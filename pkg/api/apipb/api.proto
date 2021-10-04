@@ -1,0 +1,38 @@
+syntax = "proto3";
+package ione.api;
+
+option go_package = "github.com/slntopp/ione-go/pkg/api/apipb";
+
+// import "google/api/annotations.proto";
+// import "gooogle/api/http.proto";
+
+message TokenRequest {
+    string username = 1;
+    string password = 2;
+    string endpoint = 4;
+    string expire_time = 3;
+}
+
+message TokenResponse {
+    string token = 1;
+}
+
+service ONeService {
+    rpc Token(TokenRequest) returns (TokenResponse) {
+        // option (google.api.http) = {
+            // post: "/token"
+            // body: "*"
+        // };
+    };
+}
+
+import "pkg/health/healthpb/health.proto";
+
+service HealthService {
+    rpc Probe(ione.health.ProbeRequest) returns (ione.health.ProbeResponse) {
+        // option (google.api.http) = {
+            // post: "/health/probe"
+            // body: "*"
+        // };
+    };
+};

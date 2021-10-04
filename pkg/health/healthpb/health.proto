@@ -1,0 +1,17 @@
+syntax = "proto3";
+package ione.health;
+
+option go_package = "github.com/slntopp/ione-go/pkg/health/healthpb";
+
+message ProbeRequest {
+    string probe_type = 1;
+    string payload = 2;
+}
+
+message ProbeResponse {
+    string response = 1;
+}
+
+service HealthService {
+    rpc Probe(ione.health.ProbeRequest) returns (ione.health.ProbeResponse);
+};
