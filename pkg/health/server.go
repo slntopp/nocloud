@@ -6,7 +6,9 @@ import (
 	"github.com/slntopp/ione-go/pkg/health/healthpb"
 )
 
-type HealthServiceServer struct{}
+type HealthServiceServer struct{
+	healthpb.UnimplementedHealthServiceServer
+}
 
 func NewServer() *HealthServiceServer {
 	return &HealthServiceServer{}
