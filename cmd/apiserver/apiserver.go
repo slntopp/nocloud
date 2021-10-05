@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/spf13/viper"
 
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
 	apipb "github.com/slntopp/ione-go/pkg/api/apipb"
@@ -32,6 +33,11 @@ func init() {
 		panic(err)
 	}
 	log = logger
+
+	viper.AutomaticEnv()
+	viper.SetDefault("HEALTH_HOST", "health:8080")
+
+	healthHost = viper.GetString("HEALTH_HOST")
 }
 
 func main() {
