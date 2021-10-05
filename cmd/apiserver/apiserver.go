@@ -1,7 +1,11 @@
 package main
 
 import (
+	"context"
 	"net"
+	"net/http"
+
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 
 	apipb "github.com/slntopp/ione-go/pkg/api/apipb"
 	"github.com/slntopp/ione-go/pkg/health/healthpb"
@@ -41,5 +45,31 @@ func main() {
 	apipb.RegisterHealthServiceServer(s, &healthAPI{client: healthClient})
 	// Serve gRPC Server
 	log.Info("Serving gRPC on 0.0.0.0:8080")
-	log.Fatal("Error", zap.Error(s.Serve(lis)))
+	go func() {
+		log.Fatal("Error", zap.Error(s.Serve(lis)))
+	}()
+
+	conn, err := grpc.DialContext(
+		context.Background(),
+		"0.0.0.0:8080",
+		grpc.WithBlock(),
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		log.Fatal("Failed to dial server:", zap.Error(err))
+	}
+
+	gwmux := runtime.NewServeMux()
+	err = apipb.RegisterHealthServiceHandler(context.Background(), gwmux, conn)
+	if err != nil {
+		log.Fatal("Failed to register HealthService gateway", zap.Error(err))
+	}
+
+	gwServer := &http.Server{
+		Addr:    ":8000",
+		Handler: gwmux,
+	}
+
+	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
+	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(gwServer.ListenAndServe()))
 }
