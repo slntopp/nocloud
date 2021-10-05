@@ -7,6 +7,7 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 
+	inflog "github.com/infinimesh/infinimesh/pkg/log"
 	apipb "github.com/slntopp/ione-go/pkg/api/apipb"
 	"github.com/slntopp/ione-go/pkg/health/healthpb"
 	"go.uber.org/zap"
@@ -25,7 +26,19 @@ func NewServer() *server {
 	return &server{}
 }
 
+func init() {
+	logger, err := inflog.NewProdOrDev()
+	if err != nil {
+		panic(err)
+	}
+	log = logger
+}
+
 func main() {
+
+	defer func() {
+		_ = log.Sync()
+	}()
 
 	healthConn, err := grpc.Dial(healthHost, grpc.WithInsecure())
 	if err != nil {
@@ -44,7 +57,7 @@ func main() {
 	// Attach the Greeter service to the server
 	apipb.RegisterHealthServiceServer(s, &healthAPI{client: healthClient})
 	// Serve gRPC Server
-	log.Info("Serving gRPC on 0.0.0.0:8080")
+	log.Info("Serving gRPC on 0.0.0.0:8080", zap.Skip())
 	go func() {
 		log.Fatal("Error", zap.Error(s.Serve(lis)))
 	}()
