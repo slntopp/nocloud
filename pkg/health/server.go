@@ -4,17 +4,21 @@ import (
 	"context"
 
 	"github.com/slntopp/ione-go/pkg/health/healthpb"
+	"go.uber.org/zap"
 )
 
 type HealthServiceServer struct{
 	healthpb.UnimplementedHealthServiceServer
+	log *zap.Logger
 }
 
-func NewServer() *HealthServiceServer {
-	return &HealthServiceServer{}
+func NewServer(log *zap.Logger) *HealthServiceServer {
+	return &HealthServiceServer{log: log}
 }
 
-func (*HealthServiceServer) Probe(ctx context.Context, request *healthpb.ProbeRequest) (*healthpb.ProbeResponse, error) {
+func (s *HealthServiceServer) Probe(ctx context.Context, request *healthpb.ProbeRequest) (*healthpb.ProbeResponse, error) {
+	log := s.log.Named("Health Probe")
+	log.Info("Probe received", zap.String("Type", request.ProbeType))
 	if request.ProbeType == "PING" {
 		return &healthpb.ProbeResponse{Response: "PONG"}, nil
 	}
