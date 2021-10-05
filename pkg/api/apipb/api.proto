@@ -3,8 +3,7 @@ package ione.api;
 
 option go_package = "github.com/slntopp/ione-go/pkg/api/apipb";
 
-// import "google/api/annotations.proto";
-// import "gooogle/api/http.proto";
+import "pkg/google/api/annotations.proto";
 
 message TokenRequest {
     string username = 1;
@@ -19,10 +18,10 @@ message TokenResponse {
 
 service ONeService {
     rpc Token(TokenRequest) returns (TokenResponse) {
-        // option (google.api.http) = {
-            // post: "/token"
-            // body: "*"
-        // };
+        option (google.api.http) = {
+            post: "/token"
+            body: "*"
+        };
     };
 }
 
@@ -30,9 +29,9 @@ import "pkg/health/healthpb/health.proto";
 
 service HealthService {
     rpc Probe(ione.health.ProbeRequest) returns (ione.health.ProbeResponse) {
-        // option (google.api.http) = {
-            // post: "/health/probe"
-            // body: "*"
-        // };
+        option (google.api.http) = {
+            post: "/health/probe"
+            body: "*"
+        };
     };
 };
