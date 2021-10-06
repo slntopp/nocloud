@@ -1,4 +1,10 @@
 version: v1
+managed:
+  enabled: true
+  go_package_prefix:
+    default: github.com/slntopp/ione-go
+    except:
+      - github.com/grpc-ecosystem/grpc-gateway
 plugins:
   - name: go
     out: .
