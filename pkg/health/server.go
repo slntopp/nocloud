@@ -3,7 +3,7 @@ package health
 import (
 	"context"
 
-	"github.com/slntopp/ione-go/pkg/health/healthpb"
+	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"go.uber.org/zap"
 )
 

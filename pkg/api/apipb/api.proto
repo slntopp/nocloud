@@ -1,7 +1,7 @@
 syntax = "proto3";
 package ione.api;
 
-option go_package = "github.com/slntopp/ione-go/pkg/api/apipb";
+option go_package = "github.com/slntopp/nocloud/pkg/api/apipb";
 
 import "pkg/google/api/annotations.proto";
 

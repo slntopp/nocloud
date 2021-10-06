@@ -7,8 +7,8 @@
 package apipb
 
 import (
-	_ "github.com/slntopp/ione-go/pkg/google/api"
-	healthpb "github.com/slntopp/ione-go/pkg/health/healthpb"
+	_ "github.com/slntopp/nocloud/pkg/google/api"
+	healthpb "github.com/slntopp/nocloud/pkg/health/healthpb"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

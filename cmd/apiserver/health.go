@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 
-	"github.com/slntopp/ione-go/pkg/api/apipb"
-	"github.com/slntopp/ione-go/pkg/health/healthpb"
+	"github.com/slntopp/nocloud/pkg/api/apipb"
+	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

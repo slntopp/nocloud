@@ -9,8 +9,8 @@ import (
 	"google.golang.org/grpc"
 
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
-	"github.com/slntopp/ione-go/pkg/health"
-	"github.com/slntopp/ione-go/pkg/health/healthpb"
+	"github.com/slntopp/nocloud/pkg/health"
+	"github.com/slntopp/nocloud/pkg/health/healthpb"
 )
 
 var (

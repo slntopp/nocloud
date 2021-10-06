@@ -1,4 +1,4 @@
-module github.com/slntopp/ione-go
+module github.com/slntopp/nocloud
 
 go 1.16
 

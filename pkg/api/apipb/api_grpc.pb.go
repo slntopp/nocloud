@@ -4,7 +4,7 @@ package apipb
 
 import (
 	context "context"
-	healthpb "github.com/slntopp/ione-go/pkg/health/healthpb"
+	healthpb "github.com/slntopp/nocloud/pkg/health/healthpb"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"

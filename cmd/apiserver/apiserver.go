@@ -9,8 +9,8 @@ import (
 	"github.com/spf13/viper"
 
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
-	apipb "github.com/slntopp/ione-go/pkg/api/apipb"
-	"github.com/slntopp/ione-go/pkg/health/healthpb"
+	apipb "github.com/slntopp/nocloud/pkg/api/apipb"
+	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
