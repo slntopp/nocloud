@@ -1,5 +1,5 @@
 syntax = "proto3";
-package ione.api;
+package nocloudapi;
 
 option go_package = "github.com/slntopp/nocloud/pkg/api/apipb";
 
@@ -8,7 +8,7 @@ import "pkg/google/api/annotations.proto";
 import "pkg/health/healthpb/health.proto";
 
 service HealthService {
-    rpc Probe(ione.health.ProbeRequest) returns (ione.health.ProbeResponse) {
+    rpc Probe(nocloudhealth.ProbeRequest) returns (nocloudhealth.ProbeResponse) {
         option (google.api.http) = {
             post: "/health/probe"
             body: "*"

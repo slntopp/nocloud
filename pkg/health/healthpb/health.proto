@@ -1,5 +1,5 @@
 syntax = "proto3";
-package ione.health;
+package nocloudhealth;
 
 option go_package = "github.com/slntopp/nocloud/pkg/health/healthpb";
 
@@ -13,5 +13,5 @@ message ProbeResponse {
 }
 
 service HealthService {
-    rpc Probe(ione.health.ProbeRequest) returns (ione.health.ProbeResponse);
+    rpc Probe(nocloudhealth.ProbeRequest) returns (nocloudhealth.ProbeResponse);
 };
