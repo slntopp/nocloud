@@ -3,6 +3,7 @@ module github.com/slntopp/nocloud
 go 1.16
 
 require (
+	github.com/arangodb/go-driver v1.2.1
 	github.com/golang/protobuf v1.5.2
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/infinimesh/infinimesh v1.0.0
