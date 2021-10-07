@@ -1,0 +1,19 @@
+version: "3.2"
+services:
+  apiserver:
+    image: slntopp/nocloud/apiserver:latest
+    environment:
+      HEALTH_HOST: health:8080
+  health:
+    image: slntopp/nocloud/health:latest
+  db:
+    image: arangodb/arangodb:3.8.1
+    environment:
+      ARANGO_ROOT_PASSWORD: openSesame
+    ports:
+      - 8529:8529
+    volumes:
+      - arangodb
+
+volumes:
+  arangodb:
