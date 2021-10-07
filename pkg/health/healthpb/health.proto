@@ -1,5 +1,5 @@
 syntax = "proto3";
-package nocloudhealth;
+package nocloud.health;
 
 option go_package = "github.com/slntopp/nocloud/pkg/health/healthpb";
 
@@ -13,5 +13,5 @@ message ProbeResponse {
 }
 
 service HealthService {
-    rpc Probe(nocloudhealth.ProbeRequest) returns (nocloudhealth.ProbeResponse);
+    rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse);
 };

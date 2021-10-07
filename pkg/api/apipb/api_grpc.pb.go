@@ -32,7 +32,7 @@ func NewHealthServiceClient(cc grpc.ClientConnInterface) HealthServiceClient {
 
 func (c *healthServiceClient) Probe(ctx context.Context, in *healthpb.ProbeRequest, opts ...grpc.CallOption) (*healthpb.ProbeResponse, error) {
 	out := new(healthpb.ProbeResponse)
-	err := c.cc.Invoke(ctx, "/nocloudapi.HealthService/Probe", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/nocloud.api.HealthService/Probe", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func _HealthService_Probe_Handler(srv interface{}, ctx context.Context, dec func
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloudapi.HealthService/Probe",
+		FullMethod: "/nocloud.api.HealthService/Probe",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(HealthServiceServer).Probe(ctx, req.(*healthpb.ProbeRequest))
@@ -89,7 +89,7 @@ func _HealthService_Probe_Handler(srv interface{}, ctx context.Context, dec func
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var HealthService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "nocloudapi.HealthService",
+	ServiceName: "nocloud.api.HealthService",
 	HandlerType: (*HealthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
