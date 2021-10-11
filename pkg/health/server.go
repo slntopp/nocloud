@@ -7,7 +7,7 @@ import (
 	"go.uber.org/zap"
 )
 
-type HealthServiceServer struct{
+type HealthServiceServer struct {
 	healthpb.UnimplementedHealthServiceServer
 	log *zap.Logger
 }
