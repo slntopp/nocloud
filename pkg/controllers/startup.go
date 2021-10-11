@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
 	driver "github.com/arangodb/go-driver"
@@ -92,7 +91,6 @@ func main() {
 	for _, col := range COLLECTIONS {
 		log.Debug("Checking Collection existence", zap.String("collection", col))
 		exists, err := db.CollectionExists(nil, col)
-		fmt.Println(exists)
 		if err != nil {
 			log.Fatal("Failed to check collection", zap.Any(col, err))
 		}
@@ -182,5 +180,5 @@ func main() {
 	}
 	log.Debug("Got namespace", zap.Any("result", rootNS))
 
-	
+
 }
