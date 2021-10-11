@@ -4,6 +4,8 @@ go 1.16
 
 require (
 	github.com/arangodb/go-driver v1.2.1
+	github.com/diegogub/aranGO v0.0.0-20201018220729-50b71e9dbd21 // indirect
+	github.com/diegogub/napping v3.2.0+incompatible // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/infinimesh/infinimesh v1.0.0

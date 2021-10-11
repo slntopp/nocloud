@@ -85,6 +85,10 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/dchest/uniuri v0.0.0-20160212164326-8902c56451e9/go.mod h1:GgB8SF9nRG+GqaDtLcwJZsQFhcogVCJ79j4EdT0c2V4=
 github.com/dgraph-io/dgo v0.0.0-20181226155115-a20f509ade83/go.mod h1:/3OtwVvGnHiyXL9bWTjZaHQk4cp8rakX6jVBFoykWaA=
 github.com/dgrijalva/jwt-go v3.2.0+incompatible/go.mod h1:E3ru+11k8xSBh+hMPgOLZmtrrCbhqsmaPHjLKYnJCaQ=
+github.com/diegogub/aranGO v0.0.0-20201018220729-50b71e9dbd21 h1:TUFxqS/jc7mn0RInBQGhe7V+sS7Z4IgK4r+RxCp0wVY=
+github.com/diegogub/aranGO v0.0.0-20201018220729-50b71e9dbd21/go.mod h1:tkVXImJAf55IxQ4MzqMArPrHSBaVUqxq0frLUnB21GY=
+github.com/diegogub/napping v3.2.0+incompatible h1:MQT+ZMIzB7TW0D9IVqYTTEXUtWPwCAhN/eIf+W01QoI=
+github.com/diegogub/napping v3.2.0+incompatible/go.mod h1:GdvMajyD4htAxeUwqGajS3o209MeEcNMe7p2YvbZqhA=
 github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1:+020luEh2TKB4/GOp8oxxtq0Daoen/Cii55CzbTV6DU=
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
