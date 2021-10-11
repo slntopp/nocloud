@@ -7,6 +7,8 @@ import (
 	driver "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
+	"github.com/slntopp/nocloud/pkg/controllers/accounts"
+	"github.com/slntopp/nocloud/pkg/controllers/namespaces"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -128,4 +130,57 @@ func main() {
 			log.Fatal("Failed to create Graph", zap.Any("Permissions", err))
 		}
 	}
+
+	col, _ := db.Collection(nil, "Accounts")
+	rootExists, err := col.DocumentExists(nil, "0")
+	if err != nil {
+		log.Fatal("Failed to check root Account", zap.Any("error", err))
+	}
+
+	if !rootExists {
+		root := accounts.Account{ 
+			Title: "root",
+			DocumentMeta: driver.DocumentMeta { Key: "0", ID: driver.DocumentID("0"), Rev: "" },
+		}
+		root.Title = "root"
+
+		meta, err := col.CreateDocument(nil, root)
+		if err != nil {
+			log.Fatal("Failed to create root Account", zap.Any("error", err))
+		}
+		log.Debug("Create root Account", zap.Any("result", meta))
+	}
+	root, err := accounts.Get(col, "0")
+	if err != nil {
+		log.Fatal("Failed to get root", zap.Any("error", err))
+	}
+	log.Debug("Got account", zap.Any("result", root))
+
+	col, _ = db.Collection(nil, "Namespaces")
+	rootNSExists, err := col.DocumentExists(nil, "0")
+	if err != nil {
+		log.Fatal("Failed to check root Account", zap.Any("error", err))
+	}
+
+	if !rootNSExists {
+		root := namespaces.Namespace{ 
+			Title: "root",
+			DocumentMeta: driver.DocumentMeta { Key: "0", ID: driver.DocumentID("0"), Rev: "" },
+		}
+		root.Title = "root"
+
+		meta, err := col.CreateDocument(nil, root)
+		if err != nil {
+			log.Fatal("Failed to create root Namespace", zap.Any("error", err))
+		}
+		log.Debug("Create root Account", zap.Any("result", meta))
+	}
+
+	rootNS, err := accounts.Get(col, "0")
+	if err != nil {
+		log.Fatal("Failed to get root", zap.Any("error", err))
+	}
+	log.Debug("Got namespace", zap.Any("result", rootNS))
+
+	
 }
