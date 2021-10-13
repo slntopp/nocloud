@@ -108,7 +108,6 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass string) {
 			Title: "root",
 			DocumentMeta: driver.DocumentMeta { Key: "0", ID: driver.DocumentID("0"), Rev: "" },
 		}
-		root.Title = "root"
 
 		meta, err := col.CreateDocument(nil, root)
 		if err != nil {
@@ -137,7 +136,6 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass string) {
 			Title: "root",
 			DocumentMeta: driver.DocumentMeta { Key: "0", ID: driver.DocumentID("0"), Rev: "" },
 		}
-		root.Title = "root"
 
 		meta, err := col.CreateDocument(nil, root)
 		if err != nil {
