@@ -46,6 +46,9 @@ func (acc *Account) LinkNamespace(ctx context.Context, col driver.Collection, ns
 		From: acc.ID,
 		To: ns.ID,
 		Level: level,
+		DocumentMeta: driver.DocumentMeta {
+			Key: acc.Key + "-" + ns.Key,
+		},
 	})
 	return err
 }
