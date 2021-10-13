@@ -37,8 +37,10 @@ func init() {
 	dbPort = viper.GetString("DB_PORT")
 	dbUser = viper.GetString("DB_USER")
 	dbPass = viper.GetString("DB_PASS")
+	
+	rootPass = viper.GetString("ROOT_PASS")
 }
 
 func main() {
-	graph.InitDB(log, dbHost, dbPort, dbUser, dbPass)
+	graph.InitDB(log, dbHost, dbPort, dbUser, dbPass, rootPass)
 }

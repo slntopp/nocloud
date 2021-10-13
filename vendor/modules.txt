@@ -81,6 +81,10 @@ go.uber.org/zap/internal/bufferpool
 go.uber.org/zap/internal/color
 go.uber.org/zap/internal/exit
 go.uber.org/zap/zapcore
+# golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+## explicit
+golang.org/x/crypto/bcrypt
+golang.org/x/crypto/blowfish
 # golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2

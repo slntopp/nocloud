@@ -59,7 +59,7 @@ func CheckAndRegisterGraph(log *zap.Logger, db driver.Database, graph NoCloudGra
 	}
 }
 
-func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass string) {
+func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass, rootPass string) {
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: []string{"http://" + dbUser + ":" + dbPass + "@" + dbHost + ":" + dbPort},
 	})
@@ -98,6 +98,9 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass string) {
 	}
 
 	col, _ := db.Collection(nil, "Accounts")
+	account_ctrl := AccountsController{
+		col: col,
+	}
 	rootExists, err := col.DocumentExists(nil, "0")
 	if err != nil {
 		log.Fatal("Failed to check root Account", zap.Any("error", err))
@@ -153,5 +156,15 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass string) {
 	err = root.LinkNamespace(nil, col, rootNS, 4)
 	if err != nil {
 		log.Error("Error while creating edge", zap.Error(err))
+	}
+
+	log.Debug("Creating credentials(standard) for root account")
+	cred, err := NewStandardCredentials(rootPass)
+	col, _ = db.Collection(nil, CREDENTIALS_COL)
+	account_ctrl.cred = col
+	col, _ = db.Collection(nil,  ACCOUNTS_COL + "2" + CREDENTIALS_COL)
+	err = account_ctrl.SetCredentials(nil, root, col, cred)
+	if err != nil {
+		log.Error("Error while creating credentials", zap.Error(err))
 	}
 }
