@@ -39,3 +39,13 @@ func (ctrl *AccountsController) Create(ctx context.Context, title string) (Accou
 	acc.DocumentMeta = meta
 	return acc, err
 }
+
+// Grant account access to namespace
+func (acc *Account) LinkNamespace(ctx context.Context, col driver.Collection, ns Namespace, level int8) (error) {
+	_, err := col.CreateDocument(ctx, Access{
+		From: acc.ID,
+		To: ns.ID,
+		Level: level,
+	})
+	return err
+}
