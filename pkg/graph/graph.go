@@ -106,7 +106,7 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass string) {
 	if !rootExists {
 		meta, err := col.CreateDocument(nil, Account{ 
 			Title: "root",
-			DocumentMeta: driver.DocumentMeta { Key: "0", ID: driver.DocumentID("0"), Rev: "" },
+			DocumentMeta: driver.DocumentMeta { Key: "0" },
 		})
 		if err != nil {
 			log.Fatal("Failed to create root Account", zap.Any("error", err))
@@ -132,7 +132,7 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass string) {
 	if !rootNSExists {
 		meta, err := col.CreateDocument(nil, Namespace{ 
 			Title: "root",
-			DocumentMeta: driver.DocumentMeta { Key: "0", ID: driver.DocumentID("0"), Rev: "" },
+			DocumentMeta: driver.DocumentMeta { Key: "0" },
 		})
 		if err != nil {
 			log.Fatal("Failed to create root Namespace", zap.Any("error", err))
