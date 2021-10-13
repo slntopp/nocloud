@@ -1,4 +1,4 @@
-package main
+package graph
 
 import (
 	"strings"
@@ -6,8 +6,7 @@ import (
 	driver "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
-	"github.com/slntopp/nocloud/pkg/controllers/accounts"
-	"github.com/slntopp/nocloud/pkg/controllers/namespaces"
+	"github.com/slntopp/nocloud/pkg/graph/namespaces"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )

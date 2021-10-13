@@ -1,4 +1,4 @@
-package namespaces
+package graph
 
 import (
 	"github.com/arangodb/go-driver"
