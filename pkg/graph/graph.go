@@ -104,12 +104,10 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass string) {
 	}
 
 	if !rootExists {
-		root := Account{ 
+		meta, err := col.CreateDocument(nil, Account{ 
 			Title: "root",
 			DocumentMeta: driver.DocumentMeta { Key: "0", ID: driver.DocumentID("0"), Rev: "" },
-		}
-
-		meta, err := col.CreateDocument(nil, root)
+		})
 		if err != nil {
 			log.Fatal("Failed to create root Account", zap.Any("error", err))
 		}
@@ -132,23 +130,28 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass string) {
 	}
 
 	if !rootNSExists {
-		root := Namespace{ 
+		meta, err := col.CreateDocument(nil, Namespace{ 
 			Title: "root",
 			DocumentMeta: driver.DocumentMeta { Key: "0", ID: driver.DocumentID("0"), Rev: "" },
-		}
-
-		meta, err := col.CreateDocument(nil, root)
+		})
 		if err != nil {
 			log.Fatal("Failed to create root Namespace", zap.Any("error", err))
 		}
 		log.Debug("Create root Account", zap.Any("result", meta))
 	}
 
-	var rootNS Account
-	meta, err = col.ReadDocument(nil, "0", &root)
+	var rootNS Namespace
+	meta, err = col.ReadDocument(nil, "0", &rootNS)
 	if err != nil {
 		log.Fatal("Failed to get root", zap.Any("error", err))
 	}
 	rootNS.DocumentMeta = meta
 	log.Debug("Got namespace", zap.Any("result", rootNS))
+
+	log.Debug("Creating superadmin permission root -> root(ns)")
+	col, _ = db.Collection(nil, ACCOUNTS_COL + "2" + NAMESPACES_COL)
+	err = root.LinkNamespace(nil, col, rootNS, 4)
+	if err != nil {
+		log.Error("Error while creating edge", zap.Error(err))
+	}
 }
