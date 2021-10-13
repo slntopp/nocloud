@@ -5,58 +5,61 @@ import (
 
 	driver "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
-	inflog "github.com/infinimesh/infinimesh/pkg/log"
-	"github.com/slntopp/nocloud/pkg/graph/namespaces"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
 
-var (
-	log *zap.Logger
-
-	dbHost string
-	dbPort string
-	dbUser string
-	dbPass string
-
-	rootPass string
-)
 
 var (
 	DB_NAME = "nocloud"
-	COLLECTIONS = []string{"Accounts", "Namespaces", "Services", "Instances"}
-	EDGES = [][]string{
-		{"Accounts", "Namespaces"},
-		{"Namespaces", "Accounts"},
-		{"Namespaces", "Services"},
-		{"Services", "Instances"},
-	}
 )
 
-func init() {
-	logger, err := inflog.NewProdOrDev()
-	if err != nil {
-		panic(err)
+func CheckAndRegisterCollections(log *zap.Logger, db driver.Database, collections []string) {
+	for _, col := range collections {
+		log.Debug("Checking Collection existence", zap.String("collection", col))
+		exists, err := db.CollectionExists(nil, col)
+		if err != nil {
+			log.Fatal("Failed to check collection", zap.Any(col, err))
+		}
+		log.Debug("Collection " + col, zap.Bool("Exists", exists))
+		if !exists {
+			log.Debug("Creating", zap.String("collection", col))
+			_, err := db.CreateCollection(nil, col, nil)
+			if err != nil {
+				log.Fatal("Failed to create collection", zap.Any(col, err))
+			}
+		}
 	}
-	log = logger
-
-	viper.AutomaticEnv()
-	viper.SetDefault("DB_HOST", "localhost")
-	viper.SetDefault("DB_PORT", "8529")
-	viper.SetDefault("DB_USER", "root")
-	viper.SetDefault("DB_PASS", "openSesame")
-
-	viper.SetDefault("ROOT_PASS", "root")
-
-	dbHost = viper.GetString("DB_HOST")
-	dbPort = viper.GetString("DB_PORT")
-	dbUser = viper.GetString("DB_USER")
-	dbPass = viper.GetString("DB_PASS")
-
-	rootPass = viper.GetString("ROOT_PASS")
 }
 
-func main() {
+func CheckAndRegisterGraph(log *zap.Logger, db driver.Database, graph NoCloudGraphSchema) {
+	graphExists, err := db.GraphExists(nil, graph.Name)
+	if err != nil {
+		log.Fatal("Failed to check graph", zap.Any(graph.Name, err))
+	}
+	log.Debug("Graph Permissions", zap.Bool("Exists", graphExists))
+
+	if graphExists {
+		return
+	}
+	log.Debug("Creating", zap.String("graph", graph.Name))
+	edges := make([]driver.EdgeDefinition, 0)
+	for _, edge := range graph.Edges {
+		edges = append(edges, driver.EdgeDefinition{
+			Collection: strings.Join(edge, "2"),
+			From: []string{edge[0]}, To: []string{edge[1]},
+		})
+	}
+
+	var options driver.CreateGraphOptions
+	options.EdgeDefinitions = edges
+
+	_, err = db.CreateGraph(nil, graph.Name, &options)
+	if err != nil {
+		log.Fatal("Failed to create Graph", zap.Any(graph.Name, err))
+	}
+}
+
+func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass string) {
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: []string{"http://" + dbUser + ":" + dbPass + "@" + dbHost + ":" + dbPort},
 	})
@@ -71,6 +74,7 @@ func main() {
 		log.Fatal("Error creating driver instance for DB", zap.Error(err))
 	}
 
+	// Checking if DB exists and creating it if not
 	log.Debug("Checking if DB exists")
 	dbExists, err := c.DatabaseExists(nil, DB_NAME)
 	if err != nil {
@@ -87,45 +91,10 @@ func main() {
 	}
 	db, err = c.Database(nil, DB_NAME)
 
-	for _, col := range COLLECTIONS {
-		log.Debug("Checking Collection existence", zap.String("collection", col))
-		exists, err := db.CollectionExists(nil, col)
-		if err != nil {
-			log.Fatal("Failed to check collection", zap.Any(col, err))
-		}
-		log.Debug("Collection " + col, zap.Bool("Exists", exists))
-		if !exists {
-			log.Debug("Creating", zap.String("collection", col))
-			_, err := db.CreateCollection(nil, col, nil)
-			if err != nil {
-				log.Fatal("Failed to create collection", zap.Any(col, err))
-			}
-		}
-	}
+	CheckAndRegisterCollections(log, db, COLLECTIONS)
 
-	graphExists, err := db.GraphExists(nil, "Permissions")
-	if err != nil {
-		log.Fatal("Failed to check graph", zap.Any("Permissions", err))
-	}
-	log.Debug("Graph Permissions", zap.Bool("Exists", graphExists))
-
-	if !graphExists {
-		log.Debug("Creating", zap.String("graph", "Permissions"))
-		edges := make([]driver.EdgeDefinition, 0)
-		for _, edge := range EDGES {
-			edges = append(edges, driver.EdgeDefinition{
-				Collection: strings.Join(edge, "2"),
-				From: []string{edge[0]}, To: []string{edge[1]},
-			})
-		}
-
-		var options driver.CreateGraphOptions
-		options.EdgeDefinitions = edges
-
-		_, err = db.CreateGraph(nil, "Permissions", &options)
-		if err != nil {
-			log.Fatal("Failed to create Graph", zap.Any("Permissions", err))
-		}
+	for _, graph := range GRAPHS_SCHEMAS {
+		CheckAndRegisterGraph(log, db, graph)
 	}
 
 	col, _ := db.Collection(nil, "Accounts")
@@ -135,7 +104,7 @@ func main() {
 	}
 
 	if !rootExists {
-		root := accounts.Account{ 
+		root := Account{ 
 			Title: "root",
 			DocumentMeta: driver.DocumentMeta { Key: "0", ID: driver.DocumentID("0"), Rev: "" },
 		}
@@ -147,20 +116,24 @@ func main() {
 		}
 		log.Debug("Create root Account", zap.Any("result", meta))
 	}
-	root, err := accounts.Get(col, "0")
+
+	var root Account
+	var meta driver.DocumentMeta
+	meta, err = col.ReadDocument(nil, "0", &root)
 	if err != nil {
 		log.Fatal("Failed to get root", zap.Any("error", err))
 	}
+	root.DocumentMeta = meta
 	log.Debug("Got account", zap.Any("result", root))
 
-	col, _ = db.Collection(nil, "Namespaces")
+	col, _ = db.Collection(nil, NAMESPACES_COL)
 	rootNSExists, err := col.DocumentExists(nil, "0")
 	if err != nil {
 		log.Fatal("Failed to check root Account", zap.Any("error", err))
 	}
 
 	if !rootNSExists {
-		root := namespaces.Namespace{ 
+		root := Namespace{ 
 			Title: "root",
 			DocumentMeta: driver.DocumentMeta { Key: "0", ID: driver.DocumentID("0"), Rev: "" },
 		}
@@ -173,11 +146,11 @@ func main() {
 		log.Debug("Create root Account", zap.Any("result", meta))
 	}
 
-	rootNS, err := accounts.Get(col, "0")
+	var rootNS Account
+	meta, err = col.ReadDocument(nil, "0", &root)
 	if err != nil {
 		log.Fatal("Failed to get root", zap.Any("error", err))
 	}
+	rootNS.DocumentMeta = meta
 	log.Debug("Got namespace", zap.Any("result", rootNS))
-
-
 }
