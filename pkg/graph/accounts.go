@@ -67,12 +67,35 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 	}
 
 	cred, err := ctrl.cred.CreateDocument(ctx, c)	
-	_, err = edge.CreateDocument(ctx, Access{
+	_, err = edge.CreateDocument(ctx, CredentialsLink{
 		From: acc.ID,
 		To: cred.ID,
+		Type: c.Type(),
 		DocumentMeta: driver.DocumentMeta {
-			Key: acc.Key + "-" + c.Type(),
+			Key: c.Type() + "-" + acc.Key, // Ensure only one credentials vertex per type
 		},
 	})
 	return err
+}
+
+func (ctrl *AccountsController) Authorize(account, auth_type string, args ...string) (bool) {
+	query := `FOR cred, edge, path IN 1 OUTBOUND @account GRAPH @credentials FILTER edge.type == @type RETURN cred`
+	c, err := ctrl.col.Database().Query(nil, query, map[string]interface{}{
+		"account": account,
+		"credentials": CREDENTIALS_GRAPH.Name,
+		"type": auth_type,
+	})
+	if err != nil {
+		return false
+	}
+	defer c.Close()
+
+	switch auth_type {
+	case "standard":
+		var cred StandardCredentials
+		_, err = c.ReadDocument(nil, &cred)
+		return err == nil && cred.Authorize(args...)
+	default:
+		return false
+	}
 }

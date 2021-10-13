@@ -167,4 +167,8 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass, rootPass string) {
 	if err != nil {
 		log.Error("Error while creating credentials", zap.Error(err))
 	}
+
+	log.Debug("Checking root credentials")
+	r := account_ctrl.Authorize(root.ID.String(), "standard", rootPass)
+	log.Debug("Result", zap.Bool("Authorized", r))
 }

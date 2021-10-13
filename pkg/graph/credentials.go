@@ -9,6 +9,14 @@ var (
 	CREDENTIALS_COL = "Credentials"
 )
 
+type CredentialsLink struct {
+	From driver.DocumentID `json:"_from"`
+	To driver.DocumentID `json:"_to"`
+	Type string `json:"type"`
+
+	driver.DocumentMeta
+}
+
 type Credentials interface {
 	Authorize(...string) bool;
 	Type() string;
