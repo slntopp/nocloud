@@ -78,25 +78,32 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 	return err
 }
 
-func (ctrl *AccountsController) Authorize(ctx context.Context, account, auth_type string, args ...string) (bool) {
-	query := `FOR cred, edge, path IN 1 OUTBOUND @account GRAPH @credentials FILTER edge.type == @type RETURN cred`
-	c, err := ctrl.col.Database().Query(ctx, query, map[string]interface{}{
-		"account": account,
-		"credentials": CREDENTIALS_GRAPH.Name,
-		"type": auth_type,
-	})
-	if err != nil {
-		return false
-	}
-	defer c.Close()
+func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string, args ...string) (bool) {
+	
+	var credentials Credentials;
+	var ok bool;
 
 	switch auth_type {
 	case "standard":
-		var cred StandardCredentials
-		_, err = c.ReadDocument(ctx, &cred)
-		return err == nil && cred.Authorize(args...)
+		credentials = &StandardCredentials{Username: args[0]}
+		ok = credentials.Find(ctx, ctrl.col.Database())
 	default:
 		return false
 	}
+
+	// Check if could find Credentials
+	if !ok {
+		return false
+	}
+
+	ok = credentials.Authorize(args...)
+	// Check if could authorize
+	if !ok {
+		return false
+	}
+
+	account, ok := credentials.Account(ctx, ctrl.col.Database())
+	ctx = context.WithValue(ctx, "account", account)
+	return ok
 }
 
