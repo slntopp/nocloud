@@ -4,6 +4,7 @@ package apipb
 
 import (
 	context "context"
+	accountspb "github.com/slntopp/nocloud/pkg/accounts-registry/accountspb"
 	healthpb "github.com/slntopp/nocloud/pkg/health/healthpb"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -95,6 +96,236 @@ var HealthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Probe",
 			Handler:    _HealthService_Probe_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/api/apipb/api.proto",
+}
+
+// AccountsServiceClient is the client API for AccountsService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type AccountsServiceClient interface {
+	Token(ctx context.Context, in *accountspb.TokenRequest, opts ...grpc.CallOption) (*accountspb.TokenResponse, error)
+	SetCredentials(ctx context.Context, in *accountspb.SetCredentialsRequest, opts ...grpc.CallOption) (*accountspb.SetCredentialsResponse, error)
+	Create(ctx context.Context, in *accountspb.CreateRequest, opts ...grpc.CallOption) (*accountspb.CreateResponse, error)
+	Get(ctx context.Context, in *accountspb.GetRequest, opts ...grpc.CallOption) (*accountspb.Account, error)
+	List(ctx context.Context, in *accountspb.ListRequest, opts ...grpc.CallOption) (*accountspb.ListResponse, error)
+}
+
+type accountsServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewAccountsServiceClient(cc grpc.ClientConnInterface) AccountsServiceClient {
+	return &accountsServiceClient{cc}
+}
+
+func (c *accountsServiceClient) Token(ctx context.Context, in *accountspb.TokenRequest, opts ...grpc.CallOption) (*accountspb.TokenResponse, error) {
+	out := new(accountspb.TokenResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Token", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountsServiceClient) SetCredentials(ctx context.Context, in *accountspb.SetCredentialsRequest, opts ...grpc.CallOption) (*accountspb.SetCredentialsResponse, error) {
+	out := new(accountspb.SetCredentialsResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/SetCredentials", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountsServiceClient) Create(ctx context.Context, in *accountspb.CreateRequest, opts ...grpc.CallOption) (*accountspb.CreateResponse, error) {
+	out := new(accountspb.CreateResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Create", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountsServiceClient) Get(ctx context.Context, in *accountspb.GetRequest, opts ...grpc.CallOption) (*accountspb.Account, error) {
+	out := new(accountspb.Account)
+	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Get", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountsServiceClient) List(ctx context.Context, in *accountspb.ListRequest, opts ...grpc.CallOption) (*accountspb.ListResponse, error) {
+	out := new(accountspb.ListResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/List", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// AccountsServiceServer is the server API for AccountsService service.
+// All implementations must embed UnimplementedAccountsServiceServer
+// for forward compatibility
+type AccountsServiceServer interface {
+	Token(context.Context, *accountspb.TokenRequest) (*accountspb.TokenResponse, error)
+	SetCredentials(context.Context, *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error)
+	Create(context.Context, *accountspb.CreateRequest) (*accountspb.CreateResponse, error)
+	Get(context.Context, *accountspb.GetRequest) (*accountspb.Account, error)
+	List(context.Context, *accountspb.ListRequest) (*accountspb.ListResponse, error)
+	mustEmbedUnimplementedAccountsServiceServer()
+}
+
+// UnimplementedAccountsServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedAccountsServiceServer struct {
+}
+
+func (UnimplementedAccountsServiceServer) Token(context.Context, *accountspb.TokenRequest) (*accountspb.TokenResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Token not implemented")
+}
+func (UnimplementedAccountsServiceServer) SetCredentials(context.Context, *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetCredentials not implemented")
+}
+func (UnimplementedAccountsServiceServer) Create(context.Context, *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedAccountsServiceServer) Get(context.Context, *accountspb.GetRequest) (*accountspb.Account, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (UnimplementedAccountsServiceServer) List(context.Context, *accountspb.ListRequest) (*accountspb.ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+func (UnimplementedAccountsServiceServer) mustEmbedUnimplementedAccountsServiceServer() {}
+
+// UnsafeAccountsServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to AccountsServiceServer will
+// result in compilation errors.
+type UnsafeAccountsServiceServer interface {
+	mustEmbedUnimplementedAccountsServiceServer()
+}
+
+func RegisterAccountsServiceServer(s grpc.ServiceRegistrar, srv AccountsServiceServer) {
+	s.RegisterService(&AccountsService_ServiceDesc, srv)
+}
+
+func _AccountsService_Token_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(accountspb.TokenRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServiceServer).Token(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.AccountsService/Token",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServiceServer).Token(ctx, req.(*accountspb.TokenRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AccountsService_SetCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(accountspb.SetCredentialsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServiceServer).SetCredentials(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.AccountsService/SetCredentials",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServiceServer).SetCredentials(ctx, req.(*accountspb.SetCredentialsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AccountsService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(accountspb.CreateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServiceServer).Create(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.AccountsService/Create",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServiceServer).Create(ctx, req.(*accountspb.CreateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AccountsService_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(accountspb.GetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServiceServer).Get(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.AccountsService/Get",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServiceServer).Get(ctx, req.(*accountspb.GetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AccountsService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(accountspb.ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServiceServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.AccountsService/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServiceServer).List(ctx, req.(*accountspb.ListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// AccountsService_ServiceDesc is the grpc.ServiceDesc for AccountsService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var AccountsService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "nocloud.api.AccountsService",
+	HandlerType: (*AccountsServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Token",
+			Handler:    _AccountsService_Token_Handler,
+		},
+		{
+			MethodName: "SetCredentials",
+			Handler:    _AccountsService_SetCredentials_Handler,
+		},
+		{
+			MethodName: "Create",
+			Handler:    _AccountsService_Create_Handler,
+		},
+		{
+			MethodName: "Get",
+			Handler:    _AccountsService_Get_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _AccountsService_List_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

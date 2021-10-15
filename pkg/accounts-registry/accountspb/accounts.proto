@@ -1,0 +1,57 @@
+syntax = "proto3";
+package nocloud.accounts;
+
+option go_package = "github.com/slntopp/nocloud/pkg/accounts-registry/accountspb";
+
+message Credentials {
+    string type = 1;
+    repeated string data = 2;
+}
+
+message CreateRequest {
+    string title = 1; // New Account title
+    Credentials auth = 2; // Credentials for New Account
+    string namespace = 3; // Namespace to put Account under
+    optional int32 access = 4; // Account access level to parent namespace
+}
+
+message CreateResponse {
+    string id = 1;
+}
+
+message GetRequest {
+    string id = 1;
+}
+
+message Account {
+    string id = 1;
+    string title = 2;
+    string namespace = 3; // Parent namespace
+}
+
+message ListRequest {
+    optional string namespace = 1; // Namespace ID to seek account in
+    optional int32 depth = 2; // Depth 
+}
+
+message ListResponse {
+    repeated Account pool = 1;
+}
+
+message SetCredentialsRequest {
+    string account = 1;
+    Credentials auth = 2;
+}
+
+message SetCredentialsResponse {
+    bool result = 1;
+}
+
+message TokenRequest {
+    Credentials auth = 1;
+    int32 exp = 2;
+}
+
+message TokenResponse {
+    string token = 1;
+}
