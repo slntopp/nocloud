@@ -162,7 +162,7 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass, rootPass string) {
 	}
 
 	log.Debug("Creating credentials(standard) for root account")
-	cred, err := NewStandardCredentials(rootPass)
+	cred, err := NewStandardCredentials("root", rootPass)
 	col, _ = db.Collection(ctx, CREDENTIALS_COL)
 	account_ctrl.cred = col
 	col, _ = db.Collection(ctx,  ACCOUNTS_COL + "2" + CREDENTIALS_COL)
@@ -172,6 +172,6 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass, rootPass string) {
 	}
 
 	log.Debug("Checking root credentials")
-	r := account_ctrl.Authorize(ctx, root.ID.String(), "standard", rootPass)
+	r := account_ctrl.Authorize(ctx, "standard", "root", rootPass)
 	log.Debug("Result", zap.Bool("Authorized", r))
 }
