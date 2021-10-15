@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"context"
 	"strings"
 
 	driver "github.com/arangodb/go-driver"
@@ -126,14 +127,16 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass, rootPass string) {
 	root.DocumentMeta = meta
 	log.Debug("Got account", zap.Any("result", root))
 
-	col, _ = db.Collection(nil, NAMESPACES_COL)
-	rootNSExists, err := col.DocumentExists(nil, "0")
+	ctx := context.WithValue(context.Background(), "account", "Accounts/0")
+
+	col, _ = db.Collection(ctx, NAMESPACES_COL)
+	rootNSExists, err := col.DocumentExists(ctx, "0")
 	if err != nil {
 		log.Fatal("Failed to check root Account", zap.Any("error", err))
 	}
 
 	if !rootNSExists {
-		meta, err := col.CreateDocument(nil, Namespace{ 
+		meta, err := col.CreateDocument(ctx, Namespace{ 
 			Title: "root",
 			DocumentMeta: driver.DocumentMeta { Key: "0" },
 		})
@@ -144,7 +147,7 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass, rootPass string) {
 	}
 
 	var rootNS Namespace
-	meta, err = col.ReadDocument(nil, "0", &rootNS)
+	meta, err = col.ReadDocument(ctx, "0", &rootNS)
 	if err != nil {
 		log.Fatal("Failed to get root", zap.Any("error", err))
 	}
@@ -152,23 +155,23 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass, rootPass string) {
 	log.Debug("Got namespace", zap.Any("result", rootNS))
 
 	log.Debug("Creating superadmin permission root -> root(ns)")
-	col, _ = db.Collection(nil, ACCOUNTS_COL + "2" + NAMESPACES_COL)
-	err = root.LinkNamespace(nil, col, rootNS, 4)
+	col, _ = db.Collection(ctx, ACCOUNTS_COL + "2" + NAMESPACES_COL)
+	err = root.LinkNamespace(ctx, col, rootNS, 4)
 	if err != nil {
 		log.Error("Error while creating edge", zap.Error(err))
 	}
 
 	log.Debug("Creating credentials(standard) for root account")
 	cred, err := NewStandardCredentials(rootPass)
-	col, _ = db.Collection(nil, CREDENTIALS_COL)
+	col, _ = db.Collection(ctx, CREDENTIALS_COL)
 	account_ctrl.cred = col
-	col, _ = db.Collection(nil,  ACCOUNTS_COL + "2" + CREDENTIALS_COL)
-	err = account_ctrl.SetCredentials(nil, root, col, cred)
+	col, _ = db.Collection(ctx,  ACCOUNTS_COL + "2" + CREDENTIALS_COL)
+	err = account_ctrl.SetCredentials(ctx, root, col, cred)
 	if err != nil {
 		log.Error("Error while creating credentials", zap.Error(err))
 	}
 
 	log.Debug("Checking root credentials")
-	r := account_ctrl.Authorize(root.ID.String(), "standard", rootPass)
+	r := account_ctrl.Authorize(ctx, root.ID.String(), "standard", rootPass)
 	log.Debug("Result", zap.Bool("Authorized", r))
 }
