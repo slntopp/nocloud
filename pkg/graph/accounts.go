@@ -43,10 +43,6 @@ func (ctrl *AccountsController) Create(ctx context.Context, title string) (Accou
 	return acc, err
 }
 
-func (ctrl *AccountsController) HasAccess(ctx context.Context, acc Account) (bool) {
-	return true
-}
-
 // Grant account access to namespace
 func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int8) (error) {
 	_, err := edge.CreateDocument(ctx, Access{
@@ -62,7 +58,11 @@ func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, n
 
 // Set Account Credentials, ensure account has only one credentials document linked per credentials type
 func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c Credentials) (error) {
-	if !ctrl.HasAccess(ctx, acc) {
+	requestor, ok := ctx.Value("account").(string)
+	if !ok {
+		return status.Error(codes.Internal, "Account ID is not given")
+	}
+	if !HasAccess(ctx, ctrl.col.Database(), requestor, acc.ID.String(), 3) {
 		return status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
@@ -78,9 +78,9 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 	return err
 }
 
-func (ctrl *AccountsController) Authorize(account, auth_type string, args ...string) (bool) {
+func (ctrl *AccountsController) Authorize(ctx context.Context, account, auth_type string, args ...string) (bool) {
 	query := `FOR cred, edge, path IN 1 OUTBOUND @account GRAPH @credentials FILTER edge.type == @type RETURN cred`
-	c, err := ctrl.col.Database().Query(nil, query, map[string]interface{}{
+	c, err := ctrl.col.Database().Query(ctx, query, map[string]interface{}{
 		"account": account,
 		"credentials": CREDENTIALS_GRAPH.Name,
 		"type": auth_type,
@@ -93,9 +93,10 @@ func (ctrl *AccountsController) Authorize(account, auth_type string, args ...str
 	switch auth_type {
 	case "standard":
 		var cred StandardCredentials
-		_, err = c.ReadDocument(nil, &cred)
+		_, err = c.ReadDocument(ctx, &cred)
 		return err == nil && cred.Authorize(args...)
 	default:
 		return false
 	}
 }
+
