@@ -4,11 +4,16 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
+
 	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
 	"github.com/slntopp/nocloud/pkg/graph"
+
 	"go.uber.org/zap"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
 type AccountsServiceServer struct {
@@ -16,6 +21,7 @@ type AccountsServiceServer struct {
 	ctrl graph.AccountsController
 
 	log *zap.Logger
+	SIGNING_KEY []byte
 }
 
 func NewServer(log *zap.Logger, db driver.Database) *AccountsServiceServer {
@@ -35,5 +41,15 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	}
 	log.Debug("Authorized user", zap.String("ID", account.ID.String()))
 
-	return &accountspb.TokenResponse{Token: "sometoken"}, nil
+	claims := jwt.MapClaims{}
+	claims["account"] = account.Key
+	claims["exp"] = request.Exp
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	token_string, err := token.SignedString(s.SIGNING_KEY)
+	if err != nil {
+		return nil, status.Error(codes.Internal, "Failed to issue token")
+	}
+
+	return &accountspb.TokenResponse{Token: token_string}, nil
 }
