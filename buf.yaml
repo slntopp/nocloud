@@ -1,2 +1,6 @@
 version: v1
 name: github.com/slntopp/nocloud
+lint:
+  ignore:
+    - vendor
+    - pkg/protoc-gen-swagger
