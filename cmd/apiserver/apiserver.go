@@ -21,6 +21,8 @@ var (
 
 	healthHost 		string
 	accountsHost 	string
+
+	SIGNING_KEY		[]byte
 )
 
 type server struct{}
@@ -39,9 +41,13 @@ func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("HEALTH_HOST", "health:8080")
 	viper.SetDefault("ACCOUNTS_HOST", "accounts:8080")
+	
+	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	healthHost 		= viper.GetString("HEALTH_HOST")
 	accountsHost 	= viper.GetString("ACCOUNTS_HOST")
+
+	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
 }
 
 func main() {

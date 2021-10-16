@@ -17,11 +17,13 @@ import (
 )
 
 var (
-	port string
-	log *zap.Logger
+	port 			string
+	log 			*zap.Logger
 
-	arangodbHost string
-	arangodbCred string
+	arangodbHost 	string
+	arangodbCred 	string
+
+	SIGNING_KEY 	[]byte
 )
 
 func init() {
@@ -33,12 +35,18 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetDefault("PORT", "8080")
+
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
 
+	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+
 	port = viper.GetString("PORT")
+
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
+
+	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
 }
 
 func main() {
@@ -66,6 +74,7 @@ func main() {
 	}
 
 	server := accounts.NewServer(log, db)
+	server.SIGNING_KEY = SIGNING_KEY
 	s := grpc.NewServer()
 	
 	accountspb.RegisterAccountsServiceServer(s, server)
