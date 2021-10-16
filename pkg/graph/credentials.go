@@ -80,5 +80,5 @@ func (cred *StandardCredentials) Account(ctx context.Context, db driver.Database
 
 	var r string
 	_, err = c.ReadDocument(ctx, &r)
-	return r, err != nil
+	return r, err == nil
 }
