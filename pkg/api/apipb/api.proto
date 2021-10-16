@@ -6,7 +6,7 @@ option go_package = "github.com/slntopp/nocloud/pkg/api/apipb";
 import "pkg/google/api/annotations.proto";
 
 import "pkg/health/healthpb/health.proto";
-import "pkg/accounts-registry/accountspb/accounts.proto";
+import "pkg/accounts/accountspb/accounts.proto";
 
 service HealthService {
     rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse) {

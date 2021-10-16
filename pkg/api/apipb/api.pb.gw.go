@@ -17,7 +17,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/utilities"
-	"github.com/slntopp/nocloud/pkg/accounts-registry/accountspb"
+	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
