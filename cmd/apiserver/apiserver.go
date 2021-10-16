@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/viper"
 
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
+	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
 	apipb "github.com/slntopp/nocloud/pkg/api/apipb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"go.uber.org/zap"
@@ -16,9 +17,10 @@ import (
 )
 
 var (
-	log *zap.Logger
+	log 			*zap.Logger
 
-	healthHost string
+	healthHost 		string
+	accountsHost 	string
 )
 
 type server struct{}
@@ -36,8 +38,10 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetDefault("HEALTH_HOST", "health:8080")
+	viper.SetDefault("ACCOUNTS_HOST", "accounts:8080")
 
-	healthHost = viper.GetString("HEALTH_HOST")
+	healthHost 		= viper.GetString("HEALTH_HOST")
+	accountsHost 	= viper.GetString("ACCOUNTS_HOST")
 }
 
 func main() {
@@ -46,11 +50,19 @@ func main() {
 		_ = log.Sync()
 	}()
 
+	log.Info("Connecting to HealthService", zap.String("host", healthHost))
 	healthConn, err := grpc.Dial(healthHost, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
 	healthClient := healthpb.NewHealthServiceClient(healthConn)
+
+	log.Info("Connecting to AccountsService", zap.String("host", accountsHost))
+	accountsConn, err := grpc.Dial(accountsHost, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	accountsClient := accountspb.NewAccountsServiceClient(accountsConn)
 
 	// Create a listener on TCP port
 	lis, err := net.Listen("tcp", ":8080")
@@ -62,12 +74,14 @@ func main() {
 	s := grpc.NewServer()
 	// Attach the Greeter service to the server
 	apipb.RegisterHealthServiceServer(s, &healthAPI{client: healthClient})
+	apipb.RegisterAccountsServiceServer(s, &accountsAPI{client: accountsClient})
 	// Serve gRPC Server
 	log.Info("Serving gRPC on 0.0.0.0:8080", zap.Skip())
 	go func() {
 		log.Fatal("Error", zap.Error(s.Serve(lis)))
 	}()
 
+	// Set up REST API server
 	conn, err := grpc.DialContext(
 		context.Background(),
 		"0.0.0.0:8080",
@@ -83,7 +97,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register HealthService gateway", zap.Error(err))
 	}
-
+	err = apipb.RegisterAccountsServiceHandler(context.Background(), gwmux, conn)
+	if err != nil {
+		log.Fatal("Failed to register AccountsService gateway", zap.Error(err))
+	}
 	gwServer := &http.Server{
 		Addr:    ":8000",
 		Handler: gwmux,
