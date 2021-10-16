@@ -24,7 +24,7 @@ type Credentials interface {
 	Type() string;
 
 	Find(context.Context, driver.Database) bool;
-	Account(context.Context, driver.Database) (string, bool);
+	Account(context.Context, driver.Database) (Account, bool);
 }
 
 type StandardCredentials struct {
@@ -67,18 +67,18 @@ func (cred *StandardCredentials) Find(ctx context.Context, db driver.Database) (
 	return err == nil
 }
 
-func (cred *StandardCredentials) Account(ctx context.Context, db driver.Database) (string, bool) {
+func (cred *StandardCredentials) Account(ctx context.Context, db driver.Database) (Account, bool) {
 	query := `FOR account IN 1 INBOUND @credentials GRAPH @credentials_graph RETURN account`
 	c, err := db.Query(ctx, query, map[string]interface{}{
 		"credentials": cred.DocumentMeta.ID,
 		"credentials_graph": CREDENTIALS_GRAPH.Name,
 	})
 	if err != nil {
-		return "", false
+		return Account{}, false
 	}
 	defer c.Close()
 
-	var r string
+	var r Account
 	_, err = c.ReadDocument(ctx, &r)
 	return r, err == nil
 }
