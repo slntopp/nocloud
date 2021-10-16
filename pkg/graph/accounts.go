@@ -18,11 +18,15 @@ type Account struct {
 }
 
 type AccountsController struct {
-	col driver.Collection
-	cred driver.Collection
+	col driver.Collection // Accounts Collection
+	cred driver.Collection // Credentials Collection
+
+	log *zap.Logger
 }
 
-// func Create(title string) (string, error) {}
+func NewAccountsController(log *zap.Logger, col, cred driver.Collection) AccountsController {
+	return AccountsController{log: log, col: col, cred: cred}
+}
 
 func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, error) {
 	var r Account
