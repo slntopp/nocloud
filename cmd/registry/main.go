@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/arangodb/go-driver"
+	"github.com/arangodb/go-driver/http"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -11,11 +13,15 @@ import (
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
 	"github.com/slntopp/nocloud/pkg/accounts"
 	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
+	"github.com/slntopp/nocloud/pkg/graph"
 )
 
 var (
 	port string
 	log *zap.Logger
+
+	arangodbHost string
+	arangodbCred string
 )
 
 func init() {
@@ -27,17 +33,39 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetDefault("PORT", "8080")
+	viper.SetDefault("DB_HOST", "db:8529")
+	viper.SetDefault("DB_CRED", "root:openSesame")
 
 	port = viper.GetString("PORT")
+	arangodbHost = viper.GetString("DB_HOST")
+	arangodbCred = viper.GetString("DB_CRED")
 }
 
 func main() {
+	conn, err := http.NewConnection(http.ConnectionConfig{
+		Endpoints: []string{"http://" + arangodbCred + "@" + arangodbHost},
+	})
+	if err != nil {
+		log.Fatal("Error creating connection to DB", zap.Error(err))
+	}
+
+	c, err := driver.NewClient(driver.ClientConfig{
+		Connection: conn,
+	})
+	if err != nil {
+		log.Fatal("Error creating driver instance for DB", zap.Error(err))
+	}
+	db, err := c.Database(nil, graph.DB_NAME)
+	if err != nil {
+		log.Fatal("Error getting instance of DB", zap.Error(err))
+	}
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	server := accounts.NewServer(log)
+	server := accounts.NewServer(log, db)
 	s := grpc.NewServer()
 	
 	accountspb.RegisterAccountsServiceServer(s, server)
