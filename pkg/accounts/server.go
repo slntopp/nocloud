@@ -3,24 +3,37 @@ package accounts
 import (
 	"context"
 
+	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
+	"github.com/slntopp/nocloud/pkg/graph"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type AccountsServiceServer struct {
 	accountspb.UnimplementedAccountsServiceServer
+	ctrl graph.AccountsController
 
 	log *zap.Logger
 }
 
-func NewServer(log *zap.Logger) *AccountsServiceServer {
-	return &AccountsServiceServer{log: log}
+func NewServer(log *zap.Logger, db driver.Database) *AccountsServiceServer {
+	accountsCol, _ := db.Collection(nil, graph.ACCOUNTS_COL)
+	credCol, _ := db.Collection(nil, graph.CREDENTIALS_COL)
+
+	return &AccountsServiceServer{log: log, ctrl: graph.NewAccountsController(log.Named("AccountsController"), accountsCol, credCol)}
 }
 
 func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.TokenRequest) (*accountspb.TokenResponse, error) {
 	log := s.log.Named("Token")
 
 	log.Debug("Token request received", zap.Any("request", request))
+	account, ok := s.ctrl.Authorize(ctx, request.Auth.Type, request.Auth.Data...)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "Wrong credentials given")
+	}
+	log.Debug("Authorized user", zap.String("ID", account.ID.String()))
 
 	return &accountspb.TokenResponse{Token: "sometoken"}, nil
 }
