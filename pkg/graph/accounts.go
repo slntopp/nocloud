@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
