@@ -42,9 +42,9 @@ func NewStandardCredentials(username, password string) (Credentials, error) {
 	}, err
 }
 
-// Authorize method for StandardCredentials assumes that args consist only of password stored at 0
+// Authorize method for StandardCredentials assumes that args consist of username and password stored at 0 and 1 accordingly
 func (c *StandardCredentials) Authorize(args ...string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(c.PasswordHash), []byte(args[0]))
+	err := bcrypt.CompareHashAndPassword([]byte(c.PasswordHash), []byte(args[1]))
     return err == nil
 }
 
