@@ -55,3 +55,11 @@ message TokenRequest {
 message TokenResponse {
     string token = 1;
 }
+
+service AccountsService {
+    rpc Token(nocloud.accounts.TokenRequest) returns (nocloud.accounts.TokenResponse);
+    rpc SetCredentials(nocloud.accounts.SetCredentialsRequest) returns (nocloud.accounts.SetCredentialsResponse);
+    rpc Create(nocloud.accounts.CreateRequest) returns (nocloud.accounts.CreateResponse);
+    rpc Get(nocloud.accounts.GetRequest) returns (nocloud.accounts.Account);
+    rpc List(nocloud.accounts.ListRequest) returns (nocloud.accounts.ListResponse);
+}

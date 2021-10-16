@@ -5,18 +5,7 @@ option go_package = "github.com/slntopp/nocloud/pkg/api/apipb";
 
 import "pkg/google/api/annotations.proto";
 
-import "pkg/health/healthpb/health.proto";
 import "pkg/accounts/accountspb/accounts.proto";
-
-service HealthService {
-    rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse) {
-        option (google.api.http) = {
-            post: "/health/probe"
-            body: "*"
-        };
-    };
-};
-
 service AccountsService {
     rpc Token(nocloud.accounts.TokenRequest) returns (nocloud.accounts.TokenResponse) {
         option (google.api.http) = {
@@ -47,3 +36,13 @@ service AccountsService {
         };
     };
 }
+
+import "pkg/health/healthpb/health.proto";
+service HealthService {
+    rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse) {
+        option (google.api.http) = {
+            post: "/health/probe"
+            body: "*"
+        };
+    };
+};
