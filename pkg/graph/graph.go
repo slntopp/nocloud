@@ -172,6 +172,6 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass, rootPass string) {
 	}
 
 	log.Debug("Checking root credentials")
-	r := account_ctrl.Authorize(ctx, "standard", "root", rootPass)
+	_, r := account_ctrl.Authorize(ctx, "standard", "root", rootPass)
 	log.Debug("Result", zap.Bool("Authorized", r))
 }
