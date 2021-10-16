@@ -7,6 +7,7 @@ import (
 
 	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 
 	"go.uber.org/zap"
 
@@ -42,7 +43,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	log.Debug("Authorized user", zap.String("ID", account.ID.String()))
 
 	claims := jwt.MapClaims{}
-	claims["account"] = account.Key
+	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = account.Key
 	claims["exp"] = request.Exp
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

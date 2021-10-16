@@ -77,7 +77,7 @@ func main() {
 	}
 
 	// Create a gRPC server object
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.UnaryInterceptor(JWT_AUTH_INTERCEPTOR),)
 	// Attach the Greeter service to the server
 	apipb.RegisterHealthServiceServer(s, &healthAPI{client: healthClient})
 	apipb.RegisterAccountsServiceServer(s, &accountsAPI{client: accountsClient})

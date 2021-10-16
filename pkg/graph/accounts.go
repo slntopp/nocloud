@@ -96,14 +96,14 @@ func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string,
 	}
 	// Check if could find Credentials
 	if !ok {
-		ctrl.log.Error("Coudn't find credentials", zap.Skip())
+		ctrl.log.Info("Coudn't find credentials", zap.Skip())
 		return Account{}, false
 	}
 
 	ok = credentials.Authorize(args...)
 	// Check if could authorize
 	if !ok {
-		ctrl.log.Error("Coudn't authorize", zap.Skip())
+		ctrl.log.Info("Coudn't authorize", zap.Skip())
 		return Account{}, false
 	}
 
