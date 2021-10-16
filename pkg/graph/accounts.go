@@ -78,32 +78,32 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 	return err
 }
 
-func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string, args ...string) (bool) {
-	
+func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string, args ...string) (Account, bool) {
 	var credentials Credentials;
 	var ok bool;
-
+	ctrl.log.Debug("Authorization request", zap.String("type", auth_type))
 	switch auth_type {
 	case "standard":
 		credentials = &StandardCredentials{Username: args[0]}
 		ok = credentials.Find(ctx, ctrl.col.Database())
 	default:
-		return false
+		return Account{}, false
 	}
-
 	// Check if could find Credentials
 	if !ok {
-		return false
+		ctrl.log.Error("Coudn't find credentials", zap.Skip())
+		return Account{}, false
 	}
 
 	ok = credentials.Authorize(args...)
 	// Check if could authorize
 	if !ok {
-		return false
+		ctrl.log.Error("Coudn't authorize", zap.Skip())
+		return Account{}, false
 	}
 
 	account, ok := credentials.Account(ctx, ctrl.col.Database())
-	ctx = context.WithValue(ctx, "account", account)
-	return ok
+	ctrl.log.Debug("Authorized account", zap.Bool("result", ok), zap.Any("account", account))
+	return account, ok
 }
 
