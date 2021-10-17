@@ -7,8 +7,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var (
+const (
 	CREDENTIALS_COL = "Credentials"
+	CREDENTIALS_EDGE_COL = ACCOUNTS_COL + "2" + CREDENTIALS_COL
 )
 
 type CredentialsLink struct {
