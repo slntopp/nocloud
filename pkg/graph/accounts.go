@@ -110,7 +110,7 @@ func MakeCredentials(credentials accountspb.Credentials) (Credentials, error) {
 	var err error;
 	switch credentials.Type {
 	case "standard":
-		cred, err = NewStandardCredentials(credentials.Data[0], credentials.Data[0])
+		cred, err = NewStandardCredentials(credentials.Data[0], credentials.Data[1])
 	default:
 		return nil, errors.New("Auth type is wrong")
 	}
