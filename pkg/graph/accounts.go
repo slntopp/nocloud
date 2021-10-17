@@ -81,7 +81,7 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 	if !ok {
 		return status.Error(codes.Internal, "Account ID is not given")
 	}
-	if !HasAccess(ctx, ctrl.col.Database(), requestor, acc.ID.String(), 3) {
+	if !HasAccess(ctx, ctrl.col.Database(), requestor, acc.ID.String(), access.ADMIN) {
 		return status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
