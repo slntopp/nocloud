@@ -14,6 +14,7 @@ type Access struct {
 	driver.DocumentMeta
 }
 
+// account - Account Key, node - DocumentID
 func HasAccess(ctx context.Context, db driver.Database, account string, node string, level int32) (bool) {
 	if account == node {
 		return true
@@ -22,6 +23,7 @@ func HasAccess(ctx context.Context, db driver.Database, account string, node str
 	return r >= level
 }
 
+// account - Account Key, node - DocumentID
 func AccessLevel(ctx context.Context, db driver.Database, account string, node string) (bool, int32) {
 	query := `FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node GRAPH @permissions RETURN path.edges[0].level`
 	c, err := db.Query(ctx, query, map[string]interface{}{
