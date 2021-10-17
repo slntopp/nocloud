@@ -94,6 +94,11 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 			Key: c.Type() + "-" + acc.Key, // Ensure only one credentials vertex per type
 		},
 	})
+	if err != nil {
+		return status.Error(codes.Internal, "Couldn't create credentials")
+	}
+	return nil
+}
 
 func MakeCredentials(credentials accountspb.Credentials) (Credentials, error) {
 	var cred Credentials;
