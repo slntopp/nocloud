@@ -6,6 +6,7 @@ import (
 
 	driver "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
 )
 
@@ -127,7 +128,7 @@ func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass, rootPass string) {
 	root.DocumentMeta = meta
 	log.Debug("Got account", zap.Any("result", root))
 
-	ctx := context.WithValue(context.Background(), "account", "Accounts/0")
+	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, "Accounts/0")
 
 	col, _ = db.Collection(ctx, NAMESPACES_COL)
 	rootNSExists, err := col.DocumentExists(ctx, "0")
