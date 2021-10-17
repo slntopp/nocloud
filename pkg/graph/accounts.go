@@ -50,7 +50,7 @@ func (ctrl *AccountsController) Create(ctx context.Context, title string) (Accou
 }
 
 // Grant account access to namespace
-func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int8) (error) {
+func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32) (error) {
 	_, err := edge.CreateDocument(ctx, Access{
 		From: acc.ID,
 		To: ns.ID,
