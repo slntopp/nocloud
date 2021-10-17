@@ -27,7 +27,7 @@ func AccessLevel(ctx context.Context, db driver.Database, account string, node s
 	c, err := db.Query(ctx, query, map[string]interface{}{
 		"account": account,
 		"node": node,
-		"permissions": "Permissions",
+		"permissions": PERMISSIONS_GRAPH.Name,
 	})
 	if err != nil {
 		return false, 0
