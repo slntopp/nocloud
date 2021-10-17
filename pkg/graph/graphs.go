@@ -2,7 +2,6 @@ package graph
 
 type NoCloudGraphSchema struct {
 	Name string
-	Collections []string
 	Edges [][]string
 }
 
