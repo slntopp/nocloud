@@ -4,10 +4,12 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
+	"go.uber.org/zap"
 )
 
-var (
+const (
 	NAMESPACES_COL = "Namespaces"
+	NS2ACC = NAMESPACES_COL + "2" + ACCOUNTS_COL
 )
 
 type Namespace struct {
@@ -17,9 +19,12 @@ type Namespace struct {
 
 type NamespacesController struct {
 	col driver.Collection
+	log *zap.Logger
 }
 
-// func Create(title string) (string, error) {}
+func NewNamespacesController(log *zap.Logger, col driver.Collection) NamespacesController {
+	return NamespacesController{log: log, col: col}
+}
 
 func (ctrl *NamespacesController) Get(ctx context.Context, id string) (Namespace, error) {
 	var r Namespace
