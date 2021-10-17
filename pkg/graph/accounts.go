@@ -62,6 +62,19 @@ func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, n
 	return err
 }
 
+// Grant namespace access to account
+func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32) (error) {
+	_, err := edge.CreateDocument(ctx, Access{
+		From: ns.ID,
+		To: acc.ID,
+		Level: level,
+		DocumentMeta: driver.DocumentMeta {
+			Key: acc.Key + "-" + ns.Key,
+		},
+	})
+	return err
+}
+
 // Set Account Credentials, ensure account has only one credentials document linked per credentials type
 func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c Credentials) (error) {
 	requestor, ok := ctx.Value("account").(string)
