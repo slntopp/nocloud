@@ -25,7 +25,7 @@ func HasAccess(ctx context.Context, db driver.Database, account string, node str
 func AccessLevel(ctx context.Context, db driver.Database, account string, node string) (bool, int32) {
 	query := `FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node GRAPH @permissions RETURN path.edges[0].level`
 	c, err := db.Query(ctx, query, map[string]interface{}{
-		"account": account,
+		"account": ACCOUNTS_COL + "/" + account,
 		"node": node,
 		"permissions": PERMISSIONS_GRAPH.Name,
 	})
