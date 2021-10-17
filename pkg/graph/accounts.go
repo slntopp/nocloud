@@ -94,7 +94,18 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 			Key: c.Type() + "-" + acc.Key, // Ensure only one credentials vertex per type
 		},
 	})
-	return err
+
+func MakeCredentials(credentials accountspb.Credentials) (Credentials, error) {
+	var cred Credentials;
+	var err error;
+	switch credentials.Type {
+	case "standard":
+		cred, err = NewStandardCredentials(credentials.Data[0], credentials.Data[0])
+	default:
+		return nil, errors.New("Auth type is wrong")
+	}
+
+	return cred, err
 }
 
 func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string, args ...string) (Account, bool) {
