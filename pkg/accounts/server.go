@@ -19,7 +19,9 @@ import (
 
 type AccountsServiceServer struct {
 	accountspb.UnimplementedAccountsServiceServer
+	db driver.Database
 	ctrl graph.AccountsController
+	ns_ctrl graph.NamespacesController
 
 	log *zap.Logger
 	SIGNING_KEY []byte
@@ -28,8 +30,18 @@ type AccountsServiceServer struct {
 func NewServer(log *zap.Logger, db driver.Database) *AccountsServiceServer {
 	accountsCol, _ := db.Collection(nil, graph.ACCOUNTS_COL)
 	credCol, _ := db.Collection(nil, graph.CREDENTIALS_COL)
+	nsCol, _ := db.Collection(nil, graph.NAMESPACES_COL)
 
-	return &AccountsServiceServer{log: log, ctrl: graph.NewAccountsController(log.Named("AccountsController"), accountsCol, credCol)}
+	return &AccountsServiceServer{
+		log: log, db: db, 
+		ctrl: graph.NewAccountsController(
+			log.Named("AccountsController"), accountsCol, credCol,
+		),
+		ns_ctrl: graph.NewNamespacesController(
+			log.Named("NamespacesController"), nsCol,
+		),
+	}
+}
 }
 
 func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.TokenRequest) (*accountspb.TokenResponse, error) {
