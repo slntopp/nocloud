@@ -9,8 +9,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var (
+const (
 	ACCOUNTS_COL = "Accounts"
+	ACC2NS = ACCOUNTS_COL + "2" + NAMESPACES_COL
 )
 
 type Account struct {
