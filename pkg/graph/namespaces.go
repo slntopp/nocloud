@@ -33,10 +33,10 @@ func (ctrl *NamespacesController) Get(ctx context.Context, id string) (Namespace
 }
 
 func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Namespace, error) {
-	acc := Namespace{
+	ns := Namespace{
 		Title: title,
 	}
-	meta, err := ctrl.col.CreateDocument(ctx, acc)
-	acc.DocumentMeta = meta
-	return acc, err
+	meta, err := ctrl.col.CreateDocument(ctx, ns)
+	ns.DocumentMeta = meta
+	return ns, err
 }
