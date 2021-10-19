@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"go.uber.org/zap"
 )
 
@@ -37,6 +39,19 @@ func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Nam
 		Title: title,
 	}
 	meta, err := ctrl.col.CreateDocument(ctx, ns)
+	if err != nil {
+		return Namespace{}, err
+	}
+	
 	ns.DocumentMeta = meta
+
+	acc := Account{
+		DocumentMeta: driver.DocumentMeta {
+			ID: driver.NewDocumentID(ACCOUNTS_COL, ctx.Value(nocloud.NoCloudAccount).(string)),
+		},
+	}
+
+	edge, _ := ctrl.col.Database().Collection(ctx, ACC2NS)
+	err = acc.LinkNamespace(ctx, edge, ns, access.ADMIN)
 	return ns, err
 }
