@@ -20,7 +20,7 @@ var (
 	log 			*zap.Logger
 
 	healthHost 		string
-	accountsHost 	string
+	registryHost 	string
 
 	SIGNING_KEY		[]byte
 )
@@ -40,12 +40,12 @@ func init() {
 
 	viper.AutomaticEnv()
 	viper.SetDefault("HEALTH_HOST", "health:8080")
-	viper.SetDefault("ACCOUNTS_HOST", "accounts:8080")
+	viper.SetDefault("REGISTRY_HOST", "accounts:8080")
 	
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	healthHost 		= viper.GetString("HEALTH_HOST")
-	accountsHost 	= viper.GetString("ACCOUNTS_HOST")
+	registryHost 	= viper.GetString("REGISTRY_HOST")
 
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
 }
@@ -63,8 +63,8 @@ func main() {
 	}
 	healthClient := healthpb.NewHealthServiceClient(healthConn)
 
-	log.Info("Connecting to AccountsService", zap.String("host", accountsHost))
-	accountsConn, err := grpc.Dial(accountsHost, grpc.WithInsecure())
+	log.Info("Connecting to AccountsService", zap.String("host", registryHost))
+	accountsConn, err := grpc.Dial(registryHost, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
