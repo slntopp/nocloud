@@ -99,7 +99,7 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 		CheckAndRegisterGraph(log, db, graph)
 	}
 
-	col, _ := db.Collection(nil, "Accounts")
+	col, _ := db.Collection(nil, ACCOUNTS_COL)
 	account_ctrl := AccountsController{
 		col: col,
 	}
@@ -128,7 +128,7 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 	root.DocumentMeta = meta
 	log.Debug("Got account", zap.Any("result", root))
 
-	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, "Accounts/0")
+	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, driver.NewDocumentID(ACCOUNTS_COL, "0"))
 
 	col, _ = db.Collection(ctx, NAMESPACES_COL)
 	rootNSExists, err := col.DocumentExists(ctx, "0")
