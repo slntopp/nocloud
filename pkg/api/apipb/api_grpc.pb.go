@@ -5,6 +5,7 @@ package apipb
 import (
 	context "context"
 	accountspb "github.com/slntopp/nocloud/pkg/accounts/accountspb"
+	namespacespb "github.com/slntopp/nocloud/pkg/accounts/namespacespb"
 	healthpb "github.com/slntopp/nocloud/pkg/health/healthpb"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -240,6 +241,92 @@ var AccountsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "List",
 			Handler:    _AccountsService_List_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/api/apipb/api.proto",
+}
+
+// NamespacesServiceClient is the client API for NamespacesService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type NamespacesServiceClient interface {
+	Create(ctx context.Context, in *namespacespb.CreateRequest, opts ...grpc.CallOption) (*namespacespb.CreateResponse, error)
+}
+
+type namespacesServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewNamespacesServiceClient(cc grpc.ClientConnInterface) NamespacesServiceClient {
+	return &namespacesServiceClient{cc}
+}
+
+func (c *namespacesServiceClient) Create(ctx context.Context, in *namespacespb.CreateRequest, opts ...grpc.CallOption) (*namespacespb.CreateResponse, error) {
+	out := new(namespacespb.CreateResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.NamespacesService/Create", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// NamespacesServiceServer is the server API for NamespacesService service.
+// All implementations must embed UnimplementedNamespacesServiceServer
+// for forward compatibility
+type NamespacesServiceServer interface {
+	Create(context.Context, *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error)
+	mustEmbedUnimplementedNamespacesServiceServer()
+}
+
+// UnimplementedNamespacesServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedNamespacesServiceServer struct {
+}
+
+func (UnimplementedNamespacesServiceServer) Create(context.Context, *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedNamespacesServiceServer) mustEmbedUnimplementedNamespacesServiceServer() {}
+
+// UnsafeNamespacesServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to NamespacesServiceServer will
+// result in compilation errors.
+type UnsafeNamespacesServiceServer interface {
+	mustEmbedUnimplementedNamespacesServiceServer()
+}
+
+func RegisterNamespacesServiceServer(s grpc.ServiceRegistrar, srv NamespacesServiceServer) {
+	s.RegisterService(&NamespacesService_ServiceDesc, srv)
+}
+
+func _NamespacesService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(namespacespb.CreateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NamespacesServiceServer).Create(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.NamespacesService/Create",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NamespacesServiceServer).Create(ctx, req.(*namespacespb.CreateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// NamespacesService_ServiceDesc is the grpc.ServiceDesc for NamespacesService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var NamespacesService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "nocloud.api.NamespacesService",
+	HandlerType: (*NamespacesServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Create",
+			Handler:    _NamespacesService_Create_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -37,6 +37,16 @@ service AccountsService {
     };
 }
 
+import "pkg/accounts/namespacespb/namespaces.proto";
+service NamespacesService {
+    rpc Create(nocloud.namespaces.CreateRequest) returns (nocloud.namespaces.CreateResponse) {
+        option (google.api.http) = {
+            post: "/namespaces"
+            body: "*"
+        };
+    };
+}
+
 import "pkg/health/healthpb/health.proto";
 service HealthService {
     rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse) {

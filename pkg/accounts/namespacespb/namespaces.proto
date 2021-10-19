@@ -1,0 +1,21 @@
+syntax = "proto3";
+package nocloud.namespaces;
+
+option go_package = "github.com/slntopp/nocloud/pkg/accounts/namespacespb";
+
+message CreateRequest {
+    string title = 1;
+}
+
+message CreateResponse {
+    string id = 1;
+}
+
+message Namespace {
+    string id = 1;
+    string title = 2;
+}
+
+service NamespacesService {
+    rpc Create(nocloud.namespaces.CreateRequest) returns (nocloud.namespaces.CreateResponse);
+}
