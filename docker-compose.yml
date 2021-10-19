@@ -4,6 +4,9 @@ services:
     image: slntopp/nocloud/apiserver:latest
     environment:
       HEALTH_HOST: health:8080
+    ports:
+      - 8000:8000 # REST-API
+      - 8080:8080 # gRPC-API
   registry:
     image: slntopp/nocloud/accounts:latest
     environment:
