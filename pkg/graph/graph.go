@@ -61,9 +61,9 @@ func CheckAndRegisterGraph(log *zap.Logger, db driver.Database, graph NoCloudGra
 	}
 }
 
-func InitDB(log *zap.Logger, dbHost, dbPort, dbUser, dbPass, rootPass string) {
+func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 	conn, err := http.NewConnection(http.ConnectionConfig{
-		Endpoints: []string{"http://" + dbUser + ":" + dbPass + "@" + dbHost + ":" + dbPort},
+		Endpoints: []string{"http://" + dbCred + "@" + dbHost},
 	})
 	if err != nil {
 		log.Fatal("Error creating connection to DB", zap.Error(err))
