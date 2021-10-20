@@ -148,3 +148,76 @@ func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string,
 	return account, ok
 }
 
+func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
+	exists, err := ctrl.col.DocumentExists(nil, "0")
+	if err != nil {
+		return err
+	}
+
+	var meta driver.DocumentMeta
+	if !exists {
+		meta, err = ctrl.col.CreateDocument(nil, Account{ 
+			Title: "nocloud",
+			DocumentMeta: driver.DocumentMeta { Key: "0" },
+		})
+		if err != nil {
+			return err
+		}
+		ctrl.log.Debug("Created root Account", zap.Any("result", meta))
+	}
+	var root Account
+	meta, err = ctrl.col.ReadDocument(nil, "0", &root)
+	if err != nil {
+		return err
+	}
+	root.DocumentMeta = meta
+
+	ns_col, _ := ctrl.col.Database().Collection(nil, NAMESPACES_COL)
+	exists, err = ns_col.DocumentExists(nil, "0")
+	if !exists {
+		meta, err := ns_col.CreateDocument(nil, Namespace{ 
+			Title: "platform",
+			DocumentMeta: driver.DocumentMeta { Key: "0" },
+		})
+		if err != nil {
+			return err
+		}
+		ctrl.log.Debug("Created root Namespace", zap.Any("result", meta))
+	}
+
+	var rootNS Namespace
+	meta, err = ns_col.ReadDocument(nil, "0", &rootNS)
+	if err != nil {
+		return err
+	}
+	rootNS.DocumentMeta = meta
+
+	edge_col, _ := ctrl.col.Database().Collection(nil, ACC2NS)
+	exists, err = edge_col.DocumentExists(nil, "0-0")
+	if !exists {
+		err = root.LinkNamespace(nil, edge_col, rootNS, 4)
+		if err != nil {
+			return err
+		}
+	}
+
+	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, "0")
+	cred_edge_col, _ := ctrl.col.Database().Collection(nil, ACC2CRED)
+	cred, err := NewStandardCredentials("nocloud", passwd)
+	if err != nil {
+		return err
+	}
+
+	exists, err = cred_edge_col.DocumentExists(nil, "standard-0")
+	if !exists {
+		err = ctrl.SetCredentials(ctx, root, cred_edge_col, cred)
+		if err != nil {
+			return err
+		}
+	}
+	_, r := ctrl.Authorize(ctx, "standard", "nocloud", passwd)
+	if !r {
+		return errors.New("Cannot authorize nocloud")
+	}
+	return nil
+}
