@@ -140,3 +140,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 
 	return res, nil
 }
+
+func (s *AccountsServiceServer) EnsureRootExists(passwd string) (error) {
+	return s.ctrl.EnsureRootExists(passwd)
+}

@@ -22,6 +22,7 @@ var (
 
 	arangodbHost 	string
 	arangodbCred 	string
+	nocloudRootPass string
 
 	SIGNING_KEY 	[]byte
 )
@@ -38,13 +39,15 @@ func init() {
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
+	viper.SetDefault("NOCLOUD_ROOT_PASSWORD", "secret")
 
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	port = viper.GetString("PORT")
 
-	arangodbHost = viper.GetString("DB_HOST")
-	arangodbCred = viper.GetString("DB_CRED")
+	arangodbHost 	= viper.GetString("DB_HOST")
+	arangodbCred 	= viper.GetString("DB_CRED")
+	nocloudRootPass = viper.GetString("NOCLOUD_ROOT_PASSWORD")
 
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
 }
@@ -75,6 +78,8 @@ func main() {
 
 	server := accounts.NewServer(log, db)
 	server.SIGNING_KEY = SIGNING_KEY
+	server.EnsureRootExists(nocloudRootPass)
+
 	s := grpc.NewServer()
 	
 	accountspb.RegisterAccountsServiceServer(s, server)
