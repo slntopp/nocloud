@@ -17,6 +17,7 @@ import (
 const (
 	ACCOUNTS_COL = "Accounts"
 	ACC2NS = ACCOUNTS_COL + "2" + NAMESPACES_COL
+	ACC2CRED = ACCOUNTS_COL + "2" + CREDENTIALS_COL
 )
 
 type Account struct {
