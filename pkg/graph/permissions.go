@@ -16,7 +16,7 @@ type Access struct {
 
 // account - Account Key, node - DocumentID
 func HasAccess(ctx context.Context, db driver.Database, account string, node string, level int32) (bool) {
-	if account == node {
+	if (ACCOUNTS_COL + "/" + account) == node {
 		return true
 	}
 	_, r := AccessLevel(ctx, db, account, node)
