@@ -1,28 +1,51 @@
 version: "3.8"
 services:
+  health:
+    container_name: health-service
+    image: slntopp/nocloud/health:latest
   apiserver:
+    container_name: apiserver
     image: slntopp/nocloud/apiserver:latest
     environment:
       HEALTH_HOST: health:8080
     ports:
       - 8000:8000 # REST-API
       - 8080:8080 # gRPC-API
+    links:
+      - registry
+      - health
   registry:
-    image: slntopp/nocloud/accounts:latest
+    container_name: registry
+    image: slntopp/nocloud/registry:latest
     environment:
       DB_HOST: db:8529
       DB_CRED: root:openSesame
       SIGNING_KEY: supersecretaaarhgreplaceme
-  health:
-    image: slntopp/nocloud/health:latest
+    depends_on:
+      - db
+    networks:
+      - default
+      - arangodb
+    links:
+      - db
+
   db:
-    image: arangodb/arangodb:3.8.1
+    container_name: database-master
+    image: arangodb/arangodb:latest
     environment:
       ARANGO_ROOT_PASSWORD: openSesame
     ports:
       - 8529:8529
     volumes:
+      - data:/var/lib/arangodb3
+      - ./database/schemes/:/docker-entrypoint-initdb.d/dumps/nocloud/
+    networks:
       - arangodb
 
-volumes:
+networks:
+  default:
   arangodb:
+    driver: bridge
+
+volumes:
+  data:
