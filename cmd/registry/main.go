@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
@@ -53,23 +54,35 @@ func init() {
 }
 
 func main() {
+	log.Info("Setting up DB Connection")
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: []string{"http://" + arangodbCred + "@" + arangodbHost},
 	})
 	if err != nil {
 		log.Fatal("Error creating connection to DB", zap.Error(err))
 	}
+	log.Debug("Instantiated DB connection", zap.Any("conn", conn))
 
+	log.Info("Setting up DB client")
 	c, err := driver.NewClient(driver.ClientConfig{
 		Connection: conn,
 	})
 	if err != nil {
 		log.Fatal("Error creating driver instance for DB", zap.Error(err))
 	}
+	log.Debug("Instantiated DB client", zap.Any("client", c))
+
+	db_connect_attempts := 0
+	db_connect:
+	log.Info("Trying to connect to DB")
 	db, err := c.Database(nil, graph.DB_NAME)
 	if err != nil {
-		log.Fatal("Error getting instance of DB", zap.Error(err))
+		db_connect_attempts++
+		log.Error("Failed to connect DB", zap.Error(err), zap.Int("attempts", db_connect_attempts), zap.Int("next_attempt", db_connect_attempts * 5))
+		time.Sleep(time.Duration(db_connect_attempts * 5) * time.Second)
+		goto db_connect
 	}
+	log.Info("DB connection established")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
