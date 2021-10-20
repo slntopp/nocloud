@@ -101,7 +101,7 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 
 	col, _ := db.Collection(nil, ACCOUNTS_COL)
 	account_ctrl := AccountsController{
-		col: col,
+		col: col, log: log,
 	}
 	rootExists, err := col.DocumentExists(nil, "0")
 	if err != nil {
