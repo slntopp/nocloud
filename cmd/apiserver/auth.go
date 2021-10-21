@@ -69,6 +69,7 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Debug("Validated token", zap.Any("claims", token))
 
 	account := token[nocloud.NOCLOUD_ACCOUNT_CLAIM].(string)
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account)
