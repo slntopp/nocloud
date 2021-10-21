@@ -75,6 +75,6 @@ func (ctrl *NamespacesController) Link(ctx context.Context, acc Account, ns Name
 }
 
 func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Namespace, access int32) (error) {
-	edge, _ := ctrl.col.Database().Collection(ctx, ACC2NS)
+	edge, _ := ctrl.col.Database().Collection(ctx, NS2ACC)
 	return acc.JoinNamespace(ctx, edge, ns, access)
 }
