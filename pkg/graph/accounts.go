@@ -52,6 +52,9 @@ func NewAccountsController(log *zap.Logger, col, cred driver.Collection) Account
 }
 
 func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, error) {
+	if id == "me" {
+		id = ctx.Value(nocloud.NoCloudAccount).(string)
+	}
 	var r Account
 	_, err := ctrl.col.ReadDocument(nil, id, &r)
 	return r, err

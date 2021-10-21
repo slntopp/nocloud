@@ -66,7 +66,10 @@ func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Nam
 		},
 	}
 
+	return ns, ctrl.Link(ctx, acc, ns, access.ADMIN)
+}
+
+func (ctrl *NamespacesController) Link(ctx context.Context, acc Account, ns Namespace, access int32) (error) {
 	edge, _ := ctrl.col.Database().Collection(ctx, ACC2NS)
-	err = acc.LinkNamespace(ctx, edge, ns, access.ADMIN)
-	return ns, err
+	return acc.LinkNamespace(ctx, edge, ns, access)
 }
