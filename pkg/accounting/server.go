@@ -3,9 +3,6 @@ package accounting
 import (
 	"context"
 
-	"github.com/arangodb/go-driver"
-
-	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 
 	"go.uber.org/zap"
@@ -14,23 +11,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
-
-
-func NewServer(log *zap.Logger, db driver.Database) *AccountsServiceServer {
-	accountsCol, _ := db.Collection(nil, graph.ACCOUNTS_COL)
-	credCol, _ := db.Collection(nil, graph.CREDENTIALS_COL)
-	nsCol, _ := db.Collection(nil, graph.NAMESPACES_COL)
-
-	return &AccountsServiceServer{
-		log: log, db: db, 
-		ctrl: graph.NewAccountsController(
-			log.Named("AccountsController"), accountsCol, credCol,
-		),
-		ns_ctrl: graph.NewNamespacesController(
-			log.Named("NamespacesController"), nsCol,
-		),
-	}
-}
 
 func ValidateMetadata(ctx context.Context, log *zap.Logger) (context.Context, error) {
 	md, ok := metadata.FromIncomingContext(ctx)

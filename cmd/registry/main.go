@@ -89,7 +89,7 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	server := accounts.NewServer(log, db)
+	server := accounts.NewAccountsServer(log, db)
 	server.SIGNING_KEY = SIGNING_KEY
 	server.EnsureRootExists(nocloudRootPass)
 
