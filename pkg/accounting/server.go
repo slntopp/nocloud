@@ -1,11 +1,11 @@
-package accounts
+package accounting
 
 import (
 	"context"
 
 	"github.com/arangodb/go-driver"
 
-	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
+	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 

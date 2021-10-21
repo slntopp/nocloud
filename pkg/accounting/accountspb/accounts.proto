@@ -1,7 +1,7 @@
 syntax = "proto3";
 package nocloud.accounts;
 
-option go_package = "github.com/slntopp/nocloud/pkg/accounts/accountspb";
+option go_package = "github.com/slntopp/nocloud/pkg/accounting/accountspb";
 
 message Credentials {
     string type = 1;

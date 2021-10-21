@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 
-	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
+	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/api/apipb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"

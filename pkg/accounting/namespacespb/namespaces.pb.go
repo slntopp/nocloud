@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.27.1
 // 	protoc        v3.18.1
-// source: pkg/accounts/namespacespb/namespaces.proto
+// source: pkg/accounting/namespacespb/namespaces.proto
 
 package namespacespb
 

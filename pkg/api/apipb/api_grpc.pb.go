@@ -4,8 +4,8 @@ package apipb
 
 import (
 	context "context"
-	accountspb "github.com/slntopp/nocloud/pkg/accounts/accountspb"
-	namespacespb "github.com/slntopp/nocloud/pkg/accounts/namespacespb"
+	accountspb "github.com/slntopp/nocloud/pkg/accounting/accountspb"
+	namespacespb "github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	healthpb "github.com/slntopp/nocloud/pkg/health/healthpb"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"

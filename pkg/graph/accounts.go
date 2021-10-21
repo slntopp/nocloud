@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
+	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"go.uber.org/zap"

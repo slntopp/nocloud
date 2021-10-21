@@ -5,7 +5,7 @@ option go_package = "github.com/slntopp/nocloud/pkg/api/apipb";
 
 import "pkg/google/api/annotations.proto";
 
-import "pkg/accounts/accountspb/accounts.proto";
+import "pkg/accounting/accountspb/accounts.proto";
 service AccountsService {
     rpc Token(nocloud.accounts.TokenRequest) returns (nocloud.accounts.TokenResponse) {
         option (google.api.http) = {
@@ -37,7 +37,7 @@ service AccountsService {
     };
 }
 
-import "pkg/accounts/namespacespb/namespaces.proto";
+import "pkg/accounting/namespacespb/namespaces.proto";
 service NamespacesService {
     rpc Create(nocloud.namespaces.CreateRequest) returns (nocloud.namespaces.CreateResponse) {
         option (google.api.http) = {

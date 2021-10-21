@@ -241,5 +241,5 @@ var AccountsService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "pkg/accounts/accountspb/accounts.proto",
+	Metadata: "pkg/accounting/accountspb/accounts.proto",
 }

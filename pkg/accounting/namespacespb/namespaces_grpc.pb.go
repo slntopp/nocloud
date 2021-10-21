@@ -97,5 +97,5 @@ var NamespacesService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "pkg/accounts/namespacespb/namespaces.proto",
+	Metadata: "pkg/accounting/namespacespb/namespaces.proto",
 }

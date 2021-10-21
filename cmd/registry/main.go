@@ -12,8 +12,8 @@ import (
 	"google.golang.org/grpc"
 
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
-	"github.com/slntopp/nocloud/pkg/accounts"
-	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
+	accounts "github.com/slntopp/nocloud/pkg/accounting"
+	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/graph"
 )
 

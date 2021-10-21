@@ -7,8 +7,8 @@
 package apipb
 
 import (
-	accountspb "github.com/slntopp/nocloud/pkg/accounts/accountspb"
-	namespacespb "github.com/slntopp/nocloud/pkg/accounts/namespacespb"
+	accountspb "github.com/slntopp/nocloud/pkg/accounting/accountspb"
+	namespacespb "github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	_ "github.com/slntopp/nocloud/pkg/google/api"
 	healthpb "github.com/slntopp/nocloud/pkg/health/healthpb"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"

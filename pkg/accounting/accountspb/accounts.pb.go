@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.27.1
 // 	protoc        v3.18.1
-// source: pkg/accounts/accountspb/accounts.proto
+// source: pkg/accounting/accountspb/accounts.proto
 
 package accountspb
 

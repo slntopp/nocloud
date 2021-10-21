@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/viper"
 
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
-	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
+	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	apipb "github.com/slntopp/nocloud/pkg/api/apipb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"go.uber.org/zap"

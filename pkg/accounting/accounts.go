@@ -1,10 +1,10 @@
-package accounts
+package accounting
 
 import (
 	"context"
 
 	jwt "github.com/dgrijalva/jwt-go"
-	"github.com/slntopp/nocloud/pkg/accounts/accountspb"
+	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
