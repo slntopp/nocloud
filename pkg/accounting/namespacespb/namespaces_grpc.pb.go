@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type NamespacesServiceClient interface {
 	Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error)
 	Join(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (*JoinResponse, error)
+	Link(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*LinkResponse, error)
 }
 
 type namespacesServiceClient struct {
@@ -48,12 +49,22 @@ func (c *namespacesServiceClient) Join(ctx context.Context, in *JoinRequest, opt
 	return out, nil
 }
 
+func (c *namespacesServiceClient) Link(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*LinkResponse, error) {
+	out := new(LinkResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.namespaces.NamespacesService/Link", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NamespacesServiceServer is the server API for NamespacesService service.
 // All implementations must embed UnimplementedNamespacesServiceServer
 // for forward compatibility
 type NamespacesServiceServer interface {
 	Create(context.Context, *CreateRequest) (*CreateResponse, error)
 	Join(context.Context, *JoinRequest) (*JoinResponse, error)
+	Link(context.Context, *LinkRequest) (*LinkResponse, error)
 	mustEmbedUnimplementedNamespacesServiceServer()
 }
 
@@ -66,6 +77,9 @@ func (UnimplementedNamespacesServiceServer) Create(context.Context, *CreateReque
 }
 func (UnimplementedNamespacesServiceServer) Join(context.Context, *JoinRequest) (*JoinResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Join not implemented")
+}
+func (UnimplementedNamespacesServiceServer) Link(context.Context, *LinkRequest) (*LinkResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Link not implemented")
 }
 func (UnimplementedNamespacesServiceServer) mustEmbedUnimplementedNamespacesServiceServer() {}
 
@@ -116,6 +130,24 @@ func _NamespacesService_Join_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NamespacesService_Link_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LinkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NamespacesServiceServer).Link(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.namespaces.NamespacesService/Link",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NamespacesServiceServer).Link(ctx, req.(*LinkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NamespacesService_ServiceDesc is the grpc.ServiceDesc for NamespacesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -130,6 +162,10 @@ var NamespacesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Join",
 			Handler:    _NamespacesService_Join_Handler,
+		},
+		{
+			MethodName: "Link",
+			Handler:    _NamespacesService_Link_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

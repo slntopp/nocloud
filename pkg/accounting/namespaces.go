@@ -107,3 +107,36 @@ func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacesp
 	}
 	return &namespacespb.JoinResponse{Result: true}, nil
 }
+
+func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacespb.LinkRequest) (*namespacespb.LinkResponse, error) {
+	log := s.log.Named("LinkNamespace")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	ctx, err := ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+
+	acc, err := s.acc_ctrl.Get(ctx, request.Account)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+	ns, err := s.ctrl.Get(ctx, request.Namespace)
+	if err != nil {
+		s.log.Debug("Error getting namespace", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Namespace not found")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID.String(), 3)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
+	}
+
+	err = s.ctrl.Link(ctx, acc, ns, *request.Access)
+	if err != nil {
+		s.log.Debug("Error while linking account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while linking account to namespace")
+	}
+	return &namespacespb.LinkResponse{Result: true}, nil
+}

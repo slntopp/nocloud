@@ -44,3 +44,9 @@ func (ns *namespacesAPI) Join(ctx context.Context, request *namespacespb.JoinReq
 	ctx = AddCrossServiceMetadata(ctx)
 	return ns.client.Join(ctx, request)
 }
+
+func (ns *namespacesAPI) Link(ctx context.Context, request *namespacespb.LinkRequest) (*namespacespb.LinkResponse, error) {
+	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	ctx = AddCrossServiceMetadata(ctx)
+	return ns.client.Link(ctx, request)
+}

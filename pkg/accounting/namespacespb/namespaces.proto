@@ -41,7 +41,18 @@ message JoinResponse {
     bool result = 1;
 }
 
+message LinkRequest {
+    string namespace = 1;
+    string account = 2;
+    optional int32 access = 3; // Account access level to namespace
+}
+
+message LinkResponse {
+    bool result = 1;
+}
+
 service NamespacesService {
     rpc Create(nocloud.namespaces.CreateRequest) returns (nocloud.namespaces.CreateResponse);
     rpc Join(nocloud.namespaces.JoinRequest) returns (nocloud.namespaces.JoinResponse);
+    rpc Link(nocloud.namespaces.LinkRequest) returns (nocloud.namespaces.LinkResponse);
 }

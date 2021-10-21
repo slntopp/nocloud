@@ -66,6 +66,12 @@ service NamespacesService {
             body: "*"
         };
     };
+    rpc Link(nocloud.namespaces.LinkRequest) returns (nocloud.namespaces.LinkResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/link"
+            body: "*"
+        };
+    };
 }
 
 import "pkg/health/healthpb/health.proto";
