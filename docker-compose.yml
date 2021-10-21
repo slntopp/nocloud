@@ -11,6 +11,7 @@ services:
     environment:
       HEALTH_HOST: health:8080
       REGISTRY_HOST: registry:8080
+      SIGNING_KEY: supersecretaaarhgreplaceme
     ports:
       - 8000:8000 # REST-API
       - 8080:8080 # gRPC-API
