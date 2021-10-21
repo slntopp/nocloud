@@ -23,9 +23,9 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
-	inflog "github.com/infinimesh/infinimesh/pkg/log"
 	"github.com/slntopp/nocloud/pkg/health"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 )
 
 var (
@@ -34,19 +34,19 @@ var (
 )
 
 func init() {
-	logger, err := inflog.NewProdOrDev()
-	if err != nil {
-		panic(err)
-	}
-	log = logger
-
 	viper.AutomaticEnv()
+	log = nocloud.NewLogger()
+
 	viper.SetDefault("PORT", "8080")
 
 	port = viper.GetString("PORT")
 }
 
 func main() {
+	defer func() {
+		_ = log.Sync()
+	}()
+
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))

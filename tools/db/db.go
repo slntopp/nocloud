@@ -16,8 +16,8 @@ limitations under the License.
 package main
 
 import (
-	inflog "github.com/infinimesh/infinimesh/pkg/log"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -34,13 +34,9 @@ var (
 )
 
 func init() {
-	logger, err := inflog.NewProdOrDev()
-	if err != nil {
-		panic(err)
-	}
-	log = logger
-
 	viper.AutomaticEnv()
+	log = nocloud.NewLogger()
+
 	viper.SetDefault("DB_HOST", "localhost")
 	viper.SetDefault("DB_PORT", "8529")
 	viper.SetDefault("DB_USER", "root")
@@ -57,5 +53,9 @@ func init() {
 }
 
 func main() {
+	defer func() {
+		_ = log.Sync()
+	}()
+
 	graph.InitDB(log, dbHost + ":" + dbPort, dbUser + ":" + dbPass, rootPass)
 }

@@ -26,11 +26,11 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
-	inflog "github.com/infinimesh/infinimesh/pkg/log"
 	"github.com/slntopp/nocloud/pkg/accounting"
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 )
 
 var (
@@ -45,13 +45,9 @@ var (
 )
 
 func init() {
-	logger, err := inflog.NewProdOrDev()
-	if err != nil {
-		panic(err)
-	}
-	log = logger
-
 	viper.AutomaticEnv()
+	log = nocloud.NewLogger()
+	
 	viper.SetDefault("PORT", "8080")
 
 	viper.SetDefault("DB_HOST", "db:8529")
@@ -70,6 +66,10 @@ func init() {
 }
 
 func main() {
+	defer func() {
+		_ = log.Sync()
+	}()
+
 	log.Info("Setting up DB Connection")
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: []string{"http://" + arangodbCred + "@" + arangodbHost},

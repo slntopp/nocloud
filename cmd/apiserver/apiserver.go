@@ -23,11 +23,11 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/viper"
 
-	inflog "github.com/infinimesh/infinimesh/pkg/log"
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	apipb "github.com/slntopp/nocloud/pkg/api/apipb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -48,13 +48,9 @@ func NewServer() *server {
 }
 
 func init() {
-	logger, err := inflog.NewProdOrDev()
-	if err != nil {
-		panic(err)
-	}
-	log = logger
-
 	viper.AutomaticEnv()
+	log = nocloud.NewLogger()
+
 	viper.SetDefault("HEALTH_HOST", "health:8080")
 	viper.SetDefault("REGISTRY_HOST", "accounts:8080")
 	
@@ -67,7 +63,6 @@ func init() {
 }
 
 func main() {
-
 	defer func() {
 		_ = log.Sync()
 	}()
