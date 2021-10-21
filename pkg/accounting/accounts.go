@@ -66,7 +66,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
 	log := s.log.Named("CreateAccount")
-	log.Debug("Create request received", zap.Any("request", request),  zap.Any("context", ctx))
+	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
 	ctx, err := ValidateMetadata(ctx, log)
 	if err != nil {
 		return nil, err
