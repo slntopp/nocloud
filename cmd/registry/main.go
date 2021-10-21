@@ -27,8 +27,9 @@ import (
 	"google.golang.org/grpc"
 
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
-	accounts "github.com/slntopp/nocloud/pkg/accounting"
+	"github.com/slntopp/nocloud/pkg/accounting"
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
+	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	"github.com/slntopp/nocloud/pkg/graph"
 )
 
@@ -104,13 +105,16 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	server := accounts.NewAccountsServer(log, db)
-	server.SIGNING_KEY = SIGNING_KEY
-	server.EnsureRootExists(nocloudRootPass)
-
 	s := grpc.NewServer()
+
+	accounts_server := accounting.NewAccountsServer(log, db)
+	accounts_server.SIGNING_KEY = SIGNING_KEY
+	accounts_server.EnsureRootExists(nocloudRootPass)
+	accountspb.RegisterAccountsServiceServer(s, accounts_server)
+
+	namespaces_server := accounting.NewNamespacesServer(log, db)
+	namespacespb.RegisterNamespacesServiceServer(s, namespaces_server)
 	
-	accountspb.RegisterAccountsServiceServer(s, server)
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
 }
