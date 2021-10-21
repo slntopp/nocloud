@@ -3,6 +3,7 @@ package accounting
 import (
 	"context"
 
+	"github.com/arangodb/go-driver"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -12,6 +13,17 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+type AccountsServiceServer struct {
+	accountspb.UnimplementedAccountsServiceServer
+	db driver.Database
+	ctrl graph.AccountsController
+	ns_ctrl graph.NamespacesController
+
+	log *zap.Logger
+	SIGNING_KEY []byte
+}
+
 
 func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.TokenRequest) (*accountspb.TokenResponse, error) {
 	log := s.log.Named("Token")

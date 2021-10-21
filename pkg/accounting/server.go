@@ -5,7 +5,6 @@ import (
 
 	"github.com/arangodb/go-driver"
 
-	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 
@@ -16,15 +15,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type AccountsServiceServer struct {
-	accountspb.UnimplementedAccountsServiceServer
-	db driver.Database
-	ctrl graph.AccountsController
-	ns_ctrl graph.NamespacesController
-
-	log *zap.Logger
-	SIGNING_KEY []byte
-}
 
 func NewServer(log *zap.Logger, db driver.Database) *AccountsServiceServer {
 	accountsCol, _ := db.Collection(nil, graph.ACCOUNTS_COL)
