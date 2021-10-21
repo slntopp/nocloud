@@ -21,6 +21,7 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -66,4 +67,43 @@ func (s *NamespacesServiceServer) Create(ctx context.Context, request *namespace
 	}
 
 	return &namespacespb.CreateResponse{ Id: ns.Key }, nil
+}
+
+func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
+	log := s.log.Named("JoinNamespace")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	ctx, err := ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+
+	acc, err := s.acc_ctrl.Get(ctx, request.Account)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+	ns, err := s.ctrl.Get(ctx, request.Namespace)
+	if err != nil {
+		s.log.Debug("Error getting namespace", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Namespace not found")
+	}
+
+	var ok bool
+	ok = graph.HasAccess(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID.String(), 3)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
+	}
+
+	ok = graph.HasAccess(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), acc.ID.String(), 3)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	err = s.ctrl.Join(ctx, acc, ns, *request.Access)
+	if err != nil {
+		s.log.Debug("Error while joining account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while joining account")
+	}
+	return &namespacespb.JoinResponse{Result: true}, nil
 }

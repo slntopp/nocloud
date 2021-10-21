@@ -29,12 +29,18 @@ type namespacesAPI struct {
 	apipb.UnimplementedNamespacesServiceServer
 }
 
-func (acc *namespacesAPI) mustEmbedUnimplementedNamespacesServiceServer() {
+func (ns *namespacesAPI) mustEmbedUnimplementedNamespacesServiceServer() {
 	log.Info("Method missing")
 }
 
-func (acc *namespacesAPI) Create(ctx context.Context, request *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error) {
+func (ns *namespacesAPI) Create(ctx context.Context, request *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error) {
 	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	ctx = AddCrossServiceMetadata(ctx)
-	return acc.client.Create(ctx, request)
+	return ns.client.Create(ctx, request)
+}
+
+func (ns *namespacesAPI) Join(ctx context.Context, request *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
+	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	ctx = AddCrossServiceMetadata(ctx)
+	return ns.client.Join(ctx, request)
 }

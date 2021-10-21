@@ -60,6 +60,12 @@ service NamespacesService {
             body: "*"
         };
     };
+    rpc Join(nocloud.namespaces.JoinRequest) returns (nocloud.namespaces.JoinResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/join"
+            body: "*"
+        };
+    };
 }
 
 import "pkg/health/healthpb/health.proto";
