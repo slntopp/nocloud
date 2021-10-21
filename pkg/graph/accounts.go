@@ -93,7 +93,7 @@ func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, n
 		To: acc.ID,
 		Level: level,
 		DocumentMeta: driver.DocumentMeta {
-			Key: acc.Key + "-" + ns.Key,
+			Key: ns.Key + "-" + acc.Key,
 		},
 	})
 	return err
