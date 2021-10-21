@@ -25,6 +25,7 @@ import (
 
 	inflog "github.com/infinimesh/infinimesh/pkg/log"
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
+	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	apipb "github.com/slntopp/nocloud/pkg/api/apipb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"go.uber.org/zap"
@@ -79,12 +80,12 @@ func main() {
 	healthClient := healthpb.NewHealthServiceClient(healthConn)
 
 	log.Info("Connecting to AccountsService", zap.String("host", registryHost))
-	accountsConn, err := grpc.Dial(registryHost, grpc.WithInsecure())
+	registryConn, err := grpc.Dial(registryHost, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
-	accountsClient := accountspb.NewAccountsServiceClient(accountsConn)
-
+	accountsClient := accountspb.NewAccountsServiceClient(registryConn)
+	namespacesClient := namespacespb.NewNamespacesServiceClient(registryConn)
 	// Create a listener on TCP port
 	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
@@ -96,6 +97,7 @@ func main() {
 	// Attach the Greeter service to the server
 	apipb.RegisterHealthServiceServer(s, &healthAPI{client: healthClient})
 	apipb.RegisterAccountsServiceServer(s, &accountsAPI{client: accountsClient})
+	apipb.RegisterNamespacesServiceServer(s, &namespacesAPI{client: namespacesClient})
 	// Serve gRPC Server
 	log.Info("Serving gRPC on 0.0.0.0:8080", zap.Skip())
 	go func() {
@@ -121,6 +123,10 @@ func main() {
 	err = apipb.RegisterAccountsServiceHandler(context.Background(), gwmux, conn)
 	if err != nil {
 		log.Fatal("Failed to register AccountsService gateway", zap.Error(err))
+	}
+	err = apipb.RegisterNamespacesServiceHandler(context.Background(), gwmux, conn)
+	if err != nil {
+		log.Fatal("Failed to register NamespacesService gateway", zap.Error(err))
 	}
 	gwServer := &http.Server{
 		Addr:    ":8000",
