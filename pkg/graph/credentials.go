@@ -72,7 +72,7 @@ func (cred *StandardCredentials) Find(ctx context.Context, db driver.Database) (
 	query := `FOR cred IN @@credentials FILTER cred.username == @username RETURN cred`
 	c, err := db.Query(ctx, query, map[string]interface{}{
 		"username": cred.Username,
-		"@credentials": CREDENTIALS_GRAPH.Name,
+		"@credentials": CREDENTIALS_COL,
 	})
 	if err != nil {
 		return false
