@@ -24,6 +24,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -114,7 +115,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 
 	col, _ := s.db.Collection(ctx, graph.NS2ACC)
-	err = account.JoinNamespace(ctx, col, ns, access_lvl)
+	err = account.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
 	if err != nil {
 		s.log.Debug("Error linking to namespace")
 		return res, err

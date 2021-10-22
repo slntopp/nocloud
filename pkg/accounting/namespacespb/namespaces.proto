@@ -45,6 +45,7 @@ message LinkRequest {
     string namespace = 1;
     string account = 2;
     optional int32 access = 3; // Account access level to namespace
+    optional string role = 4;
 }
 
 message LinkResponse {

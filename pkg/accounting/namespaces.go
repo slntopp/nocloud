@@ -22,6 +22,8 @@ import (
 	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/access"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -90,17 +92,24 @@ func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacesp
 	}
 
 	var ok bool
-	ok = graph.HasAccess(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID.String(), 3)
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
-	}
-
-	ok = graph.HasAccess(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), acc.ID.String(), 3)
-	if !ok {
+	var level int32
+	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), acc.ID.String())
+	if !ok || level < access.ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	err = s.ctrl.Join(ctx, acc, ns, *request.Access)
+	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID.String())
+	if !ok || level < access.ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
+	}
+
+	if request.Access == nil {
+		level = level - 1
+	} else {
+		level = *request.Access
+	}
+
+	err = s.ctrl.Join(ctx, acc, ns, level, roles.DEFAULT)
 	if err != nil {
 		s.log.Debug("Error while joining account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while joining account")
@@ -128,12 +137,18 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID.String(), 3)
-	if !ok {
+	ok, level := graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID.String())
+	if !ok || level < access.ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
-	err = s.ctrl.Link(ctx, acc, ns, *request.Access)
+	if request.Access == nil {
+		level = level - 1
+	} else {
+		level = *request.Access
+	}
+
+	err = s.ctrl.Link(ctx, acc, ns, level, roles.DEFAULT)
 	if err != nil {
 		s.log.Debug("Error while linking account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while linking account to namespace")

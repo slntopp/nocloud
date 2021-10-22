@@ -22,6 +22,7 @@ import (
 	driver "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"go.uber.org/zap"
 )
 
@@ -172,7 +173,7 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 
 	log.Debug("Creating superadmin permission root -> root(ns)")
 	col, _ = db.Collection(ctx, ACCOUNTS_COL + "2" + NAMESPACES_COL)
-	err = root.LinkNamespace(ctx, col, rootNS, 4)
+	err = root.LinkNamespace(ctx, col, rootNS, 4, roles.OWNER)
 	if err != nil {
 		log.Error("Error while creating edge", zap.Error(err))
 	}

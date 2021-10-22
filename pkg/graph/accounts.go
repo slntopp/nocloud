@@ -23,6 +23,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"go.uber.org/zap"
 
 	"google.golang.org/grpc/codes"
@@ -74,11 +75,12 @@ func (ctrl *AccountsController) Create(ctx context.Context, title string) (Accou
 }
 
 // Grant account access to namespace
-func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32) (error) {
+func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) (error) {
 	_, err := edge.CreateDocument(ctx, Access{
 		From: acc.ID,
 		To: ns.ID,
 		Level: level,
+		Role: role,
 		DocumentMeta: driver.DocumentMeta {
 			Key: acc.Key + "-" + ns.Key,
 		},
@@ -87,11 +89,12 @@ func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, n
 }
 
 // Grant namespace access to account
-func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32) (error) {
+func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) (error) {
 	_, err := edge.CreateDocument(ctx, Access{
 		From: ns.ID,
 		To: acc.ID,
 		Level: level,
+		Role: role,
 		DocumentMeta: driver.DocumentMeta {
 			Key: ns.Key + "-" + acc.Key,
 		},
@@ -213,7 +216,7 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	edge_col, _ := ctrl.col.Database().Collection(nil, ACC2NS)
 	exists, err = edge_col.DocumentExists(nil, "0-0")
 	if !exists {
-		err = root.LinkNamespace(nil, edge_col, rootNS, 4)
+		err = root.LinkNamespace(nil, edge_col, rootNS, 4, roles.OWNER)
 		if err != nil {
 			return err
 		}
