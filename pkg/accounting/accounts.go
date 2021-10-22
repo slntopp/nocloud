@@ -56,6 +56,63 @@ func NewAccountsServer(log *zap.Logger, db driver.Database) *AccountsServiceServ
 	}
 }
 
+func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.GetRequest) (*accountspb.Account, error) {
+	log := s.log.Named("GetAccount")
+	log.Debug("Get request received", zap.Any("request", request), zap.Any("context", ctx))
+	ctx, err := ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := s.ctrl.Get(ctx, request.Id)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.READ)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	return MakeAccountMessage(acc), nil
+}
+
+func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.ListRequest) (*accountspb.ListResponse, error) {
+	log := s.log.Named("ListAccounts")
+	log.Debug("List request received", zap.Any("request", request), zap.Any("context", ctx))
+	ctx, err := ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := s.ctrl.Get(ctx, requestor)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.PermissionDenied, "Requestor Account not found")
+	}
+	log.Debug("Requestor", zap.Any("account", acc))
+
+	var pool []graph.Account
+	pool, err = s.ctrl.List(ctx, acc, request.Depth)
+	if err != nil {
+		s.log.Debug("Error listing accounts", zap.Any("error", err))
+		return nil, status.Error(codes.Internal, "Error listing accounts")
+	}
+	log.Debug("List result", zap.Any("pool", pool))
+
+	result := make([]*accountspb.Account, len(pool))
+	for i, acc := range pool {
+		result[i] = MakeAccountMessage(acc)
+	}
+	log.Debug("Convert result", zap.Any("pool", result))
+
+	return &accountspb.ListResponse{Pool: result}, nil
+}
 
 func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.TokenRequest) (*accountspb.TokenResponse, error) {
 	log := s.log.Named("Token")

@@ -37,6 +37,18 @@ func (acc *accountsAPI) Token(ctx context.Context, request *accountspb.TokenRequ
 	return acc.client.Token(ctx, request)
 }
 
+func (acc *accountsAPI) Get(ctx context.Context, request *accountspb.GetRequest) (*accountspb.Account, error) {
+	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	ctx = AddCrossServiceMetadata(ctx)
+	return acc.client.Get(ctx, request)
+}
+
+func (acc *accountsAPI) List(ctx context.Context, request *accountspb.ListRequest) (*accountspb.ListResponse, error) {
+	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	ctx = AddCrossServiceMetadata(ctx)
+	return acc.client.List(ctx, request)
+}
+
 func (acc *accountsAPI) Create(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
 	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	ctx = AddCrossServiceMetadata(ctx)

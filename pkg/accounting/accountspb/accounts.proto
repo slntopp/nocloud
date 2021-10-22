@@ -41,7 +41,6 @@ message GetRequest {
 message Account {
     string id = 1;
     string title = 2;
-    string namespace = 3; // Parent namespace
 }
 
 message ListRequest {
