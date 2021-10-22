@@ -1,4 +1,4 @@
-FROM golang:1.16 AS builder
+FROM golang:1.17 AS builder
 ADD go.mod /go/src/github.com/slntopp/nocloud/go.mod
 ADD . /go/src/github.com/slntopp/nocloud
 WORKDIR /go/src/github.com/slntopp/nocloud
