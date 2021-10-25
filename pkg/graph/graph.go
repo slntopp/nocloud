@@ -32,6 +32,9 @@ var (
 )
 
 func CheckAndRegisterCollections(log *zap.Logger, db driver.Database, collections []string) {
+	options := &driver.CreateCollectionOptions{
+		KeyOptions: &driver.CollectionKeyOptions{AllowUserKeys: true, Type: "uuid"},
+	}
 	for _, col := range collections {
 		log.Debug("Checking Collection existence", zap.String("collection", col))
 		exists, err := db.CollectionExists(nil, col)
@@ -41,7 +44,7 @@ func CheckAndRegisterCollections(log *zap.Logger, db driver.Database, collection
 		log.Debug("Collection " + col, zap.Bool("Exists", exists))
 		if !exists {
 			log.Debug("Creating", zap.String("collection", col))
-			_, err := db.CreateCollection(nil, col, nil)
+			_, err := db.CreateCollection(nil, col, options)
 			if err != nil {
 				log.Fatal("Failed to create collection", zap.Any(col, err))
 			}
