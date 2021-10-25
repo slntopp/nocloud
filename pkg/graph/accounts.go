@@ -22,7 +22,6 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"go.uber.org/zap"
 
@@ -170,6 +169,36 @@ func (ctrl *AccountsController) UpdateCredentials(ctx context.Context, cred stri
 	_, err = ctrl.cred.UpdateDocument(ctx, cred, c)
 	return err
 }
+
+func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col driver.Collection, acc Account, auth_type string) (key string, has_credentials bool) {
+	cred_edge := auth_type + "-" + acc.Key
+	ctrl.log.Debug("Looking for Credentials Edge(Link)", zap.String("key", cred_edge))
+	var edge CredentialsLink
+	_, err := edge_col.ReadDocument(ctx, cred_edge, &edge)
+	if err != nil {
+		ctrl.log.Debug("Error getting Credentials Edge(Link)", zap.Error(err))
+		return key, false
+	}
+	ctrl.log.Debug("Found Credentials Edge(Link)", zap.Any("edge", edge))
+
+	var cred Credentials
+	switch auth_type {
+	case "standard":
+		cred = &StandardCredentials{}
+	default:
+		return key, false
+	}
+
+	key = edge.To.Key()
+	ctrl.log.Debug("Looking for Credentials", zap.Any("key", key))
+	err = cred.FindByKey(ctx, ctrl.cred, key)
+	if err != nil {
+		ctrl.log.Debug("Error getting Credentials by Key", zap.Error(err))
+		return key, false
+	}
+	return key, true
+}
+
 func MakeCredentials(credentials accountspb.Credentials) (Credentials, error) {
 	var cred Credentials;
 	var err error;
