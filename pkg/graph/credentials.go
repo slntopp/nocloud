@@ -42,6 +42,8 @@ type Credentials interface {
 	Find(context.Context, driver.Database) bool;
 	FindByKey(context.Context, driver.Collection, string) error;
 	Account(context.Context, driver.Database) (Account, bool);
+
+	Key() string;
 }
 
 type StandardCredentials struct {
