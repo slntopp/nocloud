@@ -60,3 +60,9 @@ func (acc *accountsAPI) Update(ctx context.Context, request *accountspb.Account)
 	ctx = AddCrossServiceMetadata(ctx)
 	return acc.client.Update(ctx, request)
 }
+
+func (acc *accountsAPI) SetCredentials(ctx context.Context, request *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error) {
+	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	ctx = AddCrossServiceMetadata(ctx)
+	return acc.client.SetCredentials(ctx, request)
+}

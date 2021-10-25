@@ -225,3 +225,49 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 func (s *AccountsServiceServer) EnsureRootExists(passwd string) (error) {
 	return s.ctrl.EnsureRootExists(passwd)
 }
+
+func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error) {
+	log := s.log.Named("SetCredentials")
+	log.Debug("SetCredentials request received", zap.Any("request", request), zap.Any("context", ctx))
+	ctx, err := ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := s.ctrl.Get(ctx, request.Account)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if !graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "NoAccess")
+	}
+
+	auth := request.Auth
+
+	edge, _ := s.db.Collection(ctx, graph.ACC2CRED)
+	old_cred_key, has_credentials := s.ctrl.GetCredentials(ctx, edge, acc, auth.Type)
+	s.log.Debug("Checking if has credentials", zap.Bool("has_credentials", has_credentials), zap.Any("old_credentials", old_cred_key))
+
+	credentials, err := graph.MakeCredentials(*auth)
+	if err != nil {
+		s.log.Debug("Error creating new credentials", zap.String("type", auth.Type), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error creading new credentials")
+	}
+
+	if has_credentials {
+		err = s.ctrl.UpdateCredentials(ctx, old_cred_key, credentials)
+	} else {
+		err = s.ctrl.SetCredentials(ctx, acc, edge, credentials)
+	}
+	
+	if err != nil {
+		s.log.Debug("Error updating/setting credentials", zap.String("type", auth.Type), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error updating/setting credentials")
+	}
+
+	return &accountspb.SetCredentialsResponse{Result: true}, nil
+}
