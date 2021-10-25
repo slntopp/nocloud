@@ -106,3 +106,7 @@ func (cred *StandardCredentials) Account(ctx context.Context, db driver.Database
 	_, err = c.ReadDocument(ctx, &r)
 	return r, err == nil
 }
+
+func (cred *StandardCredentials) Key() (string) {
+	return cred.Key()
+}
