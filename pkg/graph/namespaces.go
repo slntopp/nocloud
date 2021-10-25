@@ -60,10 +60,11 @@ func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Nam
 	}
 	
 	ns.DocumentMeta = meta
-
+	key := ctx.Value(nocloud.NoCloudAccount).(string)
 	acc := Account{
 		DocumentMeta: driver.DocumentMeta {
-			ID: driver.NewDocumentID(ACCOUNTS_COL, ctx.Value(nocloud.NoCloudAccount).(string)),
+			Key: key,
+			ID: driver.NewDocumentID(ACCOUNTS_COL, key),
 		},
 	}
 
