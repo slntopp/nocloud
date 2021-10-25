@@ -151,14 +151,6 @@ func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, n
 
 // Set Account Credentials, ensure account has only one credentials document linked per credentials type
 func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c Credentials) (error) {
-	requestor, ok := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !ok {
-		return status.Error(codes.Internal, "Account ID is not given")
-	}
-	if !HasAccess(ctx, ctrl.col.Database(), requestor, acc.ID.String(), access.ADMIN) {
-		return status.Error(codes.PermissionDenied, "NoAccess")
-	}
-
 	cred, err := ctrl.cred.CreateDocument(ctx, c)	
 	_, err = edge.CreateDocument(ctx, CredentialsLink{
 		From: acc.ID,
