@@ -40,6 +40,7 @@ type Credentials interface {
 	Type() string;
 
 	Find(context.Context, driver.Database) bool;
+	FindByKey(context.Context, driver.Collection, string) error;
 	Account(context.Context, driver.Database) (Account, bool);
 }
 
