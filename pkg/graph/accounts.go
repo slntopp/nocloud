@@ -166,6 +166,10 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 	return nil
 }
 
+func (ctrl *AccountsController) UpdateCredentials(ctx context.Context, cred string, c Credentials) (err error) {
+	_, err = ctrl.cred.UpdateDocument(ctx, cred, c)
+	return err
+}
 func MakeCredentials(credentials accountspb.Credentials) (Credentials, error) {
 	var cred Credentials;
 	var err error;
