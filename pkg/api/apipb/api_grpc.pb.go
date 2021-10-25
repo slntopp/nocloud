@@ -288,6 +288,7 @@ var AccountsService_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NamespacesServiceClient interface {
 	Create(ctx context.Context, in *namespacespb.CreateRequest, opts ...grpc.CallOption) (*namespacespb.CreateResponse, error)
+	List(ctx context.Context, in *namespacespb.ListRequest, opts ...grpc.CallOption) (*namespacespb.ListResponse, error)
 	Join(ctx context.Context, in *namespacespb.JoinRequest, opts ...grpc.CallOption) (*namespacespb.JoinResponse, error)
 	Link(ctx context.Context, in *namespacespb.LinkRequest, opts ...grpc.CallOption) (*namespacespb.LinkResponse, error)
 }
@@ -303,6 +304,15 @@ func NewNamespacesServiceClient(cc grpc.ClientConnInterface) NamespacesServiceCl
 func (c *namespacesServiceClient) Create(ctx context.Context, in *namespacespb.CreateRequest, opts ...grpc.CallOption) (*namespacespb.CreateResponse, error) {
 	out := new(namespacespb.CreateResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.NamespacesService/Create", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *namespacesServiceClient) List(ctx context.Context, in *namespacespb.ListRequest, opts ...grpc.CallOption) (*namespacespb.ListResponse, error) {
+	out := new(namespacespb.ListResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.NamespacesService/List", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -332,6 +342,7 @@ func (c *namespacesServiceClient) Link(ctx context.Context, in *namespacespb.Lin
 // for forward compatibility
 type NamespacesServiceServer interface {
 	Create(context.Context, *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error)
+	List(context.Context, *namespacespb.ListRequest) (*namespacespb.ListResponse, error)
 	Join(context.Context, *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error)
 	Link(context.Context, *namespacespb.LinkRequest) (*namespacespb.LinkResponse, error)
 	mustEmbedUnimplementedNamespacesServiceServer()
@@ -343,6 +354,9 @@ type UnimplementedNamespacesServiceServer struct {
 
 func (UnimplementedNamespacesServiceServer) Create(context.Context, *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedNamespacesServiceServer) List(context.Context, *namespacespb.ListRequest) (*namespacespb.ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 func (UnimplementedNamespacesServiceServer) Join(context.Context, *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Join not implemented")
@@ -377,6 +391,24 @@ func _NamespacesService_Create_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(NamespacesServiceServer).Create(ctx, req.(*namespacespb.CreateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _NamespacesService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(namespacespb.ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NamespacesServiceServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.NamespacesService/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NamespacesServiceServer).List(ctx, req.(*namespacespb.ListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -427,6 +459,10 @@ var NamespacesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Create",
 			Handler:    _NamespacesService_Create_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _NamespacesService_List_Handler,
 		},
 		{
 			MethodName: "Join",

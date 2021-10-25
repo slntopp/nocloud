@@ -52,8 +52,17 @@ message LinkResponse {
     bool result = 1;
 }
 
+message ListRequest {
+    optional int32 depth = 1; // Depth 
+}
+
+message ListResponse {
+    repeated Namespace pool = 1;
+}
+
 service NamespacesService {
     rpc Create(nocloud.namespaces.CreateRequest) returns (nocloud.namespaces.CreateResponse);
+    rpc List(nocloud.namespaces.ListRequest) returns (nocloud.namespaces.ListResponse);
     rpc Join(nocloud.namespaces.JoinRequest) returns (nocloud.namespaces.JoinResponse);
     rpc Link(nocloud.namespaces.LinkRequest) returns (nocloud.namespaces.LinkResponse);
 }

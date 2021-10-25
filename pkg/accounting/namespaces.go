@@ -71,6 +71,40 @@ func (s *NamespacesServiceServer) Create(ctx context.Context, request *namespace
 	return &namespacespb.CreateResponse{ Id: ns.Key }, nil
 }
 
+func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacespb.ListRequest) (*namespacespb.ListResponse, error) {
+	log := s.log.Named("ListNamespaces")
+	log.Debug("List request received", zap.Any("request", request), zap.Any("context", ctx))
+	ctx, err := ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := s.acc_ctrl.Get(ctx, requestor)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.PermissionDenied, "Requestor Account not found")
+	}
+	log.Debug("Requestor", zap.Any("account", acc))
+
+	var pool []graph.Namespace
+	pool, err = s.ctrl.List(ctx, acc, request.Depth)
+	if err != nil {
+		s.log.Debug("Error listing namespaces", zap.Any("error", err))
+		return nil, status.Error(codes.Internal, "Error listing namespaces")
+	}
+	log.Debug("List result", zap.Any("pool", pool))
+
+	result := make([]*namespacespb.Namespace, len(pool))
+	for i, ns := range pool {
+		result[i] = &namespacespb.Namespace{Title:  ns.Title }
+	}
+	log.Debug("Convert result", zap.Any("pool", result))
+
+	return &namespacespb.ListResponse{Pool: result}, nil
+}
+
 func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
 	log := s.log.Named("JoinNamespace")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))

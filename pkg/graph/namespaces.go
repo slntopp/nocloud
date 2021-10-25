@@ -50,6 +50,45 @@ func (ctrl *NamespacesController) Get(ctx context.Context, id string) (Namespace
 	return r, err
 }
 
+func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, req_depth *int32) ([]Namespace, error) {
+	var depth int32
+	if req_depth == nil || *req_depth < 2 {
+		depth = 2
+	} else {
+		depth = *req_depth
+	}
+
+	query := `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@namespaces, node) RETURN node`
+	bindVars := map[string]interface{}{
+		"depth": depth,
+		"account": requestor.ID.String(),
+		"permissions_graph": PERMISSIONS_GRAPH.Name,
+		"@namespaces": NAMESPACES_COL,
+	}
+	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	var r []Namespace
+	for {
+		var ns Namespace 
+		_, err := c.ReadDocument(ctx, &ns)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		ctrl.log.Debug("Got document", zap.Any("namespace", ns))
+		r = append(r, ns)
+	}
+
+	return r, nil
+}
+
 func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Namespace, error) {
 	ns := Namespace{
 		Title: title,

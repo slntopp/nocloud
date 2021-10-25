@@ -92,7 +92,7 @@ var file_pkg_api_apipb_api_proto_rawDesc = []byte{
 	0x73, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x1e, 0x2e, 0x6e, 0x6f, 0x63, 0x6c,
 	0x6f, 0x75, 0x64, 0x2e, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x2e, 0x4c, 0x69, 0x73,
 	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x11, 0x82, 0xd3, 0xe4, 0x93, 0x02,
-	0x0b, 0x12, 0x09, 0x2f, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x32, 0xe4, 0x02, 0x0a,
+	0x0b, 0x12, 0x09, 0x2f, 0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x32, 0xc4, 0x03, 0x0a,
 	0x11, 0x4e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x73, 0x53, 0x65, 0x72, 0x76, 0x69,
 	0x63, 0x65, 0x12, 0x67, 0x0a, 0x06, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x12, 0x21, 0x2e, 0x6e,
 	0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65,
@@ -100,7 +100,13 @@ var file_pkg_api_apipb_api_proto_rawDesc = []byte{
 	0x22, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70,
 	0x61, 0x63, 0x65, 0x73, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f,
 	0x6e, 0x73, 0x65, 0x22, 0x16, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x10, 0x22, 0x0b, 0x2f, 0x6e, 0x61,
-	0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x73, 0x3a, 0x01, 0x2a, 0x12, 0x72, 0x0a, 0x04, 0x4a,
+	0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x73, 0x3a, 0x01, 0x2a, 0x12, 0x5e, 0x0a, 0x04, 0x4c,
+	0x69, 0x73, 0x74, 0x12, 0x1f, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x6e, 0x61,
+	0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x73, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x20, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x6e,
+	0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x73, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x52, 0x65,
+	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x13, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x0d, 0x12, 0x0b,
+	0x2f, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x73, 0x12, 0x72, 0x0a, 0x04, 0x4a,
 	0x6f, 0x69, 0x6e, 0x12, 0x1f, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x6e, 0x61,
 	0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65, 0x73, 0x2e, 0x4a, 0x6f, 0x69, 0x6e, 0x52, 0x65, 0x71,
 	0x75, 0x65, 0x73, 0x74, 0x1a, 0x20, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x6e,
@@ -143,18 +149,20 @@ var file_pkg_api_apipb_api_proto_goTypes = []interface{}{
 	(*accountspb.GetRequest)(nil),             // 4: nocloud.accounts.GetRequest
 	(*accountspb.ListRequest)(nil),            // 5: nocloud.accounts.ListRequest
 	(*namespacespb.CreateRequest)(nil),        // 6: nocloud.namespaces.CreateRequest
-	(*namespacespb.JoinRequest)(nil),          // 7: nocloud.namespaces.JoinRequest
-	(*namespacespb.LinkRequest)(nil),          // 8: nocloud.namespaces.LinkRequest
-	(*healthpb.ProbeRequest)(nil),             // 9: nocloud.health.ProbeRequest
-	(*accountspb.TokenResponse)(nil),          // 10: nocloud.accounts.TokenResponse
-	(*accountspb.SetCredentialsResponse)(nil), // 11: nocloud.accounts.SetCredentialsResponse
-	(*accountspb.CreateResponse)(nil),         // 12: nocloud.accounts.CreateResponse
-	(*accountspb.UpdateResponse)(nil),         // 13: nocloud.accounts.UpdateResponse
-	(*accountspb.ListResponse)(nil),           // 14: nocloud.accounts.ListResponse
-	(*namespacespb.CreateResponse)(nil),       // 15: nocloud.namespaces.CreateResponse
-	(*namespacespb.JoinResponse)(nil),         // 16: nocloud.namespaces.JoinResponse
-	(*namespacespb.LinkResponse)(nil),         // 17: nocloud.namespaces.LinkResponse
-	(*healthpb.ProbeResponse)(nil),            // 18: nocloud.health.ProbeResponse
+	(*namespacespb.ListRequest)(nil),          // 7: nocloud.namespaces.ListRequest
+	(*namespacespb.JoinRequest)(nil),          // 8: nocloud.namespaces.JoinRequest
+	(*namespacespb.LinkRequest)(nil),          // 9: nocloud.namespaces.LinkRequest
+	(*healthpb.ProbeRequest)(nil),             // 10: nocloud.health.ProbeRequest
+	(*accountspb.TokenResponse)(nil),          // 11: nocloud.accounts.TokenResponse
+	(*accountspb.SetCredentialsResponse)(nil), // 12: nocloud.accounts.SetCredentialsResponse
+	(*accountspb.CreateResponse)(nil),         // 13: nocloud.accounts.CreateResponse
+	(*accountspb.UpdateResponse)(nil),         // 14: nocloud.accounts.UpdateResponse
+	(*accountspb.ListResponse)(nil),           // 15: nocloud.accounts.ListResponse
+	(*namespacespb.CreateResponse)(nil),       // 16: nocloud.namespaces.CreateResponse
+	(*namespacespb.ListResponse)(nil),         // 17: nocloud.namespaces.ListResponse
+	(*namespacespb.JoinResponse)(nil),         // 18: nocloud.namespaces.JoinResponse
+	(*namespacespb.LinkResponse)(nil),         // 19: nocloud.namespaces.LinkResponse
+	(*healthpb.ProbeResponse)(nil),            // 20: nocloud.health.ProbeResponse
 }
 var file_pkg_api_apipb_api_proto_depIdxs = []int32{
 	0,  // 0: nocloud.api.AccountsService.Token:input_type -> nocloud.accounts.TokenRequest
@@ -164,21 +172,23 @@ var file_pkg_api_apipb_api_proto_depIdxs = []int32{
 	4,  // 4: nocloud.api.AccountsService.Get:input_type -> nocloud.accounts.GetRequest
 	5,  // 5: nocloud.api.AccountsService.List:input_type -> nocloud.accounts.ListRequest
 	6,  // 6: nocloud.api.NamespacesService.Create:input_type -> nocloud.namespaces.CreateRequest
-	7,  // 7: nocloud.api.NamespacesService.Join:input_type -> nocloud.namespaces.JoinRequest
-	8,  // 8: nocloud.api.NamespacesService.Link:input_type -> nocloud.namespaces.LinkRequest
-	9,  // 9: nocloud.api.HealthService.Probe:input_type -> nocloud.health.ProbeRequest
-	10, // 10: nocloud.api.AccountsService.Token:output_type -> nocloud.accounts.TokenResponse
-	11, // 11: nocloud.api.AccountsService.SetCredentials:output_type -> nocloud.accounts.SetCredentialsResponse
-	12, // 12: nocloud.api.AccountsService.Create:output_type -> nocloud.accounts.CreateResponse
-	13, // 13: nocloud.api.AccountsService.Update:output_type -> nocloud.accounts.UpdateResponse
-	3,  // 14: nocloud.api.AccountsService.Get:output_type -> nocloud.accounts.Account
-	14, // 15: nocloud.api.AccountsService.List:output_type -> nocloud.accounts.ListResponse
-	15, // 16: nocloud.api.NamespacesService.Create:output_type -> nocloud.namespaces.CreateResponse
-	16, // 17: nocloud.api.NamespacesService.Join:output_type -> nocloud.namespaces.JoinResponse
-	17, // 18: nocloud.api.NamespacesService.Link:output_type -> nocloud.namespaces.LinkResponse
-	18, // 19: nocloud.api.HealthService.Probe:output_type -> nocloud.health.ProbeResponse
-	10, // [10:20] is the sub-list for method output_type
-	0,  // [0:10] is the sub-list for method input_type
+	7,  // 7: nocloud.api.NamespacesService.List:input_type -> nocloud.namespaces.ListRequest
+	8,  // 8: nocloud.api.NamespacesService.Join:input_type -> nocloud.namespaces.JoinRequest
+	9,  // 9: nocloud.api.NamespacesService.Link:input_type -> nocloud.namespaces.LinkRequest
+	10, // 10: nocloud.api.HealthService.Probe:input_type -> nocloud.health.ProbeRequest
+	11, // 11: nocloud.api.AccountsService.Token:output_type -> nocloud.accounts.TokenResponse
+	12, // 12: nocloud.api.AccountsService.SetCredentials:output_type -> nocloud.accounts.SetCredentialsResponse
+	13, // 13: nocloud.api.AccountsService.Create:output_type -> nocloud.accounts.CreateResponse
+	14, // 14: nocloud.api.AccountsService.Update:output_type -> nocloud.accounts.UpdateResponse
+	3,  // 15: nocloud.api.AccountsService.Get:output_type -> nocloud.accounts.Account
+	15, // 16: nocloud.api.AccountsService.List:output_type -> nocloud.accounts.ListResponse
+	16, // 17: nocloud.api.NamespacesService.Create:output_type -> nocloud.namespaces.CreateResponse
+	17, // 18: nocloud.api.NamespacesService.List:output_type -> nocloud.namespaces.ListResponse
+	18, // 19: nocloud.api.NamespacesService.Join:output_type -> nocloud.namespaces.JoinResponse
+	19, // 20: nocloud.api.NamespacesService.Link:output_type -> nocloud.namespaces.LinkResponse
+	20, // 21: nocloud.api.HealthService.Probe:output_type -> nocloud.health.ProbeResponse
+	11, // [11:22] is the sub-list for method output_type
+	0,  // [0:11] is the sub-list for method input_type
 	0,  // [0:0] is the sub-list for extension type_name
 	0,  // [0:0] is the sub-list for extension extendee
 	0,  // [0:0] is the sub-list for field type_name
