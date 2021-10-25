@@ -36,13 +36,20 @@ type CredentialsLink struct {
 }
 
 type Credentials interface {
+	// Check if given authorization data are mapped 
+	// to existent Credentials
 	Authorize(...string) bool;
+	// Return Credentials type
 	Type() string;
 
+	// Find Credentials in database by authorisation data and Unmarshall it's data into struct
 	Find(context.Context, driver.Database) bool;
+	// Find Credentials in database by document key and Unmarshall it's data into struct
 	FindByKey(context.Context, driver.Collection, string) error;
+	// Return Account authorisable by this Credentials
 	Account(context.Context, driver.Database) (Account, bool);
 
+	// Return DocumentMeta Key
 	Key() string;
 }
 
