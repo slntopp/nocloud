@@ -104,13 +104,21 @@ func (ctrl *AccountsController) Exists(ctx context.Context, id string) (bool, er
 	return ctrl.col.DocumentExists(nil, id)
 }
 
-func (ctrl *AccountsController) Create(ctx context.Context, title string) (Account, error) {
-	acc := Account{
+func (ctrl *AccountsController) Create(ctx context.Context, title string) (acc Account, err error) {
+	acc = Account{
 		Title: title,
 	}
 	meta, err := ctrl.col.CreateDocument(ctx, acc)
 	acc.DocumentMeta = meta
 	return acc, err
+}
+
+func (ctrl *AccountsController) Update(ctx context.Context, acc Account, title string) (err error) {
+	patch := map[string]interface{}{
+		"title": title,
+	}
+	_, err = ctrl.col.UpdateDocument(ctx, acc.Key, patch)
+	return err
 }
 
 // Grant account access to namespace

@@ -21,6 +21,7 @@ type AccountsServiceClient interface {
 	Token(ctx context.Context, in *TokenRequest, opts ...grpc.CallOption) (*TokenResponse, error)
 	SetCredentials(ctx context.Context, in *SetCredentialsRequest, opts ...grpc.CallOption) (*SetCredentialsResponse, error)
 	Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*CreateResponse, error)
+	Update(ctx context.Context, in *Account, opts ...grpc.CallOption) (*UpdateResponse, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Account, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 }
@@ -60,6 +61,15 @@ func (c *accountsServiceClient) Create(ctx context.Context, in *CreateRequest, o
 	return out, nil
 }
 
+func (c *accountsServiceClient) Update(ctx context.Context, in *Account, opts ...grpc.CallOption) (*UpdateResponse, error) {
+	out := new(UpdateResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.accounts.AccountsService/Update", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *accountsServiceClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Account, error) {
 	out := new(Account)
 	err := c.cc.Invoke(ctx, "/nocloud.accounts.AccountsService/Get", in, out, opts...)
@@ -85,6 +95,7 @@ type AccountsServiceServer interface {
 	Token(context.Context, *TokenRequest) (*TokenResponse, error)
 	SetCredentials(context.Context, *SetCredentialsRequest) (*SetCredentialsResponse, error)
 	Create(context.Context, *CreateRequest) (*CreateResponse, error)
+	Update(context.Context, *Account) (*UpdateResponse, error)
 	Get(context.Context, *GetRequest) (*Account, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	mustEmbedUnimplementedAccountsServiceServer()
@@ -102,6 +113,9 @@ func (UnimplementedAccountsServiceServer) SetCredentials(context.Context, *SetCr
 }
 func (UnimplementedAccountsServiceServer) Create(context.Context, *CreateRequest) (*CreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedAccountsServiceServer) Update(context.Context, *Account) (*UpdateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
 func (UnimplementedAccountsServiceServer) Get(context.Context, *GetRequest) (*Account, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
@@ -176,6 +190,24 @@ func _AccountsService_Create_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AccountsService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Account)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServiceServer).Update(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.accounts.AccountsService/Update",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServiceServer).Update(ctx, req.(*Account))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AccountsService_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetRequest)
 	if err := dec(in); err != nil {
@@ -230,6 +262,10 @@ var AccountsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Create",
 			Handler:    _AccountsService_Create_Handler,
+		},
+		{
+			MethodName: "Update",
+			Handler:    _AccountsService_Update_Handler,
 		},
 		{
 			MethodName: "Get",

@@ -54,3 +54,9 @@ func (acc *accountsAPI) Create(ctx context.Context, request *accountspb.CreateRe
 	ctx = AddCrossServiceMetadata(ctx)
 	return acc.client.Create(ctx, request)
 }
+
+func (acc *accountsAPI) Update(ctx context.Context, request *accountspb.Account) (*accountspb.UpdateResponse, error) {
+	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	ctx = AddCrossServiceMetadata(ctx)
+	return acc.client.Update(ctx, request)
+}

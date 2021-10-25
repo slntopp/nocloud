@@ -43,6 +43,10 @@ message Account {
     string title = 2;
 }
 
+message UpdateResponse {
+    bool result = 1;
+}
+
 message ListRequest {
     optional string namespace = 1; // Namespace ID to seek account in
     optional int32 depth = 2; // Depth 
@@ -74,6 +78,7 @@ service AccountsService {
     rpc Token(nocloud.accounts.TokenRequest) returns (nocloud.accounts.TokenResponse);
     rpc SetCredentials(nocloud.accounts.SetCredentialsRequest) returns (nocloud.accounts.SetCredentialsResponse);
     rpc Create(nocloud.accounts.CreateRequest) returns (nocloud.accounts.CreateResponse);
+    rpc Update(nocloud.accounts.Account) returns (nocloud.accounts.UpdateResponse);
     rpc Get(nocloud.accounts.GetRequest) returns (nocloud.accounts.Account);
     rpc List(nocloud.accounts.ListRequest) returns (nocloud.accounts.ListResponse);
 }

@@ -40,6 +40,12 @@ service AccountsService {
             body: "*"
         };
     };
+    rpc Update(nocloud.accounts.Account) returns (nocloud.accounts.UpdateResponse) {
+        option (google.api.http) = {
+            patch: "/accounts/{id}"
+            body: "*"
+        };
+    };
     rpc Get(nocloud.accounts.GetRequest) returns (nocloud.accounts.Account) {
         option (google.api.http) = {
             get: "/accounts/{id}"

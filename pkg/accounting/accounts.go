@@ -192,6 +192,36 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	return res, nil
 }
 
+func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.Account) (*accountspb.UpdateResponse, error) {
+	log := s.log.Named("UpdateAccount")
+	log.Debug("Update request received", zap.Any("request", request), zap.Any("context", ctx))
+	ctx, err := ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := s.ctrl.Get(ctx, request.Id)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	err = s.ctrl.Update(ctx, acc, request.Title)
+	if err != nil {
+		s.log.Debug("Error updating account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while updating account")
+	}
+
+	return &accountspb.UpdateResponse{Result: true}, nil
+}
+
 func (s *AccountsServiceServer) EnsureRootExists(passwd string) (error) {
 	return s.ctrl.EnsureRootExists(passwd)
 }

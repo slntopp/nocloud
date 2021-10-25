@@ -24,6 +24,7 @@ type AccountsServiceClient interface {
 	Token(ctx context.Context, in *accountspb.TokenRequest, opts ...grpc.CallOption) (*accountspb.TokenResponse, error)
 	SetCredentials(ctx context.Context, in *accountspb.SetCredentialsRequest, opts ...grpc.CallOption) (*accountspb.SetCredentialsResponse, error)
 	Create(ctx context.Context, in *accountspb.CreateRequest, opts ...grpc.CallOption) (*accountspb.CreateResponse, error)
+	Update(ctx context.Context, in *accountspb.Account, opts ...grpc.CallOption) (*accountspb.UpdateResponse, error)
 	Get(ctx context.Context, in *accountspb.GetRequest, opts ...grpc.CallOption) (*accountspb.Account, error)
 	List(ctx context.Context, in *accountspb.ListRequest, opts ...grpc.CallOption) (*accountspb.ListResponse, error)
 }
@@ -63,6 +64,15 @@ func (c *accountsServiceClient) Create(ctx context.Context, in *accountspb.Creat
 	return out, nil
 }
 
+func (c *accountsServiceClient) Update(ctx context.Context, in *accountspb.Account, opts ...grpc.CallOption) (*accountspb.UpdateResponse, error) {
+	out := new(accountspb.UpdateResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Update", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *accountsServiceClient) Get(ctx context.Context, in *accountspb.GetRequest, opts ...grpc.CallOption) (*accountspb.Account, error) {
 	out := new(accountspb.Account)
 	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Get", in, out, opts...)
@@ -88,6 +98,7 @@ type AccountsServiceServer interface {
 	Token(context.Context, *accountspb.TokenRequest) (*accountspb.TokenResponse, error)
 	SetCredentials(context.Context, *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error)
 	Create(context.Context, *accountspb.CreateRequest) (*accountspb.CreateResponse, error)
+	Update(context.Context, *accountspb.Account) (*accountspb.UpdateResponse, error)
 	Get(context.Context, *accountspb.GetRequest) (*accountspb.Account, error)
 	List(context.Context, *accountspb.ListRequest) (*accountspb.ListResponse, error)
 	mustEmbedUnimplementedAccountsServiceServer()
@@ -105,6 +116,9 @@ func (UnimplementedAccountsServiceServer) SetCredentials(context.Context, *accou
 }
 func (UnimplementedAccountsServiceServer) Create(context.Context, *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedAccountsServiceServer) Update(context.Context, *accountspb.Account) (*accountspb.UpdateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
 func (UnimplementedAccountsServiceServer) Get(context.Context, *accountspb.GetRequest) (*accountspb.Account, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
@@ -179,6 +193,24 @@ func _AccountsService_Create_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AccountsService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(accountspb.Account)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServiceServer).Update(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.AccountsService/Update",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServiceServer).Update(ctx, req.(*accountspb.Account))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AccountsService_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(accountspb.GetRequest)
 	if err := dec(in); err != nil {
@@ -233,6 +265,10 @@ var AccountsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Create",
 			Handler:    _AccountsService_Create_Handler,
+		},
+		{
+			MethodName: "Update",
+			Handler:    _AccountsService_Update_Handler,
 		},
 		{
 			MethodName: "Get",
