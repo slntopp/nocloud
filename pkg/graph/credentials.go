@@ -84,6 +84,11 @@ func (cred *StandardCredentials) Find(ctx context.Context, db driver.Database) (
 	return err == nil
 }
 
+func (cred *StandardCredentials) FindByKey(ctx context.Context, col driver.Collection, key string) (error) {
+	_, err := col.ReadDocument(ctx, key, cred)
+	return err
+}
+
 func (cred *StandardCredentials) Account(ctx context.Context, db driver.Database) (Account, bool) {
 	query := `FOR account IN 1 INBOUND @credentials GRAPH @credentials_graph RETURN account`
 	c, err := db.Query(ctx, query, map[string]interface{}{
