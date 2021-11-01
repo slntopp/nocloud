@@ -74,6 +74,14 @@ message TokenResponse {
     string token = 1;
 }
 
+message DeleteRequest {
+    string id = 1;
+}
+
+message DeleteResponse {
+    bool result = 1;
+}
+
 service AccountsService {
     rpc Token(nocloud.accounts.TokenRequest) returns (nocloud.accounts.TokenResponse);
     rpc SetCredentials(nocloud.accounts.SetCredentialsRequest) returns (nocloud.accounts.SetCredentialsResponse);
@@ -81,4 +89,5 @@ service AccountsService {
     rpc Update(nocloud.accounts.Account) returns (nocloud.accounts.UpdateResponse);
     rpc Get(nocloud.accounts.GetRequest) returns (nocloud.accounts.Account);
     rpc List(nocloud.accounts.ListRequest) returns (nocloud.accounts.ListResponse);
+    rpc Delete(nocloud.accounts.DeleteRequest) returns (nocloud.accounts.DeleteResponse);
 }
