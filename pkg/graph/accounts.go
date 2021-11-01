@@ -18,7 +18,6 @@ package graph
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
@@ -155,7 +154,13 @@ func (acc *Account) Delete(ctx context.Context, db driver.Database) (error) {
 		return err
 	}
 
-	fmt.Println("Deleted Account: ", acc.Title)
+	graph, _ := db.Graph(ctx, PERMISSIONS_GRAPH.Name)
+	col, _ := graph.VertexCollection(ctx, ACCOUNTS_COL)
+	_, err = col.RemoveDocument(ctx, acc.Key)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
