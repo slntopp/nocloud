@@ -32,10 +32,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func AddCrossServiceMetadata(ctx context.Context) context.Context {
-	return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, ctx.Value(nocloud.NoCloudAccount).(string))
-}
-
 func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	l := log.Named("JWT Interceptor")
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
@@ -76,6 +72,7 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 		return nil, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
 	}
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.(string))
+	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, account.(string))
 
 	return ctx, nil
 }
