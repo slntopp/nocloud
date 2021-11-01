@@ -56,6 +56,11 @@ service AccountsService {
             get: "/accounts"
         };
     };
+    rpc Delete(nocloud.accounts.DeleteRequest) returns (nocloud.accounts.DeleteResponse) {
+        option (google.api.http) = {
+            delete: "/accounts/{id}"
+        };
+    };
 }
 
 import "pkg/accounting/namespacespb/namespaces.proto";
@@ -81,6 +86,11 @@ service NamespacesService {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/link"
             body: "*"
+        };
+    };
+    rpc Delete(nocloud.namespaces.DeleteRequest) returns (nocloud.namespaces.DeleteResponse) {
+        option (google.api.http) = {
+            delete: "/namespaces/{id}"
         };
     };
 }

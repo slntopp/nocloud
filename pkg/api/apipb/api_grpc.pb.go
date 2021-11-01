@@ -27,6 +27,7 @@ type AccountsServiceClient interface {
 	Update(ctx context.Context, in *accountspb.Account, opts ...grpc.CallOption) (*accountspb.UpdateResponse, error)
 	Get(ctx context.Context, in *accountspb.GetRequest, opts ...grpc.CallOption) (*accountspb.Account, error)
 	List(ctx context.Context, in *accountspb.ListRequest, opts ...grpc.CallOption) (*accountspb.ListResponse, error)
+	Delete(ctx context.Context, in *accountspb.DeleteRequest, opts ...grpc.CallOption) (*accountspb.DeleteResponse, error)
 }
 
 type accountsServiceClient struct {
@@ -91,6 +92,15 @@ func (c *accountsServiceClient) List(ctx context.Context, in *accountspb.ListReq
 	return out, nil
 }
 
+func (c *accountsServiceClient) Delete(ctx context.Context, in *accountspb.DeleteRequest, opts ...grpc.CallOption) (*accountspb.DeleteResponse, error) {
+	out := new(accountspb.DeleteResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AccountsServiceServer is the server API for AccountsService service.
 // All implementations must embed UnimplementedAccountsServiceServer
 // for forward compatibility
@@ -101,6 +111,7 @@ type AccountsServiceServer interface {
 	Update(context.Context, *accountspb.Account) (*accountspb.UpdateResponse, error)
 	Get(context.Context, *accountspb.GetRequest) (*accountspb.Account, error)
 	List(context.Context, *accountspb.ListRequest) (*accountspb.ListResponse, error)
+	Delete(context.Context, *accountspb.DeleteRequest) (*accountspb.DeleteResponse, error)
 	mustEmbedUnimplementedAccountsServiceServer()
 }
 
@@ -125,6 +136,9 @@ func (UnimplementedAccountsServiceServer) Get(context.Context, *accountspb.GetRe
 }
 func (UnimplementedAccountsServiceServer) List(context.Context, *accountspb.ListRequest) (*accountspb.ListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+func (UnimplementedAccountsServiceServer) Delete(context.Context, *accountspb.DeleteRequest) (*accountspb.DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedAccountsServiceServer) mustEmbedUnimplementedAccountsServiceServer() {}
 
@@ -247,6 +261,24 @@ func _AccountsService_List_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AccountsService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(accountspb.DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServiceServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.AccountsService/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServiceServer).Delete(ctx, req.(*accountspb.DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AccountsService_ServiceDesc is the grpc.ServiceDesc for AccountsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -278,6 +310,10 @@ var AccountsService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "List",
 			Handler:    _AccountsService_List_Handler,
 		},
+		{
+			MethodName: "Delete",
+			Handler:    _AccountsService_Delete_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "pkg/api/apipb/api.proto",
@@ -291,6 +327,7 @@ type NamespacesServiceClient interface {
 	List(ctx context.Context, in *namespacespb.ListRequest, opts ...grpc.CallOption) (*namespacespb.ListResponse, error)
 	Join(ctx context.Context, in *namespacespb.JoinRequest, opts ...grpc.CallOption) (*namespacespb.JoinResponse, error)
 	Link(ctx context.Context, in *namespacespb.LinkRequest, opts ...grpc.CallOption) (*namespacespb.LinkResponse, error)
+	Delete(ctx context.Context, in *namespacespb.DeleteRequest, opts ...grpc.CallOption) (*namespacespb.DeleteResponse, error)
 }
 
 type namespacesServiceClient struct {
@@ -337,6 +374,15 @@ func (c *namespacesServiceClient) Link(ctx context.Context, in *namespacespb.Lin
 	return out, nil
 }
 
+func (c *namespacesServiceClient) Delete(ctx context.Context, in *namespacespb.DeleteRequest, opts ...grpc.CallOption) (*namespacespb.DeleteResponse, error) {
+	out := new(namespacespb.DeleteResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.NamespacesService/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NamespacesServiceServer is the server API for NamespacesService service.
 // All implementations must embed UnimplementedNamespacesServiceServer
 // for forward compatibility
@@ -345,6 +391,7 @@ type NamespacesServiceServer interface {
 	List(context.Context, *namespacespb.ListRequest) (*namespacespb.ListResponse, error)
 	Join(context.Context, *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error)
 	Link(context.Context, *namespacespb.LinkRequest) (*namespacespb.LinkResponse, error)
+	Delete(context.Context, *namespacespb.DeleteRequest) (*namespacespb.DeleteResponse, error)
 	mustEmbedUnimplementedNamespacesServiceServer()
 }
 
@@ -363,6 +410,9 @@ func (UnimplementedNamespacesServiceServer) Join(context.Context, *namespacespb.
 }
 func (UnimplementedNamespacesServiceServer) Link(context.Context, *namespacespb.LinkRequest) (*namespacespb.LinkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Link not implemented")
+}
+func (UnimplementedNamespacesServiceServer) Delete(context.Context, *namespacespb.DeleteRequest) (*namespacespb.DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedNamespacesServiceServer) mustEmbedUnimplementedNamespacesServiceServer() {}
 
@@ -449,6 +499,24 @@ func _NamespacesService_Link_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NamespacesService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(namespacespb.DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NamespacesServiceServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.NamespacesService/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NamespacesServiceServer).Delete(ctx, req.(*namespacespb.DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NamespacesService_ServiceDesc is the grpc.ServiceDesc for NamespacesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -471,6 +539,10 @@ var NamespacesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Link",
 			Handler:    _NamespacesService_Link_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _NamespacesService_Delete_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
