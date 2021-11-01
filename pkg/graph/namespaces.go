@@ -17,6 +17,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -118,4 +119,22 @@ func (ctrl *NamespacesController) Link(ctx context.Context, acc Account, ns Name
 func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Namespace, access int32, role string) (error) {
 	edge, _ := ctrl.col.Database().Collection(ctx, NS2ACC)
 	return acc.JoinNamespace(ctx, edge, ns, access, role)
+}
+
+func (ns *Namespace) Delete(ctx context.Context, db driver.Database) (error) {
+	err := DeleteNodeChildren(ctx, db, ns.ID.String())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Deleted Namespace: ", ns.Title)
+	return nil
+}
+
+func (ctrl *NamespacesController) Delete(ctx context.Context, id string) (error) {
+	ns, err := ctrl.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	return ns.Delete(ctx, ctrl.col.Database())
 }

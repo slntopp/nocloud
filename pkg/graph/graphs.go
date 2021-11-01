@@ -15,6 +15,13 @@ limitations under the License.
 */
 package graph
 
+import (
+	"context"
+	"errors"
+
+	"github.com/arangodb/go-driver"
+)
+
 type NoCloudGraphSchema struct {
 	Name string
 	Edges [][]string
@@ -40,4 +47,71 @@ var CREDENTIALS_GRAPH = NoCloudGraphSchema{
 
 var GRAPHS_SCHEMAS = []NoCloudGraphSchema{
 	PERMISSIONS_GRAPH, CREDENTIALS_GRAPH,
+}
+
+type Node struct {
+	Collection 	string `json:"collection"`
+	Key 		string `json:"key"`
+}
+
+type Deletable interface {
+	Delete(context.Context, driver.Database) (error)
+}
+
+func DeleteNodeChildren(ctx context.Context, db driver.Database, node string) (error) {
+	query := `FOR node, edge, path IN OUTBOUND @node GRAPH Permissions FILTER edge.role == "owner" RETURN PARSE_IDENTIFIER(node._id)`
+	c, err := db.Query(ctx, query, map[string]interface{}{
+		"node": node,
+	})
+	if err != nil {
+		return errors.New("Error executing find children query")
+	}
+	defer c.Close()
+
+	for {
+		var node Node
+		_, err := c.ReadDocument(ctx, &node)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return errors.New("Error reading Document")
+		}
+
+		// fmt.Println("Node must be deleted", node)
+		next, err := MakeDeletable(ctx, db, node)
+		if err != nil {
+			return errors.New("Error making node deletable")
+		}
+
+		err = next.Delete(ctx, db)
+		if err != nil {
+			return errors.New("Error deleting child node")
+		}
+	}
+
+	return nil
+}
+
+func MakeDeletable(ctx context.Context, db driver.Database, node Node) (Deletable, error) {
+	var result Deletable
+	var err error
+	col, _ := db.Collection(ctx, node.Collection)
+
+	switch node.Collection {
+	case ACCOUNTS_COL:
+		var acc Account
+		_, err = col.ReadDocument(ctx, node.Key, &acc)
+		result = &acc
+	case NAMESPACES_COL:
+		var ns Namespace
+		_, err = col.ReadDocument(ctx, node.Key, &ns)
+		result = &ns
+	default:
+		return nil, errors.New("Error making node deletable: Can't define node type")
+	}
+
+	if err != nil {
+		return nil, errors.New("Error making node deletable: Can't get node from Collection")
+	}
+	return result, nil
 }

@@ -18,6 +18,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
@@ -146,6 +147,24 @@ func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, n
 		},
 	})
 	return err
+}
+
+func (acc *Account) Delete(ctx context.Context, db driver.Database) (error) {
+	err := DeleteNodeChildren(ctx, db, acc.ID.String())
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Deleted Account: ", acc.Title)
+	return nil
+}
+
+func (ctrl *AccountsController) Delete(ctx context.Context, id string) (error) {
+	acc, err := ctrl.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	return acc.Delete(ctx, ctrl.col.Database())
 }
 
 // Set Account Credentials, ensure account has only one credentials document linked per credentials type
