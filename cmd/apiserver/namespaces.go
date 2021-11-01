@@ -35,24 +35,20 @@ func (ns *namespacesAPI) mustEmbedUnimplementedNamespacesServiceServer() {
 
 func (ns *namespacesAPI) Create(ctx context.Context, request *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error) {
 	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
-	ctx = AddCrossServiceMetadata(ctx)
 	return ns.client.Create(ctx, request)
 }
 
 func (ns *namespacesAPI) List(ctx context.Context, request *namespacespb.ListRequest) (*namespacespb.ListResponse, error) {
 	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
-	ctx = AddCrossServiceMetadata(ctx)
 	return ns.client.List(ctx, request)
 }
 
 func (ns *namespacesAPI) Join(ctx context.Context, request *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
 	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
-	ctx = AddCrossServiceMetadata(ctx)
 	return ns.client.Join(ctx, request)
 }
 
 func (ns *namespacesAPI) Link(ctx context.Context, request *namespacespb.LinkRequest) (*namespacespb.LinkResponse, error) {
 	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
-	ctx = AddCrossServiceMetadata(ctx)
 	return ns.client.Link(ctx, request)
 }
