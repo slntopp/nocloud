@@ -52,3 +52,8 @@ func (ns *namespacesAPI) Link(ctx context.Context, request *namespacespb.LinkReq
 	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return ns.client.Link(ctx, request)
 }
+
+func (ns *namespacesAPI) Delete(ctx context.Context, request *namespacespb.DeleteRequest) (*namespacespb.DeleteResponse, error) {
+	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	return ns.client.Delete(ctx, request)
+}

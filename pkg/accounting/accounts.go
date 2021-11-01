@@ -228,7 +228,7 @@ func (s *AccountsServiceServer) EnsureRootExists(passwd string) (error) {
 
 func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error) {
 	log := s.log.Named("SetCredentials")
-	log.Debug("SetCredentials request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 	ctx, err := ValidateMetadata(ctx, log)
 	if err != nil {
 		return nil, err
@@ -270,4 +270,33 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 	}
 
 	return &accountspb.SetCredentialsResponse{Result: true}, nil
+}
+
+func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.DeleteRequest) (*accountspb.DeleteResponse, error) {
+	log := s.log.Named("Delete")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	ctx, err := ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := s.ctrl.Get(ctx, request.Id)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if !graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "NoAccess")
+	}
+
+	err = acc.Delete(ctx, s.db)
+	if err != nil {
+		s.log.Debug("Error deleting account and it's children", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error deleting account")
+	}
+
+	return &accountspb.DeleteResponse{Result: true}, nil
 }

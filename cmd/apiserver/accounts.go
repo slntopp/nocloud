@@ -61,3 +61,8 @@ func (acc *accountsAPI) SetCredentials(ctx context.Context, request *accountspb.
 	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return acc.client.SetCredentials(ctx, request)
 }
+
+func (acc *accountsAPI) Delete(ctx context.Context, request *accountspb.DeleteRequest) (*accountspb.DeleteResponse, error) {
+	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	return acc.client.Delete(ctx, request)
+}

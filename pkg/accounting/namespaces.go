@@ -189,3 +189,32 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 	}
 	return &namespacespb.LinkResponse{Result: true}, nil
 }
+
+func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespacespb.DeleteRequest) (*namespacespb.DeleteResponse, error) {
+	log := s.log.Named("Delete")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	ctx, err := ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ctrl.Get(ctx, request.Id)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if !graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "NoAccess")
+	}
+
+	err = ns.Delete(ctx, s.db)
+	if err != nil {
+		s.log.Debug("Error deleting account and it's children", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error deleting account")
+	}
+
+	return &namespacespb.DeleteResponse{Result: true}, nil
+}
