@@ -60,9 +60,18 @@ message ListResponse {
     repeated Namespace pool = 1;
 }
 
+message DeleteRequest {
+    string id = 1;
+}
+
+message DeleteResponse {
+    bool result = 1;
+}
+
 service NamespacesService {
     rpc Create(nocloud.namespaces.CreateRequest) returns (nocloud.namespaces.CreateResponse);
     rpc List(nocloud.namespaces.ListRequest) returns (nocloud.namespaces.ListResponse);
     rpc Join(nocloud.namespaces.JoinRequest) returns (nocloud.namespaces.JoinResponse);
     rpc Link(nocloud.namespaces.LinkRequest) returns (nocloud.namespaces.LinkResponse);
+    rpc Delete(nocloud.namespaces.DeleteRequest) returns (nocloud.namespaces.DeleteResponse);
 }

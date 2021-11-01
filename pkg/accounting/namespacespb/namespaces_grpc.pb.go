@@ -22,6 +22,7 @@ type NamespacesServiceClient interface {
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	Join(ctx context.Context, in *JoinRequest, opts ...grpc.CallOption) (*JoinResponse, error)
 	Link(ctx context.Context, in *LinkRequest, opts ...grpc.CallOption) (*LinkResponse, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 }
 
 type namespacesServiceClient struct {
@@ -68,6 +69,15 @@ func (c *namespacesServiceClient) Link(ctx context.Context, in *LinkRequest, opt
 	return out, nil
 }
 
+func (c *namespacesServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.namespaces.NamespacesService/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NamespacesServiceServer is the server API for NamespacesService service.
 // All implementations must embed UnimplementedNamespacesServiceServer
 // for forward compatibility
@@ -76,6 +86,7 @@ type NamespacesServiceServer interface {
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	Join(context.Context, *JoinRequest) (*JoinResponse, error)
 	Link(context.Context, *LinkRequest) (*LinkResponse, error)
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	mustEmbedUnimplementedNamespacesServiceServer()
 }
 
@@ -94,6 +105,9 @@ func (UnimplementedNamespacesServiceServer) Join(context.Context, *JoinRequest) 
 }
 func (UnimplementedNamespacesServiceServer) Link(context.Context, *LinkRequest) (*LinkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Link not implemented")
+}
+func (UnimplementedNamespacesServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedNamespacesServiceServer) mustEmbedUnimplementedNamespacesServiceServer() {}
 
@@ -180,6 +194,24 @@ func _NamespacesService_Link_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NamespacesService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NamespacesServiceServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.namespaces.NamespacesService/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NamespacesServiceServer).Delete(ctx, req.(*DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NamespacesService_ServiceDesc is the grpc.ServiceDesc for NamespacesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -202,6 +234,10 @@ var NamespacesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Link",
 			Handler:    _NamespacesService_Link_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _NamespacesService_Delete_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
