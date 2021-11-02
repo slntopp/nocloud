@@ -18,7 +18,7 @@ package driver
 import (
 	"context"
 
-	pb "github.com/slntopp/nocloud/pkg/internal/instance_driver/proto"
+	pb "github.com/slntopp/nocloud/pkg/drivers/instance/proto"
 )
 
 var DRIVER_NAME string
