@@ -27,15 +27,15 @@ type NoCloudGraphSchema struct {
 	Edges [][]string
 }
 
-var COLLECTIONS = []string{ACCOUNTS_COL, NAMESPACES_COL, "Services", "Instances", CREDENTIALS_COL}
+var COLLECTIONS = []string{ACCOUNTS_COL, NAMESPACES_COL, SERVICES_COL, "Instances", CREDENTIALS_COL}
 
 var PERMISSIONS_GRAPH = NoCloudGraphSchema{
 	Name: "Permissions",
 	Edges: [][]string{
 		{ACCOUNTS_COL, NAMESPACES_COL},
 		{NAMESPACES_COL, ACCOUNTS_COL},
-		{NAMESPACES_COL, "Services"},
-		{"Services", "Instances"},
+		{NAMESPACES_COL, SERVICES_COL},
+		{SERVICES_COL, "Instances"},
 	},
 }
 var CREDENTIALS_GRAPH = NoCloudGraphSchema{
