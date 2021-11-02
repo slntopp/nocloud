@@ -133,5 +133,5 @@ var DriverService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "pkg/internal/instance_driver/proto/driver.proto",
+	Metadata: "pkg/drivers/instance/proto/driver.proto",
 }

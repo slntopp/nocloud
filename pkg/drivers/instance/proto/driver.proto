@@ -18,8 +18,10 @@ package nocloud.instance.driver;
 
 option go_package = "github.com/slntopp/nocloud/pkg/internal/instance_driver";
 
+import "google/protobuf/struct.proto";
+
 message ValidateConfigSyntaxRequest {
-    string config = 1;
+    google.protobuf.Value config = 1;
 }
 
 message ValidateConfigSyntaxResponse {
