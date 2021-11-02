@@ -23,19 +23,21 @@ import "pkg/instances/proto/instances.proto";
 import "pkg/drivers/instance/proto/driver.proto";
 
 message Service {
-    string title = 1;
-    string namespace = 2;
-    repeated nocloud.instances.Instance instances = 3;
-    google.protobuf.Value config = 4;
+    string version = 1;
+    string title = 2;
+    map<string, google.protobuf.Value> context = 3;
+    map<string, nocloud.instances.InstancesGroup> instances_group = 4;
 }
 
 message ValidateServiceConfigRequest {
     Service config = 1;
+    string namespace = 2;
 }
 
 message ValidateConfigSyntaxResponse {
-    string instance = 1;
-    nocloud.instance.driver.ValidateConfigSyntaxResponse error = 2;
+    string group = 1;
+    string instance = 2;
+    nocloud.instance.driver.ValidateConfigSyntaxResponse error = 3;
 }
 
 message ValidateServiceConfigResponse {
@@ -45,6 +47,7 @@ message ValidateServiceConfigResponse {
 
 message CreateServiceRequest {
     Service service = 1;
+    string namespace = 2;
 }
 
 message CreateServiceResponse {
@@ -53,7 +56,8 @@ message CreateServiceResponse {
 
 message UpdateServiceRequest {
     string id = 1;
-    Service service = 2;
+    string namespace = 2;
+    Service service = 3;
 }
 
 message UpdateServiceResponse {
@@ -71,12 +75,12 @@ message DeleteServiceResponse {
 message PerformServiceActionRequest {
     string id = 1;
     string action = 2;
-    optional google.protobuf.Value data = 3; 
+    map<string, google.protobuf.Value> data = 3; 
 }
 
 message PerformServiceActionResponse {
     bool result = 1;
-    optional google.protobuf.Value meta = 2; 
+    map<string, google.protobuf.Value> meta = 2; 
 }
 
 service ServicesService {

@@ -67,44 +67,45 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 	service := request.GetConfig()
 	
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, service.Namespace, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, request.Namespace, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
 	log.Debug("Init validation")
-	for _, instance := range service.Instances {
-		log.Debug("Validating Service Instance", zap.String("instance", instance.GetTitle()))
-		for _, config := range instance.Configs {
-			log.Debug("Validating Instance Config", zap.Any("config", config))
-			client, ok := s.drivers[config.Type]
-			if !ok {
-				response.Result = false
-				err := fmt.Sprintf("Driver Type '%w' not registered", config.Type)
-				response.Error = append(
-					response.Error,
-					&servicespb.ValidateConfigSyntaxResponse{
-						Instance: instance.GetTitle(),
-						Error: &driverpb.ValidateConfigSyntaxResponse{
-							Result: false,
-							Error: &err,
-					}},
-				)
-				continue
-			}
+	for name, group := range service.InstancesGroup {
+		log.Debug("Validating Instances Group", zap.String("group", name))
+		groupType := group.GetType()
 
-			res, err := client.ValidateConfigSyntax(ctx, &driverpb.ValidateConfigSyntaxRequest{Config: config.GetConfig()})
+		config_err := servicespb.ValidateConfigSyntaxResponse{
+			Group: groupType,
+		}
+
+		client, ok := s.drivers[groupType]
+		if !ok {
+			response.Result = false
+			msg := fmt.Sprintf("Driver Type '%w' not registered", groupType)
+			config_err.Error = &driverpb.ValidateConfigSyntaxResponse{
+				Result: false, Error: &msg,
+			}
+			response.Error = append(
+				response.Error, &config_err,
+			)
+			continue
+		}
+
+		for _, instance := range group.Instances {
+			log.Debug("Validating Service Instance", zap.String("instance", instance.GetTitle()))
+			config := instance.GetConfig()
+			res, err := client.ValidateConfigSyntax(ctx, &driverpb.ValidateConfigSyntaxRequest{Config: config})
 			if err != nil {
 				response.Result = false
-				err := fmt.Sprintf("Error Validating Config for Driver Type '%w'", config.Type)
+				msg := fmt.Sprintf("Error Validating Config for Instance '%w' of type '%w'", instance.GetTitle(), groupType)
+				config_err.Error = &driverpb.ValidateConfigSyntaxResponse{
+					Result: false, Error: &msg,
+				}
 				response.Error = append(
-					response.Error,
-					&servicespb.ValidateConfigSyntaxResponse{
-						Instance: instance.GetTitle(),
-						Error: &driverpb.ValidateConfigSyntaxResponse{
-							Result: false,
-							Error: &err,
-					}},
+					response.Error, &config_err,
 				)
 				continue
 			}

@@ -20,12 +20,13 @@ option go_package = "github.com/slntopp/nocloud/pkg/instances/proto";
 
 import "google/protobuf/struct.proto";
 
-message DriverConfig {
-    string type = 1;
-    google.protobuf.Value config = 2;
-}
-
 message Instance {
     string title = 1;
-    repeated DriverConfig configs = 2;
+    map<string, google.protobuf.Value> config = 2;
+}
+
+message InstancesGroup {
+    string type = 1;
+    map<string, google.protobuf.Value> config = 2;
+    repeated Instance instances = 3;
 }
