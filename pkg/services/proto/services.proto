@@ -19,26 +19,32 @@ package nocloud.services;
 option go_package = "github.com/slntopp/nocloud/pkg/services/proto";
 
 import "google/protobuf/struct.proto";
+import "pkg/instances/proto/instances.proto";
 import "pkg/drivers/instance/proto/driver.proto";
 
-
-message ValidateServiceConfigRequest {
-    string config = 1;
+message Service {
+    string title = 1;
+    string namespace = 2;
+    repeated nocloud.instances.Instance instances = 3;
+    google.protobuf.Value config = 4;
 }
 
-message ValidateInstanceConfigError {
+message ValidateServiceConfigRequest {
+    Service config = 1;
+}
+
+message ValidateConfigSyntaxResponse {
     string instance = 1;
-    string error = 2;
+    nocloud.instance.driver.ValidateConfigSyntaxResponse error = 2;
 }
 
 message ValidateServiceConfigResponse {
     bool result = 1;
-    repeated ValidateInstanceConfigError error = 2; 
+    repeated ValidateConfigSyntaxResponse error = 2; 
 }
 
 message CreateServiceRequest {
-    string namespace = 1;
-    google.protobuf.Value config = 2;
+    Service service = 1;
 }
 
 message CreateServiceResponse {
@@ -47,7 +53,7 @@ message CreateServiceResponse {
 
 message UpdateServiceRequest {
     string id = 1;
-    google.protobuf.Value config = 2;
+    Service service = 2;
 }
 
 message UpdateServiceResponse {
