@@ -16,50 +16,44 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 
+	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/proto"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	"github.com/slntopp/nocloud/pkg/services"
+	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-
-	"github.com/slntopp/nocloud/pkg/accounting"
-	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
-	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
-	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 )
 
 var (
-	port 			string
-	log 			*zap.Logger
+	port string
+	log *zap.Logger
 
 	arangodbHost 	string
 	arangodbCred 	string
-	nocloudRootPass string
-
-	SIGNING_KEY 	[]byte
+	drivers 		[]string
 )
 
 func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
-	
+
 	viper.SetDefault("PORT", "8080")
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
-	viper.SetDefault("NOCLOUD_ROOT_PASSWORD", "secret")
-
-	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+	viper.SetDefault("DRIVERS", "")
 
 	port = viper.GetString("PORT")
 
 	arangodbHost 	= viper.GetString("DB_HOST")
 	arangodbCred 	= viper.GetString("DB_CRED")
-	nocloudRootPass = viper.GetString("NOCLOUD_ROOT_PASSWORD")
-
-	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
+	drivers 		= viper.GetStringSlice("DRIVERS")
 }
 
 func main() {
@@ -77,15 +71,27 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-
-	accounts_server := accounting.NewAccountsServer(log, db)
-	accounts_server.SIGNING_KEY = SIGNING_KEY
-	accounts_server.EnsureRootExists(nocloudRootPass)
-	accountspb.RegisterAccountsServiceServer(s, accounts_server)
-
-	namespaces_server := accounting.NewNamespacesServer(log, db)
-	namespacespb.RegisterNamespacesServiceServer(s, namespaces_server)
 	
+	services_server := services.NewServicesServer(log, db)
+
+	for _, driver := range drivers {
+		log.Info("Registering Driver", zap.String("driver", driver))
+		conn, err := grpc.Dial(driver, grpc.WithInsecure())
+		if err != nil {
+			log.Error("Error registering driver", zap.String("driver", driver), zap.Error(err))
+			continue
+		}
+		client := driverpb.NewDriverServiceClient(conn)
+		driver_type, err := client.GetType(context.Background(), &driverpb.GetTypeRequest{})
+		if err != nil {
+			log.Error("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
+		}
+		services_server.RegisterDriver(driver_type.GetType(), client)
+		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
+	}
+
+	servicespb.RegisterServicesServiceServer(s, services_server)
+
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
 }

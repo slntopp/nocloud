@@ -95,6 +95,39 @@ service NamespacesService {
     };
 }
 
+import "pkg/services/proto/services.proto";
+service ServicesService {
+    rpc ValidateServiceConfig(nocloud.services.ValidateServiceConfigRequest) returns (nocloud.services.ValidateServiceConfigResponse) {
+        option (google.api.http) = {
+            post: "/services/verify",
+            body: "*"
+        };
+    };
+    rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.CreateServiceResponse) {
+        option (google.api.http) = {
+            post: "/services",
+            body: "*"
+        };
+    };
+    rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.UpdateServiceResponse) {
+        option (google.api.http) = {
+            patch: "/services/{id}",
+            body: "*"
+        };
+    };
+    rpc DeleteService(nocloud.services.DeleteServiceRequest) returns (nocloud.services.DeleteServiceResponse) {
+        option (google.api.http) = {
+            delete: "/services/{id}"
+        };
+    };
+    rpc PerformServiceAction(nocloud.services.PerformServiceActionRequest) returns (nocloud.services.PerformServiceActionResponse) {
+        option (google.api.http) = {
+            post: "/services/{id}/action/{action}",
+            body: "*"
+        };
+    };
+}
+
 import "pkg/health/healthpb/health.proto";
 service HealthService {
     rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse) {

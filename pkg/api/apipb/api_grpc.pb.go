@@ -7,6 +7,7 @@ import (
 	accountspb "github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	namespacespb "github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	healthpb "github.com/slntopp/nocloud/pkg/health/healthpb"
+	proto "github.com/slntopp/nocloud/pkg/services/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -543,6 +544,236 @@ var NamespacesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Delete",
 			Handler:    _NamespacesService_Delete_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/api/apipb/api.proto",
+}
+
+// ServicesServiceClient is the client API for ServicesService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ServicesServiceClient interface {
+	ValidateServiceConfig(ctx context.Context, in *proto.ValidateServiceConfigRequest, opts ...grpc.CallOption) (*proto.ValidateServiceConfigResponse, error)
+	CreateService(ctx context.Context, in *proto.CreateServiceRequest, opts ...grpc.CallOption) (*proto.CreateServiceResponse, error)
+	UpdateService(ctx context.Context, in *proto.UpdateServiceRequest, opts ...grpc.CallOption) (*proto.UpdateServiceResponse, error)
+	DeleteService(ctx context.Context, in *proto.DeleteServiceRequest, opts ...grpc.CallOption) (*proto.DeleteServiceResponse, error)
+	PerformServiceAction(ctx context.Context, in *proto.PerformServiceActionRequest, opts ...grpc.CallOption) (*proto.PerformServiceActionResponse, error)
+}
+
+type servicesServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewServicesServiceClient(cc grpc.ClientConnInterface) ServicesServiceClient {
+	return &servicesServiceClient{cc}
+}
+
+func (c *servicesServiceClient) ValidateServiceConfig(ctx context.Context, in *proto.ValidateServiceConfigRequest, opts ...grpc.CallOption) (*proto.ValidateServiceConfigResponse, error) {
+	out := new(proto.ValidateServiceConfigResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/ValidateServiceConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesServiceClient) CreateService(ctx context.Context, in *proto.CreateServiceRequest, opts ...grpc.CallOption) (*proto.CreateServiceResponse, error) {
+	out := new(proto.CreateServiceResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/CreateService", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesServiceClient) UpdateService(ctx context.Context, in *proto.UpdateServiceRequest, opts ...grpc.CallOption) (*proto.UpdateServiceResponse, error) {
+	out := new(proto.UpdateServiceResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/UpdateService", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesServiceClient) DeleteService(ctx context.Context, in *proto.DeleteServiceRequest, opts ...grpc.CallOption) (*proto.DeleteServiceResponse, error) {
+	out := new(proto.DeleteServiceResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/DeleteService", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *proto.PerformServiceActionRequest, opts ...grpc.CallOption) (*proto.PerformServiceActionResponse, error) {
+	out := new(proto.PerformServiceActionResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/PerformServiceAction", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ServicesServiceServer is the server API for ServicesService service.
+// All implementations must embed UnimplementedServicesServiceServer
+// for forward compatibility
+type ServicesServiceServer interface {
+	ValidateServiceConfig(context.Context, *proto.ValidateServiceConfigRequest) (*proto.ValidateServiceConfigResponse, error)
+	CreateService(context.Context, *proto.CreateServiceRequest) (*proto.CreateServiceResponse, error)
+	UpdateService(context.Context, *proto.UpdateServiceRequest) (*proto.UpdateServiceResponse, error)
+	DeleteService(context.Context, *proto.DeleteServiceRequest) (*proto.DeleteServiceResponse, error)
+	PerformServiceAction(context.Context, *proto.PerformServiceActionRequest) (*proto.PerformServiceActionResponse, error)
+	mustEmbedUnimplementedServicesServiceServer()
+}
+
+// UnimplementedServicesServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedServicesServiceServer struct {
+}
+
+func (UnimplementedServicesServiceServer) ValidateServiceConfig(context.Context, *proto.ValidateServiceConfigRequest) (*proto.ValidateServiceConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateServiceConfig not implemented")
+}
+func (UnimplementedServicesServiceServer) CreateService(context.Context, *proto.CreateServiceRequest) (*proto.CreateServiceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateService not implemented")
+}
+func (UnimplementedServicesServiceServer) UpdateService(context.Context, *proto.UpdateServiceRequest) (*proto.UpdateServiceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateService not implemented")
+}
+func (UnimplementedServicesServiceServer) DeleteService(context.Context, *proto.DeleteServiceRequest) (*proto.DeleteServiceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteService not implemented")
+}
+func (UnimplementedServicesServiceServer) PerformServiceAction(context.Context, *proto.PerformServiceActionRequest) (*proto.PerformServiceActionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PerformServiceAction not implemented")
+}
+func (UnimplementedServicesServiceServer) mustEmbedUnimplementedServicesServiceServer() {}
+
+// UnsafeServicesServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ServicesServiceServer will
+// result in compilation errors.
+type UnsafeServicesServiceServer interface {
+	mustEmbedUnimplementedServicesServiceServer()
+}
+
+func RegisterServicesServiceServer(s grpc.ServiceRegistrar, srv ServicesServiceServer) {
+	s.RegisterService(&ServicesService_ServiceDesc, srv)
+}
+
+func _ServicesService_ValidateServiceConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.ValidateServiceConfigRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).ValidateServiceConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesService/ValidateServiceConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).ValidateServiceConfig(ctx, req.(*proto.ValidateServiceConfigRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesService_CreateService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.CreateServiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).CreateService(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesService/CreateService",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).CreateService(ctx, req.(*proto.CreateServiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesService_UpdateService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.UpdateServiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).UpdateService(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesService/UpdateService",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).UpdateService(ctx, req.(*proto.UpdateServiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesService_DeleteService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.DeleteServiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).DeleteService(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesService/DeleteService",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).DeleteService(ctx, req.(*proto.DeleteServiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesService_PerformServiceAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.PerformServiceActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).PerformServiceAction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesService/PerformServiceAction",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).PerformServiceAction(ctx, req.(*proto.PerformServiceActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ServicesService_ServiceDesc is the grpc.ServiceDesc for ServicesService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ServicesService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "nocloud.api.ServicesService",
+	HandlerType: (*ServicesServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ValidateServiceConfig",
+			Handler:    _ServicesService_ValidateServiceConfig_Handler,
+		},
+		{
+			MethodName: "CreateService",
+			Handler:    _ServicesService_CreateService_Handler,
+		},
+		{
+			MethodName: "UpdateService",
+			Handler:    _ServicesService_UpdateService_Handler,
+		},
+		{
+			MethodName: "DeleteService",
+			Handler:    _ServicesService_DeleteService_Handler,
+		},
+		{
+			MethodName: "PerformServiceAction",
+			Handler:    _ServicesService_PerformServiceAction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

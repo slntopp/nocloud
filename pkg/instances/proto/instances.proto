@@ -14,27 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 syntax = "proto3";
-package nocloud.instance.driver;
+package nocloud.instances;
 
-option go_package = "github.com/slntopp/nocloud/pkg/drivers/instance";
+option go_package = "github.com/slntopp/nocloud/pkg/instances/proto";
 
-import "pkg/instances/proto/instances.proto";
+import "google/protobuf/struct.proto";
 
-message ValidateConfigSyntaxRequest {
-    nocloud.instances.InstancesGroup instances_group = 1;
+message Instance {
+    string title = 1;
+    map<string, google.protobuf.Value> config = 2;
 }
 
-message ValidateConfigSyntaxResponse {
-    bool result = 1;
-    repeated string errors = 2; 
-}
-
-message GetTypeRequest {}
-message GetTypeResponse {
+message InstancesGroup {
     string type = 1;
-}
-
-service DriverService {
-    rpc ValidateConfigSyntax(ValidateConfigSyntaxRequest) returns (ValidateConfigSyntaxResponse);
-    rpc GetType(GetTypeRequest) returns (GetTypeResponse);
+    map<string, google.protobuf.Value> config = 2;
+    repeated Instance instances = 3;
 }
