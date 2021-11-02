@@ -59,7 +59,7 @@ func NewAccountsServer(log *zap.Logger, db driver.Database) *AccountsServiceServ
 func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.GetRequest) (*accountspb.Account, error) {
 	log := s.log.Named("GetAccount")
 	log.Debug("Get request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := ValidateMetadata(ctx, log)
+	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.ListRequest) (*accountspb.ListResponse, error) {
 	log := s.log.Named("ListAccounts")
 	log.Debug("List request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := ValidateMetadata(ctx, log)
+	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
 	log := s.log.Named("CreateAccount")
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := ValidateMetadata(ctx, log)
+	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.Account) (*accountspb.UpdateResponse, error) {
 	log := s.log.Named("UpdateAccount")
 	log.Debug("Update request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := ValidateMetadata(ctx, log)
+	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +229,7 @@ func (s *AccountsServiceServer) EnsureRootExists(passwd string) (error) {
 func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error) {
 	log := s.log.Named("SetCredentials")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := ValidateMetadata(ctx, log)
+	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +275,7 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.DeleteRequest) (*accountspb.DeleteResponse, error) {
 	log := s.log.Named("Delete")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := ValidateMetadata(ctx, log)
+	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
 		return nil, err
 	}
