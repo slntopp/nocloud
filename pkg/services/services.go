@@ -62,7 +62,7 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	response := servicespb.ValidateServiceConfigResponse{Result: false, Error: make([]*servicespb.ValidateConfigSyntaxResponse, 0)}
+	response := servicespb.ValidateServiceConfigResponse{Result: false, Errors: make([]*servicespb.ValidateConfigSyntaxResponse, 0)}
 
 	service := request.GetConfig()
 	
@@ -73,7 +73,7 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 	}
 
 	log.Debug("Init validation")
-	for name, group := range service.InstancesGroup {
+	for name, group := range service.InstancesGroups {
 		log.Debug("Validating Instances Group", zap.String("group", name))
 		groupType := group.GetType()
 
@@ -84,40 +84,37 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 		client, ok := s.drivers[groupType]
 		if !ok {
 			response.Result = false
-			msg := fmt.Sprintf("Driver Type '%w' not registered", groupType)
 			config_err.Error = &driverpb.ValidateConfigSyntaxResponse{
-				Result: false, Error: &msg,
+				Result: false, Errors: []string{
+					fmt.Sprintf("Driver Type '%w' not registered", groupType),
+				},
 			}
-			response.Error = append(
-				response.Error, &config_err,
+			response.Errors = append(
+				response.Errors, &config_err,
 			)
 			continue
 		}
 
-		for _, instance := range group.Instances {
-			log.Debug("Validating Service Instance", zap.String("instance", instance.GetTitle()))
-			config := instance.GetConfig()
-			res, err := client.ValidateConfigSyntax(ctx, &driverpb.ValidateConfigSyntaxRequest{Config: config})
-			if err != nil {
-				response.Result = false
-				msg := fmt.Sprintf("Error Validating Config for Instance '%w' of type '%w'", instance.GetTitle(), groupType)
-				config_err.Error = &driverpb.ValidateConfigSyntaxResponse{
-					Result: false, Error: &msg,
-				}
-				response.Error = append(
-					response.Error, &config_err,
-				)
-				continue
+		res, err := client.ValidateConfigSyntax(ctx, &driverpb.ValidateConfigSyntaxRequest{InstancesGroup: group})
+		if err != nil {
+			response.Result = false
+			config_err.Error = &driverpb.ValidateConfigSyntaxResponse{
+				Result: false, Errors: []string{
+					fmt.Sprintf("Error validating group '%w'", name),
+				},
 			}
-
-			if !res.Result {
-				response.Result = false
-				response.Error = append(response.Error, &servicespb.ValidateConfigSyntaxResponse{
-					Instance: instance.GetTitle(),
-					Error: res,
-				})
-			}
+			response.Errors = append(
+				response.Errors, &config_err,
+			)
+			continue
 		}
+		if !res.GetResult() {
+			response.Result = false
+			config_err.Error = res
+			response.Errors = append(response.Errors, &config_err)
+			continue
+		}
+		log.Debug("Validated Instances Group", zap.String("group", name))
 	}
 
 	return &response, nil

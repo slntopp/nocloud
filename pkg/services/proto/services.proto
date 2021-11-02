@@ -26,7 +26,7 @@ message Service {
     string version = 1;
     string title = 2;
     map<string, google.protobuf.Value> context = 3;
-    map<string, nocloud.instances.InstancesGroup> instances_group = 4;
+    map<string, nocloud.instances.InstancesGroup> instances_groups = 4;
 }
 
 message ValidateServiceConfigRequest {
@@ -42,7 +42,7 @@ message ValidateConfigSyntaxResponse {
 
 message ValidateServiceConfigResponse {
     bool result = 1;
-    repeated ValidateConfigSyntaxResponse error = 2; 
+    repeated ValidateConfigSyntaxResponse errors = 2; 
 }
 
 message CreateServiceRequest {
