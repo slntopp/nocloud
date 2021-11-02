@@ -19,6 +19,8 @@ package nocloud.services;
 option go_package = "github.com/slntopp/nocloud/pkg/services/proto";
 
 import "google/protobuf/struct.proto";
+import "pkg/drivers/instance/proto/driver.proto";
+
 
 message ValidateServiceConfigRequest {
     string config = 1;
