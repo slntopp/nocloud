@@ -1,4 +1,4 @@
-# nocloud
+# NoCloud
 Brand new Cloud FrontEnd based on IONe and Golang
 
 ## Table of Contents
