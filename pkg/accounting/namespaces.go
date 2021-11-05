@@ -98,7 +98,7 @@ func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacesp
 
 	result := make([]*namespacespb.Namespace, len(pool))
 	for i, ns := range pool {
-		result[i] = &namespacespb.Namespace{Title:  ns.Title }
+		result[i] = &namespacespb.Namespace{Id: ns.Key, Title:  ns.Title }
 	}
 	log.Debug("Convert result", zap.Any("pool", result))
 
