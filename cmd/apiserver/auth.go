@@ -36,7 +36,6 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 	l := log.Named("JWT Interceptor")
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
 
-
 	switch info.FullMethod {
 	case "/nocloud.api.AccountsService/Token":
 		return handler(ctx, req)
@@ -56,9 +55,11 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 }
 
 func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
+	l := log.Named("JWT Middleware")
 	tokenString, err := grpc_auth.AuthFromMD(ctx, "bearer")
 	if err != nil {
-		return nil, status.Error(codes.Unauthenticated, "No Token given")
+		l.Debug("Error extracting token", zap.Any("error", err))
+		return nil, err
 	}
 
 	token, err := validateToken(tokenString)
