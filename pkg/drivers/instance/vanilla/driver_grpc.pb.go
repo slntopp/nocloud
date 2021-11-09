@@ -4,6 +4,7 @@ package vanilla
 
 import (
 	context "context"
+	proto "github.com/slntopp/nocloud/pkg/services/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -18,7 +19,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DriverServiceClient interface {
-	ValidateConfigSyntax(ctx context.Context, in *ValidateConfigSyntaxRequest, opts ...grpc.CallOption) (*ValidateConfigSyntaxResponse, error)
+	ValidateConfigSyntax(ctx context.Context, in *proto.ValidateServiceConfigRequest, opts ...grpc.CallOption) (*proto.ValidateServiceConfigResponse, error)
 	GetType(ctx context.Context, in *GetTypeRequest, opts ...grpc.CallOption) (*GetTypeResponse, error)
 }
 
@@ -30,8 +31,8 @@ func NewDriverServiceClient(cc grpc.ClientConnInterface) DriverServiceClient {
 	return &driverServiceClient{cc}
 }
 
-func (c *driverServiceClient) ValidateConfigSyntax(ctx context.Context, in *ValidateConfigSyntaxRequest, opts ...grpc.CallOption) (*ValidateConfigSyntaxResponse, error) {
-	out := new(ValidateConfigSyntaxResponse)
+func (c *driverServiceClient) ValidateConfigSyntax(ctx context.Context, in *proto.ValidateServiceConfigRequest, opts ...grpc.CallOption) (*proto.ValidateServiceConfigResponse, error) {
+	out := new(proto.ValidateServiceConfigResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/ValidateConfigSyntax", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -52,7 +53,7 @@ func (c *driverServiceClient) GetType(ctx context.Context, in *GetTypeRequest, o
 // All implementations must embed UnimplementedDriverServiceServer
 // for forward compatibility
 type DriverServiceServer interface {
-	ValidateConfigSyntax(context.Context, *ValidateConfigSyntaxRequest) (*ValidateConfigSyntaxResponse, error)
+	ValidateConfigSyntax(context.Context, *proto.ValidateServiceConfigRequest) (*proto.ValidateServiceConfigResponse, error)
 	GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error)
 	mustEmbedUnimplementedDriverServiceServer()
 }
@@ -61,7 +62,7 @@ type DriverServiceServer interface {
 type UnimplementedDriverServiceServer struct {
 }
 
-func (UnimplementedDriverServiceServer) ValidateConfigSyntax(context.Context, *ValidateConfigSyntaxRequest) (*ValidateConfigSyntaxResponse, error) {
+func (UnimplementedDriverServiceServer) ValidateConfigSyntax(context.Context, *proto.ValidateServiceConfigRequest) (*proto.ValidateServiceConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateConfigSyntax not implemented")
 }
 func (UnimplementedDriverServiceServer) GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error) {
@@ -81,7 +82,7 @@ func RegisterDriverServiceServer(s grpc.ServiceRegistrar, srv DriverServiceServe
 }
 
 func _DriverService_ValidateConfigSyntax_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ValidateConfigSyntaxRequest)
+	in := new(proto.ValidateServiceConfigRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -93,7 +94,7 @@ func _DriverService_ValidateConfigSyntax_Handler(srv interface{}, ctx context.Co
 		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/ValidateConfigSyntax",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServiceServer).ValidateConfigSyntax(ctx, req.(*ValidateConfigSyntaxRequest))
+		return srv.(DriverServiceServer).ValidateConfigSyntax(ctx, req.(*proto.ValidateServiceConfigRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

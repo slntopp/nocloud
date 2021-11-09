@@ -62,7 +62,7 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	response := servicespb.ValidateServiceConfigResponse{Result: false, Errors: make([]*servicespb.ValidateConfigSyntaxResponse, 0)}
+	response := servicespb.ValidateServiceConfigResponse{Result: false, Errors: make([]*servicespb.ValidateServiceConfigError, 0)}
 
 	service := request.GetConfig()
 	
@@ -77,32 +77,24 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 		log.Debug("Validating Instances Group", zap.String("group", name))
 		groupType := group.GetType()
 
-		config_err := servicespb.ValidateConfigSyntaxResponse{
-			Group: groupType,
+		config_err := servicespb.ValidateServiceConfigError{
+			InstanceGroup: name,
 		}
 
 		client, ok := s.drivers[groupType]
 		if !ok {
 			response.Result = false
-			config_err.Error = &driverpb.ValidateConfigSyntaxResponse{
-				Result: false, Errors: []string{
-					fmt.Sprintf("Driver Type '%w' not registered", groupType),
-				},
-			}
+			config_err.Error = fmt.Sprintf("Driver Type '%s' not registered", groupType)
 			response.Errors = append(
 				response.Errors, &config_err,
 			)
 			continue
 		}
 
-		res, err := client.ValidateConfigSyntax(ctx, &driverpb.ValidateConfigSyntaxRequest{InstancesGroup: group})
+		res, err := client.ValidateConfigSyntax(ctx, request)
 		if err != nil {
 			response.Result = false
-			config_err.Error = &driverpb.ValidateConfigSyntaxResponse{
-				Result: false, Errors: []string{
-					fmt.Sprintf("Error validating group '%w'", name),
-				},
-			}
+			config_err.Error = fmt.Sprintf("Error validating group '%s'", name)
 			response.Errors = append(
 				response.Errors, &config_err,
 			)
@@ -110,8 +102,7 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 		}
 		if !res.GetResult() {
 			response.Result = false
-			config_err.Error = res
-			response.Errors = append(response.Errors, &config_err)
+			response.Errors = append(response.Errors, res.Errors...)
 			continue
 		}
 		log.Debug("Validated Instances Group", zap.String("group", name))

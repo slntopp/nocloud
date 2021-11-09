@@ -24,6 +24,7 @@ import (
 	"context"
 
 	pb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
+	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 )
 
 var DRIVER_NAME string
@@ -40,6 +41,6 @@ func (s *DriverServiceServer) GetType(ctx context.Context, _ *pb.GetTypeRequest)
 	return &pb.GetTypeResponse{Type: DRIVER_NAME}, nil
 }
 
-func (s *DriverServiceServer) ValidateConfigSyntax(ctx context.Context, req *pb.ValidateConfigSyntaxRequest) (*pb.ValidateConfigSyntaxResponse, error) {
-	return &pb.ValidateConfigSyntaxResponse{Result: true}, nil
+func (s *DriverServiceServer) ValidateConfigSyntax(ctx context.Context, req *servicespb.ValidateServiceConfigRequest) (*servicespb.ValidateServiceConfigResponse, error) {
+	return &servicespb.ValidateServiceConfigResponse{Result: true}, nil
 }
