@@ -20,7 +20,7 @@ option go_package = "github.com/slntopp/nocloud/pkg/services/proto";
 
 import "google/protobuf/struct.proto";
 import "pkg/instances/proto/instances.proto";
-import "pkg/drivers/instance/proto/driver.proto";
+import "pkg/drivers/instance/vanilla/driver.proto";
 
 message Service {
     string version = 1;
@@ -37,7 +37,7 @@ message ValidateServiceConfigRequest {
 message ValidateConfigSyntaxResponse {
     string group = 1;
     string instance = 2;
-    nocloud.instance.driver.ValidateConfigSyntaxResponse error = 3;
+    nocloud.instance.driver.vanilla.ValidateConfigSyntaxResponse error = 3;
 }
 
 message ValidateServiceConfigResponse {

@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 syntax = "proto3";
-package nocloud.instance.driver;
+package nocloud.instance.driver.vanilla;
 
-option go_package = "github.com/slntopp/nocloud/pkg/drivers/instance";
+option go_package = "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla";
 
 import "pkg/instances/proto/instances.proto";
 

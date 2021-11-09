@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
-	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/proto"
+	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"

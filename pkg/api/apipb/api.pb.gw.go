@@ -20,7 +20,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
-	proto_2 "github.com/slntopp/nocloud/pkg/services/proto"
+	proto_1 "github.com/slntopp/nocloud/pkg/services/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -654,7 +654,7 @@ func local_request_NamespacesService_Delete_0(ctx context.Context, marshaler run
 }
 
 func request_ServicesService_ValidateServiceConfig_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.ValidateServiceConfigRequest
+	var protoReq proto_1.ValidateServiceConfigRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -671,7 +671,7 @@ func request_ServicesService_ValidateServiceConfig_0(ctx context.Context, marsha
 }
 
 func local_request_ServicesService_ValidateServiceConfig_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.ValidateServiceConfigRequest
+	var protoReq proto_1.ValidateServiceConfigRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -688,7 +688,7 @@ func local_request_ServicesService_ValidateServiceConfig_0(ctx context.Context, 
 }
 
 func request_ServicesService_CreateService_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.CreateServiceRequest
+	var protoReq proto_1.CreateServiceRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -705,7 +705,7 @@ func request_ServicesService_CreateService_0(ctx context.Context, marshaler runt
 }
 
 func local_request_ServicesService_CreateService_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.CreateServiceRequest
+	var protoReq proto_1.CreateServiceRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -722,7 +722,7 @@ func local_request_ServicesService_CreateService_0(ctx context.Context, marshale
 }
 
 func request_ServicesService_UpdateService_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.UpdateServiceRequest
+	var protoReq proto_1.UpdateServiceRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -757,7 +757,7 @@ func request_ServicesService_UpdateService_0(ctx context.Context, marshaler runt
 }
 
 func local_request_ServicesService_UpdateService_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.UpdateServiceRequest
+	var protoReq proto_1.UpdateServiceRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -792,7 +792,7 @@ func local_request_ServicesService_UpdateService_0(ctx context.Context, marshale
 }
 
 func request_ServicesService_DeleteService_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.DeleteServiceRequest
+	var protoReq proto_1.DeleteServiceRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -819,7 +819,7 @@ func request_ServicesService_DeleteService_0(ctx context.Context, marshaler runt
 }
 
 func local_request_ServicesService_DeleteService_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.DeleteServiceRequest
+	var protoReq proto_1.DeleteServiceRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -846,7 +846,7 @@ func local_request_ServicesService_DeleteService_0(ctx context.Context, marshale
 }
 
 func request_ServicesService_PerformServiceAction_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.PerformServiceActionRequest
+	var protoReq proto_1.PerformServiceActionRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -892,7 +892,7 @@ func request_ServicesService_PerformServiceAction_0(ctx context.Context, marshal
 }
 
 func local_request_ServicesService_PerformServiceAction_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.PerformServiceActionRequest
+	var protoReq proto_1.PerformServiceActionRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"net"
 
-	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/proto"
+	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/services"
