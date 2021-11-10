@@ -16,7 +16,10 @@ limitations under the License.
 package graph
 
 import (
+	"encoding/json"
+
 	"github.com/arangodb/go-driver"
+	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
 )
 
@@ -26,9 +29,11 @@ const (
 )
 
 type Service struct {
+	Version string `json:"version"`
 	Title string `json:"title"`
-	Config interface{} `json:"config"`
-	Instances []interface{} `json:"instances"`
+	Context map[string]interface{} `json:"context"`
+	InstancesGroups map[string]InstancesGroup `json:"instances_groups"`
+	State string `json:"state"`
 
 	driver.DocumentMeta
 }
@@ -42,3 +47,24 @@ type ServicesController struct {
 func NewServicesController(log *zap.Logger, col driver.Collection) ServicesController {
 	return ServicesController{log: log, col: col}
 }
+
+func (s *Service) ToServiceMessage() (res *pb.Service, err error) {
+	b, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, res)
+	return res, err
+}
+
+func MakeServiceFromMessage(req *pb.Service) (res *Service, err error) {
+	b, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, res)
+	return res, err
+}
+

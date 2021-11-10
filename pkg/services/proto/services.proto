@@ -26,6 +26,7 @@ message Service {
     string title = 2;
     map<string, google.protobuf.Value> context = 3;
     map<string, nocloud.instances.InstancesGroup> instances_groups = 4;
+    string state = 5;
 }
 
 message ValidateServiceConfigRequest {

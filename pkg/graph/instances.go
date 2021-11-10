@@ -22,12 +22,21 @@ import (
 
 const (
 	INSTANCES_COL = "Instances"
+	INSTANCES_GROUPS_COL = "InstancesGroups"
 	SERV2INST = SERVICES_COL + "2" + INSTANCES_COL
 )
 
 type Instance struct {
 	Title string `json:"title"`
-	Config interface{} `json:"config"`
+	Config map[string]interface{} `json:"config"`
+
+	driver.DocumentMeta
+}
+
+type InstancesGroup struct {
+	Type string `json:"type"`
+	Config map[string]interface{} `json:"config"`
+	Instances []Instance `json:"instances"`
 
 	driver.DocumentMeta
 }
