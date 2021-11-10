@@ -16,35 +16,38 @@ limitations under the License.
 package graph
 
 import (
-	"context"
-
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
+	"golang.org/x/net/context"
 )
 
 const (
-	INSTANCES_COL = "Instances"
+	INSTANCES_GROUPS_COL = "InstancesGroups"
 )
 
-type Instance struct {
-	Title string `json:"title"`
+type InstancesGroup struct {
+	Type string `json:"type"`
 	Config map[string]interface{} `json:"config"`
+	Instances []Instance `json:"instances"`
 
 	driver.DocumentMeta
 }
 
-
-type InstancesController struct {
+type InstancesGroupsController struct {
 	col driver.Collection // Instances Collection
-
+	inst_ctrl InstancesController
+	
 	log *zap.Logger
 }
 
-func NewInstancesController(log *zap.Logger, db driver.Database) InstancesController {
-	col, _ := db.Collection(nil, INSTANCES_COL)
-	return InstancesController{log: log, col: col}
+func NewInstancesGroupsController(log *zap.Logger, db driver.Database) InstancesGroupsController {
+	col, _ := db.Collection(nil, INSTANCES_GROUPS_COL)
+	return InstancesGroupsController{log: log, inst_ctrl: NewInstancesController(log, db), col: col}
 }
 
-func (ctrl *InstancesController) Create(ctx context.Context, instance Instance) (error) {
+func (ctrl *InstancesGroupsController) Create(ctx context.Context, group InstancesGroup) (error) {
+	for _, instance := range group.Instances {
+		ctrl.inst_ctrl.Create(ctx, instance)
+	}
 	return nil
 }
