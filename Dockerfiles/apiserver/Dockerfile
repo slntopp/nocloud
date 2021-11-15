@@ -1,8 +1,14 @@
-FROM golang:1.17 AS builder
-ADD go.mod /go/src/github.com/slntopp/nocloud/go.mod
-ADD . /go/src/github.com/slntopp/nocloud
+FROM golang:1.17-alpine AS builder
+
+RUN apk add upx
+
 WORKDIR /go/src/github.com/slntopp/nocloud
-RUN cd /go/src/github.com/slntopp/nocloud && CGO_ENABLED=0 go build ./cmd/apiserver
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/apiserver
+RUN upx ./apiserver
 
 FROM scratch
 WORKDIR /
