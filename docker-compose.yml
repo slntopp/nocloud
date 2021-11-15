@@ -2,12 +2,12 @@ version: "3.8"
 services:
   health:
     container_name: health-service
-    image: slntopp/nocloud/health:latest
+    image: ghcr.io/slntopp/nocloud/health:latest
     networks:
       - grpc-internal
   apiserver:
     container_name: apiserver
-    image: slntopp/nocloud/apiserver:latest
+    image: ghcr.io/slntopp/nocloud/apiserver:latest
     environment:
       HEALTH_HOST: health:8080
       REGISTRY_HOST: registry:8080
@@ -19,7 +19,7 @@ services:
       - grpc-internal
   registry:
     container_name: registry
-    image: slntopp/nocloud/registry:latest
+    image: ghcr.io/slntopp/nocloud/registry:latest
     environment:
       DB_HOST: db:8529
       DB_CRED: root:openSesame
