@@ -1,3 +1,6 @@
 docker-compose.yml
 docs
 Dockerfiles/*
+tools
+*.md
+database
