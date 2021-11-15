@@ -18,6 +18,7 @@ package nocloud.instance.driver.vanilla;
 
 option go_package = "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla";
 
+import "google/protobuf/struct.proto";
 import "pkg/instances/proto/instances.proto";
 import "pkg/services_providers/proto/services_providers.proto";
 
@@ -31,9 +32,14 @@ message DeployRequest {
     nocloud.services_providers.ServicesProvider services_provider = 2;
 }
 
+message DeployResponse {
+    nocloud.instances.InstancesGroup   group = 1;
+    map<string, google.protobuf.Value> group_data = 2;
+}
+
 service DriverService {
     rpc ValidateConfigSyntax(nocloud.instances.ValidateInstancesGroupConfigRequest) returns (nocloud.instances.ValidateInstancesGroupConfigResponse);
     rpc GetType(GetTypeRequest) returns (GetTypeResponse);
 
-    rpc Deploy(DeployRequest) returns (nocloud.instances.InstancesGroup);
+    rpc Deploy(DeployRequest) returns (DeployResponse);
 }

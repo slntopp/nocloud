@@ -21,7 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 type DriverServiceClient interface {
 	ValidateConfigSyntax(ctx context.Context, in *proto.ValidateInstancesGroupConfigRequest, opts ...grpc.CallOption) (*proto.ValidateInstancesGroupConfigResponse, error)
 	GetType(ctx context.Context, in *GetTypeRequest, opts ...grpc.CallOption) (*GetTypeResponse, error)
-	Deploy(ctx context.Context, in *DeployRequest, opts ...grpc.CallOption) (*proto.InstancesGroup, error)
+	Deploy(ctx context.Context, in *DeployRequest, opts ...grpc.CallOption) (*DeployResponse, error)
 }
 
 type driverServiceClient struct {
@@ -50,8 +50,8 @@ func (c *driverServiceClient) GetType(ctx context.Context, in *GetTypeRequest, o
 	return out, nil
 }
 
-func (c *driverServiceClient) Deploy(ctx context.Context, in *DeployRequest, opts ...grpc.CallOption) (*proto.InstancesGroup, error) {
-	out := new(proto.InstancesGroup)
+func (c *driverServiceClient) Deploy(ctx context.Context, in *DeployRequest, opts ...grpc.CallOption) (*DeployResponse, error) {
+	out := new(DeployResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Deploy", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -65,7 +65,7 @@ func (c *driverServiceClient) Deploy(ctx context.Context, in *DeployRequest, opt
 type DriverServiceServer interface {
 	ValidateConfigSyntax(context.Context, *proto.ValidateInstancesGroupConfigRequest) (*proto.ValidateInstancesGroupConfigResponse, error)
 	GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error)
-	Deploy(context.Context, *DeployRequest) (*proto.InstancesGroup, error)
+	Deploy(context.Context, *DeployRequest) (*DeployResponse, error)
 	mustEmbedUnimplementedDriverServiceServer()
 }
 
@@ -79,7 +79,7 @@ func (UnimplementedDriverServiceServer) ValidateConfigSyntax(context.Context, *p
 func (UnimplementedDriverServiceServer) GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetType not implemented")
 }
-func (UnimplementedDriverServiceServer) Deploy(context.Context, *DeployRequest) (*proto.InstancesGroup, error) {
+func (UnimplementedDriverServiceServer) Deploy(context.Context, *DeployRequest) (*DeployResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Deploy not implemented")
 }
 func (UnimplementedDriverServiceServer) mustEmbedUnimplementedDriverServiceServer() {}
