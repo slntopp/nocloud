@@ -22,6 +22,7 @@ import (
 	"github.com/arangodb/go-driver"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
@@ -91,7 +92,7 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 			continue
 		}
 
-		res, err := client.ValidateConfigSyntax(ctx, request)
+		res, err := client.ValidateConfigSyntax(ctx, &proto.ValidateInstancesGroupConfigRequest{Config: group})
 		if err != nil {
 			response.Result = false
 			config_err.Error = fmt.Sprintf("Error validating group '%s'", name)
@@ -102,7 +103,15 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 		}
 		if !res.GetResult() {
 			response.Result = false
-			response.Errors = append(response.Errors, res.Errors...)
+			errors := make([]*servicespb.ValidateServiceConfigError, 0)
+			for _, confErr := range res.Errors {
+				errors = append(errors, &servicespb.ValidateServiceConfigError{
+					Error: confErr.Error,
+					Instance: confErr.Instance,
+					InstanceGroup: name,
+				})
+			}
+			response.Errors = append(response.Errors, errors...)
 			continue
 		}
 		log.Debug("Validated Instances Group", zap.String("group", name))

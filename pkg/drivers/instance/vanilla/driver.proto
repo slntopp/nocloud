@@ -18,7 +18,7 @@ package nocloud.instance.driver.vanilla;
 
 option go_package = "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla";
 
-import "pkg/services/proto/services.proto";
+import "pkg/instances/proto/instances.proto";
 
 message GetTypeRequest {}
 message GetTypeResponse {
@@ -26,6 +26,8 @@ message GetTypeResponse {
 }
 
 service DriverService {
-    rpc ValidateConfigSyntax(nocloud.services.ValidateServiceConfigRequest) returns (nocloud.services.ValidateServiceConfigResponse);
+    rpc ValidateConfigSyntax(nocloud.instances.ValidateInstancesGroupConfigRequest) returns (nocloud.instances.ValidateInstancesGroupConfigResponse);
     rpc GetType(GetTypeRequest) returns (GetTypeResponse);
+
+    rpc Deploy(nocloud.instances.InstancesGroup) returns (nocloud.instances.InstancesGroup);
 }

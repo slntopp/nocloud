@@ -4,7 +4,7 @@ package vanilla
 
 import (
 	context "context"
-	proto "github.com/slntopp/nocloud/pkg/services/proto"
+	proto "github.com/slntopp/nocloud/pkg/instances/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,8 +19,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DriverServiceClient interface {
-	ValidateConfigSyntax(ctx context.Context, in *proto.ValidateServiceConfigRequest, opts ...grpc.CallOption) (*proto.ValidateServiceConfigResponse, error)
+	ValidateConfigSyntax(ctx context.Context, in *proto.ValidateInstancesGroupConfigRequest, opts ...grpc.CallOption) (*proto.ValidateInstancesGroupConfigResponse, error)
 	GetType(ctx context.Context, in *GetTypeRequest, opts ...grpc.CallOption) (*GetTypeResponse, error)
+	Deploy(ctx context.Context, in *proto.InstancesGroup, opts ...grpc.CallOption) (*proto.InstancesGroup, error)
 }
 
 type driverServiceClient struct {
@@ -31,8 +32,8 @@ func NewDriverServiceClient(cc grpc.ClientConnInterface) DriverServiceClient {
 	return &driverServiceClient{cc}
 }
 
-func (c *driverServiceClient) ValidateConfigSyntax(ctx context.Context, in *proto.ValidateServiceConfigRequest, opts ...grpc.CallOption) (*proto.ValidateServiceConfigResponse, error) {
-	out := new(proto.ValidateServiceConfigResponse)
+func (c *driverServiceClient) ValidateConfigSyntax(ctx context.Context, in *proto.ValidateInstancesGroupConfigRequest, opts ...grpc.CallOption) (*proto.ValidateInstancesGroupConfigResponse, error) {
+	out := new(proto.ValidateInstancesGroupConfigResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/ValidateConfigSyntax", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -49,12 +50,22 @@ func (c *driverServiceClient) GetType(ctx context.Context, in *GetTypeRequest, o
 	return out, nil
 }
 
+func (c *driverServiceClient) Deploy(ctx context.Context, in *proto.InstancesGroup, opts ...grpc.CallOption) (*proto.InstancesGroup, error) {
+	out := new(proto.InstancesGroup)
+	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Deploy", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DriverServiceServer is the server API for DriverService service.
 // All implementations must embed UnimplementedDriverServiceServer
 // for forward compatibility
 type DriverServiceServer interface {
-	ValidateConfigSyntax(context.Context, *proto.ValidateServiceConfigRequest) (*proto.ValidateServiceConfigResponse, error)
+	ValidateConfigSyntax(context.Context, *proto.ValidateInstancesGroupConfigRequest) (*proto.ValidateInstancesGroupConfigResponse, error)
 	GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error)
+	Deploy(context.Context, *proto.InstancesGroup) (*proto.InstancesGroup, error)
 	mustEmbedUnimplementedDriverServiceServer()
 }
 
@@ -62,11 +73,14 @@ type DriverServiceServer interface {
 type UnimplementedDriverServiceServer struct {
 }
 
-func (UnimplementedDriverServiceServer) ValidateConfigSyntax(context.Context, *proto.ValidateServiceConfigRequest) (*proto.ValidateServiceConfigResponse, error) {
+func (UnimplementedDriverServiceServer) ValidateConfigSyntax(context.Context, *proto.ValidateInstancesGroupConfigRequest) (*proto.ValidateInstancesGroupConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateConfigSyntax not implemented")
 }
 func (UnimplementedDriverServiceServer) GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetType not implemented")
+}
+func (UnimplementedDriverServiceServer) Deploy(context.Context, *proto.InstancesGroup) (*proto.InstancesGroup, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Deploy not implemented")
 }
 func (UnimplementedDriverServiceServer) mustEmbedUnimplementedDriverServiceServer() {}
 
@@ -82,7 +96,7 @@ func RegisterDriverServiceServer(s grpc.ServiceRegistrar, srv DriverServiceServe
 }
 
 func _DriverService_ValidateConfigSyntax_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.ValidateServiceConfigRequest)
+	in := new(proto.ValidateInstancesGroupConfigRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -94,7 +108,7 @@ func _DriverService_ValidateConfigSyntax_Handler(srv interface{}, ctx context.Co
 		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/ValidateConfigSyntax",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServiceServer).ValidateConfigSyntax(ctx, req.(*proto.ValidateServiceConfigRequest))
+		return srv.(DriverServiceServer).ValidateConfigSyntax(ctx, req.(*proto.ValidateInstancesGroupConfigRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -117,6 +131,24 @@ func _DriverService_GetType_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DriverService_Deploy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.InstancesGroup)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServiceServer).Deploy(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/Deploy",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServiceServer).Deploy(ctx, req.(*proto.InstancesGroup))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DriverService_ServiceDesc is the grpc.ServiceDesc for DriverService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -131,6 +163,10 @@ var DriverService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetType",
 			Handler:    _DriverService_GetType_Handler,
+		},
+		{
+			MethodName: "Deploy",
+			Handler:    _DriverService_Deploy_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

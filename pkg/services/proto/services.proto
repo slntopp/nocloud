@@ -22,11 +22,13 @@ import "google/protobuf/struct.proto";
 import "pkg/instances/proto/instances.proto";
 
 message Service {
-    string version = 1;
-    string title = 2;
-    map<string, google.protobuf.Value> context = 3;
-    map<string, nocloud.instances.InstancesGroup> instances_groups = 4;
-    string state = 5;
+    string uuid = 1;
+    string version = 2;
+    string title = 3;
+    string state = 4;
+    map<string, google.protobuf.Value> context = 5;
+    map<string, nocloud.instances.InstancesGroup> instances_groups = 6;
+    string hash = 7;
 }
 
 message ValidateServiceConfigRequest {
