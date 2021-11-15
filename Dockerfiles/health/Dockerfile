@@ -9,4 +9,6 @@ WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud/health /health
 
 EXPOSE 8080
+LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
+
 ENTRYPOINT ["/health"]

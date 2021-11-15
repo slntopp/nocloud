@@ -10,4 +10,6 @@ COPY --from=builder  /go/src/github.com/slntopp/nocloud/apiserver /apiserver
 
 EXPOSE 8080
 EXPOSE 8000
+LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
+
 ENTRYPOINT ["/apiserver"]
