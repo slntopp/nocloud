@@ -18,7 +18,9 @@ package nocloud.services_providers;
 
 option go_package = "github.com/slntopp/nocloud/pkg/services_providers/proto";
 
+import "google/protobuf/any.proto";
+
 message ServicesProvider {
     string uuid = 1;
-    string secrets = 2; // json
+    google.protobuf.Any secrets = 2; // json
 }
