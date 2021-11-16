@@ -30,6 +30,7 @@ message InstancesGroup {
     string type = 1;
     map<string, google.protobuf.Value> config = 2;
     repeated Instance instances = 3;
+    map<string, google.protobuf.Value> resources = 4;
 }
 
 message ValidateInstancesGroupConfigRequest {
