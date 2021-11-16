@@ -19,12 +19,11 @@ package nocloud.instances;
 option go_package = "github.com/slntopp/nocloud/pkg/instances/proto";
 
 import "google/protobuf/struct.proto";
-import "google/protobuf/any.proto";
 
 message Instance {
     string title = 1;
     map<string, google.protobuf.Value> config = 2;
-    google.protobuf.Any resources = 3;
+    map<string, google.protobuf.Value> resources = 3;
 }
 
 message InstancesGroup {
