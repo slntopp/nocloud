@@ -39,3 +39,8 @@ func (sp *spRegistryAPI) Test(ctx context.Context, req *sppb.ServicesProvider) (
 	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return sp.client.Test(ctx, req)
 }
+
+func (sp *spRegistryAPI) Create(ctx context.Context, req *sppb.ServicesProvider) (*sppb.ServicesProvider, error) {
+	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	return sp.client.Create(ctx, req)
+}
