@@ -17,12 +17,15 @@ package services_providers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ServicesProviderServer struct {
@@ -54,7 +57,18 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 	return client.TestServiceProviderConfig(ctx, req)
 }
 
-func (s *ServicesProviderServer) Test(ctx context.Context, req sppb.ServicesProvider) (sppb.TestResponse, error) {
-	s.log.Debug("Test request received", zap.Any("request", req))
+func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesProvider) (res *sppb.ServicesProvider, err error) {
+	s.log.Debug("Create request received", zap.Any("request", req))
 
+	testRes, err := s.Test(ctx, req)
+	if err != nil {
+		return req, err
+	}
+	if !testRes.Result {
+		return req, status.Error(codes.Internal, testRes.Error)
+	}
+
+	sp := &graph.ServicesProvider{ServicesProvider: req}
+	err = s.ctrl.Create(ctx, sp)
+	return sp.ServicesProvider, err
 }
