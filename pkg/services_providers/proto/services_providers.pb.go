@@ -146,6 +146,61 @@ func (x *ServicesProvider) GetVars() map[string]*Var {
 	return nil
 }
 
+type TestResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Result bool   `protobuf:"varint,1,opt,name=result,proto3" json:"result,omitempty"`
+	Error  string `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+}
+
+func (x *TestResponse) Reset() {
+	*x = TestResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[2]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *TestResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*TestResponse) ProtoMessage() {}
+
+func (x *TestResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[2]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use TestResponse.ProtoReflect.Descriptor instead.
+func (*TestResponse) Descriptor() ([]byte, []int) {
+	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *TestResponse) GetResult() bool {
+	if x != nil {
+		return x.Result
+	}
+	return false
+}
+
+func (x *TestResponse) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 var File_pkg_services_providers_proto_services_providers_proto protoreflect.FileDescriptor
 
 var file_pkg_services_providers_proto_services_providers_proto_rawDesc = []byte{
@@ -189,7 +244,25 @@ var file_pkg_services_providers_proto_services_providers_proto_rawDesc = []byte{
 	0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1f, 0x2e, 0x6e, 0x6f, 0x63, 0x6c,
 	0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f,
 	0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x56, 0x61, 0x72, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75,
-	0x65, 0x3a, 0x02, 0x38, 0x01, 0x42, 0xf6, 0x01, 0x0a, 0x1e, 0x63, 0x6f, 0x6d, 0x2e, 0x6e, 0x6f,
+	0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x3c, 0x0a, 0x0c, 0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x14, 0x0a,
+	0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x72,
+	0x72, 0x6f, 0x72, 0x32, 0xdf, 0x01, 0x0a, 0x17, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73,
+	0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12,
+	0x5e, 0x0a, 0x04, 0x54, 0x65, 0x73, 0x74, 0x12, 0x2c, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75,
+	0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69,
+	0x64, 0x65, 0x72, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72, 0x6f,
+	0x76, 0x69, 0x64, 0x65, 0x72, 0x1a, 0x28, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e,
+	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65,
+	0x72, 0x73, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x64, 0x0a, 0x06, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x12, 0x2c, 0x2e, 0x6e, 0x6f, 0x63, 0x6c,
+	0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f,
+	0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50,
+	0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x1a, 0x2c, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75,
+	0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69,
+	0x64, 0x65, 0x72, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72, 0x6f,
+	0x76, 0x69, 0x64, 0x65, 0x72, 0x42, 0xf6, 0x01, 0x0a, 0x1e, 0x63, 0x6f, 0x6d, 0x2e, 0x6e, 0x6f,
 	0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70,
 	0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x42, 0x16, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
 	0x65, 0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x50, 0x72, 0x6f, 0x74, 0x6f,
@@ -220,24 +293,29 @@ func file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP() []
 	return file_pkg_services_providers_proto_services_providers_proto_rawDescData
 }
 
-var file_pkg_services_providers_proto_services_providers_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_pkg_services_providers_proto_services_providers_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_pkg_services_providers_proto_services_providers_proto_goTypes = []interface{}{
 	(*Var)(nil),              // 0: nocloud.services_providers.Var
 	(*ServicesProvider)(nil), // 1: nocloud.services_providers.ServicesProvider
-	nil,                      // 2: nocloud.services_providers.Var.ValueEntry
-	nil,                      // 3: nocloud.services_providers.ServicesProvider.SecretsEntry
-	nil,                      // 4: nocloud.services_providers.ServicesProvider.VarsEntry
-	(*structpb.Value)(nil),   // 5: google.protobuf.Value
+	(*TestResponse)(nil),     // 2: nocloud.services_providers.TestResponse
+	nil,                      // 3: nocloud.services_providers.Var.ValueEntry
+	nil,                      // 4: nocloud.services_providers.ServicesProvider.SecretsEntry
+	nil,                      // 5: nocloud.services_providers.ServicesProvider.VarsEntry
+	(*structpb.Value)(nil),   // 6: google.protobuf.Value
 }
 var file_pkg_services_providers_proto_services_providers_proto_depIdxs = []int32{
-	2, // 0: nocloud.services_providers.Var.value:type_name -> nocloud.services_providers.Var.ValueEntry
-	3, // 1: nocloud.services_providers.ServicesProvider.secrets:type_name -> nocloud.services_providers.ServicesProvider.SecretsEntry
-	4, // 2: nocloud.services_providers.ServicesProvider.vars:type_name -> nocloud.services_providers.ServicesProvider.VarsEntry
-	5, // 3: nocloud.services_providers.Var.ValueEntry.value:type_name -> google.protobuf.Value
-	5, // 4: nocloud.services_providers.ServicesProvider.SecretsEntry.value:type_name -> google.protobuf.Value
+	3, // 0: nocloud.services_providers.Var.value:type_name -> nocloud.services_providers.Var.ValueEntry
+	4, // 1: nocloud.services_providers.ServicesProvider.secrets:type_name -> nocloud.services_providers.ServicesProvider.SecretsEntry
+	5, // 2: nocloud.services_providers.ServicesProvider.vars:type_name -> nocloud.services_providers.ServicesProvider.VarsEntry
+	6, // 3: nocloud.services_providers.Var.ValueEntry.value:type_name -> google.protobuf.Value
+	6, // 4: nocloud.services_providers.ServicesProvider.SecretsEntry.value:type_name -> google.protobuf.Value
 	0, // 5: nocloud.services_providers.ServicesProvider.VarsEntry.value:type_name -> nocloud.services_providers.Var
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
+	1, // 6: nocloud.services_providers.ServicesProviderService.Test:input_type -> nocloud.services_providers.ServicesProvider
+	1, // 7: nocloud.services_providers.ServicesProviderService.Create:input_type -> nocloud.services_providers.ServicesProvider
+	2, // 8: nocloud.services_providers.ServicesProviderService.Test:output_type -> nocloud.services_providers.TestResponse
+	1, // 9: nocloud.services_providers.ServicesProviderService.Create:output_type -> nocloud.services_providers.ServicesProvider
+	8, // [8:10] is the sub-list for method output_type
+	6, // [6:8] is the sub-list for method input_type
 	6, // [6:6] is the sub-list for extension type_name
 	6, // [6:6] is the sub-list for extension extendee
 	0, // [0:6] is the sub-list for field type_name
@@ -273,6 +351,18 @@ func file_pkg_services_providers_proto_services_providers_proto_init() {
 				return nil
 			}
 		}
+		file_pkg_services_providers_proto_services_providers_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*TestResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -280,9 +370,9 @@ func file_pkg_services_providers_proto_services_providers_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_pkg_services_providers_proto_services_providers_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
-			NumServices:   0,
+			NumServices:   1,
 		},
 		GoTypes:           file_pkg_services_providers_proto_services_providers_proto_goTypes,
 		DependencyIndexes: file_pkg_services_providers_proto_services_providers_proto_depIdxs,

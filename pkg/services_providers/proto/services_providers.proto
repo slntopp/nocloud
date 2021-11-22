@@ -29,3 +29,13 @@ message ServicesProvider {
     map<string, google.protobuf.Value> secrets = 2; // json
     map<string, Var> vars = 3;
 }
+
+message TestResponse {
+    bool result = 1;
+    string error = 2;
+}
+
+service ServicesProviderService {
+    rpc Test(ServicesProvider) returns (TestResponse);
+    rpc Create(ServicesProvider) returns (ServicesProvider);
+}
