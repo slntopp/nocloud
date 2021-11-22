@@ -39,7 +39,15 @@ func NewServicesProviderServer(log *zap.Logger, db driver.Database) *ServicesPro
 	return &ServicesProviderServer{log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db)}
 }
 
-	return &ServicesProviderServer{log: log, db: db, ctrl: graph.NewServicesProvidersController(log, spCol)}
+func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesProvider) (*sppb.TestResponse, error) {
+	s.log.Debug("Test request received", zap.Any("request", req))
+
+	client, ok := s.drivers[req.GetType()]
+	if !ok {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("Driver type '%s' not registered", req.GetType()))
+	}
+
+	return client.TestServiceProviderConfig(ctx, req)
 }
 
 func (s *ServicesProviderServer) Test(ctx context.Context, req sppb.ServicesProvider) (sppb.TestResponse, error) {
