@@ -28,6 +28,7 @@ import (
 	apipb "github.com/slntopp/nocloud/pkg/api/apipb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -37,6 +38,7 @@ var (
 
 	healthHost 		string
 	registryHost 	string
+	spRegistryHost  string
 
 	SIGNING_KEY		[]byte
 )
@@ -53,11 +55,13 @@ func init() {
 
 	viper.SetDefault("HEALTH_HOST", "health:8080")
 	viper.SetDefault("REGISTRY_HOST", "accounts:8080")
+	viper.SetDefault("SP_REGISTRY_HOST", "accounts:8080")
 	
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	healthHost 		= viper.GetString("HEALTH_HOST")
 	registryHost 	= viper.GetString("REGISTRY_HOST")
+	spRegistryHost 	= viper.GetString("SP_REGISTRY_HOST")
 
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
 }
@@ -81,6 +85,12 @@ func main() {
 	}
 	accountsClient := accountspb.NewAccountsServiceClient(registryConn)
 	namespacesClient := namespacespb.NewNamespacesServiceClient(registryConn)
+
+	spRegistryConn, err := grpc.Dial(spRegistryHost, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	spRegistryClient := sppb.NewServicesProvidersServiceClient(spRegistryConn)
 	// Create a listener on TCP port
 	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
@@ -89,10 +99,13 @@ func main() {
 
 	// Create a gRPC server object
 	s := grpc.NewServer(grpc.UnaryInterceptor(JWT_AUTH_INTERCEPTOR),)
-	// Attach the Greeter service to the server
 	apipb.RegisterHealthServiceServer(s, &healthAPI{client: healthClient})
+
 	apipb.RegisterAccountsServiceServer(s, &accountsAPI{client: accountsClient})
 	apipb.RegisterNamespacesServiceServer(s, &namespacesAPI{client: namespacesClient})
+
+	apipb.RegisterServicesProvidersServiceServer(s, &spRegistryAPI{client: spRegistryClient, log: log.Named("ServicesProvidersRegistry")})
+
 	// Serve gRPC Server
 	log.Info("Serving gRPC on 0.0.0.0:8080", zap.Skip())
 	go func() {

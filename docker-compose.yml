@@ -11,6 +11,7 @@ services:
     environment:
       HEALTH_HOST: health:8080
       REGISTRY_HOST: registry:8080
+      SP_REGISTRY_HOST: sp-registry:8080
       SIGNING_KEY: supersecretaaarhgreplaceme
     ports:
       - 8000:8000 # REST-API
@@ -38,6 +39,12 @@ services:
     environment:
       DB_HOST: db:8529
       DB_CRED: root:openSesame
+      LOG_LEVEL: -1
+    networks:
+      - arangodb
+      - grpc-internal
+    links:
+      - db
 
   db:
     container_name: database-master
