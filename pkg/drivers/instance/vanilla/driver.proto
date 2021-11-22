@@ -35,9 +35,13 @@ message DeployResponse {
     nocloud.instances.InstancesGroup   group = 1;
 }
 
+message TestServiceProviderConfigResponse {
+    bool result = 1;
+    string error = 2;
+}
+
 service DriverService {
+    rpc TestServiceProviderConfig(nocloud.services_providers.ServicesProvider) returns (TestServiceProviderConfigResponse);
     rpc ValidateConfigSyntax(nocloud.instances.ValidateInstancesGroupConfigRequest) returns (nocloud.instances.ValidateInstancesGroupConfigResponse);
     rpc GetType(GetTypeRequest) returns (GetTypeResponse);
-
-    rpc Deploy(DeployRequest) returns (DeployResponse);
 }
