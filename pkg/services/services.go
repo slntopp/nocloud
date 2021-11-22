@@ -42,7 +42,7 @@ type ServicesServiceServer struct {
 }
 
 func NewServicesServer(log *zap.Logger, db driver.Database) *ServicesServiceServer {
-	servicesCol, _ := db.Collection(nil, graph.INSTANCES_COL)
+	servicesCol, _ := db.Collection(nil, graph.SERVICES_COL)
 
 	return &ServicesServiceServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, servicesCol),
