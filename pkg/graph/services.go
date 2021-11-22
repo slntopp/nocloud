@@ -16,6 +16,7 @@ limitations under the License.
 package graph
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/arangodb/go-driver"
@@ -35,17 +36,21 @@ type Service struct {
 	InstancesGroups map[string]InstancesGroup `json:"instances_groups"`
 	State string `json:"state"`
 
+	Hash string `json:"hash"`
+
 	driver.DocumentMeta
 }
 
 type ServicesController struct {
 	col driver.Collection // Services Collection
+	ig_ctrl InstancesGroupsController
 
 	log *zap.Logger
 }
 
-func NewServicesController(log *zap.Logger, col driver.Collection) ServicesController {
-	return ServicesController{log: log, col: col}
+func NewServicesController(log *zap.Logger, db driver.Database) ServicesController {
+	col, _ := db.Collection(nil, SERVICES_COL)
+	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db)}
 }
 
 func (s *Service) ToServiceMessage() (res *pb.Service, err error) {
@@ -68,3 +73,9 @@ func MakeServiceFromMessage(req *pb.Service) (res *Service, err error) {
 	return res, err
 }
 
+func (ctrl *ServicesController) Create(ctx context.Context, service Service) (error) {
+	for _, ig := range service.InstancesGroups {
+		ctrl.ig_ctrl.Create(ctx, ig)
+	}
+	return nil
+}
