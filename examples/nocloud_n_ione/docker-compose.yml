@@ -11,7 +11,9 @@ services:
     environment:
       HEALTH_HOST: health:8080
       REGISTRY_HOST: registry:8080
+      SP_REGISTRY_HOST: sp-registry:8080
       SIGNING_KEY: supersecretaaarhgreplaceme
+      LOG_LEVEL: -1
     ports:
       - 8000:8000 # REST-API
       - 8080:8080 # gRPC-API
@@ -32,16 +34,19 @@ services:
       - grpc-internal
     links:
       - db
-  
   sp-registry:
     container_name: sp-registry
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
-    depends_on:
-      - driver-ione
     environment:
       DB_HOST: db:8529
       DB_CRED: root:openSesame
       DRIVERS: driver-ione:8080
+      LOG_LEVEL: -1
+    networks:
+      - arangodb
+      - grpc-internal
+    links:
+      - db
 
   db:
     container_name: database-master
