@@ -51,15 +51,6 @@ func (c *driverServiceClient) ValidateConfigSyntax(ctx context.Context, in *prot
 	return out, nil
 }
 
-func (c *driverServiceClient) ValidateConfigSyntax(ctx context.Context, in *proto1.ValidateInstancesGroupConfigRequest, opts ...grpc.CallOption) (*proto1.ValidateInstancesGroupConfigResponse, error) {
-	out := new(proto1.ValidateInstancesGroupConfigResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/ValidateConfigSyntax", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *driverServiceClient) GetType(ctx context.Context, in *GetTypeRequest, opts ...grpc.CallOption) (*GetTypeResponse, error) {
 	out := new(GetTypeResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/GetType", in, out, opts...)
@@ -119,24 +110,6 @@ func _DriverService_TestServiceProviderConfig_Handler(srv interface{}, ctx conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DriverServiceServer).TestServiceProviderConfig(ctx, req.(*proto.ServicesProvider))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _DriverService_ValidateConfigSyntax_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto1.ValidateInstancesGroupConfigRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DriverServiceServer).TestServiceProviderConfig(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/TestServiceProviderConfig",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServiceServer).ValidateConfigSyntax(ctx, req.(*proto1.ValidateInstancesGroupConfigRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
