@@ -2239,9 +2239,9 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 }
 
 var (
-	pattern_ServicesProvidersService_Test_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"services_providers", "test"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_ServicesProvidersService_Test_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"sp", "test"}, "", runtime.AssumeColonVerbOpt(true)))
 
-	pattern_ServicesProvidersService_Create_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"services_providers"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_ServicesProvidersService_Create_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"sp"}, "", runtime.AssumeColonVerbOpt(true)))
 )
 
 var (

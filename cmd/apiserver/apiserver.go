@@ -137,6 +137,10 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register NamespacesService gateway", zap.Error(err))
 	}
+	err = apipb.RegisterServicesProvidersServiceHandler(context.Background(), gwmux, conn)
+	if err != nil {
+		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
+	}
 	gwServer := &http.Server{
 		Addr:    ":8000",
 		Handler: gwmux,
