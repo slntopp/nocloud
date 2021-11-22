@@ -26,7 +26,7 @@ import (
 )
 
 type ServicesProviderServer struct {
-	sppb.UnimplementedServicesProviderServiceServer
+	sppb.UnimplementedServicesProvidersServiceServer
 
 	drivers map[string]driverpb.DriverServiceClient
 	db driver.Database
