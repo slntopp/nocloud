@@ -4,7 +4,8 @@ package vanilla
 
 import (
 	context "context"
-	proto "github.com/slntopp/nocloud/pkg/services/proto"
+	proto1 "github.com/slntopp/nocloud/pkg/instances/proto"
+	proto "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,7 +20,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DriverServiceClient interface {
-	ValidateConfigSyntax(ctx context.Context, in *proto.ValidateServiceConfigRequest, opts ...grpc.CallOption) (*proto.ValidateServiceConfigResponse, error)
+	TestServiceProviderConfig(ctx context.Context, in *proto.ServicesProvider, opts ...grpc.CallOption) (*TestServiceProviderConfigResponse, error)
+	ValidateConfigSyntax(ctx context.Context, in *proto1.ValidateInstancesGroupConfigRequest, opts ...grpc.CallOption) (*proto1.ValidateInstancesGroupConfigResponse, error)
 	GetType(ctx context.Context, in *GetTypeRequest, opts ...grpc.CallOption) (*GetTypeResponse, error)
 }
 
@@ -31,8 +33,17 @@ func NewDriverServiceClient(cc grpc.ClientConnInterface) DriverServiceClient {
 	return &driverServiceClient{cc}
 }
 
-func (c *driverServiceClient) ValidateConfigSyntax(ctx context.Context, in *proto.ValidateServiceConfigRequest, opts ...grpc.CallOption) (*proto.ValidateServiceConfigResponse, error) {
-	out := new(proto.ValidateServiceConfigResponse)
+func (c *driverServiceClient) TestServiceProviderConfig(ctx context.Context, in *proto.ServicesProvider, opts ...grpc.CallOption) (*TestServiceProviderConfigResponse, error) {
+	out := new(TestServiceProviderConfigResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/TestServiceProviderConfig", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *driverServiceClient) ValidateConfigSyntax(ctx context.Context, in *proto1.ValidateInstancesGroupConfigRequest, opts ...grpc.CallOption) (*proto1.ValidateInstancesGroupConfigResponse, error) {
+	out := new(proto1.ValidateInstancesGroupConfigResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/ValidateConfigSyntax", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -53,7 +64,8 @@ func (c *driverServiceClient) GetType(ctx context.Context, in *GetTypeRequest, o
 // All implementations must embed UnimplementedDriverServiceServer
 // for forward compatibility
 type DriverServiceServer interface {
-	ValidateConfigSyntax(context.Context, *proto.ValidateServiceConfigRequest) (*proto.ValidateServiceConfigResponse, error)
+	TestServiceProviderConfig(context.Context, *proto.ServicesProvider) (*TestServiceProviderConfigResponse, error)
+	ValidateConfigSyntax(context.Context, *proto1.ValidateInstancesGroupConfigRequest) (*proto1.ValidateInstancesGroupConfigResponse, error)
 	GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error)
 	mustEmbedUnimplementedDriverServiceServer()
 }
@@ -62,7 +74,10 @@ type DriverServiceServer interface {
 type UnimplementedDriverServiceServer struct {
 }
 
-func (UnimplementedDriverServiceServer) ValidateConfigSyntax(context.Context, *proto.ValidateServiceConfigRequest) (*proto.ValidateServiceConfigResponse, error) {
+func (UnimplementedDriverServiceServer) TestServiceProviderConfig(context.Context, *proto.ServicesProvider) (*TestServiceProviderConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestServiceProviderConfig not implemented")
+}
+func (UnimplementedDriverServiceServer) ValidateConfigSyntax(context.Context, *proto1.ValidateInstancesGroupConfigRequest) (*proto1.ValidateInstancesGroupConfigResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ValidateConfigSyntax not implemented")
 }
 func (UnimplementedDriverServiceServer) GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error) {
@@ -81,8 +96,26 @@ func RegisterDriverServiceServer(s grpc.ServiceRegistrar, srv DriverServiceServe
 	s.RegisterService(&DriverService_ServiceDesc, srv)
 }
 
+func _DriverService_TestServiceProviderConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.ServicesProvider)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServiceServer).TestServiceProviderConfig(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/TestServiceProviderConfig",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServiceServer).TestServiceProviderConfig(ctx, req.(*proto.ServicesProvider))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DriverService_ValidateConfigSyntax_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.ValidateServiceConfigRequest)
+	in := new(proto1.ValidateInstancesGroupConfigRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -94,7 +127,7 @@ func _DriverService_ValidateConfigSyntax_Handler(srv interface{}, ctx context.Co
 		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/ValidateConfigSyntax",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServiceServer).ValidateConfigSyntax(ctx, req.(*proto.ValidateServiceConfigRequest))
+		return srv.(DriverServiceServer).ValidateConfigSyntax(ctx, req.(*proto1.ValidateInstancesGroupConfigRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -124,6 +157,10 @@ var DriverService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "nocloud.instance.driver.vanilla.DriverService",
 	HandlerType: (*DriverServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "TestServiceProviderConfig",
+			Handler:    _DriverService_TestServiceProviderConfig_Handler,
+		},
 		{
 			MethodName: "ValidateConfigSyntax",
 			Handler:    _DriverService_ValidateConfigSyntax_Handler,
