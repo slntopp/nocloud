@@ -16,8 +16,12 @@ limitations under the License.
 package main
 
 import (
+	"context"
+
 	"github.com/slntopp/nocloud/pkg/api/apipb"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	"go.uber.org/zap"
 )
 
 type spRegistryAPI struct {
@@ -25,6 +29,11 @@ type spRegistryAPI struct {
 	apipb.UnimplementedServicesProvidersServiceServer
 }
 
-func (acc *spRegistryAPI) mustEmbedUnimplementedServicesProviderServiceServer() {
+func (sp *spRegistryAPI) mustEmbedUnimplementedServicesProviderServiceServer() {
 	log.Info("Method missing")
+}
+
+func (sp *spRegistryAPI) Test(ctx context.Context, req *sppb.ServicesProvider) (*sppb.TestResponse, error) {
+	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	return sp.client.Test(ctx, req)
 }
