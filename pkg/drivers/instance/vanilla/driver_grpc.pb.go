@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DriverServiceClient interface {
-	TestServiceProviderConfig(ctx context.Context, in *proto.ServicesProvider, opts ...grpc.CallOption) (*TestServiceProviderConfigResponse, error)
+	TestServiceProviderConfig(ctx context.Context, in *proto.ServicesProvider, opts ...grpc.CallOption) (*proto.TestResponse, error)
 	ValidateConfigSyntax(ctx context.Context, in *proto1.ValidateInstancesGroupConfigRequest, opts ...grpc.CallOption) (*proto1.ValidateInstancesGroupConfigResponse, error)
 	GetType(ctx context.Context, in *GetTypeRequest, opts ...grpc.CallOption) (*GetTypeResponse, error)
 }
@@ -33,8 +33,8 @@ func NewDriverServiceClient(cc grpc.ClientConnInterface) DriverServiceClient {
 	return &driverServiceClient{cc}
 }
 
-func (c *driverServiceClient) TestServiceProviderConfig(ctx context.Context, in *proto.ServicesProvider, opts ...grpc.CallOption) (*TestServiceProviderConfigResponse, error) {
-	out := new(TestServiceProviderConfigResponse)
+func (c *driverServiceClient) TestServiceProviderConfig(ctx context.Context, in *proto.ServicesProvider, opts ...grpc.CallOption) (*proto.TestResponse, error) {
+	out := new(proto.TestResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/TestServiceProviderConfig", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (c *driverServiceClient) GetType(ctx context.Context, in *GetTypeRequest, o
 // All implementations must embed UnimplementedDriverServiceServer
 // for forward compatibility
 type DriverServiceServer interface {
-	TestServiceProviderConfig(context.Context, *proto.ServicesProvider) (*TestServiceProviderConfigResponse, error)
+	TestServiceProviderConfig(context.Context, *proto.ServicesProvider) (*proto.TestResponse, error)
 	ValidateConfigSyntax(context.Context, *proto1.ValidateInstancesGroupConfigRequest) (*proto1.ValidateInstancesGroupConfigResponse, error)
 	GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error)
 	mustEmbedUnimplementedDriverServiceServer()
@@ -74,7 +74,7 @@ type DriverServiceServer interface {
 type UnimplementedDriverServiceServer struct {
 }
 
-func (UnimplementedDriverServiceServer) TestServiceProviderConfig(context.Context, *proto.ServicesProvider) (*TestServiceProviderConfigResponse, error) {
+func (UnimplementedDriverServiceServer) TestServiceProviderConfig(context.Context, *proto.ServicesProvider) (*proto.TestResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method TestServiceProviderConfig not implemented")
 }
 func (UnimplementedDriverServiceServer) ValidateConfigSyntax(context.Context, *proto1.ValidateInstancesGroupConfigRequest) (*proto1.ValidateInstancesGroupConfigResponse, error) {
