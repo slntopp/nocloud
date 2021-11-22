@@ -20,6 +20,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/viper"
 
@@ -141,11 +142,9 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
 	}
-	gwServer := &http.Server{
-		Addr:    ":8000",
-		Handler: gwmux,
-	}
+
+	handler := handlers.CORS(handlers.AllowedOrigins([]string{"*"}))(gwmux)
 
 	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
-	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(gwServer.ListenAndServe()))
+	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(http.ListenAndServe(":8000", handler)))
 }
