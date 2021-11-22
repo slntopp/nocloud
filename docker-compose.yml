@@ -32,6 +32,12 @@ services:
       - grpc-internal
     links:
       - db
+  sp-registry:
+    container_name: sp-registry
+    image: ghcr.io/slntopp/nocloud/sp-registry:latest
+    environment:
+      DB_HOST: db:8529
+      DB_CRED: root:openSesame
 
   db:
     container_name: database-master
