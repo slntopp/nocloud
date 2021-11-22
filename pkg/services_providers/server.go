@@ -36,7 +36,8 @@ type ServicesProviderServer struct {
 }
 
 func NewServicesProviderServer(log *zap.Logger, db driver.Database) *ServicesProviderServer {
-	spCol, _ := db.Collection(nil, graph.SERVICES_PROVIDERS_COL)
+	return &ServicesProviderServer{log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db)}
+}
 
 	return &ServicesProviderServer{log: log, db: db, ctrl: graph.NewServicesProvidersController(log, spCol)}
 }
