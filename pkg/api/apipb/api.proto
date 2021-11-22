@@ -137,3 +137,19 @@ service HealthService {
         };
     };
 };
+
+import "pkg/services_providers/proto/services_providers.proto";
+service ServicesProvidersService {
+    rpc Test(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.TestResponse) {
+        option (google.api.http) = {
+            post: "/services_providers/test"
+            body: "*"
+        };
+    };
+    rpc Create(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.ServicesProvider) {
+        option (google.api.http) = {
+            post: "/services_providers"
+            body: "*"
+        };
+    };
+};

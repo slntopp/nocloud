@@ -8,6 +8,7 @@ import (
 	namespacespb "github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	healthpb "github.com/slntopp/nocloud/pkg/health/healthpb"
 	proto "github.com/slntopp/nocloud/pkg/services/proto"
+	proto1 "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -860,6 +861,129 @@ var HealthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Probe",
 			Handler:    _HealthService_Probe_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/api/apipb/api.proto",
+}
+
+// ServicesProvidersServiceClient is the client API for ServicesProvidersService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ServicesProvidersServiceClient interface {
+	Test(ctx context.Context, in *proto1.ServicesProvider, opts ...grpc.CallOption) (*proto1.TestResponse, error)
+	Create(ctx context.Context, in *proto1.ServicesProvider, opts ...grpc.CallOption) (*proto1.ServicesProvider, error)
+}
+
+type servicesProvidersServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewServicesProvidersServiceClient(cc grpc.ClientConnInterface) ServicesProvidersServiceClient {
+	return &servicesProvidersServiceClient{cc}
+}
+
+func (c *servicesProvidersServiceClient) Test(ctx context.Context, in *proto1.ServicesProvider, opts ...grpc.CallOption) (*proto1.TestResponse, error) {
+	out := new(proto1.TestResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesProvidersService/Test", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesProvidersServiceClient) Create(ctx context.Context, in *proto1.ServicesProvider, opts ...grpc.CallOption) (*proto1.ServicesProvider, error) {
+	out := new(proto1.ServicesProvider)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesProvidersService/Create", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ServicesProvidersServiceServer is the server API for ServicesProvidersService service.
+// All implementations must embed UnimplementedServicesProvidersServiceServer
+// for forward compatibility
+type ServicesProvidersServiceServer interface {
+	Test(context.Context, *proto1.ServicesProvider) (*proto1.TestResponse, error)
+	Create(context.Context, *proto1.ServicesProvider) (*proto1.ServicesProvider, error)
+	mustEmbedUnimplementedServicesProvidersServiceServer()
+}
+
+// UnimplementedServicesProvidersServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedServicesProvidersServiceServer struct {
+}
+
+func (UnimplementedServicesProvidersServiceServer) Test(context.Context, *proto1.ServicesProvider) (*proto1.TestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Test not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) Create(context.Context, *proto1.ServicesProvider) (*proto1.ServicesProvider, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) mustEmbedUnimplementedServicesProvidersServiceServer() {
+}
+
+// UnsafeServicesProvidersServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ServicesProvidersServiceServer will
+// result in compilation errors.
+type UnsafeServicesProvidersServiceServer interface {
+	mustEmbedUnimplementedServicesProvidersServiceServer()
+}
+
+func RegisterServicesProvidersServiceServer(s grpc.ServiceRegistrar, srv ServicesProvidersServiceServer) {
+	s.RegisterService(&ServicesProvidersService_ServiceDesc, srv)
+}
+
+func _ServicesProvidersService_Test_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto1.ServicesProvider)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).Test(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesProvidersService/Test",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).Test(ctx, req.(*proto1.ServicesProvider))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesProvidersService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto1.ServicesProvider)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).Create(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesProvidersService/Create",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).Create(ctx, req.(*proto1.ServicesProvider))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ServicesProvidersService_ServiceDesc is the grpc.ServiceDesc for ServicesProvidersService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ServicesProvidersService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "nocloud.api.ServicesProvidersService",
+	HandlerType: (*ServicesProvidersServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Test",
+			Handler:    _ServicesProvidersService_Test_Handler,
+		},
+		{
+			MethodName: "Create",
+			Handler:    _ServicesProvidersService_Create_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
