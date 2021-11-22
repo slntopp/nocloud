@@ -16,9 +16,32 @@ limitations under the License.
 package services_providers
 
 import (
+	"context"
+
+	"github.com/arangodb/go-driver"
+	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
+	"github.com/slntopp/nocloud/pkg/graph"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	"go.uber.org/zap"
 )
 
 type ServicesProviderServer struct {
 	sppb.UnimplementedServicesProviderServiceServer
+
+	drivers map[string]driverpb.DriverServiceClient
+	db driver.Database
+	ctrl graph.ServicesProvidersController
+
+	log *zap.Logger
+}
+
+func NewServicesProviderServer(log *zap.Logger, db driver.Database) *ServicesProviderServer {
+	spCol, _ := db.Collection(nil, graph.SERVICES_PROVIDERS_COL)
+
+	return &ServicesProviderServer{log: log, db: db, ctrl: graph.NewServicesProvidersController(log, spCol)}
+}
+
+func (s *ServicesProviderServer) Test(ctx context.Context, req sppb.ServicesProvider) (sppb.TestResponse, error) {
+	s.log.Debug("Test request received", zap.Any("request", req))
+
 }
