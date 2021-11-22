@@ -49,6 +49,11 @@ func (s *ServicesProviderServer) RegisterDriver(type_key string, client driverpb
 func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesProvider) (*sppb.TestResponse, error) {
 	s.log.Debug("Test request received", zap.Any("request", req))
 
+	title := req.GetTitle()
+	if title == "" {
+		return nil, status.Error(codes.InvalidArgument, "Services Provider 'title' is not given")
+	}
+
 	client, ok := s.drivers[req.GetType()]
 	if !ok {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("Driver type '%s' not registered", req.GetType()))
