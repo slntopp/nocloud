@@ -86,6 +86,7 @@ func main() {
 	accountsClient := accountspb.NewAccountsServiceClient(registryConn)
 	namespacesClient := namespacespb.NewNamespacesServiceClient(registryConn)
 
+	log.Info("Connecting to ServicesProvidersService", zap.String("host", spRegistryHost))
 	spRegistryConn, err := grpc.Dial(spRegistryHost, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
