@@ -43,7 +43,7 @@ type ServicesServiceServer struct {
 
 func NewServicesServer(log *zap.Logger, db driver.Database) *ServicesServiceServer {
 	return &ServicesServiceServer{
-		log: log, db: db, ctrl: graph.NewServicesController(log, db),
+		log: log, db: db, ctrl: graph.NewServicesController(log, db), drivers: make(map[string]driverpb.DriverServiceClient),
 	}
 }
 

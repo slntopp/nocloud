@@ -39,7 +39,7 @@ type ServicesProviderServer struct {
 }
 
 func NewServicesProviderServer(log *zap.Logger, db driver.Database) *ServicesProviderServer {
-	return &ServicesProviderServer{log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db)}
+	return &ServicesProviderServer{log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db), drivers: make(map[string]driverpb.DriverServiceClient),}
 }
 
 func (s *ServicesProviderServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
