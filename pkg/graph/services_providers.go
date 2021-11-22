@@ -30,6 +30,7 @@ type ServicesProvidersController struct {
 	log *zap.Logger
 }
 
-func NewServicesProvidersController(log *zap.Logger, col driver.Collection) ServicesProvidersController {
+func NewServicesProvidersController(log *zap.Logger, db driver.Database) ServicesProvidersController {
+	col, _ := db.Collection(nil, SERVICES_PROVIDERS_COL)
 	return ServicesProvidersController{log: log, col: col}
 }
