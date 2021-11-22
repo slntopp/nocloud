@@ -16,13 +16,22 @@ limitations under the License.
 package graph
 
 import (
+	"context"
+
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
+
+	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 )
 
 const (
 	SERVICES_PROVIDERS_COL = "ServicesProviders"
 )
+
+type ServicesProvider struct {
+	*sppb.ServicesProvider
+	driver.DocumentMeta
+}
 
 type ServicesProvidersController struct {
 	col driver.Collection // Services Collection
@@ -33,4 +42,10 @@ type ServicesProvidersController struct {
 func NewServicesProvidersController(log *zap.Logger, db driver.Database) ServicesProvidersController {
 	col, _ := db.Collection(nil, SERVICES_PROVIDERS_COL)
 	return ServicesProvidersController{log: log, col: col}
+}
+
+func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *ServicesProvider) (err error) {
+	meta, err := ctrl.col.CreateDocument(ctx, &sp)
+	sp.Uuid = meta.Key
+	return err
 }
