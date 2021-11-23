@@ -143,7 +143,11 @@ func main() {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
 	}
 
-	handler := handlers.CORS(handlers.AllowedOrigins([]string{"*"}))(gwmux)
+	handler := handlers.CORS(
+		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedHeaders([]string{"Content-Type"}),
+		handlers.AllowedMethods([]string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"}),
+	)(gwmux)
 
 	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
 	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(http.ListenAndServe(":8000", handler)))
