@@ -31,13 +31,14 @@ export default {
 
 		logout({commit}){
 			commit('setToken', '');
-			Cookies.remove(COOKIES_NAME)
+			Cookies.remove(COOKIES_NAME);
 			router.push({name: "Login"});
 		},
 
 		load({commit}){
 			const token = Cookies.get(COOKIES_NAME);
 			if(token){
+				api.axios.defaults.headers.common['Authorization'] = "Bearer " + token;
 				commit('setToken', token);
 			}
 		}
