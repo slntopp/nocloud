@@ -80,6 +80,6 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 		ctrl.log.Debug("Error creating document", zap.Error(err))
 		return errors.New("Error creating document")
 	}
-	service.Uuid = meta.ID.String()
+	service.Uuid = meta.ID.Key()
 	return nil
 }
