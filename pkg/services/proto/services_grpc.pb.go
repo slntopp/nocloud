@@ -22,6 +22,7 @@ type ServicesServiceClient interface {
 	CreateService(ctx context.Context, in *CreateServiceRequest, opts ...grpc.CallOption) (*Service, error)
 	UpdateService(ctx context.Context, in *UpdateServiceRequest, opts ...grpc.CallOption) (*Service, error)
 	DeleteService(ctx context.Context, in *DeleteServiceRequest, opts ...grpc.CallOption) (*DeleteServiceResponse, error)
+	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	PerformServiceAction(ctx context.Context, in *PerformServiceActionRequest, opts ...grpc.CallOption) (*PerformServiceActionResponse, error)
 }
 
@@ -69,6 +70,15 @@ func (c *servicesServiceClient) DeleteService(ctx context.Context, in *DeleteSer
 	return out, nil
 }
 
+func (c *servicesServiceClient) Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error) {
+	out := new(UpResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/Up", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *PerformServiceActionRequest, opts ...grpc.CallOption) (*PerformServiceActionResponse, error) {
 	out := new(PerformServiceActionResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/PerformServiceAction", in, out, opts...)
@@ -86,6 +96,7 @@ type ServicesServiceServer interface {
 	CreateService(context.Context, *CreateServiceRequest) (*Service, error)
 	UpdateService(context.Context, *UpdateServiceRequest) (*Service, error)
 	DeleteService(context.Context, *DeleteServiceRequest) (*DeleteServiceResponse, error)
+	Up(context.Context, *UpRequest) (*UpResponse, error)
 	PerformServiceAction(context.Context, *PerformServiceActionRequest) (*PerformServiceActionResponse, error)
 	mustEmbedUnimplementedServicesServiceServer()
 }
@@ -105,6 +116,9 @@ func (UnimplementedServicesServiceServer) UpdateService(context.Context, *Update
 }
 func (UnimplementedServicesServiceServer) DeleteService(context.Context, *DeleteServiceRequest) (*DeleteServiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteService not implemented")
+}
+func (UnimplementedServicesServiceServer) Up(context.Context, *UpRequest) (*UpResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Up not implemented")
 }
 func (UnimplementedServicesServiceServer) PerformServiceAction(context.Context, *PerformServiceActionRequest) (*PerformServiceActionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PerformServiceAction not implemented")
@@ -194,6 +208,24 @@ func _ServicesService_DeleteService_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ServicesService_Up_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).Up(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services.ServicesService/Up",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).Up(ctx, req.(*UpRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ServicesService_PerformServiceAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PerformServiceActionRequest)
 	if err := dec(in); err != nil {
@@ -234,6 +266,10 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteService",
 			Handler:    _ServicesService_DeleteService_Handler,
+		},
+		{
+			MethodName: "Up",
+			Handler:    _ServicesService_Up_Handler,
 		},
 		{
 			MethodName: "PerformServiceAction",

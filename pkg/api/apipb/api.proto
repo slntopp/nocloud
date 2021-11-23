@@ -120,6 +120,13 @@ service ServicesService {
             delete: "/services/{id}"
         };
     };
+    
+    rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse) {
+        option (google.api.http) = {
+            post: "/services/{id}/up"
+            body: "*"
+        };
+    };
     rpc PerformServiceAction(nocloud.services.PerformServiceActionRequest) returns (nocloud.services.PerformServiceActionResponse) {
         option (google.api.http) = {
             post: "/services/{id}/action/{action}",

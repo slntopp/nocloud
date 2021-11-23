@@ -44,3 +44,8 @@ func (sp *servicesAPI) CreateService(ctx context.Context, req *pb.CreateServiceR
 	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return sp.client.CreateService(ctx, req)
 }
+
+func (sp *servicesAPI) Up(ctx context.Context, req *pb.UpRequest) (*pb.UpResponse, error) {
+	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	return sp.client.Up(ctx, req)
+}

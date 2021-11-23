@@ -72,10 +72,18 @@ message PerformServiceActionResponse {
     map<string, google.protobuf.Value> meta = 2; 
 }
 
+message UpRequest {
+    string id = 1;
+    map<string, string> deploy_policies = 2; // Map of InstanceGroup UUID to ServiceProvider
+}
+message UpResponse {}
+
 service ServicesService {
     rpc TestServiceConfig(nocloud.services.CreateServiceRequest) returns (nocloud.services.TestServiceConfigResponse);
     rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.Service);
     rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.Service);
     rpc DeleteService(nocloud.services.DeleteServiceRequest) returns (nocloud.services.DeleteServiceResponse);
+
+    rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse);
     rpc PerformServiceAction(nocloud.services.PerformServiceActionRequest) returns (nocloud.services.PerformServiceActionResponse);
 }

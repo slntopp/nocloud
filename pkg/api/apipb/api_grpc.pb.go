@@ -559,6 +559,7 @@ type ServicesServiceClient interface {
 	CreateService(ctx context.Context, in *proto.CreateServiceRequest, opts ...grpc.CallOption) (*proto.Service, error)
 	UpdateService(ctx context.Context, in *proto.UpdateServiceRequest, opts ...grpc.CallOption) (*proto.Service, error)
 	DeleteService(ctx context.Context, in *proto.DeleteServiceRequest, opts ...grpc.CallOption) (*proto.DeleteServiceResponse, error)
+	Up(ctx context.Context, in *proto.UpRequest, opts ...grpc.CallOption) (*proto.UpResponse, error)
 	PerformServiceAction(ctx context.Context, in *proto.PerformServiceActionRequest, opts ...grpc.CallOption) (*proto.PerformServiceActionResponse, error)
 }
 
@@ -606,6 +607,15 @@ func (c *servicesServiceClient) DeleteService(ctx context.Context, in *proto.Del
 	return out, nil
 }
 
+func (c *servicesServiceClient) Up(ctx context.Context, in *proto.UpRequest, opts ...grpc.CallOption) (*proto.UpResponse, error) {
+	out := new(proto.UpResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/Up", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *proto.PerformServiceActionRequest, opts ...grpc.CallOption) (*proto.PerformServiceActionResponse, error) {
 	out := new(proto.PerformServiceActionResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/PerformServiceAction", in, out, opts...)
@@ -623,6 +633,7 @@ type ServicesServiceServer interface {
 	CreateService(context.Context, *proto.CreateServiceRequest) (*proto.Service, error)
 	UpdateService(context.Context, *proto.UpdateServiceRequest) (*proto.Service, error)
 	DeleteService(context.Context, *proto.DeleteServiceRequest) (*proto.DeleteServiceResponse, error)
+	Up(context.Context, *proto.UpRequest) (*proto.UpResponse, error)
 	PerformServiceAction(context.Context, *proto.PerformServiceActionRequest) (*proto.PerformServiceActionResponse, error)
 	mustEmbedUnimplementedServicesServiceServer()
 }
@@ -642,6 +653,9 @@ func (UnimplementedServicesServiceServer) UpdateService(context.Context, *proto.
 }
 func (UnimplementedServicesServiceServer) DeleteService(context.Context, *proto.DeleteServiceRequest) (*proto.DeleteServiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteService not implemented")
+}
+func (UnimplementedServicesServiceServer) Up(context.Context, *proto.UpRequest) (*proto.UpResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Up not implemented")
 }
 func (UnimplementedServicesServiceServer) PerformServiceAction(context.Context, *proto.PerformServiceActionRequest) (*proto.PerformServiceActionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PerformServiceAction not implemented")
@@ -731,6 +745,24 @@ func _ServicesService_DeleteService_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ServicesService_Up_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.UpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).Up(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesService/Up",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).Up(ctx, req.(*proto.UpRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ServicesService_PerformServiceAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(proto.PerformServiceActionRequest)
 	if err := dec(in); err != nil {
@@ -771,6 +803,10 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeleteService",
 			Handler:    _ServicesService_DeleteService_Handler,
+		},
+		{
+			MethodName: "Up",
+			Handler:    _ServicesService_Up_Handler,
 		},
 		{
 			MethodName: "PerformServiceAction",
