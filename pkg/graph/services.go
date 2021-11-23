@@ -17,7 +17,6 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 
 	"github.com/arangodb/go-driver"
@@ -31,55 +30,51 @@ const (
 )
 
 type Service struct {
-	pb.Service
+	*pb.Service
 	driver.DocumentMeta
 }
 
 type ServicesController struct {
+	log *zap.Logger
+
 	col driver.Collection // Services Collection
 	ig_ctrl InstancesGroupsController
 
-	log *zap.Logger
+	db driver.Database
 }
 
 func NewServicesController(log *zap.Logger, db driver.Database) ServicesController {
 	col, _ := db.Collection(nil, SERVICES_COL)
-	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db)}
+	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db), db:db}
 }
 
-func (s *Service) ToServiceMessage() (res *pb.Service, err error) {
-	b, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(b, res)
-	return res, err
-}
-
-func MakeServiceFromMessage(req *pb.Service) (res *Service, err error) {
-	b, err := json.Marshal(req)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(b, res)
-	return res, err
-}
-
-func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service) (error) {
+// Create Service and underlaying entities and store in DB
+func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service) (*Service, error) {
 	ctrl.log.Debug("Creating Service", zap.Any("service", service))
 	for _, ig := range service.GetInstancesGroups() {
 		err := ctrl.ig_ctrl.Create(ctx, ig)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	meta, err := ctrl.col.CreateDocument(ctx, service)
 	if err != nil {
 		ctrl.log.Debug("Error creating document", zap.Error(err))
-		return errors.New("Error creating document")
+		return nil, errors.New("Error creating document")
 	}
 	service.Uuid = meta.ID.Key()
-	return nil
+	return &Service{service, meta}, nil
+}
+
+// Join Service into Namespace
+func (ctrl *ServicesController) Join(ctx context.Context, service *Service, namespace *Namespace, access int32, role string) (error) {
+	ctrl.log.Debug("Joining service to namespace")
+	edge, _ := ctrl.db.Collection(ctx, NS2SERV)
+	_, err := edge.CreateDocument(ctx, Access{
+		From: namespace.ID,
+		To: service.ID,
+		Level: access,
+		Role: role,
+	})
+	return err
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -35,6 +36,7 @@ type ServicesServiceServer struct {
 	servicespb.UnimplementedServicesServiceServer
 	db driver.Database
 	ctrl graph.ServicesController
+	ns_ctrl graph.NamespacesController
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -43,7 +45,9 @@ type ServicesServiceServer struct {
 
 func NewServicesServer(log *zap.Logger, db driver.Database) *ServicesServiceServer {
 	return &ServicesServiceServer{
-		log: log, db: db, ctrl: graph.NewServicesController(log, db), drivers: make(map[string]driverpb.DriverServiceClient),
+		log: log, db: db, ctrl: graph.NewServicesController(log, db),
+		ns_ctrl: graph.NewNamespacesController(log, db),
+		drivers: make(map[string]driverpb.DriverServiceClient),
 	}
 }
 
@@ -51,20 +55,25 @@ func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.
 	s.drivers[type_key] = client
 }
 
-func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *servicespb.CreateServiceRequest) (*servicespb.TestServiceConfigResponse, string, error) {
+func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *servicespb.CreateServiceRequest) (*servicespb.TestServiceConfigResponse, *graph.Namespace, error) {
 	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	response := &servicespb.TestServiceConfigResponse{Result: true, Errors: make([]*servicespb.TestServiceConfigError, 0)}
 
+	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
+	if err != nil {
+		s.log.Debug("Error getting namespace", zap.Error(err))
+		return nil, nil, status.Error(codes.NotFound, "Namespace not found")
+	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, fmt.Sprintf("%s/%s", graph.NAMESPACES_COL, request.Namespace), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, namespace.ID.String(), access.ADMIN)
 	if !ok {
-		return nil, requestor, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
+		return nil, nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
 	service := request.GetService()
@@ -114,7 +123,7 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 		log.Debug("Validated Instances Group", zap.String("group", name))
 	}
 
-	return response, requestor, nil
+	return response, &namespace, nil
 }
 
 func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *servicespb.CreateServiceRequest) (*servicespb.TestServiceConfigResponse, error) {
@@ -127,7 +136,7 @@ func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *
 func (s *ServicesServiceServer) CreateService(ctx context.Context, request *servicespb.CreateServiceRequest) (*servicespb.Service, error) {
 	log := s.log.Named("CreateService")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-	testResult, _, err := s.DoTestServiceConfig(ctx, log, request)
+	testResult, namespace, err := s.DoTestServiceConfig(ctx, log, request)
 
 	if err != nil {
 		return nil, err
@@ -136,10 +145,16 @@ func (s *ServicesServiceServer) CreateService(ctx context.Context, request *serv
 	}
 
 	service := request.GetService()
-	err = s.ctrl.Create(ctx, service)
+	doc, err := s.ctrl.Create(ctx, service)
 	if err != nil {
 		log.Error("Error while creating service", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating Service")
+	}
+
+	err = s.ctrl.Join(ctx, doc, namespace, access.ADMIN, roles.OWNER)	
+	if err != nil {
+		log.Error("Error while joining service to namespace", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
 	}
 	return service, nil
 }
