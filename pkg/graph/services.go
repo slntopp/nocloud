@@ -66,6 +66,14 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 	return &Service{service, meta}, nil
 }
 
+func (ctrl *ServicesController) Get(ctx context.Context, id string) (*Service, error) {
+	ctrl.log.Debug("Getting Service", zap.String("id", id))
+	var service pb.Service
+	meta, err := ctrl.col.ReadDocument(ctx, id, &service)
+	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("service", service))
+	return &Service{&service, meta}, err
+}
+
 // Join Service into Namespace
 func (ctrl *ServicesController) Join(ctx context.Context, service *Service, namespace *Namespace, access int32, role string) (error) {
 	ctrl.log.Debug("Joining service to namespace")
