@@ -66,7 +66,7 @@ func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *
 	service := request.GetService()
 	
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, request.Namespace, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, fmt.Sprintf("%s/%s", graph.NAMESPACES_COL, request.Namespace), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
