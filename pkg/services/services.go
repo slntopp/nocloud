@@ -61,18 +61,19 @@ func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	response := servicespb.TestServiceConfigResponse{Result: false, Errors: make([]*servicespb.TestServiceConfigError, 0)}
+	response := &servicespb.TestServiceConfigResponse{Result: true, Errors: make([]*servicespb.TestServiceConfigError, 0)}
 
-	service := request.GetService()
-	
 	// Checking if requestor has access to Namespace Service going to be put in
 	ok := graph.HasAccess(ctx, s.db, requestor, fmt.Sprintf("%s/%s", graph.NAMESPACES_COL, request.Namespace), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
-	log.Debug("Init validation")
-	for name, group := range service.InstancesGroups {
+	service := request.GetService()
+	groups  := service.GetInstancesGroups()
+
+	log.Debug("Init validation", zap.Any("groups", groups), zap.Int("amount", len(groups)))
+	for name, group := range service.GetInstancesGroups() {
 		log.Debug("Validating Instances Group", zap.String("group", name))
 		groupType := group.GetType()
 
@@ -115,5 +116,5 @@ func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *
 		log.Debug("Validated Instances Group", zap.String("group", name))
 	}
 
-	return &response, nil
+	return response, nil
 }
