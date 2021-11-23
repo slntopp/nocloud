@@ -53,7 +53,7 @@ func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.
 
 func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *servicespb.TestServiceConfigRequest) (*servicespb.TestServiceConfigResponse, error) {
 	log := s.log.Named("TestServiceConfig")
-	log.Debug("Get request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
 		return nil, err
