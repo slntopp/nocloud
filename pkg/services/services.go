@@ -51,12 +51,10 @@ func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.
 	s.drivers[type_key] = client
 }
 
-func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *servicespb.TestServiceConfigRequest) (*servicespb.TestServiceConfigResponse, error) {
-	log := s.log.Named("TestServiceConfig")
-	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *servicespb.CreateServiceRequest) (*servicespb.TestServiceConfigResponse, string, error) {
 	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -66,7 +64,7 @@ func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *
 	// Checking if requestor has access to Namespace Service going to be put in
 	ok := graph.HasAccess(ctx, s.db, requestor, fmt.Sprintf("%s/%s", graph.NAMESPACES_COL, request.Namespace), access.ADMIN)
 	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
+		return nil, requestor, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
 	service := request.GetService()
@@ -116,5 +114,14 @@ func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *
 		log.Debug("Validated Instances Group", zap.String("group", name))
 	}
 
-	return response, nil
+	return response, requestor, nil
+}
+
+func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *servicespb.CreateServiceRequest) (*servicespb.TestServiceConfigResponse, error) {
+	log := s.log.Named("TestServiceConfig")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	response, _, err := s.DoTestServiceConfig(ctx, log, request)
+	return response, err
+}
+
 }
