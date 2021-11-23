@@ -19,6 +19,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
@@ -67,7 +68,7 @@ func init() {
 	
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
-	corsAllowed 	= viper.GetStringSlice("CORS_ALLOWED")
+	corsAllowed 	= strings.Split(viper.GetString("CORS_ALLOWED"), ",")
 
 	healthHost 		= viper.GetString("HEALTH_HOST")
 	registryHost 	= viper.GetString("REGISTRY_HOST")
@@ -166,6 +167,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
 	}
+
+	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
 
 	handler := handlers.CORS(
 		handlers.AllowedOrigins(corsAllowed),
