@@ -17,9 +17,13 @@ package graph
 
 import (
 	"context"
+	"errors"
 
 	"github.com/arangodb/go-driver"
+	"github.com/gofrs/uuid"
 	"go.uber.org/zap"
+
+	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 )
 
 const (
@@ -27,9 +31,7 @@ const (
 )
 
 type Instance struct {
-	Title string `json:"title"`
-	Config map[string]interface{} `json:"config"`
-
+	*pb.Instance
 	driver.DocumentMeta
 }
 
@@ -42,9 +44,17 @@ type InstancesController struct {
 
 func NewInstancesController(log *zap.Logger, db driver.Database) InstancesController {
 	col, _ := db.Collection(nil, INSTANCES_COL)
-	return InstancesController{log: log, col: col}
+	return InstancesController{log: log.Named("InstancesController"), col: col}
 }
 
-func (ctrl *InstancesController) Create(ctx context.Context, instance Instance) (error) {
+func (ctrl *InstancesController) Create(ctx context.Context, instance *pb.Instance) (error) {
+	ctrl.log.Debug("Creating Instance", zap.Any("instance", instance))
+	id, err := uuid.NewV4()
+	if err != nil {
+		ctrl.log.Debug("Error generating UUID", zap.Error(err))
+		return errors.New("Error generating UUID")
+	}
+
+	instance.Uuid = id.String()
 	return nil
 }

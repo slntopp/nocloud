@@ -16,9 +16,14 @@ limitations under the License.
 package graph
 
 import (
+	"errors"
+
 	"github.com/arangodb/go-driver"
+	"github.com/gofrs/uuid"
 	"go.uber.org/zap"
 	"golang.org/x/net/context"
+
+	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 )
 
 const (
@@ -26,10 +31,7 @@ const (
 )
 
 type InstancesGroup struct {
-	Type string `json:"type"`
-	Config map[string]interface{} `json:"config"`
-	Instances []Instance `json:"instances"`
-
+	*pb.InstancesGroup
 	driver.DocumentMeta
 }
 
@@ -42,12 +44,22 @@ type InstancesGroupsController struct {
 
 func NewInstancesGroupsController(log *zap.Logger, db driver.Database) InstancesGroupsController {
 	col, _ := db.Collection(nil, INSTANCES_GROUPS_COL)
-	return InstancesGroupsController{log: log, inst_ctrl: NewInstancesController(log, db), col: col}
+	return InstancesGroupsController{log: log.Named("InstancesGroupsController"), inst_ctrl: NewInstancesController(log, db), col: col}
 }
 
-func (ctrl *InstancesGroupsController) Create(ctx context.Context, group InstancesGroup) (error) {
-	for _, instance := range group.Instances {
-		ctrl.inst_ctrl.Create(ctx, instance)
+func (ctrl *InstancesGroupsController) Create(ctx context.Context, group *pb.InstancesGroup) (error) {
+	ctrl.log.Debug("Creating InstancesGroup", zap.Any("group", group))
+	id, err := uuid.NewV4()
+	if err != nil {
+		ctrl.log.Debug("Error generating UUID", zap.Error(err))
+		return errors.New("Error generating UUID")
 	}
+	for _, instance := range group.GetInstances() {
+		err := ctrl.inst_ctrl.Create(ctx, instance)
+		if err != nil {
+			return err
+		}
+	}
+	group.Uuid = id.String()
 	return nil
 }

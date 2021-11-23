@@ -18,6 +18,7 @@ package graph
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
@@ -30,14 +31,7 @@ const (
 )
 
 type Service struct {
-	Version string `json:"version"`
-	Title string `json:"title"`
-	Context map[string]interface{} `json:"context"`
-	InstancesGroups map[string]InstancesGroup `json:"instances_groups"`
-	State string `json:"state"`
-
-	Hash string `json:"hash"`
-
+	pb.Service
 	driver.DocumentMeta
 }
 
@@ -73,9 +67,19 @@ func MakeServiceFromMessage(req *pb.Service) (res *Service, err error) {
 	return res, err
 }
 
-func (ctrl *ServicesController) Create(ctx context.Context, service Service) (error) {
-	for _, ig := range service.InstancesGroups {
-		ctrl.ig_ctrl.Create(ctx, ig)
+func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service) (error) {
+	ctrl.log.Debug("Creating Service", zap.Any("service", service))
+	for _, ig := range service.GetInstancesGroups() {
+		err := ctrl.ig_ctrl.Create(ctx, ig)
+		if err != nil {
+			return err
+		}
 	}
+	meta, err := ctrl.col.CreateDocument(ctx, service)
+	if err != nil {
+		ctrl.log.Debug("Error creating document", zap.Error(err))
+		return errors.New("Error creating document")
+	}
+	service.Uuid = meta.ID.String()
 	return nil
 }

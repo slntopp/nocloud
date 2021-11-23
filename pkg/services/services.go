@@ -124,4 +124,22 @@ func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *
 	return response, err
 }
 
+func (s *ServicesServiceServer) CreateService(ctx context.Context, request *servicespb.CreateServiceRequest) (*servicespb.Service, error) {
+	log := s.log.Named("CreateService")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	testResult, _, err := s.DoTestServiceConfig(ctx, log, request)
+
+	if err != nil {
+		return nil, err
+	} else if !testResult.Result {
+		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
+	}
+
+	service := request.GetService()
+	err = s.ctrl.Create(ctx, service)
+	if err != nil {
+		log.Error("Error while creating service", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while creating Service")
+	}
+	return service, nil
 }
