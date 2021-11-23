@@ -66,12 +66,31 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 	return &Service{service, meta}, nil
 }
 
+func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service) (error) {
+	ctrl.log.Debug("Updating Service", zap.Any("service", service))
+	for _, ig := range service.GetInstancesGroups() {
+		err := ctrl.ig_ctrl.Update(ctx, ig)
+		if err != nil {
+			return err
+		}
+	}
+	meta, err := ctrl.col.UpdateDocument(ctx, service.GetUuid(), service)
+	ctrl.log.Debug("UpdateDocument.Result", zap.Any("meta", meta), zap.Error(err))
+	return err
+}
+
+// Get Service from DB
 func (ctrl *ServicesController) Get(ctx context.Context, id string) (*Service, error) {
 	ctrl.log.Debug("Getting Service", zap.String("id", id))
 	var service pb.Service
 	meta, err := ctrl.col.ReadDocument(ctx, id, &service)
-	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("service", service))
-	return &Service{&service, meta}, err
+	if err != nil {
+		ctrl.log.Debug("Error reading document", zap.Error(err))
+		return nil, errors.New("Error reading document")
+	}
+	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Any("service", &service))
+	service.Uuid = meta.ID.Key()
+	return &Service{&service, meta}, nil
 }
 
 // Join Service into Namespace

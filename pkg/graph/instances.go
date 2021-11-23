@@ -58,3 +58,8 @@ func (ctrl *InstancesController) Create(ctx context.Context, instance *pb.Instan
 	instance.Uuid = id.String()
 	return nil
 }
+
+func (ctrl *InstancesController) Update(ctx context.Context, instance *pb.Instance) (error) {
+	ctrl.log.Debug("Updating Instance", zap.Any("instance", instance))
+	return nil
+}

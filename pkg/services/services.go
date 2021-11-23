@@ -36,6 +36,7 @@ type ServicesServiceServer struct {
 	servicespb.UnimplementedServicesServiceServer
 	db driver.Database
 	ctrl graph.ServicesController
+	sp_ctrl graph.ServicesProvidersController
 	ns_ctrl graph.NamespacesController
 
 	drivers map[string]driverpb.DriverServiceClient
@@ -46,6 +47,7 @@ type ServicesServiceServer struct {
 func NewServicesServer(log *zap.Logger, db driver.Database) *ServicesServiceServer {
 	return &ServicesServiceServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
+		sp_ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl: graph.NewNamespacesController(log, db),
 		drivers: make(map[string]driverpb.DriverServiceClient),
 	}
@@ -157,4 +159,50 @@ func (s *ServicesServiceServer) CreateService(ctx context.Context, request *serv
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
 	}
 	return service, nil
+}
+
+func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRequest) (*servicespb.UpResponse, error) {
+	log := s.log.Named("Up")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	service, err := s.ctrl.Get(ctx, request.GetId())
+	if err != nil {
+		log.Debug("Error getting Service", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not found")
+	}
+	log.Debug("Found Service", zap.Any("service", service))
+
+	deploy_policies := request.GetDeployPolicies()
+
+	for _, group := range service.GetInstancesGroups() {
+		groupType := group.GetType()
+		
+		sp_id := deploy_policies[group.GetUuid()]
+		sp, err := s.sp_ctrl.Get(ctx, sp_id)
+		if err != nil {
+			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Error getting ServiceProvider(%s)", sp_id))
+		}
+
+		client, ok := s.drivers[groupType]
+		if !ok {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver if type '%s' not registered", groupType))
+		}
+
+		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
+		if err != nil {
+			s.log.Error("Error deploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
+			continue
+		}
+		group.Data = response.GetGroup().GetData()
+	}
+
+	s.log.Debug("Updated Service", zap.Any("service", service))
+	err = s.ctrl.Update(ctx, service.Service)
+	if err != nil {
+		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		return nil, status.Error(codes.Internal, "Error storing updates")
+	}
+
+	return &servicespb.UpResponse{}, nil
 }

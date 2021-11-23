@@ -63,3 +63,14 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, group *pb.Ins
 	group.Uuid = id.String()
 	return nil
 }
+
+func (ctrl *InstancesGroupsController) Update(ctx context.Context, group *pb.InstancesGroup) (error) {
+	ctrl.log.Debug("Updating InstancesGroup", zap.Any("group", group))
+	for _, instance := range group.GetInstances() {
+		err := ctrl.inst_ctrl.Update(ctx, instance)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
