@@ -13,7 +13,6 @@ services:
       REGISTRY_HOST: registry:8080
       SP_REGISTRY_HOST: sp-registry:8080
       SIGNING_KEY: supersecretaaarhgreplaceme
-      LOG_LEVEL: -1
     ports:
       - 8000:8000 # REST-API
       - 8080:8080 # gRPC-API
@@ -54,7 +53,6 @@ services:
     environment:
       DB_HOST: db:8529
       DB_CRED: root:openSesame
-      LOG_LEVEL: -1
     networks:
       - arangodb
       - grpc-internal
