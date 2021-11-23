@@ -63,7 +63,7 @@ func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *
 
 	response := servicespb.TestServiceConfigResponse{Result: false, Errors: make([]*servicespb.TestServiceConfigError, 0)}
 
-	service := request.GetConfig()
+	service := request.GetService()
 	
 	// Checking if requestor has access to Namespace Service going to be put in
 	ok := graph.HasAccess(ctx, s.db, requestor, request.Namespace, access.ADMIN)

@@ -32,7 +32,7 @@ message Service {
 }
 
 message TestServiceConfigRequest {
-    Service config = 1;
+    Service service = 1;
     string namespace = 2;
 }
 
