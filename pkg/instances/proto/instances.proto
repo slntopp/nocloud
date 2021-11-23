@@ -21,7 +21,7 @@ message InstancesGroup {
 }
 
 message TestInstancesGroupConfigRequest {
-    InstancesGroup config = 1;
+    InstancesGroup group = 1;
 }
 
 message TestInstancesGroupConfigError {
