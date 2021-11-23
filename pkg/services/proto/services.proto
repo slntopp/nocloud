@@ -31,11 +31,6 @@ message Service {
     string hash = 7;
 }
 
-message TestServiceConfigRequest {
-    Service service = 1;
-    string namespace = 2;
-}
-
 message TestServiceConfigError {
     string error = 1; 
     string instance_group = 2;
@@ -52,18 +47,10 @@ message CreateServiceRequest {
     string namespace = 2;
 }
 
-message CreateServiceResponse {
-    string id = 1;
-}
-
 message UpdateServiceRequest {
     string id = 1;
     string namespace = 2;
     Service service = 3;
-}
-
-message UpdateServiceResponse {
-    bool result = 1;
 }
 
 message DeleteServiceRequest {
@@ -86,9 +73,9 @@ message PerformServiceActionResponse {
 }
 
 service ServicesService {
-    rpc TestServiceConfig(nocloud.services.TestServiceConfigRequest) returns (nocloud.services.TestServiceConfigResponse);
-    rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.CreateServiceResponse);
-    rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.UpdateServiceResponse);
+    rpc TestServiceConfig(nocloud.services.CreateServiceRequest) returns (nocloud.services.TestServiceConfigResponse);
+    rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.Service);
+    rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.Service);
     rpc DeleteService(nocloud.services.DeleteServiceRequest) returns (nocloud.services.DeleteServiceResponse);
     rpc PerformServiceAction(nocloud.services.PerformServiceActionRequest) returns (nocloud.services.PerformServiceActionResponse);
 }

@@ -35,12 +35,12 @@ func (sp *servicesAPI) mustEmbedUnimplementedServicesServiceServer() {
 	sp.log.Info("Method missing")
 }
 
-func (sp *servicesAPI) TestServiceConfig(ctx context.Context, req *pb.TestServiceConfigRequest) (*pb.TestServiceConfigResponse, error) {
+func (sp *servicesAPI) TestServiceConfig(ctx context.Context, req *pb.CreateServiceRequest) (*pb.TestServiceConfigResponse, error) {
 	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return sp.client.TestServiceConfig(ctx, req)
 }
 
-func (sp *servicesAPI) CreateService(ctx context.Context, req *pb.CreateServiceRequest) (*pb.CreateServiceResponse, error) {
+func (sp *servicesAPI) CreateService(ctx context.Context, req *pb.CreateServiceRequest) (*pb.Service, error) {
 	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return sp.client.CreateService(ctx, req)
 }

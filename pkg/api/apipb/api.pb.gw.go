@@ -655,7 +655,7 @@ func local_request_NamespacesService_Delete_0(ctx context.Context, marshaler run
 }
 
 func request_ServicesService_TestServiceConfig_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.TestServiceConfigRequest
+	var protoReq proto_1.CreateServiceRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -672,7 +672,7 @@ func request_ServicesService_TestServiceConfig_0(ctx context.Context, marshaler 
 }
 
 func local_request_ServicesService_TestServiceConfig_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.TestServiceConfigRequest
+	var protoReq proto_1.CreateServiceRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)

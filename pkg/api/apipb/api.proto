@@ -97,19 +97,19 @@ service NamespacesService {
 
 import "pkg/services/proto/services.proto";
 service ServicesService {
-    rpc TestServiceConfig(nocloud.services.TestServiceConfigRequest) returns (nocloud.services.TestServiceConfigResponse) {
+    rpc TestServiceConfig(nocloud.services.CreateServiceRequest) returns (nocloud.services.TestServiceConfigResponse) {
         option (google.api.http) = {
             post: "/services/test",
             body: "*"
         };
     };
-    rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.CreateServiceResponse) {
+    rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.Service) {
         option (google.api.http) = {
             post: "/services",
             body: "*"
         };
     };
-    rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.UpdateServiceResponse) {
+    rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.Service) {
         option (google.api.http) = {
             patch: "/services/{id}",
             body: "*"
