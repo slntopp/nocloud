@@ -29,6 +29,7 @@ import (
 	apipb "github.com/slntopp/nocloud/pkg/api/apipb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -39,6 +40,7 @@ var (
 
 	healthHost 		string
 	registryHost 	string
+	servicesHost	string
 	spRegistryHost  string
 
 	SIGNING_KEY		[]byte
@@ -56,12 +58,14 @@ func init() {
 
 	viper.SetDefault("HEALTH_HOST", "health:8080")
 	viper.SetDefault("REGISTRY_HOST", "accounts:8080")
-	viper.SetDefault("SP_REGISTRY_HOST", "accounts:8080")
+	viper.SetDefault("SP_REGISTRY_HOST", "sp-registry:8080")
+	viper.SetDefault("SERVICES_HOST", "services-registry:8080")
 	
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	healthHost 		= viper.GetString("HEALTH_HOST")
 	registryHost 	= viper.GetString("REGISTRY_HOST")
+	servicesHost 	= viper.GetString("SERVICES_HOST")
 	spRegistryHost 	= viper.GetString("SP_REGISTRY_HOST")
 
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
@@ -93,6 +97,14 @@ func main() {
 		panic(err)
 	}
 	spRegistryClient := sppb.NewServicesProvidersServiceClient(spRegistryConn)
+
+	log.Info("Connecting to ServicesService", zap.String("host", spRegistryHost))
+	servicesConn, err := grpc.Dial(servicesHost, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	servicesClient := servicespb.NewServicesServiceClient(servicesConn)
+
 	// Create a listener on TCP port
 	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
@@ -107,6 +119,8 @@ func main() {
 	apipb.RegisterNamespacesServiceServer(s, &namespacesAPI{client: namespacesClient})
 
 	apipb.RegisterServicesProvidersServiceServer(s, &spRegistryAPI{client: spRegistryClient, log: log.Named("ServicesProvidersRegistry")})
+
+	apipb.RegisterServicesServiceServer(s, &servicesAPI{client: servicesClient, log: log.Named("ServicesRegistry")})
 
 	// Serve gRPC Server
 	log.Info("Serving gRPC on 0.0.0.0:8080", zap.Skip())
@@ -141,6 +155,10 @@ func main() {
 	err = apipb.RegisterServicesProvidersServiceHandler(context.Background(), gwmux, conn)
 	if err != nil {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
+	}
+	err = apipb.RegisterServicesServiceHandler(context.Background(), gwmux, conn)
+	if err != nil {
+		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
 	}
 
 	handler := handlers.CORS(
