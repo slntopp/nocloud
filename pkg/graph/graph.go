@@ -16,13 +16,10 @@ limitations under the License.
 package graph
 
 import (
-	"context"
 	"strings"
 
 	driver "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
-	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"go.uber.org/zap"
 )
 
@@ -119,4 +116,5 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 	}
 
 	account_ctrl := NewAccountsController(log, db)
+	account_ctrl.EnsureRootExists(rootPass)
 }
