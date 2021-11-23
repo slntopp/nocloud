@@ -99,7 +99,7 @@ import "pkg/services/proto/services.proto";
 service ServicesService {
     rpc TestServiceConfig(nocloud.services.TestServiceConfigRequest) returns (nocloud.services.TestServiceConfigResponse) {
         option (google.api.http) = {
-            post: "/services/verify",
+            post: "/services/test",
             body: "*"
         };
     };
