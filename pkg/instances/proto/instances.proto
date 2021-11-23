@@ -20,16 +20,16 @@ message InstancesGroup {
     map<string, google.protobuf.Value> data = 5;
 }
 
-message ValidateInstancesGroupConfigRequest {
+message TestInstancesGroupConfigRequest {
     InstancesGroup config = 1;
 }
 
-message ValidateInstancesGroupConfigError {
+message TestInstancesGroupConfigError {
     string error = 1;
     string instance = 2;
 }
 
-message ValidateInstancesGroupConfigResponse {
+message TestInstancesGroupConfigResponse {
     bool result = 1;
-    repeated ValidateInstancesGroupConfigError errors = 2;
+    repeated TestInstancesGroupConfigError errors = 2;
 }

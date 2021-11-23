@@ -171,7 +171,7 @@ func (x *InstancesGroup) GetData() map[string]*structpb.Value {
 	return nil
 }
 
-type ValidateInstancesGroupConfigRequest struct {
+type TestInstancesGroupConfigRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -179,8 +179,8 @@ type ValidateInstancesGroupConfigRequest struct {
 	Config *InstancesGroup `protobuf:"bytes,1,opt,name=config,proto3" json:"config,omitempty"`
 }
 
-func (x *ValidateInstancesGroupConfigRequest) Reset() {
-	*x = ValidateInstancesGroupConfigRequest{}
+func (x *TestInstancesGroupConfigRequest) Reset() {
+	*x = TestInstancesGroupConfigRequest{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_pkg_instances_proto_instances_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -188,13 +188,13 @@ func (x *ValidateInstancesGroupConfigRequest) Reset() {
 	}
 }
 
-func (x *ValidateInstancesGroupConfigRequest) String() string {
+func (x *TestInstancesGroupConfigRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ValidateInstancesGroupConfigRequest) ProtoMessage() {}
+func (*TestInstancesGroupConfigRequest) ProtoMessage() {}
 
-func (x *ValidateInstancesGroupConfigRequest) ProtoReflect() protoreflect.Message {
+func (x *TestInstancesGroupConfigRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_instances_proto_instances_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -206,19 +206,19 @@ func (x *ValidateInstancesGroupConfigRequest) ProtoReflect() protoreflect.Messag
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ValidateInstancesGroupConfigRequest.ProtoReflect.Descriptor instead.
-func (*ValidateInstancesGroupConfigRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use TestInstancesGroupConfigRequest.ProtoReflect.Descriptor instead.
+func (*TestInstancesGroupConfigRequest) Descriptor() ([]byte, []int) {
 	return file_pkg_instances_proto_instances_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *ValidateInstancesGroupConfigRequest) GetConfig() *InstancesGroup {
+func (x *TestInstancesGroupConfigRequest) GetConfig() *InstancesGroup {
 	if x != nil {
 		return x.Config
 	}
 	return nil
 }
 
-type ValidateInstancesGroupConfigError struct {
+type TestInstancesGroupConfigError struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -227,8 +227,8 @@ type ValidateInstancesGroupConfigError struct {
 	Instance string `protobuf:"bytes,2,opt,name=instance,proto3" json:"instance,omitempty"`
 }
 
-func (x *ValidateInstancesGroupConfigError) Reset() {
-	*x = ValidateInstancesGroupConfigError{}
+func (x *TestInstancesGroupConfigError) Reset() {
+	*x = TestInstancesGroupConfigError{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_pkg_instances_proto_instances_proto_msgTypes[3]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -236,13 +236,13 @@ func (x *ValidateInstancesGroupConfigError) Reset() {
 	}
 }
 
-func (x *ValidateInstancesGroupConfigError) String() string {
+func (x *TestInstancesGroupConfigError) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ValidateInstancesGroupConfigError) ProtoMessage() {}
+func (*TestInstancesGroupConfigError) ProtoMessage() {}
 
-func (x *ValidateInstancesGroupConfigError) ProtoReflect() protoreflect.Message {
+func (x *TestInstancesGroupConfigError) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_instances_proto_instances_proto_msgTypes[3]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -254,36 +254,36 @@ func (x *ValidateInstancesGroupConfigError) ProtoReflect() protoreflect.Message 
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ValidateInstancesGroupConfigError.ProtoReflect.Descriptor instead.
-func (*ValidateInstancesGroupConfigError) Descriptor() ([]byte, []int) {
+// Deprecated: Use TestInstancesGroupConfigError.ProtoReflect.Descriptor instead.
+func (*TestInstancesGroupConfigError) Descriptor() ([]byte, []int) {
 	return file_pkg_instances_proto_instances_proto_rawDescGZIP(), []int{3}
 }
 
-func (x *ValidateInstancesGroupConfigError) GetError() string {
+func (x *TestInstancesGroupConfigError) GetError() string {
 	if x != nil {
 		return x.Error
 	}
 	return ""
 }
 
-func (x *ValidateInstancesGroupConfigError) GetInstance() string {
+func (x *TestInstancesGroupConfigError) GetInstance() string {
 	if x != nil {
 		return x.Instance
 	}
 	return ""
 }
 
-type ValidateInstancesGroupConfigResponse struct {
+type TestInstancesGroupConfigResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Result bool                                 `protobuf:"varint,1,opt,name=result,proto3" json:"result,omitempty"`
-	Errors []*ValidateInstancesGroupConfigError `protobuf:"bytes,2,rep,name=errors,proto3" json:"errors,omitempty"`
+	Result bool                             `protobuf:"varint,1,opt,name=result,proto3" json:"result,omitempty"`
+	Errors []*TestInstancesGroupConfigError `protobuf:"bytes,2,rep,name=errors,proto3" json:"errors,omitempty"`
 }
 
-func (x *ValidateInstancesGroupConfigResponse) Reset() {
-	*x = ValidateInstancesGroupConfigResponse{}
+func (x *TestInstancesGroupConfigResponse) Reset() {
+	*x = TestInstancesGroupConfigResponse{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_pkg_instances_proto_instances_proto_msgTypes[4]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -291,13 +291,13 @@ func (x *ValidateInstancesGroupConfigResponse) Reset() {
 	}
 }
 
-func (x *ValidateInstancesGroupConfigResponse) String() string {
+func (x *TestInstancesGroupConfigResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*ValidateInstancesGroupConfigResponse) ProtoMessage() {}
+func (*TestInstancesGroupConfigResponse) ProtoMessage() {}
 
-func (x *ValidateInstancesGroupConfigResponse) ProtoReflect() protoreflect.Message {
+func (x *TestInstancesGroupConfigResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_pkg_instances_proto_instances_proto_msgTypes[4]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -309,19 +309,19 @@ func (x *ValidateInstancesGroupConfigResponse) ProtoReflect() protoreflect.Messa
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use ValidateInstancesGroupConfigResponse.ProtoReflect.Descriptor instead.
-func (*ValidateInstancesGroupConfigResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use TestInstancesGroupConfigResponse.ProtoReflect.Descriptor instead.
+func (*TestInstancesGroupConfigResponse) Descriptor() ([]byte, []int) {
 	return file_pkg_instances_proto_instances_proto_rawDescGZIP(), []int{4}
 }
 
-func (x *ValidateInstancesGroupConfigResponse) GetResult() bool {
+func (x *TestInstancesGroupConfigResponse) GetResult() bool {
 	if x != nil {
 		return x.Result
 	}
 	return false
 }
 
-func (x *ValidateInstancesGroupConfigResponse) GetErrors() []*ValidateInstancesGroupConfigError {
+func (x *TestInstancesGroupConfigResponse) GetErrors() []*TestInstancesGroupConfigError {
 	if x != nil {
 		return x.Errors
 	}
@@ -401,26 +401,25 @@ var file_pkg_instances_proto_instances_proto_rawDesc = []byte{
 	0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x2c, 0x0a, 0x05, 0x76,
 	0x61, 0x6c, 0x75, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f,
 	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x56, 0x61, 0x6c,
-	0x75, 0x65, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x60, 0x0a,
-	0x23, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x65, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63,
-	0x65, 0x73, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71,
-	0x75, 0x65, 0x73, 0x74, 0x12, 0x39, 0x0a, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01,
-	0x20, 0x01, 0x28, 0x0b, 0x32, 0x21, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x69,
-	0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x2e, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63,
-	0x65, 0x73, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x52, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x22,
-	0x55, 0x0a, 0x21, 0x56, 0x61, 0x6c, 0x69, 0x64, 0x61, 0x74, 0x65, 0x49, 0x6e, 0x73, 0x74, 0x61,
-	0x6e, 0x63, 0x65, 0x73, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x45,
-	0x72, 0x72, 0x6f, 0x72, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x01, 0x20,
-	0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x69, 0x6e,
-	0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x69, 0x6e,
-	0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x22, 0x8c, 0x01, 0x0a, 0x24, 0x56, 0x61, 0x6c, 0x69, 0x64,
-	0x61, 0x74, 0x65, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x47, 0x72, 0x6f, 0x75,
-	0x70, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x16, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52,
-	0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x4c, 0x0a, 0x06, 0x65, 0x72, 0x72, 0x6f, 0x72,
-	0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x34, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75,
-	0x64, 0x2e, 0x69, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x2e, 0x56, 0x61, 0x6c, 0x69,
-	0x64, 0x61, 0x74, 0x65, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x47, 0x72, 0x6f,
+	0x75, 0x65, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38, 0x01, 0x22, 0x5c, 0x0a,
+	0x1f, 0x54, 0x65, 0x73, 0x74, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x47, 0x72,
+	0x6f, 0x75, 0x70, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x12, 0x39, 0x0a, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x21, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x69, 0x6e, 0x73, 0x74, 0x61,
+	0x6e, 0x63, 0x65, 0x73, 0x2e, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x47, 0x72,
+	0x6f, 0x75, 0x70, 0x52, 0x06, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x22, 0x51, 0x0a, 0x1d, 0x54,
+	0x65, 0x73, 0x74, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x47, 0x72, 0x6f, 0x75,
+	0x70, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x12, 0x14, 0x0a, 0x05,
+	0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x72, 0x72,
+	0x6f, 0x72, 0x12, 0x1a, 0x0a, 0x08, 0x69, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x18, 0x02,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x08, 0x69, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x22, 0x84,
+	0x01, 0x0a, 0x20, 0x54, 0x65, 0x73, 0x74, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73,
+	0x47, 0x72, 0x6f, 0x75, 0x70, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x08, 0x52, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x48, 0x0a, 0x06, 0x65,
+	0x72, 0x72, 0x6f, 0x72, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x30, 0x2e, 0x6e, 0x6f,
+	0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x69, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x2e,
+	0x54, 0x65, 0x73, 0x74, 0x49, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x47, 0x72, 0x6f,
 	0x75, 0x70, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x45, 0x72, 0x72, 0x6f, 0x72, 0x52, 0x06, 0x65,
 	0x72, 0x72, 0x6f, 0x72, 0x73, 0x42, 0xbc, 0x01, 0x0a, 0x15, 0x63, 0x6f, 0x6d, 0x2e, 0x6e, 0x6f,
 	0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x69, 0x6e, 0x73, 0x74, 0x61, 0x6e, 0x63, 0x65, 0x73, 0x42,
@@ -451,18 +450,18 @@ func file_pkg_instances_proto_instances_proto_rawDescGZIP() []byte {
 
 var file_pkg_instances_proto_instances_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_pkg_instances_proto_instances_proto_goTypes = []interface{}{
-	(*Instance)(nil),                             // 0: nocloud.instances.Instance
-	(*InstancesGroup)(nil),                       // 1: nocloud.instances.InstancesGroup
-	(*ValidateInstancesGroupConfigRequest)(nil),  // 2: nocloud.instances.ValidateInstancesGroupConfigRequest
-	(*ValidateInstancesGroupConfigError)(nil),    // 3: nocloud.instances.ValidateInstancesGroupConfigError
-	(*ValidateInstancesGroupConfigResponse)(nil), // 4: nocloud.instances.ValidateInstancesGroupConfigResponse
-	nil,                    // 5: nocloud.instances.Instance.ConfigEntry
-	nil,                    // 6: nocloud.instances.Instance.ResourcesEntry
-	nil,                    // 7: nocloud.instances.Instance.DataEntry
-	nil,                    // 8: nocloud.instances.InstancesGroup.ConfigEntry
-	nil,                    // 9: nocloud.instances.InstancesGroup.ResourcesEntry
-	nil,                    // 10: nocloud.instances.InstancesGroup.DataEntry
-	(*structpb.Value)(nil), // 11: google.protobuf.Value
+	(*Instance)(nil),                         // 0: nocloud.instances.Instance
+	(*InstancesGroup)(nil),                   // 1: nocloud.instances.InstancesGroup
+	(*TestInstancesGroupConfigRequest)(nil),  // 2: nocloud.instances.TestInstancesGroupConfigRequest
+	(*TestInstancesGroupConfigError)(nil),    // 3: nocloud.instances.TestInstancesGroupConfigError
+	(*TestInstancesGroupConfigResponse)(nil), // 4: nocloud.instances.TestInstancesGroupConfigResponse
+	nil,                                      // 5: nocloud.instances.Instance.ConfigEntry
+	nil,                                      // 6: nocloud.instances.Instance.ResourcesEntry
+	nil,                                      // 7: nocloud.instances.Instance.DataEntry
+	nil,                                      // 8: nocloud.instances.InstancesGroup.ConfigEntry
+	nil,                                      // 9: nocloud.instances.InstancesGroup.ResourcesEntry
+	nil,                                      // 10: nocloud.instances.InstancesGroup.DataEntry
+	(*structpb.Value)(nil),                   // 11: google.protobuf.Value
 }
 var file_pkg_instances_proto_instances_proto_depIdxs = []int32{
 	5,  // 0: nocloud.instances.Instance.config:type_name -> nocloud.instances.Instance.ConfigEntry
@@ -472,8 +471,8 @@ var file_pkg_instances_proto_instances_proto_depIdxs = []int32{
 	0,  // 4: nocloud.instances.InstancesGroup.instances:type_name -> nocloud.instances.Instance
 	9,  // 5: nocloud.instances.InstancesGroup.resources:type_name -> nocloud.instances.InstancesGroup.ResourcesEntry
 	10, // 6: nocloud.instances.InstancesGroup.data:type_name -> nocloud.instances.InstancesGroup.DataEntry
-	1,  // 7: nocloud.instances.ValidateInstancesGroupConfigRequest.config:type_name -> nocloud.instances.InstancesGroup
-	3,  // 8: nocloud.instances.ValidateInstancesGroupConfigResponse.errors:type_name -> nocloud.instances.ValidateInstancesGroupConfigError
+	1,  // 7: nocloud.instances.TestInstancesGroupConfigRequest.config:type_name -> nocloud.instances.InstancesGroup
+	3,  // 8: nocloud.instances.TestInstancesGroupConfigResponse.errors:type_name -> nocloud.instances.TestInstancesGroupConfigError
 	11, // 9: nocloud.instances.Instance.ConfigEntry.value:type_name -> google.protobuf.Value
 	11, // 10: nocloud.instances.Instance.ResourcesEntry.value:type_name -> google.protobuf.Value
 	11, // 11: nocloud.instances.Instance.DataEntry.value:type_name -> google.protobuf.Value
@@ -518,7 +517,7 @@ func file_pkg_instances_proto_instances_proto_init() {
 			}
 		}
 		file_pkg_instances_proto_instances_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ValidateInstancesGroupConfigRequest); i {
+			switch v := v.(*TestInstancesGroupConfigRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -530,7 +529,7 @@ func file_pkg_instances_proto_instances_proto_init() {
 			}
 		}
 		file_pkg_instances_proto_instances_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ValidateInstancesGroupConfigError); i {
+			switch v := v.(*TestInstancesGroupConfigError); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -542,7 +541,7 @@ func file_pkg_instances_proto_instances_proto_init() {
 			}
 		}
 		file_pkg_instances_proto_instances_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ValidateInstancesGroupConfigResponse); i {
+			switch v := v.(*TestInstancesGroupConfigResponse); i {
 			case 0:
 				return &v.state
 			case 1:

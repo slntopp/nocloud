@@ -654,8 +654,8 @@ func local_request_NamespacesService_Delete_0(ctx context.Context, marshaler run
 
 }
 
-func request_ServicesService_ValidateServiceConfig_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.ValidateServiceConfigRequest
+func request_ServicesService_TestServiceConfig_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq proto_1.TestServiceConfigRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -666,13 +666,13 @@ func request_ServicesService_ValidateServiceConfig_0(ctx context.Context, marsha
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := client.ValidateServiceConfig(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.TestServiceConfig(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_ServicesService_ValidateServiceConfig_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.ValidateServiceConfigRequest
+func local_request_ServicesService_TestServiceConfig_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq proto_1.TestServiceConfigRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -683,7 +683,7 @@ func local_request_ServicesService_ValidateServiceConfig_0(ctx context.Context, 
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := server.ValidateServiceConfig(ctx, &protoReq)
+	msg, err := server.TestServiceConfig(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -1340,7 +1340,7 @@ func RegisterNamespacesServiceHandlerServer(ctx context.Context, mux *runtime.Se
 // Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterServicesServiceHandlerFromEndpoint instead.
 func RegisterServicesServiceHandlerServer(ctx context.Context, mux *runtime.ServeMux, server ServicesServiceServer) error {
 
-	mux.Handle("POST", pattern_ServicesService_ValidateServiceConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ServicesService_TestServiceConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -1351,7 +1351,7 @@ func RegisterServicesServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesService_ValidateServiceConfig_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesService_TestServiceConfig_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -1359,7 +1359,7 @@ func RegisterServicesServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 			return
 		}
 
-		forward_ServicesService_ValidateServiceConfig_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ServicesService_TestServiceConfig_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -1961,7 +1961,7 @@ func RegisterServicesServiceHandler(ctx context.Context, mux *runtime.ServeMux, 
 // "ServicesServiceClient" to call the correct interceptors.
 func RegisterServicesServiceHandlerClient(ctx context.Context, mux *runtime.ServeMux, client ServicesServiceClient) error {
 
-	mux.Handle("POST", pattern_ServicesService_ValidateServiceConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("POST", pattern_ServicesService_TestServiceConfig_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
@@ -1970,14 +1970,14 @@ func RegisterServicesServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesService_ValidateServiceConfig_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesService_TestServiceConfig_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_ServicesService_ValidateServiceConfig_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_ServicesService_TestServiceConfig_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2065,7 +2065,7 @@ func RegisterServicesServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 }
 
 var (
-	pattern_ServicesService_ValidateServiceConfig_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"services", "verify"}, "", runtime.AssumeColonVerbOpt(true)))
+	pattern_ServicesService_TestServiceConfig_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"services", "verify"}, "", runtime.AssumeColonVerbOpt(true)))
 
 	pattern_ServicesService_CreateService_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"services"}, "", runtime.AssumeColonVerbOpt(true)))
 
@@ -2077,7 +2077,7 @@ var (
 )
 
 var (
-	forward_ServicesService_ValidateServiceConfig_0 = runtime.ForwardResponseMessage
+	forward_ServicesService_TestServiceConfig_0 = runtime.ForwardResponseMessage
 
 	forward_ServicesService_CreateService_0 = runtime.ForwardResponseMessage
 

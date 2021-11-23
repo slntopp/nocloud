@@ -31,20 +31,20 @@ message Service {
     string hash = 7;
 }
 
-message ValidateServiceConfigRequest {
+message TestServiceConfigRequest {
     Service config = 1;
     string namespace = 2;
 }
 
-message ValidateServiceConfigError {
+message TestServiceConfigError {
     string error = 1; 
     string instance_group = 2;
     string instance = 3;
 }
 
-message ValidateServiceConfigResponse {
+message TestServiceConfigResponse {
     bool result = 1;
-    repeated ValidateServiceConfigError errors = 2; 
+    repeated TestServiceConfigError errors = 2; 
 }
 
 message CreateServiceRequest {
@@ -86,7 +86,7 @@ message PerformServiceActionResponse {
 }
 
 service ServicesService {
-    rpc ValidateServiceConfig(nocloud.services.ValidateServiceConfigRequest) returns (nocloud.services.ValidateServiceConfigResponse);
+    rpc TestServiceConfig(nocloud.services.TestServiceConfigRequest) returns (nocloud.services.TestServiceConfigResponse);
     rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.CreateServiceResponse);
     rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.UpdateServiceResponse);
     rpc DeleteService(nocloud.services.DeleteServiceRequest) returns (nocloud.services.DeleteServiceResponse);

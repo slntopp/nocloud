@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ServicesServiceClient interface {
-	ValidateServiceConfig(ctx context.Context, in *ValidateServiceConfigRequest, opts ...grpc.CallOption) (*ValidateServiceConfigResponse, error)
+	TestServiceConfig(ctx context.Context, in *TestServiceConfigRequest, opts ...grpc.CallOption) (*TestServiceConfigResponse, error)
 	CreateService(ctx context.Context, in *CreateServiceRequest, opts ...grpc.CallOption) (*CreateServiceResponse, error)
 	UpdateService(ctx context.Context, in *UpdateServiceRequest, opts ...grpc.CallOption) (*UpdateServiceResponse, error)
 	DeleteService(ctx context.Context, in *DeleteServiceRequest, opts ...grpc.CallOption) (*DeleteServiceResponse, error)
@@ -33,9 +33,9 @@ func NewServicesServiceClient(cc grpc.ClientConnInterface) ServicesServiceClient
 	return &servicesServiceClient{cc}
 }
 
-func (c *servicesServiceClient) ValidateServiceConfig(ctx context.Context, in *ValidateServiceConfigRequest, opts ...grpc.CallOption) (*ValidateServiceConfigResponse, error) {
-	out := new(ValidateServiceConfigResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/ValidateServiceConfig", in, out, opts...)
+func (c *servicesServiceClient) TestServiceConfig(ctx context.Context, in *TestServiceConfigRequest, opts ...grpc.CallOption) (*TestServiceConfigResponse, error) {
+	out := new(TestServiceConfigResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/TestServiceConfig", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *Pe
 // All implementations must embed UnimplementedServicesServiceServer
 // for forward compatibility
 type ServicesServiceServer interface {
-	ValidateServiceConfig(context.Context, *ValidateServiceConfigRequest) (*ValidateServiceConfigResponse, error)
+	TestServiceConfig(context.Context, *TestServiceConfigRequest) (*TestServiceConfigResponse, error)
 	CreateService(context.Context, *CreateServiceRequest) (*CreateServiceResponse, error)
 	UpdateService(context.Context, *UpdateServiceRequest) (*UpdateServiceResponse, error)
 	DeleteService(context.Context, *DeleteServiceRequest) (*DeleteServiceResponse, error)
@@ -94,8 +94,8 @@ type ServicesServiceServer interface {
 type UnimplementedServicesServiceServer struct {
 }
 
-func (UnimplementedServicesServiceServer) ValidateServiceConfig(context.Context, *ValidateServiceConfigRequest) (*ValidateServiceConfigResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidateServiceConfig not implemented")
+func (UnimplementedServicesServiceServer) TestServiceConfig(context.Context, *TestServiceConfigRequest) (*TestServiceConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestServiceConfig not implemented")
 }
 func (UnimplementedServicesServiceServer) CreateService(context.Context, *CreateServiceRequest) (*CreateServiceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateService not implemented")
@@ -122,20 +122,20 @@ func RegisterServicesServiceServer(s grpc.ServiceRegistrar, srv ServicesServiceS
 	s.RegisterService(&ServicesService_ServiceDesc, srv)
 }
 
-func _ServicesService_ValidateServiceConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ValidateServiceConfigRequest)
+func _ServicesService_TestServiceConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TestServiceConfigRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).ValidateServiceConfig(ctx, in)
+		return srv.(ServicesServiceServer).TestServiceConfig(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/ValidateServiceConfig",
+		FullMethod: "/nocloud.services.ServicesService/TestServiceConfig",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).ValidateServiceConfig(ctx, req.(*ValidateServiceConfigRequest))
+		return srv.(ServicesServiceServer).TestServiceConfig(ctx, req.(*TestServiceConfigRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -220,8 +220,8 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ServicesServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ValidateServiceConfig",
-			Handler:    _ServicesService_ValidateServiceConfig_Handler,
+			MethodName: "TestServiceConfig",
+			Handler:    _ServicesService_TestServiceConfig_Handler,
 		},
 		{
 			MethodName: "CreateService",

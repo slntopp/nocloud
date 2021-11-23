@@ -51,8 +51,8 @@ func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.
 	s.drivers[type_key] = client
 }
 
-func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, request *servicespb.ValidateServiceConfigRequest) (*servicespb.ValidateServiceConfigResponse, error) {
-	log := s.log.Named("ValidateServiceConfig")
+func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *servicespb.TestServiceConfigRequest) (*servicespb.TestServiceConfigResponse, error) {
+	log := s.log.Named("TestServiceConfig")
 	log.Debug("Get request received", zap.Any("request", request), zap.Any("context", ctx))
 	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
@@ -61,7 +61,7 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	response := servicespb.ValidateServiceConfigResponse{Result: false, Errors: make([]*servicespb.ValidateServiceConfigError, 0)}
+	response := servicespb.TestServiceConfigResponse{Result: false, Errors: make([]*servicespb.TestServiceConfigError, 0)}
 
 	service := request.GetConfig()
 	
@@ -76,7 +76,7 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 		log.Debug("Validating Instances Group", zap.String("group", name))
 		groupType := group.GetType()
 
-		config_err := servicespb.ValidateServiceConfigError{
+		config_err := servicespb.TestServiceConfigError{
 			InstanceGroup: name,
 		}
 
@@ -90,7 +90,7 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 			continue
 		}
 
-		res, err := client.ValidateConfigSyntax(ctx, &proto.ValidateInstancesGroupConfigRequest{Config: group})
+		res, err := client.TestInstancesGroupConfig(ctx, &proto.TestInstancesGroupConfigRequest{Config: group})
 		if err != nil {
 			response.Result = false
 			config_err.Error = fmt.Sprintf("Error validating group '%s'", name)
@@ -101,9 +101,9 @@ func (s *ServicesServiceServer) ValidateServiceConfig(ctx context.Context, reque
 		}
 		if !res.GetResult() {
 			response.Result = false
-			errors := make([]*servicespb.ValidateServiceConfigError, 0)
+			errors := make([]*servicespb.TestServiceConfigError, 0)
 			for _, confErr := range res.Errors {
-				errors = append(errors, &servicespb.ValidateServiceConfigError{
+				errors = append(errors, &servicespb.TestServiceConfigError{
 					Error: confErr.Error,
 					Instance: confErr.Instance,
 					InstanceGroup: name,

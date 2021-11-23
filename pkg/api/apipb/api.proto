@@ -97,7 +97,7 @@ service NamespacesService {
 
 import "pkg/services/proto/services.proto";
 service ServicesService {
-    rpc ValidateServiceConfig(nocloud.services.ValidateServiceConfigRequest) returns (nocloud.services.ValidateServiceConfigResponse) {
+    rpc TestServiceConfig(nocloud.services.TestServiceConfigRequest) returns (nocloud.services.TestServiceConfigResponse) {
         option (google.api.http) = {
             post: "/services/verify",
             body: "*"
