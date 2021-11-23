@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/handlers"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/spf13/viper"
 
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
