@@ -23,7 +23,7 @@ type DriverServiceClient interface {
 	TestServiceProviderConfig(ctx context.Context, in *proto.ServicesProvider, opts ...grpc.CallOption) (*proto.TestResponse, error)
 	ValidateConfigSyntax(ctx context.Context, in *proto1.ValidateInstancesGroupConfigRequest, opts ...grpc.CallOption) (*proto1.ValidateInstancesGroupConfigResponse, error)
 	GetType(ctx context.Context, in *GetTypeRequest, opts ...grpc.CallOption) (*GetTypeResponse, error)
-	Deploy(ctx context.Context, in *DeployRequest, opts ...grpc.CallOption) (*DeployResponse, error)
+	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 }
 
 type driverServiceClient struct {
@@ -61,9 +61,9 @@ func (c *driverServiceClient) GetType(ctx context.Context, in *GetTypeRequest, o
 	return out, nil
 }
 
-func (c *driverServiceClient) Deploy(ctx context.Context, in *DeployRequest, opts ...grpc.CallOption) (*DeployResponse, error) {
-	out := new(DeployResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Deploy", in, out, opts...)
+func (c *driverServiceClient) Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error) {
+	out := new(UpResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Up", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ type DriverServiceServer interface {
 	TestServiceProviderConfig(context.Context, *proto.ServicesProvider) (*proto.TestResponse, error)
 	ValidateConfigSyntax(context.Context, *proto1.ValidateInstancesGroupConfigRequest) (*proto1.ValidateInstancesGroupConfigResponse, error)
 	GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error)
-	Deploy(context.Context, *DeployRequest) (*DeployResponse, error)
+	Up(context.Context, *UpRequest) (*UpResponse, error)
 	mustEmbedUnimplementedDriverServiceServer()
 }
 
@@ -94,8 +94,8 @@ func (UnimplementedDriverServiceServer) ValidateConfigSyntax(context.Context, *p
 func (UnimplementedDriverServiceServer) GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetType not implemented")
 }
-func (UnimplementedDriverServiceServer) Deploy(context.Context, *DeployRequest) (*DeployResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Deploy not implemented")
+func (UnimplementedDriverServiceServer) Up(context.Context, *UpRequest) (*UpResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Up not implemented")
 }
 func (UnimplementedDriverServiceServer) mustEmbedUnimplementedDriverServiceServer() {}
 
@@ -164,20 +164,20 @@ func _DriverService_GetType_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DriverService_Deploy_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeployRequest)
+func _DriverService_Up_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(DriverServiceServer).Deploy(ctx, in)
+		return srv.(DriverServiceServer).Up(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/Deploy",
+		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/Up",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServiceServer).Deploy(ctx, req.(*DeployRequest))
+		return srv.(DriverServiceServer).Up(ctx, req.(*UpRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -202,8 +202,8 @@ var DriverService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DriverService_GetType_Handler,
 		},
 		{
-			MethodName: "Deploy",
-			Handler:    _DriverService_Deploy_Handler,
+			MethodName: "Up",
+			Handler:    _DriverService_Up_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
