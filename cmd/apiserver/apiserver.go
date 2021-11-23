@@ -43,6 +43,8 @@ var (
 	servicesHost	string
 	spRegistryHost  string
 
+	corsAllowed 	[]string
+
 	SIGNING_KEY		[]byte
 )
 
@@ -56,12 +58,16 @@ func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
+	viper.SetDefault("CORS_ALLOWED", []string{"*"})
+
 	viper.SetDefault("HEALTH_HOST", "health:8080")
 	viper.SetDefault("REGISTRY_HOST", "accounts:8080")
 	viper.SetDefault("SP_REGISTRY_HOST", "sp-registry:8080")
 	viper.SetDefault("SERVICES_HOST", "services-registry:8080")
 	
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+
+	corsAllowed 	= viper.GetStringSlice("CORS_ALLOWED")
 
 	healthHost 		= viper.GetString("HEALTH_HOST")
 	registryHost 	= viper.GetString("REGISTRY_HOST")
@@ -162,7 +168,7 @@ func main() {
 	}
 
 	handler := handlers.CORS(
-		handlers.AllowedOrigins([]string{"*"}),
+		handlers.AllowedOrigins(corsAllowed),
 		handlers.AllowedHeaders([]string{"Content-Type"}),
 		handlers.AllowedMethods([]string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"}),
 	)(gwmux)
