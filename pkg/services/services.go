@@ -90,7 +90,7 @@ func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *
 			continue
 		}
 
-		res, err := client.TestInstancesGroupConfig(ctx, &proto.TestInstancesGroupConfigRequest{Config: group})
+		res, err := client.TestInstancesGroupConfig(ctx, &proto.TestInstancesGroupConfigRequest{Group: group})
 		if err != nil {
 			response.Result = false
 			config_err.Error = fmt.Sprintf("Error validating group '%s'", name)

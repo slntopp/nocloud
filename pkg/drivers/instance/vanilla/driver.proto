@@ -39,7 +39,7 @@ message UpResponse {
 
 service DriverService {
     rpc TestServiceProviderConfig(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.TestResponse);
-    rpc TestInstancesGroupConfig(nocloud.instances.TestInstancesGroupConfigRequest) returns (nocloud.instances.TestInstancesGroupConfigRequest);
+    rpc TestInstancesGroupConfig(nocloud.instances.TestInstancesGroupConfigRequest) returns (nocloud.instances.TestInstancesGroupConfigResponse);
     rpc GetType(GetTypeRequest) returns (GetTypeResponse);
 
     rpc Up(UpRequest) returns (UpResponse);
