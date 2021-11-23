@@ -50,3 +50,11 @@ func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *Service
 	sp.Uuid = meta.Key
 	return err
 }
+
+func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r *ServicesProvider, err error) {
+	ctrl.log.Debug("Getting ServicesProvider", zap.Any("sp", id))
+	var sp sppb.ServicesProvider
+	meta, err := ctrl.col.ReadDocument(ctx, id, &sp)
+	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("sp", &sp))
+	return &ServicesProvider{&sp, meta}, err
+}
