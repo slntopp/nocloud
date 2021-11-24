@@ -31,7 +31,7 @@ type servicesAPI struct {
 	log *zap.Logger
 }
 
-func (sp *servicesAPI) mustEmbedUnimplementedServicesServiceServer() {
+func (sp *servicesAPI) mustEmbedUnimplementedServicesProvidersServiceServer() {
 	sp.log.Info("Method missing")
 }
 
