@@ -19,7 +19,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	proto_1 "github.com/slntopp/nocloud/pkg/services/proto"
-	proto_2 "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	proto_0 "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -1017,7 +1017,7 @@ func local_request_HealthService_Probe_0(ctx context.Context, marshaler runtime.
 }
 
 func request_ServicesProvidersService_Test_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesProvidersServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.ServicesProvider
+	var protoReq proto_0.ServicesProvider
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1034,7 +1034,7 @@ func request_ServicesProvidersService_Test_0(ctx context.Context, marshaler runt
 }
 
 func local_request_ServicesProvidersService_Test_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesProvidersServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.ServicesProvider
+	var protoReq proto_0.ServicesProvider
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1051,7 +1051,7 @@ func local_request_ServicesProvidersService_Test_0(ctx context.Context, marshale
 }
 
 func request_ServicesProvidersService_Create_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesProvidersServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.ServicesProvider
+	var protoReq proto_0.ServicesProvider
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1068,7 +1068,7 @@ func request_ServicesProvidersService_Create_0(ctx context.Context, marshaler ru
 }
 
 func local_request_ServicesProvidersService_Create_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesProvidersServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_2.ServicesProvider
+	var protoReq proto_0.ServicesProvider
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
