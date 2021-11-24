@@ -105,7 +105,7 @@ func main() {
 	}
 	spRegistryClient := sppb.NewServicesProvidersServiceClient(spRegistryConn)
 
-	log.Info("Connecting to ServicesService", zap.String("host", spRegistryHost))
+	log.Info("Connecting to ServicesService", zap.String("host", servicesHost))
 	servicesConn, err := grpc.Dial(servicesHost, grpc.WithInsecure())
 	if err != nil {
 		panic(err)
