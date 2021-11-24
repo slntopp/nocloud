@@ -7,11 +7,15 @@ const COOKIES_NAME = 'noCloud-token';
 export default {
 	namespaced: true,
   state: {
-		token: ''
+		token: '',
+		userdata: {}
   },
   mutations: {
 		setToken(state, token){
 			state.token = token;
+		},
+		setUserdata(state, data){
+			state.userdata = data
 		}
   },
   actions: {
@@ -41,11 +45,29 @@ export default {
 				api.axios.defaults.headers.common['Authorization'] = "Bearer " + token;
 				commit('setToken', token);
 			}
+		},
+
+		fetchUserData({commit}){
+			commit
+			return new Promise((resolve, reject) => {
+				api.accounts.get('me')
+				.then(response => {
+					console.log(response);
+					commit('setUserdata', response);
+					resolve(response);
+				})
+				.catch(error => {
+					reject(error)
+				})
+			})
 		}
   },
 	getters: {
 		isLoggedIn(state){
 			return state.token.length > 0;
+		},
+		userdata(state){
+			return state.userdata;
 		}
 	}
 }

@@ -4,12 +4,13 @@
       app
       permanent
       color="background-light"
+      :mini-variant="miniNav"
     >
     
       <router-link
         to="/"
       >
-        <div class="d-flex gg-15px align-center justify-center pa-6">
+        <div class="d-flex gg-15px align-center justify-center" :class="[miniNav ? 'pa-3' : 'pa-5']">
           <v-img
             alt=""
             src="@/assets/logo.svg"
@@ -17,7 +18,10 @@
             max-width="48px"
             contain
           ></v-img>
+					
           <v-img
+						v-if="!miniNav"
+						transition="fade-transition"
             alt=""
             src="@/assets/logoTitle.svg"
             max-height="24px"
@@ -107,8 +111,18 @@
           </template>
           <v-list
             dence
+						min-width="250px"
           >
-            <v-list-item v-if="isLoggedIn" @click="logoutHandler">
+            <v-list-item>
+							<v-list-item-content>
+								<v-list-item-title class="text-h6">
+									{{userdata.title}}
+								</v-list-item-title>
+								<v-list-item-subtitle>#{{userdata.id}}</v-list-item-subtitle>
+							</v-list-item-content>
+						</v-list-item>
+						<v-divider></v-divider>
+            <v-list-item @click="logoutHandler">
               <v-list-item-title>Logout</v-list-item-title>
             </v-list-item>
           </v-list>
@@ -130,7 +144,8 @@ export default {
   name: 'App',
 
   data: () => ({
-    bgc: "#0c0c3c"
+    bgc: "#0c0c3c",
+		miniNav: false
   }),
   methods:{
     logoutHandler(){
@@ -160,12 +175,19 @@ export default {
         next();
       }
     })
+
+		if(this.isLoggedIn){
+			this.$store.dispatch('auth/fetchUserData')
+		}
   },
   computed: {
     isLoggedIn(){
       const result = this.$store.getters['auth/isLoggedIn']
       return result
-    }
+    },
+		userdata(){
+			return this.$store.getters['auth/userdata'];
+		}
   }
 };
 </script>
