@@ -34,6 +34,7 @@ import (
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 var (
@@ -131,6 +132,7 @@ func main() {
 
 	// Serve gRPC Server
 	log.Info("Serving gRPC on 0.0.0.0:8080", zap.Skip())
+	reflection.Register(s)
 	go func() {
 		log.Fatal("Error", zap.Error(s.Serve(lis)))
 	}()
