@@ -11,8 +11,15 @@ services:
     environment:
       HEALTH_HOST: health:8080
       REGISTRY_HOST: registry:8080
+      SERVICES_REGISTRY: services-registry:8080
       SP_REGISTRY_HOST: sp-registry:8080
       SIGNING_KEY: supersecretaaarhgreplaceme
+      LOG_LEVEL: -1
+    links:
+      - health:health
+      - registry
+      - sp-registry
+      - services-registry
     ports:
       - 8000:8000 # REST-API
       - 8080:8080 # gRPC-API
