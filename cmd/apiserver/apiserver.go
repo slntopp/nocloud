@@ -50,10 +50,17 @@ var (
 	SIGNING_KEY		[]byte
 )
 
-type server struct{}
+func resolveHost(addr string) string {
+	host := strings.SplitN(addr, ":", 2)
+	ips, err := net.LookupIP(host[0])
+	if err != nil {
+		log.Debug("Error resolving host", zap.String("host", host[0]), zap.Error(err))
+		return addr
+	}
+	log.Debug("Resolved IPs", zap.Any("pool", ips))
+	host[0] = ips[0].String()
+	return strings.Join(host, ":")
 
-func NewServer() *server {
-	return &server{}
 }
 
 func init() {
@@ -71,10 +78,10 @@ func init() {
 
 	corsAllowed 	= strings.Split(viper.GetString("CORS_ALLOWED"), ",")
 
-	healthHost 		= viper.GetString("HEALTH_HOST")
-	registryHost 	= viper.GetString("REGISTRY_HOST")
-	servicesHost 	= viper.GetString("SERVICES_HOST")
-	spRegistryHost 	= viper.GetString("SP_REGISTRY_HOST")
+	healthHost 		= resolveHost(viper.GetString("HEALTH_HOST"))
+	registryHost 	= resolveHost(viper.GetString("REGISTRY_HOST"))
+	servicesHost 	= resolveHost(viper.GetString("SERVICES_HOST"))
+	spRegistryHost 	= resolveHost(viper.GetString("SP_REGISTRY_HOST"))
 
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
 }
