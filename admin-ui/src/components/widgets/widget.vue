@@ -12,6 +12,7 @@
         color="primary"
         height="5"
         indeterminate
+				absolute
       ></v-progress-linear>
     </template>
     <v-card-title>{{title}}</v-card-title>

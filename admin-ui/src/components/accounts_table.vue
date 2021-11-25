@@ -4,6 +4,7 @@
 		:items="tableData"
 		:value="selected"
 		@input="handleSelect"
+		:single-select="singleSelect"
 	>
 
 	</nocloud-table>
@@ -21,6 +22,10 @@ export default {
 		value: {
 			type: Array,
 			default: () => []
+		},
+		"single-select": {
+			type: Boolean,
+			default: false
 		}
 	},
 	data () {
@@ -30,8 +35,8 @@ export default {
 		}
 	},
 	methods: {
-		handleSelect(){
-			this.$emit('input', this.selected)
+		handleSelect(item){
+			this.$emit('input', item)
 		}
 	},
 	computed: {
