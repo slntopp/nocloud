@@ -17,7 +17,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gorilla/handlers"
@@ -27,6 +29,8 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+
+	"github.com/gabriel-vasile/mimetype"
 )
 
 var (
@@ -37,6 +41,7 @@ var (
 )
 
 func init() {
+	fmt.Println("started")
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
@@ -47,10 +52,46 @@ func init() {
 	corsAllowed = strings.Split(viper.GetString("CORS_ALLOWED"), ",")
 }
 
+func getContentType(path string) (mime string, ok bool) {
+	chunks := strings.Split(path, ".")
+	switch chunks[len(chunks) - 1] {
+	case "css":
+		return "text/css; charset=utf-8", true
+	default:
+		return "", false
+	}
+}
+
+func staticHandler(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
+	log.Debug("Static request", zap.Any("path", pathParams))
+	file := "index.html"
+	if path, ok := pathParams["path"]; ok {
+		file = path
+	}
+	if path, ok := pathParams["file"]; ok {
+		file += "/" + path
+	}
+	index, err := os.ReadFile("/dist/" + file)
+	if err != nil {
+		log.Error("Error reading file", zap.Error(err))
+		w.WriteHeader(404)
+		return
+	}
+	
+	mime, ok := getContentType(file)
+	if !ok {
+		mime = mimetype.Detect(index).String()
+	}
+	log.Debug("Content-Type", zap.String("mime", mime))
+	w.Header().Set("Content-Type", mime)
+	w.Write(index)
+}
+
 func main() {
 	defer func() {
 		_ = log.Sync()
 	}()
+	fmt.Println("main", log)
 
 	var err error
 
@@ -77,8 +118,11 @@ func main() {
 		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
 	}
 
-	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
+	gwmux.HandlePath("GET", "/admin", staticHandler)
+	gwmux.HandlePath("GET", "/admin/{path}", staticHandler)
+	gwmux.HandlePath("GET", "/admin/{path}/{file}", staticHandler)
 
+	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
 	handler := handlers.CORS(
 		handlers.AllowedOrigins(corsAllowed),
 		handlers.AllowedHeaders([]string{"Content-Type"}),
