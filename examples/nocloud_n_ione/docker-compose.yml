@@ -21,8 +21,16 @@ services:
       - sp-registry
       - services-registry
     ports:
-      - 8000:8000 # REST-API
       - 8080:8080 # gRPC-API
+    networks:
+      - grpc-internal
+  apiserver-web:
+    container_name: apiserver-web
+    image: ghcr.io/slntopp/nocloud/apiserver-web:latest
+    environment:
+      APISERVER_HOST: apiserver:8080
+    ports:
+      - 8000:8000 # REST-API
     networks:
       - grpc-internal
   registry:
