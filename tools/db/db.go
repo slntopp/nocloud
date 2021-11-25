@@ -42,7 +42,7 @@ func init() {
 	viper.SetDefault("DB_USER", "root")
 	viper.SetDefault("DB_PASS", "openSesame")
 
-	viper.SetDefault("ROOT_PASS", "root")
+	viper.SetDefault("ROOT_PASS", "secret")
 
 	dbHost = viper.GetString("DB_HOST")
 	dbPort = viper.GetString("DB_PORT")

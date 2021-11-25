@@ -47,7 +47,10 @@ type AccountsController struct {
 	log *zap.Logger
 }
 
-func NewAccountsController(log *zap.Logger, col, cred driver.Collection) AccountsController {
+func NewAccountsController(log *zap.Logger, db driver.Database) AccountsController {
+	col, _ := db.Collection(nil, ACCOUNTS_COL)
+	cred, _ := db.Collection(nil, CREDENTIALS_COL)
+	log = log.Named("AccountsController")
 	return AccountsController{log: log, col: col, cred: cred}
 }
 

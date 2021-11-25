@@ -16,30 +16,25 @@ limitations under the License.
 package graph
 
 import (
+	"context"
+	"errors"
+
 	"github.com/arangodb/go-driver"
+	"github.com/gofrs/uuid"
 	"go.uber.org/zap"
+
+	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 )
 
 const (
 	INSTANCES_COL = "Instances"
-	INSTANCES_GROUPS_COL = "InstancesGroups"
-	SERV2INST = SERVICES_COL + "2" + INSTANCES_COL
 )
 
 type Instance struct {
-	Title string `json:"title"`
-	Config map[string]interface{} `json:"config"`
-
+	*pb.Instance
 	driver.DocumentMeta
 }
 
-type InstancesGroup struct {
-	Type string `json:"type"`
-	Config map[string]interface{} `json:"config"`
-	Instances []Instance `json:"instances"`
-
-	driver.DocumentMeta
-}
 
 type InstancesController struct {
 	col driver.Collection // Instances Collection
@@ -47,7 +42,24 @@ type InstancesController struct {
 	log *zap.Logger
 }
 
-func NewInstancesController(log *zap.Logger, col driver.Collection) InstancesController {
-	return InstancesController{log: log, col: col}
+func NewInstancesController(log *zap.Logger, db driver.Database) InstancesController {
+	col, _ := db.Collection(nil, INSTANCES_COL)
+	return InstancesController{log: log.Named("InstancesController"), col: col}
 }
 
+func (ctrl *InstancesController) Create(ctx context.Context, instance *pb.Instance) (error) {
+	ctrl.log.Debug("Creating Instance", zap.Any("instance", instance))
+	id, err := uuid.NewV4()
+	if err != nil {
+		ctrl.log.Debug("Error generating UUID", zap.Error(err))
+		return errors.New("Error generating UUID")
+	}
+
+	instance.Uuid = id.String()
+	return nil
+}
+
+func (ctrl *InstancesController) Update(ctx context.Context, instance *pb.Instance) (error) {
+	ctrl.log.Debug("Updating Instance", zap.Any("instance", instance))
+	return nil
+}

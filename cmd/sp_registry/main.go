@@ -23,8 +23,8 @@ import (
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
-	"github.com/slntopp/nocloud/pkg/services"
-	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
+	sp "github.com/slntopp/nocloud/pkg/services_providers"
+	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -72,7 +72,7 @@ func main() {
 
 	s := grpc.NewServer()
 	
-	services_server := services.NewServicesServer(log, db)
+	server := sp.NewServicesProviderServer(log, db)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
@@ -86,11 +86,11 @@ func main() {
 		if err != nil {
 			log.Error("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
 		}
-		services_server.RegisterDriver(driver_type.GetType(), client)
+		server.RegisterDriver(driver_type.GetType(), client)
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
 
-	servicespb.RegisterServicesServiceServer(s, services_server)
+	sppb.RegisterServicesProvidersServiceServer(s, server)
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))

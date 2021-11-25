@@ -11,6 +11,7 @@ services:
     environment:
       HEALTH_HOST: health:8080
       REGISTRY_HOST: registry:8080
+      SP_REGISTRY_HOST: sp-registry:8080
       SIGNING_KEY: supersecretaaarhgreplaceme
     ports:
       - 8000:8000 # REST-API
@@ -27,6 +28,31 @@ services:
       SIGNING_KEY: supersecretaaarhgreplaceme
     depends_on:
       - db
+    networks:
+      - arangodb
+      - grpc-internal
+    links:
+      - db
+  services-registry:
+    container_name: services-registry
+    image: ghcr.io/slntopp/nocloud/services-registry:latest
+    environment:
+      DB_HOST: db:8529
+      DB_CRED: root:openSesame
+      DRIVERS: driver-ione:8080
+    depends_on:
+      - db
+    networks:
+      - arangodb
+      - grpc-internal
+    links:
+      - db
+  sp-registry:
+    container_name: sp-registry
+    image: ghcr.io/slntopp/nocloud/sp-registry:latest
+    environment:
+      DB_HOST: db:8529
+      DB_CRED: root:openSesame
     networks:
       - arangodb
       - grpc-internal

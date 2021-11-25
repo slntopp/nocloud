@@ -97,19 +97,19 @@ service NamespacesService {
 
 import "pkg/services/proto/services.proto";
 service ServicesService {
-    rpc ValidateServiceConfig(nocloud.services.ValidateServiceConfigRequest) returns (nocloud.services.ValidateServiceConfigResponse) {
+    rpc TestServiceConfig(nocloud.services.CreateServiceRequest) returns (nocloud.services.TestServiceConfigResponse) {
         option (google.api.http) = {
-            post: "/services/verify",
+            post: "/services/test",
             body: "*"
         };
     };
-    rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.CreateServiceResponse) {
+    rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.Service) {
         option (google.api.http) = {
             post: "/services",
             body: "*"
         };
     };
-    rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.UpdateServiceResponse) {
+    rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.Service) {
         option (google.api.http) = {
             patch: "/services/{id}",
             body: "*"
@@ -118,6 +118,13 @@ service ServicesService {
     rpc DeleteService(nocloud.services.DeleteServiceRequest) returns (nocloud.services.DeleteServiceResponse) {
         option (google.api.http) = {
             delete: "/services/{id}"
+        };
+    };
+    
+    rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse) {
+        option (google.api.http) = {
+            post: "/services/{id}/up"
+            body: "*"
         };
     };
     rpc PerformServiceAction(nocloud.services.PerformServiceActionRequest) returns (nocloud.services.PerformServiceActionResponse) {
@@ -133,6 +140,22 @@ service HealthService {
     rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse) {
         option (google.api.http) = {
             post: "/health/probe"
+            body: "*"
+        };
+    };
+};
+
+import "pkg/services_providers/proto/services_providers.proto";
+service ServicesProvidersService {
+    rpc Test(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.TestResponse) {
+        option (google.api.http) = {
+            post: "/sp/test"
+            body: "*"
+        };
+    };
+    rpc Create(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.ServicesProvider) {
+        option (google.api.http) = {
+            post: "/sp"
             body: "*"
         };
     };
