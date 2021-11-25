@@ -16,13 +16,9 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"net"
-	"net/http"
 	"strings"
 
-	"github.com/gorilla/handlers"
-	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/spf13/viper"
 
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
@@ -44,8 +40,6 @@ var (
 	registryHost 	string
 	servicesHost	string
 	spRegistryHost  string
-
-	corsAllowed 	[]string
 
 	SIGNING_KEY		[]byte
 )
@@ -75,8 +69,6 @@ func init() {
 	viper.SetDefault("SERVICES_HOST", "services-registry:8080")
 	
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
-
-	corsAllowed 	= strings.Split(viper.GetString("CORS_ALLOWED"), ",")
 
 	healthHost 		= resolveHost(viper.GetString("HEALTH_HOST"))
 	registryHost 	= resolveHost(viper.GetString("REGISTRY_HOST"))
@@ -138,53 +130,9 @@ func main() {
 	apipb.RegisterServicesServiceServer(s, &servicesAPI{client: servicesClient, log: log.Named("ServicesRegistry")})
 
 	// Serve gRPC Server
-	log.Info("Serving gRPC on 0.0.0.0:8080", zap.Skip())
 	reflection.Register(s)
-	go func() {
-		log.Fatal("Error", zap.Error(s.Serve(lis)))
-	}()
+	log.Info("Serving gRPC on 0.0.0.0:8080", zap.Skip())
+	log.Fatal("Error", zap.Error(s.Serve(lis)))
 
-	// Set up REST API server
-	conn, err := grpc.DialContext(
-		context.Background(),
-		"0.0.0.0:8080",
-		grpc.WithBlock(),
-		grpc.WithInsecure(),
-	)
-	if err != nil {
-		log.Fatal("Failed to dial server:", zap.Error(err))
-	}
-
-	gwmux := runtime.NewServeMux()
-	err = apipb.RegisterHealthServiceHandler(context.Background(), gwmux, conn)
-	if err != nil {
-		log.Fatal("Failed to register HealthService gateway", zap.Error(err))
-	}
-	err = apipb.RegisterAccountsServiceHandler(context.Background(), gwmux, conn)
-	if err != nil {
-		log.Fatal("Failed to register AccountsService gateway", zap.Error(err))
-	}
-	err = apipb.RegisterNamespacesServiceHandler(context.Background(), gwmux, conn)
-	if err != nil {
-		log.Fatal("Failed to register NamespacesService gateway", zap.Error(err))
-	}
-	err = apipb.RegisterServicesProvidersServiceHandler(context.Background(), gwmux, conn)
-	if err != nil {
-		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
-	}
-	err = apipb.RegisterServicesServiceHandler(context.Background(), gwmux, conn)
-	if err != nil {
-		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
-	}
-
-	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
-
-	handler := handlers.CORS(
-		handlers.AllowedOrigins(corsAllowed),
-		handlers.AllowedHeaders([]string{"Content-Type"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"}),
-	)(gwmux)
-
-	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
-	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(http.ListenAndServe(":8000", handler)))
 }
+	
