@@ -18,12 +18,14 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ServicesServiceClient interface {
-	TestServiceConfig(ctx context.Context, in *CreateServiceRequest, opts ...grpc.CallOption) (*TestServiceConfigResponse, error)
-	CreateService(ctx context.Context, in *CreateServiceRequest, opts ...grpc.CallOption) (*Service, error)
-	UpdateService(ctx context.Context, in *UpdateServiceRequest, opts ...grpc.CallOption) (*Service, error)
-	DeleteService(ctx context.Context, in *DeleteServiceRequest, opts ...grpc.CallOption) (*DeleteServiceResponse, error)
+	TestConfig(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*TestConfigResponse, error)
+	Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*Service, error)
+	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*Service, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Service, error)
+	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
-	PerformServiceAction(ctx context.Context, in *PerformServiceActionRequest, opts ...grpc.CallOption) (*PerformServiceActionResponse, error)
+	PerformAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error)
 }
 
 type servicesServiceClient struct {
@@ -34,36 +36,54 @@ func NewServicesServiceClient(cc grpc.ClientConnInterface) ServicesServiceClient
 	return &servicesServiceClient{cc}
 }
 
-func (c *servicesServiceClient) TestServiceConfig(ctx context.Context, in *CreateServiceRequest, opts ...grpc.CallOption) (*TestServiceConfigResponse, error) {
-	out := new(TestServiceConfigResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/TestServiceConfig", in, out, opts...)
+func (c *servicesServiceClient) TestConfig(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*TestConfigResponse, error) {
+	out := new(TestConfigResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/TestConfig", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *servicesServiceClient) CreateService(ctx context.Context, in *CreateServiceRequest, opts ...grpc.CallOption) (*Service, error) {
+func (c *servicesServiceClient) Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*Service, error) {
 	out := new(Service)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/CreateService", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/Create", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *servicesServiceClient) UpdateService(ctx context.Context, in *UpdateServiceRequest, opts ...grpc.CallOption) (*Service, error) {
+func (c *servicesServiceClient) Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*Service, error) {
 	out := new(Service)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/UpdateService", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/Update", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *servicesServiceClient) DeleteService(ctx context.Context, in *DeleteServiceRequest, opts ...grpc.CallOption) (*DeleteServiceResponse, error) {
-	out := new(DeleteServiceResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/DeleteService", in, out, opts...)
+func (c *servicesServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesServiceClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Service, error) {
+	out := new(Service)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/Get", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
+	out := new(ListResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/List", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +99,9 @@ func (c *servicesServiceClient) Up(ctx context.Context, in *UpRequest, opts ...g
 	return out, nil
 }
 
-func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *PerformServiceActionRequest, opts ...grpc.CallOption) (*PerformServiceActionResponse, error) {
-	out := new(PerformServiceActionResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/PerformServiceAction", in, out, opts...)
+func (c *servicesServiceClient) PerformAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error) {
+	out := new(PerformActionResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/PerformAction", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -92,12 +112,14 @@ func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *Pe
 // All implementations must embed UnimplementedServicesServiceServer
 // for forward compatibility
 type ServicesServiceServer interface {
-	TestServiceConfig(context.Context, *CreateServiceRequest) (*TestServiceConfigResponse, error)
-	CreateService(context.Context, *CreateServiceRequest) (*Service, error)
-	UpdateService(context.Context, *UpdateServiceRequest) (*Service, error)
-	DeleteService(context.Context, *DeleteServiceRequest) (*DeleteServiceResponse, error)
+	TestConfig(context.Context, *CreateRequest) (*TestConfigResponse, error)
+	Create(context.Context, *CreateRequest) (*Service, error)
+	Update(context.Context, *UpdateRequest) (*Service, error)
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
+	Get(context.Context, *GetRequest) (*Service, error)
+	List(context.Context, *ListRequest) (*ListResponse, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
-	PerformServiceAction(context.Context, *PerformServiceActionRequest) (*PerformServiceActionResponse, error)
+	PerformAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error)
 	mustEmbedUnimplementedServicesServiceServer()
 }
 
@@ -105,23 +127,29 @@ type ServicesServiceServer interface {
 type UnimplementedServicesServiceServer struct {
 }
 
-func (UnimplementedServicesServiceServer) TestServiceConfig(context.Context, *CreateServiceRequest) (*TestServiceConfigResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method TestServiceConfig not implemented")
+func (UnimplementedServicesServiceServer) TestConfig(context.Context, *CreateRequest) (*TestConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestConfig not implemented")
 }
-func (UnimplementedServicesServiceServer) CreateService(context.Context, *CreateServiceRequest) (*Service, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateService not implemented")
+func (UnimplementedServicesServiceServer) Create(context.Context, *CreateRequest) (*Service, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
-func (UnimplementedServicesServiceServer) UpdateService(context.Context, *UpdateServiceRequest) (*Service, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateService not implemented")
+func (UnimplementedServicesServiceServer) Update(context.Context, *UpdateRequest) (*Service, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
-func (UnimplementedServicesServiceServer) DeleteService(context.Context, *DeleteServiceRequest) (*DeleteServiceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteService not implemented")
+func (UnimplementedServicesServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedServicesServiceServer) Get(context.Context, *GetRequest) (*Service, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (UnimplementedServicesServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 func (UnimplementedServicesServiceServer) Up(context.Context, *UpRequest) (*UpResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Up not implemented")
 }
-func (UnimplementedServicesServiceServer) PerformServiceAction(context.Context, *PerformServiceActionRequest) (*PerformServiceActionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PerformServiceAction not implemented")
+func (UnimplementedServicesServiceServer) PerformAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PerformAction not implemented")
 }
 func (UnimplementedServicesServiceServer) mustEmbedUnimplementedServicesServiceServer() {}
 
@@ -136,74 +164,110 @@ func RegisterServicesServiceServer(s grpc.ServiceRegistrar, srv ServicesServiceS
 	s.RegisterService(&ServicesService_ServiceDesc, srv)
 }
 
-func _ServicesService_TestServiceConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateServiceRequest)
+func _ServicesService_TestConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).TestServiceConfig(ctx, in)
+		return srv.(ServicesServiceServer).TestConfig(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/TestServiceConfig",
+		FullMethod: "/nocloud.services.ServicesService/TestConfig",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).TestServiceConfig(ctx, req.(*CreateServiceRequest))
+		return srv.(ServicesServiceServer).TestConfig(ctx, req.(*CreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServicesService_CreateService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateServiceRequest)
+func _ServicesService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).CreateService(ctx, in)
+		return srv.(ServicesServiceServer).Create(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/CreateService",
+		FullMethod: "/nocloud.services.ServicesService/Create",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).CreateService(ctx, req.(*CreateServiceRequest))
+		return srv.(ServicesServiceServer).Create(ctx, req.(*CreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServicesService_UpdateService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateServiceRequest)
+func _ServicesService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).UpdateService(ctx, in)
+		return srv.(ServicesServiceServer).Update(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/UpdateService",
+		FullMethod: "/nocloud.services.ServicesService/Update",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).UpdateService(ctx, req.(*UpdateServiceRequest))
+		return srv.(ServicesServiceServer).Update(ctx, req.(*UpdateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServicesService_DeleteService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteServiceRequest)
+func _ServicesService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).DeleteService(ctx, in)
+		return srv.(ServicesServiceServer).Delete(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/DeleteService",
+		FullMethod: "/nocloud.services.ServicesService/Delete",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).DeleteService(ctx, req.(*DeleteServiceRequest))
+		return srv.(ServicesServiceServer).Delete(ctx, req.(*DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesService_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).Get(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services.ServicesService/Get",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).Get(ctx, req.(*GetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services.ServicesService/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).List(ctx, req.(*ListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -226,20 +290,20 @@ func _ServicesService_Up_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServicesService_PerformServiceAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PerformServiceActionRequest)
+func _ServicesService_PerformAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PerformActionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).PerformServiceAction(ctx, in)
+		return srv.(ServicesServiceServer).PerformAction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/PerformServiceAction",
+		FullMethod: "/nocloud.services.ServicesService/PerformAction",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).PerformServiceAction(ctx, req.(*PerformServiceActionRequest))
+		return srv.(ServicesServiceServer).PerformAction(ctx, req.(*PerformActionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -252,28 +316,36 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ServicesServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "TestServiceConfig",
-			Handler:    _ServicesService_TestServiceConfig_Handler,
+			MethodName: "TestConfig",
+			Handler:    _ServicesService_TestConfig_Handler,
 		},
 		{
-			MethodName: "CreateService",
-			Handler:    _ServicesService_CreateService_Handler,
+			MethodName: "Create",
+			Handler:    _ServicesService_Create_Handler,
 		},
 		{
-			MethodName: "UpdateService",
-			Handler:    _ServicesService_UpdateService_Handler,
+			MethodName: "Update",
+			Handler:    _ServicesService_Update_Handler,
 		},
 		{
-			MethodName: "DeleteService",
-			Handler:    _ServicesService_DeleteService_Handler,
+			MethodName: "Delete",
+			Handler:    _ServicesService_Delete_Handler,
+		},
+		{
+			MethodName: "Get",
+			Handler:    _ServicesService_Get_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _ServicesService_List_Handler,
 		},
 		{
 			MethodName: "Up",
 			Handler:    _ServicesService_Up_Handler,
 		},
 		{
-			MethodName: "PerformServiceAction",
-			Handler:    _ServicesService_PerformServiceAction_Handler,
+			MethodName: "PerformAction",
+			Handler:    _ServicesService_PerformAction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

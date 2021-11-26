@@ -93,6 +93,48 @@ func (ctrl *ServicesController) Get(ctx context.Context, id string) (*Service, e
 	return &Service{&service, meta}, nil
 }
 
+// List Services in DB
+func (ctrl *ServicesController) List(ctx context.Context, requestor string, req_depth *int32) ([]*Service, error) {
+	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
+
+	var depth int32
+	if req_depth == nil || *req_depth < 2 {
+		depth = 5
+	} else {
+		depth = *req_depth
+	}
+
+	query := `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) RETURN node`
+	bindVars := map[string]interface{}{
+		"depth": depth,
+		"account": driver.NewDocumentID(ACCOUNTS_COL, requestor),
+		"permissions_graph": PERMISSIONS_GRAPH.Name,
+		"@services": SERVICES_COL,
+	}
+	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+	var r []*Service
+	for {
+		var s pb.Service
+		meta, err := c.ReadDocument(ctx, &s)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		ctrl.log.Debug("Got document", zap.Any("service", s))
+		s.Uuid = meta.ID.Key()
+		r = append(r, &Service{&s, meta})
+	}
+
+	return r,  nil
+}
+
 // Join Service into Namespace
 func (ctrl *ServicesController) Join(ctx context.Context, service *Service, namespace *Namespace, access int32, role string) (error) {
 	ctrl.log.Debug("Joining service to namespace")

@@ -57,7 +57,7 @@ func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.
 	s.drivers[type_key] = client
 }
 
-func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *servicespb.CreateServiceRequest) (*servicespb.TestServiceConfigResponse, *graph.Namespace, error) {
+func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *servicespb.CreateRequest) (*servicespb.TestConfigResponse, *graph.Namespace, error) {
 	ctx, err := nocloud.ValidateMetadata(ctx, log)
 	if err != nil {
 		return nil, nil, err
@@ -65,7 +65,7 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	response := &servicespb.TestServiceConfigResponse{Result: true, Errors: make([]*servicespb.TestServiceConfigError, 0)}
+	response := &servicespb.TestConfigResponse{Result: true, Errors: make([]*servicespb.TestConfigError, 0)}
 
 	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
 	if err != nil {
@@ -86,7 +86,7 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 		log.Debug("Validating Instances Group", zap.String("group", name))
 		groupType := group.GetType()
 
-		config_err := servicespb.TestServiceConfigError{
+		config_err := servicespb.TestConfigError{
 			InstanceGroup: name,
 		}
 
@@ -111,9 +111,9 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 		}
 		if !res.GetResult() {
 			response.Result = false
-			errors := make([]*servicespb.TestServiceConfigError, 0)
+			errors := make([]*servicespb.TestConfigError, 0)
 			for _, confErr := range res.Errors {
-				errors = append(errors, &servicespb.TestServiceConfigError{
+				errors = append(errors, &servicespb.TestConfigError{
 					Error: confErr.Error,
 					Instance: confErr.Instance,
 					InstanceGroup: name,
@@ -128,14 +128,14 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 	return response, &namespace, nil
 }
 
-func (s *ServicesServiceServer) TestServiceConfig(ctx context.Context, request *servicespb.CreateServiceRequest) (*servicespb.TestServiceConfigResponse, error) {
+func (s *ServicesServiceServer) TestConfig(ctx context.Context, request *servicespb.CreateRequest) (*servicespb.TestConfigResponse, error) {
 	log := s.log.Named("TestServiceConfig")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 	response, _, err := s.DoTestServiceConfig(ctx, log, request)
 	return response, err
 }
 
-func (s *ServicesServiceServer) CreateService(ctx context.Context, request *servicespb.CreateServiceRequest) (*servicespb.Service, error) {
+func (s *ServicesServiceServer) Create(ctx context.Context, request *servicespb.CreateRequest) (*servicespb.Service, error) {
 	log := s.log.Named("CreateService")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 	testResult, namespace, err := s.DoTestServiceConfig(ctx, log, request)
@@ -205,4 +205,54 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 	}
 
 	return &servicespb.UpResponse{}, nil
+}
+
+func (s *ServicesServiceServer) Get(ctx context.Context, request *servicespb.GetRequest) (res *servicespb.Service, err error) {
+	log := s.log.Named("Get")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	ctx, err = nocloud.ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	r, err := s.ctrl.Get(ctx, request.GetId())
+	if err != nil {
+		log.Debug("Error getting Service from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not Found in DB")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor,  r.ID.String(), access.READ)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
+	}
+
+	return r.Service, nil
+}
+
+func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.ListRequest) (response *servicespb.ListResponse, err error) {
+	log := s.log.Named("List")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	ctx, err = nocloud.ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	r, err := s.ctrl.List(ctx, requestor, request.Depth)
+	if err != nil {
+		log.Debug("Error reading Services from DB", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error reading Services from DB")
+	}
+
+	response = &servicespb.ListResponse{Services: make([]*servicespb.Service, len(r))}
+	for i, service := range r {
+		response.Services[i] = service.Service
+	}
+
+	return response, nil
 }

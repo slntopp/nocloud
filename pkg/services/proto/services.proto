@@ -31,43 +31,43 @@ message Service {
     string hash = 7;
 }
 
-message TestServiceConfigError {
+message TestConfigError {
     string error = 1; 
     string instance_group = 2;
     string instance = 3;
 }
 
-message TestServiceConfigResponse {
+message TestConfigResponse {
     bool result = 1;
-    repeated TestServiceConfigError errors = 2; 
+    repeated TestConfigError errors = 2; 
 }
 
-message CreateServiceRequest {
+message CreateRequest {
     Service service = 1;
     string namespace = 2;
 }
 
-message UpdateServiceRequest {
+message UpdateRequest {
     string id = 1;
     string namespace = 2;
     Service service = 3;
 }
 
-message DeleteServiceRequest {
+message DeleteRequest {
     string id = 1;
 }
 
-message DeleteServiceResponse {
+message DeleteResponse {
     bool result = 1;
 }
 
-message PerformServiceActionRequest {
+message PerformActionRequest {
     string id = 1;
     string action = 2;
     map<string, google.protobuf.Value> data = 3; 
 }
 
-message PerformServiceActionResponse {
+message PerformActionResponse {
     bool result = 1;
     map<string, google.protobuf.Value> meta = 2; 
 }
@@ -78,12 +78,28 @@ message UpRequest {
 }
 message UpResponse {}
 
+message ListRequest {
+    optional string namespace = 1;
+    optional int32 depth = 2;
+}
+
+message ListResponse {
+    repeated Service services = 1;
+}
+
+message GetRequest {
+    string id = 1;
+}
+
 service ServicesService {
-    rpc TestServiceConfig(nocloud.services.CreateServiceRequest) returns (nocloud.services.TestServiceConfigResponse);
-    rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.Service);
-    rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.Service);
-    rpc DeleteService(nocloud.services.DeleteServiceRequest) returns (nocloud.services.DeleteServiceResponse);
+    rpc TestConfig(nocloud.services.CreateRequest) returns (nocloud.services.TestConfigResponse);
+    rpc Create(nocloud.services.CreateRequest) returns (nocloud.services.Service);
+    rpc Update(nocloud.services.UpdateRequest) returns (nocloud.services.Service);
+    rpc Delete(nocloud.services.DeleteRequest) returns (nocloud.services.DeleteResponse);
+
+    rpc Get(nocloud.services.GetRequest) returns (nocloud.services.Service);
+    rpc List(nocloud.services.ListRequest) returns (nocloud.services.ListResponse);
 
     rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse);
-    rpc PerformServiceAction(nocloud.services.PerformServiceActionRequest) returns (nocloud.services.PerformServiceActionResponse);
+    rpc PerformAction(nocloud.services.PerformActionRequest) returns (nocloud.services.PerformActionResponse);
 }

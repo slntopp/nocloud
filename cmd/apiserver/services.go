@@ -35,17 +35,27 @@ func (sp *servicesAPI) mustEmbedUnimplementedServicesServiceServer() {
 	sp.log.Info("Method missing")
 }
 
-func (sp *servicesAPI) TestServiceConfig(ctx context.Context, req *pb.CreateServiceRequest) (*pb.TestServiceConfigResponse, error) {
+func (sp *servicesAPI) TestConfig(ctx context.Context, req *pb.CreateRequest) (*pb.TestConfigResponse, error) {
 	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
-	return sp.client.TestServiceConfig(ctx, req)
+	return sp.client.TestConfig(ctx, req)
 }
 
-func (sp *servicesAPI) CreateService(ctx context.Context, req *pb.CreateServiceRequest) (*pb.Service, error) {
+func (sp *servicesAPI) Create(ctx context.Context, req *pb.CreateRequest) (*pb.Service, error) {
 	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
-	return sp.client.CreateService(ctx, req)
+	return sp.client.Create(ctx, req)
 }
 
 func (sp *servicesAPI) Up(ctx context.Context, req *pb.UpRequest) (*pb.UpResponse, error) {
 	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return sp.client.Up(ctx, req)
+}
+
+func (sp *servicesAPI) Get(ctx context.Context, req *pb.GetRequest) (*pb.Service, error) {
+	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	return sp.client.Get(ctx, req)
+}
+
+func (sp *servicesAPI) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
+	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	return sp.client.List(ctx, req)
 }
