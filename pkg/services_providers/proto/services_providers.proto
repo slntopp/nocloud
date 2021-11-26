@@ -37,7 +37,20 @@ message TestResponse {
     string error = 2;
 }
 
+message GetRequest {
+    string id = 1;
+}
+
+message ListRequest {}
+
+message ListResponse {
+    repeated ServicesProvider services_providers = 1;
+}
+
 service ServicesProvidersService {
     rpc Test(ServicesProvider) returns (TestResponse);
     rpc Create(ServicesProvider) returns (ServicesProvider);
+
+    rpc Get(GetRequest) returns (ServicesProvider);
+    rpc List(ListRequest) returns (ListResponse);
 }

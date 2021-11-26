@@ -44,3 +44,13 @@ func (sp *spRegistryAPI) Create(ctx context.Context, req *sppb.ServicesProvider)
 	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return sp.client.Create(ctx, req)
 }
+
+func (sp *spRegistryAPI) Get(ctx context.Context, req *sppb.GetRequest) (*sppb.ServicesProvider, error) {
+	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	return sp.client.Get(ctx, req)
+}
+
+func (sp *spRegistryAPI) List(ctx context.Context, req *sppb.ListRequest) (*sppb.ListResponse, error) {
+	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	return sp.client.List(ctx, req)
+}

@@ -171,4 +171,15 @@ service ServicesProvidersService {
             body: "*"
         };
     };
+
+    rpc Get(nocloud.services_providers.GetRequest) returns (nocloud.services_providers.ServicesProvider) {
+        option (google.api.http) = {
+            get: "/sp/{id}"
+        };
+    };
+    rpc List(nocloud.services_providers.ListRequest) returns (nocloud.services_providers.ListResponse) {
+        option (google.api.http) = {
+            get: "/sp"
+        };
+    };
 };

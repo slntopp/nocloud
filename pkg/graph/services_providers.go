@@ -17,6 +17,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
@@ -55,6 +56,43 @@ func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r 
 	ctrl.log.Debug("Getting ServicesProvider", zap.Any("sp", id))
 	var sp sppb.ServicesProvider
 	meta, err := ctrl.col.ReadDocument(ctx, id, &sp)
+	if err != nil {
+		ctrl.log.Debug("Error reading document(ServiceProvider)", zap.Error(err))
+		return nil, errors.New("Error reading document")
+	}
 	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("sp", &sp))
+	sp.Uuid = meta.ID.Key()
 	return &ServicesProvider{&sp, meta}, err
+}
+
+// List Services Providers in DB
+func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor string) ([]*ServicesProvider, error) {
+	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
+
+	query := `FOR sp IN @@services RETURN sp`
+	bindVars := map[string]interface{}{
+		"@services": SERVICES_PROVIDERS_COL,
+	}
+	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+	var r []*ServicesProvider
+	for {
+		var s sppb.ServicesProvider
+		meta, err := c.ReadDocument(ctx, &s)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		ctrl.log.Debug("Got document", zap.Any("service_provider", &s))
+		s.Uuid = meta.ID.Key()
+		r = append(r, &ServicesProvider{&s, meta})
+	}
+
+	return r,  nil
 }

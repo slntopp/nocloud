@@ -22,6 +22,7 @@ import (
 	"github.com/arangodb/go-driver"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -76,4 +77,49 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 	sp := &graph.ServicesProvider{ServicesProvider: req}
 	err = s.ctrl.Create(ctx, sp)
 	return sp.ServicesProvider, err
+}
+
+func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetRequest) (res *sppb.ServicesProvider, err error) {
+	log := s.log.Named("Get")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	ctx, err = nocloud.ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	r, err := s.ctrl.Get(ctx, request.GetId())
+	if err != nil {
+		log.Debug("Error getting Service from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not Found in DB")
+	}
+
+	return r.ServicesProvider, nil
+}
+
+func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest) (res *sppb.ListResponse, err error) {
+	log := s.log.Named("List")
+	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
+
+	ctx, err = nocloud.ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	r, err := s.ctrl.List(ctx, requestor)
+	if err != nil {
+		log.Debug("Error reading ServicesProviders from DB", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error reading ServicesProviders from DB")
+	}
+
+	res = &sppb.ListResponse{ServicesProviders: make([]*sppb.ServicesProvider, len(r))}
+	for i, sp := range r {
+		res.ServicesProviders[i] = sp.ServicesProvider
+	}
+
+	return res, nil
 }

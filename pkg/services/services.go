@@ -224,7 +224,7 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *servicespb.Get
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor,  r.ID.String(), access.READ)
+	ok := graph.HasAccess(ctx, s.db, requestor, r.ID.String(), access.READ)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
 	}
