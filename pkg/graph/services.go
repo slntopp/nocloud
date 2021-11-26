@@ -86,7 +86,7 @@ func (ctrl *ServicesController) Get(ctx context.Context, id string) (*Service, e
 	var service pb.Service
 	meta, err := ctrl.col.ReadDocument(ctx, id, &service)
 	if err != nil {
-		ctrl.log.Debug("Error reading document", zap.Error(err))
+		ctrl.log.Debug("Error reading document(Service)", zap.Error(err))
 		return nil, errors.New("Error reading document")
 	}
 	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Any("service", &service))
@@ -128,7 +128,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, req_
 		} else if err != nil {
 			return nil, err
 		}
-		ctrl.log.Debug("Got document", zap.Any("service", s))
+		ctrl.log.Debug("Got document", zap.Any("service", &s))
 		s.Uuid = meta.ID.Key()
 		r = append(r, &Service{&s, meta})
 	}
