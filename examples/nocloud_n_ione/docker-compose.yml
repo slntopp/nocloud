@@ -14,12 +14,6 @@ services:
       SERVICES_REGISTRY: services-registry:8080
       SP_REGISTRY_HOST: sp-registry:8080
       SIGNING_KEY: supersecretaaarhgreplaceme
-      LOG_LEVEL: -1
-    links:
-      - health:health
-      - registry
-      - sp-registry
-      - services-registry
     ports:
       - 8080:8080 # gRPC-API
     networks:
@@ -66,6 +60,7 @@ services:
     container_name: sp-registry
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     environment:
+      LOG_LEVEL: -1
       DB_HOST: db:8529
       DB_CRED: root:openSesame
       DRIVERS: driver-ione:8080
