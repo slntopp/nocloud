@@ -48,6 +48,7 @@ services:
     environment:
       DB_HOST: db:8529
       DB_CRED: root:openSesame
+      DRIVERS: driver-ione:8080
     depends_on:
       - db
     networks:
