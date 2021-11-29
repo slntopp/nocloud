@@ -177,3 +177,33 @@ func (ctrl *ServicesController) Unprovide(ctx context.Context, group string) (er
 	_, err = edge.RemoveDocument(ctx, group)
 	return err
 }
+
+func (ctrl *ServicesController) GetProvisions(ctx context.Context, service string) (r map[string]string, err error) {
+	ctrl.log.Debug("Getting groups provisions")
+	query := `FOR service, provision IN INBOUND @service GRAPH @@services RETURN provision`
+	bindVars := map[string]interface{}{
+		"service": service,
+		"@services": SERVICES_GRAPH.Name,
+	}
+
+	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	r = make(map[string]string)
+	for {
+		var p Provision
+		_, err = c.ReadDocument(ctx, &p)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		ctrl.log.Debug("Got document", zap.Any("provision", p))
+		r[p.Group] = p.From.Key()
+	}
+
+	return r, nil
+}
