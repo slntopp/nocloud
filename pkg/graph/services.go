@@ -169,3 +169,11 @@ func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.
 	})
 	return err
 }
+
+func (ctrl *ServicesController) Unprovide(ctx context.Context, group string) (err error) {
+	ctrl.log.Debug("Unproviding group from service provider")
+	g, _ := ctrl.db.Graph(ctx, SERVICES_GRAPH.Name)
+	edge, _, _ := g.EdgeCollection(ctx, SP2SERV)
+	_, err = edge.RemoveDocument(ctx, group)
+	return err
+}
