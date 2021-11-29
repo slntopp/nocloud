@@ -243,7 +243,9 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	provisions, err := s.ctrl.GetProvisions(ctx, service.GetUuid())
+	if err != nil {
+		s.log.Debug("Can't get provisions for service", zap.Any("service", service))
+	}
 	context := make(map[string]*InstancesGroupDriverContext)
 
 	for _, group := range service.GetInstancesGroups() {
