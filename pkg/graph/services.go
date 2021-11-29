@@ -57,7 +57,7 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 			return nil, err
 		}
 	}
-	service.State = "init"
+	service.Status = "init"
 	meta, err := ctrl.col.CreateDocument(ctx, service)
 	if err != nil {
 		ctrl.log.Debug("Error creating document", zap.Error(err))
