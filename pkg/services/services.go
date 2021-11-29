@@ -172,6 +172,14 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
+	service.Status = "starting"
+	s.log.Debug("Updated Service", zap.Any("service", service))
+	err = s.ctrl.Update(ctx, service.Service)
+	if err != nil {
+		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		return nil, status.Error(codes.Internal, "Error storing updates")
+	}
+
 	deploy_policies := request.GetDeployPolicies()
 
 	for _, group := range service.GetInstancesGroups() {
@@ -195,8 +203,13 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 			continue
 		}
 		group.Data = response.GetGroup().GetData()
+		err = s.ctrl.Provide(ctx, sp.ID, service.ID, group.GetUuid())
+		if err != nil {
+			s.log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp_id), zap.Any("group", group), zap.Error(err))
+			continue
+		}
 	}
-	service.Status = "starting"
+	service.Status = "up"
 
 	s.log.Debug("Updated Service", zap.Any("service", service))
 	err = s.ctrl.Update(ctx, service.Service)

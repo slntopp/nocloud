@@ -27,10 +27,19 @@ import (
 const (
 	SERVICES_COL = "Services"
 	NS2SERV = NAMESPACES_COL + "2" + SERVICES_COL
+	SP2SERV = SERVICES_PROVIDERS_COL + "2" + SERVICES_COL
 )
 
 type Service struct {
 	*pb.Service
+	driver.DocumentMeta
+}
+
+type Provision struct {
+	From driver.DocumentID `json:"_from"`
+	To driver.DocumentID `json:"_to"`
+	Group string `json:"group"`
+
 	driver.DocumentMeta
 }
 
@@ -145,6 +154,17 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *Service, name
 		To: service.ID,
 		Level: access,
 		Role: role,
+	})
+	return err
+}
+
+func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.DocumentID, group string) (error) {
+	ctrl.log.Debug("Providing group to service provider")
+	edge, _ := ctrl.db.Collection(ctx, SP2SERV)
+	_, err := edge.CreateDocument(ctx, Provision{
+		From: sp,
+		To: service,
+		Group: group,
 	})
 	return err
 }
