@@ -39,17 +39,13 @@ type NamespacesServiceServer struct {
 }
 
 func NewNamespacesServer(log *zap.Logger, db driver.Database) *NamespacesServiceServer {
-	nsCol, _ := db.Collection(nil, graph.NAMESPACES_COL)
-	accCol, _ := db.Collection(nil, graph.ACCOUNTS_COL)
-	credCol, _ := db.Collection(nil, graph.CREDENTIALS_COL)
-
 	return &NamespacesServiceServer{
 		log: log, db: db,
 		ctrl: graph.NewNamespacesController(
-			log.Named("NamespacesController"), nsCol,
+			log.Named("NamespacesController"), db,
 		),
 		acc_ctrl: graph.NewAccountsController(
-			log.Named("AccountsController"), accCol, credCol,
+			log.Named("AccountsController"), db,
 		),
 	}
 }

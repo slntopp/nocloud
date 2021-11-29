@@ -19,7 +19,7 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
-	jwt "github.com/dgrijalva/jwt-go"
+	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -41,17 +41,13 @@ type AccountsServiceServer struct {
 }
 
 func NewAccountsServer(log *zap.Logger, db driver.Database) *AccountsServiceServer {
-	accountsCol, _ := db.Collection(nil, graph.ACCOUNTS_COL)
-	credCol, _ := db.Collection(nil, graph.CREDENTIALS_COL)
-	nsCol, _ := db.Collection(nil, graph.NAMESPACES_COL)
-
 	return &AccountsServiceServer{
 		log: log, db: db, 
 		ctrl: graph.NewAccountsController(
-			log.Named("AccountsController"), accountsCol, credCol,
+			log.Named("AccountsController"), db,
 		),
 		ns_ctrl: graph.NewNamespacesController(
-			log.Named("NamespacesController"), nsCol,
+			log.Named("NamespacesController"), db,
 		),
 	}
 }

@@ -26,6 +26,31 @@ message Var {
 
 message ServicesProvider {
     string uuid = 1;
-    map<string, google.protobuf.Value> secrets = 2; // json
-    map<string, Var> vars = 3;
+    string type = 2;
+    string title = 3;
+    map<string, google.protobuf.Value> secrets = 4; // json
+    map<string, Var> vars = 5;
+}
+
+message TestResponse {
+    bool result = 1;
+    string error = 2;
+}
+
+message GetRequest {
+    string id = 1;
+}
+
+message ListRequest {}
+
+message ListResponse {
+    repeated ServicesProvider services_providers = 1;
+}
+
+service ServicesProvidersService {
+    rpc Test(ServicesProvider) returns (TestResponse);
+    rpc Create(ServicesProvider) returns (ServicesProvider);
+
+    rpc Get(GetRequest) returns (ServicesProvider);
+    rpc List(ListRequest) returns (ListResponse);
 }

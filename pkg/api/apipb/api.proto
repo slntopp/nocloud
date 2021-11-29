@@ -97,30 +97,49 @@ service NamespacesService {
 
 import "pkg/services/proto/services.proto";
 service ServicesService {
-    rpc ValidateServiceConfig(nocloud.services.ValidateServiceConfigRequest) returns (nocloud.services.ValidateServiceConfigResponse) {
+    rpc TestConfig(nocloud.services.CreateRequest) returns (nocloud.services.TestConfigResponse) {
         option (google.api.http) = {
-            post: "/services/verify",
+            post: "/services/test"
             body: "*"
         };
     };
-    rpc CreateService(nocloud.services.CreateServiceRequest) returns (nocloud.services.CreateServiceResponse) {
+    rpc Create(nocloud.services.CreateRequest) returns (nocloud.services.Service) {
         option (google.api.http) = {
-            post: "/services",
+            post: "/services"
             body: "*"
         };
     };
-    rpc UpdateService(nocloud.services.UpdateServiceRequest) returns (nocloud.services.UpdateServiceResponse) {
+    rpc Update(nocloud.services.UpdateRequest) returns (nocloud.services.Service) {
         option (google.api.http) = {
-            patch: "/services/{id}",
+            patch: "/services/{id}"
             body: "*"
         };
     };
-    rpc DeleteService(nocloud.services.DeleteServiceRequest) returns (nocloud.services.DeleteServiceResponse) {
+    rpc Delete(nocloud.services.DeleteRequest) returns (nocloud.services.DeleteResponse) {
         option (google.api.http) = {
             delete: "/services/{id}"
         };
     };
-    rpc PerformServiceAction(nocloud.services.PerformServiceActionRequest) returns (nocloud.services.PerformServiceActionResponse) {
+    
+    rpc Get(nocloud.services.GetRequest) returns (nocloud.services.Service) {
+        option (google.api.http) = {
+            get: "/services/{id}"
+        };
+    };
+    rpc List(nocloud.services.ListRequest) returns (nocloud.services.ListResponse) {
+        option (google.api.http) = {
+            get: "/services"
+        };
+    };
+
+
+    rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse) {
+        option (google.api.http) = {
+            post: "/services/{id}/up"
+            body: "*"
+        };
+    };
+    rpc PerformServiceAction(nocloud.services.PerformActionRequest) returns (nocloud.services.PerformActionResponse) {
         option (google.api.http) = {
             post: "/services/{id}/action/{action}",
             body: "*"
@@ -134,6 +153,33 @@ service HealthService {
         option (google.api.http) = {
             post: "/health/probe"
             body: "*"
+        };
+    };
+};
+
+import "pkg/services_providers/proto/services_providers.proto";
+service ServicesProvidersService {
+    rpc Test(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.TestResponse) {
+        option (google.api.http) = {
+            post: "/sp/test"
+            body: "*"
+        };
+    };
+    rpc Create(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.ServicesProvider) {
+        option (google.api.http) = {
+            post: "/sp"
+            body: "*"
+        };
+    };
+
+    rpc Get(nocloud.services_providers.GetRequest) returns (nocloud.services_providers.ServicesProvider) {
+        option (google.api.http) = {
+            get: "/sp/{id}"
+        };
+    };
+    rpc List(nocloud.services_providers.ListRequest) returns (nocloud.services_providers.ListResponse) {
+        option (google.api.http) = {
+            get: "/sp"
         };
     };
 };

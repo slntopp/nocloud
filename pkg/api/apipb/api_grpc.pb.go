@@ -8,6 +8,7 @@ import (
 	namespacespb "github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	healthpb "github.com/slntopp/nocloud/pkg/health/healthpb"
 	proto "github.com/slntopp/nocloud/pkg/services/proto"
+	proto1 "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -554,11 +555,14 @@ var NamespacesService_ServiceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ServicesServiceClient interface {
-	ValidateServiceConfig(ctx context.Context, in *proto.ValidateServiceConfigRequest, opts ...grpc.CallOption) (*proto.ValidateServiceConfigResponse, error)
-	CreateService(ctx context.Context, in *proto.CreateServiceRequest, opts ...grpc.CallOption) (*proto.CreateServiceResponse, error)
-	UpdateService(ctx context.Context, in *proto.UpdateServiceRequest, opts ...grpc.CallOption) (*proto.UpdateServiceResponse, error)
-	DeleteService(ctx context.Context, in *proto.DeleteServiceRequest, opts ...grpc.CallOption) (*proto.DeleteServiceResponse, error)
-	PerformServiceAction(ctx context.Context, in *proto.PerformServiceActionRequest, opts ...grpc.CallOption) (*proto.PerformServiceActionResponse, error)
+	TestConfig(ctx context.Context, in *proto.CreateRequest, opts ...grpc.CallOption) (*proto.TestConfigResponse, error)
+	Create(ctx context.Context, in *proto.CreateRequest, opts ...grpc.CallOption) (*proto.Service, error)
+	Update(ctx context.Context, in *proto.UpdateRequest, opts ...grpc.CallOption) (*proto.Service, error)
+	Delete(ctx context.Context, in *proto.DeleteRequest, opts ...grpc.CallOption) (*proto.DeleteResponse, error)
+	Get(ctx context.Context, in *proto.GetRequest, opts ...grpc.CallOption) (*proto.Service, error)
+	List(ctx context.Context, in *proto.ListRequest, opts ...grpc.CallOption) (*proto.ListResponse, error)
+	Up(ctx context.Context, in *proto.UpRequest, opts ...grpc.CallOption) (*proto.UpResponse, error)
+	PerformServiceAction(ctx context.Context, in *proto.PerformActionRequest, opts ...grpc.CallOption) (*proto.PerformActionResponse, error)
 }
 
 type servicesServiceClient struct {
@@ -569,44 +573,71 @@ func NewServicesServiceClient(cc grpc.ClientConnInterface) ServicesServiceClient
 	return &servicesServiceClient{cc}
 }
 
-func (c *servicesServiceClient) ValidateServiceConfig(ctx context.Context, in *proto.ValidateServiceConfigRequest, opts ...grpc.CallOption) (*proto.ValidateServiceConfigResponse, error) {
-	out := new(proto.ValidateServiceConfigResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/ValidateServiceConfig", in, out, opts...)
+func (c *servicesServiceClient) TestConfig(ctx context.Context, in *proto.CreateRequest, opts ...grpc.CallOption) (*proto.TestConfigResponse, error) {
+	out := new(proto.TestConfigResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/TestConfig", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *servicesServiceClient) CreateService(ctx context.Context, in *proto.CreateServiceRequest, opts ...grpc.CallOption) (*proto.CreateServiceResponse, error) {
-	out := new(proto.CreateServiceResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/CreateService", in, out, opts...)
+func (c *servicesServiceClient) Create(ctx context.Context, in *proto.CreateRequest, opts ...grpc.CallOption) (*proto.Service, error) {
+	out := new(proto.Service)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/Create", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *servicesServiceClient) UpdateService(ctx context.Context, in *proto.UpdateServiceRequest, opts ...grpc.CallOption) (*proto.UpdateServiceResponse, error) {
-	out := new(proto.UpdateServiceResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/UpdateService", in, out, opts...)
+func (c *servicesServiceClient) Update(ctx context.Context, in *proto.UpdateRequest, opts ...grpc.CallOption) (*proto.Service, error) {
+	out := new(proto.Service)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/Update", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *servicesServiceClient) DeleteService(ctx context.Context, in *proto.DeleteServiceRequest, opts ...grpc.CallOption) (*proto.DeleteServiceResponse, error) {
-	out := new(proto.DeleteServiceResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/DeleteService", in, out, opts...)
+func (c *servicesServiceClient) Delete(ctx context.Context, in *proto.DeleteRequest, opts ...grpc.CallOption) (*proto.DeleteResponse, error) {
+	out := new(proto.DeleteResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/Delete", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *proto.PerformServiceActionRequest, opts ...grpc.CallOption) (*proto.PerformServiceActionResponse, error) {
-	out := new(proto.PerformServiceActionResponse)
+func (c *servicesServiceClient) Get(ctx context.Context, in *proto.GetRequest, opts ...grpc.CallOption) (*proto.Service, error) {
+	out := new(proto.Service)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/Get", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesServiceClient) List(ctx context.Context, in *proto.ListRequest, opts ...grpc.CallOption) (*proto.ListResponse, error) {
+	out := new(proto.ListResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/List", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesServiceClient) Up(ctx context.Context, in *proto.UpRequest, opts ...grpc.CallOption) (*proto.UpResponse, error) {
+	out := new(proto.UpResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/Up", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *proto.PerformActionRequest, opts ...grpc.CallOption) (*proto.PerformActionResponse, error) {
+	out := new(proto.PerformActionResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesService/PerformServiceAction", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -618,11 +649,14 @@ func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *pr
 // All implementations must embed UnimplementedServicesServiceServer
 // for forward compatibility
 type ServicesServiceServer interface {
-	ValidateServiceConfig(context.Context, *proto.ValidateServiceConfigRequest) (*proto.ValidateServiceConfigResponse, error)
-	CreateService(context.Context, *proto.CreateServiceRequest) (*proto.CreateServiceResponse, error)
-	UpdateService(context.Context, *proto.UpdateServiceRequest) (*proto.UpdateServiceResponse, error)
-	DeleteService(context.Context, *proto.DeleteServiceRequest) (*proto.DeleteServiceResponse, error)
-	PerformServiceAction(context.Context, *proto.PerformServiceActionRequest) (*proto.PerformServiceActionResponse, error)
+	TestConfig(context.Context, *proto.CreateRequest) (*proto.TestConfigResponse, error)
+	Create(context.Context, *proto.CreateRequest) (*proto.Service, error)
+	Update(context.Context, *proto.UpdateRequest) (*proto.Service, error)
+	Delete(context.Context, *proto.DeleteRequest) (*proto.DeleteResponse, error)
+	Get(context.Context, *proto.GetRequest) (*proto.Service, error)
+	List(context.Context, *proto.ListRequest) (*proto.ListResponse, error)
+	Up(context.Context, *proto.UpRequest) (*proto.UpResponse, error)
+	PerformServiceAction(context.Context, *proto.PerformActionRequest) (*proto.PerformActionResponse, error)
 	mustEmbedUnimplementedServicesServiceServer()
 }
 
@@ -630,19 +664,28 @@ type ServicesServiceServer interface {
 type UnimplementedServicesServiceServer struct {
 }
 
-func (UnimplementedServicesServiceServer) ValidateServiceConfig(context.Context, *proto.ValidateServiceConfigRequest) (*proto.ValidateServiceConfigResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ValidateServiceConfig not implemented")
+func (UnimplementedServicesServiceServer) TestConfig(context.Context, *proto.CreateRequest) (*proto.TestConfigResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TestConfig not implemented")
 }
-func (UnimplementedServicesServiceServer) CreateService(context.Context, *proto.CreateServiceRequest) (*proto.CreateServiceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateService not implemented")
+func (UnimplementedServicesServiceServer) Create(context.Context, *proto.CreateRequest) (*proto.Service, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
-func (UnimplementedServicesServiceServer) UpdateService(context.Context, *proto.UpdateServiceRequest) (*proto.UpdateServiceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UpdateService not implemented")
+func (UnimplementedServicesServiceServer) Update(context.Context, *proto.UpdateRequest) (*proto.Service, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
-func (UnimplementedServicesServiceServer) DeleteService(context.Context, *proto.DeleteServiceRequest) (*proto.DeleteServiceResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteService not implemented")
+func (UnimplementedServicesServiceServer) Delete(context.Context, *proto.DeleteRequest) (*proto.DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
-func (UnimplementedServicesServiceServer) PerformServiceAction(context.Context, *proto.PerformServiceActionRequest) (*proto.PerformServiceActionResponse, error) {
+func (UnimplementedServicesServiceServer) Get(context.Context, *proto.GetRequest) (*proto.Service, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (UnimplementedServicesServiceServer) List(context.Context, *proto.ListRequest) (*proto.ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+func (UnimplementedServicesServiceServer) Up(context.Context, *proto.UpRequest) (*proto.UpResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Up not implemented")
+}
+func (UnimplementedServicesServiceServer) PerformServiceAction(context.Context, *proto.PerformActionRequest) (*proto.PerformActionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PerformServiceAction not implemented")
 }
 func (UnimplementedServicesServiceServer) mustEmbedUnimplementedServicesServiceServer() {}
@@ -658,80 +701,134 @@ func RegisterServicesServiceServer(s grpc.ServiceRegistrar, srv ServicesServiceS
 	s.RegisterService(&ServicesService_ServiceDesc, srv)
 }
 
-func _ServicesService_ValidateServiceConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.ValidateServiceConfigRequest)
+func _ServicesService_TestConfig_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.CreateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).ValidateServiceConfig(ctx, in)
+		return srv.(ServicesServiceServer).TestConfig(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.api.ServicesService/ValidateServiceConfig",
+		FullMethod: "/nocloud.api.ServicesService/TestConfig",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).ValidateServiceConfig(ctx, req.(*proto.ValidateServiceConfigRequest))
+		return srv.(ServicesServiceServer).TestConfig(ctx, req.(*proto.CreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServicesService_CreateService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.CreateServiceRequest)
+func _ServicesService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.CreateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).CreateService(ctx, in)
+		return srv.(ServicesServiceServer).Create(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.api.ServicesService/CreateService",
+		FullMethod: "/nocloud.api.ServicesService/Create",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).CreateService(ctx, req.(*proto.CreateServiceRequest))
+		return srv.(ServicesServiceServer).Create(ctx, req.(*proto.CreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServicesService_UpdateService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.UpdateServiceRequest)
+func _ServicesService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.UpdateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).UpdateService(ctx, in)
+		return srv.(ServicesServiceServer).Update(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.api.ServicesService/UpdateService",
+		FullMethod: "/nocloud.api.ServicesService/Update",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).UpdateService(ctx, req.(*proto.UpdateServiceRequest))
+		return srv.(ServicesServiceServer).Update(ctx, req.(*proto.UpdateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServicesService_DeleteService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.DeleteServiceRequest)
+func _ServicesService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.DeleteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).DeleteService(ctx, in)
+		return srv.(ServicesServiceServer).Delete(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.api.ServicesService/DeleteService",
+		FullMethod: "/nocloud.api.ServicesService/Delete",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).DeleteService(ctx, req.(*proto.DeleteServiceRequest))
+		return srv.(ServicesServiceServer).Delete(ctx, req.(*proto.DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesService_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.GetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).Get(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesService/Get",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).Get(ctx, req.(*proto.GetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesService/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).List(ctx, req.(*proto.ListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesService_Up_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto.UpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).Up(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesService/Up",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).Up(ctx, req.(*proto.UpRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _ServicesService_PerformServiceAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.PerformServiceActionRequest)
+	in := new(proto.PerformActionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -743,7 +840,7 @@ func _ServicesService_PerformServiceAction_Handler(srv interface{}, ctx context.
 		FullMethod: "/nocloud.api.ServicesService/PerformServiceAction",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).PerformServiceAction(ctx, req.(*proto.PerformServiceActionRequest))
+		return srv.(ServicesServiceServer).PerformServiceAction(ctx, req.(*proto.PerformActionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -756,20 +853,32 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ServicesServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "ValidateServiceConfig",
-			Handler:    _ServicesService_ValidateServiceConfig_Handler,
+			MethodName: "TestConfig",
+			Handler:    _ServicesService_TestConfig_Handler,
 		},
 		{
-			MethodName: "CreateService",
-			Handler:    _ServicesService_CreateService_Handler,
+			MethodName: "Create",
+			Handler:    _ServicesService_Create_Handler,
 		},
 		{
-			MethodName: "UpdateService",
-			Handler:    _ServicesService_UpdateService_Handler,
+			MethodName: "Update",
+			Handler:    _ServicesService_Update_Handler,
 		},
 		{
-			MethodName: "DeleteService",
-			Handler:    _ServicesService_DeleteService_Handler,
+			MethodName: "Delete",
+			Handler:    _ServicesService_Delete_Handler,
+		},
+		{
+			MethodName: "Get",
+			Handler:    _ServicesService_Get_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _ServicesService_List_Handler,
+		},
+		{
+			MethodName: "Up",
+			Handler:    _ServicesService_Up_Handler,
 		},
 		{
 			MethodName: "PerformServiceAction",
@@ -860,6 +969,201 @@ var HealthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Probe",
 			Handler:    _HealthService_Probe_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/api/apipb/api.proto",
+}
+
+// ServicesProvidersServiceClient is the client API for ServicesProvidersService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ServicesProvidersServiceClient interface {
+	Test(ctx context.Context, in *proto1.ServicesProvider, opts ...grpc.CallOption) (*proto1.TestResponse, error)
+	Create(ctx context.Context, in *proto1.ServicesProvider, opts ...grpc.CallOption) (*proto1.ServicesProvider, error)
+	Get(ctx context.Context, in *proto1.GetRequest, opts ...grpc.CallOption) (*proto1.ServicesProvider, error)
+	List(ctx context.Context, in *proto1.ListRequest, opts ...grpc.CallOption) (*proto1.ListResponse, error)
+}
+
+type servicesProvidersServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewServicesProvidersServiceClient(cc grpc.ClientConnInterface) ServicesProvidersServiceClient {
+	return &servicesProvidersServiceClient{cc}
+}
+
+func (c *servicesProvidersServiceClient) Test(ctx context.Context, in *proto1.ServicesProvider, opts ...grpc.CallOption) (*proto1.TestResponse, error) {
+	out := new(proto1.TestResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesProvidersService/Test", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesProvidersServiceClient) Create(ctx context.Context, in *proto1.ServicesProvider, opts ...grpc.CallOption) (*proto1.ServicesProvider, error) {
+	out := new(proto1.ServicesProvider)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesProvidersService/Create", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesProvidersServiceClient) Get(ctx context.Context, in *proto1.GetRequest, opts ...grpc.CallOption) (*proto1.ServicesProvider, error) {
+	out := new(proto1.ServicesProvider)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesProvidersService/Get", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesProvidersServiceClient) List(ctx context.Context, in *proto1.ListRequest, opts ...grpc.CallOption) (*proto1.ListResponse, error) {
+	out := new(proto1.ListResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.api.ServicesProvidersService/List", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ServicesProvidersServiceServer is the server API for ServicesProvidersService service.
+// All implementations must embed UnimplementedServicesProvidersServiceServer
+// for forward compatibility
+type ServicesProvidersServiceServer interface {
+	Test(context.Context, *proto1.ServicesProvider) (*proto1.TestResponse, error)
+	Create(context.Context, *proto1.ServicesProvider) (*proto1.ServicesProvider, error)
+	Get(context.Context, *proto1.GetRequest) (*proto1.ServicesProvider, error)
+	List(context.Context, *proto1.ListRequest) (*proto1.ListResponse, error)
+	mustEmbedUnimplementedServicesProvidersServiceServer()
+}
+
+// UnimplementedServicesProvidersServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedServicesProvidersServiceServer struct {
+}
+
+func (UnimplementedServicesProvidersServiceServer) Test(context.Context, *proto1.ServicesProvider) (*proto1.TestResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Test not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) Create(context.Context, *proto1.ServicesProvider) (*proto1.ServicesProvider, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) Get(context.Context, *proto1.GetRequest) (*proto1.ServicesProvider, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) List(context.Context, *proto1.ListRequest) (*proto1.ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) mustEmbedUnimplementedServicesProvidersServiceServer() {
+}
+
+// UnsafeServicesProvidersServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ServicesProvidersServiceServer will
+// result in compilation errors.
+type UnsafeServicesProvidersServiceServer interface {
+	mustEmbedUnimplementedServicesProvidersServiceServer()
+}
+
+func RegisterServicesProvidersServiceServer(s grpc.ServiceRegistrar, srv ServicesProvidersServiceServer) {
+	s.RegisterService(&ServicesProvidersService_ServiceDesc, srv)
+}
+
+func _ServicesProvidersService_Test_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto1.ServicesProvider)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).Test(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesProvidersService/Test",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).Test(ctx, req.(*proto1.ServicesProvider))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesProvidersService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto1.ServicesProvider)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).Create(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesProvidersService/Create",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).Create(ctx, req.(*proto1.ServicesProvider))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesProvidersService_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto1.GetRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).Get(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesProvidersService/Get",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).Get(ctx, req.(*proto1.GetRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesProvidersService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(proto1.ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).List(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.api.ServicesProvidersService/List",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).List(ctx, req.(*proto1.ListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// ServicesProvidersService_ServiceDesc is the grpc.ServiceDesc for ServicesProvidersService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var ServicesProvidersService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "nocloud.api.ServicesProvidersService",
+	HandlerType: (*ServicesProvidersServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Test",
+			Handler:    _ServicesProvidersService_Test_Handler,
+		},
+		{
+			MethodName: "Create",
+			Handler:    _ServicesProvidersService_Create_Handler,
+		},
+		{
+			MethodName: "Get",
+			Handler:    _ServicesProvidersService_Get_Handler,
+		},
+		{
+			MethodName: "List",
+			Handler:    _ServicesProvidersService_List_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

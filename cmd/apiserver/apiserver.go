@@ -16,11 +16,9 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"net"
-	"net/http"
+	"strings"
 
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/spf13/viper"
 
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
@@ -28,8 +26,11 @@ import (
 	apipb "github.com/slntopp/nocloud/pkg/api/apipb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
+	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 )
 
 var (
@@ -37,27 +38,42 @@ var (
 
 	healthHost 		string
 	registryHost 	string
+	servicesHost	string
+	spRegistryHost  string
 
 	SIGNING_KEY		[]byte
 )
 
-type server struct{}
+func resolveHost(addr string) string {
+	host := strings.SplitN(addr, ":", 2)
+	ips, err := net.LookupIP(host[0])
+	if err != nil {
+		log.Debug("Error resolving host", zap.String("host", host[0]), zap.Error(err))
+		return addr
+	}
+	log.Debug("Resolved IPs", zap.Any("pool", ips))
+	host[0] = ips[0].String()
+	return strings.Join(host, ":")
 
-func NewServer() *server {
-	return &server{}
 }
 
 func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
+	viper.SetDefault("CORS_ALLOWED", []string{"*"})
+
 	viper.SetDefault("HEALTH_HOST", "health:8080")
 	viper.SetDefault("REGISTRY_HOST", "accounts:8080")
+	viper.SetDefault("SP_REGISTRY_HOST", "sp-registry:8080")
+	viper.SetDefault("SERVICES_HOST", "services-registry:8080")
 	
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
-	healthHost 		= viper.GetString("HEALTH_HOST")
-	registryHost 	= viper.GetString("REGISTRY_HOST")
+	healthHost 		= resolveHost(viper.GetString("HEALTH_HOST"))
+	registryHost 	= resolveHost(viper.GetString("REGISTRY_HOST"))
+	servicesHost 	= resolveHost(viper.GetString("SERVICES_HOST"))
+	spRegistryHost 	= resolveHost(viper.GetString("SP_REGISTRY_HOST"))
 
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
 }
@@ -81,6 +97,21 @@ func main() {
 	}
 	accountsClient := accountspb.NewAccountsServiceClient(registryConn)
 	namespacesClient := namespacespb.NewNamespacesServiceClient(registryConn)
+
+	log.Info("Connecting to ServicesProvidersService", zap.String("host", spRegistryHost))
+	spRegistryConn, err := grpc.Dial(spRegistryHost, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	spRegistryClient := sppb.NewServicesProvidersServiceClient(spRegistryConn)
+
+	log.Info("Connecting to ServicesService", zap.String("host", servicesHost))
+	servicesConn, err := grpc.Dial(servicesHost, grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	servicesClient := servicespb.NewServicesServiceClient(servicesConn)
+
 	// Create a listener on TCP port
 	lis, err := net.Listen("tcp", ":8080")
 	if err != nil {
@@ -89,45 +120,19 @@ func main() {
 
 	// Create a gRPC server object
 	s := grpc.NewServer(grpc.UnaryInterceptor(JWT_AUTH_INTERCEPTOR),)
-	// Attach the Greeter service to the server
 	apipb.RegisterHealthServiceServer(s, &healthAPI{client: healthClient})
+
 	apipb.RegisterAccountsServiceServer(s, &accountsAPI{client: accountsClient})
 	apipb.RegisterNamespacesServiceServer(s, &namespacesAPI{client: namespacesClient})
+
+	apipb.RegisterServicesProvidersServiceServer(s, &spRegistryAPI{client: spRegistryClient, log: log.Named("ServicesProvidersRegistry")})
+
+	apipb.RegisterServicesServiceServer(s, &servicesAPI{client: servicesClient, log: log.Named("ServicesRegistry")})
+
 	// Serve gRPC Server
+	reflection.Register(s)
 	log.Info("Serving gRPC on 0.0.0.0:8080", zap.Skip())
-	go func() {
-		log.Fatal("Error", zap.Error(s.Serve(lis)))
-	}()
+	log.Fatal("Error", zap.Error(s.Serve(lis)))
 
-	// Set up REST API server
-	conn, err := grpc.DialContext(
-		context.Background(),
-		"0.0.0.0:8080",
-		grpc.WithBlock(),
-		grpc.WithInsecure(),
-	)
-	if err != nil {
-		log.Fatal("Failed to dial server:", zap.Error(err))
-	}
-
-	gwmux := runtime.NewServeMux()
-	err = apipb.RegisterHealthServiceHandler(context.Background(), gwmux, conn)
-	if err != nil {
-		log.Fatal("Failed to register HealthService gateway", zap.Error(err))
-	}
-	err = apipb.RegisterAccountsServiceHandler(context.Background(), gwmux, conn)
-	if err != nil {
-		log.Fatal("Failed to register AccountsService gateway", zap.Error(err))
-	}
-	err = apipb.RegisterNamespacesServiceHandler(context.Background(), gwmux, conn)
-	if err != nil {
-		log.Fatal("Failed to register NamespacesService gateway", zap.Error(err))
-	}
-	gwServer := &http.Server{
-		Addr:    ":8000",
-		Handler: gwmux,
-	}
-
-	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
-	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(gwServer.ListenAndServe()))
 }
+	

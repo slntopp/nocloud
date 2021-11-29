@@ -40,7 +40,8 @@ type NamespacesController struct {
 	log *zap.Logger
 }
 
-func NewNamespacesController(log *zap.Logger, col driver.Collection) NamespacesController {
+func NewNamespacesController(log *zap.Logger, db driver.Database) NamespacesController {
+	col, _ := db.Collection(nil, NAMESPACES_COL)
 	return NamespacesController{log: log, col: col}
 }
 

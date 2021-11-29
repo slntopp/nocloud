@@ -16,13 +16,10 @@ limitations under the License.
 package graph
 
 import (
-	"context"
 	"strings"
 
 	driver "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
-	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"go.uber.org/zap"
 )
 
@@ -118,80 +115,6 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 		CheckAndRegisterGraph(log, db, graph)
 	}
 
-	col, _ := db.Collection(nil, ACCOUNTS_COL)
-	account_ctrl := AccountsController{
-		col: col, log: log,
-	}
-	rootExists, err := col.DocumentExists(nil, "0")
-	if err != nil {
-		log.Fatal("Failed to check root Account", zap.Any("error", err))
-	}
-
-	if !rootExists {
-		meta, err := col.CreateDocument(nil, Account{ 
-			Title: "root",
-			DocumentMeta: driver.DocumentMeta { Key: "0" },
-		})
-		if err != nil {
-			log.Fatal("Failed to create root Account", zap.Any("error", err))
-		}
-		log.Debug("Create root Account", zap.Any("result", meta))
-	}
-
-	var root Account
-	var meta driver.DocumentMeta
-	meta, err = col.ReadDocument(nil, "0", &root)
-	if err != nil {
-		log.Fatal("Failed to get root", zap.Any("error", err))
-	}
-	root.DocumentMeta = meta
-	log.Debug("Got account", zap.Any("result", root))
-
-	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, "0")
-
-	col, _ = db.Collection(ctx, NAMESPACES_COL)
-	rootNSExists, err := col.DocumentExists(ctx, "0")
-	if err != nil {
-		log.Fatal("Failed to check root Account", zap.Any("error", err))
-	}
-
-	if !rootNSExists {
-		meta, err := col.CreateDocument(ctx, Namespace{ 
-			Title: "root",
-			DocumentMeta: driver.DocumentMeta { Key: "0" },
-		})
-		if err != nil {
-			log.Fatal("Failed to create root Namespace", zap.Any("error", err))
-		}
-		log.Debug("Create root Account", zap.Any("result", meta))
-	}
-
-	var rootNS Namespace
-	meta, err = col.ReadDocument(ctx, "0", &rootNS)
-	if err != nil {
-		log.Fatal("Failed to get root", zap.Any("error", err))
-	}
-	rootNS.DocumentMeta = meta
-	log.Debug("Got namespace", zap.Any("result", rootNS))
-
-	log.Debug("Creating superadmin permission root -> root(ns)")
-	col, _ = db.Collection(ctx, ACCOUNTS_COL + "2" + NAMESPACES_COL)
-	err = root.LinkNamespace(ctx, col, rootNS, 4, roles.OWNER)
-	if err != nil {
-		log.Error("Error while creating edge", zap.Error(err))
-	}
-
-	log.Debug("Creating credentials(standard) for root account")
-	cred, err := NewStandardCredentials("root", rootPass)
-	col, _ = db.Collection(ctx, CREDENTIALS_COL)
-	account_ctrl.cred = col
-	col, _ = db.Collection(ctx,  ACCOUNTS_COL + "2" + CREDENTIALS_COL)
-	err = account_ctrl.SetCredentials(ctx, root, col, cred)
-	if err != nil {
-		log.Error("Error while creating credentials", zap.Error(err))
-	}
-
-	log.Debug("Checking root credentials")
-	_, r := account_ctrl.Authorize(ctx, "standard", "root", rootPass)
-	log.Debug("Result", zap.Bool("Authorized", r))
+	account_ctrl := NewAccountsController(log, db)
+	account_ctrl.EnsureRootExists(rootPass)
 }
