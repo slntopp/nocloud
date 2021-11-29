@@ -25,7 +25,7 @@ message Service {
     string uuid = 1;
     string version = 2;
     string title = 3;
-    string state = 4;
+    string status = 4;
     map<string, google.protobuf.Value> context = 5;
     map<string, nocloud.instances.InstancesGroup> instances_groups = 6;
     string hash = 7;
