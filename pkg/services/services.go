@@ -306,6 +306,14 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 		}
 	}
 
+	service.Status = "down"
+	s.log.Debug("Updated Service", zap.Any("service", service))
+	err = s.ctrl.Update(ctx, service.Service)
+	if err != nil {
+		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		return nil, status.Error(codes.Internal, "Error storing updates")
+	}
+
 	return &servicespb.DownResponse{}, nil
 }
 
