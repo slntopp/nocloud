@@ -232,6 +232,42 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 	return &servicespb.UpResponse{}, nil
 }
 
+func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.DownRequest) (*servicespb.DownResponse, error) {
+	log := s.log.Named("Down")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	service, err := s.ctrl.Get(ctx, request.GetId())
+	if err != nil {
+		log.Debug("Error getting Service", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not found")
+	}
+	log.Debug("Found Service", zap.Any("service", service))
+
+	provisions, err := s.ctrl.GetProvisions(ctx, service.GetUuid())
+	context := make(map[string]*InstancesGroupDriverContext)
+
+	for _, group := range service.GetInstancesGroups() {
+		sp_id, ok := provisions[group.GetUuid()]
+		if !ok {
+			log.Debug("Instance Group has not provision", zap.String("group", group.GetUuid()), zap.String("service", service.GetUuid()))
+			continue
+		}
+		sp, err := s.sp_ctrl.Get(ctx, sp_id)
+		if err != nil {
+			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Error getting ServiceProvider(%s)", sp_id))
+		}
+
+		groupType := group.GetType()
+		client, ok := s.drivers[groupType]
+		if !ok {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver if type '%s' not registered", groupType))
+		}
+
+		context[group.GetUuid()] = &InstancesGroupDriverContext{sp, client}
+	}
+
+	service.Status = "stopping"
 	s.log.Debug("Updated Service", zap.Any("service", service))
 	err = s.ctrl.Update(ctx, service.Service)
 	if err != nil {
@@ -239,7 +275,24 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
-	return &servicespb.UpResponse{}, nil
+	for _, group := range service.GetInstancesGroups() {		
+		client := context[group.GetUuid()].client
+		sp := context[group.GetUuid()].sp
+
+		_, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
+		if err != nil {
+			s.log.Error("Error undeploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
+			continue
+		}
+		group.Data = nil
+		err = s.ctrl.Unprovide(ctx, group.GetUuid())
+		if err != nil {
+			s.log.Error("Error unlinking group from ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
+			continue
+		}
+	}
+
+	return &servicespb.DownResponse{}, nil
 }
 
 func (s *ServicesServiceServer) Get(ctx context.Context, request *servicespb.GetRequest) (res *servicespb.Service, err error) {

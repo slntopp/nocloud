@@ -50,9 +50,9 @@ func (s *servicesAPI) Up(ctx context.Context, req *pb.UpRequest) (*pb.UpResponse
 	return s.client.Up(ctx, req)
 }
 
-func (sp *servicesAPI) Get(ctx context.Context, req *pb.GetRequest) (*pb.Service, error) {
-	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
-	return sp.client.Get(ctx, req)
+func (s *servicesAPI) Down(ctx context.Context, req *pb.DownRequest) (*pb.DownResponse, error) {
+	s.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
+	return s.client.Down(ctx, req)
 }
 
 func (s *servicesAPI) Get(ctx context.Context, req *pb.GetRequest) (*pb.Service, error) {
