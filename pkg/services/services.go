@@ -178,7 +178,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 	log.Debug("Found Service", zap.Any("service", service))
 
 	deploy_policies := request.GetDeployPolicies()
-	context := make(map[string]*InstancesGroupDriverContext)
+	contexts := make(map[string]*InstancesGroupDriverContext)
 
 	for _, group := range service.GetInstancesGroups() {
 		sp_id := deploy_policies[group.GetUuid()]
@@ -193,7 +193,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		if !ok {
 			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver of type '%s' not registered", groupType))
 		}
-		context[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
+		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
 
 	service.Status = "starting"
@@ -204,9 +204,14 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
-	for _, group := range service.GetInstancesGroups() {		
-		client := *context[group.GetUuid()].client
-		sp := context[group.GetUuid()].sp
+	for _, group := range service.GetInstancesGroups() {
+		c, ok := contexts[group.GetUuid()]
+		if !ok {
+			log.Debug("Instance Group has no context", zap.String("group", group.GetUuid()), zap.String("service", service.GetUuid()))
+			continue
+		}
+		client := *c.client
+		sp := c.sp
 
 		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
@@ -248,7 +253,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 		s.log.Debug("Can't get provisions for Service", zap.Any("service", service), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Can't gather Service provisions")
 	}
-	context := make(map[string]*InstancesGroupDriverContext)
+	contexts := make(map[string]*InstancesGroupDriverContext)
 
 	for _, group := range service.GetInstancesGroups() {
 		sp_id, ok := provisions[group.GetUuid()]
@@ -268,7 +273,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver of type '%s' not registered", groupType))
 		}
 
-		context[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
+		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
 
 	service.Status = "stopping"
@@ -280,8 +285,13 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 	}
 
 	for _, group := range service.GetInstancesGroups() {		
-		client := *context[group.GetUuid()].client
-		sp := context[group.GetUuid()].sp
+		c, ok := contexts[group.GetUuid()]
+		if !ok {
+			log.Debug("Instance Group has no context, i.e. provision", zap.String("group", group.GetUuid()), zap.String("service", service.GetUuid()))
+			continue
+		}
+		client := *c.client
+		sp := c.sp
 
 		_, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
