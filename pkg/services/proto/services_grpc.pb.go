@@ -25,6 +25,7 @@ type ServicesServiceClient interface {
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Service, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
+	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
 	PerformAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error)
 }
 
@@ -99,6 +100,15 @@ func (c *servicesServiceClient) Up(ctx context.Context, in *UpRequest, opts ...g
 	return out, nil
 }
 
+func (c *servicesServiceClient) Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error) {
+	out := new(DownResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/Down", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *servicesServiceClient) PerformAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error) {
 	out := new(PerformActionResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/PerformAction", in, out, opts...)
@@ -119,6 +129,7 @@ type ServicesServiceServer interface {
 	Get(context.Context, *GetRequest) (*Service, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
+	Down(context.Context, *DownRequest) (*DownResponse, error)
 	PerformAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error)
 	mustEmbedUnimplementedServicesServiceServer()
 }
@@ -147,6 +158,9 @@ func (UnimplementedServicesServiceServer) List(context.Context, *ListRequest) (*
 }
 func (UnimplementedServicesServiceServer) Up(context.Context, *UpRequest) (*UpResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Up not implemented")
+}
+func (UnimplementedServicesServiceServer) Down(context.Context, *DownRequest) (*DownResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Down not implemented")
 }
 func (UnimplementedServicesServiceServer) PerformAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PerformAction not implemented")
@@ -290,6 +304,24 @@ func _ServicesService_Up_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ServicesService_Down_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DownRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).Down(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services.ServicesService/Down",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).Down(ctx, req.(*DownRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ServicesService_PerformAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PerformActionRequest)
 	if err := dec(in); err != nil {
@@ -342,6 +374,10 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Up",
 			Handler:    _ServicesService_Up_Handler,
+		},
+		{
+			MethodName: "Down",
+			Handler:    _ServicesService_Down_Handler,
 		},
 		{
 			MethodName: "PerformAction",

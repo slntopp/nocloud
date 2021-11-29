@@ -78,6 +78,11 @@ message UpRequest {
 }
 message UpResponse {}
 
+message DownRequest {
+    string id = 1;
+}
+message DownResponse {}
+
 message ListRequest {
     optional string namespace = 1;
     optional int32 depth = 2;
@@ -101,5 +106,6 @@ service ServicesService {
     rpc List(nocloud.services.ListRequest) returns (nocloud.services.ListResponse);
 
     rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse);
+    rpc Down(nocloud.services.DownRequest) returns (nocloud.services.DownResponse);
     rpc PerformAction(nocloud.services.PerformActionRequest) returns (nocloud.services.PerformActionResponse);
 }
