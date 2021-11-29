@@ -165,6 +165,7 @@ func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.
 		From: sp,
 		To: service,
 		Group: group,
+		DocumentMeta: driver.DocumentMeta{Key: group},
 	})
 	return err
 }
