@@ -53,6 +53,11 @@ func NewServicesServer(log *zap.Logger, db driver.Database) *ServicesServiceServ
 	}
 }
 
+type InstancesGroupDriverContext struct {
+	sp *graph.ServicesProvider
+	client driverpb.DriverServiceClient
+}
+
 func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
 	s.drivers[type_key] = client
 }
@@ -172,6 +177,25 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
+	deploy_policies := request.GetDeployPolicies()
+	context := make(map[string]*InstancesGroupDriverContext)
+
+	for _, group := range service.GetInstancesGroups() {
+		sp_id := deploy_policies[group.GetUuid()]
+		sp, err := s.sp_ctrl.Get(ctx, sp_id)
+		if err != nil {
+			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Error getting ServiceProvider(%s)", sp_id))
+		}
+		
+		groupType := group.GetType()
+		client, ok := s.drivers[groupType]
+		if !ok {
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver if type '%s' not registered", groupType))
+		}
+		context[group.GetUuid()] = &InstancesGroupDriverContext{sp, client}
+	}
+
 	service.Status = "starting"
 	s.log.Debug("Updated Service", zap.Any("service", service))
 	err = s.ctrl.Update(ctx, service.Service)
@@ -180,22 +204,9 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
-	deploy_policies := request.GetDeployPolicies()
-
-	for _, group := range service.GetInstancesGroups() {
-		groupType := group.GetType()
-		
-		sp_id := deploy_policies[group.GetUuid()]
-		sp, err := s.sp_ctrl.Get(ctx, sp_id)
-		if err != nil {
-			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Error getting ServiceProvider(%s)", sp_id))
-		}
-
-		client, ok := s.drivers[groupType]
-		if !ok {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver if type '%s' not registered", groupType))
-		}
+	for _, group := range service.GetInstancesGroups() {		
+		client := context[group.GetUuid()].client
+		sp := context[group.GetUuid()].sp
 
 		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
@@ -205,11 +216,21 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		group.Data = response.GetGroup().GetData()
 		err = s.ctrl.Provide(ctx, sp.ID, service.ID, group.GetUuid())
 		if err != nil {
-			s.log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp_id), zap.Any("group", group), zap.Error(err))
+			s.log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
 			continue
 		}
 	}
+	
 	service.Status = "up"
+	s.log.Debug("Updated Service", zap.Any("service", service))
+	err = s.ctrl.Update(ctx, service.Service)
+	if err != nil {
+		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		return nil, status.Error(codes.Internal, "Error storing updates")
+	}
+
+	return &servicespb.UpResponse{}, nil
+}
 
 	s.log.Debug("Updated Service", zap.Any("service", service))
 	err = s.ctrl.Update(ctx, service.Service)
