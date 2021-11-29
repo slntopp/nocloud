@@ -191,7 +191,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		groupType := group.GetType()
 		client, ok := s.drivers[groupType]
 		if !ok {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver if type '%s' not registered", groupType))
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver of type '%s' not registered", groupType))
 		}
 		context[group.GetUuid()] = &InstancesGroupDriverContext{sp, client}
 	}
@@ -261,7 +261,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 		groupType := group.GetType()
 		client, ok := s.drivers[groupType]
 		if !ok {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver if type '%s' not registered", groupType))
+			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver of type '%s' not registered", groupType))
 		}
 
 		context[group.GetUuid()] = &InstancesGroupDriverContext{sp, client}
