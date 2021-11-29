@@ -219,6 +219,17 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 			continue
 		}
 		s.log.Debug("Up Request Result", zap.Any("response", response))
+
+		// TODO: Change to Hash comparation
+		// TODO: Add cleanups
+		if len(group.Instances) != len(response.GetGroup().GetInstances()) {
+			s.log.Error("Instances config changed by Driver")
+			continue
+		}
+		for i, instance := range response.GetGroup().GetInstances() {
+			group.Instances[i].Data = instance.GetData()
+		}
+		
 		group.Data = response.GetGroup().GetData()
 		err = s.ctrl.Provide(ctx, sp.ID, service.ID, group.GetUuid())
 		if err != nil {
