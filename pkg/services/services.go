@@ -218,12 +218,14 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 			s.log.Error("Error deploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
 			continue
 		}
+		s.log.Debug("Up Request Result", zap.Any("response", response))
 		group.Data = response.GetGroup().GetData()
 		err = s.ctrl.Provide(ctx, sp.ID, service.ID, group.GetUuid())
 		if err != nil {
 			s.log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
 			continue
 		}
+		s.log.Debug("Updated Group", zap.Any("group", group))
 	}
 	
 	service.Status = "up"
