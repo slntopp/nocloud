@@ -180,11 +180,12 @@ func (ctrl *ServicesController) Unprovide(ctx context.Context, group string) (er
 
 func (ctrl *ServicesController) GetProvisions(ctx context.Context, service string) (r map[string]string, err error) {
 	ctrl.log.Debug("Getting groups provisions")
-	query := `FOR service, provision IN INBOUND @service GRAPH @@services RETURN provision`
+	query := `FOR service, provision IN INBOUND @service GRAPH @services RETURN provision`
 	bindVars := map[string]interface{}{
 		"service": service,
-		"@services": SERVICES_GRAPH.Name,
+		"services": SERVICES_GRAPH.Name,
 	}
+	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
