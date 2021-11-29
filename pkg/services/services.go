@@ -55,7 +55,7 @@ func NewServicesServer(log *zap.Logger, db driver.Database) *ServicesServiceServ
 
 type InstancesGroupDriverContext struct {
 	sp *graph.ServicesProvider
-	client driverpb.DriverServiceClient
+	client *driverpb.DriverServiceClient
 }
 
 func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
@@ -193,7 +193,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		if !ok {
 			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver of type '%s' not registered", groupType))
 		}
-		context[group.GetUuid()] = &InstancesGroupDriverContext{sp, client}
+		context[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
 
 	service.Status = "starting"
@@ -205,7 +205,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 	}
 
 	for _, group := range service.GetInstancesGroups() {		
-		client := context[group.GetUuid()].client
+		client := *context[group.GetUuid()].client
 		sp := context[group.GetUuid()].sp
 
 		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
@@ -264,7 +264,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver of type '%s' not registered", groupType))
 		}
 
-		context[group.GetUuid()] = &InstancesGroupDriverContext{sp, client}
+		context[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
 
 	service.Status = "stopping"
@@ -276,7 +276,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 	}
 
 	for _, group := range service.GetInstancesGroups() {		
-		client := context[group.GetUuid()].client
+		client := *context[group.GetUuid()].client
 		sp := context[group.GetUuid()].sp
 
 		_, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
