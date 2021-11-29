@@ -196,6 +196,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		}
 		group.Data = response.GetGroup().GetData()
 	}
+	service.Status = "starting"
 
 	s.log.Debug("Updated Service", zap.Any("service", service))
 	err = s.ctrl.Update(ctx, service.Service)
