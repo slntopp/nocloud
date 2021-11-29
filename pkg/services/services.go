@@ -245,7 +245,8 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 
 	provisions, err := s.ctrl.GetProvisions(ctx, service.ID.String())
 	if err != nil {
-		s.log.Debug("Can't get provisions for service", zap.Any("service", service))
+		s.log.Debug("Can't get provisions for Service", zap.Any("service", service), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Can't gather Service provisions")
 	}
 	context := make(map[string]*InstancesGroupDriverContext)
 
