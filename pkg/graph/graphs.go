@@ -49,7 +49,6 @@ var SERVICES_GRAPH = NoCloudGraphSchema{
 	Name: "Services",
 	Edges: [][]string{
 		{SERVICES_COL, SERVICES_PROVIDERS_COL},
-		{INSTANCES_GROUPS_COL, SERVICES_COL},
 	},
 }
 
