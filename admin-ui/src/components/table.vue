@@ -14,7 +14,7 @@
 	>
 	
 		<template
-			v-slot:item.id="props"
+			v-slot:[`item.id`]="props"
 		>
 
 			<template
