@@ -10,7 +10,7 @@ COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/apiserver_web
 RUN upx ./apiserver_web
 
-FROM node:latest AS ui-builder
+FROM node:16.13 AS ui-builder
 
 ADD admin-ui /app
 WORKDIR /app
