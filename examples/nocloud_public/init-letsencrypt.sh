@@ -6,7 +6,7 @@ if ! [ -x "$(command -v docker-compose)" ]; then
 fi
 
 base_domain=$1
-domains=(grpc.$base_domain rest.$base_domain db.$base_domain)
+domains=(api.$base_domain rest.$base_domain db.$base_domain)
 rsa_key_size=4096
 data_path="./data/certbot"
 email="" # Adding a valid address is strongly recommended
