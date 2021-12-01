@@ -11,8 +11,9 @@ services:
       - ./data/certbot/conf:/etc/letsencrypt
       - ./data/certbot/www:/var/www/certbot
     ports:
-      - 443
-      - 8080
+      - 80:80
+      - 443:443
+      - 8080:8080
     environment:
       BASE_DOMAIN: example.com
     networks:
