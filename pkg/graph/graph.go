@@ -114,7 +114,4 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 	for _, graph := range GRAPHS_SCHEMAS {
 		CheckAndRegisterGraph(log, db, graph)
 	}
-
-	account_ctrl := NewAccountsController(log, db)
-	account_ctrl.EnsureRootExists(rootPass)
 }

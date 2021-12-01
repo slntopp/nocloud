@@ -27,10 +27,19 @@ import (
 const (
 	SERVICES_COL = "Services"
 	NS2SERV = NAMESPACES_COL + "2" + SERVICES_COL
+	SP2SERV = SERVICES_PROVIDERS_COL + "2" + SERVICES_COL
 )
 
 type Service struct {
 	*pb.Service
+	driver.DocumentMeta
+}
+
+type Provision struct {
+	From driver.DocumentID `json:"_from"`
+	To driver.DocumentID `json:"_to"`
+	Group string `json:"group"`
+
 	driver.DocumentMeta
 }
 
@@ -57,7 +66,7 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 			return nil, err
 		}
 	}
-	service.State = "init"
+	service.Status = "init"
 	meta, err := ctrl.col.CreateDocument(ctx, service)
 	if err != nil {
 		ctrl.log.Debug("Error creating document", zap.Error(err))
@@ -147,4 +156,55 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *Service, name
 		Role: role,
 	})
 	return err
+}
+
+func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.DocumentID, group string) (error) {
+	ctrl.log.Debug("Providing group to service provider")
+	edge, _ := ctrl.db.Collection(ctx, SP2SERV)
+	_, err := edge.CreateDocument(ctx, Provision{
+		From: sp,
+		To: service,
+		Group: group,
+		DocumentMeta: driver.DocumentMeta{Key: group},
+	})
+	return err
+}
+
+func (ctrl *ServicesController) Unprovide(ctx context.Context, group string) (err error) {
+	ctrl.log.Debug("Unproviding group from service provider")
+	g, _ := ctrl.db.Graph(ctx, SERVICES_GRAPH.Name)
+	edge, _, _ := g.EdgeCollection(ctx, SP2SERV)
+	_, err = edge.RemoveDocument(ctx, group)
+	return err
+}
+
+func (ctrl *ServicesController) GetProvisions(ctx context.Context, service string) (r map[string]string, err error) {
+	ctrl.log.Debug("Getting groups provisions")
+	query := `FOR service, provision IN INBOUND @service GRAPH @services RETURN provision`
+	bindVars := map[string]interface{}{
+		"service": service,
+		"services": SERVICES_GRAPH.Name,
+	}
+	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	r = make(map[string]string)
+	for {
+		var p Provision
+		_, err = c.ReadDocument(ctx, &p)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		ctrl.log.Debug("Got document", zap.Any("provision", p))
+		r[p.Group] = p.From.Key()
+	}
+
+	return r, nil
 }

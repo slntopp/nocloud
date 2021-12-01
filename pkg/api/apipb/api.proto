@@ -139,6 +139,12 @@ service ServicesService {
             body: "*"
         };
     };
+    rpc Down(nocloud.services.DownRequest) returns (nocloud.services.DownResponse) {
+        option (google.api.http) = {
+            post: "/services/{id}/down"
+            body: "*"
+        };
+    };
     rpc PerformServiceAction(nocloud.services.PerformActionRequest) returns (nocloud.services.PerformActionResponse) {
         option (google.api.http) = {
             post: "/services/{id}/action/{action}",
