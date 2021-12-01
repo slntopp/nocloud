@@ -1,0 +1,12 @@
+upstream rest {
+    server apiserver-web:8000;
+}
+
+server {
+    listen 443 ssl;
+    server_name rest.${BASE_DOMAIN};
+
+    location / {
+        proxy_pass http://rest;
+    }
+}

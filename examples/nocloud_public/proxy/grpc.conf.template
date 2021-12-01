@@ -1,0 +1,12 @@
+upstream grpc {
+    server apiserver:8080;
+}
+
+server {
+    listen 8080 ssl http2;
+    server_name api.${BASE_DOMAIN};
+
+    location / {
+        grpc_pass grpc://grpc;
+    }
+}

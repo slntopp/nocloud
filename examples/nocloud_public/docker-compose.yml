@@ -1,0 +1,122 @@
+version: "3.8"
+services:
+  proxy:
+    image: nginx
+    depends_on:
+      - apiserver
+      - apiserver-web
+      - db
+    volumes:
+      - ./proxy:/etc/nginx/templates
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    environment:
+      BASE_DOMAIN: example.com
+    networks:
+      - proxy
+  certbot:
+    image: certbot/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    volumes:
+      - ./data/certbot/conf:/etc/letsencrypt
+      - ./data/certbot/www:/var/www/certbot
+
+  health:
+    container_name: health-service
+    image: ghcr.io/slntopp/nocloud/health:latest
+    networks:
+      - grpc-internal
+  apiserver:
+    container_name: apiserver
+    image: ghcr.io/slntopp/nocloud/apiserver:latest
+    environment:
+      HEALTH_HOST: health:8080
+      REGISTRY_HOST: registry:8080
+      SERVICES_REGISTRY: services-registry:8080
+      SP_REGISTRY_HOST: sp-registry:8080
+      SIGNING_KEY: supersecretaaarhgreplaceme
+    networks:
+      - proxy
+      - grpc-internal
+  apiserver-web:
+    container_name: apiserver-web
+    image: ghcr.io/slntopp/nocloud/apiserver-web:latest
+    environment:
+      APISERVER_HOST: apiserver:8080
+    networks:
+      - proxy
+      - grpc-internal
+  registry:
+    container_name: registry
+    image: ghcr.io/slntopp/nocloud/registry:latest
+    environment:
+      DB_HOST: db:8529
+      DB_CRED: root:openSesame
+      NOCLOUD_ROOT_PASSWORD: secret
+      SIGNING_KEY: supersecretaaarhgreplaceme
+    depends_on:
+      - db
+    networks:
+      - arangodb
+      - grpc-internal
+    links:
+      - db
+  services-registry:
+    container_name: services-registry
+    image: ghcr.io/slntopp/nocloud/services-registry:latest
+    environment:
+      DB_HOST: db:8529
+      DB_CRED: root:openSesame
+      DRIVERS: driver-ione:8080
+    depends_on:
+      - db
+    networks:
+      - arangodb
+      - grpc-internal
+    links:
+      - db
+  sp-registry:
+    container_name: sp-registry
+    image: ghcr.io/slntopp/nocloud/sp-registry:latest
+    environment:
+      LOG_LEVEL: -1
+      DB_HOST: db:8529
+      DB_CRED: root:openSesame
+      DRIVERS: driver-ione:8080
+    networks:
+      - arangodb
+      - grpc-internal
+    links:
+      - db
+
+  db:
+    container_name: database-master
+    image: arangodb/arangodb:latest
+    environment:
+      ARANGO_ROOT_PASSWORD: openSesame
+    volumes:
+      - data:/var/lib/arangodb3
+      - ../../database/schemes/:/docker-entrypoint-initdb.d/dumps/nocloud/
+    networks:
+      - proxy
+      - arangodb
+
+  driver-ione:
+    container_name: driver
+    image: ghcr.io/slntopp/nocloud-driver-ione:latest
+    networks:
+      - grpc-internal
+
+networks:
+  proxy:
+    driver: bridge
+  grpc-internal:
+  arangodb:
+    driver: bridge
+
+volumes:
+  data:
