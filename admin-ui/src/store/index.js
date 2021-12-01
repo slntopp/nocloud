@@ -5,7 +5,7 @@ import Vuex from 'vuex'
 import auth from './auth'
 import namespaces from './namespaces'
 import accounts from './accounts'
-import serviceProviders from './servicesProviders'
+import servicesProviders from './servicesProviders'
 
 Vue.use(Vuex)
 
@@ -20,6 +20,6 @@ export default new Vuex.Store({
 		auth,
 		namespaces,
 		accounts,
-		serviceProviders,
+		servicesProviders,
   }
 })

@@ -1,6 +1,6 @@
 <template>
 	<v-data-table
-		item-key="id"
+		:item-key="itemKey"
 		class="elevation-0 background-light rounded-lg"
 		:loading="loading"
 		loading-text="Loading... Please wait"
@@ -14,7 +14,7 @@
 	>
 	
 		<template
-			v-slot:[`item.id`]="props"
+			v-slot:[`item.${itemKey}`]="props"
 		>
 
 			<template
@@ -80,6 +80,10 @@ export default {
 		"single-select": {
 			type: Boolean,
 			default: false
+		},
+		'item-key': {
+			type: String,
+			default: 'id'
 		}
 	},
 	data(){

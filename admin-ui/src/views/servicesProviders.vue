@@ -1,15 +1,22 @@
 <template>
 	<div class="servicesProviders pa-4 flex-wrap">
 		<div class="buttons__inline pb-4">
-			
+
+			<v-btn
+				color="background-light"
+				class="mr-8"
+				:disabled="selected.length < 1"
+				@click="deleteSelectedServicesProviders"
+			>
+				delete
+			</v-btn>
 		</div>
 
-		<!-- <namespaces-table
+		<services-providers
 			v-model="selected"
-			single-select
 		>
 
-		</namespaces-table> -->
+		</services-providers>
 
 		<v-snackbar
 			v-model="snackbar.visibility"
@@ -33,14 +40,17 @@
 </template>
 
 <script>
-// import api from "@/api.js"
+import api from "@/api.js"
+import servicesProviders from "@/components/servicesproviders_table.vue"
 
 export default {
 	name: "namespaces-view",
 	components: {
+		servicesProviders
 	},
 	data () {
 		return {
+			selected: [],
 			snackbar: {
 				visibility: false,
 				message: '',
@@ -49,9 +59,26 @@ export default {
 		}
 	},
 	methods: {
+		deleteSelectedServicesProviders(){
+			if(this.selected.length > 0){
+				const deletePromices = this.selected.map(el => api.delete(`/sp/${el.uuid}`));
+				Promise.all(deletePromices)
+				.then(res => {
+					if(res.every(el => el.result)){
+						console.log('all ok');
+					}
+
+					this.selected = [];
+					this.$store.dispatch('servicesProviders/fetch');
+				})
+				.catch(err => {
+					console.log(err);
+				})
+			}
+		}
 	},
 	created(){
-		this.$store.dispatch('serviceProviders/fetch')
+		this.$store.dispatch('servicesProviders/fetch')
 	}
 }
 </script>

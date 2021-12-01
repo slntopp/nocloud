@@ -1,8 +1,8 @@
 import Api from 'nocloudjsrest';
 import vuex from '@/store/index.js'
-const api = new Api();
+// const api = new Api();
 // const api = new Api("http://localhost/", 8000);
-// const api = new Api("http://localhost/http://localhost:8000/", 8624);
+const api = new Api("http://localhost/http://localhost:8000/", 8624);
 
 api.axios.interceptors.response.use(function (response) {
   return response;
