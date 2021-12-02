@@ -34,6 +34,14 @@ const routes = [
 		}
   },
   {
+    path: '/sp',
+    name: 'ServicesProviders',
+    component: () => import('../views/servicesProviders.vue'),
+		meta: {
+			requireLogin: true
+		}
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import(/* webpackChunkName: "about" */ '../views/login.vue'),
@@ -45,7 +53,7 @@ const routes = [
 ]
 
 const router = new VueRouter({
-  mode: 'history',
+  // mode: 'history',
   base: process.env.BASE_URL,
   routes
 })

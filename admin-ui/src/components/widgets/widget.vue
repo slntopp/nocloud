@@ -28,7 +28,7 @@
 
 <script>
 export default {
-  name: "widget",
+  name: "widget-origin",
   props: {
     title: String,
     loading: {
