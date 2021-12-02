@@ -391,9 +391,9 @@ func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.Li
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
 	}
 
-	response = &servicespb.ListResponse{Services: make([]*servicespb.Service, len(r))}
+	response = &servicespb.ListResponse{Pool: make([]*servicespb.Service, len(r))}
 	for i, service := range r {
-		response.Services[i] = service.Service
+		response.Pool[i] = service.Service
 	}
 
 	return response, nil

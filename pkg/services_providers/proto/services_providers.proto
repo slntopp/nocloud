@@ -44,7 +44,7 @@ message GetRequest {
 message ListRequest {}
 
 message ListResponse {
-    repeated ServicesProvider services_providers = 1;
+    repeated ServicesProvider pool = 1;
 }
 
 service ServicesProvidersService {
