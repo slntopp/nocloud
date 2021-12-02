@@ -204,6 +204,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
+	result := &servicespb.UpResponse{Errors: make([]*servicespb.UpError, 0)}
 	for _, group := range service.GetInstancesGroups() {
 		c, ok := contexts[group.GetUuid()]
 		if !ok {
@@ -216,6 +217,12 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
 			s.log.Error("Error deploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
+			result.Errors = append(result.Errors, &servicespb.UpError{
+				Data: map[string]string{
+					"group": group.GetUuid(),
+					"error": err.Error(),
+				},
+			})
 			continue
 		}
 		s.log.Debug("Up Request Result", zap.Any("response", response))
@@ -224,6 +231,12 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		// TODO: Add cleanups
 		if len(group.Instances) != len(response.GetGroup().GetInstances()) {
 			s.log.Error("Instances config changed by Driver")
+			result.Errors = append(result.Errors, &servicespb.UpError{
+				Data: map[string]string{
+					"group": group.GetUuid(),
+					"error": "Instances config changed by Driver",
+				},
+			})
 			continue
 		}
 		for i, instance := range response.GetGroup().GetInstances() {
@@ -234,6 +247,12 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		err = s.ctrl.Provide(ctx, sp.ID, service.ID, group.GetUuid())
 		if err != nil {
 			s.log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
+			result.Errors = append(result.Errors, &servicespb.UpError{
+				Data: map[string]string{
+					"group": group.GetUuid(),
+					"error": err.Error(),
+				},
+			})
 			continue
 		}
 		s.log.Debug("Updated Group", zap.Any("group", group))
