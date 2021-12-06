@@ -15,13 +15,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Log in to the Container registry
-        uses: docker/login-action@v1.10.0
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Set target tags
         id: set-tags-matrix
         run: echo "::set-output name=matrix::$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')"
@@ -43,10 +36,18 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}
 
+      - name: Log in to the Container registry
+        uses: docker/login-action@v1.10.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v2.7.0
         with:
           context: .
+          file: Dockerfiles/${{matrix.tag}}/Dockerfile
           push: true
           tags: latest
           labels: ${{ steps.meta.outputs.labels }}
