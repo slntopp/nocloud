@@ -40,6 +40,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3.6.1
         with:
+          tags: type=raw,value=latest
           images: ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}
 
       - name: Log in to the Container registry
@@ -55,5 +56,5 @@ jobs:
           context: .
           file: Dockerfiles/${{matrix.tag}}/Dockerfile
           push: true
-          tags: latest
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
