@@ -27,7 +27,10 @@ jobs:
     needs: prepare
     strategy:
       matrix: 
-        tag: ${{fromJson(needs.prepare.outputs.matrix)}}  
+        tag: ${{fromJson(needs.prepare.outputs.matrix)}}
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout
