@@ -10,7 +10,7 @@
   "dependencies": {
     "ansi-regex": "^6.0.1",
     "babel-preset-es2015": "^6.24.1",
-    "core-js": "^3.19.2",
+    "core-js": "^3.19.3",
     "glob-parent": "^6.0.2",
     "js-cookie": "^3.0.1",
     "json-schema": "^0.4.0",
