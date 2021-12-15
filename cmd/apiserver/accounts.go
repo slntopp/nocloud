@@ -20,8 +20,6 @@ import (
 
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/api/apipb"
-	"github.com/slntopp/nocloud/pkg/nocloud"
-	"go.uber.org/zap"
 )
 
 type accountsAPI struct {
@@ -29,40 +27,32 @@ type accountsAPI struct {
 	apipb.UnimplementedAccountsServiceServer
 }
 
-func (acc *accountsAPI) mustEmbedUnimplementedAccountsServiceServer() {
-	log.Info("Method missing")
-}
+func (acc *accountsAPI) mustEmbedUnimplementedAccountsServiceServer() {}
 
 func (acc *accountsAPI) Token(ctx context.Context, request *accountspb.TokenRequest) (*accountspb.TokenResponse, error) {
 	return acc.client.Token(ctx, request)
 }
 
 func (acc *accountsAPI) Get(ctx context.Context, request *accountspb.GetRequest) (*accountspb.Account, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return acc.client.Get(ctx, request)
 }
 
 func (acc *accountsAPI) List(ctx context.Context, request *accountspb.ListRequest) (*accountspb.ListResponse, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return acc.client.List(ctx, request)
 }
 
 func (acc *accountsAPI) Create(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return acc.client.Create(ctx, request)
 }
 
 func (acc *accountsAPI) Update(ctx context.Context, request *accountspb.Account) (*accountspb.UpdateResponse, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return acc.client.Update(ctx, request)
 }
 
 func (acc *accountsAPI) SetCredentials(ctx context.Context, request *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return acc.client.SetCredentials(ctx, request)
 }
 
 func (acc *accountsAPI) Delete(ctx context.Context, request *accountspb.DeleteRequest) (*accountspb.DeleteResponse, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return acc.client.Delete(ctx, request)
 }

@@ -19,7 +19,6 @@ import (
 	"context"
 
 	"github.com/slntopp/nocloud/pkg/api/apipb"
-	"github.com/slntopp/nocloud/pkg/nocloud"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 )
@@ -31,26 +30,20 @@ type spRegistryAPI struct {
 	log *zap.Logger
 }
 
-func (sp *spRegistryAPI) mustEmbedUnimplementedServicesProvidersServiceServer() {
-	sp.log.Info("Method missing")
-}
+func (sp *spRegistryAPI) mustEmbedUnimplementedServicesProvidersServiceServer() {}
 
 func (sp *spRegistryAPI) Test(ctx context.Context, req *sppb.ServicesProvider) (*sppb.TestResponse, error) {
-	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return sp.client.Test(ctx, req)
 }
 
 func (sp *spRegistryAPI) Create(ctx context.Context, req *sppb.ServicesProvider) (*sppb.ServicesProvider, error) {
-	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return sp.client.Create(ctx, req)
 }
 
 func (sp *spRegistryAPI) Get(ctx context.Context, req *sppb.GetRequest) (*sppb.ServicesProvider, error) {
-	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return sp.client.Get(ctx, req)
 }
 
 func (sp *spRegistryAPI) List(ctx context.Context, req *sppb.ListRequest) (*sppb.ListResponse, error) {
-	sp.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return sp.client.List(ctx, req)
 }

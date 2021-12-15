@@ -30,13 +30,9 @@ type healthAPI struct {
 	apipb.UnimplementedHealthServiceServer
 }
 
-func (h *healthAPI) mustEmbedUnimplementedHealthServiceServer() {
-	log.Info("Method missing")
-}
+func (h *healthAPI) mustEmbedUnimplementedHealthServiceServer() {}
 
 func (h *healthAPI) Probe(ctx context.Context, request *healthpb.ProbeRequest) (response *healthpb.ProbeResponse, err error) {
-	log.Info("IONe Health", zap.String("Probe", request.ProbeType))
-
 	res, err := h.client.Probe(ctx, request)
 	if err != nil {
 		log.Error("Probe Failed", zap.Error(err))

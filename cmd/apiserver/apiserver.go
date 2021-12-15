@@ -19,7 +19,14 @@ import (
 	"net"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"github.com/spf13/viper"
+
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
@@ -28,9 +35,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
 )
 
 var (
@@ -119,7 +123,12 @@ func main() {
 	}
 
 	// Create a gRPC server object
-	s := grpc.NewServer(grpc.UnaryInterceptor(JWT_AUTH_INTERCEPTOR),)
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_zap.UnaryServerInterceptor(log),
+			grpc.UnaryServerInterceptor(JWT_AUTH_INTERCEPTOR),
+		)),
+	)
 	apipb.RegisterHealthServiceServer(s, &healthAPI{client: healthClient})
 
 	apipb.RegisterAccountsServiceServer(s, &accountsAPI{client: accountsClient})

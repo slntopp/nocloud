@@ -20,8 +20,6 @@ import (
 
 	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	"github.com/slntopp/nocloud/pkg/api/apipb"
-	"github.com/slntopp/nocloud/pkg/nocloud"
-	"go.uber.org/zap"
 )
 
 type namespacesAPI struct {
@@ -29,31 +27,24 @@ type namespacesAPI struct {
 	apipb.UnimplementedNamespacesServiceServer
 }
 
-func (ns *namespacesAPI) mustEmbedUnimplementedNamespacesServiceServer() {
-	log.Info("Method missing")
-}
+func (ns *namespacesAPI) mustEmbedUnimplementedNamespacesServiceServer() {}
 
 func (ns *namespacesAPI) Create(ctx context.Context, request *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return ns.client.Create(ctx, request)
 }
 
 func (ns *namespacesAPI) List(ctx context.Context, request *namespacespb.ListRequest) (*namespacespb.ListResponse, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return ns.client.List(ctx, request)
 }
 
 func (ns *namespacesAPI) Join(ctx context.Context, request *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return ns.client.Join(ctx, request)
 }
 
 func (ns *namespacesAPI) Link(ctx context.Context, request *namespacespb.LinkRequest) (*namespacespb.LinkResponse, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return ns.client.Link(ctx, request)
 }
 
 func (ns *namespacesAPI) Delete(ctx context.Context, request *namespacespb.DeleteRequest) (*namespacespb.DeleteResponse, error) {
-	log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return ns.client.Delete(ctx, request)
 }
