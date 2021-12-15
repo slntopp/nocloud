@@ -18,6 +18,7 @@ package nocloud.api;
 
 option go_package = "github.com/slntopp/nocloud/pkg/api/apipb";
 
+import "google/protobuf/any.proto";
 import "pkg/google/api/annotations.proto";
 
 import "pkg/accounting/accountspb/accounts.proto";
@@ -186,6 +187,13 @@ service ServicesProvidersService {
     rpc List(nocloud.services_providers.ListRequest) returns (nocloud.services_providers.ListResponse) {
         option (google.api.http) = {
             get: "/sp"
+        };
+    };
+
+    rpc Invoke(nocloud.services_providers.ActionRequest) returns (google.protobuf.Any) {
+        option (google.api.http) = {
+            post: "/sp/{uuid}"
+            body: "*"
         };
     };
 };

@@ -18,8 +18,8 @@ import (
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
-	proto_0 "github.com/slntopp/nocloud/pkg/services/proto"
-	proto_1 "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	proto_2 "github.com/slntopp/nocloud/pkg/services/proto"
+	proto_0 "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
@@ -639,7 +639,7 @@ func local_request_NamespacesService_Delete_0(ctx context.Context, marshaler run
 }
 
 func request_ServicesService_TestConfig_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.CreateRequest
+	var protoReq proto_2.CreateRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -656,7 +656,7 @@ func request_ServicesService_TestConfig_0(ctx context.Context, marshaler runtime
 }
 
 func local_request_ServicesService_TestConfig_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.CreateRequest
+	var protoReq proto_2.CreateRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -673,7 +673,7 @@ func local_request_ServicesService_TestConfig_0(ctx context.Context, marshaler r
 }
 
 func request_ServicesService_Create_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.CreateRequest
+	var protoReq proto_2.CreateRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -690,7 +690,7 @@ func request_ServicesService_Create_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_ServicesService_Create_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.CreateRequest
+	var protoReq proto_2.CreateRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -707,7 +707,7 @@ func local_request_ServicesService_Create_0(ctx context.Context, marshaler runti
 }
 
 func request_ServicesService_Update_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.UpdateRequest
+	var protoReq proto_2.UpdateRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -741,7 +741,7 @@ func request_ServicesService_Update_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_ServicesService_Update_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.UpdateRequest
+	var protoReq proto_2.UpdateRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -775,7 +775,7 @@ func local_request_ServicesService_Update_0(ctx context.Context, marshaler runti
 }
 
 func request_ServicesService_Delete_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.DeleteRequest
+	var protoReq proto_2.DeleteRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -801,7 +801,7 @@ func request_ServicesService_Delete_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_ServicesService_Delete_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.DeleteRequest
+	var protoReq proto_2.DeleteRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -827,7 +827,7 @@ func local_request_ServicesService_Delete_0(ctx context.Context, marshaler runti
 }
 
 func request_ServicesService_Get_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.GetRequest
+	var protoReq proto_2.GetRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -853,7 +853,7 @@ func request_ServicesService_Get_0(ctx context.Context, marshaler runtime.Marsha
 }
 
 func local_request_ServicesService_Get_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.GetRequest
+	var protoReq proto_2.GetRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -883,7 +883,7 @@ var (
 )
 
 func request_ServicesService_List_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.ListRequest
+	var protoReq proto_2.ListRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -899,7 +899,7 @@ func request_ServicesService_List_0(ctx context.Context, marshaler runtime.Marsh
 }
 
 func local_request_ServicesService_List_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.ListRequest
+	var protoReq proto_2.ListRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -915,7 +915,7 @@ func local_request_ServicesService_List_0(ctx context.Context, marshaler runtime
 }
 
 func request_ServicesService_Up_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.UpRequest
+	var protoReq proto_2.UpRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -949,7 +949,7 @@ func request_ServicesService_Up_0(ctx context.Context, marshaler runtime.Marshal
 }
 
 func local_request_ServicesService_Up_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.UpRequest
+	var protoReq proto_2.UpRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -983,7 +983,7 @@ func local_request_ServicesService_Up_0(ctx context.Context, marshaler runtime.M
 }
 
 func request_ServicesService_Down_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.DownRequest
+	var protoReq proto_2.DownRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1017,7 +1017,7 @@ func request_ServicesService_Down_0(ctx context.Context, marshaler runtime.Marsh
 }
 
 func local_request_ServicesService_Down_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.DownRequest
+	var protoReq proto_2.DownRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1051,7 +1051,7 @@ func local_request_ServicesService_Down_0(ctx context.Context, marshaler runtime
 }
 
 func request_ServicesService_PerformServiceAction_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.PerformActionRequest
+	var protoReq proto_2.PerformActionRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1095,7 +1095,7 @@ func request_ServicesService_PerformServiceAction_0(ctx context.Context, marshal
 }
 
 func local_request_ServicesService_PerformServiceAction_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_0.PerformActionRequest
+	var protoReq proto_2.PerformActionRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1173,7 +1173,7 @@ func local_request_HealthService_Probe_0(ctx context.Context, marshaler runtime.
 }
 
 func request_ServicesProvidersService_Test_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesProvidersServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.ServicesProvider
+	var protoReq proto_0.ServicesProvider
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1190,7 +1190,7 @@ func request_ServicesProvidersService_Test_0(ctx context.Context, marshaler runt
 }
 
 func local_request_ServicesProvidersService_Test_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesProvidersServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.ServicesProvider
+	var protoReq proto_0.ServicesProvider
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1207,7 +1207,7 @@ func local_request_ServicesProvidersService_Test_0(ctx context.Context, marshale
 }
 
 func request_ServicesProvidersService_Create_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesProvidersServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.ServicesProvider
+	var protoReq proto_0.ServicesProvider
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1224,7 +1224,7 @@ func request_ServicesProvidersService_Create_0(ctx context.Context, marshaler ru
 }
 
 func local_request_ServicesProvidersService_Create_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesProvidersServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.ServicesProvider
+	var protoReq proto_0.ServicesProvider
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -1241,7 +1241,7 @@ func local_request_ServicesProvidersService_Create_0(ctx context.Context, marsha
 }
 
 func request_ServicesProvidersService_Get_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesProvidersServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.GetRequest
+	var protoReq proto_0.GetRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -1251,14 +1251,14 @@ func request_ServicesProvidersService_Get_0(ctx context.Context, marshaler runti
 		_   = err
 	)
 
-	val, ok = pathParams["id"]
+	val, ok = pathParams["uuid"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "uuid")
 	}
 
-	protoReq.Id, err = runtime.String(val)
+	protoReq.Uuid, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "uuid", err)
 	}
 
 	msg, err := client.Get(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -1267,7 +1267,7 @@ func request_ServicesProvidersService_Get_0(ctx context.Context, marshaler runti
 }
 
 func local_request_ServicesProvidersService_Get_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesProvidersServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.GetRequest
+	var protoReq proto_0.GetRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -1277,14 +1277,14 @@ func local_request_ServicesProvidersService_Get_0(ctx context.Context, marshaler
 		_   = err
 	)
 
-	val, ok = pathParams["id"]
+	val, ok = pathParams["uuid"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "id")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "uuid")
 	}
 
-	protoReq.Id, err = runtime.String(val)
+	protoReq.Uuid, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "id", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "uuid", err)
 	}
 
 	msg, err := server.Get(ctx, &protoReq)
@@ -1293,7 +1293,7 @@ func local_request_ServicesProvidersService_Get_0(ctx context.Context, marshaler
 }
 
 func request_ServicesProvidersService_List_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesProvidersServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.ListRequest
+	var protoReq proto_0.ListRequest
 	var metadata runtime.ServerMetadata
 
 	msg, err := client.List(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -1302,10 +1302,78 @@ func request_ServicesProvidersService_List_0(ctx context.Context, marshaler runt
 }
 
 func local_request_ServicesProvidersService_List_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesProvidersServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq proto_1.ListRequest
+	var protoReq proto_0.ListRequest
 	var metadata runtime.ServerMetadata
 
 	msg, err := server.List(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_ServicesProvidersService_Invoke_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesProvidersServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq proto_0.ActionRequest
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "uuid")
+	}
+
+	protoReq.Uuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "uuid", err)
+	}
+
+	msg, err := client.Invoke(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_ServicesProvidersService_Invoke_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesProvidersServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq proto_0.ActionRequest
+	var metadata runtime.ServerMetadata
+
+	newReader, berr := utilities.IOReaderFactory(req.Body)
+	if berr != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", berr)
+	}
+	if err := marshaler.NewDecoder(newReader()).Decode(&protoReq); err != nil && err != io.EOF {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	}
+
+	var (
+		val string
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["uuid"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "uuid")
+	}
+
+	protoReq.Uuid, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "uuid", err)
+	}
+
+	msg, err := server.Invoke(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -1910,7 +1978,7 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.api.ServicesProvidersService/Get", runtime.WithHTTPPathPattern("/sp/{id}"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.api.ServicesProvidersService/Get", runtime.WithHTTPPathPattern("/sp/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1947,6 +2015,29 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		}
 
 		forward_ServicesProvidersService_List_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
+	mux.Handle("POST", pattern_ServicesProvidersService_Invoke_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.api.ServicesProvidersService/Invoke", runtime.WithHTTPPathPattern("/sp/{uuid}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_ServicesProvidersService_Invoke_0(rctx, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_ServicesProvidersService_Invoke_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -2743,7 +2834,7 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.api.ServicesProvidersService/Get", runtime.WithHTTPPathPattern("/sp/{id}"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.api.ServicesProvidersService/Get", runtime.WithHTTPPathPattern("/sp/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -2779,6 +2870,26 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 
 	})
 
+	mux.Handle("POST", pattern_ServicesProvidersService_Invoke_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.api.ServicesProvidersService/Invoke", runtime.WithHTTPPathPattern("/sp/{uuid}"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_ServicesProvidersService_Invoke_0(rctx, inboundMarshaler, client, req, pathParams)
+		ctx = runtime.NewServerMetadataContext(ctx, md)
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_ServicesProvidersService_Invoke_0(ctx, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	return nil
 }
 
@@ -2787,9 +2898,11 @@ var (
 
 	pattern_ServicesProvidersService_Create_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"sp"}, ""))
 
-	pattern_ServicesProvidersService_Get_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"sp", "id"}, ""))
+	pattern_ServicesProvidersService_Get_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"sp", "uuid"}, ""))
 
 	pattern_ServicesProvidersService_List_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"sp"}, ""))
+
+	pattern_ServicesProvidersService_Invoke_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"sp", "uuid"}, ""))
 )
 
 var (
@@ -2800,4 +2913,6 @@ var (
 	forward_ServicesProvidersService_Get_0 = runtime.ForwardResponseMessage
 
 	forward_ServicesProvidersService_List_0 = runtime.ForwardResponseMessage
+
+	forward_ServicesProvidersService_Invoke_0 = runtime.ForwardResponseMessage
 )

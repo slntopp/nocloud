@@ -27,6 +27,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 type ServicesProviderServer struct {
@@ -35,6 +36,7 @@ type ServicesProviderServer struct {
 	drivers map[string]driverpb.DriverServiceClient
 	db driver.Database
 	ctrl graph.ServicesProvidersController
+	ns_ctrl graph.NamespacesController
 
 	log *zap.Logger
 }
@@ -122,4 +124,45 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 	}
 
 	return res, nil
+}
+
+func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.ActionRequest) (res *anypb.Any, err error) {
+	log := s.log.Named("Invoke")
+	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
+
+	ctx, err = nocloud.ValidateMetadata(ctx, log)
+	if err != nil {
+		return nil, err
+	}
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ns_ctrl.Get(ctx, "0")
+	if err != nil {
+		return nil, err
+	}
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), 3)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	}
+
+	sp, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		log.Error("Error getting services provider",
+			zap.String("services_provider", req.GetUuid()),
+			zap.Error(err),
+		)
+		return nil, status.Error(codes.NotFound, "ServicesProvider not found")
+	}
+
+	client, ok := s.drivers[sp.GetType()]
+	if !ok {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("Driver type '%s' not registered", sp.GetType()))
+	}
+
+	request := &driverpb.ActionRequest{
+		ServicesProvider: sp.ServicesProvider,
+		Action: req.GetAction(), Params: req.GetParams(),
+	}
+	return client.Invoke(ctx, request)
 }

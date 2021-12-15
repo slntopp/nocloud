@@ -7,6 +7,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	anypb "google.golang.org/protobuf/types/known/anypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -22,6 +23,7 @@ type ServicesProvidersServiceClient interface {
 	Create(ctx context.Context, in *ServicesProvider, opts ...grpc.CallOption) (*ServicesProvider, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*ServicesProvider, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
+	Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*anypb.Any, error)
 }
 
 type servicesProvidersServiceClient struct {
@@ -68,6 +70,15 @@ func (c *servicesProvidersServiceClient) List(ctx context.Context, in *ListReque
 	return out, nil
 }
 
+func (c *servicesProvidersServiceClient) Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*anypb.Any, error) {
+	out := new(anypb.Any)
+	err := c.cc.Invoke(ctx, "/nocloud.services_providers.ServicesProvidersService/Invoke", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServicesProvidersServiceServer is the server API for ServicesProvidersService service.
 // All implementations must embed UnimplementedServicesProvidersServiceServer
 // for forward compatibility
@@ -76,6 +87,7 @@ type ServicesProvidersServiceServer interface {
 	Create(context.Context, *ServicesProvider) (*ServicesProvider, error)
 	Get(context.Context, *GetRequest) (*ServicesProvider, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
+	Invoke(context.Context, *ActionRequest) (*anypb.Any, error)
 	mustEmbedUnimplementedServicesProvidersServiceServer()
 }
 
@@ -94,6 +106,9 @@ func (UnimplementedServicesProvidersServiceServer) Get(context.Context, *GetRequ
 }
 func (UnimplementedServicesProvidersServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) Invoke(context.Context, *ActionRequest) (*anypb.Any, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Invoke not implemented")
 }
 func (UnimplementedServicesProvidersServiceServer) mustEmbedUnimplementedServicesProvidersServiceServer() {
 }
@@ -181,6 +196,24 @@ func _ServicesProvidersService_List_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ServicesProvidersService_Invoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).Invoke(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services_providers.ServicesProvidersService/Invoke",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).Invoke(ctx, req.(*ActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ServicesProvidersService_ServiceDesc is the grpc.ServiceDesc for ServicesProvidersService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -203,6 +236,10 @@ var ServicesProvidersService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "List",
 			Handler:    _ServicesProvidersService_List_Handler,
+		},
+		{
+			MethodName: "Invoke",
+			Handler:    _ServicesProvidersService_Invoke_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

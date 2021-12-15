@@ -9,6 +9,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	anypb "google.golang.org/protobuf/types/known/anypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -25,6 +26,7 @@ type DriverServiceClient interface {
 	GetType(ctx context.Context, in *GetTypeRequest, opts ...grpc.CallOption) (*GetTypeResponse, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
+	Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*anypb.Any, error)
 }
 
 type driverServiceClient struct {
@@ -80,6 +82,15 @@ func (c *driverServiceClient) Down(ctx context.Context, in *DownRequest, opts ..
 	return out, nil
 }
 
+func (c *driverServiceClient) Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*anypb.Any, error) {
+	out := new(anypb.Any)
+	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Invoke", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DriverServiceServer is the server API for DriverService service.
 // All implementations must embed UnimplementedDriverServiceServer
 // for forward compatibility
@@ -89,6 +100,7 @@ type DriverServiceServer interface {
 	GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
+	Invoke(context.Context, *ActionRequest) (*anypb.Any, error)
 	mustEmbedUnimplementedDriverServiceServer()
 }
 
@@ -110,6 +122,9 @@ func (UnimplementedDriverServiceServer) Up(context.Context, *UpRequest) (*UpResp
 }
 func (UnimplementedDriverServiceServer) Down(context.Context, *DownRequest) (*DownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Down not implemented")
+}
+func (UnimplementedDriverServiceServer) Invoke(context.Context, *ActionRequest) (*anypb.Any, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Invoke not implemented")
 }
 func (UnimplementedDriverServiceServer) mustEmbedUnimplementedDriverServiceServer() {}
 
@@ -214,6 +229,24 @@ func _DriverService_Down_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DriverService_Invoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ActionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServiceServer).Invoke(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/Invoke",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServiceServer).Invoke(ctx, req.(*ActionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DriverService_ServiceDesc is the grpc.ServiceDesc for DriverService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -240,6 +273,10 @@ var DriverService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Down",
 			Handler:    _DriverService_Down_Handler,
+		},
+		{
+			MethodName: "Invoke",
+			Handler:    _DriverService_Invoke_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
