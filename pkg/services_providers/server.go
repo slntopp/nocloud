@@ -90,7 +90,7 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	r, err := s.ctrl.Get(ctx, request.GetId())
+	r, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service from DB", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")

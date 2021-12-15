@@ -180,7 +180,7 @@ service ServicesProvidersService {
 
     rpc Get(nocloud.services_providers.GetRequest) returns (nocloud.services_providers.ServicesProvider) {
         option (google.api.http) = {
-            get: "/sp/{id}"
+            get: "/sp/{uuid}"
         };
     };
     rpc List(nocloud.services_providers.ListRequest) returns (nocloud.services_providers.ListResponse) {

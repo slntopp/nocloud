@@ -38,7 +38,7 @@ message TestResponse {
 }
 
 message GetRequest {
-    string id = 1;
+    string uuid = 1;
 }
 
 message ListRequest {}
