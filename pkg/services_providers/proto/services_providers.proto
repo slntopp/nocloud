@@ -18,7 +18,6 @@ package nocloud.services_providers;
 
 option go_package = "github.com/slntopp/nocloud/pkg/services_providers/proto";
 
-import "google/protobuf/any.proto";
 import "google/protobuf/struct.proto";
 
 message Var {
@@ -48,10 +47,14 @@ message ListResponse {
     repeated ServicesProvider pool = 1;
 }
 
+// Available only for users with SUPERUSER and ADMIN access to platform namespace
 message ActionRequest {
-    string uuid = 1;
-    string action = 2;
-    repeated google.protobuf.Any params = 3;
+    nocloud.services_providers.ServicesProvider services_provider = 1;
+    message Request {
+        google.protobuf.Value action = 1;
+        repeated google.protobuf.Value params = 2;
+    }
+    Request request = 2;
 }
 
 service ServicesProvidersService {
@@ -61,5 +64,5 @@ service ServicesProvidersService {
     rpc Get(GetRequest) returns (ServicesProvider);
     rpc List(ListRequest) returns (ListResponse);
 
-    rpc Invoke(ActionRequest) returns (google.protobuf.Any);
+    rpc Invoke(ActionRequest) returns (google.protobuf.Struct);
 }

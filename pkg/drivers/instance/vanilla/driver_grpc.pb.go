@@ -9,7 +9,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	anypb "google.golang.org/protobuf/types/known/anypb"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -26,7 +26,7 @@ type DriverServiceClient interface {
 	GetType(ctx context.Context, in *GetTypeRequest, opts ...grpc.CallOption) (*GetTypeResponse, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
-	Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*anypb.Any, error)
+	Invoke(ctx context.Context, in *proto.ActionRequest, opts ...grpc.CallOption) (*structpb.Struct, error)
 }
 
 type driverServiceClient struct {
@@ -82,8 +82,8 @@ func (c *driverServiceClient) Down(ctx context.Context, in *DownRequest, opts ..
 	return out, nil
 }
 
-func (c *driverServiceClient) Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*anypb.Any, error) {
-	out := new(anypb.Any)
+func (c *driverServiceClient) Invoke(ctx context.Context, in *proto.ActionRequest, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	out := new(structpb.Struct)
 	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Invoke", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ type DriverServiceServer interface {
 	GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
-	Invoke(context.Context, *ActionRequest) (*anypb.Any, error)
+	Invoke(context.Context, *proto.ActionRequest) (*structpb.Struct, error)
 	mustEmbedUnimplementedDriverServiceServer()
 }
 
@@ -123,7 +123,7 @@ func (UnimplementedDriverServiceServer) Up(context.Context, *UpRequest) (*UpResp
 func (UnimplementedDriverServiceServer) Down(context.Context, *DownRequest) (*DownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Down not implemented")
 }
-func (UnimplementedDriverServiceServer) Invoke(context.Context, *ActionRequest) (*anypb.Any, error) {
+func (UnimplementedDriverServiceServer) Invoke(context.Context, *proto.ActionRequest) (*structpb.Struct, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Invoke not implemented")
 }
 func (UnimplementedDriverServiceServer) mustEmbedUnimplementedDriverServiceServer() {}
@@ -230,7 +230,7 @@ func _DriverService_Down_Handler(srv interface{}, ctx context.Context, dec func(
 }
 
 func _DriverService_Invoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ActionRequest)
+	in := new(proto.ActionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -242,7 +242,7 @@ func _DriverService_Invoke_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/Invoke",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServiceServer).Invoke(ctx, req.(*ActionRequest))
+		return srv.(DriverServiceServer).Invoke(ctx, req.(*proto.ActionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

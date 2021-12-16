@@ -21,6 +21,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/api/apipb"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type spRegistryAPI struct {
@@ -46,4 +47,8 @@ func (sp *spRegistryAPI) Get(ctx context.Context, req *sppb.GetRequest) (*sppb.S
 
 func (sp *spRegistryAPI) List(ctx context.Context, req *sppb.ListRequest) (*sppb.ListResponse, error) {
 	return sp.client.List(ctx, req)
+}
+
+func (sp *spRegistryAPI) Invoke(ctx context.Context, req *sppb.ActionRequest) (*structpb.Struct, error) {
+	return sp.client.Invoke(ctx, req)
 }

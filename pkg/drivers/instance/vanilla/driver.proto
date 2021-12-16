@@ -18,7 +18,7 @@ package nocloud.instance.driver.vanilla;
 
 option go_package = "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla";
 
-import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
 
 import "pkg/instances/proto/instances.proto";
 import "pkg/services_providers/proto/services_providers.proto";
@@ -43,13 +43,6 @@ message DownRequest {
 }
 message DownResponse {}
 
-// Available only for users with SUPERUSER and ADMIN access to platform namespace
-message ActionRequest {
-    nocloud.services_providers.ServicesProvider services_provider = 1;
-    string action = 2;
-    repeated google.protobuf.Any params = 3;
-}
-
 service DriverService {
     rpc TestServiceProviderConfig(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.TestResponse);
     rpc TestInstancesGroupConfig(nocloud.instances.TestInstancesGroupConfigRequest) returns (nocloud.instances.TestInstancesGroupConfigResponse);
@@ -58,5 +51,5 @@ service DriverService {
     rpc Up(UpRequest) returns (UpResponse);
     rpc Down(DownRequest) returns (DownResponse);
 
-    rpc Invoke(ActionRequest) returns (google.protobuf.Any);
+    rpc Invoke(nocloud.services_providers.ActionRequest) returns (google.protobuf.Struct);
 }

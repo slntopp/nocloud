@@ -27,7 +27,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type ServicesProviderServer struct {
@@ -42,7 +42,11 @@ type ServicesProviderServer struct {
 }
 
 func NewServicesProviderServer(log *zap.Logger, db driver.Database) *ServicesProviderServer {
-	return &ServicesProviderServer{log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db), drivers: make(map[string]driverpb.DriverServiceClient),}
+	return &ServicesProviderServer{
+		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),
+		ns_ctrl: graph.NewNamespacesController(log, db),
+		drivers: make(map[string]driverpb.DriverServiceClient),
+	}
 }
 
 func (s *ServicesProviderServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
@@ -126,7 +130,7 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 	return res, nil
 }
 
-func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.ActionRequest) (res *anypb.Any, err error) {
+func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.ActionRequest) (res *structpb.Struct, err error) {
 	log := s.log.Named("Invoke")
 	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
 
@@ -146,23 +150,21 @@ func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.ActionReq
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
 
-	sp, err := s.ctrl.Get(ctx, req.GetUuid())
+	sp, err := s.ctrl.Get(ctx, req.GetServicesProvider().GetUuid())
 	if err != nil {
 		log.Error("Error getting services provider",
-			zap.String("services_provider", req.GetUuid()),
+			zap.String("services_provider", req.GetServicesProvider().GetUuid()),
 			zap.Error(err),
 		)
 		return nil, status.Error(codes.NotFound, "ServicesProvider not found")
 	}
+
+	req.ServicesProvider = sp.ServicesProvider
 
 	client, ok := s.drivers[sp.GetType()]
 	if !ok {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("Driver type '%s' not registered", sp.GetType()))
 	}
 
-	request := &driverpb.ActionRequest{
-		ServicesProvider: sp.ServicesProvider,
-		Action: req.GetAction(), Params: req.GetParams(),
-	}
-	return client.Invoke(ctx, request)
+	return client.Invoke(ctx, req)
 }

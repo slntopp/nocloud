@@ -7,7 +7,7 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	anypb "google.golang.org/protobuf/types/known/anypb"
+	structpb "google.golang.org/protobuf/types/known/structpb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -23,7 +23,7 @@ type ServicesProvidersServiceClient interface {
 	Create(ctx context.Context, in *ServicesProvider, opts ...grpc.CallOption) (*ServicesProvider, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*ServicesProvider, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
-	Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*anypb.Any, error)
+	Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*structpb.Struct, error)
 }
 
 type servicesProvidersServiceClient struct {
@@ -70,8 +70,8 @@ func (c *servicesProvidersServiceClient) List(ctx context.Context, in *ListReque
 	return out, nil
 }
 
-func (c *servicesProvidersServiceClient) Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*anypb.Any, error) {
-	out := new(anypb.Any)
+func (c *servicesProvidersServiceClient) Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*structpb.Struct, error) {
+	out := new(structpb.Struct)
 	err := c.cc.Invoke(ctx, "/nocloud.services_providers.ServicesProvidersService/Invoke", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ type ServicesProvidersServiceServer interface {
 	Create(context.Context, *ServicesProvider) (*ServicesProvider, error)
 	Get(context.Context, *GetRequest) (*ServicesProvider, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
-	Invoke(context.Context, *ActionRequest) (*anypb.Any, error)
+	Invoke(context.Context, *ActionRequest) (*structpb.Struct, error)
 	mustEmbedUnimplementedServicesProvidersServiceServer()
 }
 
@@ -107,7 +107,7 @@ func (UnimplementedServicesProvidersServiceServer) Get(context.Context, *GetRequ
 func (UnimplementedServicesProvidersServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
-func (UnimplementedServicesProvidersServiceServer) Invoke(context.Context, *ActionRequest) (*anypb.Any, error) {
+func (UnimplementedServicesProvidersServiceServer) Invoke(context.Context, *ActionRequest) (*structpb.Struct, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Invoke not implemented")
 }
 func (UnimplementedServicesProvidersServiceServer) mustEmbedUnimplementedServicesProvidersServiceServer() {
