@@ -41,7 +41,7 @@ type ServicesProvidersController struct {
 }
 
 func NewServicesProvidersController(log *zap.Logger, db driver.Database) ServicesProvidersController {
-	col, _ := db.Collection(nil, SERVICES_PROVIDERS_COL)
+	col, _ := db.Collection(context.TODO(), SERVICES_PROVIDERS_COL)
 	return ServicesProvidersController{log: log, col: col}
 }
 

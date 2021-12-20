@@ -41,13 +41,13 @@ type NamespacesController struct {
 }
 
 func NewNamespacesController(log *zap.Logger, db driver.Database) NamespacesController {
-	col, _ := db.Collection(nil, NAMESPACES_COL)
+	col, _ := db.Collection(context.TODO(), NAMESPACES_COL)
 	return NamespacesController{log: log, col: col}
 }
 
 func (ctrl *NamespacesController) Get(ctx context.Context, id string) (Namespace, error) {
 	var r Namespace
-	_, err := ctrl.col.ReadDocument(nil, id, &r)
+	_, err := ctrl.col.ReadDocument(context.TODO(), id, &r)
 	return r, err
 }
 

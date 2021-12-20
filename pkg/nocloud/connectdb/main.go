@@ -16,6 +16,7 @@ limitations under the License.
 package connectdb
 
 import (
+	"context"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -45,7 +46,7 @@ func MakeDBConnection(log *zap.Logger, host, cred string) (driver.Database) {
 	db_connect_attempts := 0
 	db_connect:
 	log.Info("Trying to connect to DB")
-	db, err := c.Database(nil, graph.DB_NAME)
+	db, err := c.Database(context.TODO(), graph.DB_NAME)
 	if err != nil {
 		db_connect_attempts++
 		log.Error("Failed to connect DB", zap.Error(err), zap.Int("attempts", db_connect_attempts), zap.Int("next_attempt", db_connect_attempts * 5))

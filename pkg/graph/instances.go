@@ -43,7 +43,7 @@ type InstancesController struct {
 }
 
 func NewInstancesController(log *zap.Logger, db driver.Database) InstancesController {
-	col, _ := db.Collection(nil, INSTANCES_COL)
+	col, _ := db.Collection(context.TODO(), INSTANCES_COL)
 	return InstancesController{log: log.Named("InstancesController"), col: col}
 }
 
