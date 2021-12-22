@@ -76,7 +76,13 @@ message UpRequest {
     string id = 1;
     map<string, string> deploy_policies = 2; // Map of InstanceGroup UUID to ServiceProvider
 }
-message UpResponse {}
+
+message UpError {
+    map<string, string> data = 1;
+}
+message UpResponse {
+    repeated UpError errors = 1;
+}
 
 message DownRequest {
     string id = 1;
@@ -89,7 +95,7 @@ message ListRequest {
 }
 
 message ListResponse {
-    repeated Service services = 1;
+    repeated Service pool = 1;
 }
 
 message GetRequest {

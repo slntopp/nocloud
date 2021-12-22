@@ -43,7 +43,7 @@ type InstancesGroupsController struct {
 }
 
 func NewInstancesGroupsController(log *zap.Logger, db driver.Database) InstancesGroupsController {
-	col, _ := db.Collection(nil, INSTANCES_GROUPS_COL)
+	col, _ := db.Collection(context.TODO(), INSTANCES_GROUPS_COL)
 	return InstancesGroupsController{log: log.Named("InstancesGroupsController"), inst_ctrl: NewInstancesController(log, db), col: col}
 }
 

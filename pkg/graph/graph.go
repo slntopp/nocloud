@@ -16,6 +16,7 @@ limitations under the License.
 package graph
 
 import (
+	"context"
 	"strings"
 
 	driver "github.com/arangodb/go-driver"
@@ -34,14 +35,14 @@ func CheckAndRegisterCollections(log *zap.Logger, db driver.Database, collection
 	}
 	for _, col := range collections {
 		log.Debug("Checking Collection existence", zap.String("collection", col))
-		exists, err := db.CollectionExists(nil, col)
+		exists, err := db.CollectionExists(context.TODO(), col)
 		if err != nil {
 			log.Fatal("Failed to check collection", zap.Any(col, err))
 		}
 		log.Debug("Collection " + col, zap.Bool("Exists", exists))
 		if !exists {
 			log.Debug("Creating", zap.String("collection", col))
-			_, err := db.CreateCollection(nil, col, options)
+			_, err := db.CreateCollection(context.TODO(), col, options)
 			if err != nil {
 				log.Fatal("Failed to create collection", zap.Any(col, err))
 			}
@@ -50,7 +51,7 @@ func CheckAndRegisterCollections(log *zap.Logger, db driver.Database, collection
 }
 
 func CheckAndRegisterGraph(log *zap.Logger, db driver.Database, graph NoCloudGraphSchema) {
-	graphExists, err := db.GraphExists(nil, graph.Name)
+	graphExists, err := db.GraphExists(context.TODO(), graph.Name)
 	if err != nil {
 		log.Fatal("Failed to check graph", zap.Any(graph.Name, err))
 	}
@@ -71,7 +72,7 @@ func CheckAndRegisterGraph(log *zap.Logger, db driver.Database, graph NoCloudGra
 	var options driver.CreateGraphOptions
 	options.EdgeDefinitions = edges
 
-	_, err = db.CreateGraph(nil, graph.Name, &options)
+	_, err = db.CreateGraph(context.TODO(), graph.Name, &options)
 	if err != nil {
 		log.Fatal("Failed to create Graph", zap.Any(graph.Name, err))
 	}
@@ -94,7 +95,7 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 
 	// Checking if DB exists and creating it if not
 	log.Debug("Checking if DB exists")
-	dbExists, err := c.DatabaseExists(nil, DB_NAME)
+	dbExists, err := c.DatabaseExists(context.TODO(), DB_NAME)
 	if err != nil {
 		log.Fatal("Error checking if DataBase exists", zap.Error(err))
 	}
@@ -102,12 +103,12 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 	
 	var db driver.Database
 	if !dbExists {
-		db, err = c.CreateDatabase(nil, DB_NAME, nil)
+		db, err = c.CreateDatabase(context.TODO(), DB_NAME, nil)
 		if err != nil {
 			log.Fatal("Error creating DataBase", zap.Error(err))
 		}
 	}
-	db, err = c.Database(nil, DB_NAME)
+	db, err = c.Database(context.TODO(), DB_NAME)
 
 	CheckAndRegisterCollections(log, db, COLLECTIONS)
 

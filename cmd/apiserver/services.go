@@ -19,7 +19,6 @@ import (
 	"context"
 
 	"github.com/slntopp/nocloud/pkg/api/apipb"
-	"github.com/slntopp/nocloud/pkg/nocloud"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
 )
@@ -31,36 +30,28 @@ type servicesAPI struct {
 	log *zap.Logger
 }
 
-func (s *servicesAPI) mustEmbedUnimplementedServicesServiceServer() {
-	s.log.Info("Method missing")
-}
+func (s *servicesAPI) mustEmbedUnimplementedServicesServiceServer() {}
 
 func (s *servicesAPI) TestConfig(ctx context.Context, req *pb.CreateRequest) (*pb.TestConfigResponse, error) {
-	s.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return s.client.TestConfig(ctx, req)
 }
 
 func (s *servicesAPI) Create(ctx context.Context, req *pb.CreateRequest) (*pb.Service, error) {
-	s.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return s.client.Create(ctx, req)
 }
 
 func (s *servicesAPI) Up(ctx context.Context, req *pb.UpRequest) (*pb.UpResponse, error) {
-	s.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return s.client.Up(ctx, req)
 }
 
 func (s *servicesAPI) Down(ctx context.Context, req *pb.DownRequest) (*pb.DownResponse, error) {
-	s.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return s.client.Down(ctx, req)
 }
 
 func (s *servicesAPI) Get(ctx context.Context, req *pb.GetRequest) (*pb.Service, error) {
-	s.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return s.client.Get(ctx, req)
 }
 
 func (s *servicesAPI) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
-	s.log.Debug("context", zap.Any("context", ctx), zap.String("account", ctx.Value(nocloud.NoCloudAccount).(string)))
 	return s.client.List(ctx, req)
 }

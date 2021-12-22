@@ -48,8 +48,8 @@ type AccountsController struct {
 }
 
 func NewAccountsController(log *zap.Logger, db driver.Database) AccountsController {
-	col, _ := db.Collection(nil, ACCOUNTS_COL)
-	cred, _ := db.Collection(nil, CREDENTIALS_COL)
+	col, _ := db.Collection(context.TODO(), ACCOUNTS_COL)
+	cred, _ := db.Collection(context.TODO(), CREDENTIALS_COL)
 	log = log.Named("AccountsController")
 	return AccountsController{log: log, col: col, cred: cred}
 }
@@ -59,7 +59,7 @@ func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, er
 		id = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
 	var r Account
-	_, err := ctrl.col.ReadDocument(nil, id, &r)
+	_, err := ctrl.col.ReadDocument(context.TODO(), id, &r)
 	return r, err
 }
 
@@ -103,7 +103,7 @@ func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req
 }
 
 func (ctrl *AccountsController) Exists(ctx context.Context, id string) (bool, error) {
-	return ctrl.col.DocumentExists(nil, id)
+	return ctrl.col.DocumentExists(context.TODO(), id)
 }
 
 func (ctrl *AccountsController) Create(ctx context.Context, title string) (acc Account, err error) {
@@ -269,14 +269,14 @@ func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string,
 }
 
 func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
-	exists, err := ctrl.col.DocumentExists(nil, "0")
+	exists, err := ctrl.col.DocumentExists(context.TODO(), "0")
 	if err != nil {
 		return err
 	}
 
 	var meta driver.DocumentMeta
 	if !exists {
-		meta, err = ctrl.col.CreateDocument(nil, Account{ 
+		meta, err = ctrl.col.CreateDocument(context.TODO(), Account{ 
 			Title: "nocloud",
 			DocumentMeta: driver.DocumentMeta { Key: "0" },
 		})
@@ -286,16 +286,16 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 		ctrl.log.Debug("Created root Account", zap.Any("result", meta))
 	}
 	var root Account
-	meta, err = ctrl.col.ReadDocument(nil, "0", &root)
+	meta, err = ctrl.col.ReadDocument(context.TODO(), "0", &root)
 	if err != nil {
 		return err
 	}
 	root.DocumentMeta = meta
 
-	ns_col, _ := ctrl.col.Database().Collection(nil, NAMESPACES_COL)
-	exists, err = ns_col.DocumentExists(nil, "0")
+	ns_col, _ := ctrl.col.Database().Collection(context.TODO(), NAMESPACES_COL)
+	exists, err = ns_col.DocumentExists(context.TODO(), "0")
 	if !exists {
-		meta, err := ns_col.CreateDocument(nil, Namespace{ 
+		meta, err := ns_col.CreateDocument(context.TODO(), Namespace{ 
 			Title: "platform",
 			DocumentMeta: driver.DocumentMeta { Key: "0" },
 		})
@@ -306,29 +306,29 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	}
 
 	var rootNS Namespace
-	meta, err = ns_col.ReadDocument(nil, "0", &rootNS)
+	meta, err = ns_col.ReadDocument(context.TODO(), "0", &rootNS)
 	if err != nil {
 		return err
 	}
 	rootNS.DocumentMeta = meta
 
-	edge_col, _ := ctrl.col.Database().Collection(nil, ACC2NS)
-	exists, err = edge_col.DocumentExists(nil, "0-0")
+	edge_col, _ := ctrl.col.Database().Collection(context.TODO(), ACC2NS)
+	exists, err = edge_col.DocumentExists(context.TODO(), "0-0")
 	if !exists {
-		err = root.LinkNamespace(nil, edge_col, rootNS, 4, roles.OWNER)
+		err = root.LinkNamespace(context.TODO(), edge_col, rootNS, 4, roles.OWNER)
 		if err != nil {
 			return err
 		}
 	}
 
 	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, "0")
-	cred_edge_col, _ := ctrl.col.Database().Collection(nil, ACC2CRED)
+	cred_edge_col, _ := ctrl.col.Database().Collection(context.TODO(), ACC2CRED)
 	cred, err := NewStandardCredentials("nocloud", passwd)
 	if err != nil {
 		return err
 	}
 
-	exists, err = cred_edge_col.DocumentExists(nil, "standard-0")
+	exists, err = cred_edge_col.DocumentExists(context.TODO(), "standard-0")
 	if !exists {
 		err = ctrl.SetCredentials(ctx, root, cred_edge_col, cred)
 		if err != nil {

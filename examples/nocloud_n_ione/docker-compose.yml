@@ -9,6 +9,7 @@ services:
     container_name: apiserver
     image: ghcr.io/slntopp/nocloud/apiserver:latest
     environment:
+      # LOG_LEVEL: -1
       HEALTH_HOST: health:8080
       REGISTRY_HOST: registry:8080
       SERVICES_REGISTRY: services-registry:8080
@@ -22,6 +23,7 @@ services:
     container_name: apiserver-web
     image: ghcr.io/slntopp/nocloud/apiserver-web:latest
     environment:
+      # LOG_LEVEL: -1
       APISERVER_HOST: apiserver:8080
     ports:
       - 8000:8000 # REST-API
@@ -31,6 +33,7 @@ services:
     container_name: registry
     image: ghcr.io/slntopp/nocloud/registry:latest
     environment:
+      # LOG_LEVEL: -1
       DB_HOST: db:8529
       DB_CRED: root:openSesame
       NOCLOUD_ROOT_PASSWORD: secret
@@ -46,6 +49,7 @@ services:
     container_name: services-registry
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     environment:
+      # LOG_LEVEL: -1
       DB_HOST: db:8529
       DB_CRED: root:openSesame
       DRIVERS: driver-ione:8080
@@ -60,7 +64,7 @@ services:
     container_name: sp-registry
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     environment:
-      LOG_LEVEL: -1
+      # LOG_LEVEL: -1
       DB_HOST: db:8529
       DB_CRED: root:openSesame
       DRIVERS: driver-ione:8080
@@ -88,7 +92,9 @@ services:
     image: ghcr.io/slntopp/nocloud-driver-ione:latest
     networks:
       - grpc-internal
-
+    environment:
+      DRIVER_TYPE_KEY: ione
+      # LOG_LEVEL: -1
 networks:
   grpc-internal:
   arangodb:

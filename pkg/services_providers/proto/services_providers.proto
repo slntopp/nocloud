@@ -38,13 +38,23 @@ message TestResponse {
 }
 
 message GetRequest {
-    string id = 1;
+    string uuid = 1;
 }
 
 message ListRequest {}
 
 message ListResponse {
-    repeated ServicesProvider services_providers = 1;
+    repeated ServicesProvider pool = 1;
+}
+
+// Available only for users with SUPERUSER and ADMIN access to platform namespace
+message ActionRequest {
+    nocloud.services_providers.ServicesProvider services_provider = 1;
+    message Request {
+        google.protobuf.Value action = 1;
+        repeated google.protobuf.Value params = 2;
+    }
+    Request request = 2;
 }
 
 service ServicesProvidersService {
@@ -53,4 +63,6 @@ service ServicesProvidersService {
 
     rpc Get(GetRequest) returns (ServicesProvider);
     rpc List(ListRequest) returns (ListResponse);
+
+    rpc Invoke(ActionRequest) returns (google.protobuf.Struct);
 }
