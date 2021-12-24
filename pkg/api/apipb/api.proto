@@ -53,7 +53,7 @@ service AccountsService {
     };
     rpc Create(nocloud.accounts.CreateRequest) returns (nocloud.accounts.CreateResponse) {
         option (google.api.http) = {
-            post: "/accounts"
+            put: "/accounts"
             body: "*"
         };
     };
@@ -84,7 +84,7 @@ import "pkg/accounting/namespacespb/namespaces.proto";
 service NamespacesService {
     rpc Create(nocloud.namespaces.CreateRequest) returns (nocloud.namespaces.CreateResponse) {
         option (google.api.http) = {
-            post: "/namespaces"
+            put: "/namespaces"
             body: "*"
         };
     };
@@ -116,13 +116,13 @@ import "pkg/services/proto/services.proto";
 service ServicesService {
     rpc TestConfig(nocloud.services.CreateRequest) returns (nocloud.services.TestConfigResponse) {
         option (google.api.http) = {
-            post: "/services/test"
+            post: "/services"
             body: "*"
         };
     };
     rpc Create(nocloud.services.CreateRequest) returns (nocloud.services.Service) {
         option (google.api.http) = {
-            post: "/services"
+            put: "/services"
             body: "*"
         };
     };

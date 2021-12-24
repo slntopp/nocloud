@@ -93,7 +93,7 @@
           "AccountsService"
         ]
       },
-      "post": {
+      "put": {
         "operationId": "AccountsService_Create",
         "responses": {
           "200": {
@@ -328,7 +328,7 @@
           "NamespacesService"
         ]
       },
-      "post": {
+      "put": {
         "operationId": "NamespacesService_Create",
         "responses": {
           "200": {
@@ -523,12 +523,12 @@
         ]
       },
       "post": {
-        "operationId": "ServicesService_Create",
+        "operationId": "ServicesService_TestConfig",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/servicesService"
+              "$ref": "#/definitions/servicesTestConfigResponse"
             }
           },
           "default": {
@@ -551,16 +551,14 @@
         "tags": [
           "ServicesService"
         ]
-      }
-    },
-    "/services/test": {
-      "post": {
-        "operationId": "ServicesService_TestConfig",
+      },
+      "put": {
+        "operationId": "ServicesService_Create",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/servicesTestConfigResponse"
+              "$ref": "#/definitions/servicesService"
             }
           },
           "default": {
