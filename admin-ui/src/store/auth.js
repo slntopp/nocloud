@@ -52,7 +52,6 @@ export default {
 			return new Promise((resolve, reject) => {
 				api.accounts.get('me')
 				.then(response => {
-					console.log(response);
 					commit('setUserdata', response);
 					resolve(response);
 				})

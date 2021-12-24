@@ -204,5 +204,5 @@ export default {
 
 
 <style scoped lang="scss">
-@import '@/globalStyles.scss';
+@import '@/styles/globalStyles.scss';
 </style>

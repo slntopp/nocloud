@@ -4,6 +4,15 @@
 
 			<v-btn
 				color="background-light"
+				class="mr-2"
+				:to="{name: 'ServicesProviders-create'}"
+			>
+				create
+			</v-btn>
+
+
+			<v-btn
+				color="background-light"
 				class="mr-8"
 				:disabled="selected.length < 1"
 				@click="deleteSelectedServicesProviders"
