@@ -21,12 +21,16 @@ import (
 
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
 
 	"github.com/slntopp/nocloud/pkg/accounting"
 	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 )
 
@@ -76,7 +80,13 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	s := grpc.NewServer()
+	auth.SetContext(log, SIGNING_KEY)
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_zap.UnaryServerInterceptor(log),
+			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
+		)),
+	)
 
 	accounts_server := accounting.NewAccountsServer(log, db)
 	accounts_server.SIGNING_KEY = SIGNING_KEY
