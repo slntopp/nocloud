@@ -29,15 +29,15 @@ message CreateRequest {
 }
 
 message CreateResponse {
-    string id = 1;
+    string uuid = 1;
 }
 
 message GetRequest {
-    string id = 1;
+    string uuid = 1;
 }
 
 message Account {
-    string id = 1;
+    string uuid = 1;
     string title = 2;
 }
 
@@ -73,7 +73,7 @@ message TokenResponse {
 }
 
 message DeleteRequest {
-    string id = 1;
+    string uuid = 1;
 }
 
 message DeleteResponse {

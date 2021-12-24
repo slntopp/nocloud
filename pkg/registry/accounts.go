@@ -63,9 +63,9 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := s.ctrl.Get(ctx, request.Id)
+	acc, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
-		s.log.Debug("Error getting account", zap.String("requested_id", request.Id),  zap.Any("error", err))
+		s.log.Debug("Error getting account", zap.String("requested_id", request.Uuid),  zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
@@ -156,7 +156,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		s.log.Debug("Error creating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating account")
 	}
-	res := &accountspb.CreateResponse{Id: account.Key}
+	res := &accountspb.CreateResponse{Uuid: account.Key}
 
 	if (*request.Access) < access_lvl {
 		access_lvl = (*request.Access)
@@ -190,7 +190,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := s.ctrl.Get(ctx, request.Id)
+	acc, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
 		s.log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
@@ -264,7 +264,7 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := s.ctrl.Get(ctx, request.Id)
+	acc, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
 		s.log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")

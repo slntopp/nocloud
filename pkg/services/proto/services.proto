@@ -47,13 +47,13 @@ message CreateRequest {
 }
 
 message UpdateRequest {
-    string id = 1;
+    string uuid = 1;
     string namespace = 2;
     Service service = 3;
 }
 
 message DeleteRequest {
-    string id = 1;
+    string uuid = 1;
 }
 
 message DeleteResponse {
@@ -61,7 +61,7 @@ message DeleteResponse {
 }
 
 message PerformActionRequest {
-    string id = 1;
+    string uuid = 1;
     string action = 2;
     map<string, google.protobuf.Value> data = 3; 
 }
@@ -72,7 +72,7 @@ message PerformActionResponse {
 }
 
 message UpRequest {
-    string id = 1;
+    string uuid = 1;
     map<string, string> deploy_policies = 2; // Map of InstanceGroup UUID to ServiceProvider
 }
 
@@ -84,7 +84,7 @@ message UpResponse {
 }
 
 message DownRequest {
-    string id = 1;
+    string uuid = 1;
 }
 message DownResponse {}
 
@@ -98,7 +98,7 @@ message ListResponse {
 }
 
 message GetRequest {
-    string id = 1;
+    string uuid = 1;
 }
 
 service ServicesService {
@@ -116,19 +116,19 @@ service ServicesService {
     };
     rpc Update(nocloud.services.UpdateRequest) returns (nocloud.services.Service) {
         option (google.api.http) = {
-            patch: "/services/{id}"
+            patch: "/services/{uuid}"
             body: "*"
         };
     };
     rpc Delete(nocloud.services.DeleteRequest) returns (nocloud.services.DeleteResponse) {
         option (google.api.http) = {
-            delete: "/services/{id}"
+            delete: "/services/{uuid}"
         };
     };
     
     rpc Get(nocloud.services.GetRequest) returns (nocloud.services.Service) {
         option (google.api.http) = {
-            get: "/services/{id}"
+            get: "/services/{uuid}"
         };
     };
     rpc List(nocloud.services.ListRequest) returns (nocloud.services.ListResponse) {
@@ -140,19 +140,19 @@ service ServicesService {
 
     rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse) {
         option (google.api.http) = {
-            post: "/services/{id}/up"
+            post: "/services/{uuid}/up"
             body: "*"
         };
     };
     rpc Down(nocloud.services.DownRequest) returns (nocloud.services.DownResponse) {
         option (google.api.http) = {
-            post: "/services/{id}/down"
+            post: "/services/{uuid}/down"
             body: "*"
         };
     };
     rpc PerformServiceAction(nocloud.services.PerformActionRequest) returns (nocloud.services.PerformActionResponse) {
         option (google.api.http) = {
-            post: "/services/{id}/action/{action}",
+            post: "/services/{uuid}/action/{action}",
             body: "*"
         };
     };

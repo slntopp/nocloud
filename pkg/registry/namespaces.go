@@ -62,7 +62,7 @@ func (s *NamespacesServiceServer) Create(ctx context.Context, request *namespace
 		return  &namespacespb.CreateResponse{}, status.Error(codes.Internal, "Can't create Namespace")
 	}
 
-	return &namespacespb.CreateResponse{ Id: ns.Key }, nil
+	return &namespacespb.CreateResponse{ Uuid: ns.Key }, nil
 }
 
 func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacespb.ListRequest) (*namespacespb.ListResponse, error) {
@@ -89,7 +89,7 @@ func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacesp
 
 	result := make([]*namespacespb.Namespace, len(pool))
 	for i, ns := range pool {
-		result[i] = &namespacespb.Namespace{Id: ns.Key, Title:  ns.Title }
+		result[i] = &namespacespb.Namespace{Uuid: ns.Key, Title:  ns.Title }
 	}
 	log.Debug("Convert result", zap.Any("pool", result))
 
@@ -178,7 +178,7 @@ func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespace
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ctrl.Get(ctx, request.Id)
+	ns, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
 		s.log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")

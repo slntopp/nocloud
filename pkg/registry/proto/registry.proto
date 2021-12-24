@@ -40,13 +40,13 @@ service AccountsService {
     };
     rpc Update(nocloud.registry.accounts.Account) returns (nocloud.registry.accounts.UpdateResponse) {
         option (google.api.http) = {
-            patch: "/accounts/{id}"
+            patch: "/accounts/{uuid}"
             body: "*"
         };
     };
     rpc Get(nocloud.registry.accounts.GetRequest) returns (nocloud.registry.accounts.Account) {
         option (google.api.http) = {
-            get: "/accounts/{id}"
+            get: "/accounts/{uuid}"
         };
     };
     rpc List(nocloud.registry.accounts.ListRequest) returns (nocloud.registry.accounts.ListResponse) {
@@ -56,7 +56,7 @@ service AccountsService {
     };
     rpc Delete(nocloud.registry.accounts.DeleteRequest) returns (nocloud.registry.accounts.DeleteResponse) {
         option (google.api.http) = {
-            delete: "/accounts/{id}"
+            delete: "/accounts/{uuid}"
         };
     };
 }
@@ -88,7 +88,7 @@ service NamespacesService {
     };
     rpc Delete(nocloud.registry.namespaces.DeleteRequest) returns (nocloud.registry.namespaces.DeleteResponse) {
         option (google.api.http) = {
-            delete: "/namespaces/{id}"
+            delete: "/namespaces/{uuid}"
         };
     };
 }

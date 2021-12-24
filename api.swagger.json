@@ -152,7 +152,7 @@
         ]
       }
     },
-    "/accounts/{id}": {
+    "/accounts/{uuid}": {
       "get": {
         "operationId": "AccountsService_Get",
         "responses": {
@@ -171,7 +171,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "uuid",
             "in": "path",
             "required": true,
             "type": "string"
@@ -199,7 +199,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "uuid",
             "in": "path",
             "required": true,
             "type": "string"
@@ -227,7 +227,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "uuid",
             "in": "path",
             "required": true,
             "type": "string"
@@ -344,36 +344,6 @@
         ]
       }
     },
-    "/namespaces/{id}": {
-      "delete": {
-        "operationId": "NamespacesService_Delete",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/registrynamespacesDeleteResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "NamespacesService"
-        ]
-      }
-    },
     "/namespaces/{namespace}/join": {
       "post": {
         "operationId": "NamespacesService_Join",
@@ -464,6 +434,36 @@
                 }
               }
             }
+          }
+        ],
+        "tags": [
+          "NamespacesService"
+        ]
+      }
+    },
+    "/namespaces/{uuid}": {
+      "delete": {
+        "operationId": "NamespacesService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/registrynamespacesDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -568,7 +568,7 @@
         ]
       }
     },
-    "/services/{id}": {
+    "/services/{uuid}": {
       "get": {
         "operationId": "ServicesService_Get",
         "responses": {
@@ -587,7 +587,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "uuid",
             "in": "path",
             "required": true,
             "type": "string"
@@ -615,7 +615,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "uuid",
             "in": "path",
             "required": true,
             "type": "string"
@@ -643,7 +643,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "uuid",
             "in": "path",
             "required": true,
             "type": "string"
@@ -670,7 +670,7 @@
         ]
       }
     },
-    "/services/{id}/action/{action}": {
+    "/services/{uuid}/action/{action}": {
       "post": {
         "operationId": "ServicesService_PerformServiceAction",
         "responses": {
@@ -689,7 +689,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "uuid",
             "in": "path",
             "required": true,
             "type": "string"
@@ -722,7 +722,7 @@
         ]
       }
     },
-    "/services/{id}/down": {
+    "/services/{uuid}/down": {
       "post": {
         "operationId": "ServicesService_Down",
         "responses": {
@@ -741,7 +741,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "uuid",
             "in": "path",
             "required": true,
             "type": "string"
@@ -760,7 +760,7 @@
         ]
       }
     },
-    "/services/{id}/up": {
+    "/services/{uuid}/up": {
       "post": {
         "operationId": "ServicesService_Up",
         "responses": {
@@ -779,7 +779,7 @@
         },
         "parameters": [
           {
-            "name": "id",
+            "name": "uuid",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1007,7 +1007,7 @@
     "accountsAccount": {
       "type": "object",
       "properties": {
-        "id": {
+        "uuid": {
           "type": "string"
         },
         "title": {
@@ -1203,7 +1203,7 @@
     "namespacesNamespace": {
       "type": "object",
       "properties": {
-        "id": {
+        "uuid": {
           "type": "string"
         },
         "title": {
@@ -1304,7 +1304,7 @@
     "registryaccountsCreateResponse": {
       "type": "object",
       "properties": {
-        "id": {
+        "uuid": {
           "type": "string"
         }
       }
@@ -1339,7 +1339,7 @@
     "registrynamespacesCreateResponse": {
       "type": "object",
       "properties": {
-        "id": {
+        "uuid": {
           "type": "string"
         }
       }

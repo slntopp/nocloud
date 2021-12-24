@@ -21,11 +21,11 @@ message CreateRequest {
 }
 
 message CreateResponse {
-    string id = 1;
+    string uuid = 1;
 }
 
 message Namespace {
-    string id = 1;
+    string uuid = 1;
     string title = 2;
 }
 
@@ -59,7 +59,7 @@ message ListResponse {
 }
 
 message DeleteRequest {
-    string id = 1;
+    string uuid = 1;
 }
 
 message DeleteResponse {

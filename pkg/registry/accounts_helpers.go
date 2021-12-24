@@ -21,5 +21,5 @@ import (
 )
 
 func MakeAccountMessage(acc graph.Account) (*accountspb.Account) {
-	return &accountspb.Account{Id: acc.Key, Title: acc.Title}
+	return &accountspb.Account{Uuid: acc.Key, Title: acc.Title}
 }

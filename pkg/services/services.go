@@ -166,7 +166,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 	log := s.log.Named("Up")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	service, err := s.ctrl.Get(ctx, request.GetId())
+	service, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not found")
@@ -269,7 +269,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 	log := s.log.Named("Down")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	service, err := s.ctrl.Get(ctx, request.GetId())
+	service, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not found")
@@ -352,7 +352,7 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *servicespb.Get
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	r, err := s.ctrl.Get(ctx, request.GetId())
+	r, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service from DB", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
