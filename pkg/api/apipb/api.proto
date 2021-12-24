@@ -35,7 +35,7 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
 };
 
 import "google/protobuf/struct.proto";
-import "pkg/google/api/annotations.proto";
+import "google/api/annotations.proto";
 
 import "pkg/accounting/accountspb/accounts.proto";
 service AccountsService {
