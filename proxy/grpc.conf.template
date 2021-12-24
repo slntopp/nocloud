@@ -2,10 +2,7 @@ server {
     listen 8080 http2;
     server_name api.nocloud.local localhost;
 
-    location /nocloud.accounts. {
-        grpc_pass grpc://registry;
-    }
-    location /nocloud.namespaces. {
+    location /nocloud.registry. {
         grpc_pass grpc://registry;
     }
 

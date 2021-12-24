@@ -2,7 +2,19 @@ server {
     listen 8080 ssl http2;
     server_name api.${BASE_DOMAIN};
 
-    location / {
-        grpc_pass grpc://grpc;
+    location /nocloud.registry. {
+        grpc_pass grpc://registry;
+    }
+
+    location /nocloud.services. {
+        grpc_pass grpc://services-registry;
+    }
+    
+    location /nocloud.services_providers. {
+        grpc_pass grpc://sp-registry;
+    }
+
+    location /nocloud.health. {
+        grpc_pass grpc://health;
     }
 }
