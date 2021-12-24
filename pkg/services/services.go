@@ -63,10 +63,6 @@ func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.
 }
 
 func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *servicespb.CreateRequest) (*servicespb.TestConfigResponse, *graph.Namespace, error) {
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, nil, err
-	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -353,10 +349,6 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *servicespb.Get
 	log := s.log.Named("Get")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	ctx, err = nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -378,10 +370,6 @@ func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.Li
 	log := s.log.Named("List")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	ctx, err = nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 

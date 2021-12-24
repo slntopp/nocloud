@@ -53,10 +53,6 @@ func NewNamespacesServer(log *zap.Logger, db driver.Database) *NamespacesService
 func (s *NamespacesServiceServer) Create(ctx context.Context, request *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error) {
 	log := s.log.Named("CreateNamespace")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 
 	ns, err := s.ctrl.Create(ctx, request.Title)
 	if err != nil {
@@ -70,10 +66,7 @@ func (s *NamespacesServiceServer) Create(ctx context.Context, request *namespace
 func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacespb.ListRequest) (*namespacespb.ListResponse, error) {
 	log := s.log.Named("ListNamespaces")
 	log.Debug("List request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -104,11 +97,6 @@ func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacesp
 func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
 	log := s.log.Named("JoinNamespace")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 
 	acc, err := s.acc_ctrl.Get(ctx, request.Account)
 	if err != nil {
@@ -151,11 +139,6 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 	log := s.log.Named("LinkNamespace")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
-
 	acc, err := s.acc_ctrl.Get(ctx, request.Account)
 	if err != nil {
 		s.log.Debug("Error getting account", zap.Any("error", err))
@@ -189,10 +172,7 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespacespb.DeleteRequest) (*namespacespb.DeleteResponse, error) {
 	log := s.log.Named("Delete")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
