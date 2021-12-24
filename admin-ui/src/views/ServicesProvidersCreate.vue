@@ -116,8 +116,8 @@ export default {
 			if(!this.isPassed) return;
 			this.isLoading = true
 			api.servicesProviders.create(this.provider)
-			.then(resp => {
-				console.log(resp);
+			.then(() => {
+				this.$router.push({name: "ServicesProviders"});
 			})
 			.finally(() => {
 				this.isLoading = false;
