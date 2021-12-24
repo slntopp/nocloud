@@ -64,7 +64,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 
 	acc, err := s.ctrl.Get(ctx, request.Id)
 	if err != nil {
-		s.log.Debug("Error getting account", zap.Any("error", err))
+		s.log.Debug("Error getting account", zap.String("requested_id", request.Id),  zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
