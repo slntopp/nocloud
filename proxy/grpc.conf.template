@@ -1,0 +1,23 @@
+server {
+    listen 8080 http2;
+    server_name api.nocloud.local localhost;
+
+    location /nocloud.accounts. {
+        grpc_pass grpc://registry;
+    }
+    location /nocloud.namespaces. {
+        grpc_pass grpc://registry;
+    }
+
+    location /nocloud.services. {
+        grpc_pass grpc://services-registry;
+    }
+    
+    location /nocloud.services_providers. {
+        grpc_pass grpc://sp-registry;
+    }
+
+    location /nocloud.health. {
+        grpc_pass grpc://health;
+    }
+}
