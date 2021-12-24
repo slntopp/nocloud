@@ -170,7 +170,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 
 	col, _ = s.db.Collection(ctx, graph.CREDENTIALS_EDGE_COL)
-	cred, err := graph.MakeCredentials(*request.Auth)
+	cred, err := graph.MakeCredentials(request.Auth)
 	if err != nil {
 		return res, status.Error(codes.Internal, err.Error())
 	}
@@ -231,13 +231,13 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
-	auth := request.Auth
+	auth := request.GetAuth()
 
 	edge, _ := s.db.Collection(ctx, graph.ACC2CRED)
 	old_cred_key, has_credentials := s.ctrl.GetCredentials(ctx, edge, acc, auth.Type)
 	s.log.Debug("Checking if has credentials", zap.Bool("has_credentials", has_credentials), zap.Any("old_credentials", old_cred_key))
 
-	credentials, err := graph.MakeCredentials(*auth)
+	credentials, err := graph.MakeCredentials(auth)
 	if err != nil {
 		s.log.Debug("Error creating new credentials", zap.String("type", auth.Type), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error creading new credentials")

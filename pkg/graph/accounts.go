@@ -226,7 +226,7 @@ func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col dri
 	return key, true
 }
 
-func MakeCredentials(credentials accountspb.Credentials) (Credentials, error) {
+func MakeCredentials(credentials *accountspb.Credentials) (Credentials, error) {
 	var cred Credentials;
 	var err error;
 	switch credentials.Type {
