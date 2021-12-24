@@ -11,37 +11,22 @@
   },
   "tags": [
     {
-      "name": "AccountsService"
-    },
-    {
-      "name": "NamespacesService"
-    },
-    {
-      "name": "ServicesService"
-    },
-    {
-      "name": "HealthService"
-    },
-    {
-      "name": "ServicesProvidersService"
-    },
-    {
-      "name": "ServicesService"
-    },
-    {
-      "name": "HealthService"
-    },
-    {
       "name": "ServicesProvidersService"
     },
     {
       "name": "DriverService"
     },
     {
+      "name": "HealthService"
+    },
+    {
       "name": "AccountsService"
     },
     {
       "name": "NamespacesService"
+    },
+    {
+      "name": "ServicesService"
     }
   ],
   "host": "localhost:8000",

@@ -16,22 +16,79 @@ limitations under the License.
 syntax = "proto3";
 package nocloud.registry;
 
+import "google/api/annotations.proto";
+
 import "pkg/registry/proto/accounts/accounts.proto";
 service AccountsService {
-    rpc Token(nocloud.registry.accounts.TokenRequest) returns (nocloud.registry.accounts.TokenResponse);
-    rpc SetCredentials(nocloud.registry.accounts.SetCredentialsRequest) returns (nocloud.registry.accounts.SetCredentialsResponse);
-    rpc Create(nocloud.registry.accounts.CreateRequest) returns (nocloud.registry.accounts.CreateResponse);
-    rpc Update(nocloud.registry.accounts.Account) returns (nocloud.registry.accounts.UpdateResponse);
-    rpc Get(nocloud.registry.accounts.GetRequest) returns (nocloud.registry.accounts.Account);
-    rpc List(nocloud.registry.accounts.ListRequest) returns (nocloud.registry.accounts.ListResponse);
-    rpc Delete(nocloud.registry.accounts.DeleteRequest) returns (nocloud.registry.accounts.DeleteResponse);
+    rpc Token(nocloud.registry.accounts.TokenRequest) returns (nocloud.registry.accounts.TokenResponse) {
+        option (google.api.http) = {
+            post: "/token"
+            body: "*"
+        };
+    };
+    rpc SetCredentials(nocloud.registry.accounts.SetCredentialsRequest) returns (nocloud.registry.accounts.SetCredentialsResponse) {
+        option (google.api.http) = {
+            post: "/accounts/{account}/credentials"
+            body: "*"
+        };
+    };
+    rpc Create(nocloud.registry.accounts.CreateRequest) returns (nocloud.registry.accounts.CreateResponse) {
+        option (google.api.http) = {
+            put: "/accounts"
+            body: "*"
+        };
+    };
+    rpc Update(nocloud.registry.accounts.Account) returns (nocloud.registry.accounts.UpdateResponse) {
+        option (google.api.http) = {
+            patch: "/accounts/{id}"
+            body: "*"
+        };
+    };
+    rpc Get(nocloud.registry.accounts.GetRequest) returns (nocloud.registry.accounts.Account) {
+        option (google.api.http) = {
+            get: "/accounts/{id}"
+        };
+    };
+    rpc List(nocloud.registry.accounts.ListRequest) returns (nocloud.registry.accounts.ListResponse) {
+        option (google.api.http) = {
+            get: "/accounts"
+        };
+    };
+    rpc Delete(nocloud.registry.accounts.DeleteRequest) returns (nocloud.registry.accounts.DeleteResponse) {
+        option (google.api.http) = {
+            delete: "/accounts/{id}"
+        };
+    };
 }
 
 import "pkg/registry/proto/namespaces/namespaces.proto";
 service NamespacesService {
-    rpc Create(nocloud.registry.namespaces.CreateRequest) returns (nocloud.registry.namespaces.CreateResponse);
-    rpc List(nocloud.registry.namespaces.ListRequest) returns (nocloud.registry.namespaces.ListResponse);
-    rpc Join(nocloud.registry.namespaces.JoinRequest) returns (nocloud.registry.namespaces.JoinResponse);
-    rpc Link(nocloud.registry.namespaces.LinkRequest) returns (nocloud.registry.namespaces.LinkResponse);
-    rpc Delete(nocloud.registry.namespaces.DeleteRequest) returns (nocloud.registry.namespaces.DeleteResponse);
+    rpc Create(nocloud.registry.namespaces.CreateRequest) returns (nocloud.registry.namespaces.CreateResponse) {
+        option (google.api.http) = {
+            put: "/namespaces"
+            body: "*"
+        };
+    };
+    rpc List(nocloud.registry.namespaces.ListRequest) returns (nocloud.registry.namespaces.ListResponse) {
+        option (google.api.http) = {
+            get: "/namespaces"
+        };
+    };
+    rpc Join(nocloud.registry.namespaces.JoinRequest) returns (nocloud.registry.namespaces.JoinResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/join"
+            body: "*"
+        };
+    };
+    rpc Link(nocloud.registry.namespaces.LinkRequest) returns (nocloud.registry.namespaces.LinkResponse) {
+        option (google.api.http) = {
+            post: "/namespaces/{namespace}/link"
+            body: "*"
+        };
+    };
+    rpc Delete(nocloud.registry.namespaces.DeleteRequest) returns (nocloud.registry.namespaces.DeleteResponse) {
+        option (google.api.http) = {
+            delete: "/namespaces/{id}"
+        };
+    };
 }
