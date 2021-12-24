@@ -1,0 +1,49 @@
+@font-face {
+	font-family: 'Quicksand';
+	src: url('./fonts/Quicksand/Quicksand-SemiBold.woff2') format('woff2'),
+		url('./fonts/Quicksand/Quicksand-SemiBold.woff') format('woff'),
+		url('./fonts/Quicksand/Quicksand-SemiBold.ttf') format('ttf');
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Quicksand';
+	src: url('./fonts/Quicksand/Quicksand-Regular.woff2') format('woff2'),
+		url('./fonts/Quicksand/Quicksand-Regular.woff') format('woff'),
+		url('./fonts/Quicksand/Quicksand-Regular.ttf') format('ttf');
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Quicksand';
+	src: url('./fonts/Quicksand/Quicksand-Medium.woff2') format('woff2'),
+		url('./fonts/Quicksand/Quicksand-Medium.woff') format('woff'),
+		url('./fonts/Quicksand/Quicksand-Medium.ttf') format('ttf');
+	font-weight: 500;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Quicksand';
+	src: url('./fonts/Quicksand/Quicksand-Bold.woff2') format('woff2'),
+		url('./fonts/Quicksand/Quicksand-Bold.woff') format('woff'),
+		url('./fonts/Quicksand/Quicksand-Bold.ttf') format('ttf');
+	font-weight: bold;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Quicksand';
+	src: url('./fonts/Quicksand/Quicksand-Light.woff2') format('woff2'),
+		url('./fonts/Quicksand/Quicksand-Light.woff') format('woff'),
+		url('./fonts/Quicksand/Quicksand-Light.ttf') format('ttf');
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
+}

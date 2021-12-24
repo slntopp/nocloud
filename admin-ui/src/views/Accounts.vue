@@ -219,7 +219,6 @@ export default {
 		namespacesForSelect(){
 			let namespaces = this.$store.getters['namespaces/all'] ?? [];
 			namespaces = namespaces.map(namespace => ({text: namespace.title, value: namespace.id}))
-			console.log(namespaces);
 			return namespaces
 		}
 	}
