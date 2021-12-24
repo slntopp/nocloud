@@ -45,15 +45,19 @@
 				<component
 					:is="templates[provider.type]"
 					:secrets="provider.secrets"
-					@change:secrets="test"
+					@change:secrets="(data) => handleFieldsChange('secrets', data)"
 					:vars="provider.vars"
-					@change:vars="test"
+					@change:vars="(data) => handleFieldsChange('vars', data)"
+					:passed="isPassed"
+					@passed="(data) => isPassed = data"
+
 				></component>
 
-				
 				<v-btn
 					color="background-light"
 					class="mr-2"
+					@click="tryToSend"
+					:loading="isLoading"
 				>
 					create
 				</v-btn>
@@ -63,6 +67,8 @@
 </template>
 
 <script>
+import api from "@/api.js"
+
 export default {
 	name: "servicesProviders-create",
 	data: () => ({
@@ -75,6 +81,9 @@ export default {
 			secrets: {},
 			vars: {}
 		},
+		
+		isPassed: false,
+		isLoading: false
 	}),
 	created(){
 		const types = require.context('@/components/serviceProviders/', true, /creatingTemplate\.vue$/)
@@ -93,8 +102,26 @@ export default {
 		}
 	},
 	methods: {
-		test(e){
-			console.log(e);
+		handleFieldsChange(type, data){
+			console.log(data);
+			if(type == 'secrets'){
+				this.provider.secrets = data;
+			}
+			if(type == 'vars'){
+				this.provider.vars = data;
+			}
+		},
+		tryToSend(){
+			console.log(this.provider, this.isPassed);
+			if(!this.isPassed) return;
+			this.isLoading = true
+			api.servicesProviders.create(this.provider)
+			.then(resp => {
+				console.log(resp);
+			})
+			.finally(() => {
+				this.isLoading = false;
+			})
 		}
 	}
 }
