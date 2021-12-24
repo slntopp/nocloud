@@ -16,8 +16,6 @@ limitations under the License.
 syntax = "proto3";
 package nocloud.namespaces;
 
-option go_package = "github.com/slntopp/nocloud/pkg/accounting/namespacespb";
-
 message CreateRequest {
     string title = 1;
 }

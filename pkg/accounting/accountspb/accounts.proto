@@ -16,8 +16,6 @@ limitations under the License.
 syntax = "proto3";
 package nocloud.accounts;
 
-option go_package = "github.com/slntopp/nocloud/pkg/accounting/accountspb";
-
 message Credentials {
     string type = 1;
     repeated string data = 2;
