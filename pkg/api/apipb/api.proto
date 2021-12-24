@@ -16,7 +16,23 @@ limitations under the License.
 syntax = "proto3";
 package nocloud.api;
 
-option go_package = "github.com/slntopp/nocloud/pkg/api/apipb";
+import "protoc-gen-openapiv2/options/annotations.proto";
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  host : "localhost:8000"
+  info : {
+    version : "0.0.0"
+    contact : {
+      name : "NoCloud"
+      url : "https://github.com/slntopp/nocloud"
+      email : "info@slnt-opp.xyz"
+    }
+  }
+  schemes : HTTP
+  consumes : "application/json"
+  consumes : "text/event-stream"
+  produces : "application/json"
+  produces : "text/event-stream"
+};
 
 import "google/protobuf/struct.proto";
 import "pkg/google/api/annotations.proto";

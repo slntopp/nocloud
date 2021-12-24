@@ -3,8 +3,6 @@ managed:
   enabled: true
   go_package_prefix:
     default: github.com/slntopp/nocloud
-    except:
-      - github.com/grpc-ecosystem/grpc-gateway
 plugins:
   - name: go
     out: .
@@ -16,3 +14,7 @@ plugins:
   - name: grpc-gateway
     out: .
     opt: paths=source_relative
+  - name: openapiv2
+    out: .
+    strategy: all
+    opt: allow_merge=true,merge_file_name=api
