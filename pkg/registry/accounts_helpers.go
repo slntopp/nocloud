@@ -13,13 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package accounting
+package registry
 
 import (
-	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/graph"
+	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 )
 
 func MakeAccountMessage(acc graph.Account) (*accountspb.Account) {
-	return &accountspb.Account{Id: acc.Key, Title: acc.Title}
+	return &accountspb.Account{Uuid: acc.Key, Title: acc.Title}
 }

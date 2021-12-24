@@ -13,25 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package accounting
+package registry
 
 import (
 	"context"
 
 	"github.com/arangodb/go-driver"
 	jwt "github.com/golang-jwt/jwt/v4"
-	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
+
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
+
+	pb "github.com/slntopp/nocloud/pkg/registry/proto"
+	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type AccountsServiceServer struct {
-	accountspb.UnimplementedAccountsServiceServer
+	pb.UnimplementedAccountsServiceServer
 	db driver.Database
 	ctrl graph.AccountsController
 	ns_ctrl graph.NamespacesController
@@ -55,16 +59,13 @@ func NewAccountsServer(log *zap.Logger, db driver.Database) *AccountsServiceServ
 func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.GetRequest) (*accountspb.Account, error) {
 	log := s.log.Named("GetAccount")
 	log.Debug("Get request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := s.ctrl.Get(ctx, request.Id)
+	acc, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
-		s.log.Debug("Error getting account", zap.Any("error", err))
+		s.log.Debug("Error getting account", zap.String("requested_id", request.Uuid),  zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
@@ -79,10 +80,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.ListRequest) (*accountspb.ListResponse, error) {
 	log := s.log.Named("ListAccounts")
 	log.Debug("List request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -136,10 +134,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
 	log := s.log.Named("CreateAccount")
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -161,7 +156,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		s.log.Debug("Error creating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating account")
 	}
-	res := &accountspb.CreateResponse{Id: account.Key}
+	res := &accountspb.CreateResponse{Uuid: account.Key}
 
 	if (*request.Access) < access_lvl {
 		access_lvl = (*request.Access)
@@ -175,7 +170,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 
 	col, _ = s.db.Collection(ctx, graph.CREDENTIALS_EDGE_COL)
-	cred, err := graph.MakeCredentials(*request.Auth)
+	cred, err := graph.MakeCredentials(request.Auth)
 	if err != nil {
 		return res, status.Error(codes.Internal, err.Error())
 	}
@@ -191,14 +186,11 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.Account) (*accountspb.UpdateResponse, error) {
 	log := s.log.Named("UpdateAccount")
 	log.Debug("Update request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := s.ctrl.Get(ctx, request.Id)
+	acc, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
 		s.log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
@@ -225,10 +217,7 @@ func (s *AccountsServiceServer) EnsureRootExists(passwd string) (error) {
 func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error) {
 	log := s.log.Named("SetCredentials")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -242,13 +231,13 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
-	auth := request.Auth
+	auth := request.GetAuth()
 
 	edge, _ := s.db.Collection(ctx, graph.ACC2CRED)
 	old_cred_key, has_credentials := s.ctrl.GetCredentials(ctx, edge, acc, auth.Type)
 	s.log.Debug("Checking if has credentials", zap.Bool("has_credentials", has_credentials), zap.Any("old_credentials", old_cred_key))
 
-	credentials, err := graph.MakeCredentials(*auth)
+	credentials, err := graph.MakeCredentials(auth)
 	if err != nil {
 		s.log.Debug("Error creating new credentials", zap.String("type", auth.Type), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error creading new credentials")
@@ -271,14 +260,11 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.DeleteRequest) (*accountspb.DeleteResponse, error) {
 	log := s.log.Named("Delete")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := s.ctrl.Get(ctx, request.Id)
+	acc, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
 		s.log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")

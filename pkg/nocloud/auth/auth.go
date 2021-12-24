@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package auth
 
 import (
 	"context"
@@ -32,14 +32,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var (
+	log *zap.Logger
+	SIGNING_KEY		[]byte
+)
+
+func SetContext(logger *zap.Logger, key []byte) {
+	log = logger.Named("JWT")
+	SIGNING_KEY = key
+	log.Debug("Context set", zap.ByteString("signing_key", key))
+}
+
 func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-	l := log.Named("JWT Interceptor")
+	l := log.Named("Interceptor")
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
 
 	switch info.FullMethod {
-	case "/nocloud.api.AccountsService/Token":
+	case "/nocloud.registry.AccountsService/Token":
 		return handler(ctx, req)
-	case "/nocloud.api.HealthService/Probe":
+	case "/nocloud.health.HealthService/Probe":
 		probe := req.(*healthpb.ProbeRequest)
 		if probe.ProbeType == "PING" {
 			return handler(ctx, req)
@@ -55,7 +66,7 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 }
 
 func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
-	l := log.Named("JWT Middleware")
+	l := log.Named("Middleware")
 	tokenString, err := grpc_auth.AuthFromMD(ctx, "bearer")
 	if err != nil {
 		l.Debug("Error extracting token", zap.Any("error", err))

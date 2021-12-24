@@ -16,7 +16,7 @@ limitations under the License.
 syntax = "proto3";
 package nocloud.health;
 
-option go_package = "github.com/slntopp/nocloud/pkg/health/healthpb";
+import "google/api/annotations.proto";
 
 message ProbeRequest {
     string probe_type = 1;
@@ -28,5 +28,10 @@ message ProbeResponse {
 }
 
 service HealthService {
-    rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse);
+    rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse) {
+        option (google.api.http) = {
+            post: "/health/probe"
+            body: "*"
+        };
+    };
 };

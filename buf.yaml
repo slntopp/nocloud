@@ -1,6 +1,5 @@
 version: v1
-name: github.com/slntopp/nocloud
-lint:
-  ignore:
-    - vendor
-    - pkg/protoc-gen-swagger
+name: buf.build/slntopp/nocloud
+deps:
+  - buf.build/googleapis/googleapis
+  - buf.build/grpc-ecosystem/grpc-gateway

@@ -1,6 +1,6 @@
 server {
-    listen 8080 ssl http2;
-    server_name api.${BASE_DOMAIN};
+    listen 8080 http2;
+    server_name api.nocloud.local localhost;
 
     location /nocloud.registry. {
         grpc_pass grpc://registry;

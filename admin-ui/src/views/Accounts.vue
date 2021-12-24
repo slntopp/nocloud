@@ -194,7 +194,7 @@ export default {
 		},
 		deleteSelectedAccount(){
 			if(this.selected.length > 0){
-				const deletePromices = this.selected.map(el => api.accounts.delete(el.id));
+				const deletePromices = this.selected.map(el => api.accounts.delete(el.uuid));
 				Promise.all(deletePromices)
 				.then(res => {
 					if(res.every(el => el.result)){
@@ -218,7 +218,7 @@ export default {
 	computed: {
 		namespacesForSelect(){
 			let namespaces = this.$store.getters['namespaces/all'] ?? [];
-			namespaces = namespaces.map(namespace => ({text: namespace.title, value: namespace.id}))
+			namespaces = namespaces.map(namespace => ({text: namespace.title, value: namespace.uuid}))
 			return namespaces
 		}
 	}

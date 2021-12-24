@@ -1,0 +1,1538 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "pkg/api/apipb/api.proto",
+    "version": "0.0.0",
+    "contact": {
+      "name": "NoCloud",
+      "url": "https://github.com/slntopp/nocloud",
+      "email": "info@slnt-opp.xyz"
+    }
+  },
+  "tags": [
+    {
+      "name": "ServicesProvidersService"
+    },
+    {
+      "name": "DriverService"
+    },
+    {
+      "name": "HealthService"
+    },
+    {
+      "name": "AccountsService"
+    },
+    {
+      "name": "NamespacesService"
+    },
+    {
+      "name": "ServicesService"
+    }
+  ],
+  "host": "localhost:8000",
+  "schemes": [
+    "http"
+  ],
+  "consumes": [
+    "application/json",
+    "text/event-stream"
+  ],
+  "produces": [
+    "application/json",
+    "text/event-stream"
+  ],
+  "paths": {
+    "/accounts": {
+      "get": {
+        "operationId": "AccountsService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/registryaccountsListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "depth",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "AccountsService"
+        ]
+      },
+      "put": {
+        "operationId": "AccountsService_Create",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/registryaccountsCreateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/registryaccountsCreateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AccountsService"
+        ]
+      }
+    },
+    "/accounts/{account}/credentials": {
+      "post": {
+        "operationId": "AccountsService_SetCredentials",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountsSetCredentialsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "auth": {
+                  "$ref": "#/definitions/accountsCredentials"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "AccountsService"
+        ]
+      }
+    },
+    "/accounts/{uuid}": {
+      "get": {
+        "operationId": "AccountsService_Get",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountsAccount"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AccountsService"
+        ]
+      },
+      "delete": {
+        "operationId": "AccountsService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/registryaccountsDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AccountsService"
+        ]
+      },
+      "patch": {
+        "operationId": "AccountsService_Update",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountsUpdateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "AccountsService"
+        ]
+      }
+    },
+    "/health/probe": {
+      "post": {
+        "operationId": "HealthService_Probe",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/healthProbeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/healthProbeRequest"
+            }
+          }
+        ],
+        "tags": [
+          "HealthService"
+        ]
+      }
+    },
+    "/namespaces": {
+      "get": {
+        "operationId": "NamespacesService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/registrynamespacesListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "depth",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "NamespacesService"
+        ]
+      },
+      "put": {
+        "operationId": "NamespacesService_Create",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/registrynamespacesCreateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/registrynamespacesCreateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "NamespacesService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/join": {
+      "post": {
+        "operationId": "NamespacesService_Join",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/namespacesJoinResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "account": {
+                  "type": "string"
+                },
+                "access": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "NamespacesService"
+        ]
+      }
+    },
+    "/namespaces/{namespace}/link": {
+      "post": {
+        "operationId": "NamespacesService_Link",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/namespacesLinkResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "account": {
+                  "type": "string"
+                },
+                "access": {
+                  "type": "integer",
+                  "format": "int32"
+                },
+                "role": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "NamespacesService"
+        ]
+      }
+    },
+    "/namespaces/{uuid}": {
+      "delete": {
+        "operationId": "NamespacesService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/registrynamespacesDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "NamespacesService"
+        ]
+      }
+    },
+    "/services": {
+      "get": {
+        "operationId": "ServicesService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudservicesListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "namespace",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "depth",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      },
+      "post": {
+        "operationId": "ServicesService_TestConfig",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesTestConfigResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/nocloudservicesCreateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      },
+      "put": {
+        "operationId": "ServicesService_Create",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesService"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/nocloudservicesCreateRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
+    "/services/{uuid}": {
+      "get": {
+        "operationId": "ServicesService_Get",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesService"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      },
+      "delete": {
+        "operationId": "ServicesService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudservicesDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      },
+      "patch": {
+        "operationId": "ServicesService_Update",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesService"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "namespace": {
+                  "type": "string"
+                },
+                "service": {
+                  "$ref": "#/definitions/servicesService"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
+    "/services/{uuid}/action/{action}": {
+      "post": {
+        "operationId": "ServicesService_PerformServiceAction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesPerformActionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
+    "/services/{uuid}/down": {
+      "post": {
+        "operationId": "ServicesService_Down",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudservicesDownResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
+    "/services/{uuid}/up": {
+      "post": {
+        "operationId": "ServicesService_Up",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudservicesUpResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "deployPolicies": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
+    "/sp": {
+      "get": {
+        "operationId": "ServicesProvidersService_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudservices_providersListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      },
+      "post": {
+        "operationId": "ServicesProvidersService_Test",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/services_providersTestResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/services_providersServicesProvider"
+            }
+          }
+        ],
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      },
+      "put": {
+        "operationId": "ServicesProvidersService_Create",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/services_providersServicesProvider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/services_providersServicesProvider"
+            }
+          }
+        ],
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      }
+    },
+    "/sp/{servicesProvider.uuid}": {
+      "post": {
+        "operationId": "ServicesProvidersService_Invoke",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "servicesProvider.uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/services_providersActionRequest"
+            }
+          }
+        ],
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      }
+    },
+    "/sp/{uuid}": {
+      "get": {
+        "operationId": "ServicesProvidersService_Get",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/services_providersServicesProvider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      }
+    },
+    "/token": {
+      "post": {
+        "operationId": "AccountsService_Token",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/accountsTokenResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/accountsTokenRequest"
+            }
+          }
+        ],
+        "tags": [
+          "AccountsService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ActionRequestRequest": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "object"
+        },
+        "params": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "accountsAccount": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      }
+    },
+    "accountsCredentials": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "accountsSetCredentialsResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
+    "accountsTokenRequest": {
+      "type": "object",
+      "properties": {
+        "auth": {
+          "$ref": "#/definitions/accountsCredentials"
+        },
+        "exp": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "accountsTokenResponse": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string"
+        }
+      }
+    },
+    "accountsUpdateResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
+    "drivervanillaDownResponse": {
+      "type": "object"
+    },
+    "drivervanillaUpResponse": {
+      "type": "object",
+      "properties": {
+        "group": {
+          "$ref": "#/definitions/instancesInstancesGroup"
+        }
+      }
+    },
+    "healthProbeRequest": {
+      "type": "object",
+      "properties": {
+        "probeType": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string"
+        }
+      }
+    },
+    "healthProbeResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "type": "string"
+        }
+      }
+    },
+    "instancesInstance": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "instancesInstancesGroup": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "instances": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/instancesInstance"
+          }
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "instancesTestInstancesGroupConfigError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "instance": {
+          "type": "string"
+        }
+      }
+    },
+    "instancesTestInstancesGroupConfigResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/instancesTestInstancesGroupConfigError"
+          }
+        }
+      }
+    },
+    "namespacesJoinResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
+    "namespacesLinkResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
+    "namespacesNamespace": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        }
+      }
+    },
+    "nocloudservicesCreateRequest": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "$ref": "#/definitions/servicesService"
+        },
+        "namespace": {
+          "type": "string"
+        }
+      }
+    },
+    "nocloudservicesDeleteResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
+    "nocloudservicesDownResponse": {
+      "type": "object"
+    },
+    "nocloudservicesListResponse": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/servicesService"
+          }
+        }
+      }
+    },
+    "nocloudservicesUpResponse": {
+      "type": "object",
+      "properties": {
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/servicesUpError"
+          }
+        }
+      }
+    },
+    "nocloudservices_providersListResponse": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/services_providersServicesProvider"
+          }
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\n The JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "registryaccountsCreateRequest": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "auth": {
+          "$ref": "#/definitions/accountsCredentials"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "access": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "registryaccountsCreateResponse": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        }
+      }
+    },
+    "registryaccountsDeleteResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
+    "registryaccountsListResponse": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/accountsAccount"
+          }
+        }
+      }
+    },
+    "registrynamespacesCreateRequest": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        }
+      }
+    },
+    "registrynamespacesCreateResponse": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        }
+      }
+    },
+    "registrynamespacesDeleteResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
+    "registrynamespacesListResponse": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/namespacesNamespace"
+          }
+        }
+      }
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "servicesPerformActionResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "servicesService": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "context": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "instancesGroups": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/instancesInstancesGroup"
+          }
+        },
+        "hash": {
+          "type": "string"
+        }
+      }
+    },
+    "servicesTestConfigError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "instanceGroup": {
+          "type": "string"
+        },
+        "instance": {
+          "type": "string"
+        }
+      }
+    },
+    "servicesTestConfigResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/servicesTestConfigError"
+          }
+        }
+      }
+    },
+    "servicesUpError": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "services_providersActionRequest": {
+      "type": "object",
+      "properties": {
+        "servicesProvider": {
+          "$ref": "#/definitions/services_providersServicesProvider"
+        },
+        "request": {
+          "$ref": "#/definitions/ActionRequestRequest"
+        }
+      },
+      "title": "Available only for users with SUPERUSER and ADMIN access to platform namespace"
+    },
+    "services_providersServicesProvider": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "secrets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "vars": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/services_providersVar"
+          }
+        }
+      }
+    },
+    "services_providersTestResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "services_providersVar": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "vanillaGetTypeResponse": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

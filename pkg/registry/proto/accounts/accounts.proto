@@ -14,9 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 syntax = "proto3";
-package nocloud.accounts;
-
-option go_package = "github.com/slntopp/nocloud/pkg/accounting/accountspb";
+package nocloud.registry.accounts;
 
 message Credentials {
     string type = 1;
@@ -31,15 +29,15 @@ message CreateRequest {
 }
 
 message CreateResponse {
-    string id = 1;
+    string uuid = 1;
 }
 
 message GetRequest {
-    string id = 1;
+    string uuid = 1;
 }
 
 message Account {
-    string id = 1;
+    string uuid = 1;
     string title = 2;
 }
 
@@ -75,19 +73,9 @@ message TokenResponse {
 }
 
 message DeleteRequest {
-    string id = 1;
+    string uuid = 1;
 }
 
 message DeleteResponse {
     bool result = 1;
-}
-
-service AccountsService {
-    rpc Token(nocloud.accounts.TokenRequest) returns (nocloud.accounts.TokenResponse);
-    rpc SetCredentials(nocloud.accounts.SetCredentialsRequest) returns (nocloud.accounts.SetCredentialsResponse);
-    rpc Create(nocloud.accounts.CreateRequest) returns (nocloud.accounts.CreateResponse);
-    rpc Update(nocloud.accounts.Account) returns (nocloud.accounts.UpdateResponse);
-    rpc Get(nocloud.accounts.GetRequest) returns (nocloud.accounts.Account);
-    rpc List(nocloud.accounts.ListRequest) returns (nocloud.accounts.ListResponse);
-    rpc Delete(nocloud.accounts.DeleteRequest) returns (nocloud.accounts.DeleteResponse);
 }
