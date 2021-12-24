@@ -48,9 +48,9 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
 
 	switch info.FullMethod {
-	case "/nocloud.api.AccountsService/Token":
+	case "/nocloud.accounts.AccountsService/Token":
 		return handler(ctx, req)
-	case "/nocloud.api.HealthService/Probe":
+	case "/nocloud.health.HealthService/Probe":
 		probe := req.(*healthpb.ProbeRequest)
 		if probe.ProbeType == "PING" {
 			return handler(ctx, req)
