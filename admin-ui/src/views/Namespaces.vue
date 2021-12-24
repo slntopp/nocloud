@@ -234,7 +234,7 @@ export default {
 		},
 		deleteSelectedNamespace(){
 			if(this.selected.length > 0){
-				const deletePromices = this.selected.map(el => api.namespaces.delete(el.id));
+				const deletePromices = this.selected.map(el => api.namespaces.delete(el.uuid));
 				Promise.all(deletePromices)
 				.then(res => {
 					if(res.every(el => el.result)){
@@ -252,7 +252,7 @@ export default {
 		linkSelectedAcounts(){
 			if(this.selected.length > 0){
 				const namespace = this.selected[0];
-				const linkPromices = this.linkAccount.selected.map(account => api.namespaces.link(namespace.id, account.id));
+				const linkPromices = this.linkAccount.selected.map(account => api.namespaces.link(namespace.uuid, account.uuid));
 				this.linkAccount.loading = true;
 				Promise.all(linkPromices)
 				.then(res => {
@@ -280,8 +280,8 @@ export default {
 			}
 		},
 		joinSelectedAcounts(){
-			api.namespaces.join(this.selected[0].id, {
-				account: this.joinAccount.selected[0].id,
+			api.namespaces.join(this.selected[0].uuid, {
+				account: this.joinAccount.selected[0].uuid,
 				access: this.joinAccount.data.access,
 				role: this.joinAccount.data.role,
 			})

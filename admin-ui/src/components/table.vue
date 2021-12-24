@@ -54,10 +54,10 @@
 const defaultHeaders = [
 	{ text: 'title', value: 'title' },
 	{
-		text: 'ID',
+		text: 'UUID',
 		align: 'start',
 		sortable: true,
-		value: 'id',
+		value: 'uuid',
 	},
 ];
 
@@ -83,7 +83,7 @@ export default {
 		},
 		'item-key': {
 			type: String,
-			default: 'id'
+			default: 'uuid'
 		}
 	},
 	data(){

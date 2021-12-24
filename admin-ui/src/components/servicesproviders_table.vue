@@ -19,7 +19,7 @@ const Headers = [
 	{ text: 'title', value: 'title' },
 	{ text: 'type', value: 'type' },
 	{
-		text: 'ID',
+		text: 'UUID',
 		align: 'start',
 		sortable: true,
 		value: 'uuid',

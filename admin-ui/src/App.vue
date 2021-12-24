@@ -128,7 +128,7 @@
 								<v-list-item-title class="text-h6">
 									{{userdata.title}}
 								</v-list-item-title>
-								<v-list-item-subtitle>#{{userdata.id}}</v-list-item-subtitle>
+								<v-list-item-subtitle>#{{userdata.uuid}}</v-list-item-subtitle>
 							</v-list-item-content>
 						</v-list-item>
 						<v-divider></v-divider>
