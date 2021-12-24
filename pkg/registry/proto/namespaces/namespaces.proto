@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 syntax = "proto3";
-package nocloud.namespaces;
+package nocloud.registry.namespaces;
 
 message CreateRequest {
     string title = 1;
@@ -64,12 +64,4 @@ message DeleteRequest {
 
 message DeleteResponse {
     bool result = 1;
-}
-
-service NamespacesService {
-    rpc Create(nocloud.namespaces.CreateRequest) returns (nocloud.namespaces.CreateResponse);
-    rpc List(nocloud.namespaces.ListRequest) returns (nocloud.namespaces.ListResponse);
-    rpc Join(nocloud.namespaces.JoinRequest) returns (nocloud.namespaces.JoinResponse);
-    rpc Link(nocloud.namespaces.LinkRequest) returns (nocloud.namespaces.LinkResponse);
-    rpc Delete(nocloud.namespaces.DeleteRequest) returns (nocloud.namespaces.DeleteResponse);
 }

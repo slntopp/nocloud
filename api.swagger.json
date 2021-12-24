@@ -26,12 +26,6 @@
       "name": "ServicesProvidersService"
     },
     {
-      "name": "AccountsService"
-    },
-    {
-      "name": "NamespacesService"
-    },
-    {
       "name": "ServicesService"
     },
     {
@@ -42,6 +36,12 @@
     },
     {
       "name": "DriverService"
+    },
+    {
+      "name": "AccountsService"
+    },
+    {
+      "name": "NamespacesService"
     }
   ],
   "host": "localhost:8000",
@@ -64,7 +64,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/nocloudaccountsListResponse"
+              "$ref": "#/definitions/registryaccountsListResponse"
             }
           },
           "default": {
@@ -99,7 +99,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/nocloudaccountsCreateResponse"
+              "$ref": "#/definitions/registryaccountsCreateResponse"
             }
           },
           "default": {
@@ -115,7 +115,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/nocloudaccountsCreateRequest"
+              "$ref": "#/definitions/registryaccountsCreateRequest"
             }
           }
         ],
@@ -202,7 +202,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/nocloudaccountsDeleteResponse"
+              "$ref": "#/definitions/registryaccountsDeleteResponse"
             }
           },
           "default": {
@@ -305,7 +305,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/nocloudnamespacesListResponse"
+              "$ref": "#/definitions/registrynamespacesListResponse"
             }
           },
           "default": {
@@ -334,7 +334,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/nocloudnamespacesCreateResponse"
+              "$ref": "#/definitions/registrynamespacesCreateResponse"
             }
           },
           "default": {
@@ -350,7 +350,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/nocloudnamespacesCreateRequest"
+              "$ref": "#/definitions/registrynamespacesCreateRequest"
             }
           }
         ],
@@ -366,7 +366,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/nocloudnamespacesDeleteResponse"
+              "$ref": "#/definitions/registrynamespacesDeleteResponse"
             }
           },
           "default": {
@@ -1226,86 +1226,6 @@
         }
       }
     },
-    "nocloudaccountsCreateRequest": {
-      "type": "object",
-      "properties": {
-        "title": {
-          "type": "string"
-        },
-        "auth": {
-          "$ref": "#/definitions/accountsCredentials"
-        },
-        "namespace": {
-          "type": "string"
-        },
-        "access": {
-          "type": "integer",
-          "format": "int32"
-        }
-      }
-    },
-    "nocloudaccountsCreateResponse": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        }
-      }
-    },
-    "nocloudaccountsDeleteResponse": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "type": "boolean"
-        }
-      }
-    },
-    "nocloudaccountsListResponse": {
-      "type": "object",
-      "properties": {
-        "pool": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/accountsAccount"
-          }
-        }
-      }
-    },
-    "nocloudnamespacesCreateRequest": {
-      "type": "object",
-      "properties": {
-        "title": {
-          "type": "string"
-        }
-      }
-    },
-    "nocloudnamespacesCreateResponse": {
-      "type": "object",
-      "properties": {
-        "id": {
-          "type": "string"
-        }
-      }
-    },
-    "nocloudnamespacesDeleteResponse": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "type": "boolean"
-        }
-      }
-    },
-    "nocloudnamespacesListResponse": {
-      "type": "object",
-      "properties": {
-        "pool": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/namespacesNamespace"
-          }
-        }
-      }
-    },
     "nocloudservicesCreateRequest": {
       "type": "object",
       "properties": {
@@ -1377,6 +1297,86 @@
       ],
       "default": "NULL_VALUE",
       "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\n The JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "registryaccountsCreateRequest": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "auth": {
+          "$ref": "#/definitions/accountsCredentials"
+        },
+        "namespace": {
+          "type": "string"
+        },
+        "access": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "registryaccountsCreateResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "registryaccountsDeleteResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
+    "registryaccountsListResponse": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/accountsAccount"
+          }
+        }
+      }
+    },
+    "registrynamespacesCreateRequest": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        }
+      }
+    },
+    "registrynamespacesCreateResponse": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      }
+    },
+    "registrynamespacesDeleteResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
+    "registrynamespacesListResponse": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/namespacesNamespace"
+          }
+        }
+      }
     },
     "rpcStatus": {
       "type": "object",

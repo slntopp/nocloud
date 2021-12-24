@@ -20,18 +20,22 @@ import (
 
 	"github.com/arangodb/go-driver"
 	jwt "github.com/golang-jwt/jwt/v4"
-	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
+
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
+
+	pb "github.com/slntopp/nocloud/pkg/registry/proto"
+	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type AccountsServiceServer struct {
-	accountspb.UnimplementedAccountsServiceServer
+	pb.UnimplementedAccountsServiceServer
 	db driver.Database
 	ctrl graph.AccountsController
 	ns_ctrl graph.NamespacesController

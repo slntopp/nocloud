@@ -4,9 +4,9 @@ package apipb
 
 import (
 	context "context"
-	accountspb "github.com/slntopp/nocloud/pkg/accounting/accountspb"
-	namespacespb "github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	healthpb "github.com/slntopp/nocloud/pkg/health/healthpb"
+	accounts "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+	namespaces "github.com/slntopp/nocloud/pkg/registry/proto/namespaces"
 	proto "github.com/slntopp/nocloud/pkg/services/proto"
 	proto1 "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	grpc "google.golang.org/grpc"
@@ -24,13 +24,13 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type AccountsServiceClient interface {
-	Token(ctx context.Context, in *accountspb.TokenRequest, opts ...grpc.CallOption) (*accountspb.TokenResponse, error)
-	SetCredentials(ctx context.Context, in *accountspb.SetCredentialsRequest, opts ...grpc.CallOption) (*accountspb.SetCredentialsResponse, error)
-	Create(ctx context.Context, in *accountspb.CreateRequest, opts ...grpc.CallOption) (*accountspb.CreateResponse, error)
-	Update(ctx context.Context, in *accountspb.Account, opts ...grpc.CallOption) (*accountspb.UpdateResponse, error)
-	Get(ctx context.Context, in *accountspb.GetRequest, opts ...grpc.CallOption) (*accountspb.Account, error)
-	List(ctx context.Context, in *accountspb.ListRequest, opts ...grpc.CallOption) (*accountspb.ListResponse, error)
-	Delete(ctx context.Context, in *accountspb.DeleteRequest, opts ...grpc.CallOption) (*accountspb.DeleteResponse, error)
+	Token(ctx context.Context, in *accounts.TokenRequest, opts ...grpc.CallOption) (*accounts.TokenResponse, error)
+	SetCredentials(ctx context.Context, in *accounts.SetCredentialsRequest, opts ...grpc.CallOption) (*accounts.SetCredentialsResponse, error)
+	Create(ctx context.Context, in *accounts.CreateRequest, opts ...grpc.CallOption) (*accounts.CreateResponse, error)
+	Update(ctx context.Context, in *accounts.Account, opts ...grpc.CallOption) (*accounts.UpdateResponse, error)
+	Get(ctx context.Context, in *accounts.GetRequest, opts ...grpc.CallOption) (*accounts.Account, error)
+	List(ctx context.Context, in *accounts.ListRequest, opts ...grpc.CallOption) (*accounts.ListResponse, error)
+	Delete(ctx context.Context, in *accounts.DeleteRequest, opts ...grpc.CallOption) (*accounts.DeleteResponse, error)
 }
 
 type accountsServiceClient struct {
@@ -41,8 +41,8 @@ func NewAccountsServiceClient(cc grpc.ClientConnInterface) AccountsServiceClient
 	return &accountsServiceClient{cc}
 }
 
-func (c *accountsServiceClient) Token(ctx context.Context, in *accountspb.TokenRequest, opts ...grpc.CallOption) (*accountspb.TokenResponse, error) {
-	out := new(accountspb.TokenResponse)
+func (c *accountsServiceClient) Token(ctx context.Context, in *accounts.TokenRequest, opts ...grpc.CallOption) (*accounts.TokenResponse, error) {
+	out := new(accounts.TokenResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Token", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -50,8 +50,8 @@ func (c *accountsServiceClient) Token(ctx context.Context, in *accountspb.TokenR
 	return out, nil
 }
 
-func (c *accountsServiceClient) SetCredentials(ctx context.Context, in *accountspb.SetCredentialsRequest, opts ...grpc.CallOption) (*accountspb.SetCredentialsResponse, error) {
-	out := new(accountspb.SetCredentialsResponse)
+func (c *accountsServiceClient) SetCredentials(ctx context.Context, in *accounts.SetCredentialsRequest, opts ...grpc.CallOption) (*accounts.SetCredentialsResponse, error) {
+	out := new(accounts.SetCredentialsResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/SetCredentials", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -59,8 +59,8 @@ func (c *accountsServiceClient) SetCredentials(ctx context.Context, in *accounts
 	return out, nil
 }
 
-func (c *accountsServiceClient) Create(ctx context.Context, in *accountspb.CreateRequest, opts ...grpc.CallOption) (*accountspb.CreateResponse, error) {
-	out := new(accountspb.CreateResponse)
+func (c *accountsServiceClient) Create(ctx context.Context, in *accounts.CreateRequest, opts ...grpc.CallOption) (*accounts.CreateResponse, error) {
+	out := new(accounts.CreateResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Create", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -68,8 +68,8 @@ func (c *accountsServiceClient) Create(ctx context.Context, in *accountspb.Creat
 	return out, nil
 }
 
-func (c *accountsServiceClient) Update(ctx context.Context, in *accountspb.Account, opts ...grpc.CallOption) (*accountspb.UpdateResponse, error) {
-	out := new(accountspb.UpdateResponse)
+func (c *accountsServiceClient) Update(ctx context.Context, in *accounts.Account, opts ...grpc.CallOption) (*accounts.UpdateResponse, error) {
+	out := new(accounts.UpdateResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Update", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -77,8 +77,8 @@ func (c *accountsServiceClient) Update(ctx context.Context, in *accountspb.Accou
 	return out, nil
 }
 
-func (c *accountsServiceClient) Get(ctx context.Context, in *accountspb.GetRequest, opts ...grpc.CallOption) (*accountspb.Account, error) {
-	out := new(accountspb.Account)
+func (c *accountsServiceClient) Get(ctx context.Context, in *accounts.GetRequest, opts ...grpc.CallOption) (*accounts.Account, error) {
+	out := new(accounts.Account)
 	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Get", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -86,8 +86,8 @@ func (c *accountsServiceClient) Get(ctx context.Context, in *accountspb.GetReque
 	return out, nil
 }
 
-func (c *accountsServiceClient) List(ctx context.Context, in *accountspb.ListRequest, opts ...grpc.CallOption) (*accountspb.ListResponse, error) {
-	out := new(accountspb.ListResponse)
+func (c *accountsServiceClient) List(ctx context.Context, in *accounts.ListRequest, opts ...grpc.CallOption) (*accounts.ListResponse, error) {
+	out := new(accounts.ListResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/List", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -95,8 +95,8 @@ func (c *accountsServiceClient) List(ctx context.Context, in *accountspb.ListReq
 	return out, nil
 }
 
-func (c *accountsServiceClient) Delete(ctx context.Context, in *accountspb.DeleteRequest, opts ...grpc.CallOption) (*accountspb.DeleteResponse, error) {
-	out := new(accountspb.DeleteResponse)
+func (c *accountsServiceClient) Delete(ctx context.Context, in *accounts.DeleteRequest, opts ...grpc.CallOption) (*accounts.DeleteResponse, error) {
+	out := new(accounts.DeleteResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.AccountsService/Delete", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -108,13 +108,13 @@ func (c *accountsServiceClient) Delete(ctx context.Context, in *accountspb.Delet
 // All implementations must embed UnimplementedAccountsServiceServer
 // for forward compatibility
 type AccountsServiceServer interface {
-	Token(context.Context, *accountspb.TokenRequest) (*accountspb.TokenResponse, error)
-	SetCredentials(context.Context, *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error)
-	Create(context.Context, *accountspb.CreateRequest) (*accountspb.CreateResponse, error)
-	Update(context.Context, *accountspb.Account) (*accountspb.UpdateResponse, error)
-	Get(context.Context, *accountspb.GetRequest) (*accountspb.Account, error)
-	List(context.Context, *accountspb.ListRequest) (*accountspb.ListResponse, error)
-	Delete(context.Context, *accountspb.DeleteRequest) (*accountspb.DeleteResponse, error)
+	Token(context.Context, *accounts.TokenRequest) (*accounts.TokenResponse, error)
+	SetCredentials(context.Context, *accounts.SetCredentialsRequest) (*accounts.SetCredentialsResponse, error)
+	Create(context.Context, *accounts.CreateRequest) (*accounts.CreateResponse, error)
+	Update(context.Context, *accounts.Account) (*accounts.UpdateResponse, error)
+	Get(context.Context, *accounts.GetRequest) (*accounts.Account, error)
+	List(context.Context, *accounts.ListRequest) (*accounts.ListResponse, error)
+	Delete(context.Context, *accounts.DeleteRequest) (*accounts.DeleteResponse, error)
 	mustEmbedUnimplementedAccountsServiceServer()
 }
 
@@ -122,25 +122,25 @@ type AccountsServiceServer interface {
 type UnimplementedAccountsServiceServer struct {
 }
 
-func (UnimplementedAccountsServiceServer) Token(context.Context, *accountspb.TokenRequest) (*accountspb.TokenResponse, error) {
+func (UnimplementedAccountsServiceServer) Token(context.Context, *accounts.TokenRequest) (*accounts.TokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Token not implemented")
 }
-func (UnimplementedAccountsServiceServer) SetCredentials(context.Context, *accountspb.SetCredentialsRequest) (*accountspb.SetCredentialsResponse, error) {
+func (UnimplementedAccountsServiceServer) SetCredentials(context.Context, *accounts.SetCredentialsRequest) (*accounts.SetCredentialsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetCredentials not implemented")
 }
-func (UnimplementedAccountsServiceServer) Create(context.Context, *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
+func (UnimplementedAccountsServiceServer) Create(context.Context, *accounts.CreateRequest) (*accounts.CreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
-func (UnimplementedAccountsServiceServer) Update(context.Context, *accountspb.Account) (*accountspb.UpdateResponse, error) {
+func (UnimplementedAccountsServiceServer) Update(context.Context, *accounts.Account) (*accounts.UpdateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
-func (UnimplementedAccountsServiceServer) Get(context.Context, *accountspb.GetRequest) (*accountspb.Account, error) {
+func (UnimplementedAccountsServiceServer) Get(context.Context, *accounts.GetRequest) (*accounts.Account, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
-func (UnimplementedAccountsServiceServer) List(context.Context, *accountspb.ListRequest) (*accountspb.ListResponse, error) {
+func (UnimplementedAccountsServiceServer) List(context.Context, *accounts.ListRequest) (*accounts.ListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
-func (UnimplementedAccountsServiceServer) Delete(context.Context, *accountspb.DeleteRequest) (*accountspb.DeleteResponse, error) {
+func (UnimplementedAccountsServiceServer) Delete(context.Context, *accounts.DeleteRequest) (*accounts.DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedAccountsServiceServer) mustEmbedUnimplementedAccountsServiceServer() {}
@@ -157,7 +157,7 @@ func RegisterAccountsServiceServer(s grpc.ServiceRegistrar, srv AccountsServiceS
 }
 
 func _AccountsService_Token_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(accountspb.TokenRequest)
+	in := new(accounts.TokenRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -169,13 +169,13 @@ func _AccountsService_Token_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: "/nocloud.api.AccountsService/Token",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AccountsServiceServer).Token(ctx, req.(*accountspb.TokenRequest))
+		return srv.(AccountsServiceServer).Token(ctx, req.(*accounts.TokenRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _AccountsService_SetCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(accountspb.SetCredentialsRequest)
+	in := new(accounts.SetCredentialsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -187,13 +187,13 @@ func _AccountsService_SetCredentials_Handler(srv interface{}, ctx context.Contex
 		FullMethod: "/nocloud.api.AccountsService/SetCredentials",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AccountsServiceServer).SetCredentials(ctx, req.(*accountspb.SetCredentialsRequest))
+		return srv.(AccountsServiceServer).SetCredentials(ctx, req.(*accounts.SetCredentialsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _AccountsService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(accountspb.CreateRequest)
+	in := new(accounts.CreateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -205,13 +205,13 @@ func _AccountsService_Create_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/nocloud.api.AccountsService/Create",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AccountsServiceServer).Create(ctx, req.(*accountspb.CreateRequest))
+		return srv.(AccountsServiceServer).Create(ctx, req.(*accounts.CreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _AccountsService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(accountspb.Account)
+	in := new(accounts.Account)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -223,13 +223,13 @@ func _AccountsService_Update_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/nocloud.api.AccountsService/Update",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AccountsServiceServer).Update(ctx, req.(*accountspb.Account))
+		return srv.(AccountsServiceServer).Update(ctx, req.(*accounts.Account))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _AccountsService_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(accountspb.GetRequest)
+	in := new(accounts.GetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -241,13 +241,13 @@ func _AccountsService_Get_Handler(srv interface{}, ctx context.Context, dec func
 		FullMethod: "/nocloud.api.AccountsService/Get",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AccountsServiceServer).Get(ctx, req.(*accountspb.GetRequest))
+		return srv.(AccountsServiceServer).Get(ctx, req.(*accounts.GetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _AccountsService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(accountspb.ListRequest)
+	in := new(accounts.ListRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -259,13 +259,13 @@ func _AccountsService_List_Handler(srv interface{}, ctx context.Context, dec fun
 		FullMethod: "/nocloud.api.AccountsService/List",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AccountsServiceServer).List(ctx, req.(*accountspb.ListRequest))
+		return srv.(AccountsServiceServer).List(ctx, req.(*accounts.ListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _AccountsService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(accountspb.DeleteRequest)
+	in := new(accounts.DeleteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func _AccountsService_Delete_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/nocloud.api.AccountsService/Delete",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AccountsServiceServer).Delete(ctx, req.(*accountspb.DeleteRequest))
+		return srv.(AccountsServiceServer).Delete(ctx, req.(*accounts.DeleteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -326,11 +326,11 @@ var AccountsService_ServiceDesc = grpc.ServiceDesc{
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NamespacesServiceClient interface {
-	Create(ctx context.Context, in *namespacespb.CreateRequest, opts ...grpc.CallOption) (*namespacespb.CreateResponse, error)
-	List(ctx context.Context, in *namespacespb.ListRequest, opts ...grpc.CallOption) (*namespacespb.ListResponse, error)
-	Join(ctx context.Context, in *namespacespb.JoinRequest, opts ...grpc.CallOption) (*namespacespb.JoinResponse, error)
-	Link(ctx context.Context, in *namespacespb.LinkRequest, opts ...grpc.CallOption) (*namespacespb.LinkResponse, error)
-	Delete(ctx context.Context, in *namespacespb.DeleteRequest, opts ...grpc.CallOption) (*namespacespb.DeleteResponse, error)
+	Create(ctx context.Context, in *namespaces.CreateRequest, opts ...grpc.CallOption) (*namespaces.CreateResponse, error)
+	List(ctx context.Context, in *namespaces.ListRequest, opts ...grpc.CallOption) (*namespaces.ListResponse, error)
+	Join(ctx context.Context, in *namespaces.JoinRequest, opts ...grpc.CallOption) (*namespaces.JoinResponse, error)
+	Link(ctx context.Context, in *namespaces.LinkRequest, opts ...grpc.CallOption) (*namespaces.LinkResponse, error)
+	Delete(ctx context.Context, in *namespaces.DeleteRequest, opts ...grpc.CallOption) (*namespaces.DeleteResponse, error)
 }
 
 type namespacesServiceClient struct {
@@ -341,8 +341,8 @@ func NewNamespacesServiceClient(cc grpc.ClientConnInterface) NamespacesServiceCl
 	return &namespacesServiceClient{cc}
 }
 
-func (c *namespacesServiceClient) Create(ctx context.Context, in *namespacespb.CreateRequest, opts ...grpc.CallOption) (*namespacespb.CreateResponse, error) {
-	out := new(namespacespb.CreateResponse)
+func (c *namespacesServiceClient) Create(ctx context.Context, in *namespaces.CreateRequest, opts ...grpc.CallOption) (*namespaces.CreateResponse, error) {
+	out := new(namespaces.CreateResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.NamespacesService/Create", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -350,8 +350,8 @@ func (c *namespacesServiceClient) Create(ctx context.Context, in *namespacespb.C
 	return out, nil
 }
 
-func (c *namespacesServiceClient) List(ctx context.Context, in *namespacespb.ListRequest, opts ...grpc.CallOption) (*namespacespb.ListResponse, error) {
-	out := new(namespacespb.ListResponse)
+func (c *namespacesServiceClient) List(ctx context.Context, in *namespaces.ListRequest, opts ...grpc.CallOption) (*namespaces.ListResponse, error) {
+	out := new(namespaces.ListResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.NamespacesService/List", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -359,8 +359,8 @@ func (c *namespacesServiceClient) List(ctx context.Context, in *namespacespb.Lis
 	return out, nil
 }
 
-func (c *namespacesServiceClient) Join(ctx context.Context, in *namespacespb.JoinRequest, opts ...grpc.CallOption) (*namespacespb.JoinResponse, error) {
-	out := new(namespacespb.JoinResponse)
+func (c *namespacesServiceClient) Join(ctx context.Context, in *namespaces.JoinRequest, opts ...grpc.CallOption) (*namespaces.JoinResponse, error) {
+	out := new(namespaces.JoinResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.NamespacesService/Join", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -368,8 +368,8 @@ func (c *namespacesServiceClient) Join(ctx context.Context, in *namespacespb.Joi
 	return out, nil
 }
 
-func (c *namespacesServiceClient) Link(ctx context.Context, in *namespacespb.LinkRequest, opts ...grpc.CallOption) (*namespacespb.LinkResponse, error) {
-	out := new(namespacespb.LinkResponse)
+func (c *namespacesServiceClient) Link(ctx context.Context, in *namespaces.LinkRequest, opts ...grpc.CallOption) (*namespaces.LinkResponse, error) {
+	out := new(namespaces.LinkResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.NamespacesService/Link", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -377,8 +377,8 @@ func (c *namespacesServiceClient) Link(ctx context.Context, in *namespacespb.Lin
 	return out, nil
 }
 
-func (c *namespacesServiceClient) Delete(ctx context.Context, in *namespacespb.DeleteRequest, opts ...grpc.CallOption) (*namespacespb.DeleteResponse, error) {
-	out := new(namespacespb.DeleteResponse)
+func (c *namespacesServiceClient) Delete(ctx context.Context, in *namespaces.DeleteRequest, opts ...grpc.CallOption) (*namespaces.DeleteResponse, error) {
+	out := new(namespaces.DeleteResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.api.NamespacesService/Delete", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -390,11 +390,11 @@ func (c *namespacesServiceClient) Delete(ctx context.Context, in *namespacespb.D
 // All implementations must embed UnimplementedNamespacesServiceServer
 // for forward compatibility
 type NamespacesServiceServer interface {
-	Create(context.Context, *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error)
-	List(context.Context, *namespacespb.ListRequest) (*namespacespb.ListResponse, error)
-	Join(context.Context, *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error)
-	Link(context.Context, *namespacespb.LinkRequest) (*namespacespb.LinkResponse, error)
-	Delete(context.Context, *namespacespb.DeleteRequest) (*namespacespb.DeleteResponse, error)
+	Create(context.Context, *namespaces.CreateRequest) (*namespaces.CreateResponse, error)
+	List(context.Context, *namespaces.ListRequest) (*namespaces.ListResponse, error)
+	Join(context.Context, *namespaces.JoinRequest) (*namespaces.JoinResponse, error)
+	Link(context.Context, *namespaces.LinkRequest) (*namespaces.LinkResponse, error)
+	Delete(context.Context, *namespaces.DeleteRequest) (*namespaces.DeleteResponse, error)
 	mustEmbedUnimplementedNamespacesServiceServer()
 }
 
@@ -402,19 +402,19 @@ type NamespacesServiceServer interface {
 type UnimplementedNamespacesServiceServer struct {
 }
 
-func (UnimplementedNamespacesServiceServer) Create(context.Context, *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error) {
+func (UnimplementedNamespacesServiceServer) Create(context.Context, *namespaces.CreateRequest) (*namespaces.CreateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
-func (UnimplementedNamespacesServiceServer) List(context.Context, *namespacespb.ListRequest) (*namespacespb.ListResponse, error) {
+func (UnimplementedNamespacesServiceServer) List(context.Context, *namespaces.ListRequest) (*namespaces.ListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
-func (UnimplementedNamespacesServiceServer) Join(context.Context, *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
+func (UnimplementedNamespacesServiceServer) Join(context.Context, *namespaces.JoinRequest) (*namespaces.JoinResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Join not implemented")
 }
-func (UnimplementedNamespacesServiceServer) Link(context.Context, *namespacespb.LinkRequest) (*namespacespb.LinkResponse, error) {
+func (UnimplementedNamespacesServiceServer) Link(context.Context, *namespaces.LinkRequest) (*namespaces.LinkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Link not implemented")
 }
-func (UnimplementedNamespacesServiceServer) Delete(context.Context, *namespacespb.DeleteRequest) (*namespacespb.DeleteResponse, error) {
+func (UnimplementedNamespacesServiceServer) Delete(context.Context, *namespaces.DeleteRequest) (*namespaces.DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedNamespacesServiceServer) mustEmbedUnimplementedNamespacesServiceServer() {}
@@ -431,7 +431,7 @@ func RegisterNamespacesServiceServer(s grpc.ServiceRegistrar, srv NamespacesServ
 }
 
 func _NamespacesService_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(namespacespb.CreateRequest)
+	in := new(namespaces.CreateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -443,13 +443,13 @@ func _NamespacesService_Create_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: "/nocloud.api.NamespacesService/Create",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NamespacesServiceServer).Create(ctx, req.(*namespacespb.CreateRequest))
+		return srv.(NamespacesServiceServer).Create(ctx, req.(*namespaces.CreateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _NamespacesService_List_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(namespacespb.ListRequest)
+	in := new(namespaces.ListRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -461,13 +461,13 @@ func _NamespacesService_List_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/nocloud.api.NamespacesService/List",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NamespacesServiceServer).List(ctx, req.(*namespacespb.ListRequest))
+		return srv.(NamespacesServiceServer).List(ctx, req.(*namespaces.ListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _NamespacesService_Join_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(namespacespb.JoinRequest)
+	in := new(namespaces.JoinRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -479,13 +479,13 @@ func _NamespacesService_Join_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/nocloud.api.NamespacesService/Join",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NamespacesServiceServer).Join(ctx, req.(*namespacespb.JoinRequest))
+		return srv.(NamespacesServiceServer).Join(ctx, req.(*namespaces.JoinRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _NamespacesService_Link_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(namespacespb.LinkRequest)
+	in := new(namespaces.LinkRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -497,13 +497,13 @@ func _NamespacesService_Link_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/nocloud.api.NamespacesService/Link",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NamespacesServiceServer).Link(ctx, req.(*namespacespb.LinkRequest))
+		return srv.(NamespacesServiceServer).Link(ctx, req.(*namespaces.LinkRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _NamespacesService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(namespacespb.DeleteRequest)
+	in := new(namespaces.DeleteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -515,7 +515,7 @@ func _NamespacesService_Delete_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: "/nocloud.api.NamespacesService/Delete",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NamespacesServiceServer).Delete(ctx, req.(*namespacespb.DeleteRequest))
+		return srv.(NamespacesServiceServer).Delete(ctx, req.(*namespaces.DeleteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

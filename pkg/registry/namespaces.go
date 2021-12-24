@@ -19,7 +19,9 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
+	pb "github.com/slntopp/nocloud/pkg/registry/proto"
+	namespacespb "github.com/slntopp/nocloud/pkg/registry/proto/namespaces"
+
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
@@ -30,7 +32,7 @@ import (
 )
 
 type NamespacesServiceServer struct {
-	namespacespb.UnimplementedNamespacesServiceServer
+	pb.UnimplementedNamespacesServiceServer
 	db driver.Database
 	ctrl graph.NamespacesController
 	acc_ctrl graph.AccountsController

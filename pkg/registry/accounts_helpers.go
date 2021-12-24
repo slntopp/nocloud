@@ -16,8 +16,8 @@ limitations under the License.
 package accounting
 
 import (
-	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/graph"
+	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 )
 
 func MakeAccountMessage(acc graph.Account) (*accountspb.Account) {

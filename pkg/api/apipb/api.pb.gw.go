@@ -15,9 +15,9 @@ import (
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/utilities"
-	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
-	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
+	"github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+	"github.com/slntopp/nocloud/pkg/registry/proto/namespaces"
 	proto_2 "github.com/slntopp/nocloud/pkg/services/proto"
 	proto_1 "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"google.golang.org/grpc"
@@ -37,7 +37,7 @@ var _ = utilities.NewDoubleArray
 var _ = metadata.Join
 
 func request_AccountsService_Token_0(ctx context.Context, marshaler runtime.Marshaler, client AccountsServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.TokenRequest
+	var protoReq accounts.TokenRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -54,7 +54,7 @@ func request_AccountsService_Token_0(ctx context.Context, marshaler runtime.Mars
 }
 
 func local_request_AccountsService_Token_0(ctx context.Context, marshaler runtime.Marshaler, server AccountsServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.TokenRequest
+	var protoReq accounts.TokenRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -71,7 +71,7 @@ func local_request_AccountsService_Token_0(ctx context.Context, marshaler runtim
 }
 
 func request_AccountsService_SetCredentials_0(ctx context.Context, marshaler runtime.Marshaler, client AccountsServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.SetCredentialsRequest
+	var protoReq accounts.SetCredentialsRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -105,7 +105,7 @@ func request_AccountsService_SetCredentials_0(ctx context.Context, marshaler run
 }
 
 func local_request_AccountsService_SetCredentials_0(ctx context.Context, marshaler runtime.Marshaler, server AccountsServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.SetCredentialsRequest
+	var protoReq accounts.SetCredentialsRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -139,7 +139,7 @@ func local_request_AccountsService_SetCredentials_0(ctx context.Context, marshal
 }
 
 func request_AccountsService_Create_0(ctx context.Context, marshaler runtime.Marshaler, client AccountsServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.CreateRequest
+	var protoReq accounts.CreateRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -156,7 +156,7 @@ func request_AccountsService_Create_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_AccountsService_Create_0(ctx context.Context, marshaler runtime.Marshaler, server AccountsServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.CreateRequest
+	var protoReq accounts.CreateRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -173,7 +173,7 @@ func local_request_AccountsService_Create_0(ctx context.Context, marshaler runti
 }
 
 func request_AccountsService_Update_0(ctx context.Context, marshaler runtime.Marshaler, client AccountsServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.Account
+	var protoReq accounts.Account
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -207,7 +207,7 @@ func request_AccountsService_Update_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_AccountsService_Update_0(ctx context.Context, marshaler runtime.Marshaler, server AccountsServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.Account
+	var protoReq accounts.Account
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -241,7 +241,7 @@ func local_request_AccountsService_Update_0(ctx context.Context, marshaler runti
 }
 
 func request_AccountsService_Get_0(ctx context.Context, marshaler runtime.Marshaler, client AccountsServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.GetRequest
+	var protoReq accounts.GetRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -267,7 +267,7 @@ func request_AccountsService_Get_0(ctx context.Context, marshaler runtime.Marsha
 }
 
 func local_request_AccountsService_Get_0(ctx context.Context, marshaler runtime.Marshaler, server AccountsServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.GetRequest
+	var protoReq accounts.GetRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -297,7 +297,7 @@ var (
 )
 
 func request_AccountsService_List_0(ctx context.Context, marshaler runtime.Marshaler, client AccountsServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.ListRequest
+	var protoReq accounts.ListRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -313,7 +313,7 @@ func request_AccountsService_List_0(ctx context.Context, marshaler runtime.Marsh
 }
 
 func local_request_AccountsService_List_0(ctx context.Context, marshaler runtime.Marshaler, server AccountsServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.ListRequest
+	var protoReq accounts.ListRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -329,7 +329,7 @@ func local_request_AccountsService_List_0(ctx context.Context, marshaler runtime
 }
 
 func request_AccountsService_Delete_0(ctx context.Context, marshaler runtime.Marshaler, client AccountsServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.DeleteRequest
+	var protoReq accounts.DeleteRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -355,7 +355,7 @@ func request_AccountsService_Delete_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_AccountsService_Delete_0(ctx context.Context, marshaler runtime.Marshaler, server AccountsServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq accountspb.DeleteRequest
+	var protoReq accounts.DeleteRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -381,7 +381,7 @@ func local_request_AccountsService_Delete_0(ctx context.Context, marshaler runti
 }
 
 func request_NamespacesService_Create_0(ctx context.Context, marshaler runtime.Marshaler, client NamespacesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq namespacespb.CreateRequest
+	var protoReq namespaces.CreateRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -398,7 +398,7 @@ func request_NamespacesService_Create_0(ctx context.Context, marshaler runtime.M
 }
 
 func local_request_NamespacesService_Create_0(ctx context.Context, marshaler runtime.Marshaler, server NamespacesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq namespacespb.CreateRequest
+	var protoReq namespaces.CreateRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -419,7 +419,7 @@ var (
 )
 
 func request_NamespacesService_List_0(ctx context.Context, marshaler runtime.Marshaler, client NamespacesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq namespacespb.ListRequest
+	var protoReq namespaces.ListRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -435,7 +435,7 @@ func request_NamespacesService_List_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_NamespacesService_List_0(ctx context.Context, marshaler runtime.Marshaler, server NamespacesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq namespacespb.ListRequest
+	var protoReq namespaces.ListRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
@@ -451,7 +451,7 @@ func local_request_NamespacesService_List_0(ctx context.Context, marshaler runti
 }
 
 func request_NamespacesService_Join_0(ctx context.Context, marshaler runtime.Marshaler, client NamespacesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq namespacespb.JoinRequest
+	var protoReq namespaces.JoinRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -485,7 +485,7 @@ func request_NamespacesService_Join_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_NamespacesService_Join_0(ctx context.Context, marshaler runtime.Marshaler, server NamespacesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq namespacespb.JoinRequest
+	var protoReq namespaces.JoinRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -519,7 +519,7 @@ func local_request_NamespacesService_Join_0(ctx context.Context, marshaler runti
 }
 
 func request_NamespacesService_Link_0(ctx context.Context, marshaler runtime.Marshaler, client NamespacesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq namespacespb.LinkRequest
+	var protoReq namespaces.LinkRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -553,7 +553,7 @@ func request_NamespacesService_Link_0(ctx context.Context, marshaler runtime.Mar
 }
 
 func local_request_NamespacesService_Link_0(ctx context.Context, marshaler runtime.Marshaler, server NamespacesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq namespacespb.LinkRequest
+	var protoReq namespaces.LinkRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -587,7 +587,7 @@ func local_request_NamespacesService_Link_0(ctx context.Context, marshaler runti
 }
 
 func request_NamespacesService_Delete_0(ctx context.Context, marshaler runtime.Marshaler, client NamespacesServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq namespacespb.DeleteRequest
+	var protoReq namespaces.DeleteRequest
 	var metadata runtime.ServerMetadata
 
 	var (
@@ -613,7 +613,7 @@ func request_NamespacesService_Delete_0(ctx context.Context, marshaler runtime.M
 }
 
 func local_request_NamespacesService_Delete_0(ctx context.Context, marshaler runtime.Marshaler, server NamespacesServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq namespacespb.DeleteRequest
+	var protoReq namespaces.DeleteRequest
 	var metadata runtime.ServerMetadata
 
 	var (

@@ -37,75 +37,75 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
 import "google/protobuf/struct.proto";
 import "google/api/annotations.proto";
 
-import "pkg/accounting/accountspb/accounts.proto";
+import "pkg/registry/proto/accounts/accounts.proto";
 service AccountsService {
-    rpc Token(nocloud.accounts.TokenRequest) returns (nocloud.accounts.TokenResponse) {
+    rpc Token(nocloud.registry.accounts.TokenRequest) returns (nocloud.registry.accounts.TokenResponse) {
         option (google.api.http) = {
             post: "/token"
             body: "*"
         };
     };
-    rpc SetCredentials(nocloud.accounts.SetCredentialsRequest) returns (nocloud.accounts.SetCredentialsResponse) {
+    rpc SetCredentials(nocloud.registry.accounts.SetCredentialsRequest) returns (nocloud.registry.accounts.SetCredentialsResponse) {
         option (google.api.http) = {
             post: "/accounts/{account}/credentials"
             body: "*"
         };
     };
-    rpc Create(nocloud.accounts.CreateRequest) returns (nocloud.accounts.CreateResponse) {
+    rpc Create(nocloud.registry.accounts.CreateRequest) returns (nocloud.registry.accounts.CreateResponse) {
         option (google.api.http) = {
             put: "/accounts"
             body: "*"
         };
     };
-    rpc Update(nocloud.accounts.Account) returns (nocloud.accounts.UpdateResponse) {
+    rpc Update(nocloud.registry.accounts.Account) returns (nocloud.registry.accounts.UpdateResponse) {
         option (google.api.http) = {
             patch: "/accounts/{id}"
             body: "*"
         };
     };
-    rpc Get(nocloud.accounts.GetRequest) returns (nocloud.accounts.Account) {
+    rpc Get(nocloud.registry.accounts.GetRequest) returns (nocloud.registry.accounts.Account) {
         option (google.api.http) = {
             get: "/accounts/{id}"
         };
     };
-    rpc List(nocloud.accounts.ListRequest) returns (nocloud.accounts.ListResponse) {
+    rpc List(nocloud.registry.accounts.ListRequest) returns (nocloud.registry.accounts.ListResponse) {
         option (google.api.http) = {
             get: "/accounts"
         };
     };
-    rpc Delete(nocloud.accounts.DeleteRequest) returns (nocloud.accounts.DeleteResponse) {
+    rpc Delete(nocloud.registry.accounts.DeleteRequest) returns (nocloud.registry.accounts.DeleteResponse) {
         option (google.api.http) = {
             delete: "/accounts/{id}"
         };
     };
 }
 
-import "pkg/accounting/namespacespb/namespaces.proto";
+import "pkg/registry/proto/namespaces/namespaces.proto";
 service NamespacesService {
-    rpc Create(nocloud.namespaces.CreateRequest) returns (nocloud.namespaces.CreateResponse) {
+    rpc Create(nocloud.registry.namespaces.CreateRequest) returns (nocloud.registry.namespaces.CreateResponse) {
         option (google.api.http) = {
             put: "/namespaces"
             body: "*"
         };
     };
-    rpc List(nocloud.namespaces.ListRequest) returns (nocloud.namespaces.ListResponse) {
+    rpc List(nocloud.registry.namespaces.ListRequest) returns (nocloud.registry.namespaces.ListResponse) {
         option (google.api.http) = {
             get: "/namespaces"
         };
     };
-    rpc Join(nocloud.namespaces.JoinRequest) returns (nocloud.namespaces.JoinResponse) {
+    rpc Join(nocloud.registry.namespaces.JoinRequest) returns (nocloud.registry.namespaces.JoinResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/join"
             body: "*"
         };
     };
-    rpc Link(nocloud.namespaces.LinkRequest) returns (nocloud.namespaces.LinkResponse) {
+    rpc Link(nocloud.registry.namespaces.LinkRequest) returns (nocloud.registry.namespaces.LinkResponse) {
         option (google.api.http) = {
             post: "/namespaces/{namespace}/link"
             body: "*"
         };
     };
-    rpc Delete(nocloud.namespaces.DeleteRequest) returns (nocloud.namespaces.DeleteResponse) {
+    rpc Delete(nocloud.registry.namespaces.DeleteRequest) returns (nocloud.registry.namespaces.DeleteResponse) {
         option (google.api.http) = {
             delete: "/namespaces/{id}"
         };
