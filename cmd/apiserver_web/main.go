@@ -17,7 +17,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -41,7 +40,6 @@ var (
 )
 
 func init() {
-	fmt.Println("started")
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
@@ -91,7 +89,6 @@ func main() {
 	defer func() {
 		_ = log.Sync()
 	}()
-	fmt.Println("main", log)
 
 	var err error
 
