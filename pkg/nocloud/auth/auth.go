@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package main
+package auth
 
 import (
 	"context"
@@ -31,6 +31,16 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+var (
+	log *zap.Logger
+	SIGNING_KEY		[]byte
+)
+
+func SetContext(logger *zap.Logger, key []byte) {
+	log = logger
+	SIGNING_KEY = key
+}
 
 func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	l := log.Named("JWT Interceptor")
