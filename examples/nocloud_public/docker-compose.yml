@@ -19,12 +19,6 @@ services:
       BASE_DOMAIN: "${BASE_DOMAIN}"
     networks:
       - proxy
-  certbot:
-    image: certbot/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    volumes:
-      - ./data/certbot/conf:/etc/letsencrypt
-      - ./data/certbot/www:/var/www/certbot
 
   health:
     container_name: health-service
