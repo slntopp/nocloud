@@ -1,0 +1,10 @@
+syntax = "proto3";
+package nocloud.hasher;
+
+option go_package = "github.com/slntopp/nocloud/pkg/hasher/hasherpb";
+import "google/protobuf/descriptor.proto";
+
+// not in proto/ package because linking .proto is "package proto" too
+extend google.protobuf.FieldOptions {
+    bool hashed = 50000;
+}
