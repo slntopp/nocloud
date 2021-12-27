@@ -18,7 +18,7 @@ services:
     image: ghcr.io/slntopp/nocloud/health:latest
     environment:
       LOG_LEVEL: -1
-      SIGNING_KEY: supersecretaaarhgreplaceme
+      SIGNING_KEY: "${SIGNING_KEY}"
     networks:
       - proxy
       - grpc-internal
@@ -39,9 +39,9 @@ services:
     environment:
       LOG_LEVEL: -1
       DB_HOST: db:8529
-      DB_CRED: root:openSesame
-      NOCLOUD_ROOT_PASSWORD: secret
-      SIGNING_KEY: supersecretaaarhgreplaceme
+      DB_CRED: "${DB_USER}:${DB_PASS}"
+      NOCLOUD_ROOT_PASSWORD: "${NOCLOUD_ROOT_PASS}"
+      SIGNING_KEY: "${SIGNING_KEY}"
     depends_on:
       - db
     networks:
@@ -55,9 +55,9 @@ services:
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     environment:
       LOG_LEVEL: -1
-      SIGNING_KEY: supersecretaaarhgreplaceme
+      SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
-      DB_CRED: root:openSesame
+      DB_CRED: "${DB_USER}:${DB_PASS}"
     depends_on:
       - db
     networks:
@@ -71,9 +71,9 @@ services:
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     environment:
       LOG_LEVEL: -1
-      SIGNING_KEY: supersecretaaarhgreplaceme
+      SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
-      DB_CRED: root:openSesame
+      DB_CRED: "${DB_USER}:${DB_PASS}"
     networks:
       - proxy
       - arangodb
@@ -85,7 +85,7 @@ services:
     container_name: database-master
     image: arangodb/arangodb:latest
     environment:
-      ARANGO_ROOT_PASSWORD: openSesame
+      ARANGO_ROOT_PASSWORD: "${DB_PASS}"
     ports:
       - 8529:8529
     volumes:

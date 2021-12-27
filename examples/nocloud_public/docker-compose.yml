@@ -3,9 +3,10 @@ services:
   proxy:
     image: nginx
     depends_on:
-      - apiserver
-      - apiserver-web
-      - db
+      - health
+      - registry
+      - services-registry
+      - sp-registry
     volumes:
       - ./proxy:/etc/nginx/templates
       - ./data/certbot/conf:/etc/letsencrypt
@@ -15,7 +16,7 @@ services:
       - 443:443
       - 8080:8080
     environment:
-      BASE_DOMAIN: example.com
+      BASE_DOMAIN: "${BASE_DOMAIN}"
     networks:
       - proxy
   certbot:
@@ -28,17 +29,9 @@ services:
   health:
     container_name: health-service
     image: ghcr.io/slntopp/nocloud/health:latest
-    networks:
-      - grpc-internal
-  apiserver:
-    container_name: apiserver
-    image: ghcr.io/slntopp/nocloud/apiserver:latest
     environment:
-      HEALTH_HOST: health:8080
-      REGISTRY_HOST: registry:8080
-      SERVICES_REGISTRY: services-registry:8080
-      SP_REGISTRY_HOST: sp-registry:8080
-      SIGNING_KEY: supersecretaaarhgreplaceme
+      LOG_LEVEL: -1
+      SIGNING_KEY: "${SIGNING_KEY}"
     networks:
       - proxy
       - grpc-internal
@@ -54,13 +47,15 @@ services:
     container_name: registry
     image: ghcr.io/slntopp/nocloud/registry:latest
     environment:
+      LOG_LEVEL: -1
       DB_HOST: db:8529
-      DB_CRED: root:openSesame
-      NOCLOUD_ROOT_PASSWORD: secret
-      SIGNING_KEY: supersecretaaarhgreplaceme
+      DB_CRED: "${DB_USER}:${DB_PASS}"
+      NOCLOUD_ROOT_PASSWORD: "${NOCLOUD_ROOT_PASS}"
+      SIGNING_KEY: "${SIGNING_KEY}"
     depends_on:
       - db
     networks:
+      - proxy
       - arangodb
       - grpc-internal
     links:
@@ -69,12 +64,14 @@ services:
     container_name: services-registry
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     environment:
+      LOG_LEVEL: -1
+      SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
-      DB_CRED: root:openSesame
-      DRIVERS: driver-ione:8080
+      DB_CRED: "${DB_USER}:${DB_PASS}"
     depends_on:
       - db
     networks:
+      - proxy
       - arangodb
       - grpc-internal
     links:
@@ -84,10 +81,11 @@ services:
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     environment:
       LOG_LEVEL: -1
+      SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
-      DB_CRED: root:openSesame
-      DRIVERS: driver-ione:8080
+      DB_CRED: "${DB_USER}:${DB_PASS}"
     networks:
+      - proxy
       - arangodb
       - grpc-internal
     links:
@@ -97,12 +95,13 @@ services:
     container_name: database-master
     image: arangodb/arangodb:latest
     environment:
-      ARANGO_ROOT_PASSWORD: openSesame
+      ARANGO_ROOT_PASSWORD: "${DB_PASS}"
+    ports:
+      - 8529:8529
     volumes:
       - data:/var/lib/arangodb3
-      - ../../database/schemes/:/docker-entrypoint-initdb.d/dumps/nocloud/
+      - ./database/schemes/:/docker-entrypoint-initdb.d/dumps/nocloud/
     networks:
-      - proxy
       - arangodb
 
   driver-ione:
