@@ -1,6 +1,9 @@
 # NoCloud
 Brand new Cloud FrontEnd based on IONe and Golang
 
+[![Containers](https://github.com/slntopp/nocloud/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/slntopp/nocloud/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/slntopp/nocloud/actions/workflows/codeql-analysis.yml/badge.svg?branch=master)](https://github.com/slntopp/nocloud/actions/workflows/codeql-analysis.yml)
+
 ## Table of Contents
 
 * [Installation](#installation)
