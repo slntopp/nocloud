@@ -29,6 +29,7 @@ message ServicesProvider {
     string title = 3;
     map<string, google.protobuf.Value> secrets = 4; // json
     map<string, Var> vars = 5;
+    map<string, google.protobuf.Struct> extentions = 6;
 }
 
 message TestResponse {
@@ -54,6 +55,10 @@ message ActionRequest {
         repeated google.protobuf.Value params = 2;
     }
     Request request = 2;
+}
+
+message ListExtentionsResponse {
+    repeated string types = 1;
 }
 
 service ServicesProvidersService {
@@ -87,4 +92,33 @@ service ServicesProvidersService {
             body: "*"
         };
     };
+
+    rpc ListExtentions(nocloud.services_providers.ListRequest) returns (nocloud.services_providers.ListExtentionsResponse) {
+        option (google.api.http) = {
+            get: "/sp-ext"
+        };
+    }
 };
+
+message GetTypeRequest {}
+message GetTypeResponse {
+    string type = 1;
+}
+
+message ServicesProvidersExtentionData {
+    string uuid = 1;
+    google.protobuf.Struct data = 2;
+}
+
+message GenericResponse {
+    bool result = 1;
+    string error = 2;
+}
+
+service ServicesProvidersExtentionsService {
+    rpc GetType(GetTypeRequest) returns (GetTypeResponse);
+    rpc Test(ServicesProvidersExtentionData) returns (GenericResponse);
+    rpc Register(ServicesProvidersExtentionData) returns (GenericResponse);
+    rpc Update(ServicesProvidersExtentionData) returns (GenericResponse);
+    rpc Unregister(ServicesProvidersExtentionData) returns (GenericResponse);
+}

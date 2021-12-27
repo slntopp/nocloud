@@ -34,6 +34,7 @@ type ServicesProviderServer struct {
 	sppb.UnimplementedServicesProvidersServiceServer
 
 	drivers map[string]driverpb.DriverServiceClient
+	extention_servers map[string]sppb.ServicesProvidersExtentionsServiceClient
 	db driver.Database
 	ctrl graph.ServicesProvidersController
 	ns_ctrl graph.NamespacesController
@@ -46,11 +47,27 @@ func NewServicesProviderServer(log *zap.Logger, db driver.Database) *ServicesPro
 		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl: graph.NewNamespacesController(log, db),
 		drivers: make(map[string]driverpb.DriverServiceClient),
+		extention_servers: make(map[string]sppb.ServicesProvidersExtentionsServiceClient),
 	}
 }
 
 func (s *ServicesProviderServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
 	s.drivers[type_key] = client
+}
+
+func (s *ServicesProviderServer) RegisterExtentionServer(type_key string, client sppb.ServicesProvidersExtentionsServiceClient) {
+	s.extention_servers[type_key] = client
+}
+
+func (s *ServicesProviderServer) ListExtentions(ctx context.Context, req *sppb.ListRequest) (res *sppb.ListExtentionsResponse, err error) {
+	s.log.Debug("ListExtentions request received", zap.Any("request", req))
+
+	keys := make([]string, 0, len(s.extention_servers))
+	for k := range s.extention_servers {
+		keys = append(keys, k)
+	}
+	
+	return &sppb.ListExtentionsResponse{Types: keys}, nil
 }
 
 func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesProvider) (*sppb.TestResponse, error) {
@@ -64,6 +81,24 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 	client, ok := s.drivers[req.GetType()]
 	if !ok {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("Driver type '%s' not registered", req.GetType()))
+	}
+
+	for ext, data := range req.GetExtentions() {
+		client, ok := s.extention_servers[ext]
+		if !ok {
+			return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
+		}
+		res, err := client.Test(ctx, &sppb.ServicesProvidersExtentionData{
+			Data: data,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if !res.Result {
+			return &sppb.TestResponse{
+				Result: res.Result, Error: res.Error,
+			}, nil
+		}
 	}
 
 	return client.TestServiceProviderConfig(ctx, req)
@@ -82,6 +117,10 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 
 	sp := &graph.ServicesProvider{ServicesProvider: req}
 	err = s.ctrl.Create(ctx, sp)
+	if err != nil {
+		s.log.Debug("Error allocating in DataBase", zap.Any("sp", sp), zap.Error(err))
+		return req, status.Error(codes.Internal, "Error allocating in DataBase")
+	}
 	return sp.ServicesProvider, err
 }
 
