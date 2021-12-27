@@ -95,8 +95,9 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 			return nil, err
 		}
 		if !res.Result {
+			err := fmt.Sprintf("Extention '%s': %s", ext, res.Error)
 			return &sppb.TestResponse{
-				Result: res.Result, Error: res.Error,
+				Result: res.Result, Error: err,
 			}, nil
 		}
 	}
