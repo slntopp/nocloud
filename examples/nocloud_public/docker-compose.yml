@@ -39,7 +39,7 @@ services:
     container_name: apiserver-web
     image: ghcr.io/slntopp/nocloud/apiserver-web:latest
     environment:
-      APISERVER_HOST: apiserver:8080
+      APISERVER_HOST: proxy:8080
     networks:
       - proxy
       - grpc-internal
