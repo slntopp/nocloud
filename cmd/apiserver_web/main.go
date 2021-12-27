@@ -94,6 +94,8 @@ func main() {
 		_ = log.Sync()
 	}()
 
+	log.Info("Starting REST-API Server")
+	log.Info("Registering Endpoints", zap.String("server", apiserver))
 	var err error
 
 	gwmux := runtime.NewServeMux()
