@@ -2,19 +2,21 @@ server {
     listen 8080 http2;
     server_name api.nocloud.local localhost;
 
+    resolver 127.0.0.11 valid=30s;
+
     location /nocloud.registry. {
-        grpc_pass grpc://registry;
+        grpc_pass grpc://registry:8080;
     }
 
     location /nocloud.services. {
-        grpc_pass grpc://services-registry;
+        grpc_pass grpc://services-registry:8080;
     }
     
     location /nocloud.services_providers. {
-        grpc_pass grpc://sp-registry;
+        grpc_pass grpc://sp-registry:8080;
     }
 
     location /nocloud.health. {
-        grpc_pass grpc://health;
+        grpc_pass grpc://health:8080;
     }
 }
