@@ -14,6 +14,9 @@
       "name": "ServicesProvidersService"
     },
     {
+      "name": "ServicesProvidersExtentionsService"
+    },
+    {
       "name": "DriverService"
     },
     {
@@ -888,6 +891,28 @@
         ]
       }
     },
+    "/sp-ext": {
+      "get": {
+        "operationId": "ServicesProvidersService_ListExtentions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/services_providersListExtentionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      }
+    },
     "/sp/{servicesProvider.uuid}": {
       "post": {
         "operationId": "ServicesProvidersService_Invoke",
@@ -1067,6 +1092,14 @@
     },
     "drivervanillaDownResponse": {
       "type": "object"
+    },
+    "drivervanillaGetTypeResponse": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        }
+      }
     },
     "drivervanillaUpResponse": {
       "type": "object",
@@ -1252,6 +1285,14 @@
           "items": {
             "$ref": "#/definitions/servicesUpError"
           }
+        }
+      }
+    },
+    "nocloudservices_providersGetTypeResponse": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
         }
       }
     },
@@ -1478,6 +1519,28 @@
       },
       "title": "Available only for users with SUPERUSER and ADMIN access to platform namespace"
     },
+    "services_providersGenericResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "services_providersListExtentionsResponse": {
+      "type": "object",
+      "properties": {
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "services_providersServicesProvider": {
       "type": "object",
       "properties": {
@@ -1501,6 +1564,12 @@
           "additionalProperties": {
             "$ref": "#/definitions/services_providersVar"
           }
+        },
+        "extentions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },
@@ -1523,14 +1592,6 @@
           "additionalProperties": {
             "type": "object"
           }
-        }
-      }
-    },
-    "vanillaGetTypeResponse": {
-      "type": "object",
-      "properties": {
-        "type": {
-          "type": "string"
         }
       }
     }
