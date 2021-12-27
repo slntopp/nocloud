@@ -102,6 +102,7 @@ services:
       - data:/var/lib/arangodb3
       - ./database/schemes/:/docker-entrypoint-initdb.d/dumps/nocloud/
     networks:
+      - proxy
       - arangodb
 
   driver-ione:
