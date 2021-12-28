@@ -140,7 +140,6 @@ export default {
 			this.isTestLoading = true
 			api.servicesProviders.testConfig(this.provider)
 			.then((res) => {
-				console.log(`res`, res);
 				if(!res.result){
 					throw res;
 				}
