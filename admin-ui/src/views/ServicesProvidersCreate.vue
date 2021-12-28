@@ -93,7 +93,8 @@ export default {
 		isPassed: false,
 		isLoading: false,
 		isTestLoading: false,
-		testButtonColor: "background-light"
+		testButtonColor: "background-light",
+		forceSuccess: false,
 	}),
 	created(){
 		const types = require.context('@/components/serviceProviders/', true, /creatingTemplate\.vue$/)
@@ -119,9 +120,13 @@ export default {
 			if(type == 'vars'){
 				this.provider.vars = data;
 			}
+
+			
+			this.testButtonColor = "background-light"
+			this.forceSuccess = false;
 		},
 		tryToSend(){
-			if(!this.isPassed) return;
+			if(!this.isPassed && !this.forceSuccess) return;
 			this.isLoading = true
 			api.servicesProviders.create(this.provider)
 			.then(() => {
@@ -140,10 +145,12 @@ export default {
 					throw res;
 				}
 				this.testButtonColor = "success"
+				this.forceSuccess = true;
 			})
 			.catch((err) => {
 				console.log('err', err);
 				this.testButtonColor = "error"
+				this.forceSuccess = false;
 			})
 			.finally(() => {
 				this.isTestLoading = false;
