@@ -89,10 +89,6 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 	log := s.log.Named("Get")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	ctx, err = nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -109,10 +105,6 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 	log := s.log.Named("List")
 	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
 
-	ctx, err = nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -134,10 +126,6 @@ func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.ActionReq
 	log := s.log.Named("Invoke")
 	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
 
-	ctx, err = nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 

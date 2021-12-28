@@ -1,0 +1,15 @@
+upstream registry {
+    server registry:8080;
+}
+
+upstream services-registry {
+    server services-registry:8080;
+}
+
+upstream sp-registry {
+    server sp-registry:8080;
+}
+
+upstream health {
+    server health:8080;
+}

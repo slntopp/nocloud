@@ -20,9 +20,9 @@ import (
 	"errors"
 
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud/pkg/accounting/accountspb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
+	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 	"go.uber.org/zap"
 
 	"google.golang.org/grpc/codes"
@@ -226,7 +226,7 @@ func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col dri
 	return key, true
 }
 
-func MakeCredentials(credentials accountspb.Credentials) (Credentials, error) {
+func MakeCredentials(credentials *accountspb.Credentials) (Credentials, error) {
 	var cred Credentials;
 	var err error;
 	switch credentials.Type {

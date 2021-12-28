@@ -17,15 +17,18 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"os"
 	"strings"
 
+	"github.com/slntopp/nocloud/pkg/health/healthpb"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	registrypb "github.com/slntopp/nocloud/pkg/registry/proto"
+	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
+	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+
 	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	"github.com/slntopp/nocloud/pkg/api/apipb"
-	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -41,7 +44,6 @@ var (
 )
 
 func init() {
-	fmt.Println("started")
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
@@ -91,29 +93,28 @@ func main() {
 	defer func() {
 		_ = log.Sync()
 	}()
-	fmt.Println("main", log)
 
 	var err error
 
 	gwmux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithInsecure()}
-	err = apipb.RegisterHealthServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = healthpb.RegisterHealthServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register HealthService gateway", zap.Error(err))
 	}
-	err = apipb.RegisterAccountsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = registrypb.RegisterAccountsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register AccountsService gateway", zap.Error(err))
 	}
-	err = apipb.RegisterNamespacesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = registrypb.RegisterNamespacesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register NamespacesService gateway", zap.Error(err))
 	}
-	err = apipb.RegisterServicesProvidersServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = sppb.RegisterServicesProvidersServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
 	}
-	err = apipb.RegisterServicesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = servicespb.RegisterServicesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
 	}

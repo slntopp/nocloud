@@ -16,9 +16,8 @@ limitations under the License.
 syntax = "proto3";
 package nocloud.services_providers;
 
-option go_package = "github.com/slntopp/nocloud/pkg/services_providers/proto";
-
 import "google/protobuf/struct.proto";
+import "google/api/annotations.proto";
 
 message Var {
     map<string, google.protobuf.Value> value = 1;
@@ -58,11 +57,34 @@ message ActionRequest {
 }
 
 service ServicesProvidersService {
-    rpc Test(ServicesProvider) returns (TestResponse);
-    rpc Create(ServicesProvider) returns (ServicesProvider);
+    rpc Test(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.TestResponse) {
+        option (google.api.http) = {
+            post: "/sp"
+            body: "*"
+        };
+    };
+    rpc Create(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.ServicesProvider) {
+        option (google.api.http) = {
+            put: "/sp"
+            body: "*"
+        };
+    };
 
-    rpc Get(GetRequest) returns (ServicesProvider);
-    rpc List(ListRequest) returns (ListResponse);
+    rpc Get(nocloud.services_providers.GetRequest) returns (nocloud.services_providers.ServicesProvider) {
+        option (google.api.http) = {
+            get: "/sp/{uuid}"
+        };
+    };
+    rpc List(nocloud.services_providers.ListRequest) returns (nocloud.services_providers.ListResponse) {
+        option (google.api.http) = {
+            get: "/sp"
+        };
+    };
 
-    rpc Invoke(ActionRequest) returns (google.protobuf.Struct);
-}
+    rpc Invoke(nocloud.services_providers.ActionRequest) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            post: "/sp/{services_provider.uuid}"
+            body: "*"
+        };
+    };
+};

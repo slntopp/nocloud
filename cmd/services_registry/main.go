@@ -22,11 +22,15 @@ import (
 
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/services"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
 )
 
@@ -37,6 +41,7 @@ var (
 	arangodbHost 	string
 	arangodbCred 	string
 	drivers 		[]string
+	SIGNING_KEY		[]byte
 )
 
 func init() {
@@ -48,12 +53,14 @@ func init() {
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("DRIVERS", "")
+	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	port = viper.GetString("PORT")
 
 	arangodbHost 	= viper.GetString("DB_HOST")
 	arangodbCred 	= viper.GetString("DB_CRED")
 	drivers 		= viper.GetStringSlice("DRIVERS")
+	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
 }
 
 func main() {
@@ -70,7 +77,13 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	s := grpc.NewServer()
+	auth.SetContext(log, SIGNING_KEY)
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_zap.UnaryServerInterceptor(log),
+			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
+		)),
+	)
 	
 	server := services.NewServicesServer(log, db)
 

@@ -63,10 +63,6 @@ func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.
 }
 
 func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *servicespb.CreateRequest) (*servicespb.TestConfigResponse, *graph.Namespace, error) {
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, nil, err
-	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -170,7 +166,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 	log := s.log.Named("Up")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	service, err := s.ctrl.Get(ctx, request.GetId())
+	service, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not found")
@@ -273,7 +269,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 	log := s.log.Named("Down")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	service, err := s.ctrl.Get(ctx, request.GetId())
+	service, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not found")
@@ -353,14 +349,10 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *servicespb.Get
 	log := s.log.Named("Get")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	ctx, err = nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	r, err := s.ctrl.Get(ctx, request.GetId())
+	r, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service from DB", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
@@ -378,10 +370,6 @@ func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.Li
 	log := s.log.Named("List")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	ctx, err = nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 

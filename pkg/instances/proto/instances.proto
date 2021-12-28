@@ -1,8 +1,6 @@
 syntax = "proto3";
 package nocloud.instances;
 
-option go_package = "github.com/slntopp/nocloud/pkg/instances/proto";
-
 import "google/protobuf/struct.proto";
 
 message Instance {

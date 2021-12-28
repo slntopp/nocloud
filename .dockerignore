@@ -5,3 +5,4 @@ tools
 *.md
 database
 examples
+api.swagger.json

@@ -26,7 +26,7 @@ type ServicesServiceClient interface {
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
-	PerformAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error)
+	PerformServiceAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error)
 }
 
 type servicesServiceClient struct {
@@ -109,9 +109,9 @@ func (c *servicesServiceClient) Down(ctx context.Context, in *DownRequest, opts 
 	return out, nil
 }
 
-func (c *servicesServiceClient) PerformAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error) {
+func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error) {
 	out := new(PerformActionResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/PerformAction", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/PerformServiceAction", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ type ServicesServiceServer interface {
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
-	PerformAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error)
+	PerformServiceAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error)
 	mustEmbedUnimplementedServicesServiceServer()
 }
 
@@ -162,8 +162,8 @@ func (UnimplementedServicesServiceServer) Up(context.Context, *UpRequest) (*UpRe
 func (UnimplementedServicesServiceServer) Down(context.Context, *DownRequest) (*DownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Down not implemented")
 }
-func (UnimplementedServicesServiceServer) PerformAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PerformAction not implemented")
+func (UnimplementedServicesServiceServer) PerformServiceAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PerformServiceAction not implemented")
 }
 func (UnimplementedServicesServiceServer) mustEmbedUnimplementedServicesServiceServer() {}
 
@@ -322,20 +322,20 @@ func _ServicesService_Down_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServicesService_PerformAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _ServicesService_PerformServiceAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PerformActionRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServiceServer).PerformAction(ctx, in)
+		return srv.(ServicesServiceServer).PerformServiceAction(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/PerformAction",
+		FullMethod: "/nocloud.services.ServicesService/PerformServiceAction",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).PerformAction(ctx, req.(*PerformActionRequest))
+		return srv.(ServicesServiceServer).PerformServiceAction(ctx, req.(*PerformActionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -380,8 +380,8 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ServicesService_Down_Handler,
 		},
 		{
-			MethodName: "PerformAction",
-			Handler:    _ServicesService_PerformAction_Handler,
+			MethodName: "PerformServiceAction",
+			Handler:    _ServicesService_PerformServiceAction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

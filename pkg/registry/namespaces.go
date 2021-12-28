@@ -13,13 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package accounting
+package registry
 
 import (
 	"context"
 
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud/pkg/accounting/namespacespb"
+	pb "github.com/slntopp/nocloud/pkg/registry/proto"
+	namespacespb "github.com/slntopp/nocloud/pkg/registry/proto/namespaces"
+
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
@@ -30,7 +32,7 @@ import (
 )
 
 type NamespacesServiceServer struct {
-	namespacespb.UnimplementedNamespacesServiceServer
+	pb.UnimplementedNamespacesServiceServer
 	db driver.Database
 	ctrl graph.NamespacesController
 	acc_ctrl graph.AccountsController
@@ -53,10 +55,6 @@ func NewNamespacesServer(log *zap.Logger, db driver.Database) *NamespacesService
 func (s *NamespacesServiceServer) Create(ctx context.Context, request *namespacespb.CreateRequest) (*namespacespb.CreateResponse, error) {
 	log := s.log.Named("CreateNamespace")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 
 	ns, err := s.ctrl.Create(ctx, request.Title)
 	if err != nil {
@@ -64,16 +62,13 @@ func (s *NamespacesServiceServer) Create(ctx context.Context, request *namespace
 		return  &namespacespb.CreateResponse{}, status.Error(codes.Internal, "Can't create Namespace")
 	}
 
-	return &namespacespb.CreateResponse{ Id: ns.Key }, nil
+	return &namespacespb.CreateResponse{ Uuid: ns.Key }, nil
 }
 
 func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacespb.ListRequest) (*namespacespb.ListResponse, error) {
 	log := s.log.Named("ListNamespaces")
 	log.Debug("List request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -94,7 +89,7 @@ func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacesp
 
 	result := make([]*namespacespb.Namespace, len(pool))
 	for i, ns := range pool {
-		result[i] = &namespacespb.Namespace{Id: ns.Key, Title:  ns.Title }
+		result[i] = &namespacespb.Namespace{Uuid: ns.Key, Title:  ns.Title }
 	}
 	log.Debug("Convert result", zap.Any("pool", result))
 
@@ -104,11 +99,6 @@ func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacesp
 func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
 	log := s.log.Named("JoinNamespace")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
 
 	acc, err := s.acc_ctrl.Get(ctx, request.Account)
 	if err != nil {
@@ -151,11 +141,6 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 	log := s.log.Named("LinkNamespace")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
-
 	acc, err := s.acc_ctrl.Get(ctx, request.Account)
 	if err != nil {
 		s.log.Debug("Error getting account", zap.Any("error", err))
@@ -189,14 +174,11 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespacespb.DeleteRequest) (*namespacespb.DeleteResponse, error) {
 	log := s.log.Named("Delete")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
-	ctx, err := nocloud.ValidateMetadata(ctx, log)
-	if err != nil {
-		return nil, err
-	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ctrl.Get(ctx, request.Id)
+	ns, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
 		s.log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
