@@ -12,7 +12,7 @@ Cloud-native Open-Source Cloud Management Framework
 
 ## Installation
 
-NoCloud is Cloud ready, meaning it can run in any OCI environment such as Docker(Compose), K8s, etc.
+NoCloud is Cloud-native, meaning it can run in any OCI environment such as Docker(Compose), K8s, etc.
 
 ### Running Localy
 
