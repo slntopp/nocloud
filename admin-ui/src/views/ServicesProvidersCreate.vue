@@ -58,6 +58,7 @@
 					class="mr-2"
 					@click="tryToSend"
 					:loading="isLoading"
+					:disabled="!isTestSuccess"
 				>
 					create
 				</v-btn>
@@ -94,7 +95,7 @@ export default {
 		isLoading: false,
 		isTestLoading: false,
 		testButtonColor: "background-light",
-		forceSuccess: false,
+		isTestSuccess: false,
 	}),
 	created(){
 		const types = require.context('@/components/serviceProviders/', true, /creatingTemplate\.vue$/)
@@ -123,10 +124,10 @@ export default {
 
 			
 			this.testButtonColor = "background-light"
-			this.forceSuccess = false;
+			this.isTestSuccess = false;
 		},
 		tryToSend(){
-			if(!this.isPassed && !this.forceSuccess) return;
+			if(!this.isPassed || !this.isTestSuccess) return;
 			this.isLoading = true
 			api.servicesProviders.create(this.provider)
 			.then(() => {
@@ -144,12 +145,12 @@ export default {
 					throw res;
 				}
 				this.testButtonColor = "success"
-				this.forceSuccess = true;
+				this.isTestSuccess = true;
 			})
 			.catch((err) => {
 				console.log('err', err);
 				this.testButtonColor = "error"
-				this.forceSuccess = false;
+				this.isTestSuccess = false;
 			})
 			.finally(() => {
 				this.isTestLoading = false;
