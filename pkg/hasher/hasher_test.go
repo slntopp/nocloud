@@ -95,7 +95,7 @@ func TestGetHash(t *testing.T) {
 				return
 			}
 
-			if v != "36d594457e8bb4af920c512d45a762df" {
+			if v != "a8e17ebe278137a930517f94171ca3f03077070ca7238cb1ca06d5fad5487cb1" {
 
 				t.Error("Non-expected ", v)
 			}
