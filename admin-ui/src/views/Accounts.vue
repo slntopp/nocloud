@@ -7,6 +7,7 @@
 				transition="slide-y-transition"
 				bottom
 				:close-on-content-click="false"
+				v-model="createMenuVisible"
 			>
 				<template v-slot:activator="{ on, attrs }">
 					<v-btn
@@ -82,7 +83,7 @@
 						<v-row justify="end">
 							<v-col md=5>
 								<v-btn
-									:loading="newAccount.data.loading"
+									:loading="newAccount.loading"
 									@click="createAccount"
 								>
 									send
@@ -98,6 +99,7 @@
 				class="mr-8"
 				:disabled="selected.length < 1"
 				@click="deleteSelectedAccount"
+				:loading="deletingLoading"
 			>
 				delete
 			</v-btn>
@@ -140,6 +142,7 @@ export default {
 	},
 	data () {
 		return {
+			createMenuVisible: false,
 			selected: [],
 			newAccount: {
 				data: {
@@ -170,6 +173,7 @@ export default {
 				message: '',
 				timeout: 3000,
 			},
+			deletingLoading: false,
 			accessLevels: [0, 1, 2, 3]
 		}
 	},
@@ -180,8 +184,20 @@ export default {
 			api.accounts.create(this.newAccount.data)
 			.then(()=>{
 				this.newAccount.title = '';
-				
+				this.createMenuVisible = false;
 				this.$store.dispatch('accounts/fetch');
+
+				this.newAccount.data = {
+					title: '',
+					auth: {
+						type: 'standard',
+						data: [
+							'', ''
+						]
+					},
+					namespace: '',
+					access: 1,
+				}
 			})
 			.catch((error)=>{
 				console.log(error)
@@ -195,6 +211,7 @@ export default {
 		deleteSelectedAccount(){
 			if(this.selected.length > 0){
 				const deletePromices = this.selected.map(el => api.accounts.delete(el.uuid));
+				this.deletingLoading = true;
 				Promise.all(deletePromices)
 				.then(res => {
 					if(res.every(el => el.result)){
@@ -208,6 +225,9 @@ export default {
 				})
 				.catch(err => {
 					console.log(err);
+				})
+				.finally(() => {
+					this.deletingLoading = false;
 				})
 			}
 		},

@@ -58,8 +58,17 @@
 					class="mr-2"
 					@click="tryToSend"
 					:loading="isLoading"
+					:disabled="!isTestSuccess"
 				>
 					create
+				</v-btn>
+				<v-btn
+					:color="testButtonColor"
+					class="mr-2"
+					@click="testConfig"
+					:loading="isTestLoading"
+				>
+					Test
 				</v-btn>
 			</v-container>
 		</div>
@@ -83,7 +92,10 @@ export default {
 		},
 		
 		isPassed: false,
-		isLoading: false
+		isLoading: false,
+		isTestLoading: false,
+		testButtonColor: "background-light",
+		isTestSuccess: false,
 	}),
 	created(){
 		const types = require.context('@/components/serviceProviders/', true, /creatingTemplate\.vue$/)
@@ -103,17 +115,19 @@ export default {
 	},
 	methods: {
 		handleFieldsChange(type, data){
-			console.log(data);
 			if(type == 'secrets'){
 				this.provider.secrets = data;
 			}
 			if(type == 'vars'){
 				this.provider.vars = data;
 			}
+
+			
+			this.testButtonColor = "background-light"
+			this.isTestSuccess = false;
 		},
 		tryToSend(){
-			console.log(this.provider, this.isPassed);
-			if(!this.isPassed) return;
+			if(!this.isPassed || !this.isTestSuccess) return;
 			this.isLoading = true
 			api.servicesProviders.create(this.provider)
 			.then(() => {
@@ -121,6 +135,25 @@ export default {
 			})
 			.finally(() => {
 				this.isLoading = false;
+			})
+		},
+		testConfig(){
+			this.isTestLoading = true
+			api.servicesProviders.testConfig(this.provider)
+			.then((res) => {
+				if(!res.result){
+					throw res;
+				}
+				this.testButtonColor = "success"
+				this.isTestSuccess = true;
+			})
+			.catch((err) => {
+				console.log('err', err);
+				this.testButtonColor = "error"
+				this.isTestSuccess = false;
+			})
+			.finally(() => {
+				this.isTestLoading = false;
 			})
 		}
 	}
