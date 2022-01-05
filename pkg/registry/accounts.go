@@ -21,6 +21,7 @@ import (
 	"github.com/arangodb/go-driver"
 	jwt "github.com/golang-jwt/jwt/v4"
 
+	"github.com/slntopp/nocloud/pkg/credentials"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
@@ -171,7 +172,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 
 	col, _ = s.db.Collection(ctx, schema.CREDENTIALS_EDGE_COL)
-	cred, err := graph.MakeCredentials(request.Auth)
+	cred, err := credentials.MakeCredentials(request.Auth, log)
 	if err != nil {
 		return res, status.Error(codes.Internal, err.Error())
 	}
@@ -238,16 +239,16 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 	old_cred_key, has_credentials := s.ctrl.GetCredentials(ctx, edge, acc, auth.Type)
 	s.log.Debug("Checking if has credentials", zap.Bool("has_credentials", has_credentials), zap.Any("old_credentials", old_cred_key))
 
-	credentials, err := graph.MakeCredentials(auth)
+	cred, err := credentials.MakeCredentials(auth, log)
 	if err != nil {
 		s.log.Debug("Error creating new credentials", zap.String("type", auth.Type), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error creading new credentials")
 	}
 
 	if has_credentials {
-		err = s.ctrl.UpdateCredentials(ctx, old_cred_key, credentials)
+		err = s.ctrl.UpdateCredentials(ctx, old_cred_key, cred)
 	} else {
-		err = s.ctrl.SetCredentials(ctx, acc, edge, credentials)
+		err = s.ctrl.SetCredentials(ctx, acc, edge, cred)
 	}
 	
 	if err != nil {
