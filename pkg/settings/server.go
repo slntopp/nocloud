@@ -53,7 +53,7 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (*s
 		keys[i] = fmt.Sprintf("%s:%s", KEYS_PREFIX, key)
 	}
 	
-	response, err := s.rdb.MGet(ctx, req.GetKeys()...).Result()
+	response, err := s.rdb.MGet(ctx, keys...).Result()
 	if err != nil {
 		s.log.Error("Error getting data from Redis", zap.Strings("keys", keys), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error getting data from Redis")
