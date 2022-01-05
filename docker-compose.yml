@@ -81,6 +81,11 @@ services:
     links:
       - db
 
+  settings:
+    image: ghcr.io/slntopp/nocloud/settings:latest
+    environment:
+      LOG_LEVEL: -1
+      REDIS_HOST: redis:6379
   redis:
     image: redis
     restart: always
