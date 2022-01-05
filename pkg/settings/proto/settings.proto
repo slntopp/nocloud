@@ -33,7 +33,18 @@ message PutResponse {
     string key = 1;
 }
 
+message KeysRequest {}
+message KeysResponse {
+    message Key {
+        string key = 1;
+        string description = 2;
+        bool public = 3;
+    }
+    repeated Key pool = 1;
+}
+
 service SettingsService {
     rpc Get(nocloud.settings.GetRequest) returns (google.protobuf.Struct);
     rpc Put(nocloud.settings.PutRequest) returns (nocloud.settings.PutResponse);
+    rpc Keys(nocloud.settings.KeysRequest) returns (nocloud.settings.KeysResponse);
 }

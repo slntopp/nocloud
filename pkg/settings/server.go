@@ -58,7 +58,7 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (*s
 		s.log.Error("Error getting data from Redis", zap.Strings("keys", keys), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error getting data from Redis")
 	}
-
+	
 	result := make(map[string]interface{})
 	for i, key := range req.GetKeys() {
 		result[key] = response[i]
@@ -89,4 +89,38 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 		return nil, status.Error(codes.Internal, "Error allocating keys in Redis")
 	}
 	return &pb.PutResponse{Key: req.GetKey()}, nil
+}
+
+func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*pb.KeysResponse, error) {
+	r := s.rdb.Keys(ctx, KEY_NS_PATTERN)
+	keys, err := r.Result()
+	if err != nil {
+		s.log.Error("Error getting keys from Redis", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting keys from Redis")
+	}
+	keys_l := len(keys)
+	keys_all := make([]string, keys_l * 2)
+	for i, key := range keys {
+		keys_all[i] = fmt.Sprintf("%s:%s", key, KEYS_VISIBILITY_POSTFIX)
+		keys_all[i + keys_l] = fmt.Sprintf("%s:%s", key, KEYS_DESC_POSTFIX)
+	}
+	vals, err := s.rdb.MGet(ctx, keys_all...).Result()
+	if err != nil {
+		s.log.Error("Error getting values from Redis", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting values from Redis")
+	}
+
+	result := make([]*pb.KeysResponse_Key, keys_l)
+	for i, key := range keys {
+		result[i] = &pb.KeysResponse_Key{
+			Key: key,
+		}
+		if pub, ok := vals[i].(string); ok {
+			result[i].Public = pub == "1"
+		}
+		if desc, ok := vals[i + keys_l].(string); ok {
+			result[i].Description = desc
+		}
+	}
+	return &pb.KeysResponse{Pool: result}, nil
 }
