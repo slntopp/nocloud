@@ -263,7 +263,7 @@ func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string,
 		return Account{}, false
 	}
 
-	account, ok := credentials.Account(ctx, ctrl.col.Database())
+	account, ok := Authorisable(ctx, &credentials, ctrl.col.Database())
 	ctrl.log.Debug("Authorized account", zap.Bool("result", ok), zap.Any("account", account))
 	return account, ok
 }

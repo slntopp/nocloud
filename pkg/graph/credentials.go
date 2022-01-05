@@ -89,11 +89,12 @@ func (cred *StandardCredentials) FindByKey(ctx context.Context, col driver.Colle
 	return err
 }
 
-func (cred *StandardCredentials) Account(ctx context.Context, db driver.Database) (Account, bool) {
+// Return Account authorisable by this Credentials
+func Authorisable(ctx context.Context, cred *Credentials, db driver.Database) (Account, bool) {
 	query := `FOR account IN 1 INBOUND @credentials GRAPH @credentials_graph RETURN account`
 	c, err := db.Query(ctx, query, map[string]interface{}{
-		"credentials": cred.DocumentMeta.ID,
-		"credentials_graph": CREDENTIALS_GRAPH.Name,
+		"credentials": cred,
+		"credentials_graph": schema.CREDENTIALS_GRAPH.Name,
 	})
 	if err != nil {
 		return Account{}, false
@@ -103,8 +104,4 @@ func (cred *StandardCredentials) Account(ctx context.Context, db driver.Database
 	var r Account
 	_, err = c.ReadDocument(ctx, &r)
 	return r, err == nil
-}
-
-func (cred *StandardCredentials) Key() (string) {
-	return cred.Key()
 }
