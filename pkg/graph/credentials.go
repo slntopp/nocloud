@@ -19,12 +19,8 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"golang.org/x/crypto/bcrypt"
-)
-
-const (
-	CREDENTIALS_COL = "Credentials"
-	CREDENTIALS_EDGE_COL = ACCOUNTS_COL + "2" + CREDENTIALS_COL
 )
 
 type CredentialsLink struct {
@@ -46,11 +42,6 @@ type Credentials interface {
 	Find(context.Context, driver.Database) bool;
 	// Find Credentials in database by document key and Unmarshall it's data into struct
 	FindByKey(context.Context, driver.Collection, string) error;
-	// Return Account authorisable by this Credentials
-	Account(context.Context, driver.Database) (Account, bool);
-
-	// Return DocumentMeta Key
-	Key() string;
 }
 
 type StandardCredentials struct {
@@ -82,7 +73,7 @@ func (cred *StandardCredentials) Find(ctx context.Context, db driver.Database) (
 	query := `FOR cred IN @@credentials FILTER cred.username == @username RETURN cred`
 	c, err := db.Query(ctx, query, map[string]interface{}{
 		"username": cred.Username,
-		"@credentials": CREDENTIALS_COL,
+		"@credentials": schema.CREDENTIALS_COL,
 	})
 	if err != nil {
 		return false

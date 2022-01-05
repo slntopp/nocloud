@@ -19,6 +19,7 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
 type Access struct {
@@ -32,7 +33,7 @@ type Access struct {
 
 // account - Account Key, node - DocumentID
 func HasAccess(ctx context.Context, db driver.Database, account string, node string, level int32) (bool) {
-	if (ACCOUNTS_COL + "/" + account) == node {
+	if (schema.ACCOUNTS_COL + "/" + account) == node {
 		return true
 	}
 	_, r := AccessLevel(ctx, db, account, node)
@@ -43,9 +44,9 @@ func HasAccess(ctx context.Context, db driver.Database, account string, node str
 func AccessLevel(ctx context.Context, db driver.Database, account string, node string) (bool, int32) {
 	query := `FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node GRAPH @permissions RETURN path.edges[0].level`
 	c, err := db.Query(ctx, query, map[string]interface{}{
-		"account": ACCOUNTS_COL + "/" + account,
+		"account": schema.ACCOUNTS_COL + "/" + account,
 		"node": node,
-		"permissions": PERMISSIONS_GRAPH.Name,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	})
 	if err != nil {
 		return false, 0

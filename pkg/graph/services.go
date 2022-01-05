@@ -20,14 +20,9 @@ import (
 	"errors"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
-)
-
-const (
-	SERVICES_COL = "Services"
-	NS2SERV = NAMESPACES_COL + "2" + SERVICES_COL
-	SP2SERV = SERVICES_PROVIDERS_COL + "2" + SERVICES_COL
 )
 
 type Service struct {
@@ -53,7 +48,7 @@ type ServicesController struct {
 }
 
 func NewServicesController(log *zap.Logger, db driver.Database) ServicesController {
-	col, _ := db.Collection(context.TODO(), SERVICES_COL)
+	col, _ := db.Collection(context.TODO(), schema.SERVICES_COL)
 	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db), db:db}
 }
 
@@ -117,9 +112,9 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, req_
 	query := `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) RETURN node`
 	bindVars := map[string]interface{}{
 		"depth": depth,
-		"account": driver.NewDocumentID(ACCOUNTS_COL, requestor),
-		"permissions_graph": PERMISSIONS_GRAPH.Name,
-		"@services": SERVICES_COL,
+		"account": driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"@services": schema.SERVICES_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
@@ -148,7 +143,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, req_
 // Join Service into Namespace
 func (ctrl *ServicesController) Join(ctx context.Context, service *Service, namespace *Namespace, access int32, role string) (error) {
 	ctrl.log.Debug("Joining service to namespace")
-	edge, _ := ctrl.db.Collection(ctx, NS2SERV)
+	edge, _ := ctrl.db.Collection(ctx, schema.NS2SERV)
 	_, err := edge.CreateDocument(ctx, Access{
 		From: namespace.ID,
 		To: service.ID,
@@ -160,7 +155,7 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *Service, name
 
 func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.DocumentID, group string) (error) {
 	ctrl.log.Debug("Providing group to service provider")
-	edge, _ := ctrl.db.Collection(ctx, SP2SERV)
+	edge, _ := ctrl.db.Collection(ctx, schema.SP2SERV)
 	_, err := edge.CreateDocument(ctx, Provision{
 		From: sp,
 		To: service,
@@ -172,8 +167,8 @@ func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.
 
 func (ctrl *ServicesController) Unprovide(ctx context.Context, group string) (err error) {
 	ctrl.log.Debug("Unproviding group from service provider")
-	g, _ := ctrl.db.Graph(ctx, SERVICES_GRAPH.Name)
-	edge, _, _ := g.EdgeCollection(ctx, SP2SERV)
+	g, _ := ctrl.db.Graph(ctx, schema.SERVICES_GRAPH.Name)
+	edge, _, _ := g.EdgeCollection(ctx, schema.SP2SERV)
 	_, err = edge.RemoveDocument(ctx, group)
 	return err
 }
@@ -183,7 +178,7 @@ func (ctrl *ServicesController) GetProvisions(ctx context.Context, service strin
 	query := `FOR service, provision IN INBOUND @service GRAPH @services RETURN provision`
 	bindVars := map[string]interface{}{
 		"service": service,
-		"services": SERVICES_GRAPH.Name,
+		"services": schema.SERVICES_GRAPH.Name,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 

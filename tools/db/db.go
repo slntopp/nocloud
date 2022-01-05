@@ -16,8 +16,8 @@ limitations under the License.
 package main
 
 import (
-	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -57,5 +57,5 @@ func main() {
 		_ = log.Sync()
 	}()
 
-	graph.InitDB(log, dbHost + ":" + dbPort, dbUser + ":" + dbPass, rootPass)
+	schema.InitDB(log, dbHost + ":" + dbPort, dbUser + ":" + dbPass, rootPass)
 }

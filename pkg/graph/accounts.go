@@ -22,12 +22,12 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 	"go.uber.org/zap"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-)
 
 const (
 	ACCOUNTS_COL = "Accounts"
@@ -48,8 +48,8 @@ type AccountsController struct {
 }
 
 func NewAccountsController(log *zap.Logger, db driver.Database) AccountsController {
-	col, _ := db.Collection(context.TODO(), ACCOUNTS_COL)
-	cred, _ := db.Collection(context.TODO(), CREDENTIALS_COL)
+	col, _ := db.Collection(context.TODO(), schema.ACCOUNTS_COL)
+	cred, _ := db.Collection(context.TODO(), schema.CREDENTIALS_COL)
 	log = log.Named("AccountsController")
 	return AccountsController{log: log, col: col, cred: cred}
 }
@@ -75,8 +75,8 @@ func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req
 	bindVars := map[string]interface{}{
 		"depth": depth,
 		"account": requestor.ID.String(),
-		"permissions_graph": PERMISSIONS_GRAPH.Name,
-		"@accounts": ACCOUNTS_COL,
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"@accounts": schema.ACCOUNTS_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
@@ -157,8 +157,8 @@ func (acc *Account) Delete(ctx context.Context, db driver.Database) (error) {
 		return err
 	}
 
-	graph, _ := db.Graph(ctx, PERMISSIONS_GRAPH.Name)
-	col, _ := graph.VertexCollection(ctx, ACCOUNTS_COL)
+	graph, _ := db.Graph(ctx, schema.PERMISSIONS_GRAPH.Name)
+	col, _ := graph.VertexCollection(ctx, schema.ACCOUNTS_COL)
 	_, err = col.RemoveDocument(ctx, acc.Key)
 	if err != nil {
 		return err
@@ -292,7 +292,7 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	}
 	root.DocumentMeta = meta
 
-	ns_col, _ := ctrl.col.Database().Collection(context.TODO(), NAMESPACES_COL)
+	ns_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.NAMESPACES_COL)
 	exists, err = ns_col.DocumentExists(context.TODO(), "0")
 	if !exists {
 		meta, err := ns_col.CreateDocument(context.TODO(), Namespace{ 
@@ -312,7 +312,7 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	}
 	rootNS.DocumentMeta = meta
 
-	edge_col, _ := ctrl.col.Database().Collection(context.TODO(), ACC2NS)
+	edge_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.ACC2NS)
 	exists, err = edge_col.DocumentExists(context.TODO(), "0-0")
 	if !exists {
 		err = root.LinkNamespace(context.TODO(), edge_col, rootNS, 4, roles.OWNER)
@@ -322,7 +322,7 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	}
 
 	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, "0")
-	cred_edge_col, _ := ctrl.col.Database().Collection(context.TODO(), ACC2CRED)
+	cred_edge_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.ACC2CRED)
 	cred, err := NewStandardCredentials("nocloud", passwd)
 	if err != nil {
 		return err

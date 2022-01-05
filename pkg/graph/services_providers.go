@@ -22,11 +22,8 @@ import (
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
 
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
-)
-
-const (
-	SERVICES_PROVIDERS_COL = "ServicesProviders"
 )
 
 type ServicesProvider struct {
@@ -41,7 +38,7 @@ type ServicesProvidersController struct {
 }
 
 func NewServicesProvidersController(log *zap.Logger, db driver.Database) ServicesProvidersController {
-	col, _ := db.Collection(context.TODO(), SERVICES_PROVIDERS_COL)
+	col, _ := db.Collection(context.TODO(), schema.SERVICES_PROVIDERS_COL)
 	return ServicesProvidersController{log: log, col: col}
 }
 
@@ -71,7 +68,7 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 
 	query := `FOR sp IN @@services RETURN sp`
 	bindVars := map[string]interface{}{
-		"@services": SERVICES_PROVIDERS_COL,
+		"@services": schema.SERVICES_PROVIDERS_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 

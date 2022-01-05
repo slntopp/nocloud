@@ -25,6 +25,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 
 	pb "github.com/slntopp/nocloud/pkg/registry/proto"
 	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
@@ -162,14 +163,14 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		access_lvl = (*request.Access)
 	}
 
-	col, _ := s.db.Collection(ctx, graph.NS2ACC)
+	col, _ := s.db.Collection(ctx, schema.NS2ACC)
 	err = account.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
 	if err != nil {
 		s.log.Debug("Error linking to namespace")
 		return res, err
 	}
 
-	col, _ = s.db.Collection(ctx, graph.CREDENTIALS_EDGE_COL)
+	col, _ = s.db.Collection(ctx, schema.CREDENTIALS_EDGE_COL)
 	cred, err := graph.MakeCredentials(request.Auth)
 	if err != nil {
 		return res, status.Error(codes.Internal, err.Error())
@@ -233,7 +234,7 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 
 	auth := request.GetAuth()
 
-	edge, _ := s.db.Collection(ctx, graph.ACC2CRED)
+	edge, _ := s.db.Collection(ctx, schema.ACC2CRED)
 	old_cred_key, has_credentials := s.ctrl.GetCredentials(ctx, edge, acc, auth.Type)
 	s.log.Debug("Checking if has credentials", zap.Bool("has_credentials", has_credentials), zap.Any("old_credentials", old_cred_key))
 
