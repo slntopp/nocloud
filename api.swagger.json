@@ -30,6 +30,9 @@
     },
     {
       "name": "ServicesService"
+    },
+    {
+      "name": "SettingsService"
     }
   ],
   "host": "localhost:8000",
@@ -1592,6 +1595,14 @@
           "additionalProperties": {
             "type": "object"
           }
+        }
+      }
+    },
+    "settingsPutResponse": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
         }
       }
     }
