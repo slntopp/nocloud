@@ -62,6 +62,7 @@ services:
       SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
+      DRIVERS: driver-ione:8080
     depends_on:
       - db
     networks:
@@ -78,6 +79,7 @@ services:
       SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
+      DRIVERS: driver-ione:8080
     networks:
       - proxy
       - arangodb
