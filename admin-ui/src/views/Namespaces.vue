@@ -7,6 +7,7 @@
 				transition="slide-y-transition"
 				bottom
 				:close-on-content-click="false"
+				v-model="createMenuVisible"
 			>
 				<template v-slot:activator="{ on, attrs }">
 					<v-btn
@@ -193,6 +194,7 @@ export default {
 	},
 	data () {
 		return {
+			createMenuVisible: false,
 			selected: [],
 			newNamespace: {
 				title: '',
@@ -225,6 +227,7 @@ export default {
 			this.newNamespace.loading = true;
 			api.namespaces.create(this.newNamespace.title)
 			.then(()=>{
+				this.createMenuVisible = false;
 				this.newNamespace.title = '';
 				this.$store.dispatch('namespaces/fetch');
 			})
