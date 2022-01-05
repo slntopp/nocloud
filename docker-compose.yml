@@ -83,6 +83,9 @@ services:
 
   settings:
     image: ghcr.io/slntopp/nocloud/settings:latest
+    networks:
+      - grpc-internal
+      - redis
     environment:
       LOG_LEVEL: -1
       REDIS_HOST: redis:6379
@@ -90,6 +93,8 @@ services:
     image: redis
     restart: always
     command: redis-server --save 60 1
+    networks:
+      - redis
     ports:
       - 6379:6379
     volumes: 
@@ -113,6 +118,8 @@ networks:
     driver: bridge
   grpc-internal:
   arangodb:
+    driver: bridge
+  redis:
     driver: bridge
 
 volumes:
