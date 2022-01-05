@@ -1032,6 +1032,20 @@
         }
       }
     },
+    "KeysResponseKey": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "public": {
+          "type": "boolean"
+        }
+      }
+    },
     "accountsAccount": {
       "type": "object",
       "properties": {
@@ -1594,6 +1608,17 @@
           "type": "object",
           "additionalProperties": {
             "type": "object"
+          }
+        }
+      }
+    },
+    "settingsKeysResponse": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/KeysResponseKey"
           }
         }
       }
