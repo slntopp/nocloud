@@ -17,6 +17,7 @@ package settings
 
 import (
 	"context"
+	"fmt"
 
 	redis "github.com/go-redis/redis/v8"
 	pb "github.com/slntopp/nocloud/pkg/settings/proto"
@@ -30,6 +31,8 @@ import (
 const KEYS_PREFIX = "settings"
 const KEYS_DESC_POSTFIX = "desc"
 const KEYS_VISIBILITY_POSTFIX = "pub"
+
+var KEY_NS_PATTERN = fmt.Sprintf("%s:*[^:%s|:%s]", KEYS_PREFIX, KEYS_VISIBILITY_POSTFIX, KEYS_DESC_POSTFIX)
 
 type SettingsServiceServer struct {
 	pb.UnimplementedSettingsServiceServer
@@ -47,7 +50,7 @@ func NewSettingsServer(log *zap.Logger, rdb *redis.Client) *SettingsServiceServe
 func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (*structpb.Struct, error) {
 	keys := make([]string, len(req.GetKeys()))
 	for i, key := range req.GetKeys() {
-		keys[i] = KEYS_PREFIX + ":" + key
+		keys[i] = fmt.Sprintf("%s:%s", KEYS_PREFIX, key)
 	}
 	
 	response, err := s.rdb.MGet(ctx, req.GetKeys()...).Result()
@@ -70,13 +73,13 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (*s
 }
 
 func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*pb.PutResponse, error) {
-	key := KEYS_PREFIX + ":" + req.GetKey()
+	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, req.GetKey())
 	request := map[string]interface{}{
 		key: req.GetValue(),
-		key + ":" + KEYS_VISIBILITY_POSTFIX: req.GetPublic(),
+		fmt.Sprintf("%s:%s", key, KEYS_VISIBILITY_POSTFIX): req.GetPublic(),
 	}
 	if req.GetDescription() != "" {
-		request[key + ":" + KEYS_DESC_POSTFIX] = req.GetDescription()
+		request[fmt.Sprintf("%s:%s", key, KEYS_DESC_POSTFIX)] = req.GetDescription()
 	}
 
 	r := s.rdb.MSet(ctx, request)
