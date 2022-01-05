@@ -28,6 +28,8 @@ import (
 )
 
 const KEYS_PREFIX = "settings"
+const KEYS_DESC_POSTFIX = "desc"
+const KEYS_VISIBILITY_POSTFIX = "pub"
 
 type SettingsServiceServer struct {
 	pb.UnimplementedSettingsServiceServer
@@ -65,4 +67,23 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (*s
 		return nil, status.Error(codes.Internal, "Error serializing map to Struct")
 	}
 	return res, nil
+}
+
+func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*pb.PutResponse, error) {
+	key := KEYS_PREFIX + ":" + req.GetKey()
+	request := map[string]interface{}{
+		key: req.GetValue(),
+		key + ":" + KEYS_VISIBILITY_POSTFIX: req.GetPublic(),
+	}
+	if req.GetDescription() != "" {
+		request[key + ":" + KEYS_DESC_POSTFIX] = req.GetDescription()
+	}
+
+	r := s.rdb.MSet(ctx, request)
+	_, err := r.Result()
+	if err != nil {
+		s.log.Error("Error allocating keys in Redis", zap.String("key", key), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error allocating keys in Redis")
+	}
+	return &pb.PutResponse{Key: req.GetKey()}, nil
 }

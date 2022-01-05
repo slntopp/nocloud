@@ -24,7 +24,7 @@ message GetRequest {
 
 message PutRequest {
     string key = 1;
-    google.protobuf.Struct value = 2;
+    string value = 2;
     optional string description = 3;
     optional bool public = 4;
 }
