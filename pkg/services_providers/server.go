@@ -156,8 +156,8 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 
 	r, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
-		log.Debug("Error getting Service from DB", zap.Error(err))
-		return nil, status.Error(codes.NotFound, "Service not Found in DB")
+		log.Debug("Error getting ServicesProvider from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
 	}
 
 	return r.ServicesProvider, nil
