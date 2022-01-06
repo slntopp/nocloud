@@ -102,7 +102,12 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 		}
 	}
 
-	return client.TestServiceProviderConfig(ctx, req)
+	test_req := &driverpb.TestServiceProviderConfigRequest{ServicesProvider: req}
+	if len(req.GetExtentions()) > 0 {
+		test_req.SyntaxOnly = true
+	}
+
+	return client.TestServiceProviderConfig(ctx, test_req)
 }
 
 func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesProvider) (res *sppb.ServicesProvider, err error) {
@@ -114,6 +119,23 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 	}
 	if !testRes.Result {
 		return req, status.Error(codes.Internal, testRes.Error)
+	}
+
+	for ext, data := range req.GetExtentions() {
+		client, ok := s.extention_servers[ext]
+		if !ok {
+			return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
+		}
+		res, err := client.Register(ctx, &sppb.ServicesProvidersExtentionData{
+			Data: data,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if !res.Result {
+			err := fmt.Sprintf("Extention '%s': %s", ext, res.Error)
+			return req, status.Error(codes.Internal, err)
+		}
 	}
 
 	sp := &graph.ServicesProvider{ServicesProvider: req}
