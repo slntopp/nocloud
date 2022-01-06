@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 type ServicesProvidersServiceClient interface {
 	Test(ctx context.Context, in *ServicesProvider, opts ...grpc.CallOption) (*TestResponse, error)
 	Create(ctx context.Context, in *ServicesProvider, opts ...grpc.CallOption) (*ServicesProvider, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*ServicesProvider, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*structpb.Struct, error)
@@ -47,6 +48,15 @@ func (c *servicesProvidersServiceClient) Test(ctx context.Context, in *ServicesP
 func (c *servicesProvidersServiceClient) Create(ctx context.Context, in *ServicesProvider, opts ...grpc.CallOption) (*ServicesProvider, error) {
 	out := new(ServicesProvider)
 	err := c.cc.Invoke(ctx, "/nocloud.services_providers.ServicesProvidersService/Create", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesProvidersServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services_providers.ServicesProvidersService/Delete", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -95,6 +105,7 @@ func (c *servicesProvidersServiceClient) ListExtentions(ctx context.Context, in 
 type ServicesProvidersServiceServer interface {
 	Test(context.Context, *ServicesProvider) (*TestResponse, error)
 	Create(context.Context, *ServicesProvider) (*ServicesProvider, error)
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	Get(context.Context, *GetRequest) (*ServicesProvider, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	Invoke(context.Context, *ActionRequest) (*structpb.Struct, error)
@@ -111,6 +122,9 @@ func (UnimplementedServicesProvidersServiceServer) Test(context.Context, *Servic
 }
 func (UnimplementedServicesProvidersServiceServer) Create(context.Context, *ServicesProvider) (*ServicesProvider, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedServicesProvidersServiceServer) Get(context.Context, *GetRequest) (*ServicesProvider, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
@@ -170,6 +184,24 @@ func _ServicesProvidersService_Create_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ServicesProvidersServiceServer).Create(ctx, req.(*ServicesProvider))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesProvidersService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services_providers.ServicesProvidersService/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).Delete(ctx, req.(*DeleteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -260,6 +292,10 @@ var ServicesProvidersService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Create",
 			Handler:    _ServicesProvidersService_Create_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _ServicesProvidersService_Delete_Handler,
 		},
 		{
 			MethodName: "Get",

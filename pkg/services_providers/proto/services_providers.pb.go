@@ -358,6 +358,108 @@ func (x *ListResponse) GetPool() []*ServicesProvider {
 	return nil
 }
 
+type DeleteRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Uuid string `protobuf:"bytes,1,opt,name=uuid,proto3" json:"uuid,omitempty"`
+}
+
+func (x *DeleteRequest) Reset() {
+	*x = DeleteRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[6]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeleteRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteRequest) ProtoMessage() {}
+
+func (x *DeleteRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[6]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteRequest.ProtoReflect.Descriptor instead.
+func (*DeleteRequest) Descriptor() ([]byte, []int) {
+	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *DeleteRequest) GetUuid() string {
+	if x != nil {
+		return x.Uuid
+	}
+	return ""
+}
+
+type DeleteResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Result   bool     `protobuf:"varint,1,opt,name=result,proto3" json:"result,omitempty"`
+	Services []string `protobuf:"bytes,2,rep,name=services,proto3" json:"services,omitempty"`
+}
+
+func (x *DeleteResponse) Reset() {
+	*x = DeleteResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[7]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeleteResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteResponse) ProtoMessage() {}
+
+func (x *DeleteResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[7]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteResponse.ProtoReflect.Descriptor instead.
+func (*DeleteResponse) Descriptor() ([]byte, []int) {
+	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *DeleteResponse) GetResult() bool {
+	if x != nil {
+		return x.Result
+	}
+	return false
+}
+
+func (x *DeleteResponse) GetServices() []string {
+	if x != nil {
+		return x.Services
+	}
+	return nil
+}
+
 // Available only for users with SUPERUSER and ADMIN access to platform namespace
 type ActionRequest struct {
 	state         protoimpl.MessageState
@@ -371,7 +473,7 @@ type ActionRequest struct {
 func (x *ActionRequest) Reset() {
 	*x = ActionRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[6]
+		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[8]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -384,7 +486,7 @@ func (x *ActionRequest) String() string {
 func (*ActionRequest) ProtoMessage() {}
 
 func (x *ActionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[6]
+	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[8]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -397,7 +499,7 @@ func (x *ActionRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActionRequest.ProtoReflect.Descriptor instead.
 func (*ActionRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{6}
+	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ActionRequest) GetServicesProvider() *ServicesProvider {
@@ -425,7 +527,7 @@ type ListExtentionsResponse struct {
 func (x *ListExtentionsResponse) Reset() {
 	*x = ListExtentionsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[7]
+		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[9]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -438,7 +540,7 @@ func (x *ListExtentionsResponse) String() string {
 func (*ListExtentionsResponse) ProtoMessage() {}
 
 func (x *ListExtentionsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[7]
+	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[9]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -451,7 +553,7 @@ func (x *ListExtentionsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListExtentionsResponse.ProtoReflect.Descriptor instead.
 func (*ListExtentionsResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{7}
+	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ListExtentionsResponse) GetTypes() []string {
@@ -470,7 +572,7 @@ type GetTypeRequest struct {
 func (x *GetTypeRequest) Reset() {
 	*x = GetTypeRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[8]
+		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[10]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -483,7 +585,7 @@ func (x *GetTypeRequest) String() string {
 func (*GetTypeRequest) ProtoMessage() {}
 
 func (x *GetTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[8]
+	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[10]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -496,7 +598,7 @@ func (x *GetTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTypeRequest.ProtoReflect.Descriptor instead.
 func (*GetTypeRequest) Descriptor() ([]byte, []int) {
-	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{8}
+	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{10}
 }
 
 type GetTypeResponse struct {
@@ -510,7 +612,7 @@ type GetTypeResponse struct {
 func (x *GetTypeResponse) Reset() {
 	*x = GetTypeResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[9]
+		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[11]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -523,7 +625,7 @@ func (x *GetTypeResponse) String() string {
 func (*GetTypeResponse) ProtoMessage() {}
 
 func (x *GetTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[9]
+	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[11]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -536,7 +638,7 @@ func (x *GetTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetTypeResponse.ProtoReflect.Descriptor instead.
 func (*GetTypeResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{9}
+	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetTypeResponse) GetType() string {
@@ -558,7 +660,7 @@ type ServicesProvidersExtentionData struct {
 func (x *ServicesProvidersExtentionData) Reset() {
 	*x = ServicesProvidersExtentionData{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[10]
+		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[12]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -571,7 +673,7 @@ func (x *ServicesProvidersExtentionData) String() string {
 func (*ServicesProvidersExtentionData) ProtoMessage() {}
 
 func (x *ServicesProvidersExtentionData) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[10]
+	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[12]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -584,7 +686,7 @@ func (x *ServicesProvidersExtentionData) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ServicesProvidersExtentionData.ProtoReflect.Descriptor instead.
 func (*ServicesProvidersExtentionData) Descriptor() ([]byte, []int) {
-	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{10}
+	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *ServicesProvidersExtentionData) GetUuid() string {
@@ -613,7 +715,7 @@ type GenericResponse struct {
 func (x *GenericResponse) Reset() {
 	*x = GenericResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[11]
+		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[13]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -626,7 +728,7 @@ func (x *GenericResponse) String() string {
 func (*GenericResponse) ProtoMessage() {}
 
 func (x *GenericResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[11]
+	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[13]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -639,7 +741,7 @@ func (x *GenericResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GenericResponse.ProtoReflect.Descriptor instead.
 func (*GenericResponse) Descriptor() ([]byte, []int) {
-	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{11}
+	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GenericResponse) GetResult() bool {
@@ -668,7 +770,7 @@ type ActionRequest_Request struct {
 func (x *ActionRequest_Request) Reset() {
 	*x = ActionRequest_Request{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[16]
+		mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[18]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -681,7 +783,7 @@ func (x *ActionRequest_Request) String() string {
 func (*ActionRequest_Request) ProtoMessage() {}
 
 func (x *ActionRequest_Request) ProtoReflect() protoreflect.Message {
-	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[16]
+	mi := &file_pkg_services_providers_proto_services_providers_proto_msgTypes[18]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -694,7 +796,7 @@ func (x *ActionRequest_Request) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActionRequest_Request.ProtoReflect.Descriptor instead.
 func (*ActionRequest_Request) Descriptor() ([]byte, []int) {
-	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{6, 0}
+	return file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP(), []int{8, 0}
 }
 
 func (x *ActionRequest_Request) GetAction() *structpb.Value {
@@ -782,58 +884,72 @@ var file_pkg_services_providers_proto_services_providers_proto_rawDesc = []byte{
 	0x32, 0x2c, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
 	0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x53, 0x65,
 	0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x52, 0x04,
-	0x70, 0x6f, 0x6f, 0x6c, 0x22, 0xa2, 0x02, 0x0a, 0x0d, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52,
-	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x59, 0x0a, 0x11, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28,
-	0x0b, 0x32, 0x2c, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76,
-	0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x53,
-	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x52,
-	0x10, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65,
-	0x72, 0x12, 0x4b, 0x0a, 0x07, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x18, 0x02, 0x20, 0x01,
-	0x28, 0x0b, 0x32, 0x31, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e,
-	0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x52, 0x07, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x69,
-	0x0a, 0x07, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x2e, 0x0a, 0x06, 0x61, 0x63, 0x74,
-	0x69, 0x6f, 0x6e, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
-	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x56, 0x61, 0x6c, 0x75,
-	0x65, 0x52, 0x06, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x2e, 0x0a, 0x06, 0x70, 0x61, 0x72,
-	0x61, 0x6d, 0x73, 0x18, 0x02, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67,
-	0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x56, 0x61, 0x6c, 0x75,
-	0x65, 0x52, 0x06, 0x70, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x22, 0x2e, 0x0a, 0x16, 0x4c, 0x69, 0x73,
-	0x74, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x12, 0x14, 0x0a, 0x05, 0x74, 0x79, 0x70, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03,
-	0x28, 0x09, 0x52, 0x05, 0x74, 0x79, 0x70, 0x65, 0x73, 0x22, 0x10, 0x0a, 0x0e, 0x47, 0x65, 0x74,
-	0x54, 0x79, 0x70, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x25, 0x0a, 0x0f, 0x47,
-	0x65, 0x74, 0x54, 0x79, 0x70, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12,
-	0x0a, 0x04, 0x74, 0x79, 0x70, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79,
-	0x70, 0x65, 0x22, 0x61, 0x0a, 0x1e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72,
-	0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x74, 0x69, 0x6f, 0x6e,
-	0x44, 0x61, 0x74, 0x61, 0x12, 0x12, 0x0a, 0x04, 0x75, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01,
-	0x28, 0x09, 0x52, 0x04, 0x75, 0x75, 0x69, 0x64, 0x12, 0x2b, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61,
-	0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x17, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e,
-	0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x52,
-	0x04, 0x64, 0x61, 0x74, 0x61, 0x22, 0x3f, 0x0a, 0x0f, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x69, 0x63,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75,
-	0x6c, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74,
-	0x12, 0x14, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52,
-	0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x32, 0xd0, 0x05, 0x0a, 0x18, 0x53, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x53, 0x65, 0x72, 0x76,
-	0x69, 0x63, 0x65, 0x12, 0x6e, 0x0a, 0x04, 0x54, 0x65, 0x73, 0x74, 0x12, 0x2c, 0x2e, 0x6e, 0x6f,
-	0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70,
-	0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
-	0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x1a, 0x28, 0x2e, 0x6e, 0x6f, 0x63, 0x6c,
-	0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f,
-	0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f,
-	0x6e, 0x73, 0x65, 0x22, 0x0e, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x08, 0x22, 0x03, 0x2f, 0x73, 0x70,
-	0x3a, 0x01, 0x2a, 0x12, 0x74, 0x0a, 0x06, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x12, 0x2c, 0x2e,
+	0x70, 0x6f, 0x6f, 0x6c, 0x22, 0x23, 0x0a, 0x0d, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x75, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x04, 0x75, 0x75, 0x69, 0x64, 0x22, 0x44, 0x0a, 0x0e, 0x44, 0x65, 0x6c,
+	0x65, 0x74, 0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x72,
+	0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x06, 0x72, 0x65, 0x73,
+	0x75, 0x6c, 0x74, 0x12, 0x1a, 0x0a, 0x08, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x18,
+	0x02, 0x20, 0x03, 0x28, 0x09, 0x52, 0x08, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x22,
+	0xa2, 0x02, 0x0a, 0x0d, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x12, 0x59, 0x0a, 0x11, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72,
+	0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x2c, 0x2e, 0x6e,
+	0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f,
+	0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x52, 0x10, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x12, 0x4b, 0x0a, 0x07,
+	0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x31, 0x2e,
 	0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73,
-	0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x1a, 0x2c, 0x2e, 0x6e, 0x6f,
-	0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70,
-	0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
-	0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x22, 0x0e, 0x82, 0xd3, 0xe4, 0x93, 0x02,
-	0x08, 0x1a, 0x03, 0x2f, 0x73, 0x70, 0x3a, 0x01, 0x2a, 0x12, 0x6f, 0x0a, 0x03, 0x47, 0x65, 0x74,
+	0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x41, 0x63, 0x74, 0x69, 0x6f,
+	0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x52, 0x07, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x69, 0x0a, 0x07, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x12, 0x2e, 0x0a, 0x06, 0x61, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x06, 0x61, 0x63,
+	0x74, 0x69, 0x6f, 0x6e, 0x12, 0x2e, 0x0a, 0x06, 0x70, 0x61, 0x72, 0x61, 0x6d, 0x73, 0x18, 0x02,
+	0x20, 0x03, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72,
+	0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x06, 0x70, 0x61,
+	0x72, 0x61, 0x6d, 0x73, 0x22, 0x2e, 0x0a, 0x16, 0x4c, 0x69, 0x73, 0x74, 0x45, 0x78, 0x74, 0x65,
+	0x6e, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x14,
+	0x0a, 0x05, 0x74, 0x79, 0x70, 0x65, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x09, 0x52, 0x05, 0x74,
+	0x79, 0x70, 0x65, 0x73, 0x22, 0x10, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x54, 0x79, 0x70, 0x65, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x25, 0x0a, 0x0f, 0x47, 0x65, 0x74, 0x54, 0x79, 0x70,
+	0x65, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x74, 0x79, 0x70,
+	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x74, 0x79, 0x70, 0x65, 0x22, 0x61, 0x0a,
+	0x1e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65,
+	0x72, 0x73, 0x45, 0x78, 0x74, 0x65, 0x6e, 0x74, 0x69, 0x6f, 0x6e, 0x44, 0x61, 0x74, 0x61, 0x12,
+	0x12, 0x0a, 0x04, 0x75, 0x75, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x75,
+	0x75, 0x69, 0x64, 0x12, 0x2b, 0x0a, 0x04, 0x64, 0x61, 0x74, 0x61, 0x18, 0x02, 0x20, 0x01, 0x28,
+	0x0b, 0x32, 0x17, 0x2e, 0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f,
+	0x62, 0x75, 0x66, 0x2e, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61,
+	0x22, 0x3f, 0x0a, 0x0f, 0x47, 0x65, 0x6e, 0x65, 0x72, 0x69, 0x63, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x16, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x08, 0x52, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x12, 0x14, 0x0a, 0x05, 0x65,
+	0x72, 0x72, 0x6f, 0x72, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x05, 0x65, 0x72, 0x72, 0x6f,
+	0x72, 0x32, 0xc5, 0x06, 0x0a, 0x18, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72,
+	0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x6e,
+	0x0a, 0x04, 0x54, 0x65, 0x73, 0x74, 0x12, 0x2c, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64,
+	0x65, 0x72, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x76,
+	0x69, 0x64, 0x65, 0x72, 0x1a, 0x28, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73,
+	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72,
+	0x73, 0x2e, 0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x0e,
+	0x82, 0xd3, 0xe4, 0x93, 0x02, 0x08, 0x22, 0x03, 0x2f, 0x73, 0x70, 0x3a, 0x01, 0x2a, 0x12, 0x74,
+	0x0a, 0x06, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x12, 0x2c, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f,
+	0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76,
+	0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72,
+	0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x1a, 0x2c, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64,
+	0x65, 0x72, 0x73, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x50, 0x72, 0x6f, 0x76,
+	0x69, 0x64, 0x65, 0x72, 0x22, 0x0e, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x08, 0x1a, 0x03, 0x2f, 0x73,
+	0x70, 0x3a, 0x01, 0x2a, 0x12, 0x73, 0x0a, 0x06, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x12, 0x29,
+	0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
+	0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x44, 0x65, 0x6c, 0x65,
+	0x74, 0x65, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2a, 0x2e, 0x6e, 0x6f, 0x63, 0x6c,
+	0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f,
+	0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x52, 0x65, 0x73,
+	0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x12, 0x82, 0xd3, 0xe4, 0x93, 0x02, 0x0c, 0x2a, 0x0a, 0x2f,
+	0x73, 0x70, 0x2f, 0x7b, 0x75, 0x75, 0x69, 0x64, 0x7d, 0x12, 0x6f, 0x0a, 0x03, 0x47, 0x65, 0x74,
 	0x12, 0x26, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f, 0x75, 0x64, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
 	0x63, 0x65, 0x73, 0x5f, 0x70, 0x72, 0x6f, 0x76, 0x69, 0x64, 0x65, 0x72, 0x73, 0x2e, 0x47, 0x65,
 	0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2c, 0x2e, 0x6e, 0x6f, 0x63, 0x6c, 0x6f,
@@ -931,7 +1047,7 @@ func file_pkg_services_providers_proto_services_providers_proto_rawDescGZIP() []
 	return file_pkg_services_providers_proto_services_providers_proto_rawDescData
 }
 
-var file_pkg_services_providers_proto_services_providers_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_pkg_services_providers_proto_services_providers_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
 var file_pkg_services_providers_proto_services_providers_proto_goTypes = []interface{}{
 	(*Var)(nil),                            // 0: nocloud.services_providers.Var
 	(*ServicesProvider)(nil),               // 1: nocloud.services_providers.ServicesProvider
@@ -939,59 +1055,63 @@ var file_pkg_services_providers_proto_services_providers_proto_goTypes = []inter
 	(*GetRequest)(nil),                     // 3: nocloud.services_providers.GetRequest
 	(*ListRequest)(nil),                    // 4: nocloud.services_providers.ListRequest
 	(*ListResponse)(nil),                   // 5: nocloud.services_providers.ListResponse
-	(*ActionRequest)(nil),                  // 6: nocloud.services_providers.ActionRequest
-	(*ListExtentionsResponse)(nil),         // 7: nocloud.services_providers.ListExtentionsResponse
-	(*GetTypeRequest)(nil),                 // 8: nocloud.services_providers.GetTypeRequest
-	(*GetTypeResponse)(nil),                // 9: nocloud.services_providers.GetTypeResponse
-	(*ServicesProvidersExtentionData)(nil), // 10: nocloud.services_providers.ServicesProvidersExtentionData
-	(*GenericResponse)(nil),                // 11: nocloud.services_providers.GenericResponse
-	nil,                                    // 12: nocloud.services_providers.Var.ValueEntry
-	nil,                                    // 13: nocloud.services_providers.ServicesProvider.SecretsEntry
-	nil,                                    // 14: nocloud.services_providers.ServicesProvider.VarsEntry
-	nil,                                    // 15: nocloud.services_providers.ServicesProvider.ExtentionsEntry
-	(*ActionRequest_Request)(nil),          // 16: nocloud.services_providers.ActionRequest.Request
-	(*structpb.Struct)(nil),                // 17: google.protobuf.Struct
-	(*structpb.Value)(nil),                 // 18: google.protobuf.Value
+	(*DeleteRequest)(nil),                  // 6: nocloud.services_providers.DeleteRequest
+	(*DeleteResponse)(nil),                 // 7: nocloud.services_providers.DeleteResponse
+	(*ActionRequest)(nil),                  // 8: nocloud.services_providers.ActionRequest
+	(*ListExtentionsResponse)(nil),         // 9: nocloud.services_providers.ListExtentionsResponse
+	(*GetTypeRequest)(nil),                 // 10: nocloud.services_providers.GetTypeRequest
+	(*GetTypeResponse)(nil),                // 11: nocloud.services_providers.GetTypeResponse
+	(*ServicesProvidersExtentionData)(nil), // 12: nocloud.services_providers.ServicesProvidersExtentionData
+	(*GenericResponse)(nil),                // 13: nocloud.services_providers.GenericResponse
+	nil,                                    // 14: nocloud.services_providers.Var.ValueEntry
+	nil,                                    // 15: nocloud.services_providers.ServicesProvider.SecretsEntry
+	nil,                                    // 16: nocloud.services_providers.ServicesProvider.VarsEntry
+	nil,                                    // 17: nocloud.services_providers.ServicesProvider.ExtentionsEntry
+	(*ActionRequest_Request)(nil),          // 18: nocloud.services_providers.ActionRequest.Request
+	(*structpb.Struct)(nil),                // 19: google.protobuf.Struct
+	(*structpb.Value)(nil),                 // 20: google.protobuf.Value
 }
 var file_pkg_services_providers_proto_services_providers_proto_depIdxs = []int32{
-	12, // 0: nocloud.services_providers.Var.value:type_name -> nocloud.services_providers.Var.ValueEntry
-	13, // 1: nocloud.services_providers.ServicesProvider.secrets:type_name -> nocloud.services_providers.ServicesProvider.SecretsEntry
-	14, // 2: nocloud.services_providers.ServicesProvider.vars:type_name -> nocloud.services_providers.ServicesProvider.VarsEntry
-	15, // 3: nocloud.services_providers.ServicesProvider.extentions:type_name -> nocloud.services_providers.ServicesProvider.ExtentionsEntry
+	14, // 0: nocloud.services_providers.Var.value:type_name -> nocloud.services_providers.Var.ValueEntry
+	15, // 1: nocloud.services_providers.ServicesProvider.secrets:type_name -> nocloud.services_providers.ServicesProvider.SecretsEntry
+	16, // 2: nocloud.services_providers.ServicesProvider.vars:type_name -> nocloud.services_providers.ServicesProvider.VarsEntry
+	17, // 3: nocloud.services_providers.ServicesProvider.extentions:type_name -> nocloud.services_providers.ServicesProvider.ExtentionsEntry
 	1,  // 4: nocloud.services_providers.ListResponse.pool:type_name -> nocloud.services_providers.ServicesProvider
 	1,  // 5: nocloud.services_providers.ActionRequest.services_provider:type_name -> nocloud.services_providers.ServicesProvider
-	16, // 6: nocloud.services_providers.ActionRequest.request:type_name -> nocloud.services_providers.ActionRequest.Request
-	17, // 7: nocloud.services_providers.ServicesProvidersExtentionData.data:type_name -> google.protobuf.Struct
-	18, // 8: nocloud.services_providers.Var.ValueEntry.value:type_name -> google.protobuf.Value
-	18, // 9: nocloud.services_providers.ServicesProvider.SecretsEntry.value:type_name -> google.protobuf.Value
+	18, // 6: nocloud.services_providers.ActionRequest.request:type_name -> nocloud.services_providers.ActionRequest.Request
+	19, // 7: nocloud.services_providers.ServicesProvidersExtentionData.data:type_name -> google.protobuf.Struct
+	20, // 8: nocloud.services_providers.Var.ValueEntry.value:type_name -> google.protobuf.Value
+	20, // 9: nocloud.services_providers.ServicesProvider.SecretsEntry.value:type_name -> google.protobuf.Value
 	0,  // 10: nocloud.services_providers.ServicesProvider.VarsEntry.value:type_name -> nocloud.services_providers.Var
-	17, // 11: nocloud.services_providers.ServicesProvider.ExtentionsEntry.value:type_name -> google.protobuf.Struct
-	18, // 12: nocloud.services_providers.ActionRequest.Request.action:type_name -> google.protobuf.Value
-	18, // 13: nocloud.services_providers.ActionRequest.Request.params:type_name -> google.protobuf.Value
+	19, // 11: nocloud.services_providers.ServicesProvider.ExtentionsEntry.value:type_name -> google.protobuf.Struct
+	20, // 12: nocloud.services_providers.ActionRequest.Request.action:type_name -> google.protobuf.Value
+	20, // 13: nocloud.services_providers.ActionRequest.Request.params:type_name -> google.protobuf.Value
 	1,  // 14: nocloud.services_providers.ServicesProvidersService.Test:input_type -> nocloud.services_providers.ServicesProvider
 	1,  // 15: nocloud.services_providers.ServicesProvidersService.Create:input_type -> nocloud.services_providers.ServicesProvider
-	3,  // 16: nocloud.services_providers.ServicesProvidersService.Get:input_type -> nocloud.services_providers.GetRequest
-	4,  // 17: nocloud.services_providers.ServicesProvidersService.List:input_type -> nocloud.services_providers.ListRequest
-	6,  // 18: nocloud.services_providers.ServicesProvidersService.Invoke:input_type -> nocloud.services_providers.ActionRequest
-	4,  // 19: nocloud.services_providers.ServicesProvidersService.ListExtentions:input_type -> nocloud.services_providers.ListRequest
-	8,  // 20: nocloud.services_providers.ServicesProvidersExtentionsService.GetType:input_type -> nocloud.services_providers.GetTypeRequest
-	10, // 21: nocloud.services_providers.ServicesProvidersExtentionsService.Test:input_type -> nocloud.services_providers.ServicesProvidersExtentionData
-	10, // 22: nocloud.services_providers.ServicesProvidersExtentionsService.Register:input_type -> nocloud.services_providers.ServicesProvidersExtentionData
-	10, // 23: nocloud.services_providers.ServicesProvidersExtentionsService.Update:input_type -> nocloud.services_providers.ServicesProvidersExtentionData
-	10, // 24: nocloud.services_providers.ServicesProvidersExtentionsService.Unregister:input_type -> nocloud.services_providers.ServicesProvidersExtentionData
-	2,  // 25: nocloud.services_providers.ServicesProvidersService.Test:output_type -> nocloud.services_providers.TestResponse
-	1,  // 26: nocloud.services_providers.ServicesProvidersService.Create:output_type -> nocloud.services_providers.ServicesProvider
-	1,  // 27: nocloud.services_providers.ServicesProvidersService.Get:output_type -> nocloud.services_providers.ServicesProvider
-	5,  // 28: nocloud.services_providers.ServicesProvidersService.List:output_type -> nocloud.services_providers.ListResponse
-	17, // 29: nocloud.services_providers.ServicesProvidersService.Invoke:output_type -> google.protobuf.Struct
-	7,  // 30: nocloud.services_providers.ServicesProvidersService.ListExtentions:output_type -> nocloud.services_providers.ListExtentionsResponse
-	9,  // 31: nocloud.services_providers.ServicesProvidersExtentionsService.GetType:output_type -> nocloud.services_providers.GetTypeResponse
-	11, // 32: nocloud.services_providers.ServicesProvidersExtentionsService.Test:output_type -> nocloud.services_providers.GenericResponse
-	11, // 33: nocloud.services_providers.ServicesProvidersExtentionsService.Register:output_type -> nocloud.services_providers.GenericResponse
-	11, // 34: nocloud.services_providers.ServicesProvidersExtentionsService.Update:output_type -> nocloud.services_providers.GenericResponse
-	11, // 35: nocloud.services_providers.ServicesProvidersExtentionsService.Unregister:output_type -> nocloud.services_providers.GenericResponse
-	25, // [25:36] is the sub-list for method output_type
-	14, // [14:25] is the sub-list for method input_type
+	6,  // 16: nocloud.services_providers.ServicesProvidersService.Delete:input_type -> nocloud.services_providers.DeleteRequest
+	3,  // 17: nocloud.services_providers.ServicesProvidersService.Get:input_type -> nocloud.services_providers.GetRequest
+	4,  // 18: nocloud.services_providers.ServicesProvidersService.List:input_type -> nocloud.services_providers.ListRequest
+	8,  // 19: nocloud.services_providers.ServicesProvidersService.Invoke:input_type -> nocloud.services_providers.ActionRequest
+	4,  // 20: nocloud.services_providers.ServicesProvidersService.ListExtentions:input_type -> nocloud.services_providers.ListRequest
+	10, // 21: nocloud.services_providers.ServicesProvidersExtentionsService.GetType:input_type -> nocloud.services_providers.GetTypeRequest
+	12, // 22: nocloud.services_providers.ServicesProvidersExtentionsService.Test:input_type -> nocloud.services_providers.ServicesProvidersExtentionData
+	12, // 23: nocloud.services_providers.ServicesProvidersExtentionsService.Register:input_type -> nocloud.services_providers.ServicesProvidersExtentionData
+	12, // 24: nocloud.services_providers.ServicesProvidersExtentionsService.Update:input_type -> nocloud.services_providers.ServicesProvidersExtentionData
+	12, // 25: nocloud.services_providers.ServicesProvidersExtentionsService.Unregister:input_type -> nocloud.services_providers.ServicesProvidersExtentionData
+	2,  // 26: nocloud.services_providers.ServicesProvidersService.Test:output_type -> nocloud.services_providers.TestResponse
+	1,  // 27: nocloud.services_providers.ServicesProvidersService.Create:output_type -> nocloud.services_providers.ServicesProvider
+	7,  // 28: nocloud.services_providers.ServicesProvidersService.Delete:output_type -> nocloud.services_providers.DeleteResponse
+	1,  // 29: nocloud.services_providers.ServicesProvidersService.Get:output_type -> nocloud.services_providers.ServicesProvider
+	5,  // 30: nocloud.services_providers.ServicesProvidersService.List:output_type -> nocloud.services_providers.ListResponse
+	19, // 31: nocloud.services_providers.ServicesProvidersService.Invoke:output_type -> google.protobuf.Struct
+	9,  // 32: nocloud.services_providers.ServicesProvidersService.ListExtentions:output_type -> nocloud.services_providers.ListExtentionsResponse
+	11, // 33: nocloud.services_providers.ServicesProvidersExtentionsService.GetType:output_type -> nocloud.services_providers.GetTypeResponse
+	13, // 34: nocloud.services_providers.ServicesProvidersExtentionsService.Test:output_type -> nocloud.services_providers.GenericResponse
+	13, // 35: nocloud.services_providers.ServicesProvidersExtentionsService.Register:output_type -> nocloud.services_providers.GenericResponse
+	13, // 36: nocloud.services_providers.ServicesProvidersExtentionsService.Update:output_type -> nocloud.services_providers.GenericResponse
+	13, // 37: nocloud.services_providers.ServicesProvidersExtentionsService.Unregister:output_type -> nocloud.services_providers.GenericResponse
+	26, // [26:38] is the sub-list for method output_type
+	14, // [14:26] is the sub-list for method input_type
 	14, // [14:14] is the sub-list for extension type_name
 	14, // [14:14] is the sub-list for extension extendee
 	0,  // [0:14] is the sub-list for field type_name
@@ -1076,7 +1196,7 @@ func file_pkg_services_providers_proto_services_providers_proto_init() {
 			}
 		}
 		file_pkg_services_providers_proto_services_providers_proto_msgTypes[6].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ActionRequest); i {
+			switch v := v.(*DeleteRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1088,7 +1208,7 @@ func file_pkg_services_providers_proto_services_providers_proto_init() {
 			}
 		}
 		file_pkg_services_providers_proto_services_providers_proto_msgTypes[7].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListExtentionsResponse); i {
+			switch v := v.(*DeleteResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1100,7 +1220,7 @@ func file_pkg_services_providers_proto_services_providers_proto_init() {
 			}
 		}
 		file_pkg_services_providers_proto_services_providers_proto_msgTypes[8].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetTypeRequest); i {
+			switch v := v.(*ActionRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1112,7 +1232,7 @@ func file_pkg_services_providers_proto_services_providers_proto_init() {
 			}
 		}
 		file_pkg_services_providers_proto_services_providers_proto_msgTypes[9].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*GetTypeResponse); i {
+			switch v := v.(*ListExtentionsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1124,7 +1244,7 @@ func file_pkg_services_providers_proto_services_providers_proto_init() {
 			}
 		}
 		file_pkg_services_providers_proto_services_providers_proto_msgTypes[10].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ServicesProvidersExtentionData); i {
+			switch v := v.(*GetTypeRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -1136,6 +1256,30 @@ func file_pkg_services_providers_proto_services_providers_proto_init() {
 			}
 		}
 		file_pkg_services_providers_proto_services_providers_proto_msgTypes[11].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetTypeResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_pkg_services_providers_proto_services_providers_proto_msgTypes[12].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ServicesProvidersExtentionData); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_pkg_services_providers_proto_services_providers_proto_msgTypes[13].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GenericResponse); i {
 			case 0:
 				return &v.state
@@ -1147,7 +1291,7 @@ func file_pkg_services_providers_proto_services_providers_proto_init() {
 				return nil
 			}
 		}
-		file_pkg_services_providers_proto_services_providers_proto_msgTypes[16].Exporter = func(v interface{}, i int) interface{} {
+		file_pkg_services_providers_proto_services_providers_proto_msgTypes[18].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*ActionRequest_Request); i {
 			case 0:
 				return &v.state
@@ -1166,7 +1310,7 @@ func file_pkg_services_providers_proto_services_providers_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_pkg_services_providers_proto_services_providers_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   17,
+			NumMessages:   19,
 			NumExtensions: 0,
 			NumServices:   2,
 		},

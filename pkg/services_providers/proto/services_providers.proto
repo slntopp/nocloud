@@ -47,6 +47,14 @@ message ListResponse {
     repeated ServicesProvider pool = 1;
 }
 
+message DeleteRequest {
+    string uuid = 1;
+}
+message DeleteResponse {
+    bool result = 1;
+    repeated string services = 2;
+}
+
 // Available only for users with SUPERUSER and ADMIN access to platform namespace
 message ActionRequest {
     nocloud.services_providers.ServicesProvider services_provider = 1;
@@ -72,6 +80,11 @@ service ServicesProvidersService {
         option (google.api.http) = {
             put: "/sp"
             body: "*"
+        };
+    };
+    rpc Delete(nocloud.services_providers.DeleteRequest) returns (nocloud.services_providers.DeleteResponse) {
+        option (google.api.http) = {
+            delete: "/sp/{uuid}"
         };
     };
 
