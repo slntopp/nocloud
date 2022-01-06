@@ -165,13 +165,13 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())
 	if err != nil {
-		log.Debug("Error getting ServicesProvider from DB", zap.Error(err))
+		log.Error("Error getting ServicesProvider from DB", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
 	}
 
 	services, err := s.ctrl.ListDeployments(ctx, sp)
 	if err != nil {
-		log.Debug("Error getting provisioned Services from DB", zap.Error(err))
+		log.Error("Error getting provisioned Services from DB", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Couldn't get Provisioned Services")
 	}
 
