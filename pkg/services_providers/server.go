@@ -184,10 +184,11 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 		return res, nil
 	}
 
-	s.ctrl.Delete(ctx, sp.GetUuid())
-
-	res.Result = true
-	return res, nil
+	err = s.ctrl.Delete(ctx, sp.GetUuid())
+	if err != nil {
+		log.Error("Error deleting ServicesProvider", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error deleting ServicesProvider")
+	}
 }
 
 func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetRequest) (res *sppb.ServicesProvider, err error) {
