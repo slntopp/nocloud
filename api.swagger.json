@@ -982,6 +982,34 @@
         "tags": [
           "ServicesProvidersService"
         ]
+      },
+      "delete": {
+        "operationId": "ServicesProvidersService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudservices_providersDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesProvidersService"
+        ]
       }
     },
     "/token": {
@@ -1301,6 +1329,20 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/servicesUpError"
+          }
+        }
+      }
+    },
+    "nocloudservices_providersDeleteResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       }

@@ -147,6 +147,49 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 	return sp.ServicesProvider, err
 }
 
+func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteRequest) (res *sppb.DeleteResponse, err error) {
+	log := s.log.Named("Delete")
+	log.Debug("Request received", zap.Any("request", req))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ns_ctrl.Get(ctx, "0")
+	if err != nil {
+		return nil, err
+	}
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), 3)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	}
+	
+	sp, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		log.Debug("Error getting ServicesProvider from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
+	}
+
+	services, err := s.ctrl.ListDeployments(ctx, sp)
+	if err != nil {
+		log.Debug("Error getting provisioned Services from DB", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Couldn't get Provisioned Services")
+	}
+
+	if len(services) > 0 {
+		res.Result = false
+		res.Services = make([]string, len(services))
+		for i, service := range services {
+			res.Services[i] = service.GetUuid()
+		}
+		return res, nil
+	}
+
+	s.ctrl.Delete(ctx, sp.GetUuid())
+
+	res.Result = true
+	return res, nil
+}
+
 func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetRequest) (res *sppb.ServicesProvider, err error) {
 	log := s.log.Named("Get")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
