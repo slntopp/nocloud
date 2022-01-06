@@ -105,7 +105,7 @@ func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp
 	query := `FOR service IN OUTBOUND @sp GRAPH @services_graph RETURN service`
 	bindVars := map[string]interface{}{
 		"@sp": sp.DocumentMeta.ID,
-		"@services_graph": schema.SERVICES_GRAPH,
+		"@services_graph": schema.SERVICES_GRAPH.Name,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
