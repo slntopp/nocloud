@@ -12,7 +12,7 @@ plugins:
     opt: paths=source_relative
   - name: go-grpc
     out: .
-    opt: 
+    opt:
       - paths=source_relative
   - name: grpc-gateway
     out: .

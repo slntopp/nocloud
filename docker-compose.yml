@@ -97,7 +97,7 @@ services:
       - redis
     ports:
       - 6379:6379
-    volumes: 
+    volumes:
       - redis-data:/data
 
   db:
