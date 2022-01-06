@@ -176,8 +176,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	}
 
 	if len(services) > 0 {
-		res.Result = false
-		res.Services = make([]string, len(services))
+		res = &sppb.DeleteResponse{ Result: false, Services: make([]string, len(services)) }
 		for i, service := range services {
 			res.Services[i] = service.GetUuid()
 		}
@@ -189,6 +188,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 		log.Error("Error deleting ServicesProvider", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error deleting ServicesProvider")
 	}
+	return &sppb.DeleteResponse{Result: true}, nil
 }
 
 func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetRequest) (res *sppb.ServicesProvider, err error) {
