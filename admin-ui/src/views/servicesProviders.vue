@@ -30,13 +30,19 @@
 		<v-snackbar
 			v-model="snackbar.visibility"
 			:timeout="snackbar.timeout"
+			:color="snackbar.color"
 		>
 			{{snackbar.message}}
+			<template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
+				<router-link :to="snackbar.route">
+					Look up.
+				</router-link>
+			</template>
 			
 
       <template v-slot:action="{ attrs }">
         <v-btn
-          color="blue"
+          :color="snackbar.buttonColor"
           text
           v-bind="attrs"
           @click="snackbar.visibility = false"
@@ -52,19 +58,17 @@
 import api from "@/api.js"
 import servicesProviders from "@/components/servicesproviders_table.vue"
 
+import snackbar from "@/mixins/snackbar.js"
+
 export default {
 	name: "namespaces-view",
 	components: {
 		servicesProviders
 	},
+	mixins: [snackbar],
 	data () {
 		return {
 			selected: [],
-			snackbar: {
-				visibility: false,
-				message: '',
-				timeout: 3000,
-			},
 		}
 	},
 	methods: {
@@ -73,21 +77,40 @@ export default {
 				const deletePromices = this.selected.map(el => api.delete(`/sp/${el.uuid}`));
 				Promise.all(deletePromices)
 				.then(res => {
+
 					if(res.every(el => el.result)){
 						console.log('all ok');
+						this.$store.dispatch('servicesProviders/fetch');
+							
+						const ending = deletePromices.length == 1 ? "" : "s";
+						this.showSnackbar({message: `Service${ending} provider${ending} deleted successfully.`})
+					} else {
+						this.showSnackbar({message: `Can’t delete Services Provider: Has Services deployed.`, route: {name: 'Home'}})
 					}
-
-					this.selected = [];
-					this.$store.dispatch('servicesProviders/fetch');
 				})
 				.catch(err => {
-					console.log(err);
+					if(err.response.status == 501 || err.response.status == 502){
+						const opts = {
+							message: `Service Unavailable: ${err.response.data.message}.`,
+							timeout: 0
+						}
+						this.showSnackbarError(opts);
+					}
 				})
 			}
-		}
+		},
 	},
 	created(){
 		this.$store.dispatch('servicesProviders/fetch')
+		.catch(err => {
+			if(err.response.status == 501 || err.response.status == 502){
+				const opts = {
+					message: `Service Unavailable: ${err.response.data.message}.`,
+					timeout: 0
+				}
+				this.showSnackbarError(opts);
+			}
+		})
 	}
 }
 </script>

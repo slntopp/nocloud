@@ -163,13 +163,19 @@
 		<v-snackbar
 			v-model="snackbar.visibility"
 			:timeout="snackbar.timeout"
+			:color="snackbar.color"
 		>
 			{{snackbar.message}}
+			<template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
+				<router-link :to="snackbar.route">
+					Look up.
+				</router-link>
+			</template>
 			
 
       <template v-slot:action="{ attrs }">
         <v-btn
-          color="blue"
+          :color="snackbar.buttonColor"
           text
           v-bind="attrs"
           @click="snackbar.visibility = false"
@@ -186,12 +192,15 @@ import namespacesTable from "@/components/namespaces_table.vue"
 import accountsTable from "@/components/accounts_table.vue"
 import api from "@/api.js"
 
+import snackbar from "@/mixins/snackbar.js"
+
 export default {
 	name: "namespaces-view",
 	components: {
 		"namespaces-table": namespacesTable,
 		"accounts-table": accountsTable,
 	},
+	mixins: [snackbar],
 	data () {
 		return {
 			createMenuVisible: false,
@@ -213,11 +222,6 @@ export default {
 					access: 1,
 					role: 'default'
 				}
-			},
-			snackbar: {
-				visibility: false,
-				message: '',
-				timeout: 3000,
 			},
 		}
 	},
@@ -243,9 +247,11 @@ export default {
 					if(res.every(el => el.result)){
 						console.log('all ok');
 					}
-
 					this.selected = [];
 					this.$store.dispatch('namespaces/fetch');
+						
+					this.snackbar.message = `Namespace${deletePromices.length == 1 ? "" : "s"} deleted successfully.`
+					this.snackbar.visibility = true;
 				})
 				.catch(err => {
 					console.log(err);
@@ -310,7 +316,7 @@ export default {
 				this.joinAccount.selected = [];
 				this.joinAccount.loading = false;
 			})
-		}
+		},
 	},
 }
 </script>
