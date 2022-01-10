@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 Nikita Ivanovski info@slnt-opp.xyz
+Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -94,6 +94,8 @@ func main() {
 		_ = log.Sync()
 	}()
 
+	log.Info("Starting REST-API Server")
+	log.Info("Registering Endpoints", zap.String("server", apiserver))
 	var err error
 
 	gwmux := runtime.NewServeMux()

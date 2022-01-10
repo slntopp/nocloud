@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 Nikita Ivanovski info@slnt-opp.xyz
+Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,41 +20,8 @@ import (
 	"errors"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
-
-type NoCloudGraphSchema struct {
-	Name string
-	Edges [][]string
-}
-
-var COLLECTIONS = []string{
-	ACCOUNTS_COL, NAMESPACES_COL, CREDENTIALS_COL,
-	SERVICES_PROVIDERS_COL, SERVICES_COL }
-
-var PERMISSIONS_GRAPH = NoCloudGraphSchema{
-	Name: "Permissions",
-	Edges: [][]string{
-		{ACCOUNTS_COL, NAMESPACES_COL},
-		{NAMESPACES_COL, ACCOUNTS_COL},
-		{NAMESPACES_COL, SERVICES_COL},
-	},
-}
-var CREDENTIALS_GRAPH = NoCloudGraphSchema{
-	Name: "Credentials",
-	Edges: [][]string{
-		{ACCOUNTS_COL, CREDENTIALS_COL},
-	},
-}
-var SERVICES_GRAPH = NoCloudGraphSchema{
-	Name: "Services",
-	Edges: [][]string{
-		{SERVICES_PROVIDERS_COL, SERVICES_COL},
-	},
-}
-
-var GRAPHS_SCHEMAS = []NoCloudGraphSchema{
-	PERMISSIONS_GRAPH, CREDENTIALS_GRAPH, SERVICES_GRAPH,
-}
 
 type Node struct {
 	Collection 	string `json:"collection"`
@@ -105,11 +72,11 @@ func MakeDeletable(ctx context.Context, db driver.Database, node Node) (Deletabl
 	col, _ := db.Collection(ctx, node.Collection)
 
 	switch node.Collection {
-	case ACCOUNTS_COL:
+	case schema.ACCOUNTS_COL:
 		var acc Account
 		_, err = col.ReadDocument(ctx, node.Key, &acc)
 		result = &acc
-	case NAMESPACES_COL:
+	case schema.NAMESPACES_COL:
 		var ns Namespace
 		_, err = col.ReadDocument(ctx, node.Key, &ns)
 		result = &ns

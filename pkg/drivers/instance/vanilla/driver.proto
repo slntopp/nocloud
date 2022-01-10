@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 Nikita Ivanovski info@slnt-opp.xyz
+Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,6 +20,11 @@ import "google/protobuf/struct.proto";
 
 import "pkg/instances/proto/instances.proto";
 import "pkg/services_providers/proto/services_providers.proto";
+
+message TestServiceProviderConfigRequest {
+    nocloud.services_providers.ServicesProvider services_provider = 1;
+    bool syntax_only = 2;
+}
 
 message GetTypeRequest {}
 message GetTypeResponse {
@@ -42,12 +47,12 @@ message DownRequest {
 message DownResponse {}
 
 service DriverService {
-    rpc TestServiceProviderConfig(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.TestResponse);
+    rpc TestServiceProviderConfig(nocloud.instance.driver.vanilla.TestServiceProviderConfigRequest) returns (nocloud.services_providers.TestResponse);
     rpc TestInstancesGroupConfig(nocloud.instances.TestInstancesGroupConfigRequest) returns (nocloud.instances.TestInstancesGroupConfigResponse);
-    rpc GetType(GetTypeRequest) returns (GetTypeResponse);
+    rpc GetType(nocloud.instance.driver.vanilla.GetTypeRequest) returns (nocloud.instance.driver.vanilla.GetTypeResponse);
 
-    rpc Up(UpRequest) returns (UpResponse);
-    rpc Down(DownRequest) returns (DownResponse);
+    rpc Up(nocloud.instance.driver.vanilla.UpRequest) returns (nocloud.instance.driver.vanilla.UpResponse);
+    rpc Down(nocloud.instance.driver.vanilla.DownRequest) returns (nocloud.instance.driver.vanilla.DownResponse);
 
     rpc Invoke(nocloud.services_providers.ActionRequest) returns (google.protobuf.Struct);
 }

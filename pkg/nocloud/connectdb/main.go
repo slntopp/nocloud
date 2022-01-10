@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 Nikita Ivanovski info@slnt-opp.xyz
+Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
-	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
 
@@ -46,7 +46,7 @@ func MakeDBConnection(log *zap.Logger, host, cred string) (driver.Database) {
 	db_connect_attempts := 0
 	db_connect:
 	log.Info("Trying to connect to DB")
-	db, err := c.Database(context.TODO(), graph.DB_NAME)
+	db, err := c.Database(context.TODO(), schema.DB_NAME)
 	if err != nil {
 		db_connect_attempts++
 		log.Error("Failed to connect DB", zap.Error(err), zap.Int("attempts", db_connect_attempts), zap.Int("next_attempt", db_connect_attempts * 5))

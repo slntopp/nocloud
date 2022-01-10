@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 Nikita Ivanovski info@slnt-opp.xyz
+Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ var (
 	arangodbHost 	string
 	arangodbCred 	string
 	drivers 		[]string
+	ext_servers 	[]string
 	SIGNING_KEY		[]byte
 )
 
@@ -53,6 +54,7 @@ func init() {
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("DRIVERS", "")
+	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	port = viper.GetString("PORT")
@@ -60,6 +62,7 @@ func init() {
 	arangodbHost 	= viper.GetString("DB_HOST")
 	arangodbCred 	= viper.GetString("DB_CRED")
 	drivers 		= viper.GetStringSlice("DRIVERS")
+	ext_servers 	= viper.GetStringSlice("EXTENTION_SERVERS")
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
 }
 
@@ -101,6 +104,22 @@ func main() {
 		}
 		server.RegisterDriver(driver_type.GetType(), client)
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
+	}
+
+	for _, ext_server := range ext_servers {
+		log.Info("Registering Extention Server", zap.String("ext_server", ext_server))
+		conn, err := grpc.Dial(ext_server, grpc.WithInsecure())
+		if err != nil {
+			log.Error("Error registering Extention Server", zap.String("ext_server", ext_server), zap.Error(err))
+			continue
+		}
+		client := sppb.NewServicesProvidersExtentionsServiceClient(conn)
+		ext_srv_type, err := client.GetType(context.Background(),&sppb.GetTypeRequest{})
+		if err != nil {
+			log.Error("Error dialing Extention Server and getting its type", zap.String("ext_server", ext_server), zap.Error(err))
+		}
+		server.RegisterExtentionServer(ext_srv_type.GetType(), client)
+		log.Info("Registered Extention Server", zap.String("ext_server", ext_server), zap.String("type", ext_srv_type.GetType()))
 	}
 
 	sppb.RegisterServicesProvidersServiceServer(s, server)

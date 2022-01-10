@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 Nikita Ivanovski info@slnt-opp.xyz
+Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ type ServicesProviderServer struct {
 	sppb.UnimplementedServicesProvidersServiceServer
 
 	drivers map[string]driverpb.DriverServiceClient
+	extention_servers map[string]sppb.ServicesProvidersExtentionsServiceClient
 	db driver.Database
 	ctrl graph.ServicesProvidersController
 	ns_ctrl graph.NamespacesController
@@ -46,11 +47,27 @@ func NewServicesProviderServer(log *zap.Logger, db driver.Database) *ServicesPro
 		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl: graph.NewNamespacesController(log, db),
 		drivers: make(map[string]driverpb.DriverServiceClient),
+		extention_servers: make(map[string]sppb.ServicesProvidersExtentionsServiceClient),
 	}
 }
 
 func (s *ServicesProviderServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
 	s.drivers[type_key] = client
+}
+
+func (s *ServicesProviderServer) RegisterExtentionServer(type_key string, client sppb.ServicesProvidersExtentionsServiceClient) {
+	s.extention_servers[type_key] = client
+}
+
+func (s *ServicesProviderServer) ListExtentions(ctx context.Context, req *sppb.ListRequest) (res *sppb.ListExtentionsResponse, err error) {
+	s.log.Debug("ListExtentions request received", zap.Any("request", req))
+
+	keys := make([]string, 0, len(s.extention_servers))
+	for k := range s.extention_servers {
+		keys = append(keys, k)
+	}
+	
+	return &sppb.ListExtentionsResponse{Types: keys}, nil
 }
 
 func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesProvider) (*sppb.TestResponse, error) {
@@ -66,7 +83,31 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("Driver type '%s' not registered", req.GetType()))
 	}
 
-	return client.TestServiceProviderConfig(ctx, req)
+	for ext, data := range req.GetExtentions() {
+		client, ok := s.extention_servers[ext]
+		if !ok {
+			return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
+		}
+		res, err := client.Test(ctx, &sppb.ServicesProvidersExtentionData{
+			Data: data,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if !res.Result {
+			err := fmt.Sprintf("Extention '%s': %s", ext, res.Error)
+			return &sppb.TestResponse{
+				Result: res.Result, Error: err,
+			}, nil
+		}
+	}
+
+	test_req := &driverpb.TestServiceProviderConfigRequest{ServicesProvider: req}
+	if len(req.GetExtentions()) > 0 {
+		test_req.SyntaxOnly = true
+	}
+
+	return client.TestServiceProviderConfig(ctx, test_req)
 }
 
 func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesProvider) (res *sppb.ServicesProvider, err error) {
@@ -80,9 +121,74 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 		return req, status.Error(codes.Internal, testRes.Error)
 	}
 
+	for ext, data := range req.GetExtentions() {
+		client, ok := s.extention_servers[ext]
+		if !ok {
+			return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
+		}
+		res, err := client.Register(ctx, &sppb.ServicesProvidersExtentionData{
+			Data: data,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if !res.Result {
+			err := fmt.Sprintf("Extention '%s': %s", ext, res.Error)
+			return req, status.Error(codes.Internal, err)
+		}
+	}
+
 	sp := &graph.ServicesProvider{ServicesProvider: req}
 	err = s.ctrl.Create(ctx, sp)
+	if err != nil {
+		s.log.Debug("Error allocating in DataBase", zap.Any("sp", sp), zap.Error(err))
+		return req, status.Error(codes.Internal, "Error allocating in DataBase")
+	}
 	return sp.ServicesProvider, err
+}
+
+func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteRequest) (res *sppb.DeleteResponse, err error) {
+	log := s.log.Named("Delete")
+	log.Debug("Request received", zap.Any("request", req))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ns_ctrl.Get(ctx, "0")
+	if err != nil {
+		return nil, err
+	}
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), 3)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	}
+	
+	sp, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		log.Error("Error getting ServicesProvider from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
+	}
+
+	services, err := s.ctrl.ListDeployments(ctx, sp)
+	if err != nil {
+		log.Error("Error getting provisioned Services from DB", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Couldn't get Provisioned Services")
+	}
+
+	if len(services) > 0 {
+		res = &sppb.DeleteResponse{ Result: false, Services: make([]string, len(services)) }
+		for i, service := range services {
+			res.Services[i] = service.GetUuid()
+		}
+		return res, nil
+	}
+
+	err = s.ctrl.Delete(ctx, sp.GetUuid())
+	if err != nil {
+		log.Error("Error deleting ServicesProvider", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error deleting ServicesProvider")
+	}
+	return &sppb.DeleteResponse{Result: true}, nil
 }
 
 func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetRequest) (res *sppb.ServicesProvider, err error) {
@@ -94,8 +200,8 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 
 	r, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
-		log.Debug("Error getting Service from DB", zap.Error(err))
-		return nil, status.Error(codes.NotFound, "Service not Found in DB")
+		log.Debug("Error getting ServicesProvider from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
 	}
 
 	return r.ServicesProvider, nil

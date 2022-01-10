@@ -14,6 +14,9 @@
       "name": "ServicesProvidersService"
     },
     {
+      "name": "ServicesProvidersExtentionsService"
+    },
+    {
       "name": "DriverService"
     },
     {
@@ -27,6 +30,9 @@
     },
     {
       "name": "ServicesService"
+    },
+    {
+      "name": "SettingsService"
     }
   ],
   "host": "localhost:8000",
@@ -888,6 +894,28 @@
         ]
       }
     },
+    "/sp-ext": {
+      "get": {
+        "operationId": "ServicesProvidersService_ListExtentions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/services_providersListExtentionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      }
+    },
     "/sp/{servicesProvider.uuid}": {
       "post": {
         "operationId": "ServicesProvidersService_Invoke",
@@ -934,6 +962,34 @@
             "description": "A successful response.",
             "schema": {
               "$ref": "#/definitions/services_providersServicesProvider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      },
+      "delete": {
+        "operationId": "ServicesProvidersService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudservices_providersDeleteResponse"
             }
           },
           "default": {
@@ -1004,6 +1060,20 @@
         }
       }
     },
+    "KeysResponseKey": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "public": {
+          "type": "boolean"
+        }
+      }
+    },
     "accountsAccount": {
       "type": "object",
       "properties": {
@@ -1067,6 +1137,14 @@
     },
     "drivervanillaDownResponse": {
       "type": "object"
+    },
+    "drivervanillaGetTypeResponse": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
+        }
+      }
     },
     "drivervanillaUpResponse": {
       "type": "object",
@@ -1252,6 +1330,28 @@
           "items": {
             "$ref": "#/definitions/servicesUpError"
           }
+        }
+      }
+    },
+    "nocloudservices_providersDeleteResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "nocloudservices_providersGetTypeResponse": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string"
         }
       }
     },
@@ -1478,6 +1578,28 @@
       },
       "title": "Available only for users with SUPERUSER and ADMIN access to platform namespace"
     },
+    "services_providersGenericResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "services_providersListExtentionsResponse": {
+      "type": "object",
+      "properties": {
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "services_providersServicesProvider": {
       "type": "object",
       "properties": {
@@ -1500,6 +1622,12 @@
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/services_providersVar"
+          }
+        },
+        "extentions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
           }
         }
       }
@@ -1526,10 +1654,21 @@
         }
       }
     },
-    "vanillaGetTypeResponse": {
+    "settingsKeysResponse": {
       "type": "object",
       "properties": {
-        "type": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/KeysResponseKey"
+          }
+        }
+      }
+    },
+    "settingsPutResponse": {
+      "type": "object",
+      "properties": {
+        "key": {
           "type": "string"
         }
       }

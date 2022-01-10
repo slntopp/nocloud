@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 Nikita Ivanovski info@slnt-opp.xyz
+Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,17 +22,12 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
-	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 
+	"github.com/slntopp/nocloud/pkg/credentials"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-)
-
-const (
-	ACCOUNTS_COL = "Accounts"
-	ACC2NS = ACCOUNTS_COL + "2" + NAMESPACES_COL
-	ACC2CRED = ACCOUNTS_COL + "2" + CREDENTIALS_COL
 )
 
 type Account struct {
@@ -48,8 +43,8 @@ type AccountsController struct {
 }
 
 func NewAccountsController(log *zap.Logger, db driver.Database) AccountsController {
-	col, _ := db.Collection(context.TODO(), ACCOUNTS_COL)
-	cred, _ := db.Collection(context.TODO(), CREDENTIALS_COL)
+	col, _ := db.Collection(context.TODO(), schema.ACCOUNTS_COL)
+	cred, _ := db.Collection(context.TODO(), schema.CREDENTIALS_COL)
 	log = log.Named("AccountsController")
 	return AccountsController{log: log, col: col, cred: cred}
 }
@@ -75,8 +70,8 @@ func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req
 	bindVars := map[string]interface{}{
 		"depth": depth,
 		"account": requestor.ID.String(),
-		"permissions_graph": PERMISSIONS_GRAPH.Name,
-		"@accounts": ACCOUNTS_COL,
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"@accounts": schema.ACCOUNTS_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
@@ -157,8 +152,8 @@ func (acc *Account) Delete(ctx context.Context, db driver.Database) (error) {
 		return err
 	}
 
-	graph, _ := db.Graph(ctx, PERMISSIONS_GRAPH.Name)
-	col, _ := graph.VertexCollection(ctx, ACCOUNTS_COL)
+	graph, _ := db.Graph(ctx, schema.PERMISSIONS_GRAPH.Name)
+	col, _ := graph.VertexCollection(ctx, schema.ACCOUNTS_COL)
 	_, err = col.RemoveDocument(ctx, acc.Key)
 	if err != nil {
 		return err
@@ -176,9 +171,9 @@ func (ctrl *AccountsController) Delete(ctx context.Context, id string) (error) {
 }
 
 // Set Account Credentials, ensure account has only one credentials document linked per credentials type
-func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c Credentials) (error) {
+func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c credentials.Credentials) (error) {
 	cred, err := ctrl.cred.CreateDocument(ctx, c)	
-	_, err = edge.CreateDocument(ctx, CredentialsLink{
+	_, err = edge.CreateDocument(ctx, credentials.Link{
 		From: acc.ID,
 		To: cred.ID,
 		Type: c.Type(),
@@ -192,7 +187,7 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 	return nil
 }
 
-func (ctrl *AccountsController) UpdateCredentials(ctx context.Context, cred string, c Credentials) (err error) {
+func (ctrl *AccountsController) UpdateCredentials(ctx context.Context, cred string, c credentials.Credentials) (err error) {
 	_, err = ctrl.cred.UpdateDocument(ctx, cred, c)
 	return err
 }
@@ -200,7 +195,7 @@ func (ctrl *AccountsController) UpdateCredentials(ctx context.Context, cred stri
 func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col driver.Collection, acc Account, auth_type string) (key string, has_credentials bool) {
 	cred_edge := auth_type + "-" + acc.Key
 	ctrl.log.Debug("Looking for Credentials Edge(Link)", zap.String("key", cred_edge))
-	var edge CredentialsLink
+	var edge credentials.Link
 	_, err := edge_col.ReadDocument(ctx, cred_edge, &edge)
 	if err != nil {
 		ctrl.log.Debug("Error getting Credentials Edge(Link)", zap.Error(err))
@@ -208,11 +203,8 @@ func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col dri
 	}
 	ctrl.log.Debug("Found Credentials Edge(Link)", zap.Any("edge", edge))
 
-	var cred Credentials
-	switch auth_type {
-	case "standard":
-		cred = &StandardCredentials{}
-	default:
+	cred, ok := credentials.Determine(auth_type)
+	if !ok {
 		return key, false
 	}
 
@@ -226,44 +218,34 @@ func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col dri
 	return key, true
 }
 
-func MakeCredentials(credentials *accountspb.Credentials) (Credentials, error) {
-	var cred Credentials;
-	var err error;
-	switch credentials.Type {
-	case "standard":
-		cred, err = NewStandardCredentials(credentials.Data[0], credentials.Data[1])
-	default:
-		return nil, errors.New("Auth type is wrong")
+// Return Account authorisable by this Credentials
+func Authorisable(ctx context.Context, cred *credentials.Credentials, db driver.Database) (Account, bool) {
+	query := `FOR account IN 1 INBOUND @credentials GRAPH @credentials_graph RETURN account`
+	c, err := db.Query(ctx, query, map[string]interface{}{
+		"credentials": cred,
+		"credentials_graph": schema.CREDENTIALS_GRAPH.Name,
+	})
+	if err != nil {
+		return Account{}, false
 	}
+	defer c.Close()
 
-	return cred, err
+	var r Account
+	_, err = c.ReadDocument(ctx, &r)
+	return r, err == nil
 }
 
 func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string, args ...string) (Account, bool) {
-	var credentials Credentials;
-	var ok bool;
 	ctrl.log.Debug("Authorization request", zap.String("type", auth_type))
-	switch auth_type {
-	case "standard":
-		credentials = &StandardCredentials{Username: args[0]}
-		ok = credentials.Find(ctx, ctrl.col.Database())
-	default:
-		return Account{}, false
-	}
-	// Check if could find Credentials
-	if !ok {
-		ctrl.log.Info("Coudn't find credentials", zap.Skip())
-		return Account{}, false
-	}
 
-	ok = credentials.Authorize(args...)
+	credentials, err := credentials.Find(ctx, ctrl.col.Database(), ctrl.log, auth_type, args...)
 	// Check if could authorize
-	if !ok {
-		ctrl.log.Info("Coudn't authorize", zap.Skip())
+	if err != nil {
+		ctrl.log.Info("Coudn't authorize", zap.Error(err))
 		return Account{}, false
 	}
 
-	account, ok := credentials.Account(ctx, ctrl.col.Database())
+	account, ok := Authorisable(ctx, &credentials, ctrl.col.Database())
 	ctrl.log.Debug("Authorized account", zap.Bool("result", ok), zap.Any("account", account))
 	return account, ok
 }
@@ -292,7 +274,7 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	}
 	root.DocumentMeta = meta
 
-	ns_col, _ := ctrl.col.Database().Collection(context.TODO(), NAMESPACES_COL)
+	ns_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.NAMESPACES_COL)
 	exists, err = ns_col.DocumentExists(context.TODO(), "0")
 	if !exists {
 		meta, err := ns_col.CreateDocument(context.TODO(), Namespace{ 
@@ -312,7 +294,7 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	}
 	rootNS.DocumentMeta = meta
 
-	edge_col, _ := ctrl.col.Database().Collection(context.TODO(), ACC2NS)
+	edge_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.ACC2NS)
 	exists, err = edge_col.DocumentExists(context.TODO(), "0-0")
 	if !exists {
 		err = root.LinkNamespace(context.TODO(), edge_col, rootNS, 4, roles.OWNER)
@@ -322,8 +304,8 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	}
 
 	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, "0")
-	cred_edge_col, _ := ctrl.col.Database().Collection(context.TODO(), ACC2CRED)
-	cred, err := NewStandardCredentials("nocloud", passwd)
+	cred_edge_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.ACC2CRED)
+	cred, err := credentials.NewStandardCredentials("nocloud", passwd)
 	if err != nil {
 		return err
 	}

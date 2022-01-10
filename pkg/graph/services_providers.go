@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 Nikita Ivanovski info@slnt-opp.xyz
+Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,11 +22,9 @@ import (
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
 
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	spb "github.com/slntopp/nocloud/pkg/services/proto"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
-)
-
-const (
-	SERVICES_PROVIDERS_COL = "ServicesProviders"
 )
 
 type ServicesProvider struct {
@@ -41,7 +39,7 @@ type ServicesProvidersController struct {
 }
 
 func NewServicesProvidersController(log *zap.Logger, db driver.Database) ServicesProvidersController {
-	col, _ := db.Collection(context.TODO(), SERVICES_PROVIDERS_COL)
+	col, _ := db.Collection(context.TODO(), schema.SERVICES_PROVIDERS_COL)
 	return ServicesProvidersController{log: log, col: col}
 }
 
@@ -49,6 +47,12 @@ func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *Service
 	ctrl.log.Debug("Creating Document for ServicesProvider", zap.Any("config", sp))
 	meta, err := ctrl.col.CreateDocument(ctx, *sp)
 	sp.Uuid = meta.Key
+	return err
+}
+
+func (ctrl *ServicesProvidersController) Delete(ctx context.Context, id string) (err error) {
+	ctrl.log.Debug("Deleting ServicesProvider Document", zap.Any("uuid", id))
+	_, err = ctrl.col.RemoveDocument(ctx, id)
 	return err
 }
 
@@ -69,9 +73,9 @@ func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r 
 func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor string) ([]*ServicesProvider, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
 
-	query := `FOR sp IN @@services RETURN sp`
+	query := `FOR sp IN @@sps RETURN sp`
 	bindVars := map[string]interface{}{
-		"@services": SERVICES_PROVIDERS_COL,
+		"@sps": schema.SERVICES_PROVIDERS_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
@@ -92,6 +96,36 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 		ctrl.log.Debug("Got document", zap.Any("service_provider", &s))
 		s.Uuid = meta.ID.Key()
 		r = append(r, &ServicesProvider{&s, meta})
+	}
+
+	return r,  nil
+}
+
+func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider) ([]*Service, error) {
+	query := `FOR service IN OUTBOUND @sp GRAPH @services_graph RETURN service`
+	bindVars := map[string]interface{}{
+		"sp": sp.DocumentMeta.ID,
+		"services_graph": schema.SERVICES_GRAPH.Name,
+	}
+	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+	var r []*Service
+	for {
+		var s spb.Service
+		meta, err := c.ReadDocument(ctx, &s)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		ctrl.log.Debug("Got document", zap.Any("service", &s))
+		s.Uuid = meta.ID.Key()
+		r = append(r, &Service{&s, meta})
 	}
 
 	return r,  nil

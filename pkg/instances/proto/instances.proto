@@ -2,6 +2,7 @@ syntax = "proto3";
 package nocloud.instances;
 
 import "google/protobuf/struct.proto";
+import "pkg/hasher/hasherpb/hasher.proto";
 
 message Instance {
     string uuid = 1;
@@ -14,7 +15,8 @@ message Instance {
 message InstancesGroup {
     string uuid = 1;
     string type = 2;
-    map<string, google.protobuf.Value> config = 3;
+    map<string, google.protobuf.Value> config = 3
+        [(nocloud.hasher.hashed) = true];
     repeated Instance instances = 4;
     map<string, google.protobuf.Value> resources = 5;
     map<string, google.protobuf.Value> data = 6;

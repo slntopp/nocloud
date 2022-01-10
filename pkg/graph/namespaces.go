@@ -1,5 +1,5 @@
 /*
-Copyright © 2021 Nikita Ivanovski info@slnt-opp.xyz
+Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,12 +22,8 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
-)
-
-const (
-	NAMESPACES_COL = "Namespaces"
-	NS2ACC = NAMESPACES_COL + "2" + ACCOUNTS_COL
 )
 
 type Namespace struct {
@@ -41,7 +37,7 @@ type NamespacesController struct {
 }
 
 func NewNamespacesController(log *zap.Logger, db driver.Database) NamespacesController {
-	col, _ := db.Collection(context.TODO(), NAMESPACES_COL)
+	col, _ := db.Collection(context.TODO(), schema.NAMESPACES_COL)
 	return NamespacesController{log: log, col: col}
 }
 
@@ -63,8 +59,8 @@ func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, r
 	bindVars := map[string]interface{}{
 		"depth": depth,
 		"account": requestor.ID.String(),
-		"permissions_graph": PERMISSIONS_GRAPH.Name,
-		"@namespaces": NAMESPACES_COL,
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"@namespaces": schema.NAMESPACES_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
@@ -104,7 +100,7 @@ func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Nam
 	acc := Account{
 		DocumentMeta: driver.DocumentMeta {
 			Key: key,
-			ID: driver.NewDocumentID(ACCOUNTS_COL, key),
+			ID: driver.NewDocumentID(schema.ACCOUNTS_COL, key),
 		},
 	}
 
@@ -112,12 +108,12 @@ func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Nam
 }
 
 func (ctrl *NamespacesController) Link(ctx context.Context, acc Account, ns Namespace, access int32, role string) (error) {
-	edge, _ := ctrl.col.Database().Collection(ctx, ACC2NS)
+	edge, _ := ctrl.col.Database().Collection(ctx, schema.ACC2NS)
 	return acc.LinkNamespace(ctx, edge, ns, access, role)
 }
 
 func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Namespace, access int32, role string) (error) {
-	edge, _ := ctrl.col.Database().Collection(ctx, NS2ACC)
+	edge, _ := ctrl.col.Database().Collection(ctx, schema.NS2ACC)
 	return acc.JoinNamespace(ctx, edge, ns, access, role)
 }
 
@@ -127,8 +123,8 @@ func (ns *Namespace) Delete(ctx context.Context, db driver.Database) (error) {
 		return err
 	}
 
-	graph, _ := db.Graph(ctx, PERMISSIONS_GRAPH.Name)
-	col, _ := graph.VertexCollection(ctx, NAMESPACES_COL)
+	graph, _ := db.Graph(ctx, schema.PERMISSIONS_GRAPH.Name)
+	col, _ := graph.VertexCollection(ctx, schema.NAMESPACES_COL)
 	_, err = col.RemoveDocument(ctx, ns.Key)
 	if err != nil {
 		return err
