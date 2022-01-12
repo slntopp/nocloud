@@ -16,9 +16,15 @@ limitations under the License.
 package dns
 
 import (
+	"context"
+	"encoding/json"
+	"strings"
+
 	redis "github.com/go-redis/redis/v8"
 	pb "github.com/slntopp/nocloud/pkg/dns/proto"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 const KEYS_PREFIX = "_dns"
@@ -36,6 +42,27 @@ func NewDNSServer(log *zap.Logger, rdb *redis.Client) *DNSServer {
 	}
 }
 
+func (s *DNSServer) Get(ctx context.Context, req *pb.Zone) (*pb.Zone, error) {
+	domain := req.GetName()
+	r := s.rdb.HGetAll(ctx, KEYS_PREFIX + ":" + domain)
+	records, err := r.Result()
+	if err != nil {
+		s.log.Error("Error getting records from Redis", zap.Error(err))
+		return nil, status.Error(codes.InvalidArgument, "Error getting records from Redis")
+	}
+	locations := make(map[string]*pb.Record)
+	for loc, data := range records {
+		var record pb.Record
+		err := json.Unmarshal([]byte(data), &record)
+		if err != nil {
+			continue
+		}
+		locations[loc] = &record
+	}
+
+	req.Locations = locations
+	return req, nil
+}
 
 func (s *DNSServer) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
 	r := s.rdb.Keys(ctx, KEYS_PREFIX + ":*")
@@ -47,5 +74,5 @@ func (s *DNSServer) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResp
 	for i, key := range keys {
 		keys[i] = strings.Split(key, ":")[1]
 	}
-	return &pb.ListResponse{Domains: keys}, nil
+	return &pb.ListResponse{Zones: keys}, nil
 }
