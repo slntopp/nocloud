@@ -11,6 +11,9 @@
   },
   "tags": [
     {
+      "name": "DNS"
+    },
+    {
       "name": "ServicesProvidersService"
     },
     {
@@ -1135,6 +1138,63 @@
         }
       }
     },
+    "dnsPool": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/dnsRecord"
+          }
+        }
+      }
+    },
+    "dnsRecord": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/dnsRecordType"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "sub": {
+          "type": "string"
+        },
+        "addr": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "dnsRecordType": {
+      "type": "string",
+      "enum": [
+        "A",
+        "AAAA",
+        "CNAME",
+        "TXT"
+      ],
+      "default": "A"
+    },
+    "dnsResult": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "drivervanillaDownResponse": {
       "type": "object"
     },
@@ -1286,6 +1346,17 @@
         },
         "title": {
           "type": "string"
+        }
+      }
+    },
+    "noclouddnsListResponse": {
+      "type": "object",
+      "properties": {
+        "domains": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
