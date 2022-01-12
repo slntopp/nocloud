@@ -3,80 +3,146 @@
 		<div class="page__title">
 			Create service provider
 		</div>
-		<div class="page__content">
-			<v-container>
-				<v-row align="center">
-					<v-col cols="3">
-						<v-subheader>
-							Provider type
-						</v-subheader>
-					</v-col>
+		<v-container>
+			<v-row>
+				<v-col lg="6" cols="12">
+					<v-row align="center">
+						<v-col cols="3">
+							<v-subheader>
+								Provider type
+							</v-subheader>
+						</v-col>
 
-					<v-col
-						cols="9"
+						<v-col
+							cols="9"
+						>
+							<v-select
+								v-model="provider.type"
+								:items="types"
+								label="Type"
+							></v-select>
+						</v-col>
+					</v-row>
+					
+					<v-row align="center">
+						<v-col cols="3">
+							<v-subheader>
+								Provider title
+							</v-subheader>
+						</v-col>
+
+						<v-col
+							cols="9"
+						>
+							<v-text-field
+								v-model="provider.title"
+								label="Title"
+							></v-text-field>
+						</v-col>
+					</v-row>
+
+					<v-divider></v-divider>
+
+					<component
+						:is="templates[provider.type]"
+						:secrets="provider.secrets"
+						@change:secrets="(data) => handleFieldsChange('secrets', data)"
+						:vars="provider.vars"
+						@change:vars="(data) => handleFieldsChange('vars', data)"
+						:passed="isPassed"
+						@passed="(data) => isPassed = data"
+
+					></component>
+
+				</v-col>
+				<v-col lg="6" cols="12">
+					<v-tabs
+						v-model="tabs"
+						background-color="background-light"
+						class="mb-2"
 					>
-						<v-select
-							v-model="provider.type"
-							:items="types"
-							label="Type"
-						></v-select>
-					</v-col>
-				</v-row>
-				
-				<v-row align="center">
-					<v-col cols="3">
-						<v-subheader>
-							Provider title
-						</v-subheader>
-					</v-col>
-
-					<v-col
-						cols="9"
+						<v-tab>Extentions</v-tab>
+					</v-tabs>
+					
+					<v-tabs-items
+						v-model="tabs"
+						color="primary"	
 					>
-						<v-text-field
-							v-model="provider.title"
-							label="Title"
-						></v-text-field>
-					</v-col>
-				</v-row>
+						<v-tab-item>
+							<v-card
+								color="background"
+							>
+								<v-row>
+									<v-col>
+										<v-select
+											v-model="extentions.selected"
+											:items="extentions.items.filter(el => !Object.keys(extentions.data).includes(el)).map(el => ({value: el, text: extentionsMap[el].title}))"
+											label="extention"
+											no-data-text="no extentions avaliable"
+										></v-select>
+									</v-col>
+									<v-col>
+										<v-btn
+											color="background-light"
+											class="mt-3"
+											:disabled="extentions.selected.length < 1"
+											@click="addExtention"
+										>
+											Add
+										</v-btn>
+									</v-col>
+								</v-row>
 
-				<v-divider></v-divider>
+								<component
+									v-for="extention in Object.keys(extentions.data)"
+									:key="extention.title"
+									:is="extentionsMap[extention].component"
+									:provider="provider"
+									:data="extentions.data[extention]"
+									@change:data="(data) => extentions.data[extention] = data"
+									@change:provider="(data) => provider = mergeDeep(provider, data)"
+									@remove="() => removeExtention(extention)"
+								/>
+							</v-card>
+						</v-tab-item>
 
-				<component
-					:is="templates[provider.type]"
-					:secrets="provider.secrets"
-					@change:secrets="(data) => handleFieldsChange('secrets', data)"
-					:vars="provider.vars"
-					@change:vars="(data) => handleFieldsChange('vars', data)"
-					:passed="isPassed"
-					@passed="(data) => isPassed = data"
+					</v-tabs-items>
+				</v-col>
+			</v-row>
 
-				></component>
-
-				<v-btn
-					color="background-light"
-					class="mr-2"
-					@click="tryToSend"
-					:loading="isLoading"
-					:disabled="!isTestSuccess"
-				>
-					create
-				</v-btn>
-				<v-btn
-					:color="testButtonColor"
-					class="mr-2"
-					@click="testConfig"
-					:loading="isTestLoading"
-				>
-					Test
-				</v-btn>
-			</v-container>
-		</div>
+			<v-row
+				justify="end"
+			>
+				<v-col col=6>
+					<v-btn
+						color="background-light"
+						class="mr-2"
+						@click="tryToSend"
+						:loading="isLoading"
+						:disabled="!isTestSuccess"
+					>
+						create
+					</v-btn>
+					<v-btn
+						:color="testButtonColor"
+						class="mr-2"
+						@click="testConfig"
+						:loading="isTestLoading"
+					>
+						Test
+					</v-btn>
+				</v-col>
+			</v-row>
+		</v-container>
 	</div>
 </template>
 
 <script>
 import api from "@/api.js"
+import Vue from "vue"
+import extentionsMap from "@/components/extentions/map.js"
+
+import { mergeDeep } from "@/functions.js";
 
 export default {
 	name: "servicesProviders-create",
@@ -96,6 +162,15 @@ export default {
 		isTestLoading: false,
 		testButtonColor: "background-light",
 		isTestSuccess: false,
+
+		tabs: null,
+		extentions: {
+			loading: false,
+			items: [],
+			data: {"nocloud-tunnelmesh": {}},
+			// data: {},
+			selected: ''
+		},
 	}),
 	created(){
 		const types = require.context('@/components/serviceProviders/', true, /creatingTemplate\.vue$/)
@@ -107,10 +182,15 @@ export default {
 				this.templates[type] = () => import(`@/components/serviceProviders/${type}/creatingTemplate.vue`)
 			}
 		})
+
+		this.fetchExtentions();
 	},
 	computed: {
 		template(){
 			return () => import(`@/components/serviceProviders/${this.type}/creatingTemplate.vue`);
+		},
+		extentionsMap(){
+			return extentionsMap
 		}
 	},
 	methods: {
@@ -125,6 +205,16 @@ export default {
 			
 			this.testButtonColor = "background-light"
 			this.isTestSuccess = false;
+		},
+		fetchExtentions(){
+			this.extentions.loading = true;
+			api.get('/sp-ext')
+			.then(res => {
+				this.extentions.items = res.types
+			})
+			.finally(() => {
+				this.extentions.loading = false;
+			})
 		},
 		tryToSend(){
 			if(!this.isPassed || !this.isTestSuccess) return;
@@ -148,13 +238,24 @@ export default {
 				this.isTestSuccess = true;
 			})
 			.catch((err) => {
-				console.log('err', err);
+				console.error(err);
 				this.testButtonColor = "error"
 				this.isTestSuccess = false;
 			})
 			.finally(() => {
 				this.isTestLoading = false;
 			})
+		},
+		addExtention(){
+			this.extentions.data[this.extentions.selected] = {};
+			this.extentions.selected = ""
+		},
+		removeExtention(extention){
+			Vue.delete(this.extentions.data, extention)
+		},
+		mergeDeep(target, ...sources){
+			console.log(target, sources);
+			return mergeDeep(target, ...sources)
 		}
 	}
 }
@@ -170,8 +271,8 @@ export default {
 	margin-bottom: 10px;
 }
 
-.page__content{
-	flex-grow: 1;
-	max-width: 750px;
-}
+// .page__content{
+// 	flex-grow: 1;
+// 	max-width: 750px;
+// }
 </style>
