@@ -191,6 +191,13 @@ export default {
 		},
 		extentionsMap(){
 			return extentionsMap
+		},
+		serviceProviderBody(){
+			if(Object.keys(this.extentions.data).length > 0){
+				return {...this.provider, extentions: this.extentions.data}
+			} else {
+				return this.provider
+			}
 		}
 	},
 	methods: {
@@ -219,7 +226,7 @@ export default {
 		tryToSend(){
 			if(!this.isPassed || !this.isTestSuccess) return;
 			this.isLoading = true
-			api.servicesProviders.create(this.provider)
+			api.servicesProviders.create(this.serviceProviderBody)
 			.then(() => {
 				this.$router.push({name: "ServicesProviders"});
 			})
@@ -229,7 +236,7 @@ export default {
 		},
 		testConfig(){
 			this.isTestLoading = true
-			api.servicesProviders.testConfig(this.provider)
+			api.servicesProviders.testConfig(this.serviceProviderBody)
 			.then((res) => {
 				if(!res.result){
 					throw res;

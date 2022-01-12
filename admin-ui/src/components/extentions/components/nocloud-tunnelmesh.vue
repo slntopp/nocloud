@@ -50,17 +50,27 @@
 
 				<v-col
 					cols="10"
+					class="d-flex"
 				>
 					<v-file-input
+						:class="{'flex-grow-0 flex-shrink-1': !!fingerprint}"
 						v-model="cert"
 						accept="application/x-x509-ca-cert"
 						label="File input"
 						truncate-length="15"
-						@input="certInput"
+						@change="certInput"
+						:hide-input="!!fingerprint"
 					></v-file-input>
-					<v-btn @click="certInput">
-						s
-					</v-btn>
+					<v-text-field
+						v-if="fingerprint"
+						class="flex-grow-1 flex-shrink-0"
+						readonly
+						:error-messages="errors"
+						label="your certificate hash"
+						:value="fingerprint"
+					>
+
+					</v-text-field>
 				</v-col>
 			</v-row>
 		</v-card-text>
@@ -69,7 +79,7 @@
 
 <script>
 import { PEM, ASN1 } from '@sardinefish/asn1';
-import createHash from "sha256-uint8array";
+import { createHash } from "sha256-uint8array";
 
 export default {
 	name: "tunnelmesh-extention",
@@ -82,7 +92,8 @@ export default {
 			errors: [],
 
 			fingerprint: "",
-			cert: null
+			cert: null,
+			certError: [],
 		}
 	},
 	props: {
@@ -111,27 +122,25 @@ export default {
 			temp.secrets.host = hostname;
 			console.log(temp);
 			this.$emit('change:provider', temp)
-			this.$emit('change:data', {hostname: hostname, fingerprint: this.fingerprint})
+			this.$emit('change:data', {hostname: this.hostname, fingerprint: this.fingerprint})
 		},
 		certInput(){
-			// const pems = PEM.parse(this.cert);
-			// const ans1 = ASN1.fromDER(pems[0].body);
 			this.cert.text()
 			.then(res=> {
-				// console.log(res);
-				
 				const buf = Buffer.from(res)
-				console.log(`buf`, buf);
-				console.log(`cert`, this.cert);
 				const pems = PEM.parse(buf);
-				console.log(`pems`, pems);
 				const ans1 = ASN1.fromDER(pems[0].body);
-				console.log(`asn`, ans1);
-				console.log(`asnhash`, createHash(ans1.bytes));
+				const hashdec = createHash().update(ans1._der).digest()
+				let hash = ''
+				for (const el of hashdec) {
+					hash += el.toString(16);
+				}
+				this.fingerprint = hash;
+				this.$emit('change:data', {hostname: this.hostname, fingerprint: this.fingerprint})
 			})
-			PEM, ASN1
-			// console.log(`pems`, pems);
-			// console.log(`asn`, ans1);
+			.catch(() => {
+				this.certError = ['Wrong file'];
+			})
 		}
 	},
 	mounted() {
@@ -142,6 +151,11 @@ export default {
 			this.$emit('change:provider', {...this.secrets, secrets: {host}})
 		}
 		this.$emit('change:data', {hostname: host, fingerprint: this.fingerprint})
+	},
+	watch: {
+		hostname(){
+			this.$emit('change:data', {hostname: this.hostname, fingerprint: this.fingerprint})
+		}
 	}
 }
 </script>
