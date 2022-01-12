@@ -81,6 +81,14 @@ services:
     links:
       - db
 
+  dns-mgmt:
+    image: ghcr.io/slntopp/nocloud/dns-mgmt:latest
+    networks:
+      - grpc-internal
+      - redis
+    environment:
+      LOG_LEVEL: -1
+      REDIS_HOST: redis:6379
   settings:
     image: ghcr.io/slntopp/nocloud/settings:latest
     networks:
