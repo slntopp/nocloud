@@ -1077,6 +1077,54 @@
         }
       }
     },
+    "RecordA": {
+      "type": "object",
+      "properties": {
+        "ip": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "RecordAAAA": {
+      "type": "object",
+      "properties": {
+        "ip": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "RecordCNAME": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "RecordTXT": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "accountsAccount": {
       "type": "object",
       "properties": {
@@ -1138,53 +1186,34 @@
         }
       }
     },
-    "dnsPool": {
-      "type": "object",
-      "properties": {
-        "pool": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/dnsRecord"
-          }
-        }
-      }
-    },
     "dnsRecord": {
       "type": "object",
       "properties": {
-        "type": {
-          "$ref": "#/definitions/dnsRecordType"
+        "a": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordA"
+          }
         },
-        "domain": {
-          "type": "string"
+        "aaaa": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordAAAA"
+          }
         },
-        "sub": {
-          "type": "string"
+        "cname": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordCNAME"
+          }
         },
-        "addr": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "ttl": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "text": {
-          "type": "string"
+        "txt": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordTXT"
+          }
         }
       }
-    },
-    "dnsRecordType": {
-      "type": "string",
-      "enum": [
-        "A",
-        "AAAA",
-        "CNAME",
-        "TXT"
-      ],
-      "default": "A"
     },
     "dnsResult": {
       "type": "object",
@@ -1192,6 +1221,20 @@
         "result": {
           "type": "integer",
           "format": "int32"
+        }
+      }
+    },
+    "dnsZone": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "locations": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/dnsRecord"
+          }
         }
       }
     },
@@ -1352,7 +1395,7 @@
     "noclouddnsListResponse": {
       "type": "object",
       "properties": {
-        "domains": {
+        "zones": {
           "type": "array",
           "items": {
             "type": "string"
