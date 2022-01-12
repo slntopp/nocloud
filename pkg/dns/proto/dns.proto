@@ -17,34 +17,36 @@ syntax = "proto3";
 package nocloud.dns;
 
 message Record {
-    enum Type {
-        A     = 0;
-        AAAA  = 1;
-        CNAME = 2;
-        TXT   = 3;
+    message A {
+        string ip = 1;
+        int32 ttl = 2;
     }
-    Type type = 1;
-    string domain = 2;
-    string sub = 3;
-    oneof host {
-        string addr = 4;
-        string name = 5;
+    repeated A a = 1;
+    message AAAA {
+        string ip = 1;
+        int32 ttl = 2;
     }
-    int32 ttl = 6;
-    string text = 7;
+    repeated AAAA aaaa = 2;
+    message CNAME {
+        string host = 1;
+        int32 ttl = 2;
+    }
+    repeated CNAME cname = 3;
+    message TXT {
+        string text = 1;
+        int32 ttl = 2;
+    }
+    repeated TXT txt = 4;
 }
 
-message GetRequest {
-    string domain = 1;
+message Zone {
+    string name = 1;
+    map<string, Record> locations = 2;
 }
 
 message ListRequest {}
 message ListResponse {
-    repeated string domains = 1;
-}
-
-message Pool {
-    repeated Record pool = 1;
+    repeated string zones = 1;
 }
 
 message Result {
@@ -52,8 +54,8 @@ message Result {
 }
 
 service DNS {
-    rpc Get(nocloud.dns.GetRequest) returns (nocloud.dns.Pool);
+    rpc Get(nocloud.dns.Zone) returns (nocloud.dns.Zone);
     rpc List(nocloud.dns.ListRequest) returns (nocloud.dns.ListResponse);
-    rpc Put(nocloud.dns.Pool) returns (nocloud.dns.Result);
-    rpc Delete(nocloud.dns.Record) returns (nocloud.dns.Result);
+    rpc Put(nocloud.dns.Zone) returns (nocloud.dns.Result);
+    rpc Delete(nocloud.dns.Zone) returns (nocloud.dns.Result);
 }

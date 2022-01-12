@@ -18,10 +18,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DNSClient interface {
-	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Pool, error)
+	Get(ctx context.Context, in *Zone, opts ...grpc.CallOption) (*Zone, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
-	Put(ctx context.Context, in *Pool, opts ...grpc.CallOption) (*Result, error)
-	Delete(ctx context.Context, in *Record, opts ...grpc.CallOption) (*Result, error)
+	Put(ctx context.Context, in *Zone, opts ...grpc.CallOption) (*Result, error)
+	Delete(ctx context.Context, in *Zone, opts ...grpc.CallOption) (*Result, error)
 }
 
 type dNSClient struct {
@@ -32,8 +32,8 @@ func NewDNSClient(cc grpc.ClientConnInterface) DNSClient {
 	return &dNSClient{cc}
 }
 
-func (c *dNSClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Pool, error) {
-	out := new(Pool)
+func (c *dNSClient) Get(ctx context.Context, in *Zone, opts ...grpc.CallOption) (*Zone, error) {
+	out := new(Zone)
 	err := c.cc.Invoke(ctx, "/nocloud.dns.DNS/Get", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func (c *dNSClient) List(ctx context.Context, in *ListRequest, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *dNSClient) Put(ctx context.Context, in *Pool, opts ...grpc.CallOption) (*Result, error) {
+func (c *dNSClient) Put(ctx context.Context, in *Zone, opts ...grpc.CallOption) (*Result, error) {
 	out := new(Result)
 	err := c.cc.Invoke(ctx, "/nocloud.dns.DNS/Put", in, out, opts...)
 	if err != nil {
@@ -59,7 +59,7 @@ func (c *dNSClient) Put(ctx context.Context, in *Pool, opts ...grpc.CallOption) 
 	return out, nil
 }
 
-func (c *dNSClient) Delete(ctx context.Context, in *Record, opts ...grpc.CallOption) (*Result, error) {
+func (c *dNSClient) Delete(ctx context.Context, in *Zone, opts ...grpc.CallOption) (*Result, error) {
 	out := new(Result)
 	err := c.cc.Invoke(ctx, "/nocloud.dns.DNS/Delete", in, out, opts...)
 	if err != nil {
@@ -72,10 +72,10 @@ func (c *dNSClient) Delete(ctx context.Context, in *Record, opts ...grpc.CallOpt
 // All implementations must embed UnimplementedDNSServer
 // for forward compatibility
 type DNSServer interface {
-	Get(context.Context, *GetRequest) (*Pool, error)
+	Get(context.Context, *Zone) (*Zone, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
-	Put(context.Context, *Pool) (*Result, error)
-	Delete(context.Context, *Record) (*Result, error)
+	Put(context.Context, *Zone) (*Result, error)
+	Delete(context.Context, *Zone) (*Result, error)
 	mustEmbedUnimplementedDNSServer()
 }
 
@@ -83,16 +83,16 @@ type DNSServer interface {
 type UnimplementedDNSServer struct {
 }
 
-func (UnimplementedDNSServer) Get(context.Context, *GetRequest) (*Pool, error) {
+func (UnimplementedDNSServer) Get(context.Context, *Zone) (*Zone, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
 func (UnimplementedDNSServer) List(context.Context, *ListRequest) (*ListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
-func (UnimplementedDNSServer) Put(context.Context, *Pool) (*Result, error) {
+func (UnimplementedDNSServer) Put(context.Context, *Zone) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Put not implemented")
 }
-func (UnimplementedDNSServer) Delete(context.Context, *Record) (*Result, error) {
+func (UnimplementedDNSServer) Delete(context.Context, *Zone) (*Result, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedDNSServer) mustEmbedUnimplementedDNSServer() {}
@@ -109,7 +109,7 @@ func RegisterDNSServer(s grpc.ServiceRegistrar, srv DNSServer) {
 }
 
 func _DNS_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRequest)
+	in := new(Zone)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func _DNS_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}
 		FullMethod: "/nocloud.dns.DNS/Get",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DNSServer).Get(ctx, req.(*GetRequest))
+		return srv.(DNSServer).Get(ctx, req.(*Zone))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -145,7 +145,7 @@ func _DNS_List_Handler(srv interface{}, ctx context.Context, dec func(interface{
 }
 
 func _DNS_Put_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Pool)
+	in := new(Zone)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -157,13 +157,13 @@ func _DNS_Put_Handler(srv interface{}, ctx context.Context, dec func(interface{}
 		FullMethod: "/nocloud.dns.DNS/Put",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DNSServer).Put(ctx, req.(*Pool))
+		return srv.(DNSServer).Put(ctx, req.(*Zone))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _DNS_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Record)
+	in := new(Zone)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func _DNS_Delete_Handler(srv interface{}, ctx context.Context, dec func(interfac
 		FullMethod: "/nocloud.dns.DNS/Delete",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DNSServer).Delete(ctx, req.(*Record))
+		return srv.(DNSServer).Delete(ctx, req.(*Zone))
 	}
 	return interceptor(ctx, in, info, handler)
 }
