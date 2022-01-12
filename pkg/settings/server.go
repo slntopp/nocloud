@@ -28,7 +28,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const KEYS_PREFIX = "settings"
+const KEYS_PREFIX = "_settings"
 const KEYS_DESC_POSTFIX = "desc"
 const KEYS_VISIBILITY_POSTFIX = "pub"
 
