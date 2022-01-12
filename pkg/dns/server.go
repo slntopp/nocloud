@@ -76,3 +76,24 @@ func (s *DNSServer) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResp
 	}
 	return &pb.ListResponse{Zones: keys}, nil
 }
+
+func (s *DNSServer) Put(ctx context.Context, req *pb.Zone) (*pb.Result, error) {
+	data := make(map[string]interface{})
+	for key, record := range req.GetLocations() {
+		s.log.Debug("record", zap.String("string", record.String()))
+		r, err := json.Marshal(record)
+		if err != nil {
+			s.log.Error("Error Marshaling Record", zap.Any("record", record), zap.Error(err))
+			return nil, status.Error(codes.InvalidArgument, "Error Marshaling Record")
+		}
+		data[key] = r
+		s.log.Debug("record result", zap.ByteString("string", r))
+	}
+	r := s.rdb.HSet(ctx, KEYS_PREFIX + ":" + req.GetName(), data)
+	upd, err := r.Result()
+	if err != nil {
+		s.log.Error("Error putting hash to Redis", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error putting hash to Redis")
+	}
+	return &pb.Result{Result: upd}, nil
+}

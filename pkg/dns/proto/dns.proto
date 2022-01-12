@@ -50,7 +50,7 @@ message ListResponse {
 }
 
 message Result {
-    int32 result = 1;
+    int64 result = 1;
 }
 
 service DNS {
