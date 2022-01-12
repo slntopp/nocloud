@@ -36,3 +36,16 @@ func NewDNSServer(log *zap.Logger, rdb *redis.Client) *DNSServer {
 	}
 }
 
+
+func (s *DNSServer) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
+	r := s.rdb.Keys(ctx, KEYS_PREFIX + ":*")
+	keys, err := r.Result()
+	if err != nil {
+		s.log.Error("Error getting keys from Redis", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting keys from Redis")
+	}
+	for i, key := range keys {
+		keys[i] = strings.Split(key, ":")[1]
+	}
+	return &pb.ListResponse{Domains: keys}, nil
+}
