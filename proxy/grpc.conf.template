@@ -23,4 +23,8 @@ server {
     location /nocloud.dns. {
         grpc_pass grpc://dns-mgmt:8080;
     }
+
+    location /nocloud.settings. {
+        grpc_pass grpc://settings:8080;
+    }
 }
