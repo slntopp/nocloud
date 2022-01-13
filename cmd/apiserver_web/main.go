@@ -21,6 +21,7 @@ import (
 	"os"
 	"strings"
 
+	dnspb "github.com/slntopp/nocloud/pkg/dns/proto"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	registrypb "github.com/slntopp/nocloud/pkg/registry/proto"
@@ -120,6 +121,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
 	}
+	err = dnspb.RegisterDNSHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	if err != nil {
+		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
+	}
+
 
 	gwmux.HandlePath("GET", "/admin", staticHandler)
 	gwmux.HandlePath("GET", "/admin/{path}", staticHandler)
