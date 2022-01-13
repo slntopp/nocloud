@@ -19,4 +19,8 @@ server {
     location /nocloud.health. {
         grpc_pass grpc://health:8080;
     }
+
+    location /nocloud.dns. {
+        grpc_pass grpc://dns-mgmt:8080;
+    }
 }
