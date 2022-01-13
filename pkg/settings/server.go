@@ -18,6 +18,7 @@ package settings
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	redis "github.com/go-redis/redis/v8"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -121,6 +122,7 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 
 	result := make([]*pb.KeysResponse_Key, keys_l)
 	for i, key := range keys {
+		key = strings.SplitN(key, ":", 2)[1]
 		result[i] = &pb.KeysResponse_Key{
 			Key: key,
 		}
