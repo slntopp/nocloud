@@ -16,6 +16,8 @@ limitations under the License.
 syntax = "proto3";
 package nocloud.dns;
 
+import "google/api/annotations.proto";
+
 message Record {
     message A {
         string ip = 1;
@@ -54,8 +56,25 @@ message Result {
 }
 
 service DNS {
-    rpc Get(nocloud.dns.Zone) returns (nocloud.dns.Zone);
-    rpc List(nocloud.dns.ListRequest) returns (nocloud.dns.ListResponse);
-    rpc Put(nocloud.dns.Zone) returns (nocloud.dns.Result);
-    rpc Delete(nocloud.dns.Zone) returns (nocloud.dns.Result);
+    rpc Get(nocloud.dns.Zone) returns (nocloud.dns.Zone) {
+        option (google.api.http) = {
+            get: "/dns/{name}"
+        };
+    };
+    rpc List(nocloud.dns.ListRequest) returns (nocloud.dns.ListResponse) {
+        option (google.api.http) = {
+            get: "/dns"
+        };
+    };
+    rpc Put(nocloud.dns.Zone) returns (nocloud.dns.Result) {
+        option (google.api.http) = {
+            put: "/dns"
+            body: "*"
+        };
+    };
+    rpc Delete(nocloud.dns.Zone) returns (nocloud.dns.Result) {
+        option (google.api.http) = {
+            delete: "/dns/{name}"
+        };
+    };
 }
