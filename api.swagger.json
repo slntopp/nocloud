@@ -925,6 +925,107 @@
         ]
       }
     },
+    "/settings": {
+      "get": {
+        "operationId": "SettingsService_Keys",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/settingsKeysResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SettingsService"
+        ]
+      },
+      "post": {
+        "operationId": "SettingsService_Get",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/nocloudsettingsGetRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SettingsService"
+        ]
+      }
+    },
+    "/settings/{key}": {
+      "put": {
+        "operationId": "SettingsService_Put",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/settingsPutResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "public": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "SettingsService"
+        ]
+      }
+    },
     "/sp": {
       "get": {
         "operationId": "ServicesProvidersService_List",
@@ -1589,6 +1690,17 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/services_providersServicesProvider"
+          }
+        }
+      }
+    },
+    "nocloudsettingsGetRequest": {
+      "type": "object",
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       }
