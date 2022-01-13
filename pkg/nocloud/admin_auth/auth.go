@@ -72,9 +72,13 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 		return nil, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
 	}
 	rootAccessClaim := token[nocloud.NOCLOUD_ROOT_CLAIM]
-	lvl, ok := rootAccessClaim.(int32)
-	if !ok || lvl == 0 {
-		return nil, status.Error(codes.Unauthenticated, "Account isn't root")
+	lvlF, ok := rootAccessClaim.(float64)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "Root Access Claim not provided")
+	}
+	lvl := int32(lvlF)
+	if lvl == 0 {
+		return nil, status.Error(codes.PermissionDenied, "Account has no root access")
 	}
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.(string))
 	ctx = context.WithValue(ctx, nocloud.NoCloudRootAccess, lvl)
