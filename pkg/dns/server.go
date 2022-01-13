@@ -47,7 +47,7 @@ func (s *DNSServer) Get(ctx context.Context, req *pb.Zone) (*pb.Zone, error) {
 	r := s.rdb.HGetAll(ctx, KEYS_PREFIX + ":" + domain)
 	records, err := r.Result()
 	if err != nil {
-		s.log.Error("Error getting records from Redis", zap.Error(err))
+		s.log.Error("Error getting records from Redis", zap.String("zone", KEYS_PREFIX + ":" + req.GetName()), zap.Error(err))
 		return nil, status.Error(codes.InvalidArgument, "Error getting records from Redis")
 	}
 	locations := make(map[string]*pb.Record)
@@ -92,8 +92,18 @@ func (s *DNSServer) Put(ctx context.Context, req *pb.Zone) (*pb.Result, error) {
 	r := s.rdb.HSet(ctx, KEYS_PREFIX + ":" + req.GetName(), data)
 	upd, err := r.Result()
 	if err != nil {
-		s.log.Error("Error putting hash to Redis", zap.Error(err))
+		s.log.Error("Error putting hash to Redis", zap.String("zone", KEYS_PREFIX + ":" + req.GetName()), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error putting hash to Redis")
 	}
 	return &pb.Result{Result: upd}, nil
+}
+
+func (s *DNSServer) Delete(ctx context.Context, req *pb.Zone) (*pb.Result, error) {
+	r := s.rdb.Del(ctx, KEYS_PREFIX + ":" + req.GetName())
+	res, err := r.Result()
+	if err != nil {
+		s.log.Error("Error deleting zone in Redis", zap.String("zone", KEYS_PREFIX + ":" + req.GetName()), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error deleting zone in Redis")
+	}
+	return &pb.Result{Result: res}, nil
 }
