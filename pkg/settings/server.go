@@ -105,6 +105,9 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 		return nil, status.Error(codes.Internal, "Error getting keys from Redis")
 	}
 	keys_l := len(keys)
+	if keys_l == 0 {
+		return &pb.KeysResponse{}, nil
+	}
 	keys_all := make([]string, keys_l * 2)
 	for i, key := range keys {
 		keys_all[i] = fmt.Sprintf("%s:%s", key, KEYS_VISIBILITY_POSTFIX)
