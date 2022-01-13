@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	redis "github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	pb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -73,6 +74,11 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (*s
 }
 
 func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*pb.PutResponse, error) {
+	access := ctx.Value(nocloud.NoCloudRootAccess).(int32)
+	if access < 3 {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
+	}
+
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, req.GetKey())
 	request := map[string]interface{}{
 		key: req.GetValue(),

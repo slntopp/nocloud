@@ -22,6 +22,7 @@ import (
 
 	redis "github.com/go-redis/redis/v8"
 	pb "github.com/slntopp/nocloud/pkg/dns/proto"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -78,6 +79,11 @@ func (s *DNSServer) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResp
 }
 
 func (s *DNSServer) Put(ctx context.Context, req *pb.Zone) (*pb.Result, error) {
+	access := ctx.Value(nocloud.NoCloudRootAccess).(int32)
+	if access < 3 {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
+	}
+
 	data := make(map[string]interface{})
 	for key, record := range req.GetLocations() {
 		s.log.Debug("record", zap.String("string", record.String()))
@@ -99,6 +105,11 @@ func (s *DNSServer) Put(ctx context.Context, req *pb.Zone) (*pb.Result, error) {
 }
 
 func (s *DNSServer) Delete(ctx context.Context, req *pb.Zone) (*pb.Result, error) {
+	access := ctx.Value(nocloud.NoCloudRootAccess).(int32)
+	if access < 3 {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
+	}
+
 	r := s.rdb.Del(ctx, KEYS_PREFIX + ":" + req.GetName())
 	res, err := r.Result()
 	if err != nil {
