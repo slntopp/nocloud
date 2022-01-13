@@ -27,6 +27,7 @@ import (
 	registrypb "github.com/slntopp/nocloud/pkg/registry/proto"
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 
 	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -123,7 +124,11 @@ func main() {
 	}
 	err = dnspb.RegisterDNSHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
-		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
+		log.Fatal("Failed to register DNS gateway", zap.Error(err))
+	}
+	err = settingspb.RegisterSettingsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	if err != nil {
+		log.Fatal("Failed to register SettingsService gateway", zap.Error(err))
 	}
 
 
