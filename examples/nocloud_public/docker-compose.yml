@@ -87,12 +87,22 @@ services:
     links:
       - db
 
+  dns-mgmt:
+    image: ghcr.io/slntopp/nocloud/dns-mgmt:latest
+    networks:
+      - grpc-internal
+      - redis
+    environment:
+      LOG_LEVEL: -1
+      SIGNING_KEY: "${SIGNING_KEY}"
+      REDIS_HOST: redis:6379
   settings:
     image: ghcr.io/slntopp/nocloud/settings:latest
     networks:
       - grpc-internal
       - redis
     environment:
+      SIGNING_KEY: "${SIGNING_KEY}"
       LOG_LEVEL: -1
       REDIS_HOST: redis:6379
   redis:
