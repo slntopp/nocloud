@@ -86,6 +86,7 @@ services:
   dns-mgmt:
     image: ghcr.io/slntopp/nocloud/dns-mgmt:latest
     networks:
+      - proxy
       - grpc-internal
       - redis
     environment:
@@ -95,6 +96,7 @@ services:
   settings:
     image: ghcr.io/slntopp/nocloud/settings:latest
     networks:
+      - proxy
       - grpc-internal
       - redis
     environment:
