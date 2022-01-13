@@ -72,8 +72,9 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	if account == nil {
 		return nil, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
 	}
-	isRoot := token[nocloud.NOCLOUD_ROOT_CLAIM]
-	if !isRoot.(bool) {
+	isRootClaim := token[nocloud.NOCLOUD_ROOT_CLAIM]
+	isRoot, ok := isRootClaim.(bool)
+	if !ok || !isRoot {
 		return nil, status.Error(codes.Unauthenticated, "Account isn't root")
 	}
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.(string))
