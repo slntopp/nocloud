@@ -127,7 +127,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	if request.GetRootClaim() {
 		ns := fmt.Sprintf("%s/0", schema.NAMESPACES_COL)
-		ok, lvl := graph.AccessLevel(ctx, s.db, account.ID.String(), ns)
+		ok, lvl := graph.AccessLevel(ctx, s.db, account.Key, ns)
 		if !ok {
 			lvl = 0
 		}
