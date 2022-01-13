@@ -1277,6 +1277,9 @@
         "exp": {
           "type": "integer",
           "format": "int32"
+        },
+        "rootClaim": {
+          "type": "boolean"
         }
       }
     },
