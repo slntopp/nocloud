@@ -128,6 +128,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	if request.GetRootClaim() {
 		ns := fmt.Sprintf("%s/0", schema.NAMESPACES_COL)
 		r := graph.HasAccess(ctx, s.db, account.ID.String(), ns, 3)
+		s.log.Debug("Adding Root claim to the token", zap.Bool("isRoot", r))
 		claims[nocloud.NOCLOUD_ROOT_CLAIM] = r
 	}
 
