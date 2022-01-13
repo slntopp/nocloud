@@ -27,7 +27,6 @@ import (
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -72,14 +71,13 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	if account == nil {
 		return nil, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
 	}
-	isRootClaim := token[nocloud.NOCLOUD_ROOT_CLAIM]
-	isRoot, ok := isRootClaim.(bool)
-	if !ok || !isRoot {
+	rootAccessClaim := token[nocloud.NOCLOUD_ROOT_CLAIM]
+	lvl, ok := rootAccessClaim.(int32)
+	if !ok || lvl == 0 {
 		return nil, status.Error(codes.Unauthenticated, "Account isn't root")
 	}
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.(string))
-	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, account.(string))
-
+	ctx = context.WithValue(ctx, nocloud.NoCloudRootAccess, lvl)
 	return ctx, nil
 }
 

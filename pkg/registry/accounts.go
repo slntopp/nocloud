@@ -127,9 +127,12 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	if request.GetRootClaim() {
 		ns := fmt.Sprintf("%s/0", schema.NAMESPACES_COL)
-		r := graph.HasAccess(ctx, s.db, account.ID.String(), ns, 3)
-		s.log.Debug("Adding Root claim to the token", zap.Bool("isRoot", r))
-		claims[nocloud.NOCLOUD_ROOT_CLAIM] = r
+		ok, lvl := graph.AccessLevel(ctx, s.db, account.ID.String(), ns)
+		if !ok {
+			lvl = 0
+		}
+		s.log.Debug("Adding Root claim to the token", zap.Int32("access_lvl", lvl))
+		claims[nocloud.NOCLOUD_ROOT_CLAIM] = lvl
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
