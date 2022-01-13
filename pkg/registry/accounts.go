@@ -17,6 +17,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -123,6 +124,12 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	claims := jwt.MapClaims{}
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = account.Key
 	claims["exp"] = request.Exp
+
+	if request.GetRootClaim() {
+		ns := fmt.Sprintf("%s/0", schema.NAMESPACES_COL)
+		r := graph.HasAccess(ctx, s.db, account.ID.String(), ns, 3)
+		claims[nocloud.NOCLOUD_ROOT_CLAIM] = r
+	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	token_string, err := token.SignedString(s.SIGNING_KEY)

@@ -24,6 +24,7 @@ import (
 )
 
 const NOCLOUD_ACCOUNT_CLAIM = "account"
+const NOCLOUD_ROOT_CLAIM = "root"
 
 type ContextKey string;
 const NoCloudAccount = ContextKey("account");
