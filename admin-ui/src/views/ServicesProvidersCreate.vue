@@ -167,8 +167,7 @@ export default {
 		extentions: {
 			loading: false,
 			items: [],
-			data: {"nocloud-tunnelmesh": {}},
-			// data: {},
+			data: {},
 			selected: ''
 		},
 	}),
