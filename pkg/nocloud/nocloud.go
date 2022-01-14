@@ -24,9 +24,11 @@ import (
 )
 
 const NOCLOUD_ACCOUNT_CLAIM = "account"
+const NOCLOUD_ROOT_CLAIM = "root"
 
 type ContextKey string;
 const NoCloudAccount = ContextKey("account");
+const NoCloudRootAccess = ContextKey("root_access")
 
 func NewLogger() (log *zap.Logger) {
 	viper.SetDefault("LOG_LEVEL", 0)

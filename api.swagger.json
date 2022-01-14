@@ -11,6 +11,9 @@
   },
   "tags": [
     {
+      "name": "DNS"
+    },
+    {
       "name": "ServicesProvidersService"
     },
     {
@@ -254,6 +257,116 @@
         ],
         "tags": [
           "AccountsService"
+        ]
+      }
+    },
+    "/dns": {
+      "get": {
+        "operationId": "DNS_List",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/noclouddnsListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "DNS"
+        ]
+      },
+      "put": {
+        "operationId": "DNS_Put",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/dnsResult"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/dnsZone"
+            }
+          }
+        ],
+        "tags": [
+          "DNS"
+        ]
+      }
+    },
+    "/dns/{name}": {
+      "get": {
+        "operationId": "DNS_Get",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/dnsZone"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DNS"
+        ]
+      },
+      "delete": {
+        "operationId": "DNS_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/dnsResult"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "DNS"
         ]
       }
     },
@@ -812,6 +925,107 @@
         ]
       }
     },
+    "/settings": {
+      "get": {
+        "operationId": "SettingsService_Keys",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/settingsKeysResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SettingsService"
+        ]
+      },
+      "post": {
+        "operationId": "SettingsService_Get",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/nocloudsettingsGetRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SettingsService"
+        ]
+      }
+    },
+    "/settings/{key}": {
+      "put": {
+        "operationId": "SettingsService_Put",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/settingsPutResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "public": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "SettingsService"
+        ]
+      }
+    },
     "/sp": {
       "get": {
         "operationId": "ServicesProvidersService_List",
@@ -1074,6 +1288,54 @@
         }
       }
     },
+    "RecordA": {
+      "type": "object",
+      "properties": {
+        "ip": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "RecordAAAA": {
+      "type": "object",
+      "properties": {
+        "ip": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "RecordCNAME": {
+      "type": "object",
+      "properties": {
+        "host": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "RecordTXT": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "ttl": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
     "accountsAccount": {
       "type": "object",
       "properties": {
@@ -1116,6 +1378,9 @@
         "exp": {
           "type": "integer",
           "format": "int32"
+        },
+        "rootClaim": {
+          "type": "boolean"
         }
       }
     },
@@ -1132,6 +1397,58 @@
       "properties": {
         "result": {
           "type": "boolean"
+        }
+      }
+    },
+    "dnsRecord": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordA"
+          }
+        },
+        "aaaa": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordAAAA"
+          }
+        },
+        "cname": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordCNAME"
+          }
+        },
+        "txt": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordTXT"
+          }
+        }
+      }
+    },
+    "dnsResult": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "dnsZone": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "locations": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/dnsRecord"
+          }
         }
       }
     },
@@ -1289,6 +1606,17 @@
         }
       }
     },
+    "noclouddnsListResponse": {
+      "type": "object",
+      "properties": {
+        "zones": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
     "nocloudservicesCreateRequest": {
       "type": "object",
       "properties": {
@@ -1362,6 +1690,17 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/services_providersServicesProvider"
+          }
+        }
+      }
+    },
+    "nocloudsettingsGetRequest": {
+      "type": "object",
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       }
