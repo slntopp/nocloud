@@ -69,11 +69,21 @@
 
         <v-list-item :to="{name: 'ServicesProviders'}">
           <v-list-item-icon>
-            <v-icon>mdi-baguette</v-icon>
+            <v-icon>mdi-database-marker</v-icon>
           </v-list-item-icon>
 
           <v-list-item-content>
             <v-list-item-title>Services Providers</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item :to="{name: 'DNS manager'}">
+          <v-list-item-icon>
+            <v-icon>mdi-dns</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>DNS manager</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
         

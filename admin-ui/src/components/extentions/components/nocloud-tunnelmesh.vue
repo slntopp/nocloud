@@ -55,7 +55,7 @@
 					<v-file-input
 						:class="{'flex-grow-0 flex-shrink-1': !!fingerprint}"
 						v-model="cert"
-						accept="application/x-x509-ca-cert"
+						accept=".crt"
 						label="File input"
 						truncate-length="15"
 						@change="certInput"
@@ -87,13 +87,12 @@ export default {
 		return {
 			rules: [
 				(value) => !!value || 'Field is required',
-				(value) => !!value.match(/^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/) || 'Is not valid domain'
 			],
 			errors: [],
 
 			fingerprint: "",
 			cert: null,
-			certError: [],
+			certError: []
 		}
 	},
 	props: {
@@ -109,7 +108,8 @@ export default {
 	computed: {
 		hostname() {
 			if(this.provider?.secrets?.host){
-				return this.provider?.secrets?.host
+				const domainname = new URL(this.provider?.secrets?.host)
+				return domainname.hostname;
 			} else {
 				return ""
 			}
@@ -133,7 +133,7 @@ export default {
 				const hashdec = createHash().update(ans1._der).digest()
 				let hash = ''
 				for (const el of hashdec) {
-					hash += el.toString(16);
+					hash += el.toString(16).padStart(2, "0");
 				}
 				this.fingerprint = hash;
 				this.$emit('change:data', {hostname: this.hostname, fingerprint: this.fingerprint})
