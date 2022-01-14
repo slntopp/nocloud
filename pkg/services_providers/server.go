@@ -188,6 +188,24 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 		log.Error("Error deleting ServicesProvider", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error deleting ServicesProvider")
 	}
+
+	for ext, data := range sp.GetExtentions() {
+		client, ok := s.extention_servers[ext]
+		if !ok {
+			continue // TODO add Warnings
+		}
+		res, err := client.Unregister(ctx, &sppb.ServicesProvidersExtentionData{
+			Data: data,
+		})
+		if err != nil {
+			log.Error("Error unregistering extension", zap.Error(err))
+			continue // TODO add Warnings
+		}
+		if !res.Result {
+			log.Error("Error unregistering extension", zap.Any("result", res))
+			continue // TODO add Warnings
+		}
+	}
 	return &sppb.DeleteResponse{Result: true}, nil
 }
 
