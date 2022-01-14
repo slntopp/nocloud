@@ -29,7 +29,7 @@ const NOCLOUD_ROOT_CLAIM = "root"
 type ContextKey string;
 const NoCloudAccount = ContextKey("account");
 const NoCloudRootAccess = ContextKey("root_access")
-const TestForceFullCheck = ContextKey("test_full_check")
+const TestFromCreate = ContextKey("test_from_create")
 
 func NewLogger() (log *zap.Logger) {
 	viper.SetDefault("LOG_LEVEL", 0)

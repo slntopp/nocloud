@@ -83,29 +83,31 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("Driver type '%s' not registered", req.GetType()))
 	}
 
-	for ext, data := range req.GetExtentions() {
-		client, ok := s.extention_servers[ext]
-		if !ok {
-			return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
-		}
-		res, err := client.Test(ctx, &sppb.ServicesProvidersExtentionData{
-			Data: data,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if !res.Result {
-			err := fmt.Sprintf("Extention '%s': %s", ext, res.Error)
-			return &sppb.TestResponse{
-				Result: res.Result, Error: err,
-			}, nil
+	tfc, ok := ctx.Value(nocloud.TestFromCreate).(bool)
+	tfc = ok && tfc
+	if !tfc {
+		for ext, data := range req.GetExtentions() {
+			client, ok := s.extention_servers[ext]
+			if !ok {
+				return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
+			}
+			res, err := client.Test(ctx, &sppb.ServicesProvidersExtentionData{
+				Data: data,
+			})
+			if err != nil {
+				return nil, err
+			}
+			if !res.Result {
+				err := fmt.Sprintf("Extention '%s': %s", ext, res.Error)
+				return &sppb.TestResponse{
+					Result: res.Result, Error: err,
+					}, nil
+			}
 		}
 	}
 
 	test_req := &driverpb.TestServiceProviderConfigRequest{ServicesProvider: req}
-	ffc, ok := ctx.Value(nocloud.TestForceFullCheck).(bool)
-	ffc = ok && ffc
-	if !ffc && len(req.GetExtentions()) > 0 {
+	if !tfc && len(req.GetExtentions()) > 0 {
 		test_req.SyntaxOnly = true
 	}
 
@@ -115,6 +117,14 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesProvider) (res *sppb.ServicesProvider, err error) {
 	log := s.log.Named("Create")
 	log.Debug("Create request received", zap.Any("request", req))
+
+	testRes, err := s.Test(ctx, req)
+	if err != nil {
+		return req, err
+	}
+	if !testRes.Result {
+		return req, status.Error(codes.Internal, testRes.Error)
+	}
 
 	sp := &graph.ServicesProvider{ServicesProvider: req}
 
@@ -138,8 +148,8 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 		}
 	}
 
-	ctx = context.WithValue(ctx, nocloud.TestForceFullCheck, true)
-	testRes, err := s.Test(ctx, req)
+	ctx = context.WithValue(ctx, nocloud.TestFromCreate, true)
+	testRes, err = s.Test(ctx, req)
 	if err != nil {
 		s.UnregisterExtentions(ctx, log, sp)
 		return req, err
