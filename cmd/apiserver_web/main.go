@@ -43,6 +43,8 @@ var (
 	
 	apiserver 		string
 	corsAllowed 	[]string
+	insecure 		bool
+	with_block 		bool
 )
 
 func init() {
@@ -51,9 +53,13 @@ func init() {
 
 	viper.SetDefault("CORS_ALLOWED", []string{"*"})
 	viper.SetDefault("APISERVER_HOST", "apiserver:8080")
+	viper.SetDefault("INSECURE", false)
+	viper.SetDefault("WITH_BLOCK", false)
 
 	apiserver   = viper.GetString("APISERVER_HOST")
 	corsAllowed = strings.Split(viper.GetString("CORS_ALLOWED"), ",")
+	insecure    = viper.GetBool("INSECURE")
+	with_block  = viper.GetBool("WITH_BLOCK")
 }
 
 func getContentType(path string) (mime string, ok bool) {
@@ -101,7 +107,13 @@ func main() {
 	var err error
 
 	gwmux := runtime.NewServeMux()
-	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithInsecure()}
+	opts := []grpc.DialOption{}
+	if insecure {
+		opts = append(opts, grpc.WithInsecure())
+	}
+	if with_block {
+		opts = append(opts, grpc.WithBlock())
+	}
 	log.Info("Registering HealthService Gateway")
 	err = healthpb.RegisterHealthServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
