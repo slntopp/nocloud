@@ -134,6 +134,30 @@
 				</v-col>
 			</v-row>
 		</v-container>
+		<v-snackbar
+			v-model="snackbar.visibility"
+			:timeout="snackbar.timeout"
+			:color="snackbar.color"
+		>
+			{{snackbar.message}}
+			<template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
+				<router-link :to="snackbar.route">
+					Look up.
+				</router-link>
+			</template>
+			
+
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          :color="snackbar.buttonColor"
+          text
+          v-bind="attrs"
+          @click="snackbar.visibility = false"
+        >
+          Close
+        </v-btn>
+      </template>
+		</v-snackbar>
 	</div>
 </template>
 
@@ -141,11 +165,13 @@
 import api from "@/api.js"
 import Vue from "vue"
 import extentionsMap from "@/components/extentions/map.js"
+import snackbar from "@/mixins/snackbar.js"
 
 import { mergeDeep } from "@/functions.js";
 
 export default {
 	name: "servicesProviders-create",
+	mixins: [snackbar],
 	data: () => ({
 		types: [],
 		templates: {},
@@ -245,8 +271,10 @@ export default {
 			})
 			.catch((err) => {
 				console.error(err);
+				console.error(err.response.data.message);
 				this.testButtonColor = "error"
 				this.isTestSuccess = false;
+				this.showSnackbarError({message: err.response.data.message})
 			})
 			.finally(() => {
 				this.isTestLoading = false;
