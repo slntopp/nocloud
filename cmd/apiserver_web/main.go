@@ -102,30 +102,37 @@ func main() {
 
 	gwmux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithInsecure()}
+	log.Info("Registering HealthService Gateway")
 	err = healthpb.RegisterHealthServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register HealthService gateway", zap.Error(err))
 	}
+	log.Info("Registering AccountsService Gateway")
 	err = registrypb.RegisterAccountsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register AccountsService gateway", zap.Error(err))
 	}
+	log.Info("Registering NamespacesService Gateway")
 	err = registrypb.RegisterNamespacesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register NamespacesService gateway", zap.Error(err))
 	}
+	log.Info("Registering ServicesProvidersService Gateway")
 	err = sppb.RegisterServicesProvidersServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
 	}
+	log.Info("Registering ServicesService Gateway")
 	err = servicespb.RegisterServicesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
 	}
+	log.Info("Registering DNS Gateway")
 	err = dnspb.RegisterDNSHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register DNS gateway", zap.Error(err))
 	}
+	log.Info("Registering SettingsService Gateway")
 	err = settingspb.RegisterSettingsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register SettingsService gateway", zap.Error(err))
