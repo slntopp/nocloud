@@ -17,21 +17,25 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 	"os"
 	"strings"
 
+	dnspb "github.com/slntopp/nocloud/pkg/dns/proto"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	registrypb "github.com/slntopp/nocloud/pkg/registry/proto"
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 
 	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/gabriel-vasile/mimetype"
 )
@@ -41,6 +45,8 @@ var (
 	
 	apiserver 		string
 	corsAllowed 	[]string
+	insecure 		bool
+	with_block 		bool
 )
 
 func init() {
@@ -49,9 +55,13 @@ func init() {
 
 	viper.SetDefault("CORS_ALLOWED", []string{"*"})
 	viper.SetDefault("APISERVER_HOST", "apiserver:8080")
+	viper.SetDefault("INSECURE", true)
+	viper.SetDefault("WITH_BLOCK", false)
 
 	apiserver   = viper.GetString("APISERVER_HOST")
 	corsAllowed = strings.Split(viper.GetString("CORS_ALLOWED"), ",")
+	insecure    = viper.GetBool("INSECURE")
+	with_block  = viper.GetBool("WITH_BLOCK")
 }
 
 func getContentType(path string) (mime string, ok bool) {
@@ -99,27 +109,52 @@ func main() {
 	var err error
 
 	gwmux := runtime.NewServeMux()
-	opts := []grpc.DialOption{grpc.WithBlock(), grpc.WithInsecure()}
+	opts := []grpc.DialOption{}
+	if insecure {
+		opts = append(opts, grpc.WithInsecure())
+	} else {
+		creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+		opts = append(opts, grpc.WithTransportCredentials(creds))
+	}
+	if with_block {
+		opts = append(opts, grpc.WithBlock())
+	}
+	log.Info("Registering HealthService Gateway")
 	err = healthpb.RegisterHealthServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register HealthService gateway", zap.Error(err))
 	}
+	log.Info("Registering AccountsService Gateway")
 	err = registrypb.RegisterAccountsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register AccountsService gateway", zap.Error(err))
 	}
+	log.Info("Registering NamespacesService Gateway")
 	err = registrypb.RegisterNamespacesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register NamespacesService gateway", zap.Error(err))
 	}
+	log.Info("Registering ServicesProvidersService Gateway")
 	err = sppb.RegisterServicesProvidersServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
 	}
+	log.Info("Registering ServicesService Gateway")
 	err = servicespb.RegisterServicesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
 	}
+	log.Info("Registering DNS Gateway")
+	err = dnspb.RegisterDNSHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	if err != nil {
+		log.Fatal("Failed to register DNS gateway", zap.Error(err))
+	}
+	log.Info("Registering SettingsService Gateway")
+	err = settingspb.RegisterSettingsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	if err != nil {
+		log.Fatal("Failed to register SettingsService gateway", zap.Error(err))
+	}
+
 
 	gwmux.HandlePath("GET", "/admin", staticHandler)
 	gwmux.HandlePath("GET", "/admin/{path}", staticHandler)

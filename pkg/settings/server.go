@@ -18,8 +18,10 @@ package settings
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	redis "github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	pb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -28,7 +30,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const KEYS_PREFIX = "settings"
+const KEYS_PREFIX = "_settings"
 const KEYS_DESC_POSTFIX = "desc"
 const KEYS_VISIBILITY_POSTFIX = "pub"
 
@@ -73,6 +75,11 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (*s
 }
 
 func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*pb.PutResponse, error) {
+	access := ctx.Value(nocloud.NoCloudRootAccess).(int32)
+	if access < 3 {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
+	}
+
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, req.GetKey())
 	request := map[string]interface{}{
 		key: req.GetValue(),
@@ -99,6 +106,9 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 		return nil, status.Error(codes.Internal, "Error getting keys from Redis")
 	}
 	keys_l := len(keys)
+	if keys_l == 0 {
+		return &pb.KeysResponse{}, nil
+	}
 	keys_all := make([]string, keys_l * 2)
 	for i, key := range keys {
 		keys_all[i] = fmt.Sprintf("%s:%s", key, KEYS_VISIBILITY_POSTFIX)
@@ -112,6 +122,7 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 
 	result := make([]*pb.KeysResponse_Key, keys_l)
 	for i, key := range keys {
+		key = strings.SplitN(key, ":", 2)[1]
 		result[i] = &pb.KeysResponse_Key{
 			Key: key,
 		}

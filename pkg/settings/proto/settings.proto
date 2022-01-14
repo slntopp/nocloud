@@ -17,6 +17,7 @@ syntax = "proto3";
 package nocloud.settings;
 
 import "google/protobuf/struct.proto";
+import "google/api/annotations.proto";
 
 message GetRequest {
     repeated string keys = 1;
@@ -44,7 +45,21 @@ message KeysResponse {
 }
 
 service SettingsService {
-    rpc Get(nocloud.settings.GetRequest) returns (google.protobuf.Struct);
-    rpc Put(nocloud.settings.PutRequest) returns (nocloud.settings.PutResponse);
-    rpc Keys(nocloud.settings.KeysRequest) returns (nocloud.settings.KeysResponse);
+    rpc Get(nocloud.settings.GetRequest) returns (google.protobuf.Struct) {
+        option (google.api.http) = {
+            post: "/settings"
+            body: "*"
+        };
+    };
+    rpc Put(nocloud.settings.PutRequest) returns (nocloud.settings.PutResponse) {
+        option (google.api.http) = {
+            put: "/settings/{key}"
+            body: "*"
+        };
+    };
+    rpc Keys(nocloud.settings.KeysRequest) returns (nocloud.settings.KeysResponse) {
+        option (google.api.http) = {
+            get: "/settings"
+        };
+    };
 }

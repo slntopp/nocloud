@@ -19,17 +19,16 @@ import (
 	"fmt"
 	"net"
 
-	redis "github.com/go-redis/redis/v8"
+	"github.com/go-redis/redis/v8"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	"github.com/slntopp/nocloud/pkg/dns"
+	pb "github.com/slntopp/nocloud/pkg/dns/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	auth "github.com/slntopp/nocloud/pkg/nocloud/admin_auth"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-
-	"github.com/slntopp/nocloud/pkg/settings"
-	pb "github.com/slntopp/nocloud/pkg/settings/proto"
 )
 
 var (
@@ -76,8 +75,8 @@ func main() {
 		grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 	)))
 
-	server := settings.NewSettingsServer(log, rdb)
-	pb.RegisterSettingsServiceServer(s, server)
+	server := dns.NewDNSServer(log, rdb)
+	pb.RegisterDNSServer(s, server)
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
