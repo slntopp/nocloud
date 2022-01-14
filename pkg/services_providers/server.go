@@ -150,6 +150,27 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 	return sp.ServicesProvider, err
 }
 
+func (s *ServicesProviderServer) UnregisterExtentions(ctx context.Context, log *zap.Logger, sp *graph.ServicesProvider) {
+	log.Debug("Unregistering ServicesProvider Extentions")
+	for ext, data := range sp.GetExtentions() {
+		client, ok := s.extention_servers[ext]
+		if !ok {
+			continue // TODO add Warnings
+		}
+		res, err := client.Unregister(ctx, &sppb.ServicesProvidersExtentionData{
+			Data: data,
+		})
+		if err != nil {
+			log.Error("Error unregistering extension", zap.Error(err))
+			continue // TODO add Warnings
+		}
+		if !res.Result {
+			log.Error("Error unregistering extension", zap.Any("result", res))
+			continue // TODO add Warnings
+		}
+	}
+}
+
 func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteRequest) (res *sppb.DeleteResponse, err error) {
 	log := s.log.Named("Delete")
 	log.Debug("Request received", zap.Any("request", req))
@@ -192,23 +213,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 		return nil, status.Error(codes.Internal, "Error deleting ServicesProvider")
 	}
 
-	for ext, data := range sp.GetExtentions() {
-		client, ok := s.extention_servers[ext]
-		if !ok {
-			continue // TODO add Warnings
-		}
-		res, err := client.Unregister(ctx, &sppb.ServicesProvidersExtentionData{
-			Data: data,
-		})
-		if err != nil {
-			log.Error("Error unregistering extension", zap.Error(err))
-			continue // TODO add Warnings
-		}
-		if !res.Result {
-			log.Error("Error unregistering extension", zap.Any("result", res))
-			continue // TODO add Warnings
-		}
-	}
+	s.UnregisterExtentions(ctx, log, sp)
 	return &sppb.DeleteResponse{Result: true}, nil
 }
 
