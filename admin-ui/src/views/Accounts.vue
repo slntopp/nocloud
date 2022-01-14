@@ -114,12 +114,19 @@
 		<v-snackbar
 			v-model="snackbar.visibility"
 			:timeout="snackbar.timeout"
+			:color="snackbar.color"
 		>
 			{{snackbar.message}}
+			<template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
+				<router-link :to="snackbar.route">
+					Look up.
+				</router-link>
+			</template>
+			
 
       <template v-slot:action="{ attrs }">
         <v-btn
-          color="blue"
+          :color="snackbar.buttonColor"
           text
           v-bind="attrs"
           @click="snackbar.visibility = false"
@@ -135,11 +142,14 @@
 import accountsTable from "@/components/accounts_table.vue"
 import api from "@/api.js"
 
+import snackbar from "@/mixins/snackbar.js"
+
 export default {
 	name: "accounts-view",
 	components: {
 		"accounts-table": accountsTable,
 	},
+	mixins: [snackbar],
 	data () {
 		return {
 			createMenuVisible: false,
@@ -167,11 +177,6 @@ export default {
 				},
 				formValid: true,
 				loading: false
-			},
-			snackbar: {
-				visibility: false,
-				message: '',
-				timeout: 3000,
 			},
 			deletingLoading: false,
 			accessLevels: [0, 1, 2, 3]
@@ -215,8 +220,7 @@ export default {
 				Promise.all(deletePromices)
 				.then(res => {
 					if(res.every(el => el.result)){
-						console.log('all ok');
-						this.snackbar.message = `Account${deletePromices.length == 1 ? "" : "s"} removed.`
+						this.snackbar.message = `Account${deletePromices.length == 1 ? "" : "s"} deleted successfully.`
 						this.snackbar.visibility = true;
 					}
 
