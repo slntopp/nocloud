@@ -7,6 +7,8 @@ services:
       - registry
       - services-registry
       - sp-registry
+      - settings
+      - dns-mgmt
     volumes:
       - ./proxy:/etc/nginx/templates
     ports:
@@ -27,12 +29,12 @@ services:
     image: ghcr.io/slntopp/nocloud/apiserver-web:latest
     environment:
       LOG_LEVEL: -1
+      WITH_BLOCK: "true"
       APISERVER_HOST: proxy:8080
     ports:
       - 8000:8000 # REST-API
     networks:
       - proxy
-      - grpc-internal
   registry:
     container_name: registry
     image: ghcr.io/slntopp/nocloud/registry:latest
