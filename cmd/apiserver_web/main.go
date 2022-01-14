@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
 	"os"
 	"strings"
@@ -34,6 +35,7 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/gabriel-vasile/mimetype"
 )
@@ -53,7 +55,7 @@ func init() {
 
 	viper.SetDefault("CORS_ALLOWED", []string{"*"})
 	viper.SetDefault("APISERVER_HOST", "apiserver:8080")
-	viper.SetDefault("INSECURE", false)
+	viper.SetDefault("INSECURE", true)
 	viper.SetDefault("WITH_BLOCK", false)
 
 	apiserver   = viper.GetString("APISERVER_HOST")
@@ -110,6 +112,9 @@ func main() {
 	opts := []grpc.DialOption{}
 	if insecure {
 		opts = append(opts, grpc.WithInsecure())
+	} else {
+		creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
+		opts = append(opts, grpc.WithTransportCredentials(creds))
 	}
 	if with_block {
 		opts = append(opts, grpc.WithBlock())
