@@ -69,7 +69,7 @@
 
         <v-list-item :to="{name: 'ServicesProviders'}">
           <v-list-item-icon>
-            <v-icon>mdi-baguette</v-icon>
+            <v-icon>mdi-database-marker</v-icon>
           </v-list-item-icon>
 
           <v-list-item-content>
@@ -79,7 +79,7 @@
 
         <v-list-item :to="{name: 'DNS manager'}">
           <v-list-item-icon>
-            <v-icon>mdi-basketball</v-icon>
+            <v-icon>mdi-dns</v-icon>
           </v-list-item-icon>
 
           <v-list-item-content>

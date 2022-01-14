@@ -87,7 +87,7 @@ export default {
 		return {
 			rules: [
 				(value) => !!value || 'Field is required',
-				(value) => !!value.match(/^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/) || 'Is not valid domain'
+				(value) => !!value.match(/^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z0-9-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/) || 'Is not valid domain'
 			],
 			errors: [],
 
