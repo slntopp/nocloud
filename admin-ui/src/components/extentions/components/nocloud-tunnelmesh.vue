@@ -133,7 +133,7 @@ export default {
 				const hashdec = createHash().update(ans1._der).digest()
 				let hash = ''
 				for (const el of hashdec) {
-					hash += el.toString(16);
+					hash += el.toString(16).padStart(2, "0");
 				}
 				this.fingerprint = hash;
 				this.$emit('change:data', {hostname: this.hostname, fingerprint: this.fingerprint})
