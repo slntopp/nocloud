@@ -55,7 +55,7 @@
 					<v-file-input
 						:class="{'flex-grow-0 flex-shrink-1': !!fingerprint}"
 						v-model="cert"
-						accept="application/x-x509-ca-cert"
+						accept=".crt"
 						label="File input"
 						truncate-length="15"
 						@change="certInput"

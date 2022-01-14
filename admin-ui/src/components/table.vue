@@ -14,6 +14,7 @@
 	>
 	
 		<template
+			v-if="!noHideUuid"
 			v-slot:[`item.${itemKey}`]="props"
 		>
 
@@ -44,6 +45,12 @@
 					mdi-content-copy
 				</v-icon>
 			</v-btn>
+		</template>
+		
+		<template v-slot:[`item.titleLink`]="{ item }">
+			<router-link :to="'/dns/'+item.original">
+				{{item.titleLink}}
+			</router-link>
 		</template>
 
 	</v-data-table>
@@ -84,6 +91,10 @@ export default {
 		'item-key': {
 			type: String,
 			default: 'uuid'
+		},
+		'no-hide-uuid': {
+			type: Boolean,
+			default: false
 		}
 	},
 	data(){
