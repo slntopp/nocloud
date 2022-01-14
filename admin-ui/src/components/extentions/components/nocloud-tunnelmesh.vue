@@ -87,13 +87,12 @@ export default {
 		return {
 			rules: [
 				(value) => !!value || 'Field is required',
-				(value) => !!value.match(/^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z0-9-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/) || 'Is not valid domain'
 			],
 			errors: [],
 
 			fingerprint: "",
 			cert: null,
-			certError: [],
+			certError: []
 		}
 	},
 	props: {
@@ -109,7 +108,8 @@ export default {
 	computed: {
 		hostname() {
 			if(this.provider?.secrets?.host){
-				return this.provider?.secrets?.host
+				const domainname = new URL(this.provider?.secrets?.host)
+				return domainname.hostname;
 			} else {
 				return ""
 			}
