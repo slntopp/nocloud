@@ -103,7 +103,9 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 	}
 
 	test_req := &driverpb.TestServiceProviderConfigRequest{ServicesProvider: req}
-	if len(req.GetExtentions()) > 0 {
+	ffc, ok := ctx.Value(nocloud.TestForceFullCheck).(bool)
+	ffc = ok && ffc
+	if !ffc && len(req.GetExtentions()) > 0 {
 		test_req.SyntaxOnly = true
 	}
 
@@ -113,6 +115,7 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesProvider) (res *sppb.ServicesProvider, err error) {
 	s.log.Debug("Create request received", zap.Any("request", req))
 
+	ctx = context.WithValue(ctx, nocloud.TestForceFullCheck, true)
 	testRes, err := s.Test(ctx, req)
 	if err != nil {
 		return req, err
