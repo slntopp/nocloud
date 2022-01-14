@@ -113,29 +113,26 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 }
 
 func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesProvider) (res *sppb.ServicesProvider, err error) {
-	s.log.Debug("Create request received", zap.Any("request", req))
+	log := s.log.Named("Create")
+	log.Debug("Create request received", zap.Any("request", req))
 
-	ctx = context.WithValue(ctx, nocloud.TestForceFullCheck, true)
-	testRes, err := s.Test(ctx, req)
-	if err != nil {
-		return req, err
-	}
-	if !testRes.Result {
-		return req, status.Error(codes.Internal, testRes.Error)
-	}
+	sp := &graph.ServicesProvider{ServicesProvider: req}
 
 	for ext, data := range req.GetExtentions() {
 		client, ok := s.extention_servers[ext]
 		if !ok {
+			s.UnregisterExtentions(ctx, log, sp)
 			return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
 		}
 		res, err := client.Register(ctx, &sppb.ServicesProvidersExtentionData{
 			Data: data,
 		})
 		if err != nil {
+			s.UnregisterExtentions(ctx, log, sp)
 			return nil, err
 		}
 		if !res.Result {
+			s.UnregisterExtentions(ctx, log, sp)
 			err := fmt.Sprintf("Extention '%s': %s", ext, res.Error)
 			return req, status.Error(codes.Internal, err)
 		}
@@ -144,6 +141,7 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 	sp := &graph.ServicesProvider{ServicesProvider: req}
 	err = s.ctrl.Create(ctx, sp)
 	if err != nil {
+		s.UnregisterExtentions(ctx, log, sp)
 		s.log.Debug("Error allocating in DataBase", zap.Any("sp", sp), zap.Error(err))
 		return req, status.Error(codes.Internal, "Error allocating in DataBase")
 	}
