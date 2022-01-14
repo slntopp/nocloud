@@ -2,8 +2,6 @@ server {
     listen 8080 http2;
     server_name api.nocloud.local localhost;
 
-    resolver 127.0.0.11 valid=30s;
-
     location /nocloud.registry. {
         grpc_pass grpc://registry:8080;
     }
