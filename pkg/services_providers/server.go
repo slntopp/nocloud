@@ -138,7 +138,17 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 		}
 	}
 
-	sp := &graph.ServicesProvider{ServicesProvider: req}
+	ctx = context.WithValue(ctx, nocloud.TestForceFullCheck, true)
+	testRes, err := s.Test(ctx, req)
+	if err != nil {
+		s.UnregisterExtentions(ctx, log, sp)
+		return req, err
+	}
+	if !testRes.Result {
+		s.UnregisterExtentions(ctx, log, sp)
+		return req, status.Error(codes.Internal, testRes.Error)
+	}
+
 	err = s.ctrl.Create(ctx, sp)
 	if err != nil {
 		s.UnregisterExtentions(ctx, log, sp)
