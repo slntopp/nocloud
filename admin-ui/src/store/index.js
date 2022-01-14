@@ -6,6 +6,7 @@ import auth from './auth'
 import namespaces from './namespaces'
 import accounts from './accounts'
 import servicesProviders from './servicesProviders'
+import dns from './dns'
 
 Vue.use(Vuex)
 
@@ -21,5 +22,6 @@ export default new Vuex.Store({
 		namespaces,
 		accounts,
 		servicesProviders,
+		dns,
   }
 })

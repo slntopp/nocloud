@@ -76,6 +76,16 @@
             <v-list-item-title>Services Providers</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
+
+        <v-list-item :to="{name: 'DNS manager'}">
+          <v-list-item-icon>
+            <v-icon>mdi-basketball</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>DNS manager</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
         
       </v-list>
     </v-navigation-drawer>

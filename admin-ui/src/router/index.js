@@ -50,6 +50,22 @@ const routes = [
 		}
   },
   {
+    path: '/dns',
+    name: 'DNS manager',
+    component: () => import('../views/dnsManager.vue'),
+		meta: {
+			requireLogin: true
+		}
+  },
+  {
+    path: '/dns/:dnsname',
+    name: 'Zones manager',
+    component: () => import('../views/zoneManager.vue'),
+		meta: {
+			requireLogin: true
+		}
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import(/* webpackChunkName: "about" */ '../views/login.vue'),
