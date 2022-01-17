@@ -37,6 +37,8 @@
         dense
       >
 
+				<v-subheader>MAIN</v-subheader>
+
         <v-list-item :to="{name: 'Dashboard'}">
           <v-list-item-icon>
             <v-icon>mdi-view-dashboard-variant</v-icon>
@@ -86,6 +88,20 @@
             <v-list-item-title>DNS manager</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
+
+				<v-subheader>SYSTEM</v-subheader>
+
+        <v-list-item :to="{name: 'Settings'}">
+          <v-list-item-icon>
+            <v-icon>mdi-cogs</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>Settings</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
+
         
       </v-list>
     </v-navigation-drawer>

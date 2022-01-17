@@ -66,6 +66,14 @@ const routes = [
 		}
   },
   {
+    path: '/settigns',
+    name: 'Settings',
+    component: () => import('../views/Settings.vue'),
+		meta: {
+			requireLogin: true
+		}
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import(/* webpackChunkName: "about" */ '../views/login.vue'),
