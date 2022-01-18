@@ -120,7 +120,6 @@ export default {
 			const temp = {...this.secrets};
 			temp.secrets = {};
 			temp.secrets.host = hostname;
-			console.log(temp);
 			this.$emit('change:provider', temp)
 			this.$emit('change:data', {hostname: this.hostname, fingerprint: this.fingerprint})
 		},

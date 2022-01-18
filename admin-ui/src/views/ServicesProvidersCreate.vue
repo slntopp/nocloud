@@ -270,8 +270,6 @@ export default {
 				this.isTestSuccess = true;
 			})
 			.catch((err) => {
-				console.error(err);
-				console.error(err.response.data.message);
 				this.testButtonColor = "error"
 				this.isTestSuccess = false;
 				this.showSnackbarError({message: err.response.data.message})
@@ -288,7 +286,6 @@ export default {
 			Vue.delete(this.extentions.data, extention)
 		},
 		mergeDeep(target, ...sources){
-			console.log(target, sources);
 			return mergeDeep(target, ...sources)
 		}
 	}

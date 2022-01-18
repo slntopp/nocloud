@@ -72,7 +72,6 @@ export default {
 				this.$router.push({name: 'Home'})
 			})
 			.catch(error => {
-				console.log(error.response);
 				if(error.response && error.response.status == 401){
 					this.isLoginFailed = true;
 				}
