@@ -89,7 +89,73 @@
 			show-select
 			v-model="selected"
 		>
+			<template v-slot:[`item.description`]=" {item} ">
+				<div
+					class="d-flex align-center"
+					v-if="edit.key == 'description' && edit.data == item"
+				>
+					<div class="control">
+						<v-icon
+							@click="saveEdit()"
+							class="edit-btn mr-2"
+						>
+							mdi-content-save-outline
+						</v-icon>
+						<v-icon
+							@click="stopEdit()"
+							class="edit-btn mr-3"
+						>
+							mdi-close-circle-outline
+						</v-icon>
+					</div>
+					<v-text-field
+						v-model="edit.data.description"
+					></v-text-field>
+				</div>
+				<template v-else>
+					<v-icon
+						@click="startEdit('description', item)"
+						class="edit-btn"
+					>
+						mdi-border-color
+					</v-icon>
+					{{item.description}}
+				</template>
+			</template>
 
+			<template v-slot:[`item.value`]=" {item} ">
+				<div
+					class="d-flex align-center"
+					v-if="edit.key == 'value' && edit.data == item"
+				>
+					<div class="control">
+						<v-icon
+							@click="saveEdit()"
+							class="edit-btn mr-2"
+						>
+							mdi-content-save-outline
+						</v-icon>
+						<v-icon
+							@click="stopEdit()"
+							class="edit-btn mr-3"
+						>
+							mdi-close-circle-outline
+						</v-icon>
+					</div>
+					<v-text-field
+						v-model="edit.data.value"
+					></v-text-field>
+				</div>
+				<template v-else>
+					<v-icon
+						@click="startEdit('value', item)"
+						class="edit-btn"
+					>
+						mdi-border-color
+					</v-icon>
+					{{item.value}}
+				</template>
+			</template>
 		</v-data-table>
 
 		<v-snackbar
@@ -104,17 +170,18 @@
 				</router-link>
 			</template>
 			
+			<template v-slot:action="{ attrs }">
+				<v-btn
+					:color="snackbar.buttonColor"
+					text
+					v-bind="attrs"
+					@click="snackbar.visibility = false"
+				>
+					Close
+				</v-btn>
+			</template>
 
-      <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
-        >
-          Close
-        </v-btn>
-      </template>
+
 		</v-snackbar>
 	</div>
 </template>
@@ -127,10 +194,7 @@ import snackbar from "@/mixins/snackbar.js"
 const headers = [
 	{ text: 'key', value: 'key' },
 	{ text: 'description', value: 'description' },
-	{
-		text: 'value',
-		value: 'value',
-	},
+	{ text: 'value', value: 'value' },
 ];
 
 const defaultData = {
@@ -161,6 +225,10 @@ export default {
 			data: {
 				...JSON.parse(JSON.stringify(defaultData))
 			}
+		},
+		edit: {
+			key: '',
+			data: {}
 		}
 	}),
 	computed: {
@@ -221,12 +289,14 @@ export default {
 			}
 		},
 		sendKey(key, data){
-			let reqestKey = '';
-			let reqestData = {};
-			if(key == undefined || data || undefined){
+			let reqestKey = key;
+			let reqestData = data;
+
+			if(reqestKey == undefined || reqestData == undefined){
 				reqestKey = this.newSetting.data.key;
 				reqestData = this.newSetting.data.data;
 			}
+
 			return new Promise((resolve, reject) => {
 				api.settings.addKey(reqestKey, reqestData)
 				.then(res => {
@@ -241,11 +311,39 @@ export default {
 				})
 			})
 
+		},
+		startEdit(key, data){
+			this.edit.key = key;
+			this.edit.data = data;
+		},
+		stopEdit(){
+			this.edit.key = '';
+			this.edit.data = {};
+		},
+		saveEdit(){
+			const data = JSON.parse(JSON.stringify(this.edit.data));
+			const key = this.edit.data.key;
+			delete data.key;
+
+			this.sendKey(key, data)
+			.then(() => {
+				this.$store.dispatch('settings/fetch');
+				this.showSnackbar({message: "Setting created successfully"});
+				this.stopEdit();
+			})
+			.catch(err => {
+				this.showSnackbarError({message: err.response.data.message})
+			})
 		}
 	}
 }
 </script>
 
-<style>
+<style scoped lang="sass">
+.edit-btn
+	opacity: 0.4
+	margin-right: 4px
 
+	&:hover
+		opacity: 1
 </style>
