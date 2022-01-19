@@ -74,6 +74,14 @@ const routes = [
 		}
   },
   {
+    path: '/services',
+    name: 'Services',
+    component: () => import('../views/Services.vue'),
+		meta: {
+			requireLogin: true
+		}
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import(/* webpackChunkName: "about" */ '../views/login.vue'),

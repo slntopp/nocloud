@@ -89,6 +89,16 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item :to="{name: 'Services'}">
+          <v-list-item-icon>
+            <v-icon>mdi-alien</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>Services</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
 				<v-subheader>SYSTEM</v-subheader>
 
         <v-list-item :to="{name: 'Settings'}">
