@@ -186,7 +186,10 @@ export default {
   methods:{
     logoutHandler(){
       this.$store.dispatch('auth/logout')
-    }
+    },
+		setTitle(value){
+			document.title = `NoCloud | ${value}`;
+		}
   },
   created(){
     this.$store.dispatch('auth/load')
@@ -211,6 +214,10 @@ export default {
         next();
       }
     })
+
+		this.$router.afterEach(to => {
+			this.setTitle(to.name)
+		})
 
 		if(this.isLoggedIn){
 			this.$store.dispatch('auth/fetchUserData')

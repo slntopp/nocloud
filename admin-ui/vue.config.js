@@ -3,5 +3,14 @@ module.exports = {
     'vuetify'
   ],
 
-  publicPath: '/admin'
+  publicPath: '/admin',
+
+	chainWebpack: config => {
+        config
+        .plugin('html')
+        .tap(args => {
+          args[0].title = 'NoCloud'
+          return args
+        })
+      }
 }
