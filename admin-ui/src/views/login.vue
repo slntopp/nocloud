@@ -70,6 +70,7 @@ export default {
 			this.$store.dispatch('auth/login', {login: this.username, password: this.password})
 			.then(() => {
 				this.$router.push({name: 'Home'})
+				this.$store.dispatch('auth/fetchUserData')
 			})
 			.catch(error => {
 				if(error.response && error.response.status == 401){
