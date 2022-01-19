@@ -5,7 +5,7 @@
 			<v-btn
 				color="background-light"
 				class="mr-2"
-				:to="{name: 'ServicesProviders-create'}"
+				:to="{name: 'ServicesProviders create'}"
 			>
 				create
 			</v-btn>
@@ -89,10 +89,15 @@ export default {
 					}
 				})
 				.catch(err => {
-					if(err.response.status == 501 || err.response.status == 502){
+					if(err.response.status >= 500 || err.response.status < 600){
 						const opts = {
-							message: `Service Unavailable: ${err.response.data.message}.`,
+							message: `Service Unavailable: ${err?.response?.data?.message ?? 'Unknown'}.`,
 							timeout: 0
+						}
+						this.showSnackbarError(opts);
+					} else {
+						const opts = {
+							message: `Error: ${err?.response?.data?.message ?? 'Unknown'}.`,
 						}
 						this.showSnackbarError(opts);
 					}

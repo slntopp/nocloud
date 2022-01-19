@@ -47,7 +47,7 @@ export default {
 	},
 	computed: {
 		tableData(){
-			return this.$store.getters['dns/all'].map(el => ({titleLink: el.replace(/\.$/, ''), original: el}));
+			return this.$store.getters['dns/all'].map(el => ({titleLink: el.replace(/\.$/, ''), original: el, route: {name: 'Zone manager', params: {dnsname: el}}}));
 		}
 	},
 	created() {

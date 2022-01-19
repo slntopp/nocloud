@@ -48,7 +48,7 @@
 		</template>
 		
 		<template v-slot:[`item.titleLink`]="{ item }">
-			<router-link :to="'/dns/'+item.original">
+			<router-link :to="item.route">
 				{{item.titleLink}}
 			</router-link>
 		</template>
