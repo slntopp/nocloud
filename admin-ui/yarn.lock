@@ -3137,10 +3137,10 @@ core-js@^2.4.0:
   resolved "https://registry.npmjs.org/core-js/-/core-js-2.6.12.tgz"
   integrity sha512-Kb2wC0fvsWfQrgk8HU5lW6U/Lcs8+9aaYcy4ZFc6DDlo4nZ7n70dEgE5rtR0oG6ufKDUnrwfWL1mXR5ljDatrQ==
 
-core-js@^3.20.2, core-js@^3.6.5:
-  version "3.20.2"
-  resolved "https://registry.yarnpkg.com/core-js/-/core-js-3.20.2.tgz#46468d8601eafc8b266bd2dd6bf9dee622779581"
-  integrity sha512-nuqhq11DcOAbFBV4zCbKeGbKQsUDRqTX0oqx7AttUBuqe3h20ixsE039QHelbL6P4h+9kytVqyEtyZ6gsiwEYw==
+core-js@^3.20.3, core-js@^3.6.5:
+  version "3.20.3"
+  resolved "https://registry.yarnpkg.com/core-js/-/core-js-3.20.3.tgz#c710d0a676e684522f3db4ee84e5e18a9d11d69a"
+  integrity sha512-vVl8j8ph6tRS3B8qir40H7yw7voy17xL0piAjlbBUsH7WIfzoedL/ZOr1OV9FyZQLWXsayOJyV4tnRyXR85/ag==
 
 core-util-is@1.0.2, core-util-is@~1.0.0:
   version "1.0.2"
@@ -6168,10 +6168,10 @@ no-case@^2.2.0:
   dependencies:
     lower-case "^1.1.1"
 
-nocloudjsrest@^1.3.3:
-  version "1.3.3"
-  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.3.3.tgz#54d09fb033f30f43fa10a86f64bb61650bf250f2"
-  integrity sha512-9PEn2E/DEWskux9Y4ep/r67JvzqESFxupLK7h9gZpY6MQK9trec+C1xS5cP0lZQJ3HLAVFkbQVc+hSjBLR59wQ==
+nocloudjsrest@^1.4.0:
+  version "1.4.0"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.0.tgz#fd298bf4c2c85e869cfd83c537c39631af0ba2dd"
+  integrity sha512-BjSCsbXW9WUWGMAPcihTr3VGAeEsbDnWky1j2p0Fe0Hk+VmICBlFwdUz6X6ee2/5bNGjXbRO9ubpTvnY9uLrMw==
   dependencies:
     axios "^0.24.0"
 
@@ -7692,10 +7692,10 @@ sass-loader@^10.1.1:
     schema-utils "^3.0.0"
     semver "^7.3.2"
 
-sass@~1.48.0:
-  version "1.48.0"
-  resolved "https://registry.yarnpkg.com/sass/-/sass-1.48.0.tgz#b53cfccc1b8ab4be375cc54f306fda9d4711162c"
-  integrity sha512-hQi5g4DcfjcipotoHZ80l7GNJHGqQS5LwMBjVYB/TaT0vcSSpbgM8Ad7cgfsB2M0MinbkEQQPO9+sjjSiwxqmw==
+sass@~1.49.0:
+  version "1.49.0"
+  resolved "https://registry.yarnpkg.com/sass/-/sass-1.49.0.tgz#65ec1b1d9a6bc1bae8d2c9d4b392c13f5d32c078"
+  integrity sha512-TVwVdNDj6p6b4QymJtNtRS2YtLJ/CqZriGg0eIAbAKMlN8Xy6kbv33FsEZSF7FufFFM705SQviHjjThfaQ4VNw==
   dependencies:
     chokidar ">=3.0.0 <4.0.0"
     immutable "^4.0.0"
