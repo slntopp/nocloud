@@ -1,16 +1,19 @@
 <template>
-	<v-data-table
+	<components :is="VDataTable"
 		:item-key="itemKey"
 		class="elevation-0 background-light rounded-lg"
 		:loading="loading"
 		loading-text="Loading... Please wait"
 		color="background-light"
-		:headers="headers"
 		:items="items"
 		show-select
 		:value="selected"
 		@input="handleSelect"
 		:single-select="singleSelect"
+		:headers="headers"
+		:expanded="expanded"
+		@update:expanded="(nw) => $emit('update:expanded', nw)"
+		:show-expand="showExpand"
 	>
 	
 		<template
@@ -53,10 +56,20 @@
 			</router-link>
 		</template>
 
-	</v-data-table>
+		<template v-for="(_, scopedSlotName) in $scopedSlots" v-slot:[scopedSlotName]="slotData">
+			<slot :name="scopedSlotName" v-bind="slotData" />
+		</template>
+		<template v-for="(_, slotName) in $slots" v-slot:[slotName]>
+			<slot :name="slotName" />
+		</template>
+
+	</components>
 </template>
 
 <script>
+import {
+  VDataTable,
+} from 'vuetify/lib'
 
 const defaultHeaders = [
 	{ text: 'title', value: 'title' },
@@ -95,13 +108,42 @@ export default {
 		'no-hide-uuid': {
 			type: Boolean,
 			default: false
-		}
+		},
+    expanded: {
+      type: Array,
+      default: () => []
+    },
+    showSelect: Boolean,
+    checkboxColor: String,
+    showExpand: Boolean,
+    showGroupBy: Boolean,
+    height: [Number, String],
+    hideDefaultHeader: Boolean,
+    caption: String,
+    dense: Boolean,
+    headerProps: Object,
+    calculateWidths: Boolean,
+    fixedHeader: Boolean,
+    headersLength: Number,
+    expandIcon: {
+      type: String,
+      default: '$expand'
+    },
+    itemClass: {
+      type: [String, Function],
+      default: () => ''
+    },
+    loaderHeight: {
+      type: [Number, String],
+      default: 4
+    }
 	},
 	data(){
 		return {
 			selected: this.value,
 			showed: [],
-			copyed: -1
+			copyed: -1,
+			VDataTable
 		}
 	},
 	methods: {
