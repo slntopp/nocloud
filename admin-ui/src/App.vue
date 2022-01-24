@@ -89,9 +89,9 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-list-item :to="{name: 'Services'}">
+        <v-list-item :to="{name: 'Services'}" @click.ctrl="() => easterEgg = true">
           <v-list-item-icon>
-            <v-icon>mdi-alien</v-icon>
+            <v-icon :color="easterEgg ? 'green darker-2' : undefined">mdi-alien</v-icon>
           </v-list-item-icon>
 
           <v-list-item-content>
@@ -191,7 +191,8 @@ export default {
 
   data: () => ({
     bgc: "#0c0c3c",
-		miniNav: false
+		miniNav: false,
+		easterEgg: false
   }),
   methods:{
     logoutHandler(){
