@@ -265,7 +265,6 @@ export default {
 				this.linkAccount.loading = true;
 				Promise.all(linkPromices)
 				.then(res => {
-					console.log(res);
 					if(res.every(el => el.result)){
 						console.log('all ok');
 						this.linkAccount.modalVisible = false;
@@ -295,7 +294,6 @@ export default {
 				role: this.joinAccount.data.role,
 			})
 			.then(res => {
-				console.log(res);
 				if(res.every(el => el.result)){
 					console.log('all ok');
 					this.joinAccount.modalVisible = false;

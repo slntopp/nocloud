@@ -114,15 +114,29 @@
 				justify="end"
 			>
 				<v-col col=6>
-					<v-btn
-						color="background-light"
-						class="mr-2"
-						@click="tryToSend"
-						:loading="isLoading"
-						:disabled="!isTestSuccess"
-					>
-						create
-					</v-btn>
+					
+					<v-tooltip bottom :value="!isTestSuccess && tooltipVisible" @change="(e) => tooltipVisible = e">
+						<template v-slot:activator="{ on, attrs }">
+							<div
+								v-bind="attrs"
+								v-on="on"
+								style="display: inline-block"
+							>
+								<v-btn
+									color="background-light"
+									class="mr-2"
+									@click="tryToSend"
+									@hover="tooltipVisible = true"
+									@blur="tooltipVisible = false"
+									:loading="isLoading"
+									:disabled="!isTestSuccess"
+								>
+									create
+								</v-btn>
+							</div>
+						</template>
+						<span>Pass test first.</span>
+					</v-tooltip>
 					<v-btn
 						:color="testButtonColor"
 						class="mr-2"
@@ -196,6 +210,8 @@ export default {
 			data: {},
 			selected: ''
 		},
+
+		tooltipVisible: false
 	}),
 	created(){
 		const types = require.context('@/components/serviceProviders/', true, /creatingTemplate\.vue$/)
@@ -249,7 +265,13 @@ export default {
 			})
 		},
 		tryToSend(){
-			if(!this.isPassed || !this.isTestSuccess) return;
+			if(!this.isPassed || !this.isTestSuccess) {
+				const opts = {
+					message: `Error: Pass test first.`,
+				}
+				this.showSnackbarError(opts);
+				return;
+			}
 			this.isLoading = true
 			api.servicesProviders.create(this.serviceProviderBody)
 			.then(() => {
@@ -257,6 +279,20 @@ export default {
 			})
 			.finally(() => {
 				this.isLoading = false;
+			})
+			.catch(err => {
+				if(err.response.status >= 500 || err.response.status < 600){
+					const opts = {
+						message: `Service Unavailable: ${err?.response?.data?.message ?? 'Unknown'}.`,
+						timeout: 0
+					}
+					this.showSnackbarError(opts);
+				} else {
+					const opts = {
+						message: `Error: ${err?.response?.data?.message ?? 'Unknown'}.`,
+					}
+					this.showSnackbarError(opts);
+				}
 			})
 		},
 		testConfig(){
@@ -270,8 +306,6 @@ export default {
 				this.isTestSuccess = true;
 			})
 			.catch((err) => {
-				console.error(err);
-				console.error(err.response.data.message);
 				this.testButtonColor = "error"
 				this.isTestSuccess = false;
 				this.showSnackbarError({message: err.response.data.message})
@@ -288,7 +322,6 @@ export default {
 			Vue.delete(this.extentions.data, extention)
 		},
 		mergeDeep(target, ...sources){
-			console.log(target, sources);
 			return mergeDeep(target, ...sources)
 		}
 	}

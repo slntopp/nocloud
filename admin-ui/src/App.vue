@@ -37,6 +37,8 @@
         dense
       >
 
+				<v-subheader>MAIN</v-subheader>
+
         <v-list-item :to="{name: 'Dashboard'}">
           <v-list-item-icon>
             <v-icon>mdi-view-dashboard-variant</v-icon>
@@ -86,6 +88,30 @@
             <v-list-item-title>DNS manager</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
+
+        <v-list-item :to="{name: 'Services'}">
+          <v-list-item-icon>
+            <v-icon>mdi-alien</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>Services</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
+				<v-subheader>SYSTEM</v-subheader>
+
+        <v-list-item :to="{name: 'Settings'}">
+          <v-list-item-icon>
+            <v-icon>mdi-cogs</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>Settings</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
+
         
       </v-list>
     </v-navigation-drawer>
@@ -170,7 +196,10 @@ export default {
   methods:{
     logoutHandler(){
       this.$store.dispatch('auth/logout')
-    }
+    },
+		setTitle(value){
+			document.title = `NoCloud | ${value}`;
+		}
   },
   created(){
     this.$store.dispatch('auth/load')
@@ -195,6 +224,10 @@ export default {
         next();
       }
     })
+
+		this.$router.afterEach(to => {
+			this.setTitle(to.name)
+		})
 
 		if(this.isLoggedIn){
 			this.$store.dispatch('auth/fetchUserData')
