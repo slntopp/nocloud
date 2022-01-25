@@ -71,6 +71,7 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 	return &Service{service, meta}, nil
 }
 
+// Update Service and underlaying entities and store in DB
 func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service) (error) {
 	ctrl.log.Debug("Updating Service", zap.Any("service", service))
 	for _, ig := range service.GetInstancesGroups() {
@@ -153,6 +154,7 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *Service, name
 	return err
 }
 
+// Create Link between Service/Group and Services Provider group is Provisioned(deployed) to
 func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.DocumentID, group string) (error) {
 	ctrl.log.Debug("Providing group to service provider")
 	edge, _ := ctrl.db.Collection(ctx, schema.SP2SERV)
@@ -165,6 +167,7 @@ func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.
 	return err
 }
 
+// Delete Link between Service/Group and Services Provider group have beem Unprovisioned(undeployed) from
 func (ctrl *ServicesController) Unprovide(ctx context.Context, group string) (err error) {
 	ctrl.log.Debug("Unproviding group from service provider")
 	g, _ := ctrl.db.Graph(ctx, schema.SERVICES_GRAPH.Name)
@@ -173,6 +176,7 @@ func (ctrl *ServicesController) Unprovide(ctx context.Context, group string) (er
 	return err
 }
 
+// Get Provisions, map of InstancesGroups to ServicesProviders, those groups are deployed to
 func (ctrl *ServicesController) GetProvisions(ctx context.Context, service string) (r map[string]string, err error) {
 	ctrl.log.Debug("Getting groups provisions")
 	query := `FOR service, provision IN INBOUND @service GRAPH @services RETURN provision`
