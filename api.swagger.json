@@ -620,6 +620,12 @@
             "required": false,
             "type": "integer",
             "format": "int32"
+          },
+          {
+            "name": "deleted",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -1639,6 +1645,9 @@
       "properties": {
         "result": {
           "type": "boolean"
+        },
+        "error": {
+          "type": "string"
         }
       }
     },

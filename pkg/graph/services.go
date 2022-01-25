@@ -18,6 +18,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -206,4 +207,16 @@ func (ctrl *ServicesController) GetProvisions(ctx context.Context, service strin
 	}
 
 	return r, nil
+}
+
+func (ctrl *ServicesController) Delete(ctx context.Context, s *Service) (ok bool, err error) {
+	log := ctrl.log.Named("Service.Delete")
+	log.Debug("Deleting Service")
+	if s.GetStatus() != "init" {
+		return false, fmt.Errorf("Cannot delete Service, status: %s", s.GetStatus())
+	}
+
+	s.Status = "del"
+	err = ctrl.Update(ctx, s.Service)
+	return true, err
 }

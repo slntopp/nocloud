@@ -386,3 +386,28 @@ func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.Li
 
 	return response, nil
 }
+
+func (s *ServicesServiceServer) Delete(ctx context.Context, request *servicespb.DeleteRequest) (response *servicespb.DeleteResponse, err error) {
+	log := s.log.Named("Delete")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	r, err := s.ctrl.Get(ctx, request.GetUuid())
+	if err != nil {
+		log.Debug("Error getting Service from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not Found in DB")
+	}
+
+	ok, err := s.ctrl.Delete(ctx, r)
+	if !ok {
+		return &servicespb.DeleteResponse{Result: false, Error: err.Error() }, nil
+	}
+	if err != nil {
+		log.Error("Error Deleting Service", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error Deleting Service")
+	}
+	
+	return &servicespb.DeleteResponse{Result: true}, nil
+}

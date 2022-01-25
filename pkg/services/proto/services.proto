@@ -62,6 +62,7 @@ message DeleteRequest {
 
 message DeleteResponse {
     bool result = 1;
+    string error = 2;
 }
 
 message PerformActionRequest {
@@ -96,6 +97,7 @@ message DownResponse {}
 message ListRequest {
     optional string namespace = 1;
     optional int32 depth = 2;
+    optional bool deleted = 3;
 }
 
 message ListResponse {
