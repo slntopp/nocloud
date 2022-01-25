@@ -95,9 +95,9 @@ message DownRequest {
 message DownResponse {}
 
 message ListRequest {
-    optional string namespace = 1;
-    optional int32 depth = 2;
-    optional bool deleted = 3;
+    optional string show_deleted = 1;
+    optional string namespace = 2;
+    optional int32 depth = 3;
 }
 
 message ListResponse {

@@ -368,12 +368,12 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *servicespb.Get
 
 func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.ListRequest) (response *servicespb.ListResponse, err error) {
 	log := s.log.Named("List")
-	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.String("namespace", request.GetNamespace()), zap.String("show_deleted", request.GetShowDeleted()))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	r, err := s.ctrl.List(ctx, requestor, request.Depth)
+	r, err := s.ctrl.List(ctx, requestor, request)
 	if err != nil {
 		log.Debug("Error reading Services from DB", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")

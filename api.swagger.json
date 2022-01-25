@@ -609,6 +609,12 @@
         },
         "parameters": [
           {
+            "name": "showDeleted",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "namespace",
             "in": "query",
             "required": false,
@@ -620,12 +626,6 @@
             "required": false,
             "type": "integer",
             "format": "int32"
-          },
-          {
-            "name": "deleted",
-            "in": "query",
-            "required": false,
-            "type": "boolean"
           }
         ],
         "tags": [

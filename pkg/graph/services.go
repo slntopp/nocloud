@@ -101,24 +101,27 @@ func (ctrl *ServicesController) Get(ctx context.Context, id string) (*Service, e
 }
 
 // List Services in DB
-func (ctrl *ServicesController) List(ctx context.Context, requestor string, req_depth *int32) ([]*Service, error) {
+func (ctrl *ServicesController) List(ctx context.Context, requestor string, request *pb.ListRequest) ([]*Service, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
 
-	var depth int32
-	if req_depth == nil || *req_depth < 2 {
+	depth := request.GetDepth()
+	if depth < 2 {
 		depth = 5
-	} else {
-		depth = *req_depth
 	}
-
-	query := `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) RETURN node`
+	showDeleted := request.GetShowDeleted() == "true"
+	var query string
+	if showDeleted {
+		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) RETURN node`
+	} else {
+		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) FILTER node.status != "del" RETURN node`
+	}
 	bindVars := map[string]interface{}{
 		"depth": depth,
 		"account": driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"@services": schema.SERVICES_COL,
 	}
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
 
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
