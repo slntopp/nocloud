@@ -7,9 +7,12 @@ import "pkg/hasher/hasherpb/hasher.proto";
 message Instance {
     string uuid = 1;
     string title = 2;
-    map<string, google.protobuf.Value> config = 3;
-    map<string, google.protobuf.Value> resources = 4;
+    map<string, google.protobuf.Value> config = 3
+        [(nocloud.hasher.hashed) = true];
+    map<string, google.protobuf.Value> resources = 4
+        [(nocloud.hasher.hashed) = true];
     map<string, google.protobuf.Value> data = 5;
+    string hash = 6;
 }
 
 message InstancesGroup {
@@ -18,8 +21,10 @@ message InstancesGroup {
     map<string, google.protobuf.Value> config = 3
         [(nocloud.hasher.hashed) = true];
     repeated Instance instances = 4;
-    map<string, google.protobuf.Value> resources = 5;
+    map<string, google.protobuf.Value> resources = 5
+        [(nocloud.hasher.hashed) = true];
     map<string, google.protobuf.Value> data = 6;
+    string hash = 7;
 }
 
 message TestInstancesGroupConfigRequest {
