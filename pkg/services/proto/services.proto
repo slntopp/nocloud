@@ -23,7 +23,8 @@ import "pkg/hasher/hasherpb/hasher.proto";
 
 message Service {
     string uuid = 1;
-    string version = 2;
+    string version = 2
+        [(nocloud.hasher.hashed) = true];
     string title = 3;
     string status = 4;
     map<string, google.protobuf.Value> context = 5

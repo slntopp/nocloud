@@ -1516,6 +1516,9 @@
           "additionalProperties": {
             "type": "object"
           }
+        },
+        "hash": {
+          "type": "string"
         }
       }
     },
@@ -1551,6 +1554,9 @@
           "additionalProperties": {
             "type": "object"
           }
+        },
+        "hash": {
+          "type": "string"
         }
       }
     },
