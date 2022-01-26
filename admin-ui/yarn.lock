@@ -6168,10 +6168,10 @@ no-case@^2.2.0:
   dependencies:
     lower-case "^1.1.1"
 
-nocloudjsrest@^1.4.0:
-  version "1.4.0"
-  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.0.tgz#fd298bf4c2c85e869cfd83c537c39631af0ba2dd"
-  integrity sha512-BjSCsbXW9WUWGMAPcihTr3VGAeEsbDnWky1j2p0Fe0Hk+VmICBlFwdUz6X6ee2/5bNGjXbRO9ubpTvnY9uLrMw==
+nocloudjsrest@^1.4.1:
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.1.tgz#d4a6fad1270ca79b4633922d9fdac2bd00556e4a"
+  integrity sha512-8TdJz5rtnqGPI8tputnmOXH0ANBbA72+cMqPzJsjPImJVG0MRNFwNdWyvDfsCqIAcDOHoC7N4SqBuP5kK7iyOA==
   dependencies:
     axios "^0.24.0"
 
@@ -8902,10 +8902,10 @@ vuetify-loader@^1.7.0:
     file-loader "^6.2.0"
     loader-utils "^2.0.0"
 
-vuetify@^2.6.2:
-  version "2.6.2"
-  resolved "https://registry.yarnpkg.com/vuetify/-/vuetify-2.6.2.tgz#1ed4d3c9e734d55202bd566b789cce0e0013279a"
-  integrity sha512-nx3uZkO8MZNMshUEh1xKaQ1hQYepNwWFn3FVxKt+XBVf7ZFscd0GS/a3KZo4B3baXQmziCQAZKNIQF5IWeaIUw==
+vuetify@^2.6.3:
+  version "2.6.3"
+  resolved "https://registry.yarnpkg.com/vuetify/-/vuetify-2.6.3.tgz#b33ede2da958a40c6ced0ad1f4eda737984b3967"
+  integrity sha512-Zfiz2DZnp1DvxqGaSCGqGjv4mPNAurJJ5Xwy7bzNzIySGLlRdlO8UH6aNWnSgfaAsLP3voxadSGDm6tKM8Ys7w==
 
 vuex@^3.4.0:
   version "3.6.2"
