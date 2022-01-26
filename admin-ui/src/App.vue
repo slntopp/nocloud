@@ -191,7 +191,7 @@ export default {
 
   data: () => ({
     bgc: "#0c0c3c",
-		miniNav: false,
+		miniNav: true,
 		easterEgg: false
   }),
   methods:{

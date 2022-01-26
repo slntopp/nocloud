@@ -280,7 +280,7 @@ export default {
 <style scoped lang="scss">
 
 .page__title{
-	color: #FF00FF;
+	color: var(--v-primary-base);
 	font-weight: 400;
 	font-size: 32px;
 	font-family: "Quicksand";

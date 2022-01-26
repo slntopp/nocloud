@@ -36,7 +36,7 @@ const routes = [
   {
     path: '/sp',
     name: 'ServicesProviders',
-    component: () => import('../views/servicesProviders.vue'),
+    component: () => import('../views/ServicesProviders.vue'),
 		meta: {
 			requireLogin: true
 		}
@@ -60,7 +60,7 @@ const routes = [
   {
     path: '/dns/:dnsname',
     name: 'Zone manager',
-    component: () => import('../views/zoneManager.vue'),
+    component: () => import('../views/ZoneManager.vue'),
 		meta: {
 			requireLogin: true
 		}
@@ -77,6 +77,14 @@ const routes = [
     path: '/services',
     name: 'Services',
     component: () => import('../views/Services.vue'),
+		meta: {
+			requireLogin: true
+		}
+  },
+  {
+    path: '/services/create',
+    name: 'Service create',
+    component: () => import('../views/ServiceCreate.vue'),
 		meta: {
 			requireLogin: true
 		}

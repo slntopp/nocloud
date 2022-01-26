@@ -1,4 +1,5 @@
 import Vue from 'vue';
+import config from '@/config';
 import Vuetify from 'vuetify/lib/framework';
 
 Vue.use(Vuetify);
@@ -6,14 +7,12 @@ Vue.use(Vuetify);
 export default new Vuetify({
   theme: {
     themes: {
-      dark: {
-        background: "#000033",
-        "background-dark": "#000020",
-        "background-light": "#0c0c3c", //old #202033
-        accent: "#FF00FF",
-				primary: "#FF00FF"
-      }
+      dark: config.colors,
     },
-    dark: true,
+    options: {
+      customProperties: true,
+      variations: false
+    },
+    dark: true, // тут поставить лайт
   },
 })

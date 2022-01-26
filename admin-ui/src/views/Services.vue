@@ -1,5 +1,16 @@
 <template>
 	<div class="services pa-4">
+		<div class="buttons__inline pb-4">
+			<v-btn
+				color="background-light"
+				class="mr-2"
+				:to="{name: 'Service create'}"
+			>
+				create
+			</v-btn>
+		</div>
+
+
 		<nocloud-table
 			:items="services"
 			:headers="headers"
@@ -129,7 +140,8 @@ export default {
 		chipColor(state){
 			const dict = {
 				'init': 'orange darken-2',
-				'up': 'green darken-2'
+				'up': 'green darken-2',
+				'del': 'gray darken-2'
 			}
 			return dict[state] ?? 'blue-grey darken-2'
 		}
