@@ -1,5 +1,15 @@
 @import "./fonts.scss";
+@import "./variables.scss";
 
 .gg-15px {
 	grid-gap: 15px;
+}
+
+.page__title {
+	color: var(--v-primary-base);
+	font-weight: 400;
+	font-size: 32px;
+	font-family: "Quicksand";
+	line-height: 1em;
+	margin-bottom: 10px;
 }

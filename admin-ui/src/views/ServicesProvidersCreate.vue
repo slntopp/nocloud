@@ -214,13 +214,14 @@ export default {
 		tooltipVisible: false
 	}),
 	created(){
-		const types = require.context('@/components/serviceProviders/', true, /creatingTemplate\.vue$/)
+		const types = require.context('@/components/modules/', true, /serviceProviders\.vue$/)
+		console.log(types.keys());
 		types.keys().forEach(key => {
-			const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/creatingTemplate\.vue/i);
+			const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceProviders\.vue/i);
 			if (matched && matched.length > 1) {
 				const type = matched[1]
 				this.types.push(type);
-				this.templates[type] = () => import(`@/components/serviceProviders/${type}/creatingTemplate.vue`)
+				this.templates[type] = () => import(`@/components/modules/${type}/serviceProviders.vue`)
 			}
 		})
 
@@ -228,7 +229,7 @@ export default {
 	},
 	computed: {
 		template(){
-			return () => import(`@/components/serviceProviders/${this.type}/creatingTemplate.vue`);
+			return () => import(`@/components/modules/${this.type}/serviceProviders.vue`);
 		},
 		extentionsMap(){
 			return extentionsMap
@@ -330,10 +331,10 @@ export default {
 
 <style scoped lang="scss">
 .page__title{
-	color: #FF00FF;
+	color: var(--v-primary-base);
 	font-weight: 400;
 	font-size: 32px;
-	font-family: "Quicksand";
+	font-family: "Quicksand", sans-serif;
 	line-height: 1em;
 	margin-bottom: 10px;
 }
