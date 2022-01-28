@@ -198,7 +198,7 @@ export default {
       this.$store.dispatch('auth/logout')
     },
 		setTitle(value){
-			document.title = `NoCloud | ${value}`;
+			document.title = `${value} | NoCloud`;
 		},
 		onResize () {
 			this.miniNav = window.innerWidth <= 768
