@@ -133,7 +133,7 @@ export default {
 				})
 			});
 
-			console.log(`errors`, errors);
+			console.error(`errors`, errors);
 
 			const secrets = {}
 			if(this.values.host){
@@ -167,7 +167,7 @@ export default {
 				vars
 			}
 
-			console.log(`errors`, errors, Object.keys(errors).length);
+			console.error(`errors`, errors, Object.keys(errors).length);
 
 			this.$emit(`change:secrets`, secrets)
 			this.$emit(`change:vars`, vars)

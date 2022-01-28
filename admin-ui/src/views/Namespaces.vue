@@ -254,7 +254,7 @@ export default {
 					this.snackbar.visibility = true;
 				})
 				.catch(err => {
-					console.log(err);
+					console.error(err);
 				})
 			}
 		},
@@ -277,7 +277,7 @@ export default {
 					this.$store.dispatch('namespaces/fetch');
 				})
 				.catch(err => {
-					console.log(err);
+					console.error(err);
 					this.snackbar.message = "Something went wrong... Try later."
 					this.snackbar.visibility = true;
 				})

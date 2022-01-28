@@ -205,7 +205,7 @@ export default {
 				}
 			})
 			.catch((error)=>{
-				console.log(error)
+				console.error(error)
 				this.snackbar.message = "Something went wrong... Try later."
 				this.snackbar.visibility = true;
 			})
@@ -228,7 +228,7 @@ export default {
 					this.$store.dispatch('accounts/fetch');
 				})
 				.catch(err => {
-					console.log(err);
+					console.error(err);
 				})
 				.finally(() => {
 					this.deletingLoading = false;

@@ -21,7 +21,6 @@ export function generator(moduleName, respWrapper = 'pool'){
 			return new Promise((resolve, reject) => {
 				api[moduleName].list()
 				.then(response => {
-					console.log(response);
 					commit('setValue', response[respWrapper])
 					resolve(response)
 				})
