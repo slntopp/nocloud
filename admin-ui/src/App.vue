@@ -200,7 +200,10 @@ export default {
     },
 		setTitle(value){
 			document.title = `NoCloud | ${value}`;
-		}
+		},
+		onResize () {
+			this.miniNav = window.innerWidth <= 768
+		},
   },
   created(){
     this.$store.dispatch('auth/load')
@@ -242,7 +245,11 @@ export default {
 		userdata(){
 			return this.$store.getters['auth/userdata'];
 		}
-  }
+  },
+	mounted(){
+		this.onResize()
+		window.addEventListener('resize', this.onResize, { passive: true })
+	},
 };
 </script>
 
