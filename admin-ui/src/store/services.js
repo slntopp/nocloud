@@ -20,7 +20,6 @@ export default {
 			return new Promise((resolve, reject) => {
 				api.services.list()
 				.then(response => {
-					console.log(response);
 					commit('setServices', response.pool)
 					resolve(response)
 				})

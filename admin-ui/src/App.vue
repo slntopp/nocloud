@@ -10,24 +10,38 @@
       <router-link
         to="/"
       >
-        <div class="d-flex gg-15px align-center justify-center" :class="[miniNav ? 'pa-3' : 'pa-5']">
-          <v-img
-            alt=""
-            src="@/assets/logo.svg"
-            max-height="42px"
-            max-width="48px"
-            contain
-          ></v-img>
-					
-          <v-img
-						v-if="!miniNav"
-						transition="fade-transition"
-            alt=""
-            src="@/assets/logoTitle.svg"
-            max-height="24px"
-            max-width="122px"
-            contain
-          ></v-img>
+        <!-- <div class="d-flex gg-15px align-center justify-center" :class="[miniNav ? 'pa-3' : 'pa-5']"> -->
+        <div class="d-flex gg-15px align-center justify-center pa-5">
+					<template
+						v-if="!config.logoSrc"
+					>
+						<v-img
+							alt=""
+							src="@/assets/logo.svg"
+							max-height="42px"
+							max-width="48px"
+							contain
+						></v-img>
+						
+						<v-img
+							v-if="!miniNav"
+							transition="fade-transition"
+							alt=""
+							src="@/assets/logoTitle.svg"
+							max-height="24px"
+							max-width="122px"
+							contain
+						></v-img>
+					</template>
+					<template v-else>
+						<v-img
+							v-if="!miniNav"
+							transition="fade-transition"
+							alt=""
+							:src="config.logoSrc"
+							contain
+						></v-img>			
+					</template>
         </div>
       </router-link>
 
@@ -129,7 +143,7 @@
         prepend-inner-icon="mdi-magnify"
         placeholder="Search..."
         single-line
-        :background-color="bgc"
+        background-color="background-light"
         dence
         rounded
       ></v-text-field>
@@ -145,8 +159,7 @@
             <v-btn
               class="mx-2"
               fab
-              dark
-              :color="bgc"
+              color="background-light"
               v-bind="attrs"
               v-on="on"
             >
@@ -185,22 +198,26 @@
 </template>
 
 <script>
+import config from "@/config"
 
 export default {
   name: 'App',
 
   data: () => ({
-    bgc: "#0c0c3c",
 		miniNav: true,
-		easterEgg: false
+		easterEgg: false,
+		config,
   }),
   methods:{
     logoutHandler(){
       this.$store.dispatch('auth/logout')
     },
 		setTitle(value){
-			document.title = `NoCloud | ${value}`;
-		}
+			document.title = `${value} | NoCloud`;
+		},
+		onResize () {
+			this.miniNav = window.innerWidth <= 768
+		},
   },
   created(){
     this.$store.dispatch('auth/load')
@@ -242,7 +259,11 @@ export default {
 		userdata(){
 			return this.$store.getters['auth/userdata'];
 		}
-  }
+  },
+	mounted(){
+		this.onResize()
+		window.addEventListener('resize', this.onResize, { passive: true })
+	},
 };
 </script>
 

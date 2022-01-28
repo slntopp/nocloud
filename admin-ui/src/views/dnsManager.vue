@@ -144,7 +144,7 @@ export default {
 					this.snackbar.visibility = true;
 				})
 				.catch(err => {
-					console.log(err);
+					console.error(err);
 				})
 			}
 		},

@@ -8,11 +8,12 @@ export default new Vuetify({
   theme: {
     themes: {
       dark: config.colors,
+      light: config.colors,
     },
     options: {
       customProperties: true,
       variations: false
     },
-    dark: true, // тут поставить лайт
+    dark: config.dark ?? true, // тут поставить лайт
   },
 })

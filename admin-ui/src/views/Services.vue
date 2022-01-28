@@ -1,5 +1,14 @@
 <template>
 	<div class="services pa-4">
+		<div v-if="isFiltered" class="page__title">
+			Used in {{$route.query.provider ? '"' + $route.query.provider + '"' : ""}} service provider
+			<v-btn
+				small
+				:to="{ name: 'Services' }"
+			>
+				clear
+			</v-btn>
+		</div>
 		<div class="buttons__inline pb-4">
 			<v-btn
 				color="background-light"
@@ -8,6 +17,13 @@
 			>
 				create
 			</v-btn>
+			<v-btn
+				color="background-light"
+				class="mr-2"
+				@click="deleteSelectedServices"
+			>
+				delete
+			</v-btn>
 		</div>
 
 
@@ -15,6 +31,8 @@
 			:items="services"
 			:headers="headers"
       :expanded.sync="expanded"
+			@input="v => selected = v"
+			:value="selected"
       show-expand
 		>
 
@@ -40,8 +58,11 @@
 			</template>
 
 			<template v-slot:[`item.title`]="slotData">
-        <div @click="clickColumn(slotData)">{{ slotData.item.title }}
-				</div>
+        <router-link
+					:to="{ name: 'Service', params: {serviceId: slotData.item.uuid} }"
+				>
+					{{ slotData.item.title }}
+				</router-link>
 			</template>
 
 			<template v-slot:[`item.status`]=" {value} ">
@@ -78,19 +99,7 @@
 
 <script>
 import noCloudTable from "@/components/table.vue"
-
-const headers = [
-	{ text: 'title', value: 'title' },
-	{ text: 'status', value: 'status' },
-	{
-		text: 'UUID',
-		align: 'start',
-		value: 'uuid',
-	},
-	{
-		text: 'hash', value: 'hash'
-	}
-]
+import api from "@/api"
 
 export default {
 	name: "Services-view",
@@ -98,14 +107,35 @@ export default {
 		"nocloud-table": noCloudTable
 	},
 	data: () => ({
-		headers,
+		headers: [
+			{ text: 'title', value: 'title' },
+			{ text: 'status', value: 'status' },
+			{
+				text: 'UUID',
+				align: 'start',
+				value: 'uuid',
+			},
+			{
+				text: 'hash', value: 'hash'
+			}
+		],
 		copyed: -1,
-		expanded: []
-
+		expanded: [],
+		selected: []
 	}),
 	computed: {
 		services(){
-			return this.$store.getters['services/all']
+			const items = this.$store.getters['services/all'];			
+
+			if(this.isFiltered){
+				return items.filter(item => {
+					return this.$route.query['items[]'].includes(item.uuid)
+				})
+			}
+			return items
+		},
+		isFiltered(){
+			return this.$route.query.filter == 'uuid' && this.$route.query['items[]'];
 		}
 	},
 	created(){
@@ -113,7 +143,6 @@ export default {
 	},
 	methods: {
 		hashTrim(hash){
-			console.log(hash);
 			if(hash)
 				return hash.slice(0, 8) + "..."
 			else
@@ -125,7 +154,7 @@ export default {
 				this.copyed = index
 			})
 			.catch(res=>{
-				console.log(res);
+				console.error(res);
 			})
 		},
     clickColumn(slotData) {
@@ -144,11 +173,52 @@ export default {
 				'del': 'gray darken-2'
 			}
 			return dict[state] ?? 'blue-grey darken-2'
-		}
+		},
+
+		
+		deleteSelectedServices(){
+			if(this.selected.length > 0){
+				const deletePromices = this.selected.map(el => api.services.delete(el.uuid));
+				Promise.all(deletePromices)
+				.then(res => {
+
+					if(res.every(el => el.result)){
+						console.log('all ok');
+						this.$store.dispatch('services/fetch');
+							
+						const ending = deletePromices.length == 1 ? "" : "s";
+						this.showSnackbar({message: `Service${ending} deleted successfully.`})
+					} else {
+						this.showSnackbar({message: `Can’t delete Services Provider: Has Services deployed.`, route: {name: 'Home'}})
+					}
+				})
+				.catch(err => {
+					if(err.response.status >= 500 || err.response.status < 600){
+						const opts = {
+							message: `Service Unavailable: ${err?.response?.data?.message ?? 'Unknown'}.`,
+							timeout: 0
+						}
+						this.showSnackbarError(opts);
+					} else {
+						const opts = {
+							message: `Error: ${err?.response?.data?.message ?? 'Unknown'}.`,
+						}
+						this.showSnackbarError(opts);
+					}
+				})
+			}
+		},
 	}
 }
 </script>
 
 <style>
-
+.page__title{
+	color: var(--v-primary-base);
+	font-weight: 400;
+	font-size: 32px;
+	font-family: "Quicksand", sans-serif;
+	line-height: 1em;
+	margin-bottom: 10px;
+}
 </style>

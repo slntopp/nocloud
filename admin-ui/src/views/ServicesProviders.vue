@@ -85,7 +85,15 @@ export default {
 						const ending = deletePromices.length == 1 ? "" : "s";
 						this.showSnackbar({message: `Service${ending} provider${ending} deleted successfully.`})
 					} else {
-						this.showSnackbar({message: `Can’t delete Services Provider: Has Services deployed.`, route: {name: 'Home'}})
+						this.showSnackbar({
+							message: `Can’t delete Services Provider: Has Services deployed.`,
+							route: {
+								name: 'Services', query: {
+									filter: 'uuid',
+									['items[]']: res.find(el => !el.result).services
+								}
+							}
+						})
 					}
 				})
 				.catch(err => {

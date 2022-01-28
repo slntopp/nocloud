@@ -5,3 +5,5 @@ globalThis.colors = {
 	accent: "#FF00FF",
 	primary: "#FF00FF"
 }
+
+globalThis.dark = true

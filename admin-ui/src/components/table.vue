@@ -156,7 +156,7 @@ export default {
 				this.copyed = index
 			})
 			.catch(res=>{
-				console.log(res);
+				console.error(res);
 			})
 		},
 		showID(index){

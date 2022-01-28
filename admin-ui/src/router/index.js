@@ -90,6 +90,14 @@ const routes = [
 		}
   },
   {
+    path: '/services/:serviceId',
+    name: 'Service',
+    component: () => import('../views/ServicePage.vue'),
+		meta: {
+			requireLogin: true
+		}
+  },
+  {
     path: '/login',
     name: 'Login',
     component: () => import(/* webpackChunkName: "about" */ '../views/login.vue'),
