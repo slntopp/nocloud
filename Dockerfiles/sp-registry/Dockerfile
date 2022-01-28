@@ -1,12 +1,5 @@
-FROM golang:1.17-alpine AS builder
+FROM ghcr.io/slntopp/nocloud/base:latest as builder
 
-RUN apk add upx
-
-WORKDIR /go/src/github.com/slntopp/nocloud
-COPY go.mod go.sum ./
-RUN go mod download
-
-COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-s -w" ./cmd/sp_registry
 RUN upx ./sp_registry
 
