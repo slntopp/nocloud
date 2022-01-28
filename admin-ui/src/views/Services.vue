@@ -8,6 +8,13 @@
 			>
 				create
 			</v-btn>
+			<v-btn
+				color="background-light"
+				class="mr-2"
+				@click="deleteSelectedServices"
+			>
+				delete
+			</v-btn>
 		</div>
 
 
@@ -15,6 +22,8 @@
 			:items="services"
 			:headers="headers"
       :expanded.sync="expanded"
+			@input="v => selected = v"
+			:value="selected"
       show-expand
 		>
 
@@ -78,6 +87,7 @@
 
 <script>
 import noCloudTable from "@/components/table.vue"
+import api from "@/api"
 
 const headers = [
 	{ text: 'title', value: 'title' },
@@ -100,8 +110,8 @@ export default {
 	data: () => ({
 		headers,
 		copyed: -1,
-		expanded: []
-
+		expanded: [],
+		selected: []
 	}),
 	computed: {
 		services(){
@@ -113,7 +123,6 @@ export default {
 	},
 	methods: {
 		hashTrim(hash){
-			console.log(hash);
 			if(hash)
 				return hash.slice(0, 8) + "..."
 			else
@@ -125,7 +134,7 @@ export default {
 				this.copyed = index
 			})
 			.catch(res=>{
-				console.log(res);
+				console.error(res);
 			})
 		},
     clickColumn(slotData) {
@@ -144,7 +153,41 @@ export default {
 				'del': 'gray darken-2'
 			}
 			return dict[state] ?? 'blue-grey darken-2'
-		}
+		},
+
+		
+		deleteSelectedServices(){
+			if(this.selected.length > 0){
+				const deletePromices = this.selected.map(el => api.services.delete(el.uuid));
+				Promise.all(deletePromices)
+				.then(res => {
+
+					if(res.every(el => el.result)){
+						console.log('all ok');
+						this.$store.dispatch('services/fetch');
+							
+						const ending = deletePromices.length == 1 ? "" : "s";
+						this.showSnackbar({message: `Service${ending} deleted successfully.`})
+					} else {
+						this.showSnackbar({message: `Can’t delete Services Provider: Has Services deployed.`, route: {name: 'Home'}})
+					}
+				})
+				.catch(err => {
+					if(err.response.status >= 500 || err.response.status < 600){
+						const opts = {
+							message: `Service Unavailable: ${err?.response?.data?.message ?? 'Unknown'}.`,
+							timeout: 0
+						}
+						this.showSnackbarError(opts);
+					} else {
+						const opts = {
+							message: `Error: ${err?.response?.data?.message ?? 'Unknown'}.`,
+						}
+						this.showSnackbarError(opts);
+					}
+				})
+			}
+		},
 	}
 }
 </script>
