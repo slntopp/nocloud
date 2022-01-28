@@ -39,8 +39,8 @@
 								<v-select
 									label="services provider"
 									:items="servicesProviders"
-									:item-value="uuid"
-									:item-text="title"
+									item-value="uuid"
+									item-text="title"
 									:rules="[v=>!!v || 'required']"
 									v-model="deployServiceProvider"
 								>
