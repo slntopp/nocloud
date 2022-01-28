@@ -129,7 +129,7 @@
         prepend-inner-icon="mdi-magnify"
         placeholder="Search..."
         single-line
-        :background-color="bgc"
+        background-color="background-light"
         dence
         rounded
       ></v-text-field>
@@ -146,7 +146,7 @@
               class="mx-2"
               fab
               dark
-              :color="bgc"
+              color="background-light"
               v-bind="attrs"
               v-on="on"
             >
@@ -190,7 +190,6 @@ export default {
   name: 'App',
 
   data: () => ({
-    bgc: "#0c0c3c",
 		miniNav: true,
 		easterEgg: false
   }),
