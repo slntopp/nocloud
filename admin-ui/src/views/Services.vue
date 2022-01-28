@@ -58,8 +58,11 @@
 			</template>
 
 			<template v-slot:[`item.title`]="slotData">
-        <div @click="clickColumn(slotData)">{{ slotData.item.title }}
-				</div>
+        <router-link
+					:to="{ name: 'Service', params: {serviceId: slotData.item.uuid} }"
+				>
+					{{ slotData.item.title }}
+				</router-link>
 			</template>
 
 			<template v-slot:[`item.status`]=" {value} ">
