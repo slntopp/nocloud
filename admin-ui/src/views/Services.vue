@@ -1,5 +1,14 @@
 <template>
 	<div class="services pa-4">
+		<div v-if="isFiltered" class="page__title">
+			Used in {{$route.query.provider ? '"' + $route.query.provider + '"' : ""}} service provider
+			<v-btn
+				small
+				:to="{ name: 'Services' }"
+			>
+				clear
+			</v-btn>
+		</div>
 		<div class="buttons__inline pb-4">
 			<v-btn
 				color="background-light"
@@ -89,33 +98,41 @@
 import noCloudTable from "@/components/table.vue"
 import api from "@/api"
 
-const headers = [
-	{ text: 'title', value: 'title' },
-	{ text: 'status', value: 'status' },
-	{
-		text: 'UUID',
-		align: 'start',
-		value: 'uuid',
-	},
-	{
-		text: 'hash', value: 'hash'
-	}
-]
-
 export default {
 	name: "Services-view",
 	components: {
 		"nocloud-table": noCloudTable
 	},
 	data: () => ({
-		headers,
+		headers: [
+			{ text: 'title', value: 'title' },
+			{ text: 'status', value: 'status' },
+			{
+				text: 'UUID',
+				align: 'start',
+				value: 'uuid',
+			},
+			{
+				text: 'hash', value: 'hash'
+			}
+		],
 		copyed: -1,
 		expanded: [],
 		selected: []
 	}),
 	computed: {
 		services(){
-			return this.$store.getters['services/all']
+			const items = this.$store.getters['services/all'];			
+
+			if(this.isFiltered){
+				return items.filter(item => {
+					return this.$route.query['items[]'].includes(item.uuid)
+				})
+			}
+			return items
+		},
+		isFiltered(){
+			return this.$route.query.filter == 'uuid' && this.$route.query['items[]'];
 		}
 	},
 	created(){
@@ -193,5 +210,12 @@ export default {
 </script>
 
 <style>
-
+.page__title{
+	color: var(--v-primary-base);
+	font-weight: 400;
+	font-size: 32px;
+	font-family: "Quicksand", sans-serif;
+	line-height: 1em;
+	margin-bottom: 10px;
+}
 </style>
