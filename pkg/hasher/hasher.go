@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 
 	"google.golang.org/protobuf/proto"
 
@@ -14,47 +15,138 @@ import (
 
 //Delete unmarked fields from messages.
 //Structs is implementation protobuf Messages in Go, and protoreflect kind of Go reflect, but it's own protobuf
-func redact(msg protoreflect.Message) {
+func redact(msg protoreflect.Message) (save4hash bool) {
+	save4hash = false
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+
 		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Hashed).(bool) {
-
-			//check and not delete inner protobuf messages like google.protobuf.Value
-			checkKin := func(s protoreflect.FullName) bool {
-				if len(s) > 7 && s[:7] == "nocloud" {
-					return true
-				}
-				return false
-			}
-
-			//There is more nested Kinds of fields, but here considered only maps
-			if fd.IsMap() {
-				if fd.MapValue().Kind() == protoreflect.MessageKind && checkKin(fd.MapValue().Message().FullName()) {
-					v.Map().Range(func(km protoreflect.MapKey, vm protoreflect.Value) bool {
-						redact(vm.Message())
-						return true
-					})
-				}
-			} else if fd.Kind() == protoreflect.MessageKind && checkKin(fd.Message().FullName()) {
-				redact(v.Message())
-			}
-
+			save4hash = true
 			return true
 		}
 
-		msg.Clear(fd) //delete non-marked as E_Hashed fields
+		save4hashChild := false
+
+		//check and not delete inner protobuf messages like google.protobuf.Value
+		checkKin := func(s protoreflect.FullName) bool {
+			if len(s) > 7 && s[:7] == "nocloud" {
+				return true
+			}
+			return false
+		}
+
+		//There is more nested Kinds of fields, but here considered only maps and lists
+		if fd.IsMap() {
+			if fd.MapValue().Kind() == protoreflect.MessageKind && checkKin(fd.MapValue().Message().FullName()) {
+				v.Map().Range(func(km protoreflect.MapKey, vm protoreflect.Value) bool {
+					if redact(vm.Message()) {
+						save4hashChild = true
+					}
+					return true
+				})
+			}
+		} else if fd.IsList() {
+			for list, i := v.List(), 0; i < list.Len(); i++ {
+				if redact(list.Get(i).Message()) {
+					save4hashChild = true
+				}
+
+			}
+		} else if fd.Kind() == protoreflect.MessageKind && checkKin(fd.Message().FullName()) {
+			if redact(v.Message()) {
+				save4hashChild = true
+			}
+		}
+
+		if !save4hashChild {
+			msg.Clear(fd) //delete non-marked as E_Hashed fields
+		} else {
+			save4hash = true
+		}
+
 		return true
 	})
 
+	return save4hash
 }
 
-func GetHash(msg proto.Message) (string, error) {
+// func getHash(msg proto.Message) (string, error)
+func getHash(msg protoreflect.Message) (string, error) {
 
-	redact(msg.ProtoReflect())
+	prMsg("Before cleaning:", msg)
+	msg_proto := proto.Clone(msg.Interface()).ProtoReflect()
+	redact(msg_proto)
+	prMsg("After cleaning for hash:", msg_proto)
 
-	bt, err := json.MarshalIndent(msg, "", "  ")
+	bt, err := json.MarshalIndent(msg_proto.Interface(), "", "  ")
 	if err != nil {
 		return "error:", err
 	}
 	byteSl := sha256.Sum256(bt)
 	return hex.EncodeToString(byteSl[:]), nil
+}
+
+//Set hash values in hash fields
+//!Attention! Hash fields should be initalized before, else SetHash can't see it
+func SetHash(msg protoreflect.Message) (err_sh error) {
+	err_sh = nil
+	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+
+		if fd.IsMap() {
+			if fd.MapValue().Kind() == protoreflect.MessageKind {
+				v.Map().Range(func(km protoreflect.MapKey, vm protoreflect.Value) bool {
+					err := SetHash(vm.Message())
+					if err != nil {
+						err_sh = err
+						return false
+					}
+					return true
+				})
+
+				if err_sh != nil {
+					return false
+				}
+			}
+		} else if fd.IsList() {
+			for list, i := v.List(), 0; i < list.Len(); i++ {
+				err := SetHash(list.Get(i).Message())
+				if err != nil {
+					err_sh = err
+					return false
+				}
+			}
+		} else if fd.Kind() == protoreflect.MessageKind {
+			err := SetHash(v.Message())
+			if err != nil {
+				err_sh = err
+				return false
+			}
+		}
+
+		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Hash).(bool) {
+			hash, err := getHash(msg)
+			if err != nil {
+				err_sh = err
+				return false
+			}
+			// v = protoreflect.ValueOfString(hash)//not work!
+
+			msg.Set(fd, protoreflect.ValueOfString(hash))
+			fmt.Println("hash:", hash)
+			fmt.Println("=================================================")
+		}
+
+		return true
+	})
+
+	return err_sh
+
+}
+
+func prMsg(s string, msg protoreflect.Message) {
+	bt1, err := json.MarshalIndent(msg.Interface(), "", "	")
+	if err != nil {
+		fmt.Println(s, "error:", err)
+	}
+	fmt.Println(s)
+	fmt.Println(string(bt1))
 }
