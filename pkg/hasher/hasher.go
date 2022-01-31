@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 
 	"google.golang.org/protobuf/proto"
 
@@ -14,7 +13,7 @@ import (
 )
 
 //Delete unmarked fields from messages.
-//Structs is implementation protobuf Messages in Go, and protoreflect kind of Go reflect, but it's own protobuf
+//Structs is a implementation protobuf Messages in Go, and protoreflect like Go-reflect
 func redact(msg protoreflect.Message) (save4hash bool) {
 	save4hash = false
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
@@ -69,13 +68,11 @@ func redact(msg protoreflect.Message) (save4hash bool) {
 	return save4hash
 }
 
-// func getHash(msg proto.Message) (string, error)
+// Making own copy of struct msg, cleaning it and returning hash
 func getHash(msg protoreflect.Message) (string, error) {
 
-	prMsg("Before cleaning:", msg)
 	msg_proto := proto.Clone(msg.Interface()).ProtoReflect()
 	redact(msg_proto)
-	prMsg("After cleaning for hash:", msg_proto)
 
 	bt, err := json.MarshalIndent(msg_proto.Interface(), "", "  ")
 	if err != nil {
@@ -85,7 +82,7 @@ func getHash(msg protoreflect.Message) (string, error) {
 	return hex.EncodeToString(byteSl[:]), nil
 }
 
-//Set hash values in hash fields
+//Setting hash values in hash fields
 //!Attention! Hash fields should be initalized before, else SetHash can't see it
 func SetHash(msg protoreflect.Message) (err_sh error) {
 	err_sh = nil
@@ -128,11 +125,8 @@ func SetHash(msg protoreflect.Message) (err_sh error) {
 				err_sh = err
 				return false
 			}
-			// v = protoreflect.ValueOfString(hash)//not work!
 
 			msg.Set(fd, protoreflect.ValueOfString(hash))
-			fmt.Println("hash:", hash)
-			fmt.Println("=================================================")
 		}
 
 		return true
@@ -140,13 +134,4 @@ func SetHash(msg protoreflect.Message) (err_sh error) {
 
 	return err_sh
 
-}
-
-func prMsg(s string, msg protoreflect.Message) {
-	bt1, err := json.MarshalIndent(msg.Interface(), "", "	")
-	if err != nil {
-		fmt.Println(s, "error:", err)
-	}
-	fmt.Println(s)
-	fmt.Println(string(bt1))
 }

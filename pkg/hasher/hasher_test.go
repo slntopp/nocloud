@@ -16,7 +16,8 @@ func prettyMsg(s string, msg proto.Message) {
 	if err != nil {
 		fmt.Println(s, "error:", err)
 	}
-	fmt.Println(s, string(bt1))
+	fmt.Println(s)
+	fmt.Println(string(bt1))
 }
 
 func initMessage() *services.Service {
@@ -25,24 +26,24 @@ func initMessage() *services.Service {
 	svm0 := make(map[string]*structpb.Value)
 	svm0["zero"] = sv0
 
-	sv1 := structpb.NewStringValue("true")
+	sv1 := structpb.NewStringValue("text")
 	svm1 := make(map[string]*structpb.Value)
 	svm1["one"] = sv1
 
 	is0 := instances.Instance{
-		Uuid:      "Uuid",
+		Uuid:      "Uuid0",
 		Title:     "Title0",
 		Config:    svm0,
 		Resources: svm1,
-		Hash:     "Instance0",
+		Hash:      "Instance0",
 	}
 
 	is1 := instances.Instance{
-		Uuid:      "Uuid",
+		Uuid:      "Uuid1",
 		Title:     "Title1",
 		Config:    svm1,
 		Resources: svm0,
-		Hash:     "Instance1",
+		Hash:      "Instance1",
 	}
 
 	iss := []*instances.Instance{&is0, &is1}
@@ -54,11 +55,12 @@ func initMessage() *services.Service {
 		Instances: iss,
 		Resources: svm0,
 		Data:      svm0,
-		Hash:     "InstancesGroup",
+		Hash:      "InstancesGroup",
 	}
 
 	ctx := make(map[string]*structpb.Value)
-	ctx["one"] = sv0
+	ctx["zero"] = sv0
+	ctx["one"] = sv1
 	igm := make(map[string]*instances.InstancesGroup)
 	igm["one"] = &ig
 
@@ -89,12 +91,6 @@ func TestRedact(t *testing.T) {
 			prettyMsg("Before:", tt.args)
 			redact(tt.args.ProtoReflect())
 			prettyMsg("After:", tt.args)
-
-			// msg_pm:=tt.args.ProtoReflect()
-			// msg1 :=proto.Clone(msg_pm.Interface())
-			// redact(msg1.ProtoReflect())
-			// prettyMsg("After Orig:", tt.args)
-			// prettyMsg("After Copy:", msg1)
 		})
 	}
 }
@@ -114,8 +110,7 @@ func TestGetHash(t *testing.T) {
 			SetHash(tt.args.ProtoReflect())
 			prettyMsg("Result:", tt.args)
 
-			if tt.args.Hash != "116797c42e80a0cae0646baa87a83ba9f28ebb54c5a96024103f149b909b96fc" {
-
+			if tt.args.Hash != "a63c667376ffb5867a9be1f2b6d46f2864319b2389816e455391ea0ecfdb6a96" {
 				t.Error("Non-expected ", tt.args.Hash)
 			}
 
