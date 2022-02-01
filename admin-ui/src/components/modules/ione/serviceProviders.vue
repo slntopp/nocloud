@@ -3,7 +3,7 @@
 		<v-row v-for="field in Object.keys(fields)" :key="field" align="center">
 			<v-col cols="3">
 				<v-subheader>
-					{{field}}
+					{{fields[field].subheader || field}}
 				</v-subheader>
 			</v-col>
 
@@ -16,6 +16,8 @@
 					:label="fields[field].label"
 					:rules="fields[field].rules"
 					:error-messages="errors[field]"
+					:type="fields[field].type"
+					v-bind="fields[field].bind || {}"
 				></v-text-field>
 			</v-col>
 		</v-row>
@@ -52,33 +54,42 @@ export default {
 	data: () => ({
 		errors: {
 			host: [],
-			credencials: [],
+			username: [],
+			password: [],
 			group: [],
 			schedule: [],
 			schedule_ds: [],
 		},
 		values: {
 			host: "",
-			credencials: "",
+			username: "",
+			password: "",
 			group: "",
 			schedule: "",
 			schedule_ds: "",
 		},
 		fields: {
 			host: {
-				type: 'domain',
+				type: 'text',
 				rules: [
 					(value) => !!value || 'Field is required',
 					(value) => !!value.match(/^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z0-9-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/) || 'Is not valid domain'
 				],
 				label: "example.com"
 			},
-			credencials: {
-				type: 'credencials',
+			username: {
+				type: 'text',
 				rules: [
 					(value) => !!value || 'Field is required'
 				],
-				label: "log:pass"
+				label: "username"
+			},
+			password: {
+				type: 'password',
+				rules: [
+					(value) => !!value || 'Field is required'
+				],
+				label: "password"
 			},
 			group: {
 				type: 'number',
@@ -86,10 +97,14 @@ export default {
 					(value) => !!value || 'Field is required',
 					(value) => value == Number(value) || 'wrong group id'
 				],
-				label: "100"
+				label: "100",
+				bind: {
+					min: 0
+				}
 			},
 			schedule: {
-				type: 'JSON',
+				type: 'text',
+				isJSON: true,
 				rules: [
 					(value) => !!value || 'Field is required',
 					(value) => isJSON(value) || "is not valid JSON"
@@ -97,7 +112,9 @@ export default {
 				label: "JSON"
 			},
 			schedule_ds: {
-				type: 'JSON',
+				type: 'text',
+				subheader: "schedule data store",
+				isJSON: true,
 				rules: [
 					(value) => !!value || 'Field is required',
 					(value) => isJSON(value) || "is not valid JSON"
@@ -139,8 +156,11 @@ export default {
 			if(this.values.host){
 				secrets.host = this.values.host;
 			}
-			if(this.values.credencials){
-				secrets.cred = this.values.credencials;
+			if(this.values.username){
+				secrets.user = this.values.username;
+			}
+			if(this.values.password){
+				secrets.pass = this.values.password;
 			}
 			if(this.values.group){
 				secrets.group = this.values.group;
@@ -178,8 +198,10 @@ export default {
 			switch (fieldName) {
 				case 'domain':
 					return this.secrets.host
-				case 'credencials':
-					return this.secrets.cred
+				case 'username':
+					return this.secrets.user
+				case 'password':
+					return this.secrets.pass
 				case 'group':
 					return this.secrets.group
 				case 'schedule':
