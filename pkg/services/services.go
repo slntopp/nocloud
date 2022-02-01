@@ -26,14 +26,15 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
-	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
+	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type ServicesServiceServer struct {
-	servicespb.UnimplementedServicesServiceServer
+	pb.UnimplementedServicesServiceServer
 	db driver.Database
 	ctrl graph.ServicesController
 	sp_ctrl graph.ServicesProvidersController
@@ -62,11 +63,11 @@ func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.
 	s.drivers[type_key] = client
 }
 
-func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *servicespb.CreateRequest) (*servicespb.TestConfigResponse, *graph.Namespace, error) {
+func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *pb.CreateRequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	response := &servicespb.TestConfigResponse{Result: true, Errors: make([]*servicespb.TestConfigError, 0)}
+	response := &pb.TestConfigResponse{Result: true, Errors: make([]*pb.TestConfigError, 0)}
 
 	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
 	if err != nil {
@@ -87,7 +88,7 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 		log.Debug("Validating Instances Group", zap.String("group", name))
 		groupType := group.GetType()
 
-		config_err := servicespb.TestConfigError{
+		config_err := pb.TestConfigError{
 			InstanceGroup: name,
 		}
 
@@ -112,9 +113,9 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 		}
 		if !res.GetResult() {
 			response.Result = false
-			errors := make([]*servicespb.TestConfigError, 0)
+			errors := make([]*pb.TestConfigError, 0)
 			for _, confErr := range res.Errors {
-				errors = append(errors, &servicespb.TestConfigError{
+				errors = append(errors, &pb.TestConfigError{
 					Error: confErr.Error,
 					Instance: confErr.Instance,
 					InstanceGroup: name,
@@ -129,14 +130,14 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 	return response, &namespace, nil
 }
 
-func (s *ServicesServiceServer) TestConfig(ctx context.Context, request *servicespb.CreateRequest) (*servicespb.TestConfigResponse, error) {
+func (s *ServicesServiceServer) TestConfig(ctx context.Context, request *pb.CreateRequest) (*pb.TestConfigResponse, error) {
 	log := s.log.Named("TestServiceConfig")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 	response, _, err := s.DoTestServiceConfig(ctx, log, request)
 	return response, err
 }
 
-func (s *ServicesServiceServer) Create(ctx context.Context, request *servicespb.CreateRequest) (*servicespb.Service, error) {
+func (s *ServicesServiceServer) Create(ctx context.Context, request *pb.CreateRequest) (*pb.Service, error) {
 	log := s.log.Named("CreateService")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 	testResult, namespace, err := s.DoTestServiceConfig(ctx, log, request)
@@ -162,7 +163,7 @@ func (s *ServicesServiceServer) Create(ctx context.Context, request *servicespb.
 	return service, nil
 }
 
-func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRequest) (*servicespb.UpResponse, error) {
+func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpResponse, error) {
 	log := s.log.Named("Up")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
@@ -198,7 +199,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
-	result := &servicespb.UpResponse{Errors: make([]*servicespb.UpError, 0)}
+	result := &pb.UpResponse{Errors: make([]*pb.UpError, 0)}
 	for _, group := range service.GetInstancesGroups() {
 		c, ok := contexts[group.GetUuid()]
 		if !ok {
@@ -211,7 +212,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
 			s.log.Error("Error deploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
-			result.Errors = append(result.Errors, &servicespb.UpError{
+			result.Errors = append(result.Errors, &pb.UpError{
 				Data: map[string]string{
 					"group": group.GetUuid(),
 					"error": err.Error(),
@@ -225,7 +226,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		// TODO: Add cleanups
 		if len(group.Instances) != len(response.GetGroup().GetInstances()) {
 			s.log.Error("Instances config changed by Driver")
-			result.Errors = append(result.Errors, &servicespb.UpError{
+			result.Errors = append(result.Errors, &pb.UpError{
 				Data: map[string]string{
 					"group": group.GetUuid(),
 					"error": "Instances config changed by Driver",
@@ -241,7 +242,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		err = s.ctrl.Provide(ctx, sp.ID, service.ID, group.GetUuid())
 		if err != nil {
 			s.log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
-			result.Errors = append(result.Errors, &servicespb.UpError{
+			result.Errors = append(result.Errors, &pb.UpError{
 				Data: map[string]string{
 					"group": group.GetUuid(),
 					"error": err.Error(),
@@ -260,10 +261,10 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
-	return &servicespb.UpResponse{}, nil
+	return &pb.UpResponse{}, nil
 }
 
-func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.DownRequest) (*servicespb.DownResponse, error) {
+func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownRequest) (*pb.DownResponse, error) {
 	log := s.log.Named("Down")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
@@ -337,10 +338,10 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
-	return &servicespb.DownResponse{}, nil
+	return &pb.DownResponse{}, nil
 }
 
-func (s *ServicesServiceServer) Get(ctx context.Context, request *servicespb.GetRequest) (res *servicespb.Service, err error) {
+func (s *ServicesServiceServer) Get(ctx context.Context, request *pb.GetRequest) (res *pb.Service, err error) {
 	log := s.log.Named("Get")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
@@ -361,7 +362,7 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *servicespb.Get
 	return r.Service, nil
 }
 
-func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.ListRequest) (response *servicespb.ListResponse, err error) {
+func (s *ServicesServiceServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.ListResponse, err error) {
 	log := s.log.Named("List")
 	log.Debug("Request received", zap.String("namespace", request.GetNamespace()), zap.String("show_deleted", request.GetShowDeleted()))
 
@@ -374,7 +375,7 @@ func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.Li
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
 	}
 
-	response = &servicespb.ListResponse{Pool: make([]*servicespb.Service, len(r))}
+	response = &pb.ListResponse{Pool: make([]*pb.Service, len(r))}
 	for i, service := range r {
 		response.Pool[i] = service.Service
 	}
@@ -382,7 +383,7 @@ func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.Li
 	return response, nil
 }
 
-func (s *ServicesServiceServer) Delete(ctx context.Context, request *servicespb.DeleteRequest) (response *servicespb.DeleteResponse, err error) {
+func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
 	log := s.log.Named("Delete")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
@@ -398,7 +399,11 @@ func (s *ServicesServiceServer) Delete(ctx context.Context, request *servicespb.
 	err = s.ctrl.Delete(ctx, r)
 	if err != nil {
 		log.Error("Error Deleting Service", zap.Error(err))
-		return &servicespb.DeleteResponse{Result: false, Error: err.Error() }, nil
+		return &pb.DeleteResponse{Result: false, Error: err.Error() }, nil
+	}
+	
+	return &pb.DeleteResponse{Result: true}, nil
+}
 	}
 	
 	return &servicespb.DeleteResponse{Result: true}, nil
