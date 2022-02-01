@@ -37,14 +37,14 @@
 		>
 
 			<template
-				v-slot:[`item.hash`]="{ item }"
+				v-slot:[`item.hash`]="{ item, index }"
 			>
 				<v-btn
 					icon
-					@click="addToClipboard(item.hash, item.index)"
+					@click="addToClipboard(item.hash, index)"
 				>
 					<v-icon
-						v-if="copyed == item.index"
+						v-if="copyed == index"
 					>
 						mdi-check
 					</v-icon>
@@ -151,6 +151,8 @@ export default {
 		addToClipboard(text, index){
 			navigator.clipboard.writeText(text)
 			.then(()=>{
+				console.log(index);
+				console.log(this.copyed);
 				this.copyed = index
 			})
 			.catch(res=>{
