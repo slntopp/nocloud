@@ -321,17 +321,18 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 		client := *c.client
 		sp := c.sp
 
-		_, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
+		res, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
 			s.log.Error("Error undeploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
 			continue
 		}
-		group.Data = nil
+		group = res.GetGroup()
 		err = s.ctrl.Unprovide(ctx, group.GetUuid())
 		if err != nil {
 			s.log.Error("Error unlinking group from ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
 			continue
 		}
+		service.InstancesGroups[group.GetUuid()] = group
 	}
 
 	service.Status = "down"

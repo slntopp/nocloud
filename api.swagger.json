@@ -1459,7 +1459,12 @@
       }
     },
     "drivervanillaDownResponse": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "group": {
+          "$ref": "#/definitions/instancesInstancesGroup"
+        }
+      }
     },
     "drivervanillaGetTypeResponse": {
       "type": "object",
