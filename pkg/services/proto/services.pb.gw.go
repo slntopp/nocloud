@@ -462,14 +462,34 @@ func request_ServicesService_PerformServiceAction_0(ctx context.Context, marshal
 		_   = err
 	)
 
-	val, ok = pathParams["uuid"]
+	val, ok = pathParams["sp"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "uuid")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "sp")
 	}
 
-	protoReq.Uuid, err = runtime.String(val)
+	protoReq.Sp, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "uuid", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "sp", err)
+	}
+
+	val, ok = pathParams["group"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "group")
+	}
+
+	protoReq.Group, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "group", err)
+	}
+
+	val, ok = pathParams["instance"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "instance")
+	}
+
+	protoReq.Instance, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "instance", err)
 	}
 
 	val, ok = pathParams["action"]
@@ -506,14 +526,34 @@ func local_request_ServicesService_PerformServiceAction_0(ctx context.Context, m
 		_   = err
 	)
 
-	val, ok = pathParams["uuid"]
+	val, ok = pathParams["sp"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "uuid")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "sp")
 	}
 
-	protoReq.Uuid, err = runtime.String(val)
+	protoReq.Sp, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "uuid", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "sp", err)
+	}
+
+	val, ok = pathParams["group"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "group")
+	}
+
+	protoReq.Group, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "group", err)
+	}
+
+	val, ok = pathParams["instance"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "instance")
+	}
+
+	protoReq.Instance, err = runtime.String(val)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "instance", err)
 	}
 
 	val, ok = pathParams["action"]
@@ -727,7 +767,7 @@ func RegisterServicesServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services.ServicesService/PerformServiceAction", runtime.WithHTTPPathPattern("/services/{uuid}/action/{action}"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services.ServicesService/PerformServiceAction", runtime.WithHTTPPathPattern("/services/{sp}/{group}/{instance}/action/{action}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -949,7 +989,7 @@ func RegisterServicesServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services.ServicesService/PerformServiceAction", runtime.WithHTTPPathPattern("/services/{uuid}/action/{action}"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services.ServicesService/PerformServiceAction", runtime.WithHTTPPathPattern("/services/{sp}/{group}/{instance}/action/{action}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -985,7 +1025,7 @@ var (
 
 	pattern_ServicesService_Down_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2}, []string{"services", "uuid", "down"}, ""))
 
-	pattern_ServicesService_PerformServiceAction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2, 1, 0, 4, 1, 5, 2}, []string{"services", "uuid", "action"}, ""))
+	pattern_ServicesService_PerformServiceAction_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 1, 0, 4, 1, 5, 2, 1, 0, 4, 1, 5, 3, 2, 4, 1, 0, 4, 1, 5, 4}, []string{"services", "sp", "group", "instance", "action"}, ""))
 )
 
 var (

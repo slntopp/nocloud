@@ -65,9 +65,11 @@ message DeleteResponse {
 }
 
 message PerformActionRequest {
-    string uuid = 1;
-    string action = 2;
-    map<string, google.protobuf.Value> data = 3;
+    string sp = 1;
+    string group = 2;
+    string instance = 3;
+    string action = 4;
+    map<string, google.protobuf.Value> data = 5;
 }
 
 message PerformActionResponse {
@@ -163,7 +165,7 @@ service ServicesService {
     rpc PerformServiceAction(nocloud.services.PerformActionRequest)
         returns (nocloud.services.PerformActionResponse) {
         option (google.api.http) = {
-            post: "/services/{uuid}/action/{action}",
+            post: "/services/{sp}/{group}/{instance}/action/{action}",
             body: "*"
         };
     };
