@@ -81,8 +81,8 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service)
 			return err
 		}
 	}
-	meta, err := ctrl.col.UpdateDocument(ctx, service.GetUuid(), service)
-	ctrl.log.Debug("UpdateDocument.Result", zap.Any("meta", meta), zap.Error(err))
+	meta, err := ctrl.col.ReplaceDocument(ctx, service.GetUuid(), service)
+	ctrl.log.Debug("ReplaceDocument.Result", zap.Any("meta", meta), zap.Error(err))
 	return err
 }
 

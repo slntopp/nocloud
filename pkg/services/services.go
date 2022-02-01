@@ -326,13 +326,13 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 			s.log.Error("Error undeploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
 			continue
 		}
-		group = res.GetGroup()
+		group := res.GetGroup()
 		err = s.ctrl.Unprovide(ctx, group.GetUuid())
 		if err != nil {
 			s.log.Error("Error unlinking group from ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
 			continue
 		}
-		service.InstancesGroups[key] = group
+		service.Service.InstancesGroups[key] = group
 	}
 
 	service.Status = "down"
