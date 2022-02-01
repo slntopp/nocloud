@@ -192,9 +192,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
 
-	service.Status = "starting"
-	s.log.Debug("Updated Service", zap.Any("service", service))
-	err = s.ctrl.Update(ctx, service.Service)
+	err = s.ctrl.SetStatus(ctx, service, "starting")
 	if err != nil {
 		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -256,7 +254,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 	
 	service.Status = "up"
 	s.log.Debug("Updated Service", zap.Any("service", service))
-	err = s.ctrl.Update(ctx, service.Service)
+	err = s.ctrl.Update(ctx, service.Service, false)
 	if err != nil {
 		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -304,9 +302,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
 
-	service.Status = "stopping"
-	s.log.Debug("Updated Service", zap.Any("service", service))
-	err = s.ctrl.Update(ctx, service.Service)
+	err = s.ctrl.SetStatus(ctx, service, "stopping")
 	if err != nil {
 		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -335,9 +331,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 		service.Service.InstancesGroups[key] = group
 	}
 
-	service.Status = "down"
-	s.log.Debug("Updated Service", zap.Any("service", service))
-	err = s.ctrl.Update(ctx, service.Service)
+	err = s.ctrl.SetStatus(ctx, service, "down")
 	if err != nil {
 		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -401,13 +395,10 @@ func (s *ServicesServiceServer) Delete(ctx context.Context, request *servicespb.
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
-	ok, err := s.ctrl.Delete(ctx, r)
-	if !ok {
-		return &servicespb.DeleteResponse{Result: false, Error: err.Error() }, nil
-	}
+	err = s.ctrl.Delete(ctx, r)
 	if err != nil {
 		log.Error("Error Deleting Service", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error Deleting Service")
+		return &servicespb.DeleteResponse{Result: false, Error: err.Error() }, nil
 	}
 	
 	return &servicespb.DeleteResponse{Result: true}, nil
