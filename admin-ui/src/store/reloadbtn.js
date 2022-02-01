@@ -5,6 +5,10 @@ export default {
 		onclick: {
 			func: null,
 			params: []
+		},
+		btnStates: {
+			disabled: false,
+			visible: true,
 		}
 	},
 	mutations: {
@@ -18,6 +22,9 @@ export default {
 		},
 		setLoading(state, data){
 			state.loading = data
+		},
+		setState(state, {stateName, value}){
+			this.state.btnStates[stateName] = value
 		}
 	},
 	actions: {
@@ -32,6 +39,9 @@ export default {
 	getters: {
 		isLoading(state){
 			return state.loading
+		},
+		states(state){
+			return state.btnStates
 		}
 	}
 }
