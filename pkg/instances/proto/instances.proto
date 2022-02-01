@@ -12,7 +12,7 @@ message Instance {
     map<string, google.protobuf.Value> resources = 4
         [(nocloud.hasher.hashed) = true];
     map<string, google.protobuf.Value> data = 5;
-    string hash = 6;
+    string hash = 6 [(nocloud.hasher.hash) = true];
 }
 
 message InstancesGroup {
@@ -20,12 +20,11 @@ message InstancesGroup {
     string type = 2;
     map<string, google.protobuf.Value> config = 3
         [(nocloud.hasher.hashed) = true];
-    repeated Instance instances = 4
-        [(nocloud.hasher.hashed) = true];
+    repeated Instance instances = 4;
     map<string, google.protobuf.Value> resources = 5
         [(nocloud.hasher.hashed) = true];
     map<string, google.protobuf.Value> data = 6;
-    string hash = 7;
+    string hash = 7 [(nocloud.hasher.hash) = true];
 }
 
 message TestInstancesGroupConfigRequest {
