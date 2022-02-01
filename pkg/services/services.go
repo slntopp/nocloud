@@ -432,10 +432,30 @@ func (s *ServicesServiceServer) Invoke(ctx context.Context, req *pb.PerformActio
 		return nil, status.Errorf(codes.NotFound, "Group '%s' doesn't exist", req.GetGroup())
 	}
 
+	prov, err := s.ctrl.GetProvisions(ctx, r.DocumentMeta.ID.String())
+	if err != nil {
+		log.Debug("Error getting Service Provisions from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service Provisions not Found in DB")
+	}
+
+	spid, ok := prov[req.GetGroup()]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "Provision for Group '%s' doesn't exist", req.GetGroup())
+	}
+	
+	sp, err := s.sp_ctrl.Get(ctx, spid)
+	if err != nil {
+		log.Debug("Error getting ServicesProvider from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
+	}
+
 	client, ok := s.drivers[igroup.GetType()]
 	if !ok {
 		return nil, status.Errorf(codes.NotFound, "Driver type '%s' not registered", igroup.GetType())
 	}
 
-	return client.Invoke(ctx, req)
+	return client.Invoke(ctx, &driverpb.PerformActionRequest{
+		Request: req,
+		ServicesProvider: sp.ServicesProvider,
+	})
 }

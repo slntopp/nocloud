@@ -1682,6 +1682,29 @@
         }
       }
     },
+    "nocloudservicesPerformActionRequest": {
+      "type": "object",
+      "properties": {
+        "sp": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "instance": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
     "nocloudservicesUpResponse": {
       "type": "object",
       "properties": {
