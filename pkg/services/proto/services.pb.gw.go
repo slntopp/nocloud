@@ -774,7 +774,7 @@ func RegisterServicesServiceHandlerFromEndpoint(ctx context.Context, mux *runtim
 
 // RegisterServicesServiceHandler registers the http handlers for service ServicesService to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterServicesServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn grpc.ClientConnInterface) error {
+func RegisterServicesServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
 	return RegisterServicesServiceHandlerClient(ctx, mux, NewServicesServiceClient(conn))
 }
 
