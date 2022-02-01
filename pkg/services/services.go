@@ -312,7 +312,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
-	for _, group := range service.GetInstancesGroups() {		
+	for key, group := range service.GetInstancesGroups() {		
 		c, ok := contexts[group.GetUuid()]
 		if !ok {
 			log.Debug("Instance Group has no context, i.e. provision", zap.String("group", group.GetUuid()), zap.String("service", service.GetUuid()))
@@ -332,7 +332,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 			s.log.Error("Error unlinking group from ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
 			continue
 		}
-		service.InstancesGroups[group.GetUuid()] = group
+		service.InstancesGroups[key] = group
 	}
 
 	service.Status = "down"
