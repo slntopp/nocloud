@@ -37,14 +37,16 @@ message UpRequest {
 }
 
 message UpResponse {
-    nocloud.instances.InstancesGroup   group = 1;
+    nocloud.instances.InstancesGroup group = 1;
 }
 
 message DownRequest {
     nocloud.instances.InstancesGroup group = 1;
     nocloud.services_providers.ServicesProvider services_provider = 2;
 }
-message DownResponse {}
+message DownResponse {
+    nocloud.instances.InstancesGroup group = 1;
+}
 
 service DriverService {
     rpc TestServiceProviderConfig(nocloud.instance.driver.vanilla.TestServiceProviderConfigRequest) returns (nocloud.services_providers.TestResponse);
