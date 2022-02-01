@@ -173,7 +173,7 @@ func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.
 
 // Delete Link between Service/Group and Services Provider group have beem Unprovisioned(undeployed) from
 func (ctrl *ServicesController) Unprovide(ctx context.Context, group string) (err error) {
-	ctrl.log.Debug("Unproviding group from service provider")
+	ctrl.log.Debug("Unproviding group from service provider", zap.String("group", group))
 	g, _ := ctrl.db.Graph(ctx, schema.SERVICES_GRAPH.Name)
 	edge, _, _ := g.EdgeCollection(ctx, schema.SP2SERV)
 	_, err = edge.RemoveDocument(ctx, group)
