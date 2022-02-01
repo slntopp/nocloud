@@ -215,7 +215,6 @@ export default {
 	}),
 	created(){
 		const types = require.context('@/components/modules/', true, /serviceProviders\.vue$/)
-		console.log(types.keys());
 		types.keys().forEach(key => {
 			const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceProviders\.vue/i);
 			if (matched && matched.length > 1) {
