@@ -175,6 +175,7 @@ pre {
 	margin: 5px;
 	background-color: var(--v-background-light-base);
 	border-radius: 4px;
+	white-space: pre-wrap;
 }
 .string {
 	color: green; 
