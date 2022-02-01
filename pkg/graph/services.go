@@ -229,14 +229,18 @@ func (ctrl *ServicesController) GetProvisions(ctx context.Context, service strin
 	return r, nil
 }
 
-func (ctrl *ServicesController) Delete(ctx context.Context, s *Service) (ok bool, err error) {
+func (ctrl *ServicesController) Delete(ctx context.Context, s *Service) (err error) {
 	log := ctrl.log.Named("Service.Delete")
 	log.Debug("Deleting Service")
 	if s.GetStatus() != "init" {
-		return false, fmt.Errorf("Cannot delete Service, status: %s", s.GetStatus())
+		return fmt.Errorf("cannot delete Service, status: %s", s.GetStatus())
 	}
 
-	s.Status = "del"
-	err = ctrl.Update(ctx, s.Service)
-	return true, err
+	return ctrl.SetStatus(ctx, s, "del")
+}
+
+func (ctrl *ServicesController) SetStatus(ctx context.Context, s *Service, status string) (err error) {
+	// TODO: check if valid status message
+	s.Status = status
+	return ctrl.Update(ctx, s.Service, false)
 }
