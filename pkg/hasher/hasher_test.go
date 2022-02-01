@@ -12,55 +12,37 @@ import (
 )
 
 func prettyMsg(s string, msg proto.Message) {
-	bt1, err := json.MarshalIndent(msg, "", "	")
+	bt1, err := json.MarshalIndent(msg, "", "  ")
 	if err != nil {
 		fmt.Println(s, "error:", err)
 	}
-	fmt.Println(s)
-	fmt.Println(string(bt1))
+	fmt.Println(s, string(bt1))
 }
 
 func initMessage() *services.Service {
 
-	sv0 := structpb.NewBoolValue(true)
-	svm0 := make(map[string]*structpb.Value)
-	svm0["zero"] = sv0
+	sv := structpb.NewBoolValue(true)
+	svm := make(map[string]*structpb.Value)
+	svm["one"] = sv
 
-	sv1 := structpb.NewStringValue("text")
-	svm1 := make(map[string]*structpb.Value)
-	svm1["one"] = sv1
-
-	is0 := instances.Instance{
-		Uuid:      "Uuid0",
-		Title:     "Title0",
-		Config:    svm0,
-		Resources: svm1,
-		Hash:      "Instance0",
+	is := instances.Instance{
+		Uuid:  "Uuid",
+		Title: "Title",
 	}
 
-	is1 := instances.Instance{
-		Uuid:      "Uuid1",
-		Title:     "Title1",
-		Config:    svm1,
-		Resources: svm0,
-		Hash:      "Instance1",
-	}
-
-	iss := []*instances.Instance{&is0, &is1}
+	iss := []*instances.Instance{&is, &is}
 
 	ig := instances.InstancesGroup{
 		Uuid:      "Uuid",
 		Type:      "Type",
-		Config:    svm0,
+		Config:    svm,
 		Instances: iss,
-		Resources: svm0,
-		Data:      svm0,
-		Hash:      "InstancesGroup",
+		Resources: svm,
+		Data:      svm,
 	}
 
 	ctx := make(map[string]*structpb.Value)
-	ctx["zero"] = sv0
-	ctx["one"] = sv1
+	ctx["one"] = sv
 	igm := make(map[string]*instances.InstancesGroup)
 	igm["one"] = &ig
 
@@ -107,11 +89,15 @@ func TestGetHash(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			SetHash(tt.args.ProtoReflect())
-			prettyMsg("Result:", tt.args)
+			v, err := GetHash(tt.args)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
-			if tt.args.Hash != "a63c667376ffb5867a9be1f2b6d46f2864319b2389816e455391ea0ecfdb6a96" {
-				t.Error("Non-expected ", tt.args.Hash)
+			if v != "88e34d66e1f48b6cbac6a778e3eb9abbde4378326443503a88654bb129903f79" {
+
+				t.Error("Non-expected ", v)
 			}
 
 		})
