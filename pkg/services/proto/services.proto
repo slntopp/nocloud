@@ -29,8 +29,9 @@ message Service {
     string status = 4;
     map<string, google.protobuf.Value> context = 5
         [(nocloud.hasher.hashed) = true];
-    map<string, nocloud.instances.InstancesGroup> instances_groups = 6;
-    string hash = 7 [(nocloud.hasher.hash) = true];
+    map<string, nocloud.instances.InstancesGroup> instances_groups = 6
+        [(nocloud.hasher.hashed) = true];
+    string hash = 7;
 }
 
 message TestConfigError {
