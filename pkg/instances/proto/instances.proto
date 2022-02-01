@@ -20,7 +20,8 @@ message InstancesGroup {
     string type = 2;
     map<string, google.protobuf.Value> config = 3
         [(nocloud.hasher.hashed) = true];
-    repeated Instance instances = 4;
+    repeated Instance instances = 4
+        [(nocloud.hasher.hashed) = true];
     map<string, google.protobuf.Value> resources = 5
         [(nocloud.hasher.hashed) = true];
     map<string, google.protobuf.Value> data = 6;

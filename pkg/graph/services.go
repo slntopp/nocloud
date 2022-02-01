@@ -62,6 +62,13 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 			return nil, err
 		}
 	}
+
+	service.Hash = "init"
+	err := hasher.SetHash(service.ProtoReflect())
+	if err != nil {
+		return nil, err
+	}
+
 	service.Status = "init"
 	meta, err := ctrl.col.CreateDocument(ctx, service)
 	if err != nil {
@@ -73,14 +80,23 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 }
 
 // Update Service and underlaying entities and store in DB
-func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service) (error) {
+func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service, hash bool) (error) {
 	ctrl.log.Debug("Updating Service", zap.Any("service", service))
 	for _, ig := range service.GetInstancesGroups() {
-		err := ctrl.ig_ctrl.Update(ctx, ig)
+		err := ctrl.ig_ctrl.Update(ctx, ig, hash)
 		if err != nil {
 			return err
 		}
 	}
+
+	if hash {
+		service.Hash = "init"
+		err := hasher.SetHash(service.ProtoReflect())
+		if err != nil {
+			return err
+		}
+	}
+
 	meta, err := ctrl.col.ReplaceDocument(ctx, service.GetUuid(), service)
 	ctrl.log.Debug("ReplaceDocument.Result", zap.Any("meta", meta), zap.Error(err))
 	return err

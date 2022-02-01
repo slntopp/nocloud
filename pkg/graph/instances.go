@@ -56,10 +56,14 @@ func (ctrl *InstancesController) Create(ctx context.Context, instance *pb.Instan
 	}
 
 	instance.Uuid = id.String()
+	instance.Hash = ""
 	return nil
 }
 
-func (ctrl *InstancesController) Update(ctx context.Context, instance *pb.Instance) (error) {
+func (ctrl *InstancesController) Update(ctx context.Context, instance *pb.Instance, hash bool) (error) {
 	ctrl.log.Debug("Updating Instance", zap.Any("instance", instance))
+	if hash {
+		instance.Hash = ""
+	}
 	return nil
 }
