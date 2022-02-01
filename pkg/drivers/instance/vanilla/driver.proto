@@ -49,7 +49,8 @@ message DownResponse {
 
 message PerformActionRequest {
     nocloud.services.PerformActionRequest request = 1;
-    nocloud.services_providers.ServicesProvider services_provider = 2;
+    nocloud.instances.InstancesGroup group = 2;
+    nocloud.services_providers.ServicesProvider services_provider = 3;
 }
 
 service DriverService {

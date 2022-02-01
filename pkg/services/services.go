@@ -456,6 +456,7 @@ func (s *ServicesServiceServer) Invoke(ctx context.Context, req *pb.PerformActio
 
 	return client.Invoke(ctx, &driverpb.PerformActionRequest{
 		Request: req,
+		Group: igroup,
 		ServicesProvider: sp.ServicesProvider,
 	})
 }
