@@ -30,7 +30,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type ServicesServiceServer struct {
@@ -396,6 +395,11 @@ func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRe
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
+	ok := graph.HasAccess(ctx, s.db, requestor, r.ID.String(), access.MGMT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
+	}
+
 	err = s.ctrl.Delete(ctx, r)
 	if err != nil {
 		log.Error("Error Deleting Service", zap.Error(err))
@@ -404,7 +408,34 @@ func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRe
 	
 	return &pb.DeleteResponse{Result: true}, nil
 }
+
+func (s *ServicesServiceServer) Invoke(ctx context.Context, req *pb.PerformActionRequest) (res *pb.PerformActionResponse, err error) {
+	log := s.log.Named("Invoke")
+	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	r, err := s.ctrl.Get(ctx, req.GetSp())
+	if err != nil {
+		log.Debug("Error getting Service from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
-	
-	return &servicespb.DeleteResponse{Result: true}, nil
+
+	ok := graph.HasAccess(ctx, s.db, requestor, r.ID.String(), access.MGMT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	}
+
+	igroup, ok := r.GetInstancesGroups()[req.GetGroup()]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "Group '%s' doesn't exist", req.GetGroup())
+	}
+
+	client, ok := s.drivers[igroup.GetType()]
+	if !ok {
+		return nil, status.Errorf(codes.NotFound, "Driver type '%s' not registered", igroup.GetType())
+	}
+
+	return client.Invoke(ctx, req)
 }
