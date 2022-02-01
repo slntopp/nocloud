@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
+	hasher "github.com/slntopp/nocloud/pkg/hasher"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
@@ -73,7 +74,7 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 	meta, err := ctrl.col.CreateDocument(ctx, service)
 	if err != nil {
 		ctrl.log.Debug("Error creating document", zap.Error(err))
-		return nil, errors.New("Error creating document")
+		return nil, errors.New("error creating document")
 	}
 	service.Uuid = meta.ID.Key()
 	return &Service{service, meta}, nil
@@ -109,7 +110,7 @@ func (ctrl *ServicesController) Get(ctx context.Context, id string) (*Service, e
 	meta, err := ctrl.col.ReadDocument(ctx, id, &service)
 	if err != nil {
 		ctrl.log.Debug("Error reading document(Service)", zap.Error(err))
-		return nil, errors.New("Error reading document")
+		return nil, errors.New("error reading document")
 	}
 	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Any("service", &service))
 	service.Uuid = meta.ID.Key()
