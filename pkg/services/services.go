@@ -181,13 +181,13 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 		sp, err := s.sp_ctrl.Get(ctx, sp_id)
 		if err != nil {
 			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Error getting ServiceProvider(%s)", sp_id))
+			return nil, status.Errorf(codes.InvalidArgument, "Error getting ServiceProvider(%s)", sp_id)
 		}
 		
 		groupType := group.GetType()
 		client, ok := s.drivers[groupType]
 		if !ok {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver of type '%s' not registered", groupType))
+			return nil, status.Errorf(codes.InvalidArgument, "Driver of type '%s' not registered", groupType)
 		}
 		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
@@ -290,13 +290,13 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 		sp, err := s.sp_ctrl.Get(ctx, sp_id)
 		if err != nil {
 			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Error getting ServiceProvider(%s)", sp_id))
+			return nil, status.Errorf(codes.InvalidArgument, "Error getting ServiceProvider(%s)", sp_id)
 		}
 
 		groupType := group.GetType()
 		client, ok := s.drivers[groupType]
 		if !ok {
-			return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Driver of type '%s' not registered", groupType))
+			return nil, status.Errorf(codes.InvalidArgument, "Driver of type '%s' not registered", groupType)
 		}
 
 		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}

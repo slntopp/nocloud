@@ -80,7 +80,7 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 
 	client, ok := s.drivers[req.GetType()]
 	if !ok {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("Driver type '%s' not registered", req.GetType()))
+		return nil, status.Errorf(codes.NotFound, "Driver type '%s' not registered", req.GetType())
 	}
 
 	tfc, ok := ctx.Value(nocloud.TestFromCreate).(bool)
@@ -89,7 +89,7 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 		for ext, data := range req.GetExtentions() {
 			client, ok := s.extention_servers[ext]
 			if !ok {
-				return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
+				return nil, status.Errorf(codes.NotFound, "Extention Server type '%s' not registered", req.GetType())
 			}
 			res, err := client.Test(ctx, &sppb.ServicesProvidersExtentionData{
 				Data: data,
@@ -132,7 +132,7 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 		client, ok := s.extention_servers[ext]
 		if !ok {
 			s.UnregisterExtentions(ctx, log, sp)
-			return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
+			return nil, status.Errorf(codes.NotFound, "Extention Server type '%s' not registered", req.GetType())
 		}
 		res, err := client.Register(ctx, &sppb.ServicesProvidersExtentionData{
 			Data: data,
@@ -143,8 +143,7 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 		}
 		if !res.Result {
 			s.UnregisterExtentions(ctx, log, sp)
-			err := fmt.Sprintf("Extention '%s': %s", ext, res.Error)
-			return req, status.Error(codes.Internal, err)
+			return req, status.Errorf(codes.Internal, "Extention '%s': %s", ext, res.Error)
 		}
 	}
 
