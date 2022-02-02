@@ -81,6 +81,8 @@ export default {
 			group: [],
 			schedule: [],
 			schedule_ds: [],
+			public_ip_pool: [],
+			private_vnets_pool: [],
 		},
 		values: {
 			host: "",
@@ -89,6 +91,8 @@ export default {
 			group: "",
 			schedule: "",
 			schedule_ds: "",
+			public_ip_pool : "",
+			private_vnets_pool: "",
 		},
 		fields: {
 			host: {
@@ -149,7 +153,29 @@ export default {
 					(value) => isJSON(value) || "is not valid JSON"
 				],
 				label: "JSON"
-			}
+			},
+			public_ip_pool: {
+				type: 'number',
+				subheader: "public ip pool",
+				rules: [
+					(value) => !!value || 'Field is required',
+				],
+				label: "pip",
+				bind: {
+					min: 0
+				}
+			},
+			private_vnets_pool: {
+				type: 'number',
+				subheader: "private vnets pool",
+				rules: [
+					(value) => !!value || 'Field is required',
+				],
+				label: "pvp",
+				bind: {
+					min: 0
+				}
+			},
 		}
 	}),
 	methods: {
@@ -192,23 +218,31 @@ export default {
 				secrets.pass = this.values.password;
 			}
 			if(this.values.group){
-				secrets.group = this.values.group;
+				secrets.group = +this.values.group;
 			}
 
 			const vars = {}
 			if(this.values.schedule){
 				if(isJSON(this.values.schedule)){
 					vars.sched = JSON.parse(this.values.schedule);
+					errors.sched = []
 				} else {
-					errors.sched = "is not valid JSON"
+					errors.sched = ["is not valid JSON"]
 				}
 			}
 			if(this.values.schedule_ds){
 				if(isJSON(this.values.schedule_ds)){
 					vars.sched_ds = JSON.parse(this.values.schedule_ds);
+					errors.sched_ds = []
 				} else {
-					errors.sched_ds = "is not valid JSON"
+					errors.sched_ds = ["is not valid JSON"]
 				}
+			}
+			if(this.values.public_ip_pool){
+				vars.public_ip_pool = {value: {default: +this.values.public_ip_pool}}
+			}
+			if(this.values.private_vnets_pool){
+				vars.private_vnets_pool = {value: {default: +this.values.private_vnets_pool}}
 			}
 
 			const result = {
@@ -237,6 +271,10 @@ export default {
 					return JSON.stringify(this.vars.sched)
 				case 'schedule_ds':
 					return JSON.stringify(this.vars.sched_ds)
+				case 'schedule':
+					return this.vars.public_ip_pool.value.default
+				case 'schedule_ds':
+					return this.vars.private_vnets_pool.value.default
 				default:
 					return "";
 			}
