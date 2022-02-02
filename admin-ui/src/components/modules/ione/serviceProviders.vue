@@ -271,10 +271,10 @@ export default {
 					return JSON.stringify(this.vars.sched)
 				case 'schedule_ds':
 					return JSON.stringify(this.vars.sched_ds)
-				case 'schedule':
-					return this.vars.public_ip_pool.value.default
-				case 'schedule_ds':
-					return this.vars.private_vnets_pool.value.default
+				case 'public_ip_pool':
+					return this.vars.public_ip_pool?.value?.default ?? ""
+				case 'private_vnets_pool':
+					return this.vars.private_vnets_pool?.value?.default ?? ""
 				default:
 					return "";
 			}
