@@ -322,7 +322,7 @@ export default {
 			this.showSnackbarError(opts);
 		},
 		addExtention(){
-			this.extentions.data[this.extentions.selected] = {};
+			this.$set(this.extentions.data, this.extentions.selected, {})
 			this.extentions.selected = ""
 		},
 		removeExtention(extention){
