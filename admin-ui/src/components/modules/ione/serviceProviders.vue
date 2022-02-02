@@ -4,6 +4,25 @@
 			<v-col cols="3">
 				<v-subheader>
 					{{fields[field].subheader || field}}
+
+					<v-tooltip
+						v-if="field == 'host' && hostWarning"
+						bottom
+						color="warning"
+					>
+						<template v-slot:activator="{ on, attrs }">
+							<v-icon
+								class="ml-2"
+								color="warning"
+								v-bind="attrs"
+								v-on="on"
+							>
+								mdi-alert-outline
+							</v-icon>
+						</template>
+						
+						<span>Non-standard RPC path: "{{hostWarning}}" instead of "/RPC2"</span>
+					</v-tooltip>
 				</v-subheader>
 			</v-col>
 
@@ -35,6 +54,8 @@ function isJSON(str){
 	}
 }
 
+// const domainRegex = /^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z0-9-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/;
+// const domainRegex = /^(https?):\/\/(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$/
 export default {
 	name: "servicesProviders-create-ione",
 	props: {
@@ -52,6 +73,7 @@ export default {
 		}
 	},
 	data: () => ({
+		hostWarning: false,
 		errors: {
 			host: [],
 			username: [],
@@ -73,7 +95,14 @@ export default {
 				type: 'text',
 				rules: [
 					(value) => !!value || 'Field is required',
-					(value) => !!value.match(/^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z0-9-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/) || 'Is not valid domain'
+					(value) => {
+						try{
+							new URL(value)
+							return true
+						} catch(err){
+							return 'Is not valid domain'
+						}
+					}
 				],
 				label: "example.com"
 			},
@@ -213,6 +242,20 @@ export default {
 			}
 		}
 	},
+	watch: {
+		"secrets.host"(newVal){
+			try{
+				const url = new URL(newVal);
+				if(url.pathname !== "/RPC2")
+					this.hostWarning = url.pathname
+				else
+					this.hostWarning = false
+			}
+			catch(err){
+				this.hostWarning = false
+			}
+		}
+	}
 }
 </script>
 
