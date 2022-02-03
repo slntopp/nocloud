@@ -135,7 +135,7 @@
 								</v-btn>
 							</div>
 						</template>
-						<span>Pass test first.</span>
+						<span>Test must be passed before creation.</span>
 					</v-tooltip>
 					<v-btn
 						:color="testButtonColor"
@@ -265,9 +265,10 @@ export default {
 			})
 		},
 		tryToSend(){
+			console.log(this.isTestSuccess);
 			if(!this.isPassed || !this.isTestSuccess) {
 				const opts = {
-					message: `Error: Pass test first.`,
+					message: `Error: Test must be passed before creation.`,
 				}
 				this.showSnackbarError(opts);
 				return;
