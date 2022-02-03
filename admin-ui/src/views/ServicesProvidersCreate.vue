@@ -115,7 +115,7 @@
 			>
 				<v-col col=6>
 					
-					<v-tooltip bottom :value="!isTestSuccess && tooltipVisible" @change="(e) => tooltipVisible = e">
+					<v-tooltip bottom :disabled="isTestSuccess">
 						<template v-slot:activator="{ on, attrs }">
 							<div
 								v-bind="attrs"
@@ -126,8 +126,6 @@
 									color="background-light"
 									class="mr-2"
 									@click="tryToSend"
-									@hover="tooltipVisible = true"
-									@blur="tooltipVisible = false"
 									:loading="isLoading"
 									:disabled="!isTestSuccess"
 								>
@@ -137,6 +135,7 @@
 						</template>
 						<span>Test must be passed before creation.</span>
 					</v-tooltip>
+					
 					<v-btn
 						:color="testButtonColor"
 						class="mr-2"
