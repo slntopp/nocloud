@@ -30,7 +30,7 @@
 					cols="6"
 				>
 					<v-text-field
-						@change="(newVal) => setValue(index + '.config.template_id', newVal)"
+						@change="(newVal) => setValue(index + '.config.template_id', +newVal)"
 						label="template_id"
 						v-model="instance.config.template_id"
 					>
@@ -53,7 +53,7 @@
 					cols="6"
 				>
 					<v-text-field
-						@change="(newVal) => setValue(index + '.resources.cpu', newVal)"
+						@change="(newVal) => setValue(index + '.resources.cpu', +newVal)"
 						label="cpu"
 						v-model="instance.resources.cpu"
 						type="number"
@@ -64,7 +64,7 @@
 					cols="6"
 				>
 					<v-text-field
-						@change="(newVal) => setValue(index + '.resources.ram', newVal)"
+						@change="(newVal) => setValue(index + '.resources.ram', +newVal)"
 						label="ram"
 						v-model="instance.resources.ram"
 						type="number"
@@ -85,7 +85,7 @@
 					cols="6"
 				>
 					<v-text-field
-						@change="(newVal) => setValue(index + '.resources.drive_size', newVal)"
+						@change="(newVal) => setValue(index + '.resources.drive_size', +newVal)"
 						label="drive size"
 						v-model="instance.resources.drive_size"
 						type="number"
@@ -96,7 +96,7 @@
 					cols="6"
 				>
 					<v-text-field
-						@change="(newVal) => setValue(index + '.resources.ips_public', newVal)"
+						@change="(newVal) => setValue(index + '.resources.ips_public', +newVal)"
 						label="ips public"
 						v-model="instance.resources.ips_public"
 						type="number"
@@ -107,7 +107,7 @@
 					cols="6"
 				>
 					<v-text-field
-						@change="(newVal) => setValue(index + '.resources.ips_private', newVal)"
+						@change="(newVal) => setValue(index + '.resources.ips_private', +newVal)"
 						label="ips private"
 						v-model="instance.resources.ips_private"
 						type="number"
@@ -149,9 +149,9 @@ export default {
 			},
 			"resources": {
 				"cpu": 1,
-				"ram": "1024",
+				"ram": 1024,
 				"drive_type": "SSD",
-				"drive_size": "10000",
+				"drive_size": 10000,
 				"ips_public": 0,
 				"ips_private": 0
 			}
@@ -217,6 +217,7 @@ function setToValue(obj, value, path) {
 			throw new Error("Can't use that path because of: " + path[i]);
 		obj = obj[path[i]];
 	}
+	console.log(value, typeof value);
 	obj[path[i]] = value;
 }
 </script>
