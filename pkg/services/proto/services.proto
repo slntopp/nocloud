@@ -23,14 +23,14 @@ import "pkg/hasher/hasherpb/hasher.proto";
 
 message Service {
     string uuid = 1;
-    string version = 2;
+    string version = 2
+        [(nocloud.hasher.hashed) = true];
     string title = 3;
     string status = 4;
     map<string, google.protobuf.Value> context = 5
         [(nocloud.hasher.hashed) = true];
-    map<string, nocloud.instances.InstancesGroup> instances_groups = 6
-        [(nocloud.hasher.hashed) = true];
-    string hash = 7;
+    map<string, nocloud.instances.InstancesGroup> instances_groups = 6;
+    string hash = 7 [(nocloud.hasher.hash) = true];
 }
 
 message TestConfigError {
@@ -61,6 +61,7 @@ message DeleteRequest {
 
 message DeleteResponse {
     bool result = 1;
+    string error = 2;
 }
 
 message PerformActionRequest {
@@ -76,8 +77,7 @@ message PerformActionResponse {
 
 message UpRequest {
     string uuid = 1;
-    map<string, string> deploy_policies =
-        2;  // Map of InstanceGroup UUID to ServiceProvider
+    map<string, string> deploy_policies = 2;  // Map of InstanceGroup UUID to ServiceProvider
 }
 
 message UpError {
@@ -93,8 +93,9 @@ message DownRequest {
 message DownResponse {}
 
 message ListRequest {
-    optional string namespace = 1;
-    optional int32 depth = 2;
+    optional string show_deleted = 1;
+    optional string namespace = 2;
+    optional int32 depth = 3;
 }
 
 message ListResponse {

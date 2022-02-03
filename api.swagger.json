@@ -609,6 +609,12 @@
         },
         "parameters": [
           {
+            "name": "showDeleted",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "namespace",
             "in": "query",
             "required": false,
@@ -1453,7 +1459,12 @@
       }
     },
     "drivervanillaDownResponse": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "group": {
+          "$ref": "#/definitions/instancesInstancesGroup"
+        }
+      }
     },
     "drivervanillaGetTypeResponse": {
       "type": "object",
@@ -1516,6 +1527,9 @@
           "additionalProperties": {
             "type": "object"
           }
+        },
+        "hash": {
+          "type": "string"
         }
       }
     },
@@ -1551,6 +1565,9 @@
           "additionalProperties": {
             "type": "object"
           }
+        },
+        "hash": {
+          "type": "string"
         }
       }
     },
@@ -1633,6 +1650,9 @@
       "properties": {
         "result": {
           "type": "boolean"
+        },
+        "error": {
+          "type": "string"
         }
       }
     },

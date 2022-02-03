@@ -142,6 +142,9 @@ networks:
   grpc-internal:
   arangodb:
     driver: bridge
+  redis:
+    driver: bridge
 
 volumes:
+  redis-data:
   data:
