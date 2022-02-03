@@ -56,7 +56,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, instance *pb.Instan
 	}
 
 	instance.Uuid = id.String()
-	instance.Hash = ""
+	instance.Hash = "init"
 	return nil
 }
 
