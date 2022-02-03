@@ -175,7 +175,7 @@ export default {
 		if (this.service.status != 'up' && this.service.status != 'del') {
 			this.$store.dispatch('servicesProviders/fetch')
 		}
-		this.$store.commit('reloadBtn/setCallback', {func: this.$store.dispatch, params: ['servicesProviders/fetch']})
+		this.$store.commit('reloadBtn/setCallback', {func: this.$store.dispatch, params: ['services/fetch']})
 	}
 }
 </script>

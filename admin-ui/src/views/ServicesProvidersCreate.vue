@@ -115,7 +115,7 @@
 			>
 				<v-col col=6>
 					
-					<v-tooltip bottom :value="!isTestSuccess && tooltipVisible" @change="(e) => tooltipVisible = e">
+					<v-tooltip bottom :disabled="isTestSuccess">
 						<template v-slot:activator="{ on, attrs }">
 							<div
 								v-bind="attrs"
@@ -126,8 +126,6 @@
 									color="background-light"
 									class="mr-2"
 									@click="tryToSend"
-									@hover="tooltipVisible = true"
-									@blur="tooltipVisible = false"
 									:loading="isLoading"
 									:disabled="!isTestSuccess"
 								>
@@ -135,8 +133,9 @@
 								</v-btn>
 							</div>
 						</template>
-						<span>Pass test first.</span>
+						<span>Test must be passed before creation.</span>
 					</v-tooltip>
+					
 					<v-btn
 						:color="testButtonColor"
 						class="mr-2"
@@ -265,9 +264,10 @@ export default {
 			})
 		},
 		tryToSend(){
+			console.log(this.isTestSuccess);
 			if(!this.isPassed || !this.isTestSuccess) {
 				const opts = {
-					message: `Error: Pass test first.`,
+					message: `Error: Test must be passed before creation.`,
 				}
 				this.showSnackbarError(opts);
 				return;

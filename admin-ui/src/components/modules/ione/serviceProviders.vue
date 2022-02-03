@@ -225,7 +225,6 @@ export default {
 			if(this.values.schedule){
 				if(isJSON(this.values.schedule)){
 					vars.sched = JSON.parse(this.values.schedule);
-					errors.sched = []
 				} else {
 					errors.sched = ["is not valid JSON"]
 				}
@@ -233,7 +232,6 @@ export default {
 			if(this.values.schedule_ds){
 				if(isJSON(this.values.schedule_ds)){
 					vars.sched_ds = JSON.parse(this.values.schedule_ds);
-					errors.sched_ds = []
 				} else {
 					errors.sched_ds = ["is not valid JSON"]
 				}
@@ -255,6 +253,8 @@ export default {
 			this.$emit(`change:secrets`, secrets)
 			this.$emit(`change:vars`, vars)
 			this.$emit(`change:full`, result)
+			console.log(errors);
+			// let passed = Object.keys(errors).every(el => errors)
 			this.$emit(`passed`, Object.keys(errors).length == 0)
 		},
 		getValue(fieldName){
