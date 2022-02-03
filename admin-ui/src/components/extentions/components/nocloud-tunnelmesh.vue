@@ -108,8 +108,12 @@ export default {
 	computed: {
 		hostname() {
 			if(this.provider?.secrets?.host){
-				const domainname = new URL(this.provider?.secrets?.host)
-				return domainname.hostname;
+				try {
+					const domainname = new URL(this.provider?.secrets?.host)
+					return domainname.hostname;
+				} catch (error) {
+					return ""
+				}
 			} else {
 				return ""
 			}

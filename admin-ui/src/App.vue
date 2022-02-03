@@ -137,56 +137,81 @@
       color="background"
       elevation=0
     >
-
-      <v-text-field
-        hide-details
-        prepend-inner-icon="mdi-magnify"
-        placeholder="Search..."
-        single-line
-        background-color="background-light"
-        dence
-        rounded
-      ></v-text-field>
+			<v-row
+				style="width: 100%"
+				justify="center"
+				align="center"
+			>
+				<v-col>
+					<v-text-field
+						hide-details
+						prepend-inner-icon="mdi-magnify"
+						placeholder="Search..."
+						single-line
+						background-color="background-light"
+						dence
+						rounded
+					></v-text-field>
+				</v-col>
+				<v-col
+					class="d-flex justify-center"
+				>
+					<v-btn
+						v-if="btnStates.visible"
+						:disabled="btnStates.disabled"
+						color="background-light"
+						fab
+						small
+						:loading="btnLoading"
+						@click="() => $store.dispatch('reloadBtn/onclick')"
+					>
+						<v-icon>mdi-reload</v-icon>
+					</v-btn>
+				</v-col>
+				<v-col
+					class="d-flex justify-end"
+				>
+      
+					<v-menu
+						offset-y
+						transition="slide-y-transition"
+					>
+						<template v-slot:activator="{ on, attrs }">
+							<v-btn
+								class="mx-2"
+								fab
+								color="background-light"
+								v-bind="attrs"
+								v-on="on"
+							>
+								<v-icon dark>
+									mdi-account
+								</v-icon>
+							</v-btn>
+						</template>
+						<v-list
+							dence
+							min-width="250px"
+						>
+							<v-list-item>
+								<v-list-item-content>
+									<v-list-item-title class="text-h6">
+										{{userdata.title}}
+									</v-list-item-title>
+									<v-list-item-subtitle>#{{userdata.uuid}}</v-list-item-subtitle>
+								</v-list-item-content>
+							</v-list-item>
+							<v-divider></v-divider>
+							<v-list-item @click="logoutHandler">
+								<v-list-item-title>Logout</v-list-item-title>
+							</v-list-item>
+						</v-list>
+					</v-menu>
+					
+				</v-col>
+			</v-row>
 
       <v-spacer></v-spacer>
-      
-      <div class="text-center">
-        <v-menu
-          offset-y
-          transition="slide-y-transition"
-        >
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn
-              class="mx-2"
-              fab
-              color="background-light"
-              v-bind="attrs"
-              v-on="on"
-            >
-              <v-icon dark>
-                mdi-account
-              </v-icon>
-            </v-btn>
-          </template>
-          <v-list
-            dence
-						min-width="250px"
-          >
-            <v-list-item>
-							<v-list-item-content>
-								<v-list-item-title class="text-h6">
-									{{userdata.title}}
-								</v-list-item-title>
-								<v-list-item-subtitle>#{{userdata.uuid}}</v-list-item-subtitle>
-							</v-list-item-content>
-						</v-list-item>
-						<v-divider></v-divider>
-            <v-list-item @click="logoutHandler">
-              <v-list-item-title>Logout</v-list-item-title>
-            </v-list-item>
-          </v-list>
-        </v-menu>
-      </div>
 
     </v-app-bar>
 
@@ -219,6 +244,21 @@ export default {
 			this.miniNav = window.innerWidth <= 768
 		},
   },
+  computed: {
+    isLoggedIn(){
+      const result = this.$store.getters['auth/isLoggedIn']
+      return result
+    },
+		userdata(){
+			return this.$store.getters['auth/userdata'];
+		},
+		btnLoading(){
+			return this.$store.getters['reloadBtn/isLoading'];
+		},
+		btnStates(){
+			return this.$store.getters['reloadBtn/states'];
+		}
+  },
   created(){
     this.$store.dispatch('auth/load')
 
@@ -234,6 +274,8 @@ export default {
     })
 
     this.$router.beforeEach((to, from, next)=>{
+			this.$store.commit('reloadBtn/setLoading', false)
+
       if(to.matched.some(el => el.meta.requireLogin) && !this.isLoggedIn){
         next({name: "Login"});
       } else if(to.matched.some(el => el.meta.requireUnlogin) && this.isLoggedIn) {
@@ -249,15 +291,6 @@ export default {
 
 		if(this.isLoggedIn){
 			this.$store.dispatch('auth/fetchUserData')
-		}
-  },
-  computed: {
-    isLoggedIn(){
-      const result = this.$store.getters['auth/isLoggedIn']
-      return result
-    },
-		userdata(){
-			return this.$store.getters['auth/userdata'];
 		}
   },
 	mounted(){

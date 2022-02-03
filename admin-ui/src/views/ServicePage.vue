@@ -61,8 +61,21 @@
 				sm=12
 				cols=12
 			>
-				Service JSON:
-				<pre v-html="syntaxHightlight(JSON.stringify(service, null, 2))"></pre>
+				Service
+				<span
+					class="service__display-trigger"
+					@click="() => ObjectDisplay = (ObjectDisplay == 'YAML' ? 'JSON' : 'YAML')"
+				>
+					{{ObjectDisplay}}
+				</span>:
+				<pre
+					v-if="ObjectDisplay == 'YAML'"
+					v-html="serviceObjectYAML"
+					></pre>
+				<pre
+					v-else-if="ObjectDisplay == 'JSON'"
+					v-html="syntaxHightlight(JSON.stringify(service, null, 2))"
+				></pre>
 			</v-col>
 		</v-row>
 	</div>
@@ -70,6 +83,7 @@
 
 <script>
 import api from "@/api"
+import yaml from "yaml"
 
 export default {
 	name: 'service-view',
@@ -77,6 +91,7 @@ export default {
 		notFound: false,
 		deployServiceProvider: '',
 		deployInstancesGroup: '',
+		ObjectDisplay: "YAML"
 	}),
 	methods: {
 		syntaxHightlight(json){
@@ -140,6 +155,12 @@ export default {
 				result.push({text: group, value: this.service.instancesGroups[group].uuid})
 			}
 			return result
+		},
+		serviceObjectYAML(){
+			const doc = new yaml.Document();
+			doc.contents = this.service;
+
+			return doc.toString();
 		}
 	},
 	created(){
@@ -154,6 +175,7 @@ export default {
 		if (this.service.status != 'up' && this.service.status != 'del') {
 			this.$store.dispatch('servicesProviders/fetch')
 		}
+		this.$store.commit('reloadBtn/setCallback', {func: this.$store.dispatch, params: ['services/fetch']})
 	}
 }
 </script>
@@ -167,6 +189,11 @@ export default {
 	line-height: 1em;
 	margin-bottom: 10px;
 }
+
+.service__display-trigger{
+	cursor: pointer;
+	color: var(--v-primary-base)
+}
 </style>
 
 <style>
@@ -175,6 +202,7 @@ pre {
 	margin: 5px;
 	background-color: var(--v-background-light-base);
 	border-radius: 4px;
+	white-space: pre-wrap;
 }
 .string {
 	color: green; 

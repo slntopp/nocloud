@@ -11,6 +11,7 @@ import accounts from './accounts'
 import servicesProviders from './servicesProviders'
 import dns from './dns'
 import settings from './settings'
+import reloadBtn from './reloadbtn'
 // import services from './services'
 
 Vue.use(Vuex)
@@ -30,6 +31,7 @@ export default new Vuex.Store({
 		dns,
 		settings,
 		services: generator('services'),
+		reloadBtn
   }
 })
 

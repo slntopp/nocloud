@@ -273,6 +273,9 @@ export default {
 		tableData(){
 			return this.$store.getters['dns/getHost'](this.$route.params.dnsname)
 		}
+	},
+	mounted(){
+		this.$store.commit('reloadBtn/setCallback', {func: this.$store.dispatch, params: ['dns/fetchHosts', this.$route.params.dnsname]})
 	}
 }
 </script>
