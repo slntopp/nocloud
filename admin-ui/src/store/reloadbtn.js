@@ -13,7 +13,6 @@ export default {
 	},
 	mutations: {
 		setCallback(state, {func, params}){
-			console.log(func, params);
 			state.onclick.func = func
 			state.onclick.params = params
 		},
