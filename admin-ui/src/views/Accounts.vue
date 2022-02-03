@@ -245,6 +245,9 @@ export default {
 			namespaces = namespaces.map(namespace => ({text: namespace.title, value: namespace.uuid}))
 			return namespaces
 		}
+	},
+	mounted(){
+		this.$store.commit('reloadBtn/setCallback', {func: this.$store.dispatch, params: ['accounts/fetch']})
 	}
 }
 </script>

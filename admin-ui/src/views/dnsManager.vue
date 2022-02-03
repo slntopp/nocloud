@@ -149,6 +149,9 @@ export default {
 			}
 		},
 	},
+	mounted(){
+		this.$store.commit('reloadBtn/setCallback', {func: this.$store.dispatch, params: ['dns/fetch']})
+	}
 }
 </script>
 

@@ -335,6 +335,9 @@ export default {
 				this.showSnackbarError({message: err.response.data.message})
 			})
 		}
+	},
+	mounted(){
+		this.$store.commit('reloadBtn/setCallback', {func: this.$store.dispatch, params: ['settings/fetch']})
 	}
 }
 </script>

@@ -124,6 +124,9 @@ export default {
 				this.showSnackbarError(opts);
 			}
 		})
+	},
+	mounted(){
+		this.$store.commit('reloadBtn/setCallback', {func: this.$store.dispatch, params: ['servicesProviders/fetch']})
 	}
 }
 </script>

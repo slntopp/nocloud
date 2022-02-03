@@ -215,7 +215,6 @@ export default {
 	}),
 	created(){
 		const types = require.context('@/components/modules/', true, /serviceProviders\.vue$/)
-		console.log(types.keys());
 		types.keys().forEach(key => {
 			const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceProviders\.vue/i);
 			if (matched && matched.length > 1) {
@@ -282,18 +281,7 @@ export default {
 				this.isLoading = false;
 			})
 			.catch(err => {
-				if(err.response.status >= 500 || err.response.status < 600){
-					const opts = {
-						message: `Service Unavailable: ${err?.response?.data?.message ?? 'Unknown'}.`,
-						timeout: 0
-					}
-					this.showSnackbarError(opts);
-				} else {
-					const opts = {
-						message: `Error: ${err?.response?.data?.message ?? 'Unknown'}.`,
-					}
-					this.showSnackbarError(opts);
-				}
+				this.errorDisplay(err)
 			})
 		},
 		testConfig(){
@@ -307,16 +295,34 @@ export default {
 				this.isTestSuccess = true;
 			})
 			.catch((err) => {
-				this.testButtonColor = "error"
-				this.isTestSuccess = false;
-				this.showSnackbarError({message: err.response.data.message})
+				this.errorDisplay(err)
 			})
 			.finally(() => {
 				this.isTestLoading = false;
 			})
 		},
+		errorDisplay(err){
+			let opts;
+			if(err?.response?.status){
+				if(err.response.status >= 500 || err.response.status < 600){
+					opts = {
+						message: `Service Unavailable: ${err?.response?.data?.message ?? 'Unknown'}.`,
+						timeout: 0
+					}
+				} else {
+					opts = {
+						message: `Error: ${err?.response?.data?.message ?? 'Unknown'}.`,
+					}
+				}
+			} else {
+				opts = {
+					message: `Error: ${err?.error ?? 'Unknown'}.`,
+				}
+			}
+			this.showSnackbarError(opts);
+		},
 		addExtention(){
-			this.extentions.data[this.extentions.selected] = {};
+			this.$set(this.extentions.data, this.extentions.selected, {})
 			this.extentions.selected = ""
 		},
 		removeExtention(extention){

@@ -212,8 +212,11 @@ export default {
 function setToValue(obj, value, path) {
 	path = path.split('.');
 	let i;
-	for (i = 0; i < path.length - 1; i++)
+	for (i = 0; i < path.length - 1; i++){
+		if(path[i] === "__proto__" || path[i] === "constructor") 
+			throw new Error("Can't use that path because of: " + path[i]);
 		obj = obj[path[i]];
+	}
 	obj[path[i]] = value;
 }
 </script>
