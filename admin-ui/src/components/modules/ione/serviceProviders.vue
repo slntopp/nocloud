@@ -224,14 +224,14 @@ export default {
 			const vars = {}
 			if(this.values.schedule){
 				if(isJSON(this.values.schedule)){
-					vars.sched = JSON.parse(this.values.schedule);
+					vars.sched = {value: JSON.parse(this.values.schedule)};
 				} else {
 					errors.sched = ["is not valid JSON"]
 				}
 			}
 			if(this.values.schedule_ds){
 				if(isJSON(this.values.schedule_ds)){
-					vars.sched_ds = JSON.parse(this.values.schedule_ds);
+					vars.sched_ds = {value: JSON.parse(this.values.schedule_ds)};
 				} else {
 					errors.sched_ds = ["is not valid JSON"]
 				}
@@ -268,9 +268,9 @@ export default {
 				case 'group':
 					return this.secrets.group
 				case 'schedule':
-					return JSON.stringify(this.vars.sched)
+					return JSON.stringify(this.vars?.sched?.value ?? "")
 				case 'schedule_ds':
-					return JSON.stringify(this.vars.sched_ds)
+					return JSON.stringify(this.vars?.sched_ds?.value ?? "")
 				case 'public_ip_pool':
 					return this.vars.public_ip_pool?.value?.default ?? ""
 				case 'private_vnets_pool':
