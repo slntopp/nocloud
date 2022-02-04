@@ -3,7 +3,7 @@
     <v-navigation-drawer
       app
       permanent
-      color="background-light"
+			:color="asideColor"
       :mini-variant="miniNav"
     >
     
@@ -49,11 +49,15 @@
       <v-list
         v-if="isLoggedIn"
         dense
+				:dark="asideDark"
       >
 
 				<v-subheader>MAIN</v-subheader>
 
-        <v-list-item :to="{name: 'Dashboard'}">
+        <v-list-item 
+					v-bind="listItemBind"
+					:to="{name: 'Dashboard'}"
+				>
           <v-list-item-icon>
             <v-icon>mdi-view-dashboard-variant</v-icon>
           </v-list-item-icon>
@@ -63,7 +67,10 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-list-item :to="{name: 'Namespaces'}">
+        <v-list-item 
+					v-bind="listItemBind"
+					:to="{name: 'Namespaces'}"
+				>
           <v-list-item-icon>
             <v-icon>mdi-form-textbox</v-icon>
           </v-list-item-icon>
@@ -73,7 +80,10 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-list-item :to="{name: 'Accounts'}">
+        <v-list-item 
+					v-bind="listItemBind"
+					:to="{name: 'Accounts'}"
+				>
           <v-list-item-icon>
             <v-icon>mdi-account-multiple</v-icon>
           </v-list-item-icon>
@@ -83,7 +93,10 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-list-item :to="{name: 'ServicesProviders'}">
+        <v-list-item 
+					v-bind="listItemBind"
+					:to="{name: 'ServicesProviders'}"
+				>
           <v-list-item-icon>
             <v-icon>mdi-database-marker</v-icon>
           </v-list-item-icon>
@@ -93,7 +106,10 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-list-item :to="{name: 'DNS manager'}">
+        <v-list-item 
+					v-bind="listItemBind"
+					:to="{name: 'DNS manager'}"
+				>
           <v-list-item-icon>
             <v-icon>mdi-dns</v-icon>
           </v-list-item-icon>
@@ -103,7 +119,10 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-list-item :to="{name: 'Services'}" @click.ctrl="() => easterEgg = true">
+        <v-list-item 
+					v-bind="listItemBind"
+					:to="{name: 'Services'}" @click.ctrl="() => easterEgg = true"
+				>
           <v-list-item-icon>
             <v-icon :color="easterEgg ? 'green darker-2' : undefined">mdi-alien</v-icon>
           </v-list-item-icon>
@@ -115,7 +134,10 @@
 
 				<v-subheader>SYSTEM</v-subheader>
 
-        <v-list-item :to="{name: 'Settings'}">
+        <v-list-item 
+					v-bind="listItemBind"
+					:to="{name: 'Settings'}"
+				>
           <v-list-item-icon>
             <v-icon>mdi-cogs</v-icon>
           </v-list-item-icon>
@@ -257,6 +279,24 @@ export default {
 		},
 		btnStates(){
 			return this.$store.getters['reloadBtn/states'];
+		},
+		asideColor(){
+			return config?.dye?.aside?.background ?? 'background-light'
+		},
+		asideLinksColor(){
+			return config?.dye?.aside?.links ?? undefined
+		},
+		asideDark(){
+			return config?.dye?.aside?.whiteText ?? undefined
+		},
+		listItemBind(){
+			if(this.asideLinksColor)
+				return {
+					color: this.asideLinksColor,
+					dark: this.asideDark
+				}
+			else
+				return {}
 		}
   },
   created(){
