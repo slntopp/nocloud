@@ -1,127 +1,67 @@
 <template>
 	<div class="service pa-4">
-		<div class="page__title">
-			Service: {{ service.title }}
+		<div class="page__title mb-5">
+			<router-link :to="{name: 'Services'}">Services</router-link>
+			/
+			{{ service.title }} 
 			<v-chip
-				small
+				x-small
 				:color="chipColor"
 			>
-				{{ service.status }}
 			</v-chip>
 		</div>
+		
+		<v-tabs
+			class="rounded-t-lg"
+			v-model="tabs"
+			background-color="background-light"
+		>
+			<v-tab>Info</v-tab>
+			<v-tab>Control</v-tab>
+			<v-tab>Template</v-tab>
+		</v-tabs>
 
-		<v-row>
-			<v-col
-				lg=7
-				md=6
-				sm=12
-				cols=12
-			>
-				<template v-if="service.status == 'up' || service.status == 'del'">
-					service deployed
-				</template>
-				<template v-else>
-					deploy:
-					<v-form ref="deployForm">
-						<v-row>
-							<v-col>
-								<v-select
-									label="instance group"
-									:items="instancesGroups"
-									:rules="[v=>!!v || 'required']"
-									v-model="deployInstancesGroup"
-								>
-								</v-select>
-							</v-col>
-						</v-row>
-						<v-row>
-							<v-col>
-								<v-select
-									label="services provider"
-									:items="servicesProviders"
-									item-value="uuid"
-									item-text="title"
-									:rules="[v=>!!v || 'required']"
-									v-model="deployServiceProvider"
-								>
-								</v-select>
-							</v-col>
-						</v-row>
-						<v-row>
-							<v-col>
-								<v-btn :disabled="!deployServiceProvider || !deployInstancesGroup" @click="deploy">deploy</v-btn>
-							</v-col>
-						</v-row>
-					</v-form>
-				</template>
-			</v-col>
-			<v-col
-				lg=5
-				md=6
-				sm=12
-				cols=12
-			>
-				Service
-				<span
-					class="service__display-trigger"
-					@click="() => ObjectDisplay = (ObjectDisplay == 'YAML' ? 'JSON' : 'YAML')"
-				>
-					{{ObjectDisplay}}
-				</span>:
-				<pre
-					v-if="ObjectDisplay == 'YAML'"
-					v-html="serviceObjectYAML"
-					></pre>
-				<pre
-					v-else-if="ObjectDisplay == 'JSON'"
-					v-html="syntaxHightlight(JSON.stringify(service, null, 2))"
-				></pre>
-			</v-col>
-		</v-row>
+		<v-tabs-items v-model="tabs" style="background: var(--v-background-light-base)" class="rounded-b-lg">
+			<v-tab-item>
+				<service-info
+					:service="service"
+				/>
+			</v-tab-item>
+
+			<v-tab-item>
+				<service-control
+					:service="service"
+					:chip-color="chipColor"
+				/>
+			</v-tab-item>
+
+			<v-tab-item>
+				<service-template
+					:service="service"
+				/>
+			</v-tab-item>
+
+		</v-tabs-items>
 	</div>
 </template>
 
 <script>
-import api from "@/api"
-import yaml from "yaml"
+import serviceTemplate from "@/components/service/template.vue"
+import serviceControl from "@/components/service/control.vue"
+import serviceInfo from "@/components/service/info.vue"
 
 export default {
 	name: 'service-view',
+	components: {
+		'service-template': serviceTemplate,
+		'service-control': serviceControl,
+		'service-info': serviceInfo,
+	},
 	data: () => ({
 		notFound: false,
-		deployServiceProvider: '',
-		deployInstancesGroup: '',
-		ObjectDisplay: "YAML"
+		tabs: 0
 	}),
-	methods: {
-		syntaxHightlight(json){
-			json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-			return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
-				let cls = 'number';
-				if (/^"/.test(match)) {
-					if (/:$/.test(match)) {
-						cls = 'key';
-					} else {
-						cls = 'string';
-					}
-				} else if (/true|false/.test(match)) {
-					cls = 'boolean';
-				} else if (/null/.test(match)) {
-					cls = 'null';
-				}
-				return '<span class="' + cls + '">' + match + '</span>';
-			});
-		},
-		deploy(){
-			if(!this.$refs.deployForm.validate())
-				return
-				
-			api.services.up(this.serviceId, this.deployInstancesGroup, this.deployServiceProvider)
-			.then(() => {
-				this.$store.dispatch('services/fetch')
-			})
-		}
-	},
+	
 	computed: {
 		service(){
 			const items = this.$store.getters['services/all']
@@ -143,24 +83,6 @@ export default {
 				'del': 'gray darken-2'
 			}
 			return dict[this.service.status] ?? 'blue-grey darken-2'
-		},
-		servicesProviders(){
-			return this.$store.getters['servicesProviders/all'];
-		},
-		instancesGroups(){
-			const result = []
-			this.service.instancesGroups
-
-			for (const group in this.service.instancesGroups) {
-				result.push({text: group, value: this.service.instancesGroups[group].uuid})
-			}
-			return result
-		},
-		serviceObjectYAML(){
-			const doc = new yaml.Document();
-			doc.contents = this.service;
-
-			return doc.toString();
 		}
 	},
 	created(){
@@ -171,10 +93,6 @@ export default {
 	},
 	mounted(){
 		document.title = `${this.service.title} | NoCloud`
-
-		if (this.service.status != 'up' && this.service.status != 'del') {
-			this.$store.dispatch('servicesProviders/fetch')
-		}
 		this.$store.commit('reloadBtn/setCallback', {func: this.$store.dispatch, params: ['services/fetch']})
 	}
 }
@@ -188,35 +106,5 @@ export default {
 	font-family: "Quicksand", sans-serif;
 	line-height: 1em;
 	margin-bottom: 10px;
-}
-
-.service__display-trigger{
-	cursor: pointer;
-	color: var(--v-primary-base)
-}
-</style>
-
-<style>
-pre {
-	padding: 5px;
-	margin: 5px;
-	background-color: var(--v-background-light-base);
-	border-radius: 4px;
-	white-space: pre-wrap;
-}
-.string {
-	color: green; 
-}
-.number {
-	color: darkorange; 
-}
-.boolean {
-	color: blue; 
-}
-.null {
-	color: magenta; 
-}
-.key {
-	color: red; 
 }
 </style>
