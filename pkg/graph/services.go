@@ -18,8 +18,10 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
+	hasher "github.com/slntopp/nocloud/pkg/hasher"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
@@ -61,26 +63,43 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 			return nil, err
 		}
 	}
+
+	service.Hash = "init"
+	err := hasher.SetHash(service.ProtoReflect())
+	if err != nil {
+		return nil, err
+	}
+
 	service.Status = "init"
 	meta, err := ctrl.col.CreateDocument(ctx, service)
 	if err != nil {
 		ctrl.log.Debug("Error creating document", zap.Error(err))
-		return nil, errors.New("Error creating document")
+		return nil, errors.New("error creating document")
 	}
 	service.Uuid = meta.ID.Key()
 	return &Service{service, meta}, nil
 }
 
-func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service) (error) {
+// Update Service and underlaying entities and store in DB
+func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service, hash bool) (error) {
 	ctrl.log.Debug("Updating Service", zap.Any("service", service))
 	for _, ig := range service.GetInstancesGroups() {
-		err := ctrl.ig_ctrl.Update(ctx, ig)
+		err := ctrl.ig_ctrl.Update(ctx, ig, hash)
 		if err != nil {
 			return err
 		}
 	}
-	meta, err := ctrl.col.UpdateDocument(ctx, service.GetUuid(), service)
-	ctrl.log.Debug("UpdateDocument.Result", zap.Any("meta", meta), zap.Error(err))
+
+	if hash {
+		service.Hash = "init"
+		err := hasher.SetHash(service.ProtoReflect())
+		if err != nil {
+			return err
+		}
+	}
+
+	meta, err := ctrl.col.ReplaceDocument(ctx, service.GetUuid(), service)
+	ctrl.log.Debug("ReplaceDocument.Result", zap.Any("meta", meta), zap.Error(err))
 	return err
 }
 
@@ -91,7 +110,7 @@ func (ctrl *ServicesController) Get(ctx context.Context, id string) (*Service, e
 	meta, err := ctrl.col.ReadDocument(ctx, id, &service)
 	if err != nil {
 		ctrl.log.Debug("Error reading document(Service)", zap.Error(err))
-		return nil, errors.New("Error reading document")
+		return nil, errors.New("error reading document")
 	}
 	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Any("service", &service))
 	service.Uuid = meta.ID.Key()
@@ -99,24 +118,27 @@ func (ctrl *ServicesController) Get(ctx context.Context, id string) (*Service, e
 }
 
 // List Services in DB
-func (ctrl *ServicesController) List(ctx context.Context, requestor string, req_depth *int32) ([]*Service, error) {
+func (ctrl *ServicesController) List(ctx context.Context, requestor string, request *pb.ListRequest) ([]*Service, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
 
-	var depth int32
-	if req_depth == nil || *req_depth < 2 {
+	depth := request.GetDepth()
+	if depth < 2 {
 		depth = 5
-	} else {
-		depth = *req_depth
 	}
-
-	query := `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) RETURN node`
+	showDeleted := request.GetShowDeleted() == "true"
+	var query string
+	if showDeleted {
+		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) RETURN node`
+	} else {
+		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) FILTER node.status != "del" RETURN node`
+	}
 	bindVars := map[string]interface{}{
 		"depth": depth,
 		"account": driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"@services": schema.SERVICES_COL,
 	}
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
 
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
@@ -153,6 +175,7 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *Service, name
 	return err
 }
 
+// Create Link between Service/Group and Services Provider group is Provisioned(deployed) to
 func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.DocumentID, group string) (error) {
 	ctrl.log.Debug("Providing group to service provider")
 	edge, _ := ctrl.db.Collection(ctx, schema.SP2SERV)
@@ -165,14 +188,16 @@ func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.
 	return err
 }
 
+// Delete Link between Service/Group and Services Provider group have beem Unprovisioned(undeployed) from
 func (ctrl *ServicesController) Unprovide(ctx context.Context, group string) (err error) {
-	ctrl.log.Debug("Unproviding group from service provider")
+	ctrl.log.Debug("Unproviding group from service provider", zap.String("group", group))
 	g, _ := ctrl.db.Graph(ctx, schema.SERVICES_GRAPH.Name)
 	edge, _, _ := g.EdgeCollection(ctx, schema.SP2SERV)
 	_, err = edge.RemoveDocument(ctx, group)
 	return err
 }
 
+// Get Provisions, map of InstancesGroups to ServicesProviders, those groups are deployed to
 func (ctrl *ServicesController) GetProvisions(ctx context.Context, service string) (r map[string]string, err error) {
 	ctrl.log.Debug("Getting groups provisions")
 	query := `FOR service, provision IN INBOUND @service GRAPH @services RETURN provision`
@@ -202,4 +227,20 @@ func (ctrl *ServicesController) GetProvisions(ctx context.Context, service strin
 	}
 
 	return r, nil
+}
+
+func (ctrl *ServicesController) Delete(ctx context.Context, s *Service) (err error) {
+	log := ctrl.log.Named("Service.Delete")
+	log.Debug("Deleting Service")
+	if s.GetStatus() != "init" {
+		return fmt.Errorf("cannot delete Service, status: %s", s.GetStatus())
+	}
+
+	return ctrl.SetStatus(ctx, s, "del")
+}
+
+func (ctrl *ServicesController) SetStatus(ctx context.Context, s *Service, status string) (err error) {
+	// TODO: check if valid status message
+	s.Status = status
+	return ctrl.Update(ctx, s.Service, false)
 }

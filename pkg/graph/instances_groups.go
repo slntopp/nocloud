@@ -61,16 +61,20 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, group *pb.Ins
 		}
 	}
 	group.Uuid = id.String()
+	group.Hash = "init"
 	return nil
 }
 
-func (ctrl *InstancesGroupsController) Update(ctx context.Context, group *pb.InstancesGroup) (error) {
+func (ctrl *InstancesGroupsController) Update(ctx context.Context, group *pb.InstancesGroup, hash bool) (error) {
 	ctrl.log.Debug("Updating InstancesGroup", zap.Any("group", group))
 	for _, instance := range group.GetInstances() {
-		err := ctrl.inst_ctrl.Update(ctx, instance)
+		err := ctrl.inst_ctrl.Update(ctx, instance, hash)
 		if err != nil {
 			return err
 		}
+	}
+	if hash {
+		group.Hash = "init"
 	}
 	return nil
 }

@@ -192,9 +192,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
 
-	service.Status = "starting"
-	s.log.Debug("Updated Service", zap.Any("service", service))
-	err = s.ctrl.Update(ctx, service.Service)
+	err = s.ctrl.SetStatus(ctx, service, "starting")
 	if err != nil {
 		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -256,7 +254,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *servicespb.UpRe
 	
 	service.Status = "up"
 	s.log.Debug("Updated Service", zap.Any("service", service))
-	err = s.ctrl.Update(ctx, service.Service)
+	err = s.ctrl.Update(ctx, service.Service, false)
 	if err != nil {
 		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -304,15 +302,13 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
 
-	service.Status = "stopping"
-	s.log.Debug("Updated Service", zap.Any("service", service))
-	err = s.ctrl.Update(ctx, service.Service)
+	err = s.ctrl.SetStatus(ctx, service, "stopping")
 	if err != nil {
 		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
-	for _, group := range service.GetInstancesGroups() {		
+	for key, group := range service.GetInstancesGroups() {		
 		c, ok := contexts[group.GetUuid()]
 		if !ok {
 			log.Debug("Instance Group has no context, i.e. provision", zap.String("group", group.GetUuid()), zap.String("service", service.GetUuid()))
@@ -321,22 +317,21 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *servicespb.Do
 		client := *c.client
 		sp := c.sp
 
-		_, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
+		res, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
 			s.log.Error("Error undeploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
 			continue
 		}
-		group.Data = nil
+		group := res.GetGroup()
 		err = s.ctrl.Unprovide(ctx, group.GetUuid())
 		if err != nil {
 			s.log.Error("Error unlinking group from ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
 			continue
 		}
+		service.Service.InstancesGroups[key] = group
 	}
 
-	service.Status = "down"
-	s.log.Debug("Updated Service", zap.Any("service", service))
-	err = s.ctrl.Update(ctx, service.Service)
+	err = s.ctrl.SetStatus(ctx, service, "down")
 	if err != nil {
 		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -368,12 +363,12 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *servicespb.Get
 
 func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.ListRequest) (response *servicespb.ListResponse, err error) {
 	log := s.log.Named("List")
-	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.String("namespace", request.GetNamespace()), zap.String("show_deleted", request.GetShowDeleted()))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	r, err := s.ctrl.List(ctx, requestor, request.Depth)
+	r, err := s.ctrl.List(ctx, requestor, request)
 	if err != nil {
 		log.Debug("Error reading Services from DB", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
@@ -385,4 +380,26 @@ func (s *ServicesServiceServer) List(ctx context.Context, request *servicespb.Li
 	}
 
 	return response, nil
+}
+
+func (s *ServicesServiceServer) Delete(ctx context.Context, request *servicespb.DeleteRequest) (response *servicespb.DeleteResponse, err error) {
+	log := s.log.Named("Delete")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	r, err := s.ctrl.Get(ctx, request.GetUuid())
+	if err != nil {
+		log.Debug("Error getting Service from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not Found in DB")
+	}
+
+	err = s.ctrl.Delete(ctx, r)
+	if err != nil {
+		log.Error("Error Deleting Service", zap.Error(err))
+		return &servicespb.DeleteResponse{Result: false, Error: err.Error() }, nil
+	}
+	
+	return &servicespb.DeleteResponse{Result: true}, nil
 }
