@@ -35,7 +35,6 @@ type Instance struct {
 	driver.DocumentMeta
 }
 
-
 type InstancesController struct {
 	col driver.Collection // Instances Collection
 
@@ -47,7 +46,7 @@ func NewInstancesController(log *zap.Logger, db driver.Database) InstancesContro
 	return InstancesController{log: log.Named("InstancesController"), col: col}
 }
 
-func (ctrl *InstancesController) Create(ctx context.Context, instance *pb.Instance) (error) {
+func (ctrl *InstancesController) Create(ctx context.Context, instance *pb.Instance) error {
 	ctrl.log.Debug("Creating Instance", zap.Any("instance", instance))
 	id, err := uuid.NewV4()
 	if err != nil {
@@ -56,14 +55,6 @@ func (ctrl *InstancesController) Create(ctx context.Context, instance *pb.Instan
 	}
 
 	instance.Uuid = id.String()
-	instance.Hash = "init"
-	return nil
-}
 
-func (ctrl *InstancesController) Update(ctx context.Context, instance *pb.Instance, hash bool) (error) {
-	ctrl.log.Debug("Updating Instance", zap.Any("instance", instance))
-	if hash {
-		instance.Hash = ""
-	}
 	return nil
 }
