@@ -12,62 +12,139 @@
 					readonly
 					:value="service.uuid"
 					label="service uuid"
-					style="display: inline-block; width: 300px"
+					style="display: inline-block; width: 330px"
+					:append-icon="copyed == 'rootUUID' ? 'mdi-check': 'mdi-content-copy'"
+					@click:append="addToClipboard(service.uuid, 'rootUUID')"
 				>
 				</v-text-field>
-				<v-btn
-					icon
-					@click="addToClipboard(service.uuid, 'rootUUID')"
+			</v-col>
+			<v-col>
+				<v-text-field
+					readonly
+					:value="hashpart(service.hash)"
+					label="service hash"
+					style="display: inline-block; width: 100px"
+					:append-icon="copyed == 'rootHash' ? 'mdi-check': 'mdi-content-copy'"
+					@click:append="addToClipboard(service.hash, 'rootHash')"
 				>
-					<v-icon
-						v-if="copyed == 'rootUUID'"
-					>
-						mdi-check
-					</v-icon>
-					<v-icon
-						v-else
-					>
-						mdi-content-copy
-					</v-icon>
-				</v-btn>
+				</v-text-field>
 			</v-col>
 		</v-row>
 		
+		groups:
 		<v-row justify="center" class="px-2 pb-2">
 			<v-expansion-panels
 				inset
 				v-model="opened"
-				multiple	
+				multiple
 			>
 				<v-expansion-panel
 					v-for="(group, i) in Object.keys(service.instancesGroups)"
 					:key="i"
 					style="background: var(--v-background-base)"
 				>
-					<v-expansion-panel-header>{{group}}</v-expansion-panel-header>
+					<v-expansion-panel-header>{{group}} | Type: {{service.instancesGroups[group].type}}</v-expansion-panel-header>
 					<v-expansion-panel-content>
-						<v-text-field
-							readonly
-							:value="service.uuid"
-							label="group uuid"
-							style="display: inline-block; width: 300px"
-						>
-						</v-text-field>
-						<v-btn
-							icon
-							@click="addToClipboard(service.instancesGroups[group].uuid, `${group}-UUID`)"
-						>
-							<v-icon
-								v-if="copyed == `${group}-UUID`"
-							>
-								mdi-check
-							</v-icon>
-							<v-icon
-								v-else
-							>
-								mdi-content-copy
-							</v-icon>
-						</v-btn>
+						<v-row>
+							<v-col>
+								<v-text-field
+									readonly
+									:value="service.uuid"
+									label="group uuid"
+									style="display: inline-block; width: 330px"
+									:append-icon="copyed == `${group}-UUID` ? 'mdi-check': 'mdi-content-copy'"
+									@click:append="addToClipboard(service.instancesGroups[group].uuid, `${group}-UUID`)"
+								>
+								</v-text-field>
+							</v-col>
+							<v-col>
+								<v-text-field
+									readonly
+									:value="hashpart(service.hash)"
+									label="group hash"
+									style="display: inline-block; width: 100px"
+									:append-icon="copyed == `${group}-hash` ? 'mdi-check': 'mdi-content-copy'"
+									@click:append="addToClipboard(service.instancesGroups[group].hash, `${group}-hash`)"
+								>
+								</v-text-field>
+							</v-col>
+						</v-row>
+						Instances:
+						<v-row>
+							<v-col>
+								<v-expansion-panels
+									inset
+									v-model="openedInstances[group]"
+									multiple
+								>
+									<v-expansion-panel
+										v-for="(instance, i) in service.instancesGroups[group].instances"
+										:key="i"
+										style="background: var(--v-background-light-base)"
+									>
+										<v-expansion-panel-header>{{instance.title}}</v-expansion-panel-header>
+										<v-expansion-panel-content>
+											<v-row>
+												<v-col>
+													<v-text-field
+														readonly
+														:value="instance.resources.cpu"
+														label="CPU"
+														style="display: inline-block; width: 100px"
+													>
+													</v-text-field>
+												</v-col>
+												<v-col>
+													<v-text-field
+														readonly
+														:value="instance.resources.ram"
+														label="RAM"
+														style="display: inline-block; width: 100px"
+													>
+													</v-text-field>
+												</v-col>
+												<v-col>
+													<v-text-field
+														readonly
+														:value="instance.resources.drive_size"
+														label="drive size"
+														style="display: inline-block; width: 100px"
+													>
+													</v-text-field>
+												</v-col>
+												<v-col>
+													<v-text-field
+														readonly
+														:value="instance.resources.drive_type"
+														label="drive type"
+														style="display: inline-block; width: 100px"
+													>
+													</v-text-field>
+												</v-col>
+												<v-col>
+													<v-text-field
+														readonly
+														:value="instance.resources.ips_private"
+														label="ips private"
+														style="display: inline-block; width: 100px"
+													>
+													</v-text-field>
+												</v-col>
+												<v-col>
+													<v-text-field
+														readonly
+														:value="instance.resources.ips_public"
+														label="ips public"
+														style="display: inline-block; width: 100px"
+													>
+													</v-text-field>
+												</v-col>
+											</v-row>
+										</v-expansion-panel-content>
+									</v-expansion-panel>
+								</v-expansion-panels>
+							</v-col>
+						</v-row>
 					</v-expansion-panel-content>
 				</v-expansion-panel>
 			</v-expansion-panels>
@@ -81,7 +158,8 @@ export default {
 	name: "service-info",
 	data: () => ({
 		copyed: null,
-		opened: []
+		opened: [],
+		openedInstances: {}
 	}),
 	props: {
 		service: {
@@ -99,9 +177,18 @@ export default {
 				console.error(res);
 			})
 		},
+		hashpart(hash){
+			if(hash)
+				return hash.slice(0, 8);
+
+			return "WWWWWWWW"
+		}
 	},
 	mounted(){
-		this.opened.push(0)
+		this.opened.push(0);
+		Object.keys(this.service.instancesGroups).forEach(key => {
+			this.$set(this.openedInstances, key, [0]);
+		});
 	}
 }
 </script>

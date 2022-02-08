@@ -3,7 +3,7 @@
 		<div class="page__title mb-5">
 			<router-link :to="{name: 'Services'}">Services</router-link>
 			/
-			{{ service.title }} 
+			{{ serviceTitle }} 
 			<v-chip
 				x-small
 				:color="chipColor"
@@ -23,20 +23,38 @@
 
 		<v-tabs-items v-model="tabs" style="background: var(--v-background-light-base)" class="rounded-b-lg">
 			<v-tab-item>
+				<v-progress-linear
+					v-if="servicesLoading"
+					indeterminate
+					class="pt-2"
+				/>
 				<service-info
+					v-if="service"
 					:service="service"
 				/>
 			</v-tab-item>
 
 			<v-tab-item>
+				<v-progress-linear
+					v-if="servicesLoading"
+					indeterminate
+					class="pt-2"
+				/>
 				<service-control
+					v-if="service"
 					:service="service"
 					:chip-color="chipColor"
 				/>
 			</v-tab-item>
 
 			<v-tab-item>
+				<v-progress-linear
+					v-if="servicesLoading"
+					indeterminate
+					class="pt-2"
+				/>
 				<service-template
+					v-if="service"
 					:service="service"
 				/>
 			</v-tab-item>
@@ -69,9 +87,8 @@ export default {
 	
 			if(item)
 				return item
-	
 			
-			return {}
+			return null
 		},
 		serviceId(){
 			return this.$route.params.serviceId;
@@ -82,7 +99,13 @@ export default {
 				'up': 'green darken-2',
 				'del': 'gray darken-2'
 			}
-			return dict[this.service.status] ?? 'blue-grey darken-2'
+			return dict?.[this?.service?.status] ?? 'blue-grey darken-2'
+		},
+		serviceTitle(){
+			return this?.service?.title ?? 'not found yet'
+		},
+		servicesLoading(){
+			return this.$store.getters['services/loading']
 		}
 	},
 	created(){
@@ -92,7 +115,7 @@ export default {
 		})
 	},
 	mounted(){
-		document.title = `${this.service.title} | NoCloud`
+		document.title = `${this.serviceTitle} | NoCloud`
 		this.$store.commit('reloadBtn/setCallback', {func: this.$store.dispatch, params: ['services/fetch']})
 	}
 }
