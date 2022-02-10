@@ -82,7 +82,7 @@ import { PEM, ASN1 } from '@sardinefish/asn1';
 import { createHash } from "sha256-uint8array";
 
 export default {
-	name: "tunnelmesh-extention",
+	name: "tunnelmesh-extention-create",
 	data(){
 		return {
 			rules: [

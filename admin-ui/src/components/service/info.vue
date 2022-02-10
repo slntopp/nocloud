@@ -23,7 +23,7 @@
 					readonly
 					:value="hashpart(service.hash)"
 					label="service hash"
-					style="display: inline-block; width: 100px"
+					style="display: inline-block; width: 150px"
 					:append-icon="copyed == 'rootHash' ? 'mdi-check': 'mdi-content-copy'"
 					@click:append="addToClipboard(service.hash, 'rootHash')"
 				>
@@ -60,9 +60,9 @@
 							<v-col>
 								<v-text-field
 									readonly
-									:value="hashpart(service.hash)"
+									:value="hashpart(service.instancesGroups[group].hash)"
 									label="group hash"
-									style="display: inline-block; width: 100px"
+									style="display: inline-block; width: 150px"
 									:append-icon="copyed == `${group}-hash` ? 'mdi-check': 'mdi-content-copy'"
 									@click:append="addToClipboard(service.instancesGroups[group].hash, `${group}-hash`)"
 								>

@@ -8,7 +8,13 @@
 		:headers="Headers"
 		item-key="uuid"
 	>
+		
 
+		<!-- <template v-slot:[`item.title`]="{ item }">
+			<router-link :to="item.route">
+				{{item.title}}
+			</router-link>
+		</template> -->
 	</nocloud-table>
 </template>
 
@@ -16,7 +22,7 @@
 import noCloudTable from "@/components/table.vue"
 
 const Headers = [
-	{ text: 'title', value: 'title' },
+	{ text: 'title', value: 'titleLink' },
 	{ text: 'type', value: 'type' },
 	{
 		text: 'UUID',
@@ -55,7 +61,14 @@ export default {
 	},
 	computed: {
 		tableData(){
-			return this.$store.getters['servicesProviders/all'];
+			return this.$store.getters['servicesProviders/all'].map(el => ({
+				titleLink: el.title,
+				type: el.type,
+				route: {
+					name: 'ServicesProvider',
+					params: {uuid: el.uuid}
+				}
+			}));
 		}
 	},
 	created() {

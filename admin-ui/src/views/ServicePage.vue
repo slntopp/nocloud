@@ -76,8 +76,8 @@ export default {
 		'service-info': serviceInfo,
 	},
 	data: () => ({
-		notFound: false,
-		tabs: 0
+		found: false,
+		tabs: 0,
 	}),
 	
 	computed: {
@@ -102,7 +102,7 @@ export default {
 			return dict?.[this?.service?.status] ?? 'blue-grey darken-2'
 		},
 		serviceTitle(){
-			return this?.service?.title ?? 'not found yet'
+			return this?.service?.title ?? 'not found'
 		},
 		servicesLoading(){
 			return this.$store.getters['services/loading']
@@ -111,7 +111,8 @@ export default {
 	created(){
 		this.$store.dispatch('services/fetch')
 		.then(() => {
-			this.notFound = true
+			this.found = !!this.service;
+			document.title = `${this.serviceTitle} | NoCloud`
 		})
 	},
 	mounted(){
