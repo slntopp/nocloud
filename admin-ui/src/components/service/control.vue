@@ -103,7 +103,7 @@ export default {
 		},
 		down(){
 			this.loading.action = true;			
-			api.post(`/services/${this.serviceId}/down`, {})
+			api.services.down(this.serviceId)
 			.then(() => {
 				this.$store.dispatch('services/fetch')
 			})
