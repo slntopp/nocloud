@@ -416,7 +416,7 @@ func (s *ServicesServiceServer) Invoke(ctx context.Context, req *pb.PerformActio
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	r, err := s.ctrl.Get(ctx, req.GetSp())
+	r, err := s.ctrl.Get(ctx, req.GetService())
 	if err != nil {
 		log.Debug("Error getting Service from DB", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")

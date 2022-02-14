@@ -693,7 +693,7 @@
         ]
       }
     },
-    "/services/{sp}/{group}/{instance}/action/{action}": {
+    "/services/{service}/{group}/{instance}/action/{action}": {
       "post": {
         "operationId": "ServicesService_PerformServiceAction",
         "responses": {
@@ -712,7 +712,7 @@
         },
         "parameters": [
           {
-            "name": "sp",
+            "name": "service",
             "in": "path",
             "required": true,
             "type": "string"
@@ -1685,7 +1685,7 @@
     "nocloudservicesPerformActionRequest": {
       "type": "object",
       "properties": {
-        "sp": {
+        "service": {
           "type": "string"
         },
         "group": {
