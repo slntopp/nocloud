@@ -34,6 +34,7 @@
 			@input="v => selected = v"
 			:value="selected"
       show-expand
+			:loading="isLoading"
 		>
 
 			<template
@@ -136,6 +137,9 @@ export default {
 		},
 		isFiltered(){
 			return this.$route.query.filter == 'uuid' && this.$route.query['items[]'];
+		},
+		isLoading(){
+			return this.$store.getters['services/isLoading'];
 		}
 	},
 	created(){
