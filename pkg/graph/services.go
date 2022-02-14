@@ -83,11 +83,16 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service, hash bool) (error) {
 	ctrl.log.Debug("Updating Service", zap.Any("service", service))
 
+	digest := service.GetHash()
 	if hash {
 		err := hasher.SetHash(service.ProtoReflect())
 		if err != nil {
 			return err
 		}
+	}
+
+	if service.GetHash() != digest {
+		service.Status = "modified"
 	}
 
 	meta, err := ctrl.col.ReplaceDocument(ctx, service.GetUuid(), service)
