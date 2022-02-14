@@ -52,7 +52,7 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, group *pb.Ins
 	id, err := uuid.NewV4()
 	if err != nil {
 		ctrl.log.Debug("Error generating UUID", zap.Error(err))
-		return errors.New("Error generating UUID")
+		return errors.New("error generating UUID")
 	}
 	for _, instance := range group.GetInstances() {
 		err := ctrl.inst_ctrl.Create(ctx, instance)
