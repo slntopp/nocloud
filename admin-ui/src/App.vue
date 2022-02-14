@@ -106,8 +106,6 @@
           </v-list-item-content>
         </v-list-item>
 
-				<v-subheader>SYSTEM</v-subheader>
-
         <v-list-item 
 					v-bind="listItemBind"
 					:to="{name: 'ServicesProviders'}"
@@ -134,6 +132,7 @@
           </v-list-item-content>
         </v-list-item>
 
+				<v-subheader>SYSTEM</v-subheader>
         <v-list-item 
 					v-bind="listItemBind"
 					:to="{name: 'Settings'}"
