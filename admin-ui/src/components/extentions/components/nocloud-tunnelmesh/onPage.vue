@@ -30,9 +30,8 @@
 <script>
 export default {
 	name: "tunnelmesh-extention-page",
-	data(){
-		
-	},
+	data: () => ({
+	}),
 	props: {
 		data: {
 			type: Object,
