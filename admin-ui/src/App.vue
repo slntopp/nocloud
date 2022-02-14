@@ -69,6 +69,19 @@
 
         <v-list-item 
 					v-bind="listItemBind"
+					:to="{name: 'Accounts'}"
+				>
+          <v-list-item-icon>
+            <v-icon>mdi-account-multiple</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>Accounts</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item 
+					v-bind="listItemBind"
 					:to="{name: 'Namespaces'}"
 				>
           <v-list-item-icon>
@@ -82,14 +95,14 @@
 
         <v-list-item 
 					v-bind="listItemBind"
-					:to="{name: 'Accounts'}"
+					:to="{name: 'Services'}" @click.ctrl="() => easterEgg = true"
 				>
           <v-list-item-icon>
-            <v-icon>mdi-account-multiple</v-icon>
+            <v-icon :color="easterEgg ? 'green darker-2' : undefined">mdi-alien</v-icon>
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>Accounts</v-list-item-title>
+            <v-list-item-title>Services</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -119,21 +132,7 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-list-item 
-					v-bind="listItemBind"
-					:to="{name: 'Services'}" @click.ctrl="() => easterEgg = true"
-				>
-          <v-list-item-icon>
-            <v-icon :color="easterEgg ? 'green darker-2' : undefined">mdi-alien</v-icon>
-          </v-list-item-icon>
-
-          <v-list-item-content>
-            <v-list-item-title>Services</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-
 				<v-subheader>SYSTEM</v-subheader>
-
         <v-list-item 
 					v-bind="listItemBind"
 					:to="{name: 'Settings'}"

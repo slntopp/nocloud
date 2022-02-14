@@ -61,7 +61,7 @@ import servicesProviders from "@/components/servicesproviders_table.vue"
 import snackbar from "@/mixins/snackbar.js"
 
 export default {
-	name: "namespaces-view",
+	name: "servicesProviders-create",
 	components: {
 		servicesProviders
 	},

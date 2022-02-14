@@ -50,6 +50,14 @@ const routes = [
 		}
   },
   {
+    path: '/sp/:uuid',
+    name: 'ServicesProvider',
+    component: () => import('../views/ServicesProvidersPage.vue'),
+		meta: {
+			requireLogin: true
+		}
+  },
+  {
     path: '/dns',
     name: 'DNS manager',
     component: () => import('../views/dnsManager.vue'),
