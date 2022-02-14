@@ -1,7 +1,7 @@
 <template>
 	<div class="sp-ione">
 		<v-row v-for="field in Object.keys(fields)" :key="field" align="center">
-			<v-col cols="3">
+			<v-col cols="4">
 				<v-subheader>
 					{{fields[field].subheader || field}}
 
@@ -27,7 +27,7 @@
 			</v-col>
 
 			<v-col
-				cols="9"
+				cols="8"
 			>
 				<v-text-field
 					@change="(data) => changeHandler(field, data)"
@@ -97,6 +97,7 @@ export default {
 		fields: {
 			host: {
 				type: 'text',
+				subheader: "Host",
 				rules: [
 					(value) => !!value || 'Field is required',
 					(value) => {
@@ -112,6 +113,7 @@ export default {
 			},
 			username: {
 				type: 'text',
+				subheader: "Username(Login)",
 				rules: [
 					(value) => !!value || 'Field is required'
 				],
@@ -119,6 +121,7 @@ export default {
 			},
 			password: {
 				type: 'password',
+				subheader: "Password or Token",
 				rules: [
 					(value) => !!value || 'Field is required'
 				],
@@ -126,6 +129,7 @@ export default {
 			},
 			group: {
 				type: 'number',
+				subheader: "Group",
 				rules: [
 					(value) => !!value || 'Field is required',
 					(value) => value == Number(value) || 'wrong group id'
@@ -137,6 +141,7 @@ export default {
 			},
 			schedule: {
 				type: 'text',
+				subheader: "Scheduler rules",
 				isJSON: true,
 				rules: [
 					(value) => !!value || 'Field is required',
@@ -146,7 +151,7 @@ export default {
 			},
 			schedule_ds: {
 				type: 'text',
-				subheader: "schedule data store",
+				subheader: "DataStore Scheduler rules",
 				isJSON: true,
 				rules: [
 					(value) => !!value || 'Field is required',
@@ -156,7 +161,7 @@ export default {
 			},
 			public_ip_pool: {
 				type: 'number',
-				subheader: "public ip pool",
+				subheader: "Public IPs Pool ID",
 				rules: [
 					(value) => !!value || 'Field is required',
 				],
@@ -167,7 +172,7 @@ export default {
 			},
 			private_vnets_pool: {
 				type: 'number',
-				subheader: "private vnets pool",
+				subheader: "Private Networks Pool ID",
 				rules: [
 					(value) => !!value || 'Field is required',
 				],
