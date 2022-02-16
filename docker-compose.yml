@@ -114,6 +114,26 @@ services:
     volumes:
       - redis-data:/data
 
+  statuses:
+    image: ghcr.io/slntopp/nocloud/statuses:latest
+    networks:
+      - grpc-internal
+      - redis
+    environment:
+      LOG_LEVEL: -1
+      PORT: 8080
+      REDIS_HOST: redis_statuses:6379
+  redis_statuses:
+    image: redis
+    restart: always
+    command: redis-server --save 60 1
+    networks:
+      - redis
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_statuses-data:/data
+
   db:
     container_name: database-master
     image: arangodb/arangodb:latest
@@ -138,4 +158,5 @@ networks:
 
 volumes:
   redis-data:
+  redis_statuses-data:
   data:
