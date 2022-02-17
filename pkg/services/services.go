@@ -409,8 +409,8 @@ func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRe
 	return &pb.DeleteResponse{Result: true}, nil
 }
 
-func (s *ServicesServiceServer) Invoke(ctx context.Context, req *pb.PerformActionRequest) (res *pb.PerformActionResponse, err error) {
-	log := s.log.Named("Invoke")
+func (s *ServicesServiceServer) PerformServiceAction(ctx context.Context, req *pb.PerformActionRequest) (res *pb.PerformActionResponse, err error) {
+	log := s.log.Named("PerformServiceAction")
 	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -424,7 +424,7 @@ func (s *ServicesServiceServer) Invoke(ctx context.Context, req *pb.PerformActio
 
 	ok := graph.HasAccess(ctx, s.db, requestor, r.ID.String(), access.MGMT)
 	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Perform Service Action")
 	}
 
 	igroup, ok := r.GetInstancesGroups()[req.GetGroup()]
