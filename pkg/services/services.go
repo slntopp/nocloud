@@ -438,7 +438,7 @@ func (s *ServicesServiceServer) PerformServiceAction(ctx context.Context, req *p
 		return nil, status.Error(codes.NotFound, "Service Provisions not Found in DB")
 	}
 
-	spid, ok := prov[req.GetGroup()]
+	spid, ok := prov[igroup.GetUuid()]
 	if !ok {
 		return nil, status.Errorf(codes.NotFound, "Provision for Group '%s' doesn't exist", req.GetGroup())
 	}
