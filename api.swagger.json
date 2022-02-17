@@ -14,6 +14,9 @@
       "name": "DNS"
     },
     {
+      "name": "ServicesService"
+    },
+    {
       "name": "ServicesProvidersService"
     },
     {
@@ -30,9 +33,6 @@
     },
     {
       "name": "NamespacesService"
-    },
-    {
-      "name": "ServicesService"
     },
     {
       "name": "SettingsService"
@@ -693,6 +693,70 @@
         ]
       }
     },
+    "/services/{service}/{group}/{instance}/action/{action}": {
+      "post": {
+        "operationId": "ServicesService_PerformServiceAction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesPerformActionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "instance",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
     "/services/{uuid}": {
       "get": {
         "operationId": "ServicesService_Get",
@@ -785,58 +849,6 @@
                 },
                 "service": {
                   "$ref": "#/definitions/servicesService"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      }
-    },
-    "/services/{uuid}/action/{action}": {
-      "post": {
-        "operationId": "ServicesService_PerformServiceAction",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/servicesPerformActionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "uuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "action",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "data": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "object"
-                  }
                 }
               }
             }
@@ -1666,6 +1678,29 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/servicesService"
+          }
+        }
+      }
+    },
+    "nocloudservicesPerformActionRequest": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "instance": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
           }
         }
       }

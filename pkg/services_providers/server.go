@@ -23,11 +23,11 @@ import (
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type ServicesProviderServer struct {
@@ -80,7 +80,7 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 
 	client, ok := s.drivers[req.GetType()]
 	if !ok {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("Driver type '%s' not registered", req.GetType()))
+		return nil, status.Errorf(codes.NotFound, "Driver type '%s' not registered", req.GetType())
 	}
 
 	tfc, ok := ctx.Value(nocloud.TestFromCreate).(bool)
@@ -89,7 +89,7 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 		for ext, data := range req.GetExtentions() {
 			client, ok := s.extention_servers[ext]
 			if !ok {
-				return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
+				return nil, status.Errorf(codes.NotFound, "Extention Server type '%s' not registered", req.GetType())
 			}
 			res, err := client.Test(ctx, &sppb.ServicesProvidersExtentionData{
 				Data: data,
@@ -132,7 +132,7 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 		client, ok := s.extention_servers[ext]
 		if !ok {
 			s.UnregisterExtentions(ctx, log, sp)
-			return nil, status.Error(codes.NotFound, fmt.Sprintf("Extention Server type '%s' not registered", req.GetType()))
+			return nil, status.Errorf(codes.NotFound, "Extention Server type '%s' not registered", req.GetType())
 		}
 		res, err := client.Register(ctx, &sppb.ServicesProvidersExtentionData{
 			Data: data,
@@ -143,8 +143,7 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 		}
 		if !res.Result {
 			s.UnregisterExtentions(ctx, log, sp)
-			err := fmt.Sprintf("Extention '%s': %s", ext, res.Error)
-			return req, status.Error(codes.Internal, err)
+			return req, status.Errorf(codes.Internal, "Extention '%s': %s", ext, res.Error)
 		}
 	}
 
@@ -200,7 +199,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), 3)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -270,39 +269,4 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 	}
 
 	return res, nil
-}
-
-func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.ActionRequest) (res *structpb.Struct, err error) {
-	log := s.log.Named("Invoke")
-	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
-
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	log.Debug("Requestor", zap.String("id", requestor))
-
-	ns, err := s.ns_ctrl.Get(ctx, "0")
-	if err != nil {
-		return nil, err
-	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), 3)
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
-	}
-
-	sp, err := s.ctrl.Get(ctx, req.GetServicesProvider().GetUuid())
-	if err != nil {
-		log.Error("Error getting services provider",
-			zap.String("services_provider", req.GetServicesProvider().GetUuid()),
-			zap.Error(err),
-		)
-		return nil, status.Error(codes.NotFound, "ServicesProvider not found")
-	}
-
-	req.ServicesProvider = sp.ServicesProvider
-
-	client, ok := s.drivers[sp.GetType()]
-	if !ok {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("Driver type '%s' not registered", sp.GetType()))
-	}
-
-	return client.Invoke(ctx, req)
 }
