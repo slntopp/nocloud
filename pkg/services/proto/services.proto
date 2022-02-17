@@ -108,6 +108,19 @@ message GetRequest {
     string uuid = 1;
 }
 
+message GetStatesRequest {
+    string uuid = 1; // Service UUID
+}
+
+message State {
+    int32 state = 1; // NoCloud Instance State
+    map<string, google.protobuf.Value> meta = 2; // Driver(Provider/Hypervisor) State data
+}
+
+message GetStatesResponse {
+    map<string, State> states = 1; // Map of Instance UUID to it's State
+}
+
 service ServicesService {
     rpc TestConfig(nocloud.services.CreateRequest)
         returns (nocloud.services.TestConfigResponse) {
@@ -146,6 +159,12 @@ service ServicesService {
         returns (nocloud.services.ListResponse) {
         option (google.api.http) = {
             get: "/services"
+        };
+    };
+
+    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.services.GetStatesResponse) {
+        option (google.api.http) = {
+            get: "/services/{uuid}/states"
         };
     };
 
