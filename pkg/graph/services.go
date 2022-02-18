@@ -84,9 +84,13 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service,
 	ctrl.log.Debug("Updating Service", zap.Any("service", service))
 
 	if hash {
+		hash := service.GetHash()
 		err := hasher.SetHash(service.ProtoReflect())
 		if err != nil {
 			return err
+		}
+		if service.GetHash() != hash {
+			service.Status = "modified"
 		}
 	}
 
