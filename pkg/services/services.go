@@ -27,6 +27,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
+	sspb "github.com/slntopp/nocloud/pkg/statuses/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -34,27 +35,29 @@ import (
 
 type ServicesServiceServer struct {
 	pb.UnimplementedServicesServiceServer
-	db driver.Database
-	ctrl graph.ServicesController
+	db      driver.Database
+	ctrl    graph.ServicesController
 	sp_ctrl graph.ServicesProvidersController
 	ns_ctrl graph.NamespacesController
 
-	drivers map[string]driverpb.DriverServiceClient
+	drivers  map[string]driverpb.DriverServiceClient
+	statuses sspb.PostServiceClient
 
 	log *zap.Logger
 }
 
-func NewServicesServer(log *zap.Logger, db driver.Database) *ServicesServiceServer {
+func NewServicesServer(log *zap.Logger, db driver.Database, gc sspb.PostServiceClient) *ServicesServiceServer {
 	return &ServicesServiceServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
-		sp_ctrl: graph.NewServicesProvidersController(log, db),
-		ns_ctrl: graph.NewNamespacesController(log, db),
-		drivers: make(map[string]driverpb.DriverServiceClient),
+		sp_ctrl:  graph.NewServicesProvidersController(log, db),
+		ns_ctrl:  graph.NewNamespacesController(log, db),
+		drivers:  make(map[string]driverpb.DriverServiceClient),
+		statuses: gc,
 	}
 }
 
 type InstancesGroupDriverContext struct {
-	sp *graph.ServicesProvider
+	sp     *graph.ServicesProvider
 	client *driverpb.DriverServiceClient
 }
 
@@ -80,7 +83,7 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 	}
 
 	service := request.GetService()
-	groups  := service.GetInstancesGroups()
+	groups := service.GetInstancesGroups()
 
 	log.Debug("Init validation", zap.Any("groups", groups), zap.Int("amount", len(groups)))
 	for name, group := range service.GetInstancesGroups() {
@@ -115,8 +118,8 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 			errors := make([]*pb.TestConfigError, 0)
 			for _, confErr := range res.Errors {
 				errors = append(errors, &pb.TestConfigError{
-					Error: confErr.Error,
-					Instance: confErr.Instance,
+					Error:         confErr.Error,
+					Instance:      confErr.Instance,
 					InstanceGroup: name,
 				})
 			}
@@ -154,7 +157,7 @@ func (s *ServicesServiceServer) Create(ctx context.Context, request *pb.CreateRe
 		return nil, status.Error(codes.Internal, "Error while creating Service")
 	}
 
-	err = s.ctrl.Join(ctx, doc, namespace, access.ADMIN, roles.OWNER)	
+	err = s.ctrl.Join(ctx, doc, namespace, access.ADMIN, roles.OWNER)
 	if err != nil {
 		log.Error("Error while joining service to namespace", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
@@ -183,7 +186,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
 			return nil, status.Errorf(codes.InvalidArgument, "Error getting ServiceProvider(%s)", sp_id)
 		}
-		
+
 		groupType := group.GetType()
 		client, ok := s.drivers[groupType]
 		if !ok {
@@ -236,7 +239,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 		for i, instance := range response.GetGroup().GetInstances() {
 			group.Instances[i].Data = instance.GetData()
 		}
-		
+
 		group.Data = response.GetGroup().GetData()
 		err = s.ctrl.Provide(ctx, sp.ID, service.ID, group.GetUuid())
 		if err != nil {
@@ -251,7 +254,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 		}
 		s.log.Debug("Updated Group", zap.Any("group", group))
 	}
-	
+
 	service.Status = "up"
 	s.log.Debug("Updated Service", zap.Any("service", service))
 	err = s.ctrl.Update(ctx, service.Service, false)
@@ -308,7 +311,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
-	for key, group := range service.GetInstancesGroups() {		
+	for key, group := range service.GetInstancesGroups() {
 		c, ok := contexts[group.GetUuid()]
 		if !ok {
 			log.Debug("Instance Group has no context, i.e. provision", zap.String("group", group.GetUuid()), zap.String("service", service.GetUuid()))
@@ -403,9 +406,9 @@ func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRe
 	err = s.ctrl.Delete(ctx, r)
 	if err != nil {
 		log.Error("Error Deleting Service", zap.Error(err))
-		return &pb.DeleteResponse{Result: false, Error: err.Error() }, nil
+		return &pb.DeleteResponse{Result: false, Error: err.Error()}, nil
 	}
-	
+
 	return &pb.DeleteResponse{Result: true}, nil
 }
 
@@ -442,7 +445,7 @@ func (s *ServicesServiceServer) PerformServiceAction(ctx context.Context, req *p
 	if !ok {
 		return nil, status.Errorf(codes.NotFound, "Provision for Group '%s' doesn't exist", req.GetGroup())
 	}
-	
+
 	sp, err := s.sp_ctrl.Get(ctx, spid)
 	if err != nil {
 		log.Debug("Error getting ServicesProvider from DB", zap.Error(err))
@@ -455,8 +458,8 @@ func (s *ServicesServiceServer) PerformServiceAction(ctx context.Context, req *p
 	}
 
 	return client.Invoke(ctx, &driverpb.PerformActionRequest{
-		Request: req,
-		Group: igroup,
+		Request:          req,
+		Group:            igroup,
 		ServicesProvider: sp.ServicesProvider,
 	})
 }
