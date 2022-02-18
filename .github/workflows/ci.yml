@@ -3,12 +3,27 @@ name: Build Docker Images
 on:
   push:
     branches:
-      - 'master'
+      - master
+      - dev-*
 
 env:
   REGISTRY: ghcr.io
+  IMAGE_TAG: ${{github.ref_name == 'master' && 'latest' || github.ref_name}}
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set target tags
+        id: set-tags-matrix
+        run: echo "::set-output name=matrix::$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')"
+
+    outputs:
+      matrix: ${{steps.set-tags-matrix.outputs.matrix}}
+
   build-and-push-base-image:
     runs-on: ubuntu-latest
     permissions:
@@ -22,7 +37,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3.6.1
         with:
-          tags: type=raw,value=latest
+          tags: type=raw,value=${{env.IMAGE_TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/base
 
       - name: Log in to the Container registry
@@ -40,19 +55,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-
-  prepare:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Set target tags
-        id: set-tags-matrix
-        run: echo "::set-output name=matrix::$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')"
-
-    outputs:
-      matrix: ${{steps.set-tags-matrix.outputs.matrix}}
 
   build-and-push:
     runs-on: ubuntu-latest
@@ -72,7 +74,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3.6.1
         with:
-          tags: type=raw,value=latest
+          tags: type=raw,value=${{env.IMAGE_TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}
 
       - name: Log in to the Container registry
