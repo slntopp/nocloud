@@ -3,10 +3,12 @@ name: Build Docker Images
 on:
   push:
     branches:
-      - 'master'
+      - master
+      - dev-*
 
 env:
   REGISTRY: ghcr.io
+  TAG: ${{ env.BRANCH == master && latest || env.BRANCH }}
 
 jobs:
   build-and-push-base-image:
@@ -22,7 +24,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3.6.1
         with:
-          tags: type=raw,value=latest
+          tags: type=raw,value=${{TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/base
 
       - name: Log in to the Container registry
@@ -72,7 +74,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3.6.1
         with:
-          tags: type=raw,value=latest
+          tags: type=raw,value=${{TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}
 
       - name: Log in to the Container registry
