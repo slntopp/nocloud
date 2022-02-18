@@ -53,8 +53,8 @@ func (s *StatusesServer) State(
 		return nil, status.Error(codes.Internal, "Error  Marshal JSON")
 	}
 
-	r := s.rdb.HSet(ctx, KEYS_PREFIX+":"+string(req.Uuid), json)
-	upd, err := r.Result()
+	r := s.rdb.Set(ctx, KEYS_PREFIX+":"+string(req.Uuid), json, 0)
+	_, err = r.Result() //TODO set string Result in PostServiceStateResponse.Result
 	if err != nil {
 		s.log.Error("Error putting status to Redis",
 			zap.String("zone", KEYS_PREFIX+":"+req.Uuid), zap.Error(err))
@@ -68,5 +68,5 @@ func (s *StatusesServer) State(
 		return nil, status.Error(codes.Internal, "Error putting status to Redis")
 	}
 
-	return &pb.PostServiceStateResponse{Uuid: req.Uuid, Result: upd, Error: ""}, nil
+	return &pb.PostServiceStateResponse{Uuid: req.Uuid, Result: 0, Error: ""}, nil
 }

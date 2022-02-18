@@ -18,6 +18,7 @@ package nocloud.statuses;
 
 import "google/protobuf/struct.proto";
 import "google/api/annotations.proto";
+import "pkg/services/proto/services.proto";
 
 message PostServiceStateRequest {
     string uuid = 1;
@@ -32,4 +33,6 @@ message PostServiceStateResponse {
 
 service PostService {
     rpc State(PostServiceStateRequest) returns (PostServiceStateResponse) {};
+    rpc StateGet(nocloud.services.Service)
+        returns (nocloud.services.GetStatesResponse) {};
 }
