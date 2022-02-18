@@ -32,16 +32,18 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
 	port string
-	log *zap.Logger
+	log  *zap.Logger
 
-	arangodbHost 	string
-	arangodbCred 	string
-	drivers 		[]string
-	SIGNING_KEY		[]byte
+	arangodbHost  string
+	arangodbCred  string
+	drivers       []string
+	SIGNING_KEY   []byte
+	statuses_host string
 )
 
 func init() {
@@ -54,13 +56,15 @@ func init() {
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+	viper.SetDefault("STATUSES_HOST", "statuses:8080")
 
 	port = viper.GetString("PORT")
 
-	arangodbHost 	= viper.GetString("DB_HOST")
-	arangodbCred 	= viper.GetString("DB_CRED")
-	drivers 		= viper.GetStringSlice("DRIVERS")
-	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
+	arangodbHost = viper.GetString("DB_HOST")
+	arangodbCred = viper.GetString("DB_CRED")
+	drivers = viper.GetStringSlice("DRIVERS")
+	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
+	statuses_host = viper.GetString("STATUSES_HOST")
 }
 
 func main() {
@@ -77,6 +81,16 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
+	log.Debug("Init Connection with Statuses", zap.String("host", statuses_host))
+	opts := []grpc.DialOption{
+		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+	conn, err := grpc.Dial(statuses_host, opts...)
+	if err != nil {
+		log.Fatal("fail to dial Statuses", zap.Error(err))
+	}
+	defer conn.Close()
+
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
@@ -84,8 +98,8 @@ func main() {
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
 	)
-	
-	server := services.NewServicesServer(log, db)
+
+	server := services.NewServicesServer(log, db, conn)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
