@@ -31,6 +31,7 @@ import (
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	sspb "github.com/slntopp/nocloud/pkg/statuses/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -90,6 +91,7 @@ func main() {
 		log.Fatal("fail to dial Statuses", zap.Error(err))
 	}
 	defer conn.Close()
+	grpc_client := sspb.NewPostServiceClient(conn)
 
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
@@ -99,7 +101,7 @@ func main() {
 		)),
 	)
 
-	server := services.NewServicesServer(log, db, conn)
+	server := services.NewServicesServer(log, db, grpc_client)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))

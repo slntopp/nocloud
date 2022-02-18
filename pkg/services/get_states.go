@@ -19,15 +19,12 @@ import (
 	"context"
 
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
-	sspb "github.com/slntopp/nocloud/pkg/statuses/proto"
 	"go.uber.org/zap"
 )
 
 //Gets statuses Instanses of Servce from pkg/statuses
 func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetStatesRequest) (*pb.GetStatesResponse, error) {
 	log := s.log.Named("TestServiceConfig")
-
-	grpc_client := sspb.NewPostServiceClient(s.statuses)
 
 	service, err := s.Get(ctx, &pb.GetRequest{
 		Uuid: request.Uuid,
@@ -36,7 +33,7 @@ func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetSt
 		log.Error("fail to get Services:", zap.Error(err))
 	}
 
-	resp, err := grpc_client.StateGet(ctx, service)
+	resp, err := s.statuses.StateGet(ctx, service)
 	if err != nil {
 		log.Error("fail to send statuses:", zap.Error(err))
 	}
