@@ -74,7 +74,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3.6.1
         with:
-          tags: type=raw,value=${{IMAGE_TAG}}
+          tags: type=raw,value=${{env.IMAGE_TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}
 
       - name: Log in to the Container registry
