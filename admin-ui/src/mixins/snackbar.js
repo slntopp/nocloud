@@ -29,6 +29,15 @@ const snackbar = {
 				buttonColor: 'white'
 			}
 			this.showSnackbar(opts);
+		},
+		showSnackbarSuccess({message, timeout}){
+			const opts = {
+				message,
+				timeout,
+				color: 'green darken-3',
+				buttonColor: 'white'
+			}
+			this.showSnackbar(opts);
 		}
 	}
 }
