@@ -134,6 +134,15 @@ services:
     volumes:
       - redis_statuses-data:/data
 
+  driver-ione:
+    container_name: driver
+    image: ghcr.io/slntopp/nocloud-driver-ione:latest
+    networks:
+      - grpc-internal
+    environment:
+      DRIVER_TYPE_KEY: ione
+      LOG_LEVEL: -1
+
   db:
     container_name: database-master
     image: arangodb/arangodb:latest
@@ -146,15 +155,6 @@ services:
       - ../../database/schemes/:/docker-entrypoint-initdb.d/dumps/nocloud/
     networks:
       - arangodb
-
-  driver-ione:
-    container_name: driver
-    image: ghcr.io/slntopp/nocloud-driver-ione:latest
-    networks:
-      - grpc-internal
-    environment:
-      DRIVER_TYPE_KEY: ione
-      LOG_LEVEL: -1
 
 networks:
   proxy:
