@@ -14,6 +14,9 @@
       "name": "DNS"
     },
     {
+      "name": "ServicesService"
+    },
+    {
       "name": "ServicesProvidersService"
     },
     {
@@ -32,10 +35,10 @@
       "name": "NamespacesService"
     },
     {
-      "name": "ServicesService"
+      "name": "SettingsService"
     },
     {
-      "name": "SettingsService"
+      "name": "PostService"
     }
   ],
   "host": "localhost:8000",
@@ -693,6 +696,70 @@
         ]
       }
     },
+    "/services/{service}/{group}/{instance}/action/{action}": {
+      "post": {
+        "operationId": "ServicesService_PerformServiceAction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesPerformActionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "instance",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "data": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
     "/services/{uuid}": {
       "get": {
         "operationId": "ServicesService_Get",
@@ -795,58 +862,6 @@
         ]
       }
     },
-    "/services/{uuid}/action/{action}": {
-      "post": {
-        "operationId": "ServicesService_PerformServiceAction",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/servicesPerformActionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "uuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "action",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "data": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      }
-    },
     "/services/{uuid}/down": {
       "post": {
         "operationId": "ServicesService_Down",
@@ -878,6 +893,36 @@
             "schema": {
               "type": "object"
             }
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
+    "/services/{uuid}/states": {
+      "get": {
+        "operationId": "ServicesService_GetStates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesGetStatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1670,6 +1715,29 @@
         }
       }
     },
+    "nocloudservicesPerformActionRequest": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "instance": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
     "nocloudservicesUpResponse": {
       "type": "object",
       "properties": {
@@ -1840,6 +1908,17 @@
         }
       }
     },
+    "servicesGetStatesResponse": {
+      "type": "object",
+      "properties": {
+        "states": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/servicesState"
+          }
+        }
+      }
+    },
     "servicesPerformActionResponse": {
       "type": "object",
       "properties": {
@@ -1883,6 +1962,21 @@
         },
         "hash": {
           "type": "string"
+        }
+      }
+    },
+    "servicesState": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },
@@ -2028,6 +2122,21 @@
       "type": "object",
       "properties": {
         "key": {
+          "type": "string"
+        }
+      }
+    },
+    "statusesPostServiceStateResponse": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string",
+          "format": "int64"
+        },
+        "error": {
           "type": "string"
         }
       }

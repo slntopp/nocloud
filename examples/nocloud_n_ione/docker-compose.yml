@@ -114,6 +114,35 @@ services:
     volumes:
       - redis-data:/data
 
+  statuses:
+    image: ghcr.io/slntopp/nocloud/statuses:latest
+    networks:
+      - grpc-internal
+      - redis
+    environment:
+      LOG_LEVEL: -1
+      PORT: 8080
+      REDIS_HOST: redis_statuses:6379
+  redis_statuses:
+    image: redis
+    restart: always
+    command: redis-server --save 60 1
+    networks:
+      - redis
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_statuses-data:/data
+
+  driver-ione:
+    container_name: driver
+    image: ghcr.io/slntopp/nocloud-driver-ione:latest
+    networks:
+      - grpc-internal
+    environment:
+      DRIVER_TYPE_KEY: ione
+      LOG_LEVEL: -1
+
   db:
     container_name: database-master
     image: arangodb/arangodb:latest
@@ -127,15 +156,6 @@ services:
     networks:
       - arangodb
 
-  driver-ione:
-    container_name: driver
-    image: ghcr.io/slntopp/nocloud-driver-ione:latest
-    networks:
-      - grpc-internal
-    environment:
-      DRIVER_TYPE_KEY: ione
-      LOG_LEVEL: -1
-
 networks:
   proxy:
     driver: bridge
@@ -146,5 +166,6 @@ networks:
     driver: bridge
 
 volumes:
+  redis_statuses-data:
   redis-data:
   data:

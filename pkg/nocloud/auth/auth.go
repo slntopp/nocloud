@@ -18,7 +18,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/slntopp/nocloud/pkg/health/healthpb"
@@ -92,7 +91,7 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 func validateToken(tokenString string) (jwt.MapClaims, error) {
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, status.Error(codes.Unauthenticated, fmt.Sprintf("Unexpected signing method: %v", t.Header["alg"]))
+			return nil, status.Errorf(codes.Unauthenticated, "Unexpected signing method: %v", t.Header["alg"])
 		}
 		return SIGNING_KEY, nil
 	})

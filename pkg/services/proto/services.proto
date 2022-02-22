@@ -65,9 +65,11 @@ message DeleteResponse {
 }
 
 message PerformActionRequest {
-    string uuid = 1;
-    string action = 2;
-    map<string, google.protobuf.Value> data = 3;
+    string service = 1;
+    string group = 2;
+    string instance = 3;
+    string action = 4;
+    map<string, google.protobuf.Value> data = 5;
 }
 
 message PerformActionResponse {
@@ -104,6 +106,19 @@ message ListResponse {
 
 message GetRequest {
     string uuid = 1;
+}
+
+message GetStatesRequest {
+    string uuid = 1; // Service UUID
+}
+
+message State {
+    int32 state = 1; // NoCloud Instance State
+    map<string, google.protobuf.Value> meta = 2; // Driver(Provider/Hypervisor) State data
+}
+
+message GetStatesResponse {
+    map<string, State> states = 1; // Map of Instance UUID to it's State
 }
 
 service ServicesService {
@@ -147,6 +162,12 @@ service ServicesService {
         };
     };
 
+    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.services.GetStatesResponse) {
+        option (google.api.http) = {
+            get: "/services/{uuid}/states"
+        };
+    };
+
     rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse) {
         option (google.api.http) = {
             post: "/services/{uuid}/up"
@@ -163,7 +184,7 @@ service ServicesService {
     rpc PerformServiceAction(nocloud.services.PerformActionRequest)
         returns (nocloud.services.PerformActionResponse) {
         option (google.api.http) = {
-            post: "/services/{uuid}/action/{action}",
+            post: "/services/{service}/{group}/{instance}/action/{action}",
             body: "*"
         };
     };

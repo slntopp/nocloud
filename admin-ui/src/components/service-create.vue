@@ -239,7 +239,7 @@ export default {
 				body: {
 					type: 'ione',
 					"resources": {
-						"ips_public": 1
+						"ips_public": 0
 					},
 				}
 			}
@@ -263,6 +263,12 @@ export default {
 
 			instances.forEach(inst => {
 				data.instances_groups[inst.title] = inst.body
+				let ips = 0;
+				Object.keys(data.instances_groups[inst.title].instances).forEach(key => {
+					const item = data.instances_groups[inst.title].instances[key];
+					ips += item.resources.ips_public;
+				})
+				data.instances_groups[inst.title].resources.ips_public = ips;
 			});
 			return {namespace: this.namespace, service: data};
 		},

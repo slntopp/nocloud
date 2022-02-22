@@ -16,8 +16,7 @@ limitations under the License.
 syntax = "proto3";
 package nocloud.instance.driver.vanilla;
 
-import "google/protobuf/struct.proto";
-
+import "pkg/services/proto/services.proto";
 import "pkg/instances/proto/instances.proto";
 import "pkg/services_providers/proto/services_providers.proto";
 
@@ -48,6 +47,12 @@ message DownResponse {
     nocloud.instances.InstancesGroup group = 1;
 }
 
+message PerformActionRequest {
+    nocloud.services.PerformActionRequest request = 1;
+    nocloud.instances.InstancesGroup group = 2;
+    nocloud.services_providers.ServicesProvider services_provider = 3;
+}
+
 service DriverService {
     rpc TestServiceProviderConfig(nocloud.instance.driver.vanilla.TestServiceProviderConfigRequest) returns (nocloud.services_providers.TestResponse);
     rpc TestInstancesGroupConfig(nocloud.instances.TestInstancesGroupConfigRequest) returns (nocloud.instances.TestInstancesGroupConfigResponse);
@@ -56,5 +61,5 @@ service DriverService {
     rpc Up(nocloud.instance.driver.vanilla.UpRequest) returns (nocloud.instance.driver.vanilla.UpResponse);
     rpc Down(nocloud.instance.driver.vanilla.DownRequest) returns (nocloud.instance.driver.vanilla.DownResponse);
 
-    rpc Invoke(nocloud.services_providers.ActionRequest) returns (google.protobuf.Struct);
+    rpc Invoke(PerformActionRequest) returns (nocloud.services.PerformActionResponse);
 }
