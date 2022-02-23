@@ -225,6 +225,10 @@ export default {
 		.then(res => {
 			console.log(res)
 		})
+		api.services.getStates(this.serviceId)
+		.then(res => {
+			console.log(res)
+		})
 	}
 }
 </script>
