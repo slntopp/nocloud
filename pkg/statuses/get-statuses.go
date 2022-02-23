@@ -28,7 +28,9 @@ import (
 //Gets statuses Instanses of Servce
 func (s *StatusesServer) StateGet(ctx context.Context, req *spb.Service) (resp *spb.GetStatesResponse, err error) {
 
-	resp.States = make(map[string]*spb.State)
+	resp = &spb.GetStatesResponse{
+		States:  make(map[string]*spb.State),
+	}
 
 	for _, ig := range req.InstancesGroups {
 		for in := range ig.Instances {
