@@ -334,7 +334,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 		service.Service.InstancesGroups[key] = group
 	}
 
-	err = s.ctrl.SetStatus(ctx, service, "down")
+	err = s.ctrl.SetStatus(ctx, service, "init")
 	if err != nil {
 		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
