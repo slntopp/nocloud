@@ -17,6 +17,7 @@ package statuses
 
 import (
 	"context"
+	"encoding/json"
 
 	redis "github.com/go-redis/redis/v8"
 	pb "github.com/slntopp/nocloud/pkg/statuses/proto"
@@ -46,7 +47,7 @@ func (s *StatusesServer) State(
 	req *pb.PostServiceStateRequest,
 ) (*pb.PostServiceStateResponse, error) {
 
-	json, err := req.Meta["StateVM"].MarshalJSON()
+	json, err := json.Marshal(req.Meta)
 	if err != nil {
 		s.log.Error("Error Marshal JSON",
 			zap.String("zone", KEYS_PREFIX+":"+string(req.Uuid)), zap.Error(err))
