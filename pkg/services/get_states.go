@@ -24,18 +24,18 @@ import (
 
 //Gets statuses Instanses of Servce from pkg/statuses
 func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetStatesRequest) (*pb.GetStatesResponse, error) {
-	log := s.log.Named("TestServiceConfig")
+	log := s.log.Named("GetStates")
 
 	service, err := s.Get(ctx, &pb.GetRequest{
 		Uuid: request.Uuid,
 	})
 	if err != nil {
-		log.Error("fail to get Services:", zap.Error(err))
+		log.Error("fail to get Services", zap.Error(err))
 	}
 
 	resp, err := s.statuses.StateGet(ctx, service)
 	if err != nil {
-		log.Error("fail to send statuses:", zap.Error(err))
+		log.Error("fail to send statuses", zap.Error(err))
 	}
 
 	return resp, nil
