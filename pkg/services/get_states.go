@@ -20,6 +20,8 @@ import (
 
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 //Gets statuses Instanses of Servce from pkg/statuses
@@ -30,12 +32,13 @@ func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetSt
 		Uuid: request.Uuid,
 	})
 	if err != nil {
-		log.Error("fail to get Services", zap.Error(err))
+		return nil, err
 	}
 
 	resp, err := s.statuses.StateGet(ctx, service)
 	if err != nil {
-		log.Error("fail to send statuses", zap.Error(err))
+		log.Error("fail to get States", zap.Error(err))
+		return nil, status.Error(codes.Internal, "fail to get States")
 	}
 
 	return resp, nil
