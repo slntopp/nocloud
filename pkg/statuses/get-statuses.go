@@ -52,9 +52,12 @@ func (s *StatusesServer) StateGet(ctx context.Context, req *spb.Service) (resp *
 				return nil, status.Error(codes.Internal, "Error  Unmarshal JSON")
 			}
 
+			resp.States[instance_uuid].Meta= stpb.GetStructValue().Fields
+
 			resp.States[instance_uuid] = &spb.State{
 				State: int32(stpb.GetStructValue().GetFields()["state"].GetNumberValue()),
 			}
+
 		}
 
 	}
