@@ -179,7 +179,7 @@ export default {
 				loading: false
 			},
 			deletingLoading: false,
-			accessLevels: [0, 1, 2, 3]
+			accessLevels: [0, 1, 2, 3],
 		}
 	},
 	methods: {

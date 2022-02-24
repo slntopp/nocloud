@@ -7,6 +7,7 @@
 		:single-select="singleSelect"
 		:headers="Headers"
 		item-key="uuid"
+		:footer-error="fetchError"
 	>
 		
 
@@ -52,6 +53,7 @@ export default {
 			selected: this.value,
 			loading: false,
 			Headers,
+			fetchError: ''
 		}
 	},
 	methods: {
@@ -76,6 +78,10 @@ export default {
 		this.$store.dispatch('servicesProviders/fetch')
 		.finally(()=>{
 			this.loading = false;
+		})
+		.catch(err => {
+			console.log(`err`, err)
+			this.fetchError = 'Can\'t reach server'
 		})
 	},
 }

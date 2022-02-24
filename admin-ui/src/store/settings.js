@@ -44,26 +44,29 @@ export default {
 			commit("setLoading", true);
 			const interestedKeys = values.length == 0 ? state.rawKeys : values;
 			return new Promise((resolve, reject) => {
-				api.settings.get(interestedKeys)
-				.then(response => {
-					commit('setValues', response)
-					resolve(response)
-				})
-				.catch(error => {
-					reject(error);
-				})
-				.finally(()=>{
+				if(interestedKeys.length !== 0){
+					api.settings.get(interestedKeys)
+					.then(response => {
+						commit('setValues', response)
+						resolve(response)
+					})
+					.catch(error => {
+						reject(error);
+					})
+					.finally(()=>{
+						commit("setLoading", false);
+					})
+				} else {
 					commit("setLoading", false);
-				})
+					resolve([])
+				}
 			})
 		},
-		fetch({dispatch}){
+		async fetch({dispatch}){
+			await dispatch('fetchKeys');
 			return new Promise((resolve, reject) => {
-				dispatch('fetchKeys')
-				.then(() => {
-					dispatch('fetchValues')
-					.then(resolve)
-				})
+				dispatch('fetchValues')
+				.then(resolve)
 				.catch(reject)
 			})
 		}
