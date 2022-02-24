@@ -139,6 +139,15 @@
 													>
 													</v-text-field>
 												</v-col>
+												<v-col>
+													<v-text-field
+														readonly
+														:value="instance.config.template_id"
+														label="template id"
+														style="display: inline-block; width: 100px"
+													>
+													</v-text-field>
+												</v-col>
 											</v-row>
 										</v-expansion-panel-content>
 									</v-expansion-panel>
