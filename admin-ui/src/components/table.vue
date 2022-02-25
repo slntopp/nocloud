@@ -63,6 +63,19 @@
 			<slot :name="slotName" />
 		</template>
 
+		<template v-if="footerError.length > 0" v-slot:footer>
+			<v-toolbar
+				class="mt-2"
+				color="error"
+				dark
+				flat
+			>
+				<v-toolbar-title class="subheading">
+					{{footerError}}
+				</v-toolbar-title>
+			</v-toolbar>
+		</template>
+
 	</components>
 </template>
 
@@ -136,7 +149,11 @@ export default {
     loaderHeight: {
       type: [Number, String],
       default: 4
-    }
+    },
+		'footer-error': {
+			type: String,
+			default: ""
+		}
 	},
 	data(){
 		return {

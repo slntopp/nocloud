@@ -35,6 +35,7 @@
 			:value="selected"
       show-expand
 			:loading="isLoading"
+			:footer-error="fetchError"
 		>
 
 			<template
@@ -122,7 +123,8 @@ export default {
 		],
 		copyed: -1,
 		expanded: [],
-		selected: []
+		selected: [],
+		fetchError: ''
 	}),
 	computed: {
 		services(){
@@ -144,6 +146,10 @@ export default {
 	},
 	created(){
 		this.$store.dispatch('services/fetch')
+		.catch(err => {
+			console.log(`err`, err)
+			this.fetchError = 'Can\'t reach server'
+		})
 	},
 	methods: {
 		hashTrim(hash){

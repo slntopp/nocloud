@@ -5,6 +5,7 @@
 		:value="selected"
 		@input="handleSelect"
 		:single-select="singleSelect"
+		:footer-error="fetchError"
 	>
 
 	</nocloud-table>
@@ -31,7 +32,8 @@ export default {
 	data () {
 		return {
 			selected: this.value,
-			loading: false
+			loading: false,
+			fetchError: ''
 		}
 	},
 	methods: {
@@ -49,6 +51,10 @@ export default {
 		this.$store.dispatch('accounts/fetch')
 		.finally(()=>{
 			this.loading = false;
+		})
+		.catch(err => {
+			console.log(`err`, err)
+			this.fetchError = 'Can\'t reach server'
 		})
 	},
 }

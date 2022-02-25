@@ -7,6 +7,7 @@
 		:single-select="singleSelect"
 		:headers="Headers"
 		item-key="original"
+		:footer-error="fetchError"
 	>
 	</nocloud-table>
 </template>
@@ -38,6 +39,7 @@ export default {
 			selected: this.value,
 			loading: false,
 			Headers,
+			fetchError: ''
 		}
 	},
 	methods: {
@@ -55,6 +57,10 @@ export default {
 		this.$store.dispatch('dns/fetch')
 		.finally(()=>{
 			this.loading = false;
+		})
+		.catch(err => {
+			console.log(`err`, err)
+			this.fetchError = 'Can\'t reach server'
 		})
 	},
 }
