@@ -78,16 +78,14 @@
 			</v-btn>
 		</div>
 
-		<v-data-table
+		<nocloud-table
 			item-key="key"
-			class="elevation-0 background-light rounded-lg"
 			:loading="loading"
-			loading-text="Loading... Please wait"
-			color="background-light"
 			:headers="headers"
 			:items="settings"
 			show-select
 			v-model="selected"
+			:footer-error="fetchError"
 		>
 			<template v-slot:[`item.description`]=" {item} ">
 				<div
@@ -156,7 +154,7 @@
 					{{item.value}}
 				</template>
 			</template>
-		</v-data-table>
+		</nocloud-table>
 
 		<v-snackbar
 			v-model="snackbar.visibility"
@@ -190,6 +188,7 @@
 import { mapGetters } from 'vuex';
 import api from "@/api.js"
 import snackbar from "@/mixins/snackbar.js"
+import noCloudTable from "@/components/table.vue"
 
 const headers = [
 	{ text: 'key', value: 'key' },
@@ -210,7 +209,14 @@ export default {
 	name: 'settings-view',
 	created(){
 		this.$store.dispatch('settings/fetch')
+		.catch(err => {
+			console.log(`err`, err)
+			this.fetchError = 'Can\'t reach server'
+		})
 		// this.$store.dispatch('settings/fetchKeys')
+	},
+	components: {
+		"nocloud-table": noCloudTable
 	},
 	mixins: [snackbar],
 	data: () => ({
@@ -229,7 +235,8 @@ export default {
 		edit: {
 			key: '',
 			data: {}
-		}
+		},
+		fetchError: ''
 	}),
 	computed: {
 		...mapGetters('settings', {
