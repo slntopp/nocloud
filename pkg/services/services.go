@@ -134,14 +134,14 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 
 func (s *ServicesServiceServer) TestConfig(ctx context.Context, request *pb.CreateRequest) (*pb.TestConfigResponse, error) {
 	log := s.log.Named("TestServiceConfig")
-	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", request))
 	response, _, err := s.DoTestServiceConfig(ctx, log, request)
 	return response, err
 }
 
 func (s *ServicesServiceServer) Create(ctx context.Context, request *pb.CreateRequest) (*pb.Service, error) {
 	log := s.log.Named("CreateService")
-	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", request))
 	testResult, namespace, err := s.DoTestServiceConfig(ctx, log, request)
 
 	if err != nil {
@@ -167,7 +167,7 @@ func (s *ServicesServiceServer) Create(ctx context.Context, request *pb.CreateRe
 
 func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpResponse, error) {
 	log := s.log.Named("Up")
-	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", request))
 
 	service, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
@@ -268,7 +268,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 
 func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownRequest) (*pb.DownResponse, error) {
 	log := s.log.Named("Down")
-	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", request))
 
 	service, err := s.ctrl.Get(ctx, request.GetUuid())
 	if err != nil {
@@ -345,7 +345,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 
 func (s *ServicesServiceServer) Get(ctx context.Context, request *pb.GetRequest) (res *pb.Service, err error) {
 	log := s.log.Named("Get")
-	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -387,7 +387,7 @@ func (s *ServicesServiceServer) List(ctx context.Context, request *pb.ListReques
 
 func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
 	log := s.log.Named("Delete")
-	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -414,7 +414,7 @@ func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRe
 
 func (s *ServicesServiceServer) PerformServiceAction(ctx context.Context, req *pb.PerformActionRequest) (res *pb.PerformActionResponse, err error) {
 	log := s.log.Named("PerformServiceAction")
-	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", req))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -462,4 +462,31 @@ func (s *ServicesServiceServer) PerformServiceAction(ctx context.Context, req *p
 		Group:            igroup,
 		ServicesProvider: sp.ServicesProvider,
 	})
+}
+
+func (s *ServicesServiceServer) GetProvisions(ctx context.Context, req *pb.GetProvisionsRequest) (*pb.GetProvisionsResponse, error) {
+	log := s.log.Named("GetProvisions")
+	log.Debug("Request received", zap.Any("request", req))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	service, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		log.Error("Error getting Service from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not Found in DB")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor, service.ID.String(), access.READ)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
+	}
+
+	r, err := s.ctrl.GetProvisions(ctx, req.GetUuid())
+	if err != nil {
+		log.Error("Error getting Service provisions", zap.String("service", req.GetUuid()), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting Service provisions")
+	}
+
+	return &pb.GetProvisionsResponse{Provisions: r}, nil
 }
