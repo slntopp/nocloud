@@ -25,6 +25,7 @@ type ServicesServiceClient interface {
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Service, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	GetStates(ctx context.Context, in *GetStatesRequest, opts ...grpc.CallOption) (*GetStatesResponse, error)
+	GetProvisions(ctx context.Context, in *GetProvisionsRequest, opts ...grpc.CallOption) (*GetProvisionsResponse, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
 	PerformServiceAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error)
@@ -101,6 +102,15 @@ func (c *servicesServiceClient) GetStates(ctx context.Context, in *GetStatesRequ
 	return out, nil
 }
 
+func (c *servicesServiceClient) GetProvisions(ctx context.Context, in *GetProvisionsRequest, opts ...grpc.CallOption) (*GetProvisionsResponse, error) {
+	out := new(GetProvisionsResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/GetProvisions", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *servicesServiceClient) Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error) {
 	out := new(UpResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/Up", in, out, opts...)
@@ -139,6 +149,7 @@ type ServicesServiceServer interface {
 	Get(context.Context, *GetRequest) (*Service, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	GetStates(context.Context, *GetStatesRequest) (*GetStatesResponse, error)
+	GetProvisions(context.Context, *GetProvisionsRequest) (*GetProvisionsResponse, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
 	PerformServiceAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error)
@@ -169,6 +180,9 @@ func (UnimplementedServicesServiceServer) List(context.Context, *ListRequest) (*
 }
 func (UnimplementedServicesServiceServer) GetStates(context.Context, *GetStatesRequest) (*GetStatesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStates not implemented")
+}
+func (UnimplementedServicesServiceServer) GetProvisions(context.Context, *GetProvisionsRequest) (*GetProvisionsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProvisions not implemented")
 }
 func (UnimplementedServicesServiceServer) Up(context.Context, *UpRequest) (*UpResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Up not implemented")
@@ -318,6 +332,24 @@ func _ServicesService_GetStates_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ServicesService_GetProvisions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProvisionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).GetProvisions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services.ServicesService/GetProvisions",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).GetProvisions(ctx, req.(*GetProvisionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ServicesService_Up_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpRequest)
 	if err := dec(in); err != nil {
@@ -406,6 +438,10 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetStates",
 			Handler:    _ServicesService_GetStates_Handler,
+		},
+		{
+			MethodName: "GetProvisions",
+			Handler:    _ServicesService_GetProvisions_Handler,
 		},
 		{
 			MethodName: "Up",

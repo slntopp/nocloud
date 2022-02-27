@@ -900,6 +900,36 @@
         ]
       }
     },
+    "/services/{uuid}/provisions": {
+      "get": {
+        "operationId": "ServicesService_GetProvisions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesGetProvisionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
     "/services/{uuid}/states": {
       "get": {
         "operationId": "ServicesService_GetStates",
@@ -1904,6 +1934,17 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "servicesGetProvisionsResponse": {
+      "type": "object",
+      "properties": {
+        "provisions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
           }
         }
       }

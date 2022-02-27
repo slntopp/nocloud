@@ -121,6 +121,14 @@ message GetStatesResponse {
     map<string, State> states = 1; // Map of Instance UUID to it's State
 }
 
+message GetProvisionsRequest {
+    string uuid = 1;
+}
+
+message GetProvisionsResponse {
+    map<string, string> provisions = 1; // Map of InstancesGroups to ServicesProviders they are deployed
+}
+
 service ServicesService {
     rpc TestConfig(nocloud.services.CreateRequest)
         returns (nocloud.services.TestConfigResponse) {
@@ -165,6 +173,11 @@ service ServicesService {
     rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.services.GetStatesResponse) {
         option (google.api.http) = {
             get: "/services/{uuid}/states"
+        };
+    };
+    rpc GetProvisions(nocloud.services.GetProvisionsRequest) returns (nocloud.services.GetProvisionsResponse) {
+        option (google.api.http) = {
+            get: "/services/{uuid}/provisions"
         };
     };
 
