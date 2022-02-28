@@ -63,7 +63,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>Dashboard</v-list-item-title>
+            <v-list-item-title>{{navTitle('Dashboard')}}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -76,7 +76,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>Accounts</v-list-item-title>
+            <v-list-item-title>{{navTitle('Accounts')}}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -89,7 +89,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>Namespaces</v-list-item-title>
+            <v-list-item-title>{{navTitle('Namespaces')}}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -102,7 +102,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>Services</v-list-item-title>
+            <v-list-item-title>{{navTitle('Services')}}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -115,7 +115,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>Services Providers</v-list-item-title>
+            <v-list-item-title>{{navTitle('Services Providers')}}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -128,7 +128,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>DNS manager</v-list-item-title>
+            <v-list-item-title>{{navTitle('DNS manager')}}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -142,7 +142,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>Settings</v-list-item-title>
+            <v-list-item-title>{{navTitle('Settings')}}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -253,6 +253,15 @@ export default {
 		miniNav: true,
 		easterEgg: false,
 		config,
+		navTitles: {
+			Dashboard: '',
+			Accounts: 'Users',
+			Namespaces: 'Tenants',
+			Services: 'Cloud Servers',
+			"Services Providers": 'Edge Clusters',
+			"DNS manager": '',
+			Settings: ''
+		}
   }),
   methods:{
     logoutHandler(){
@@ -264,6 +273,13 @@ export default {
 		onResize () {
 			this.miniNav = window.innerWidth <= 768
 		},
+		navTitle(title) {
+			if(title && this.navTitles[title]){
+				return this.navTitles[title]
+			}
+
+			return title
+		}
   },
   computed: {
     isLoggedIn(){
