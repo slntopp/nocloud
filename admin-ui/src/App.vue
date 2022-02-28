@@ -119,6 +119,8 @@
           </v-list-item-content>
         </v-list-item>
 
+				<v-subheader>SYSTEM</v-subheader>
+
         <v-list-item 
 					v-bind="listItemBind"
 					:to="{name: 'DNS manager'}"
@@ -131,8 +133,7 @@
             <v-list-item-title>{{navTitle('DNS manager')}}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
-
-				<v-subheader>SYSTEM</v-subheader>
+				
         <v-list-item 
 					v-bind="listItemBind"
 					:to="{name: 'Settings'}"
@@ -253,15 +254,7 @@ export default {
 		miniNav: true,
 		easterEgg: false,
 		config,
-		navTitles: {
-			Dashboard: '',
-			Accounts: 'Users',
-			Namespaces: 'Tenants',
-			Services: 'Cloud Servers',
-			"Services Providers": 'Edge Clusters',
-			"DNS manager": '',
-			Settings: ''
-		}
+		navTitles: config.navTitles ?? {}
   }),
   methods:{
     logoutHandler(){
