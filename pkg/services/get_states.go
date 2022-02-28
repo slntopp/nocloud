@@ -63,6 +63,7 @@ func (s *ServicesServiceServer) UpdateStates(ctx context.Context) {
 				log.Error("fail to get ServicesProviders", zap.Error(err))
 				return //status.Error(codes.Internal, "fail to get ServicesProviders")
 			}
+			log.Debug("Got ServicesProviders", zap.Int("length", len(sp_array)))
 
 			for _, sp := range sp_array {
 
@@ -71,14 +72,15 @@ func (s *ServicesServiceServer) UpdateStates(ctx context.Context) {
 					log.Error("fail to get Services", zap.Error(err))
 					continue
 				}
+				log.Debug("Got Services", zap.Int("length", len(s_array)), zap.Any("services", s_array))
 
 				for _, s := range s_array {
 					g_array := s.GetInstancesGroups() // gets groups
 					for _, ig := range g_array {
 						ing_array = append(ing_array, ig)
 					}
-
 				}
+				log.Debug("Got Groups", zap.Int("length", len(ing_array)))
 
 				client, ok := s.drivers[sp.GetType()]
 				if !ok {
