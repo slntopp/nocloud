@@ -253,15 +253,7 @@ export default {
 		miniNav: true,
 		easterEgg: false,
 		config,
-		navTitles: {
-			Dashboard: '',
-			Accounts: 'Users',
-			Namespaces: 'Tenants',
-			Services: 'Cloud Servers',
-			"Services Providers": 'Edge Clusters',
-			"DNS manager": '',
-			Settings: ''
-		}
+		navTitles: config.navTitles ?? {}
   }),
   methods:{
     logoutHandler(){

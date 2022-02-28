@@ -8,5 +8,6 @@ export default {
 			links: global?.dye?.aside?.links,
 			whiteText: global?.dye?.aside?.whiteText,
 		}
-	}
+	},
+	navTitles: global.navTitles ?? {},
 }
