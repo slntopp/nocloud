@@ -47,7 +47,7 @@ func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetSt
 }
 
 //Gets statuses Instanses of Servce from pkg/statuses
-func (s *ServicesServiceServer) UpdateStates(ctx context.Context, request *pb.GetStatesRequest) error {
+func (s *ServicesServiceServer) UpdateStates(ctx context.Context) {
 	log := s.log.Named("UpdateStates")
 
 	// s.ticker.Stop()
@@ -55,51 +55,49 @@ func (s *ServicesServiceServer) UpdateStates(ctx context.Context, request *pb.Ge
 
 	for range s.ticker.C {
 
-		var ig_array []*instances.InstancesGroup
+		go func() {
+			var ing_array []*instances.InstancesGroup
 
-		sp_array, err := s.sp_ctrl.List(ctx, "") // gets service providers
-		if err != nil {
-			log.Error("fail to get ServicesProviders", zap.Error(err))
-			return status.Error(codes.Internal, "fail to get ServicesProviders")
-		}
-
-		for isp := range sp_array {
-
-			sp := sp_array[isp]
-			s_array, err := s.sp_ctrl.ListDeployments(ctx, sp) // gets services
+			sp_array, err := s.sp_ctrl.List(ctx, "0") // gets service providers
 			if err != nil {
-				log.Error("fail to get Services", zap.Error(err))
-				return status.Error(codes.Internal, "fail to get Services")
-				// continue? todo
+				log.Error("fail to get ServicesProviders", zap.Error(err))
+				return //status.Error(codes.Internal, "fail to get ServicesProviders")
 			}
 
-			for is := range s_array {
-				g_array := s_array[is].GetInstancesGroups() // gets groups
-				for _, ig := range g_array {
-					ig_array = append(ig_array, ig)
+			for _, sp := range sp_array {
+
+				s_array, err := s.sp_ctrl.ListDeployments(ctx, sp) // gets services
+				if err != nil {
+					log.Error("fail to get Services", zap.Error(err))
+					continue
+				}
+
+				for _, s := range s_array {
+					g_array := s.GetInstancesGroups() // gets groups
+					for _, ig := range g_array {
+						ing_array = append(ing_array, ig)
+					}
+
+				}
+
+				client, ok := s.drivers[sp.GetType()]
+				if !ok {
+					log.Error("Driver of type driver not registered", zap.String("type", sp.GetType()))
+					continue
+				}
+
+				_, err = client.MonitorStates(ctx, &driverpb.StateUpdateRequest{
+					Group:            ing_array,
+					ServicesProvider: sp.ServicesProvider,
+				})
+				if err != nil {
+					log.Error("fail to UpdateStates", zap.Error(err))
+					return //status.Errorf(codes.InvalidArgument, "Driver of type '%s' not registered", sp.GetType())
 				}
 
 			}
 
-			// 1. pool = List ServicesProviders
-			// 2. for sp in pool {
-			//    groups := sp.ListDeployments()
-			//    driver.MonitorStates({sp, groups})
-			// }
-
-			_, err = s.drivers["key"].MonitorStates(ctx, &driverpb.StateUpdateRequest{//key todo
-				Group:            ig_array,
-				ServicesProvider: sp.ServicesProvider,
-			})
-			if err != nil {
-				log.Error("fail to UpdateStates", zap.Error(err))
-				return status.Error(codes.Internal, "fail to UpdateStates")
-				// continue? todo
-			}
-
-		}
+		}()
 
 	}
-
-	return nil
 }

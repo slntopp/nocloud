@@ -102,6 +102,7 @@ func main() {
 	)
 
 	server := services.NewServicesServer(log, db, grpc_client)
+	server.UpdateStates(context.Background())
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
