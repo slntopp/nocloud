@@ -92,3 +92,4 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: IMAGE_TAG=${{env.IMAGE_TAG}}
