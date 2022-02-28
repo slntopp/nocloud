@@ -482,7 +482,7 @@ func (s *ServicesServiceServer) GetProvisions(ctx context.Context, req *pb.GetPr
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
 	}
 
-	r, err := s.ctrl.GetProvisions(ctx, req.GetUuid())
+	r, err := s.ctrl.GetProvisions(ctx, service.ID.String())
 	if err != nil {
 		log.Error("Error getting Service provisions", zap.String("service", req.GetUuid()), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error getting Service provisions")
