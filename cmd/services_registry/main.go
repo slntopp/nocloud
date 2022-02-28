@@ -102,7 +102,6 @@ func main() {
 	)
 
 	server := services.NewServicesServer(log, db, grpc_client)
-	server.UpdateStates(context.Background())
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
@@ -120,6 +119,7 @@ func main() {
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
 
+	go server.UpdateStates(context.Background())
 	pb.RegisterServicesServiceServer(s, server)
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
