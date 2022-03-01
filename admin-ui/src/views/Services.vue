@@ -144,7 +144,12 @@ export default {
 		})
 		.catch(err => {
 			console.log(`err`, err)
-			this.fetchError = 'Can\'t reach server'
+			this.fetchError = 'Can\'t reach the server'
+			if(err.response){
+				this.fetchError += `: [ERROR]: ${err.response.data.message}`
+			} else {
+				this.fetchError += `: [ERROR]: ${err.toJSON().message}`
+			}
 		})
 	},
 	methods: {
