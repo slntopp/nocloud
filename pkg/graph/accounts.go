@@ -18,6 +18,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -251,7 +252,7 @@ func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string,
 }
 
 func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
-	exists, err := ctrl.col.DocumentExists(context.TODO(), "0")
+	exists, err := ctrl.col.DocumentExists(context.TODO(), schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		return err
 	}
@@ -260,7 +261,7 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	if !exists {
 		meta, err = ctrl.col.CreateDocument(context.TODO(), Account{ 
 			Title: "nocloud",
-			DocumentMeta: driver.DocumentMeta { Key: "0" },
+			DocumentMeta: driver.DocumentMeta { Key: schema.ROOT_ACCOUNT_KEY },
 		})
 		if err != nil {
 			return err
@@ -268,18 +269,18 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 		ctrl.log.Debug("Created root Account", zap.Any("result", meta))
 	}
 	var root Account
-	meta, err = ctrl.col.ReadDocument(context.TODO(), "0", &root)
+	meta, err = ctrl.col.ReadDocument(context.TODO(), schema.ROOT_ACCOUNT_KEY, &root)
 	if err != nil {
 		return err
 	}
 	root.DocumentMeta = meta
 
 	ns_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.NAMESPACES_COL)
-	exists, err = ns_col.DocumentExists(context.TODO(), "0")
-	if !exists {
+	exists, err = ns_col.DocumentExists(context.TODO(), schema.ROOT_NAMESPACE_KEY)
+	if err != nil || !exists {
 		meta, err := ns_col.CreateDocument(context.TODO(), Namespace{ 
 			Title: "platform",
-			DocumentMeta: driver.DocumentMeta { Key: "0" },
+			DocumentMeta: driver.DocumentMeta { Key: schema.ROOT_NAMESPACE_KEY },
 		})
 		if err != nil {
 			return err
@@ -288,30 +289,30 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	}
 
 	var rootNS Namespace
-	meta, err = ns_col.ReadDocument(context.TODO(), "0", &rootNS)
+	meta, err = ns_col.ReadDocument(context.TODO(), schema.ROOT_NAMESPACE_KEY, &rootNS)
 	if err != nil {
 		return err
 	}
 	rootNS.DocumentMeta = meta
 
 	edge_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.ACC2NS)
-	exists, err = edge_col.DocumentExists(context.TODO(), "0-0")
-	if !exists {
+	exists, err = edge_col.DocumentExists(context.TODO(), fmt.Sprintf("%s-%s", schema.ROOT_ACCOUNT_KEY, schema.ROOT_NAMESPACE_KEY))
+	if err != nil || !exists {
 		err = root.LinkNamespace(context.TODO(), edge_col, rootNS, 4, roles.OWNER)
 		if err != nil {
 			return err
 		}
 	}
 
-	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, "0")
+	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 	cred_edge_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.ACC2CRED)
 	cred, err := credentials.NewStandardCredentials("nocloud", passwd)
 	if err != nil {
 		return err
 	}
 
-	exists, err = cred_edge_col.DocumentExists(context.TODO(), "standard-0")
-	if !exists {
+	exists, err = cred_edge_col.DocumentExists(context.TODO(), fmt.Sprintf("standard-%s", schema.ROOT_ACCOUNT_KEY))
+	if err != nil || !exists {
 		err = ctrl.SetCredentials(ctx, root, cred_edge_col, cred)
 		if err != nil {
 			return err
