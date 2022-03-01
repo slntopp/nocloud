@@ -8,8 +8,27 @@ updates:
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: daily
+      time: '06:00'
+    reviewers:
+      - slntopp
+    assignees:
+      - slntopp
   - package-ecosystem: "npm"
     directory: "admin-ui"
     schedule:
-      interval: "daily"
+      interval: daily
+      time: '06:00'
+    reviewers:
+      - slntopp
+    assignees:
+      - slntopp
+  - package-ecosystem: github-actions
+    directory: '.github/workflows'
+    schedule:
+      interval: daily
+      time: '06:00'
+    reviewers:
+      - slntopp
+    assignees:
+      - slntopp
