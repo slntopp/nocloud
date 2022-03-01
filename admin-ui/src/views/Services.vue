@@ -146,8 +146,6 @@ export default {
 	},
 	methods: {
 		treeview(item){
-			console.log('\n\n\n')
-			console.log(item)
 			const result = []
 			let index = 0;
 			for (const [name, group] of Object.entries(item.instancesGroups)) {
