@@ -53,10 +53,12 @@ message PerformActionRequest {
     nocloud.services_providers.ServicesProvider services_provider = 3;
 }
 
-message StateUpdateRequest {
+message MonitoringRequest {
     repeated nocloud.instances.InstancesGroup groups = 1;
     nocloud.services_providers.ServicesProvider services_provider = 2;
 }
+
+message MonitoringResponse {}
 
 service DriverService {
     rpc TestServiceProviderConfig(nocloud.instance.driver.vanilla.TestServiceProviderConfigRequest) returns (nocloud.services_providers.TestResponse);
@@ -68,5 +70,5 @@ service DriverService {
 
     rpc Invoke(PerformActionRequest) returns (nocloud.services.PerformActionResponse);
 
-    rpc MonitorStates(StateUpdateRequest) returns (GetTypeResponse);
+    rpc Monitoring(MonitoringRequest) returns (MonitoringResponse);
 }

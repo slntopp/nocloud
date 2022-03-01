@@ -18,7 +18,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/arangodb/go-driver"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
@@ -44,8 +43,6 @@ type ServicesServiceServer struct {
 	drivers  map[string]driverpb.DriverServiceClient
 	statuses sspb.PostServiceClient
 
-	ticker *time.Ticker
-
 	log *zap.Logger
 }
 
@@ -55,7 +52,6 @@ func NewServicesServer(log *zap.Logger, db driver.Database, gc sspb.PostServiceC
 		sp_ctrl:  graph.NewServicesProvidersController(log, db),
 		ns_ctrl:  graph.NewNamespacesController(log, db),
 		drivers:  make(map[string]driverpb.DriverServiceClient),
-		ticker:   time.NewTicker(5 * time.Second),
 		statuses: gc,
 	}
 }

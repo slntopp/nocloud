@@ -119,7 +119,6 @@ func main() {
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
 
-	go server.UpdateStates(context.Background())
 	pb.RegisterServicesServiceServer(s, server)
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())

@@ -122,6 +122,7 @@ func main() {
 		log.Info("Registered Extention Server", zap.String("ext_server", ext_server), zap.String("type", ext_srv_type.GetType()))
 	}
 
+	go server.MonitoringRoutine(context.Background())
 	sppb.RegisterServicesProvidersServiceServer(s, server)
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())

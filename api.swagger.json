@@ -2181,6 +2181,9 @@
           "type": "string"
         }
       }
+    },
+    "vanillaMonitoringResponse": {
+      "type": "object"
     }
   }
 }
