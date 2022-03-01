@@ -79,18 +79,11 @@
 			<template v-slot:expanded-item="{ headers, item }">
 				<td :colspan="headers.length" style="padding: 0">
 					<v-card class="pa-4" color="background">
-						<v-row>
-							<v-col>groups count: {{Object.keys(item.instancesGroups).length}}</v-col>
-							<v-col>
-								status:
-								<v-chip
-									small
-									:color="chipColor(item.status)"
-								>
-									{{item.status}}
-								</v-chip>
-							</v-col>
-						</v-row>
+						<v-treeview
+							:items="treeview(item)"
+						>
+
+						</v-treeview>
 					</v-card>
 				</td>
 			</template>
@@ -146,12 +139,40 @@ export default {
 	},
 	created(){
 		this.$store.dispatch('services/fetch')
+		.then(() => {
+			this.fetchError = ''
+		})
 		.catch(err => {
 			console.log(`err`, err)
-			this.fetchError = 'Can\'t reach server'
+			this.fetchError = 'Can\'t reach the server'
+			if(err.response){
+				this.fetchError += `: [ERROR]: ${err.response.data.message}`
+			} else {
+				this.fetchError += `: [ERROR]: ${err.toJSON().message}`
+			}
 		})
 	},
 	methods: {
+		treeview(item){
+			const result = []
+			let index = 0;
+			for (const [name, group] of Object.entries(item.instancesGroups)) {
+				const temp = {};
+				temp.id = ++index;
+				temp.name = name;
+				const childs = [];
+				for (const [ind, inst] of Object.entries(group.instances)) {
+					ind
+					const temp = {};
+					temp.id = ++index;
+					temp.name = inst.title;
+					childs.push(temp);
+				}
+				temp.children = childs;
+				result.push(temp);
+			}
+			return result;
+		},
 		hashTrim(hash){
 			if(hash)
 				return hash.slice(0, 8) + "..."
