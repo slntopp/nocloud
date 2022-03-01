@@ -209,6 +209,9 @@ export default {
 	name: 'settings-view',
 	created(){
 		this.$store.dispatch('settings/fetch')
+		.then(() => {
+			this.fetchError = ''
+		})
 		.catch(err => {
 			console.log(`err`, err)
 			this.fetchError = 'Can\'t reach server'

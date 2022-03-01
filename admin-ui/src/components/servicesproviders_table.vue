@@ -76,6 +76,9 @@ export default {
 	created() {
 		this.loading = true;
 		this.$store.dispatch('servicesProviders/fetch')
+		.then(() => {
+			this.fetchError = ''
+		})
 		.finally(()=>{
 			this.loading = false;
 		})

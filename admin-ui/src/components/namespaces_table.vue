@@ -49,6 +49,9 @@ export default {
 	created() {
 		this.loading = true;
 		this.$store.dispatch('namespaces/fetch')
+		.then(() => {
+			this.fetchError = ''
+		})
 		.finally(()=>{
 			this.loading = false;
 		})

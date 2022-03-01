@@ -139,6 +139,9 @@ export default {
 	},
 	created(){
 		this.$store.dispatch('services/fetch')
+		.then(() => {
+			this.fetchError = ''
+		})
 		.catch(err => {
 			console.log(`err`, err)
 			this.fetchError = 'Can\'t reach server'

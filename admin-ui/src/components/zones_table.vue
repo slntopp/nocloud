@@ -55,6 +55,9 @@ export default {
 	created() {
 		this.loading = true;
 		this.$store.dispatch('dns/fetch')
+		.then(() => {
+			this.fetchError = ''
+		})
 		.finally(()=>{
 			this.loading = false;
 		})

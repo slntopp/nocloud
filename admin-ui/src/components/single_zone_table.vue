@@ -78,6 +78,9 @@ export default {
 	created() {
 		this.loading = true;
 		this.$store.dispatch('dns/fetchHosts', this.$route.params.dnsname)
+		.then(() => {
+			this.fetchError = ''
+		})
 		.finally(()=>{
 			this.loading = false;
 		})
