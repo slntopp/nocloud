@@ -39,6 +39,7 @@ func NewLogger() (log *zap.Logger) {
 	atom.SetLevel(zapcore.Level(level))
 
 	encoderCfg := zap.NewProductionEncoderConfig()
+	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
 	return zap.New(zapcore.NewCore(
 		zapcore.NewJSONEncoder(encoderCfg),
 		zapcore.Lock(os.Stdout),
