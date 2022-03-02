@@ -94,21 +94,18 @@ func (s *SettingsServiceServer) Sub(req *pb.SubRequest, stream pb.SettingsServic
 	s.log.Debug("Subscribe request received", zap.String("key", req.GetKey()))
 	sub := s.rdb.Subscribe(context.TODO(), strcase.LowerCamelCase(req.GetKey()))
 	defer sub.Close()
-	for {
-		select {
-		case msg := <- sub.Channel():
-			s.log.Debug("Received update in Channel", zap.Any("msg", msg))
-			err := stream.Send(&pb.SubRequest{
-				Key: msg.Channel,
-				Value: msg.Payload,
-			})
-			if err != nil {
-				s.log.Error("Error sending update to the stream", zap.Error(err))
-			}
-		case <- stream.Context().Done():
-			return nil
+
+	for msg := range sub.Channel() {
+		err := stream.Send(&pb.SubRequest{
+			Key: msg.Channel,
+			Value: msg.Payload,
+		})
+		if err != nil {
+			s.log.Error("Error sending update to the stream", zap.Error(err))
 		}
 	}
+
+	return nil
 }
 
 func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*pb.KeysResponse, error) {
