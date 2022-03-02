@@ -18,7 +18,6 @@ package settings
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	redis "github.com/go-redis/redis/v8"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -33,10 +32,8 @@ import (
 )
 
 const KEYS_PREFIX = "_settings"
-const KEYS_DESC_POSTFIX = "desc"
-const KEYS_VISIBILITY_POSTFIX = "pub"
 
-var KEY_NS_PATTERN = fmt.Sprintf("%s:*[^:%s|:%s]", KEYS_PREFIX, KEYS_VISIBILITY_POSTFIX, KEYS_DESC_POSTFIX)
+var KEY_NS_PATTERN = fmt.Sprintf("%s:*", KEYS_PREFIX)
 
 type SettingsServiceServer struct {
 	pb.UnimplementedSettingsServiceServer
@@ -52,20 +49,11 @@ func NewSettingsServer(log *zap.Logger, rdb *redis.Client) *SettingsServiceServe
 }
 
 func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (*structpb.Struct, error) {
-	keys := make([]string, len(req.GetKeys()))
-	for i, key := range req.GetKeys() {
-		keys[i] = fmt.Sprintf("%s:%s", KEYS_PREFIX, key)
-	}
-	
-	response, err := s.rdb.MGet(ctx, keys...).Result()
-	if err != nil {
-		s.log.Error("Error getting data from Redis", zap.Strings("keys", keys), zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error getting data from Redis")
-	}
-	
 	result := make(map[string]interface{})
-	for i, key := range req.GetKeys() {
-		result[strcase.KebabCase(key)] = response[i]
+
+	for _, key := range req.GetKeys() {
+		r := s.rdb.HGet(ctx, strcase.LowerCamelCase(key), "value")
+		result[key], _ = r.Result()
 	}
 
 	res, err := structpb.NewStruct(result)
@@ -83,15 +71,8 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 	}
 
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(req.GetKey()))
-	request := map[string]interface{}{
-		key: req.GetValue(),
-		fmt.Sprintf("%s:%s", key, KEYS_VISIBILITY_POSTFIX): req.GetPublic(),
-	}
-	if req.GetDescription() != "" {
-		request[fmt.Sprintf("%s:%s", key, KEYS_DESC_POSTFIX)] = req.GetDescription()
-	}
-
-	r := s.rdb.MSet(ctx, request)
+	r := s.rdb.HSet(ctx, key, "value", req.GetValue(), 
+		"desc", req.GetDescription(), "pub", req.GetPublic())
 	_, err := r.Result()
 	if err != nil {
 		s.log.Error("Error allocating keys in Redis", zap.String("key", key), zap.Error(err))
@@ -128,33 +109,21 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 		s.log.Error("Error getting keys from Redis", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error getting keys from Redis")
 	}
-	keys_l := len(keys)
-	if keys_l == 0 {
-		return &pb.KeysResponse{}, nil
-	}
-	keys_all := make([]string, keys_l * 2)
+	
+	result := make([]*pb.KeysResponse_Key, len(keys))
 	for i, key := range keys {
-		keys_all[i] = fmt.Sprintf("%s:%s", key, KEYS_VISIBILITY_POSTFIX)
-		keys_all[i + keys_l] = fmt.Sprintf("%s:%s", key, KEYS_DESC_POSTFIX)
-	}
-	vals, err := s.rdb.MGet(ctx, keys_all...).Result()
-	if err != nil {
-		s.log.Error("Error getting values from Redis", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error getting values from Redis")
-	}
-
-	result := make([]*pb.KeysResponse_Key, keys_l)
-	for i, key := range keys {
-		key = strings.SplitN(key, ":", 2)[1]
+		r := s.rdb.HGetAll(ctx, key)
+		data, err := r.Result()
+		if err != nil {
+			result[i] = &pb.KeysResponse_Key{Key: strcase.KebabCase(key), Description: "Unresolved"}
+			continue
+		}
 		result[i] = &pb.KeysResponse_Key{
 			Key: strcase.KebabCase(key),
-		}
-		if pub, ok := vals[i].(string); ok {
-			result[i].Public = pub == "1"
-		}
-		if desc, ok := vals[i + keys_l].(string); ok {
-			result[i].Description = desc
+			Description: data["desc"],
+			Public: data["pub"] == "1",
 		}
 	}
+
 	return &pb.KeysResponse{Pool: result}, nil
 }
