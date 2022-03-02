@@ -18,6 +18,7 @@ package settings
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	redis "github.com/go-redis/redis/v8"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -118,8 +119,9 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 			result[i] = &pb.KeysResponse_Key{Key: strcase.KebabCase(key), Description: "Unresolved"}
 			continue
 		}
+		parts := strings.SplitN(key, ":", 1)
 		result[i] = &pb.KeysResponse_Key{
-			Key: strcase.KebabCase(key),
+			Key: strcase.KebabCase(parts[1]),
 			Description: data["desc"],
 			Public: data["pub"] == "1",
 		}
