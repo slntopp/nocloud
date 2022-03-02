@@ -84,8 +84,12 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 	}
 
 	go func() {
+		s.log.Debug("Publishing to key channel", zap.String("key", key))
 		r := s.rdb.Publish(ctx, key, req.GetValue())
-		r.Result()
+		_, err := r.Result()
+		if err != nil {
+			s.log.Error("Error publishing update", zap.Error(err))
+		}
 	}()
 
 	return &pb.PutResponse{Key: req.GetKey()}, nil
