@@ -118,12 +118,14 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 			goto final
 		}
 
+		log.Debug("Subscribed for settings key")
 		for {
 			data, err := sub.Recv()
 			if err != nil {
 				log.Error("Error reading from Settings Sub channel", zap.Error(err))
 				break
 			}
+			log.Debug("Received setting key update", zap.Any("data", data))
 			err = json.Unmarshal([]byte(data.GetValue()), &conf)
 			if err != nil {
 				log.Error("Error unmarshall udpate from Settings Sub channel", zap.Any("raw", data), zap.Error(err))
