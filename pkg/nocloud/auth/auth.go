@@ -42,6 +42,14 @@ func SetContext(logger *zap.Logger, key []byte) {
 	log.Debug("Context set", zap.ByteString("signing_key", key))
 }
 
+func MakeToken(account string) (string, error) {
+	claims := jwt.MapClaims{}
+	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = account
+	claims[nocloud.NOCLOUD_ROOT_CLAIM] = 4
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(SIGNING_KEY)
+}
+
 func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	l := log.Named("Interceptor")
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
