@@ -53,8 +53,9 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (re
 	result := make(map[string]interface{})
 
 	for _, key := range req.GetKeys() {
-		s.log.Debug("Reading hash", zap.String("key", strcase.LowerCamelCase(key)))
-		r := s.rdb.HGet(ctx, strcase.LowerCamelCase(key), "value")
+		dbKey := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(key))
+		s.log.Debug("Reading hash", zap.String("key", dbKey))
+		r := s.rdb.HGet(ctx, dbKey, "value")
 		result[key], err = r.Result()
 		s.log.Debug("Result", zap.Any("value", result[key]), zap.Error(err))
 	}
