@@ -49,15 +49,17 @@ func NewSettingsServer(log *zap.Logger, rdb *redis.Client) *SettingsServiceServe
 	}
 }
 
-func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (*structpb.Struct, error) {
+func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (res *structpb.Struct, err error) {
 	result := make(map[string]interface{})
 
 	for _, key := range req.GetKeys() {
+		s.log.Debug("Reading hash", zap.String("key", strcase.LowerCamelCase(key)))
 		r := s.rdb.HGet(ctx, strcase.LowerCamelCase(key), "value")
-		result[key], _ = r.Result()
+		result[key], err = r.Result()
+		s.log.Debug("Result", zap.Any("value", result[key]), zap.Error(err))
 	}
 
-	res, err := structpb.NewStruct(result)
+	res, err = structpb.NewStruct(result)
 	if err != nil {
 		s.log.Error("Error serializing map to Struct", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error serializing map to Struct")
