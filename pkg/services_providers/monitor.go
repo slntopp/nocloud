@@ -132,7 +132,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 
 		log.Info("Monitoring Conf Updated", zap.Any("conf", conf))
 		final:
-		time.Sleep(time.Duration(conf.Frequency))
+		time.Sleep(time.Duration(conf.Frequency) * time.Second)
 		goto begin_sub
 	}()
 
