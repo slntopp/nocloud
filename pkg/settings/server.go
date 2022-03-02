@@ -84,15 +84,17 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 	}
 
 	go func() {
-		s.rdb.Publish(ctx, key, req.GetValue())
+		r := s.rdb.Publish(ctx, key, req.GetValue())
+		r.Result()
 	}()
 
 	return &pb.PutResponse{Key: req.GetKey()}, nil
 }
 
 func (s *SettingsServiceServer) Sub(req *pb.SubRequest, stream pb.SettingsService_SubServer) error {
-	s.log.Debug("Subscribe request received", zap.String("key", req.GetKey()))
-	sub := s.rdb.Subscribe(context.TODO(), strcase.LowerCamelCase(req.GetKey()))
+	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(req.GetKey()))
+	s.log.Debug("Subscribe request received", zap.String("key", key))
+	sub := s.rdb.Subscribe(context.TODO(), key)
 	defer sub.Close()
 
 	for msg := range sub.Channel() {
