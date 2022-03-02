@@ -129,7 +129,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 				log.Error("Error unmarshall udpate from Settings Sub channel", zap.Any("raw", data), zap.Error(err))
 				break
 			}
-			ticker.Reset(time.Duration(conf.Frequency))
+			ticker.Reset(time.Duration(conf.Frequency) * time.Second)
 		}
 
 		log.Info("Monitoring Conf Updated", zap.Any("conf", conf))
