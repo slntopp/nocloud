@@ -71,6 +71,7 @@ func MakeConf(ctx context.Context, log *zap.Logger) MonitoringRoutineConf {
 	var r_str string
 	r, err := settingsClient.Get(ctx, &settingspb.GetRequest{Keys: []string{monFreqKey}})
 	if err != nil {
+		log.Debug("Failed to Get conf", zap.Error(err))
 		goto set_default
 	}
 	if _, ok := r.GetFields()[monFreqKey]; !ok {
@@ -103,10 +104,12 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 	log := s.log.Named("MonitoringRoutine")
 
 	conf := MakeConf(ctx, log)
+	log.Info("Got Monitoring Configuration", zap.Any("conf", conf))
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
 
 	go func ()  {
 		begin_sub:
+		log.Debug("Attempt subscribe for settings key")
 		sub, err := settingsClient.Sub(ctx, &settingspb.SubRequest{Key: "sp-monitoring-routing"})
 		if err != nil {
 			log.Error("Could not subscribe to Settings update", zap.Error(err))
@@ -121,7 +124,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 			}
 			err = json.Unmarshal([]byte(data.GetValue()), &conf)
 			if err != nil {
-				log.Error("Error unmarshall udpate from Settings Sub channel", zap.Error(err))
+				log.Error("Error unmarshall udpate from Settings Sub channel", zap.Any("raw", data), zap.Error(err))
 				break
 			}
 			ticker.Reset(time.Duration(conf.Frequency))
