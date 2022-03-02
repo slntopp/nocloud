@@ -115,13 +115,16 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 	for i, key := range keys {
 		r := s.rdb.HGetAll(ctx, key)
 		data, err := r.Result()
+
+		key = strings.Replace(key, KEYS_PREFIX + ":", "", 1)
+		key = strcase.KebabCase(key)
+
 		if err != nil {
-			result[i] = &pb.KeysResponse_Key{Key: strcase.KebabCase(key), Description: "Unresolved"}
+			result[i] = &pb.KeysResponse_Key{Key: key, Description: "Unresolved"}
 			continue
 		}
-		parts := strings.SplitN(key, ":", 1)
 		result[i] = &pb.KeysResponse_Key{
-			Key: strcase.KebabCase(parts[1]),
+			Key: key,
 			Description: data["desc"],
 			Public: data["pub"] == "1",
 		}
