@@ -108,7 +108,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 		sub, err := settingsClient.Sub(ctx, &settingspb.SubRequest{Key: "sp-monitoring-routing"})
 		if err != nil {
 			log.Error("Could not subscribe to Settings update", zap.Error(err))
-			return
+			goto final
 		}
 
 		for {
@@ -126,6 +126,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 		}
 
 		log.Info("Monitoring Conf Updated", zap.Any("conf", conf))
+		final:
 		time.Sleep(time.Duration(conf.Frequency))
 		goto begin_sub
 	}()
