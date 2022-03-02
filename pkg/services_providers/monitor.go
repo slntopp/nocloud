@@ -65,7 +65,7 @@ func init() {
     settingsClient = settingspb.NewSettingsServiceClient(conn)
 }
 
-func MakeConf(ctx context.Context) MonitoringRoutineConf {
+func MakeConf(ctx context.Context, log *zap.Logger) MonitoringRoutineConf {
 
 	var conf MonitoringRoutineConf
 	var r_str string
@@ -84,15 +84,17 @@ func MakeConf(ctx context.Context) MonitoringRoutineConf {
 	return conf
 
 	set_default:
+	log.Info("Setting default conf")
 	conf = defaultConf
 	payload, err := json.Marshal(conf)
 	if err == nil {
-		settingsClient.Put(ctx, &settingspb.PutRequest{
+		_, err := settingsClient.Put(ctx, &settingspb.PutRequest{
 			Key: monFreqKey,
 			Value: string(payload),
 			Description: &description,
 			Public: &public,
 		})
+		log.Error("Error Putting Monitoring Configuration", zap.Error(err))
 	}
 	return conf
 }
@@ -100,7 +102,7 @@ func MakeConf(ctx context.Context) MonitoringRoutineConf {
 func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 	log := s.log.Named("MonitoringRoutine")
 
-	conf := MakeConf(ctx)
+	conf := MakeConf(ctx, log)
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
 
 	go func ()  {
