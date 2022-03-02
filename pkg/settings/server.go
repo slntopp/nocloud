@@ -95,6 +95,11 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 		s.log.Error("Error allocating keys in Redis", zap.String("key", key), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error allocating keys in Redis")
 	}
+
+	go func() {
+		s.rdb.Publish(ctx, key, req.GetValue())
+	}()
+
 	return &pb.PutResponse{Key: req.GetKey()}, nil
 }
 
