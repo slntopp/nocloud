@@ -95,7 +95,9 @@ func MakeConf(ctx context.Context, log *zap.Logger) MonitoringRoutineConf {
 			Description: &description,
 			Public: &public,
 		})
-		log.Error("Error Putting Monitoring Configuration", zap.Error(err))
+		if err != nil {
+			log.Error("Error Putting Monitoring Configuration", zap.Error(err))
+		}
 	}
 	return conf
 }
