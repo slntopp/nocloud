@@ -91,6 +91,7 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 }
 
 func (s *SettingsServiceServer) Sub(req *pb.SubRequest, stream pb.SettingsService_SubServer) error {
+	s.log.Debug("Subscribe request received", zap.String("key", req.GetKey()))
 	sub := s.rdb.Subscribe(context.TODO(), strcase.LowerCamelCase(req.GetKey()))
 	defer sub.Close()
 	for {
