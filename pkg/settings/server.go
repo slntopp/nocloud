@@ -96,10 +96,14 @@ func (s *SettingsServiceServer) Sub(req *pb.SubRequest, stream pb.SettingsServic
 	for {
 		select {
 		case msg := <- sub.Channel():
-			stream.Send(&pb.SubRequest{
+			s.log.Debug("Received update in Channel", zap.Any("msg", msg))
+			err := stream.Send(&pb.SubRequest{
 				Key: msg.Channel,
 				Value: msg.Payload,
 			})
+			if err != nil {
+				s.log.Error("Error sending update to the stream", zap.Error(err))
+			}
 		case <- stream.Context().Done():
 			return nil
 		}
