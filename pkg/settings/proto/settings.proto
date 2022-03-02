@@ -34,10 +34,10 @@ message PutResponse {
     string key = 1;
 }
 
-message SubRequest {
-    string key = 1;
-    string value = 2;
-}
+// message SubRequest {
+//     string key = 1;
+//     string value = 2;
+// }
 
 message KeysRequest {}
 message KeysResponse {
@@ -62,7 +62,7 @@ service SettingsService {
             body: "*"
         };
     };
-    rpc Sub(nocloud.settings.SubRequest) returns (stream nocloud.settings.SubRequest);
+    // rpc Sub(nocloud.settings.SubRequest) returns (stream nocloud.settings.SubRequest);
     rpc Keys(nocloud.settings.KeysRequest) returns (nocloud.settings.KeysResponse) {
         option (google.api.http) = {
             get: "/settings"

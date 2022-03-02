@@ -1008,6 +1008,7 @@
     },
     "/settings": {
       "get": {
+        "summary": "rpc Sub(nocloud.settings.SubRequest) returns (stream nocloud.settings.SubRequest);",
         "operationId": "SettingsService_Keys",
         "responses": {
           "200": {
@@ -2163,17 +2164,6 @@
       "type": "object",
       "properties": {
         "key": {
-          "type": "string"
-        }
-      }
-    },
-    "settingsSubRequest": {
-      "type": "object",
-      "properties": {
-        "key": {
-          "type": "string"
-        },
-        "value": {
           "type": "string"
         }
       }

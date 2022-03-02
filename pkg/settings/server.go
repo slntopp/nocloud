@@ -83,35 +83,7 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 		return nil, status.Error(codes.Internal, "Error allocating keys in Redis")
 	}
 
-	go func() {
-		s.log.Debug("Publishing to key channel", zap.String("key", key))
-		r := s.rdb.Publish(ctx, key, req.GetValue())
-		_, err := r.Result()
-		if err != nil {
-			s.log.Error("Error publishing update", zap.Error(err))
-		}
-	}()
-
 	return &pb.PutResponse{Key: req.GetKey()}, nil
-}
-
-func (s *SettingsServiceServer) Sub(req *pb.SubRequest, stream pb.SettingsService_SubServer) error {
-	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(req.GetKey()))
-	s.log.Debug("Subscribe request received", zap.String("key", key))
-	sub := s.rdb.Subscribe(context.TODO(), key)
-	defer sub.Close()
-
-	for msg := range sub.Channel() {
-		err := stream.Send(&pb.SubRequest{
-			Key: msg.Channel,
-			Value: msg.Payload,
-		})
-		if err != nil {
-			s.log.Error("Error sending update to the stream", zap.Error(err))
-		}
-	}
-
-	return nil
 }
 
 func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*pb.KeysResponse, error) {
