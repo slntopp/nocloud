@@ -103,6 +103,22 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 	return &pb.PutResponse{Key: req.GetKey()}, nil
 }
 
+func (s *SettingsServiceServer) Sub(req *pb.SubRequest, stream pb.SettingsService_SubServer) error {
+	sub := s.rdb.Subscribe(context.TODO(), req.GetKey())
+	defer sub.Close()
+	for {
+		select {
+		case msg := <- sub.Channel():
+			stream.Send(&pb.SubRequest{
+				Key: msg.Channel,
+				Value: msg.Payload,
+			})
+		case <- stream.Context().Done():
+			return nil
+		}
+	}
+}
+
 func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*pb.KeysResponse, error) {
 	r := s.rdb.Keys(ctx, KEY_NS_PATTERN)
 	keys, err := r.Result()
