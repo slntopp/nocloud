@@ -2167,6 +2167,17 @@
         }
       }
     },
+    "settingsSubRequest": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      }
+    },
     "statusesPostServiceStateResponse": {
       "type": "object",
       "properties": {
