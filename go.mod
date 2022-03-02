@@ -12,6 +12,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.3
 	github.com/spf13/viper v1.10.1
+	github.com/stoewer/go-strcase v1.2.0
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
 	golang.org/x/net v0.0.0-20211216030914-fe4d6282115f

@@ -27,6 +27,8 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	strcase "github.com/stoewer/go-strcase"
+
 	"go.uber.org/zap"
 )
 
@@ -63,7 +65,7 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (*s
 	
 	result := make(map[string]interface{})
 	for i, key := range req.GetKeys() {
-		result[key] = response[i]
+		result[strcase.KebabCase(key)] = response[i]
 	}
 
 	res, err := structpb.NewStruct(result)
@@ -80,7 +82,7 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
 	}
 
-	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, req.GetKey())
+	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(req.GetKey()))
 	request := map[string]interface{}{
 		key: req.GetValue(),
 		fmt.Sprintf("%s:%s", key, KEYS_VISIBILITY_POSTFIX): req.GetPublic(),
@@ -104,7 +106,7 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 }
 
 func (s *SettingsServiceServer) Sub(req *pb.SubRequest, stream pb.SettingsService_SubServer) error {
-	sub := s.rdb.Subscribe(context.TODO(), req.GetKey())
+	sub := s.rdb.Subscribe(context.TODO(), strcase.LowerCamelCase(req.GetKey()))
 	defer sub.Close()
 	for {
 		select {
@@ -145,7 +147,7 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 	for i, key := range keys {
 		key = strings.SplitN(key, ":", 2)[1]
 		result[i] = &pb.KeysResponse_Key{
-			Key: key,
+			Key: strcase.KebabCase(key),
 		}
 		if pub, ok := vals[i].(string); ok {
 			result[i].Public = pub == "1"
