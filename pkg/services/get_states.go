@@ -31,6 +31,11 @@ func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetSt
 		return nil, err
 	}
 
+	return s.GetStatesInternal(ctx, service)
+}
+
+
+func (s *ServicesServiceServer) GetStatesInternal(ctx context.Context, service *pb.Service) (*instpb.GetInstancesStatesResponse, error) {
 	var keys []string
 	for _, igroup := range service.GetInstancesGroups() {
 		for _, inst := range igroup.GetInstances() {
