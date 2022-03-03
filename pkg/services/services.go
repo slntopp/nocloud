@@ -255,6 +255,14 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 		log.Debug("Updated Group", zap.Any("group", group))
 	}
 
+	// Save provisions into Service Document for Quick Access
+	provisions, err := s.ctrl.GetProvisions(ctx, service.GetUuid())
+	if err != nil {
+		log.Error("Error getting Provisions", zap.String("service", service.GetUuid()), zap.Error(err))
+	} else {
+		service.Provisions = provisions
+	}
+
 	service.Status = "up"
 	log.Debug("Updated Service", zap.Any("service", service))
 	err = s.ctrl.Update(ctx, service.Service, false)

@@ -31,6 +31,7 @@ message Service {
         [(nocloud.hasher.hashed) = true];
     map<string, nocloud.instances.InstancesGroup> instances_groups = 6;
     string hash = 7 [(nocloud.hasher.hash) = true];
+    map<string, string> provisions = 8;
 }
 
 message TestConfigError {

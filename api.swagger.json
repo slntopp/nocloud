@@ -2037,6 +2037,12 @@
         },
         "hash": {
           "type": "string"
+        },
+        "provisions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
