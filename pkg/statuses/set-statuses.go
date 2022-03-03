@@ -47,18 +47,18 @@ func (s *StatusesServer) State(
 	req *pb.PostInstanceStateRequest,
 ) (*pb.PostInstanceStateResponse, error) {
 
-	json, err := json.Marshal(req.Meta)
+	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, req.GetUuid())
 	if err != nil {
 		s.log.Error("Error Marshal JSON",
-			zap.String("zone", KEYS_PREFIX+":"+string(req.Uuid)), zap.Error(err))
+			zap.String("key", key), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error  Marshal JSON")
 	}
 
-	r := s.rdb.Set(ctx, KEYS_PREFIX+":"+string(req.Uuid), json, 0)
-	_, err = r.Result() //TODO set string Result in PostServiceStateResponse.Result
+	r := s.rdb.Set(ctx, key, json, 0)
+	_, err = r.Result()
 	if err != nil {
 		s.log.Error("Error putting status to Redis",
-			zap.String("zone", KEYS_PREFIX+":"+req.Uuid), zap.Error(err))
+			zap.String("key", key), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error putting status to Redis")
 	}
 
