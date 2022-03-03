@@ -183,7 +183,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 		sp_id := deploy_policies[group.GetUuid()]
 		sp, err := s.sp_ctrl.Get(ctx, sp_id)
 		if err != nil {
-			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
+			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
 			return nil, status.Errorf(codes.InvalidArgument, "Error getting ServiceProvider(%s)", sp_id)
 		}
 
@@ -197,7 +197,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 
 	err = s.ctrl.SetStatus(ctx, service, "starting")
 	if err != nil {
-		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
@@ -213,7 +213,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 
 		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
-			s.log.Error("Error deploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
+			log.Error("Error deploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
 			result.Errors = append(result.Errors, &pb.UpError{
 				Data: map[string]string{
 					"group": group.GetUuid(),
@@ -222,12 +222,12 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 			})
 			continue
 		}
-		s.log.Debug("Up Request Result", zap.Any("response", response))
+		log.Debug("Up Request Result", zap.Any("response", response))
 
 		// TODO: Change to Hash comparation
 		// TODO: Add cleanups
 		if len(group.Instances) != len(response.GetGroup().GetInstances()) {
-			s.log.Error("Instances config changed by Driver")
+			log.Error("Instances config changed by Driver")
 			result.Errors = append(result.Errors, &pb.UpError{
 				Data: map[string]string{
 					"group": group.GetUuid(),
@@ -243,7 +243,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 		group.Data = response.GetGroup().GetData()
 		err = s.ctrl.Provide(ctx, sp.ID, service.ID, group.GetUuid())
 		if err != nil {
-			s.log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
+			log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
 			result.Errors = append(result.Errors, &pb.UpError{
 				Data: map[string]string{
 					"group": group.GetUuid(),
@@ -252,14 +252,14 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 			})
 			continue
 		}
-		s.log.Debug("Updated Group", zap.Any("group", group))
+		log.Debug("Updated Group", zap.Any("group", group))
 	}
 
 	service.Status = "up"
-	s.log.Debug("Updated Service", zap.Any("service", service))
+	log.Debug("Updated Service", zap.Any("service", service))
 	err = s.ctrl.Update(ctx, service.Service, false)
 	if err != nil {
-		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
@@ -279,7 +279,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 
 	provisions, err := s.ctrl.GetProvisions(ctx, service.ID.String())
 	if err != nil {
-		s.log.Debug("Can't get provisions for Service", zap.Any("service", service), zap.Error(err))
+		log.Debug("Can't get provisions for Service", zap.Any("service", service), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Can't gather Service provisions")
 	}
 	contexts := make(map[string]*InstancesGroupDriverContext)
@@ -292,7 +292,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 		}
 		sp, err := s.sp_ctrl.Get(ctx, sp_id)
 		if err != nil {
-			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
+			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
 			return nil, status.Errorf(codes.InvalidArgument, "Error getting ServiceProvider(%s)", sp_id)
 		}
 
@@ -307,7 +307,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 
 	err = s.ctrl.SetStatus(ctx, service, "stopping")
 	if err != nil {
-		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
@@ -322,13 +322,13 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 
 		res, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
-			s.log.Error("Error undeploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
+			log.Error("Error undeploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
 			continue
 		}
 		group := res.GetGroup()
 		err = s.ctrl.Unprovide(ctx, group.GetUuid())
 		if err != nil {
-			s.log.Error("Error unlinking group from ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
+			log.Error("Error unlinking group from ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
 			continue
 		}
 		service.Service.InstancesGroups[key] = group
@@ -336,7 +336,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 
 	err = s.ctrl.SetStatus(ctx, service, "init")
 	if err != nil {
-		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
