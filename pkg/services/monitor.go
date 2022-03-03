@@ -132,6 +132,14 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 					}
 				}
 
+				// Refresh provisions
+				provisions, err := s.ctrl.GetProvisions(ctx, service.GetUuid())
+				if err != nil {
+					log.Error("Error getting Provisions", zap.String("service", service.GetUuid()), zap.Error(err))
+				} else {
+					service.Provisions = provisions
+				}
+
 				err = s.ctrl.Update(ctx, service.Service, false)
 				if err != nil {
 					log.Error("Failed to update Service", zap.String("service", service.GetUuid()), zap.Error(err))
