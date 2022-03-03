@@ -122,23 +122,26 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 			go func(service *graph.Service) {
 				log.Debug("TO BE MONITORED", zap.Any("graph.Service", service), zap.Any("pb.Service", service.Service))
 
-				r, err := s.GetStatesInternal(ctx, service.Service)
+				states, err := s.GetStatesInternal(ctx, service.Service)
 				if err != nil {
 					log.Error("Failed to get Service Instances states", zap.String("service", service.GetUuid()), zap.Error(err))
 					return
 				}
-				log.Debug("Got Service Instances States", zap.String("service", service.GetUuid()), zap.Any("states", r))
-				for uuid, state := range r.GetStates() {
+				log.Debug("Got Service Instances States", zap.String("service", service.GetUuid()), zap.Any("states", states))
+				for uuid, state := range states.GetStates() {
 					log.Debug("Got State for", zap.String("instance", uuid), zap.Any("state", state))
 				}
 
 				for _, group := range service.GetInstancesGroups() {
 					log.Debug("Group to update", zap.Any("group", group))
 					for _, inst := range group.GetInstances() {
-						state, ok := r.GetStates()[inst.GetUuid()]
+						state, ok := states.GetStates()[inst.GetUuid()]
 						log.Debug("Instance to update", zap.Any("instance", inst), zap.Bool("ok", ok), zap.Any("state", state))
 						if !ok {
 							log.Debug("State for Instance not found")
+							for uuid, state := range states.GetStates() {
+								log.Debug("Got State for", zap.String("instance", uuid), zap.Bool("match", uuid == inst.GetUuid()), zap.Any("state", state))
+							}
 							continue
 						}
 						inst.State = state
