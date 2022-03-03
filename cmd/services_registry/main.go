@@ -24,6 +24,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/services"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"github.com/spf13/viper"
@@ -34,6 +35,7 @@ import (
 	instpb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -118,7 +120,13 @@ func main() {
 		server.RegisterDriver(driver_type.GetType(), client)
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
-
+	
+	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		log.Fatal("Can't generate token", zap.Error(err))
+	}
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
+	go server.MonitoringRoutine(ctx)
 	pb.RegisterServicesServiceServer(s, server)
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
