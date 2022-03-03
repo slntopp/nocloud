@@ -28,12 +28,14 @@ import (
 )
 
 const KEYS_PREFIX = "_st"
+var rdbCtx context.Context = context.Background()
 
 type StatusesServer struct {
 	pb.UnimplementedStatesServiceServer
 
 	log *zap.Logger
 	rdb *redis.Client
+
 }
 
 func NewStatusesServer(log *zap.Logger, rdb *redis.Client) *StatusesServer {
@@ -57,7 +59,7 @@ func (s *StatusesServer) PostInstanceState(
 		return nil, status.Error(codes.Internal, "Error  Marshal JSON")
 	}
 
-	r := s.rdb.Set(ctx, key, json, 0)
+	r := s.rdb.Set(rdbCtx, key, json, 0)
 	_, err = r.Result()
 	if err != nil {
 		s.log.Error("Error putting status to Redis",
@@ -65,11 +67,13 @@ func (s *StatusesServer) PostInstanceState(
 		return nil, status.Error(codes.Internal, "Error putting status to Redis")
 	}
 
-	err = s.rdb.Publish(ctx, key, json).Err()
-	if err != nil {
-		s.log.Error("Error putting status to Redis channel",
+	go func() {
+		err = s.rdb.Publish(rdbCtx, key, json).Err()
+		if err != nil {
+			s.log.Error("Error putting status to Redis channel",
 			zap.String("key", key), zap.Error(err))
-	}
+		}
+	}()
 
 	return &pb.PostInstanceStateResponse{Uuid: req.Uuid, Result: 0, Error: ""}, nil
 }
