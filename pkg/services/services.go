@@ -256,7 +256,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 	}
 
 	// Save provisions into Service Document for Quick Access
-	provisions, err := s.ctrl.GetProvisions(ctx, service.GetUuid())
+	provisions, err := s.ctrl.GetProvisions(ctx, service.ID.String())
 	if err != nil {
 		log.Error("Error getting Provisions", zap.String("service", service.GetUuid()), zap.Error(err))
 	} else {
