@@ -41,7 +41,7 @@ func NewStatusesServer(log *zap.Logger, rdb *redis.Client) *StatusesServer {
 	}
 }
 
-//Path status param to redis, both to db and channel
+// Store Instance State to Redis key and channel
 func (s *StatusesServer) PostInstanceState(
 	ctx context.Context,
 	req *pb.PostInstanceStateRequest,
