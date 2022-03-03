@@ -364,6 +364,7 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *pb.GetRequest)
 	states, err := s.GetStatesInternal(ctx, r.Service)
 	if err != nil {
 		log.Error("Error getting Instances States", zap.String("uuid", r.GetUuid()), zap.Error(err))
+		return r.Service, nil
 	}
 
 	for _, group := range r.GetInstancesGroups() {
