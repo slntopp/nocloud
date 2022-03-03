@@ -128,6 +128,9 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 					return
 				}
 				log.Debug("Got Service Instances States", zap.String("service", service.GetUuid()), zap.Any("states", r))
+				for uuid, state := range r.GetStates() {
+					log.Debug("Got State for", zap.String("instance", uuid), zap.Any("state", state))
+				}
 
 				for _, group := range service.GetInstancesGroups() {
 					log.Debug("Group to update", zap.Any("group", group))
