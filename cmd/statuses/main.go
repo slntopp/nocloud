@@ -20,10 +20,10 @@ import (
 	"net"
 
 	"github.com/go-redis/redis/v8"
+	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	auth "github.com/slntopp/nocloud/pkg/nocloud/admin_auth"
 	spb "github.com/slntopp/nocloud/pkg/statuses"
-	pb "github.com/slntopp/nocloud/pkg/statuses/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -73,7 +73,7 @@ func main() {
 	grpcServer := grpc.NewServer(opts...)
 
 	server := spb.NewStatusesServer(log, rdb)
-	pb.RegisterPostServiceServer(grpcServer, server)
+	pb.RegisterStatesServiceServer(grpcServer, server)
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(grpcServer.Serve(lis)))
