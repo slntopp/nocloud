@@ -120,36 +120,21 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 
 		for _, service := range pool {
 			go func(service *graph.Service) {
-				log.Debug("TO BE MONITORED", zap.Any("graph.Service", service), zap.Any("pb.Service", service.Service))
-
 				states, err := s.GetStatesInternal(ctx, service.Service)
 				if err != nil {
 					log.Error("Failed to get Service Instances states", zap.String("service", service.GetUuid()), zap.Error(err))
 					return
 				}
-				log.Debug("Got Service Instances States", zap.String("service", service.GetUuid()), zap.Any("states", states))
-				for uuid, state := range states.GetStates() {
-					log.Debug("Got State for", zap.String("instance", uuid), zap.Any("state", state))
-				}
 
 				for _, group := range service.GetInstancesGroups() {
-					log.Debug("Group to update", zap.Any("group", group))
 					for _, inst := range group.GetInstances() {
 						state, ok := states.GetStates()[inst.GetUuid()]
-						log.Debug("Instance to update", zap.Any("instance", inst), zap.Bool("ok", ok), zap.Any("state", state))
 						if !ok {
-							log.Debug("State for Instance not found")
-							for uuid, state := range states.GetStates() {
-								log.Debug("Got State for", zap.String("instance", uuid), zap.Bool("match", uuid == inst.GetUuid()), zap.Any("state", state))
-							}
+							log.Debug("State for Instance not found", zap.String("instance", inst.GetUuid()))
 							continue
 						}
 						inst.State = state
-						log.Debug("Instance updated", zap.Any("instance", inst))
-						// group.Instances[i] = inst
 					}
-					log.Debug("Group updated", zap.Any("group", group))
-					// service.Service.InstancesGroups[key] = group
 				}
 
 				// Refresh provisions
@@ -161,7 +146,6 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 				}
 				log.Debug("Got Provisions", zap.String("service", service.GetUuid()), zap.Any("provisions", provisions))
 
-				log.Debug("TO BE UPDATED", zap.Any("graph.Service", service), zap.Any("pb.Service", service.Service))
 				err = s.ctrl.Update(ctx, service.Service, false)
 				if err != nil {
 					log.Error("Failed to update Service", zap.String("service", service.GetUuid()), zap.Error(err))
