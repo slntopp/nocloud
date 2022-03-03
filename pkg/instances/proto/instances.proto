@@ -59,7 +59,7 @@ message InstanceState {
 }
 
 message GetInstancesStatesRequest {
-    repeated Instance instances = 1;
+    repeated string instances = 1;
 }
 
 message GetInstancesStatesResponse {

@@ -33,31 +33,31 @@ func (s *StatusesServer) GetInstancesStates(ctx context.Context, req *pb.GetInst
 		States:  make(map[string]*pb.InstanceState),
 	}
 
-	for _, instance := range req.GetInstances() {
+	keys := req.GetInstances()	
+	for i, uuid := range keys {
+		keys[i] = fmt.Sprintf("%s:%s", KEYS_PREFIX, uuid)
+	}
 
-			instance_uuid := instance.GetUuid()
-			key := fmt.Sprintf("%s:%s", KEYS_PREFIX, instance.GetUuid())
+	r := s.rdb.MGet(ctx, keys...)
+	states, err := r.Result()
+	if err != nil {
+		s.log.Error("Error getting states from Redis", zap.Strings("keys", keys), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting states from Redis")
+	}
 
-			r := s.rdb.Get(ctx, key)
-			st, err := r.Result()
-			if err != nil {
-				s.log.Error("Error getting status from Redis",
-					zap.String("key", key), zap.Error(err))
-				return nil, status.Error(codes.Internal, "Error getting status from Redis")
-			}
+	for i, state := range states {
+		var stpb structpb.Value
+		err = stpb.UnmarshalJSON(state.([]byte))
+		if err != nil {
+			s.log.Error("Error Unmarshal JSON",
+				zap.String("key", keys[i]), zap.Error(err))
+			return nil, status.Error(codes.Internal, "Error Unmarshal JSON")
+		}
 
-			var stpb structpb.Value
-			err = stpb.UnmarshalJSON([]byte(st))
-			if err != nil {
-				s.log.Error("Error Unmarshal JSON",
-					zap.String("key", key), zap.Error(err))
-				return nil, status.Error(codes.Internal, "Error  Unmarshal JSON")
-			}
-
-			resp.States[instance_uuid] = &pb.InstanceState{
-				State: int32(stpb.GetStructValue().GetFields()["state"].GetNumberValue()),
-				Meta: stpb.GetStructValue().Fields,
-			}
+		resp.States[keys[i]] = &pb.InstanceState{
+			State: int32(stpb.GetStructValue().GetFields()["state"].GetNumberValue()),
+			Meta: stpb.GetStructValue().Fields,
+		}
 	}
 
 	return resp, nil
