@@ -14,6 +14,9 @@
       "name": "DNS"
     },
     {
+      "name": "StatesService"
+    },
+    {
       "name": "ServicesService"
     },
     {
@@ -36,9 +39,6 @@
     },
     {
       "name": "SettingsService"
-    },
-    {
-      "name": "PostService"
     }
   ],
   "host": "localhost:8000",
@@ -1577,6 +1577,17 @@
         }
       }
     },
+    "instancesGetInstancesStatesResponse": {
+      "type": "object",
+      "properties": {
+        "states": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/instancesInstanceState"
+          }
+        }
+      }
+    },
     "instancesInstance": {
       "type": "object",
       "properties": {
@@ -1606,6 +1617,21 @@
         },
         "hash": {
           "type": "string"
+        }
+      }
+    },
+    "instancesInstanceState": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },
@@ -1643,6 +1669,21 @@
           }
         },
         "hash": {
+          "type": "string"
+        }
+      }
+    },
+    "instancesPostInstanceStateResponse": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string",
+          "format": "int64"
+        },
+        "error": {
           "type": "string"
         }
       }
@@ -2164,21 +2205,6 @@
       "type": "object",
       "properties": {
         "key": {
-          "type": "string"
-        }
-      }
-    },
-    "statusesPostServiceStateResponse": {
-      "type": "object",
-      "properties": {
-        "uuid": {
-          "type": "string"
-        },
-        "result": {
-          "type": "string",
-          "format": "int64"
-        },
-        "error": {
           "type": "string"
         }
       }
