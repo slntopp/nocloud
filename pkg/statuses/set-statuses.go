@@ -18,6 +18,7 @@ package statuses
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	redis "github.com/go-redis/redis/v8"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
@@ -64,12 +65,13 @@ func (s *StatusesServer) PostInstanceState(
 		return nil, status.Error(codes.Internal, "Error putting status to Redis")
 	}
 
-	err = s.rdb.Publish(ctx, req.Uuid, json).Err()
-	if err != nil {
-		s.log.Error("Error putting status to Redis",
-			zap.String("zone", KEYS_PREFIX+":"+req.Uuid), zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error putting status to Redis")
-	}
+	go func() {
+		err = s.rdb.Publish(ctx, key, json).Err()
+		if err != nil {
+			s.log.Error("Error putting status to Redis",
+				zap.String("key", key), zap.Error(err))
+		}
+	}()
 
 	return &pb.PostInstanceStateResponse{Uuid: req.Uuid, Result: 0, Error: ""}, nil
 }
