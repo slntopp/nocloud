@@ -105,7 +105,7 @@ func main() {
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
-		conn, err := grpc.Dial(driver, grpc.WithInsecure())
+		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Error("Error registering driver", zap.String("driver", driver), zap.Error(err))
 			continue
