@@ -47,7 +47,7 @@ func (s *StatusesServer) GetInstancesStates(ctx context.Context, req *pb.GetInst
 
 	for i, state := range states {
 		var stpb structpb.Value
-		err = stpb.UnmarshalJSON(state.([]byte))
+		err = stpb.UnmarshalJSON([]byte(state.(string)))
 		if err != nil {
 			s.log.Error("Error Unmarshal JSON",
 				zap.String("key", keys[i]), zap.Error(err))
