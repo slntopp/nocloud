@@ -126,7 +126,7 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 					return
 				}
 
-				for _, group := range service.GetInstancesGroups() {
+				for _, group := range service.Service.GetInstancesGroups() {
 					for _, inst := range group.GetInstances() {
 						inst.State = r.States[inst.GetUuid()]
 					}
