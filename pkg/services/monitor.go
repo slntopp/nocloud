@@ -153,6 +153,7 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 				} else {
 					service.Provisions = provisions
 				}
+				log.Debug("Got Provisions", zap.String("service", service.GetUuid()), zap.Any("provisions", provisions))
 
 				log.Debug("TO BE UPDATED", zap.Any("graph.Service", service), zap.Any("pb.Service", service.Service))
 				err = s.ctrl.Update(ctx, service.Service, false)
