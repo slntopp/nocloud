@@ -135,8 +135,10 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 						if !ok {
 							continue
 						}
-						service.Service.InstancesGroups[key].Instances[i].State = state
+						inst.State = state
+						group.Instances[i] = inst
 					}
+					service.InstancesGroups[key] = group
 				}
 
 				// Refresh provisions
@@ -144,7 +146,7 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 				if err != nil {
 					log.Error("Error getting Provisions", zap.String("service", service.GetUuid()), zap.Error(err))
 				} else {
-					service.Service.Provisions = provisions
+					service.Provisions = provisions
 				}
 
 				log.Debug("TO BE UPDATED", zap.Any("graph.Service", service), zap.Any("pb.Service", service.Service))
