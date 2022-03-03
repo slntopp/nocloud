@@ -142,7 +142,7 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 						log.Debug("Instance updated", zap.Any("instance", inst))
 						group.Instances[i] = inst
 					}
-					log.Debug("Group to update", zap.Any("group", group))
+					log.Debug("Group updated", zap.Any("group", group))
 					service.Service.InstancesGroups[key] = group
 				}
 
