@@ -17,8 +17,9 @@ package statuses
 
 import (
 	"context"
+	"fmt"
 
-	spb "github.com/slntopp/nocloud/pkg/services/proto"
+	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,23 +27,22 @@ import (
 )
 
 //Gets statuses Instanses of Servce
-func (s *StatusesServer) StateGet(ctx context.Context, req *spb.Service) (resp *spb.GetStatesResponse, err error) {
+func (s *StatusesServer) GetInstancesStates(ctx context.Context, req *pb.GetInstancesStatesRequest) (resp *pb.GetInstancesStatesResponse, err error) {
 
-	resp = &spb.GetStatesResponse{
-		States:  make(map[string]*spb.State),
+	resp = &pb.GetInstancesStatesResponse{
+		States:  make(map[string]*pb.InstanceState),
 	}
 
-	for _, ig := range req.InstancesGroups {
-		for in := range ig.Instances {
+	for _, instance := range req.GetInstances() {
 
-			instance := ig.Instances[in]
-			instance_uuid := string(instance.Uuid)
+			instance_uuid := instance.GetUuid()
+			key := fmt.Sprintf("%s:%s", KEYS_PREFIX, instance.GetUuid())
 
-			r := s.rdb.Get(ctx, KEYS_PREFIX+":"+instance_uuid)
+			r := s.rdb.Get(ctx, key)
 			st, err := r.Result()
 			if err != nil {
 				s.log.Error("Error getting status from Redis",
-					zap.String("zone", KEYS_PREFIX+":"+instance_uuid), zap.Error(err))
+					zap.String("key", key), zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting status from Redis")
 			}
 
@@ -50,16 +50,14 @@ func (s *StatusesServer) StateGet(ctx context.Context, req *spb.Service) (resp *
 			err = stpb.UnmarshalJSON([]byte(st))
 			if err != nil {
 				s.log.Error("Error Unmarshal JSON",
-					zap.String("zone", KEYS_PREFIX+":"+string(req.Uuid)), zap.Error(err))
+					zap.String("key", key), zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error  Unmarshal JSON")
 			}
 
-			resp.States[instance_uuid] = &spb.State{
+			resp.States[instance_uuid] = &pb.InstanceState{
 				State: int32(stpb.GetStructValue().GetFields()["state"].GetNumberValue()),
 				Meta: stpb.GetStructValue().Fields,
 			}
-		}
-
 	}
 
 	return resp, nil
