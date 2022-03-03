@@ -18,16 +18,12 @@ package services
 import (
 	"context"
 
+	instpb "github.com/slntopp/nocloud/pkg/instances/proto"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
-	"go.uber.org/zap"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 //Gets statuses Instanses of Servce from pkg/statuses
-func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetStatesRequest) (*pb.GetStatesResponse, error) {
-	log := s.log.Named("GetStates")
-
+func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetStatesRequest) (*instpb.GetInstancesStatesResponse, error) {
 	service, err := s.Get(ctx, &pb.GetRequest{
 		Uuid: request.Uuid,
 	})
@@ -35,11 +31,14 @@ func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetSt
 		return nil, err
 	}
 
-	resp, err := s.statuses.StateGet(ctx, service)
-	if err != nil {
-		log.Error("fail to get States", zap.Error(err))
-		return nil, status.Error(codes.Internal, "fail to get States")
+	var keys []string
+	for _, igroup := range service.GetInstancesGroups() {
+		for _, inst := range igroup.GetInstances() {
+			keys = append(keys, inst.GetUuid())
+		}
 	}
-
-	return resp, nil
+	resp, err := s.statuses.GetInstancesStates(ctx, &instpb.GetInstancesStatesRequest{
+		Instances: keys,
+	})
+	return resp, err
 }

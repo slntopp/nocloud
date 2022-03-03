@@ -4,6 +4,7 @@ package proto
 
 import (
 	context "context"
+	proto "github.com/slntopp/nocloud/pkg/instances/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -24,7 +25,7 @@ type ServicesServiceClient interface {
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Service, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
-	GetStates(ctx context.Context, in *GetStatesRequest, opts ...grpc.CallOption) (*GetStatesResponse, error)
+	GetStates(ctx context.Context, in *GetStatesRequest, opts ...grpc.CallOption) (*proto.GetInstancesStatesResponse, error)
 	GetProvisions(ctx context.Context, in *GetProvisionsRequest, opts ...grpc.CallOption) (*GetProvisionsResponse, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
@@ -93,8 +94,8 @@ func (c *servicesServiceClient) List(ctx context.Context, in *ListRequest, opts 
 	return out, nil
 }
 
-func (c *servicesServiceClient) GetStates(ctx context.Context, in *GetStatesRequest, opts ...grpc.CallOption) (*GetStatesResponse, error) {
-	out := new(GetStatesResponse)
+func (c *servicesServiceClient) GetStates(ctx context.Context, in *GetStatesRequest, opts ...grpc.CallOption) (*proto.GetInstancesStatesResponse, error) {
+	out := new(proto.GetInstancesStatesResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/GetStates", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -148,7 +149,7 @@ type ServicesServiceServer interface {
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	Get(context.Context, *GetRequest) (*Service, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
-	GetStates(context.Context, *GetStatesRequest) (*GetStatesResponse, error)
+	GetStates(context.Context, *GetStatesRequest) (*proto.GetInstancesStatesResponse, error)
 	GetProvisions(context.Context, *GetProvisionsRequest) (*GetProvisionsResponse, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
@@ -178,7 +179,7 @@ func (UnimplementedServicesServiceServer) Get(context.Context, *GetRequest) (*Se
 func (UnimplementedServicesServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
-func (UnimplementedServicesServiceServer) GetStates(context.Context, *GetStatesRequest) (*GetStatesResponse, error) {
+func (UnimplementedServicesServiceServer) GetStates(context.Context, *GetStatesRequest) (*proto.GetInstancesStatesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetStates not implemented")
 }
 func (UnimplementedServicesServiceServer) GetProvisions(context.Context, *GetProvisionsRequest) (*GetProvisionsResponse, error) {

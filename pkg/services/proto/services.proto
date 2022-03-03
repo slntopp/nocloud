@@ -112,10 +112,6 @@ message GetStatesRequest {
     string uuid = 1; // Service UUID
 }
 
-message GetStatesResponse {
-    map<string, nocloud.instances.InstanceState> states = 1; // Map of Instance UUID to it's State
-}
-
 message GetProvisionsRequest {
     string uuid = 1;
 }
@@ -165,7 +161,7 @@ service ServicesService {
         };
     };
 
-    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.services.GetStatesResponse) {
+    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.instances.GetInstancesStatesResponse) {
         option (google.api.http) = {
             get: "/services/{uuid}/states"
         };
