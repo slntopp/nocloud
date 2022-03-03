@@ -120,13 +120,15 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 
 		for _, service := range pool {
 			go func(service *graph.Service) {
+				log.Debug("TO BE MONITORED", zap.Any("graph.Service", service), zap.Any("pb.Service", service.Service))
+
 				r, err := s.GetStatesInternal(ctx, service.Service)
 				if err != nil {
 					log.Error("Failed to get Service Instances states", zap.String("service", service.GetUuid()), zap.Error(err))
 					return
 				}
 
-				for _, group := range service.Service.GetInstancesGroups() {
+				for _, group := range service.GetInstancesGroups() {
 					for _, inst := range group.GetInstances() {
 						inst.State = r.States[inst.GetUuid()]
 					}
@@ -140,6 +142,7 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 					service.Provisions = provisions
 				}
 
+				log.Debug("TO BE UPDATED", zap.Any("graph.Service", service), zap.Any("pb.Service", service.Service))
 				err = s.ctrl.Update(ctx, service.Service, false)
 				if err != nil {
 					log.Error("Failed to update Service", zap.String("service", service.GetUuid()), zap.Error(err))
