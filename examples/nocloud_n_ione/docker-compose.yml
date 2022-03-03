@@ -105,8 +105,8 @@ services:
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
-      REDIS_HOST: redis:6379
-  redis:
+      REDIS_HOST: redis_settings:6379
+  redis_settings:
     image: redis
     restart: always
     command: redis-server --save 60 1
