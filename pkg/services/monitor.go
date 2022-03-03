@@ -135,7 +135,7 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 				for _, group := range service.GetInstancesGroups() {
 					log.Debug("Group to update", zap.Any("group", group))
 					for _, inst := range group.GetInstances() {
-						state, ok := r.States[inst.GetUuid()]
+						state, ok := r.GetStates()[inst.GetUuid()]
 						log.Debug("Instance to update", zap.Any("instance", inst), zap.Bool("ok", ok), zap.Any("state", state))
 						if !ok {
 							log.Debug("State for Instance not found")
