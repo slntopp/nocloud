@@ -55,7 +55,7 @@ func (s *StatusesServer) GetInstancesStates(ctx context.Context, req *pb.GetInst
 			return nil, status.Error(codes.Internal, "Error Unmarshal JSON")
 		}
 
-		key := strings.Replace(keys[i], KEYS_PREFIX, "", 1)
+		key := strings.Replace(keys[i], KEYS_PREFIX + ":", "", 1)
 		resp.States[key] = &pb.InstanceState{
 			State: int32(stpb.GetStructValue().GetFields()["state"].GetNumberValue()),
 			Meta: stpb.GetStructValue().Fields,
