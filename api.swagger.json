@@ -1615,6 +1615,9 @@
             "type": "object"
           }
         },
+        "state": {
+          "$ref": "#/definitions/instancesInstanceState"
+        },
         "hash": {
           "type": "string"
         }

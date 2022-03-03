@@ -12,7 +12,8 @@ message Instance {
     map<string, google.protobuf.Value> resources = 4
         [(nocloud.hasher.hashed) = true];
     map<string, google.protobuf.Value> data = 5;
-    string hash = 6 [(nocloud.hasher.hash) = true];
+    InstanceState state = 6;
+    string hash = 7 [(nocloud.hasher.hash) = true];
 }
 
 message InstancesGroup {
