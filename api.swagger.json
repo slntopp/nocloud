@@ -2000,7 +2000,7 @@
         "states": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/definitions/servicesState"
+            "$ref": "#/definitions/instancesInstanceState"
           }
         }
       }
@@ -2048,21 +2048,6 @@
         },
         "hash": {
           "type": "string"
-        }
-      }
-    },
-    "servicesState": {
-      "type": "object",
-      "properties": {
-        "state": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
         }
       }
     },

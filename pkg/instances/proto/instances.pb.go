@@ -374,8 +374,8 @@ type InstanceState struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	State int32                      `protobuf:"varint,1,opt,name=state,proto3" json:"state,omitempty"`
-	Meta  map[string]*structpb.Value `protobuf:"bytes,2,rep,name=meta,proto3" json:"meta,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	State int32                      `protobuf:"varint,1,opt,name=state,proto3" json:"state,omitempty"`                                                                                      // NoCloud Instance State
+	Meta  map[string]*structpb.Value `protobuf:"bytes,2,rep,name=meta,proto3" json:"meta,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"` // Driver(Provider/Hypervisor) State data
 }
 
 func (x *InstanceState) Reset() {

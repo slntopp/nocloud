@@ -46,8 +46,8 @@ message TestInstancesGroupConfigResponse {
 // StatesService
 
 message InstanceState {
-    int32 state = 1;
-    map<string, google.protobuf.Value> meta = 2;
+    int32 state = 1; // NoCloud Instance State
+    map<string, google.protobuf.Value> meta = 2; // Driver(Provider/Hypervisor) State data
 }
 
 message PostInstanceStateRequest {
