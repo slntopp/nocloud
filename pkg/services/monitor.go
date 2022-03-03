@@ -127,10 +127,15 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 					log.Error("Failed to get Service Instances states", zap.String("service", service.GetUuid()), zap.Error(err))
 					return
 				}
+				log.Debug("Got Service Instances States", zap.String("service", service.GetUuid()), zap.Any("states", r))
 
-				for _, group := range service.GetInstancesGroups() {
-					for _, inst := range group.GetInstances() {
-						inst.State = r.States[inst.GetUuid()]
+				for key, group := range service.GetInstancesGroups() {
+					for i, inst := range group.GetInstances() {
+						state, ok := r.States[inst.GetUuid()]
+						if !ok {
+							continue
+						}
+						service.Service.InstancesGroups[key].Instances[i].State = state
 					}
 				}
 
@@ -139,7 +144,7 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 				if err != nil {
 					log.Error("Error getting Provisions", zap.String("service", service.GetUuid()), zap.Error(err))
 				} else {
-					service.Provisions = provisions
+					service.Service.Provisions = provisions
 				}
 
 				log.Debug("TO BE UPDATED", zap.Any("graph.Service", service), zap.Any("pb.Service", service.Service))
