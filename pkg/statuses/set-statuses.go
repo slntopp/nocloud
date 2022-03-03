@@ -42,12 +42,14 @@ func NewStatusesServer(log *zap.Logger, rdb *redis.Client) *StatusesServer {
 }
 
 //Path status param to redis, both to db and channel
-func (s *StatusesServer) State(
+func (s *StatusesServer) PostInstanceState(
 	ctx context.Context,
 	req *pb.PostInstanceStateRequest,
 ) (*pb.PostInstanceStateResponse, error) {
 
+	state := req.GetState()
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, req.GetUuid())
+	json, err := json.Marshal(state.GetMeta())
 	if err != nil {
 		s.log.Error("Error Marshal JSON",
 			zap.String("key", key), zap.Error(err))
