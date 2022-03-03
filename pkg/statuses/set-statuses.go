@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 
 	redis "github.com/go-redis/redis/v8"
-	pb "github.com/slntopp/nocloud/pkg/statuses/proto"
+	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -29,7 +29,7 @@ import (
 const KEYS_PREFIX = "_st"
 
 type StatusesServer struct {
-	pb.UnimplementedPostServiceServer
+	pb.UnimplementedStatesServiceServer
 
 	log *zap.Logger
 	rdb *redis.Client
@@ -44,8 +44,8 @@ func NewStatusesServer(log *zap.Logger, rdb *redis.Client) *StatusesServer {
 //Path status param to redis, both to db and channel
 func (s *StatusesServer) State(
 	ctx context.Context,
-	req *pb.PostServiceStateRequest,
-) (*pb.PostServiceStateResponse, error) {
+	req *pb.PostInstanceStateRequest,
+) (*pb.PostInstanceStateResponse, error) {
 
 	json, err := json.Marshal(req.Meta)
 	if err != nil {
@@ -69,5 +69,5 @@ func (s *StatusesServer) State(
 		return nil, status.Error(codes.Internal, "Error putting status to Redis")
 	}
 
-	return &pb.PostServiceStateResponse{Uuid: req.Uuid, Result: 0, Error: ""}, nil
+	return &pb.PostInstanceStateResponse{Uuid: req.Uuid, Result: 0, Error: ""}, nil
 }
