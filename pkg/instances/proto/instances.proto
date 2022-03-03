@@ -64,7 +64,7 @@ message GetInstancesStatesRequest {
     repeated string instances = 1;
 }
 message GetInstancesStatesResponse {
-    map<string, InstanceState> states = 1;
+    map<string, InstanceState> states = 1; // Map of Instance UUID to it's State
 }
 
 service StatesService {
