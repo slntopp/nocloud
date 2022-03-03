@@ -130,15 +130,19 @@ func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
 				log.Debug("Got Service Instances States", zap.String("service", service.GetUuid()), zap.Any("states", r))
 
 				for key, group := range service.GetInstancesGroups() {
+					log.Debug("Group to update", zap.Any("group", group))
 					for i, inst := range group.GetInstances() {
 						state, ok := r.States[inst.GetUuid()]
 						if !ok {
 							continue
 						}
+						log.Debug("Instance to update", zap.Any("instance", inst))
 						inst.State = state
+						log.Debug("Instance updated", zap.Any("instance", inst))
 						group.Instances[i] = inst
 					}
-					service.InstancesGroups[key] = group
+					log.Debug("Group to update", zap.Any("group", group))
+					service.Service.InstancesGroups[key] = group
 				}
 
 				// Refresh provisions
