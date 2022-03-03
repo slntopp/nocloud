@@ -361,6 +361,17 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *pb.GetRequest)
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
 	}
 
+	states, err := s.GetStatesInternal(ctx, r.Service)
+	if err != nil {
+		log.Error("Error getting Instances States", zap.String("uuid", r.GetUuid()), zap.Error(err))
+	}
+
+	for _, group := range r.GetInstancesGroups() {
+		for _, inst := range group.GetInstances() {
+			inst.State = states.States[inst.GetUuid()]
+		}
+	}
+
 	return r.Service, nil
 }
 
