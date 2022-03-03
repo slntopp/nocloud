@@ -65,13 +65,11 @@ func (s *StatusesServer) PostInstanceState(
 		return nil, status.Error(codes.Internal, "Error putting status to Redis")
 	}
 
-	go func() {
-		err = s.rdb.Publish(ctx, key, json).Err()
-		if err != nil {
-			s.log.Error("Error putting status to Redis",
-				zap.String("key", key), zap.Error(err))
-		}
-	}()
+	err = s.rdb.Publish(ctx, key, json).Err()
+	if err != nil {
+		s.log.Error("Error putting status to Redis channel",
+			zap.String("key", key), zap.Error(err))
+	}
 
 	return &pb.PostInstanceStateResponse{Uuid: req.Uuid, Result: 0, Error: ""}, nil
 }
