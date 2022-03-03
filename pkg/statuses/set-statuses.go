@@ -49,6 +49,8 @@ func (s *StatusesServer) PostInstanceState(
 	ctx context.Context,
 	req *pb.PostInstanceStateRequest,
 ) (*pb.PostInstanceStateResponse, error) {
+	log := s.log.Named("PostInstanceState")
+	log.Debug("Request received", zap.Any("request", req))
 
 	state := req.GetState()
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, req.GetUuid())
@@ -59,6 +61,7 @@ func (s *StatusesServer) PostInstanceState(
 		return nil, status.Error(codes.Internal, "Error  Marshal JSON")
 	}
 
+	log.Debug("Storing State in Redis", zap.String("key", key))
 	r := s.rdb.Set(rdbCtx, key, json, 0)
 	_, err = r.Result()
 	if err != nil {
@@ -66,13 +69,16 @@ func (s *StatusesServer) PostInstanceState(
 			zap.String("key", key), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error putting status to Redis")
 	}
+	log.Debug("State stored in Redis")
 
 	go func() {
+		log.Debug("Storing State in Redis Channel", zap.String("key", key))
 		err = s.rdb.Publish(rdbCtx, key, json).Err()
 		if err != nil {
-			s.log.Error("Error putting status to Redis channel",
-			zap.String("key", key), zap.Error(err))
+			s.log.Error("Error putting status to Redis channel", zap.String("key", key), zap.Error(err))
+			return
 		}
+		log.Debug("State stored in Redis Channel")
 	}()
 
 	return &pb.PostInstanceStateResponse{Uuid: req.Uuid, Result: 0, Error: ""}, nil
