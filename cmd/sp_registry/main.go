@@ -34,6 +34,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -95,7 +96,7 @@ func main() {
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
-		conn, err := grpc.Dial(driver, grpc.WithInsecure())
+		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Error("Error registering driver", zap.String("driver", driver), zap.Error(err))
 			continue
@@ -111,7 +112,7 @@ func main() {
 
 	for _, ext_server := range ext_servers {
 		log.Info("Registering Extention Server", zap.String("ext_server", ext_server))
-		conn, err := grpc.Dial(ext_server, grpc.WithInsecure())
+		conn, err := grpc.Dial(ext_server, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Error("Error registering Extention Server", zap.String("ext_server", ext_server), zap.Error(err))
 			continue
