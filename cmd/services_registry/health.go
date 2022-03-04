@@ -19,6 +19,7 @@ import (
 	"context"
 
 	pb "github.com/slntopp/nocloud/pkg/health/proto"
+	"github.com/slntopp/nocloud/pkg/services"
 	"go.uber.org/zap"
 )
 
@@ -27,11 +28,12 @@ const SERVICE = "Services Registry"
 type HealthServer struct {
 	pb.UnimplementedInternalProbeServiceServer
 	log *zap.Logger
+	srv *services.ServicesServiceServer
 }
 
-func NewHealthServer(log *zap.Logger) (*HealthServer) {
+func NewHealthServer(log *zap.Logger, srv *services.ServicesServiceServer) (*HealthServer) {
 	return &HealthServer{
-		log: log,
+		log: log, srv: srv,
 	}
 }
 
@@ -43,10 +45,19 @@ func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.Servi
 }
 
 func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutineStatus, error) {
-	return &pb.RoutineStatus{
+	state := s.srv.MonitoringRoutineState()
+	res := &pb.RoutineStatus{
+		Routine: state.Name,
+		LastExecution: state.LastExec,
 		Status: &pb.ServingStatus{
 			Service: SERVICE,
-			Status: pb.Status_NOEXIST,
+			Status: pb.Status_STOPPED,
 		},
-	}, nil
+	}
+
+	if state.Running {
+		res.Status.Status = pb.Status_RUNNING
+	}
+
+	return res, nil
 }

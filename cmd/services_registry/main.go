@@ -130,7 +130,7 @@ func main() {
 	go server.MonitoringRoutine(ctx)
 	pb.RegisterServicesServiceServer(s, server)
 
-	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))

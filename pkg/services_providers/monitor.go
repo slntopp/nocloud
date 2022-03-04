@@ -102,6 +102,10 @@ func MakeConf(ctx context.Context, log *zap.Logger) MonitoringRoutineConf {
 	return conf
 }
 
+func (s *ServicesProviderServer) MonitoringRoutineState() Routine {
+	return s.monitoring
+}
+
 func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 	log := s.log.Named("MonitoringRoutine")
 
@@ -111,6 +115,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 
 	for tick := range ticker.C {
 		log.Info("Starting", zap.Time("tick", tick))
+		s.monitoring.Running = true
 
 		sp_pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY)
 		if err != nil {
@@ -152,5 +157,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 				}
 			}(sp)
 		}
+
+		s.monitoring.LastExec = tick.String()
 	}
 }
