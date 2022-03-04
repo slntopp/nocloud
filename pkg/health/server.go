@@ -111,6 +111,7 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 					Status: pb.Status_INTENAL,
 					Error: &err_string,
 				}
+				s.log.Debug("Sent to channel", zap.String("service", service))
 				return
 			}
 			client := pb.NewInternalProbeServiceClient(conn)
@@ -125,10 +126,12 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 					Status: pb.Status_INTENAL,
 					Error: &err_string,
 				}
+				s.log.Debug("Sent to channel", zap.String("service", service))
 				return
 			}
 			s.log.Debug("Service tested", zap.String("service", service))
 			check_routines_ch <- r
+			s.log.Debug("Sent to channel", zap.String("service", service))
 		}(service)
 	}
 
