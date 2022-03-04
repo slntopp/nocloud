@@ -71,13 +71,13 @@ func main() {
 	auth.SetContext(log, SIGNING_KEY)
 
 	var opts []grpc.ServerOption
-	grpcServer := grpc.NewServer(opts...)
+	s := grpc.NewServer(opts...)
 
 	server := spb.NewStatusesServer(log, rdb)
-	pb.RegisterStatesServiceServer(grpcServer, server)
+	pb.RegisterStatesServiceServer(s, server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
-	log.Fatal("Failed to serve gRPC", zap.Error(grpcServer.Serve(lis)))
+	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
 }
