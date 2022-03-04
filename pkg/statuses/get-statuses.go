@@ -17,6 +17,7 @@ package statuses
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -48,7 +49,12 @@ func (s *StatusesServer) GetInstancesStates(ctx context.Context, req *pb.GetInst
 
 	for i, state := range states {
 		var stpb structpb.Value
-		err = stpb.UnmarshalJSON([]byte(state.(string)))
+		switch state.(type) {
+		case string:
+			err = stpb.UnmarshalJSON([]byte(state.(string)))
+		case nil:
+			err = errors.New("No Data")
+		}
 		if err != nil {
 			s.log.Error("Error Unmarshal JSON",
 				zap.String("key", keys[i]), zap.Error(err))
