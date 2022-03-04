@@ -81,6 +81,8 @@ func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeReques
 		}, nil
 	case "services":
 		return s.CheckServices(ctx, request)
+	case "routines":
+		return s.CheckRoutines(ctx, request)
 	}
 
 	return &pb.ProbeResponse{
@@ -94,7 +96,7 @@ func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeReques
 }
 
 func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
-	check_routines_ch := make(chan *pb.ServingStatus, len(grpc_services))
+	check_services_ch := make(chan *pb.ServingStatus, len(grpc_services))
 	var wg sync.WaitGroup
 	
 	for _, service := range grpc_services {
@@ -106,7 +108,7 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 			if err != nil {
 				s.log.Error("Dial returned Error", zap.Error(err))
 				err_string := err.Error()
-				check_routines_ch <- &pb.ServingStatus{
+				check_services_ch <- &pb.ServingStatus{
 					Service: service,
 					Status: pb.Status_OFFLINE,
 					Error: &err_string,
@@ -121,10 +123,73 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 			if err != nil {
 				s.log.Error("Testing returned Error", zap.Error(err))
 				err_string := err.Error()
-				check_routines_ch <- &pb.ServingStatus{
+				check_services_ch <- &pb.ServingStatus{
 					Service: service,
 					Status: pb.Status_INTENAL,
 					Error: &err_string,
+				}
+				s.log.Debug("Sent to channel", zap.String("service", service))
+				return
+			}
+			s.log.Debug("Service tested", zap.String("service", service))
+			check_services_ch <- r
+			s.log.Debug("Sent to channel", zap.String("service", service))
+		}(service)
+	}
+
+	s.log.Debug("Waiting for tests")
+	wg.Wait()
+	s.log.Debug("Tests completed, processing")
+
+	res := &pb.ProbeResponse{}
+	for i := 0; i < len(grpc_services); i++ {
+		r := <- check_services_ch
+		s.log.Debug("Received response", zap.String("service", r.GetService()))
+		res.Serving = append(res.Serving, r)
+		if r.Status != pb.Status_SERVING {
+			res.Status = pb.Status_HASERRS
+		}
+	}
+
+	return res, nil
+}
+
+func (s *HealthServiceServer) CheckRoutines(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
+	check_routines_ch := make(chan *pb.RoutineStatus, len(grpc_services))
+	var wg sync.WaitGroup
+
+	for _, service := range grpc_services {
+		wg.Add(1)
+		go func(service string) {
+			defer wg.Done()
+			s.log.Debug("Dialing Service", zap.String("service", service))
+			conn, err := grpc.Dial(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				s.log.Error("Dial returned Error", zap.Error(err))
+				err_string := err.Error()
+				check_routines_ch <- &pb.RoutineStatus{
+					Status: &pb.ServingStatus{
+						Service: service,
+						Status: pb.Status_OFFLINE,
+						Error: &err_string,
+					},
+				}
+				s.log.Debug("Sent to channel", zap.String("service", service))
+				return
+			}
+			client := pb.NewInternalProbeServiceClient(conn)
+
+			s.log.Debug("Testing Service", zap.String("service", service))
+			r, err := client.Routine(s.ctx, request)
+			if err != nil {
+				s.log.Error("Testing returned Error", zap.Error(err))
+				err_string := err.Error()
+				check_routines_ch <- &pb.RoutineStatus{
+					Status: &pb.ServingStatus{
+						Service: service,
+						Status: pb.Status_INTENAL,
+						Error: &err_string,
+					},
 				}
 				s.log.Debug("Sent to channel", zap.String("service", service))
 				return
@@ -142,9 +207,9 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 	res := &pb.ProbeResponse{}
 	for i := 0; i < len(grpc_services); i++ {
 		r := <- check_routines_ch
-		s.log.Debug("Received response", zap.String("service", r.GetService()))
-		res.Serving = append(res.Serving, r)
-		if r.Status != pb.Status_SERVING {
+		s.log.Debug("Received response", zap.String("service", r.GetStatus().GetService()))
+		res.Routines = append(res.Routines, r)
+		if r.GetStatus().GetStatus() != pb.Status_SERVING || r.GetStatus().GetStatus() != pb.Status_NOEXIST {
 			res.Status = pb.Status_HASERRS
 		}
 	}

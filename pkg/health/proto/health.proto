@@ -27,6 +27,7 @@ enum Status {
     UNKNOWN = 0;
     SERVING = 1;
     OFFLINE = 2;
+    RUNNING = 3;
     STOPPED = 4;
     INTENAL = 5;
     HASERRS = 6;

@@ -1824,6 +1824,7 @@
         "UNKNOWN",
         "SERVING",
         "OFFLINE",
+        "RUNNING",
         "STOPPED",
         "INTENAL",
         "HASERRS",
