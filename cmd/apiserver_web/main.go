@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	dnspb "github.com/slntopp/nocloud/pkg/dns/proto"
-	"github.com/slntopp/nocloud/pkg/health/healthpb"
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	registrypb "github.com/slntopp/nocloud/pkg/registry/proto"
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"

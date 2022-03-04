@@ -26,7 +26,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/slntopp/nocloud/pkg/health"
-	"github.com/slntopp/nocloud/pkg/health/healthpb"
+	pb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 )
@@ -67,7 +67,7 @@ func main() {
 		)),
 	)
 	
-	healthpb.RegisterHealthServiceServer(s, server)
+	pb.RegisterHealthServiceServer(s, server)
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
 }
