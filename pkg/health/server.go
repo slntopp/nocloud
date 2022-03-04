@@ -137,6 +137,7 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 
 	s.log.Debug("Waiting for tests")
 	wg.Wait()
+	s.log.Debug("Tests completed, processing")
 
 	res := &pb.ProbeResponse{}
 	for i := 0; i < len(grpc_services); i++ {
