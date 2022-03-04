@@ -25,13 +25,13 @@ message ProbeRequest {
 
 enum Status {
     UNKNOWN = 0;
-    SERVING = 1;
-    OFFLINE = 2;
-    RUNNING = 3;
-    STOPPED = 4;
-    INTENAL = 5;
-    HASERRS = 6;
-    NOEXIST = 7;
+    SERVING = 1; // Service is up and running
+    OFFLINE = 2; // Service is offline(down)
+    RUNNING = 3; // Routine is running
+    STOPPED = 4; // Routine is stopped
+    INTENAL = 5; // Internal error while making status
+    HASERRS = 6; // Check has errors
+    NOEXIST = 7; // Service has no Routines
 }
 
 message ProbeResponse {
