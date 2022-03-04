@@ -101,11 +101,11 @@ func MakeConf(ctx context.Context, log *zap.Logger) MonitoringRoutineConf {
 	return conf
 }
 
-func (s *ServicesServiceServer) MonitoringRoutineState() Routine {
+func (s *ServicesServer) MonitoringRoutineState() Routine {
 	return s.monitoring
 }
 
-func (s *ServicesServiceServer) MonitoringRoutine(ctx context.Context) {
+func (s *ServicesServer) MonitoringRoutine(ctx context.Context) {
 	log := s.log.Named("MonitoringRoutine")
 
 	conf := MakeConf(ctx, log)

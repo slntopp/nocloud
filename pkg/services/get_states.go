@@ -23,7 +23,7 @@ import (
 )
 
 //Gets statuses Instanses of Servce from pkg/statuses
-func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetStatesRequest) (*instpb.GetInstancesStatesResponse, error) {
+func (s *ServicesServer) GetStates(ctx context.Context, request *pb.GetStatesRequest) (*instpb.GetInstancesStatesResponse, error) {
 	service, err := s.Get(ctx, &pb.GetRequest{
 		Uuid: request.Uuid,
 	})
@@ -35,7 +35,7 @@ func (s *ServicesServiceServer) GetStates(ctx context.Context, request *pb.GetSt
 }
 
 
-func (s *ServicesServiceServer) GetStatesInternal(ctx context.Context, service *pb.Service) (*instpb.GetInstancesStatesResponse, error) {
+func (s *ServicesServer) GetStatesInternal(ctx context.Context, service *pb.Service) (*instpb.GetInstancesStatesResponse, error) {
 	var keys []string
 	for _, igroup := range service.GetInstancesGroups() {
 		for _, inst := range igroup.GetInstances() {

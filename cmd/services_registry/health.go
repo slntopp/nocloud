@@ -28,10 +28,10 @@ const SERVICE = "Services Registry"
 type HealthServer struct {
 	pb.UnimplementedInternalProbeServiceServer
 	log *zap.Logger
-	srv *services.ServicesServiceServer
+	srv *services.ServicesServer
 }
 
-func NewHealthServer(log *zap.Logger, srv *services.ServicesServiceServer) (*HealthServer) {
+func NewHealthServer(log *zap.Logger, srv *services.ServicesServer) (*HealthServer) {
 	return &HealthServer{
 		log: log, srv: srv,
 	}

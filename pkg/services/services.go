@@ -39,7 +39,7 @@ type Routine struct {
 	Running bool
 }
 
-type ServicesServiceServer struct {
+type ServicesServer struct {
 	pb.UnimplementedServicesServiceServer
 	db      driver.Database
 	ctrl    graph.ServicesController
@@ -54,8 +54,8 @@ type ServicesServiceServer struct {
 	log *zap.Logger
 }
 
-func NewServicesServer(log *zap.Logger, db driver.Database, gc instpb.StatesServiceClient) *ServicesServiceServer {
-	return &ServicesServiceServer{
+func NewServicesServer(log *zap.Logger, db driver.Database, gc instpb.StatesServiceClient) *ServicesServer {
+	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
 		sp_ctrl:  graph.NewServicesProvidersController(log, db),
 		ns_ctrl:  graph.NewNamespacesController(log, db),
@@ -73,11 +73,11 @@ type InstancesGroupDriverContext struct {
 	client *driverpb.DriverServiceClient
 }
 
-func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
+func (s *ServicesServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
 	s.drivers[type_key] = client
 }
 
-func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *pb.CreateRequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
+func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *pb.CreateRequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -144,14 +144,14 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 	return response, &namespace, nil
 }
 
-func (s *ServicesServiceServer) TestConfig(ctx context.Context, request *pb.CreateRequest) (*pb.TestConfigResponse, error) {
+func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateRequest) (*pb.TestConfigResponse, error) {
 	log := s.log.Named("TestServiceConfig")
 	log.Debug("Request received", zap.Any("request", request))
 	response, _, err := s.DoTestServiceConfig(ctx, log, request)
 	return response, err
 }
 
-func (s *ServicesServiceServer) Create(ctx context.Context, request *pb.CreateRequest) (*pb.Service, error) {
+func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) (*pb.Service, error) {
 	log := s.log.Named("CreateService")
 	log.Debug("Request received", zap.Any("request", request))
 	testResult, namespace, err := s.DoTestServiceConfig(ctx, log, request)
@@ -177,7 +177,7 @@ func (s *ServicesServiceServer) Create(ctx context.Context, request *pb.CreateRe
 	return service, nil
 }
 
-func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpResponse, error) {
+func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpResponse, error) {
 	log := s.log.Named("Up")
 	log.Debug("Request received", zap.Any("request", request))
 
@@ -286,7 +286,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 	return &pb.UpResponse{}, nil
 }
 
-func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownRequest) (*pb.DownResponse, error) {
+func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb.DownResponse, error) {
 	log := s.log.Named("Down")
 	log.Debug("Request received", zap.Any("request", request))
 
@@ -363,7 +363,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 	return &pb.DownResponse{}, nil
 }
 
-func (s *ServicesServiceServer) Get(ctx context.Context, request *pb.GetRequest) (res *pb.Service, err error) {
+func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *pb.Service, err error) {
 	log := s.log.Named("Get")
 	log.Debug("Request received", zap.Any("request", request))
 
@@ -397,7 +397,7 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *pb.GetRequest)
 	return r.Service, nil
 }
 
-func (s *ServicesServiceServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.ListResponse, err error) {
+func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.ListResponse, err error) {
 	log := s.log.Named("List")
 	log.Debug("Request received", zap.String("namespace", request.GetNamespace()), zap.String("show_deleted", request.GetShowDeleted()))
 
@@ -418,7 +418,7 @@ func (s *ServicesServiceServer) List(ctx context.Context, request *pb.ListReques
 	return response, nil
 }
 
-func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
+func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
 	log := s.log.Named("Delete")
 	log.Debug("Request received", zap.Any("request", request))
 
@@ -445,7 +445,7 @@ func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRe
 	return &pb.DeleteResponse{Result: true}, nil
 }
 
-func (s *ServicesServiceServer) PerformServiceAction(ctx context.Context, req *pb.PerformActionRequest) (res *pb.PerformActionResponse, err error) {
+func (s *ServicesServer) PerformServiceAction(ctx context.Context, req *pb.PerformActionRequest) (res *pb.PerformActionResponse, err error) {
 	log := s.log.Named("PerformServiceAction")
 	log.Debug("Request received", zap.Any("request", req))
 
@@ -497,7 +497,7 @@ func (s *ServicesServiceServer) PerformServiceAction(ctx context.Context, req *p
 	})
 }
 
-func (s *ServicesServiceServer) GetProvisions(ctx context.Context, req *pb.GetProvisionsRequest) (*pb.GetProvisionsResponse, error) {
+func (s *ServicesServer) GetProvisions(ctx context.Context, req *pb.GetProvisionsRequest) (*pb.GetProvisionsResponse, error) {
 	log := s.log.Named("GetProvisions")
 	log.Debug("Request received", zap.Any("request", req))
 
