@@ -21,6 +21,7 @@ services:
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
+      APISERVER_HOST: proxy:8080
     networks:
       - proxy
       - grpc-internal
@@ -44,6 +45,7 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       NOCLOUD_ROOT_PASSWORD: "${NOCLOUD_ROOT_PASS}"
       SIGNING_KEY: "${SIGNING_KEY}"
+      SETTINGS_HOST: settings:8080
     depends_on:
       - db
     networks:
@@ -60,6 +62,7 @@ services:
       SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
+      SETTINGS_HOST: settings:8080
     depends_on:
       - db
     networks:
@@ -76,6 +79,7 @@ services:
       SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
+      SETTINGS_HOST: settings:8080
     networks:
       - proxy
       - arangodb
@@ -103,16 +107,14 @@ services:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
       REDIS_HOST: redis:6379
-  redis:
+  redis_settings:
     image: redis
     restart: always
     command: redis-server --save 60 1
     networks:
       - redis
-    ports:
-      - 6379:6379
     volumes:
-      - redis-data:/data
+      - redis-settings-data:/data
 
   statuses:
     image: ghcr.io/slntopp/nocloud/statuses:latest
@@ -157,6 +159,6 @@ networks:
     driver: bridge
 
 volumes:
-  redis-data:
-  redis_statuses-data:
+  redis-settings-data:
+  redis-statuses-data:
   data:

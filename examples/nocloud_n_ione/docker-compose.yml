@@ -19,6 +19,7 @@ services:
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
+      APISERVER_HOST: proxy:8080
     networks:
       - proxy
       - grpc-internal
@@ -113,7 +114,7 @@ services:
     networks:
       - redis
     volumes:
-      - redis-data:/data
+      - redis-settings-data:/data
 
   statuses:
     image: ghcr.io/slntopp/nocloud/statuses:latest
@@ -133,7 +134,7 @@ services:
     ports:
       - 6379:6379
     volumes:
-      - redis_statuses-data:/data
+      - redis-statuses-data:/data
 
   driver-ione:
     container_name: driver
@@ -167,6 +168,6 @@ networks:
     driver: bridge
 
 volumes:
-  redis_statuses-data:
-  redis-data:
+  redis-settings-data:
+  redis-statuses-data:
   data:
