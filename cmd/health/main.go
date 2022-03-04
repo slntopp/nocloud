@@ -16,6 +16,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -24,11 +25,13 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/slntopp/nocloud/pkg/health"
 	pb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
 var (
@@ -58,7 +61,13 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	server := health.NewServer(log)
+	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		log.Fatal("Failed to generate root token")
+	}
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
+	
+	server := health.NewServer(log, ctx)
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(

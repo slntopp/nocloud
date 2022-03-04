@@ -19,16 +19,49 @@ import (
 	"context"
 
 	pb "github.com/slntopp/nocloud/pkg/health/proto"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
+
+var (
+	registryHost, servicesHost, servicesProvidersHost,
+	settingsHost, dnsHost, statusesHost string
+)
+
+var grpc_services []string
+
+func init() {
+	viper.AutomaticEnv()
+
+	viper.SetDefault("REGISTRY_HOST", "registry:8080")
+	registryHost = viper.GetString("REGISTRY_HOST")
+	viper.SetDefault("SERVICES_HOST", "services-registry:8080")
+	servicesHost = viper.GetString("SERVICES_HOST")
+	viper.SetDefault("SP_HOST", "sp-registry:8080")
+	servicesProvidersHost = viper.GetString("SP_HOST")
+	viper.SetDefault("SETTINGS_HOST", "settings:8080")
+	settingsHost = viper.GetString("SETTINGS_HOST")
+	viper.SetDefault("DNS_HOST", "dns-mgmt:8080")
+	dnsHost = viper.GetString("DNS_HOST")
+	viper.SetDefault("STATUSES_HOST", "statuses:8080")
+	statusesHost = viper.GetString("STATUSES_HOST")
+
+	grpc_services = []string{
+		registryHost, servicesHost, servicesProvidersHost,
+		settingsHost, dnsHost, statusesHost,
+	}
+}
 
 type HealthServiceServer struct {
 	pb.UnimplementedHealthServiceServer
+	ctx context.Context
 	log *zap.Logger
 }
 
-func NewServer(log *zap.Logger) *HealthServiceServer {
-	return &HealthServiceServer{log: log}
+func NewServer(log *zap.Logger, ctx context.Context) *HealthServiceServer {
+	return &HealthServiceServer{log: log, ctx: ctx}
 }
 
 func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
@@ -58,7 +91,44 @@ func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeReques
 		}},
 	}, nil
 }
+
+func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
+	check_routines_ch := make(chan *pb.ServingStatus, len(grpc_services))
+
+	for _, service := range grpc_services {
+		go func(service string) {
+			conn, err := grpc.Dial(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				err_string := err.Error()
+				check_routines_ch <- &pb.ServingStatus{
+					Service: service,
+					Status: pb.Status_INTENAL,
+					Error: &err_string,
+				}
+				return
+			}
+			client := pb.NewInternalProbeServiceClient(conn)
+			r, err := client.Service(s.ctx, request)
+			if err != nil {
+				err_string := err.Error()
+				check_routines_ch <- &pb.ServingStatus{
+					Service: service,
+					Status: pb.Status_INTENAL,
+					Error: &err_string,
+				}
+				return
+			}
+			check_routines_ch <- r
+		}(service)
 	}
 
-	return &pb.ProbeResponse{Response: "ok"}, nil
+	res := &pb.ProbeResponse{}
+	for r := range check_routines_ch {
+		res.Serving = append(res.Serving, r)
+		if r.Status != pb.Status_SERVING {
+			res.Status = pb.Status_HASERRS
+		}
+	}
+
+	return res, nil
 }
