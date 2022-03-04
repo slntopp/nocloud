@@ -97,6 +97,7 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 
 	for _, service := range grpc_services {
 		go func(service string) {
+			s.log.Debug("Dialing Service", zap.String("service", service))
 			conn, err := grpc.Dial(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
 				err_string := err.Error()
@@ -108,6 +109,8 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 				return
 			}
 			client := pb.NewInternalProbeServiceClient(conn)
+
+			s.log.Debug("Testing Service", zap.String("service", service))
 			r, err := client.Service(s.ctx, request)
 			if err != nil {
 				err_string := err.Error()
@@ -118,12 +121,14 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 				}
 				return
 			}
+			s.log.Debug("Service tested", zap.String("service", service))
 			check_routines_ch <- r
 		}(service)
 	}
 
 	res := &pb.ProbeResponse{}
 	for r := range check_routines_ch {
+		s.log.Debug("Received response", zap.String("service", r.GetService()))
 		res.Serving = append(res.Serving, r)
 		if r.Status != pb.Status_SERVING {
 			res.Status = pb.Status_HASERRS
