@@ -17,6 +17,7 @@ package health
 
 import (
 	"context"
+	"sync"
 
 	pb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/spf13/viper"
@@ -94,9 +95,12 @@ func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeReques
 
 func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
 	check_routines_ch := make(chan *pb.ServingStatus, len(grpc_services))
-
+	var wg sync.WaitGroup
+	
 	for _, service := range grpc_services {
+		wg.Add(1)
 		go func(service string) {
+			defer wg.Add(1)
 			s.log.Debug("Dialing Service", zap.String("service", service))
 			conn, err := grpc.Dial(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
@@ -128,8 +132,12 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 		}(service)
 	}
 
+	s.log.Debug("Waiting for tests")
+	wg.Wait()
+
 	res := &pb.ProbeResponse{}
-	for r := range check_routines_ch {
+	for i := 0; i < len(grpc_services); i++ {
+		r := <- check_routines_ch
 		s.log.Debug("Received response", zap.String("service", r.GetService()))
 		res.Serving = append(res.Serving, r)
 		if r.Status != pb.Status_SERVING {
