@@ -22,6 +22,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const SERVICE = "Registry"
+
 type HealthServer struct {
 	pb.UnimplementedInternalProbeServiceServer
 	log *zap.Logger
@@ -35,7 +37,16 @@ func NewHealthServer(log *zap.Logger) (*HealthServer) {
 
 func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.ServingStatus, error) {
 	return &pb.ServingStatus{
-		Service: "Registry",
+		Service: SERVICE,
 		Status: pb.Status_SERVING,
+	}, nil
+}
+
+func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutineStatus, error) {
+	return &pb.RoutineStatus{
+		Status: &pb.ServingStatus{
+			Service: SERVICE,
+			Status: pb.Status_NOEXIST,
+		},
 	}, nil
 }
