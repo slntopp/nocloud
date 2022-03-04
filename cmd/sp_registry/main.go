@@ -21,6 +21,7 @@ import (
 	"net"
 
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
@@ -131,6 +132,8 @@ func main() {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
 	go server.MonitoringRoutine(ctx)
 	sppb.RegisterServicesProvidersServiceServer(s, server)
+
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))

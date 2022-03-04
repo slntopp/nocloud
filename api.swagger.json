@@ -1826,7 +1826,8 @@
         "OFFLINE",
         "STOPPED",
         "INTENAL",
-        "HASERRS"
+        "HASERRS",
+        "NOEXIST"
       ],
       "default": "UNKNOWN"
     },

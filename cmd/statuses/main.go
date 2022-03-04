@@ -20,6 +20,7 @@ import (
 	"net"
 
 	"github.com/go-redis/redis/v8"
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	auth "github.com/slntopp/nocloud/pkg/nocloud/admin_auth"
@@ -74,6 +75,8 @@ func main() {
 
 	server := spb.NewStatusesServer(log, rdb)
 	pb.RegisterStatesServiceServer(grpcServer, server)
+
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(grpcServer.Serve(lis)))

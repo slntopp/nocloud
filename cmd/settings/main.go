@@ -28,6 +28,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/settings"
 	pb "github.com/slntopp/nocloud/pkg/settings/proto"
 )
@@ -78,6 +79,8 @@ func main() {
 
 	server := settings.NewSettingsServer(log, rdb)
 	pb.RegisterSettingsServiceServer(s, server)
+
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))

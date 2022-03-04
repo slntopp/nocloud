@@ -30,6 +30,7 @@ enum Status {
     STOPPED = 4;
     INTENAL = 5;
     HASERRS = 6;
+    NOEXIST = 7;
 }
 
 message ProbeResponse {
