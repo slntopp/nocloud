@@ -108,7 +108,7 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 				err_string := err.Error()
 				check_routines_ch <- &pb.ServingStatus{
 					Service: service,
-					Status: pb.Status_INTENAL,
+					Status: pb.Status_OFFLINE,
 					Error: &err_string,
 				}
 				s.log.Debug("Sent to channel", zap.String("service", service))
