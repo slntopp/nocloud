@@ -100,7 +100,7 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 	for _, service := range grpc_services {
 		wg.Add(1)
 		go func(service string) {
-			defer wg.Add(1)
+			defer wg.Done()
 			s.log.Debug("Dialing Service", zap.String("service", service))
 			conn, err := grpc.Dial(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
