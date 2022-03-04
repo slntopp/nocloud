@@ -25,6 +25,21 @@ message ProbeRequest {
 
 message ProbeResponse {
     string response = 1;
+    ServingStatus status = 2;
+    repeated RoutineStatus routines = 3;
+}
+
+enum ServingStatus {
+    UNKNOWN = 0;
+    SERVING = 1;
+    OFFLINE = 2;
+    STOPPED = 4;
+}
+
+message RoutineStatus {
+    string routine = 1;
+    ServingStatus status = 2;
+    string last_execution = 3;
 }
 
 service HealthService {

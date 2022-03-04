@@ -18,12 +18,12 @@ package health
 import (
 	"context"
 
-	"github.com/slntopp/nocloud/pkg/health/healthpb"
+	pb "github.com/slntopp/nocloud/pkg/health/proto"
 	"go.uber.org/zap"
 )
 
 type HealthServiceServer struct {
-	healthpb.UnimplementedHealthServiceServer
+	pb.UnimplementedHealthServiceServer
 	log *zap.Logger
 }
 
@@ -31,12 +31,12 @@ func NewServer(log *zap.Logger) *HealthServiceServer {
 	return &HealthServiceServer{log: log}
 }
 
-func (s *HealthServiceServer) Probe(ctx context.Context, request *healthpb.ProbeRequest) (*healthpb.ProbeResponse, error) {
+func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
 	log := s.log.Named("Health Probe")
 	log.Info("Probe received", zap.String("Type", request.ProbeType))
 	if request.ProbeType == "PING" {
-		return &healthpb.ProbeResponse{Response: "PONG"}, nil
+		return &pb.ProbeResponse{Response: "PONG"}, nil
 	}
 
-	return &healthpb.ProbeResponse{Response: "ok"}, nil
+	return &pb.ProbeResponse{Response: "ok"}, nil
 }

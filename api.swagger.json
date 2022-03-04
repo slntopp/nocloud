@@ -1574,8 +1574,41 @@
       "properties": {
         "response": {
           "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/healthServingStatus"
+        },
+        "routines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/healthRoutineStatus"
+          }
         }
       }
+    },
+    "healthRoutineStatus": {
+      "type": "object",
+      "properties": {
+        "routine": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/healthServingStatus"
+        },
+        "lastExecution": {
+          "type": "string"
+        }
+      }
+    },
+    "healthServingStatus": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "SERVING",
+        "OFFLINE",
+        "STOPPED"
+      ],
+      "default": "UNKNOWN"
     },
     "instancesGetInstancesStatesResponse": {
       "type": "object",
