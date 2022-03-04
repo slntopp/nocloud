@@ -100,6 +100,7 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 			s.log.Debug("Dialing Service", zap.String("service", service))
 			conn, err := grpc.Dial(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
 			if err != nil {
+				s.log.Error("Dial returned Error", zap.Error(err))
 				err_string := err.Error()
 				check_routines_ch <- &pb.ServingStatus{
 					Service: service,
@@ -113,6 +114,7 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 			s.log.Debug("Testing Service", zap.String("service", service))
 			r, err := client.Service(s.ctx, request)
 			if err != nil {
+				s.log.Error("Testing returned Error", zap.Error(err))
 				err_string := err.Error()
 				check_routines_ch <- &pb.ServingStatus{
 					Service: service,
