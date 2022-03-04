@@ -61,6 +61,7 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
+	auth.SetContext(log, SIGNING_KEY)
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Failed to generate root token")
@@ -68,7 +69,6 @@ func main() {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
 	
 	server := health.NewServer(log, ctx)
-	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(log),
