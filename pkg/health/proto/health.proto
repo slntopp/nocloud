@@ -23,17 +23,26 @@ message ProbeRequest {
     string payload = 2;
 }
 
-message ProbeResponse {
-    string response = 1;
-    ServingStatus status = 2;
-    repeated RoutineStatus routines = 3;
-}
-
-enum ServingStatus {
+enum Status {
     UNKNOWN = 0;
     SERVING = 1;
     OFFLINE = 2;
     STOPPED = 4;
+    INTENAL = 5;
+    HASERRS = 6;
+}
+
+message ProbeResponse {
+    string response = 1;
+    Status status = 2;
+    repeated ServingStatus serving = 3;
+    repeated RoutineStatus routines = 4;
+}
+
+message ServingStatus {
+    string service = 1;
+    Status status = 2;
+    optional string error = 3;
 }
 
 message RoutineStatus {
@@ -49,4 +58,9 @@ service HealthService {
             body: "*"
         };
     };
+};
+
+service InternalProbeService {
+    rpc Service(nocloud.health.ProbeRequest) returns (nocloud.health.ServingStatus);
+    rpc Routine(nocloud.health.ProbeRequest) returns (nocloud.health.RoutineStatus);
 };

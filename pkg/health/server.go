@@ -34,8 +34,30 @@ func NewServer(log *zap.Logger) *HealthServiceServer {
 func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
 	log := s.log.Named("Health Probe")
 	log.Info("Probe received", zap.String("Type", request.ProbeType))
-	if request.ProbeType == "PING" {
-		return &pb.ProbeResponse{Response: "PONG"}, nil
+
+	switch(request.ProbeType) {
+	case "PING":
+		return &pb.ProbeResponse{
+			Response: "PONG",
+			Status: pb.Status_SERVING,
+			Serving: []*pb.ServingStatus{{
+				Service: "health",
+				Status: pb.Status_SERVING,
+			}},
+		}, nil
+	case "services":
+		return s.CheckServices(ctx, request)
+	}
+
+	return &pb.ProbeResponse{
+		Response: "ok",
+		Status: pb.Status_SERVING,
+		Serving: []*pb.ServingStatus{{
+			Service: "health",
+			Status: pb.Status_SERVING,
+		}},
+	}, nil
+}
 	}
 
 	return &pb.ProbeResponse{Response: "ok"}, nil
