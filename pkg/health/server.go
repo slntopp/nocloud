@@ -209,7 +209,7 @@ func (s *HealthServiceServer) CheckRoutines(ctx context.Context, request *pb.Pro
 		r := <- check_routines_ch
 		s.log.Debug("Received response", zap.String("service", r.GetStatus().GetService()))
 		res.Routines = append(res.Routines, r)
-		if r.GetStatus().GetStatus() != pb.Status_SERVING || r.GetStatus().GetStatus() != pb.Status_NOEXIST {
+		if r.GetStatus().GetStatus() != pb.Status_SERVING && r.GetStatus().GetStatus() != pb.Status_NOEXIST {
 			res.Status = pb.Status_HASERRS
 		}
 	}
