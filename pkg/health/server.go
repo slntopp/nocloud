@@ -204,12 +204,12 @@ func (s *HealthServiceServer) CheckRoutines(ctx context.Context, request *pb.Pro
 	wg.Wait()
 	s.log.Debug("Tests completed, processing")
 
-	res := &pb.ProbeResponse{}
+	res := &pb.ProbeResponse{Status: pb.Status_RUNNING}
 	for i := 0; i < len(grpc_services); i++ {
 		r := <- check_routines_ch
 		s.log.Debug("Received response", zap.String("service", r.GetStatus().GetService()))
 		res.Routines = append(res.Routines, r)
-		if r.GetStatus().GetStatus() != pb.Status_SERVING && r.GetStatus().GetStatus() != pb.Status_NOEXIST {
+		if r.GetStatus().GetStatus() != pb.Status_RUNNING && r.GetStatus().GetStatus() != pb.Status_NOEXIST {
 			res.Status = pb.Status_HASERRS
 		}
 	}
