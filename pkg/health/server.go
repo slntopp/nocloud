@@ -141,7 +141,7 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 	wg.Wait()
 	s.log.Debug("Tests completed, processing")
 
-	res := &pb.ProbeResponse{}
+	res := &pb.ProbeResponse{Status: pb.Status_SERVING}
 	for i := 0; i < len(grpc_services); i++ {
 		r := <- check_services_ch
 		s.log.Debug("Received response", zap.String("service", r.GetService()))
