@@ -158,6 +158,6 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 			}(sp)
 		}
 
-		s.monitoring.LastExec = tick.String()
+		s.monitoring.LastExec = tick.Format("2006-01-02T15:04:05Z07:00")
 	}
 }
