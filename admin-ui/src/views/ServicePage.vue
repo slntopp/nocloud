@@ -109,6 +109,7 @@ export default {
 		}
 	},
 	created(){
+		this.$store.dispatch('servicesProviders/fetch')
 		this.$store.dispatch('services/fetch')
 		.then(() => {
 			this.found = !!this.service;
