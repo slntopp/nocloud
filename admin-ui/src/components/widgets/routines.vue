@@ -1,6 +1,6 @@
 <template>
   <widget
-    title="Services"
+    title="Routines"
     :loading="loading"
   >
     <v-alert
@@ -22,14 +22,14 @@
 					</v-list-item-title>
 
 					<v-list-item-subtitle v-if="lastExecution(item.lastExecution)">
-						Last execution: {{lastExecution(item.lastExecution)}}
+						Last execution: {{ts2str(item.lastExecution)}}
 					</v-list-item-subtitle>
 				</v-list-item-content>
 				
 				<v-list-item-icon>
 					<v-chip
 						small
-						:color="item.status.status == 'RUNNING' ? 'success' : 'error'"
+						:color="chipsColor(item.status.status)"
 					>
 						{{item.status.status}}
 					</v-chip>
@@ -37,6 +37,19 @@
 			</v-list-item>
 
 		</v-list>
+		
+		<!-- <v-expansion-panels
+			color="transparent"
+		>
+			<v-expansion-panel>
+				<v-expansion-panel-header>
+					No exist
+				</v-expansion-panel-header>
+				<v-expansion-panel-content>
+					Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+				</v-expansion-panel-content>
+			</v-expansion-panel>
+		</v-expansion-panels> -->
 
 		<v-btn
 			@click="checkHealth"
@@ -50,8 +63,26 @@
 import widget from "./widget.vue";
 import api from "@/api.js"
 
+const formatDateNumber = (num, n = 2) => {
+  num = num.toString();
+  while (num.length < n) {
+    num = "0" + num;
+  }
+  return num;
+};
+const date2Object = (date) => {
+  return {
+    day: date.getDate(),
+    month: date.getMonth(),
+    year: date.getFullYear(),
+    hour: date.getHours(),
+    minute: date.getMinutes(),
+    second: date.getSeconds(),
+  };
+};
+
 export default {
-  name: 'services-widget',
+  name: 'routines-widget',
   components: {
     widget
   },
@@ -95,7 +126,7 @@ export default {
 			this.loading = true;
 			api.health.routines()
 			.then(res => {
-				this.state = res.routines;
+				this.state = res.routines.filter(el => el.status.status !== 'NOEXIST');
 				this.err = null;
 			})
 			.catch(err => {
@@ -110,12 +141,52 @@ export default {
 			if(!time) return ""
 
 			const date = new Date(time)
-			// console.log(date)
-			// const month = date.getMonth();
-			// const day = date.getDate();
-
 			return new Intl.DateTimeFormat().format(date)
-		}
+		},
+		chipsColor(state){
+			switch (state) {
+				case 'RUNNING':
+					return 'success'
+				case 'INTERNAL':
+					return 'error'
+				case 'STOPPED':
+					return 'warning'
+				case 'NOEXIST':
+					return 'gray'
+		
+				default:
+					return 'gray';
+			}
+		},
+    ts2str(ts) {
+      let today = date2Object(new Date());
+      let date = new Date(Date.parse(ts));
+      date = date2Object(date);
+      let result = "";
+      // Day month section
+      if (
+        Number(date.month) == today.month &&
+        Number(date.year) == today.year
+      ) {
+        if (Number(date.day) == today.day) {
+          result += "Today";
+        } else if (Number(date.day) == today.day - 1) {
+          result += "Yesterday";
+        }
+      } else {
+        result +=
+          formatDateNumber(date.day) + "." + formatDateNumber(date.month + 1);
+      }
+      // Year section
+      if (Number(date.year) != today.year) {
+        result += `.${formatDateNumber(date.year, 4)}`;
+      }
+      // Time section
+      result += ` ${formatDateNumber(date.hour)}:${formatDateNumber(
+        date.minute
+      )}:${formatDateNumber(date.second)}`;
+      return result;
+    },
 	}
 }
 </script>
