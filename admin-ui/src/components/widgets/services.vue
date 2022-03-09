@@ -1,14 +1,36 @@
 <template>
   <widget
-    title="Health"
+    title="Services"
     :loading="loading"
   >
     <v-alert
-
-      v-bind="alertAttrs"
+			type="error"
+			v-if="err"
     >
-      {{alertText}}
+      {{err.name}}: {{err.message}}
     </v-alert>
+
+		<v-list
+			dense
+			class="mb-4"
+			color="transparent"
+		>
+			<v-list-item v-for="item in state" :key="item.service" class="px-0">
+				<v-list-item-content>
+					{{item.service}}
+				</v-list-item-content>
+				
+				<v-list-item-icon>
+					<v-chip
+						small
+						:color="item.status == 'SERVING' ? 'success' : 'error'"
+					>
+						{{item.status}}
+					</v-chip>
+				</v-list-item-icon>
+			</v-list-item>
+
+		</v-list>
 
 		<v-btn
 			@click="checkHealth"
@@ -23,13 +45,14 @@ import widget from "./widget.vue";
 import api from "@/api.js"
 
 export default {
-  name: 'health-widget',
+  name: 'services-widget',
   components: {
     widget
   },
   data: ()=>({
     loading: false,
-    isHealthOk: false
+		err: null,
+    state: {}
   }),
   computed: {
     alertText(){
@@ -64,14 +87,14 @@ export default {
 	methods: {
 		checkHealth(){
 			this.loading = true;
-			api.health.ping()
+			api.health.services()
 			.then(res => {
-				if(res.response == "PONG"){
-					this.isHealthOk = true;
-				}
+				this.state = res.serving;
+				this.err = null;
 			})
 			.catch(err => {
 				console.error(err);
+				this.err = err;
 			})
 			.finally(()=>{
 				this.loading = false;

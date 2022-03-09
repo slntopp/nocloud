@@ -49,6 +49,15 @@
 							<v-col>
 								<v-text-field
 									readonly
+									:value="location(group)"
+									label="location"
+									style="display: inline-block; width: 330px"
+								>
+								</v-text-field>
+							</v-col>
+							<v-col>
+								<v-text-field
+									readonly
 									:value="service.uuid"
 									label="group uuid"
 									style="display: inline-block; width: 330px"
@@ -84,6 +93,26 @@
 									>
 										<v-expansion-panel-header>{{instance.title}}</v-expansion-panel-header>
 										<v-expansion-panel-content>
+											<v-row>
+												<v-col>
+													<v-text-field
+														readonly
+														:value="instance.state.meta.state_str"
+														label="state"
+														style="display: inline-block; width: 100px"
+													>
+													</v-text-field>
+												</v-col>
+												<v-col>		
+													<v-text-field
+														readonly
+														:value="instance.state.meta.lcm_state_str"
+														label="lcm state"
+														style="display: inline-block; width: 100px"
+													>
+													</v-text-field>
+												</v-col>
+											</v-row>
 											<v-row>
 												<v-col>
 													<v-text-field
@@ -176,6 +205,11 @@ export default {
 			required: true
 		}
 	},
+	computed: {
+		servicesProviders(){
+			return this.$store.getters['servicesProviders/all'];
+		}
+	},
 	methods: {
 		addToClipboard(text, index){
 			navigator.clipboard.writeText(text)
@@ -191,6 +225,10 @@ export default {
 				return hash.slice(0, 8);
 
 			return "WWWWWWWW"
+		},
+		location(group){
+			const lc = this.servicesProviders.find(el => el.uuid == this.service.provisions[this.service.instancesGroups[group].uuid])
+			return lc.title ?? 'none'
 		}
 	},
 	mounted(){
