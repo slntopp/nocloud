@@ -64,7 +64,7 @@ export default {
 	methods: {
 		checkHealth(){
 			this.loading = true;
-			api.health.probe()
+			api.health.ping()
 			.then(res => {
 				if(res.response == "PONG"){
 					this.isHealthOk = true;
