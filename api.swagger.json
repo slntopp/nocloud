@@ -1691,8 +1691,7 @@
       "type": "object",
       "properties": {
         "state": {
-          "type": "integer",
-          "format": "int32"
+          "$ref": "#/definitions/instancesNoCloudState"
         },
         "meta": {
           "type": "object",
@@ -1739,6 +1738,18 @@
           "type": "string"
         }
       }
+    },
+    "instancesNoCloudState": {
+      "type": "string",
+      "enum": [
+        "INIT",
+        "UNKNOWN",
+        "STOPPED",
+        "RUNNING",
+        "FAILED",
+        "DELETED"
+      ],
+      "default": "INIT"
     },
     "instancesPostInstanceStateResponse": {
       "type": "object",

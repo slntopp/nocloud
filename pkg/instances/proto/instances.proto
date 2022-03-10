@@ -45,8 +45,17 @@ message TestInstancesGroupConfigResponse {
 
 // StatesService
 
+enum NoCloudState {
+    INIT = 0;
+    UNKNOWN = 1;
+    STOPPED = 2;
+    RUNNING = 3;
+    FAILED  = 4;
+    DELETED = 5;
+}
+
 message InstanceState {
-    int32 state = 1; // NoCloud Instance State
+    NoCloudState state = 1; // NoCloud Instance State
     map<string, google.protobuf.Value> meta = 2; // Driver(Provider/Hypervisor) State data
 }
 
