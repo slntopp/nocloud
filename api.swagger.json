@@ -1732,8 +1732,10 @@
         "UNKNOWN",
         "STOPPED",
         "RUNNING",
-        "FAILED",
-        "DELETED"
+        "FAILURE",
+        "DELETED",
+        "SUSPENDED",
+        "OPERATION"
       ],
       "default": "INIT"
     },

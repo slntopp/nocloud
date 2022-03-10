@@ -50,8 +50,10 @@ enum NoCloudState {
     UNKNOWN = 1;
     STOPPED = 2;
     RUNNING = 3;
-    FAILED  = 4;
+    FAILURE  = 4;
     DELETED = 5;
+    SUSPENDED = 6;
+    OPERATION = 7;
 }
 
 message State {
