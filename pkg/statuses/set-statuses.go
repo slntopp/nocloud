@@ -54,7 +54,7 @@ func (s *StatusesServer) PostInstanceState(
 
 	state := req.GetState()
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, req.GetUuid())
-	json, err := json.Marshal(state.GetMeta())
+	json, err := json.Marshal(state)
 	if err != nil {
 		s.log.Error("Error Marshal JSON",
 			zap.String("key", key), zap.Error(err))

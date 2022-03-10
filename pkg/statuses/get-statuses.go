@@ -17,6 +17,7 @@ package statuses
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -25,7 +26,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	structpb "google.golang.org/protobuf/types/known/structpb"
 )
 
 //Gets statuses Instanses of Servce
@@ -48,10 +48,10 @@ func (s *StatusesServer) GetInstancesStates(ctx context.Context, req *pb.GetInst
 	}
 
 	for i, state := range states {
-		var stpb structpb.Value
+		var istate pb.InstanceState
 		switch state.(type) {
 		case string:
-			err = stpb.UnmarshalJSON([]byte(state.(string)))
+			err = json.Unmarshal([]byte(state.(string)), &istate)
 		case nil:
 			err = errors.New("No Data")
 		}
@@ -62,10 +62,7 @@ func (s *StatusesServer) GetInstancesStates(ctx context.Context, req *pb.GetInst
 		}
 
 		key := strings.Replace(keys[i], KEYS_PREFIX + ":", "", 1)
-		resp.States[key] = &pb.InstanceState{
-			State: int32(stpb.GetStructValue().GetFields()["state"].GetNumberValue()),
-			Meta: stpb.GetStructValue().Fields,
-		}
+		resp.States[key] = &istate
 	}
 
 	return resp, nil
