@@ -18,8 +18,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type StatesServiceClient interface {
-	PostInstanceState(ctx context.Context, in *PostInstanceStateRequest, opts ...grpc.CallOption) (*PostInstanceStateResponse, error)
-	GetInstancesStates(ctx context.Context, in *GetInstancesStatesRequest, opts ...grpc.CallOption) (*GetInstancesStatesResponse, error)
+	PostState(ctx context.Context, in *PostStateRequest, opts ...grpc.CallOption) (*PostStateResponse, error)
+	GetStates(ctx context.Context, in *GetStatesRequest, opts ...grpc.CallOption) (*GetStatesResponse, error)
 }
 
 type statesServiceClient struct {
@@ -30,18 +30,18 @@ func NewStatesServiceClient(cc grpc.ClientConnInterface) StatesServiceClient {
 	return &statesServiceClient{cc}
 }
 
-func (c *statesServiceClient) PostInstanceState(ctx context.Context, in *PostInstanceStateRequest, opts ...grpc.CallOption) (*PostInstanceStateResponse, error) {
-	out := new(PostInstanceStateResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.instances.StatesService/PostInstanceState", in, out, opts...)
+func (c *statesServiceClient) PostState(ctx context.Context, in *PostStateRequest, opts ...grpc.CallOption) (*PostStateResponse, error) {
+	out := new(PostStateResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.instances.StatesService/PostState", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *statesServiceClient) GetInstancesStates(ctx context.Context, in *GetInstancesStatesRequest, opts ...grpc.CallOption) (*GetInstancesStatesResponse, error) {
-	out := new(GetInstancesStatesResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.instances.StatesService/GetInstancesStates", in, out, opts...)
+func (c *statesServiceClient) GetStates(ctx context.Context, in *GetStatesRequest, opts ...grpc.CallOption) (*GetStatesResponse, error) {
+	out := new(GetStatesResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.instances.StatesService/GetStates", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -52,8 +52,8 @@ func (c *statesServiceClient) GetInstancesStates(ctx context.Context, in *GetIns
 // All implementations must embed UnimplementedStatesServiceServer
 // for forward compatibility
 type StatesServiceServer interface {
-	PostInstanceState(context.Context, *PostInstanceStateRequest) (*PostInstanceStateResponse, error)
-	GetInstancesStates(context.Context, *GetInstancesStatesRequest) (*GetInstancesStatesResponse, error)
+	PostState(context.Context, *PostStateRequest) (*PostStateResponse, error)
+	GetStates(context.Context, *GetStatesRequest) (*GetStatesResponse, error)
 	mustEmbedUnimplementedStatesServiceServer()
 }
 
@@ -61,11 +61,11 @@ type StatesServiceServer interface {
 type UnimplementedStatesServiceServer struct {
 }
 
-func (UnimplementedStatesServiceServer) PostInstanceState(context.Context, *PostInstanceStateRequest) (*PostInstanceStateResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PostInstanceState not implemented")
+func (UnimplementedStatesServiceServer) PostState(context.Context, *PostStateRequest) (*PostStateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PostState not implemented")
 }
-func (UnimplementedStatesServiceServer) GetInstancesStates(context.Context, *GetInstancesStatesRequest) (*GetInstancesStatesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetInstancesStates not implemented")
+func (UnimplementedStatesServiceServer) GetStates(context.Context, *GetStatesRequest) (*GetStatesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetStates not implemented")
 }
 func (UnimplementedStatesServiceServer) mustEmbedUnimplementedStatesServiceServer() {}
 
@@ -80,38 +80,38 @@ func RegisterStatesServiceServer(s grpc.ServiceRegistrar, srv StatesServiceServe
 	s.RegisterService(&StatesService_ServiceDesc, srv)
 }
 
-func _StatesService_PostInstanceState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PostInstanceStateRequest)
+func _StatesService_PostState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PostStateRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(StatesServiceServer).PostInstanceState(ctx, in)
+		return srv.(StatesServiceServer).PostState(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.instances.StatesService/PostInstanceState",
+		FullMethod: "/nocloud.instances.StatesService/PostState",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StatesServiceServer).PostInstanceState(ctx, req.(*PostInstanceStateRequest))
+		return srv.(StatesServiceServer).PostState(ctx, req.(*PostStateRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _StatesService_GetInstancesStates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetInstancesStatesRequest)
+func _StatesService_GetStates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetStatesRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(StatesServiceServer).GetInstancesStates(ctx, in)
+		return srv.(StatesServiceServer).GetStates(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.instances.StatesService/GetInstancesStates",
+		FullMethod: "/nocloud.instances.StatesService/GetStates",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(StatesServiceServer).GetInstancesStates(ctx, req.(*GetInstancesStatesRequest))
+		return srv.(StatesServiceServer).GetStates(ctx, req.(*GetStatesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -124,12 +124,12 @@ var StatesService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*StatesServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "PostInstanceState",
-			Handler:    _StatesService_PostInstanceState_Handler,
+			MethodName: "PostState",
+			Handler:    _StatesService_PostState_Handler,
 		},
 		{
-			MethodName: "GetInstancesStates",
-			Handler:    _StatesService_GetInstancesStates_Handler,
+			MethodName: "GetStates",
+			Handler:    _StatesService_GetStates_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

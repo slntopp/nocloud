@@ -12,7 +12,7 @@ message Instance {
     map<string, google.protobuf.Value> resources = 4
         [(nocloud.hasher.hashed) = true];
     map<string, google.protobuf.Value> data = 5;
-    InstanceState state = 6;
+    State state = 6;
     string hash = 7 [(nocloud.hasher.hash) = true];
 }
 
@@ -54,29 +54,29 @@ enum NoCloudState {
     DELETED = 5;
 }
 
-message InstanceState {
+message State {
     NoCloudState state = 1; // NoCloud Instance State
     map<string, google.protobuf.Value> meta = 2; // Driver(Provider/Hypervisor) State data
 }
 
-message PostInstanceStateRequest {
+message PostStateRequest {
     string uuid = 1;
-    InstanceState state = 2;
+    State state = 2;
 }
-message PostInstanceStateResponse {
+message PostStateResponse {
     string uuid = 1;
     int64 result = 2;
     string error = 3;
 }
 
-message GetInstancesStatesRequest {
+message GetStatesRequest {
     repeated string instances = 1;
 }
-message GetInstancesStatesResponse {
-    map<string, InstanceState> states = 1; // Map of Instance UUID to it's State
+message GetStatesResponse {
+    map<string, State> states = 1; // Map of Instance UUID to it's State
 }
 
 service StatesService {
-    rpc PostInstanceState(PostInstanceStateRequest) returns (PostInstanceStateResponse) {};
-    rpc GetInstancesStates(GetInstancesStatesRequest) returns (GetInstancesStatesResponse) {};
+    rpc PostState(PostStateRequest) returns (PostStateResponse) {};
+    rpc GetStates(GetStatesRequest) returns (GetStatesResponse) {};
 }

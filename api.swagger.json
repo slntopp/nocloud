@@ -940,7 +940,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/instancesGetInstancesStatesResponse"
+              "$ref": "#/definitions/instancesGetStatesResponse"
             }
           },
           "default": {
@@ -1641,13 +1641,13 @@
         }
       }
     },
-    "instancesGetInstancesStatesResponse": {
+    "instancesGetStatesResponse": {
       "type": "object",
       "properties": {
         "states": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/definitions/instancesInstanceState"
+            "$ref": "#/definitions/instancesState"
           }
         }
       }
@@ -1680,24 +1680,10 @@
           }
         },
         "state": {
-          "$ref": "#/definitions/instancesInstanceState"
+          "$ref": "#/definitions/instancesState"
         },
         "hash": {
           "type": "string"
-        }
-      }
-    },
-    "instancesInstanceState": {
-      "type": "object",
-      "properties": {
-        "state": {
-          "$ref": "#/definitions/instancesNoCloudState"
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
         }
       }
     },
@@ -1751,7 +1737,7 @@
       ],
       "default": "INIT"
     },
-    "instancesPostInstanceStateResponse": {
+    "instancesPostStateResponse": {
       "type": "object",
       "properties": {
         "uuid": {
@@ -1763,6 +1749,20 @@
         },
         "error": {
           "type": "string"
+        }
+      }
+    },
+    "instancesState": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "#/definitions/instancesNoCloudState"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },

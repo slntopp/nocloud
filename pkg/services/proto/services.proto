@@ -162,7 +162,7 @@ service ServicesService {
         };
     };
 
-    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.instances.GetInstancesStatesResponse) {
+    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.instances.GetStatesResponse) {
         option (google.api.http) = {
             get: "/services/{uuid}/states"
         };

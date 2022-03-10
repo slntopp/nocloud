@@ -29,10 +29,10 @@ import (
 )
 
 //Gets statuses Instanses of Servce
-func (s *StatusesServer) GetInstancesStates(ctx context.Context, req *pb.GetInstancesStatesRequest) (resp *pb.GetInstancesStatesResponse, err error) {
+func (s *StatusesServer) GetStates(ctx context.Context, req *pb.GetStatesRequest) (resp *pb.GetStatesResponse, err error) {
 
-	resp = &pb.GetInstancesStatesResponse{
-		States:  make(map[string]*pb.InstanceState),
+	resp = &pb.GetStatesResponse{
+		States:  make(map[string]*pb.State),
 	}
 
 	keys := req.GetInstances()	
@@ -48,7 +48,7 @@ func (s *StatusesServer) GetInstancesStates(ctx context.Context, req *pb.GetInst
 	}
 
 	for i, state := range states {
-		var istate pb.InstanceState
+		var istate pb.State
 		switch state.(type) {
 		case string:
 			err = json.Unmarshal([]byte(state.(string)), &istate)
