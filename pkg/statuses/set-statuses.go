@@ -45,11 +45,11 @@ func NewStatusesServer(log *zap.Logger, rdb *redis.Client) *StatusesServer {
 }
 
 // Store Instance State to Redis key and channel
-func (s *StatusesServer) PostInstanceState(
+func (s *StatusesServer) PostState(
 	ctx context.Context,
 	req *pb.PostStateRequest,
 ) (*pb.PostStateResponse, error) {
-	log := s.log.Named("PostInstanceState")
+	log := s.log.Named("PostState")
 	log.Debug("Request received", zap.Any("request", req))
 
 	state := req.GetState()
