@@ -40,13 +40,13 @@ type Status int32
 
 const (
 	Status_UNKNOWN Status = 0
-	Status_SERVING Status = 1
-	Status_OFFLINE Status = 2
-	Status_RUNNING Status = 3
-	Status_STOPPED Status = 4
-	Status_INTENAL Status = 5
-	Status_HASERRS Status = 6
-	Status_NOEXIST Status = 7
+	Status_SERVING Status = 1 // Service is up and running
+	Status_OFFLINE Status = 2 // Service is offline(down)
+	Status_RUNNING Status = 3 // Routine is running
+	Status_STOPPED Status = 4 // Routine is stopped
+	Status_INTENAL Status = 5 // Internal error while making status
+	Status_HASERRS Status = 6 // Check has errors
+	Status_NOEXIST Status = 7 // Service has no Routines
 )
 
 // Enum value maps for Status.
