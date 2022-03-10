@@ -135,9 +135,13 @@ export default {
 		},
 		isLoading(){
 			return this.$store.getters['services/isLoading'];
+		},
+		servicesProviders(){
+			return this.$store.getters['servicesProviders/all'];
 		}
 	},
 	created(){
+		this.$store.dispatch('servicesProviders/fetch')
 		this.$store.dispatch('services/fetch')
 		.then(() => {
 			this.fetchError = ''
@@ -159,13 +163,20 @@ export default {
 			for (const [name, group] of Object.entries(item.instancesGroups)) {
 				const temp = {};
 				temp.id = ++index;
+				let sp = this.servicesProviders.find(el => el.uuid == item.provisions[group.uuid])
 				temp.name = name;
+				if(sp){
+					temp.name += ` [location]: ${sp.title}`
+				}
 				const childs = [];
 				for (const [ind, inst] of Object.entries(group.instances)) {
 					ind
 					const temp = {};
 					temp.id = ++index;
 					temp.name = inst.title;
+					if(sp){
+						temp.name += ` [state]: ${inst.state.meta.lcm_state_str}`
+					}
 					childs.push(temp);
 				}
 				temp.children = childs;
