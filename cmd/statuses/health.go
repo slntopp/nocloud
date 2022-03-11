@@ -22,7 +22,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const SERVICE = "Statuses Manager"
+const SERVICE = "States Manager"
 
 type HealthServer struct {
 	pb.UnimplementedInternalProbeServiceServer

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package statuses
+package states
 
 import (
 	"context"
@@ -30,7 +30,7 @@ import (
 const KEYS_PREFIX = "_st"
 var rdbCtx context.Context = context.Background()
 
-type StatusesServer struct {
+type StatesServer struct {
 	pb.UnimplementedStatesServiceServer
 
 	log *zap.Logger
@@ -38,14 +38,14 @@ type StatusesServer struct {
 
 }
 
-func NewStatusesServer(log *zap.Logger, rdb *redis.Client) *StatusesServer {
-	return &StatusesServer{
-		log: log.Named("StatusesServer"), rdb: rdb,
+func NewStatesServer(log *zap.Logger, rdb *redis.Client) *StatesServer {
+	return &StatesServer{
+		log: log.Named("StatesServer"), rdb: rdb,
 	}
 }
 
 // Store Instance State to Redis key and channel
-func (s *StatusesServer) PostState(
+func (s *StatesServer) PostState(
 	ctx context.Context,
 	req *pb.PostStateRequest,
 ) (*pb.PostStateResponse, error) {

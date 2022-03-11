@@ -47,7 +47,7 @@ var (
 	arangodbCred  string
 	drivers       []string
 	SIGNING_KEY   []byte
-	statusesHost  string
+	statesHost  string
 )
 
 func init() {
@@ -60,7 +60,7 @@ func init() {
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
-	viper.SetDefault("STATUSES_HOST", "statuses:8080")
+	viper.SetDefault("STATES_HOST", "states:8080")
 
 	port = viper.GetString("PORT")
 
@@ -68,7 +68,7 @@ func init() {
 	arangodbCred = viper.GetString("DB_CRED")
 	drivers = viper.GetStringSlice("DRIVERS")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
-	statusesHost = viper.GetString("STATUSES_HOST")
+	statesHost = viper.GetString("STATES_HOST")
 }
 
 func main() {
@@ -85,13 +85,13 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	log.Debug("Init Connection with Statuses", zap.String("host", statusesHost))
+	log.Debug("Init Connection with States", zap.String("host", statesHost))
 	opts := []grpc.DialOption{
 		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	conn, err := grpc.Dial(statusesHost, opts...)
+	conn, err := grpc.Dial(statesHost, opts...)
 	if err != nil {
-		log.Fatal("fail to dial Statuses", zap.Error(err))
+		log.Fatal("fail to dial States", zap.Error(err))
 	}
 	defer conn.Close()
 	grpc_client := stpb.NewStatesServiceClient(conn)

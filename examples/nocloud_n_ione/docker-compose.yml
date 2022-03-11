@@ -19,7 +19,12 @@ services:
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
-      APISERVER_HOST: proxy:8080
+      REGISTRY_HOST: registry:8080
+      SERVICES_HOST: services-registry:8080
+      SP_HOST: sp-registry:8080
+      SETTINGS_HOST: settings:8080
+      DNS_HOST: dns-mgmt:8080
+      STATES_HOST: states:8080
     networks:
       - proxy
       - grpc-internal
@@ -62,7 +67,7 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       DRIVERS: driver-ione:8080
       SETTINGS_HOST: settings:8080
-      STATUSES_HOST: statuses:8080
+      STATES_HOST: states:8080
     depends_on:
       - db
     networks:
@@ -81,7 +86,7 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       DRIVERS: driver-ione:8080
       SETTINGS_HOST: settings:8080
-      STATUSES_HOST: statuses:8080
+      STATES_HOST: states:8080
     networks:
       - proxy
       - arangodb
@@ -118,16 +123,16 @@ services:
     volumes:
       - redis-settings-data:/data
 
-  statuses:
-    image: ghcr.io/slntopp/nocloud/statuses:latest
+  states:
+    image: ghcr.io/slntopp/nocloud/states:latest
     networks:
       - grpc-internal
       - redis
     environment:
       LOG_LEVEL: -1
       PORT: 8080
-      REDIS_HOST: redis_statuses:6379
-  redis_statuses:
+      REDIS_HOST: redis_states:6379
+  redis_states:
     image: redis
     restart: always
     command: redis-server --save 60 1
@@ -136,7 +141,7 @@ services:
     ports:
       - 6379:6379
     volumes:
-      - redis-statuses-data:/data
+      - redis-states-data:/data
 
   driver-ione:
     container_name: driver
@@ -171,5 +176,5 @@ networks:
 
 volumes:
   redis-settings-data:
-  redis-statuses-data:
+  redis-states-data:
   data:

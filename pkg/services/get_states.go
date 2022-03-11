@@ -22,7 +22,7 @@ import (
 	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 )
 
-//Gets statuses Instanses of Servce from pkg/statuses
+//Gets states Instanses of Servce from pkg/states
 func (s *ServicesServer) GetStates(ctx context.Context, request *pb.GetStatesRequest) (*stpb.GetStatesResponse, error) {
 	service, err := s.Get(ctx, &pb.GetRequest{
 		Uuid: request.Uuid,

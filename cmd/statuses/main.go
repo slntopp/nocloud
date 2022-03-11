@@ -43,7 +43,7 @@ func init() {
 	log = nocloud.NewLogger()
 
 	viper.SetDefault("PORT", "8080")
-	viper.SetDefault("REDIS_HOST", "redis_statuses:6379")
+	viper.SetDefault("REDIS_HOST", "redis_states:6379")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	port = viper.GetString("PORT")
@@ -73,7 +73,7 @@ func main() {
 	var opts []grpc.ServerOption
 	s := grpc.NewServer(opts...)
 
-	server := spb.NewStatusesServer(log, rdb)
+	server := spb.NewStatesServer(log, rdb)
 	pb.RegisterStatesServiceServer(s, server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))

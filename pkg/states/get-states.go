@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package statuses
+package states
 
 import (
 	"context"
@@ -28,8 +28,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-//Gets statuses Instanses of Servce
-func (s *StatusesServer) GetStates(ctx context.Context, req *pb.GetStatesRequest) (resp *pb.GetStatesResponse, err error) {
+//Gets states Instanses of Servce
+func (s *StatesServer) GetStates(ctx context.Context, req *pb.GetStatesRequest) (resp *pb.GetStatesResponse, err error) {
 
 	resp = &pb.GetStatesResponse{
 		States:  make(map[string]*pb.State),

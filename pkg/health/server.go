@@ -28,7 +28,7 @@ import (
 
 var (
 	registryHost, servicesHost, servicesProvidersHost,
-	settingsHost, dnsHost, statusesHost string
+	settingsHost, dnsHost, statesHost string
 )
 
 var grpc_services []string
@@ -46,12 +46,12 @@ func init() {
 	settingsHost = viper.GetString("SETTINGS_HOST")
 	viper.SetDefault("DNS_HOST", "dns-mgmt:8080")
 	dnsHost = viper.GetString("DNS_HOST")
-	viper.SetDefault("STATUSES_HOST", "statuses:8080")
-	statusesHost = viper.GetString("STATUSES_HOST")
+	viper.SetDefault("STATES_HOST", "states:8080")
+	statesHost = viper.GetString("STATES_HOST")
 
 	grpc_services = []string{
 		registryHost, servicesHost, servicesProvidersHost,
-		settingsHost, dnsHost, statusesHost,
+		settingsHost, dnsHost, statesHost,
 	}
 }
 

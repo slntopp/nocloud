@@ -48,7 +48,7 @@ var (
 	drivers 		[]string
 	ext_servers 	[]string
 	SIGNING_KEY		[]byte
-	statusesHost  string
+	statesHost  string
 )
 
 func init() {
@@ -62,7 +62,7 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
-	viper.SetDefault("STATUSES_HOST", "statuses:8080")
+	viper.SetDefault("STATES_HOST", "states:8080")
 
 	port = viper.GetString("PORT")
 
@@ -71,7 +71,7 @@ func init() {
 	drivers 		= viper.GetStringSlice("DRIVERS")
 	ext_servers 	= viper.GetStringSlice("EXTENTION_SERVERS")
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
-	statusesHost 	= viper.GetString("STATUSES_HOST")
+	statesHost 	= viper.GetString("STATES_HOST")
 }
 
 func main() {
@@ -88,13 +88,13 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	log.Debug("Init Connection with Statuses", zap.String("host", statusesHost))
+	log.Debug("Init Connection with States", zap.String("host", statesHost))
 	opts := []grpc.DialOption{
 		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	conn, err := grpc.Dial(statusesHost, opts...)
+	conn, err := grpc.Dial(statesHost, opts...)
 	if err != nil {
-		log.Fatal("fail to dial Statuses", zap.Error(err))
+		log.Fatal("fail to dial States", zap.Error(err))
 	}
 	defer conn.Close()
 	grpc_client := stpb.NewStatesServiceClient(conn)
