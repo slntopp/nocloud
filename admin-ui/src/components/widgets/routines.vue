@@ -114,7 +114,6 @@ export default {
 			api.health.routines()
 			.then(res => {
 				this.state = res.routines.filter(el => el.status.status !== 'NOEXIST');
-				this.state = res.routines;
 				this.err = null;
 			})
 			.catch(err => {
