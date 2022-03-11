@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 
-	pb "github.com/slntopp/nocloud/pkg/instances/proto"
+	pb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -35,7 +35,7 @@ func (s *StatusesServer) GetStates(ctx context.Context, req *pb.GetStatesRequest
 		States:  make(map[string]*pb.State),
 	}
 
-	keys := req.GetInstances()	
+	keys := req.GetUuids()	
 	for i, uuid := range keys {
 		keys[i] = fmt.Sprintf("%s:%s", KEYS_PREFIX, uuid)
 	}

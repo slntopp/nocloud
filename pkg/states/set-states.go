@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	redis "github.com/go-redis/redis/v8"
-	pb "github.com/slntopp/nocloud/pkg/instances/proto"
+	pb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

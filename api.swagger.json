@@ -940,7 +940,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/instancesGetStatesResponse"
+              "$ref": "#/definitions/statesGetStatesResponse"
             }
           },
           "default": {
@@ -1641,17 +1641,6 @@
         }
       }
     },
-    "instancesGetStatesResponse": {
-      "type": "object",
-      "properties": {
-        "states": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/instancesState"
-          }
-        }
-      }
-    },
     "instancesInstance": {
       "type": "object",
       "properties": {
@@ -1680,7 +1669,7 @@
           }
         },
         "state": {
-          "$ref": "#/definitions/instancesState"
+          "$ref": "#/definitions/statesState"
         },
         "hash": {
           "type": "string"
@@ -1722,49 +1711,6 @@
         },
         "hash": {
           "type": "string"
-        }
-      }
-    },
-    "instancesNoCloudState": {
-      "type": "string",
-      "enum": [
-        "INIT",
-        "UNKNOWN",
-        "STOPPED",
-        "RUNNING",
-        "FAILURE",
-        "DELETED",
-        "SUSPENDED",
-        "OPERATION"
-      ],
-      "default": "INIT"
-    },
-    "instancesPostStateResponse": {
-      "type": "object",
-      "properties": {
-        "uuid": {
-          "type": "string"
-        },
-        "result": {
-          "type": "string",
-          "format": "int64"
-        },
-        "error": {
-          "type": "string"
-        }
-      }
-    },
-    "instancesState": {
-      "type": "object",
-      "properties": {
-        "state": {
-          "$ref": "#/definitions/instancesNoCloudState"
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
         }
       }
     },
@@ -2221,6 +2167,9 @@
           "additionalProperties": {
             "type": "object"
           }
+        },
+        "state": {
+          "$ref": "#/definitions/statesState"
         }
       }
     },
@@ -2262,6 +2211,60 @@
       "properties": {
         "key": {
           "type": "string"
+        }
+      }
+    },
+    "statesGetStatesResponse": {
+      "type": "object",
+      "properties": {
+        "states": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/statesState"
+          }
+        }
+      }
+    },
+    "statesNoCloudState": {
+      "type": "string",
+      "enum": [
+        "INIT",
+        "UNKNOWN",
+        "STOPPED",
+        "RUNNING",
+        "FAILURE",
+        "DELETED",
+        "SUSPENDED",
+        "OPERATION"
+      ],
+      "default": "INIT"
+    },
+    "statesPostStateResponse": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string",
+          "format": "int64"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "statesState": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "#/definitions/statesNoCloudState"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },

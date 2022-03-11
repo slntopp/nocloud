@@ -23,11 +23,11 @@ import (
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/instances/proto"
-	instpb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
+	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -47,20 +47,20 @@ type ServicesServer struct {
 	ns_ctrl graph.NamespacesController
 
 	drivers  map[string]driverpb.DriverServiceClient
-	statuses instpb.StatesServiceClient
+	states stpb.StatesServiceClient
 
 	monitoring Routine
 
 	log *zap.Logger
 }
 
-func NewServicesServer(log *zap.Logger, db driver.Database, gc instpb.StatesServiceClient) *ServicesServer {
+func NewServicesServer(log *zap.Logger, db driver.Database, gc stpb.StatesServiceClient) *ServicesServer {
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
 		sp_ctrl:  graph.NewServicesProvidersController(log, db),
 		ns_ctrl:  graph.NewNamespacesController(log, db),
 		drivers:  make(map[string]driverpb.DriverServiceClient),
-		statuses: gc,
+		states: gc,
 		monitoring: Routine{
 			Name: "Monitoring",
 			Running: false,

@@ -20,6 +20,7 @@ import "google/protobuf/struct.proto";
 import "pkg/instances/proto/instances.proto";
 import "google/api/annotations.proto";
 import "pkg/hasher/hasherpb/hasher.proto";
+import "pkg/states/proto/states.proto";
 
 message Service {
     string uuid = 1;
@@ -162,7 +163,7 @@ service ServicesService {
         };
     };
 
-    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.instances.GetStatesResponse) {
+    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.states.GetStatesResponse) {
         option (google.api.http) = {
             get: "/services/{uuid}/states"
         };

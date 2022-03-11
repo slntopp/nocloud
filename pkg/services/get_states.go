@@ -18,12 +18,12 @@ package services
 import (
 	"context"
 
-	instpb "github.com/slntopp/nocloud/pkg/instances/proto"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
+	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 )
 
 //Gets statuses Instanses of Servce from pkg/statuses
-func (s *ServicesServer) GetStates(ctx context.Context, request *pb.GetStatesRequest) (*instpb.GetStatesResponse, error) {
+func (s *ServicesServer) GetStates(ctx context.Context, request *pb.GetStatesRequest) (*stpb.GetStatesResponse, error) {
 	service, err := s.Get(ctx, &pb.GetRequest{
 		Uuid: request.Uuid,
 	})
@@ -35,15 +35,15 @@ func (s *ServicesServer) GetStates(ctx context.Context, request *pb.GetStatesReq
 }
 
 
-func (s *ServicesServer) GetStatesInternal(ctx context.Context, service *pb.Service) (*instpb.GetStatesResponse, error) {
+func (s *ServicesServer) GetStatesInternal(ctx context.Context, service *pb.Service) (*stpb.GetStatesResponse, error) {
 	var keys []string
 	for _, igroup := range service.GetInstancesGroups() {
 		for _, inst := range igroup.GetInstances() {
 			keys = append(keys, inst.GetUuid())
 		}
 	}
-	resp, err := s.statuses.GetStates(ctx, &instpb.GetStatesRequest{
-		Instances: keys,
+	resp, err := s.states.GetStates(ctx, &stpb.GetStatesRequest{
+		Uuids: keys,
 	})
 	return resp, err
 }

@@ -21,10 +21,10 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
-	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	auth "github.com/slntopp/nocloud/pkg/nocloud/admin_auth"
-	spb "github.com/slntopp/nocloud/pkg/statuses"
+	spb "github.com/slntopp/nocloud/pkg/states"
+	pb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

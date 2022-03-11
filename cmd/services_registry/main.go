@@ -33,7 +33,7 @@ import (
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	instpb "github.com/slntopp/nocloud/pkg/instances/proto"
+	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -94,7 +94,7 @@ func main() {
 		log.Fatal("fail to dial Statuses", zap.Error(err))
 	}
 	defer conn.Close()
-	grpc_client := instpb.NewStatesServiceClient(conn)
+	grpc_client := stpb.NewStatesServiceClient(conn)
 
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(

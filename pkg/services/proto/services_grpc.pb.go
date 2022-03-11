@@ -4,7 +4,7 @@ package proto
 
 import (
 	context "context"
-	proto "github.com/slntopp/nocloud/pkg/instances/proto"
+	proto "github.com/slntopp/nocloud/pkg/states/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
