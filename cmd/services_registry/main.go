@@ -47,7 +47,7 @@ var (
 	arangodbCred  string
 	drivers       []string
 	SIGNING_KEY   []byte
-	statuses_host string
+	statusesHost  string
 )
 
 func init() {
@@ -68,7 +68,7 @@ func init() {
 	arangodbCred = viper.GetString("DB_CRED")
 	drivers = viper.GetStringSlice("DRIVERS")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
-	statuses_host = viper.GetString("STATUSES_HOST")
+	statusesHost = viper.GetString("STATUSES_HOST")
 }
 
 func main() {
@@ -85,11 +85,11 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	log.Debug("Init Connection with Statuses", zap.String("host", statuses_host))
+	log.Debug("Init Connection with Statuses", zap.String("host", statusesHost))
 	opts := []grpc.DialOption{
 		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	conn, err := grpc.Dial(statuses_host, opts...)
+	conn, err := grpc.Dial(statusesHost, opts...)
 	if err != nil {
 		log.Fatal("fail to dial Statuses", zap.Error(err))
 	}

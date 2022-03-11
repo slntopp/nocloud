@@ -23,6 +23,7 @@ import (
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	instpb "github.com/slntopp/nocloud/pkg/instances/proto"
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
+	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -155,6 +156,27 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 				if err != nil {
 					log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 				}
+
+				func(){
+					states, err := s.states.GetStates(ctx, &stpb.GetStatesRequest{
+						Uuids: []string{sp.GetUuid()},
+					})
+					if err != nil {
+						log.Error("Error Syncronising ServicesProvider State", zap.String("sp", sp.GetUuid()), zap.Error(err))
+						return
+					}
+					state, ok := states.GetStates()[sp.GetUuid()]
+					if !ok {
+						log.Error("Error got no State for ServicesProvider", zap.String("sp", sp.GetUuid()))
+						return
+					}
+
+					sp.State = state
+					err = s.ctrl.Update(ctx, sp.ServicesProvider)
+					if err != nil {
+						log.Error("Failed to update ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
+					}
+				}()
 			}(sp)
 		}
 

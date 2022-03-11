@@ -62,6 +62,7 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       DRIVERS: driver-ione:8080
       SETTINGS_HOST: settings:8080
+      STATUSES_HOST: statuses:8080
     depends_on:
       - db
     networks:
@@ -80,6 +81,7 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       DRIVERS: driver-ione:8080
       SETTINGS_HOST: settings:8080
+      STATUSES_HOST: statuses:8080
     networks:
       - proxy
       - arangodb

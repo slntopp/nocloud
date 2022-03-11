@@ -28,6 +28,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sp "github.com/slntopp/nocloud/pkg/services_providers"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
@@ -47,6 +48,7 @@ var (
 	drivers 		[]string
 	ext_servers 	[]string
 	SIGNING_KEY		[]byte
+	statusesHost  string
 )
 
 func init() {
@@ -60,6 +62,7 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+	viper.SetDefault("STATUSES_HOST", "statuses:8080")
 
 	port = viper.GetString("PORT")
 
@@ -68,6 +71,7 @@ func init() {
 	drivers 		= viper.GetStringSlice("DRIVERS")
 	ext_servers 	= viper.GetStringSlice("EXTENTION_SERVERS")
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
+	statusesHost 	= viper.GetString("STATUSES_HOST")
 }
 
 func main() {
@@ -84,6 +88,17 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
+	log.Debug("Init Connection with Statuses", zap.String("host", statusesHost))
+	opts := []grpc.DialOption{
+		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+	conn, err := grpc.Dial(statusesHost, opts...)
+	if err != nil {
+		log.Fatal("fail to dial Statuses", zap.Error(err))
+	}
+	defer conn.Close()
+	grpc_client := stpb.NewStatesServiceClient(conn)
+
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
@@ -92,7 +107,7 @@ func main() {
 		)),
 	)
 	
-	server := sp.NewServicesProviderServer(log, db)
+	server := sp.NewServicesProviderServer(log, db, grpc_client)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))

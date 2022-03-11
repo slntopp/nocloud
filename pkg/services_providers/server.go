@@ -25,6 +25,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,6 +41,8 @@ type ServicesProviderServer struct {
 	sppb.UnimplementedServicesProvidersServiceServer
 
 	drivers map[string]driverpb.DriverServiceClient
+	states stpb.StatesServiceClient
+
 	extention_servers map[string]sppb.ServicesProvidersExtentionsServiceClient
 	db driver.Database
 	ctrl graph.ServicesProvidersController
@@ -50,7 +53,7 @@ type ServicesProviderServer struct {
 	log *zap.Logger
 }
 
-func NewServicesProviderServer(log *zap.Logger, db driver.Database) *ServicesProviderServer {
+func NewServicesProviderServer(log *zap.Logger, db driver.Database, gc stpb.StatesServiceClient) *ServicesProviderServer {
 	return &ServicesProviderServer{
 		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl: graph.NewNamespacesController(log, db),
@@ -60,6 +63,7 @@ func NewServicesProviderServer(log *zap.Logger, db driver.Database) *ServicesPro
 			Name: "Monitoring",
 			Running: false,
 		},
+		states: gc,
 	}
 }
 
