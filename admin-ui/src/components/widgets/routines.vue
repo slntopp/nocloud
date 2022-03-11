@@ -37,19 +37,6 @@
 			</v-list-item>
 
 		</v-list>
-		
-		<!-- <v-expansion-panels
-			color="transparent"
-		>
-			<v-expansion-panel>
-				<v-expansion-panel-header>
-					No exist
-				</v-expansion-panel-header>
-				<v-expansion-panel-content>
-					Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-				</v-expansion-panel-content>
-			</v-expansion-panel>
-		</v-expansion-panels> -->
 
 		<v-btn
 			@click="checkHealth"
@@ -127,6 +114,7 @@ export default {
 			api.health.routines()
 			.then(res => {
 				this.state = res.routines.filter(el => el.status.status !== 'NOEXIST');
+				this.state = res.routines;
 				this.err = null;
 			})
 			.catch(err => {
