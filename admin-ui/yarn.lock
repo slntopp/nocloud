@@ -6714,10 +6714,10 @@ no-case@^2.2.0:
   dependencies:
     lower-case "^1.1.1"
 
-nocloudjsrest@^1.4.5:
-  version "1.4.5"
-  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.5.tgz#d33ab23a9877fb470ef49e47b357c63da0406d09"
-  integrity sha512-t9j+b0IANJX3ocLZlxoUw5hNZfWaHj0j5mZbrpczQGQDGP1mSGGoQksN2Tx1w7IxZNYRaC/JHdEvvmZmgPBEUw==
+nocloudjsrest@^1.4.6:
+  version "1.4.6"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.6.tgz#82154cacf9305559af9181c0b1d2b118908ed01e"
+  integrity sha512-2gUPZjNVRF88Vtln9u1wbPW9XDrDZZbZOaegVwRXzFhoI/iEN+D+73rvjsYXP1qPxSTZln9EnZq6yxz80Z6rvw==
   dependencies:
     axios "^0.24.0"
 
