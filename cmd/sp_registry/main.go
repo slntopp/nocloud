@@ -21,17 +21,22 @@ import (
 	"net"
 
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sp "github.com/slntopp/nocloud/pkg/services_providers"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -43,6 +48,7 @@ var (
 	drivers 		[]string
 	ext_servers 	[]string
 	SIGNING_KEY		[]byte
+	statesHost  string
 )
 
 func init() {
@@ -56,6 +62,7 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+	viper.SetDefault("STATES_HOST", "states:8080")
 
 	port = viper.GetString("PORT")
 
@@ -64,6 +71,7 @@ func init() {
 	drivers 		= viper.GetStringSlice("DRIVERS")
 	ext_servers 	= viper.GetStringSlice("EXTENTION_SERVERS")
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
+	statesHost 	= viper.GetString("STATES_HOST")
 }
 
 func main() {
@@ -80,6 +88,17 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
+	log.Debug("Init Connection with States", zap.String("host", statesHost))
+	opts := []grpc.DialOption{
+		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+	conn, err := grpc.Dial(statesHost, opts...)
+	if err != nil {
+		log.Fatal("fail to dial States", zap.Error(err))
+	}
+	defer conn.Close()
+	grpc_client := stpb.NewStatesServiceClient(conn)
+
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
@@ -88,11 +107,11 @@ func main() {
 		)),
 	)
 	
-	server := sp.NewServicesProviderServer(log, db)
+	server := sp.NewServicesProviderServer(log, db, grpc_client)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
-		conn, err := grpc.Dial(driver, grpc.WithInsecure())
+		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Error("Error registering driver", zap.String("driver", driver), zap.Error(err))
 			continue
@@ -108,7 +127,7 @@ func main() {
 
 	for _, ext_server := range ext_servers {
 		log.Info("Registering Extention Server", zap.String("ext_server", ext_server))
-		conn, err := grpc.Dial(ext_server, grpc.WithInsecure())
+		conn, err := grpc.Dial(ext_server, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Error("Error registering Extention Server", zap.String("ext_server", ext_server), zap.Error(err))
 			continue
@@ -122,7 +141,15 @@ func main() {
 		log.Info("Registered Extention Server", zap.String("ext_server", ext_server), zap.String("type", ext_srv_type.GetType()))
 	}
 
+	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		log.Fatal("Can't generate token", zap.Error(err))
+	}
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
+	go server.MonitoringRoutine(ctx)
 	sppb.RegisterServicesProvidersServiceServer(s, server)
+
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))

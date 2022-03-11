@@ -18,7 +18,6 @@ package services
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/arangodb/go-driver"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
@@ -28,13 +27,19 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
-	sspb "github.com/slntopp/nocloud/pkg/statuses/proto"
+	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-type ServicesServiceServer struct {
+type Routine struct {
+	Name string
+	LastExec string
+	Running bool
+}
+
+type ServicesServer struct {
 	pb.UnimplementedServicesServiceServer
 	db      driver.Database
 	ctrl    graph.ServicesController
@@ -42,21 +47,24 @@ type ServicesServiceServer struct {
 	ns_ctrl graph.NamespacesController
 
 	drivers  map[string]driverpb.DriverServiceClient
-	statuses sspb.PostServiceClient
+	states stpb.StatesServiceClient
 
-	ticker *time.Ticker
+	monitoring Routine
 
 	log *zap.Logger
 }
 
-func NewServicesServer(log *zap.Logger, db driver.Database, gc sspb.PostServiceClient) *ServicesServiceServer {
-	return &ServicesServiceServer{
+func NewServicesServer(log *zap.Logger, db driver.Database, gc stpb.StatesServiceClient) *ServicesServer {
+	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
 		sp_ctrl:  graph.NewServicesProvidersController(log, db),
 		ns_ctrl:  graph.NewNamespacesController(log, db),
 		drivers:  make(map[string]driverpb.DriverServiceClient),
-		ticker:   time.NewTicker(5 * time.Second),
-		statuses: gc,
+		states: gc,
+		monitoring: Routine{
+			Name: "Monitoring",
+			Running: false,
+		},
 	}
 }
 
@@ -65,11 +73,11 @@ type InstancesGroupDriverContext struct {
 	client *driverpb.DriverServiceClient
 }
 
-func (s *ServicesServiceServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
+func (s *ServicesServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
 	s.drivers[type_key] = client
 }
 
-func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *pb.CreateRequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
+func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *pb.CreateRequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -136,14 +144,14 @@ func (s *ServicesServiceServer) DoTestServiceConfig(ctx context.Context, log *za
 	return response, &namespace, nil
 }
 
-func (s *ServicesServiceServer) TestConfig(ctx context.Context, request *pb.CreateRequest) (*pb.TestConfigResponse, error) {
+func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateRequest) (*pb.TestConfigResponse, error) {
 	log := s.log.Named("TestServiceConfig")
 	log.Debug("Request received", zap.Any("request", request))
 	response, _, err := s.DoTestServiceConfig(ctx, log, request)
 	return response, err
 }
 
-func (s *ServicesServiceServer) Create(ctx context.Context, request *pb.CreateRequest) (*pb.Service, error) {
+func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) (*pb.Service, error) {
 	log := s.log.Named("CreateService")
 	log.Debug("Request received", zap.Any("request", request))
 	testResult, namespace, err := s.DoTestServiceConfig(ctx, log, request)
@@ -169,7 +177,7 @@ func (s *ServicesServiceServer) Create(ctx context.Context, request *pb.CreateRe
 	return service, nil
 }
 
-func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpResponse, error) {
+func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpResponse, error) {
 	log := s.log.Named("Up")
 	log.Debug("Request received", zap.Any("request", request))
 
@@ -187,7 +195,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 		sp_id := deploy_policies[group.GetUuid()]
 		sp, err := s.sp_ctrl.Get(ctx, sp_id)
 		if err != nil {
-			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
+			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
 			return nil, status.Errorf(codes.InvalidArgument, "Error getting ServiceProvider(%s)", sp_id)
 		}
 
@@ -201,7 +209,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 
 	err = s.ctrl.SetStatus(ctx, service, "starting")
 	if err != nil {
-		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
@@ -217,7 +225,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 
 		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
-			s.log.Error("Error deploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
+			log.Error("Error deploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
 			result.Errors = append(result.Errors, &pb.UpError{
 				Data: map[string]string{
 					"group": group.GetUuid(),
@@ -226,12 +234,12 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 			})
 			continue
 		}
-		s.log.Debug("Up Request Result", zap.Any("response", response))
+		log.Debug("Up Request Result", zap.Any("response", response))
 
 		// TODO: Change to Hash comparation
 		// TODO: Add cleanups
 		if len(group.Instances) != len(response.GetGroup().GetInstances()) {
-			s.log.Error("Instances config changed by Driver")
+			log.Error("Instances config changed by Driver")
 			result.Errors = append(result.Errors, &pb.UpError{
 				Data: map[string]string{
 					"group": group.GetUuid(),
@@ -247,7 +255,7 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 		group.Data = response.GetGroup().GetData()
 		err = s.ctrl.Provide(ctx, sp.ID, service.ID, group.GetUuid())
 		if err != nil {
-			s.log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
+			log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
 			result.Errors = append(result.Errors, &pb.UpError{
 				Data: map[string]string{
 					"group": group.GetUuid(),
@@ -256,21 +264,29 @@ func (s *ServicesServiceServer) Up(ctx context.Context, request *pb.UpRequest) (
 			})
 			continue
 		}
-		s.log.Debug("Updated Group", zap.Any("group", group))
+		log.Debug("Updated Group", zap.Any("group", group))
+	}
+
+	// Save provisions into Service Document for Quick Access
+	provisions, err := s.ctrl.GetProvisions(ctx, service.ID.String())
+	if err != nil {
+		log.Error("Error getting Provisions", zap.String("service", service.GetUuid()), zap.Error(err))
+	} else {
+		service.Provisions = provisions
 	}
 
 	service.Status = "up"
-	s.log.Debug("Updated Service", zap.Any("service", service))
+	log.Debug("Updated Service", zap.Any("service", service))
 	err = s.ctrl.Update(ctx, service.Service, false)
 	if err != nil {
-		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
 	return &pb.UpResponse{}, nil
 }
 
-func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownRequest) (*pb.DownResponse, error) {
+func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb.DownResponse, error) {
 	log := s.log.Named("Down")
 	log.Debug("Request received", zap.Any("request", request))
 
@@ -283,7 +299,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 
 	provisions, err := s.ctrl.GetProvisions(ctx, service.ID.String())
 	if err != nil {
-		s.log.Debug("Can't get provisions for Service", zap.Any("service", service), zap.Error(err))
+		log.Debug("Can't get provisions for Service", zap.Any("service", service), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Can't gather Service provisions")
 	}
 	contexts := make(map[string]*InstancesGroupDriverContext)
@@ -296,7 +312,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 		}
 		sp, err := s.sp_ctrl.Get(ctx, sp_id)
 		if err != nil {
-			s.log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
+			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
 			return nil, status.Errorf(codes.InvalidArgument, "Error getting ServiceProvider(%s)", sp_id)
 		}
 
@@ -311,7 +327,7 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 
 	err = s.ctrl.SetStatus(ctx, service, "stopping")
 	if err != nil {
-		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
@@ -326,13 +342,13 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 
 		res, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
-			s.log.Error("Error undeploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
+			log.Error("Error undeploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
 			continue
 		}
 		group := res.GetGroup()
 		err = s.ctrl.Unprovide(ctx, group.GetUuid())
 		if err != nil {
-			s.log.Error("Error unlinking group from ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
+			log.Error("Error unlinking group from ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
 			continue
 		}
 		service.Service.InstancesGroups[key] = group
@@ -340,14 +356,14 @@ func (s *ServicesServiceServer) Down(ctx context.Context, request *pb.DownReques
 
 	err = s.ctrl.SetStatus(ctx, service, "init")
 	if err != nil {
-		s.log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
 
 	return &pb.DownResponse{}, nil
 }
 
-func (s *ServicesServiceServer) Get(ctx context.Context, request *pb.GetRequest) (res *pb.Service, err error) {
+func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *pb.Service, err error) {
 	log := s.log.Named("Get")
 	log.Debug("Request received", zap.Any("request", request))
 
@@ -365,10 +381,23 @@ func (s *ServicesServiceServer) Get(ctx context.Context, request *pb.GetRequest)
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
 	}
 
+	states, err := s.GetStatesInternal(ctx, r.Service)
+	if err != nil {
+		log.Error("Error getting Instances States", zap.String("uuid", r.GetUuid()), zap.Error(err))
+		return r.Service, nil
+	}
+	log.Debug("Got Instances States", zap.Any("states", states))
+
+	for _, group := range r.GetInstancesGroups() {
+		for _, inst := range group.GetInstances() {
+			inst.State = states.States[inst.GetUuid()]
+		}
+	}
+
 	return r.Service, nil
 }
 
-func (s *ServicesServiceServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.ListResponse, err error) {
+func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.ListResponse, err error) {
 	log := s.log.Named("List")
 	log.Debug("Request received", zap.String("namespace", request.GetNamespace()), zap.String("show_deleted", request.GetShowDeleted()))
 
@@ -389,7 +418,7 @@ func (s *ServicesServiceServer) List(ctx context.Context, request *pb.ListReques
 	return response, nil
 }
 
-func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
+func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
 	log := s.log.Named("Delete")
 	log.Debug("Request received", zap.Any("request", request))
 
@@ -416,7 +445,7 @@ func (s *ServicesServiceServer) Delete(ctx context.Context, request *pb.DeleteRe
 	return &pb.DeleteResponse{Result: true}, nil
 }
 
-func (s *ServicesServiceServer) PerformServiceAction(ctx context.Context, req *pb.PerformActionRequest) (res *pb.PerformActionResponse, err error) {
+func (s *ServicesServer) PerformServiceAction(ctx context.Context, req *pb.PerformActionRequest) (res *pb.PerformActionResponse, err error) {
 	log := s.log.Named("PerformServiceAction")
 	log.Debug("Request received", zap.Any("request", req))
 
@@ -468,7 +497,7 @@ func (s *ServicesServiceServer) PerformServiceAction(ctx context.Context, req *p
 	})
 }
 
-func (s *ServicesServiceServer) GetProvisions(ctx context.Context, req *pb.GetProvisionsRequest) (*pb.GetProvisionsResponse, error) {
+func (s *ServicesServer) GetProvisions(ctx context.Context, req *pb.GetProvisionsRequest) (*pb.GetProvisionsResponse, error) {
 	log := s.log.Named("GetProvisions")
 	log.Debug("Request received", zap.Any("request", req))
 

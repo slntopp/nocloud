@@ -21,9 +21,11 @@ import (
 	"net"
 
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/services"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"github.com/spf13/viper"
@@ -31,9 +33,10 @@ import (
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	sspb "github.com/slntopp/nocloud/pkg/statuses/proto"
+	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -44,7 +47,7 @@ var (
 	arangodbCred  string
 	drivers       []string
 	SIGNING_KEY   []byte
-	statuses_host string
+	statesHost  string
 )
 
 func init() {
@@ -57,7 +60,7 @@ func init() {
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
-	viper.SetDefault("STATUSES_HOST", "statuses:8080")
+	viper.SetDefault("STATES_HOST", "states:8080")
 
 	port = viper.GetString("PORT")
 
@@ -65,7 +68,7 @@ func init() {
 	arangodbCred = viper.GetString("DB_CRED")
 	drivers = viper.GetStringSlice("DRIVERS")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
-	statuses_host = viper.GetString("STATUSES_HOST")
+	statesHost = viper.GetString("STATES_HOST")
 }
 
 func main() {
@@ -82,16 +85,16 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	log.Debug("Init Connection with Statuses", zap.String("host", statuses_host))
+	log.Debug("Init Connection with States", zap.String("host", statesHost))
 	opts := []grpc.DialOption{
 		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	conn, err := grpc.Dial(statuses_host, opts...)
+	conn, err := grpc.Dial(statesHost, opts...)
 	if err != nil {
-		log.Fatal("fail to dial Statuses", zap.Error(err))
+		log.Fatal("fail to dial States", zap.Error(err))
 	}
 	defer conn.Close()
-	grpc_client := sspb.NewPostServiceClient(conn)
+	grpc_client := stpb.NewStatesServiceClient(conn)
 
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
@@ -105,7 +108,7 @@ func main() {
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
-		conn, err := grpc.Dial(driver, grpc.WithInsecure())
+		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Error("Error registering driver", zap.String("driver", driver), zap.Error(err))
 			continue
@@ -118,9 +121,16 @@ func main() {
 		server.RegisterDriver(driver_type.GetType(), client)
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
-
-	go server.UpdateStates(context.Background())
+	
+	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		log.Fatal("Can't generate token", zap.Error(err))
+	}
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
+	go server.MonitoringRoutine(ctx)
 	pb.RegisterServicesServiceServer(s, server)
+
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))

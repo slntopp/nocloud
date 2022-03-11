@@ -23,8 +23,34 @@ message ProbeRequest {
     string payload = 2;
 }
 
+enum Status {
+    UNKNOWN = 0;
+    SERVING = 1; // Service is up and running
+    OFFLINE = 2; // Service is offline(down)
+    RUNNING = 3; // Routine is running
+    STOPPED = 4; // Routine is stopped
+    INTENAL = 5; // Internal error while making status
+    HASERRS = 6; // Check has errors
+    NOEXIST = 7; // Service has no Routines
+}
+
 message ProbeResponse {
     string response = 1;
+    Status status = 2;
+    repeated ServingStatus serving = 3;
+    repeated RoutineStatus routines = 4;
+}
+
+message ServingStatus {
+    string service = 1;
+    Status status = 2;
+    optional string error = 3;
+}
+
+message RoutineStatus {
+    string routine = 1;
+    ServingStatus status = 2;
+    string last_execution = 3;
 }
 
 service HealthService {
@@ -34,4 +60,9 @@ service HealthService {
             body: "*"
         };
     };
+};
+
+service InternalProbeService {
+    rpc Service(nocloud.health.ProbeRequest) returns (nocloud.health.ServingStatus);
+    rpc Routine(nocloud.health.ProbeRequest) returns (nocloud.health.RoutineStatus);
 };

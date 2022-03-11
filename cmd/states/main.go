@@ -20,10 +20,11 @@ import (
 	"net"
 
 	"github.com/go-redis/redis/v8"
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	auth "github.com/slntopp/nocloud/pkg/nocloud/admin_auth"
-	spb "github.com/slntopp/nocloud/pkg/statuses"
-	pb "github.com/slntopp/nocloud/pkg/statuses/proto"
+	spb "github.com/slntopp/nocloud/pkg/states"
+	pb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -42,7 +43,7 @@ func init() {
 	log = nocloud.NewLogger()
 
 	viper.SetDefault("PORT", "8080")
-	viper.SetDefault("REDIS_HOST", "redis_statuses:6379")
+	viper.SetDefault("REDIS_HOST", "redis_states:6379")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	port = viper.GetString("PORT")
@@ -70,11 +71,13 @@ func main() {
 	auth.SetContext(log, SIGNING_KEY)
 
 	var opts []grpc.ServerOption
-	grpcServer := grpc.NewServer(opts...)
+	s := grpc.NewServer(opts...)
 
-	server := spb.NewStatusesServer(log, rdb)
-	pb.RegisterPostServiceServer(grpcServer, server)
+	server := spb.NewStatesServer(log, rdb)
+	pb.RegisterStatesServiceServer(s, server)
+
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
-	log.Fatal("Failed to serve gRPC", zap.Error(grpcServer.Serve(lis)))
+	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
 }

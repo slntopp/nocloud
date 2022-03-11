@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 type SettingsServiceClient interface {
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*structpb.Struct, error)
 	Put(ctx context.Context, in *PutRequest, opts ...grpc.CallOption) (*PutResponse, error)
+	// rpc Sub(nocloud.settings.SubRequest) returns (stream nocloud.settings.SubRequest);
 	Keys(ctx context.Context, in *KeysRequest, opts ...grpc.CallOption) (*KeysResponse, error)
 }
 
@@ -65,6 +66,7 @@ func (c *settingsServiceClient) Keys(ctx context.Context, in *KeysRequest, opts 
 type SettingsServiceServer interface {
 	Get(context.Context, *GetRequest) (*structpb.Struct, error)
 	Put(context.Context, *PutRequest) (*PutResponse, error)
+	// rpc Sub(nocloud.settings.SubRequest) returns (stream nocloud.settings.SubRequest);
 	Keys(context.Context, *KeysRequest) (*KeysResponse, error)
 	mustEmbedUnimplementedSettingsServiceServer()
 }

@@ -24,6 +24,7 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"github.com/slntopp/nocloud/pkg/dns"
 	pb "github.com/slntopp/nocloud/pkg/dns/proto"
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	auth "github.com/slntopp/nocloud/pkg/nocloud/admin_auth"
 	"github.com/spf13/viper"
@@ -77,6 +78,7 @@ func main() {
 
 	server := dns.NewDNSServer(log, rdb)
 	pb.RegisterDNSServer(s, server)
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))

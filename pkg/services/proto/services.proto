@@ -20,6 +20,7 @@ import "google/protobuf/struct.proto";
 import "pkg/instances/proto/instances.proto";
 import "google/api/annotations.proto";
 import "pkg/hasher/hasherpb/hasher.proto";
+import "pkg/states/proto/states.proto";
 
 message Service {
     string uuid = 1;
@@ -31,6 +32,7 @@ message Service {
         [(nocloud.hasher.hashed) = true];
     map<string, nocloud.instances.InstancesGroup> instances_groups = 6;
     string hash = 7 [(nocloud.hasher.hash) = true];
+    map<string, string> provisions = 8;
 }
 
 message TestConfigError {
@@ -112,15 +114,6 @@ message GetStatesRequest {
     string uuid = 1; // Service UUID
 }
 
-message State {
-    int32 state = 1; // NoCloud Instance State
-    map<string, google.protobuf.Value> meta = 2; // Driver(Provider/Hypervisor) State data
-}
-
-message GetStatesResponse {
-    map<string, State> states = 1; // Map of Instance UUID to it's State
-}
-
 message GetProvisionsRequest {
     string uuid = 1;
 }
@@ -170,7 +163,7 @@ service ServicesService {
         };
     };
 
-    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.services.GetStatesResponse) {
+    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.states.GetStatesResponse) {
         option (google.api.http) = {
             get: "/services/{uuid}/states"
         };

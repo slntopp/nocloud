@@ -20,7 +20,7 @@ import (
 	"errors"
 
 	"github.com/golang-jwt/jwt/v4"
-	"github.com/slntopp/nocloud/pkg/health/healthpb"
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
 
@@ -40,6 +40,14 @@ func SetContext(logger *zap.Logger, key []byte) {
 	log = logger.Named("JWT")
 	SIGNING_KEY = key
 	log.Debug("Context set", zap.ByteString("signing_key", key))
+}
+
+func MakeToken(account string) (string, error) {
+	claims := jwt.MapClaims{}
+	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = account
+	claims[nocloud.NOCLOUD_ROOT_CLAIM] = 4
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(SIGNING_KEY)
 }
 
 func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {

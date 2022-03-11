@@ -17,26 +17,202 @@ package health
 
 import (
 	"context"
+	"sync"
 
-	"github.com/slntopp/nocloud/pkg/health/healthpb"
+	pb "github.com/slntopp/nocloud/pkg/health/proto"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
+var (
+	registryHost, servicesHost, servicesProvidersHost,
+	settingsHost, dnsHost, statesHost string
+)
+
+var grpc_services []string
+
+func init() {
+	viper.AutomaticEnv()
+
+	viper.SetDefault("REGISTRY_HOST", "registry:8080")
+	registryHost = viper.GetString("REGISTRY_HOST")
+	viper.SetDefault("SERVICES_HOST", "services-registry:8080")
+	servicesHost = viper.GetString("SERVICES_HOST")
+	viper.SetDefault("SP_HOST", "sp-registry:8080")
+	servicesProvidersHost = viper.GetString("SP_HOST")
+	viper.SetDefault("SETTINGS_HOST", "settings:8080")
+	settingsHost = viper.GetString("SETTINGS_HOST")
+	viper.SetDefault("DNS_HOST", "dns-mgmt:8080")
+	dnsHost = viper.GetString("DNS_HOST")
+	viper.SetDefault("STATES_HOST", "states:8080")
+	statesHost = viper.GetString("STATES_HOST")
+
+	grpc_services = []string{
+		registryHost, servicesHost, servicesProvidersHost,
+		settingsHost, dnsHost, statesHost,
+	}
+}
+
 type HealthServiceServer struct {
-	healthpb.UnimplementedHealthServiceServer
+	pb.UnimplementedHealthServiceServer
+	ctx context.Context
 	log *zap.Logger
 }
 
-func NewServer(log *zap.Logger) *HealthServiceServer {
-	return &HealthServiceServer{log: log}
+func NewServer(log *zap.Logger, ctx context.Context) *HealthServiceServer {
+	return &HealthServiceServer{log: log, ctx: ctx}
 }
 
-func (s *HealthServiceServer) Probe(ctx context.Context, request *healthpb.ProbeRequest) (*healthpb.ProbeResponse, error) {
+func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
 	log := s.log.Named("Health Probe")
 	log.Info("Probe received", zap.String("Type", request.ProbeType))
-	if request.ProbeType == "PING" {
-		return &healthpb.ProbeResponse{Response: "PONG"}, nil
+
+	switch(request.ProbeType) {
+	case "PING":
+		return &pb.ProbeResponse{
+			Response: "PONG",
+			Status: pb.Status_SERVING,
+			Serving: []*pb.ServingStatus{{
+				Service: "health",
+				Status: pb.Status_SERVING,
+			}},
+		}, nil
+	case "services":
+		return s.CheckServices(ctx, request)
+	case "routines":
+		return s.CheckRoutines(ctx, request)
 	}
 
-	return &healthpb.ProbeResponse{Response: "ok"}, nil
+	return &pb.ProbeResponse{
+		Response: "ok",
+		Status: pb.Status_SERVING,
+		Serving: []*pb.ServingStatus{{
+			Service: "health",
+			Status: pb.Status_SERVING,
+		}},
+	}, nil
+}
+
+func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
+	check_services_ch := make(chan *pb.ServingStatus, len(grpc_services))
+	var wg sync.WaitGroup
+	
+	for _, service := range grpc_services {
+		wg.Add(1)
+		go func(service string) {
+			defer wg.Done()
+			s.log.Debug("Dialing Service", zap.String("service", service))
+			conn, err := grpc.Dial(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				s.log.Error("Dial returned Error", zap.Error(err))
+				err_string := err.Error()
+				check_services_ch <- &pb.ServingStatus{
+					Service: service,
+					Status: pb.Status_OFFLINE,
+					Error: &err_string,
+				}
+				s.log.Debug("Sent to channel", zap.String("service", service))
+				return
+			}
+			client := pb.NewInternalProbeServiceClient(conn)
+
+			s.log.Debug("Testing Service", zap.String("service", service))
+			r, err := client.Service(s.ctx, request)
+			if err != nil {
+				s.log.Error("Testing returned Error", zap.Error(err))
+				err_string := err.Error()
+				check_services_ch <- &pb.ServingStatus{
+					Service: service,
+					Status: pb.Status_INTENAL,
+					Error: &err_string,
+				}
+				s.log.Debug("Sent to channel", zap.String("service", service))
+				return
+			}
+			s.log.Debug("Service tested", zap.String("service", service))
+			check_services_ch <- r
+			s.log.Debug("Sent to channel", zap.String("service", service))
+		}(service)
+	}
+
+	s.log.Debug("Waiting for tests")
+	wg.Wait()
+	s.log.Debug("Tests completed, processing")
+
+	res := &pb.ProbeResponse{Status: pb.Status_SERVING}
+	for i := 0; i < len(grpc_services); i++ {
+		r := <- check_services_ch
+		s.log.Debug("Received response", zap.String("service", r.GetService()))
+		res.Serving = append(res.Serving, r)
+		if r.Status != pb.Status_SERVING {
+			res.Status = pb.Status_HASERRS
+		}
+	}
+
+	return res, nil
+}
+
+func (s *HealthServiceServer) CheckRoutines(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
+	check_routines_ch := make(chan *pb.RoutineStatus, len(grpc_services))
+	var wg sync.WaitGroup
+
+	for _, service := range grpc_services {
+		wg.Add(1)
+		go func(service string) {
+			defer wg.Done()
+			s.log.Debug("Dialing Service", zap.String("service", service))
+			conn, err := grpc.Dial(service, grpc.WithTransportCredentials(insecure.NewCredentials()))
+			if err != nil {
+				s.log.Error("Dial returned Error", zap.Error(err))
+				err_string := err.Error()
+				check_routines_ch <- &pb.RoutineStatus{
+					Status: &pb.ServingStatus{
+						Service: service,
+						Status: pb.Status_OFFLINE,
+						Error: &err_string,
+					},
+				}
+				s.log.Debug("Sent to channel", zap.String("service", service))
+				return
+			}
+			client := pb.NewInternalProbeServiceClient(conn)
+
+			s.log.Debug("Testing Service", zap.String("service", service))
+			r, err := client.Routine(s.ctx, request)
+			if err != nil {
+				s.log.Error("Testing returned Error", zap.Error(err))
+				err_string := err.Error()
+				check_routines_ch <- &pb.RoutineStatus{
+					Status: &pb.ServingStatus{
+						Service: service,
+						Status: pb.Status_INTENAL,
+						Error: &err_string,
+					},
+				}
+				s.log.Debug("Sent to channel", zap.String("service", service))
+				return
+			}
+			s.log.Debug("Service tested", zap.String("service", service))
+			check_routines_ch <- r
+			s.log.Debug("Sent to channel", zap.String("service", service))
+		}(service)
+	}
+
+	s.log.Debug("Waiting for tests")
+	wg.Wait()
+	s.log.Debug("Tests completed, processing")
+
+	res := &pb.ProbeResponse{Status: pb.Status_RUNNING}
+	for i := 0; i < len(grpc_services); i++ {
+		r := <- check_routines_ch
+		s.log.Debug("Received response", zap.String("service", r.GetStatus().GetService()))
+		res.Routines = append(res.Routines, r)
+		if r.GetStatus().GetStatus() != pb.Status_RUNNING && r.GetStatus().GetStatus() != pb.Status_NOEXIST {
+			res.Status = pb.Status_HASERRS
+		}
+	}
+
+	return res, nil
 }

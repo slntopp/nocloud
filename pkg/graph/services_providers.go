@@ -50,6 +50,15 @@ func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *Service
 	return err
 }
 
+// Update ServicesProvider in DB
+func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *sppb.ServicesProvider) (error) {
+	ctrl.log.Debug("Updating ServicesProvider", zap.Any("sp", sp))
+
+	meta, err := ctrl.col.ReplaceDocument(ctx, sp.GetUuid(), sp)
+	ctrl.log.Debug("ReplaceDocument.Result", zap.Any("meta", meta), zap.Error(err))
+	return err
+}
+
 func (ctrl *ServicesProvidersController) Delete(ctx context.Context, id string) (err error) {
 	ctrl.log.Debug("Deleting ServicesProvider Document", zap.Any("uuid", id))
 	_, err = ctrl.col.RemoveDocument(ctx, id)

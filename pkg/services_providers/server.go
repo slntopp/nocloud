@@ -25,29 +25,45 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
+type Routine struct {
+	Name string
+	LastExec string
+	Running bool
+}
+
 type ServicesProviderServer struct {
 	sppb.UnimplementedServicesProvidersServiceServer
 
 	drivers map[string]driverpb.DriverServiceClient
+	states stpb.StatesServiceClient
+
 	extention_servers map[string]sppb.ServicesProvidersExtentionsServiceClient
 	db driver.Database
 	ctrl graph.ServicesProvidersController
 	ns_ctrl graph.NamespacesController
 
+	monitoring Routine
+
 	log *zap.Logger
 }
 
-func NewServicesProviderServer(log *zap.Logger, db driver.Database) *ServicesProviderServer {
+func NewServicesProviderServer(log *zap.Logger, db driver.Database, gc stpb.StatesServiceClient) *ServicesProviderServer {
 	return &ServicesProviderServer{
 		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl: graph.NewNamespacesController(log, db),
 		drivers: make(map[string]driverpb.DriverServiceClient),
 		extention_servers: make(map[string]sppb.ServicesProvidersExtentionsServiceClient),
+		monitoring: Routine{
+			Name: "Monitoring",
+			Running: false,
+		},
+		states: gc,
 	}
 }
 

@@ -31,6 +31,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	accounting "github.com/slntopp/nocloud/pkg/registry"
 
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	pb "github.com/slntopp/nocloud/pkg/registry/proto"
 )
 
@@ -95,6 +96,8 @@ func main() {
 
 	namespaces_server := accounting.NewNamespacesServer(log, db)
 	pb.RegisterNamespacesServiceServer(s, namespaces_server)
+	
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 	
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
