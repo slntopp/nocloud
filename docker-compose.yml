@@ -17,6 +17,7 @@ services:
       - proxy
   health:
     container_name: health-service
+    restart: always
     image: ghcr.io/slntopp/nocloud/health:latest
     environment:
       LOG_LEVEL: -1
@@ -43,6 +44,7 @@ services:
       - proxy
   registry:
     container_name: registry
+    restart: always
     image: ghcr.io/slntopp/nocloud/registry:latest
     environment:
       LOG_LEVEL: -1
@@ -61,6 +63,7 @@ services:
       - db
   services-registry:
     container_name: services-registry
+    restart: always
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     environment:
       LOG_LEVEL: -1
@@ -79,6 +82,7 @@ services:
       - db
   sp-registry:
     container_name: sp-registry
+    restart: always
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     environment:
       LOG_LEVEL: -1
@@ -95,6 +99,7 @@ services:
       - db
 
   dns-mgmt:
+    restart: always
     image: ghcr.io/slntopp/nocloud/dns-mgmt:latest
     networks:
       - proxy
@@ -105,6 +110,7 @@ services:
       SIGNING_KEY: "${SIGNING_KEY}"
       REDIS_HOST: redis:6379
   settings:
+    restart: always
     image: ghcr.io/slntopp/nocloud/settings:latest
     networks:
       - proxy
@@ -113,7 +119,7 @@ services:
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
-      REDIS_HOST: redis:6379
+      REDIS_HOST: redis_settings:6379
   redis_settings:
     image: redis
     restart: always
@@ -124,6 +130,7 @@ services:
       - redis-settings-data:/data
 
   states:
+    restart: always
     image: ghcr.io/slntopp/nocloud/states:latest
     networks:
       - grpc-internal
@@ -141,10 +148,11 @@ services:
     ports:
       - 6379:6379
     volumes:
-      - redis_states-data:/data
+      - redis-states-data:/data
 
   db:
     container_name: database-master
+    restart: always
     image: arangodb/arangodb:latest
     environment:
       ARANGO_ROOT_PASSWORD: "${DB_PASS}"

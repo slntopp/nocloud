@@ -1,12 +1,15 @@
 version: "3.8"
 services:
   proxy:
+    restart: always
     image: nginx
     depends_on:
       - health
       - registry
       - services-registry
       - sp-registry
+      - settings
+      - dns-mgmt
     volumes:
       - ../../proxy:/etc/nginx/templates
     ports:
@@ -15,6 +18,7 @@ services:
       - proxy
   health:
     container_name: health-service
+    restart: always
     image: ghcr.io/slntopp/nocloud/health:latest
     environment:
       LOG_LEVEL: -1
@@ -30,6 +34,7 @@ services:
       - grpc-internal
   apiserver-web:
     container_name: apiserver-web
+    restart: always
     image: ghcr.io/slntopp/nocloud/apiserver-web:latest
     environment:
       LOG_LEVEL: -1
@@ -41,6 +46,7 @@ services:
       - grpc-internal
   registry:
     container_name: registry
+    restart: always
     image: ghcr.io/slntopp/nocloud/registry:latest
     environment:
       LOG_LEVEL: -1
@@ -59,6 +65,7 @@ services:
       - db
   services-registry:
     container_name: services-registry
+    restart: always
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     environment:
       LOG_LEVEL: -1
@@ -78,6 +85,7 @@ services:
       - db
   sp-registry:
     container_name: sp-registry
+    restart: always
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     environment:
       LOG_LEVEL: -1
@@ -95,6 +103,7 @@ services:
       - db
 
   dns-mgmt:
+    restart: always
     image: ghcr.io/slntopp/nocloud/dns-mgmt:latest
     networks:
       - proxy
@@ -105,6 +114,7 @@ services:
       SIGNING_KEY: "${SIGNING_KEY}"
       REDIS_HOST: redis:6379
   settings:
+    restart: always
     image: ghcr.io/slntopp/nocloud/settings:latest
     networks:
       - proxy
@@ -124,6 +134,7 @@ services:
       - redis-settings-data:/data
 
   states:
+    restart: always
     image: ghcr.io/slntopp/nocloud/states:latest
     networks:
       - grpc-internal
@@ -145,6 +156,7 @@ services:
 
   driver-ione:
     container_name: driver
+    restart: always
     image: ghcr.io/slntopp/nocloud-driver-ione:latest
     networks:
       - grpc-internal
@@ -155,6 +167,7 @@ services:
 
   db:
     container_name: database-master
+    restart: always
     image: arangodb/arangodb:latest
     environment:
       ARANGO_ROOT_PASSWORD: "${DB_PASS}"
