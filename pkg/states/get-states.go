@@ -18,7 +18,6 @@ package states
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -49,11 +48,19 @@ func (s *StatesServer) GetStates(ctx context.Context, req *pb.GetStatesRequest) 
 
 	for i, state := range states {
 		var istate pb.State
+		key := strings.Replace(keys[i], KEYS_PREFIX + ":", "", 1)
+
 		switch state.(type) {
 		case string:
 			err = json.Unmarshal([]byte(state.(string)), &istate)
 		case nil:
-			err = errors.New("No Data")
+			states := make(map[string]*pb.State)
+			states[key] = &pb.State{
+				State: pb.NoCloudState_UNKNOWN,
+			}
+			return &pb.GetStatesResponse{
+				States: states,
+			}, nil
 		}
 		if err != nil {
 			s.log.Error("Error Unmarshal JSON",
@@ -61,7 +68,6 @@ func (s *StatesServer) GetStates(ctx context.Context, req *pb.GetStatesRequest) 
 			return nil, status.Error(codes.Internal, "Error Unmarshal JSON")
 		}
 
-		key := strings.Replace(keys[i], KEYS_PREFIX + ":", "", 1)
 		resp.States[key] = &istate
 	}
 
