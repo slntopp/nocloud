@@ -71,7 +71,7 @@ func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r 
 	meta, err := ctrl.col.ReadDocument(ctx, id, &sp)
 	if err != nil {
 		ctrl.log.Debug("Error reading document(ServiceProvider)", zap.Error(err))
-		return nil, errors.New("Error reading document")
+		return nil, errors.New("error reading document")
 	}
 	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("sp", &sp))
 	sp.Uuid = meta.ID.Key()
