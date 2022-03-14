@@ -24,11 +24,11 @@ import (
 
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	spb "github.com/slntopp/nocloud/pkg/services/proto"
-	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 )
 
 type ServicesProvider struct {
-	*sppb.ServicesProvider
+	*pb.ServicesProvider
 	driver.DocumentMeta
 }
 
@@ -51,7 +51,7 @@ func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *Service
 }
 
 // Update ServicesProvider in DB
-func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *sppb.ServicesProvider) (error) {
+func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *pb.ServicesProvider) (error) {
 	ctrl.log.Debug("Updating ServicesProvider", zap.Any("sp", sp))
 
 	meta, err := ctrl.col.ReplaceDocument(ctx, sp.GetUuid(), sp)
@@ -67,7 +67,7 @@ func (ctrl *ServicesProvidersController) Delete(ctx context.Context, id string) 
 
 func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r *ServicesProvider, err error) {
 	ctrl.log.Debug("Getting ServicesProvider", zap.Any("sp", id))
-	var sp sppb.ServicesProvider
+	var sp pb.ServicesProvider
 	meta, err := ctrl.col.ReadDocument(ctx, id, &sp)
 	if err != nil {
 		ctrl.log.Debug("Error reading document(ServiceProvider)", zap.Error(err))
@@ -95,7 +95,7 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 	defer c.Close()
 	var r []*ServicesProvider
 	for {
-		var s sppb.ServicesProvider
+		var s pb.ServicesProvider
 		meta, err := c.ReadDocument(ctx, &s)
 		if driver.IsNoMoreDocuments(err) {
 			break
