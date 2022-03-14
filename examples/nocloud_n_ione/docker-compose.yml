@@ -149,6 +149,7 @@ services:
     networks:
       - grpc-internal
     environment:
+      STATES_HOST: states:8080
       DRIVER_TYPE_KEY: ione
       LOG_LEVEL: -1
 
