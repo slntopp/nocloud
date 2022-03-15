@@ -17,7 +17,6 @@ package graph
 
 import (
 	"context"
-	"errors"
 
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
@@ -33,7 +32,7 @@ type ServicesProvider struct {
 }
 
 type ServicesProvidersController struct {
-	col driver.Collection // Services Collection
+	col driver.Collection // Services Providers Collection
 
 	log *zap.Logger
 }
@@ -68,11 +67,17 @@ func (ctrl *ServicesProvidersController) Delete(ctx context.Context, id string) 
 func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r *ServicesProvider, err error) {
 	ctrl.log.Debug("Getting ServicesProvider", zap.Any("sp", id))
 	var sp pb.ServicesProvider
-	meta, err := ctrl.col.ReadDocument(ctx, id, &sp)
+	query := `RETURN DOCUMENT(@sp)`
+	c, err := ctrl.col.Database().Query(ctx, query, map[string]interface{}{
+		"sp": driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, id),
+	})
 	if err != nil {
 		ctrl.log.Debug("Error reading document(ServiceProvider)", zap.Error(err))
-		return nil, errors.New("error reading document")
+		return nil, err
 	}
+	defer c.Close()
+
+	meta, err := c.ReadDocument(ctx, &sp)
 	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("sp", &sp))
 	sp.Uuid = meta.ID.Key()
 	return &ServicesProvider{&sp, meta}, err
