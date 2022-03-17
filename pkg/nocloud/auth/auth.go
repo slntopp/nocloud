@@ -50,6 +50,14 @@ func MakeToken(account string) (string, error) {
 	return token.SignedString(SIGNING_KEY)
 }
 
+func MakeTokenInstance(instance string) (string, error) {
+	claims := jwt.MapClaims{}
+	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = "placeholder"
+	claims[nocloud.NOCLOUD_INSTANCE_CLAIM] = instance
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(SIGNING_KEY)
+}
+
 func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	l := log.Named("Interceptor")
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
@@ -93,14 +101,24 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.(string))
 	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, account.(string))
 
-	sp := token[nocloud.NOCLOUD_SP_CLAIM]
-	if sp == nil {
-		goto done
-	}
-	ctx = context.WithValue(ctx, nocloud.NoCloudSp, sp.(string))
-	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_SP_CLAIM, account.(string))
+	ctx = func(ctx context.Context)(context.Context){
+		sp := token[nocloud.NOCLOUD_SP_CLAIM]
+		if sp == nil {
+			return ctx
+		}
+		ctx = context.WithValue(ctx, nocloud.NoCloudSp, sp.(string))
+		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_SP_CLAIM, sp.(string))
+	}(ctx)
 
-	done:
+	ctx = func(ctx context.Context)(context.Context){
+		inst := token[nocloud.NOCLOUD_INSTANCE_CLAIM]
+		if inst == nil {
+			return ctx
+		}
+		ctx = context.WithValue(ctx, nocloud.NoCloudInstance, inst.(string))
+		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_INSTANCE_CLAIM, inst.(string))
+	}(ctx)
+
 	return ctx, nil
 }
 
