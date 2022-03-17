@@ -32,6 +32,7 @@ enum NoCloudState {
 message State {
     NoCloudState state = 1; // NoCloud Instance State
     map<string, google.protobuf.Value> meta = 2; // Driver(Provider/Hypervisor) State data
+    optional int64 ts = 3;
 }
 
 message PostStateRequest {
