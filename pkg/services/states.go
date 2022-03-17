@@ -51,7 +51,7 @@ func (s *ServicesServer) GetStatesInternal(ctx context.Context, service *pb.Serv
 	return resp, err
 }
 
-func (s *ServicesServer) PostStates(ctx context.Context, request *stpb.PostStateRequest) (*stpb.PostStateResponse, error) {
+func (s *ServicesServer) PostState(ctx context.Context, request *stpb.PostStateRequest) (*stpb.PostStateResponse, error) {
 	inst, ok := ctx.Value(nocloud.NoCloudInstance).(string)
 	if !ok || inst != request.GetUuid() {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Post State to Instance")
