@@ -17,7 +17,6 @@ syntax = "proto3";
 package nocloud.states;
 
 import "google/protobuf/struct.proto";
-import "pkg/hasher/hasherpb/hasher.proto";
 
 enum NoCloudState {
     INIT = 0;

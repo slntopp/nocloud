@@ -47,3 +47,7 @@ func (s *ServicesServer) GetStatesInternal(ctx context.Context, service *pb.Serv
 	})
 	return resp, err
 }
+
+func (s *ServicesServer) PostStates(ctx context.Context, request *stpb.PostStateRequest) (*stpb.PostStateResponse, error) {
+	return s.states.PostState(ctx, request)
+}

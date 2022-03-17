@@ -93,6 +93,14 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.(string))
 	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, account.(string))
 
+	sp := token[nocloud.NOCLOUD_SP_CLAIM]
+	if sp == nil {
+		goto done
+	}
+	ctx = context.WithValue(ctx, nocloud.NoCloudSp, sp.(string))
+	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_SP_CLAIM, account.(string))
+
+	done:
 	return ctx, nil
 }
 
@@ -109,7 +117,7 @@ func validateToken(tokenString string) (jwt.MapClaims, error) {
 	}
 
 	if !token.Valid {
-		return nil, errors.New("Invalid token")
+		return nil, errors.New("invalid token")
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {

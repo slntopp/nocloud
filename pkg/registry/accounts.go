@@ -68,7 +68,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 
 	acc, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
-		s.log.Debug("Error getting account", zap.String("requested_id", request.Uuid),  zap.Any("error", err))
+		log.Debug("Error getting account", zap.String("requested_id", request.Uuid),  zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
@@ -89,7 +89,7 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	acc, err := s.ctrl.Get(ctx, requestor)
 	if err != nil {
-		s.log.Debug("Error getting account", zap.Any("error", err))
+		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.PermissionDenied, "Requestor Account not found")
 	}
 	log.Debug("Requestor", zap.Any("account", acc))
@@ -97,7 +97,7 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	var pool []graph.Account
 	pool, err = s.ctrl.List(ctx, acc, request.Depth)
 	if err != nil {
-		s.log.Debug("Error listing accounts", zap.Any("error", err))
+		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")
 	}
 	log.Debug("List result", zap.Any("pool", pool))
@@ -131,8 +131,17 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 		if !ok {
 			lvl = 0
 		}
-		s.log.Debug("Adding Root claim to the token", zap.Int32("access_lvl", lvl))
+		log.Debug("Adding Root claim to the token", zap.Int32("access_lvl", lvl))
 		claims[nocloud.NOCLOUD_ROOT_CLAIM] = lvl
+	}
+
+	if sp := request.GetSpClaim(); sp != "" {
+		ok, lvl := graph.AccessLevel(ctx, s.db, account.Key, driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp).String())
+		if !ok {
+			lvl = 0
+		}
+		log.Debug("Adding ServicesProvider claim to the token", zap.Int32("access_lvl", lvl))
+		claims[nocloud.NOCLOUD_SP_CLAIM] = lvl
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -153,7 +162,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 
 	ns, err := s.ns_ctrl.Get(ctx, request.Namespace)
 	if err != nil {
-		s.log.Debug("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
+		log.Debug("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
 		return nil, err
 	}
 
@@ -166,7 +175,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 
 	account, err := s.ctrl.Create(ctx, request.Title)
 	if err != nil {
-		s.log.Debug("Error creating account", zap.Error(err))
+		log.Debug("Error creating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating account")
 	}
 	res := &accountspb.CreateResponse{Uuid: account.Key}
@@ -178,7 +187,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
 	err = account.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
 	if err != nil {
-		s.log.Debug("Error linking to namespace")
+		log.Debug("Error linking to namespace")
 		return res, err
 	}
 
@@ -205,7 +214,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 
 	acc, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
-		s.log.Debug("Error getting account", zap.Any("error", err))
+		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
@@ -216,7 +225,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 
 	err = s.ctrl.Update(ctx, acc, request.Title)
 	if err != nil {
-		s.log.Debug("Error updating account", zap.Error(err))
+		log.Debug("Error updating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while updating account")
 	}
 
@@ -236,7 +245,7 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 
 	acc, err := s.ctrl.Get(ctx, request.Account)
 	if err != nil {
-		s.log.Debug("Error getting account", zap.Any("error", err))
+		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
@@ -248,11 +257,11 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 
 	edge, _ := s.db.Collection(ctx, schema.ACC2CRED)
 	old_cred_key, has_credentials := s.ctrl.GetCredentials(ctx, edge, acc, auth.Type)
-	s.log.Debug("Checking if has credentials", zap.Bool("has_credentials", has_credentials), zap.Any("old_credentials", old_cred_key))
+	log.Debug("Checking if has credentials", zap.Bool("has_credentials", has_credentials), zap.Any("old_credentials", old_cred_key))
 
 	cred, err := credentials.MakeCredentials(auth, log)
 	if err != nil {
-		s.log.Debug("Error creating new credentials", zap.String("type", auth.Type), zap.Error(err))
+		log.Debug("Error creating new credentials", zap.String("type", auth.Type), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error creading new credentials")
 	}
 
@@ -263,7 +272,7 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 	}
 	
 	if err != nil {
-		s.log.Debug("Error updating/setting credentials", zap.String("type", auth.Type), zap.Error(err))
+		log.Debug("Error updating/setting credentials", zap.String("type", auth.Type), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error updating/setting credentials")
 	}
 
@@ -279,7 +288,7 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 
 	acc, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
-		s.log.Debug("Error getting account", zap.Any("error", err))
+		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
@@ -289,7 +298,7 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 
 	err = acc.Delete(ctx, s.db)
 	if err != nil {
-		s.log.Debug("Error deleting account and it's children", zap.Error(err))
+		log.Debug("Error deleting account and it's children", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error deleting account")
 	}
 
