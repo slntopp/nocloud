@@ -18,8 +18,11 @@ package services
 import (
 	"context"
 
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	stpb "github.com/slntopp/nocloud/pkg/states/proto"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 //Gets states Instanses of Servce from pkg/states
@@ -48,6 +51,10 @@ func (s *ServicesServer) GetStatesInternal(ctx context.Context, service *pb.Serv
 	return resp, err
 }
 
-func (s *ServicesServer) PostStates(ctx context.Context, request *stpb.PostStateRequest) (*stpb.PostStateResponse, error) {
+func (s *ServicesServer) PostState(ctx context.Context, request *stpb.PostStateRequest) (*stpb.PostStateResponse, error) {
+	inst, ok := ctx.Value(nocloud.NoCloudInstance).(string)
+	if !ok || inst != request.GetUuid() {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Post State to Instance")
+	}
 	return s.states.PostState(ctx, request)
 }

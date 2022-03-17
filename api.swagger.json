@@ -1469,6 +1469,9 @@
         },
         "spClaim": {
           "type": "string"
+        },
+        "instanceClaim": {
+          "type": "string"
         }
       }
     },
@@ -2268,6 +2271,10 @@
           "additionalProperties": {
             "type": "object"
           }
+        },
+        "ts": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
