@@ -167,6 +167,7 @@ services:
     environment:
       STATES_HOST: states:8080
       DRIVER_TYPE_KEY: ione
+      SIGNING_KEY: "${SIGNING_KEY}"
       LOG_LEVEL: -1
 
   db:
