@@ -240,7 +240,7 @@ func (ctrl *ServicesController) GetProvisions(ctx context.Context, service strin
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
-	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	c, err := ctrl.db.Query(ctx, query, bindVars)
 	if err != nil {
 		return nil, err
 	}
@@ -276,4 +276,33 @@ func (ctrl *ServicesController) SetStatus(ctx context.Context, s *Service, statu
 	// TODO: check if valid status message
 	s.Status = status
 	return ctrl.Update(ctx, s.Service, false)
+}
+
+const findServiceByInstanceQuery =
+`FOR service IN @@services
+FILTER @instance IN service.instances[*]
+LIMIT 1
+    RETURN service`
+
+// Returns Service by one of it's Instances UUID
+func (ctrl *ServicesController) FindServiceByInstance(ctx context.Context, instance string) (*Service, error) {
+	log := ctrl.log.Named("FindServiceByInstance")
+
+	c, err := ctrl.db.Query(ctx, findServiceByInstanceQuery, map[string]interface{}{
+		"instance": instance,
+		"@services": schema.SERVICES_COL,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	var service *pb.Service
+	meta, err := c.ReadDocument(ctx, service)
+	if err != nil {
+		log.Error("Error reading new document", zap.String("instance", instance), zap.Error(err))
+		return nil, err
+	}
+	service.Uuid = meta.ID.Key()
+	return &Service{service, meta}, nil
 }
