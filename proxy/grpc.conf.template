@@ -14,6 +14,10 @@ server {
         grpc_pass grpc://sp-registry:8080;
     }
 
+    location /nocloud.edge. {
+        grpc_pass grpc://edge:8080;
+    }
+
     location /nocloud.health. {
         grpc_pass grpc://health:8080;
     }
