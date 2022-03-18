@@ -18,6 +18,13 @@ export default {
     setServicesProviders(state, servicesProviders) {
       state.servicesProviders = servicesProviders;
     },
+    updateService(state, service) {
+      if (!state.servicesProviders.length)
+        state.servicesProviders.push(service);
+      state.servicesProviders = state.servicesProviders.map((serv) =>
+        serv.uuid === service.uuid ? service : serv
+      );
+    },
     setLoading(state, data) {
       state.loading = data;
     },
@@ -30,6 +37,23 @@ export default {
           .list()
           .then((response) => {
             commit("setServicesProviders", response.pool);
+            resolve(response);
+          })
+          .catch((error) => {
+            reject(error);
+          })
+          .finally(() => {
+            commit("setLoading", false);
+          });
+      });
+    },
+    fetchById({ commit }, id) {
+      commit("setLoading", true);
+      return new Promise((resolve, reject) => {
+        api.servicesProviders
+          .get(id)
+          .then((response) => {
+            commit("updateService", response);
             resolve(response);
           })
           .catch((error) => {
