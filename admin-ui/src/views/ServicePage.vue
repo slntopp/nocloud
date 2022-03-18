@@ -88,6 +88,13 @@ export default {
       return this.$store.getters["services/loading"];
     },
   },
+  created() {
+    this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("services/fetchById", this.serviceId).then(() => {
+      this.found = !!this.service;
+      document.title = `${this.serviceTitle} | NoCloud`;
+    });
+  },
   mounted() {
     document.title = `${this.serviceTitle} | NoCloud`;
     this.$store.commit("reloadBtn/setCallback", {

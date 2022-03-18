@@ -22,6 +22,7 @@ export default {
       state.loading = data;
     },
     updateService(state, service) {
+      if (!state.services.length) state.services.push(service);
       state.services = state.services.map((serv) =>
         serv.uuid === service.uuid ? service : serv
       );
