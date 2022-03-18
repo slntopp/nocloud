@@ -1,5 +1,5 @@
 <template>
-  <div class="service pa-4">
+  <div class="service pa-4 h-100">
     <div class="page__title mb-5">
       <router-link :to="{ name: 'Services' }">Services</router-link>
       /
