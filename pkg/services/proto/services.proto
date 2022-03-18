@@ -168,7 +168,6 @@ service ServicesService {
             get: "/services/{uuid}/states"
         };
     };
-    rpc PostState(nocloud.states.PostStateRequest) returns (nocloud.states.PostStateResponse);
     rpc GetProvisions(nocloud.services.GetProvisionsRequest) returns (nocloud.services.GetProvisionsResponse) {
         option (google.api.http) = {
             get: "/services/{uuid}/provisions"

@@ -29,6 +29,9 @@
       "name": "DriverService"
     },
     {
+      "name": "EdgeService"
+    },
+    {
       "name": "HealthService"
     },
     {
@@ -1138,7 +1141,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/services_providersTestResponse"
+              "$ref": "#/definitions/nocloudservices_providersTestResponse"
             }
           },
           "default": {
@@ -1783,6 +1786,17 @@
         }
       }
     },
+    "nocloudedgeTestResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
     "nocloudhealthStatus": {
       "type": "string",
       "enum": [
@@ -1897,6 +1911,17 @@
           "items": {
             "$ref": "#/definitions/services_providersServicesProvider"
           }
+        }
+      }
+    },
+    "nocloudservices_providersTestResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
         }
       }
     },
@@ -2176,17 +2201,6 @@
         },
         "state": {
           "$ref": "#/definitions/statesState"
-        }
-      }
-    },
-    "services_providersTestResponse": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "type": "boolean"
-        },
-        "error": {
-          "type": "string"
         }
       }
     },
