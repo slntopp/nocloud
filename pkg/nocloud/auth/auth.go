@@ -45,6 +45,7 @@ func SetContext(logger *zap.Logger, key []byte) {
 func MakeToken(account string) (string, error) {
 	claims := jwt.MapClaims{}
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = account
+	claims[nocloud.NOCLOUD_INSTANCE_CLAIM] = "placeholder"
 	claims[nocloud.NOCLOUD_ROOT_CLAIM] = 4
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(SIGNING_KEY)
