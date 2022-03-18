@@ -134,10 +134,7 @@ export default {
     },
   },
   mounted() {
-    this.$store.commit("reloadBtn/setCallback", {
-      func: this.$store.dispatch,
-      params: ["dns/fetch"],
-    });
+    this.$store.commit("reloadBtn/setCallback", { type: "dns/fetch" });
   },
 };
 </script>

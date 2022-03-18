@@ -24,9 +24,7 @@
     >
       <v-tab-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
-		
         <service-info v-if="service" :service="service" />
-
       </v-tab-item>
 
       <v-tab-item>
@@ -92,7 +90,7 @@ export default {
   },
   created() {
     this.$store.dispatch("servicesProviders/fetch");
-    this.$store.dispatch("services/fetch").then(() => {
+    this.$store.dispatch("services/fetchById", this.serviceId).then(() => {
       this.found = !!this.service;
       document.title = `${this.serviceTitle} | NoCloud`;
     });
@@ -100,8 +98,8 @@ export default {
   mounted() {
     document.title = `${this.serviceTitle} | NoCloud`;
     this.$store.commit("reloadBtn/setCallback", {
-      func: this.$store.dispatch,
-      params: ["services/fetch"],
+      type: "services/fetchById",
+      params: this.serviceId,
     });
   },
 };

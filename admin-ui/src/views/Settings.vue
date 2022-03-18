@@ -206,7 +206,7 @@ export default {
       key: "",
       data: {},
     },
-    fetchError: ""
+    fetchError: "",
   }),
   computed: {
     ...mapGetters("settings", {
@@ -319,10 +319,7 @@ export default {
     },
   },
   mounted() {
-    this.$store.commit("reloadBtn/setCallback", {
-      func: this.$store.dispatch,
-      params: ["settings/fetch"],
-    });
+    this.$store.commit("reloadBtn/setCallback", { type: "settings/fetch" });
   },
 };
 </script>
