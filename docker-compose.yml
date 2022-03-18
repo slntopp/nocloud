@@ -28,6 +28,7 @@ services:
       SETTINGS_HOST: settings:8080
       DNS_HOST: dns-mgmt:8080
       STATES_HOST: states:8080
+      EDGE_HOST: edge:8080
     networks:
       - proxy
       - grpc-internal
