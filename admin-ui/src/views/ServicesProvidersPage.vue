@@ -69,7 +69,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("servicesProviders/fetch").then(() => {
+    this.$store.dispatch("servicesProviders/fetchById", this.uuid).then(() => {
       this.found = !!this.service;
       document.title = `${this.title} | NoCloud`;
     });
@@ -77,7 +77,8 @@ export default {
   mounted() {
     document.title = `${this.title} | NoCloud`;
     this.$store.commit("reloadBtn/setCallback", {
-      type: "servicesProviders/fetch",
+      type: "servicesProviders/fetchById",
+      params: this.uuid,
     });
   },
 };
