@@ -21,6 +21,15 @@
 			<v-col>
 				<v-text-field
 					readonly
+					:value="service && service.status"
+					label="state"
+					style="display: inline-block; width: 150px"
+				>
+				</v-text-field>
+			</v-col>
+			<v-col>
+				<v-text-field
+					readonly
 					:value="hashpart(service.hash)"
 					label="service hash"
 					style="display: inline-block; width: 150px"
