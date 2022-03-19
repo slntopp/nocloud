@@ -228,7 +228,7 @@ export default {
 		},
 		location(group){
 			const lc = this.servicesProviders.find(el => el.uuid == this.service.provisions[this.service.instancesGroups[group].uuid])
-			return lc.title ?? 'none'
+			return lc?.title ?? 'none'
 		}
 	},
 	mounted(){
