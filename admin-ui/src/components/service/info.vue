@@ -58,7 +58,7 @@
 							<v-col>
 								<v-text-field
 									readonly
-									:value="service.uuid"
+									:value="service.instancesGroups[group].uuid"
 									label="group uuid"
 									style="display: inline-block; width: 330px"
 									:append-icon="copyed == `${group}-UUID` ? 'mdi-check': 'mdi-content-copy'"
