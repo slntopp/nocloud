@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	dnspb "github.com/slntopp/nocloud/pkg/dns/proto"
-	"github.com/slntopp/nocloud/pkg/health/healthpb"
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	registrypb "github.com/slntopp/nocloud/pkg/registry/proto"
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
@@ -54,7 +54,7 @@ func init() {
 	log = nocloud.NewLogger()
 
 	viper.SetDefault("CORS_ALLOWED", []string{"*"})
-	viper.SetDefault("APISERVER_HOST", "apiserver:8080")
+	viper.SetDefault("APISERVER_HOST", "proxy:8080")
 	viper.SetDefault("INSECURE", true)
 	viper.SetDefault("WITH_BLOCK", false)
 

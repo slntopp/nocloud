@@ -20,6 +20,7 @@ import "google/protobuf/struct.proto";
 import "pkg/instances/proto/instances.proto";
 import "google/api/annotations.proto";
 import "pkg/hasher/hasherpb/hasher.proto";
+import "pkg/states/proto/states.proto";
 
 message Service {
     string uuid = 1;
@@ -31,6 +32,7 @@ message Service {
         [(nocloud.hasher.hashed) = true];
     map<string, nocloud.instances.InstancesGroup> instances_groups = 6;
     string hash = 7 [(nocloud.hasher.hash) = true];
+    map<string, string> provisions = 8;
 }
 
 message TestConfigError {
@@ -65,9 +67,11 @@ message DeleteResponse {
 }
 
 message PerformActionRequest {
-    string uuid = 1;
-    string action = 2;
-    map<string, google.protobuf.Value> data = 3;
+    string service = 1;
+    string group = 2;
+    string instance = 3;
+    string action = 4;
+    map<string, google.protobuf.Value> data = 5;
 }
 
 message PerformActionResponse {
@@ -104,6 +108,18 @@ message ListResponse {
 
 message GetRequest {
     string uuid = 1;
+}
+
+message GetStatesRequest {
+    string uuid = 1; // Service UUID
+}
+
+message GetProvisionsRequest {
+    string uuid = 1;
+}
+
+message GetProvisionsResponse {
+    map<string, string> provisions = 1; // Map of InstancesGroups to ServicesProviders they are deployed
 }
 
 service ServicesService {
@@ -147,6 +163,17 @@ service ServicesService {
         };
     };
 
+    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.states.GetStatesResponse) {
+        option (google.api.http) = {
+            get: "/services/{uuid}/states"
+        };
+    };
+    rpc GetProvisions(nocloud.services.GetProvisionsRequest) returns (nocloud.services.GetProvisionsResponse) {
+        option (google.api.http) = {
+            get: "/services/{uuid}/provisions"
+        };
+    };
+
     rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse) {
         option (google.api.http) = {
             post: "/services/{uuid}/up"
@@ -163,7 +190,7 @@ service ServicesService {
     rpc PerformServiceAction(nocloud.services.PerformActionRequest)
         returns (nocloud.services.PerformActionResponse) {
         option (google.api.http) = {
-            post: "/services/{uuid}/action/{action}",
+            post: "/services/{service}/{group}/{instance}/action/{action}",
             body: "*"
         };
     };

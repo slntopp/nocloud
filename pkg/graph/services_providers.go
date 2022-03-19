@@ -17,23 +17,22 @@ package graph
 
 import (
 	"context"
-	"errors"
 
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
 
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	spb "github.com/slntopp/nocloud/pkg/services/proto"
-	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 )
 
 type ServicesProvider struct {
-	*sppb.ServicesProvider
+	*pb.ServicesProvider
 	driver.DocumentMeta
 }
 
 type ServicesProvidersController struct {
-	col driver.Collection // Services Collection
+	col driver.Collection // Services Providers Collection
 
 	log *zap.Logger
 }
@@ -50,6 +49,15 @@ func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *Service
 	return err
 }
 
+// Update ServicesProvider in DB
+func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *pb.ServicesProvider) (error) {
+	ctrl.log.Debug("Updating ServicesProvider", zap.Any("sp", sp))
+
+	meta, err := ctrl.col.ReplaceDocument(ctx, sp.GetUuid(), sp)
+	ctrl.log.Debug("ReplaceDocument.Result", zap.Any("meta", meta), zap.Error(err))
+	return err
+}
+
 func (ctrl *ServicesProvidersController) Delete(ctx context.Context, id string) (err error) {
 	ctrl.log.Debug("Deleting ServicesProvider Document", zap.Any("uuid", id))
 	_, err = ctrl.col.RemoveDocument(ctx, id)
@@ -58,12 +66,18 @@ func (ctrl *ServicesProvidersController) Delete(ctx context.Context, id string) 
 
 func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r *ServicesProvider, err error) {
 	ctrl.log.Debug("Getting ServicesProvider", zap.Any("sp", id))
-	var sp sppb.ServicesProvider
-	meta, err := ctrl.col.ReadDocument(ctx, id, &sp)
+	var sp pb.ServicesProvider
+	query := `RETURN DOCUMENT(@sp)`
+	c, err := ctrl.col.Database().Query(ctx, query, map[string]interface{}{
+		"sp": driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, id),
+	})
 	if err != nil {
 		ctrl.log.Debug("Error reading document(ServiceProvider)", zap.Error(err))
-		return nil, errors.New("Error reading document")
+		return nil, err
 	}
+	defer c.Close()
+
+	meta, err := c.ReadDocument(ctx, &sp)
 	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("sp", &sp))
 	sp.Uuid = meta.ID.Key()
 	return &ServicesProvider{&sp, meta}, err
@@ -86,7 +100,7 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 	defer c.Close()
 	var r []*ServicesProvider
 	for {
-		var s sppb.ServicesProvider
+		var s pb.ServicesProvider
 		meta, err := c.ReadDocument(ctx, &s)
 		if driver.IsNoMoreDocuments(err) {
 			break

@@ -1,6 +1,7 @@
 version: "3.8"
 services:
   proxy:
+    restart: always
     image: nginx
     depends_on:
       - health
@@ -22,15 +23,24 @@ services:
 
   health:
     container_name: health-service
+    restart: always
     image: ghcr.io/slntopp/nocloud/health:latest
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
+      REGISTRY_HOST: registry:8080
+      SERVICES_HOST: services-registry:8080
+      SP_HOST: sp-registry:8080
+      SETTINGS_HOST: settings:8080
+      DNS_HOST: dns-mgmt:8080
+      STATES_HOST: states:8080
+      EDGE_HOST: edge:8080
     networks:
       - proxy
       - grpc-internal
   apiserver-web:
     container_name: apiserver-web
+    restart: always
     image: ghcr.io/slntopp/nocloud/apiserver-web:latest
     environment:
       APISERVER_HOST: proxy:8080
@@ -39,6 +49,7 @@ services:
       - grpc-internal
   registry:
     container_name: registry
+    restart: always
     image: ghcr.io/slntopp/nocloud/registry:latest
     environment:
       LOG_LEVEL: -1
@@ -46,6 +57,7 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       NOCLOUD_ROOT_PASSWORD: "${NOCLOUD_ROOT_PASS}"
       SIGNING_KEY: "${SIGNING_KEY}"
+      SETTINGS_HOST: settings:8080
     depends_on:
       - db
     networks:
@@ -56,6 +68,7 @@ services:
       - db
   services-registry:
     container_name: services-registry
+    restart: always
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     environment:
       LOG_LEVEL: -1
@@ -63,6 +76,8 @@ services:
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       DRIVERS: driver-ione:8080
+      SETTINGS_HOST: settings:8080
+      STATES_HOST: states:8080
     depends_on:
       - db
     networks:
@@ -73,6 +88,7 @@ services:
       - db
   sp-registry:
     container_name: sp-registry
+    restart: always
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     environment:
       LOG_LEVEL: -1
@@ -80,6 +96,24 @@ services:
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       DRIVERS: driver-ione:8080
+      SETTINGS_HOST: settings:8080
+      STATES_HOST: states:8080
+    networks:
+      - proxy
+      - arangodb
+      - grpc-internal
+    links:
+      - db
+  edge:
+    container_name: edge
+    restart: always
+    image: ghcr.io/slntopp/nocloud/edge:latest
+    environment:
+      LOG_LEVEL: -1
+      SIGNING_KEY: "${SIGNING_KEY}"
+      DB_HOST: db:8529
+      DB_CRED: "${DB_USER}:${DB_PASS}"
+      STATES_HOST: states:8080
     networks:
       - proxy
       - arangodb
@@ -88,6 +122,7 @@ services:
       - db
 
   dns-mgmt:
+    restart: always
     image: ghcr.io/slntopp/nocloud/dns-mgmt:latest
     networks:
       - proxy
@@ -98,16 +133,17 @@ services:
       SIGNING_KEY: "${SIGNING_KEY}"
       REDIS_HOST: redis:6379
   settings:
+    restart: always
     image: ghcr.io/slntopp/nocloud/settings:latest
     networks:
       - proxy
       - grpc-internal
       - redis
     environment:
-      SIGNING_KEY: "${SIGNING_KEY}"
       LOG_LEVEL: -1
-      REDIS_HOST: redis:6379
-  redis:
+      SIGNING_KEY: "${SIGNING_KEY}"
+      REDIS_HOST: redis_settings:6379
+  redis_settings:
     image: redis
     restart: always
     command: redis-server --save 60 1
@@ -116,10 +152,44 @@ services:
     ports:
       - 6379:6379
     volumes:
-      - redis-data:/data
+      - redis-settings-data:/data
+
+  states:
+    restart: always
+    image: ghcr.io/slntopp/nocloud/states:latest
+    networks:
+      - grpc-internal
+      - redis
+    environment:
+      LOG_LEVEL: -1
+      PORT: 8080
+      REDIS_HOST: redis_states:6379
+  redis_states:
+    image: redis
+    restart: always
+    command: redis-server --save 60 1
+    networks:
+      - redis
+    ports:
+      - 6379:6379
+    volumes:
+      - redis-states-data:/data
+
+  driver-ione:
+    container_name: driver
+    restart: always
+    image: ghcr.io/slntopp/nocloud-driver-ione:latest
+    networks:
+      - grpc-internal
+    environment:
+      STATES_HOST: states:8080
+      DRIVER_TYPE_KEY: ione
+      SIGNING_KEY: "${SIGNING_KEY}"
+      LOG_LEVEL: -1
 
   db:
     container_name: database-master
+    restart: always
     image: arangodb/arangodb:latest
     environment:
       ARANGO_ROOT_PASSWORD: "${DB_PASS}"
@@ -132,18 +202,16 @@ services:
       - proxy
       - arangodb
 
-  driver-ione:
-    container_name: driver
-    image: ghcr.io/slntopp/nocloud-driver-ione:latest
-    networks:
-      - grpc-internal
-
 networks:
   proxy:
     driver: bridge
   grpc-internal:
   arangodb:
     driver: bridge
+  redis:
+    driver: bridge
 
 volumes:
+  redis-settings-data:
+  redis-states-data:
   data:

@@ -83,9 +83,19 @@ func getHash(msg protoreflect.Message) (string, error) {
 }
 
 //Setting hash values in hash fields
-//!Attention! Hash fields should be initalized before, else SetHash can't see it
 func SetHash(msg protoreflect.Message) (err_sh error) {
 	err_sh = nil
+
+	//initialize blank hash fields
+	//msg.Range don't see blank fields
+	md := msg.Descriptor()
+	for i := 0; i < md.Fields().Len(); i++ {
+		fd := md.Fields().Get(i)
+		if !msg.Has(fd) && proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Hash).(bool) {
+			msg.Set(fd, protoreflect.ValueOfString("init"))
+		}
+	}
+
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
 
 		if fd.IsMap() {

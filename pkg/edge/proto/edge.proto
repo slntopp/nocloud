@@ -14,24 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 syntax = "proto3";
-package nocloud.health;
+package nocloud.edge;
 
-import "google/api/annotations.proto";
+import "pkg/states/proto/states.proto";
 
-message ProbeRequest {
-    string probe_type = 1;
-    string payload = 2;
+message TestRequest {}
+message TestResponse {
+    bool result = 1;
+    string error = 2;
 }
 
-message ProbeResponse {
-    string response = 1;
+service EdgeService {
+    rpc Test(TestRequest) returns (TestResponse);
+    rpc PostState(nocloud.states.PostStateRequest) returns (nocloud.states.PostStateResponse);
 }
-
-service HealthService {
-    rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse) {
-        option (google.api.http) = {
-            post: "/health/probe"
-            body: "*"
-        };
-    };
-};

@@ -35,7 +35,7 @@ func initMessage() *services.Service {
 		Title:     "Title0",
 		Config:    svm0,
 		Resources: svm1,
-		Hash:      "Instance0",
+		// Hash:      "Instance0",
 	}
 
 	is1 := instances.Instance{
@@ -43,7 +43,7 @@ func initMessage() *services.Service {
 		Title:     "Title1",
 		Config:    svm1,
 		Resources: svm0,
-		Hash:      "Instance1",
+		// Hash:      "Instance1",
 	}
 
 	iss := []*instances.Instance{&is0, &is1}
@@ -71,7 +71,7 @@ func initMessage() *services.Service {
 		Status:          "Status",
 		Context:         ctx,
 		InstancesGroups: igm,
-		Hash:            "uuid",
+		// Hash:            "uuid",
 	}
 
 	return serv
@@ -110,7 +110,7 @@ func TestGetHash(t *testing.T) {
 			SetHash(tt.args.ProtoReflect())
 			prettyMsg("Result:", tt.args)
 
-			if tt.args.Hash != "a63c667376ffb5867a9be1f2b6d46f2864319b2389816e455391ea0ecfdb6a96" {
+			if tt.args.Hash != "1bc6a0a8905e70c1c355da05fcbe132be8e96b54dabc447f5d847212f78b191f" {
 				t.Error("Non-expected ", tt.args.Hash)
 			}
 

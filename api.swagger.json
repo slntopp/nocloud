@@ -14,6 +14,12 @@
       "name": "DNS"
     },
     {
+      "name": "StatesService"
+    },
+    {
+      "name": "ServicesService"
+    },
+    {
       "name": "ServicesProvidersService"
     },
     {
@@ -23,16 +29,19 @@
       "name": "DriverService"
     },
     {
+      "name": "EdgeService"
+    },
+    {
       "name": "HealthService"
+    },
+    {
+      "name": "InternalProbeService"
     },
     {
       "name": "AccountsService"
     },
     {
       "name": "NamespacesService"
-    },
-    {
-      "name": "ServicesService"
     },
     {
       "name": "SettingsService"
@@ -64,7 +73,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -99,7 +108,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -131,7 +140,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -174,7 +183,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -202,7 +211,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -230,7 +239,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -273,7 +282,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -293,7 +302,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -325,7 +334,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -353,7 +362,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -383,7 +392,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -415,7 +424,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -444,7 +453,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -476,7 +485,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -523,7 +532,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -573,7 +582,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -603,7 +612,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -644,7 +653,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -674,7 +683,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -693,109 +702,7 @@
         ]
       }
     },
-    "/services/{uuid}": {
-      "get": {
-        "operationId": "ServicesService_Get",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/servicesService"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "uuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      },
-      "delete": {
-        "operationId": "ServicesService_Delete",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/nocloudservicesDeleteResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "uuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      },
-      "patch": {
-        "operationId": "ServicesService_Update",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/servicesService"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "uuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "namespace": {
-                  "type": "string"
-                },
-                "service": {
-                  "$ref": "#/definitions/servicesService"
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      }
-    },
-    "/services/{uuid}/action/{action}": {
+    "/services/{service}/{group}/{instance}/action/{action}": {
       "post": {
         "operationId": "ServicesService_PerformServiceAction",
         "responses": {
@@ -808,13 +715,25 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
         "parameters": [
           {
-            "name": "uuid",
+            "name": "service",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "group",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "instance",
             "in": "path",
             "required": true,
             "type": "string"
@@ -847,6 +766,108 @@
         ]
       }
     },
+    "/services/{uuid}": {
+      "get": {
+        "operationId": "ServicesService_Get",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesService"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      },
+      "delete": {
+        "operationId": "ServicesService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudservicesDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      },
+      "patch": {
+        "operationId": "ServicesService_Update",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesService"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "namespace": {
+                  "type": "string"
+                },
+                "service": {
+                  "$ref": "#/definitions/servicesService"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
     "/services/{uuid}/down": {
       "post": {
         "operationId": "ServicesService_Down",
@@ -860,7 +881,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -885,6 +906,66 @@
         ]
       }
     },
+    "/services/{uuid}/provisions": {
+      "get": {
+        "operationId": "ServicesService_GetProvisions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/servicesGetProvisionsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
+    "/services/{uuid}/states": {
+      "get": {
+        "operationId": "ServicesService_GetStates",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/statesGetStatesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
     "/services/{uuid}/up": {
       "post": {
         "operationId": "ServicesService_Up",
@@ -898,7 +979,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -933,6 +1014,7 @@
     },
     "/settings": {
       "get": {
+        "summary": "rpc Sub(nocloud.settings.SubRequest) returns (stream nocloud.settings.SubRequest);",
         "operationId": "SettingsService_Keys",
         "responses": {
           "200": {
@@ -944,7 +1026,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -964,7 +1046,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -996,7 +1078,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -1045,7 +1127,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -1059,13 +1141,13 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/services_providersTestResponse"
+              "$ref": "#/definitions/nocloudservices_providersTestResponse"
             }
           },
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -1095,7 +1177,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -1127,7 +1209,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -1149,7 +1231,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -1187,7 +1269,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -1215,7 +1297,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -1245,7 +1327,7 @@
           "default": {
             "description": "An unexpected error response.",
             "schema": {
-              "$ref": "#/definitions/rpcStatus"
+              "$ref": "#/definitions/googlerpcStatus"
             }
           }
         },
@@ -1387,6 +1469,12 @@
         },
         "rootClaim": {
           "type": "boolean"
+        },
+        "spClaim": {
+          "type": "string"
+        },
+        "instanceClaim": {
+          "type": "string"
         }
       }
     },
@@ -1482,6 +1570,24 @@
         }
       }
     },
+    "googlerpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
     "healthProbeRequest": {
       "type": "object",
       "properties": {
@@ -1497,6 +1603,49 @@
       "type": "object",
       "properties": {
         "response": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/nocloudhealthStatus"
+        },
+        "serving": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/healthServingStatus"
+          }
+        },
+        "routines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/healthRoutineStatus"
+          }
+        }
+      }
+    },
+    "healthRoutineStatus": {
+      "type": "object",
+      "properties": {
+        "routine": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/healthServingStatus"
+        },
+        "lastExecution": {
+          "type": "string"
+        }
+      }
+    },
+    "healthServingStatus": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/nocloudhealthStatus"
+        },
+        "error": {
           "type": "string"
         }
       }
@@ -1527,6 +1676,9 @@
           "additionalProperties": {
             "type": "object"
           }
+        },
+        "state": {
+          "$ref": "#/definitions/statesState"
         },
         "hash": {
           "type": "string"
@@ -1634,6 +1786,31 @@
         }
       }
     },
+    "nocloudedgeTestResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "nocloudhealthStatus": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "SERVING",
+        "OFFLINE",
+        "RUNNING",
+        "STOPPED",
+        "INTENAL",
+        "HASERRS",
+        "NOEXIST"
+      ],
+      "default": "UNKNOWN"
+    },
     "nocloudservicesCreateRequest": {
       "type": "object",
       "properties": {
@@ -1666,6 +1843,29 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/servicesService"
+          }
+        }
+      }
+    },
+    "nocloudservicesPerformActionRequest": {
+      "type": "object",
+      "properties": {
+        "service": {
+          "type": "string"
+        },
+        "group": {
+          "type": "string"
+        },
+        "instance": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
           }
         }
       }
@@ -1711,6 +1911,17 @@
           "items": {
             "$ref": "#/definitions/services_providersServicesProvider"
           }
+        }
+      }
+    },
+    "nocloudservices_providersTestResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "string"
         }
       }
     },
@@ -1822,20 +2033,13 @@
         }
       }
     },
-    "rpcStatus": {
+    "servicesGetProvisionsResponse": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "integer",
-          "format": "int32"
-        },
-        "message": {
-          "type": "string"
-        },
-        "details": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/protobufAny"
+        "provisions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
           }
         }
       }
@@ -1883,6 +2087,12 @@
         },
         "hash": {
           "type": "string"
+        },
+        "provisions": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
@@ -1988,17 +2198,9 @@
           "additionalProperties": {
             "type": "object"
           }
-        }
-      }
-    },
-    "services_providersTestResponse": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "type": "boolean"
         },
-        "error": {
-          "type": "string"
+        "state": {
+          "$ref": "#/definitions/statesState"
         }
       }
     },
@@ -2031,6 +2233,67 @@
           "type": "string"
         }
       }
+    },
+    "statesGetStatesResponse": {
+      "type": "object",
+      "properties": {
+        "states": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/statesState"
+          }
+        }
+      }
+    },
+    "statesNoCloudState": {
+      "type": "string",
+      "enum": [
+        "INIT",
+        "UNKNOWN",
+        "STOPPED",
+        "RUNNING",
+        "FAILURE",
+        "DELETED",
+        "SUSPENDED",
+        "OPERATION"
+      ],
+      "default": "INIT"
+    },
+    "statesPostStateResponse": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string",
+          "format": "int64"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "statesState": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "#/definitions/statesNoCloudState"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "ts": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "vanillaMonitoringResponse": {
+      "type": "object"
     }
   }
 }
