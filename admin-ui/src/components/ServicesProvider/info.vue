@@ -85,6 +85,18 @@
         </v-row>
       </v-col>
     </v-row>
+ <!-- Date -->
+    <v-row>
+      <v-col cols="12" lg="6" class="mt-5 mb-5">
+        <v-alert dark  type="info" color="indigo ">
+          <span class="mr-2 text-h6">Last Monitored:</span>
+          {{
+            template.state.meta.ts &&
+            format(new Date(template.state.meta.ts), "dd MMMM yyy  H:mm")
+          }}
+        </v-alert>
+      </v-col>
+    </v-row>
 
     <!-- Hosts -->
     <v-card-title class="px-0 mb-3">Hosts:</v-card-title>
@@ -130,7 +142,12 @@
                 <div class="title_progress">
                   <span>Memory</span>
                   <div>
-                    <span>{{ ((host.total_ram - host.free_ram) / 1048576).toFixed(2)}} GiB</span>
+                    <span
+                      >{{
+                        ((host.total_ram - host.free_ram) / 1048576).toFixed(2)
+                      }}
+                      GiB</span
+                    >
                     /
                     <span>{{ (host.total_ram / 1048576).toFixed(2) }} GiB</span>
                   </div>
@@ -316,10 +333,11 @@
 
 <script>
 import extentionsMap from "@/components/extentions/map.js";
-
+import { format } from "date-fns";
 export default {
   name: "services-provider-info",
   data: () => ({
+    format,
     copyed: null,
     opened: [],
     showPassword: false,
@@ -354,5 +372,8 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+.v-alert__icon.v-icon {
+    margin-top: 5px;
 }
 </style>
