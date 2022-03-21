@@ -11,11 +11,15 @@
 	>
 		
 
-		<!-- <template v-slot:[`item.title`]="{ item }">
-			<router-link :to="item.route">
-				{{item.title}}
-			</router-link>
-		</template> -->
+		<template v-slot:[`item.state`]="{ value }">
+			<v-chip
+				small
+				:color="chipsColor(value)"
+			>
+				{{value}}
+			</v-chip>
+		</template>
+
 	</nocloud-table>
 </template>
 
@@ -25,6 +29,7 @@ import noCloudTable from "@/components/table.vue"
 const Headers = [
 	{ text: 'title', value: 'titleLink' },
 	{ text: 'type', value: 'type' },
+	{ text: 'state', value: 'state' },
 	{
 		text: 'UUID',
 		align: 'start',
@@ -59,7 +64,24 @@ export default {
 	methods: {
 		handleSelect(item){
 			this.$emit('input', item)
-		}
+		},
+		chipsColor(state){
+			if(!state){
+				return 'gray'
+			}
+			switch (state.toLowerCase()) {
+				case 'running':
+				case 'operation':
+					return 'success'
+				case 'unknown':
+				case 'deleted':
+				case 'failure':
+					return 'error'
+		
+				default:
+					return 'gray';
+			}
+		},
 	},
 	computed: {
 		tableData(){
@@ -69,7 +91,8 @@ export default {
 				route: {
 					name: 'ServicesProvider',
 					params: {uuid: el.uuid}
-				}
+				},
+				state: el?.state?.state ?? 'UNKNOWN'
 			}));
 		}
 	},

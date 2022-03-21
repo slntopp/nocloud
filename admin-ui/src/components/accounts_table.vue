@@ -56,9 +56,9 @@ export default {
 			this.loading = false;
 		})
 		.catch(err => {
-			console.log(`err`, err)
+			console.error(err.toJSON())
 			this.fetchError = 'Can\'t reach the server'
-			if(err.response){
+			if(err.response && err.response.data.message){
 				this.fetchError += `: [ERROR]: ${err.response.data.message}`
 			} else {
 				this.fetchError += `: [ERROR]: ${err.toJSON().message}`

@@ -301,9 +301,13 @@ export default {
 			}
 
 			api.services.testConfig(data)
-			.then(() => {
-				this.showSnackbar({message: `Service passed tests successfully`})
-				this.testsPassed = true;
+			.then(res => {
+				if(res.result){
+					this.showSnackbar({message: `Service passed tests successfully`})
+					this.testsPassed = true;
+				} else {
+					throw res;
+				}
 			})
 			.catch(err => {
 				this.testsPassed = false;
