@@ -52,7 +52,7 @@ import servicesProviders from "@/components/servicesproviders_table.vue";
 import snackbar from "@/mixins/snackbar.js";
 
 export default {
-  name: "servicesProviders-create",
+  name: "servicesProviders-view",
   components: {
     servicesProviders,
   },
@@ -73,7 +73,6 @@ export default {
             if (res.every((el) => el.result)) {
               console.log("all ok");
               this.$store.dispatch("servicesProviders/fetch");
-
               const ending = deletePromices.length == 1 ? "" : "s";
               this.showSnackbar({
                 message: `Service${ending} provider${ending} deleted successfully.`,
