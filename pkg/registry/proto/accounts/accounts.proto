@@ -67,6 +67,8 @@ message TokenRequest {
     Credentials auth = 1;
     int32 exp = 2;
     bool root_claim = 3;
+    string sp_claim = 4;
+    string instance_claim = 5;
 }
 
 message TokenResponse {

@@ -54,6 +54,15 @@ func NewServicesController(log *zap.Logger, db driver.Database) ServicesControll
 	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db), db:db}
 }
 
+const createServiceQuery =
+`LET service = @body
+LET instances = (FOR gid IN ATTRIBUTES(service.instances_groups)
+    LET group = service.instances_groups[gid]
+    FOR instance IN group.instances
+        RETURN instance.uuid)
+
+INSERT MERGE(service, {instances: instances}) INTO @@services RETURN NEW`
+
 // Create Service and underlaying entities and store in DB
 func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service) (*Service, error) {
 	ctrl.log.Debug("Creating Service", zap.Any("service", service))
@@ -70,14 +79,34 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 	}
 
 	service.Status = "init"
-	meta, err := ctrl.col.CreateDocument(ctx, service)
+
+	c, err := ctrl.db.Query(ctx, createServiceQuery, map[string]interface{}{
+		"body": service,
+		"@services": schema.SERVICES_COL,
+	})
 	if err != nil {
 		ctrl.log.Debug("Error creating document", zap.Error(err))
-		return nil, errors.New("error creating document")
+		return nil, err
+	}
+	defer c.Close()
+
+	meta, err := c.ReadDocument(ctx, service)
+	if err != nil {
+		ctrl.log.Debug("Error reading new document", zap.Error(err))
+		return nil, err
 	}
 	service.Uuid = meta.ID.Key()
 	return &Service{service, meta}, nil
 }
+
+const updateServiceQuery = 
+`LET service = @body
+LET instances = (FOR gid IN ATTRIBUTES(service.instances_groups)
+    LET group = service.instances_groups[gid]
+    FOR instance IN group.instances
+        RETURN instance.uuid)
+
+REPLACE @service WITH MERGE(service, {instances: instances}) IN @@services`
 
 // Update Service and underlaying entities and store in DB
 func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service, hash bool) (error) {
@@ -94,9 +123,17 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service,
 		}
 	}
 
-	meta, err := ctrl.col.ReplaceDocument(ctx, service.GetUuid(), service)
-	ctrl.log.Debug("ReplaceDocument.Result", zap.Any("meta", meta), zap.Error(err))
-	return err
+	c, err := ctrl.db.Query(ctx, updateServiceQuery, map[string]interface{}{
+		"service": service.GetUuid(),
+		"body": service,
+		"@services": schema.SERVICES_COL,
+	})
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	return nil
 }
 
 // Get Service from DB
@@ -136,7 +173,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
 
-	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	c, err := ctrl.db.Query(ctx, query, bindVars)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +240,7 @@ func (ctrl *ServicesController) GetProvisions(ctx context.Context, service strin
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
-	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	c, err := ctrl.db.Query(ctx, query, bindVars)
 	if err != nil {
 		return nil, err
 	}
@@ -239,4 +276,33 @@ func (ctrl *ServicesController) SetStatus(ctx context.Context, s *Service, statu
 	// TODO: check if valid status message
 	s.Status = status
 	return ctrl.Update(ctx, s.Service, false)
+}
+
+const findServiceByInstanceQuery =
+`FOR service IN @@services
+FILTER @instance IN service.instances[*]
+LIMIT 1
+    RETURN service`
+
+// Returns Service by one of it's Instances UUID
+func (ctrl *ServicesController) FindServiceByInstance(ctx context.Context, instance string) (*Service, error) {
+	log := ctrl.log.Named("FindServiceByInstance")
+
+	c, err := ctrl.db.Query(ctx, findServiceByInstanceQuery, map[string]interface{}{
+		"instance": instance,
+		"@services": schema.SERVICES_COL,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	var service *pb.Service
+	meta, err := c.ReadDocument(ctx, service)
+	if err != nil {
+		log.Error("Error reading new document", zap.String("instance", instance), zap.Error(err))
+		return nil, err
+	}
+	service.Uuid = meta.ID.Key()
+	return &Service{service, meta}, nil
 }

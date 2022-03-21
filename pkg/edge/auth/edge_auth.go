@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package auth
 
 import (
@@ -20,7 +21,6 @@ import (
 	"errors"
 
 	"github.com/golang-jwt/jwt/v4"
-	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
 
@@ -42,35 +42,13 @@ func SetContext(logger *zap.Logger, key []byte) {
 	log.Debug("Context set", zap.ByteString("signing_key", key))
 }
 
-func MakeToken(account string) (string, error) {
-	claims := jwt.MapClaims{}
-	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = account
-	claims[nocloud.NOCLOUD_INSTANCE_CLAIM] = "placeholder"
-	claims[nocloud.NOCLOUD_ROOT_CLAIM] = 4
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(SIGNING_KEY)
-}
-
-func MakeTokenInstance(instance string) (string, error) {
-	claims := jwt.MapClaims{}
-	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = "placeholder"
-	claims[nocloud.NOCLOUD_INSTANCE_CLAIM] = instance
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(SIGNING_KEY)
-}
-
 func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	l := log.Named("Interceptor")
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
 
 	switch info.FullMethod {
-	case "/nocloud.registry.AccountsService/Token":
+	case "/nocloud.edge.EdgeService/Test":
 		return handler(ctx, req)
-	case "/nocloud.health.HealthService/Probe":
-		probe := req.(*healthpb.ProbeRequest)
-		if probe.ProbeType == "PING" {
-			return handler(ctx, req)
-		}
 	}
 
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
@@ -95,30 +73,12 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	}
 	log.Debug("Validated token", zap.Any("claims", token))
 
-	account := token[nocloud.NOCLOUD_ACCOUNT_CLAIM]
-	if account == nil {
-		return nil, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
+	inst := token[nocloud.NOCLOUD_INSTANCE_CLAIM]
+	if inst == nil {
+		return ctx, status.Error(codes.Unauthenticated, "Instance Claim not present")
 	}
-	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.(string))
-	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, account.(string))
-
-	ctx = func(ctx context.Context)(context.Context){
-		sp := token[nocloud.NOCLOUD_SP_CLAIM]
-		if sp == nil {
-			return ctx
-		}
-		ctx = context.WithValue(ctx, nocloud.NoCloudSp, sp.(string))
-		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_SP_CLAIM, sp.(string))
-	}(ctx)
-
-	ctx = func(ctx context.Context)(context.Context){
-		inst := token[nocloud.NOCLOUD_INSTANCE_CLAIM]
-		if inst == nil {
-			return ctx
-		}
-		ctx = context.WithValue(ctx, nocloud.NoCloudInstance, inst.(string))
-		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_INSTANCE_CLAIM, inst.(string))
-	}(ctx)
+	ctx = context.WithValue(ctx, nocloud.NoCloudInstance, inst.(string))
+	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_INSTANCE_CLAIM, inst.(string))
 
 	return ctx, nil
 }

@@ -28,6 +28,7 @@ services:
       SETTINGS_HOST: settings:8080
       DNS_HOST: dns-mgmt:8080
       STATES_HOST: states:8080
+      EDGE_HOST: edge:8080
     networks:
       - proxy
       - grpc-internal
@@ -90,6 +91,22 @@ services:
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8080
+      STATES_HOST: states:8080
+    networks:
+      - proxy
+      - arangodb
+      - grpc-internal
+    links:
+      - db
+  edge:
+    container_name: edge
+    restart: always
+    image: ghcr.io/slntopp/nocloud/edge:latest
+    environment:
+      LOG_LEVEL: -1
+      SIGNING_KEY: "${SIGNING_KEY}"
+      DB_HOST: db:8529
+      DB_CRED: "${DB_USER}:${DB_PASS}"
       STATES_HOST: states:8080
     networks:
       - proxy

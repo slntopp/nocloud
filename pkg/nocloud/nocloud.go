@@ -25,10 +25,14 @@ import (
 
 const NOCLOUD_ACCOUNT_CLAIM = "account"
 const NOCLOUD_ROOT_CLAIM = "root"
+const NOCLOUD_SP_CLAIM = "sp"
+const NOCLOUD_INSTANCE_CLAIM = "instance"
 
 type ContextKey string;
 const NoCloudAccount = ContextKey("account");
 const NoCloudRootAccess = ContextKey("root_access")
+const NoCloudSp = ContextKey("sp")
+const NoCloudInstance = ContextKey("instance")
 const TestFromCreate = ContextKey("test_from_create")
 
 func NewLogger() (log *zap.Logger) {
