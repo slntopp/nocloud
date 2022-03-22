@@ -1,0 +1,50 @@
+name: "Go: Attempt build"
+
+on:
+  push:
+    branches:
+      - dependabot/go_modules/*
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set target tags
+        id: set-tags-matrix
+        run: echo "::set-output name=matrix::$(ls cmd | jq -cnR '[inputs | select(length>0)]')"
+
+      - name: Go version
+        id: go_version
+        run: echo "::set-output name=version::$(sed -n '3p' go.mod | grep -Eo '\d.\d+')"
+
+    outputs:
+      go_version: ${{ steps.go_version.outputs.version }}
+      matrix: ${{ steps.set-tags-matrix.outputs.matrix }}
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [ prepare ]
+    strategy:
+      matrix:
+        dir: ${{fromJson(needs.prepare.outputs.matrix)}}
+    steps:
+      - name: Set up Go 1.13
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ needs.prepare.outputs.go_version }}
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
+          path: go/src/github.com/slntopp/nocloud
+      - name: Go Modules
+        run: go mod download
+        env:
+          GOPATH: /home/runner/work/nocloud/go
+      - name: Attempt build
+        run: go build cmd/${{ matrix.dir }}
+        env:
+          GOPATH: /home/runner/work/nocloud/go
