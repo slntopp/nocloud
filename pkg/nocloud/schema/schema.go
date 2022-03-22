@@ -44,6 +44,10 @@ const (
 	SERVICES_PROVIDERS_COL = "ServicesProviders"
 )
 
+const (
+	TRANSACTIONS_COL = "Transactions"
+)
+
 type NoCloudGraphSchema struct {
 	Name string
 	Edges [][]string
@@ -51,7 +55,7 @@ type NoCloudGraphSchema struct {
 
 var COLLECTIONS = []string{
 	ACCOUNTS_COL, NAMESPACES_COL, CREDENTIALS_COL,
-	SERVICES_PROVIDERS_COL, SERVICES_COL }
+	SERVICES_PROVIDERS_COL, SERVICES_COL, TRANSACTIONS_COL }
 
 var PERMISSIONS_GRAPH = NoCloudGraphSchema{
 	Name: "Permissions",

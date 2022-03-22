@@ -11,10 +11,10 @@
   },
   "tags": [
     {
-      "name": "DNS"
+      "name": "StatesService"
     },
     {
-      "name": "StatesService"
+      "name": "DNS"
     },
     {
       "name": "ServicesService"
