@@ -35,8 +35,8 @@
             {{ ram }}
           </v-chip>
         </p>
-        <p class="d-flex justify-space-between align-center">
-          <span> Hash: </span>
+        <p class="d-flex justify-space-between align-center mb-0">
+          Hash:
           <v-chip class="" :color="copyed == index ? 'green' : ''" label>
             <v-btn icon @click="addToClipboardItem(hash, index)">
               <v-icon v-if="copyed == index"> mdi-check </v-icon>
@@ -109,9 +109,6 @@ export default {
       navigator.clipboard
         .writeText(hash)
         .then(() => {
-          console.log(index);
-          console.log(hash);
-          console.log(this.copyed);
           this.copyed = index;
         })
         .catch((res) => {

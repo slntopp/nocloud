@@ -71,7 +71,9 @@
               v-for="(group, title) in item.instancesGroups"
               :key="title"
             >
-              <v-expansion-panel-header> {{ title }}</v-expansion-panel-header>
+              <v-expansion-panel-header>
+                {{ title }} | Type: {{ group.type }}</v-expansion-panel-header
+              >
               <v-expansion-panel-content
                 style="background: var(--v-background-base)"
               >
@@ -84,7 +86,7 @@
                     :cpu="elem.resources.cpu"
                     :drive_type="elem.resources.drive_type"
                     :drive_size="elem.resources.drive_size"
-                    :ram="elem.resources.ram "
+                    :ram="elem.resources.ram"
                     :hash="elem.hash"
                     :index="index"
                     :chipColor="chipColor"
@@ -209,9 +211,6 @@ export default {
       navigator.clipboard
         .writeText(text)
         .then(() => {
-          console.log(index);
-          console.log(text);
-          console.log(this.copyed);
           this.copyed = index;
         })
         .catch((res) => {
@@ -233,8 +232,8 @@ export default {
         up: "green darken-2",
         del: "gray darken-2",
         RUNNING: "green darken-2",
-        UNKNOWN: "orange darken-2",
-        STOPPED: "red darken-2"
+        UNKNOWN: "red darken-2",
+        STOPPED: "orange darken-2",
       };
       return dict[state] ?? "blue-grey darken-2";
     },
