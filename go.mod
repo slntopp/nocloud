@@ -14,7 +14,7 @@ require (
 	github.com/spf13/viper v1.10.1
 	github.com/stoewer/go-strcase v1.2.0
 	go.uber.org/zap v1.21.0
-	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
+	golang.org/x/crypto v0.0.0-20220214200702-86341886e292
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	google.golang.org/genproto v0.0.0-20220317150908-0efb43f6373e
 	google.golang.org/grpc v1.45.0
