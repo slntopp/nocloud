@@ -1588,12 +1588,12 @@
   dependencies:
     "@vue/cli-shared-utils" "^4.5.16"
 
-"@vue/cli-plugin-router@~5.0.1":
-  version "5.0.3"
-  resolved "https://registry.yarnpkg.com/@vue/cli-plugin-router/-/cli-plugin-router-5.0.3.tgz#8413d8a6347c556ffb6a1965d6992ff625564177"
-  integrity sha512-9GPewake2QhmnNe1p72Cejv0jyenH+gv3+3JlZf4kPR68ncqwF7YiUjxbnJnItWgq4Zep3+YqYmQ4PsIWjMPUQ==
+"@vue/cli-plugin-router@~5.0.4":
+  version "5.0.4"
+  resolved "https://registry.yarnpkg.com/@vue/cli-plugin-router/-/cli-plugin-router-5.0.4.tgz#d30b20125408d39c7ad19a7f8a4a82aee9e033a9"
+  integrity sha512-lylzCuH3Br0BcTz5IxxSffpyoF9dQ2k4jTdK8QlWrnRanWGw7P9C0kYMr9rohHaXpvAlu6bio392gbNIWpEepg==
   dependencies:
-    "@vue/cli-shared-utils" "^5.0.3"
+    "@vue/cli-shared-utils" "^5.0.4"
 
 "@vue/cli-plugin-vuex@^4.5.16":
   version "4.5.16"
@@ -1684,24 +1684,6 @@
     read-pkg "^5.1.1"
     request "^2.88.2"
     semver "^6.1.0"
-    strip-ansi "^6.0.0"
-
-"@vue/cli-shared-utils@^5.0.3":
-  version "5.0.3"
-  resolved "https://registry.yarnpkg.com/@vue/cli-shared-utils/-/cli-shared-utils-5.0.3.tgz#e8facc759f4e2ceed4a26f33943c0005a834e4af"
-  integrity sha512-xAHxFDYVohHWXOLdmGvka3ffQcRgKdACempFQkGJX74Q7OBf0zPf5WH+vQXhlR17eA3LmWdY+Nv8OfsIGim6Fg==
-  dependencies:
-    chalk "^4.1.2"
-    execa "^1.0.0"
-    joi "^17.4.0"
-    launch-editor "^2.2.1"
-    lru-cache "^6.0.0"
-    node-fetch "^2.6.7"
-    node-ipc "9.2.1"
-    open "^8.0.2"
-    ora "^5.3.0"
-    read-pkg "^5.1.1"
-    semver "^7.3.4"
     strip-ansi "^6.0.0"
 
 "@vue/cli-shared-utils@^5.0.4":
