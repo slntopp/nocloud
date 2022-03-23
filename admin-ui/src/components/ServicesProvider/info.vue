@@ -85,14 +85,16 @@
         </v-row>
       </v-col>
     </v-row>
- <!-- Date -->
+
+    
+    <!-- Date -->
     <v-row>
       <v-col cols="12" lg="6" class="mt-5 mb-5">
-        <v-alert dark  type="info" color="indigo ">
+        <v-alert dark type="info" color="indigo ">
           <span class="mr-2 text-h6">Last Monitored:</span>
           {{
             template.state.meta.ts &&
-            format(new Date(template.state.meta.ts), "dd MMMM yyy  H:mm")
+            format(new Date(template.state.meta.ts * 1000), "dd MMMM yyy  H:mm")
           }}
         </v-alert>
       </v-col>
@@ -374,6 +376,6 @@ export default {
   justify-content: space-between;
 }
 .v-alert__icon.v-icon {
-    margin-top: 5px;
+  margin-top: 5px;
 }
 </style>

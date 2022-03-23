@@ -11,33 +11,23 @@
       </div>
       <v-divider class="mx-4"></v-divider>
       <v-card-text>
-        <p class="d-flex justify-space-between align-center">
-          CPU:
-          <v-chip class="" color="indigo" label>
-            {{ cpu }}
-          </v-chip>
+        <p class="d-flex">
+          <v-chip label> CPU: {{ cpu }} core(s)</v-chip>
+          <v-chip label> RAM: {{ ram }} Mb</v-chip>
         </p>
-        <p class="d-flex justify-space-between align-center">
-          Drive size:
-          <v-chip class="" color="indigo" label>
+        <p class="d-flex">
+          <v-chip label>
+            Size:
             {{ driveSize(drive_size) }} GiB
           </v-chip>
-        </p>
-        <p class="d-flex justify-space-between align-center">
-          Drive type:
-          <v-chip class="" color="indigo" label>
+          <v-chip label>
+            Type:
             {{ drive_type }}
           </v-chip>
         </p>
-        <p class="d-flex justify-space-between align-center">
-          RAM:
-          <v-chip class="" color="indigo" label>
-            {{ ram }}
-          </v-chip>
-        </p>
-        <p class="d-flex justify-space-between align-center mb-0">
-          Hash:
-          <v-chip class="" :color="copyed == index ? 'green' : ''" label>
+        <p class="d-flex  mb-0">
+          <v-chip class="hash" label :color="copyed == index ? 'green' : ''">
+            Hash:
             <v-btn icon @click="addToClipboardItem(hash, index)">
               <v-icon v-if="copyed == index"> mdi-check </v-icon>
               <v-icon v-else> mdi-content-copy </v-icon>
@@ -119,4 +109,14 @@ export default {
 };
 </script>
 
-<style></style>
+<style scoped>
+.v-card__text .v-chip {
+  width: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.v-card__text .hash {
+  width: 100%;
+}
+</style>
