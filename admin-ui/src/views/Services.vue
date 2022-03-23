@@ -54,12 +54,49 @@
           {{ value }}
         </v-chip>
       </template>
-
+      <!-- 
       <template v-slot:expanded-item="{ headers, item }">
         <td :colspan="headers.length" style="padding: 0">
           <v-card class="pa-4" color="background">
             <v-treeview :items="treeview(item)"> </v-treeview>
           </v-card>
+        </td>
+      </template> -->
+
+      <template v-slot:expanded-item="{ headers, item }">
+        <td :colspan="headers.length" style="padding: 0">
+          <v-expansion-panels inset v-model="opened" multiple>
+            <v-expansion-panel
+              style="background: var(--v-background-light-base)"
+              v-for="(group, title) in item.instancesGroups"
+              :key="title"
+            >
+              <v-expansion-panel-header>
+                {{ title }} | Type: {{ group.type }}</v-expansion-panel-header
+              >
+              <v-expansion-panel-content
+                style="background: var(--v-background-base)"
+              >
+                <v-row>
+                  <serveces-instances-item
+                    v-for="(elem, index) in group.instances"
+                    :key="index"
+                    :title="elem.title"
+                    :state="elem.state.state"
+                    :cpu="elem.resources.cpu"
+                    :drive_type="elem.resources.drive_type"
+                    :drive_size="elem.resources.drive_size"
+                    :ram="elem.resources.ram"
+                    :hash="elem.hash"
+                    :index="index"
+                    :chipColor="chipColor"
+                    :hashTrim="hashTrim"
+                  >
+                  </serveces-instances-item>
+                </v-row>
+              </v-expansion-panel-content>
+            </v-expansion-panel>
+          </v-expansion-panels>
         </td>
       </template>
     </nocloud-table>
@@ -68,14 +105,17 @@
 
 <script>
 import noCloudTable from "@/components/table.vue";
+import servecesInstancesItem from "@/components/serveces_instances_item.vue";
 import api from "@/api";
 
 export default {
   name: "Services-view",
   components: {
     "nocloud-table": noCloudTable,
+    servecesInstancesItem,
   },
   data: () => ({
+    opened: [0],
     headers: [
       { text: "title", value: "title" },
       { text: "status", value: "status" },
@@ -133,35 +173,36 @@ export default {
       });
   },
   methods: {
-    treeview(item) {
-      const result = [];
-      let index = 0;
-      for (const [name, group] of Object.entries(item.instancesGroups)) {
-        const temp = {};
-        temp.id = ++index;
-        let sp = this.servicesProviders.find(
-          (el) => el.uuid == item.provisions[group.uuid]
-        );
-        temp.name = name;
-        if (sp) {
-          temp.name += ` [location]: ${sp.title}`;
-        }
-        const childs = [];
-        for (const [ind, inst] of Object.entries(group.instances)) {
-          ind;
-          const temp = {};
-          temp.id = ++index;
-          temp.name = inst.title;
-          if (sp) {
-            temp.name += ` [state]: ${inst.state.meta.lcm_state_str}`;
-          }
-          childs.push(temp);
-        }
-        temp.children = childs;
-        result.push(temp);
-      }
-      return result;
-    },
+    // treeview(item) {
+    //   const result = [];
+    //   let index = 0;
+    //   for (const [name, group] of Object.entries(item.instancesGroups)) {
+    //     const temp = {};
+    //     temp.id = ++index;
+    //     let sp = this.servicesProviders.find(
+    //       (el) => el.uuid == item.provisions[group.uuid]
+    //     );
+    //     temp.name = name;
+    //     if (sp) {
+    //       temp.name += ` [location]: ${sp.title}`;
+    //     }
+    //     const childs = [];
+    //     for (const [ind, inst] of Object.entries(group.instances)) {
+    //       ind;
+    //       const temp = {};
+    //       temp.id = ++index;
+    //       temp.name = inst.title;
+    //       if (sp) {
+    //         temp.name += ` [state]: ${inst.state.meta.lcm_state_str}`;
+    //       }
+    //       childs.push(temp);
+    //     }
+    //     temp.children = childs;
+    //     result.push(temp);
+    //     console.log(result);
+    //   }
+    //   return result;
+    // },
     hashTrim(hash) {
       if (hash) return hash.slice(0, 8) + "...";
       else return "XXXXXXXX...";
@@ -170,8 +211,6 @@ export default {
       navigator.clipboard
         .writeText(text)
         .then(() => {
-          console.log(index);
-          console.log(this.copyed);
           this.copyed = index;
         })
         .catch((res) => {
@@ -192,6 +231,9 @@ export default {
         init: "orange darken-2",
         up: "green darken-2",
         del: "gray darken-2",
+        RUNNING: "green darken-2",
+        UNKNOWN: "red darken-2",
+        STOPPED: "orange darken-2",
       };
       return dict[state] ?? "blue-grey darken-2";
     },
@@ -241,6 +283,7 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
     });
+    this.opened.push(0);
   },
 };
 </script>
@@ -253,5 +296,8 @@ export default {
   font-family: "Quicksand", sans-serif;
   line-height: 1em;
   margin-bottom: 10px;
+}
+.v-expansion-panel-content .v-expansion-panel-content__wrap {
+  padding: 22px;
 }
 </style>
