@@ -19,7 +19,6 @@
 				<v-list-item-content>
 					{{item.service}}
 				</v-list-item-content>
-				
 				<v-list-item-icon>
 					<v-chip
 						small
