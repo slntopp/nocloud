@@ -34,7 +34,6 @@
 
 <script>
 export default {
-  name: "servicesProvider-page",
   data: () => ({
     found: false,
     tabsIndex: 0,
