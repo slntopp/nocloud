@@ -3,7 +3,7 @@ module github.com/slntopp/nocloud
 go 1.17
 
 require (
-	github.com/arangodb/go-driver v1.3.0
+	github.com/arangodb/go-driver v1.3.1
 	github.com/gabriel-vasile/mimetype v1.4.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofrs/uuid v4.2.0+incompatible
