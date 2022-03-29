@@ -11,6 +11,7 @@
           @click:append="addToClipboard(template.uuid, 'rootUUID')"
         >
         </v-text-field>
+   
       </v-col>
       <v-col>
         <v-text-field
@@ -356,8 +357,7 @@ export default {
   //   },
   methods: {
     addToClipboard(text, index) {
-      navigator.clipboard
-        .writeText(text)
+      navigator.clipboard.writeText(text)
         .then(() => {
           this.copyed = index;
         })
