@@ -57,6 +57,16 @@ message DeleteResponse {
     repeated string services = 2;
 }
 
+message UpdateRequest {
+    string uuid = 1;
+    ServicesProvider sp = 2;
+}
+
+message UpdateResponse {
+    bool result = 1;
+    string error = 2;
+}
+
 // Available only for users with SUPERUSER and ADMIN access to platform namespace
 message ActionRequest {
     nocloud.services_providers.ServicesProvider services_provider = 1;
@@ -87,6 +97,12 @@ service ServicesProvidersService {
     rpc Delete(nocloud.services_providers.DeleteRequest) returns (nocloud.services_providers.DeleteResponse) {
         option (google.api.http) = {
             delete: "/sp/{uuid}"
+        };
+    };
+    rpc Update(nocloud.services_providers.UpdateRequest) returns (nocloud.services_providers.UpdateResponse) {
+        option (google.api.http) = {
+            patch: "/sp/{uuid}"
+            body: "*"
         };
     };
 
