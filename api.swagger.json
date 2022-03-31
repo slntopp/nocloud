@@ -14,6 +14,9 @@
       "name": "StatesService"
     },
     {
+      "name": "RecordsService"
+    },
+    {
       "name": "DNS"
     },
     {
@@ -1494,6 +1497,17 @@
         }
       }
     },
+    "billingRecords": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/nocloudbillingRecord"
+          }
+        }
+      }
+    },
     "dnsResult": {
       "type": "object",
       "properties": {
@@ -1743,6 +1757,49 @@
         },
         "title": {
           "type": "string"
+        }
+      }
+    },
+    "nocloudbillingRecord": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "end": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "proc": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "processed": {
+          "type": "boolean"
+        },
+        "instance": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/statesNoCloudState"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "total": {
+          "type": "number",
+          "format": "float"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          },
+          "title": "Record meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity\nprice_atm: \u003cnumber\u003e // hourly price per quant of resouce at the moment, e.g. 1 NCU \n[other keys]: \u003cany\u003e // for example Drive Type(SSD/HDD/NVMe/etc)\n}"
         }
       }
     },

@@ -72,9 +72,11 @@ message Record {
     bool processed = 5; // Wether Record has been processed(converted to Transaction)
 
     string instance = 6; // Instance UUID
-    string resource = 7; // Resource key
+    nocloud.states.NoCloudState state = 7; // Instance state
 
-    float total = 8; // Record total value in NCU
+    string resource = 8; // Resource key
+
+    float total = 9; // Record total value in NCU
     /* Record meta data, like
         meta: {
             total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity
@@ -82,5 +84,19 @@ message Record {
             [other keys]: <any> // for example Drive Type(SSD/HDD/NVMe/etc)
         }
     */
-    map<string, google.protobuf.Value> meta = 9;
+    map<string, google.protobuf.Value> meta = 10;
+}
+
+message Records {
+    repeated Record pool = 1;
+}
+
+message GetActiveRequest {
+    string uuid = 1; // Instance UUID
+}
+
+service RecordsService {
+    rpc GetActive(GetActiveRequest) returns (Records);
+    rpc Create(Records) returns (Records);
+    rpc Update(Records) returns (Records);
 }
