@@ -272,15 +272,26 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
 	}
 
-	sp := &graph.ServicesProvider{ServicesProvider: &sppb.ServicesProvider{
-		Uuid:       req.GetUuid(),
+	/*sp := &graph.ServicesProvider{ServicesProvider: &sppb.ServicesProvider{
+		Uuid:       oldSp.GetUuid(),
 		Type:       oldSp.GetType(),
-		Title:      req.GetTitle(),
-		Secrets:    req.GetSecrets(),
+		Title:      replaceIfExist(oldSp.GetTitle(), req.GetTitle()),
+		Secrets:    replaceIfExist(oldSp.GetSecrets(), req.GetSecrets()),
 		Vars:       req.GetVars(),
 		Extentions: oldSp.GetExtentions(),
-		State:      req.GetState(),
+		State:      oldSp.GetState(),
 	},
+	}*/
+
+	sp := &graph.ServicesProvider{ServicesProvider: oldSp.ServicesProvider}
+	if newTitle := req.GetTitle(); newTitle != "" {
+		sp.Title = newTitle
+	}
+	if newSecrets := req.GetSecrets(); newSecrets != nil {
+		sp.Secrets = newSecrets
+	}
+	if newVars := req.GetVars(); newVars != nil {
+		sp.Vars = newVars
 	}
 
 	testRes, err := s.Test(ctx, sp.ServicesProvider)
@@ -293,7 +304,6 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 
 	err = s.ctrl.Update(ctx, sp.ServicesProvider)
 	if err != nil {
-		s.UnregisterExtentions(ctx, log, sp)
 		s.log.Debug("Error updating in DataBase", zap.Any("sp", sp), zap.Error(err))
 		return req, status.Error(codes.Internal, "Error updating in DataBase")
 	}
