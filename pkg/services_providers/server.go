@@ -272,17 +272,6 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
 	}
 
-	/*sp := &graph.ServicesProvider{ServicesProvider: &sppb.ServicesProvider{
-		Uuid:       oldSp.GetUuid(),
-		Type:       oldSp.GetType(),
-		Title:      replaceIfExist(oldSp.GetTitle(), req.GetTitle()),
-		Secrets:    replaceIfExist(oldSp.GetSecrets(), req.GetSecrets()),
-		Vars:       req.GetVars(),
-		Extentions: oldSp.GetExtentions(),
-		State:      oldSp.GetState(),
-	},
-	}*/
-
 	sp := &graph.ServicesProvider{ServicesProvider: oldSp.ServicesProvider}
 	if newTitle := req.GetTitle(); newTitle != "" {
 		sp.Title = newTitle
