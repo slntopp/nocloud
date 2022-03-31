@@ -35,7 +35,7 @@ enum Kind {
 message ResourceConf {
     Kind kind = 1;
     float price = 2;
-    uint32 period = 3;
+    uint64 period = 3; // if set to 0, then it's a one-time payment
     // If except set to true then transaction will be created if Instance is in one of the states listed in on
     // If except set to false then transaction will be created if Instance is NOT in one of the states listed in on
     bool except = 4;
@@ -44,15 +44,38 @@ message ResourceConf {
 
 message Transaction {
     string uuid = 1; // transaction UUID
-    uint64 start = 2; // Timestamp of Transaction coverage frame start
-    uint64 end = 3; // Timestamp of Transaction coverage frame end
-    uint64 exec = 4; // Timestamp of Transaction planned execution time
-    bool processed = 5; // Wether Transaction has been processed(applied to Account balance, etc)
+    uint64 exec = 2; // Timestamp of Transaction planned execution time
+    uint64 proc = 3; // Timestamp of Transaction processing time
+    bool processed = 4; // Wether Transaction has been processed(applied to Account balance, etc)
 
-    string instance = 6; // Linked instance UUID
-    string resource = 7; // Resource key
+    string account = 5;
+    string service = 6;
+    repeated string records = 7; // list of records UUIDs
+
     float total = 8; // Transaction total value in NCU
     /* Transaction meta data, like
+        meta: {
+            total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity
+            price_atm: <number> // hourly price per quant of resouce at the moment, e.g. 1 NCU 
+            [other keys]: <any> // for example Drive Type(SSD/HDD/NVMe/etc)
+        }
+    */
+    map<string, google.protobuf.Value> meta = 9;
+}
+
+message Record {
+    string uuid = 1; // Record UUID
+    uint64 start = 2; // Timestamp of Record coverage frame start
+    uint64 end = 3; // Timestamp of Record coverage frame end
+
+    uint64 proc = 4; // Timestamp of Record processing time
+    bool processed = 5; // Wether Record has been processed(converted to Transaction)
+
+    string instance = 6; // Instance UUID
+    string resource = 7; // Resource key
+
+    float total = 8; // Record total value in NCU
+    /* Record meta data, like
         meta: {
             total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity
             price_atm: <number> // hourly price per quant of resouce at the moment, e.g. 1 NCU 

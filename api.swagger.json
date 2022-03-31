@@ -1494,35 +1494,6 @@
         }
       }
     },
-    "dnsRecord": {
-      "type": "object",
-      "properties": {
-        "a": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/RecordA"
-          }
-        },
-        "aaaa": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/RecordAAAA"
-          }
-        },
-        "cname": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/RecordCNAME"
-          }
-        },
-        "txt": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/RecordTXT"
-          }
-        }
-      }
-    },
     "dnsResult": {
       "type": "object",
       "properties": {
@@ -1541,7 +1512,7 @@
         "locations": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/definitions/dnsRecord"
+            "$ref": "#/definitions/noclouddnsRecord"
           }
         }
       }
@@ -1782,6 +1753,35 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        }
+      }
+    },
+    "noclouddnsRecord": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordA"
+          }
+        },
+        "aaaa": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordAAAA"
+          }
+        },
+        "cname": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordCNAME"
+          }
+        },
+        "txt": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordTXT"
           }
         }
       }
