@@ -254,6 +254,18 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	log := s.log.Named("Update")
 	log.Debug("Update request received", zap.Any("request", req))
 
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ns_ctrl.Get(ctx, "0")
+	if err != nil {
+		return nil, err
+	}
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	}
+
 	oldSp, err := s.ctrl.Get(ctx, req.GetUuid())
 	if err != nil {
 		log.Error("Error getting ServicesProvider from DB", zap.Error(err))
