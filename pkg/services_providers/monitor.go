@@ -113,8 +113,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 	conf := MakeConf(ctx, log)
 	log.Info("Got Monitoring Configuration", zap.Any("conf", conf))
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
-	tick := time.Now()
-	for {
+	for tick := range ticker.C{
 		s.monitoring.Running = true
 
 		sp_pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY)
@@ -180,6 +179,5 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 		}
 		
 		s.monitoring.LastExec = tick.Format("2006-01-02T15:04:05Z07:00")
-		tick = <- ticker.C
 	}
 }
