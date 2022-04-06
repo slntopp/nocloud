@@ -33,7 +33,7 @@ enum Kind {
 message ResourceConf {
     string key = 1;
     Kind kind = 2;
-    float price = 3;
+    float price = 3; // Price per period
     uint64 period = 4; // if set to 0, then it's a one-time payment
     // If except set to true then transaction will be created if Instance is in one of the states listed in on
     // If except set to false then transaction will be created if Instance is NOT in one of the states listed in on
