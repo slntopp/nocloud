@@ -1497,6 +1497,29 @@
         }
       }
     },
+    "billingKind": {
+      "type": "string",
+      "enum": [
+        "UNSPECIFIED",
+        "POSTPAID",
+        "PREPAID"
+      ],
+      "default": "UNSPECIFIED"
+    },
+    "billingPlan": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "resources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/billingResourceConf"
+          }
+        }
+      }
+    },
     "billingRecords": {
       "type": "object",
       "properties": {
@@ -1504,6 +1527,35 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/nocloudbillingRecord"
+          }
+        }
+      }
+    },
+    "billingResourceConf": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/billingKind"
+        },
+        "price": {
+          "type": "number",
+          "format": "float"
+        },
+        "period": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "except": {
+          "type": "boolean",
+          "title": "If except set to true then transaction will be created if Instance is in one of the states listed in on\nIf except set to false then transaction will be created if Instance is NOT in one of the states listed in on"
+        },
+        "on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/statesNoCloudState"
           }
         }
       }
@@ -1667,6 +1719,9 @@
         },
         "hash": {
           "type": "string"
+        },
+        "billingPlan": {
+          "$ref": "#/definitions/billingPlan"
         }
       }
     },

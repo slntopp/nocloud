@@ -19,6 +19,7 @@ package nocloud.instances;
 import "google/protobuf/struct.proto";
 import "pkg/hasher/hasherpb/hasher.proto";
 import "pkg/states/proto/states.proto";
+import "pkg/billing/proto/billing.proto";
 
 message Instance {
     string uuid = 1;
@@ -30,6 +31,7 @@ message Instance {
     map<string, google.protobuf.Value> data = 5;
     nocloud.states.State state = 6;
     string hash = 7 [(nocloud.hasher.hash) = true];
+    nocloud.billing.Plan billing_plan = 8;
 }
 
 message InstancesGroup {

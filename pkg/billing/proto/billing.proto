@@ -21,9 +21,7 @@ import "google/protobuf/struct.proto";
 
 message Plan {
     string title = 1;
-    // Map of resource keys to their configurations
-    // Resouce key is one of driver supported keys, like cpu, ram, etc.
-    map<string, ResourceConf> resources = 2;
+    repeated ResourceConf resources = 2;
 }
 
 enum Kind {
@@ -33,13 +31,14 @@ enum Kind {
 }
 
 message ResourceConf {
-    Kind kind = 1;
-    float price = 2;
-    uint64 period = 3; // if set to 0, then it's a one-time payment
+    string key = 1;
+    Kind kind = 2;
+    float price = 3;
+    uint64 period = 4; // if set to 0, then it's a one-time payment
     // If except set to true then transaction will be created if Instance is in one of the states listed in on
     // If except set to false then transaction will be created if Instance is NOT in one of the states listed in on
-    bool except = 4;
-    repeated nocloud.states.NoCloudState on = 5;
+    bool except = 5;
+    repeated nocloud.states.NoCloudState on = 6;
 }
 
 message Transaction {
@@ -100,3 +99,31 @@ service RecordsService {
     rpc Create(Records) returns (Records);
     rpc Update(Records) returns (Records);
 }
+
+/* 
+Драйвер получает запрос на мониторинг
+...
+Драйвер получает актуальные статусы машины(инстанса) - V
+Драйвер получает активные записи о машине(инстансе) - V
+Драйвер обновляет активные записи, если нужно(статус изменился / прошло время по биллинг плану) - X
+Драйвер создает новые записи, если нужно(статус изменился / прошло время по биллинг плану) - X
+*/
+
+/*
+
+Monitoring(
+    for group in groups {
+        for inst in group {
+            lr = GetLast(inst, cpu)
+            pool = []
+            next = lr.end + inst.period
+            while next < now {
+                lr = Compute(inst, lr.end, next)
+                pool << lr
+            }
+            Create(pool)
+        }
+    }
+)
+
+*/
