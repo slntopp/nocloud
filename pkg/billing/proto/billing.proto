@@ -66,8 +66,8 @@ message Record {
     string uuid = 1; // Record UUID
     uint64 start = 2; // Timestamp of Record coverage frame start
     uint64 end = 3; // Timestamp of Record coverage frame end
+    uint64 exec = 4; // Time when Record must be processed
 
-    uint64 proc = 4; // Timestamp of Record processing time
     bool processed = 5; // Wether Record has been processed(converted to Transaction)
 
     string instance = 6; // Instance UUID
@@ -99,31 +99,3 @@ service RecordsService {
     rpc Create(Records) returns (Records);
     rpc Update(Records) returns (Records);
 }
-
-/* 
-Драйвер получает запрос на мониторинг
-...
-Драйвер получает актуальные статусы машины(инстанса) - V
-Драйвер получает активные записи о машине(инстансе) - V
-Драйвер обновляет активные записи, если нужно(статус изменился / прошло время по биллинг плану) - X
-Драйвер создает новые записи, если нужно(статус изменился / прошло время по биллинг плану) - X
-*/
-
-/*
-
-Monitoring(
-    for group in groups {
-        for inst in group {
-            lr = GetLast(inst, cpu)
-            pool = []
-            next = lr.end + inst.period
-            while next < now {
-                lr = Compute(inst, lr.end, next)
-                pool << lr
-            }
-            Create(pool)
-        }
-    }
-)
-
-*/

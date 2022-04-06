@@ -1829,7 +1829,7 @@
           "type": "string",
           "format": "uint64"
         },
-        "proc": {
+        "exec": {
           "type": "string",
           "format": "uint64"
         },
