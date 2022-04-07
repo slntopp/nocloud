@@ -113,7 +113,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 	conf := MakeConf(ctx, log)
 	log.Info("Got Monitoring Configuration", zap.Any("conf", conf))
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
-	for tick := range ticker.C{
+	for tick := range ticker.C {
 		s.monitoring.Running = true
 
 		sp_pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY)

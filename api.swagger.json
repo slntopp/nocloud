@@ -1847,7 +1847,7 @@
         },
         "total": {
           "type": "number",
-          "format": "float"
+          "format": "double"
         },
         "meta": {
           "type": "object",

@@ -51,7 +51,7 @@ message Transaction {
     string service = 6;
     repeated string records = 7; // list of records UUIDs
 
-    float total = 8; // Transaction total value in NCU
+    double total = 8; // Transaction total value in NCU
     /* Transaction meta data, like
         meta: {
             total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity
@@ -75,7 +75,7 @@ message Record {
 
     string resource = 8; // Resource key
 
-    float total = 9; // Record total value in NCU
+    double total = 9; // Record total value in NCU
     /* Record meta data, like
         meta: {
             total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity
