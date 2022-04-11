@@ -31,10 +31,10 @@ import (
 func (s *StatesServer) GetStates(ctx context.Context, req *pb.GetStatesRequest) (resp *pb.GetStatesResponse, err error) {
 
 	resp = &pb.GetStatesResponse{
-		States:  make(map[string]*pb.State),
+		States: make(map[string]*pb.State),
 	}
 
-	keys := req.GetUuids()	
+	keys := req.GetUuids()
 	for i, uuid := range keys {
 		keys[i] = fmt.Sprintf("%s:%s", KEYS_PREFIX, uuid)
 	}
@@ -48,19 +48,15 @@ func (s *StatesServer) GetStates(ctx context.Context, req *pb.GetStatesRequest) 
 
 	for i, state := range states {
 		var istate pb.State
-		key := strings.Replace(keys[i], KEYS_PREFIX + ":", "", 1)
+		key := strings.Replace(keys[i], KEYS_PREFIX+":", "", 1)
 
 		switch state.(type) {
 		case string:
 			err = json.Unmarshal([]byte(state.(string)), &istate)
 		case nil:
-			states := make(map[string]*pb.State)
-			states[key] = &pb.State{
+			istate = pb.State{
 				State: pb.NoCloudState_UNKNOWN,
 			}
-			return &pb.GetStatesResponse{
-				States: states,
-			}, nil
 		}
 		if err != nil {
 			s.log.Error("Error Unmarshal JSON",
