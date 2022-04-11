@@ -1542,7 +1542,7 @@
         },
         "price": {
           "type": "number",
-          "format": "float"
+          "format": "double"
         },
         "period": {
           "type": "string",
