@@ -171,3 +171,341 @@ var RecordsService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "pkg/billing/proto/billing.proto",
 }
+
+// BillingServiceClient is the client API for BillingService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type BillingServiceClient interface {
+	CreatePlan(ctx context.Context, in *Plan, opts ...grpc.CallOption) (*Plan, error)
+	UpdatePlan(ctx context.Context, in *Plan, opts ...grpc.CallOption) (*Plan, error)
+	GetPlan(ctx context.Context, in *Plan, opts ...grpc.CallOption) (*Plan, error)
+	ListPlans(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
+	DeletePlan(ctx context.Context, in *Plan, opts ...grpc.CallOption) (*Plan, error)
+	CreateTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Transaction, error)
+	ListTransactions(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Transactions, error)
+	GetRecords(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Records, error)
+}
+
+type billingServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewBillingServiceClient(cc grpc.ClientConnInterface) BillingServiceClient {
+	return &billingServiceClient{cc}
+}
+
+func (c *billingServiceClient) CreatePlan(ctx context.Context, in *Plan, opts ...grpc.CallOption) (*Plan, error) {
+	out := new(Plan)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/CreatePlan", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) UpdatePlan(ctx context.Context, in *Plan, opts ...grpc.CallOption) (*Plan, error) {
+	out := new(Plan)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/UpdatePlan", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) GetPlan(ctx context.Context, in *Plan, opts ...grpc.CallOption) (*Plan, error) {
+	out := new(Plan)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/GetPlan", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) ListPlans(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
+	out := new(ListResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/ListPlans", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) DeletePlan(ctx context.Context, in *Plan, opts ...grpc.CallOption) (*Plan, error) {
+	out := new(Plan)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/DeletePlan", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) CreateTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Transaction, error) {
+	out := new(Transaction)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/CreateTransaction", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) ListTransactions(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Transactions, error) {
+	out := new(Transactions)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/ListTransactions", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *billingServiceClient) GetRecords(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Records, error) {
+	out := new(Records)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/GetRecords", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// BillingServiceServer is the server API for BillingService service.
+// All implementations must embed UnimplementedBillingServiceServer
+// for forward compatibility
+type BillingServiceServer interface {
+	CreatePlan(context.Context, *Plan) (*Plan, error)
+	UpdatePlan(context.Context, *Plan) (*Plan, error)
+	GetPlan(context.Context, *Plan) (*Plan, error)
+	ListPlans(context.Context, *ListRequest) (*ListResponse, error)
+	DeletePlan(context.Context, *Plan) (*Plan, error)
+	CreateTransaction(context.Context, *Transaction) (*Transaction, error)
+	ListTransactions(context.Context, *ListRequest) (*Transactions, error)
+	GetRecords(context.Context, *Transaction) (*Records, error)
+	mustEmbedUnimplementedBillingServiceServer()
+}
+
+// UnimplementedBillingServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedBillingServiceServer struct {
+}
+
+func (UnimplementedBillingServiceServer) CreatePlan(context.Context, *Plan) (*Plan, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreatePlan not implemented")
+}
+func (UnimplementedBillingServiceServer) UpdatePlan(context.Context, *Plan) (*Plan, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdatePlan not implemented")
+}
+func (UnimplementedBillingServiceServer) GetPlan(context.Context, *Plan) (*Plan, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPlan not implemented")
+}
+func (UnimplementedBillingServiceServer) ListPlans(context.Context, *ListRequest) (*ListResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPlans not implemented")
+}
+func (UnimplementedBillingServiceServer) DeletePlan(context.Context, *Plan) (*Plan, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeletePlan not implemented")
+}
+func (UnimplementedBillingServiceServer) CreateTransaction(context.Context, *Transaction) (*Transaction, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateTransaction not implemented")
+}
+func (UnimplementedBillingServiceServer) ListTransactions(context.Context, *ListRequest) (*Transactions, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListTransactions not implemented")
+}
+func (UnimplementedBillingServiceServer) GetRecords(context.Context, *Transaction) (*Records, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRecords not implemented")
+}
+func (UnimplementedBillingServiceServer) mustEmbedUnimplementedBillingServiceServer() {}
+
+// UnsafeBillingServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to BillingServiceServer will
+// result in compilation errors.
+type UnsafeBillingServiceServer interface {
+	mustEmbedUnimplementedBillingServiceServer()
+}
+
+func RegisterBillingServiceServer(s grpc.ServiceRegistrar, srv BillingServiceServer) {
+	s.RegisterService(&BillingService_ServiceDesc, srv)
+}
+
+func _BillingService_CreatePlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Plan)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).CreatePlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.BillingService/CreatePlan",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).CreatePlan(ctx, req.(*Plan))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_UpdatePlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Plan)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).UpdatePlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.BillingService/UpdatePlan",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).UpdatePlan(ctx, req.(*Plan))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_GetPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Plan)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).GetPlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.BillingService/GetPlan",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).GetPlan(ctx, req.(*Plan))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_ListPlans_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).ListPlans(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.BillingService/ListPlans",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).ListPlans(ctx, req.(*ListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_DeletePlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Plan)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).DeletePlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.BillingService/DeletePlan",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).DeletePlan(ctx, req.(*Plan))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_CreateTransaction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Transaction)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).CreateTransaction(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.BillingService/CreateTransaction",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).CreateTransaction(ctx, req.(*Transaction))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_ListTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).ListTransactions(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.BillingService/ListTransactions",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).ListTransactions(ctx, req.(*ListRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BillingService_GetRecords_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Transaction)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).GetRecords(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.BillingService/GetRecords",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).GetRecords(ctx, req.(*Transaction))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// BillingService_ServiceDesc is the grpc.ServiceDesc for BillingService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var BillingService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "nocloud.billing.BillingService",
+	HandlerType: (*BillingServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "CreatePlan",
+			Handler:    _BillingService_CreatePlan_Handler,
+		},
+		{
+			MethodName: "UpdatePlan",
+			Handler:    _BillingService_UpdatePlan_Handler,
+		},
+		{
+			MethodName: "GetPlan",
+			Handler:    _BillingService_GetPlan_Handler,
+		},
+		{
+			MethodName: "ListPlans",
+			Handler:    _BillingService_ListPlans_Handler,
+		},
+		{
+			MethodName: "DeletePlan",
+			Handler:    _BillingService_DeletePlan_Handler,
+		},
+		{
+			MethodName: "CreateTransaction",
+			Handler:    _BillingService_CreateTransaction_Handler,
+		},
+		{
+			MethodName: "ListTransactions",
+			Handler:    _BillingService_ListTransactions_Handler,
+		},
+		{
+			MethodName: "GetRecords",
+			Handler:    _BillingService_GetRecords_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/billing/proto/billing.proto",
+}

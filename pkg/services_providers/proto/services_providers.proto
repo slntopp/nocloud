@@ -32,6 +32,7 @@ message ServicesProvider {
     map<string, Var> vars = 5;
     map<string, google.protobuf.Struct> extentions = 6;
     nocloud.states.State state = 7;
+    bool public = 8; // If set to true, the provider will be visible to all users
 }
 
 message TestResponse {

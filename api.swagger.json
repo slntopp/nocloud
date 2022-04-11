@@ -17,6 +17,9 @@
       "name": "RecordsService"
     },
     {
+      "name": "BillingService"
+    },
+    {
       "name": "DNS"
     },
     {
@@ -269,6 +272,347 @@
         ],
         "tags": [
           "AccountsService"
+        ]
+      }
+    },
+    "/billing/plans": {
+      "get": {
+        "operationId": "BillingService_ListPlans",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudbillingListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "BillingService"
+        ]
+      },
+      "put": {
+        "operationId": "BillingService_CreatePlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingPlan"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/billingPlan"
+            }
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      }
+    },
+    "/billing/plans/{uuid}": {
+      "get": {
+        "operationId": "BillingService_GetPlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingPlan"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "public",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "linkedInstances",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      },
+      "delete": {
+        "operationId": "BillingService_DeletePlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingPlan"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "public",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "linkedInstances",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      },
+      "patch": {
+        "operationId": "BillingService_UpdatePlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingPlan"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "public": {
+                  "type": "boolean"
+                },
+                "resources": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/billingResourceConf"
+                  }
+                },
+                "linkedInstances": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      }
+    },
+    "/billing/transactions": {
+      "get": {
+        "operationId": "BillingService_ListTransactions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingTransactions"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "BillingService"
+        ]
+      },
+      "put": {
+        "operationId": "BillingService_CreateTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingTransaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/billingTransaction"
+            }
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      }
+    },
+    "/billing/transactions/{uuid}": {
+      "get": {
+        "operationId": "BillingService_GetRecords",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingRecords"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "exec",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "proc",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "uint64"
+          },
+          {
+            "name": "processed",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "account",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "records",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "total",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "format": "double"
+          }
+        ],
+        "tags": [
+          "BillingService"
         ]
       }
     },
@@ -1509,13 +1853,25 @@
     "billingPlan": {
       "type": "object",
       "properties": {
+        "uuid": {
+          "type": "string"
+        },
         "title": {
           "type": "string"
+        },
+        "public": {
+          "type": "boolean"
         },
         "resources": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/billingResourceConf"
+          }
+        },
+        "linkedInstances": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         }
       }
@@ -1556,6 +1912,59 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/statesNoCloudState"
+          }
+        }
+      }
+    },
+    "billingTransaction": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "exec": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "proc": {
+          "type": "string",
+          "format": "uint64"
+        },
+        "processed": {
+          "type": "boolean"
+        },
+        "account": {
+          "type": "string"
+        },
+        "service": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "total": {
+          "type": "number",
+          "format": "double"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          },
+          "title": "Transaction meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity\nprice_atm: \u003cnumber\u003e // hourly price per quant of resouce at the moment, e.g. 1 NCU \n[other keys]: \u003cany\u003e // for example Drive Type(SSD/HDD/NVMe/etc)\n}"
+        }
+      }
+    },
+    "billingTransactions": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/billingTransaction"
           }
         }
       }
@@ -1812,6 +2221,17 @@
         },
         "title": {
           "type": "string"
+        }
+      }
+    },
+    "nocloudbillingListResponse": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/billingPlan"
+          }
         }
       }
     },
@@ -2313,6 +2733,9 @@
         },
         "state": {
           "$ref": "#/definitions/statesState"
+        },
+        "public": {
+          "type": "boolean"
         }
       }
     },

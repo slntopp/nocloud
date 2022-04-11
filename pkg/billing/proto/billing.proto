@@ -18,10 +18,19 @@ package nocloud.billing;
 
 import "pkg/states/proto/states.proto";
 import "google/protobuf/struct.proto";
+import "google/api/annotations.proto";
 
 message Plan {
-    string title = 1;
-    repeated ResourceConf resources = 2;
+    string uuid = 1;
+    string title = 2;
+    bool public = 3; // if true, then this plan is available for all users
+    repeated ResourceConf resources = 4;
+    repeated string linked_instances = 5; // uuids of instances that are linked to this plan
+}
+
+message ListRequest {}
+message ListResponse {
+    repeated Plan pool = 1;
 }
 
 enum Kind {
@@ -62,6 +71,10 @@ message Transaction {
     map<string, google.protobuf.Value> meta = 9;
 }
 
+message Transactions {
+    repeated Transaction pool = 1;
+}
+
 message Record {
     string uuid = 1; // Record UUID
     uint64 start = 2; // Timestamp of Record coverage frame start
@@ -98,4 +111,51 @@ service RecordsService {
     rpc GetActive(GetActiveRequest) returns (Records);
     rpc Create(Records) returns (Records);
     rpc Update(Records) returns (Records);
+}
+
+service BillingService {
+    rpc CreatePlan(Plan) returns (Plan) {
+        option (google.api.http) = {
+            put: "/billing/plans"
+            body: "*"
+        };
+    };
+    rpc UpdatePlan(Plan) returns (Plan) {
+        option (google.api.http) = {
+            patch: "/billing/plans/{uuid}"
+            body: "*"
+        };
+    };
+    rpc GetPlan(Plan) returns (Plan) {
+        option (google.api.http) = {
+            get: "/billing/plans/{uuid}"
+        };
+    };
+    rpc ListPlans(ListRequest) returns (ListResponse) {
+        option (google.api.http) = {
+            get: "/billing/plans"
+        };
+    };
+    rpc DeletePlan(Plan) returns (Plan) {
+        option (google.api.http) = {
+            delete: "/billing/plans/{uuid}"
+        };
+    };
+
+    rpc CreateTransaction(Transaction) returns (Transaction) {
+        option (google.api.http) = {
+            put: "/billing/transactions"
+            body: "*"
+        };
+    };
+    rpc ListTransactions(ListRequest) returns (Transactions) {
+        option (google.api.http) = {
+            get: "/billing/transactions"
+        };
+    };
+    rpc GetRecords(Transaction) returns (Records) {
+        option (google.api.http) = {
+            get: "/billing/transactions/{uuid}"
+        };
+    };
 }
