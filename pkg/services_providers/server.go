@@ -32,21 +32,21 @@ import (
 )
 
 type Routine struct {
-	Name string
+	Name     string
 	LastExec string
-	Running bool
+	Running  bool
 }
 
 type ServicesProviderServer struct {
 	sppb.UnimplementedServicesProvidersServiceServer
 
 	drivers map[string]driverpb.DriverServiceClient
-	states stpb.StatesServiceClient
+	states  stpb.StatesServiceClient
 
 	extention_servers map[string]sppb.ServicesProvidersExtentionsServiceClient
-	db driver.Database
-	ctrl graph.ServicesProvidersController
-	ns_ctrl graph.NamespacesController
+	db                driver.Database
+	ctrl              graph.ServicesProvidersController
+	ns_ctrl           graph.NamespacesController
 
 	monitoring Routine
 
@@ -56,11 +56,11 @@ type ServicesProviderServer struct {
 func NewServicesProviderServer(log *zap.Logger, db driver.Database, gc stpb.StatesServiceClient) *ServicesProviderServer {
 	return &ServicesProviderServer{
 		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),
-		ns_ctrl: graph.NewNamespacesController(log, db),
-		drivers: make(map[string]driverpb.DriverServiceClient),
+		ns_ctrl:           graph.NewNamespacesController(log, db),
+		drivers:           make(map[string]driverpb.DriverServiceClient),
 		extention_servers: make(map[string]sppb.ServicesProvidersExtentionsServiceClient),
 		monitoring: Routine{
-			Name: "Monitoring",
+			Name:    "Monitoring",
 			Running: false,
 		},
 		states: gc,
@@ -82,7 +82,7 @@ func (s *ServicesProviderServer) ListExtentions(ctx context.Context, req *sppb.L
 	for k := range s.extention_servers {
 		keys = append(keys, k)
 	}
-	
+
 	return &sppb.ListExtentionsResponse{Types: keys}, nil
 }
 
@@ -117,7 +117,7 @@ func (s *ServicesProviderServer) Test(ctx context.Context, req *sppb.ServicesPro
 				err := fmt.Sprintf("Extention '%s': %s", ext, res.Error)
 				return &sppb.TestResponse{
 					Result: res.Result, Error: err,
-					}, nil
+				}, nil
 			}
 		}
 	}
@@ -219,7 +219,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
-	
+
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())
 	if err != nil {
 		log.Error("Error getting ServicesProvider from DB", zap.Error(err))
@@ -233,7 +233,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	}
 
 	if len(services) > 0 {
-		res = &sppb.DeleteResponse{ Result: false, Services: make([]string, len(services)) }
+		res = &sppb.DeleteResponse{Result: false, Services: make([]string, len(services))}
 		for i, service := range services {
 			res.Services[i] = service.GetUuid()
 		}
@@ -248,6 +248,55 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 
 	s.UnregisterExtentions(ctx, log, sp)
 	return &sppb.DeleteResponse{Result: true}, nil
+}
+
+func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesProvider) (res *sppb.ServicesProvider, err error) {
+	log := s.log.Named("Update")
+	log.Debug("Update request received", zap.Any("request", req))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ns_ctrl.Get(ctx, "0")
+	if err != nil {
+		return nil, err
+	}
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	}
+
+	oldSp, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		log.Error("Error getting ServicesProvider from DB", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
+	}
+
+	sp := &graph.ServicesProvider{ServicesProvider: oldSp.ServicesProvider}
+	if newTitle := req.GetTitle(); newTitle != "" {
+		sp.Title = newTitle
+	}
+	if newSecrets := req.GetSecrets(); newSecrets != nil {
+		sp.Secrets = newSecrets
+	}
+	if newVars := req.GetVars(); newVars != nil {
+		sp.Vars = newVars
+	}
+
+	testRes, err := s.Test(ctx, sp.ServicesProvider)
+	if err != nil {
+		return req, err
+	}
+	if !testRes.Result {
+		return req, status.Error(codes.Internal, testRes.Error)
+	}
+
+	err = s.ctrl.Update(ctx, sp.ServicesProvider)
+	if err != nil {
+		s.log.Debug("Error updating in DataBase", zap.Any("sp", sp), zap.Error(err))
+		return req, status.Error(codes.Internal, "Error updating in DataBase")
+	}
+	return sp.ServicesProvider, err
 }
 
 func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetRequest) (res *sppb.ServicesProvider, err error) {

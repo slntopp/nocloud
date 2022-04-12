@@ -90,6 +90,12 @@ service ServicesProvidersService {
             delete: "/sp/{uuid}"
         };
     };
+    rpc Update(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.ServicesProvider) {
+        option (google.api.http) = {
+            patch: "/sp/{uuid}"
+            body: "*"
+        };
+    };
 
     rpc Get(nocloud.services_providers.GetRequest) returns (nocloud.services_providers.ServicesProvider) {
         option (google.api.http) = {

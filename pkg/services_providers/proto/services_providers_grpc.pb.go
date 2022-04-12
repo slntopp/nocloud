@@ -22,6 +22,7 @@ type ServicesProvidersServiceClient interface {
 	Test(ctx context.Context, in *ServicesProvider, opts ...grpc.CallOption) (*TestResponse, error)
 	Create(ctx context.Context, in *ServicesProvider, opts ...grpc.CallOption) (*ServicesProvider, error)
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
+	Update(ctx context.Context, in *ServicesProvider, opts ...grpc.CallOption) (*ServicesProvider, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*ServicesProvider, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*structpb.Struct, error)
@@ -57,6 +58,15 @@ func (c *servicesProvidersServiceClient) Create(ctx context.Context, in *Service
 func (c *servicesProvidersServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
 	out := new(DeleteResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.services_providers.ServicesProvidersService/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesProvidersServiceClient) Update(ctx context.Context, in *ServicesProvider, opts ...grpc.CallOption) (*ServicesProvider, error) {
+	out := new(ServicesProvider)
+	err := c.cc.Invoke(ctx, "/nocloud.services_providers.ServicesProvidersService/Update", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -106,6 +116,7 @@ type ServicesProvidersServiceServer interface {
 	Test(context.Context, *ServicesProvider) (*TestResponse, error)
 	Create(context.Context, *ServicesProvider) (*ServicesProvider, error)
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
+	Update(context.Context, *ServicesProvider) (*ServicesProvider, error)
 	Get(context.Context, *GetRequest) (*ServicesProvider, error)
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	Invoke(context.Context, *ActionRequest) (*structpb.Struct, error)
@@ -125,6 +136,9 @@ func (UnimplementedServicesProvidersServiceServer) Create(context.Context, *Serv
 }
 func (UnimplementedServicesProvidersServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) Update(context.Context, *ServicesProvider) (*ServicesProvider, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
 func (UnimplementedServicesProvidersServiceServer) Get(context.Context, *GetRequest) (*ServicesProvider, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
@@ -202,6 +216,24 @@ func _ServicesProvidersService_Delete_Handler(srv interface{}, ctx context.Conte
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ServicesProvidersServiceServer).Delete(ctx, req.(*DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesProvidersService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ServicesProvider)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).Update(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services_providers.ServicesProvidersService/Update",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).Update(ctx, req.(*ServicesProvider))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -296,6 +328,10 @@ var ServicesProvidersService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Delete",
 			Handler:    _ServicesProvidersService_Delete_Handler,
+		},
+		{
+			MethodName: "Update",
+			Handler:    _ServicesProvidersService_Update_Handler,
 		},
 		{
 			MethodName: "Get",

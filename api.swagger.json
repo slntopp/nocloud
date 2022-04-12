@@ -1674,6 +1674,74 @@
         "tags": [
           "ServicesProvidersService"
         ]
+      },
+      "patch": {
+        "operationId": "ServicesProvidersService_Update",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/services_providersServicesProvider"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "secrets": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                },
+                "vars": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/definitions/services_providersVar"
+                  }
+                },
+                "extentions": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                },
+                "state": {
+                  "$ref": "#/definitions/statesState"
+                },
+                "public": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "ServicesProvidersService"
+        ]
       }
     },
     "/token": {

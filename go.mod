@@ -3,11 +3,11 @@ module github.com/slntopp/nocloud
 go 1.18
 
 require (
-	github.com/arangodb/go-driver v1.3.0
+	github.com/arangodb/go-driver v1.3.1
 	github.com/gabriel-vasile/mimetype v1.4.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofrs/uuid v4.2.0+incompatible
-	github.com/golang-jwt/jwt/v4 v4.4.0
+	github.com/golang-jwt/jwt/v4 v4.4.1
 	github.com/gorilla/handlers v1.5.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.0
@@ -18,7 +18,7 @@ require (
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	google.golang.org/genproto v0.0.0-20220317150908-0efb43f6373e
 	google.golang.org/grpc v1.45.0
-	google.golang.org/protobuf v1.27.1
+	google.golang.org/protobuf v1.28.0
 )
 
 require (
