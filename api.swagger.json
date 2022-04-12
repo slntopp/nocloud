@@ -358,6 +358,12 @@
             "type": "string"
           },
           {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
             "name": "public",
             "in": "query",
             "required": false,
@@ -403,6 +409,12 @@
           },
           {
             "name": "title",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
             "in": "query",
             "required": false,
             "type": "string"
@@ -459,6 +471,9 @@
               "type": "object",
               "properties": {
                 "title": {
+                  "type": "string"
+                },
+                "type": {
                   "type": "string"
                 },
                 "public": {
@@ -1857,6 +1872,9 @@
           "type": "string"
         },
         "title": {
+          "type": "string"
+        },
+        "type": {
           "type": "string"
         },
         "public": {

@@ -23,9 +23,10 @@ import "google/api/annotations.proto";
 message Plan {
     string uuid = 1;
     string title = 2;
-    bool public = 3; // if true, then this plan is available for all users
-    repeated ResourceConf resources = 4;
-    repeated string linked_instances = 5; // uuids of instances that are linked to this plan
+    string type = 3; // Instance / InstanceGroup type supported by this plan
+    bool public = 4; // if true, then this plan is available for all users
+    repeated ResourceConf resources = 5;
+    repeated string linked_instances = 6; // uuids of instances that are linked to this plan
 }
 
 message ListRequest {}
