@@ -171,6 +171,24 @@ services:
     volumes:
       - redis-states-data:/data
 
+  billing:
+    container_name: billing
+    restart: always
+    depends_on:
+      - db
+      - settings
+    image: ghcr.io/slntopp/nocloud/billing:latest
+    networks:
+      - grpc-internal
+    environment:
+      LOG_LEVEL: -1
+      SIGNING_KEY: "${SIGNING_KEY}"
+      DB_HOST: db:8529
+      DB_CRED: "${DB_USER}:${DB_PASS}"
+      SETTINGS_HOST: settings:8080
+    links:
+      - db
+
   driver-ione:
     container_name: driver
     restart: always

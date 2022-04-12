@@ -28,15 +28,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type Routine struct {
+	Name string
+	LastExec string
+	Running bool
+}
+
 type BillingServiceServer struct {
 	pb.UnimplementedBillingServiceServer
 
 	log *zap.Logger
+
 	nss graph.NamespacesController
 	plans graph.BillingPlansController
 	transactions graph.TransactionsController
 	records graph.RecordsController
+
 	db driver.Database
+
+	monitoring Routine
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingServiceServer {
@@ -47,7 +57,10 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 		plans: graph.NewBillingPlansController(log.Named("PlansController"), db),
 		transactions: graph.NewTransactionsController(log.Named("TransactionsController"), db),
 		records: graph.NewRecordsController(log.Named("RecordsController"), db),
-		db: db,
+		db: db, monitoring: Routine{
+			Name: "Generate Transactions",
+			Running: false,
+		},
 	}
 }
 
@@ -143,7 +156,7 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 	return p.Plan, nil
 }
 
-func (s *BillingServiceServer) ListPlans(ctx context.Context, _ *pb.ListRequest) (pb.ListResponse, error) {
+func (s *BillingServiceServer) ListPlans(ctx context.Context, _ *pb.ListRequest) (*pb.ListResponse, error) {
 	log := s.log.Named("ListPlans")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("request", zap.String("requestor", requestor))
@@ -151,7 +164,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, _ *pb.ListRequest)
 	plans, err := s.plans.List(ctx)
 	if err != nil {
 		log.Error("Error listing plans", zap.Error(err))
-		return pb.ListResponse{}, status.Error(codes.Internal, "Error listing plans")
+		return nil, status.Error(codes.Internal, "Error listing plans")
 	}
 
 	result := make([]*pb.Plan, 0)
@@ -167,5 +180,5 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, _ *pb.ListRequest)
 		result = append(result, plan.Plan)
 	}
 
-	return pb.ListResponse{ Pool: result }, nil
+	return &pb.ListResponse{ Pool: result }, nil
 }
