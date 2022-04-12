@@ -17,6 +17,7 @@ package health
 
 import (
 	"context"
+	"strings"
 	"sync"
 
 	pb "github.com/slntopp/nocloud/pkg/health/proto"
@@ -36,25 +37,8 @@ var grpc_services []string
 func init() {
 	viper.AutomaticEnv()
 
-	viper.SetDefault("REGISTRY_HOST", "registry:8080")
-	registryHost = viper.GetString("REGISTRY_HOST")
-	viper.SetDefault("SERVICES_HOST", "services-registry:8080")
-	servicesHost = viper.GetString("SERVICES_HOST")
-	viper.SetDefault("SP_HOST", "sp-registry:8080")
-	servicesProvidersHost = viper.GetString("SP_HOST")
-	viper.SetDefault("SETTINGS_HOST", "settings:8080")
-	settingsHost = viper.GetString("SETTINGS_HOST")
-	viper.SetDefault("DNS_HOST", "dns-mgmt:8080")
-	dnsHost = viper.GetString("DNS_HOST")
-	viper.SetDefault("STATES_HOST", "states:8080")
-	statesHost = viper.GetString("STATES_HOST")
-	viper.SetDefault("EDGE_HOST", "edge:8080")
-	edgeHost = viper.GetString("EDGE_HOST")
-
-	grpc_services = []string{
-		registryHost, servicesHost, servicesProvidersHost,
-		settingsHost, dnsHost, statesHost, edgeHost,
-	}
+	viper.SetDefault("PROBABLES", "registry:8080,services-registry:8080,sp-registry:8080,settings:8080,dns-mgmt:8080,states:8080,edge:8080")
+	grpc_services = strings.Split(viper.GetString("PROBABLES"), ",")
 }
 
 type HealthServiceServer struct {
