@@ -189,6 +189,8 @@ services:
       - settings
     image: ghcr.io/slntopp/nocloud/billing:latest
     networks:
+      - proxy
+      - arangodb
       - grpc-internal
     environment:
       LOG_LEVEL: -1

@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 
+	billingpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	dnspb "github.com/slntopp/nocloud/pkg/dns/proto"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -153,6 +154,11 @@ func main() {
 	err = settingspb.RegisterSettingsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register SettingsService gateway", zap.Error(err))
+	}
+	log.Info("Registering BillingService Gateway")
+	err = billingpb.RegisterBillingServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	if err != nil {
+		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
 	}
 
 
