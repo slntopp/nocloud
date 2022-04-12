@@ -23,7 +23,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const SERVICE = "Services Providers Registry"
+const SERVICE = "Billing Machine"
 
 type HealthServer struct {
 	pb.UnimplementedInternalProbeServiceServer
@@ -44,20 +44,8 @@ func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.Servi
 	}, nil
 }
 
-func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutineStatus, error) {
-	state := s.srv.GenTransactionsRoutineState()
-	res := &pb.RoutineStatus{
-		Routine: state.Name,
-		LastExecution: state.LastExec,
-		Status: &pb.ServingStatus{
-			Service: SERVICE,
-			Status: pb.Status_STOPPED,
-		},
-	}
-
-	if state.Running {
-		res.Status.Status = pb.Status_RUNNING
-	}
-
-	return res, nil
+func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutinesStatus, error) {
+	return &pb.RoutinesStatus{
+		Routines: s.srv.GenTransactionsRoutineState(),
+	}, nil
 }

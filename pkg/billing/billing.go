@@ -21,6 +21,7 @@ import (
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud/pkg/billing/proto"
 	"github.com/slntopp/nocloud/pkg/graph"
+	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"go.uber.org/zap"
@@ -46,7 +47,8 @@ type BillingServiceServer struct {
 
 	db driver.Database
 
-	monitoring Routine
+	gen *healthpb.RoutineStatus
+	proc *healthpb.RoutineStatus
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingServiceServer {
@@ -57,9 +59,18 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 		plans: graph.NewBillingPlansController(log.Named("PlansController"), db),
 		transactions: graph.NewTransactionsController(log.Named("TransactionsController"), db),
 		records: graph.NewRecordsController(log.Named("RecordsController"), db),
-		db: db, monitoring: Routine{
-			Name: "Generate Transactions",
-			Running: false,
+		db: db, gen: &healthpb.RoutineStatus {
+			Routine: "Generate Transactions",
+			Status: &healthpb.ServingStatus{
+				Service: "Billing Machine",
+				Status: healthpb.Status_STOPPED,
+			},
+		}, proc: &healthpb.RoutineStatus {
+			Routine: "Process Transactions",
+			Status: &healthpb.ServingStatus{
+				Service: "Billing Machine",
+				Status: healthpb.Status_STOPPED,
+			},
 		},
 	}
 }
