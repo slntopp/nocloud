@@ -52,6 +52,9 @@ message RoutineStatus {
     ServingStatus status = 2;
     string last_execution = 3;
 }
+message RoutinesStatus {
+    repeated RoutineStatus routines = 1;
+}
 
 service HealthService {
     rpc Probe(nocloud.health.ProbeRequest) returns (nocloud.health.ProbeResponse) {
@@ -64,5 +67,5 @@ service HealthService {
 
 service InternalProbeService {
     rpc Service(nocloud.health.ProbeRequest) returns (nocloud.health.ServingStatus);
-    rpc Routine(nocloud.health.ProbeRequest) returns (nocloud.health.RoutineStatus);
+    rpc Routine(nocloud.health.ProbeRequest) returns (nocloud.health.RoutinesStatus);
 };

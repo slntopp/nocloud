@@ -181,7 +181,9 @@ func (s *HealthServiceServer) CheckRoutines(ctx context.Context, request *pb.Pro
 				return
 			}
 			s.log.Debug("Service tested", zap.String("service", service))
-			check_routines_ch <- r
+			for _, rt := range r.Routines {
+				check_routines_ch <- rt
+			}
 			s.log.Debug("Sent to channel", zap.String("service", service))
 		}(service)
 	}

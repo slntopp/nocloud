@@ -2168,6 +2168,17 @@
         }
       }
     },
+    "healthRoutinesStatus": {
+      "type": "object",
+      "properties": {
+        "routines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/healthRoutineStatus"
+          }
+        }
+      }
+    },
     "healthServingStatus": {
       "type": "object",
       "properties": {
