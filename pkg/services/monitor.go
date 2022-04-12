@@ -47,7 +47,7 @@ var (
 		Frequency: 60,
 	}
 
-	description = "Services Monitoring Routing Configuration"
+	description = "Services Monitoring Routine Configuration"
 	public = false
 )
 
