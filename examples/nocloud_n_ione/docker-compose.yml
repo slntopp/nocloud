@@ -5,11 +5,14 @@ services:
     image: nginx
     depends_on:
       - health
+      - apiserver-web
       - registry
       - services-registry
       - sp-registry
       - settings
       - dns-mgmt
+      - billing
+      - states
     volumes:
       - ../../proxy:/etc/nginx/templates
     ports:
@@ -30,7 +33,15 @@ services:
   apiserver-web:
     container_name: apiserver-web
     restart: always
-    image: ghcr.io/slntopp/nocloud/apiserver-web:latest
+    depends_on:
+      - registry
+      - services-registry
+      - sp-registry
+      - settings
+      - dns-mgmt
+      - billing
+      - states
+    image: ghcr.io/slntopp/nocloud/apiserver-web:dev-billing
     environment:
       LOG_LEVEL: -1
       APISERVER_HOST: proxy:8080
@@ -116,6 +127,8 @@ services:
   dns-mgmt:
     restart: always
     image: ghcr.io/slntopp/nocloud/dns-mgmt:latest
+    depends_on:
+      - redis_settings
     networks:
       - proxy
       - grpc-internal
@@ -123,9 +136,11 @@ services:
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
-      REDIS_HOST: redis:6379
+      REDIS_HOST: redis_settings:6379
   settings:
     restart: always
+    depends_on:
+      - redis_settings
     image: ghcr.io/slntopp/nocloud/settings:latest
     networks:
       - proxy
@@ -146,7 +161,8 @@ services:
 
   states:
     restart: always
-    image: ghcr.io/slntopp/nocloud/states:latest
+    depends_on:
+      - redis_states
     networks:
       - grpc-internal
       - redis
