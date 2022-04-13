@@ -17,6 +17,7 @@ package graph
 
 import (
 	"context"
+	"errors"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud/pkg/billing/proto"
@@ -40,4 +41,20 @@ func NewTransactionsController(log *zap.Logger, db driver.Database) Transactions
 	return TransactionsController{
 		log: log, col: col,
 	}
+}
+
+func (ctrl *TransactionsController) Create(ctx context.Context, tx *pb.Transaction) (*Transaction, error) {
+	if tx.Account == "" {
+		return nil, errors.New("account is required")
+	}
+	if tx.Total == 0 {
+		return nil, errors.New("total is required")
+	}
+	meta, err := ctrl.col.CreateDocument(ctx, tx)
+	if err != nil {
+		ctrl.log.Error("Failed to create transaction", zap.Error(err))
+		return nil, err
+	}
+	tx.Uuid = meta.Key
+	return &Transaction{tx, meta}, nil
 }

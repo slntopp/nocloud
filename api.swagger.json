@@ -502,7 +502,7 @@
     },
     "/billing/transactions": {
       "get": {
-        "operationId": "BillingService_ListTransactions",
+        "operationId": "BillingService_GetTransactions",
         "responses": {
           "200": {
             "description": "A successful response.",

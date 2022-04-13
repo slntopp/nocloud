@@ -182,7 +182,7 @@ type BillingServiceClient interface {
 	ListPlans(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	DeletePlan(ctx context.Context, in *Plan, opts ...grpc.CallOption) (*Plan, error)
 	CreateTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Transaction, error)
-	ListTransactions(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Transactions, error)
+	GetTransactions(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Transactions, error)
 	GetRecords(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Records, error)
 }
 
@@ -248,9 +248,9 @@ func (c *billingServiceClient) CreateTransaction(ctx context.Context, in *Transa
 	return out, nil
 }
 
-func (c *billingServiceClient) ListTransactions(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Transactions, error) {
+func (c *billingServiceClient) GetTransactions(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Transactions, error) {
 	out := new(Transactions)
-	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/ListTransactions", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/GetTransactions", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +276,7 @@ type BillingServiceServer interface {
 	ListPlans(context.Context, *ListRequest) (*ListResponse, error)
 	DeletePlan(context.Context, *Plan) (*Plan, error)
 	CreateTransaction(context.Context, *Transaction) (*Transaction, error)
-	ListTransactions(context.Context, *ListRequest) (*Transactions, error)
+	GetTransactions(context.Context, *ListRequest) (*Transactions, error)
 	GetRecords(context.Context, *Transaction) (*Records, error)
 	mustEmbedUnimplementedBillingServiceServer()
 }
@@ -303,8 +303,8 @@ func (UnimplementedBillingServiceServer) DeletePlan(context.Context, *Plan) (*Pl
 func (UnimplementedBillingServiceServer) CreateTransaction(context.Context, *Transaction) (*Transaction, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateTransaction not implemented")
 }
-func (UnimplementedBillingServiceServer) ListTransactions(context.Context, *ListRequest) (*Transactions, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListTransactions not implemented")
+func (UnimplementedBillingServiceServer) GetTransactions(context.Context, *ListRequest) (*Transactions, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTransactions not implemented")
 }
 func (UnimplementedBillingServiceServer) GetRecords(context.Context, *Transaction) (*Records, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRecords not implemented")
@@ -430,20 +430,20 @@ func _BillingService_CreateTransaction_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
-func _BillingService_ListTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _BillingService_GetTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ListRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BillingServiceServer).ListTransactions(ctx, in)
+		return srv.(BillingServiceServer).GetTransactions(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.billing.BillingService/ListTransactions",
+		FullMethod: "/nocloud.billing.BillingService/GetTransactions",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BillingServiceServer).ListTransactions(ctx, req.(*ListRequest))
+		return srv.(BillingServiceServer).GetTransactions(ctx, req.(*ListRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -498,8 +498,8 @@ var BillingService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _BillingService_CreateTransaction_Handler,
 		},
 		{
-			MethodName: "ListTransactions",
-			Handler:    _BillingService_ListTransactions_Handler,
+			MethodName: "GetTransactions",
+			Handler:    _BillingService_GetTransactions_Handler,
 		},
 		{
 			MethodName: "GetRecords",

@@ -108,6 +108,11 @@ message GetActiveRequest {
     string uuid = 1; // Instance UUID
 }
 
+message GetTransactionsRequest {
+    optional string account = 1;
+    optional string service = 2;
+}
+
 service RecordsService {
     rpc GetActive(GetActiveRequest) returns (Records);
     rpc Create(Records) returns (Records);
@@ -149,7 +154,7 @@ service BillingService {
             body: "*"
         };
     };
-    rpc ListTransactions(ListRequest) returns (Transactions) {
+    rpc GetTransactions(ListRequest) returns (Transactions) {
         option (google.api.http) = {
             get: "/billing/transactions"
         };
