@@ -76,7 +76,7 @@
                     v-for="(elem, index) in group.instances"
                     :key="index"
                     :title="elem.title"
-                    :state="elem.state ? elem.state.state : 'UNKNOWN' "
+                    :state="elem.state ? elem.state.state : 'UNKNOWN'"
                     :cpu="elem.resources.cpu"
                     :drive_type="elem.resources.drive_type"
                     :drive_size="elem.resources.drive_size"
