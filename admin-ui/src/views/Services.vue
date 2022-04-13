@@ -66,6 +66,7 @@
               <v-expansion-panel-header>
                 {{ title }} | Type: {{ group.type }} -
                 {{ titleSP(item) }}</v-expansion-panel-header
+
               >
               <v-expansion-panel-content
                 style="background: var(--v-background-base)"
@@ -75,7 +76,7 @@
                     v-for="(elem, index) in group.instances"
                     :key="index"
                     :title="elem.title"
-                    :state="elem.state.state"
+                    :state="elem.state ? elem.state.state : 'UNKNOWN' "
                     :cpu="elem.resources.cpu"
                     :drive_type="elem.resources.drive_type"
                     :drive_size="elem.resources.drive_size"
