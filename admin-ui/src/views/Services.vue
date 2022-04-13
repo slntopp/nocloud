@@ -54,14 +54,6 @@
           {{ value }}
         </v-chip>
       </template>
-      <!-- 
-      <template v-slot:expanded-item="{ headers, item }">
-        <td :colspan="headers.length" style="padding: 0">
-          <v-card class="pa-4" color="background">
-            <v-treeview :items="treeview(item)"> </v-treeview>
-          </v-card>
-        </td>
-      </template> -->
 
       <template v-slot:expanded-item="{ headers, item }">
         <td :colspan="headers.length" style="padding: 0">
@@ -72,7 +64,8 @@
               :key="title"
             >
               <v-expansion-panel-header>
-                {{ title }} | Type: {{ group.type }}</v-expansion-panel-header
+                {{ title }} | Type: {{ group.type }} -
+                {{ titleSP(item) }}</v-expansion-panel-header
               >
               <v-expansion-panel-content
                 style="background: var(--v-background-base)"
@@ -173,6 +166,14 @@ export default {
       });
   },
   methods: {
+    titleSP(item) {
+      for (const group of Object.values(item.instancesGroups)) {
+        let data = this.servicesProviders.find(
+          (el) => el.uuid == item.provisions[group.uuid]
+        );
+        return data.title;
+      }
+    },
     // treeview(item) {
     //   const result = [];
     //   let index = 0;
