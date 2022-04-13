@@ -106,15 +106,14 @@ func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatu
 }
 
 func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
-    log := s.log.Named("GenTransactionsRoutine")
+    log := s.log.Named("Routine")
 
 	conf := MakeConf(ctx, log)
-	log.Info("Got Routine Configuration", zap.Any("conf", conf))
+	log.Info("Got Configuration", zap.Any("conf", conf))
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
 
     for tick := range ticker.C {
-		log.Info("Starting", zap.Time("tick", tick))
-		
+		log.Info("Starting Generating Transactions Sub-Routine", zap.Time("tick", tick))
 		s.gen.Status.Status = hpb.Status_RUNNING
 		s.gen.Status.Error = nil
 		_, err := s.db.Query(ctx, generateTransactions, map[string]interface{}{
@@ -133,6 +132,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		}
 		s.gen.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 
+		log.Info("Starting Processing Transactions Sub-Routine", zap.Time("tick", tick))
 		s.proc.Status.Status = hpb.Status_RUNNING
 		s.gen.Status.Error = nil
 		_, err = s.db.Query(ctx, processTransactions, map[string]interface{}{
