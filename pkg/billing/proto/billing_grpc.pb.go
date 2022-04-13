@@ -182,7 +182,7 @@ type BillingServiceClient interface {
 	ListPlans(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	DeletePlan(ctx context.Context, in *Plan, opts ...grpc.CallOption) (*Plan, error)
 	CreateTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Transaction, error)
-	GetTransactions(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Transactions, error)
+	GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*Transactions, error)
 	GetRecords(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Records, error)
 }
 
@@ -248,7 +248,7 @@ func (c *billingServiceClient) CreateTransaction(ctx context.Context, in *Transa
 	return out, nil
 }
 
-func (c *billingServiceClient) GetTransactions(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Transactions, error) {
+func (c *billingServiceClient) GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*Transactions, error) {
 	out := new(Transactions)
 	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/GetTransactions", in, out, opts...)
 	if err != nil {
@@ -276,7 +276,7 @@ type BillingServiceServer interface {
 	ListPlans(context.Context, *ListRequest) (*ListResponse, error)
 	DeletePlan(context.Context, *Plan) (*Plan, error)
 	CreateTransaction(context.Context, *Transaction) (*Transaction, error)
-	GetTransactions(context.Context, *ListRequest) (*Transactions, error)
+	GetTransactions(context.Context, *GetTransactionsRequest) (*Transactions, error)
 	GetRecords(context.Context, *Transaction) (*Records, error)
 	mustEmbedUnimplementedBillingServiceServer()
 }
@@ -303,7 +303,7 @@ func (UnimplementedBillingServiceServer) DeletePlan(context.Context, *Plan) (*Pl
 func (UnimplementedBillingServiceServer) CreateTransaction(context.Context, *Transaction) (*Transaction, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateTransaction not implemented")
 }
-func (UnimplementedBillingServiceServer) GetTransactions(context.Context, *ListRequest) (*Transactions, error) {
+func (UnimplementedBillingServiceServer) GetTransactions(context.Context, *GetTransactionsRequest) (*Transactions, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTransactions not implemented")
 }
 func (UnimplementedBillingServiceServer) GetRecords(context.Context, *Transaction) (*Records, error) {
@@ -431,7 +431,7 @@ func _BillingService_CreateTransaction_Handler(srv interface{}, ctx context.Cont
 }
 
 func _BillingService_GetTransactions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListRequest)
+	in := new(GetTransactionsRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -443,7 +443,7 @@ func _BillingService_GetTransactions_Handler(srv interface{}, ctx context.Contex
 		FullMethod: "/nocloud.billing.BillingService/GetTransactions",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BillingServiceServer).GetTransactions(ctx, req.(*ListRequest))
+		return srv.(BillingServiceServer).GetTransactions(ctx, req.(*GetTransactionsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

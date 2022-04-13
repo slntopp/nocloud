@@ -517,6 +517,20 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "account",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
         "tags": [
           "BillingService"
         ]

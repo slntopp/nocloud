@@ -154,7 +154,7 @@ service BillingService {
             body: "*"
         };
     };
-    rpc GetTransactions(ListRequest) returns (Transactions) {
+    rpc GetTransactions(GetTransactionsRequest) returns (Transactions) {
         option (google.api.http) = {
             get: "/billing/transactions"
         };
