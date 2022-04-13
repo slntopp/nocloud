@@ -11,11 +11,11 @@
       </div>
       <v-divider class="mx-4"></v-divider>
       <v-card-text>
-        <p class="d-flex">
+        <p class="d-flex justify-space-between">
           <v-chip label> CPU: {{ cpu }} core(s)</v-chip>
           <v-chip label> RAM: {{ ram }} Mb</v-chip>
         </p>
-        <p class="d-flex">
+        <p class="d-flex justify-space-between">
           <v-chip label>
             Size:
             {{ driveSize(drive_size) }} GiB
@@ -111,7 +111,7 @@ export default {
 
 <style scoped>
 .v-card__text .v-chip {
-  width: 50%;
+  width: 48%;
   display: flex;
   justify-content: center;
   align-items: center;
