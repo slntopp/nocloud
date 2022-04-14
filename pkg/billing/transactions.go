@@ -128,10 +128,11 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessT
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
+	acc := driver.NewDocumentID(schema.ACCOUNTS_COL, req.Account)
 	c, err := s.db.Query(ctx, reprocessTransactions, map[string]interface{}{
 		"@accounts": schema.ACCOUNTS_COL,
 		"@transactions": schema.TRANSACTIONS_COL,
-		"account": req.Account,
+		"account": acc.String(),
 		"now": time.Now().Unix(),
 	})
 	if err != nil {
