@@ -44,7 +44,7 @@ message ResourceConf {
     string key = 1;
     Kind kind = 2;
     double price = 3; // Price per period
-    uint64 period = 4; // if set to 0, then it's a one-time payment
+    int64 period = 4; // if set to 0, then it's a one-time payment
     // If except set to true then transaction will be created if Instance is in one of the states listed in on
     // If except set to false then transaction will be created if Instance is NOT in one of the states listed in on
     bool except = 5;
@@ -53,8 +53,8 @@ message ResourceConf {
 
 message Transaction {
     string uuid = 1; // transaction UUID
-    uint64 exec = 2; // Timestamp of Transaction planned execution time
-    uint64 proc = 3; // Timestamp of Transaction processing time
+    int64 exec = 2; // Timestamp of Transaction planned execution time
+    int64 proc = 3; // Timestamp of Transaction processing time
     bool processed = 4; // Wether Transaction has been processed(applied to Account balance, etc)
 
     string account = 5;
@@ -78,9 +78,9 @@ message Transactions {
 
 message Record {
     string uuid = 1; // Record UUID
-    uint64 start = 2; // Timestamp of Record coverage frame start
-    uint64 end = 3; // Timestamp of Record coverage frame end
-    uint64 exec = 4; // Time when Record must be processed
+    int64 start = 2; // Timestamp of Record coverage frame start
+    int64 end = 3; // Timestamp of Record coverage frame end
+    int64 exec = 4; // Time when Record must be processed
 
     bool processed = 5; // Wether Record has been processed(converted to Transaction)
 

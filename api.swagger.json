@@ -625,14 +625,14 @@
             "in": "query",
             "required": false,
             "type": "string",
-            "format": "uint64"
+            "format": "int64"
           },
           {
             "name": "proc",
             "in": "query",
             "required": false,
             "type": "string",
-            "format": "uint64"
+            "format": "int64"
           },
           {
             "name": "processed",
@@ -2032,7 +2032,7 @@
         },
         "period": {
           "type": "string",
-          "format": "uint64"
+          "format": "int64"
         },
         "except": {
           "type": "boolean",
@@ -2054,11 +2054,11 @@
         },
         "exec": {
           "type": "string",
-          "format": "uint64"
+          "format": "int64"
         },
         "proc": {
           "type": "string",
-          "format": "uint64"
+          "format": "int64"
         },
         "processed": {
           "type": "boolean"
@@ -2384,15 +2384,15 @@
         },
         "start": {
           "type": "string",
-          "format": "uint64"
+          "format": "int64"
         },
         "end": {
           "type": "string",
-          "format": "uint64"
+          "format": "int64"
         },
         "exec": {
           "type": "string",
-          "format": "uint64"
+          "format": "int64"
         },
         "processed": {
           "type": "boolean"
