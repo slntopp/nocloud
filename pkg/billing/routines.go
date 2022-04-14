@@ -188,5 +188,5 @@ FILTER t.exec <= @now
 FILTER !t.processed
     LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
     UPDATE account WITH { balance: account.balance - t.total } IN @@accounts
-    UPDATE t WITH { processed: true } IN @@transactions
+    UPDATE t WITH { processed: true, proc: @now } IN @@transactions
 `
