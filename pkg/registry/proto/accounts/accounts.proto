@@ -39,6 +39,7 @@ message GetRequest {
 message Account {
     string uuid = 1;
     string title = 2;
+    optional double balance = 3;
 }
 
 message UpdateResponse {

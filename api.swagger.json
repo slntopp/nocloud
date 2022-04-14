@@ -265,6 +265,10 @@
               "properties": {
                 "title": {
                   "type": "string"
+                },
+                "balance": {
+                  "type": "number",
+                  "format": "double"
                 }
               }
             }
@@ -1906,6 +1910,10 @@
         },
         "title": {
           "type": "string"
+        },
+        "balance": {
+          "type": "number",
+          "format": "double"
         }
       }
     },
