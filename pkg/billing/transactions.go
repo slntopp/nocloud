@@ -115,7 +115,8 @@ FILTER t.account == account._key
     UPDATE t WITH { processed: true, proc: @now } IN @@transactions RETURN NEW )
 
 UPDATE account WITH { balance: -SUM(transactions[*].total) } IN @@accounts
-RETURN transactions
+FOR t IN transactions
+    RETURN t
 `
 func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessTransactionsRequest) (*pb.Transactions, error) {
 	log := s.log.Named("Reprocess")
