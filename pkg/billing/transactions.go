@@ -17,6 +17,7 @@ package billing
 
 import (
 	"context"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud/pkg/billing/proto"
@@ -103,4 +104,57 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
 	}
 	return r.Transaction, nil
+}
+
+const reprocessTransactions = `
+LET account = UNSET(DOCUMENT(@account), "balance")
+LET transactions = (
+FOR t IN @@transactions // Iterate over Transactions
+FILTER t.exec <= @now
+FILTER t.account == account._key
+    UPDATE t WITH { processed: true, proc: @now } IN @@transactions RETURN NEW )
+
+UPDATE account WITH { balance: -SUM(transactions[*].total) } IN @@accounts
+RETURN transactions
+`
+func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessTransactionsRequest) (*pb.Transactions, error) {
+	log := s.log.Named("Reprocess")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY).String()
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	c, err := s.db.Query(ctx, reprocessTransactions, map[string]interface{}{
+		"@accounts": schema.ACCOUNTS_COL,
+		"@transactions": schema.TRANSACTIONS_COL,
+		"account": req.Account,
+		"now": time.Now().Unix(),
+	})
+	if err != nil {
+		log.Error("Error Reprocessing Transactions", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error Reprocessing Transactions")
+	}
+	defer c.Close()
+
+	var transactions []*pb.Transaction
+	for {
+		transaction := &pb.Transaction{}
+		meta, err := c.ReadDocument(ctx, transaction)
+		if err != nil {
+			if driver.IsNoMoreDocuments(err) {
+				break
+			}
+			log.Error("Failed to retrieve transactions", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to retrieve transactions")
+		}
+		transaction.Uuid = meta.Key
+		transactions = append(transactions, transaction)
+	}
+
+	log.Debug("Transactions retrieved", zap.Any("transactions", transactions))
+	return &pb.Transactions{Pool: transactions}, nil
 }

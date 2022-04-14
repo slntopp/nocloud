@@ -275,6 +275,36 @@
         ]
       }
     },
+    "/billing/account/{account}/reprocess": {
+      "post": {
+        "operationId": "BillingService_Reprocess",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingTransactions"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      }
+    },
     "/billing/plans": {
       "get": {
         "operationId": "BillingService_ListPlans",

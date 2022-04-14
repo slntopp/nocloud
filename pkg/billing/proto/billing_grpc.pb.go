@@ -184,6 +184,7 @@ type BillingServiceClient interface {
 	CreateTransaction(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Transaction, error)
 	GetTransactions(ctx context.Context, in *GetTransactionsRequest, opts ...grpc.CallOption) (*Transactions, error)
 	GetRecords(ctx context.Context, in *Transaction, opts ...grpc.CallOption) (*Records, error)
+	Reprocess(ctx context.Context, in *ReprocessTransactionsRequest, opts ...grpc.CallOption) (*Transactions, error)
 }
 
 type billingServiceClient struct {
@@ -266,6 +267,15 @@ func (c *billingServiceClient) GetRecords(ctx context.Context, in *Transaction, 
 	return out, nil
 }
 
+func (c *billingServiceClient) Reprocess(ctx context.Context, in *ReprocessTransactionsRequest, opts ...grpc.CallOption) (*Transactions, error) {
+	out := new(Transactions)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.BillingService/Reprocess", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BillingServiceServer is the server API for BillingService service.
 // All implementations must embed UnimplementedBillingServiceServer
 // for forward compatibility
@@ -278,6 +288,7 @@ type BillingServiceServer interface {
 	CreateTransaction(context.Context, *Transaction) (*Transaction, error)
 	GetTransactions(context.Context, *GetTransactionsRequest) (*Transactions, error)
 	GetRecords(context.Context, *Transaction) (*Records, error)
+	Reprocess(context.Context, *ReprocessTransactionsRequest) (*Transactions, error)
 	mustEmbedUnimplementedBillingServiceServer()
 }
 
@@ -308,6 +319,9 @@ func (UnimplementedBillingServiceServer) GetTransactions(context.Context, *GetTr
 }
 func (UnimplementedBillingServiceServer) GetRecords(context.Context, *Transaction) (*Records, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRecords not implemented")
+}
+func (UnimplementedBillingServiceServer) Reprocess(context.Context, *ReprocessTransactionsRequest) (*Transactions, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Reprocess not implemented")
 }
 func (UnimplementedBillingServiceServer) mustEmbedUnimplementedBillingServiceServer() {}
 
@@ -466,6 +480,24 @@ func _BillingService_GetRecords_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BillingService_Reprocess_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReprocessTransactionsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BillingServiceServer).Reprocess(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.BillingService/Reprocess",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BillingServiceServer).Reprocess(ctx, req.(*ReprocessTransactionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BillingService_ServiceDesc is the grpc.ServiceDesc for BillingService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -504,6 +536,10 @@ var BillingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRecords",
 			Handler:    _BillingService_GetRecords_Handler,
+		},
+		{
+			MethodName: "Reprocess",
+			Handler:    _BillingService_Reprocess_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -113,6 +113,10 @@ message GetTransactionsRequest {
     optional string service = 2;
 }
 
+message ReprocessTransactionsRequest {
+    string account = 1;
+}
+
 service RecordsService {
     rpc GetActive(GetActiveRequest) returns (Records);
     rpc Create(Records) returns (Records);
@@ -162,6 +166,11 @@ service BillingService {
     rpc GetRecords(Transaction) returns (Records) {
         option (google.api.http) = {
             get: "/billing/transactions/{uuid}"
+        };
+    };
+    rpc Reprocess(ReprocessTransactionsRequest) returns (Transactions) {
+        option (google.api.http) = {
+            post: "/billing/account/{account}/reprocess"
         };
     };
 }
