@@ -8,7 +8,13 @@ Cloud-native Open-Source Cloud Management Framework
 
 * [Installation](#installation)
 * [Drivers](#drivers)
-* [CLI](https://github.com/slntopp/nocloud-cli)
+* [CLI](#nocloud-cli)
+
+  * [Usage](#usage)
+  * [Linux](#linux)
+  * [macOS](#macos)
+  * [Windows](#windows)
+  * [From Source](#build-from-source)
 
 ## Installation
 
@@ -44,3 +50,51 @@ See and try [this sample compose with IONe driver](examples/nocloud_n_ione/docke
 ### List of supported drivers
 
 Currently we have only [IONe](https://github.com/slntopp/nocloud-driver-ione) driver. More drivers planned and community help is always appreciated!
+
+## NoCloud CLI
+
+### Usage
+
+Start with `nocloud help` and `nocloud help login` ;)
+
+### Linux
+
+1. Go to [CLI Releases](https://github.com/slntopp/nocloud-cli/releases)
+2. If you're using **apt**, **yum** or **dnf** you can get package there right away.
+3. If you're using other package manager or have none, you can download prebuilt binary in `.tar.gz` archive for `arm64` or `x86_64`, unpack it and put `nocloud` binary to `/usr/bin` or your `$PATH/bin`
+4. If you're using Linux on some other arch, let us know, we'll add it to the build. Meanwhile - try [building from source](build-from-source)
+
+### macOS
+
+If you're using [**Homebrew**](https://brew.sh):
+
+```shell
+brew tap slntopp/nocloud
+brew install nocloud
+```
+
+You're good to go!
+
+If you don't have [**Homebrew**](https://brew.sh), consider using it ;), otherwise you can get prebuilt binary from [CLI Releases page](https://github.com/slntopp/nocloud-cli/releases) as an `.tar.gz` archive.
+
+```shell
+# if you have wget then
+wget https://github/slntopp/nocloud-cli/releases/#version/nocloud-version-darwin-arch.tar.gz
+# if you don't, just download it
+tar -xvzf #nocloud-version-darwin-arch.tar.gz
+# move binary to /usr/local/bin or alike
+mv #nocloud-version-darwin-arch/nocloud /usr/local/bin
+```
+
+You're good to go!
+
+### Windows
+
+1. Go to [CLI Releases](https://github.com/slntopp/nocloud-cli/releases)
+2. Get prebuilt binary from [CLI Releases page](https://github.com/slntopp/nocloud-cli/releases) as an `.zip` archive.
+3. Unpack it
+4. Put it somewhere in `$PATH`
+
+### Build From Source
+
+See [CLI repo](https://github.com/slntopp/nocloud-cli) for source and instructions.
