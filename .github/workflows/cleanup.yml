@@ -12,10 +12,10 @@ on:
 
 jobs:
   clean-ghcr:
-    name: Untagged Images (> 1 day)
+    name: Cleanup
     runs-on: ubuntu-latest
     steps:
-      - name: Delete untagged containers older than a day
+      - name: Untagged Images (> 1 day)
         uses: snok/container-retention-policy@v1
         with:
           image-names: ${{ github.event.inputs.images }}
