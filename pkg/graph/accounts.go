@@ -27,12 +27,13 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/slntopp/nocloud/pkg/credentials"
+	pb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type Account struct {
-	Title string `json:"title"`
+	*pb.Account
 	driver.DocumentMeta
 }
 
@@ -54,9 +55,14 @@ func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, er
 	if id == "me" {
 		id = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
-	var r Account
-	_, err := ctrl.col.ReadDocument(context.TODO(), id, &r)
-	return r, err
+	var r pb.Account
+	meta, err := ctrl.col.ReadDocument(ctx, id, &r)
+	if err != nil {
+		return Account{}, err
+	}
+	r.Uuid = meta.ID.Key()
+	ctrl.log.Debug("Got document", zap.Any("account", &r))
+	return Account{&r, meta}, err
 }
 
 func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req_depth *int32) ([]Account, error) {
@@ -84,15 +90,16 @@ func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req
 
 	var r []Account
 	for {
-		var acc Account 
-		_, err := c.ReadDocument(ctx, &acc)
+		var acc pb.Account 
+		meta, err := c.ReadDocument(ctx, &acc)
 		if driver.IsNoMoreDocuments(err) {
 			break
 		} else if err != nil {
 			return nil, err
 		}
 		ctrl.log.Debug("Got document", zap.Any("account", acc))
-		r = append(r, acc)
+		acc.Uuid = meta.ID.Key()
+		r = append(r, Account{&acc, meta})
 	}
 
 	return r, nil
@@ -102,13 +109,11 @@ func (ctrl *AccountsController) Exists(ctx context.Context, id string) (bool, er
 	return ctrl.col.DocumentExists(context.TODO(), id)
 }
 
-func (ctrl *AccountsController) Create(ctx context.Context, title string) (acc Account, err error) {
-	acc = Account{
-		Title: title,
-	}
+func (ctrl *AccountsController) Create(ctx context.Context, title string) (Account, error) {
+	acc := pb.Account{Title: title}
 	meta, err := ctrl.col.CreateDocument(ctx, acc)
-	acc.DocumentMeta = meta
-	return acc, err
+	acc.Uuid = meta.ID.Key()
+	return Account{&acc, meta}, err
 }
 
 func (ctrl *AccountsController) Update(ctx context.Context, acc Account, title string) (err error) {
@@ -260,7 +265,9 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	var meta driver.DocumentMeta
 	if !exists {
 		meta, err = ctrl.col.CreateDocument(context.TODO(), Account{ 
-			Title: "nocloud",
+			Account: &pb.Account{
+				Title: "nocloud",
+			},
 			DocumentMeta: driver.DocumentMeta { Key: schema.ROOT_ACCOUNT_KEY },
 		})
 		if err != nil {
