@@ -62,7 +62,7 @@ Start with `nocloud help` and `nocloud help login` ;)
 1. Go to [CLI Releases](https://github.com/slntopp/nocloud-cli/releases)
 2. If you're using **apt**, **yum** or **dnf** you can get package there right away.
 3. If you're using other package manager or have none, you can download prebuilt binary in `.tar.gz` archive for `arm64` or `x86_64`, unpack it and put `nocloud` binary to `/usr/bin` or your `$PATH/bin`
-4. If you're using Linux on some other arch, let us know, we'll add it to the build. Meanwhile - try [building from source](build-from-source)
+4. If you're using Linux on some other arch, let us know, we'll add it to the build. Meanwhile - try [building from source](#build-from-source)
 
 ### macOS
 
