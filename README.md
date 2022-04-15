@@ -59,10 +59,36 @@ Start with `nocloud help` and `nocloud help login` ;)
 
 ### Linux
 
+#### `.deb` (Debian, Ubuntu, etc.)
+
 1. Go to [CLI Releases](https://github.com/slntopp/nocloud-cli/releases)
-2. If you're using **apt**, **yum** or **dnf** you can get package there right away.
-3. If you're using other package manager or have none, you can download prebuilt binary in `.tar.gz` archive for `arm64` or `x86_64`, unpack it and put `nocloud` binary to `/usr/bin` or your `$PATH/bin`
-4. If you're using Linux on some other arch, let us know, we'll add it to the build. Meanwhile - try [building from source](#build-from-source)
+2. Get `.deb` package for your CPU arch (`arm64` or `x86_64`)
+3. `dpkg -i path/to/.deb`
+
+If you're using some other arch, let us know, we'll add it to the build. Meanwhile - try [building from source](#build-from-source)
+
+#### `.rpm` (RedHat, CentOS, Fedora, etc.)
+
+1. Go to [CLI Releases](https://github.com/slntopp/nocloud-cli/releases)
+2. Get `.rpm` package for your CPU arch (`arm64` or `x86_64`)
+3. `yum localinstall path/to/.rpm` or `dnf install path/to/.rpm`
+
+If you're using some other arch, let us know, we'll add it to the build. Meanwhile - try [building from source](#build-from-source)
+
+#### AUR (Arch Linux, Manjaro, etc.)
+
+If you have `yaourt` package must be found automatically by label `nocloud-bin`
+
+Otherwise,
+1. `git clone https://aur.archlinux.org/packages/nocloud-bin`
+2. `cd nocloud-bin`
+3. `makepkg -i`
+
+#### Others
+
+If you're using other package manager or have none, you can download prebuilt binary in `.tar.gz` archive for `arm64` or `x86_64`, unpack it and put `nocloud` binary to `/usr/bin` or your `$PATH/bin`.
+
+If you're using some other arch, let us know, we'll add it to the build. Meanwhile - try [building from source](#build-from-source)
 
 ### macOS
 
