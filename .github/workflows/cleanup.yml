@@ -8,11 +8,11 @@ on:
       images:
         description: 'comma-separated Images Names list'
         required: true
-        default: base
+        default: nocloud/base, nocloud/billing, nocloud/edge, nocloud/states, nocloud/settings, nocloud/dns-mgmt, nocloud/apiserver-web, services-registry, nocloud/health, nocloud/registry, nocloud/sp-registry
 
 jobs:
   clean-ghcr:
-    name: Delete old unused container images
+    name: Untagged Images (> 1 day)
     runs-on: ubuntu-latest
     steps:
       - name: Delete untagged containers older than a day
@@ -24,7 +24,7 @@ jobs:
           untagged-only: true
           token: ${{ secrets.PACKAGES_PAT }}
 
-      - name: Delete dev containers older than two week
+      - name: Dev Images (> 2 weeks)
         uses: snok/container-retention-policy@v1
         with:
           image-names: ${{ github.event.inputs.images }}
