@@ -21,8 +21,8 @@ import (
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
 
+	ipb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	spb "github.com/slntopp/nocloud/pkg/services/proto"
 	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 )
 
@@ -122,31 +122,35 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 	return r,  nil
 }
 
-func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider) ([]*spb.Service, error) {
-	query := `FOR service IN OUTBOUND @sp GRAPH @services_graph RETURN service`
+const listDeployedGroupsQuery = `
+FOR group IN INBOUND @sp
+GRAPH @permissions
+FILTER IS_SAME_COLLECTION(@groups, group)
+    RETURN MERGE(group, { uuid: group._key })`
+func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error) {
 	bindVars := map[string]interface{}{
+		"groups": schema.INSTANCES_GROUPS_COL,
 		"sp": sp.DocumentMeta.ID,
-		"services_graph": schema.SERVICES_GRAPH.Name,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
-	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	c, err := ctrl.col.Database().Query(ctx, listDeployedGroupsQuery, bindVars)
 	if err != nil {
 		return nil, err
 	}
 	defer c.Close()
-	var r []*spb.Service
+	var r []*ipb.InstancesGroup
 	for {
-		var s spb.Service
-		meta, err := c.ReadDocument(ctx, &s)
+		var ig ipb.InstancesGroup
+		_, err := c.ReadDocument(ctx, &ig)
 		if driver.IsNoMoreDocuments(err) {
 			break
 		} else if err != nil {
 			return nil, err
 		}
-		ctrl.log.Debug("Got document", zap.Any("service", &s))
-		s.Uuid = meta.ID.Key()
-		r = append(r, &s)
+		ctrl.log.Debug("Got document", zap.Any("group", ig))
+		r = append(r, &ig)
 	}
 
 	return r,  nil

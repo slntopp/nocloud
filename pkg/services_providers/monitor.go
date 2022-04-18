@@ -21,7 +21,6 @@ import (
 	"time"
 
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
-	instpb "github.com/slntopp/nocloud/pkg/instances/proto"
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/spf13/viper"
@@ -125,20 +124,12 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 
 		for _, sp := range sp_pool {
 			go func(sp *graph.ServicesProvider) {
-				services, err := s.ctrl.ListDeployments(ctx, sp)
+				igroups, err := s.ctrl.ListDeployments(ctx, sp)
 				if err != nil {
 					log.Error("Failed to get Services deployed to ServiceProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 					return
 				}
 
-				var igroups []*instpb.InstancesGroup
-				for _, service := range services {
-					for _, igroup := range service.GetInstancesGroups() {
-						if igroup.GetType() == sp.GetType() {
-							igroups = append(igroups, igroup)
-						}
-					}
-				}
 				log.Debug("Got InstancesGroups", zap.Int("length", len(igroups)))
 
 				client, ok := s.drivers[sp.GetType()]
