@@ -41,3 +41,10 @@ func NewRecordsController(log *zap.Logger, db driver.Database) RecordsController
 		log: log, col: col,
 	}
 }
+
+func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) {
+	_, err := ctrl.col.CreateDocument(ctx, r)
+	if err != nil {
+		ctrl.log.Error("failed to create record", zap.Error(err))
+	}
+}

@@ -29,11 +29,12 @@ type HealthServer struct {
 	pb.UnimplementedInternalProbeServiceServer
 	log *zap.Logger
 	srv *billing.BillingServiceServer
+	rec *billing.RecordsServiceServer
 }
 
-func NewHealthServer(log *zap.Logger, srv *billing.BillingServiceServer) (*HealthServer) {
+func NewHealthServer(log *zap.Logger, srv *billing.BillingServiceServer, rec *billing.RecordsServiceServer) (*HealthServer) {
 	return &HealthServer{
-		log: log, srv: srv,
+		log: log, srv: srv, rec: rec,
 	}
 }
 
@@ -45,7 +46,8 @@ func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.Servi
 }
 
 func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutinesStatus, error) {
+	routines := append(s.srv.GenTransactionsRoutineState(), s.rec.ConsumerStatus)
 	return &pb.RoutinesStatus{
-		Routines: s.srv.GenTransactionsRoutineState(),
+		Routines: routines,
 	}, nil
 }

@@ -43,8 +43,6 @@ var (
 
 	arangodbHost 	string
 	arangodbCred 	string
-	drivers 		[]string
-	ext_servers 	[]string
 	SIGNING_KEY		[]byte
 	statesHost  string
 )
@@ -66,8 +64,6 @@ func init() {
 
 	arangodbHost 	= viper.GetString("DB_HOST")
 	arangodbCred 	= viper.GetString("DB_CRED")
-	drivers 		= viper.GetStringSlice("DRIVERS")
-	ext_servers 	= viper.GetStringSlice("EXTENTION_SERVERS")
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
 	statesHost 	= viper.GetString("STATES_HOST")
 }
@@ -114,7 +110,11 @@ func main() {
 	go server.GenTransactionsRoutine(ctx)
 	pb.RegisterBillingServiceServer(s, server)
 
-	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
+	records := billing.NewRecordsServiceServer(log, db)
+	go records.Consume(ctx)
+	pb.RegisterRecordsServiceServer(s, records)
+
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server, records))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
