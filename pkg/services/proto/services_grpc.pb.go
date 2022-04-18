@@ -24,7 +24,7 @@ type ServicesServiceClient interface {
 	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*Service, error)
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Service, error)
-	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
+	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Services, error)
 	GetStates(ctx context.Context, in *GetStatesRequest, opts ...grpc.CallOption) (*proto.GetStatesResponse, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
@@ -83,8 +83,8 @@ func (c *servicesServiceClient) Get(ctx context.Context, in *GetRequest, opts ..
 	return out, nil
 }
 
-func (c *servicesServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
-	out := new(ListResponse)
+func (c *servicesServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Services, error) {
+	out := new(Services)
 	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/List", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -128,7 +128,7 @@ type ServicesServiceServer interface {
 	Update(context.Context, *UpdateRequest) (*Service, error)
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	Get(context.Context, *GetRequest) (*Service, error)
-	List(context.Context, *ListRequest) (*ListResponse, error)
+	List(context.Context, *ListRequest) (*Services, error)
 	GetStates(context.Context, *GetStatesRequest) (*proto.GetStatesResponse, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
@@ -154,7 +154,7 @@ func (UnimplementedServicesServiceServer) Delete(context.Context, *DeleteRequest
 func (UnimplementedServicesServiceServer) Get(context.Context, *GetRequest) (*Service, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
-func (UnimplementedServicesServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
+func (UnimplementedServicesServiceServer) List(context.Context, *ListRequest) (*Services, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
 }
 func (UnimplementedServicesServiceServer) GetStates(context.Context, *GetStatesRequest) (*proto.GetStatesResponse, error) {

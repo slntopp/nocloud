@@ -1016,7 +1016,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/nocloudservicesListResponse"
+              "$ref": "#/definitions/servicesServices"
             }
           },
           "default": {
@@ -2444,17 +2444,6 @@
     "nocloudservicesDownResponse": {
       "type": "object"
     },
-    "nocloudservicesListResponse": {
-      "type": "object",
-      "properties": {
-        "pool": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/servicesService"
-          }
-        }
-      }
-    },
     "nocloudservicesUpResponse": {
       "type": "object",
       "properties": {
@@ -2662,6 +2651,17 @@
         "PROC"
       ],
       "default": "UNSPECIFIED"
+    },
+    "servicesServices": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/servicesService"
+          }
+        }
+      }
     },
     "servicesTestConfigError": {
       "type": "object",

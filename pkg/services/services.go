@@ -385,7 +385,7 @@ func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *
 	return r, nil
 }
 
-func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.ListResponse, err error) {
+func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.Services, err error) {
 	log := s.log.Named("List")
 	log.Debug("Request received", zap.String("namespace", request.GetNamespace()), zap.String("show_deleted", request.GetShowDeleted()))
 
@@ -398,7 +398,7 @@ func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (res
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
 	}
 
-	return &pb.ListResponse{Pool: r}, nil
+	return &pb.Services{Pool: r}, nil
 }
 
 func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {

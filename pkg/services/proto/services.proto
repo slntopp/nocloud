@@ -44,6 +44,10 @@ message Service {
     string hash = 7 [(nocloud.hasher.hash) = true];
 }
 
+message Services {
+    repeated Service pool = 1;
+}
+
 message TestConfigError {
     string error = 1;
     string instance_group = 2;
@@ -98,10 +102,6 @@ message ListRequest {
     optional int32 depth = 3;
 }
 
-message ListResponse {
-    repeated Service pool = 1;
-}
-
 message GetRequest {
     string uuid = 1;
 }
@@ -145,7 +145,7 @@ service ServicesService {
         };
     };
     rpc List(nocloud.services.ListRequest)
-        returns (nocloud.services.ListResponse) {
+        returns (nocloud.services.Services) {
         option (google.api.http) = {
             get: "/services"
         };
