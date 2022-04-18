@@ -44,27 +44,21 @@ func GraphGetEnsure(log *zap.Logger, ctx context.Context, db driver.Database, na
 	return graph
 }
 
-func GraphGetVertexEnsure(log *zap.Logger, ctx context.Context, db driver.Database, graph driver.Graph, name string) (driver.Collection) {
-	exists, err := graph.VertexCollectionExists(ctx, name)
+func GraphGetVertexEnsure(log *zap.Logger, ctx context.Context, db driver.Database, graph driver.Graph, name string) (col driver.Collection) {
+	exists, err := db.CollectionExists(ctx, name)
 	if err != nil {
-		log.Fatal("Error checking if vertex collection exists", zap.Error(err))
+		log.Fatal("Error checking if collection exists", zap.Error(err))
 	}
 	if !exists {
-		options := &driver.CreateCollectionOptions{
+		col, err = db.CreateCollection(ctx, name, &driver.CreateCollectionOptions{
 			KeyOptions: &driver.CollectionKeyOptions{AllowUserKeys: true, Type: "uuid"},
-		}
-		_, err := db.CreateCollection(ctx, name, options)
+		})
 		if err != nil {
-			log.Fatal("Error creating collection in Graph", zap.Error(err))
-		}
-		col, err := graph.CreateVertexCollection(ctx, name)
-		if err != nil {
-			log.Fatal("Error creating vertex collection", zap.Error(err))
+			log.Fatal("Error creating collection", zap.Error(err))
 		}
 		return col
 	}
-
-	col, err := graph.VertexCollection(ctx, name)
+	col, err = db.Collection(ctx, name)
 	if err != nil {
 		log.Fatal("Error getting collection", zap.Error(err))
 	}
@@ -85,6 +79,10 @@ func GraphGetEdgeEnsure(log *zap.Logger, ctx context.Context, graph driver.Graph
 		}
 		return col
 	}
+
+	graph.SetVertexConstraints(ctx, name, driver.VertexConstraints{
+		From: []string{from}, To: []string{to},
+	})
 
 	col, _, err := graph.EdgeCollection(ctx, name)
 	if err != nil {
