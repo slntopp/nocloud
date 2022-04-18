@@ -101,15 +101,15 @@ func (s *RecordsServiceServer) Consume(ctx context.Context) {
 	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
 
 	for msg := range records {
-		log.Info("Received a message", zap.String("message", string(msg.Body)))
-		var record *pb.Record
-		err = proto.Unmarshal(msg.Body, record)
+		log.Debug("Received a message", zap.String("message", string(msg.Body)))
+		var record pb.Record
+		err = proto.Unmarshal(msg.Body, &record)
 		if err != nil {
 			log.Error("Failed to unmarshal record", zap.Error(err))
 			continue
 		}
 
-		s.records.Create(ctx, record)
+		s.records.Create(ctx, &record)
 		s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 	}
 }
