@@ -117,8 +117,14 @@ LET instances_groups = (
         LET instances = (
             FOR i IN 1 OUTBOUND group
             GRAPH @permissions
+            FILTER IS_SAME_COLLECTION(@instances, i)
                 RETURN MERGE(i, { uuid: i._key }) )
-        RETURN MERGE(group, { uuid: group._key, instances })
+        LET sp = (
+            FOR s IN 1 OUTBOUND group
+            GRAPH @permissions
+            FILTER IS_SAME_COLLECTION(@sps, s)
+                RETURN s._key )
+        RETURN MERGE(group, { uuid: group._key, instances, sp: sp[0] })
 )
     
 RETURN MERGE(service, { uuid: service._key, instances_groups })
@@ -202,60 +208,6 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, n
 		Role: role,
 	})
 	return err
-}
-
-// Create Link between Service/Group and Services Provider group is Provisioned(deployed) to
-// func (ctrl *ServicesController) Provide(ctx context.Context, sp, service driver.DocumentID, group string) (error) {
-// 	ctrl.log.Debug("Providing group to service provider")
-// 	edge, _ := ctrl.db.Collection(ctx, schema.SP2SERV)
-// 	_, err := edge.CreateDocument(ctx, Provision{
-// 		From: sp,
-// 		To: service,
-// 		Group: group,
-// 		DocumentMeta: driver.DocumentMeta{Key: group},
-// 	})
-// 	return err
-// }
-
-// Delete Link between Service/Group and Services Provider group have beem Unprovisioned(undeployed) from
-// func (ctrl *ServicesController) Unprovide(ctx context.Context, group string) (err error) {
-// 	ctrl.log.Debug("Unproviding group from service provider", zap.String("group", group))
-// 	g, _ := ctrl.db.Graph(ctx, schema.SERVICES_GRAPH.Name)
-// 	edge, _, _ := g.EdgeCollection(ctx, schema.SP2SERV)
-// 	_, err = edge.RemoveDocument(ctx, group)
-// 	return err
-// }
-
-// Get Provisions, map of InstancesGroups to ServicesProviders, those groups are deployed to
-func (ctrl *ServicesController) GetProvisions(ctx context.Context, service string) (r map[string]string, err error) {
-	ctrl.log.Debug("Getting groups provisions")
-	query := `FOR service, provision IN INBOUND @service GRAPH @services RETURN provision`
-	bindVars := map[string]interface{}{
-		"service": service,
-		"services": schema.SERVICES_GRAPH.Name,
-	}
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
-
-	c, err := ctrl.db.Query(ctx, query, bindVars)
-	if err != nil {
-		return nil, err
-	}
-	defer c.Close()
-
-	r = make(map[string]string)
-	for {
-		var p Provision
-		_, err = c.ReadDocument(ctx, &p)
-		if driver.IsNoMoreDocuments(err) {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		ctrl.log.Debug("Got document", zap.Any("provision", p))
-		r[p.Group] = p.From.Key()
-	}
-
-	return r, nil
 }
 
 func (ctrl *ServicesController) Delete(ctx context.Context, s *pb.Service) (err error) {

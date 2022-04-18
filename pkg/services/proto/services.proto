@@ -75,17 +75,6 @@ message DeleteResponse {
     string error = 2;
 }
 
-message PerformActionRequest {
-    string instance = 1;
-    string action = 2;
-    map<string, google.protobuf.Value> data = 3;
-}
-
-message PerformActionResponse {
-    bool result = 1;
-    map<string, google.protobuf.Value> meta = 2;
-}
-
 message UpRequest {
     string uuid = 1;
     map<string, string> deploy_policies = 2;  // Map of InstanceGroup UUID to ServiceProvider
@@ -119,14 +108,6 @@ message GetRequest {
 
 message GetStatesRequest {
     string uuid = 1; // Service UUID
-}
-
-message GetProvisionsRequest {
-    string uuid = 1;
-}
-
-message GetProvisionsResponse {
-    map<string, string> provisions = 1; // Map of InstancesGroups to ServicesProviders they are deployed
 }
 
 service ServicesService {
@@ -175,11 +156,6 @@ service ServicesService {
             get: "/services/{uuid}/states"
         };
     };
-    rpc GetProvisions(nocloud.services.GetProvisionsRequest) returns (nocloud.services.GetProvisionsResponse) {
-        option (google.api.http) = {
-            get: "/services/{uuid}/provisions"
-        };
-    };
 
     rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse) {
         option (google.api.http) = {
@@ -191,13 +167,6 @@ service ServicesService {
         returns (nocloud.services.DownResponse) {
         option (google.api.http) = {
             post: "/services/{uuid}/down"
-            body: "*"
-        };
-    };
-    rpc PerformServiceAction(nocloud.services.PerformActionRequest)
-        returns (nocloud.services.PerformActionResponse) {
-        option (google.api.http) = {
-            post: "/services/{service}/{group}/{instance}/action/{action}",
             body: "*"
         };
     };

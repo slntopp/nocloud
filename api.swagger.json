@@ -1112,70 +1112,6 @@
         ]
       }
     },
-    "/services/{service}/{group}/{instance}/action/{action}": {
-      "post": {
-        "operationId": "ServicesService_PerformServiceAction",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/servicesPerformActionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googlerpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "service",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "instance",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "action",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "data": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "object"
-                  }
-                }
-              }
-            }
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      }
-    },
     "/services/{uuid}": {
       "get": {
         "operationId": "ServicesService_Get",
@@ -1309,36 +1245,6 @@
             "schema": {
               "type": "object"
             }
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      }
-    },
-    "/services/{uuid}/provisions": {
-      "get": {
-        "operationId": "ServicesService_GetProvisions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/servicesGetProvisionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googlerpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "uuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
           }
         ],
         "tags": [
@@ -2336,6 +2242,9 @@
         },
         "hash": {
           "type": "string"
+        },
+        "sp": {
+          "type": "string"
         }
       }
     },
@@ -2546,29 +2455,6 @@
         }
       }
     },
-    "nocloudservicesPerformActionRequest": {
-      "type": "object",
-      "properties": {
-        "service": {
-          "type": "string"
-        },
-        "group": {
-          "type": "string"
-        },
-        "instance": {
-          "type": "string"
-        },
-        "action": {
-          "type": "string"
-        },
-        "data": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
-        }
-      }
-    },
     "nocloudservicesUpResponse": {
       "type": "object",
       "properties": {
@@ -2728,31 +2614,6 @@
           "type": "array",
           "items": {
             "$ref": "#/definitions/namespacesNamespace"
-          }
-        }
-      }
-    },
-    "servicesGetProvisionsResponse": {
-      "type": "object",
-      "properties": {
-        "provisions": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "servicesPerformActionResponse": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "type": "boolean"
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
           }
         }
       }
