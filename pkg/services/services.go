@@ -398,12 +398,7 @@ func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (res
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
 	}
 
-	response = &pb.ListResponse{Pool: make([]*pb.Service, len(r))}
-	for i, service := range r {
-		response.Pool[i] = service
-	}
-
-	return response, nil
+	return &pb.ListResponse{Pool: r}, nil
 }
 
 func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
