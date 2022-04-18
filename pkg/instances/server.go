@@ -48,6 +48,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database) *Instance
 		db: db, log: logger.Named("instances"),
 		ctrl: ig_ctrl.Instances(),
 		ig_ctrl: ig_ctrl,
+		drivers:  make(map[string]driverpb.DriverServiceClient),
 	}
 }
 
