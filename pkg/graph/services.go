@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud/pkg/hasher"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
@@ -63,6 +64,11 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 
 	service.Status = pb.ServiceStatus_INIT
 
+	err := hasher.SetHash(service.ProtoReflect())
+	if err != nil {
+		return nil, err
+	}
+
 	obj := proto.Clone(service).(*pb.Service)
 	obj.InstancesGroups = nil
 
@@ -81,11 +87,6 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 			continue
 		}
 	}
-
-	// err := hasher.SetHash(service.ProtoReflect())
-	// if err != nil {
-	// 	return nil, err
-	// }
 
 	return service, nil
 }

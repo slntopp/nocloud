@@ -21,6 +21,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/slntopp/nocloud/pkg/hasher"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
@@ -61,6 +62,11 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating InstancesGroup", zap.Any("group", g))
 	
+	err := hasher.SetHash(g.ProtoReflect())
+	if err != nil {
+		return err
+	}
+
 	obj := proto.Clone(g).(*pb.InstancesGroup)
 	obj.Instances = nil
 	meta, err := ctrl.col.CreateDocument(ctx, obj)
