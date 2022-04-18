@@ -98,7 +98,7 @@ func (s *RecordsServiceServer) Consume(ctx context.Context) {
 		goto init
 	}
 
-	s.ConsumerStatus.Status.Status = healthpb.Status_SERVING
+	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
 
 	for msg := range records {
 		log.Info("Received a message", zap.String("message", string(msg.Body)))
