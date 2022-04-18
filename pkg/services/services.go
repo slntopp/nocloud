@@ -33,12 +33,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type Routine struct {
-	Name string
-	LastExec string
-	Running bool
-}
-
 type ServicesServer struct {
 	pb.UnimplementedServicesServiceServer
 	db      driver.Database
@@ -48,8 +42,6 @@ type ServicesServer struct {
 
 	drivers  map[string]driverpb.DriverServiceClient
 	states stpb.StatesServiceClient
-
-	monitoring Routine
 
 	log *zap.Logger
 }
@@ -61,10 +53,6 @@ func NewServicesServer(log *zap.Logger, db driver.Database, gc stpb.StatesServic
 		ns_ctrl:  graph.NewNamespacesController(log, db),
 		drivers:  make(map[string]driverpb.DriverServiceClient),
 		states: gc,
-		monitoring: Routine{
-			Name: "Monitoring",
-			Running: false,
-		},
 	}
 }
 
