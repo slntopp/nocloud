@@ -29,7 +29,7 @@ enum Status {
     OFFLINE = 2; // Service is offline(down)
     RUNNING = 3; // Routine is running
     STOPPED = 4; // Routine is stopped
-    INTENAL = 5; // Internal error while making status
+    INTERNAL = 5; // Internal error while making status
     HASERRS = 6; // Check has errors
     NOEXIST = 7; // Service has no Routines
 }

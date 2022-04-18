@@ -2486,7 +2486,7 @@
         "OFFLINE",
         "RUNNING",
         "STOPPED",
-        "INTENAL",
+        "INTERNAL",
         "HASERRS",
         "NOEXIST"
       ],
