@@ -83,6 +83,8 @@ services:
       STATES_HOST: states:8080
     depends_on:
       - db
+      - states
+      - driver-ione
     networks:
       - proxy
       - arangodb
@@ -92,7 +94,10 @@ services:
   sp-registry:
     container_name: sp-registry
     restart: always
-    image: ghcr.io/slntopp/nocloud/sp-registry:dev-billing
+    image: ghcr.io/slntopp/nocloud/sp-registry:dev-schema
+    depends_on:
+      - db
+      - driver-ione
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
@@ -193,11 +198,13 @@ services:
       - proxy
       - arangodb
       - grpc-internal
+      - mq
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
+      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       SETTINGS_HOST: settings:8080
     links:
       - db
@@ -208,10 +215,12 @@ services:
     image: ghcr.io/slntopp/nocloud-driver-ione:latest
     networks:
       - grpc-internal
+      - mq
     environment:
       STATES_HOST: states:8080
       DRIVER_TYPE_KEY: ione
       SIGNING_KEY: "${SIGNING_KEY}"
+      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       LOG_LEVEL: -1
 
   db:
@@ -231,6 +240,8 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    networks:
+      - mq
     environment:
       RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
@@ -242,6 +253,8 @@ networks:
   arangodb:
     driver: bridge
   redis:
+    driver: bridge
+  mq:
     driver: bridge
 
 volumes:
