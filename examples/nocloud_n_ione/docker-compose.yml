@@ -224,7 +224,6 @@ services:
       - 8529:8529
     volumes:
       - data:/var/lib/arangodb3
-      - ../../database/schemes/:/docker-entrypoint-initdb.d/dumps/nocloud/
     networks:
       - arangodb
   rabbitmq:
