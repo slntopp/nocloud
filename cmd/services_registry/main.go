@@ -22,6 +22,8 @@ import (
 
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
+	"github.com/slntopp/nocloud/pkg/instances"
+	ipb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
@@ -105,6 +107,7 @@ func main() {
 	)
 
 	server := services.NewServicesServer(log, db, grpc_client)
+	iserver := instances.NewInstancesServiceServer(log, db)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
@@ -119,6 +122,7 @@ func main() {
 			log.Error("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
 		}
 		server.RegisterDriver(driver_type.GetType(), client)
+		iserver.RegisterDriver(driver_type.GetType(), client)
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
 	
@@ -129,6 +133,7 @@ func main() {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
 	go server.MonitoringRoutine(ctx)
 	pb.RegisterServicesServiceServer(s, server)
+	ipb.RegisterInstancesServiceServer(s, iserver)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
 

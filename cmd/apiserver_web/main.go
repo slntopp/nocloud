@@ -25,6 +25,7 @@ import (
 	billingpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	dnspb "github.com/slntopp/nocloud/pkg/dns/proto"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
+	instancespb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	registrypb "github.com/slntopp/nocloud/pkg/registry/proto"
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
@@ -144,6 +145,11 @@ func main() {
 	err = servicespb.RegisterServicesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
+	}
+	log.Info("Registering InstancesService Gateway")
+	err = instancespb.RegisterInstancesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	if err != nil {
+		log.Fatal("Failed to register InstancesService gateway", zap.Error(err))
 	}
 	log.Info("Registering DNS Gateway")
 	err = dnspb.RegisterDNSHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)

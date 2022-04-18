@@ -20,6 +20,7 @@ import "google/protobuf/struct.proto";
 import "pkg/hasher/hasherpb/hasher.proto";
 import "pkg/states/proto/states.proto";
 import "pkg/billing/proto/billing.proto";
+import "google/api/annotations.proto";
 
 enum InstanceStatus {
     UNSPECIFIED = 0;
@@ -42,6 +43,7 @@ message Instance {
     nocloud.states.State state = 7;
     string hash = 8 [(nocloud.hasher.hash) = true];
     nocloud.billing.Plan billing_plan = 9;
+    optional int32 access_level = 10;
 }
 
 message InstancesGroup {
@@ -57,6 +59,7 @@ message InstancesGroup {
     map<string, google.protobuf.Value> data = 7;
     string hash = 8 [(nocloud.hasher.hash) = true];
     optional string sp = 9;
+    optional int32 access_level = 10;
 }
 
 message TestInstancesGroupConfigRequest {
@@ -71,4 +74,24 @@ message TestInstancesGroupConfigError {
 message TestInstancesGroupConfigResponse {
     bool result = 1;
     repeated TestInstancesGroupConfigError errors = 2;
+}
+
+message InvokeRequest {
+    string uuid = 1;
+    string method = 2;
+    map<string, google.protobuf.Value> params = 3;
+}
+
+message InvokeResponse {
+    bool result = 1;
+    map<string, google.protobuf.Value> meta = 2;
+}
+
+service InstancesService {
+    rpc Invoke(nocloud.instances.InvokeRequest) returns (nocloud.instances.InvokeResponse) {
+        option (google.api.http) = {
+            post: "/instances/{uuid}/invoke"
+            body: "*"
+        };
+    };
 }

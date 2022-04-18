@@ -23,6 +23,9 @@
       "name": "DNS"
     },
     {
+      "name": "InstancesService"
+    },
+    {
       "name": "ServicesService"
     },
     {
@@ -269,6 +272,10 @@
                 "balance": {
                   "type": "number",
                   "format": "double"
+                },
+                "accessLevel": {
+                  "type": "integer",
+                  "format": "int32"
                 }
               }
             }
@@ -818,6 +825,55 @@
         ],
         "tags": [
           "HealthService"
+        ]
+      }
+    },
+    "/instances/{uuid}/invoke": {
+      "post": {
+        "operationId": "InstancesService_Invoke",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/instancesInvokeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string"
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "InstancesService"
         ]
       }
     },
@@ -1820,6 +1876,10 @@
         "balance": {
           "type": "number",
           "format": "double"
+        },
+        "accessLevel": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2189,6 +2249,10 @@
         },
         "billingPlan": {
           "$ref": "#/definitions/billingPlan"
+        },
+        "accessLevel": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2245,6 +2309,24 @@
         },
         "sp": {
           "type": "string"
+        },
+        "accessLevel": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "instancesInvokeResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },
@@ -2297,6 +2379,10 @@
         },
         "title": {
           "type": "string"
+        },
+        "accessLevel": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2636,6 +2722,10 @@
         },
         "hash": {
           "type": "string"
+        },
+        "accessLevel": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },

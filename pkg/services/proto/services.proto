@@ -42,6 +42,7 @@ message Service {
         [(nocloud.hasher.hashed) = true];
     repeated nocloud.instances.InstancesGroup instances_groups = 6;
     string hash = 7 [(nocloud.hasher.hash) = true];
+    optional int32 access_level = 8;
 }
 
 message Services {

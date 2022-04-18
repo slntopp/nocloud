@@ -34,7 +34,7 @@ type InstancesGroupsController struct {
 	col driver.Collection // Instances Collection
 	graph driver.Graph
 
-	inst_ctrl InstancesController
+	inst_ctrl *InstancesController
 	
 	log *zap.Logger
 }
@@ -56,6 +56,10 @@ func NewInstancesGroupsController(log *zap.Logger, db driver.Database) *Instance
 		log: log.Named("InstancesGroupsController"), inst_ctrl: NewInstancesController(log, db),
 		col: col, graph: graph,
 	}
+}
+
+func (ctrl *InstancesGroupsController) Instances() *InstancesController {
+	return ctrl.inst_ctrl
 }
 
 func (ctrl *InstancesGroupsController) Create(ctx context.Context, service driver.DocumentID, g *pb.InstancesGroup) (error) {

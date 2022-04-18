@@ -24,6 +24,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/hasher"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 )
 
 const (
@@ -35,16 +36,18 @@ type InstancesController struct {
 	graph driver.Graph
 
 	log *zap.Logger
+
+	db driver.Database
 }
 
-func NewInstancesController(log *zap.Logger, db driver.Database) InstancesController {
+func NewInstancesController(log *zap.Logger, db driver.Database) *InstancesController {
 	ctx := context.TODO()
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.INSTANCES_COL)
 	GraphGetEdgeEnsure(log, ctx, graph, schema.IG2INST, schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL)
 
-	return InstancesController{log: log.Named("InstancesController"), col: col, graph: graph}
+	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db}
 }
 
 func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, i *pb.Instance) error {
@@ -87,4 +90,50 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	}
 
 	return nil
+}
+
+const getGroupWithSPQuery = `
+LET instance = DOCUMENT(@instance)
+LET group = (
+    FOR group IN 1 INBOUND instance
+    GRAPH @permissions
+        RETURN group )[0]
+
+LET sp = (
+    FOR s IN 1 OUTBOUND group
+    GRAPH @permissions
+    FILTER IS_SAME_COLLECTION(@sps, s)
+        RETURN s )[0]
+        
+RETURN {
+  group: MERGE(group, { uuid: group._key }),
+  sp: MERGE(sp, { uuid: sp._key })
+}`
+type GroupWithSP struct {
+	Group *pb.InstancesGroup `json:"group"`
+	SP    *sppb.ServicesProvider `json:"sp"`
+}
+
+func (ctrl *InstancesController) GetGroup(ctx context.Context, i string) (*GroupWithSP, error) {
+	log := ctrl.log.Named("GetGroup")
+	log.Debug("Getting Instance Group", zap.String("instance", i))
+	c, err := ctrl.db.Query(ctx, getGroupWithSPQuery, map[string]interface{}{
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"sps": schema.SERVICES_PROVIDERS_COL,
+		"instance": i,
+	})
+	if err != nil {
+		log.Error("Error while querying", zap.Error(err))
+		return nil, err
+	}
+	defer c.Close()
+
+	var r GroupWithSP
+	_, err = c.ReadDocument(ctx, &r)
+	if err != nil {
+		log.Error("Error while reading document", zap.Error(err))
+		return nil, err
+	}
+
+	return &r, nil
 }
