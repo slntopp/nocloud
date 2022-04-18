@@ -53,13 +53,13 @@ func GraphGetVertexEnsure(log *zap.Logger, ctx context.Context, db driver.Databa
 		options := &driver.CreateCollectionOptions{
 			KeyOptions: &driver.CollectionKeyOptions{AllowUserKeys: true, Type: "uuid"},
 		}
-		col, err := db.CreateCollection(ctx, name, options)
-		if err != nil {
-			log.Fatal("Error creating vertex collection", zap.Error(err))
-		}
-		col, err = graph.CreateVertexCollection(ctx, name)
+		_, err := db.CreateCollection(ctx, name, options)
 		if err != nil {
 			log.Fatal("Error creating collection in Graph", zap.Error(err))
+		}
+		col, err := graph.CreateVertexCollection(ctx, name)
+		if err != nil {
+			log.Fatal("Error creating vertex collection", zap.Error(err))
 		}
 		return col
 	}
