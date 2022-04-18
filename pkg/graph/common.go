@@ -92,3 +92,25 @@ func GraphGetEdgeEnsure(log *zap.Logger, ctx context.Context, graph driver.Graph
 	}
 	return col
 }
+
+func GetEnsureCollection(log *zap.Logger, ctx context.Context, db driver.Database, name string) (driver.Collection) {
+	exists, err := db.CollectionExists(ctx, name)
+	if err != nil {
+		log.Fatal("Error checking if collection exists", zap.Error(err))
+	}
+	if !exists {
+		col, err := db.CreateCollection(ctx, name, &driver.CreateCollectionOptions{
+			KeyOptions: &driver.CollectionKeyOptions{AllowUserKeys: true, Type: "uuid"},
+		})
+		if err != nil {
+			log.Fatal("Error creating collection", zap.Error(err))
+		}
+		return col
+	}
+
+	col, err := db.Collection(ctx, name)
+	if err != nil {
+		log.Fatal("Error getting collection", zap.Error(err))
+	}
+	return col
+}

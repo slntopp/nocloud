@@ -35,8 +35,10 @@ type RecordsController struct {
 	log *zap.Logger
 }
 
-func NewRecordsController(log *zap.Logger, db driver.Database) RecordsController {
-	col, _ := db.Collection(context.TODO(), schema.RECORDS_COL)
+func NewRecordsController(logger *zap.Logger, db driver.Database) RecordsController {
+	ctx := context.TODO()
+	log := logger.Named("RecordsController")
+	col := GetEnsureCollection(log, ctx, db, schema.RECORDS_COL)
 	return RecordsController{
 		log: log, col: col,
 	}

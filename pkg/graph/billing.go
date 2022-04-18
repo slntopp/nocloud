@@ -35,8 +35,10 @@ type BillingPlansController struct {
 	col driver.Collection // Billing Plans collection
 }
 
-func NewBillingPlansController(log *zap.Logger, db driver.Database) BillingPlansController {
-	plans, _ := db.Collection(context.TODO(), schema.BILLING_PLANS_COL)
+func NewBillingPlansController(logger *zap.Logger, db driver.Database) BillingPlansController {
+	ctx := context.TODO()
+	log := logger.Named("BillingPlansController")
+	plans := GetEnsureCollection(log, ctx, db, schema.BILLING_PLANS_COL)
 	return BillingPlansController{
 		log: log, col: plans,
 	}

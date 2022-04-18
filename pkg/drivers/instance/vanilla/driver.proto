@@ -47,12 +47,6 @@ message DownResponse {
     nocloud.instances.InstancesGroup group = 1;
 }
 
-message PerformActionRequest {
-    nocloud.services.PerformActionRequest request = 1;
-    nocloud.instances.InstancesGroup group = 2;
-    nocloud.services_providers.ServicesProvider services_provider = 3;
-}
-
 message MonitoringRequest {
     repeated nocloud.instances.InstancesGroup groups = 1;
     nocloud.services_providers.ServicesProvider services_provider = 2;
@@ -67,8 +61,6 @@ service DriverService {
 
     rpc Up(nocloud.instance.driver.vanilla.UpRequest) returns (nocloud.instance.driver.vanilla.UpResponse);
     rpc Down(nocloud.instance.driver.vanilla.DownRequest) returns (nocloud.instance.driver.vanilla.DownResponse);
-
-    rpc Invoke(PerformActionRequest) returns (nocloud.services.PerformActionResponse);
 
     rpc Monitoring(MonitoringRequest) returns (MonitoringResponse);
 }

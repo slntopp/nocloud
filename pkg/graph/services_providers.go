@@ -37,8 +37,15 @@ type ServicesProvidersController struct {
 	log *zap.Logger
 }
 
-func NewServicesProvidersController(log *zap.Logger, db driver.Database) ServicesProvidersController {
-	col, _ := db.Collection(context.TODO(), schema.SERVICES_PROVIDERS_COL)
+func NewServicesProvidersController(logger *zap.Logger, db driver.Database) ServicesProvidersController {
+	ctx := context.TODO()
+	log := logger.Named("ServicesProvidersController")
+
+	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
+	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.SERVICES_PROVIDERS_COL)
+
+	GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
+
 	return ServicesProvidersController{log: log, col: col}
 }
 

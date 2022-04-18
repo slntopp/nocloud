@@ -36,8 +36,10 @@ type TransactionsController struct {
 	log *zap.Logger
 }
 
-func NewTransactionsController(log *zap.Logger, db driver.Database) TransactionsController {
-	col, _ := db.Collection(context.TODO(), schema.TRANSACTIONS_COL)
+func NewTransactionsController(logger *zap.Logger, db driver.Database) TransactionsController {
+	ctx := context.TODO()
+	log := logger.Named("TransactionsController")
+	col := GetEnsureCollection(log, ctx, db, schema.TRANSACTIONS_COL)
 	return TransactionsController{
 		log: log, col: col,
 	}

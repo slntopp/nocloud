@@ -44,10 +44,22 @@ type AccountsController struct {
 	log *zap.Logger
 }
 
-func NewAccountsController(log *zap.Logger, db driver.Database) AccountsController {
-	col, _ := db.Collection(context.TODO(), schema.ACCOUNTS_COL)
-	cred, _ := db.Collection(context.TODO(), schema.CREDENTIALS_COL)
-	log = log.Named("AccountsController")
+func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsController {
+	ctx := context.TODO()
+	log := logger.Named("AccountsController")
+
+	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
+	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.ACCOUNTS_COL)
+
+	GraphGetEdgeEnsure(log, ctx, graph, schema.ACC2NS, schema.ACCOUNTS_COL, schema.NAMESPACES_COL)
+	GraphGetEdgeEnsure(log, ctx, graph, schema.NS2ACC, schema.NAMESPACES_COL, schema.ACCOUNTS_COL)
+
+	graph = GraphGetEnsure(log, ctx, db, schema.CREDENTIALS_GRAPH.Name)
+	GraphGetVertexEnsure(log, ctx, db, graph, schema.ACCOUNTS_COL)
+	cred := GraphGetVertexEnsure(log, ctx, db, graph, schema.CREDENTIALS_COL)
+
+	GraphGetEdgeEnsure(log, ctx, graph, schema.CREDENTIALS_EDGE_COL, schema.ACCOUNTS_COL, schema.CREDENTIALS_COL)
+
 	return AccountsController{log: log, col: col, cred: cred}
 }
 
