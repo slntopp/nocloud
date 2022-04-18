@@ -115,7 +115,7 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 	return r,  nil
 }
 
-func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider) ([]*Service, error) {
+func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider) ([]*spb.Service, error) {
 	query := `FOR service IN OUTBOUND @sp GRAPH @services_graph RETURN service`
 	bindVars := map[string]interface{}{
 		"sp": sp.DocumentMeta.ID,
@@ -128,7 +128,7 @@ func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp
 		return nil, err
 	}
 	defer c.Close()
-	var r []*Service
+	var r []*spb.Service
 	for {
 		var s spb.Service
 		meta, err := c.ReadDocument(ctx, &s)
@@ -139,7 +139,7 @@ func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp
 		}
 		ctrl.log.Debug("Got document", zap.Any("service", &s))
 		s.Uuid = meta.ID.Key()
-		r = append(r, &Service{&s, meta})
+		r = append(r, &s)
 	}
 
 	return r,  nil

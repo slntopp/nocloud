@@ -21,30 +21,41 @@ import "pkg/hasher/hasherpb/hasher.proto";
 import "pkg/states/proto/states.proto";
 import "pkg/billing/proto/billing.proto";
 
+enum InstanceStatus {
+    UNSPECIFIED = 0;
+    INIT = 1;
+    MODIFIED = 2;
+    UP = 3;
+    DOWN = 4;
+    DEL = 5;
+}
+
 message Instance {
     string uuid = 1;
     string title = 2;
-    map<string, google.protobuf.Value> config = 3
+    InstanceStatus status = 3;
+    map<string, google.protobuf.Value> config = 4
         [(nocloud.hasher.hashed) = true];
-    map<string, google.protobuf.Value> resources = 4
+    map<string, google.protobuf.Value> resources = 5
         [(nocloud.hasher.hashed) = true];
-    map<string, google.protobuf.Value> data = 5;
-    nocloud.states.State state = 6;
-    string hash = 7 [(nocloud.hasher.hash) = true];
-    nocloud.billing.Plan billing_plan = 8;
+    map<string, google.protobuf.Value> data = 6;
+    nocloud.states.State state = 7;
+    string hash = 8 [(nocloud.hasher.hash) = true];
+    nocloud.billing.Plan billing_plan = 9;
 }
 
 message InstancesGroup {
     string uuid = 1;
     string type = 2;
-    map<string, google.protobuf.Value> config = 3
+    string title = 3;
+    map<string, google.protobuf.Value> config = 4
         [(nocloud.hasher.hashed) = true];
-    repeated Instance instances = 4
+    repeated Instance instances = 5
         [(nocloud.hasher.hashed) = true];
-    map<string, google.protobuf.Value> resources = 5
+    map<string, google.protobuf.Value> resources = 6
         [(nocloud.hasher.hashed) = true];
-    map<string, google.protobuf.Value> data = 6;
-    string hash = 7 [(nocloud.hasher.hash) = true];
+    map<string, google.protobuf.Value> data = 7;
+    string hash = 8 [(nocloud.hasher.hash) = true];
 }
 
 message TestInstancesGroupConfigRequest {

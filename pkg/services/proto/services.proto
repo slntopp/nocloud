@@ -22,17 +22,26 @@ import "google/api/annotations.proto";
 import "pkg/hasher/hasherpb/hasher.proto";
 import "pkg/states/proto/states.proto";
 
+enum ServiceStatus {
+    UNSPECIFIED = 0;
+    INIT = 1;
+    MODIFIED = 2;
+    UP = 3;
+    DOWN = 4;
+    DEL = 5;
+    PROC = 6;
+}
+
 message Service {
     string uuid = 1;
     string version = 2
         [(nocloud.hasher.hashed) = true];
     string title = 3;
-    string status = 4;
+    ServiceStatus status = 4;
     map<string, google.protobuf.Value> context = 5
         [(nocloud.hasher.hashed) = true];
-    map<string, nocloud.instances.InstancesGroup> instances_groups = 6;
+    repeated nocloud.instances.InstancesGroup instances_groups = 6;
     string hash = 7 [(nocloud.hasher.hash) = true];
-    map<string, string> provisions = 8;
 }
 
 message TestConfigError {

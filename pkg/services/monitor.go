@@ -20,13 +20,12 @@ import (
 	"encoding/json"
 	"time"
 
-	sppb "github.com/slntopp/nocloud/pkg/services/proto"
+	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
@@ -116,7 +115,7 @@ func (s *ServicesServer) MonitoringRoutine(ctx context.Context) {
 		log.Info("Starting", zap.Time("tick", tick))
 		s.monitoring.Running = true
 
-		pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY, &sppb.ListRequest{})
+		pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY, &pb.ListRequest{})
 		if err != nil {
 			log.Error("Failed to get Services", zap.Error(err))
 			continue
@@ -124,8 +123,8 @@ func (s *ServicesServer) MonitoringRoutine(ctx context.Context) {
 		log.Debug("Got Services", zap.Int("length", len(pool)))
 
 		for _, service := range pool {
-			go func(service *graph.Service) {
-				states, err := s.GetStatesInternal(ctx, service.Service)
+			go func(service *pb.Service) {
+				states, err := s.GetStatesInternal(ctx, service)
 				if err != nil {
 					log.Error("Failed to get Service Instances states", zap.String("service", service.GetUuid()), zap.Error(err))
 					return
@@ -142,16 +141,7 @@ func (s *ServicesServer) MonitoringRoutine(ctx context.Context) {
 					}
 				}
 
-				// Refresh provisions
-				provisions, err := s.ctrl.GetProvisions(ctx, service.ID.String())
-				if err != nil {
-					log.Error("Error getting Provisions", zap.String("service", service.GetUuid()), zap.Error(err))
-				} else {
-					service.Provisions = provisions
-				}
-				log.Debug("Got Provisions", zap.String("service", service.GetUuid()), zap.Any("provisions", provisions))
-
-				err = s.ctrl.Update(ctx, service.Service, false)
+				err = s.ctrl.Update(ctx, service, false)
 				if err != nil {
 					log.Error("Failed to update Service", zap.String("service", service.GetUuid()), zap.Error(err))
 				}

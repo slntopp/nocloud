@@ -2254,6 +2254,9 @@
         "title": {
           "type": "string"
         },
+        "status": {
+          "$ref": "#/definitions/instancesInstanceStatus"
+        },
         "config": {
           "type": "object",
           "additionalProperties": {
@@ -2283,6 +2286,18 @@
         }
       }
     },
+    "instancesInstanceStatus": {
+      "type": "string",
+      "enum": [
+        "UNSPECIFIED",
+        "INIT",
+        "MODIFIED",
+        "UP",
+        "DOWN",
+        "DEL"
+      ],
+      "default": "UNSPECIFIED"
+    },
     "instancesInstancesGroup": {
       "type": "object",
       "properties": {
@@ -2290,6 +2305,9 @@
           "type": "string"
         },
         "type": {
+          "type": "string"
+        },
+        "title": {
           "type": "string"
         },
         "config": {
@@ -2752,7 +2770,7 @@
           "type": "string"
         },
         "status": {
-          "type": "string"
+          "$ref": "#/definitions/servicesServiceStatus"
         },
         "context": {
           "type": "object",
@@ -2761,21 +2779,28 @@
           }
         },
         "instancesGroups": {
-          "type": "object",
-          "additionalProperties": {
+          "type": "array",
+          "items": {
             "$ref": "#/definitions/instancesInstancesGroup"
           }
         },
         "hash": {
           "type": "string"
-        },
-        "provisions": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
         }
       }
+    },
+    "servicesServiceStatus": {
+      "type": "string",
+      "enum": [
+        "UNSPECIFIED",
+        "INIT",
+        "MODIFIED",
+        "UP",
+        "DOWN",
+        "DEL",
+        "PROC"
+      ],
+      "default": "UNSPECIFIED"
     },
     "servicesTestConfigError": {
       "type": "object",

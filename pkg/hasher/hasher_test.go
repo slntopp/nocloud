@@ -61,14 +61,13 @@ func initMessage() *services.Service {
 	ctx := make(map[string]*structpb.Value)
 	ctx["zero"] = sv0
 	ctx["one"] = sv1
-	igm := make(map[string]*instances.InstancesGroup)
-	igm["one"] = &ig
+	igm := []*instances.InstancesGroup{&ig}
 
 	serv := &services.Service{
 		Uuid:            "Uuid",
 		Version:         "Version",
 		Title:           "Title",
-		Status:          "Status",
+		Status:          services.ServiceStatus_INIT,
 		Context:         ctx,
 		InstancesGroups: igm,
 		// Hash:            "uuid",
