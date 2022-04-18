@@ -22,7 +22,7 @@ services:
   health:
     container_name: health-service
     restart: always
-    image: ghcr.io/slntopp/nocloud/health:latest
+    image: ghcr.io/slntopp/nocloud/health:dev-billing
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
@@ -72,7 +72,7 @@ services:
   services-registry:
     container_name: services-registry
     restart: always
-    image: ghcr.io/slntopp/nocloud/services-registry:latest
+    image: ghcr.io/slntopp/nocloud/services-registry:dev-billing
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
@@ -92,7 +92,7 @@ services:
   sp-registry:
     container_name: sp-registry
     restart: always
-    image: ghcr.io/slntopp/nocloud/sp-registry:latest
+    image: ghcr.io/slntopp/nocloud/sp-registry:dev-billing
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
@@ -163,7 +163,7 @@ services:
     restart: always
     depends_on:
       - redis_states
-    image: ghcr.io/slntopp/nocloud/states:latest
+    image: ghcr.io/slntopp/nocloud/states:dev-billing
     networks:
       - grpc-internal
       - redis
@@ -188,7 +188,7 @@ services:
     depends_on:
       - db
       - settings
-    image: ghcr.io/slntopp/nocloud/billing:latest
+    image: ghcr.io/slntopp/nocloud/billing:dev-billing
     networks:
       - proxy
       - arangodb
@@ -227,6 +227,14 @@ services:
       - ../../database/schemes/:/docker-entrypoint-initdb.d/dumps/nocloud/
     networks:
       - arangodb
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
 
 networks:
   proxy:

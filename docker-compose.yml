@@ -210,6 +210,14 @@ services:
       - ./database/schemes/:/docker-entrypoint-initdb.d/dumps/nocloud/
     networks:
       - arangodb
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
 
 networks:
   proxy:
