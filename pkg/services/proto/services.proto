@@ -76,11 +76,9 @@ message DeleteResponse {
 }
 
 message PerformActionRequest {
-    string service = 1;
-    string group = 2;
-    string instance = 3;
-    string action = 4;
-    map<string, google.protobuf.Value> data = 5;
+    string instance = 1;
+    string action = 2;
+    map<string, google.protobuf.Value> data = 3;
 }
 
 message PerformActionResponse {

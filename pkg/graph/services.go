@@ -39,7 +39,7 @@ type ServicesController struct {
 	log *zap.Logger
 
 	col driver.Collection // Services Collection
-	ig_ctrl InstancesGroupsController
+	ig_ctrl *InstancesGroupsController
 
 	db driver.Database
 }
@@ -55,6 +55,10 @@ func NewServicesController(log *zap.Logger, db driver.Database) ServicesControll
 	GraphGetEdgeEnsure(log, ctx, graph, schema.NS2SERV, schema.NAMESPACES_COL, schema.SERVICES_COL)
 
 	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db), db:db}
+}
+
+func (ctrl *ServicesController) IGController() *InstancesGroupsController {
+	return ctrl.ig_ctrl
 }
 
 // Create Service and underlaying entities and store in DB

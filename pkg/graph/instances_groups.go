@@ -39,7 +39,7 @@ type InstancesGroupsController struct {
 	log *zap.Logger
 }
 
-func NewInstancesGroupsController(log *zap.Logger, db driver.Database) InstancesGroupsController {
+func NewInstancesGroupsController(log *zap.Logger, db driver.Database) *InstancesGroupsController {
 	ctx := context.TODO()
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
@@ -52,7 +52,7 @@ func NewInstancesGroupsController(log *zap.Logger, db driver.Database) Instances
 	GraphGetEdgeEnsure(log, ctx, graph, schema.SERV2IG, schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL)
 	GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
 
-	return InstancesGroupsController{
+	return &InstancesGroupsController{
 		log: log.Named("InstancesGroupsController"), inst_ctrl: NewInstancesController(log, db),
 		col: col, graph: graph,
 	}
@@ -101,4 +101,18 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	}
 
 	return nil
+}
+
+func (ctrl *InstancesGroupsController) Provide(ctx context.Context, group, sp string) error {
+	edge, _, err := ctrl.graph.EdgeCollection(ctx, schema.IG2SP)
+	if err != nil {
+		ctrl.log.Error("Failed to get edge collection", zap.Error(err))
+		return err
+	}
+
+	_, err = edge.CreateDocument(ctx, Access{
+		From: driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group),
+		To: driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp),
+	})
+	return err
 }

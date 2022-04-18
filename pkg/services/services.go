@@ -254,17 +254,17 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 		}
 
 		group.Data = response.GetGroup().GetData()
-		// err = s.ctrl.Provide(ctx, sp.ID, service.ID, group.GetUuid())
-		// if err != nil {
-		// 	log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
-		// 	result.Errors = append(result.Errors, &pb.UpError{
-		// 		Data: map[string]string{
-		// 			"group": group.GetUuid(),
-		// 			"error": err.Error(),
-		// 		},
-		// 	})
-		// 	continue
-		// }
+		err = s.ctrl.IGController().Provide(ctx, group.Uuid, sp.Uuid)
+		if err != nil {
+			log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
+			result.Errors = append(result.Errors, &pb.UpError{
+				Data: map[string]string{
+					"group": group.GetUuid(),
+					"error": err.Error(),
+				},
+			})
+			continue
+		}
 		log.Debug("Updated Group", zap.Any("group", group))
 	}
 
@@ -437,58 +437,6 @@ func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) 
 
 	return &pb.DeleteResponse{Result: true}, nil
 }
-
-// func (s *ServicesServer) PerformServiceAction(ctx context.Context, req *pb.PerformActionRequest) (res *pb.PerformActionResponse, err error) {
-// 	log := s.log.Named("PerformServiceAction")
-// 	log.Debug("Request received", zap.Any("request", req))
-
-// 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-// 	log.Debug("Requestor", zap.String("id", requestor))
-
-// 	r, err := s.ctrl.Get(ctx, req.GetService())
-// 	if err != nil {
-// 		log.Debug("Error getting Service from DB", zap.Error(err))
-// 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
-// 	}
-
-// 	ok := graph.HasAccess(ctx, s.db, requestor, r.ID.String(), access.MGMT)
-// 	if !ok {
-// 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Perform Service Action")
-// 	}
-
-// 	igroup, ok := r.GetInstancesGroups()[req.GetGroup()]
-// 	if !ok {
-// 		return nil, status.Errorf(codes.NotFound, "Group '%s' doesn't exist", req.GetGroup())
-// 	}
-
-// 	prov, err := s.ctrl.GetProvisions(ctx, r.DocumentMeta.ID.String())
-// 	if err != nil {
-// 		log.Debug("Error getting Service Provisions from DB", zap.Error(err))
-// 		return nil, status.Error(codes.NotFound, "Service Provisions not Found in DB")
-// 	}
-
-// 	spid, ok := prov[igroup.GetUuid()]
-// 	if !ok {
-// 		return nil, status.Errorf(codes.NotFound, "Provision for Group '%s' doesn't exist", req.GetGroup())
-// 	}
-
-// 	sp, err := s.sp_ctrl.Get(ctx, spid)
-// 	if err != nil {
-// 		log.Debug("Error getting ServicesProvider from DB", zap.Error(err))
-// 		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
-// 	}
-
-// 	client, ok := s.drivers[igroup.GetType()]
-// 	if !ok {
-// 		return nil, status.Errorf(codes.NotFound, "Driver type '%s' not registered", igroup.GetType())
-// 	}
-
-// 	return client.Invoke(ctx, &driverpb.PerformActionRequest{
-// 		Request:          req,
-// 		Group:            igroup,
-// 		ServicesProvider: sp.ServicesProvider,
-// 	})
-// }
 
 func (s *ServicesServer) GetProvisions(ctx context.Context, req *pb.GetProvisionsRequest) (*pb.GetProvisionsResponse, error) {
 	log := s.log.Named("GetProvisions")

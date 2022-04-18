@@ -56,6 +56,7 @@ message InstancesGroup {
         [(nocloud.hasher.hashed) = true];
     map<string, google.protobuf.Value> data = 7;
     string hash = 8 [(nocloud.hasher.hash) = true];
+    optional string sp = 9;
 }
 
 message TestInstancesGroupConfigRequest {
