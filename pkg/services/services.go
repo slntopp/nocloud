@@ -26,7 +26,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
@@ -180,14 +179,19 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 
 func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpResponse, error) {
 	log := s.log.Named("Up")
-	log.Debug("Request received", zap.Any("request", request))
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
-	service, err := s.ctrl.Get(ctx, request.GetUuid())
+	service, err := s.ctrl.Get(ctx, requestor, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not found")
 	}
 	log.Debug("Found Service", zap.Any("service", service))
+
+	if service.AccessLevel == nil || *service.AccessLevel < access.MGMT {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
+	}
 
 	deploy_policies := request.GetDeployPolicies()
 	contexts := make(map[string]*InstancesGroupDriverContext)
@@ -281,14 +285,19 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 
 func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb.DownResponse, error) {
 	log := s.log.Named("Down")
-	log.Debug("Request received", zap.Any("request", request))
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
-	service, err := s.ctrl.Get(ctx, request.GetUuid())
+	service, err := s.ctrl.Get(ctx, requestor, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not found")
 	}
 	log.Debug("Found Service", zap.Any("service", service))
+
+	if service.AccessLevel == nil || *service.AccessLevel < access.MGMT {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
+	}
 
 	contexts := make(map[string]*InstancesGroupDriverContext)
 
@@ -358,31 +367,17 @@ func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	r, err := s.ctrl.Get(ctx, request.GetUuid())
+	service, err := s.ctrl.Get(ctx, requestor, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service from DB", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.SERVICES_COL, r.Uuid).String(), access.READ)
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
+	if service.AccessLevel == nil || *service.AccessLevel < access.READ {
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	states, err := s.GetStatesInternal(ctx, r)
-	if err != nil {
-		log.Error("Error getting Instances States", zap.String("uuid", r.GetUuid()), zap.Error(err))
-		return r, nil
-	}
-	log.Debug("Got Instances States", zap.Any("states", states))
-
-	for _, group := range r.GetInstancesGroups() {
-		for _, inst := range group.GetInstances() {
-			inst.State = states.States[inst.GetUuid()]
-		}
-	}
-
-	return r, nil
+	return service, nil
 }
 
 func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.Services, err error) {
@@ -403,23 +398,20 @@ func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (res
 
 func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
 	log := s.log.Named("Delete")
-	log.Debug("Request received", zap.Any("request", request))
-
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	log.Debug("Requestor", zap.String("id", requestor))
+	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
-	r, err := s.ctrl.Get(ctx, request.GetUuid())
+	service, err := s.ctrl.Get(ctx, requestor, request.GetUuid())
 	if err != nil {
 		log.Debug("Error getting Service from DB", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.SERVICES_COL, r.Uuid).String(), access.MGMT)
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
+	if service.AccessLevel == nil || *service.AccessLevel < access.ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	err = s.ctrl.Delete(ctx, r)
+	err = s.ctrl.Delete(ctx, service)
 	if err != nil {
 		log.Error("Error Deleting Service", zap.Error(err))
 		return &pb.DeleteResponse{Result: false, Error: err.Error()}, nil

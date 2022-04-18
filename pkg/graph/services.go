@@ -110,7 +110,14 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service,
 
 // Get Service from DB
 const getServiceQuery = `
-LET service = DOCUMENT(@service)
+LET service = (
+    FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @service
+    GRAPH @permissions SORT path.edges[0].level
+    	RETURN MERGE(path.vertices[-1], {
+    	    access_level: path.edges[0].level ? : 0
+    	})
+)[0]
+
 LET instances_groups = (
     FOR group IN 1 OUTBOUND service
     GRAPH @permissions
@@ -126,15 +133,19 @@ LET instances_groups = (
                 RETURN s._key )
         RETURN MERGE(group, { uuid: group._key, instances, sp: sp[0] })
 )
-    
+
 RETURN MERGE(service, { uuid: service._key, instances_groups })
 `
-func (ctrl *ServicesController) Get(ctx context.Context, key string) (*pb.Service, error) {
+func (ctrl *ServicesController) Get(ctx context.Context, acc, key string) (*pb.Service, error) {
 	ctrl.log.Debug("Getting Service", zap.String("key", key))
 
+	requestor := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
 	id := driver.NewDocumentID(schema.SERVICES_COL, key)
 	c, err := ctrl.db.Query(ctx, getServiceQuery, map[string]interface{}{
+		"account": requestor,
 		"service": id, 
+		"instances": schema.INSTANCES_COL,
+		"sps": schema.SERVICES_PROVIDERS_COL,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	})
 	if err != nil {
