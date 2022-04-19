@@ -25,6 +25,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	s "github.com/slntopp/nocloud/pkg/states"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -42,10 +43,17 @@ type InstancesServer struct {
 	db driver.Database
 }
 
-func NewInstancesServiceServer(logger *zap.Logger, db driver.Database) *InstancesServer {
-	ig_ctrl := graph.NewInstancesGroupsController(logger, db) 
+func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq string) *InstancesServer {
+	log := logger.Named("instances")
+	ig_ctrl := graph.NewInstancesGroupsController(logger, db)
+
+	s := s.NewStatesPubSub(log, nil, rbmq)
+	ch := s.Channel()
+	s.TopicExchange(ch, "states") // init Exchange with name "states" of type "topic"
+	s.StatesConsumerInit(ch, "states", "instances", schema.INSTANCES_COL) // init Consumer queue of topic "states.instances"
+
 	return &InstancesServer{
-		db: db, log: logger.Named("instances"),
+		db: db, log: log,
 		ctrl: ig_ctrl.Instances(),
 		ig_ctrl: ig_ctrl,
 		drivers:  make(map[string]driverpb.DriverServiceClient),

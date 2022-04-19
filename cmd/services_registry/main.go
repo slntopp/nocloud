@@ -34,7 +34,6 @@ import (
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -47,6 +46,7 @@ var (
 	arangodbCred  string
 	drivers       []string
 	SIGNING_KEY   []byte
+	rbmq string
 	statesHost  string
 )
 
@@ -61,6 +61,7 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("STATES_HOST", "states:8080")
+	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 
 	port = viper.GetString("PORT")
 
@@ -69,6 +70,7 @@ func init() {
 	drivers = viper.GetStringSlice("DRIVERS")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 	statesHost = viper.GetString("STATES_HOST")
+	rbmq = viper.GetString("RABBITMQ_CONN")
 }
 
 func main() {
@@ -94,7 +96,6 @@ func main() {
 		log.Fatal("fail to dial States", zap.Error(err))
 	}
 	defer conn.Close()
-	grpc_client := stpb.NewStatesServiceClient(conn)
 
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
@@ -104,8 +105,8 @@ func main() {
 		)),
 	)
 
-	server := services.NewServicesServer(log, db, grpc_client)
-	iserver := instances.NewInstancesServiceServer(log, db)
+	server := services.NewServicesServer(log, db)
+	iserver := instances.NewInstancesServiceServer(log, db, rbmq)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))

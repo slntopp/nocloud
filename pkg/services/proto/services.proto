@@ -152,12 +152,6 @@ service ServicesService {
         };
     };
 
-    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.states.GetStatesResponse) {
-        option (google.api.http) = {
-            get: "/services/{uuid}/states"
-        };
-    };
-
     rpc Up(nocloud.services.UpRequest) returns (nocloud.services.UpResponse) {
         option (google.api.http) = {
             post: "/services/{uuid}/up"

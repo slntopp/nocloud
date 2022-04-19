@@ -21,6 +21,7 @@ import (
 
 	pb "github.com/slntopp/nocloud/pkg/edge/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	s "github.com/slntopp/nocloud/pkg/states"
 	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -31,12 +32,16 @@ type EdgeServiceServer struct {
 	pb.UnimplementedEdgeServiceServer
 
 	log *zap.Logger
-	st stpb.StatesServiceClient
+	pub s.Pub
 }
 
-func NewEdgeServiceServer(log *zap.Logger, st stpb.StatesServiceClient) *EdgeServiceServer {
+func NewEdgeServiceServer(log *zap.Logger, rbmq string) *EdgeServiceServer {
+	s := s.NewStatesPubSub(log, nil, rbmq)
+	ch := s.Channel()
+	s.TopicExchange(ch, "states")
+	
 	return &EdgeServiceServer{
-		log: log, st: st,
+		log: log, pub: s.Publisher(ch, "states", "instances"),
 	}
 }
 
@@ -44,10 +49,12 @@ func (s *EdgeServiceServer) Test(ctx context.Context, _ *pb.TestRequest) (*pb.Te
 	return &pb.TestResponse{Result: true}, nil
 }
 
-func (s *EdgeServiceServer) PostState(ctx context.Context, req *stpb.PostStateRequest) (*stpb.PostStateResponse, error) {
+func (s *EdgeServiceServer) PostState(ctx context.Context, req *stpb.ObjectState) (*pb.Empty, error) {
 	inst, ok := ctx.Value(nocloud.NoCloudInstance).(string)
-	if !ok || inst != req.GetUuid() {
+	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Post State to Instance")
 	}
-	return s.st.PostState(ctx, req)
+	req.Uuid = inst
+
+	return &pb.Empty{}, s.pub(req)
 }

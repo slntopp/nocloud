@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type EdgeServiceClient interface {
 	Test(ctx context.Context, in *TestRequest, opts ...grpc.CallOption) (*TestResponse, error)
-	PostState(ctx context.Context, in *proto.PostStateRequest, opts ...grpc.CallOption) (*proto.PostStateResponse, error)
+	PostState(ctx context.Context, in *proto.ObjectState, opts ...grpc.CallOption) (*Empty, error)
 }
 
 type edgeServiceClient struct {
@@ -40,8 +40,8 @@ func (c *edgeServiceClient) Test(ctx context.Context, in *TestRequest, opts ...g
 	return out, nil
 }
 
-func (c *edgeServiceClient) PostState(ctx context.Context, in *proto.PostStateRequest, opts ...grpc.CallOption) (*proto.PostStateResponse, error) {
-	out := new(proto.PostStateResponse)
+func (c *edgeServiceClient) PostState(ctx context.Context, in *proto.ObjectState, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
 	err := c.cc.Invoke(ctx, "/nocloud.edge.EdgeService/PostState", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (c *edgeServiceClient) PostState(ctx context.Context, in *proto.PostStateRe
 // for forward compatibility
 type EdgeServiceServer interface {
 	Test(context.Context, *TestRequest) (*TestResponse, error)
-	PostState(context.Context, *proto.PostStateRequest) (*proto.PostStateResponse, error)
+	PostState(context.Context, *proto.ObjectState) (*Empty, error)
 	mustEmbedUnimplementedEdgeServiceServer()
 }
 
@@ -65,7 +65,7 @@ type UnimplementedEdgeServiceServer struct {
 func (UnimplementedEdgeServiceServer) Test(context.Context, *TestRequest) (*TestResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Test not implemented")
 }
-func (UnimplementedEdgeServiceServer) PostState(context.Context, *proto.PostStateRequest) (*proto.PostStateResponse, error) {
+func (UnimplementedEdgeServiceServer) PostState(context.Context, *proto.ObjectState) (*Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostState not implemented")
 }
 func (UnimplementedEdgeServiceServer) mustEmbedUnimplementedEdgeServiceServer() {}
@@ -100,7 +100,7 @@ func _EdgeService_Test_Handler(srv interface{}, ctx context.Context, dec func(in
 }
 
 func _EdgeService_PostState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(proto.PostStateRequest)
+	in := new(proto.ObjectState)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func _EdgeService_PostState_Handler(srv interface{}, ctx context.Context, dec fu
 		FullMethod: "/nocloud.edge.EdgeService/PostState",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(EdgeServiceServer).PostState(ctx, req.(*proto.PostStateRequest))
+		return srv.(EdgeServiceServer).PostState(ctx, req.(*proto.ObjectState))
 	}
 	return interceptor(ctx, in, info, handler)
 }

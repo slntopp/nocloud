@@ -27,7 +27,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
-	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -41,18 +40,16 @@ type ServicesServer struct {
 	ns_ctrl graph.NamespacesController
 
 	drivers  map[string]driverpb.DriverServiceClient
-	states stpb.StatesServiceClient
 
 	log *zap.Logger
 }
 
-func NewServicesServer(log *zap.Logger, db driver.Database, gc stpb.StatesServiceClient) *ServicesServer {
+func NewServicesServer(log *zap.Logger, db driver.Database) *ServicesServer {
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
 		sp_ctrl:  graph.NewServicesProvidersController(log, db),
 		ns_ctrl:  graph.NewNamespacesController(log, db),
 		drivers:  make(map[string]driverpb.DriverServiceClient),
-		states: gc,
 	}
 }
 

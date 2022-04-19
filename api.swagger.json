@@ -11,9 +11,6 @@
   },
   "tags": [
     {
-      "name": "StatesService"
-    },
-    {
       "name": "RecordsService"
     },
     {
@@ -1308,36 +1305,6 @@
         ]
       }
     },
-    "/services/{uuid}/states": {
-      "get": {
-        "operationId": "ServicesService_GetStates",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/statesGetStatesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googlerpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "uuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      }
-    },
     "/services/{uuid}/up": {
       "post": {
         "operationId": "ServicesService_Up",
@@ -2120,6 +2087,9 @@
         }
       }
     },
+    "edgeEmpty": {
+      "type": "object"
+    },
     "googlerpcStatus": {
       "type": "object",
       "properties": {
@@ -2894,17 +2864,6 @@
         }
       }
     },
-    "statesGetStatesResponse": {
-      "type": "object",
-      "properties": {
-        "states": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/statesState"
-          }
-        }
-      }
-    },
     "statesNoCloudState": {
       "type": "string",
       "enum": [
@@ -2918,21 +2877,6 @@
         "OPERATION"
       ],
       "default": "INIT"
-    },
-    "statesPostStateResponse": {
-      "type": "object",
-      "properties": {
-        "uuid": {
-          "type": "string"
-        },
-        "result": {
-          "type": "string",
-          "format": "int64"
-        },
-        "error": {
-          "type": "string"
-        }
-      }
     },
     "statesState": {
       "type": "object",
