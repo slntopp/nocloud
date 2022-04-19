@@ -123,8 +123,9 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 }
 
 const listDeployedGroupsQuery = `
-FOR group IN INBOUND @sp
+FOR group, edge, path IN 1 INBOUND @sp
 GRAPH @permissions
+OPTIONS { order: "bfs", uniqueVertices: "global" }
 FILTER IS_SAME_COLLECTION(@groups, group)
     RETURN MERGE(group, { uuid: group._key })`
 func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error) {
