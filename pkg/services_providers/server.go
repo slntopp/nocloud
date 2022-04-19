@@ -54,7 +54,7 @@ type ServicesProviderServer struct {
 }
 
 func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq string) *ServicesProviderServer {
-	s := s.NewStatesPubSub(log, nil, rbmq)
+	s := s.NewStatesPubSub(log, &db, rbmq)
 	ch := s.Channel()
 	s.TopicExchange(ch, "states") // init Exchange with name "states" of type "topic"
 	s.StatesConsumerInit(ch, "states", "sp", schema.SERVICES_PROVIDERS_COL) // init Consumer queue of topic "states.sp"

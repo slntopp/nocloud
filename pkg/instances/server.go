@@ -47,7 +47,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq stri
 	log := logger.Named("instances")
 	ig_ctrl := graph.NewInstancesGroupsController(logger, db)
 
-	s := s.NewStatesPubSub(log, nil, rbmq)
+	s := s.NewStatesPubSub(log, &db, rbmq)
 	ch := s.Channel()
 	s.TopicExchange(ch, "states") // init Exchange with name "states" of type "topic"
 	s.StatesConsumerInit(ch, "states", "instances", schema.INSTANCES_COL) // init Consumer queue of topic "states.instances"
