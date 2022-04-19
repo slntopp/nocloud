@@ -72,6 +72,9 @@ func (s *StatesPubSub) TopicExchange(ch *amqp.Channel, name string) {
 }
 
 func (s *StatesPubSub) StatesConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) {
+	if s.db == nil {
+		log.Fatal("Failed to initialize states consumer, database is not set")
+	}
 	topic := exchange + "." + subtopic
 	q, err := ch.QueueDeclare(
 		topic, false, false, true, false, nil,
@@ -104,7 +107,7 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			log.Error("Failed to unmarshal request", zap.Error(err))
 			continue
 		}
-		c, err := s.db.Query(context.TODO(), updateStateQuery, map[string]interface{}{
+		c, err := (*s.db).Query(context.TODO(), updateStateQuery, map[string]interface{}{
 			"@collection": col,
 			"key": req.Uuid,
 			"state": req.State,
