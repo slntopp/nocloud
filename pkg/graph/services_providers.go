@@ -144,6 +144,7 @@ func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp
 		"groups": schema.INSTANCES_GROUPS_COL,
 		"sp": sp.DocumentMeta.ID,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"instances": schema.INSTANCES_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
