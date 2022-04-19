@@ -33,7 +33,6 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -44,7 +43,6 @@ var (
 	arangodbHost 	string
 	arangodbCred 	string
 	SIGNING_KEY		[]byte
-	statesHost  string
 )
 
 func init() {
@@ -58,14 +56,12 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
-	viper.SetDefault("STATES_HOST", "states:8080")
 
 	port = viper.GetString("PORT")
 
 	arangodbHost 	= viper.GetString("DB_HOST")
 	arangodbCred 	= viper.GetString("DB_CRED")
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
-	statesHost 	= viper.GetString("STATES_HOST")
 }
 
 func main() {
@@ -81,16 +77,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
-
-	log.Debug("Init Connection with States", zap.String("host", statesHost))
-	opts := []grpc.DialOption{
-		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	conn, err := grpc.Dial(statesHost, opts...)
-	if err != nil {
-		log.Fatal("fail to dial States", zap.Error(err))
-	}
-	defer conn.Close()
 
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(

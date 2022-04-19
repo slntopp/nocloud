@@ -47,7 +47,6 @@ var (
 	drivers       []string
 	SIGNING_KEY   []byte
 	rbmq string
-	statesHost  string
 )
 
 func init() {
@@ -60,7 +59,6 @@ func init() {
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
-	viper.SetDefault("STATES_HOST", "states:8080")
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 
 	port = viper.GetString("PORT")
@@ -69,7 +67,6 @@ func init() {
 	arangodbCred = viper.GetString("DB_CRED")
 	drivers = viper.GetStringSlice("DRIVERS")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
-	statesHost = viper.GetString("STATES_HOST")
 	rbmq = viper.GetString("RABBITMQ_CONN")
 }
 
@@ -86,16 +83,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
-
-	log.Debug("Init Connection with States", zap.String("host", statesHost))
-	opts := []grpc.DialOption{
-		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	conn, err := grpc.Dial(statesHost, opts...)
-	if err != nil {
-		log.Fatal("fail to dial States", zap.Error(err))
-	}
-	defer conn.Close()
 
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(

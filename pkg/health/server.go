@@ -29,7 +29,7 @@ import (
 
 var (
 	registryHost, servicesHost, servicesProvidersHost,
-	settingsHost, dnsHost, statesHost, edgeHost string
+	settingsHost, dnsHost, edgeHost string
 )
 
 var grpc_services []string
@@ -37,7 +37,7 @@ var grpc_services []string
 func init() {
 	viper.AutomaticEnv()
 
-	viper.SetDefault("PROBABLES", "registry:8080,services-registry:8080,sp-registry:8080,settings:8080,dns-mgmt:8080,states:8080,edge:8080")
+	viper.SetDefault("PROBABLES", "registry:8080,services-registry:8080,sp-registry:8080,settings:8080,dns-mgmt:8080,edge:8080")
 	grpc_services = strings.Split(viper.GetString("PROBABLES"), ",")
 }
 
