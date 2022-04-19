@@ -57,6 +57,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amq
 	ch = d.Channel()
 	d.TopicExchange(ch, "datas") // init Exchange with name "datas" of type "topic"
 	d.ConsumerInit(ch, "datas", "instances", schema.INSTANCES_COL) // init Consumer queue of topic "datas.instances"
+	d.ConsumerInit(ch, "datas", "instances-groups", schema.INSTANCES_GROUPS_COL) // init Consumer queue of topic "datas.instances-groups"
 
 	return &InstancesServer{
 		db: db, log: log,
