@@ -110,6 +110,7 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			log.Error("Failed to update state", zap.Error(err))
 			continue
 		}
+		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
 		c.Close()
 	}
 }
