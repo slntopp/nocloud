@@ -21,7 +21,7 @@ services:
   health:
     container_name: health-service
     restart: always
-    image: ghcr.io/slntopp/nocloud/health:dev-billing
+    image: ghcr.io/slntopp/nocloud/health:latest
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
@@ -34,6 +34,7 @@ services:
     restart: always
     depends_on:
       - proxy
+    image: ghcr.io/slntopp/nocloud/apiserver-web:latest
     environment:
       LOG_LEVEL: -1
       APISERVER_HOST: proxy:8080
@@ -64,7 +65,7 @@ services:
   services-registry:
     container_name: services-registry
     restart: always
-    image: ghcr.io/slntopp/nocloud/services-registry:dev-billing
+    image: ghcr.io/slntopp/nocloud/services-registry:latest
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
@@ -86,7 +87,7 @@ services:
   sp-registry:
     container_name: sp-registry
     restart: always
-    image: ghcr.io/slntopp/nocloud/sp-registry:dev-schema
+    image: ghcr.io/slntopp/nocloud/sp-registry:latest
     depends_on:
       - db
       - driver-ione
@@ -160,7 +161,7 @@ services:
     depends_on:
       - db
       - settings
-    image: ghcr.io/slntopp/nocloud/billing:dev-billing
+    image: ghcr.io/slntopp/nocloud/billing:latest
     networks:
       - proxy
       - arangodb
