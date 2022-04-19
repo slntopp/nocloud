@@ -53,6 +53,11 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amq
 	s.TopicExchange(ch, "states") // init Exchange with name "states" of type "topic"
 	s.StatesConsumerInit(ch, "states", "instances", schema.INSTANCES_COL) // init Consumer queue of topic "states.instances"
 
+	d := NewPubSub(log, &db, rbmq)
+	ch = d.Channel()
+	d.TopicExchange(ch, "datas") // init Exchange with name "datas" of type "topic"
+	d.ConsumerInit(ch, "datas", "instances", schema.INSTANCES_COL) // init Consumer queue of topic "datas.instances"
+
 	return &InstancesServer{
 		db: db, log: log,
 		ctrl: ig_ctrl.Instances(),

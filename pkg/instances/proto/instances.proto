@@ -87,6 +87,11 @@ message InvokeResponse {
     map<string, google.protobuf.Value> meta = 2;
 }
 
+message ObjectData {
+    string uuid = 1;
+    map<string, google.protobuf.Value> data = 2;
+}
+
 service InstancesService {
     rpc Invoke(nocloud.instances.InvokeRequest) returns (nocloud.instances.InvokeResponse) {
         option (google.api.http) = {
