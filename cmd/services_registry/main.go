@@ -30,6 +30,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/services"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"github.com/spf13/viper"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -91,6 +92,13 @@ func main() {
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
 	)
+
+	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
+	rbmq, err := amqp.Dial(rbmq)
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer rbmq.Close()
 
 	server := services.NewServicesServer(log, db)
 	iserver := instances.NewInstancesServiceServer(log, db, rbmq)

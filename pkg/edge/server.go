@@ -23,6 +23,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	s "github.com/slntopp/nocloud/pkg/states"
 	stpb "github.com/slntopp/nocloud/pkg/states/proto"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -35,7 +36,7 @@ type EdgeServiceServer struct {
 	pub s.Pub
 }
 
-func NewEdgeServiceServer(log *zap.Logger, rbmq string) *EdgeServiceServer {
+func NewEdgeServiceServer(log *zap.Logger, rbmq *amqp.Connection) *EdgeServiceServer {
 	s := s.NewStatesPubSub(log, nil, rbmq)
 	ch := s.Channel()
 	s.TopicExchange(ch, "states")

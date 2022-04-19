@@ -27,6 +27,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	s "github.com/slntopp/nocloud/pkg/states"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -53,7 +54,7 @@ type ServicesProviderServer struct {
 	log *zap.Logger
 }
 
-func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq string) *ServicesProviderServer {
+func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.Connection) *ServicesProviderServer {
 	s := s.NewStatesPubSub(log, &db, rbmq)
 	ch := s.Channel()
 	s.TopicExchange(ch, "states") // init Exchange with name "states" of type "topic"

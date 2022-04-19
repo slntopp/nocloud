@@ -26,6 +26,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	s "github.com/slntopp/nocloud/pkg/states"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -43,7 +44,7 @@ type InstancesServer struct {
 	db driver.Database
 }
 
-func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq string) *InstancesServer {
+func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection) *InstancesServer {
 	log := logger.Named("instances")
 	ig_ctrl := graph.NewInstancesGroupsController(logger, db)
 

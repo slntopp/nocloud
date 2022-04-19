@@ -33,10 +33,10 @@ var (
 type StatesPubSub struct {
 	log *zap.Logger
 	db *driver.Database
-	rbmq string
+	rbmq *amqp.Connection
 }
 
-func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq string) *StatesPubSub {
+func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *StatesPubSub {
 	ps := &StatesPubSub{
 		log: log.Named("StatesServer"), rbmq: rbmq,
 	}
@@ -49,13 +49,7 @@ func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq string) *StatesP
 func (s *StatesPubSub) Channel() (*amqp.Channel) {
 	log := s.log.Named("Channel")
 
-	rbmq, err := amqp.Dial(s.rbmq)
-	if err != nil {
-		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
-	}
-	defer rbmq.Close()
-
-	ch, err := rbmq.Channel()
+	ch, err := s.rbmq.Channel()
 	if err != nil {
 		log.Fatal("Failed to open a channel", zap.Error(err))
 	}

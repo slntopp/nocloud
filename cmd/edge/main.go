@@ -27,6 +27,7 @@ import (
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/spf13/viper"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
@@ -71,6 +72,13 @@ func main() {
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
 	)
+
+	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
+	rbmq, err := amqp.Dial(rbmq)
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer rbmq.Close()
 
 	server := edge.NewEdgeServiceServer(log, rbmq)
 	pb.RegisterEdgeServiceServer(s, server)

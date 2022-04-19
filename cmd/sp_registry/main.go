@@ -29,6 +29,7 @@ import (
 	sp "github.com/slntopp/nocloud/pkg/services_providers"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"github.com/spf13/viper"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -95,6 +96,13 @@ func main() {
 		)),
 	)
 	
+	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
+	rbmq, err := amqp.Dial(rbmq)
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer rbmq.Close()
+
 	server := sp.NewServicesProviderServer(log, db, rbmq)
 
 	for _, driver := range drivers {
