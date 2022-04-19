@@ -5,12 +5,12 @@ services:
     image: nginx
     depends_on:
       - health
-      - apiserver-web
       - registry
       - services-registry
       - sp-registry
       - settings
       - dns-mgmt
+      - edge
       - billing
     volumes:
       - ../../proxy:/etc/nginx/templates
@@ -33,13 +33,7 @@ services:
     container_name: apiserver-web
     restart: always
     depends_on:
-      - registry
-      - services-registry
-      - sp-registry
-      - settings
-      - dns-mgmt
-      - billing
-      - edge
+      - proxy
     environment:
       LOG_LEVEL: -1
       APISERVER_HOST: proxy:8080
