@@ -226,8 +226,6 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 		}
 		log.Debug("Up Request Result", zap.Any("response", response))
 
-		// TODO: Change to Hash comparation
-		// TODO: Add cleanups
 		if len(group.Instances) != len(response.GetGroup().GetInstances()) {
 			log.Error("Instances config changed by Driver")
 			result.Errors = append(result.Errors, &pb.UpError{
@@ -238,11 +236,7 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 			})
 			continue
 		}
-		for i, instance := range response.GetGroup().GetInstances() {
-			group.Instances[i].Data = instance.GetData()
-		}
 
-		group.Data = response.GetGroup().GetData()
 		err = s.ctrl.IGController().Provide(ctx, group.Uuid, sp.Uuid)
 		if err != nil {
 			log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
