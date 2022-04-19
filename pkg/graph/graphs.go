@@ -94,7 +94,7 @@ const getWithAccessLevel = `
 FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
 GRAPH @permissions SORT path.edges[0].level
 	RETURN MERGE(path.vertices[-1], {
-	    access_level: path.edges[0].level ? : 0
+	    access_level: path.edges[0].level ? : 0, uuid: path.vertices[-1]._key
 	})
 `
 func GetWithAccess(ctx context.Context, db driver.Database, acc, id driver.DocumentID, node interface{}) (error) {
