@@ -32,14 +32,18 @@ var (
 
 type StatesPubSub struct {
 	log *zap.Logger
-	db driver.Database
+	db *driver.Database
 	rbmq string
 }
 
-func NewStatesPubSub(log *zap.Logger, db *driver.Database, RabbitMQConn string) *StatesPubSub {
-	return &StatesPubSub{
-		log: log.Named("StatesServer"), db: *db,
+func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq string) *StatesPubSub {
+	ps := &StatesPubSub{
+		log: log.Named("StatesServer"), rbmq: rbmq,
 	}
+	if db != nil {
+		ps.db = db
+	}
+	return ps
 }
 
 func (s *StatesPubSub) Channel() (*amqp.Channel) {
