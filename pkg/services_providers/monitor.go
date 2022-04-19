@@ -123,7 +123,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 
 		for _, sp := range sp_pool {
 			go func(sp *graph.ServicesProvider) {
-				igroups, err := s.ctrl.ListDeployments(ctx, sp)
+				igroups, err := s.ctrl.ListDeployments(ctx, sp, true)
 				if err != nil {
 					log.Error("Failed to get Services deployed to ServiceProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 					return

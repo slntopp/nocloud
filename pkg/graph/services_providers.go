@@ -128,7 +128,18 @@ GRAPH @permissions
 OPTIONS { order: "bfs", uniqueVertices: "global" }
 FILTER IS_SAME_COLLECTION(@groups, group)
     RETURN MERGE(group, { uuid: group._key })`
-func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error) {
+const listDeployedGroupsQueryWithInstances = `
+FOR group IN 1 INBOUND @sp
+GRAPH @permissions
+OPTIONS { order: "bfs", uniqueVertices: "global" }
+FILTER IS_SAME_COLLECTION(@groups, group)
+    LET instances = (
+        FOR instance IN OUTBOUND group
+        GRAPH @permissions
+        FILTER IS_SAME_COLLECTION(@instances, instance)
+            RETURN MERGE(instance, { uuid: instance._key }) )
+    RETURN MERGE(group, { uuid: group._key, instances })`
+func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider, includeInstances bool) ([]*ipb.InstancesGroup, error) {
 	bindVars := map[string]interface{}{
 		"groups": schema.INSTANCES_GROUPS_COL,
 		"sp": sp.DocumentMeta.ID,
@@ -136,7 +147,11 @@ func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
-	c, err := ctrl.col.Database().Query(ctx, listDeployedGroupsQuery, bindVars)
+	query := listDeployedGroupsQuery
+	if includeInstances {
+		query = listDeployedGroupsQueryWithInstances
+	}
+	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
 		return nil, err
 	}
