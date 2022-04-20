@@ -7,7 +7,6 @@ on:
     inputs:
       images:
         description: 'comma-separated Images Names list'
-        required: true
         default: nocloud/base
 env:
   images: ${{ github.event.inputs.images }} || "nocloud/base, nocloud/billing, nocloud/edge, nocloud/settings, nocloud/dns-mgmt, nocloud/apiserver-web, nocloud/services-registry, nocloud/health, nocloud/registry, nocloud/sp-registry"
