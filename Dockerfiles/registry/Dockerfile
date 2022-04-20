@@ -1,7 +1,8 @@
-ARG  IMAGE_TAG=latest
+ARG IMAGE_TAG=latest
+ARG ARCH=amd64
 FROM ghcr.io/slntopp/nocloud/base:${IMAGE_TAG} as builder
 
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -buildvcs=false ./cmd/registry
+RUN CGO_ENABLED=0 GOARCH=${ARCH} go build -ldflags="-s -w" -buildvcs=false ./cmd/registry
 RUN upx ./registry
 
 FROM scratch
