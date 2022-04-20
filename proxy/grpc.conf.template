@@ -9,6 +9,9 @@ server {
     location /nocloud.services. {
         grpc_pass grpc://services-registry:8080;
     }
+    location /nocloud.instances. {
+        grpc_pass grpc://services-registry:8080;
+    }
     
     location /nocloud.services_providers. {
         grpc_pass grpc://sp-registry:8080;
@@ -28,5 +31,9 @@ server {
 
     location /nocloud.settings. {
         grpc_pass grpc://settings:8080;
+    }
+
+    location /nocloud.billing. {
+        grpc_pass grpc://billing:8080;
     }
 }

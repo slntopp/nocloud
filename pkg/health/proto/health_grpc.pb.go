@@ -105,7 +105,7 @@ var HealthService_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type InternalProbeServiceClient interface {
 	Service(ctx context.Context, in *ProbeRequest, opts ...grpc.CallOption) (*ServingStatus, error)
-	Routine(ctx context.Context, in *ProbeRequest, opts ...grpc.CallOption) (*RoutineStatus, error)
+	Routine(ctx context.Context, in *ProbeRequest, opts ...grpc.CallOption) (*RoutinesStatus, error)
 }
 
 type internalProbeServiceClient struct {
@@ -125,8 +125,8 @@ func (c *internalProbeServiceClient) Service(ctx context.Context, in *ProbeReque
 	return out, nil
 }
 
-func (c *internalProbeServiceClient) Routine(ctx context.Context, in *ProbeRequest, opts ...grpc.CallOption) (*RoutineStatus, error) {
-	out := new(RoutineStatus)
+func (c *internalProbeServiceClient) Routine(ctx context.Context, in *ProbeRequest, opts ...grpc.CallOption) (*RoutinesStatus, error) {
+	out := new(RoutinesStatus)
 	err := c.cc.Invoke(ctx, "/nocloud.health.InternalProbeService/Routine", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -139,7 +139,7 @@ func (c *internalProbeServiceClient) Routine(ctx context.Context, in *ProbeReque
 // for forward compatibility
 type InternalProbeServiceServer interface {
 	Service(context.Context, *ProbeRequest) (*ServingStatus, error)
-	Routine(context.Context, *ProbeRequest) (*RoutineStatus, error)
+	Routine(context.Context, *ProbeRequest) (*RoutinesStatus, error)
 	mustEmbedUnimplementedInternalProbeServiceServer()
 }
 
@@ -150,7 +150,7 @@ type UnimplementedInternalProbeServiceServer struct {
 func (UnimplementedInternalProbeServiceServer) Service(context.Context, *ProbeRequest) (*ServingStatus, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Service not implemented")
 }
-func (UnimplementedInternalProbeServiceServer) Routine(context.Context, *ProbeRequest) (*RoutineStatus, error) {
+func (UnimplementedInternalProbeServiceServer) Routine(context.Context, *ProbeRequest) (*RoutinesStatus, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Routine not implemented")
 }
 func (UnimplementedInternalProbeServiceServer) mustEmbedUnimplementedInternalProbeServiceServer() {}

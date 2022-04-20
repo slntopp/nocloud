@@ -22,21 +22,21 @@ import (
 
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
+	"github.com/slntopp/nocloud/pkg/instances"
+	ipb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/services"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"github.com/spf13/viper"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 )
 
 var (
@@ -47,7 +47,7 @@ var (
 	arangodbCred  string
 	drivers       []string
 	SIGNING_KEY   []byte
-	statesHost  string
+	rbmq string
 )
 
 func init() {
@@ -60,7 +60,7 @@ func init() {
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
-	viper.SetDefault("STATES_HOST", "states:8080")
+	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 
 	port = viper.GetString("PORT")
 
@@ -68,7 +68,7 @@ func init() {
 	arangodbCred = viper.GetString("DB_CRED")
 	drivers = viper.GetStringSlice("DRIVERS")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
-	statesHost = viper.GetString("STATES_HOST")
+	rbmq = viper.GetString("RABBITMQ_CONN")
 }
 
 func main() {
@@ -85,17 +85,6 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	log.Debug("Init Connection with States", zap.String("host", statesHost))
-	opts := []grpc.DialOption{
-		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	conn, err := grpc.Dial(statesHost, opts...)
-	if err != nil {
-		log.Fatal("fail to dial States", zap.Error(err))
-	}
-	defer conn.Close()
-	grpc_client := stpb.NewStatesServiceClient(conn)
-
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
@@ -104,7 +93,15 @@ func main() {
 		)),
 	)
 
-	server := services.NewServicesServer(log, db, grpc_client)
+	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
+	rbmq, err := amqp.Dial(rbmq)
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer rbmq.Close()
+
+	server := services.NewServicesServer(log, db)
+	iserver := instances.NewInstancesServiceServer(log, db, rbmq)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
@@ -119,16 +116,12 @@ func main() {
 			log.Error("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
 		}
 		server.RegisterDriver(driver_type.GetType(), client)
+		iserver.RegisterDriver(driver_type.GetType(), client)
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
 	
-	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
-	if err != nil {
-		log.Fatal("Can't generate token", zap.Error(err))
-	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
-	go server.MonitoringRoutine(ctx)
 	pb.RegisterServicesServiceServer(s, server)
+	ipb.RegisterInstancesServiceServer(s, iserver)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
 

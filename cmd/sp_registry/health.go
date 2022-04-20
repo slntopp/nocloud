@@ -44,20 +44,21 @@ func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.Servi
 	}, nil
 }
 
-func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutineStatus, error) {
+func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutinesStatus, error) {
 	state := s.srv.MonitoringRoutineState()
-	res := &pb.RoutineStatus{
+	status := &pb.RoutineStatus {
 		Routine: state.Name,
-		LastExecution: state.LastExec,
 		Status: &pb.ServingStatus{
 			Service: SERVICE,
 			Status: pb.Status_STOPPED,
 		},
+		LastExecution: state.LastExec,
 	}
-
 	if state.Running {
-		res.Status.Status = pb.Status_RUNNING
+		status.Status.Status = pb.Status_RUNNING
 	}
 
-	return res, nil
+	return &pb.RoutinesStatus {
+		Routines: []*pb.RoutineStatus{status},
+	}, nil
 }

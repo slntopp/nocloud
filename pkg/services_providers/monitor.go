@@ -21,9 +21,7 @@ import (
 	"time"
 
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
-	instpb "github.com/slntopp/nocloud/pkg/instances/proto"
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
-	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -49,7 +47,7 @@ var (
 		Frequency: 60,
 	}
 
-	description = "ServicesProviders Monitoring Routing Configuration"
+	description = "ServicesProviders Monitoring Routine Configuration"
 	public = false
 )
 
@@ -113,9 +111,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 	conf := MakeConf(ctx, log)
 	log.Info("Got Monitoring Configuration", zap.Any("conf", conf))
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
-
 	for tick := range ticker.C {
-		log.Info("Starting", zap.Time("tick", tick))
 		s.monitoring.Running = true
 
 		sp_pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY)
@@ -127,20 +123,12 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 
 		for _, sp := range sp_pool {
 			go func(sp *graph.ServicesProvider) {
-				services, err := s.ctrl.ListDeployments(ctx, sp)
+				igroups, err := s.ctrl.ListDeployments(ctx, sp, true)
 				if err != nil {
 					log.Error("Failed to get Services deployed to ServiceProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 					return
 				}
 
-				var igroups []*instpb.InstancesGroup
-				for _, service := range services {
-					for _, igroup := range service.GetInstancesGroups() {
-						if igroup.GetType() == sp.GetType() {
-							igroups = append(igroups, igroup)
-						}
-					}
-				}
 				log.Debug("Got InstancesGroups", zap.Int("length", len(igroups)))
 
 				client, ok := s.drivers[sp.GetType()]
@@ -156,30 +144,9 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 				if err != nil {
 					log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 				}
-
-				func(){
-					states, err := s.states.GetStates(ctx, &stpb.GetStatesRequest{
-						Uuids: []string{sp.GetUuid()},
-					})
-					if err != nil {
-						log.Error("Error Syncronising ServicesProvider State", zap.String("sp", sp.GetUuid()), zap.Error(err))
-						return
-					}
-					state, ok := states.GetStates()[sp.GetUuid()]
-					if !ok {
-						log.Error("Error got no State for ServicesProvider", zap.String("sp", sp.GetUuid()))
-						return
-					}
-
-					sp.State = state
-					err = s.ctrl.Update(ctx, sp.ServicesProvider)
-					if err != nil {
-						log.Error("Failed to update ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
-					}
-				}()
 			}(sp)
 		}
-
+		
 		s.monitoring.LastExec = tick.Format("2006-01-02T15:04:05Z07:00")
 	}
 }

@@ -77,7 +77,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	return MakeAccountMessage(acc), nil
+	return acc.Account, nil
 }
 
 func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.ListRequest) (*accountspb.ListResponse, error) {
@@ -104,7 +104,7 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	result := make([]*accountspb.Account, len(pool))
 	for i, acc := range pool {
-		result[i] = MakeAccountMessage(acc)
+		result[i] = acc.Account
 	}
 	log.Debug("Convert result", zap.Any("pool", result))
 

@@ -28,8 +28,8 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sp "github.com/slntopp/nocloud/pkg/services_providers"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
-	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/spf13/viper"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -48,7 +48,7 @@ var (
 	drivers 		[]string
 	ext_servers 	[]string
 	SIGNING_KEY		[]byte
-	statesHost  string
+	rbmq string
 )
 
 func init() {
@@ -62,7 +62,7 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("EXTENTION_SERVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
-	viper.SetDefault("STATES_HOST", "states:8080")
+	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 
 	port = viper.GetString("PORT")
 
@@ -71,7 +71,7 @@ func init() {
 	drivers 		= viper.GetStringSlice("DRIVERS")
 	ext_servers 	= viper.GetStringSlice("EXTENTION_SERVERS")
 	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
-	statesHost 	= viper.GetString("STATES_HOST")
+	rbmq = viper.GetString("RABBITMQ_CONN")
 }
 
 func main() {
@@ -88,17 +88,6 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	log.Debug("Init Connection with States", zap.String("host", statesHost))
-	opts := []grpc.DialOption{
-		grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	conn, err := grpc.Dial(statesHost, opts...)
-	if err != nil {
-		log.Fatal("fail to dial States", zap.Error(err))
-	}
-	defer conn.Close()
-	grpc_client := stpb.NewStatesServiceClient(conn)
-
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
@@ -107,7 +96,14 @@ func main() {
 		)),
 	)
 	
-	server := sp.NewServicesProviderServer(log, db, grpc_client)
+	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
+	rbmq, err := amqp.Dial(rbmq)
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer rbmq.Close()
+
+	server := sp.NewServicesProviderServer(log, db, rbmq)
 
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))

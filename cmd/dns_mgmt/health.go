@@ -42,11 +42,6 @@ func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.Servi
 	}, nil
 }
 
-func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutineStatus, error) {
-	return &pb.RoutineStatus{
-		Status: &pb.ServingStatus{
-			Service: SERVICE,
-			Status: pb.Status_NOEXIST,
-		},
-	}, nil
+func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutinesStatus, error) {
+	return &pb.RoutinesStatus{}, nil
 }

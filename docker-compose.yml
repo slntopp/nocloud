@@ -9,6 +9,8 @@ services:
       - sp-registry
       - settings
       - dns-mgmt
+      - edge
+      - billing
     volumes:
       - ./proxy:/etc/nginx/templates
     ports:
@@ -22,18 +24,15 @@ services:
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
-      REGISTRY_HOST: registry:8080
-      SERVICES_HOST: services-registry:8080
-      SP_HOST: sp-registry:8080
-      SETTINGS_HOST: settings:8080
-      DNS_HOST: dns-mgmt:8080
-      STATES_HOST: states:8080
-      EDGE_HOST: edge:8080
+      PROBABLES: registry:8080,billing:8080,services-registry:8080,sp-registry:8080,settings:8080,dns-mgmt:8080,edge:8080
     networks:
       - proxy
       - grpc-internal
   apiserver-web:
     container_name: apiserver-web
+    restart: always
+    depends_on:
+      - proxy
     image: ghcr.io/slntopp/nocloud/apiserver-web:latest
     environment:
       LOG_LEVEL: -1
@@ -72,13 +71,16 @@ services:
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8080
-      STATES_HOST: states:8080
+      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      # DRIVERS: host:port # your drivers here
     depends_on:
       - db
+      # - your drivers here
     networks:
       - proxy
       - arangodb
       - grpc-internal
+      - mq
     links:
       - db
   sp-registry:
@@ -91,11 +93,12 @@ services:
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8080
-      STATES_HOST: states:8080
+      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     networks:
       - proxy
       - arangodb
       - grpc-internal
+      - mq
     links:
       - db
   edge:
@@ -105,13 +108,10 @@ services:
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
-      DB_HOST: db:8529
-      DB_CRED: "${DB_USER}:${DB_PASS}"
-      STATES_HOST: states:8080
+      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     networks:
       - proxy
-      - arangodb
-      - grpc-internal
+      - mq
     links:
       - db
 
@@ -128,6 +128,8 @@ services:
       REDIS_HOST: redis:6379
   settings:
     restart: always
+    depends_on:
+      - redis_settings
     image: ghcr.io/slntopp/nocloud/settings:latest
     networks:
       - proxy
@@ -146,26 +148,27 @@ services:
     volumes:
       - redis-settings-data:/data
 
-  states:
+  billing:
+    container_name: billing
     restart: always
-    image: ghcr.io/slntopp/nocloud/states:latest
+    depends_on:
+      - db
+      - settings
+    image: ghcr.io/slntopp/nocloud/billing:latest
     networks:
+      - proxy
+      - arangodb
       - grpc-internal
-      - redis
+      - mq
     environment:
       LOG_LEVEL: -1
-      PORT: 8080
-      REDIS_HOST: redis_states:6379
-  redis_states:
-    image: redis
-    restart: always
-    command: redis-server --save 60 1
-    networks:
-      - redis
-    ports:
-      - 6379:6379
-    volumes:
-      - redis-states-data:/data
+      SIGNING_KEY: "${SIGNING_KEY}"
+      DB_HOST: db:8529
+      DB_CRED: "${DB_USER}:${DB_PASS}"
+      SETTINGS_HOST: settings:8080
+      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+    links:
+      - db
 
   db:
     container_name: database-master
@@ -177,9 +180,18 @@ services:
       - 8529:8529
     volumes:
       - data:/var/lib/arangodb3
-      - ./database/schemes/:/docker-entrypoint-initdb.d/dumps/nocloud/
     networks:
       - arangodb
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - mq
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
 
 networks:
   proxy:
@@ -189,8 +201,9 @@ networks:
     driver: bridge
   redis:
     driver: bridge
+  mq:
+    driver: bridge
 
 volumes:
   redis-settings-data:
-  redis-states-data:
   data:

@@ -21,8 +21,8 @@ import (
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
 
+	ipb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	spb "github.com/slntopp/nocloud/pkg/services/proto"
 	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 )
 
@@ -37,8 +37,15 @@ type ServicesProvidersController struct {
 	log *zap.Logger
 }
 
-func NewServicesProvidersController(log *zap.Logger, db driver.Database) ServicesProvidersController {
-	col, _ := db.Collection(context.TODO(), schema.SERVICES_PROVIDERS_COL)
+func NewServicesProvidersController(logger *zap.Logger, db driver.Database) ServicesProvidersController {
+	ctx := context.TODO()
+	log := logger.Named("ServicesProvidersController")
+
+	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
+	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.SERVICES_PROVIDERS_COL)
+
+	GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
+
 	return ServicesProvidersController{log: log, col: col}
 }
 
@@ -115,31 +122,52 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 	return r,  nil
 }
 
-func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider) ([]*Service, error) {
-	query := `FOR service IN OUTBOUND @sp GRAPH @services_graph RETURN service`
+const listDeployedGroupsQuery = `
+FOR group, edge, path IN 1 INBOUND @sp
+GRAPH @permissions
+OPTIONS { order: "bfs", uniqueVertices: "global" }
+FILTER IS_SAME_COLLECTION(@groups, group)
+    RETURN MERGE(group, { uuid: group._key })`
+const listDeployedGroupsQueryWithInstances = `
+FOR group IN 1 INBOUND @sp
+GRAPH @permissions
+OPTIONS { order: "bfs", uniqueVertices: "global" }
+FILTER IS_SAME_COLLECTION(@groups, group)
+    LET instances = (
+        FOR instance IN OUTBOUND group
+        GRAPH @permissions
+        FILTER IS_SAME_COLLECTION(@instances, instance)
+            RETURN MERGE(instance, { uuid: instance._key }) )
+    RETURN MERGE(group, { uuid: group._key, instances })`
+func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider, includeInstances bool) ([]*ipb.InstancesGroup, error) {
 	bindVars := map[string]interface{}{
+		"groups": schema.INSTANCES_GROUPS_COL,
 		"sp": sp.DocumentMeta.ID,
-		"services_graph": schema.SERVICES_GRAPH.Name,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"instances": schema.INSTANCES_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
+	query := listDeployedGroupsQuery
+	if includeInstances {
+		query = listDeployedGroupsQueryWithInstances
+	}
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
 		return nil, err
 	}
 	defer c.Close()
-	var r []*Service
+	var r []*ipb.InstancesGroup
 	for {
-		var s spb.Service
-		meta, err := c.ReadDocument(ctx, &s)
+		var ig ipb.InstancesGroup
+		_, err := c.ReadDocument(ctx, &ig)
 		if driver.IsNoMoreDocuments(err) {
 			break
 		} else if err != nil {
 			return nil, err
 		}
-		ctrl.log.Debug("Got document", zap.Any("service", &s))
-		s.Uuid = meta.ID.Key()
-		r = append(r, &Service{&s, meta})
+		ctrl.log.Debug("Got document", zap.Any("group", ig))
+		r = append(r, &ig)
 	}
 
 	return r,  nil

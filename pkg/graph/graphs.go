@@ -89,3 +89,30 @@ func MakeDeletable(ctx context.Context, db driver.Database, node Node) (Deletabl
 	}
 	return result, nil
 }
+
+const getWithAccessLevel = `
+FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
+GRAPH @permissions SORT path.edges[0].level
+	RETURN MERGE(path.vertices[-1], {
+	    access_level: path.edges[0].level ? : 0, uuid: path.vertices[-1]._key
+	})
+`
+func GetWithAccess(ctx context.Context, db driver.Database, acc, id driver.DocumentID, node interface{}) (error) {
+	vars :=  map[string]interface{}{
+		"account": acc,
+		"node": id,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+	}
+	c, err := db.Query(ctx, getWithAccessLevel, vars)
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+	
+	_, err = c.ReadDocument(ctx, node)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
