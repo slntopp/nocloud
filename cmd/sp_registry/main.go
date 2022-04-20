@@ -109,13 +109,12 @@ func main() {
 		log.Info("Registering Driver", zap.String("driver", driver))
 		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			log.Error("Error registering driver", zap.String("driver", driver), zap.Error(err))
-			continue
+			log.Fatal("Error registering driver", zap.String("driver", driver), zap.Error(err))
 		}
 		client := driverpb.NewDriverServiceClient(conn)
 		driver_type, err := client.GetType(context.Background(), &driverpb.GetTypeRequest{})
 		if err != nil {
-			log.Error("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
+			log.Fatal("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
 		}
 		server.RegisterDriver(driver_type.GetType(), client)
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
@@ -125,13 +124,12 @@ func main() {
 		log.Info("Registering Extention Server", zap.String("ext_server", ext_server))
 		conn, err := grpc.Dial(ext_server, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			log.Error("Error registering Extention Server", zap.String("ext_server", ext_server), zap.Error(err))
-			continue
+			log.Fatal("Error registering Extention Server", zap.String("ext_server", ext_server), zap.Error(err))
 		}
 		client := sppb.NewServicesProvidersExtentionsServiceClient(conn)
 		ext_srv_type, err := client.GetType(context.Background(),&sppb.GetTypeRequest{})
 		if err != nil {
-			log.Error("Error dialing Extention Server and getting its type", zap.String("ext_server", ext_server), zap.Error(err))
+			log.Fatal("Error dialing Extention Server and getting its type", zap.String("ext_server", ext_server), zap.Error(err))
 		}
 		server.RegisterExtentionServer(ext_srv_type.GetType(), client)
 		log.Info("Registered Extention Server", zap.String("ext_server", ext_server), zap.String("type", ext_srv_type.GetType()))

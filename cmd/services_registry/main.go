@@ -107,13 +107,12 @@ func main() {
 		log.Info("Registering Driver", zap.String("driver", driver))
 		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
-			log.Error("Error registering driver", zap.String("driver", driver), zap.Error(err))
-			continue
+			log.Fatal("Error registering driver", zap.String("driver", driver), zap.Error(err))
 		}
 		client := driverpb.NewDriverServiceClient(conn)
 		driver_type, err := client.GetType(context.Background(), &driverpb.GetTypeRequest{})
 		if err != nil {
-			log.Error("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
+			log.Fatal("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
 		}
 		server.RegisterDriver(driver_type.GetType(), client)
 		iserver.RegisterDriver(driver_type.GetType(), client)
