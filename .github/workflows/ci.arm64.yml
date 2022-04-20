@@ -53,8 +53,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args:
-            ARCH: arm64
+          platforms: linux/arm64,darwin/arm64
+          build-args: ARCH=arm64
 
   build-and-push:
     runs-on: ubuntu-latest
@@ -92,4 +92,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          build-args: IMAGE_TAG=${{env.IMAGE_TAG}}
+          platforms: linux/arm64,darwin/arm64
+          build-args: IMAGE_TAG=${{env.IMAGE_TAG}},ARCH=arm64
