@@ -23,8 +23,9 @@ message TestResponse {
     bool result = 1;
     string error = 2;
 }
+message Empty {}
 
 service EdgeService {
     rpc Test(TestRequest) returns (TestResponse);
-    rpc PostState(nocloud.states.PostStateRequest) returns (nocloud.states.PostStateResponse);
+    rpc PostState(nocloud.states.ObjectState) returns (Empty);
 }

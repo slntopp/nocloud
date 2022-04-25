@@ -11,10 +11,16 @@
   },
   "tags": [
     {
+      "name": "RecordsService"
+    },
+    {
+      "name": "BillingService"
+    },
+    {
       "name": "DNS"
     },
     {
-      "name": "StatesService"
+      "name": "InstancesService"
     },
     {
       "name": "ServicesService"
@@ -259,6 +265,14 @@
               "properties": {
                 "title": {
                   "type": "string"
+                },
+                "balance": {
+                  "type": "number",
+                  "format": "double"
+                },
+                "accessLevel": {
+                  "type": "integer",
+                  "format": "int32"
                 }
               }
             }
@@ -266,6 +280,406 @@
         ],
         "tags": [
           "AccountsService"
+        ]
+      }
+    },
+    "/billing/account/{account}/reprocess": {
+      "post": {
+        "operationId": "BillingService_Reprocess",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingTransactions"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      }
+    },
+    "/billing/plans": {
+      "get": {
+        "operationId": "BillingService_ListPlans",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudbillingListResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "BillingService"
+        ]
+      },
+      "put": {
+        "operationId": "BillingService_CreatePlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingPlan"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/billingPlan"
+            }
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      }
+    },
+    "/billing/plans/{uuid}": {
+      "get": {
+        "operationId": "BillingService_GetPlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingPlan"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "public",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "linkedInstances",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      },
+      "delete": {
+        "operationId": "BillingService_DeletePlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingPlan"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "title",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "public",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "linkedInstances",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      },
+      "patch": {
+        "operationId": "BillingService_UpdatePlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingPlan"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "public": {
+                  "type": "boolean"
+                },
+                "resources": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/billingResourceConf"
+                  }
+                },
+                "linkedInstances": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      }
+    },
+    "/billing/transactions": {
+      "get": {
+        "operationId": "BillingService_GetTransactions",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingTransactions"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "account",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      },
+      "put": {
+        "operationId": "BillingService_CreateTransaction",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingTransaction"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/billingTransaction"
+            }
+          }
+        ],
+        "tags": [
+          "BillingService"
+        ]
+      }
+    },
+    "/billing/transactions/{uuid}": {
+      "get": {
+        "operationId": "BillingService_GetRecords",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingRecords"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "exec",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "proc",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "processed",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          },
+          {
+            "name": "account",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "service",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "records",
+            "in": "query",
+            "required": false,
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "collectionFormat": "multi"
+          },
+          {
+            "name": "total",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "format": "double"
+          }
+        ],
+        "tags": [
+          "BillingService"
         ]
       }
     },
@@ -408,6 +822,55 @@
         ],
         "tags": [
           "HealthService"
+        ]
+      }
+    },
+    "/instances/{uuid}/invoke": {
+      "post": {
+        "operationId": "InstancesService_Invoke",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/instancesInvokeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string"
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "InstancesService"
         ]
       }
     },
@@ -606,7 +1069,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/nocloudservicesListResponse"
+              "$ref": "#/definitions/servicesServices"
             }
           },
           "default": {
@@ -694,70 +1157,6 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/nocloudservicesCreateRequest"
-            }
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      }
-    },
-    "/services/{service}/{group}/{instance}/action/{action}": {
-      "post": {
-        "operationId": "ServicesService_PerformServiceAction",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/servicesPerformActionResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googlerpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "service",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "group",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "instance",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "action",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "type": "object",
-              "properties": {
-                "data": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "object"
-                  }
-                }
-              }
             }
           }
         ],
@@ -899,66 +1298,6 @@
             "schema": {
               "type": "object"
             }
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      }
-    },
-    "/services/{uuid}/provisions": {
-      "get": {
-        "operationId": "ServicesService_GetProvisions",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/servicesGetProvisionsResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googlerpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "uuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          }
-        ],
-        "tags": [
-          "ServicesService"
-        ]
-      }
-    },
-    "/services/{uuid}/states": {
-      "get": {
-        "operationId": "ServicesService_GetStates",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/statesGetStatesResponse"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googlerpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "uuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
           }
         ],
         "tags": [
@@ -1369,6 +1708,9 @@
                 },
                 "state": {
                   "$ref": "#/definitions/statesState"
+                },
+                "public": {
+                  "type": "boolean"
                 }
               }
             }
@@ -1497,6 +1839,14 @@
         },
         "title": {
           "type": "string"
+        },
+        "balance": {
+          "type": "number",
+          "format": "double"
+        },
+        "accessLevel": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -1559,31 +1909,133 @@
         }
       }
     },
-    "dnsRecord": {
+    "billingKind": {
+      "type": "string",
+      "enum": [
+        "UNSPECIFIED",
+        "POSTPAID",
+        "PREPAID"
+      ],
+      "default": "UNSPECIFIED"
+    },
+    "billingPlan": {
       "type": "object",
       "properties": {
-        "a": {
+        "uuid": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "public": {
+          "type": "boolean"
+        },
+        "resources": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/RecordA"
+            "$ref": "#/definitions/billingResourceConf"
           }
         },
-        "aaaa": {
+        "linkedInstances": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/RecordAAAA"
+            "type": "string"
+          }
+        }
+      }
+    },
+    "billingRecords": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/nocloudbillingRecord"
+          }
+        }
+      }
+    },
+    "billingResourceConf": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/definitions/billingKind"
+        },
+        "price": {
+          "type": "number",
+          "format": "double"
+        },
+        "period": {
+          "type": "string",
+          "format": "int64"
+        },
+        "except": {
+          "type": "boolean",
+          "title": "If except set to true then transaction will be created if Instance is in one of the states listed in on\nIf except set to false then transaction will be created if Instance is NOT in one of the states listed in on"
+        },
+        "on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/statesNoCloudState"
+          }
+        }
+      }
+    },
+    "billingTransaction": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "exec": {
+          "type": "string",
+          "format": "int64"
+        },
+        "proc": {
+          "type": "string",
+          "format": "int64"
+        },
+        "processed": {
+          "type": "boolean"
+        },
+        "account": {
+          "type": "string"
+        },
+        "service": {
+          "type": "string"
+        },
+        "records": {
+          "type": "array",
+          "items": {
+            "type": "string"
           }
         },
-        "cname": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/RecordCNAME"
-          }
+        "total": {
+          "type": "number",
+          "format": "double"
         },
-        "txt": {
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          },
+          "title": "Transaction meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity\nprice_atm: \u003cnumber\u003e // hourly price per quant of resouce at the moment, e.g. 1 NCU \n[other keys]: \u003cany\u003e // for example Drive Type(SSD/HDD/NVMe/etc)\n}"
+        }
+      }
+    },
+    "billingTransactions": {
+      "type": "object",
+      "properties": {
+        "pool": {
           "type": "array",
           "items": {
-            "$ref": "#/definitions/RecordTXT"
+            "$ref": "#/definitions/billingTransaction"
           }
         }
       }
@@ -1606,7 +2058,7 @@
         "locations": {
           "type": "object",
           "additionalProperties": {
-            "$ref": "#/definitions/dnsRecord"
+            "$ref": "#/definitions/noclouddnsRecord"
           }
         }
       }
@@ -1634,6 +2086,9 @@
           "$ref": "#/definitions/instancesInstancesGroup"
         }
       }
+    },
+    "edgeEmpty": {
+      "type": "object"
     },
     "googlerpcStatus": {
       "type": "object",
@@ -1701,6 +2156,17 @@
         }
       }
     },
+    "healthRoutinesStatus": {
+      "type": "object",
+      "properties": {
+        "routines": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/healthRoutineStatus"
+          }
+        }
+      }
+    },
     "healthServingStatus": {
       "type": "object",
       "properties": {
@@ -1723,6 +2189,9 @@
         },
         "title": {
           "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/instancesInstanceStatus"
         },
         "config": {
           "type": "object",
@@ -1747,8 +2216,27 @@
         },
         "hash": {
           "type": "string"
+        },
+        "billingPlan": {
+          "$ref": "#/definitions/billingPlan"
+        },
+        "accessLevel": {
+          "type": "integer",
+          "format": "int32"
         }
       }
+    },
+    "instancesInstanceStatus": {
+      "type": "string",
+      "enum": [
+        "UNSPECIFIED",
+        "INIT",
+        "MODIFIED",
+        "UP",
+        "DOWN",
+        "DEL"
+      ],
+      "default": "UNSPECIFIED"
     },
     "instancesInstancesGroup": {
       "type": "object",
@@ -1757,6 +2245,9 @@
           "type": "string"
         },
         "type": {
+          "type": "string"
+        },
+        "title": {
           "type": "string"
         },
         "config": {
@@ -1785,6 +2276,27 @@
         },
         "hash": {
           "type": "string"
+        },
+        "sp": {
+          "type": "string"
+        },
+        "accessLevel": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "instancesInvokeResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },
@@ -1837,6 +2349,64 @@
         },
         "title": {
           "type": "string"
+        },
+        "accessLevel": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "nocloudbillingListResponse": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/billingPlan"
+          }
+        }
+      }
+    },
+    "nocloudbillingRecord": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "start": {
+          "type": "string",
+          "format": "int64"
+        },
+        "end": {
+          "type": "string",
+          "format": "int64"
+        },
+        "exec": {
+          "type": "string",
+          "format": "int64"
+        },
+        "processed": {
+          "type": "boolean"
+        },
+        "instance": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/statesNoCloudState"
+        },
+        "resource": {
+          "type": "string"
+        },
+        "total": {
+          "type": "number",
+          "format": "double"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          },
+          "title": "Record meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity\nprice_atm: \u003cnumber\u003e // hourly price per quant of resouce at the moment, e.g. 1 NCU \n[other keys]: \u003cany\u003e // for example Drive Type(SSD/HDD/NVMe/etc)\n}"
         }
       }
     },
@@ -1847,6 +2417,35 @@
           "type": "array",
           "items": {
             "type": "string"
+          }
+        }
+      }
+    },
+    "noclouddnsRecord": {
+      "type": "object",
+      "properties": {
+        "a": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordA"
+          }
+        },
+        "aaaa": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordAAAA"
+          }
+        },
+        "cname": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordCNAME"
+          }
+        },
+        "txt": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/RecordTXT"
           }
         }
       }
@@ -1870,7 +2469,7 @@
         "OFFLINE",
         "RUNNING",
         "STOPPED",
-        "INTENAL",
+        "INTERNAL",
         "HASERRS",
         "NOEXIST"
       ],
@@ -1900,40 +2499,6 @@
     },
     "nocloudservicesDownResponse": {
       "type": "object"
-    },
-    "nocloudservicesListResponse": {
-      "type": "object",
-      "properties": {
-        "pool": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/servicesService"
-          }
-        }
-      }
-    },
-    "nocloudservicesPerformActionRequest": {
-      "type": "object",
-      "properties": {
-        "service": {
-          "type": "string"
-        },
-        "group": {
-          "type": "string"
-        },
-        "instance": {
-          "type": "string"
-        },
-        "action": {
-          "type": "string"
-        },
-        "data": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
-        }
-      }
     },
     "nocloudservicesUpResponse": {
       "type": "object",
@@ -2098,31 +2663,6 @@
         }
       }
     },
-    "servicesGetProvisionsResponse": {
-      "type": "object",
-      "properties": {
-        "provisions": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
-        }
-      }
-    },
-    "servicesPerformActionResponse": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "type": "boolean"
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
-        }
-      }
-    },
     "servicesService": {
       "type": "object",
       "properties": {
@@ -2136,7 +2676,7 @@
           "type": "string"
         },
         "status": {
-          "type": "string"
+          "$ref": "#/definitions/servicesServiceStatus"
         },
         "context": {
           "type": "object",
@@ -2145,18 +2685,40 @@
           }
         },
         "instancesGroups": {
-          "type": "object",
-          "additionalProperties": {
+          "type": "array",
+          "items": {
             "$ref": "#/definitions/instancesInstancesGroup"
           }
         },
         "hash": {
           "type": "string"
         },
-        "provisions": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
+        "accessLevel": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "servicesServiceStatus": {
+      "type": "string",
+      "enum": [
+        "UNSPECIFIED",
+        "INIT",
+        "MODIFIED",
+        "UP",
+        "DOWN",
+        "DEL",
+        "PROC"
+      ],
+      "default": "UNSPECIFIED"
+    },
+    "servicesServices": {
+      "type": "object",
+      "properties": {
+        "pool": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/servicesService"
           }
         }
       }
@@ -2266,6 +2828,9 @@
         },
         "state": {
           "$ref": "#/definitions/statesState"
+        },
+        "public": {
+          "type": "boolean"
         }
       }
     },
@@ -2299,17 +2864,6 @@
         }
       }
     },
-    "statesGetStatesResponse": {
-      "type": "object",
-      "properties": {
-        "states": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/statesState"
-          }
-        }
-      }
-    },
     "statesNoCloudState": {
       "type": "string",
       "enum": [
@@ -2323,21 +2877,6 @@
         "OPERATION"
       ],
       "default": "INIT"
-    },
-    "statesPostStateResponse": {
-      "type": "object",
-      "properties": {
-        "uuid": {
-          "type": "string"
-        },
-        "result": {
-          "type": "string",
-          "format": "int64"
-        },
-        "error": {
-          "type": "string"
-        }
-      }
     },
     "statesState": {
       "type": "object",

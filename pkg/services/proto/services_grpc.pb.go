@@ -4,7 +4,6 @@ package proto
 
 import (
 	context "context"
-	proto "github.com/slntopp/nocloud/pkg/states/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -24,12 +23,9 @@ type ServicesServiceClient interface {
 	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*Service, error)
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Service, error)
-	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
-	GetStates(ctx context.Context, in *GetStatesRequest, opts ...grpc.CallOption) (*proto.GetStatesResponse, error)
-	GetProvisions(ctx context.Context, in *GetProvisionsRequest, opts ...grpc.CallOption) (*GetProvisionsResponse, error)
+	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Services, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
-	PerformServiceAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error)
 }
 
 type servicesServiceClient struct {
@@ -85,27 +81,9 @@ func (c *servicesServiceClient) Get(ctx context.Context, in *GetRequest, opts ..
 	return out, nil
 }
 
-func (c *servicesServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error) {
-	out := new(ListResponse)
+func (c *servicesServiceClient) List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Services, error) {
+	out := new(Services)
 	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/List", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *servicesServiceClient) GetStates(ctx context.Context, in *GetStatesRequest, opts ...grpc.CallOption) (*proto.GetStatesResponse, error) {
-	out := new(proto.GetStatesResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/GetStates", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *servicesServiceClient) GetProvisions(ctx context.Context, in *GetProvisionsRequest, opts ...grpc.CallOption) (*GetProvisionsResponse, error) {
-	out := new(GetProvisionsResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/GetProvisions", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -130,15 +108,6 @@ func (c *servicesServiceClient) Down(ctx context.Context, in *DownRequest, opts 
 	return out, nil
 }
 
-func (c *servicesServiceClient) PerformServiceAction(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*PerformActionResponse, error) {
-	out := new(PerformActionResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/PerformServiceAction", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // ServicesServiceServer is the server API for ServicesService service.
 // All implementations must embed UnimplementedServicesServiceServer
 // for forward compatibility
@@ -148,12 +117,9 @@ type ServicesServiceServer interface {
 	Update(context.Context, *UpdateRequest) (*Service, error)
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	Get(context.Context, *GetRequest) (*Service, error)
-	List(context.Context, *ListRequest) (*ListResponse, error)
-	GetStates(context.Context, *GetStatesRequest) (*proto.GetStatesResponse, error)
-	GetProvisions(context.Context, *GetProvisionsRequest) (*GetProvisionsResponse, error)
+	List(context.Context, *ListRequest) (*Services, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
-	PerformServiceAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error)
 	mustEmbedUnimplementedServicesServiceServer()
 }
 
@@ -176,23 +142,14 @@ func (UnimplementedServicesServiceServer) Delete(context.Context, *DeleteRequest
 func (UnimplementedServicesServiceServer) Get(context.Context, *GetRequest) (*Service, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
 }
-func (UnimplementedServicesServiceServer) List(context.Context, *ListRequest) (*ListResponse, error) {
+func (UnimplementedServicesServiceServer) List(context.Context, *ListRequest) (*Services, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method List not implemented")
-}
-func (UnimplementedServicesServiceServer) GetStates(context.Context, *GetStatesRequest) (*proto.GetStatesResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetStates not implemented")
-}
-func (UnimplementedServicesServiceServer) GetProvisions(context.Context, *GetProvisionsRequest) (*GetProvisionsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetProvisions not implemented")
 }
 func (UnimplementedServicesServiceServer) Up(context.Context, *UpRequest) (*UpResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Up not implemented")
 }
 func (UnimplementedServicesServiceServer) Down(context.Context, *DownRequest) (*DownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Down not implemented")
-}
-func (UnimplementedServicesServiceServer) PerformServiceAction(context.Context, *PerformActionRequest) (*PerformActionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method PerformServiceAction not implemented")
 }
 func (UnimplementedServicesServiceServer) mustEmbedUnimplementedServicesServiceServer() {}
 
@@ -315,42 +272,6 @@ func _ServicesService_List_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServicesService_GetStates_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetStatesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ServicesServiceServer).GetStates(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/GetStates",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).GetStates(ctx, req.(*GetStatesRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ServicesService_GetProvisions_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetProvisionsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ServicesServiceServer).GetProvisions(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/GetProvisions",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).GetProvisions(ctx, req.(*GetProvisionsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _ServicesService_Up_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpRequest)
 	if err := dec(in); err != nil {
@@ -387,24 +308,6 @@ func _ServicesService_Down_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _ServicesService_PerformServiceAction_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PerformActionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ServicesServiceServer).PerformServiceAction(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/PerformServiceAction",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).PerformServiceAction(ctx, req.(*PerformActionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // ServicesService_ServiceDesc is the grpc.ServiceDesc for ServicesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -437,24 +340,12 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ServicesService_List_Handler,
 		},
 		{
-			MethodName: "GetStates",
-			Handler:    _ServicesService_GetStates_Handler,
-		},
-		{
-			MethodName: "GetProvisions",
-			Handler:    _ServicesService_GetProvisions_Handler,
-		},
-		{
 			MethodName: "Up",
 			Handler:    _ServicesService_Up_Handler,
 		},
 		{
 			MethodName: "Down",
 			Handler:    _ServicesService_Down_Handler,
-		},
-		{
-			MethodName: "PerformServiceAction",
-			Handler:    _ServicesService_PerformServiceAction_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

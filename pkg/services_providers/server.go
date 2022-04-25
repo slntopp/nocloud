@@ -24,8 +24,10 @@ import (
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
-	stpb "github.com/slntopp/nocloud/pkg/states/proto"
+	s "github.com/slntopp/nocloud/pkg/states"
+	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -41,7 +43,6 @@ type ServicesProviderServer struct {
 	sppb.UnimplementedServicesProvidersServiceServer
 
 	drivers map[string]driverpb.DriverServiceClient
-	states  stpb.StatesServiceClient
 
 	extention_servers map[string]sppb.ServicesProvidersExtentionsServiceClient
 	db                driver.Database
@@ -53,7 +54,12 @@ type ServicesProviderServer struct {
 	log *zap.Logger
 }
 
-func NewServicesProviderServer(log *zap.Logger, db driver.Database, gc stpb.StatesServiceClient) *ServicesProviderServer {
+func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.Connection) *ServicesProviderServer {
+	s := s.NewStatesPubSub(log, &db, rbmq)
+	ch := s.Channel()
+	s.TopicExchange(ch, "states") // init Exchange with name "states" of type "topic"
+	s.StatesConsumerInit(ch, "states", "sp", schema.SERVICES_PROVIDERS_COL) // init Consumer queue of topic "states.sp"
+
 	return &ServicesProviderServer{
 		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl:           graph.NewNamespacesController(log, db),
@@ -63,7 +69,6 @@ func NewServicesProviderServer(log *zap.Logger, db driver.Database, gc stpb.Stat
 			Name:    "Monitoring",
 			Running: false,
 		},
-		states: gc,
 	}
 }
 
@@ -226,7 +231,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
 	}
 
-	services, err := s.ctrl.ListDeployments(ctx, sp)
+	services, err := s.ctrl.ListDeployments(ctx, sp, false)
 	if err != nil {
 		log.Error("Error getting provisioned Services from DB", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Couldn't get Provisioned Services")

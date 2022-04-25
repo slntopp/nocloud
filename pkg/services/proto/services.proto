@@ -22,17 +22,31 @@ import "google/api/annotations.proto";
 import "pkg/hasher/hasherpb/hasher.proto";
 import "pkg/states/proto/states.proto";
 
+enum ServiceStatus {
+    UNSPECIFIED = 0;
+    INIT = 1;
+    MODIFIED = 2;
+    UP = 3;
+    DOWN = 4;
+    DEL = 5;
+    PROC = 6;
+}
+
 message Service {
     string uuid = 1;
     string version = 2
         [(nocloud.hasher.hashed) = true];
     string title = 3;
-    string status = 4;
+    ServiceStatus status = 4;
     map<string, google.protobuf.Value> context = 5
         [(nocloud.hasher.hashed) = true];
-    map<string, nocloud.instances.InstancesGroup> instances_groups = 6;
+    repeated nocloud.instances.InstancesGroup instances_groups = 6;
     string hash = 7 [(nocloud.hasher.hash) = true];
-    map<string, string> provisions = 8;
+    optional int32 access_level = 8;
+}
+
+message Services {
+    repeated Service pool = 1;
 }
 
 message TestConfigError {
@@ -66,19 +80,6 @@ message DeleteResponse {
     string error = 2;
 }
 
-message PerformActionRequest {
-    string service = 1;
-    string group = 2;
-    string instance = 3;
-    string action = 4;
-    map<string, google.protobuf.Value> data = 5;
-}
-
-message PerformActionResponse {
-    bool result = 1;
-    map<string, google.protobuf.Value> meta = 2;
-}
-
 message UpRequest {
     string uuid = 1;
     map<string, string> deploy_policies = 2;  // Map of InstanceGroup UUID to ServiceProvider
@@ -102,24 +103,12 @@ message ListRequest {
     optional int32 depth = 3;
 }
 
-message ListResponse {
-    repeated Service pool = 1;
-}
-
 message GetRequest {
     string uuid = 1;
 }
 
 message GetStatesRequest {
     string uuid = 1; // Service UUID
-}
-
-message GetProvisionsRequest {
-    string uuid = 1;
-}
-
-message GetProvisionsResponse {
-    map<string, string> provisions = 1; // Map of InstancesGroups to ServicesProviders they are deployed
 }
 
 service ServicesService {
@@ -157,20 +146,9 @@ service ServicesService {
         };
     };
     rpc List(nocloud.services.ListRequest)
-        returns (nocloud.services.ListResponse) {
+        returns (nocloud.services.Services) {
         option (google.api.http) = {
             get: "/services"
-        };
-    };
-
-    rpc GetStates(nocloud.services.GetStatesRequest) returns (nocloud.states.GetStatesResponse) {
-        option (google.api.http) = {
-            get: "/services/{uuid}/states"
-        };
-    };
-    rpc GetProvisions(nocloud.services.GetProvisionsRequest) returns (nocloud.services.GetProvisionsResponse) {
-        option (google.api.http) = {
-            get: "/services/{uuid}/provisions"
         };
     };
 
@@ -184,13 +162,6 @@ service ServicesService {
         returns (nocloud.services.DownResponse) {
         option (google.api.http) = {
             post: "/services/{uuid}/down"
-            body: "*"
-        };
-    };
-    rpc PerformServiceAction(nocloud.services.PerformActionRequest)
-        returns (nocloud.services.PerformActionResponse) {
-        option (google.api.http) = {
-            post: "/services/{service}/{group}/{instance}/action/{action}",
             body: "*"
         };
     };

@@ -31,4 +31,8 @@ server {
     location /nocloud.settings. {
         grpc_pass grpc://settings:8080;
     }
+
+    location /nocloud.billing. {
+        grpc_pass grpc://billing:8080;
+    }
 }

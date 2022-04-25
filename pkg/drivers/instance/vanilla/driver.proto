@@ -19,6 +19,7 @@ package nocloud.instance.driver.vanilla;
 import "pkg/services/proto/services.proto";
 import "pkg/instances/proto/instances.proto";
 import "pkg/services_providers/proto/services_providers.proto";
+import "google/protobuf/struct.proto";
 
 message TestServiceProviderConfigRequest {
     nocloud.services_providers.ServicesProvider services_provider = 1;
@@ -47,18 +48,20 @@ message DownResponse {
     nocloud.instances.InstancesGroup group = 1;
 }
 
-message PerformActionRequest {
-    nocloud.services.PerformActionRequest request = 1;
-    nocloud.instances.InstancesGroup group = 2;
-    nocloud.services_providers.ServicesProvider services_provider = 3;
-}
-
 message MonitoringRequest {
     repeated nocloud.instances.InstancesGroup groups = 1;
     nocloud.services_providers.ServicesProvider services_provider = 2;
 }
 
 message MonitoringResponse {}
+
+message InvokeRequest {
+    nocloud.instances.Instance instance = 1;
+    nocloud.services_providers.ServicesProvider services_provider = 2;
+
+    string method = 3;
+    map<string, google.protobuf.Value> params = 4;
+}
 
 service DriverService {
     rpc TestServiceProviderConfig(nocloud.instance.driver.vanilla.TestServiceProviderConfigRequest) returns (nocloud.services_providers.TestResponse);
@@ -68,7 +71,7 @@ service DriverService {
     rpc Up(nocloud.instance.driver.vanilla.UpRequest) returns (nocloud.instance.driver.vanilla.UpResponse);
     rpc Down(nocloud.instance.driver.vanilla.DownRequest) returns (nocloud.instance.driver.vanilla.DownResponse);
 
-    rpc Invoke(PerformActionRequest) returns (nocloud.services.PerformActionResponse);
-
     rpc Monitoring(MonitoringRequest) returns (MonitoringResponse);
+
+    rpc Invoke(InvokeRequest) returns (nocloud.instances.InvokeResponse);
 }

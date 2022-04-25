@@ -36,8 +36,16 @@ type NamespacesController struct {
 	log *zap.Logger
 }
 
-func NewNamespacesController(log *zap.Logger, db driver.Database) NamespacesController {
-	col, _ := db.Collection(context.TODO(), schema.NAMESPACES_COL)
+func NewNamespacesController(logger *zap.Logger, db driver.Database) NamespacesController {
+	ctx := context.TODO()
+	log := logger.Named("NamespacesController")
+
+	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
+	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.NAMESPACES_COL)
+
+	GraphGetEdgeEnsure(log, ctx, graph, schema.NS2ACC, schema.NAMESPACES_COL, schema.ACCOUNTS_COL)
+	GraphGetEdgeEnsure(log, ctx, graph, schema.ACC2NS, schema.ACCOUNTS_COL, schema.NAMESPACES_COL)
+
 	return NamespacesController{log: log, col: col}
 }
 

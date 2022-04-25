@@ -5,7 +5,6 @@ package vanilla
 import (
 	context "context"
 	proto1 "github.com/slntopp/nocloud/pkg/instances/proto"
-	proto2 "github.com/slntopp/nocloud/pkg/services/proto"
 	proto "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
@@ -26,8 +25,8 @@ type DriverServiceClient interface {
 	GetType(ctx context.Context, in *GetTypeRequest, opts ...grpc.CallOption) (*GetTypeResponse, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
-	Invoke(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*proto2.PerformActionResponse, error)
 	Monitoring(ctx context.Context, in *MonitoringRequest, opts ...grpc.CallOption) (*MonitoringResponse, error)
+	Invoke(ctx context.Context, in *InvokeRequest, opts ...grpc.CallOption) (*proto1.InvokeResponse, error)
 }
 
 type driverServiceClient struct {
@@ -83,18 +82,18 @@ func (c *driverServiceClient) Down(ctx context.Context, in *DownRequest, opts ..
 	return out, nil
 }
 
-func (c *driverServiceClient) Invoke(ctx context.Context, in *PerformActionRequest, opts ...grpc.CallOption) (*proto2.PerformActionResponse, error) {
-	out := new(proto2.PerformActionResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Invoke", in, out, opts...)
+func (c *driverServiceClient) Monitoring(ctx context.Context, in *MonitoringRequest, opts ...grpc.CallOption) (*MonitoringResponse, error) {
+	out := new(MonitoringResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Monitoring", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *driverServiceClient) Monitoring(ctx context.Context, in *MonitoringRequest, opts ...grpc.CallOption) (*MonitoringResponse, error) {
-	out := new(MonitoringResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Monitoring", in, out, opts...)
+func (c *driverServiceClient) Invoke(ctx context.Context, in *InvokeRequest, opts ...grpc.CallOption) (*proto1.InvokeResponse, error) {
+	out := new(proto1.InvokeResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Invoke", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +109,8 @@ type DriverServiceServer interface {
 	GetType(context.Context, *GetTypeRequest) (*GetTypeResponse, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
-	Invoke(context.Context, *PerformActionRequest) (*proto2.PerformActionResponse, error)
 	Monitoring(context.Context, *MonitoringRequest) (*MonitoringResponse, error)
+	Invoke(context.Context, *InvokeRequest) (*proto1.InvokeResponse, error)
 	mustEmbedUnimplementedDriverServiceServer()
 }
 
@@ -134,11 +133,11 @@ func (UnimplementedDriverServiceServer) Up(context.Context, *UpRequest) (*UpResp
 func (UnimplementedDriverServiceServer) Down(context.Context, *DownRequest) (*DownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Down not implemented")
 }
-func (UnimplementedDriverServiceServer) Invoke(context.Context, *PerformActionRequest) (*proto2.PerformActionResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Invoke not implemented")
-}
 func (UnimplementedDriverServiceServer) Monitoring(context.Context, *MonitoringRequest) (*MonitoringResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Monitoring not implemented")
+}
+func (UnimplementedDriverServiceServer) Invoke(context.Context, *InvokeRequest) (*proto1.InvokeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Invoke not implemented")
 }
 func (UnimplementedDriverServiceServer) mustEmbedUnimplementedDriverServiceServer() {}
 
@@ -243,24 +242,6 @@ func _DriverService_Down_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DriverService_Invoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PerformActionRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DriverServiceServer).Invoke(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/Invoke",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DriverServiceServer).Invoke(ctx, req.(*PerformActionRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _DriverService_Monitoring_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MonitoringRequest)
 	if err := dec(in); err != nil {
@@ -275,6 +256,24 @@ func _DriverService_Monitoring_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DriverServiceServer).Monitoring(ctx, req.(*MonitoringRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DriverService_Invoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvokeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServiceServer).Invoke(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/Invoke",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServiceServer).Invoke(ctx, req.(*InvokeRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -307,12 +306,12 @@ var DriverService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DriverService_Down_Handler,
 		},
 		{
-			MethodName: "Invoke",
-			Handler:    _DriverService_Invoke_Handler,
-		},
-		{
 			MethodName: "Monitoring",
 			Handler:    _DriverService_Monitoring_Handler,
+		},
+		{
+			MethodName: "Invoke",
+			Handler:    _DriverService_Invoke_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
