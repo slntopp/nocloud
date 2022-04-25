@@ -65,8 +65,8 @@
             >
               <v-expansion-panel-header>
                 {{ title }} | Type: {{ group.type }} -
-                {{ titleSP(item) }}</v-expansion-panel-header
-
+                {{ titleSP(item) }}
+                </v-expansion-panel-header
               >
               <v-expansion-panel-content
                 style="background: var(--v-background-base)"
@@ -131,12 +131,12 @@ export default {
   computed: {
     services() {
       const items = this.$store.getters["services/all"];
-
       if (this.isFiltered) {
         return items.filter((item) => {
           return this.$route.query["items[]"].includes(item.uuid);
         });
       }
+      console.log(items)
       return items;
     },
     isFiltered() {
