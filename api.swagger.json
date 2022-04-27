@@ -1405,6 +1405,34 @@
       }
     },
     "/settings/{key}": {
+      "delete": {
+        "operationId": "SettingsService_Pop",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "type": "object"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SettingsService"
+        ]
+      },
       "put": {
         "operationId": "SettingsService_Put",
         "responses": {
