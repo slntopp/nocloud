@@ -54,7 +54,7 @@ func Fetch[T any](key string, _conf *T, _default *Setting[T]) error {
 		log.Error("No default conf")
 		return errors.New("error: default setting is nil")
 	}
-	payload, err := json.Marshal(_default)
+	payload, err := json.Marshal(_default.Value)
 	if err == nil {
 		_, err := c.Put(ctx, &pb.PutRequest{
 			Key: key,
