@@ -47,6 +47,7 @@ func Fetch[T any](key string, _conf *T, _default *Setting[T]) error {
 		log.Warn("Failed to Unmarshal setting", zap.Any("result", r), zap.Error(err))
 		goto set_default
 	}
+	return nil
 
 	set_default:
 	log.Info("Setting default conf")
