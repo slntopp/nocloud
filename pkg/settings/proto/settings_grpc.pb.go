@@ -23,7 +23,7 @@ type SettingsServiceClient interface {
 	Put(ctx context.Context, in *PutRequest, opts ...grpc.CallOption) (*PutResponse, error)
 	// rpc Sub(nocloud.settings.SubRequest) returns (stream nocloud.settings.SubRequest);
 	Keys(ctx context.Context, in *KeysRequest, opts ...grpc.CallOption) (*KeysResponse, error)
-	Pop(ctx context.Context, in *PopRequest, opts ...grpc.CallOption) (*structpb.Struct, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 }
 
 type settingsServiceClient struct {
@@ -61,9 +61,9 @@ func (c *settingsServiceClient) Keys(ctx context.Context, in *KeysRequest, opts 
 	return out, nil
 }
 
-func (c *settingsServiceClient) Pop(ctx context.Context, in *PopRequest, opts ...grpc.CallOption) (*structpb.Struct, error) {
-	out := new(structpb.Struct)
-	err := c.cc.Invoke(ctx, "/nocloud.settings.SettingsService/Pop", in, out, opts...)
+func (c *settingsServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.settings.SettingsService/Delete", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ type SettingsServiceServer interface {
 	Put(context.Context, *PutRequest) (*PutResponse, error)
 	// rpc Sub(nocloud.settings.SubRequest) returns (stream nocloud.settings.SubRequest);
 	Keys(context.Context, *KeysRequest) (*KeysResponse, error)
-	Pop(context.Context, *PopRequest) (*structpb.Struct, error)
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	mustEmbedUnimplementedSettingsServiceServer()
 }
 
@@ -95,8 +95,8 @@ func (UnimplementedSettingsServiceServer) Put(context.Context, *PutRequest) (*Pu
 func (UnimplementedSettingsServiceServer) Keys(context.Context, *KeysRequest) (*KeysResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Keys not implemented")
 }
-func (UnimplementedSettingsServiceServer) Pop(context.Context, *PopRequest) (*structpb.Struct, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Pop not implemented")
+func (UnimplementedSettingsServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedSettingsServiceServer) mustEmbedUnimplementedSettingsServiceServer() {}
 
@@ -165,20 +165,20 @@ func _SettingsService_Keys_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SettingsService_Pop_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PopRequest)
+func _SettingsService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(SettingsServiceServer).Pop(ctx, in)
+		return srv.(SettingsServiceServer).Delete(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/nocloud.settings.SettingsService/Pop",
+		FullMethod: "/nocloud.settings.SettingsService/Delete",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SettingsServiceServer).Pop(ctx, req.(*PopRequest))
+		return srv.(SettingsServiceServer).Delete(ctx, req.(*DeleteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -203,8 +203,8 @@ var SettingsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SettingsService_Keys_Handler,
 		},
 		{
-			MethodName: "Pop",
-			Handler:    _SettingsService_Pop_Handler,
+			MethodName: "Delete",
+			Handler:    _SettingsService_Delete_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

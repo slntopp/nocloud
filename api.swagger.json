@@ -1406,12 +1406,12 @@
     },
     "/settings/{key}": {
       "delete": {
-        "operationId": "SettingsService_Pop",
+        "operationId": "SettingsService_Delete",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "type": "object"
+              "$ref": "#/definitions/nocloudsettingsDeleteResponse"
             }
           },
           "default": {
@@ -2579,6 +2579,14 @@
           "type": "boolean"
         },
         "error": {
+          "type": "string"
+        }
+      }
+    },
+    "nocloudsettingsDeleteResponse": {
+      "type": "object",
+      "properties": {
+        "key": {
           "type": "string"
         }
       }

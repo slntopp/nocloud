@@ -49,7 +49,11 @@ message KeysResponse {
     repeated Key pool = 1;
 }
 
-message PopRequest {
+message DeleteRequest {
+    string key = 1;
+}
+
+message DeleteResponse {
     string key = 1;
 }
 
@@ -72,7 +76,7 @@ service SettingsService {
             get: "/settings"
         };
     };
-    rpc Pop(nocloud.settings.PopRequest) returns (google.protobuf.Struct) {
+    rpc Delete(nocloud.settings.DeleteRequest) returns (nocloud.settings.DeleteResponse) {
         option (google.api.http) = {
             delete: "/settings/{key}"
         };
