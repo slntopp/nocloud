@@ -93,13 +93,21 @@ func main() {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
+	
+	log.Info("Starting Transaction Generator-Processor")
 	go server.GenTransactionsRoutine(ctx)
+
+	log.Info("Registering BillingService Server")
 	pb.RegisterBillingServiceServer(s, server)
 
 	records := billing.NewRecordsServiceServer(log, db)
+	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
+
+	log.Info("Registering RecordsService Server")
 	pb.RegisterRecordsServiceServer(s, records)
 
+	log.Info("Registering Internal HealthProbe Server")
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server, records))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
