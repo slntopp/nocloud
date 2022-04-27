@@ -35,6 +35,8 @@
     </v-row>
 
     groups:
+  {{service}}
+  {{servicesProviders}}
     <v-row justify="center" class="px-2 pb-2">
       <v-expansion-panels inset v-model="opened" multiple>
         <v-expansion-panel

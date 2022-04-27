@@ -54,7 +54,6 @@
           {{ value }}
         </v-chip>
       </template>
-
       <template v-slot:expanded-item="{ headers, item }">
         <td :colspan="headers.length" style="padding: 0">
           <v-expansion-panels inset v-model="opened" multiple>

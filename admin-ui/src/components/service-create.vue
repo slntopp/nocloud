@@ -203,8 +203,7 @@ export default {
 			"version": "1",
 			"title": "",
 			"context": {},
-			"instances_groups": {
-			}
+			"instances_groups": []
 		},
 		namespace: "",
 		instances: [],
@@ -262,13 +261,18 @@ export default {
 			const instances = JSON.parse(JSON.stringify(this.instances));
 
 			instances.forEach(inst => {
-				data.instances_groups[inst.title] = inst.body
-				let ips = 0;
-				Object.keys(data.instances_groups[inst.title].instances).forEach(key => {
-					const item = data.instances_groups[inst.title].instances[key];
-					ips += item.resources.ips_public;
-				})
-				data.instances_groups[inst.title].resources.ips_public = ips;
+				console.log(inst)
+				console.log(inst.body)
+				data.instances_groups.push({...inst.body, title:inst.title })
+				console.log(data.instances_groups)
+				// console.log(data.instances_groups[inst.title])
+				// console.log(data.instances_groups)
+				// let ips = 0;
+				// Object.keys(data.instances_groups[inst.title].instances).forEach(key => {
+				// 	const item = data.instances_groups[inst.title].instances[key];
+				// 	ips += item.resources.ips_public;
+				// })
+				// data.instances_groups[inst.title].resources.ips_public = ips;
 			});
 			return {namespace: this.namespace, service: data};
 		},

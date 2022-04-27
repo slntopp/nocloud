@@ -165,7 +165,6 @@ export default {
 		addInstance(){
 			const item = JSON.parse(JSON.stringify(this.defaultItem));
 			const data = JSON.parse(this.instancesGroup)
-
 			item.title += "#" + (data.body.instances.length + 1);
 
 			data.body.instances.push(item);
@@ -217,7 +216,7 @@ function setToValue(obj, value, path) {
 			throw new Error("Can't use that path because of: " + path[i]);
 		obj = obj[path[i]];
 	}
-	console.log(value, typeof value);
+
 	obj[path[i]] = value;
 }
 </script>
