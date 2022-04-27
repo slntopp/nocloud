@@ -27,8 +27,11 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
+	sc "github.com/slntopp/nocloud/pkg/settings/client"
+	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -44,7 +47,15 @@ type ServicesServer struct {
 	log *zap.Logger
 }
 
-func NewServicesServer(log *zap.Logger, db driver.Database) *ServicesServer {
+func NewServicesServer(_log *zap.Logger, db driver.Database, stC stpb.SettingsServiceClient, internal_token string) *ServicesServer {
+	log := _log.Named("ServicesServer")
+
+	sc.Setup(
+		log, metadata.AppendToOutgoingContext(
+			context.Background(), "authorization", "bearer " + internal_token,
+		), &stC,
+	)
+	
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
 		sp_ctrl:  graph.NewServicesProvidersController(log, db),

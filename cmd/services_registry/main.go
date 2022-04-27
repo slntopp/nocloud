@@ -27,8 +27,10 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/services"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
+	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
@@ -48,6 +50,7 @@ var (
 	drivers       []string
 	SIGNING_KEY   []byte
 	rbmq string
+	settingsHost  string
 )
 
 func init() {
@@ -61,6 +64,7 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
+	viper.SetDefault("SETTINGS_HOST", "settings:8080")
 
 	port = viper.GetString("PORT")
 
@@ -69,6 +73,7 @@ func init() {
 	drivers = viper.GetStringSlice("DRIVERS")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 	rbmq = viper.GetString("RABBITMQ_CONN")
+	settingsHost = viper.GetString("SETTINGS_HOST")
 }
 
 func main() {
@@ -100,7 +105,19 @@ func main() {
 	}
 	defer rbmq.Close()
 
-	server := services.NewServicesServer(log, db)
+	conn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+    if err != nil {
+        panic(err)
+    }
+	defer conn.Close()
+
+    stC := stpb.NewSettingsServiceClient(conn)
+	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		log.Fatal("Can't generate token", zap.Error(err))
+	}
+
+	server := services.NewServicesServer(log, db, stC, token)
 	iserver := instances.NewInstancesServiceServer(log, db, rbmq)
 
 	for _, driver := range drivers {
