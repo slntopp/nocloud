@@ -115,3 +115,15 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 
 	return &pb.KeysResponse{Pool: result}, nil
 }
+
+func (s *SettingsServiceServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(req.GetKey()))
+	
+	_, err := s.rdb.Del(ctx, key).Result()
+	if err != nil {
+		s.log.Error("Error deleting key from Redis", zap.String("key", key), zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error deleting key from Redis")
+	}
+
+	return &pb.DeleteResponse{ Key: req.GetKey() }, nil
+}
