@@ -17,10 +17,10 @@ package services_providers
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
+	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
@@ -43,12 +43,13 @@ type MonitoringRoutineConf struct {
 }
 
 var (
-	defaultConf = MonitoringRoutineConf{
-		Frequency: 60,
+	defaultSetting = &sc.Setting[MonitoringRoutineConf]{
+		Value: MonitoringRoutineConf{
+			Frequency: 60,
+		},
+		Description: "ServicesProviders Monitoring Routine Configuration",
+		Public:      false,
 	}
-
-	description = "ServicesProviders Monitoring Routine Configuration"
-	public = false
 )
 
 func init() {
@@ -64,40 +65,14 @@ func init() {
     settingsClient = settingspb.NewSettingsServiceClient(conn)
 }
 
-func MakeConf(ctx context.Context, log *zap.Logger) MonitoringRoutineConf {
+func MakeConf(ctx context.Context, log *zap.Logger) (conf MonitoringRoutineConf) {
+	sc.Setup(log, ctx, &settingsClient)
 
-	var conf MonitoringRoutineConf
-	var r_str string
-	r, err := settingsClient.Get(ctx, &settingspb.GetRequest{Keys: []string{monFreqKey}})
+	err := sc.Fetch(monFreqKey, &conf, defaultSetting)
 	if err != nil {
-		log.Debug("Failed to Get conf", zap.Error(err))
-		goto set_default
+		return defaultSetting.Value
 	}
-	if _, ok := r.GetFields()[monFreqKey]; !ok {
-		goto set_default
-	}
-	r_str = r.GetFields()[monFreqKey].GetStringValue()
-	err = json.Unmarshal([]byte(r_str), &conf)
-	if err != nil {
-		goto set_default
-	}
-	return conf
 
-	set_default:
-	log.Info("Setting default conf")
-	conf = defaultConf
-	payload, err := json.Marshal(conf)
-	if err == nil {
-		_, err := settingsClient.Put(ctx, &settingspb.PutRequest{
-			Key: monFreqKey,
-			Value: string(payload),
-			Description: &description,
-			Public: &public,
-		})
-		if err != nil {
-			log.Error("Error Putting Monitoring Configuration", zap.Error(err))
-		}
-	}
 	return conf
 }
 
