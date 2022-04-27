@@ -111,13 +111,7 @@ func main() {
     }
 	defer conn.Close()
 
-    stC := stpb.NewSettingsServiceClient(conn)
-	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
-	if err != nil {
-		log.Fatal("Can't generate token", zap.Error(err))
-	}
-
-	server := services.NewServicesServer(log, db, stC, token)
+	server := services.NewServicesServer(log, db)
 	iserver := instances.NewInstancesServiceServer(log, db, rbmq)
 
 	for _, driver := range drivers {
@@ -135,6 +129,14 @@ func main() {
 		iserver.RegisterDriver(driver_type.GetType(), client)
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
+
+	stC := stpb.NewSettingsServiceClient(conn)
+	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		log.Fatal("Can't generate token", zap.Error(err))
+	}
+
+	server.SetupSettingsClient(stC, token)
 	
 	pb.RegisterServicesServiceServer(s, server)
 	ipb.RegisterInstancesServiceServer(s, iserver)

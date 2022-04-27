@@ -47,15 +47,9 @@ type ServicesServer struct {
 	log *zap.Logger
 }
 
-func NewServicesServer(_log *zap.Logger, db driver.Database, stC stpb.SettingsServiceClient, internal_token string) *ServicesServer {
+func NewServicesServer(_log *zap.Logger, db driver.Database) *ServicesServer {
 	log := _log.Named("ServicesServer")
 
-	sc.Setup(
-		log, metadata.AppendToOutgoingContext(
-			context.Background(), "authorization", "bearer " + internal_token,
-		), &stC,
-	)
-	
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
 		sp_ctrl:  graph.NewServicesProvidersController(log, db),
@@ -73,6 +67,13 @@ func (s *ServicesServer) RegisterDriver(type_key string, client driverpb.DriverS
 	s.drivers[type_key] = client
 }
 
+func (s *ServicesServer) SetupSettingsClient(stC stpb.SettingsServiceClient, internal_token string) {
+	sc.Setup(
+		s.log, metadata.AppendToOutgoingContext(
+			context.Background(), "authorization", "bearer " + internal_token,
+		), &stC,
+	)
+}
 func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *pb.CreateRequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
