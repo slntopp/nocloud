@@ -8,4 +8,5 @@ import "google/protobuf/descriptor.proto";
 extend google.protobuf.FieldOptions {
     bool hashed = 50000;
     bool hash = 50010;
+    bool skip = 50020;
 }
