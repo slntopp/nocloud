@@ -33,6 +33,7 @@ const NoCloudAccount = ContextKey("account");
 const NoCloudRootAccess = ContextKey("root_access")
 const NoCloudSp = ContextKey("sp")
 const NoCloudInstance = ContextKey("instance")
+const NoCloudToken = ContextKey("token")
 const TestFromCreate = ContextKey("test_from_create")
 
 func NewLogger() (log *zap.Logger) {
