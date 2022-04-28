@@ -3,7 +3,7 @@ services:
   proxy:
     restart: always
     image: nginx
-    depends_on:
+    links:
       - health
       - registry
       - services-registry
@@ -73,9 +73,11 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       DRIVERS: driver-ione:8080
       SETTINGS_HOST: settings:8080
+      BILLING_HOST: billing:8080
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     depends_on:
       - db
+      - billing
       - driver-ione
     networks:
       - proxy
@@ -84,6 +86,7 @@ services:
       - mq
     links:
       - db
+      - billing
   sp-registry:
     container_name: sp-registry
     restart: always

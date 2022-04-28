@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 
+	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/instances"
@@ -51,6 +52,7 @@ var (
 	SIGNING_KEY   []byte
 	rbmq string
 	settingsHost  string
+	billingHost  string
 )
 
 func init() {
@@ -65,6 +67,7 @@ func init() {
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 	viper.SetDefault("SETTINGS_HOST", "settings:8080")
+	viper.SetDefault("BILLING_HOST", "settings:8080")
 
 	port = viper.GetString("PORT")
 
@@ -74,6 +77,7 @@ func init() {
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 	rbmq = viper.GetString("RABBITMQ_CONN")
 	settingsHost = viper.GetString("SETTINGS_HOST")
+	billingHost = viper.GetString("BILLING_HOST")
 }
 
 func main() {
@@ -105,12 +109,6 @@ func main() {
 	}
 	defer rbmq.Close()
 
-	conn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-    if err != nil {
-        panic(err)
-    }
-	defer conn.Close()
-
 	server := services.NewServicesServer(log, db)
 	iserver := instances.NewInstancesServiceServer(log, db, rbmq)
 
@@ -130,13 +128,31 @@ func main() {
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
 
-	stC := stpb.NewSettingsServiceClient(conn)
+	log.Info("Registering Settings Service", zap.String("url", settingsHost))
+	setconn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	defer setconn.Close()
+	
+	setc := stpb.NewSettingsServiceClient(setconn)
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
+	server.SetupSettingsClient(setc, token)
+	log.Info("Settings Service registered")
 
-	server.SetupSettingsClient(stC, token)
+	log.Info("Registering Billing Service", zap.String("url", billingHost))
+	billconn, err := grpc.Dial(billingHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	defer billconn.Close()
+
+	billc := bpb.NewBillingServiceClient(billconn)
+	server.SetupBillingClient(billc)
+	log.Info("Billing Service registered")
 	
 	pb.RegisterServicesServiceServer(s, server)
 	ipb.RegisterInstancesServiceServer(s, iserver)

@@ -71,10 +71,12 @@ services:
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8080
+      BILLING_HOST: billing:8080
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       # DRIVERS: host:port # your drivers here
     depends_on:
       - db
+      - billing
       # - your drivers here
     networks:
       - proxy
@@ -83,6 +85,8 @@ services:
       - mq
     links:
       - db
+      - billing
+      # - your drivers here
   sp-registry:
     container_name: sp-registry
     restart: always
