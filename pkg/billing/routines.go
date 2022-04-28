@@ -133,7 +133,7 @@ FOR service IN @@services // Iterate over Services
 	LET instances = (
         FOR i IN 2 OUTBOUND service
         GRAPH @permissions
-        FILTER IS_SAME_COLLECTION(@instances, i)
+        FILTER IS_SAME_COLLECTION(@@instances, i)
             RETURN i._key )
 
     LET account = LAST( // Find Service owner Account
