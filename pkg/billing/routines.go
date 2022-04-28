@@ -93,6 +93,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		s.gen.Status.Error = nil
 		_, err := s.db.Query(ctx, generateTransactions, map[string]interface{}{
 			"@transactions": schema.TRANSACTIONS_COL,
+			"@instances": schema.INSTANCES_COL,
 			"@services": schema.SERVICES_COL,
 			"@records": schema.RECORDS_COL,
 			"@accounts": schema.ACCOUNTS_COL,
