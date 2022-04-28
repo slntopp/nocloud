@@ -101,11 +101,16 @@ func (s *RecordsServiceServer) Consume(ctx context.Context) {
 	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
 
 	for msg := range records {
-		log.Debug("Received a message", zap.String("message", string(msg.Body)))
+		log.Debug("Received a message")
 		var record pb.Record
 		err = proto.Unmarshal(msg.Body, &record)
+		log.Debug("Message unmarshalled", zap.Any("record", &record))
 		if err != nil {
 			log.Error("Failed to unmarshal record", zap.Error(err))
+			continue
+		}
+		if record.Total == 0 {
+			log.Warn("Got zero record, skipping", zap.Any("record", &record))
 			continue
 		}
 
