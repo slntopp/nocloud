@@ -31,8 +31,8 @@ var (
 )
 
 type StatesPubSub struct {
-	log *zap.Logger
-	db *driver.Database
+	log  *zap.Logger
+	db   *driver.Database
 	rbmq *amqp.Connection
 }
 
@@ -46,7 +46,7 @@ func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection
 	return ps
 }
 
-func (s *StatesPubSub) Channel() (*amqp.Channel) {
+func (s *StatesPubSub) Channel() *amqp.Channel {
 	log := s.log.Named("Channel")
 
 	ch, err := s.rbmq.Channel()
@@ -90,8 +90,9 @@ func (s *StatesPubSub) StatesConsumerInit(ch *amqp.Channel, exchange, subtopic, 
 }
 
 const updateStateQuery = `
-UPDATE DOCUMENT(@@collection, @key) WITH { state: @state } IN @@collection
+UPDATE DOCUMENT(@@collection, @key) WITH { state: @state } IN @@collection OPTIONS { mergeObjects: false }
 `
+
 func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	log := s.log.Named(col)
 	for msg := range msgs {
@@ -103,8 +104,8 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		}
 		c, err := (*s.db).Query(context.TODO(), updateStateQuery, map[string]interface{}{
 			"@collection": col,
-			"key": req.Uuid,
-			"state": req.State,
+			"key":         req.Uuid,
+			"state":       req.State,
 		})
 		if err != nil {
 			log.Error("Failed to update state", zap.Error(err))
@@ -115,7 +116,8 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	}
 }
 
-type Pub func(msg *pb.ObjectState) (error)
+type Pub func(msg *pb.ObjectState) error
+
 func (s *StatesPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
 	return func(msg *pb.ObjectState) error {
@@ -125,7 +127,7 @@ func (s *StatesPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pu
 		}
 		return ch.Publish(exchange, topic, false, false, amqp.Publishing{
 			ContentType: "text/plain",
-			Body: 	  body,
+			Body:        body,
 		})
 	}
 }
