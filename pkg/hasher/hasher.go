@@ -18,7 +18,7 @@ func redact(msg protoreflect.Message) (save4hash bool) {
 	save4hash = false
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
 
-		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Skip).(bool) {
+		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Skipped).(bool) {
 			return false
 		}
 
