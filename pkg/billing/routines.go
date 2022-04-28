@@ -129,6 +129,12 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 
 const generateTransactions = `
 FOR service IN @@services // Iterate over Services
+	LET instances = (
+        FOR i IN 2 OUTBOUND service
+        GRAPH @permissions
+        FILTER IS_SAME_COLLECTION(@instances, i)
+            RETURN i._key )
+
     LET account = LAST( // Find Service owner Account
     FOR node, edge, path IN 2
     INBOUND service
@@ -142,7 +148,7 @@ FOR service IN @@services // Iterate over Services
         FOR record IN @@records
         FILTER record.exec <= @now
         FILTER !record.processed
-        FILTER record.instance IN service.instances
+        FILTER record.instance IN instances
             UPDATE record._key WITH { processed: true } IN @@records RETURN NEW
     )
     
