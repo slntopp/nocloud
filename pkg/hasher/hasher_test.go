@@ -46,6 +46,17 @@ func initMessage() *services.Service {
 		Title:     "Title1",
 		Config:    svm1,
 		Resources: svm0,
+		BillingPlan: &billing.Plan{
+			Title: randomdata.SillyName(),
+			Type: "whatever",
+			Resources: []*billing.ResourceConf{
+				{
+					On: []states.NoCloudState{
+						3, 4, 5,
+					},
+				},
+			},
+		},
 		// Hash:      "Instance1",
 	}
 
@@ -143,7 +154,7 @@ func TestGetHash(t *testing.T) {
 			SetHash(tt.args.ProtoReflect())
 			prettyMsg("Result:", tt.args)
 
-			if tt.args.Hash != "f4a0f98677c86ef04f438a951ef6e5b0a1e844fe8311bf785990b19bdbf3b8fe" {
+			if tt.args.Hash != "2ff69ddea9ed27915a8412c686d6294d4ba2127002ee05d84d4b65084d5804f6" {
 				t.Error("Non-expected ", tt.args.Hash)
 			}
 

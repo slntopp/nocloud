@@ -102,6 +102,10 @@ func SetHash(msg protoreflect.Message) (err_sh error) {
 
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
 
+		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Skipped).(bool) {
+			return false
+		}
+
 		if fd.IsMap() {
 			if fd.MapValue().Kind() == protoreflect.MessageKind {
 				v.Map().Range(func(km protoreflect.MapKey, vm protoreflect.Value) bool {
