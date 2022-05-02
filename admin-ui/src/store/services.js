@@ -4,14 +4,22 @@ export default {
   namespaced: true,
   state: {
     services: [],
+    service: [],
     loading: false,
+    loadingItem: false,
   },
   getters: {
     all(state) {
       return state.services;
     },
+    one(state) {
+      return state.service;
+    },
     isLoading(state) {
       return state.loading;
+    },
+    isLoadingItem(state) {
+      return state.loadingItem;
     },
   },
   mutations: {
@@ -21,12 +29,35 @@ export default {
     setLoading(state, data) {
       state.loading = data;
     },
+    setLoadingItem(state, data) {
+      state.loadingItem = data;
+    },
+    setService(state, service) {
+      if (state.service.length) {
+        let isProductExists = false;
+        state.service.find(item => {
+          if (item.uuid === service.uuid) {
+            isProductExists = true
+          }
+        })
+        if (!isProductExists) {
+          state.service.push(service);
+        }
+      } else {
+        state.service.push(service);
+      }
+
+
+    },
     updateService(state, service) {
       if (!state.services.length) state.services.push(service);
       state.services = state.services.map((serv) =>
         serv.uuid === service.uuid ? service : serv
       );
     },
+    fetchByIdElem(state, data) {
+      state.service = data
+    }
   },
   actions: {
     fetch({ commit }) {
@@ -60,6 +91,23 @@ export default {
           })
           .finally(() => {
             commit("setLoading", false);
+          });
+      });
+    },
+    fetchByIdItem({ commit }, id) {
+      commit("setLoadingItem", true);
+      return new Promise((resolve, reject) => {
+        api.services
+          .get(id)
+          .then((response) => {
+            commit("setService", response);
+            resolve(response);
+          })
+          .catch((error) => {
+            reject(error);
+          })
+          .finally(() => {
+            commit("setLoadingItem", false);
           });
       });
     },

@@ -261,8 +261,6 @@ export default {
 			const instances = JSON.parse(JSON.stringify(this.instances));
 
 			instances.forEach(inst => {
-				console.log(inst)
-				console.log(inst.body)
 				data.instances_groups.push({...inst.body, title:inst.title })
 				console.log(data.instances_groups)
 				// console.log(data.instances_groups[inst.title])

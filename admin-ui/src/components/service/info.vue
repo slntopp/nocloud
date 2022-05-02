@@ -35,8 +35,7 @@
     </v-row>
 
     groups:
-  {{service}}
-  {{servicesProviders}}
+ 
     <v-row justify="center" class="px-2 pb-2">
       <v-expansion-panels inset v-model="opened" multiple>
         <v-expansion-panel
@@ -118,7 +117,7 @@
                         <v-col>
                           <v-text-field
                             readonly
-                            :value="instance.state.meta.state_str"
+                            :value="instance.state && instance.state.meta.state_str"
                             label="state"
                             style="display: inline-block; width: 100px"
                           >
@@ -127,7 +126,7 @@
                         <v-col>
                           <v-text-field
                             readonly
-                            :value="instance.state.meta.lcm_state_str"
+                            :value="instance.state && instance.state.meta.lcm_state_str"
                             label="lcm state"
                             style="display: inline-block; width: 100px"
                           >
