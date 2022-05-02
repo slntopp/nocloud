@@ -233,7 +233,6 @@ export default {
       return extentionsMap;
     },
     serviceProviderBody() {
-		
       if (Object.keys(this.extentions.data).length >  0) {
         if (this.provider.type === "custom") {
           return {

@@ -174,14 +174,14 @@ export default {
 			})
 		},
 		sendVmAction(action){
-			console.log(action, this.service)
+			// console.log(action, this.service)
 			const groupName = Object.keys(this.service.instancesGroups)[0];
 			let vminfo = {
 				service: this.service.uuid,
 				group: groupName,
 				instance: this.service.instancesGroups[groupName].instances[0].uuid,
 			}
-			console.log(vminfo)
+			// console.log(vminfo)
 			this.actualAction = action;
 			this.actionLoading = true;
 			api.services.action(vminfo, action)
