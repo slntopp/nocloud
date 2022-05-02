@@ -4,19 +4,20 @@ Cloud-native Open-Source Cloud Management Framework
 [![Containers](https://github.com/slntopp/nocloud/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/slntopp/nocloud/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/slntopp/nocloud/actions/workflows/codeql-analysis.yml/badge.svg?branch=master)](https://github.com/slntopp/nocloud/actions/workflows/codeql-analysis.yml)
 
-## Table of Contents
-
-* ### [Installation](#installation)
-* ### [Drivers](#drivers)
-* ### [CLI](#nocloud-cli)
-
-  * ### [Usage](#usage)
-  * ### [Linux](#linux)
-  * ### [macOS](#macos)
-  * ### [Windows](#windows)
-  * ### [From Source](#build-from-source)
-
-* ### [Building Protobuf](#building-proto)
+| **Table of Contents** |                 |
+|-------------------------------|---------|
+| [Installation](#installation) |         |
+| Docker | [Local](#running-localy)       |
+| - | [Production](#running-in-production)|
+| [Drivers](#drivers)           |         |
+| [CLI](#nocloud-cli)           |         |
+| - | [Usage](#usage)                     |
+| CLI Installation | [Linux](#linux)      |
+| - | [macOS](#macos)                     |
+| - | [Windows](#windows)                 |
+| - | [From Source](#build-from-source)   |
+| [Building Protobuf](#building-proto) |  |
+-------------------------------------------
 
 ## Installation
 
