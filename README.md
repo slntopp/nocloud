@@ -1,4 +1,5 @@
 # NoCloud
+
 Cloud-native Open-Source Cloud Management Framework
 
 [![Containers](https://github.com/slntopp/nocloud/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/slntopp/nocloud/actions/workflows/ci.yml)
@@ -101,6 +102,7 @@ Then see usage [usage](#usage)
 If you have `yaourt` package must be found automatically by label `nocloud-bin`
 
 Otherwise,
+
 1. `git clone https://aur.archlinux.org/packages/nocloud-bin`
 2. `cd nocloud-bin`
 3. `makepkg -i`
