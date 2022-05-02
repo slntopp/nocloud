@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Pallinder/go-randomdata"
+	billing "github.com/slntopp/nocloud/pkg/billing/proto"
 	instances "github.com/slntopp/nocloud/pkg/instances/proto"
 	services "github.com/slntopp/nocloud/pkg/services/proto"
+	states "github.com/slntopp/nocloud/pkg/states/proto"
 	"google.golang.org/protobuf/proto"
 	structpb "google.golang.org/protobuf/types/known/structpb"
 )
@@ -43,6 +46,17 @@ func initMessage() *services.Service {
 		Title:     "Title1",
 		Config:    svm1,
 		Resources: svm0,
+		BillingPlan: &billing.Plan{
+			Title: randomdata.SillyName(),
+			Type: "whatever",
+			Resources: []*billing.ResourceConf{
+				{
+					On: []states.NoCloudState{
+						3, 4, 5,
+					},
+				},
+			},
+		},
 		// Hash:      "Instance1",
 	}
 
@@ -94,6 +108,37 @@ func TestRedact(t *testing.T) {
 	}
 }
 
+// Must be empty hash, enum shouldn't cause panic
+func TestRedactWithBP(t *testing.T) {
+	i := instances.Instance{
+		Title: randomdata.SillyName(),
+		Config: map[string]*structpb.Value{},
+	}
+
+	redact(i.ProtoReflect())
+	t.Log(i.Hash)
+
+	hash := i.Hash
+
+	i.BillingPlan = &billing.Plan{
+		Title: randomdata.SillyName(),
+		Type: "whatever",
+		Resources: []*billing.ResourceConf{
+			{
+				On: []states.NoCloudState{
+					3, 4, 5,
+				},
+			},
+		},
+	}
+	redact(i.ProtoReflect())
+	t.Log(i.Hash)
+
+	if hash != i.Hash {
+		t.Fatalf("Expected %s, got %s", hash, i.Hash)
+	}
+}
+
 func TestGetHash(t *testing.T) {
 
 	tests := []struct {
@@ -109,7 +154,7 @@ func TestGetHash(t *testing.T) {
 			SetHash(tt.args.ProtoReflect())
 			prettyMsg("Result:", tt.args)
 
-			if tt.args.Hash != "1bc6a0a8905e70c1c355da05fcbe132be8e96b54dabc447f5d847212f78b191f" {
+			if tt.args.Hash != "2ff69ddea9ed27915a8412c686d6294d4ba2127002ee05d84d4b65084d5804f6" {
 				t.Error("Non-expected ", tt.args.Hash)
 			}
 

@@ -31,7 +31,7 @@ type Record struct {
 
 type RecordsController struct {
 	col driver.Collection // Billing Plans collection
-
+	db driver.Database
 	log *zap.Logger
 }
 
@@ -40,11 +40,45 @@ func NewRecordsController(logger *zap.Logger, db driver.Database) RecordsControl
 	log := logger.Named("RecordsController")
 	col := GetEnsureCollection(log, ctx, db, schema.RECORDS_COL)
 	return RecordsController{
-		log: log, col: col,
+		log: log, col: col, db: db,
 	}
 }
 
+const checkOverlappingQuery = `
+let n = @record
+RETURN COUNT(FOR r IN @@records
+FILTER r.instance == n.instance
+FILTER r.resource == n.resource
+FILTER (n.start < r.end && n.start >= r.start) || (n.start <= r.start && r.start > n.end)
+    RETURN r) == 0
+`
+func (ctrl *RecordsController) CheckOverlapping(ctx context.Context, r *pb.Record) (ok bool) {
+	c, err := ctrl.db.Query(ctx, checkOverlappingQuery, map[string]interface{}{
+		"record": r,
+		"@records": schema.RECORDS_COL,
+	})
+	if err != nil {
+		ctrl.log.Error("failed to check overlapping", zap.Error(err))
+		return false
+	}
+	defer c.Close()
+
+	_, err = c.ReadDocument(ctx, &ok)
+	if err != nil {
+		ctrl.log.Error("failed to read document", zap.Error(err))
+		return false
+	}
+	return ok
+}
+
 func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) {
+	ok := ctrl.CheckOverlapping(ctx, r)
+	ctrl.log.Debug("Pre-flight checks", zap.Bool("overlapping", ok))
+	if !ok {
+		ctrl.log.Warn("Skipping creating transactions: overlapping", zap.Any("record", r))
+		return
+	}
+
 	_, err := ctrl.col.CreateDocument(ctx, r)
 	if err != nil {
 		ctrl.log.Error("failed to create record", zap.Error(err))

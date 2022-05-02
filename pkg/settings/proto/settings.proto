@@ -49,6 +49,14 @@ message KeysResponse {
     repeated Key pool = 1;
 }
 
+message DeleteRequest {
+    string key = 1;
+}
+
+message DeleteResponse {
+    string key = 1;
+}
+
 service SettingsService {
     rpc Get(nocloud.settings.GetRequest) returns (google.protobuf.Struct) {
         option (google.api.http) = {
@@ -66,6 +74,11 @@ service SettingsService {
     rpc Keys(nocloud.settings.KeysRequest) returns (nocloud.settings.KeysResponse) {
         option (google.api.http) = {
             get: "/settings"
+        };
+    };
+    rpc Delete(nocloud.settings.DeleteRequest) returns (nocloud.settings.DeleteResponse) {
+        option (google.api.http) = {
+            delete: "/settings/{key}"
         };
     };
 }

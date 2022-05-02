@@ -26,6 +26,7 @@ import (
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -81,6 +82,10 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	}
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.(string))
 	ctx = context.WithValue(ctx, nocloud.NoCloudRootAccess, lvl)
+
+	ctx = context.WithValue(ctx, nocloud.NoCloudToken, tokenString)
+	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer " + tokenString)
+
 	return ctx, nil
 }
 

@@ -223,8 +223,8 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, n
 
 func (ctrl *ServicesController) Delete(ctx context.Context, s *pb.Service) (err error) {
 	log := ctrl.log.Named("Service.Delete")
-	log.Debug("Deleting Service")
-	if s.GetStatus() != pb.ServiceStatus_INIT || s.GetStatus() != pb.ServiceStatus_DOWN {
+	log.Debug("Deleting Service", zap.String("status", s.GetStatus().String()))
+	if s.GetStatus() != pb.ServiceStatus_INIT && s.GetStatus() != pb.ServiceStatus_DOWN {
 		return fmt.Errorf("cannot delete Service, status: %s", s.GetStatus())
 	}
 

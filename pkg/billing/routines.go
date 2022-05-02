@@ -17,11 +17,11 @@ package billing
 
 import (
 	"context"
-	"encoding/json"
 	"time"
 
 	hpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -41,12 +41,13 @@ type RoutineConf struct {
 }
 
 var (
-	defaultConf = RoutineConf{
-		Frequency: 60,
+	defaultSetting = &sc.Setting[RoutineConf]{
+		Value: RoutineConf{
+			Frequency: 60,
+		},
+		Description: "Transactions Generating and Processing Routine Configuration",
+		Public:      false,
 	}
-
-	description = "Transactions Generating and Processing Routine Configuration"
-	public = false
 )
 
 func init() {
@@ -62,40 +63,14 @@ func init() {
     settingsClient = settingspb.NewSettingsServiceClient(conn)
 }
 
-func MakeConf(ctx context.Context, log *zap.Logger) RoutineConf {
+func MakeConf(ctx context.Context, log *zap.Logger) (conf RoutineConf) {
+	sc.Setup(log, ctx, &settingsClient)
 
-	var conf RoutineConf
-	var r_str string
-	r, err := settingsClient.Get(ctx, &settingspb.GetRequest{Keys: []string{monFreqKey}})
+	err := sc.Fetch(monFreqKey, &conf, defaultSetting)
 	if err != nil {
-		log.Debug("Failed to Get conf", zap.Error(err))
-		goto set_default
+		return defaultSetting.Value
 	}
-	if _, ok := r.GetFields()[monFreqKey]; !ok {
-		goto set_default
-	}
-	r_str = r.GetFields()[monFreqKey].GetStringValue()
-	err = json.Unmarshal([]byte(r_str), &conf)
-	if err != nil {
-		goto set_default
-	}
-	return conf
 
-	set_default:
-	log.Info("Setting default conf")
-	conf = defaultConf
-	payload, err := json.Marshal(conf)
-	if err == nil {
-		_, err := settingsClient.Put(ctx, &settingspb.PutRequest{
-			Key: monFreqKey,
-			Value: string(payload),
-			Description: &description,
-			Public: &public,
-		})
-		if err != nil {
-			log.Error("Error Putting Monitoring Configuration", zap.Error(err))
-		}
-	}
 	return conf
 }
 
@@ -118,6 +93,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		s.gen.Status.Error = nil
 		_, err := s.db.Query(ctx, generateTransactions, map[string]interface{}{
 			"@transactions": schema.TRANSACTIONS_COL,
+			"@instances": schema.INSTANCES_COL,
 			"@services": schema.SERVICES_COL,
 			"@records": schema.RECORDS_COL,
 			"@accounts": schema.ACCOUNTS_COL,
@@ -154,6 +130,12 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 
 const generateTransactions = `
 FOR service IN @@services // Iterate over Services
+	LET instances = (
+        FOR i IN 2 OUTBOUND service
+        GRAPH @permissions
+        FILTER IS_SAME_COLLECTION(@@instances, i)
+            RETURN i._key )
+
     LET account = LAST( // Find Service owner Account
     FOR node, edge, path IN 2
     INBOUND service
@@ -167,13 +149,13 @@ FOR service IN @@services // Iterate over Services
         FOR record IN @@records
         FILTER record.exec <= @now
         FILTER !record.processed
-        FILTER record.instance IN service.instances
+        FILTER record.instance IN instances
             UPDATE record._key WITH { processed: true } IN @@records RETURN NEW
     )
     
     FILTER LENGTH(records) > 0 // Skip if no Records (no empty Transaction)
     INSERT {
-        exec: DATE_NOW() / 1000, // Timestamp in seconds
+        exec: @now, // Timestamp in seconds
         processed: false,
         account: account._key,
         service: service._key,

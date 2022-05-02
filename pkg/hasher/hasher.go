@@ -18,7 +18,11 @@ func redact(msg protoreflect.Message) (save4hash bool) {
 	save4hash = false
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
 
-		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Hashed).(bool) {
+		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Skipped).(bool) {
+			return false
+		}
+
+		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Hashed).(bool)  {
 			save4hash = true
 			return true
 		}
@@ -97,6 +101,10 @@ func SetHash(msg protoreflect.Message) (err_sh error) {
 	}
 
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+
+		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Skipped).(bool) {
+			return false
+		}
 
 		if fd.IsMap() {
 			if fd.MapValue().Kind() == protoreflect.MessageKind {

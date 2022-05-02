@@ -120,6 +120,9 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_INSTANCE_CLAIM, inst.(string))
 	}(ctx)
 
+	ctx = context.WithValue(ctx, nocloud.NoCloudToken, tokenString)
+	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer " + tokenString)
+
 	return ctx, nil
 }
 

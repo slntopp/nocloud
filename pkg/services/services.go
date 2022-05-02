@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
+	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/instances/proto"
@@ -27,8 +28,11 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
+	sc "github.com/slntopp/nocloud/pkg/settings/client"
+	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -41,10 +45,14 @@ type ServicesServer struct {
 
 	drivers  map[string]driverpb.DriverServiceClient
 
+	billing bpb.BillingServiceClient
+
 	log *zap.Logger
 }
 
-func NewServicesServer(log *zap.Logger, db driver.Database) *ServicesServer {
+func NewServicesServer(_log *zap.Logger, db driver.Database) *ServicesServer {
+	log := _log.Named("ServicesServer")
+
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
 		sp_ctrl:  graph.NewServicesProvidersController(log, db),
@@ -60,6 +68,31 @@ type InstancesGroupDriverContext struct {
 
 func (s *ServicesServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
 	s.drivers[type_key] = client
+}
+
+func (s *ServicesServer) SetupSettingsClient(stC stpb.SettingsServiceClient, internal_token string) {
+	sc.Setup(
+		s.log, metadata.AppendToOutgoingContext(
+			context.Background(), "authorization", "bearer " + internal_token,
+		), &stC,
+	)
+}
+
+func (s *ServicesServer) SetupBillingClient(bC bpb.BillingServiceClient) {
+	s.billing = bC
+} 
+
+type InstanceBillingPlanSettings struct {
+	Required bool `json:"required"` // each instance must have it
+}
+
+const IBPSKey = "instance-billing-plan-settings"
+var DefaultBillingPlanSettings = sc.Setting[InstanceBillingPlanSettings]{
+	Value: InstanceBillingPlanSettings{
+		Required: true, 
+	},
+	Description: "Instances Billing Plans Settings",
+	Public: false,
 }
 
 func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *pb.CreateRequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
@@ -79,13 +112,48 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 		return nil, nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
+	var ibps InstanceBillingPlanSettings
+	err = sc.Fetch(IBPSKey, &ibps, &DefaultBillingPlanSettings)
+	if err != nil {
+		log.Error("Error fetching instance billing plan settings", zap.Error(err))
+		return nil, nil, status.Error(codes.Internal, "Error while fetching Instance Billing Plan Settings")
+	}
+	log.Debug("Instance billing plan settings", zap.Any("settings", ibps))
+
 	service := request.GetService()
 	groups := service.GetInstancesGroups()
+
+	bp_cache := make(map[string]*bpb.Plan)
 
 	log.Debug("Init validation", zap.Any("groups", groups), zap.Int("amount", len(groups)))
 	for _, group := range service.GetInstancesGroups() {
 		log.Debug("Validating Instances Group", zap.String("group", group.Title))
 		groupType := group.GetType()
+
+		for _, instance := range group.GetInstances() {
+			log.Debug("Instance BillingPlan is", zap.Bool("provided", instance.BillingPlan != nil ))
+			if ibps.Required && instance.BillingPlan == nil {
+				response.Result = false
+				terr := pb.TestConfigError{
+					Error: "Instance has no billing plan and no default is set",
+					Instance: instance.Title,
+					InstanceGroup: group.Title,
+				}
+				response.Errors = append(response.Errors, &terr)
+				continue
+			}
+			if instance.BillingPlan != nil && instance.BillingPlan.Uuid != "" {
+				plan, ok := bp_cache[instance.BillingPlan.Uuid]
+				if !ok {
+					plan, err = s.billing.GetPlan(ctx, instance.BillingPlan)
+					if err != nil {
+						log.Error("Error fetching BillingPlan", zap.Error(err))
+						return nil, nil, err
+					}
+				}
+				instance.BillingPlan = plan
+			}
+		}
 
 		config_err := pb.TestConfigError{
 			InstanceGroup: group.Title,

@@ -57,6 +57,20 @@ Currently we have only [IONe](https://github.com/slntopp/nocloud-driver-ione) dr
 
 Start with `nocloud help` and `nocloud help login` ;)
 
+### Homebrew
+
+See [macOS](#macos).
+
+### Snap
+
+Just run
+
+```shell
+snap install nocloud
+```
+
+and see usage [usage](#usage)
+
 ### Linux
 
 #### `.deb` (Debian, Ubuntu, etc.)
@@ -67,6 +81,8 @@ Start with `nocloud help` and `nocloud help login` ;)
 
 If you're using some other arch, let us know, we'll add it to the build. Meanwhile - try [building from source](#build-from-source)
 
+Then see usage [usage](#usage)
+
 #### `.rpm` (RedHat, CentOS, Fedora, etc.)
 
 1. Go to [CLI Releases](https://github.com/slntopp/nocloud-cli/releases)
@@ -74,6 +90,8 @@ If you're using some other arch, let us know, we'll add it to the build. Meanwhi
 3. `yum localinstall path/to/.rpm` or `dnf install path/to/.rpm`
 
 If you're using some other arch, let us know, we'll add it to the build. Meanwhile - try [building from source](#build-from-source)
+
+Then see usage [usage](#usage)
 
 #### AUR (Arch Linux, Manjaro, etc.)
 
@@ -84,11 +102,15 @@ Otherwise,
 2. `cd nocloud-bin`
 3. `makepkg -i`
 
+Then see usage [usage](#usage)
+
 #### Others
 
 If you're using other package manager or have none, you can download prebuilt binary in `.tar.gz` archive for `arm64` or `x86_64`, unpack it and put `nocloud` binary to `/usr/bin` or your `$PATH/bin`.
 
 If you're using some other arch, let us know, we'll add it to the build. Meanwhile - try [building from source](#build-from-source)
+
+Then see usage [usage](#usage)
 
 ### macOS
 
@@ -100,6 +122,8 @@ brew install nocloud
 ```
 
 You're good to go!
+
+Then see usage [usage](#usage)
 
 If you don't have [**Homebrew**](https://brew.sh), consider using it ;), otherwise you can get prebuilt binary from [CLI Releases page](https://github.com/slntopp/nocloud-cli/releases) as an `.tar.gz` archive.
 
@@ -114,12 +138,16 @@ mv #nocloud-version-darwin-arch/nocloud /usr/local/bin
 
 You're good to go!
 
+Then see usage [usage](#usage)
+
 ### Windows
 
 1. Go to [CLI Releases](https://github.com/slntopp/nocloud-cli/releases)
 2. Get prebuilt binary from [CLI Releases page](https://github.com/slntopp/nocloud-cli/releases) as an `.zip` archive.
 3. Unpack it
 4. Put it somewhere in `$PATH`
+
+Then see usage [usage](#usage)
 
 ### Build From Source
 

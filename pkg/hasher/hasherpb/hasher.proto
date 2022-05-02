@@ -6,6 +6,7 @@ import "google/protobuf/descriptor.proto";
 
 // not in proto/ package because linking .proto is "package proto" too
 extend google.protobuf.FieldOptions {
-    bool hashed = 50000;
-    bool hash = 50010;
+    bool hash = 50000;
+    bool hashed = 50010;
+    bool skipped = 50020;
 }

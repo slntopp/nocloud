@@ -23,6 +23,7 @@ type SettingsServiceClient interface {
 	Put(ctx context.Context, in *PutRequest, opts ...grpc.CallOption) (*PutResponse, error)
 	// rpc Sub(nocloud.settings.SubRequest) returns (stream nocloud.settings.SubRequest);
 	Keys(ctx context.Context, in *KeysRequest, opts ...grpc.CallOption) (*KeysResponse, error)
+	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 }
 
 type settingsServiceClient struct {
@@ -60,6 +61,15 @@ func (c *settingsServiceClient) Keys(ctx context.Context, in *KeysRequest, opts 
 	return out, nil
 }
 
+func (c *settingsServiceClient) Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error) {
+	out := new(DeleteResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.settings.SettingsService/Delete", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SettingsServiceServer is the server API for SettingsService service.
 // All implementations must embed UnimplementedSettingsServiceServer
 // for forward compatibility
@@ -68,6 +78,7 @@ type SettingsServiceServer interface {
 	Put(context.Context, *PutRequest) (*PutResponse, error)
 	// rpc Sub(nocloud.settings.SubRequest) returns (stream nocloud.settings.SubRequest);
 	Keys(context.Context, *KeysRequest) (*KeysResponse, error)
+	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	mustEmbedUnimplementedSettingsServiceServer()
 }
 
@@ -83,6 +94,9 @@ func (UnimplementedSettingsServiceServer) Put(context.Context, *PutRequest) (*Pu
 }
 func (UnimplementedSettingsServiceServer) Keys(context.Context, *KeysRequest) (*KeysResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Keys not implemented")
+}
+func (UnimplementedSettingsServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
 }
 func (UnimplementedSettingsServiceServer) mustEmbedUnimplementedSettingsServiceServer() {}
 
@@ -151,6 +165,24 @@ func _SettingsService_Keys_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SettingsService_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SettingsServiceServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.settings.SettingsService/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SettingsServiceServer).Delete(ctx, req.(*DeleteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SettingsService_ServiceDesc is the grpc.ServiceDesc for SettingsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -169,6 +201,10 @@ var SettingsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Keys",
 			Handler:    _SettingsService_Keys_Handler,
+		},
+		{
+			MethodName: "Delete",
+			Handler:    _SettingsService_Delete_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

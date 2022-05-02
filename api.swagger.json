@@ -1405,6 +1405,34 @@
       }
     },
     "/settings/{key}": {
+      "delete": {
+        "operationId": "SettingsService_Delete",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudsettingsDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SettingsService"
+        ]
+      },
       "put": {
         "operationId": "SettingsService_Put",
         "responses": {
@@ -2551,6 +2579,14 @@
           "type": "boolean"
         },
         "error": {
+          "type": "string"
+        }
+      }
+    },
+    "nocloudsettingsDeleteResponse": {
+      "type": "object",
+      "properties": {
+        "key": {
           "type": "string"
         }
       }

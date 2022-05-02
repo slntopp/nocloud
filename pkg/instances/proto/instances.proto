@@ -42,7 +42,8 @@ message Instance {
     map<string, google.protobuf.Value> data = 6;
     nocloud.states.State state = 7;
     string hash = 8 [(nocloud.hasher.hash) = true];
-    nocloud.billing.Plan billing_plan = 9;
+    nocloud.billing.Plan billing_plan = 9
+        [(nocloud.hasher.skipped) = true];
     optional int32 access_level = 10;
 }
 
