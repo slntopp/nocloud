@@ -16,6 +16,8 @@ Cloud-native Open-Source Cloud Management Framework
   * [Windows](#windows)
   * [From Source](#build-from-source)
 
+* [Building Protobuf](#building-proto)
+
 ## Installation
 
 NoCloud is Cloud-native, meaning it can run in any OCI environment such as Docker(Compose), K8s, etc.
@@ -152,3 +154,11 @@ Then see usage [usage](#usage)
 ### Build From Source
 
 See [CLI repo](https://github.com/slntopp/nocloud-cli) for source and instructions.
+
+## Building Proto
+
+Simply navigate to cloned repo directory and run:
+
+```shell
+docker run -it -v $(pwd)/pkg:/go/src/github.com/slntopp/nocloud/pkg ghcr.io/slntopp/nocloud/buf:latest
+```
