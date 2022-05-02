@@ -6,17 +6,17 @@ Cloud-native Open-Source Cloud Management Framework
 
 ## Table of Contents
 
-* [Installation](#installation)
-* [Drivers](#drivers)
-* [CLI](#nocloud-cli)
+* ### [Installation](#installation)
+* ### [Drivers](#drivers)
+* ### [CLI](#nocloud-cli)
 
-  * [Usage](#usage)
-  * [Linux](#linux)
-  * [macOS](#macos)
-  * [Windows](#windows)
-  * [From Source](#build-from-source)
+  * ### [Usage](#usage)
+  * ### [Linux](#linux)
+  * ### [macOS](#macos)
+  * ### [Windows](#windows)
+  * ### [From Source](#build-from-source)
 
-* [Building Protobuf](#building-proto)
+* ### [Building Protobuf](#building-proto)
 
 ## Installation
 
@@ -27,7 +27,7 @@ NoCloud is Cloud-native, meaning it can run in any OCI environment such as Docke
 Just do `docker-compose up` in the repo root, and you're ready to go.
 Read through the `docker-compose.yml` to see configuration options.
 
-> **Note: Debug Log**  
+> **Note: Debug Log**
 All NoCloud containers(so except ArangoDB) have multiple Log Levels.  
 Add `LOG_LEVEL` to environment to change log level  
 `LOG_LEVEL` variates from -1(debug) to 5(Fatal)  
@@ -160,5 +160,7 @@ See [CLI repo](https://github.com/slntopp/nocloud-cli) for source and instructio
 Simply navigate to cloned repo directory and run:
 
 ```shell
-docker run -it -v $(pwd)/pkg:/go/src/github.com/slntopp/nocloud/pkg ghcr.io/slntopp/nocloud/buf:latest
+docker run -it \
+  -v $(pwd)/pkg:/go/src/github.com/slntopp/nocloud/pkg \
+  ghcr.io/slntopp/nocloud/buf:latest
 ```
