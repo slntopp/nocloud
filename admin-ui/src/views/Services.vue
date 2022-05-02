@@ -54,43 +54,53 @@
           {{ value }}
         </v-chip>
       </template>
-
       <template v-slot:expanded-item="{ headers, item }">
         <td :colspan="headers.length" style="padding: 0">
-          <v-expansion-panels inset v-model="opened" multiple>
-            <v-expansion-panel
-              style="background: var(--v-background-light-base)"
-              v-for="(group, title) in item.instancesGroups"
-              :key="title"
+          <v-progress-linear
+            indeterminate
+            color="purple"
+            v-if="isLoadingItem"
+          ></v-progress-linear>
+          <div v-for="(itemService, index) in service" :key="index" v-else>
+            <v-expansion-panels
+              inset
+              v-model="opened"
+              multiple
+              v-if="item.uuid == itemService.uuid"
             >
-              <v-expansion-panel-header>
-                {{ title }} | Type: {{ group.type }} -
-                {{ titleSP(item) }}</v-expansion-panel-header
-
+              <v-expansion-panel
+                style="background: var(--v-background-light-base)"
+                v-for="(group, index) in itemService.instancesGroups"
+                :key="index"
               >
-              <v-expansion-panel-content
-                style="background: var(--v-background-base)"
-              >
-                <v-row>
-                  <serveces-instances-item
-                    v-for="(elem, index) in group.instances"
-                    :key="index"
-                    :title="elem.title"
-                    :state="elem.state ? elem.state.state : 'UNKNOWN'"
-                    :cpu="elem.resources.cpu"
-                    :drive_type="elem.resources.drive_type"
-                    :drive_size="elem.resources.drive_size"
-                    :ram="elem.resources.ram"
-                    :hash="elem.hash"
-                    :index="index"
-                    :chipColor="chipColor"
-                    :hashTrim="hashTrim"
-                  >
-                  </serveces-instances-item>
-                </v-row>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
-          </v-expansion-panels>
+                <v-expansion-panel-header>
+                  {{ group.title }} | Type: {{ group.type }}
+                  <span v-if="itemService.provisions">{{ titleSP(itemService) }} </span>
+                </v-expansion-panel-header>
+                <v-expansion-panel-content
+                  style="background: var(--v-background-base)"
+                >
+                  <v-row>
+                    <serveces-instances-item
+                      v-for="(elem, index) in group.instances"
+                      :key="index"
+                      :title="elem.title"
+                      :state="elem.state ? elem.state.state : 'UNKNOWN'"
+                      :cpu="elem.resources.cpu"
+                      :drive_type="elem.resources.drive_type"
+                      :drive_size="elem.resources.drive_size"
+                      :ram="elem.resources.ram"
+                      :hash="elem.hash"
+                      :index="index"
+                      :chipColor="chipColor"
+                      :hashTrim="hashTrim"
+                    >
+                    </serveces-instances-item>
+                  </v-row>
+                </v-expansion-panel-content>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
         </td>
       </template>
     </nocloud-table>
@@ -131,7 +141,6 @@ export default {
   computed: {
     services() {
       const items = this.$store.getters["services/all"];
-
       if (this.isFiltered) {
         return items.filter((item) => {
           return this.$route.query["items[]"].includes(item.uuid);
@@ -139,11 +148,17 @@ export default {
       }
       return items;
     },
+    service() {
+      return this.$store.getters["services/one"];
+    },
     isFiltered() {
       return this.$route.query.filter == "uuid" && this.$route.query["items[]"];
     },
     isLoading() {
       return this.$store.getters["services/isLoading"];
+    },
+    isLoadingItem() {
+      return this.$store.getters["services/isLoadingItem"];
     },
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];
@@ -167,10 +182,10 @@ export default {
       });
   },
   methods: {
-    titleSP(item) {
-      for (const group of Object.values(item.instancesGroups)) {
+    titleSP(itemService) {
+      for (const group of Object.values(itemService.instancesGroups)) {
         let data = this.servicesProviders.find(
-          (el) => el.uuid == item.provisions[group.uuid]
+          (el) => el.uuid == itemService.provisions[group.uuid]
         );
         return data.title;
       }
@@ -279,6 +294,13 @@ export default {
             }
           });
       }
+    },
+  },
+  watch: {
+    expanded() {
+      this.expanded.forEach((elem) =>
+        this.$store.dispatch("services/fetchByIdItem", elem.uuid)
+      );
     },
   },
   mounted() {
