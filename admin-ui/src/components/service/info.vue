@@ -35,17 +35,17 @@
     </v-row>
 
     groups:
- 
+
     <v-row justify="center" class="px-2 pb-2">
       <v-expansion-panels inset v-model="opened" multiple>
         <v-expansion-panel
-          v-for="(group, i) in Object.keys(service.instancesGroups)"
+          v-for="(group, i) in service.instancesGroups"
           :key="i"
           style="background: var(--v-background-base)"
         >
           <v-expansion-panel-header
-            >{{ group }} | Type:
-            {{ service.instancesGroups[group].type }}</v-expansion-panel-header
+            >{{ group.title }} | Type:
+            {{ group.type }}</v-expansion-panel-header
           >
           <v-expansion-panel-content>
             <v-row>
@@ -61,36 +61,26 @@
               <v-col>
                 <v-text-field
                   readonly
-                  :value="service.instancesGroups[group].uuid"
+                  :value="group.uuid"
                   label="group uuid"
                   style="display: inline-block; width: 330px"
                   :append-icon="
                     copyed == `${group}-UUID` ? 'mdi-check' : 'mdi-content-copy'
                   "
-                  @click:append="
-                    addToClipboard(
-                      service.instancesGroups[group].uuid,
-                      `${group}-UUID`
-                    )
-                  "
+                  @click:append="addToClipboard(group.uuid, `${group}-UUID`)"
                 >
                 </v-text-field>
               </v-col>
               <v-col>
                 <v-text-field
                   readonly
-                  :value="hashpart(service.instancesGroups[group].hash)"
+                  :value="hashpart(group.hash)"
                   label="group hash"
                   style="display: inline-block; width: 150px"
                   :append-icon="
                     copyed == `${group}-hash` ? 'mdi-check' : 'mdi-content-copy'
                   "
-                  @click:append="
-                    addToClipboard(
-                      service.instancesGroups[group].hash,
-                      `${group}-hash`
-                    )
-                  "
+                  @click:append="addToClipboard(group.hash, `${group}-hash`)"
                 >
                 </v-text-field>
               </v-col>
@@ -104,8 +94,7 @@
                   multiple
                 >
                   <v-expansion-panel
-                    v-for="(instance, i) in service.instancesGroups[group]
-                      .instances"
+                    v-for="(instance, i) in group.instances"
                     :key="i"
                     style="background: var(--v-background-light-base)"
                   >
@@ -117,7 +106,9 @@
                         <v-col>
                           <v-text-field
                             readonly
-                            :value="instance.state && instance.state.meta.state_str"
+                            :value="
+                              instance.state && instance.state.meta.state_str
+                            "
                             label="state"
                             style="display: inline-block; width: 100px"
                           >
@@ -126,7 +117,10 @@
                         <v-col>
                           <v-text-field
                             readonly
-                            :value="instance.state && instance.state.meta.lcm_state_str"
+                            :value="
+                              instance.state &&
+                              instance.state.meta.lcm_state_str
+                            "
                             label="lcm state"
                             style="display: inline-block; width: 100px"
                           >
@@ -245,12 +239,12 @@ export default {
       return "WWWWWWWW";
     },
     location(group) {
-      const lc = this.servicesProviders.find(
-        (el) =>
-          el.uuid ==
-          this.service.provisions[this.service.instancesGroups[group].uuid]
-      );
-      return lc?.title ?? "none";
+      const lc = this.servicesProviders.find((el) => {
+        if (group.sp) {
+          return el.uuid == group.sp;
+        }
+      });
+      return lc.title;
     },
   },
   mounted() {
