@@ -495,12 +495,13 @@ func RegisterBillingServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/CreatePlan", runtime.WithHTTPPathPattern("/billing/plans"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/CreatePlan", runtime.WithHTTPPathPattern("/billing/plans"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BillingService_CreatePlan_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BillingService_CreatePlan_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -518,12 +519,13 @@ func RegisterBillingServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/UpdatePlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/UpdatePlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BillingService_UpdatePlan_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BillingService_UpdatePlan_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -541,12 +543,13 @@ func RegisterBillingServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/GetPlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/GetPlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BillingService_GetPlan_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BillingService_GetPlan_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -564,12 +567,13 @@ func RegisterBillingServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/ListPlans", runtime.WithHTTPPathPattern("/billing/plans"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/ListPlans", runtime.WithHTTPPathPattern("/billing/plans"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BillingService_ListPlans_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BillingService_ListPlans_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -587,12 +591,13 @@ func RegisterBillingServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/DeletePlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/DeletePlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BillingService_DeletePlan_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BillingService_DeletePlan_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -610,12 +615,13 @@ func RegisterBillingServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/CreateTransaction", runtime.WithHTTPPathPattern("/billing/transactions"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/CreateTransaction", runtime.WithHTTPPathPattern("/billing/transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BillingService_CreateTransaction_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BillingService_CreateTransaction_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -633,12 +639,13 @@ func RegisterBillingServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/GetTransactions", runtime.WithHTTPPathPattern("/billing/transactions"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/GetTransactions", runtime.WithHTTPPathPattern("/billing/transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BillingService_GetTransactions_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BillingService_GetTransactions_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -656,12 +663,13 @@ func RegisterBillingServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/GetRecords", runtime.WithHTTPPathPattern("/billing/transactions/{uuid}"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/GetRecords", runtime.WithHTTPPathPattern("/billing/transactions/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BillingService_GetRecords_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BillingService_GetRecords_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -679,12 +687,13 @@ func RegisterBillingServiceHandlerServer(ctx context.Context, mux *runtime.Serve
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/Reprocess", runtime.WithHTTPPathPattern("/billing/account/{account}/reprocess"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.BillingService/Reprocess", runtime.WithHTTPPathPattern("/billing/account/{account}/reprocess"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_BillingService_Reprocess_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_BillingService_Reprocess_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -726,7 +735,7 @@ func RegisterBillingServiceHandlerFromEndpoint(ctx context.Context, mux *runtime
 
 // RegisterBillingServiceHandler registers the http handlers for service BillingService to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterBillingServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn grpc.ClientConnInterface) error {
+func RegisterBillingServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
 	return RegisterBillingServiceHandlerClient(ctx, mux, NewBillingServiceClient(conn))
 }
 
@@ -741,12 +750,13 @@ func RegisterBillingServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/CreatePlan", runtime.WithHTTPPathPattern("/billing/plans"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/CreatePlan", runtime.WithHTTPPathPattern("/billing/plans"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BillingService_CreatePlan_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BillingService_CreatePlan_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -761,12 +771,13 @@ func RegisterBillingServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/UpdatePlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/UpdatePlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BillingService_UpdatePlan_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BillingService_UpdatePlan_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -781,12 +792,13 @@ func RegisterBillingServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/GetPlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/GetPlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BillingService_GetPlan_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BillingService_GetPlan_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -801,12 +813,13 @@ func RegisterBillingServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/ListPlans", runtime.WithHTTPPathPattern("/billing/plans"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/ListPlans", runtime.WithHTTPPathPattern("/billing/plans"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BillingService_ListPlans_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BillingService_ListPlans_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -821,12 +834,13 @@ func RegisterBillingServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/DeletePlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/DeletePlan", runtime.WithHTTPPathPattern("/billing/plans/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BillingService_DeletePlan_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BillingService_DeletePlan_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -841,12 +855,13 @@ func RegisterBillingServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/CreateTransaction", runtime.WithHTTPPathPattern("/billing/transactions"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/CreateTransaction", runtime.WithHTTPPathPattern("/billing/transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BillingService_CreateTransaction_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BillingService_CreateTransaction_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -861,12 +876,13 @@ func RegisterBillingServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/GetTransactions", runtime.WithHTTPPathPattern("/billing/transactions"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/GetTransactions", runtime.WithHTTPPathPattern("/billing/transactions"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BillingService_GetTransactions_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BillingService_GetTransactions_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -881,12 +897,13 @@ func RegisterBillingServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/GetRecords", runtime.WithHTTPPathPattern("/billing/transactions/{uuid}"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/GetRecords", runtime.WithHTTPPathPattern("/billing/transactions/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BillingService_GetRecords_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BillingService_GetRecords_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -901,12 +918,13 @@ func RegisterBillingServiceHandlerClient(ctx context.Context, mux *runtime.Serve
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/Reprocess", runtime.WithHTTPPathPattern("/billing/account/{account}/reprocess"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.BillingService/Reprocess", runtime.WithHTTPPathPattern("/billing/account/{account}/reprocess"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_BillingService_Reprocess_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_BillingService_Reprocess_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)

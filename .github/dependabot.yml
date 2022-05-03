@@ -20,11 +20,11 @@ updates:
       interval: daily
       time: '06:00'
     reviewers:
-      - slntopp
+      - va-ovsyanikov
     assignees:
       - slntopp
   - package-ecosystem: github-actions
-    directory: '.github/workflows'
+    directory: ".github/workflows/*"
     schedule:
       interval: daily
       time: '06:00'

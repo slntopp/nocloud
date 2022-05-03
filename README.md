@@ -1,20 +1,24 @@
 # NoCloud
+
 Cloud-native Open-Source Cloud Management Framework
 
 [![Containers](https://github.com/slntopp/nocloud/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/slntopp/nocloud/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/slntopp/nocloud/actions/workflows/codeql-analysis.yml/badge.svg?branch=master)](https://github.com/slntopp/nocloud/actions/workflows/codeql-analysis.yml)
 
-## Table of Contents
-
-* [Installation](#installation)
-* [Drivers](#drivers)
-* [CLI](#nocloud-cli)
-
-  * [Usage](#usage)
-  * [Linux](#linux)
-  * [macOS](#macos)
-  * [Windows](#windows)
-  * [From Source](#build-from-source)
+| **Table of Contents** |                 |
+|-------------------------------|---------|
+| [Installation](#installation) |         |
+| Docker | [Local](#running-localy)       |
+| - | [Production](#running-in-production)|
+| [Drivers](#drivers)           |         |
+| [CLI](#nocloud-cli)           |         |
+| - | [Usage](#usage)                     |
+| CLI Installation | [Linux](#linux)      |
+| - | [macOS](#macos)                     |
+| - | [Windows](#windows)                 |
+| - | [From Source](#build-from-source)   |
+| [Building Protobuf](#building-proto) |  |
+-------------------------------------------
 
 ## Installation
 
@@ -25,7 +29,7 @@ NoCloud is Cloud-native, meaning it can run in any OCI environment such as Docke
 Just do `docker-compose up` in the repo root, and you're ready to go.
 Read through the `docker-compose.yml` to see configuration options.
 
-> **Note: Debug Log**  
+> **Note: Debug Log**
 All NoCloud containers(so except ArangoDB) have multiple Log Levels.  
 Add `LOG_LEVEL` to environment to change log level  
 `LOG_LEVEL` variates from -1(debug) to 5(Fatal)  
@@ -98,6 +102,7 @@ Then see usage [usage](#usage)
 If you have `yaourt` package must be found automatically by label `nocloud-bin`
 
 Otherwise,
+
 1. `git clone https://aur.archlinux.org/packages/nocloud-bin`
 2. `cd nocloud-bin`
 3. `makepkg -i`
@@ -152,3 +157,13 @@ Then see usage [usage](#usage)
 ### Build From Source
 
 See [CLI repo](https://github.com/slntopp/nocloud-cli) for source and instructions.
+
+## Building Proto
+
+Simply navigate to cloned repo directory and run:
+
+```shell
+docker run -it \
+  -v $(pwd)/pkg:/go/src/github.com/slntopp/nocloud/pkg \
+  ghcr.io/slntopp/nocloud/buf:latest
+```
