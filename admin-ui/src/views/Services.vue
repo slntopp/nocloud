@@ -74,8 +74,8 @@
                 :key="index"
               >
                 <v-expansion-panel-header>
-                  {{ group.title }} | Type: {{ group.type }}
-                  <span v-if="itemService.provisions">{{ titleSP(itemService) }} </span>
+                  {{ group.title }} | Type: {{ group.type }} -
+                  {{ titleSP(group) }}
                 </v-expansion-panel-header>
                 <v-expansion-panel-content
                   style="background: var(--v-background-base)"
@@ -182,13 +182,13 @@ export default {
       });
   },
   methods: {
-    titleSP(itemService) {
-      for (const group of Object.values(itemService.instancesGroups)) {
-        let data = this.servicesProviders.find(
-          (el) => el.uuid == itemService.provisions[group.uuid]
-        );
-        return data.title;
-      }
+    titleSP(group) {
+      let data = this.servicesProviders.find((el) => {
+        if (group.sp) {
+          return el.uuid == group.sp;
+        }
+      });
+      return data.title;
     },
     // treeview(item) {
     //   const result = [];
