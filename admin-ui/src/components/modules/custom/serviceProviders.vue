@@ -1,48 +1,40 @@
 <template>
 	<div class="te">
-		<v-row align="center">
+		<v-row>
 			<v-col cols="3">
 				<v-subheader>
 					secrets
 				</v-subheader>
 			</v-col>
-
-			<v-col
-				cols="9"
-			>
-				<v-text-field
-					label="json"
-					:value="JSON.stringify(secrets)"
-					:error-messages="errors.secrets"
-					@change="(data) => changeHandler('secrets', data)"
-				></v-text-field>
+			<v-col cols="9">
+				<json-editor
+          json="secrets"
+          @changeValue="(data) => changeHandler('secrets', data)"
+        />
 			</v-col>
 		</v-row>
-		<v-row align="center">
+		<v-row>
 			<v-col cols="3">
 				<v-subheader>
 					vars
 				</v-subheader>
 			</v-col>
-
-			<v-col
-				cols="9"
-			>
-				<v-text-field
-					label="json"
-					:value="JSON.stringify(vars)"
-					:error-messages="errors.vars"
-					@change="(data) => changeHandler('vars', data)"
-				></v-text-field>
+			<v-col cols="9">
+				<json-editor
+          json="vars"
+          @changeValue="(data) => changeHandler('vars', data)"
+        />
 			</v-col>
 		</v-row>
-		
 	</div>
 </template>
 
 <script>
+import JsonEditor from '@/components/JsonEditor';
+
 export default {
 	name: "servicesProviders-create-custom",
+  components: { JsonEditor },
 	props: {
 		secrets: {
 			type: Object,
@@ -87,6 +79,8 @@ export default {
 }
 </script>
 
-<style>
-
+<style scoped lang="scss">
+.te > * {
+  margin-top: 30px;
+}
 </style>
