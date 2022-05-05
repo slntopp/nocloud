@@ -1,5 +1,15 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
+    <!-- <v-row>
+      <v-col>
+        <div>
+          service state:
+          <v-chip x-small :color="chipColor">
+            {{ this.service.status }}
+          </v-chip>
+        </div>
+      </v-col>
+    </v-row> -->
     <v-row align="center">
       <v-col>
         <v-text-field
@@ -31,6 +41,11 @@
           @click:append="addToClipboard(service.hash, 'rootHash')"
         >
         </v-text-field>
+      </v-col>
+    </v-row>
+    <v-row class="mb-5">
+      <v-col>
+        <service-deploy :service="service"></service-deploy>
       </v-col>
     </v-row>
 
@@ -102,8 +117,16 @@
                       instance.title
                     }}</v-expansion-panel-header>
                     <v-expansion-panel-content>
-                      <v-row>
+                      <v-row v-if="group.type === 'ione'">
                         <v-col>
+                          <service-control
+                            :service="service"
+                            :chip-color="chipColor"
+                          ></service-control>
+                        </v-col>
+                      </v-row>
+                      <v-row>
+                        <v-col md="2">
                           <v-text-field
                             readonly
                             :value="
@@ -114,7 +137,7 @@
                           >
                           </v-text-field>
                         </v-col>
-                        <v-col>
+                        <v-col md="2">
                           <v-text-field
                             readonly
                             :value="
@@ -205,19 +228,29 @@
 </template>
 
 <script>
+import ServiceDeploy from "@/components/service/service-deploy.vue";
+import ServiceControl from "@/components/service/service-control.vue";
 export default {
   name: "service-info",
-  data: () => ({
-    copyed: null,
-    opened: [],
-    openedInstances: {},
-  }),
+  components: {
+    ServiceDeploy,
+    ServiceControl,
+  },
   props: {
     service: {
       type: Object,
       required: true,
     },
+    chipColor: {
+      type: String,
+      required: true,
+    },
   },
+  data: () => ({
+    copyed: null,
+    opened: [],
+    openedInstances: {},
+  }),
   computed: {
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];

@@ -13,7 +13,7 @@
       background-color="background-light"
     >
       <v-tab>Info</v-tab>
-      <v-tab>Control</v-tab>
+      <!-- <v-tab>Control</v-tab> -->
       <v-tab>Template</v-tab>
     </v-tabs>
 
@@ -24,17 +24,17 @@
     >
       <v-tab-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
-        <service-info v-if="service" :service="service" />
+        <service-info v-if="service" :service="service" :chipColor="chipColor" />
       </v-tab-item>
 
-      <v-tab-item>
+      <!-- <v-tab-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
         <service-control
           v-if="service"
           :service="service"
           :chip-color="chipColor"
         />
-      </v-tab-item>
+      </v-tab-item> -->
 
       <v-tab-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
@@ -46,14 +46,14 @@
 
 <script>
 import serviceTemplate from "@/components/service/template.vue";
-import serviceControl from "@/components/service/control.vue";
+// import serviceControl from "@/components/service/control.vue";
 import serviceInfo from "@/components/service/info.vue";
 
 export default {
   name: "service-view",
   components: {
     "service-template": serviceTemplate,
-    "service-control": serviceControl,
+    // "service-control": serviceControl,
     "service-info": serviceInfo,
   },
   data: () => ({
