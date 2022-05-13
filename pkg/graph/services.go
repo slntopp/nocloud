@@ -21,6 +21,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/hasher"
+	nocloud "github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
@@ -28,9 +29,9 @@ import (
 )
 
 type Provision struct {
-	From driver.DocumentID `json:"_from"`
-	To driver.DocumentID `json:"_to"`
-	Group string `json:"group"`
+	From  driver.DocumentID `json:"_from"`
+	To    driver.DocumentID `json:"_to"`
+	Group string            `json:"group"`
 
 	driver.DocumentMeta
 }
@@ -38,7 +39,7 @@ type Provision struct {
 type ServicesController struct {
 	log *zap.Logger
 
-	col driver.Collection // Services Collection
+	col     driver.Collection // Services Collection
 	ig_ctrl *InstancesGroupsController
 
 	db driver.Database
@@ -46,7 +47,7 @@ type ServicesController struct {
 
 func NewServicesController(log *zap.Logger, db driver.Database) ServicesController {
 	ctx := context.TODO()
-	
+
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.SERVICES_COL)
 	col.EnsurePersistentIndex(ctx, []string{"status"}, &driver.EnsurePersistentIndexOptions{
@@ -54,7 +55,7 @@ func NewServicesController(log *zap.Logger, db driver.Database) ServicesControll
 	})
 	GraphGetEdgeEnsure(log, ctx, graph, schema.NS2SERV, schema.NAMESPACES_COL, schema.SERVICES_COL)
 
-	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db), db:db}
+	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db), db: db}
 }
 
 func (ctrl *ServicesController) IGController() *InstancesGroupsController {
@@ -96,15 +97,120 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 }
 
 // Update Service and underlaying entities and store in DB
-func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service, hash bool) (err error) {
-	ctrl.log.Debug("Updating Service", zap.Any("service", service))
+func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service, hash bool) error {
+	log := ctrl.log.Named("Update")
+	log.Debug("Updating Service", zap.Any("service", service))
 
-	mask := &pb.Service{
-		Title: service.Title,
-		Context: service.Context,
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	oldService, err := ctrl.Get(ctx, requestor, service.GetUuid())
+	if err != nil {
+		log.Debug("Error recieving document(Service)", zap.Error(err))
+		return err
 	}
 
-	_, err = ctrl.col.UpdateDocument(ctx, service.Uuid, mask)
+	newService := proto.Clone(oldService).(*pb.Service)
+
+	if newService.Title != service.Title {
+		newService.Title = service.Title
+	}
+
+	for _, ig := range service.GetInstancesGroups() {
+		for _, newIg := range newService.GetInstancesGroups() {
+			if ig.GetUuid() == newIg.GetUuid() {
+				if newTitle := ig.GetTitle(); newTitle != "" {
+					newIg.Title = newTitle
+				}
+				if newType := ig.GetType(); newType != "" {
+					newIg.Type = newType
+				}
+
+				//resources
+				if newIpsPublic := ig.Resources["ips_public"]; newIpsPublic != nil {
+					newIg.Resources["ips_public"] = newIpsPublic
+				}
+				if newIpsPrivate := ig.Resources["ips_private"]; newIpsPrivate != nil {
+					newIg.Resources["ips_private"] = newIpsPrivate
+				}
+
+				for _, inst := range ig.GetInstances() {
+					for _, newInst := range newIg.GetInstances() {
+						if inst.GetUuid() == newInst.GetUuid() {
+							if newTitle := inst.GetTitle(); newTitle != "" {
+								newInst.Title = newTitle
+							}
+
+							//config
+							if newPass := inst.Config["password"]; newPass != nil {
+								newInst.Config["password"] = newPass
+							}
+							if newTemplateId := inst.Config["template_id"]; newTemplateId != nil {
+								newInst.Config["template_id"] = newTemplateId
+							}
+
+							//resources
+							if newCPU := inst.Resources["cpu"]; newCPU != nil {
+								newInst.Resources["cpu"] = newCPU
+							}
+							if newDriveSize := inst.Resources["drive_size"]; newDriveSize != nil {
+								newInst.Resources["drive_size"] = newDriveSize
+							}
+							if newDriveType := inst.Resources["drive_type"]; newDriveType != nil {
+								newInst.Resources["drive_type"] = newDriveType
+							}
+							if newRAM := inst.Resources["ram"]; newRAM != nil {
+								newInst.Resources["ram"] = newRAM
+							}
+							if newIpsPublic := inst.Resources["ips_public"]; newIpsPublic != nil {
+								newInst.Resources["ips_public"] = newIpsPublic
+							}
+							if newIpsPrivate := inst.Resources["ips_private"]; newIpsPrivate != nil {
+								newInst.Resources["ips_private"] = newIpsPrivate
+							}
+
+							// NO BILLING UPDATING. MAYBE ADDED IN FUTURE
+
+							newInst.Data = nil
+							newInst.State = nil
+
+							err := hasher.SetHash(newInst.ProtoReflect())
+							if err != nil {
+								log.Error("Failed to calculate hash", zap.Error(err))
+								return err
+							}
+
+							meta, err := ctrl.ig_ctrl.inst_ctrl.col.UpdateDocument(ctx, newInst.GetUuid(), newInst)
+							ctrl.log.Debug("UpdateDocument.Result", zap.Any("meta", meta), zap.Error(err))
+						}
+					}
+				}
+
+				err := hasher.SetHash(newIg.ProtoReflect())
+				if err != nil {
+					log.Error("Failed to calculate hash", zap.Error(err))
+					return err
+				}
+				newIg.Instances = nil
+				meta, err := ctrl.ig_ctrl.col.UpdateDocument(ctx, newIg.GetUuid(), newIg)
+				ctrl.log.Debug("UpdateDocument.Result", zap.Any("meta", meta), zap.Error(err))
+			}
+		}
+	}
+
+	err = hasher.SetHash(newService.ProtoReflect())
+	if err != nil {
+		log.Error("Failed to calculate hash", zap.Error(err))
+		return err
+	}
+
+	newService.InstancesGroups = nil
+
+	_, err = ctrl.col.UpdateDocument(ctx, newService.Uuid, newService)
+	if err != nil {
+		log.Debug("Error updating document(Service)", zap.Error(err))
+	}
+
 	return err
 }
 
@@ -136,16 +242,17 @@ LET instances_groups = (
 
 RETURN MERGE(service, { uuid: service._key, instances_groups })
 `
+
 func (ctrl *ServicesController) Get(ctx context.Context, acc, key string) (*pb.Service, error) {
 	ctrl.log.Debug("Getting Service", zap.String("key", key))
 
 	requestor := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
 	id := driver.NewDocumentID(schema.SERVICES_COL, key)
 	c, err := ctrl.db.Query(ctx, getServiceQuery, map[string]interface{}{
-		"account": requestor,
-		"service": id, 
-		"instances": schema.INSTANCES_COL,
-		"sps": schema.SERVICES_PROVIDERS_COL,
+		"account":     requestor,
+		"service":     id,
+		"instances":   schema.INSTANCES_COL,
+		"sps":         schema.SERVICES_PROVIDERS_COL,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	})
 	if err != nil {
@@ -179,10 +286,10 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) FILTER node.status != "del" RETURN node`
 	}
 	bindVars := map[string]interface{}{
-		"depth": depth,
-		"account": driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		"depth":             depth,
+		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
-		"@services": schema.SERVICES_COL,
+		"@services":         schema.SERVICES_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
 
@@ -205,18 +312,18 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		r = append(r, &s)
 	}
 
-	return r,  nil
+	return r, nil
 }
 
 // Join Service into Namespace
-func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, namespace *Namespace, access int32, role string) (error) {
+func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, namespace *Namespace, access int32, role string) error {
 	ctrl.log.Debug("Joining service to namespace")
 	edge, _ := ctrl.db.Collection(ctx, schema.NS2SERV)
 	_, err := edge.CreateDocument(ctx, Access{
-		From: namespace.ID,
-		To: driver.NewDocumentID(schema.SERVICES_COL, service.Uuid),
+		From:  namespace.ID,
+		To:    driver.NewDocumentID(schema.SERVICES_COL, service.Uuid),
 		Level: access,
-		Role: role,
+		Role:  role,
 	})
 	return err
 }
