@@ -241,7 +241,7 @@ func (s *ServicesServer) Update(ctx context.Context, request *pb.UpdateRequest) 
 		log.Error("Error while updating service", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while updating Service")
 	}
-	return nil, nil
+	return service, nil
 }
 
 func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpResponse, error) {

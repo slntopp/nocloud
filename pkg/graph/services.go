@@ -21,6 +21,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/hasher"
+	ipb "github.com/slntopp/nocloud/pkg/instances/proto"
 	nocloud "github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
@@ -191,8 +192,11 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service,
 					log.Error("Failed to calculate hash", zap.Error(err))
 					return err
 				}
-				newIg.Instances = nil
-				meta, err := ctrl.ig_ctrl.col.UpdateDocument(ctx, newIg.GetUuid(), newIg)
+
+				maskIg := proto.Clone(newIg).(*ipb.InstancesGroup)
+				maskIg.Instances = nil
+
+				meta, err := ctrl.ig_ctrl.col.UpdateDocument(ctx, maskIg.GetUuid(), maskIg)
 				ctrl.log.Debug("UpdateDocument.Result", zap.Any("meta", meta), zap.Error(err))
 			}
 		}
