@@ -21,6 +21,7 @@ updates:
       time: '06:00'
     reviewers:
       - va-ovsyanikov
+      - slntopp
     assignees:
       - slntopp
   - package-ecosystem: github-actions
