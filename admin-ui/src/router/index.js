@@ -114,6 +114,30 @@ const routes = [
       requireUnlogin: true,
     },
   },
+  {
+    path: "/plans",
+    name: "Plans",
+    component: () => import("../views/Plans.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/plans/create",
+    name: "Plans create",
+    component: () => import("../views/PlansCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/plans/:planId",
+    name: "Plan",
+    component: () => import("../views/PlanPage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
 ];
 
 const router = new VueRouter({
