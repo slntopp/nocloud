@@ -235,8 +235,22 @@ func (s *ServicesServer) Update(ctx context.Context, request *pb.UpdateRequest) 
 	log := s.log.Named("UpdateService")
 	log.Debug("Request received", zap.Any("request", request))
 
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
+	if err != nil {
+		s.log.Debug("Error getting namespace", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Namespace not found")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor, namespace.ID.String(), access.ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	}
+
 	service := request.GetService()
-	err := s.ctrl.Update(ctx, service, true)
+	err = s.ctrl.Update(ctx, service, true)
 	if err != nil {
 		log.Error("Error while updating service", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while updating Service")
