@@ -58,10 +58,10 @@
           :key="i"
           style="background: var(--v-background-base)"
         >
-          <v-expansion-panel-header
-            >{{ group.title }} | Type:
-            {{ group.type }}</v-expansion-panel-header
-          >
+          <v-expansion-panel-header>
+            {{ group.title }} | Type:
+            {{ group.type }}
+          </v-expansion-panel-header>
           <v-expansion-panel-content>
             <v-row>
               <v-col>
@@ -120,7 +120,7 @@
                       <v-row v-if="group.type === 'ione'">
                         <v-col>
                           <service-control
-                            :service="service"
+                            :instance_uuid=" instance.uuid"
                             :chip-color="chipColor"
                           ></service-control>
                         </v-col>

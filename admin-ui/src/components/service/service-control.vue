@@ -1,6 +1,5 @@
 <template>
   <div>
-    <div v-if="this.service.status == 'up'">VM control:</div>
     <v-row>
       <v-col>
         <v-btn
@@ -45,8 +44,8 @@ export default {
   name: "service-state",
   mixins: [snackbar],
   props: {
-    service: {
-      type: Object,
+    instance_uuid: {
+      type: String,
       required: true,
     },
     "chip-color": {
@@ -75,19 +74,10 @@ export default {
   }),
   methods: {
     sendVmAction(action) {
-      // console.log(action, this.service)
-      const groupName = Object.keys(this.service.instancesGroups)[0];
-      let vminfo = {
-        service: this.service.uuid,
-        group: groupName,
-        instance: this.service.instancesGroups[groupName].instances[0].uuid,
-      };
-      // console.log(vminfo)
       this.actualAction = action;
       this.actionLoading = true;
-      console.log(vminfo, action)
       api.services
-        .action(vminfo, action)
+        .action(this.instance_uuid, action)
         .then(() => {
           this.showSnackbarSuccess({ message: `Done!` });
         })
