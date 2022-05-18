@@ -42,39 +42,56 @@
 
           <v-divider />
 
-          <plans-form
-            v-for="current of amountForms"
-            :key="current"
-            :current="current"
-            :amount="amountForms"
-            :data="(plan.uuid)
-              ? plan.resources[current - 1]
-              : null
-            "
-            @changeValue="(data) => changeValue(current, data)"
-          />
-
-          <v-row justify="center">
-            <v-col cols="2">
-              <v-btn
+          <v-tabs v-model="form.title" background-color="background">
+            <v-tab
+              v-for="title of form.titles"
+              :key="title"
+            >
+              {{ title }}
+              <v-icon
                 small
-                color="success"
-                @click="() => amountForms++"
-              >
-                <v-icon>mdi-plus</v-icon>
-              </v-btn>
-            </v-col>
-            <v-col cols="2">
-              <v-btn
-                small
+                right
                 color="error"
-                :disabled="amountForms < 2"
-                @click="deleteForm"
+                v-if="plan.type === 'custom'"
+                @click="removeConfig(title)"
               >
-                <v-icon>mdi-minus</v-icon>
-              </v-btn>
-            </v-col>
-          </v-row>
+                mdi-close
+              </v-icon>
+            </v-tab>
+            <v-text-field
+              dense
+              outlined
+              label="New config"
+              class="ml-2 mt-1 mw-20"
+              v-if="plan.type === 'custom' && isVisible"
+              @change="addConfig"
+            />
+            <v-icon
+              class="ml-2"
+              v-else-if="plan.type === 'custom'"
+              @click="isVisible = true"
+            >
+              mdi-plus
+            </v-icon>
+          </v-tabs>
+
+          <v-divider />
+
+          <v-tabs-items v-model="form.title">
+            <v-tab-item
+              v-for="(title, i) of form.titles"
+              :key="title"
+            >
+              <plans-form
+                :keyForm="title"
+                :data="(plan.uuid)
+                  ? plan.resources[i]
+                  : null
+                "
+                @changeValue="(data) => changeValue(i, data)"
+              />
+            </v-tab-item>
+          </v-tabs-items>
         </v-col>
       </v-row>
       
@@ -137,14 +154,18 @@ export default {
   data: () => ({
     types: [],
     plan: {
-      type: 'custom',
       title: '',
+      type: 'custom',
       public: false,
       resources: []
     },
-    amountForms: 1,
+    form: {
+      title: '',
+      titles: []
+    },
     generalRule: [v => !!v || 'This field is required!'],
 
+    isVisible: true,
     isValid: false,
     isLoading: false,
     isTestSuccess: false,
@@ -158,15 +179,24 @@ export default {
         value;
       }
 
-      if (this.plan.resources[num - 1]) {
-        this.plan.resources[num - 1][key] = value;
+      if (this.plan.resources[num]) {
+        this.plan.resources[num][key] = value;
       } else {
         this.plan.resources.push({ [key]: value });
       }
     },
-    deleteForm() {
-      this.plan.resources.pop();
-      this.amountForms--;
+    addConfig(title) {
+      this.form.titles.push(title);
+      // this.form.title = title;
+      this.isVisible = false;
+    },
+    removeConfig(title) {
+      this.form.titles = this.form.titles
+        .filter((el) => el !== title);
+
+      if (this.form.titles.length <= 0) {
+        this.isVisible = true;
+      }
     },
     tryToSend() {
       if (!this.isValid) {
@@ -217,10 +247,10 @@ export default {
         return;
       }
 
+      console.log(this.plan.resources);
+
       this.plan.resources.forEach((form, i, arr) => {
         arr[i].period = this.getTimestamp(form.date);
-
-        delete arr[0].date;
       });
 
       this.testButtonColor = 'success';
@@ -241,20 +271,10 @@ export default {
       return Date.parse(
         `${year}-${month}-${day}T${time}Z`
       ) / 1000;
-    },
-    async getItem() {
-      const id = this.$route.params?.planId;
-
-      if (!id) return;
-
-      this.amountForms = 0;
-      await this.$store.dispatch('plans/fetchItem', id);
-      const item = this.$store.getters['plans/one'];
-
-      this.amountForms = item.resources?.length;
     }
   },
   created() {
+    const id = this.$route.params?.planId;
     const types = require.context(
       "@/components/modules/",
       true,
@@ -270,15 +290,18 @@ export default {
       }
     });
 
-    this.getItem();
+    if (id) this.$store.dispatch('plans/fetchItem', id);
   },
   watch: {
-    amountForms() {
-      setTimeout(() => {
-        if (this.$route.params?.planId) {
-          this.plan = this.$store.getters['plans/one'];
-        }
-      }, 100);
+    'plan.type'() {
+      switch (this.plan.type) {
+        case 'ione':
+          this.form.titles = ['CPU', 'RAM', 'IP public'];
+          break;
+        default:
+          this.form.titles = [];
+          break;
+      }
     }
   }
 }
@@ -292,5 +315,13 @@ export default {
   font-family: "Quicksand", sans-serif;
   line-height: 1em;
   margin-bottom: 10px;
+}
+
+.theme--dark.v-tabs-items {
+  background: var(--v-background-base);
+}
+
+.mw-20 {
+  max-width: 150px;
 }
 </style>

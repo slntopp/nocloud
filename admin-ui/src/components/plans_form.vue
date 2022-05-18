@@ -2,35 +2,6 @@
   <div class="pa-4">
     <v-row align="center">
       <v-col cols="3">
-        <v-subheader>Key</v-subheader>
-      </v-col>
-      <v-col cols="9">
-        <v-text-field
-          label="Key"
-          v-model="key"
-          :rules="generalRule"
-          @change="$emit('changeValue', { key: 'key', value: key })"
-        />
-      </v-col>
-    </v-row>
-
-    <v-row align="center">
-      <v-col cols="3">
-        <v-subheader>Kind</v-subheader>
-      </v-col>
-      <v-col cols="9">
-        <v-select
-          label="Kind"
-          v-model="kind"
-          :items="kinds"
-          :rules="generalRule"
-          @change="$emit('changeValue', { key: 'kind', value: kind })"
-        />
-      </v-col>
-    </v-row>
-
-    <v-row align="center">
-      <v-col cols="3">
         <v-subheader>Price</v-subheader>
       </v-col>
       <v-col cols="9">
@@ -46,11 +17,11 @@
 
     <v-row align="center">
       <v-col cols="3">
-        <v-subheader>Date</v-subheader>
+        <v-subheader>Period</v-subheader>
       </v-col>
       <v-col :cols="(this.date === 'Custom') ? 8 : 7">
         <v-select
-          label="Date"
+          label="Period"
           v-model="date"
           :items="typesDate"
           :rules="generalRule"
@@ -121,24 +92,9 @@
 
     <v-row align="center">
       <v-col cols="3">
-        <v-subheader>Except</v-subheader>
-      </v-col>
-      <v-col cols="9">
-        <v-select
-          label="Except"
-          v-model="except"
-          :items="['true', 'false']"
-          :rules="generalRule"
-          @change="$emit('changeValue', { key: 'except', value: except })"
-        />
-      </v-col>
-    </v-row>
-
-    <v-row align="center">
-      <v-col cols="3">
         <v-subheader>State</v-subheader>
       </v-col>
-      <v-col cols="9">
+      <v-col cols="6">
         <v-select
           multiple
           label="State"
@@ -148,26 +104,46 @@
           @change="$emit('changeValue', { key: 'on', value: state })"
         />
       </v-col>
+      <v-col cols="3" class="d-flex justify-end">
+        <v-switch
+          label="Except"
+          v-model="except"
+          @change="$emit('changeValue', { key: 'except', value: except })"
+        />
+      </v-col>
     </v-row>
 
-    <v-divider class="mt-6" v-if="amount !== current" />
+    <v-row align="center">
+      <v-col cols="3">
+        <v-subheader>Kind</v-subheader>
+      </v-col>
+      <v-col cols="9">
+        <v-radio-group row v-model="kind">
+          <v-radio
+            v-for="item of kinds"
+            :key="item"
+            :value="item"
+            :label="item.toLowerCase()"
+            @change="$emit('changeValue', { key: 'kind', value: kind })"
+          />
+        </v-radio-group>
+      </v-col>
+    </v-row>
   </div>
 </template>
 
 <script>
 export default {
   props: {
-    amount: { type: Number },
-    current: { type: Number },
-    data: { type: Object }
+    data: { type: Object },
+    keyForm: { type: String }
   },
   data: () => ({
-    key: '',
-    kind: '',
     price: '',
     date: '',
-    except: '',
     state: '',
+    kind: 'POSTPAID',
+    except: false,
 
     fullDate: {
       day: '0',
@@ -239,6 +215,20 @@ export default {
       }
     ]
   }),
+  methods: {
+    resetDate(date) {
+      Object.keys(date).forEach((key) => {
+        date[key] = (key === 'time')
+          ? '00:00:00'
+          : '0';
+      });
+    }
+  },
+  mounted() {
+    this.$emit('changeValue', { key: 'key', value: this.keyForm });
+    this.$emit('changeValue', { key: 'kind', value: this.kind });
+    this.$emit('changeValue', { key: 'except', value: this.except });
+  },
   watch: {
     date () {
       if (this.date === 'Custom') return;
@@ -262,42 +252,33 @@ export default {
       this.fullDate[key] = value;
     },
     data () {
-      if (this.data) {
-        Object.entries(this.data)
-          .forEach(([key, value]) => {
-            if (key === 'on') {
-              this.state = value;
-            } else if (key === 'period') {
-              const date = new Date(value * 1000);
-              const time = date.toUTCString().split(' ');
+      if (!this.data) return;
 
-              this.fullDate = {
-                day: `${date.getUTCDate() - 1}`,
-                month: `${date.getUTCMonth()}`,
-                year: `${date.getUTCFullYear() - 1970}`,
-                quarter: '0',
-                week: '0',
-                time: time[time.length - 2]
-              };
-              this.date = 'Custom';
-              this.$emit('changeValue', {
-                key: 'date',
-                value: this.fullDate
-              });
-            } else {
-              this[key] = `${value}`;
-            }
-          })
-      }
-    }
-  },
-  methods: {
-    resetDate(date) {
-      Object.keys(date).forEach((key) => {
-        date[key] = (key === 'time')
-          ? '00:00:00'
-          : '0';
-      });
+      Object.entries(this.data)
+        .forEach(([key, value]) => {
+          if (key === 'on') {
+            this.state = value;
+          } else if (key === 'period') {
+            const date = new Date(value * 1000);
+            const time = date.toUTCString().split(' ');
+
+            this.fullDate = {
+              day: `${date.getUTCDate() - 1}`,
+              month: `${date.getUTCMonth()}`,
+              year: `${date.getUTCFullYear() - 1970}`,
+              quarter: '0',
+              week: '0',
+              time: time[time.length - 2]
+            };
+            this.date = 'Custom';
+            this.$emit('changeValue', {
+              key: 'date',
+              value: this.fullDate
+            });
+          } else {
+            this[key] = `${value}`;
+          }
+        })
     }
   }
 }
