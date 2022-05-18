@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/Pallinder/go-randomdata v1.2.0
-	github.com/arangodb/go-driver v1.3.1
+	github.com/arangodb/go-driver v1.3.2
 	github.com/gabriel-vasile/mimetype v1.4.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.4.1
@@ -18,7 +18,7 @@ require (
 	golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4
 	golang.org/x/net v0.0.0-20220412020605-290c469a71a5
 	google.golang.org/genproto v0.0.0-20220407144326-9054f6ed7bac
-	google.golang.org/grpc v1.46.0
+	google.golang.org/grpc v1.46.2
 	google.golang.org/protobuf v1.28.0
 )
 
