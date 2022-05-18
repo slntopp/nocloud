@@ -187,7 +187,6 @@ export default {
     },
     addConfig(title) {
       this.form.titles.push(title);
-      // this.form.title = title;
       this.isVisible = false;
     },
     removeConfig(title) {
@@ -247,8 +246,6 @@ export default {
         return;
       }
 
-      console.log(this.plan.resources);
-
       this.plan.resources.forEach((form, i, arr) => {
         arr[i].period = this.getTimestamp(form.date);
       });
@@ -271,6 +268,16 @@ export default {
       return Date.parse(
         `${year}-${month}-${day}T${time}Z`
       ) / 1000;
+    },
+    async getItem(id) {
+      await this.$store.dispatch('plans/fetchItem', id);
+      const item = this.$store.getters['plans/one'];
+
+      this.plan = item;
+      this.isVisible = false;
+      item.resources.forEach((el) => {
+        this.form.titles.push(el.key);
+      });
     }
   },
   created() {
@@ -290,7 +297,7 @@ export default {
       }
     });
 
-    if (id) this.$store.dispatch('plans/fetchItem', id);
+    if (id) this.getItem(id);
   },
   watch: {
     'plan.type'() {

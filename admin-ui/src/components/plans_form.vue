@@ -228,6 +228,34 @@ export default {
     this.$emit('changeValue', { key: 'key', value: this.keyForm });
     this.$emit('changeValue', { key: 'kind', value: this.kind });
     this.$emit('changeValue', { key: 'except', value: this.except });
+
+    if (!this.data) return;
+
+    Object.entries(this.data)
+      .forEach(([key, value]) => {
+        if (key === 'on') {
+          this.state = value;
+        } else if (key === 'period') {
+          const date = new Date(value * 1000);
+          const time = date.toUTCString().split(' ');
+
+          this.fullDate = {
+            day: `${date.getUTCDate() - 1}`,
+            month: `${date.getUTCMonth()}`,
+            year: `${date.getUTCFullYear() - 1970}`,
+            quarter: '0',
+            week: '0',
+            time: time[time.length - 2]
+          };
+          this.date = 'Custom';
+          this.$emit('changeValue', {
+            key: 'date',
+            value: this.fullDate
+          });
+        } else {
+          this[key] = `${value}`;
+        }
+      });
   },
   watch: {
     date () {
@@ -250,35 +278,6 @@ export default {
       this.resetDate(this.fullDate);
 
       this.fullDate[key] = value;
-    },
-    data () {
-      if (!this.data) return;
-
-      Object.entries(this.data)
-        .forEach(([key, value]) => {
-          if (key === 'on') {
-            this.state = value;
-          } else if (key === 'period') {
-            const date = new Date(value * 1000);
-            const time = date.toUTCString().split(' ');
-
-            this.fullDate = {
-              day: `${date.getUTCDate() - 1}`,
-              month: `${date.getUTCMonth()}`,
-              year: `${date.getUTCFullYear() - 1970}`,
-              quarter: '0',
-              week: '0',
-              time: time[time.length - 2]
-            };
-            this.date = 'Custom';
-            this.$emit('changeValue', {
-              key: 'date',
-              value: this.fullDate
-            });
-          } else {
-            this[key] = `${value}`;
-          }
-        })
     }
   }
 }
