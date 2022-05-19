@@ -86,6 +86,15 @@
             @click="() => removeInstance(currentInstancesGroupsIndex)"
             >Remove</v-btn
           >
+          <v-btn class="mx-4 mb-4" @click="applyGroup">apply to group</v-btn>
+          <v-select
+            dense
+						label="plan"
+            class="d-inline-block"
+            v-model="currentInstancesGroups.plan"
+            :rules="planRules"
+            :items="plans"
+					/>
 
           <v-text-field
             label="instances group title"
@@ -103,6 +112,8 @@
           <component
             :is="templates[currentInstancesGroups.body.type]"
             :instances-group="JSON.stringify(currentInstancesGroups)"
+            :planRules="planRules"
+            :plans="plans"
             @update:instances-group="receiveObject"
           >
           </component>
@@ -166,7 +177,9 @@ export default {
     currentInstancesGroupsIndex: -1,
     types: ["ione", "custom"],
     templates: {},
+    plans: [],
 
+    plansVisible: false,
     testsPassed: false,
   }),
   mixins: [snackbar],
@@ -184,13 +197,14 @@ export default {
     },
     defaultInstance(title = "") {
       return {
-        title: title,
+        title,
         body: {
           type: "ione",
           resources: {
             ips_public: 0,
           },
         },
+        plan: ''
       };
     },
     selectInstance(index = -1) {
@@ -207,6 +221,14 @@ export default {
       this.instances[this.currentInstancesGroupsIndex] = JSON.parse(newVal);
       this.selectInstance(this.currentInstancesGroupsIndex);
       this.testsPassed = false;
+    },
+    applyGroup() {
+      const current = this.currentInstancesGroups;
+      const instances = current.body.instances;
+
+      instances.forEach((inst) => {
+        inst.billing_plan = current.plan;
+      });
     },
     getService() {
       const data = JSON.parse(JSON.stringify(this.service));
@@ -280,6 +302,11 @@ export default {
     namespacesLoading() {
       return this.$store.getters["namespaces/isLoading"];
     },
+    planRules() {
+      return (this.plansVisible)
+        ? this.rules.req
+        : []
+    }
   },
   created() {
     this.$store.dispatch("namespaces/fetch");
@@ -297,6 +324,19 @@ export default {
           import(`@/components/modules/${type}/serviceCreate.vue`);
       }
     });
+    
+    api.get('/billing/plans')
+      .then((res) => res.pool
+        .forEach(({ title }) => this.plans.push(title))
+      )
+
+    api.settings
+      .get(['instance-billing-plan-settings'])
+      .then((res) => {
+        const key = res['instance-billing-plan-settings']
+
+        this.plansVisible = JSON.parse(key).required
+      })
   },
   watch: {
     service: {

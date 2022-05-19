@@ -114,6 +114,15 @@
 					>
 					</v-text-field>
 				</v-col>
+				<v-col cols="6">
+					<v-select
+						label="plan"
+            v-model="instance.billing_plan"
+            :items="plans"
+            :rules="planRules"
+						@change="(newVal) => setValue(index + '.billing_plan', newVal)"
+					/>
+				</v-col>
 			</v-row>
 
 		</v-card>
@@ -139,7 +148,7 @@
 <script>
 export default {
 	name: 'ione-create-service-module',
-	props: ['instances-group'],
+	props: ['instances-group', 'plans', 'planRules'],
 	data: () => ({
 		defaultItem: {
 			"title": "instance",
@@ -154,11 +163,12 @@ export default {
 				"drive_size": 10000,
 				"ips_public": 0,
 				"ips_private": 0
-			}
+			},
+      "billing_plan": ""
 		},
 		types: [
 			'SSD', 'HDD'
-		],
+		]
 		// instances: []
 	}),
 	methods: { 
@@ -186,20 +196,15 @@ export default {
 		}
 	},
 	computed: {
-		inst(){
-			return JSON.parse(this.instancesGroup)
-		},
 		instances(){
-			const data = this.group
-			return data.body.instances
-		},
-		group(){
 			const data = JSON.parse(this.instancesGroup)
-			return data
+
+			return data.body.instances
 		}
 	},
-	created(){
+	created() {
 		const data = JSON.parse(this.instancesGroup)
+
 		if(!data.body.instances){
 			data.body.instances = []
 		}
