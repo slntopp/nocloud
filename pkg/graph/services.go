@@ -21,7 +21,6 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/hasher"
-	ipb "github.com/slntopp/nocloud/pkg/instances/proto"
 	nocloud "github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
@@ -111,111 +110,80 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service,
 		return err
 	}
 
-	newService := proto.Clone(oldService).(*pb.Service)
-
-	if newService.Title != service.Title {
-		newService.Title = service.Title
-	}
-
-	for _, ig := range service.GetInstancesGroups() {
-		for _, newIg := range newService.GetInstancesGroups() {
-			if ig.GetUuid() == newIg.GetUuid() {
-				if newTitle := ig.GetTitle(); newTitle != "" {
-					newIg.Title = newTitle
-				}
-				if newType := ig.GetType(); newType != "" {
-					newIg.Type = newType
-				}
-
-				//resources
-				if newIpsPublic := ig.Resources["ips_public"]; newIpsPublic != nil {
-					newIg.Resources["ips_public"] = newIpsPublic
-				}
-				if newIpsPrivate := ig.Resources["ips_private"]; newIpsPrivate != nil {
-					newIg.Resources["ips_private"] = newIpsPrivate
-				}
-
-				for _, inst := range ig.GetInstances() {
-					for _, newInst := range newIg.GetInstances() {
-						if inst.GetUuid() == newInst.GetUuid() {
-							if newTitle := inst.GetTitle(); newTitle != "" {
-								newInst.Title = newTitle
-							}
-
-							//config
-							if newPass := inst.Config["password"]; newPass != nil {
-								newInst.Config["password"] = newPass
-							}
-							if newTemplateId := inst.Config["template_id"]; newTemplateId != nil {
-								newInst.Config["template_id"] = newTemplateId
-							}
-
-							//resources
-							if newCPU := inst.Resources["cpu"]; newCPU != nil {
-								newInst.Resources["cpu"] = newCPU
-							}
-							if newDriveSize := inst.Resources["drive_size"]; newDriveSize != nil {
-								newInst.Resources["drive_size"] = newDriveSize
-							}
-							if newDriveType := inst.Resources["drive_type"]; newDriveType != nil {
-								newInst.Resources["drive_type"] = newDriveType
-							}
-							if newRAM := inst.Resources["ram"]; newRAM != nil {
-								newInst.Resources["ram"] = newRAM
-							}
-							if newIpsPublic := inst.Resources["ips_public"]; newIpsPublic != nil {
-								newInst.Resources["ips_public"] = newIpsPublic
-							}
-							if newIpsPrivate := inst.Resources["ips_private"]; newIpsPrivate != nil {
-								newInst.Resources["ips_private"] = newIpsPrivate
-							}
-
-							// NO BILLING UPDATING. MAYBE ADDED IN FUTURE
-
-							newInst.Data = nil
-							newInst.State = nil
-
-							err := hasher.SetHash(newInst.ProtoReflect())
-							if err != nil {
-								log.Error("Failed to calculate hash", zap.Error(err))
-								return err
-							}
-
-							meta, err := ctrl.ig_ctrl.inst_ctrl.col.UpdateDocument(ctx, newInst.GetUuid(), newInst)
-							ctrl.log.Debug("UpdateDocument.Result", zap.Any("meta", meta), zap.Error(err))
-						}
-					}
-				}
-
-				err := hasher.SetHash(newIg.ProtoReflect())
-				if err != nil {
-					log.Error("Failed to calculate hash", zap.Error(err))
-					return err
-				}
-
-				maskIg := proto.Clone(newIg).(*ipb.InstancesGroup)
-				maskIg.Instances = nil
-
-				meta, err := ctrl.ig_ctrl.col.UpdateDocument(ctx, maskIg.GetUuid(), maskIg)
-				ctrl.log.Debug("UpdateDocument.Result", zap.Any("meta", meta), zap.Error(err))
+	// deleting missing groups
+	for _, oldIg := range oldService.GetInstancesGroups() {
+		var oldIgFound = false
+		for _, ig := range service.GetInstancesGroups() {
+			if oldIg.GetUuid() == ig.GetUuid() {
+				oldIgFound = true
+				break
+			}
+		}
+		if !oldIgFound {
+			docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
+			err = ctrl.ig_ctrl.Delete(ctx, docID, oldIg)
+			if err != nil {
+				log.Error("Error while deleting instances group", zap.Error(err))
+				return err
 			}
 		}
 	}
 
-	err = hasher.SetHash(newService.ProtoReflect())
+	// creating missing and updating existing groups
+	for _, ig := range service.GetInstancesGroups() {
+		var igFound = false
+		for _, oldIg := range oldService.GetInstancesGroups() {
+			if ig.GetUuid() == oldIg.GetUuid() {
+				igFound = true
+				err = ctrl.ig_ctrl.Update(ctx, ig, oldIg)
+				if err != nil {
+					log.Error("Error while updating instances group", zap.Error(err))
+					return err
+				}
+				break
+			}
+		}
+		if !igFound {
+			docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
+			err = ctrl.ig_ctrl.Create(ctx, docID, ig)
+			if err != nil {
+				log.Error("Error while creating instances group", zap.Error(err))
+				return err
+			}
+		}
+	}
+
+	err = hasher.SetHash(service.ProtoReflect())
 	if err != nil {
 		log.Error("Failed to calculate hash", zap.Error(err))
 		return err
 	}
 
-	newService.InstancesGroups = nil
-
-	_, err = ctrl.col.UpdateDocument(ctx, newService.Uuid, newService)
-	if err != nil {
-		log.Debug("Error updating document(Service)", zap.Error(err))
+	mask := &pb.Service{
+		Uuid:    service.GetUuid(),
+		Context: service.GetContext(),
 	}
 
-	return err
+	if oldService.GetVersion() != service.GetVersion() {
+		mask.Version = service.GetVersion()
+	}
+	if oldService.GetTitle() != service.GetTitle() {
+		mask.Title = service.GetTitle()
+	}
+	if oldService.GetStatus() != service.GetStatus() {
+		mask.Status = service.GetStatus()
+	}
+	if hash {
+		mask.Hash = service.GetHash()
+	}
+
+	_, err = ctrl.col.UpdateDocument(ctx, mask.Uuid, mask)
+	if err != nil {
+		log.Debug("Error updating document(Service)", zap.Error(err))
+		return err
+	}
+
+	return nil
 }
 
 // Get Service from DB

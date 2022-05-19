@@ -27,6 +27,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
@@ -96,7 +97,12 @@ var DefaultBillingPlanSettings = sc.Setting[InstanceBillingPlanSettings]{
 	Public:      false,
 }
 
-func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *pb.CreateRequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
+type CURequest interface {
+	GetService() *pb.Service
+	GetNamespace() string
+}
+
+func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request CURequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -235,16 +241,19 @@ func (s *ServicesServer) Update(ctx context.Context, request *pb.UpdateRequest) 
 	log := s.log.Named("UpdateService")
 	log.Debug("Request received", zap.Any("request", request))
 
+	testResult, _, err := s.DoTestServiceConfig(ctx, log, request)
+
+	if err != nil {
+		return nil, err
+	} else if !testResult.Result {
+		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
+	}
+
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
-	if err != nil {
-		s.log.Debug("Error getting namespace", zap.Error(err))
-		return nil, status.Error(codes.NotFound, "Namespace not found")
-	}
-
-	ok := graph.HasAccess(ctx, s.db, requestor, namespace.ID.String(), access.ADMIN)
+	docID := driver.NewDocumentID(schema.SERVICES_COL, request.Uuid)
+	ok := graph.HasAccess(ctx, s.db, requestor, docID.String(), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}

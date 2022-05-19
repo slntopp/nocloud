@@ -32,7 +32,7 @@ const (
 )
 
 type InstancesController struct {
-	col driver.Collection // Instances Collection
+	col   driver.Collection // Instances Collection
 	graph driver.Graph
 
 	log *zap.Logger
@@ -92,6 +92,57 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	return nil
 }
 
+func (ctrl *InstancesController) Update(ctx context.Context, inst, oldInst *pb.Instance) error {
+	log := ctrl.log.Named("Update")
+	log.Debug("Updating Instance", zap.Any("instance", inst))
+
+	inst.BillingPlan = nil
+	inst.Data = nil
+	inst.State = nil
+
+	err := hasher.SetHash(inst.ProtoReflect())
+	if err != nil {
+		return err
+	}
+
+	mask := &pb.Instance{
+		Uuid:      inst.GetUuid(),
+		Config:    inst.GetConfig(),
+		Resources: inst.GetResources(),
+		Hash:      inst.GetHash(),
+	}
+
+	if inst.GetTitle() != oldInst.GetTitle() {
+		mask.Title = inst.GetTitle()
+	}
+	if inst.GetStatus() != oldInst.GetStatus() {
+		mask.Status = inst.GetStatus()
+	}
+
+	_, err = ctrl.col.UpdateDocument(ctx, mask.Uuid, mask)
+	if err != nil {
+		log.Error("Failed to update Instance", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func (ctrl *InstancesController) Delete(ctx context.Context, group driver.DocumentID, i *pb.Instance) error {
+	log := ctrl.log.Named("Delete")
+	log.Debug("Deleting Instance", zap.Any("instance", i))
+
+	_, err := ctrl.col.RemoveDocument(ctx, i.Uuid)
+	if err != nil {
+		log.Error("Failed to delete Instance", zap.Error(err))
+		return err
+	}
+
+	// Deleting of edges will be added in future :)
+
+	return nil
+}
+
 const getGroupWithSPQuery = `
 LET instance = DOCUMENT(@instance)
 LET group = (
@@ -109,8 +160,9 @@ RETURN {
   group: MERGE(group, { uuid: group._key }),
   sp: MERGE(sp, { uuid: sp._key })
 }`
+
 type GroupWithSP struct {
-	Group *pb.InstancesGroup `json:"group"`
+	Group *pb.InstancesGroup     `json:"group"`
 	SP    *sppb.ServicesProvider `json:"sp"`
 }
 
@@ -119,8 +171,8 @@ func (ctrl *InstancesController) GetGroup(ctx context.Context, i string) (*Group
 	log.Debug("Getting Instance Group", zap.String("instance", i))
 	c, err := ctrl.db.Query(ctx, getGroupWithSPQuery, map[string]interface{}{
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
-		"sps": schema.SERVICES_PROVIDERS_COL,
-		"instance": i,
+		"sps":         schema.SERVICES_PROVIDERS_COL,
+		"instance":    i,
 	})
 	if err != nil {
 		log.Error("Error while querying", zap.Error(err))
