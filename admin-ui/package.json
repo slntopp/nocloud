@@ -16,7 +16,7 @@
     "glob-parent": "^6.0.2",
     "js-cookie": "^3.0.1",
     "json-schema": "^0.4.0",
-    "nocloudjsrest": "^1.4.6",
+    "nocloudjsrest": "^1.4.8",
     "nth-check": "^2.0.1",
     "sass-loader": "^10.1.1",
     "sha256-uint8array": "^0.10.3",
@@ -24,7 +24,7 @@
     "vue-router": "^3.5.4",
     "vuetify": "^2.6.6",
     "vuex": "^3.4.0",
-    "yaml": "^2.1.0"
+    "yaml": "2.0.1"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~5.0.1",
