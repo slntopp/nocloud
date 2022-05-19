@@ -128,7 +128,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, inst, oldInst *pb.I
 	return nil
 }
 
-func (ctrl *InstancesController) Delete(ctx context.Context, group driver.DocumentID, i *pb.Instance) error {
+func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb.Instance) error {
 	log := ctrl.log.Named("Delete")
 	log.Debug("Deleting Instance", zap.Any("instance", i))
 
@@ -138,7 +138,13 @@ func (ctrl *InstancesController) Delete(ctx context.Context, group driver.Docume
 		return err
 	}
 
-	// Deleting of edges will be added in future :)
+	ctrl.log.Debug("Deleting Edge", zap.String("fromCollection", schema.INSTANCES_GROUPS_COL), zap.String("toCollection",
+		schema.INSTANCES_COL), zap.String("fromKey", group), zap.String("toKey", i.GetUuid()))
+	err = DeleteEdge(ctx, ctrl.col.Database(), schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL, group, i.GetUuid())
+	if err != nil {
+		log.Error("Failed to delete edge "+schema.INSTANCES_GROUPS_COL+"2"+schema.INSTANCES_COL, zap.Error(err))
+		return err
+	}
 
 	return nil
 }

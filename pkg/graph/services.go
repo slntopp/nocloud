@@ -120,8 +120,7 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service,
 			}
 		}
 		if !oldIgFound {
-			docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
-			err = ctrl.ig_ctrl.Delete(ctx, docID, oldIg)
+			err = ctrl.ig_ctrl.Delete(ctx, service.GetUuid(), oldIg)
 			if err != nil {
 				log.Error("Error while deleting instances group", zap.Error(err))
 				return err

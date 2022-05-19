@@ -24,15 +24,15 @@ import (
 )
 
 type Node struct {
-	Collection 	string `json:"collection"`
-	Key 		string `json:"key"`
+	Collection string `json:"collection"`
+	Key        string `json:"key"`
 }
 
 type Deletable interface {
-	Delete(context.Context, driver.Database) (error)
+	Delete(context.Context, driver.Database) error
 }
 
-func DeleteNodeChildren(ctx context.Context, db driver.Database, node string) (error) {
+func DeleteNodeChildren(ctx context.Context, db driver.Database, node string) error {
 	query := `FOR node, edge, path IN OUTBOUND @node GRAPH Permissions FILTER edge.role == "owner" RETURN PARSE_IDENTIFIER(node._id)`
 	c, err := db.Query(ctx, query, map[string]interface{}{
 		"node": node,
@@ -97,10 +97,11 @@ GRAPH @permissions SORT path.edges[0].level
 	    access_level: path.edges[0].level ? : 0, uuid: path.vertices[-1]._key
 	})
 `
-func GetWithAccess(ctx context.Context, db driver.Database, acc, id driver.DocumentID, node interface{}) (error) {
-	vars :=  map[string]interface{}{
-		"account": acc,
-		"node": id,
+
+func GetWithAccess(ctx context.Context, db driver.Database, acc, id driver.DocumentID, node interface{}) error {
+	vars := map[string]interface{}{
+		"account":     acc,
+		"node":        id,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	}
 	c, err := db.Query(ctx, getWithAccessLevel, vars)
@@ -108,11 +109,35 @@ func GetWithAccess(ctx context.Context, db driver.Database, acc, id driver.Docum
 		return err
 	}
 	defer c.Close()
-	
+
 	_, err = c.ReadDocument(ctx, node)
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+const deleteEdgeQuery = `
+FOR edge IN @@collection
+    FILTER edge._from == @fromDocID && edge._to == @toDocID
+    REMOVE edge._key IN @@collection
+`
+
+func DeleteEdge(ctx context.Context, db driver.Database, fromCollection, toCollection, fromKey, toKey string) error {
+	fromDocID := driver.NewDocumentID(fromCollection, fromKey)
+	toDocID := driver.NewDocumentID(toCollection, toKey)
+	collection := fromCollection + "2" + toCollection
+
+	c, err := db.Query(ctx, deleteEdgeQuery, map[string]interface{}{
+		"@collection": collection,
+		"fromDocID":   fromDocID,
+		"toDocID":     toDocID,
+	})
+	if err != nil {
+		return err
+	}
+	defer c.Close()
 
 	return nil
 }

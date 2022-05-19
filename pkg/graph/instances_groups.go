@@ -107,20 +107,26 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	return nil
 }
 
-func (ctrl *InstancesGroupsController) Delete(ctx context.Context, service driver.DocumentID, g *pb.InstancesGroup) error {
+func (ctrl *InstancesGroupsController) Delete(ctx context.Context, service string, g *pb.InstancesGroup) error {
 	log := ctrl.log.Named("Delete")
 	log.Debug("Deleting InstancesGroup", zap.Any("group", g))
 
-	meta, err := ctrl.col.RemoveDocument(ctx, g.GetUuid())
+	_, err := ctrl.col.RemoveDocument(ctx, g.GetUuid())
 	if err != nil {
 		log.Error("Failed to delete InstancesGroup", zap.Error(err))
 		return err
 	}
 
-	// Deleting of edges will be added in future :)
+	ctrl.log.Debug("Deleting Edge", zap.String("fromCollection", schema.SERVICES_COL), zap.String("toCollection",
+		schema.INSTANCES_GROUPS_COL), zap.String("fromKey", service), zap.String("toKey", g.GetUuid()))
+	err = DeleteEdge(ctx, ctrl.col.Database(), schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL, service, g.GetUuid())
+	if err != nil {
+		log.Error("Failed to delete edge "+schema.SERVICES_COL+"2"+schema.INSTANCES_GROUPS_COL, zap.Error(err))
+		return err
+	}
 
 	for _, instance := range g.GetInstances() {
-		err := ctrl.inst_ctrl.Delete(ctx, meta.ID, instance)
+		err := ctrl.inst_ctrl.Delete(ctx, g.GetUuid(), instance)
 		if err != nil {
 			log.Error("Failed to delete Instance", zap.Error(err))
 			continue
@@ -144,8 +150,7 @@ func (ctrl *InstancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 			}
 		}
 		if !oldInstFound {
-			docID := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, ig.Uuid)
-			err := ctrl.inst_ctrl.Delete(ctx, docID, oldInst)
+			err := ctrl.inst_ctrl.Delete(ctx, ig.GetUuid(), oldInst)
 			if err != nil {
 				log.Error("Error while deleting instance", zap.Error(err))
 				return err
