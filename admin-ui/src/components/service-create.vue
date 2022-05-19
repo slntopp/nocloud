@@ -325,7 +325,7 @@ export default {
       }
     });
     
-    api.get('/billing/plans')
+    api.plans.list()
       .then((res) => res.pool
         .forEach(({ title }) => this.plans.push(title))
       )
