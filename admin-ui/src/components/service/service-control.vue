@@ -76,7 +76,7 @@ export default {
     sendVmAction(action) {
       this.actualAction = action;
       this.actionLoading = true;
-      api.services
+      api.instances
         .action(this.instance_uuid, action)
         .then(() => {
           this.showSnackbarSuccess({ message: `Done!` });
