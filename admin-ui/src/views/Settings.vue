@@ -321,6 +321,11 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", { type: "settings/fetch" });
   },
+  watch: {
+    settings() {
+      this.fetchError = '';
+    }
+  }
 };
 </script>
 

@@ -118,8 +118,7 @@ export default {
     }
   },
   created() {
-    this.$store
-      .dispatch('plans/fetch')
+    this.$store.dispatch('plans/fetch')
       .then(() => {
         this.fetchError = '';
       })
@@ -140,6 +139,11 @@ export default {
     },
     isLoading() {
       return this.$store.getters['plans/isLoading'];
+    }
+  },
+  watch: {
+    plans() {
+      this.fetchError = '';
     }
   }
 }

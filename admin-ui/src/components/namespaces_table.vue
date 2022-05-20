@@ -65,6 +65,11 @@ export default {
 			}
 		})
 	},
+  watch: {
+    tableData() {
+      this.fetchError = '';
+    }
+  }
 }
 </script>
 
