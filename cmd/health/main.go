@@ -35,20 +35,20 @@ import (
 )
 
 var (
-	port string
-	log *zap.Logger
-	SIGNING_KEY		[]byte
+	port        string
+	log         *zap.Logger
+	SIGNING_KEY []byte
 )
 
 func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
-	viper.SetDefault("PORT", "8080")
+	viper.SetDefault("PORT", "8000")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	port = viper.GetString("PORT")
-	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
+	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 }
 
 func main() {
@@ -66,8 +66,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to generate root token")
 	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
-	
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+
 	server := health.NewServer(log, ctx)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
@@ -75,7 +75,7 @@ func main() {
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
 	)
-	
+
 	pb.RegisterHealthServiceServer(s, server)
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))

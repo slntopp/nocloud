@@ -41,21 +41,21 @@ import (
 
 var (
 	port string
-	log *zap.Logger
+	log  *zap.Logger
 
-	arangodbHost 	string
-	arangodbCred 	string
-	drivers 		[]string
-	ext_servers 	[]string
-	SIGNING_KEY		[]byte
-	rbmq string
+	arangodbHost string
+	arangodbCred string
+	drivers      []string
+	ext_servers  []string
+	SIGNING_KEY  []byte
+	rbmq         string
 )
 
 func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
-	viper.SetDefault("PORT", "8080")
+	viper.SetDefault("PORT", "8000")
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
@@ -66,11 +66,11 @@ func init() {
 
 	port = viper.GetString("PORT")
 
-	arangodbHost 	= viper.GetString("DB_HOST")
-	arangodbCred 	= viper.GetString("DB_CRED")
-	drivers 		= viper.GetStringSlice("DRIVERS")
-	ext_servers 	= viper.GetStringSlice("EXTENTION_SERVERS")
-	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
+	arangodbHost = viper.GetString("DB_HOST")
+	arangodbCred = viper.GetString("DB_CRED")
+	drivers = viper.GetStringSlice("DRIVERS")
+	ext_servers = viper.GetStringSlice("EXTENTION_SERVERS")
+	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 	rbmq = viper.GetString("RABBITMQ_CONN")
 }
 
@@ -95,7 +95,7 @@ func main() {
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
 	)
-	
+
 	log.Info("Dialing RabbitMQ", zap.String("url", rbmq))
 	rbmq, err := amqp.Dial(rbmq)
 	if err != nil {
@@ -127,7 +127,7 @@ func main() {
 			log.Fatal("Error registering Extention Server", zap.String("ext_server", ext_server), zap.Error(err))
 		}
 		client := sppb.NewServicesProvidersExtentionsServiceClient(conn)
-		ext_srv_type, err := client.GetType(context.Background(),&sppb.GetTypeRequest{})
+		ext_srv_type, err := client.GetType(context.Background(), &sppb.GetTypeRequest{})
 		if err != nil {
 			log.Fatal("Error dialing Extention Server and getting its type", zap.String("ext_server", ext_server), zap.Error(err))
 		}
@@ -139,7 +139,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
 	go server.MonitoringRoutine(ctx)
 	sppb.RegisterServicesProvidersServiceServer(s, server)
 

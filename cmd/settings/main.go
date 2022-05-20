@@ -35,23 +35,23 @@ import (
 
 var (
 	port string
-	log *zap.Logger
+	log  *zap.Logger
 
-	redisHost string
-	SIGNING_KEY		[]byte
+	redisHost   string
+	SIGNING_KEY []byte
 )
 
 func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
-	viper.SetDefault("PORT", "8080")
+	viper.SetDefault("PORT", "8000")
 	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	port = viper.GetString("PORT")
 	redisHost = viper.GetString("REDIS_HOST")
-	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
+	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 }
 
 func main() {
@@ -61,9 +61,9 @@ func main() {
 
 	log.Info("Setting up RedisDB Connection")
 	rdb := redis.NewClient(&redis.Options{
-        Addr:     redisHost,
-        DB:       0,  // use default DB
-    })
+		Addr: redisHost,
+		DB:   0, // use default DB
+	})
 	log.Info("RedisDB connection established")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))

@@ -46,12 +46,12 @@ var (
 	port string
 	log  *zap.Logger
 
-	arangodbHost  string
-	arangodbCred  string
-	drivers       []string
-	SIGNING_KEY   []byte
-	rbmq string
-	settingsHost  string
+	arangodbHost string
+	arangodbCred string
+	drivers      []string
+	SIGNING_KEY  []byte
+	rbmq         string
+	settingsHost string
 	billingHost  string
 )
 
@@ -59,7 +59,7 @@ func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
-	viper.SetDefault("PORT", "8080")
+	viper.SetDefault("PORT", "8000")
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
@@ -134,7 +134,7 @@ func main() {
 		panic(err)
 	}
 	defer setconn.Close()
-	
+
 	setc := stpb.NewSettingsServiceClient(setconn)
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
@@ -153,7 +153,7 @@ func main() {
 	billc := bpb.NewBillingServiceClient(billconn)
 	server.SetupBillingClient(billc)
 	log.Info("Billing Service registered")
-	
+
 	pb.RegisterServicesServiceServer(s, server)
 	ipb.RegisterInstancesServiceServer(s, iserver)
 

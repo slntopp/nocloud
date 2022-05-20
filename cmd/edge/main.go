@@ -34,17 +34,17 @@ import (
 
 var (
 	port string
-	log *zap.Logger
+	log  *zap.Logger
 
-	rbmq string
-	SIGNING_KEY   []byte
+	rbmq        string
+	SIGNING_KEY []byte
 )
 
 func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
-	viper.SetDefault("PORT", "8080")
+	viper.SetDefault("PORT", "8000")
 
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")

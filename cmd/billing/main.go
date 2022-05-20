@@ -38,18 +38,18 @@ import (
 
 var (
 	port string
-	log *zap.Logger
+	log  *zap.Logger
 
-	arangodbHost 	string
-	arangodbCred 	string
-	SIGNING_KEY		[]byte
+	arangodbHost string
+	arangodbCred string
+	SIGNING_KEY  []byte
 )
 
 func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
 
-	viper.SetDefault("PORT", "8080")
+	viper.SetDefault("PORT", "8000")
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
@@ -59,9 +59,9 @@ func init() {
 
 	port = viper.GetString("PORT")
 
-	arangodbHost 	= viper.GetString("DB_HOST")
-	arangodbCred 	= viper.GetString("DB_CRED")
-	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
+	arangodbHost = viper.GetString("DB_HOST")
+	arangodbCred = viper.GetString("DB_CRED")
+	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 }
 
 func main() {
@@ -85,15 +85,15 @@ func main() {
 			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
 		)),
 	)
-	
+
 	server := billing.NewBillingServiceServer(log, db)
 
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer " + token)
-	
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+
 	log.Info("Starting Transaction Generator-Processor")
 	go server.GenTransactionsRoutine(ctx)
 

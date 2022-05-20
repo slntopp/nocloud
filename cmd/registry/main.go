@@ -36,21 +36,21 @@ import (
 )
 
 var (
-	port 			string
-	log 			*zap.Logger
+	port string
+	log  *zap.Logger
 
-	arangodbHost 	string
-	arangodbCred 	string
+	arangodbHost    string
+	arangodbCred    string
 	nocloudRootPass string
 
-	SIGNING_KEY 	[]byte
+	SIGNING_KEY []byte
 )
 
 func init() {
 	viper.AutomaticEnv()
 	log = nocloud.NewLogger()
-	
-	viper.SetDefault("PORT", "8080")
+
+	viper.SetDefault("PORT", "8000")
 
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
@@ -60,11 +60,11 @@ func init() {
 
 	port = viper.GetString("PORT")
 
-	arangodbHost 	= viper.GetString("DB_HOST")
-	arangodbCred 	= viper.GetString("DB_CRED")
+	arangodbHost = viper.GetString("DB_HOST")
+	arangodbCred = viper.GetString("DB_CRED")
 	nocloudRootPass = viper.GetString("NOCLOUD_ROOT_PASSWORD")
 
-	SIGNING_KEY 	= []byte(viper.GetString("SIGNING_KEY"))
+	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 }
 
 func main() {
@@ -96,9 +96,9 @@ func main() {
 
 	namespaces_server := accounting.NewNamespacesServer(log, db)
 	pb.RegisterNamespacesServiceServer(s, namespaces_server)
-	
+
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
-	
+
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
 }
