@@ -17,7 +17,6 @@ services:
       - proxy
 
   health:
-    container_name: health-service
     image: ghcr.io/slntopp/nocloud/health:latest
     restart: always
     labels:
@@ -34,7 +33,6 @@ services:
       - proxy
       - grpc-internal
   web:
-    container_name: web
     image: ghcr.io/slntopp/nocloud/apiserver-web:latest
     restart: always
     depends_on:
@@ -50,7 +48,6 @@ services:
     networks:
       - proxy
   registry:
-    container_name: registry
     image: ghcr.io/slntopp/nocloud/registry:latest
     restart: always
     labels:
@@ -75,7 +72,6 @@ services:
     links:
       - db
   services-registry:
-    container_name: services-registry
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     restart: always
     labels:
@@ -107,7 +103,6 @@ services:
       - billing
       # - your drivers here
   sp-registry:
-    container_name: sp-registry
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     restart: always
     labels:
@@ -131,7 +126,6 @@ services:
     links:
       - db
   edge:
-    container_name: edge
     image: ghcr.io/slntopp/nocloud/edge:latest
     restart: always
     labels:
@@ -196,7 +190,6 @@ services:
       - redis-settings-data:/data
 
   billing:
-    container_name: billing
     image: ghcr.io/slntopp/nocloud/billing:latest
     restart: always
     labels:
@@ -224,7 +217,6 @@ services:
       - db
 
   db:
-    container_name: database-master
     image: arangodb/arangodb:latest
     restart: always
     labels:
