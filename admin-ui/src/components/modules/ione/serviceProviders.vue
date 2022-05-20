@@ -1,6 +1,10 @@
 <template>
 	<div class="sp-ione">
-		<v-row v-for="field in Object.keys(fields)" :key="field" align="center">
+		<v-row
+      v-for="field in Object.keys(fields)"
+      :key="field"
+      :align="(!fields[field].isJSON) ? 'center' : null"
+    >
 			<v-col cols="4">
 				<v-subheader>
 					{{fields[field].subheader || field}}
@@ -26,9 +30,7 @@
 				</v-subheader>
 			</v-col>
 
-			<v-col
-				cols="8"
-			>
+			<v-col cols="8">
 				<v-text-field
 					@change="(data) => changeHandler(field, data)"
 					:value="getValue(field)"
@@ -37,13 +39,20 @@
 					:error-messages="errors[field]"
 					:type="fields[field].type"
 					v-bind="fields[field].bind || {}"
-				></v-text-field>
+          v-if="!fields[field].isJSON"
+				/>
+        <json-editor
+          v-else
+          :json="field"
+					@changeValue="(data) => changeHandler(field, data)"
+        />
 			</v-col>
 		</v-row>
 	</div>
 </template>
 
 <script>
+import JsonEditor from '../../JsonEditor.vue';
 
 function isJSON(str){
 	try{
@@ -57,6 +66,7 @@ function isJSON(str){
 // const domainRegex = /^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z0-9-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/;
 // const domainRegex = /^(https?):\/\/(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$/
 export default {
+  components: { JsonEditor },
 	name: "servicesProviders-create-ione",
 	props: {
 		secrets: {
