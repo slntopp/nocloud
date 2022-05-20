@@ -118,13 +118,17 @@
         <v-subheader>Kind</v-subheader>
       </v-col>
       <v-col cols="9">
-        <v-radio-group row v-model="kind">
+        <v-radio-group
+          row
+          mandatory
+          v-model="kind"
+          @change="$emit('changeValue', { key: 'kind', value: kind })"
+        >
           <v-radio
             v-for="item of kinds"
             :key="item"
             :value="item"
             :label="item.toLowerCase()"
-            @change="$emit('changeValue', { key: 'kind', value: kind })"
           />
         </v-radio-group>
       </v-col>
@@ -142,7 +146,7 @@ export default {
     price: '',
     date: '',
     state: '',
-    kind: 'POSTPAID',
+    kind: '',
     except: false,
 
     fullDate: {
@@ -225,16 +229,21 @@ export default {
     }
   },
   mounted() {
-    this.$emit('changeValue', { key: 'key', value: this.keyForm });
-    this.$emit('changeValue', { key: 'kind', value: this.kind });
-    this.$emit('changeValue', { key: 'except', value: this.except });
+    if (!this.data) {
+      this.$emit('changeValue', { key: 'key', value: this.keyForm });
+      this.$emit('changeValue', { key: 'kind', value: this.kind });
+      this.$emit('changeValue', { key: 'except', value: this.except });
 
-    if (!this.data) return;
+      return;
+    }
 
     Object.entries(this.data)
       .forEach(([key, value]) => {
         if (key === 'on') {
           this.state = value;
+        } else if (key === 'date') {
+          this.date = 'Custom';
+          this.fullDate = value;
         } else if (key === 'period') {
           const date = new Date(value * 1000);
           const time = date.toUTCString().split(' ');
@@ -253,7 +262,7 @@ export default {
             value: this.fullDate
           });
         } else {
-          this[key] = `${value}`;
+          this[key] = value;
         }
       });
   },

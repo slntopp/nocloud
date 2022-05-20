@@ -44,15 +44,19 @@
 
           <v-tabs v-model="form.title" background-color="background">
             <v-tab
+              active-class="indigo darken-4"
               v-for="title of form.titles"
               :key="title"
+              @dblclick="edit = {
+                isVisible: true,
+                title
+              }"
             >
               {{ title }}
               <v-icon
                 small
                 right
                 color="error"
-                v-if="plan.type === 'custom'"
                 @click="removeConfig(title)"
               >
                 mdi-close
@@ -61,14 +65,17 @@
             <v-text-field
               dense
               outlined
-              label="New config"
+              :label="(edit.isVisible)
+                ? `Edit ${edit.title}`
+                : 'New config'
+              "
               class="ml-2 mt-1 mw-20"
-              v-if="plan.type === 'custom' && isVisible"
+              v-if="isVisible || edit.isVisible"
               @change="addConfig"
             />
             <v-icon
+              v-else
               class="ml-2"
-              v-else-if="plan.type === 'custom'"
               @click="isVisible = true"
             >
               mdi-plus
@@ -84,10 +91,7 @@
             >
               <plans-form
                 :keyForm="title"
-                :data="(plan.uuid)
-                  ? plan.resources[i]
-                  : null
-                "
+                :data="plan.resources[i]"
                 @changeValue="(data) => changeValue(i, data)"
               />
             </v-tab-item>
@@ -163,6 +167,10 @@ export default {
       title: '',
       titles: []
     },
+    edit: {
+      isVisible: false,
+      title: ''
+    },
     generalRule: [v => !!v || 'This field is required!'],
 
     isVisible: true,
@@ -186,6 +194,16 @@ export default {
       }
     },
     addConfig(title) {
+      if (this.edit.isVisible) {
+        const i = this.form.titles
+          .indexOf(this.edit.title);
+
+        this.form.titles[i] = title;
+        this.edit.isVisible = false;
+
+        return;
+      }
+
       this.form.titles.push(title);
       this.isVisible = false;
     },
@@ -304,6 +322,7 @@ export default {
       switch (this.plan.type) {
         case 'ione':
           this.form.titles = ['CPU', 'RAM', 'IP public'];
+          this.isVisible = false;
           break;
         default:
           this.form.titles = [];
