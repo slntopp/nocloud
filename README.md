@@ -39,6 +39,8 @@ Add this to your `/etc/hosts` file:
 Just do `docker-compose up` in the repo root, and you're ready to go.
 Read through the `docker-compose.yml` to see configuration options.
 
+Now you can navigate to Admin UI at [`http://api.nocloud.local/admin`](http://api.nocloud.local/admin).
+
 > **Note: Debug Log**
 All NoCloud containers(so except ArangoDB) have multiple Log Levels.  
 Add `LOG_LEVEL` to environment to change log level  
