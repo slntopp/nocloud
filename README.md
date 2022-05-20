@@ -26,6 +26,16 @@ NoCloud is Cloud-native, meaning it can run in any OCI environment such as Docke
 
 ### Running Localy
 
+Add this to your `/etc/hosts` file:
+
+```shell
+127.0.2.1       nocloud.local
+127.0.2.1       traefik.nocloud.local # Traefik dashboard
+127.0.2.1       rbmq.nocloud.local # RabbitMQ Manager UI
+127.0.2.1       api.nocloud.local # REST and gRPC API
+127.0.2.1       db.nocloud.local # ArangoDB UI
+```
+
 Just do `docker-compose up` in the repo root, and you're ready to go.
 Read through the `docker-compose.yml` to see configuration options.
 
