@@ -8,7 +8,7 @@ api.axios.interceptors.response.use(
   },
   function (error) {
     if (error.response && error.response?.data?.code === 7) {
-      console.log("credentials are not actual");
+      // console.log("credentials are not actual");
       vuex.dispatch("auth/logout");
     }
     return Promise.reject(error); // this is the important part

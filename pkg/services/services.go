@@ -27,6 +27,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
@@ -43,7 +44,7 @@ type ServicesServer struct {
 	sp_ctrl graph.ServicesProvidersController
 	ns_ctrl graph.NamespacesController
 
-	drivers  map[string]driverpb.DriverServiceClient
+	drivers map[string]driverpb.DriverServiceClient
 
 	billing bpb.BillingServiceClient
 
@@ -55,9 +56,9 @@ func NewServicesServer(_log *zap.Logger, db driver.Database) *ServicesServer {
 
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
-		sp_ctrl:  graph.NewServicesProvidersController(log, db),
-		ns_ctrl:  graph.NewNamespacesController(log, db),
-		drivers:  make(map[string]driverpb.DriverServiceClient),
+		sp_ctrl: graph.NewServicesProvidersController(log, db),
+		ns_ctrl: graph.NewNamespacesController(log, db),
+		drivers: make(map[string]driverpb.DriverServiceClient),
 	}
 }
 
@@ -73,29 +74,35 @@ func (s *ServicesServer) RegisterDriver(type_key string, client driverpb.DriverS
 func (s *ServicesServer) SetupSettingsClient(stC stpb.SettingsServiceClient, internal_token string) {
 	sc.Setup(
 		s.log, metadata.AppendToOutgoingContext(
-			context.Background(), "authorization", "bearer " + internal_token,
+			context.Background(), "authorization", "bearer "+internal_token,
 		), &stC,
 	)
 }
 
 func (s *ServicesServer) SetupBillingClient(bC bpb.BillingServiceClient) {
 	s.billing = bC
-} 
+}
 
 type InstanceBillingPlanSettings struct {
 	Required bool `json:"required"` // each instance must have it
 }
 
 const IBPSKey = "instance-billing-plan-settings"
+
 var DefaultBillingPlanSettings = sc.Setting[InstanceBillingPlanSettings]{
 	Value: InstanceBillingPlanSettings{
-		Required: true, 
+		Required: true,
 	},
 	Description: "Instances Billing Plans Settings",
-	Public: false,
+	Public:      false,
 }
 
-func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request *pb.CreateRequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
+type CURequest interface {
+	GetService() *pb.Service
+	GetNamespace() string
+}
+
+func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request CURequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -131,12 +138,12 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 		groupType := group.GetType()
 
 		for _, instance := range group.GetInstances() {
-			log.Debug("Instance BillingPlan is", zap.Bool("provided", instance.BillingPlan != nil ))
+			log.Debug("Instance BillingPlan is", zap.Bool("provided", instance.BillingPlan != nil))
 			if ibps.Required && instance.BillingPlan == nil {
 				response.Result = false
 				terr := pb.TestConfigError{
-					Error: "Instance has no billing plan and no default is set",
-					Instance: instance.Title,
+					Error:         "Instance has no billing plan and no default is set",
+					Instance:      instance.Title,
 					InstanceGroup: group.Title,
 				}
 				response.Errors = append(response.Errors, &terr)
@@ -226,6 +233,36 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	if err != nil {
 		log.Error("Error while joining service to namespace", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
+	}
+	return service, nil
+}
+
+func (s *ServicesServer) Update(ctx context.Context, request *pb.UpdateRequest) (*pb.Service, error) {
+	log := s.log.Named("UpdateService")
+	log.Debug("Request received", zap.Any("request", request))
+
+	testResult, _, err := s.DoTestServiceConfig(ctx, log, request)
+
+	if err != nil {
+		return nil, err
+	} else if !testResult.Result {
+		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
+	}
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	docID := driver.NewDocumentID(schema.SERVICES_COL, request.Uuid)
+	ok := graph.HasAccess(ctx, s.db, requestor, docID.String(), access.ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	}
+
+	service := request.GetService()
+	err = s.ctrl.Update(ctx, service, true)
+	if err != nil {
+		log.Error("Error while updating service", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while updating Service")
 	}
 	return service, nil
 }
