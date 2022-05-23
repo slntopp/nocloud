@@ -133,6 +133,11 @@ export default {
         }
       });
   },
+  mounted() {
+    this.$store.commit("reloadBtn/setCallback", {
+      type: "plans/fetch",
+    });
+  },
   computed: {
     plans() {
       return this.$store.getters['plans/all'];
