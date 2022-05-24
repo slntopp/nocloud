@@ -92,8 +92,7 @@
 						label="plan"
             class="d-inline-block"
             v-model="currentInstancesGroups.plan"
-            :rules="planRules"
-            :items="plans"
+            :items="plans.titles"
 					/>
 
           <v-text-field
@@ -177,7 +176,10 @@ export default {
     currentInstancesGroupsIndex: -1,
     types: ["ione", "custom"],
     templates: {},
-    plans: [],
+    plans: {
+      titles: [],
+      list: []
+    },
 
     plansVisible: false,
     testsPassed: false,
@@ -225,10 +227,15 @@ export default {
     applyGroup() {
       const current = this.currentInstancesGroups;
       const instances = current.body.instances;
+      const plan = this.plans.list
+        .find((plan) => current.plan.includes(plan.title));
 
       instances.forEach((inst) => {
-        inst.billing_plan = current.plan;
+        inst.billing_plan = plan;
+        inst.plan = current.plan;
       });
+
+      this.instances[this.currentInstancesGroupsIndex] = current;
     },
     getService() {
       const data = JSON.parse(JSON.stringify(this.service));
@@ -327,7 +334,12 @@ export default {
     
     api.plans.list()
       .then((res) => res.pool
-        .forEach(({ title }) => this.plans.push(title))
+        .forEach((plan) => {
+          const title = `${plan.title} (${plan.uuid.slice(0, 8)}...)`;
+
+          this.plans.titles.push(title)
+          this.plans.list.push(plan)
+        })
       )
 
     api.settings

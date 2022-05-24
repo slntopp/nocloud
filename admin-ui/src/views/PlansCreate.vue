@@ -44,7 +44,7 @@
 
           <v-tabs v-model="form.title" background-color="background">
             <v-tab
-              active-class="indigo darken-4"
+              active-class="background-light"
               v-for="title of form.titles"
               :key="title"
               @dblclick="edit = {
@@ -83,6 +83,10 @@
           </v-tabs>
 
           <v-divider />
+
+          <v-subheader v-if="form.titles.length > 0">
+            To edit the title, double-click the LMB
+          </v-subheader>
 
           <v-tabs-items v-model="form.title">
             <v-tab-item

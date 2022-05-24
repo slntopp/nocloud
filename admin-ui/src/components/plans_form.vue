@@ -157,7 +157,7 @@ export default {
       week: '0',
       time: '00:00:00'
     },
-    amountDate: 0,
+    amountDate: '0',
     menuVisible: false,
 
     generalRule: [v => !!v || 'This field is required!'],
@@ -180,6 +180,8 @@ export default {
       'Quarter',
       'Year',
       'Time',
+      'Hour',
+      'Minute',
       'Custom'
     ],
     states: [
@@ -193,30 +195,14 @@ export default {
       'OPERATION'
     ],
     items: [
-      {
-        title: 'Day',
-        model: 'day'
-      },
-      {
-        title: 'Week',
-        model: 'week'
-      },
-      {
-        title: 'Month',
-        model: 'month'
-      },
-      {
-        title: 'Quarter',
-        model: 'quarter'
-      },
-      {
-        title: 'Year',
-        model: 'year'
-      },
-      {
-        title: 'Time',
-        model: 'time'
-      }
+      { title: 'Day', model: 'day' },
+      { title: 'Week', model: 'week' },
+      { title: 'Month', model: 'month' },
+      { title: 'Quarter', model: 'quarter' },
+      { title: 'Year', model: 'year' },
+      { title: 'Time', model: 'time' },
+      { title: 'Hour' },
+      { title: 'Minute' }
     ]
   }),
   methods: {
@@ -281,8 +267,21 @@ export default {
     amountDate () {
       if (this.date === '') return;
 
-      const key = this.date.toLowerCase();
-      const value = this.amountDate;
+      let key = this.date.toLowerCase();
+      let value = this.amountDate;
+      const newValue = (value.length < 2)
+        ? `0${value}`
+        : value;
+
+      switch (key) {
+        case 'hour':
+          key = 'time';
+          value = `${newValue}:00:00`;
+          break;
+        case 'minute':
+          key = 'time';
+          value = `00:${newValue}:00`;
+      }
 
       this.resetDate(this.fullDate);
 
