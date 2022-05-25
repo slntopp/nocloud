@@ -325,7 +325,7 @@ export default {
     'plan.type'() {
       switch (this.plan.type) {
         case 'ione':
-          this.form.titles = ['CPU', 'RAM', 'IP public'];
+          this.form.titles = ['cpu', 'ram', 'ip_public'];
           this.isVisible = false;
           break;
         default:

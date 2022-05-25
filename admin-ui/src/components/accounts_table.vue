@@ -1,23 +1,28 @@
 <template>
 	<nocloud-table
-		:loading="loading"
+    :headers="headers"
 		:items="tableData"
 		:value="selected"
-		@input="handleSelect"
+		:loading="loading"
 		:single-select="singleSelect"
 		:footer-error="fetchError"
+		@input="handleSelect"
 	>
-
+    <template v-slot:[`item.balance`]='{ item }'>
+      <balance :value="item.balance" />
+    </template>
 	</nocloud-table>
 </template>
 
 <script>
 import noCloudTable from "@/components/table.vue"
+import Balance from './balance.vue'
 
 export default {
 	name: "accounts-table",
 	components: {
-		"nocloud-table": noCloudTable
+		"nocloud-table": noCloudTable,
+    Balance
 	},
 	props: {
 		value: {
@@ -33,7 +38,12 @@ export default {
 		return {
 			selected: this.value,
 			loading: false,
-			fetchError: ''
+			fetchError: '',
+      headers: [
+        { text: 'Title', value: 'title' },
+        { text: 'UUID', value: 'uuid' },
+        { text: 'Balance', value: 'balance' }
+      ]
 		}
 	},
 	methods: {

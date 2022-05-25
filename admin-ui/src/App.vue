@@ -163,7 +163,8 @@
             <v-icon>mdi-reload</v-icon>
           </v-btn>
         </v-col>
-        <v-col class="d-flex justify-end">
+        <v-col class="d-flex justify-end align-center">
+          <balance title="Balance: " />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
@@ -207,8 +208,10 @@
 
 <script>
 import config from "@/config";
+import balance from './components/balance.vue';
 
 export default {
+  components: { balance },
   name: "App",
 
   data: () => ({
