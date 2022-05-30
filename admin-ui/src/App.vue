@@ -113,6 +113,16 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Transactions' }">
+          <v-list-item-icon>
+            <v-icon>mdi-abacus</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Transactions") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-subheader>SYSTEM</v-subheader>
 
         <v-list-item v-bind="listItemBind" :to="{ name: 'DNS manager' }">

@@ -138,6 +138,22 @@ const routes = [
       requireLogin: true,
     },
   },
+  {
+    path: "/transactions",
+    name: "Transactions",
+    component: () => import("../views/Transactions.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/transactions/create",
+    name: "Transactions create",
+    component: () => import("../views/TransactionsCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
 ];
 
 const router = new VueRouter({

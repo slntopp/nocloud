@@ -11,6 +11,7 @@ import settings from "./settings";
 import reloadBtn from "./reloadbtn";
 import services from "./services";
 import plans from "./plans";
+import transactions from "./transactions";
 
 Vue.use(Vuex);
 
@@ -27,6 +28,7 @@ export default new Vuex.Store({
     settings,
     services,
     reloadBtn,
-    plans
+    plans,
+    transactions
   },
 });

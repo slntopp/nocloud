@@ -8,7 +8,7 @@
 			</v-col>
 			<v-col cols="9">
 				<json-editor
-          json="secrets"
+          :json="secrets"
           @changeValue="(data) => changeHandler('secrets', data)"
         />
 			</v-col>
@@ -21,7 +21,7 @@
 			</v-col>
 			<v-col cols="9">
 				<json-editor
-          json="vars"
+          :json="vars"
           @changeValue="(data) => changeHandler('vars', data)"
         />
 			</v-col>
@@ -65,12 +65,12 @@ export default {
 			}
 		},
 		changeHandler(input, data){
-			const isJSON = this.isJSON(data);
+			const isJSON = this.isJSON(JSON.stringify(data));
+
 			if(!isJSON){
 				this.errors[input] = ["is not JSON"];
 			} else {
 				this.errors[input] = [];
-				data = JSON.parse(data);
 			}
 			this.$emit(`change:${input}`, data)
 			this.$emit(`passed`, Object.values(this.errors).every(el => el.length == 0))

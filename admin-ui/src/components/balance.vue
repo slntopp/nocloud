@@ -7,7 +7,7 @@
 <script>
 export default {
   name: 'balance-display',
-  props: ['title', 'value'],
+  props: ['title', 'value', 'positive-color', 'negative-color'],
   mounted() {
     if (!this.balance) {
       this.$store.dispatch('accounts/fetch')
@@ -26,9 +26,9 @@ export default {
     },
     colorChip() {
       if (this.balance > 0) {
-        return 'success';
+        return this['positive-color'] || 'success';
       } else if (this.balance < 0) {
-        return 'error';
+        return this['negative-color'] || 'error';
       } else {
         return 'gray';
       }

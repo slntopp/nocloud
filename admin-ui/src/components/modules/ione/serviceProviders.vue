@@ -43,7 +43,7 @@
 				/>
         <json-editor
           v-else
-          :json="field"
+          :json="getValue(field)"
 					@changeValue="(data) => changeHandler(field, data)"
         />
 			</v-col>
@@ -52,7 +52,7 @@
 </template>
 
 <script>
-import JsonEditor from '../../JsonEditor.vue';
+import JsonEditor from '@/components/JsonEditor.vue';
 
 function isJSON(str){
 	try{
@@ -283,9 +283,9 @@ export default {
 				case 'group':
 					return this.secrets.group
 				case 'schedule':
-					return JSON.stringify(this.vars?.sched?.value ?? "")
+					return this.vars?.sched?.value ?? {}
 				case 'schedule_ds':
-					return JSON.stringify(this.vars?.sched_ds?.value ?? "")
+					return this.vars?.sched_ds?.value ?? {}
 				case 'public_ip_pool':
 					return this.vars.public_ip_pool?.value?.default ?? ""
 				case 'private_vnets_pool':

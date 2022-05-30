@@ -48,7 +48,7 @@
 <script>
 export default {
   props: {
-    json: { type: String, required: true },
+    json: { type: Object, required: true },
     isValid: { type: Boolean, required: true },
     disabled: { type: Boolean, required: true },
     changeField: { type: Function, required: true },
@@ -81,27 +81,16 @@ export default {
       }
       this.$emit('changeDisable')
 
-      const tree = JSON.parse(localStorage.getItem(this.json))
-
       this.keys = ['/']
-      this.addKeys(tree)
+      this.addKeys(this.json)
     }
   },
   mounted () {
-    if (localStorage.getItem(this.json)) {
-      const tree = JSON.parse(localStorage.getItem(this.json))
-
-      this.addKeys(tree)
-    }
+    this.addKeys(this.json)
   },
   watch: {
     isValid () {
-      if (localStorage.getItem(this.json)) {
-        const tree = JSON.parse(localStorage.getItem(this.json))
-
-        this.keys = ['/']
-        this.addKeys(tree)
-      }
+      this.addKeys(this.json)
     }
   }
 }

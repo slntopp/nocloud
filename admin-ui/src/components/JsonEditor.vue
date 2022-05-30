@@ -40,7 +40,7 @@ export default {
   name: 'JsonEditor',
   components: { JsonForm, JsonTextarea, JsonActions },
   props: {
-    json: { type: String, required: true }
+    json: { type: Object, required: true }
   },
   data: () => ({
     tree: '',
@@ -69,11 +69,11 @@ export default {
     },
     deleteField () {
       if (this.fieldKey !== '/') {
-        const tree = JSON.parse(localStorage.getItem(this.json))
+        const tree = JSON.parse(JSON.stringify(this.json))
 
         this.deleteNode(tree)
 
-        localStorage.setItem(this.json, JSON.stringify(tree))
+        this.$emit('changeValue', tree)
       }
 
       this.cancel()
@@ -92,7 +92,6 @@ export default {
       if (this.tree !== '') {
         const tree = JSON.parse(this.tree)
 
-        localStorage.setItem(this.json, JSON.stringify(tree))
         this.$emit('changeValue', tree)
 
         this.disabled = true
@@ -110,11 +109,10 @@ export default {
       const value = (this.typeValue === 'string')
         ? this.newValue
         : JSON.parse(this.newValue)
-      const tree = JSON.parse(localStorage.getItem(this.json))
+      const tree = JSON.parse(JSON.stringify(this.json))
 
       this.findNode(tree, value)
 
-      localStorage.setItem(this.json, JSON.stringify(tree))
       this.$emit('changeValue', tree)
 
       this.cancel()
@@ -155,7 +153,7 @@ export default {
         this.newValue = ''
         this.disabledDelete = true
       } else {
-        const tree = JSON.parse(localStorage.getItem(this.json))
+        const tree = JSON.parse(JSON.stringify(this.json))
         const { key, value, type } = this.findNode(tree)
 
         this.newKey = key

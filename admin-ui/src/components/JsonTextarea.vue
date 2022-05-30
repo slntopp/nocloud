@@ -5,14 +5,14 @@
     :disabled="disabled"
     :rules="typeRule"
     @keyup="formatting"
-    @change="() => $emit('getTree', tree)"
+    @change="$emit('getTree', tree)"
   />
 </template>
 
 <script>
 export default {
   props: {
-    json: { type: String, required: true },
+    json: { type: Object, required: true },
     disabled: { type: Boolean }
   },
   data: () => ({
@@ -20,13 +20,9 @@ export default {
   }),
   methods: {
     changeTree () {
-      if (!localStorage.getItem(this.json)) {
-        localStorage.setItem(this.json, '{}')
-      }
-
       let count = 0
 
-      this.tree = localStorage.getItem(this.json)
+      this.tree = JSON.stringify(this.json)
         .split('')
         .map((simbol) => {
           switch (simbol) {
