@@ -87,12 +87,12 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
       BILLING_HOST: billing:8000
+      DRIVERS: driver-ione:8080
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-      # DRIVERS: host:port # your drivers here
     depends_on:
       - db
       - billing
-      # - your drivers here
+      - driver-ione
     networks:
       - proxy
       - arangodb
@@ -101,7 +101,6 @@ services:
     links:
       - db
       - billing
-      # - your drivers here
   sp-registry:
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     restart: always
@@ -117,7 +116,11 @@ services:
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
+      DRIVERS: driver-ione:8080
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+    depends_on:
+      - db
+      - driver-ione
     networks:
       - proxy
       - arangodb

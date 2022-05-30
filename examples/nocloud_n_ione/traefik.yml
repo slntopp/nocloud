@@ -1,0 +1,15 @@
+api:
+  insecure: true
+  dashboard: true
+accessLog: {}
+providers:
+  docker:
+    network: nocloud_n_ione_proxy
+entryPoints:
+  http:
+    address: ":80"
+  grpc:
+    address: ":8000"
+
+log:
+  level: INFO
