@@ -21,7 +21,7 @@ import "google/protobuf/struct.proto";
 import "google/api/annotations.proto";
 
 enum PlanKind {
-    UNKNOWN = 0;
+    UNKNOWN = 0; // Default value; should never be used but will be treated as DYNAMIC
     DYNAMIC = 1;
     STATIC = 2;
 }
@@ -65,7 +65,7 @@ message Product {
     string title = 2; // Product title
     double price = 3; // Product price in NCU per period
     int64 period = 4;
-    map<string, float> resources = 5; // Map of resources keys to fixed units amount
+    map<string, google.protobuf.Value> resources = 5; // Map of resources keys to fixed units amount
     map<string, google.protobuf.Value> meta = 6;
 
     optional int32 sorter = 7; // Sorting order, might be needed in UIs
