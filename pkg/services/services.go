@@ -162,7 +162,14 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 
 				err := s.ctrl.IGController().Instances().ValidateBillingPlan(instance)
 				if err != nil {
-					return nil, nil, err
+					response.Result = false
+					terr := pb.TestConfigError{
+						Error:         err.Error(),
+						Instance:      instance.Title,
+						InstanceGroup: group.Title,
+					}
+					response.Errors = append(response.Errors, &terr)
+					continue
 				}
 			}
 		}
