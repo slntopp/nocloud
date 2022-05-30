@@ -200,17 +200,20 @@ func (ctrl *InstancesController) GetGroup(ctx context.Context, i string) (*Group
 }
 
 func (ctrl *InstancesController) ValidateBillingPlan(i *pb.Instance) error {
+	log := ctrl.log.Named("ValidateBillingPlan").Named(i.Title)
 	if i.BillingPlan == nil {
+		log.Debug("Billing plan is not provided, skipping")
 		return nil
 	}
 
 	if i.BillingPlan.Kind < 2 { // If Kind is Dynamic or Unknown
+		log.Debug("Billing plan Dynamic, nothing else to validate")
 		i.BillingPlan.Kind = bpb.PlanKind_DYNAMIC // Ensuring Kind is set
 		return nil
 	}
 
 	if i.BillingPlan.Kind == bpb.PlanKind_STATIC {
-
+		log.Debug("Billing plan is Static, checking if it is valid")
 		if i.Product == nil {
 			return errors.New("product is required for static billing plan")
 		}
