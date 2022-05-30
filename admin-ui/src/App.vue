@@ -101,6 +101,28 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-subheader>BILLING</v-subheader>
+
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Plans' }">
+          <v-list-item-icon>
+            <v-icon>mdi-script-text</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Plans") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Transactions' }">
+          <v-list-item-icon>
+            <v-icon>mdi-abacus</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Transactions") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-subheader>SYSTEM</v-subheader>
 
         <v-list-item v-bind="listItemBind" :to="{ name: 'DNS manager' }">
@@ -151,7 +173,8 @@
             <v-icon>mdi-reload</v-icon>
           </v-btn>
         </v-col>
-        <v-col class="d-flex justify-end">
+        <v-col class="d-flex justify-end align-center">
+          <balance title="Balance: " />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
@@ -195,8 +218,10 @@
 
 <script>
 import config from "@/config";
+import balance from './components/balance.vue';
 
 export default {
+  components: { balance },
   name: "App",
 
   data: () => ({

@@ -222,7 +222,7 @@ export default {
         );
         Promise.all(deletePromices)
           .then((res) => {
-            if (res.every((el) => el.result)) {
+            if (res.every((el) => el.key)) {
               this.$store.dispatch("settings/fetch");
 
               const ending = deletePromices.length == 1 ? "" : "s";
@@ -321,6 +321,11 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", { type: "settings/fetch" });
   },
+  watch: {
+    settings() {
+      this.fetchError = '';
+    }
+  }
 };
 </script>
 

@@ -117,8 +117,8 @@
 				<v-col cols="6">
 					<v-select
 						label="plan"
-            v-model="instance.billing_plan"
-            :items="plans"
+            v-model="instance.plan"
+            :items="plans.titles"
             :rules="planRules"
 						@change="(newVal) => setValue(index + '.billing_plan', newVal)"
 					/>
@@ -164,7 +164,7 @@ export default {
 				"ips_public": 0,
 				"ips_private": 0
 			},
-      "billing_plan": ""
+      "billing_plan": {}
 		},
 		types: [
 			'SSD', 'HDD'
@@ -182,13 +182,23 @@ export default {
 		},
 		remove(index){
 			// this.instances.splice(index, 1);
-			const data = this.group;
+			const data = JSON.parse(this.instancesGroup);
 			data.body.instances.splice(index, 1);
 			this.change(data);
 		},
 		setValue(path, val){
 			const data = JSON.parse(this.instancesGroup)
-			setToValue(data.body.instances, val, path);
+
+      if (path.includes('plan')) {
+        const i = path.split('.')[0]
+        const plan = this.plans.list
+          .find(({ title }) => val.includes(title))
+
+        data.body.instances[i].plan = val
+        val = plan
+      }
+
+			setToValue(data.body.instances, val, path)
 			this.change(data)
 		},
 		change(data){

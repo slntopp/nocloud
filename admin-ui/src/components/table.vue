@@ -6,7 +6,7 @@
 		loading-text="Loading... Please wait"
 		color="background-light"
 		:items="items"
-		show-select
+		:show-select="showSelect"
 		:value="selected"
 		@input="handleSelect"
 		:single-select="singleSelect"
@@ -122,11 +122,14 @@ export default {
 			type: Boolean,
 			default: false
 		},
+    'show-select': {
+      type: Boolean,
+      default: true
+    },
     expanded: {
       type: Array,
       default: () => []
     },
-    showSelect: Boolean,
     checkboxColor: String,
     showExpand: Boolean,
     showGroupBy: Boolean,

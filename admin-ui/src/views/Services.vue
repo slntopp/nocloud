@@ -302,6 +302,9 @@ export default {
         this.$store.dispatch("services/fetchByIdItem", elem.uuid)
       );
     },
+    services() {
+      this.fetchError = '';
+    }
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
