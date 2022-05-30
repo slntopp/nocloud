@@ -53,14 +53,14 @@ var (
 func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("SETTINGS_HOST", "settings:8080")
-    host := viper.GetString("SETTINGS_HOST")
-    
-	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
-    if err != nil {
-        panic(err)
-    }
+	host := viper.GetString("SETTINGS_HOST")
 
-    settingsClient = settingspb.NewSettingsServiceClient(conn)
+	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+
+	settingsClient = settingspb.NewSettingsServiceClient(conn)
 }
 
 func MakeConf(ctx context.Context, log *zap.Logger) (conf RoutineConf) {
@@ -81,24 +81,24 @@ func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatu
 }
 
 func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
-    log := s.log.Named("Routine")
+	log := s.log.Named("Routine")
 
 	conf := MakeConf(ctx, log)
 	log.Info("Got Configuration", zap.Any("conf", conf))
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
-
-    for tick := range ticker.C {
+	tick := time.Now()
+	for {
 		log.Info("Starting Generating Transactions Sub-Routine", zap.Time("tick", tick))
 		s.gen.Status.Status = hpb.Status_RUNNING
 		s.gen.Status.Error = nil
 		_, err := s.db.Query(ctx, generateTransactions, map[string]interface{}{
 			"@transactions": schema.TRANSACTIONS_COL,
-			"@instances": schema.INSTANCES_COL,
-			"@services": schema.SERVICES_COL,
-			"@records": schema.RECORDS_COL,
-			"@accounts": schema.ACCOUNTS_COL,
-			"permissions": schema.PERMISSIONS_GRAPH.Name,
-			"now": tick.Unix(),
+			"@instances":    schema.INSTANCES_COL,
+			"@services":     schema.SERVICES_COL,
+			"@records":      schema.RECORDS_COL,
+			"@accounts":     schema.ACCOUNTS_COL,
+			"permissions":   schema.PERMISSIONS_GRAPH.Name,
+			"now":           tick.Unix(),
 		})
 		if err != nil {
 			log.Error("Error Generating Transactions", zap.Error(err))
@@ -113,9 +113,9 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		s.gen.Status.Error = nil
 		_, err = s.db.Query(ctx, processTransactions, map[string]interface{}{
 			"@transactions": schema.TRANSACTIONS_COL,
-			"@accounts": schema.ACCOUNTS_COL,
-			"accounts": schema.ACCOUNTS_COL,
-			"now": tick.Unix(),
+			"@accounts":     schema.ACCOUNTS_COL,
+			"accounts":      schema.ACCOUNTS_COL,
+			"now":           tick.Unix(),
 		})
 		if err != nil {
 			log.Error("Error Processing Transactions", zap.Error(err))
@@ -123,9 +123,10 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			err_s := err.Error()
 			s.proc.Status.Error = &err_s
 		}
-     
+
 		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
-    }
+		tick = <-ticker.C
+	}
 }
 
 const generateTransactions = `

@@ -55,14 +55,14 @@ var (
 func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("SETTINGS_HOST", "settings:8080")
-    host := viper.GetString("SETTINGS_HOST")
-    
-	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
-    if err != nil {
-        panic(err)
-    }
+	host := viper.GetString("SETTINGS_HOST")
 
-    settingsClient = settingspb.NewSettingsServiceClient(conn)
+	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+
+	settingsClient = settingspb.NewSettingsServiceClient(conn)
 }
 
 func MakeConf(ctx context.Context, log *zap.Logger) (conf MonitoringRoutineConf) {
@@ -86,7 +86,8 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 	conf := MakeConf(ctx, log)
 	log.Info("Got Monitoring Configuration", zap.Any("conf", conf))
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
-	for tick := range ticker.C {
+	tick := time.Now()
+	for {
 		s.monitoring.Running = true
 
 		sp_pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY)
@@ -113,7 +114,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 				}
 
 				_, err = client.Monitoring(ctx, &driverpb.MonitoringRequest{
-					Groups: igroups,
+					Groups:           igroups,
 					ServicesProvider: sp.ServicesProvider,
 				})
 				if err != nil {
@@ -121,7 +122,8 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 				}
 			}(sp)
 		}
-		
+
 		s.monitoring.LastExec = tick.Format("2006-01-02T15:04:05Z07:00")
+		tick = <-ticker.C
 	}
 }
