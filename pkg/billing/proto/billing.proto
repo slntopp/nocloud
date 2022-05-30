@@ -20,13 +20,22 @@ import "pkg/states/proto/states.proto";
 import "google/protobuf/struct.proto";
 import "google/api/annotations.proto";
 
+enum PlanKind {
+    UNKNOWN = 0;
+    DYNAMIC = 1;
+    STATIC = 2;
+}
+
 message Plan {
     string uuid = 1;
     string title = 2;
     string type = 3; // Instance / InstanceGroup type supported by this plan
     bool public = 4; // if true, then this plan is available for all users
-    repeated ResourceConf resources = 5;
-    repeated string linked_instances = 6; // uuids of instances that are linked to this plan
+
+    PlanKind kind = 5; // dynamic(based on resources) or static(based on products)
+    repeated ResourceConf resources = 6; // Resources confs to make plan dynamic
+    map<string, Product> products = 7; // Products to make plan pre defined(map key is product key like sm, lg or whatever)
+    map<string, google.protobuf.Value> meta = 8;
 }
 
 message ListRequest {}
@@ -43,12 +52,23 @@ enum Kind {
 message ResourceConf {
     string key = 1;
     Kind kind = 2;
-    double price = 3; // Price per period
+    double price = 3; // Price in NCU per period
     int64 period = 4; // if set to 0, then it's a one-time payment
     // If except set to true then transaction will be created if Instance is in one of the states listed in on
     // If except set to false then transaction will be created if Instance is NOT in one of the states listed in on
     bool except = 5;
     repeated nocloud.states.NoCloudState on = 6;
+}
+
+message Product {
+    Kind kind = 1;
+    string title = 2; // Product title
+    double price = 3; // Product price in NCU per period
+    int64 period = 4;
+    map<string, float> resources = 5; // Map of resources keys to fixed units amount
+    map<string, google.protobuf.Value> meta = 6;
+
+    optional int32 sorter = 7; // Sorting order, might be needed in UIs
 }
 
 message Transaction {
