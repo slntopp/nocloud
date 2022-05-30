@@ -224,8 +224,12 @@ func (ctrl *InstancesController) ValidateBillingPlan(i *pb.Instance) error {
 		}
 
 		for key, amount := range product.Resources {
-			if i.Resources[key] != amount {
-				return fmt.Errorf("resource %s is not equal to Product predefined amount", key)
+			res, ok := i.Resources[key]
+			if !ok {
+				return fmt.Errorf("resource %s is not defined in instance", key)
+			}
+			if res.AsInterface() != amount.AsInterface() {
+				return fmt.Errorf("resource %s has different amount in billing plan and instance: %v != %v", key, res, amount)
 			}
 		}
 
