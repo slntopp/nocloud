@@ -17,10 +17,13 @@ package graph
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
 
+	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	"github.com/slntopp/nocloud/pkg/hasher"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -194,4 +197,37 @@ func (ctrl *InstancesController) GetGroup(ctx context.Context, i string) (*Group
 	}
 
 	return &r, nil
+}
+
+func (ctrl *InstancesController) ValidateBillingPlan(i *pb.Instance) error {
+	if i.BillingPlan == nil {
+		return nil
+	}
+
+	if i.BillingPlan.Kind < 2 { // If Kind is Dynamic or Unknown
+		i.BillingPlan.Kind = bpb.PlanKind_DYNAMIC // Ensuring Kind is set
+		return nil
+	}
+
+	if i.BillingPlan.Kind == bpb.PlanKind_STATIC {
+
+		if i.Product == nil {
+			return errors.New("product is required for static billing plan")
+		}
+
+		product, ok := i.BillingPlan.Products[*i.Product]
+		if !ok {
+			return fmt.Errorf("product %s is not defined in billing plan", *i.Product)
+		}
+
+		for key, amount := range product.Resources {
+			if i.Resources[key] != amount {
+				return fmt.Errorf("resource %s is not equal to Product predefined amount", key)
+			}
+		}
+
+		return nil
+	}
+
+	return nil
 }
