@@ -20,6 +20,7 @@ services:
     volumes:
       - ./traefik.yml:/traefik.yml
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./letsencrypt/:/etc/traefik/acme/
     networks:
       - proxy
 
