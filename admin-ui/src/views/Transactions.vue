@@ -15,6 +15,20 @@
       :items="accountsTitles"
     />
 
+    <v-subheader v-if="
+      balanceValues.length > 1 && accountTitle !== 'all'
+    ">
+      Balance:
+    </v-subheader>
+    <v-sparkline
+      color="primary"
+      height="25vh"
+      line-width="1"
+      label-size="4"
+      :labels="balanceLabels"
+      :value="balanceValues"
+    />
+
     <nocloud-table
       class="mt-4"
       :items="transactions"
@@ -28,26 +42,29 @@
       </template>
 
       <template v-slot:[`item.service`]="{ item, index }">
-        <router-link
-          :to="{ name: 'Service', params: { serviceId: item.service } }"
-        >
-          {{ service(item.service) }}
-        </router-link>
+        <template v-if="item.service">
+          <router-link
+            :to="{ name: 'Service', params: { serviceId: item.service } }"
+          >
+            {{ service(item.service) }}
+          </router-link>
 
-        <v-icon
-          class="ml-2"
-          v-if="!visibleItems.includes(index)"
-          @click="visibleItems.push(index)"
-        >
-          mdi-eye-outline
-        </v-icon>
-        <template v-else>
-          ({{ hashTrim(item.service) }})
-          <v-btn icon @click="addToClipboard(item.service, index)">
-            <v-icon v-if="copyed === index"> mdi-check </v-icon>
-            <v-icon v-else> mdi-content-copy </v-icon>
-          </v-btn>
+          <v-icon
+            class="ml-2"
+            v-if="!visibleItems.includes(index)"
+            @click="visibleItems.push(index)"
+          >
+            mdi-eye-outline
+          </v-icon>
+          <template v-else>
+            ({{ hashTrim(item.service) }})
+            <v-btn icon @click="addToClipboard(item.service, index)">
+              <v-icon v-if="copyed === index"> mdi-check </v-icon>
+              <v-icon v-else> mdi-content-copy </v-icon>
+            </v-btn>
+          </template>
         </template>
+        <template v-else>-</template>
       </template>
 
       <template v-slot:[`item.total`]="{ item }">
@@ -101,7 +118,7 @@ export default {
       { text: 'Amount ', value: 'total' },
       { text: 'Date ', value: 'proc' }
     ],
-    accountTitle: 'all',
+    accountTitle: '',
     visibleItems: [],
     copyed: -1,
     fetchError: ''
@@ -133,19 +150,29 @@ export default {
       else return ' XXXXXXXX... ';
     },
     addToClipboard(text, index) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => {
-          this.copyed = index;
-        })
-        .catch((res) => {
-          console.error(res);
+      if (navigator?.clipboard) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            this.copyed = index;
+          })
+          .catch((err) => {
+            this.showSnackbarError({
+              message: err
+            });
+          });
+      } else {
+        this.showSnackbarError({
+          message: 'Clipboard is not supported!'
         });
+      }
     }
   },
   created() {
+    const { title } = this.$store.getters['auth/userdata'];
     const accounts = this.accounts.map((acc) => acc.uuid);
 
+    this.accountTitle = title;
     this.$store.dispatch('services/fetch')
     this.$store.dispatch('transactions/fetch', accounts)
       .then(() => {
@@ -180,7 +207,7 @@ export default {
       }
 
       return transactions.filter((item) =>
-        item.account === account.uuid
+        item.account === account?.uuid
       );
     },
     isLoading() {
@@ -191,6 +218,22 @@ export default {
     },
     accountsTitles() {
       return [...this.accounts.map((acc) => acc.title), 'all'];
+    },
+    balanceLabels() {
+      return this.balanceValues?.map((el) => `${el} NCU`);
+    },
+    balanceValues() {
+      let balance = 0;
+      const values = (this.accountTitle !== 'all')
+        ? this.transactions?.map((el) =>
+            balance -= el.total
+          )
+        : [];
+      const amount = values.length - 15;
+
+      values.unshift(0);
+
+      return (amount > 0) ? values.slice(amount) : values;
     }
   },
   watch: {
@@ -198,8 +241,10 @@ export default {
       this.fetchError = '';
     },
     accounts() {
+      const { title } = this.$store.getters['auth/userdata'];
       const accounts = this.accounts.map((acc) => acc.uuid);
 
+      this.accountTitle = title;
       this.$store.dispatch('transactions/fetch', accounts)
         .then(() => {
           this.fetchError = '';

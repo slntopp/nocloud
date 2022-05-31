@@ -225,14 +225,18 @@ export default {
       else return "XXXXXXXX...";
     },
     addToClipboard(text, index) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => {
-          this.copyed = index;
-        })
-        .catch((res) => {
-          console.error(res);
-        });
+      if (navigator?.clipboard) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            this.copyed = index;
+          })
+          .catch((res) => {
+            console.error(res);
+          });
+      } else {
+        alert('Clipboard is not supported!');
+      }
     },
     clickColumn(slotData) {
       // const indexRow = slotData.index;

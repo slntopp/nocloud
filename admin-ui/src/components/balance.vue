@@ -1,5 +1,5 @@
 <template>
-  <v-chip v-if="balance" :color="colorChip">
+  <v-chip v-if="balance !== undefined" :color="colorChip">
     {{ title }}{{ balance }} NCU
   </v-chip>
 </template>

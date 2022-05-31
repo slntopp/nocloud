@@ -20,11 +20,12 @@ export default {
   }),
   methods: {
     changeTree () {
+      const tree = JSON.stringify(this.json)
       let count = 0
 
-      this.tree = JSON.stringify(this.json)
+      this.tree = tree
         .split('')
-        .map((simbol) => {
+        .map((simbol, i) => {
           switch (simbol) {
             case '{':
               count++
@@ -35,12 +36,31 @@ export default {
             case ':':
               return ': '
             case ',':
+              if (this.amountQuotes(i, tree)) {
+                return simbol
+              }
               return `,\n${'\t'.repeat(count)}`
             default:
               return simbol
           }
         })
         .join('')
+    },
+    amountQuotes(num, tree) {
+      let quotes = 0
+
+      tree
+        .slice(0, num)
+        .split('')
+        .forEach((simbol) => {
+          if (simbol === '"' && quotes) {
+            quotes--
+          } else if (simbol === '"') {
+            quotes++
+          }
+        })
+      
+      return quotes
     },
     formatting ({ target, key }) {
       const start = target.selectionStart

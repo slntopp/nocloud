@@ -1,6 +1,6 @@
 <template>
   <v-row dense>
-    <v-col class="column" style="justify-content:flex-end">
+    <v-col class="column justify-end">
       <v-btn
         dark
         small
@@ -11,7 +11,7 @@
         Save
       </v-btn>
     </v-col>
-    <v-col>
+    <v-col class="d-flex">
       <v-select
         dense
         required
@@ -25,6 +25,7 @@
         dark
         small
         color="red"
+        class="ml-2 mb-2"
         v-if="key !== null"
         @click="cancel"
       >
@@ -90,6 +91,7 @@ export default {
   },
   watch: {
     isValid () {
+      this.keys = ['/']
       this.addKeys(this.json)
     }
   }
