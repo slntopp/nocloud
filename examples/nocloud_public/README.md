@@ -26,6 +26,8 @@ If you want to access Traefik dashaboard you'd need to white list your IP addres
 
 In order to generate certs you ought to write your email address in `traefik.yml`
 
+> You might also need to `chmod 600 letsenctypt/acme.json`
+
 ## Start service
 
 ```shell
