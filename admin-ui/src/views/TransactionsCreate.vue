@@ -256,13 +256,20 @@ export default {
       this.transaction.service = this.services
         .find((service) =>
           service.title === this.transaction.service
-        ).uuid;
+        )?.uuid || '';
 
       this.transaction.exec = this.exec;
       this.transaction.total *= 1;
     }
   },
   created() {
+    const date = new Date();
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+
+    this.date.value = `${year}-${month}-${day}`;
+    
     this.$store.dispatch('services/fetch')
       .then(() => {
         this.fetchError = '';

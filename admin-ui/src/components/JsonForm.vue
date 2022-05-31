@@ -1,6 +1,6 @@
 <template>
   <v-row dense>
-    <v-col>
+    <v-col class="d-flex align-center">
       <v-text-field
         dense
         required
@@ -22,6 +22,7 @@
       <v-icon
         dark
         dense
+        class="ml-2 mb-2"
         color="yellow"
         v-if="add"
         @click="() => $emit('changeAdd', false)"
@@ -31,6 +32,7 @@
       <v-icon
         dark
         dense
+        class="ml-2 mb-2"
         color="green"
         v-else-if="typeValue === 'object'"
         @click="() => $emit('changeAdd', true)"

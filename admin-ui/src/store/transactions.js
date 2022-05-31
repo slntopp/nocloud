@@ -62,7 +62,7 @@ export default {
           params: { account: id }
         })
           .then((response) => {
-            commit('setTransaction', response);
+            commit('setTransaction', response.pool);
             resolve(response);
           })
           .catch((error) => {

@@ -170,15 +170,20 @@ export default {
 		handleSelect(item){
 			this.$emit('input', item)
 		},
-		addToClipboard(text, index){
-			navigator.clipboard.writeText(text)
-			.then(()=>{
-				this.copyed = index
-			})
-			.catch(res=>{
-				console.error(res);
-			})
-		},
+		addToClipboard(text, index) {
+      if (navigator?.clipboard) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            this.copyed = index;
+          })
+          .catch((res) => {
+            console.error(res);
+          });
+      } else {
+        alert('Clipboard is not supported!');
+      }
+    },
 		showID(index){
 			this.showed.push(index);
 		}

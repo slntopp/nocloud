@@ -357,13 +357,18 @@ export default {
   //   },
   methods: {
     addToClipboard(text, index) {
-      navigator.clipboard.writeText(text)
-        .then(() => {
-          this.copyed = index;
-        })
-        .catch((res) => {
-          console.error(res);
-        });
+      if (navigator?.clipboard) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            this.copyed = index;
+          })
+          .catch((res) => {
+            console.error(res);
+          });
+      } else {
+        alert('Clipboard is not supported!');
+      }
     },
   },
 };
