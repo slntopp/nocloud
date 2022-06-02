@@ -6901,10 +6901,10 @@ no-case@^2.2.0:
   dependencies:
     lower-case "^1.1.1"
 
-nocloudjsrest@^1.4.9:
-  version "1.4.9"
-  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.9.tgz#e5661c31426d71c94da95c68c6c950795fb6fc28"
-  integrity sha512-uFud69XAVmZ6wYRB1TmZhQsd68xpB4o4ZUE7vTAM3LwN5+enF0FyVXSSh/qKiBjEc0hyI/B1YuA3Fx6f8r4gVg==
+nocloudjsrest@^1.4.10:
+  version "1.4.10"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.10.tgz#deb8356926159134f87fdffcaf995a77e8d69226"
+  integrity sha512-4qQdSU/nAiQzNXNhw1aeXxYnHSXl1eom/WDELocVE50AdqtZyx4wJNW+E9J68HVpb3/MInxS7eRJ1wEt/vNC+A==
   dependencies:
     axios "^0.24.0"
 
