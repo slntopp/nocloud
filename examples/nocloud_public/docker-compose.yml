@@ -98,7 +98,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.services.rule=Host(`api.${BASE_DOMAIN}`)
-      - traefik.http.routers.services.rule=PathPrefix("/nocloud.services.")
+      - traefik.http.routers.services.rule=PathPrefix("/nocloud.services.", "/nocloud.instances.")
       - traefik.http.routers.services.tls=true
       - traefik.http.routers.services.tls.certresolver=letsencrypt
       - traefik.http.routers.services.entrypoints=grpc

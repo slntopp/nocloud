@@ -75,7 +75,7 @@ services:
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     restart: always
     labels:
-      - traefik.http.routers.services.rule=PathPrefix("/nocloud.services.")
+      - traefik.http.routers.services.rule=PathPrefix("/nocloud.services.", "/nocloud.instances.")
       - traefik.http.routers.services.entrypoints=grpc
       - traefik.http.services.services.loadbalancer.server.port=8000
       - traefik.http.services.services.loadbalancer.server.scheme=h2c
