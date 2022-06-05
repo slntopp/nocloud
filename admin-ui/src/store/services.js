@@ -54,6 +54,7 @@ export default {
       state.services = state.services.map((serv) =>
         serv.uuid === service.uuid ? service : serv
       );
+      console.log( state.services)
     },
     fetchByIdElem(state, data) {
       state.service = data

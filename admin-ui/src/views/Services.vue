@@ -146,6 +146,7 @@ export default {
           return this.$route.query["items[]"].includes(item.uuid);
         });
       }
+      console.log(items)
       return items;
     },
     service() {
