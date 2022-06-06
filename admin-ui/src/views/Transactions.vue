@@ -15,9 +15,7 @@
       :items="accountsTitles"
     />
 
-    <v-subheader v-if="
-      balanceValues.length > 1 && accountTitle !== 'all'
-    ">
+    <v-subheader v-if="balance.values.length > 1">
       Balance:
     </v-subheader>
     <v-sparkline
@@ -25,15 +23,17 @@
       height="25vh"
       line-width="1"
       label-size="4"
-      :labels="balanceLabels"
-      :value="balanceValues"
+      :labels="balance.labels"
+      :value="balance.values"
     />
 
     <nocloud-table
       class="mt-4"
+      sort-by="proc"
       :items="transactions"
       :headers="headers"
       :loading="isLoading"
+      :sort-desc="true"
       :show-select="false"
       :footer-error="fetchError"
     >
@@ -219,21 +219,27 @@ export default {
     accountsTitles() {
       return [...this.accounts.map((acc) => acc.title), 'all'];
     },
-    balanceLabels() {
-      return this.balanceValues?.map((el) => `${el} NCU`);
-    },
-    balanceValues() {
+    balance() {
+      const amount = this.transactions?.length - 11;
+      const labels = [];
+      const values = [];
       let balance = 0;
-      const values = (this.accountTitle !== 'all')
-        ? this.transactions?.map((el) =>
-            balance -= el.total
-          )
-        : [];
-      const amount = values.length - 15;
 
+      if (this.accountTitle === 'all') {
+        return { labels, values };
+      }
+
+      this.transactions?.forEach((el) => {
+        values.push(balance -= el.total);
+        labels.push(`${balance} NCU`);
+      });
       values.unshift(0);
+      labels.unshift('0 NCU');
 
-      return (amount > 0) ? values.slice(amount) : values;
+      return {
+        labels: (amount > 0) ? labels.slice(amount) : labels,
+        values: (amount > 0) ? values.slice(amount) : values
+      };
     }
   },
   watch: {
