@@ -19,6 +19,7 @@ package nocloud.services_providers;
 import "google/protobuf/struct.proto";
 import "google/api/annotations.proto";
 import "pkg/states/proto/states.proto";
+import "pkg/public_data/proto/public_data.proto";
 
 message Var {
     map<string, google.protobuf.Value> value = 1;
@@ -32,7 +33,8 @@ message ServicesProvider {
     map<string, Var> vars = 5;
     map<string, google.protobuf.Struct> extentions = 6;
     nocloud.states.State state = 7;
-    bool public = 8; // If set to true, the provider will be visible to all users
+    nocloud.public_data.PublicData public_data = 8;
+    bool public = 9; // If set to true, the provider will be visible to all users
 }
 
 message TestResponse {
