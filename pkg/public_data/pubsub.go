@@ -20,7 +20,7 @@ import (
 	"log"
 
 	"github.com/arangodb/go-driver"
-	pb "github.com/slntopp/nocloud/pkg/public_data/proto"
+	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -95,17 +95,20 @@ UPDATE DOCUMENT(@@collection, @key) WITH { public_data: @public_data } IN @@coll
 
 func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	log := s.log.Named(col)
+	log.Debug("PublicData updating started")
 	for msg := range msgs {
-		var req pb.ObjectState
+		log.Debug("pd upd msg", zap.Any("msg", msg))
+		var req pb.ObjectPublicData
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
 			continue
 		}
+		log.Debug("req pd", zap.Any("req", &req))
 		c, err := (*s.db).Query(context.TODO(), updatePublicDataQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
-			"public_data": req.PublicData,
+			"public_data": req.Data,
 		})
 		if err != nil {
 			log.Error("Failed to update public_data", zap.Error(err))
@@ -116,11 +119,11 @@ func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	}
 }
 
-type Pub func(msg *pb.ObjectState) error
+type Pub func(msg *pb.ObjectPublicData) error
 
 func (s *PublicDataPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
-	return func(msg *pb.ObjectState) error {
+	return func(msg *pb.ObjectPublicData) error {
 		body, err := proto.Marshal(msg)
 		if err != nil {
 			return err

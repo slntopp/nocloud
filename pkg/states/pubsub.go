@@ -96,12 +96,14 @@ UPDATE DOCUMENT(@@collection, @key) WITH { state: @state } IN @@collection OPTIO
 func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	log := s.log.Named(col)
 	for msg := range msgs {
+		log.Debug("st upd msg", zap.Any("msg", msg))
 		var req pb.ObjectState
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
 			continue
 		}
+		log.Debug("req st", zap.Any("req", &req))
 		c, err := (*s.db).Query(context.TODO(), updateStateQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
