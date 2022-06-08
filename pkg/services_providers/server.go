@@ -25,6 +25,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	p "github.com/slntopp/nocloud/pkg/public_data"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	s "github.com/slntopp/nocloud/pkg/states"
 	"github.com/streadway/amqp"
@@ -56,9 +57,13 @@ type ServicesProviderServer struct {
 
 func NewServicesProviderServer(log *zap.Logger, db driver.Database, rbmq *amqp.Connection) *ServicesProviderServer {
 	s := s.NewStatesPubSub(log, &db, rbmq)
-	ch := s.Channel()
-	s.TopicExchange(ch, "states") // init Exchange with name "states" of type "topic"
-	s.StatesConsumerInit(ch, "states", "sp", schema.SERVICES_PROVIDERS_COL) // init Consumer queue of topic "states.sp"
+	p := p.NewPublicDataPubSub(log, &db, rbmq)
+	statesCh := s.Channel()
+	publicDataCh := p.Channel()
+	s.TopicExchange(statesCh, "states") // init Exchange with name "states" of type "topic"
+	p.TopicExchange(publicDataCh, "public_data")
+	s.StatesConsumerInit(statesCh, "states", "sp", schema.SERVICES_PROVIDERS_COL) // init Consumer queue of topic "states.sp"
+	p.PublicDataConsumerInit(publicDataCh, "public_data", "sp", schema.SERVICES_PROVIDERS_COL)
 
 	return &ServicesProviderServer{
 		log: log, db: db, ctrl: graph.NewServicesProvidersController(log, db),

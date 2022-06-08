@@ -20,7 +20,7 @@ import (
 	"log"
 
 	"github.com/arangodb/go-driver"
-	pb "github.com/slntopp/nocloud/pkg/states/proto"
+	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
@@ -30,15 +30,15 @@ var (
 	RabbitMQConn string
 )
 
-type StatesPubSub struct {
+type PublicDataPubSub struct {
 	log  *zap.Logger
 	db   *driver.Database
 	rbmq *amqp.Connection
 }
 
-func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *StatesPubSub {
-	ps := &StatesPubSub{
-		log: log.Named("StatesServer"), rbmq: rbmq,
+func NewPublicDataPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *PublicDataPubSub {
+	ps := &PublicDataPubSub{
+		log: log.Named("PublicDataServer"), rbmq: rbmq,
 	}
 	if db != nil {
 		ps.db = db
@@ -46,7 +46,7 @@ func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection
 	return ps
 }
 
-func (s *StatesPubSub) Channel() *amqp.Channel {
+func (s *PublicDataPubSub) Channel() *amqp.Channel {
 	log := s.log.Named("Channel")
 
 	ch, err := s.rbmq.Channel()
@@ -56,7 +56,7 @@ func (s *StatesPubSub) Channel() *amqp.Channel {
 	return ch
 }
 
-func (s *StatesPubSub) TopicExchange(ch *amqp.Channel, name string) {
+func (s *PublicDataPubSub) TopicExchange(ch *amqp.Channel, name string) {
 	err := ch.ExchangeDeclare(
 		name, "topic", true, false, false, false, nil,
 	)
@@ -65,7 +65,7 @@ func (s *StatesPubSub) TopicExchange(ch *amqp.Channel, name string) {
 	}
 }
 
-func (s *StatesPubSub) StatesConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) {
+func (s *PublicDataPubSub) PublicDataConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) {
 	if s.db == nil {
 		log.Fatal("Failed to initialize states consumer, database is not set")
 	}
@@ -89,40 +89,41 @@ func (s *StatesPubSub) StatesConsumerInit(ch *amqp.Channel, exchange, subtopic, 
 	go s.Consumer(col, msgs)
 }
 
-const updateStateQuery = `
-UPDATE DOCUMENT(@@collection, @key) WITH { state: @state } IN @@collection OPTIONS { mergeObjects: false }
+const updatePublicDataQuery = `
+UPDATE DOCUMENT(@@collection, @key) WITH { public_data: @public_data } IN @@collection OPTIONS { mergeObjects: false }
 `
 
-func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
+func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	log := s.log.Named(col)
+	log.Debug("PublicData updating started")
 	for msg := range msgs {
-		log.Debug("st upd msg", zap.Any("msg", msg))
-		var req pb.ObjectState
+		log.Debug("pd upd msg", zap.Any("msg", msg))
+		var req pb.ObjectPublicData
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
 			continue
 		}
-		log.Debug("req st", zap.Any("req", &req))
-		c, err := (*s.db).Query(context.TODO(), updateStateQuery, map[string]interface{}{
+		log.Debug("req pd", zap.Any("req", &req))
+		c, err := (*s.db).Query(context.TODO(), updatePublicDataQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
-			"state":       req.State,
+			"public_data": req.Data,
 		})
 		if err != nil {
-			log.Error("Failed to update state", zap.Error(err))
+			log.Error("Failed to update public_data", zap.Error(err))
 			continue
 		}
-		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
+		log.Debug("Updated public_data", zap.String("type", col), zap.String("uuid", req.Uuid))
 		c.Close()
 	}
 }
 
-type Pub func(msg *pb.ObjectState) error
+type Pub func(msg *pb.ObjectPublicData) error
 
-func (s *StatesPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
+func (s *PublicDataPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
-	return func(msg *pb.ObjectState) error {
+	return func(msg *pb.ObjectPublicData) error {
 		body, err := proto.Marshal(msg)
 		if err != nil {
 			return err
