@@ -173,9 +173,10 @@ func main() {
 
 	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
 	handler := cors.New(cors.Options{
-		AllowedOrigins: corsAllowed,
-		AllowedHeaders: []string{"Content-Type"},
-		AllowedMethods: []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
+		AllowedOrigins:   corsAllowed,
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
+		AllowCredentials: true,
 	}).Handler(gwmux)
 
 	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
