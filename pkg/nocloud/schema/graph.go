@@ -24,7 +24,6 @@ import (
 	"go.uber.org/zap"
 )
 
-
 var (
 	DB_NAME = "nocloud"
 )
@@ -39,7 +38,7 @@ func CheckAndRegisterCollections(log *zap.Logger, db driver.Database, collection
 		if err != nil {
 			log.Fatal("Failed to check collection", zap.Any(col, err))
 		}
-		log.Debug("Collection " + col, zap.Bool("Exists", exists))
+		log.Debug("Collection "+col, zap.Bool("Exists", exists))
 		if !exists {
 			log.Debug("Creating", zap.String("collection", col))
 			_, err := db.CreateCollection(context.TODO(), col, options)
@@ -65,7 +64,7 @@ func CheckAndRegisterGraph(log *zap.Logger, db driver.Database, graph NoCloudGra
 	for _, edge := range graph.Edges {
 		edges = append(edges, driver.EdgeDefinition{
 			Collection: strings.Join(edge, "2"),
-			From: []string{edge[0]}, To: []string{edge[1]},
+			From:       []string{edge[0]}, To: []string{edge[1]},
 		})
 	}
 
@@ -100,7 +99,7 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 		log.Fatal("Error checking if DataBase exists", zap.Error(err))
 	}
 	log.Debug("DataBase", zap.Bool("Exists", dbExists))
-	
+
 	var db driver.Database
 	if !dbExists {
 		db, err = c.CreateDatabase(context.TODO(), DB_NAME, nil)

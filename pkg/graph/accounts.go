@@ -38,7 +38,7 @@ type Account struct {
 }
 
 type AccountsController struct {
-	col driver.Collection // Accounts Collection
+	col  driver.Collection // Accounts Collection
 	cred driver.Collection // Credentials Collection
 
 	log *zap.Logger
@@ -87,10 +87,10 @@ func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req
 
 	query := `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@accounts, node) RETURN node`
 	bindVars := map[string]interface{}{
-		"depth": depth,
-		"account": requestor.ID.String(),
+		"depth":             depth,
+		"account":           requestor.ID.String(),
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
-		"@accounts": schema.ACCOUNTS_COL,
+		"@accounts":         schema.ACCOUNTS_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
@@ -102,7 +102,7 @@ func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req
 
 	var r []Account
 	for {
-		var acc pb.Account 
+		var acc pb.Account
 		meta, err := c.ReadDocument(ctx, &acc)
 		if driver.IsNoMoreDocuments(err) {
 			break
@@ -137,13 +137,13 @@ func (ctrl *AccountsController) Update(ctx context.Context, acc Account, title s
 }
 
 // Grant account access to namespace
-func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) (error) {
+func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) error {
 	_, err := edge.CreateDocument(ctx, Access{
-		From: acc.ID,
-		To: ns.ID,
+		From:  acc.ID,
+		To:    ns.ID,
 		Level: level,
-		Role: role,
-		DocumentMeta: driver.DocumentMeta {
+		Role:  role,
+		DocumentMeta: driver.DocumentMeta{
 			Key: acc.Key + "-" + ns.Key,
 		},
 	})
@@ -151,36 +151,36 @@ func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, n
 }
 
 // Grant namespace access to account
-func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) (error) {
+func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) error {
 	_, err := edge.CreateDocument(ctx, Access{
-		From: ns.ID,
-		To: acc.ID,
+		From:  ns.ID,
+		To:    acc.ID,
 		Level: level,
-		Role: role,
-		DocumentMeta: driver.DocumentMeta {
+		Role:  role,
+		DocumentMeta: driver.DocumentMeta{
 			Key: ns.Key + "-" + acc.Key,
 		},
 	})
 	return err
 }
 
-func (acc *Account) Delete(ctx context.Context, db driver.Database) (error) {
-	err := DeleteNodeChildren(ctx, db, acc.ID.String())
+func (acc *Account) Delete(ctx context.Context, db driver.Database) error {
+	err := DeleteRecursive(ctx, db, acc.ID)
 	if err != nil {
 		return err
 	}
 
-	graph, _ := db.Graph(ctx, schema.PERMISSIONS_GRAPH.Name)
+	/*graph, _ := db.Graph(ctx, schema.PERMISSIONS_GRAPH.Name)
 	col, _ := graph.VertexCollection(ctx, schema.ACCOUNTS_COL)
 	_, err = col.RemoveDocument(ctx, acc.Key)
 	if err != nil {
 		return err
-	}
+	}*/
 
 	return nil
 }
 
-func (ctrl *AccountsController) Delete(ctx context.Context, id string) (error) {
+func (ctrl *AccountsController) Delete(ctx context.Context, id string) error {
 	acc, err := ctrl.Get(ctx, id)
 	if err != nil {
 		return err
@@ -189,13 +189,14 @@ func (ctrl *AccountsController) Delete(ctx context.Context, id string) (error) {
 }
 
 // Set Account Credentials, ensure account has only one credentials document linked per credentials type
-func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c credentials.Credentials) (error) {
-	cred, err := ctrl.cred.CreateDocument(ctx, c)	
+func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c credentials.Credentials, role string) error {
+	cred, err := ctrl.cred.CreateDocument(ctx, c)
 	_, err = edge.CreateDocument(ctx, credentials.Link{
 		From: acc.ID,
-		To: cred.ID,
+		To:   cred.ID,
 		Type: c.Type(),
-		DocumentMeta: driver.DocumentMeta {
+		Role: role,
+		DocumentMeta: driver.DocumentMeta{
 			Key: c.Type() + "-" + acc.Key, // Ensure only one credentials vertex per type
 		},
 	})
@@ -240,7 +241,7 @@ func (ctrl *AccountsController) GetCredentials(ctx context.Context, edge_col dri
 func Authorisable(ctx context.Context, cred *credentials.Credentials, db driver.Database) (Account, bool) {
 	query := `FOR account IN 1 INBOUND @credentials GRAPH @credentials_graph RETURN account`
 	c, err := db.Query(ctx, query, map[string]interface{}{
-		"credentials": cred,
+		"credentials":       cred,
 		"credentials_graph": schema.CREDENTIALS_GRAPH.Name,
 	})
 	if err != nil {
@@ -276,11 +277,11 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 
 	var meta driver.DocumentMeta
 	if !exists {
-		meta, err = ctrl.col.CreateDocument(context.TODO(), Account{ 
+		meta, err = ctrl.col.CreateDocument(context.TODO(), Account{
 			Account: &pb.Account{
 				Title: "nocloud",
 			},
-			DocumentMeta: driver.DocumentMeta { Key: schema.ROOT_ACCOUNT_KEY },
+			DocumentMeta: driver.DocumentMeta{Key: schema.ROOT_ACCOUNT_KEY},
 		})
 		if err != nil {
 			return err
@@ -297,9 +298,9 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	ns_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.NAMESPACES_COL)
 	exists, err = ns_col.DocumentExists(context.TODO(), schema.ROOT_NAMESPACE_KEY)
 	if err != nil || !exists {
-		meta, err := ns_col.CreateDocument(context.TODO(), Namespace{ 
-			Title: "platform",
-			DocumentMeta: driver.DocumentMeta { Key: schema.ROOT_NAMESPACE_KEY },
+		meta, err := ns_col.CreateDocument(context.TODO(), Namespace{
+			Title:        "platform",
+			DocumentMeta: driver.DocumentMeta{Key: schema.ROOT_NAMESPACE_KEY},
 		})
 		if err != nil {
 			return err
@@ -332,7 +333,7 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 
 	exists, err = cred_edge_col.DocumentExists(context.TODO(), fmt.Sprintf("standard-%s", schema.ROOT_ACCOUNT_KEY))
 	if err != nil || !exists {
-		err = ctrl.SetCredentials(ctx, root, cred_edge_col, cred)
+		err = ctrl.SetCredentials(ctx, root, cred_edge_col, cred, roles.OWNER)
 		if err != nil {
 			return err
 		}

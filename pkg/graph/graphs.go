@@ -18,6 +18,7 @@ package graph
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -30,6 +31,58 @@ type Node struct {
 
 type Deletable interface {
 	Delete(context.Context, driver.Database) error
+}
+
+func DeleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID) error {
+	col, err := db.Collection(ctx, id.Collection())
+	if err != nil {
+		return fmt.Errorf("error while extracting collection: %v, DocID: %s", err, id)
+	}
+
+	_, err = col.RemoveDocument(ctx, id.Key())
+	if err != nil {
+		return fmt.Errorf("error while deleting by DocID: %v, DocID: %s", err, id)
+	}
+
+	return nil
+}
+
+func DeleteRecursive(ctx context.Context, db driver.Database, id driver.DocumentID) error {
+	query := `FOR node, edge IN OUTBOUND @node GRAPH Permissions FILTER edge.role == "owner" return {edge: edge._id, to: edge._to}`
+	c, err := db.Query(ctx, query, map[string]interface{}{
+		"node": id,
+	})
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	for {
+		var obj map[string]driver.DocumentID
+		_, err := c.ReadDocument(ctx, &obj)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return err
+		}
+
+		err = DeleteByDocID(ctx, db, obj["edge"])
+		if err != nil {
+			return fmt.Errorf("error while deleting 'edge': %v, obj: %v", err, obj)
+		}
+
+		DeleteRecursive(ctx, db, obj["to"])
+		if err != nil {
+			return fmt.Errorf("error while deleting 'to': %v, obj: %v", err, obj)
+		}
+	}
+
+	err = DeleteByDocID(ctx, db, id)
+	if err != nil {
+		return fmt.Errorf("error while deleting node: %v, DocID: %s", err, id)
+	}
+
+	return nil
 }
 
 func DeleteNodeChildren(ctx context.Context, db driver.Database, node string) error {
@@ -72,10 +125,10 @@ func MakeDeletable(ctx context.Context, db driver.Database, node Node) (Deletabl
 	col, _ := db.Collection(ctx, node.Collection)
 
 	switch node.Collection {
-	case schema.ACCOUNTS_COL:
-		var acc Account
-		_, err = col.ReadDocument(ctx, node.Key, &acc)
-		result = &acc
+	/*case schema.ACCOUNTS_COL:
+	var acc Account
+	_, err = col.ReadDocument(ctx, node.Key, &acc)
+	result = &acc*/
 	case schema.NAMESPACES_COL:
 		var ns Namespace
 		_, err = col.ReadDocument(ctx, node.Key, &ns)
