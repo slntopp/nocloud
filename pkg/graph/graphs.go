@@ -71,7 +71,7 @@ func DeleteRecursive(ctx context.Context, db driver.Database, id driver.Document
 			return fmt.Errorf("error while deleting 'edge': %v, obj: %v", err, obj)
 		}
 
-		DeleteRecursive(ctx, db, obj["to"])
+		err = DeleteRecursive(ctx, db, obj["to"])
 		if err != nil {
 			return fmt.Errorf("error while deleting 'to': %v, obj: %v", err, obj)
 		}
