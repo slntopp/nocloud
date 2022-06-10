@@ -17,7 +17,6 @@ package graph
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/arangodb/go-driver"
@@ -47,10 +46,40 @@ func DeleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID
 	return nil
 }
 
-func DeleteRecursive(ctx context.Context, db driver.Database, id driver.DocumentID) error {
-	query := `FOR node, edge IN OUTBOUND @node GRAPH Permissions FILTER edge.role == "owner" return {edge: edge._id, to: edge._to}`
+func DeleteInBoundEdges(ctx context.Context, db driver.Database, id driver.DocumentID, graph string) error {
+	query := `FOR node, edge IN INBOUND @node GRAPH @graph RETURN edge._id`
 	c, err := db.Query(ctx, query, map[string]interface{}{
-		"node": id,
+		"node":  id,
+		"graph": graph,
+	})
+	if err != nil {
+		return err
+	}
+	defer c.Close()
+
+	for {
+		var id driver.DocumentID
+		_, err := c.ReadDocument(ctx, &id)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return err
+		}
+
+		err = DeleteByDocID(ctx, db, id)
+		if err != nil {
+			return fmt.Errorf("error while deleting inbound edge: %v, id: %s", err, id)
+		}
+	}
+
+	return nil
+}
+
+func DeleteRecursive(ctx context.Context, db driver.Database, id driver.DocumentID, graph string) error {
+	query := `FOR node, edge IN 1..100 OUTBOUND @node GRAPH @graph FILTER edge.role == "owner" RETURN {edge: edge._id, to: edge._to}`
+	c, err := db.Query(ctx, query, map[string]interface{}{
+		"node":  id,
+		"graph": graph,
 	})
 	if err != nil {
 		return err
@@ -70,77 +99,33 @@ func DeleteRecursive(ctx context.Context, db driver.Database, id driver.Document
 		if err != nil {
 			return fmt.Errorf("error while deleting 'edge': %v, obj: %v", err, obj)
 		}
-
-		err = DeleteRecursive(ctx, db, obj["to"])
-		if err != nil {
-			return fmt.Errorf("error while deleting 'to': %v, obj: %v", err, obj)
+		if obj["to"].Collection() == schema.ACCOUNTS_COL {
+			err = DeleteRecursive(ctx, db, id, schema.CREDENTIALS_GRAPH.Name)
+			if err != nil {
+				return fmt.Errorf("error while deleting 'to': %v, obj: %v", err, obj)
+			}
+		} else {
+			err = DeleteInBoundEdges(ctx, db, obj["to"], schema.PERMISSIONS_GRAPH.Name)
+			if err != nil {
+				return fmt.Errorf("error while deleting 'to' inbound edges: %v, obj: %v", err, obj)
+			}
+			err = DeleteByDocID(ctx, db, obj["to"])
+			if err != nil {
+				return fmt.Errorf("error while deleting 'to': %v, obj: %v", err, obj)
+			}
 		}
 	}
 
+	err = DeleteInBoundEdges(ctx, db, id, schema.PERMISSIONS_GRAPH.Name)
+	if err != nil {
+		return fmt.Errorf("error while deleting node's inbound edges: %v, node: %v", err, id)
+	}
 	err = DeleteByDocID(ctx, db, id)
 	if err != nil {
 		return fmt.Errorf("error while deleting node: %v, DocID: %s", err, id)
 	}
 
 	return nil
-}
-
-func DeleteNodeChildren(ctx context.Context, db driver.Database, node string) error {
-	query := `FOR node, edge, path IN OUTBOUND @node GRAPH Permissions FILTER edge.role == "owner" RETURN PARSE_IDENTIFIER(node._id)`
-	c, err := db.Query(ctx, query, map[string]interface{}{
-		"node": node,
-	})
-	if err != nil {
-		return errors.New("Error executing find children query")
-	}
-	defer c.Close()
-
-	for {
-		var node Node
-		_, err := c.ReadDocument(ctx, &node)
-		if driver.IsNoMoreDocuments(err) {
-			break
-		} else if err != nil {
-			return errors.New("Error reading Document")
-		}
-
-		// fmt.Println("Node must be deleted", node)
-		next, err := MakeDeletable(ctx, db, node)
-		if err != nil {
-			return errors.New("Error making node deletable")
-		}
-
-		err = next.Delete(ctx, db)
-		if err != nil {
-			return errors.New("Error deleting child node")
-		}
-	}
-
-	return nil
-}
-
-func MakeDeletable(ctx context.Context, db driver.Database, node Node) (Deletable, error) {
-	var result Deletable
-	var err error
-	col, _ := db.Collection(ctx, node.Collection)
-
-	switch node.Collection {
-	/*case schema.ACCOUNTS_COL:
-	var acc Account
-	_, err = col.ReadDocument(ctx, node.Key, &acc)
-	result = &acc*/
-	case schema.NAMESPACES_COL:
-		var ns Namespace
-		_, err = col.ReadDocument(ctx, node.Key, &ns)
-		result = &ns
-	default:
-		return nil, errors.New("Error making node deletable: Can't define node type")
-	}
-
-	if err != nil {
-		return nil, errors.New("Error making node deletable: Can't get node from Collection")
-	}
-	return result, nil
 }
 
 const getWithAccessLevel = `

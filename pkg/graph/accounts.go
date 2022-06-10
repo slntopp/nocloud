@@ -165,18 +165,10 @@ func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, n
 }
 
 func (acc *Account) Delete(ctx context.Context, db driver.Database) error {
-	err := DeleteRecursive(ctx, db, acc.ID)
+	err := DeleteRecursive(ctx, db, acc.ID, schema.PERMISSIONS_GRAPH.Name)
 	if err != nil {
 		return err
 	}
-
-	/*graph, _ := db.Graph(ctx, schema.PERMISSIONS_GRAPH.Name)
-	col, _ := graph.VertexCollection(ctx, schema.ACCOUNTS_COL)
-	_, err = col.RemoveDocument(ctx, acc.Key)
-	if err != nil {
-		return err
-	}*/
-
 	return nil
 }
 
