@@ -90,9 +90,19 @@
           <v-select
             dense
 						label="plan"
-            class="d-inline-block"
+            style="width: 200px"
+            class="d-inline-block mr-4"
             v-model="currentInstancesGroups.plan"
             :items="plans.titles"
+					/>
+          <v-select
+            dense
+						label="product"
+            style="width: 200px"
+            class="d-inline-block"
+            v-model="currentInstancesGroups.product"
+            v-if="plans.products.length > 0"
+            :items="plans.products"
 					/>
 
           <v-text-field
@@ -178,7 +188,8 @@ export default {
     templates: {},
     plans: {
       titles: [],
-      list: []
+      list: [],
+      products: []
     },
 
     plansVisible: false,
@@ -227,12 +238,20 @@ export default {
     applyGroup() {
       const current = this.currentInstancesGroups;
       const instances = current.body.instances;
-      const plan = this.plans.list
-        .find((plan) => current.plan.includes(plan.title));
+      const plan = this.plans.list.find((plan) =>
+        current.plan.includes(plan.title)
+      );
+      const [product] = Object.entries(plan.products)
+        .find(([, prod]) =>
+          prod.title === current.product
+        ) || [];
 
       instances.forEach((inst) => {
         inst.billing_plan = plan;
         inst.plan = current.plan;
+        inst.product = product;
+        inst.productTitle = current.product;
+        inst.products = this.plans.products;
       });
 
       this.instances[this.currentInstancesGroupsIndex] = current;
@@ -347,7 +366,11 @@ export default {
       .then((res) => {
         const key = res['instance-billing-plan-settings']
 
-        this.plansVisible = JSON.parse(key).required
+        if (key) {
+          this.plansVisible = JSON.parse(key).required
+        } else {
+          this.plansVisible = false
+        }
       })
   },
   watch: {
@@ -357,6 +380,20 @@ export default {
       },
       deep: true,
     },
+    'currentInstancesGroups.plan'() {
+      const { plan } = this.currentInstancesGroups;
+      const uuid = plan.split('(')[1]?.slice(0, 8);
+      const products = this.plans.list.find((el) =>
+        el.uuid.includes(uuid)
+      )?.products || {};
+
+      this.plans.products = [];
+      delete this.currentInstancesGroups.product;
+      delete this.currentInstancesGroups.products;
+      Object.values(products).forEach(({ title }) => {
+        this.plans.products.push(title);
+      });
+    }
   },
 };
 </script>

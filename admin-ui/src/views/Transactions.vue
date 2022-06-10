@@ -220,22 +220,47 @@ export default {
       return [...this.accounts.map((acc) => acc.title), 'all'];
     },
     balance() {
-      const amount = this.transactions?.length - 11;
-      const labels = [];
-      const values = [];
+      const dates = [];
+      let labels = ['0 NCU'];
+      let values = [0];
       let balance = 0;
+      let counter = 0;
 
       if (this.accountTitle === 'all') {
         return { labels, values };
       }
 
-      this.transactions?.forEach((el) => {
+      this.transactions?.forEach((el, i, arr) => {
         values.push(balance -= el.total);
         labels.push(`${balance} NCU`);
+        dates.push(el.proc - arr[i - 1]?.proc ||
+          arr[i + 1].proc - el.proc);
       });
-      values.unshift(0);
-      labels.unshift('0 NCU');
 
+      for (let i = 1; i < dates.length; i++) {
+        const max = Math.max(dates[i], dates[i - 1]);
+        const min = Math.min(dates[i], dates[i - 1]);
+        const spaces = (Math.round(max / min) < 10)
+          ? Math.round(max / min) - 1 : 9;
+
+        if (spaces < 1) continue;
+        const newValues = values.splice(i + counter);
+        const newLabels = labels.splice(i + counter);
+        const diff = (newValues[0] - values.at(-1)) / (spaces + 1);
+
+        for (let j = 0; j < spaces; j++) {
+          const curr = values[i + j + counter - 1];
+
+          values[i + j + counter] = curr + diff;
+          labels[i + j + counter] = ' ';
+        }
+
+        counter += spaces + 1;
+        values = values.concat(newValues);
+        labels = labels.concat(newLabels);
+      }
+
+      const amount = values.length - 12;
       return {
         labels: (amount > 0) ? labels.slice(amount) : labels,
         values: (amount > 0) ? values.slice(amount) : values
@@ -269,7 +294,3 @@ export default {
   }
 }
 </script>
-
-<style>
-
-</style>

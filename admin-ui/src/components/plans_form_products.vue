@@ -93,9 +93,10 @@ export default {
     generalRule: [v => !!v || 'This field is required!'],
   }),
   created() {
-    this.resources = this.preset;
-    this.$emit('change:product', { key: 'resources', value: this.resources });
-
+    if (!this.$route.params?.planId) {
+      this.resources = this.preset;
+      this.$emit('change:product', { key: 'resources', value: this.resources });
+    }
     if (!this.product) {
       this.$emit('change:product', { key: 'kind', value: this.kind });
 
@@ -104,10 +105,7 @@ export default {
 
     Object.entries(this.product)
       .forEach(([key, value]) => {
-        if (key === 'date') {
-          this.date = 'Custom';
-          this.fullDate = value;
-        } else if (key === 'period') {
+        if (key === 'period') {
           const date = new Date(value * 1000);
           const time = date.toUTCString().split(' ');
 

@@ -109,12 +109,7 @@ export default {
 
     Object.entries(this.resource)
       .forEach(([key, value]) => {
-        if (key === 'on') {
-          this.state = value;
-        } else if (key === 'date') {
-          this.date = 'Custom';
-          this.fullDate = value;
-        } else if (key === 'period') {
+        if (key === 'period') {
           const date = new Date(value * 1000);
           const time = date.toUTCString().split(' ');
 
@@ -131,6 +126,8 @@ export default {
             key: 'date',
             value: this.fullDate
           });
+        } else if (key === 'on') {
+          this.state = value;
         } else {
           this[key] = value;
         }

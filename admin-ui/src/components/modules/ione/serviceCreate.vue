@@ -123,6 +123,15 @@
 						@change="(newVal) => setValue(index + '.billing_plan', newVal)"
 					/>
 				</v-col>
+				<v-col cols="6">
+					<v-select
+						label="product"
+            v-model="instance.productTitle"
+            v-if="instance.products"
+            :items="instance.products"
+						@change="(newVal) => setValue(index + '.product', newVal)"
+					/>
+				</v-col>
 			</v-row>
 
 		</v-card>
@@ -172,6 +181,23 @@ export default {
 		// instances: []
 	}),
 	methods: { 
+    addProducts(instance) {
+      const { plan, billing_plan } = instance;
+      const uuid = plan.split('(')[1]?.slice(0, 8);
+      const products = this.plans.list.find((el) =>
+        el.uuid.includes(uuid)
+      )?.products || {};
+
+      if (billing_plan.kind === 'STATIC') {
+        instance.products = [];
+        Object.values(products).forEach(({ title }) => {
+          instance.products.push(title);
+        });
+      } else {
+        delete instance.products;
+        delete instance.product;
+      }
+    },
 		addInstance(){
 			const item = JSON.parse(JSON.stringify(this.defaultItem));
 			const data = JSON.parse(this.instancesGroup)
@@ -188,17 +214,26 @@ export default {
 		},
 		setValue(path, val){
 			const data = JSON.parse(this.instancesGroup)
+      const i = path.split('.')[0]
 
       if (path.includes('plan')) {
-        const i = path.split('.')[0]
         const plan = this.plans.list
           .find(({ title }) => val.includes(title))
 
         data.body.instances[i].plan = val
         val = plan
       }
+      if (path.includes('product')) {
+        const plan = data.body.instances[i].billing_plan
+        const [product] = Object.entries(plan.products)
+          .find(([, prod]) => prod.title === val)
+
+        data.body.instances[i].productTitle = val
+        val = product
+      }
 
 			setToValue(data.body.instances, val, path)
+      this.addProducts(data.body.instances[i])
 			this.change(data)
 		},
 		change(data){

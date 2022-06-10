@@ -1,6 +1,6 @@
 <template>
   <div class="pa-4">
-    <h1 class="page__title">{{ title || 'Create' }} plan</h1>
+    <h1 class="page__title" v-if="!item">Create plan</h1>
     <v-form v-model="isValid" ref="form">
       <v-row>
         <v-col lg="6" cols="12">
@@ -62,10 +62,10 @@
 
           <v-divider />
 
-          <v-tabs v-model="form.title" background-color="background">
+          <v-tabs v-model="form.title" background-color="background-light">
             <v-tab
               draggable="true"
-              active-class="background-light"
+              active-class="background"
               v-for="(title, i) of form.titles"
               :key="title"
               @drag="(e) => dragTab(e, i)"
@@ -140,7 +140,7 @@
             :disabled="!isTestSuccess"
             @click="tryToSend"
           >
-            {{ title || 'Create' }}
+            {{ item ? 'Edit' : 'Create' }}
           </v-btn>
           <v-btn
             class="mr-2"
@@ -184,7 +184,7 @@ import snackbar from '@/mixins/snackbar.js';
 export default {
   name: 'plansCreate-view',
   mixins: [snackbar],
-  props: ['title'],
+  props: ['item'],
   data: () => ({
     types: [],
     kinds: ['DYNAMIC', 'STATIC'],
@@ -215,11 +215,15 @@ export default {
   methods: {
     changeResource(num, { key, value }) {
       try {
-        value = JSON.parse(value);
+        value = JSON.parse(value, num);
       } catch {
         value;
       }
 
+      if (key === 'date') {
+        this.setPeriod(value, num);
+        return;
+      }
       if (this.plan.resources[num]) {
         this.plan.resources[num][key] = value;
       } else {
@@ -233,6 +237,10 @@ export default {
         value;
       }
 
+      if (key === 'date') {
+        this.setPeriod(value, obj);
+        return;
+      }
       if (this.plan.products[obj]) {
         this.plan.products[obj][key] = value;
       } else {
@@ -263,14 +271,14 @@ export default {
       const width = parseInt(getComputedStyle(e.target).width);
       const all = Array.from(e.target.parentElement.children);
       const next = Math.round(e.layerX / width * (i + 1));
-      const prev = e.target.getAttribute('date-x');
+      const prev = e.target.getAttribute('data-x');
 
       e.target.style.cssText = `transform: translateX(${e.layerX}px)`;
-      e.target.setAttribute('date-x', `${e.layerX}`);
+      e.target.setAttribute('data-x', `${e.layerX}`);
       all.shift();
       all.pop();
 
-      if (!all[next]) return;
+      if (!all[next] || next === i) return;
 
       const nextWidth = parseInt(getComputedStyle(all[next]).width);
 
@@ -344,15 +352,22 @@ export default {
       }
 
       this.isLoading = true;
+      Object.entries(this.plan.products)
+        .forEach(([key, form]) => {
+          const num = this.form.titles
+            .findIndex((el) => el === key);
+          
+          form.sorter = num;
+        });
 
       const id = this.$route.params?.planId;
-      const request = (this.title === 'Edit')
+      const request = (this.item)
         ? api.plans.update(id, this.plan)
         : api.plans.create(this.plan);
 
       request.then(() => {
           this.showSnackbarSuccess({
-            message: (this.title === 'Edit')
+            message: (this.item)
               ? 'Plan edited successfully'
               : 'Plan created successfully'
           });
@@ -383,24 +398,19 @@ export default {
         return;
       }
 
-      if (this.plan.kind === 'DYNAMIC') {
-        this.plan.resources.forEach((form, i, arr) => {
-          arr[i].period = this.getTimestamp(form.date);
-        });
-        this.plan.products = {};
-      } else {
-        Object.values(this.plan.products)
-          .forEach((form, i) => {
-            const period = this.getTimestamp(form.date);
-
-            this.plan.products[i].period = period;
-            this.plan.products[i].sorter = i;
-          });
-        this.plan.resources = [];
-      }
-
       this.testButtonColor = 'success';
       this.isTestSuccess = true;
+    },
+    setPeriod(date, res) {
+      const period = this.getTimestamp(date);
+
+      if (this.plan.kind === 'DYNAMIC') {
+        this.plan.resources[res].period = period;
+        this.plan.products = {};
+      } else {
+        this.plan.products[res].period = period;
+        this.plan.resources = [];
+      }
     },
     getTimestamp({ day, month, year, quarter, week, time }) {
       year = +year + 1970;
@@ -418,19 +428,22 @@ export default {
         `${year}-${month}-${day}T${time}Z`
       ) / 1000;
     },
-    async getItem(id) {
-      await this.$store.dispatch('plans/fetchItem', id);
-      const item = this.$store.getters['plans/one'];
+    getItem() {
+      this.form.titles = [];
+      if (Object.keys(this.item).length > 0) {
+        this.plan = this.item;
+        this.isVisible = false;
 
-      this.plan = item;
-      this.isVisible = false;
-      item.resources.forEach((el) => {
-        this.form.titles.push(el.key);
-      });
+        this.item.resources.forEach((el) => {
+          this.form.titles.push(el.key);
+        });
+        Object.keys(this.item.products).forEach((key) => {
+          this.form.titles.push(key);
+        });
+      }
     }
   },
   created() {
-    const id = this.$route.params?.planId;
     const types = require.context(
       "@/components/modules/",
       true,
@@ -446,7 +459,7 @@ export default {
       }
     });
 
-    if (id) this.getItem(id);
+    this.getItem();
   },
   computed: {
     template() {
@@ -475,6 +488,9 @@ export default {
           this.form.titles = [];
           this.isVisible = true;
       }
+    },
+    item() {
+      this.getItem();
     }
   }
 }
