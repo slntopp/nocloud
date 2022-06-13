@@ -105,12 +105,13 @@ func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Re
 
 	for {
 		var r pb.Record
-		_, err = c.ReadDocument(ctx, &r)
+		m, err := c.ReadDocument(ctx, &r)
 		if driver.IsNoMoreDocuments(err) {
 			break
 		} else if err != nil {
 			return nil, err
 		}
+		r.Uuid = m.ID.String()
 		res = append(res, &r)
 	}
 
