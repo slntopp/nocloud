@@ -4,7 +4,7 @@ Cloud-native Open-Source Cloud Management Framework
 
 [![Containers](https://github.com/slntopp/nocloud/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/slntopp/nocloud/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/slntopp/nocloud/actions/workflows/codeql-analysis.yml/badge.svg?branch=master)](https://github.com/slntopp/nocloud/actions/workflows/codeql-analysis.yml)
-[!Codiga](https://api.codiga.io/project/30612/status/svg)
+![Codiga](https://api.codiga.io/project/30612/status/svg)
 
 | **Table of Contents** |                 |
 |-------------------------------|---------|
