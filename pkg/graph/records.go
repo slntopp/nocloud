@@ -86,16 +86,32 @@ func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) {
 	}
 }
 
-func (ctrl *RecordsController) Get(ctx context.Context, recs []string) (res []*pb.Record, err error) {
-	if len(recs) == 0 {
-		return res, nil
-	}
+const getRecordsQuery = `
+LET T = DOCUMENT(@transaction)
+FOR rec IN T.records
+  RETURN DOCUMENT(CONCAT(@records, "/", rec))
+`
 
-	res = make([]*pb.Record, len(recs))
-	_, _, err = ctrl.col.ReadDocuments(ctx, recs, res)
+func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Record, err error) {
+	c, err := ctrl.db.Query(ctx, getRecordsQuery, map[string]interface{}{
+		"transaction": driver.NewDocumentID(schema.TRANSACTIONS_COL, tr),
+		"records":     schema.RECORDS_COL,
+	})
 	if err != nil {
-		ctrl.log.Error("failed to read records", zap.Error(err))
+		ctrl.log.Error("failed to get records", zap.Error(err))
 		return nil, err
+	}
+	defer c.Close()
+
+	for {
+		var r pb.Record
+		_, err = c.ReadDocument(ctx, &r)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		res = append(res, &r)
 	}
 
 	return res, nil
