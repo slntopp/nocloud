@@ -32,6 +32,7 @@ import (
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
 var (
@@ -139,7 +140,7 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 	}
 	log.Debug("Transaction found", zap.String("requestor", requestor), zap.Any("transaction", tr))
 
-	ok := graph.HasAccess(ctx, s.db, requestor, tr.Account, access.SUDO)
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account).String(), access.SUDO)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
