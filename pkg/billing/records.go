@@ -138,12 +138,12 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 		return nil, status.Error(codes.NotFound, "Transaction not found")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, tr.Account, access.SUDO)
+	ok := graph.HasAccess(ctx, s.db, requestor, tr.Transaction.Account, access.SUDO)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
 
-	recs, err := s.records.Get(ctx, tr.Records)
+	recs, err := s.records.Get(ctx, tr.Transaction.Records)
 	if err != nil {
 		log.Error("Failed to get records", zap.String("requestor", requestor), zap.String("uuid", req.Uuid))
 		return nil, status.Error(codes.Internal, "Failed to get Records")
