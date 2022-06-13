@@ -23,11 +23,15 @@ import (
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/slntopp/nocloud/pkg/billing/proto"
 	"github.com/slntopp/nocloud/pkg/graph"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/access"
 )
 
 var (
@@ -117,4 +121,40 @@ init:
 		s.records.Create(ctx, &record)
 		s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 	}
+}
+
+func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transaction) (*pb.Records, error) {
+	log := s.log.Named("GetRecords")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	if req.Uuid == "" {
+		log.Error("Request has no UUID", zap.String("requestor", requestor))
+		return nil, status.Error(codes.InvalidArgument, "Request has no UUID")
+	}
+
+	tr, err := s.transactions.Get(ctx, req.Uuid)
+	if err != nil {
+		log.Error("Failed to get transaction", zap.String("requestor", requestor), zap.String("uuid", req.Uuid))
+		return nil, status.Error(codes.NotFound, "Transaction not found")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor, tr.Account, access.SUDO)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Permission denied")
+	}
+
+	recs, err := s.records.Get(ctx, tr.Records)
+	if err != nil {
+		log.Error("Failed to get records", zap.String("requestor", requestor), zap.String("uuid", req.Uuid))
+		return nil, status.Error(codes.Internal, "Failed to get Records")
+	}
+
+	pool := make([]*pb.Record, len(recs))
+	for i, rec := range recs {
+		pool[i] = rec.Record
+	}
+
+	return &pb.Records{
+		Pool: pool,
+	}, nil
 }
