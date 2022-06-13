@@ -145,7 +145,7 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
 
-	pool, err := s.records.Get(ctx, tr.Records)
+	pool, err := s.records.Get(ctx, tr.Uuid)
 	if err != nil {
 		log.Error("Failed to get records", zap.String("requestor", requestor), zap.String("uuid", req.Uuid))
 		return nil, status.Error(codes.Internal, "Failed to get Records")
