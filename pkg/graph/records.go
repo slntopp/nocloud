@@ -25,13 +25,13 @@ import (
 )
 
 type Record struct {
-	*pb.Transaction
+	*pb.Record
 	driver.DocumentMeta
 }
 
 type RecordsController struct {
 	col driver.Collection // Billing Plans collection
-	db driver.Database
+	db  driver.Database
 	log *zap.Logger
 }
 
@@ -52,9 +52,10 @@ FILTER r.resource == n.resource
 FILTER (n.start < r.end && n.start >= r.start) || (n.start <= r.start && r.start > n.end)
     RETURN r) == 0
 `
+
 func (ctrl *RecordsController) CheckOverlapping(ctx context.Context, r *pb.Record) (ok bool) {
 	c, err := ctrl.db.Query(ctx, checkOverlappingQuery, map[string]interface{}{
-		"record": r,
+		"record":   r,
 		"@records": schema.RECORDS_COL,
 	})
 	if err != nil {
