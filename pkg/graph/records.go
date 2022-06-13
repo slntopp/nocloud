@@ -94,7 +94,7 @@ FOR rec IN T.records
 
 func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Record, err error) {
 	c, err := ctrl.db.Query(ctx, getRecordsQuery, map[string]interface{}{
-		"transaction": driver.NewDocumentID(schema.TRANSACTIONS_COL, tr),
+		"transaction": driver.NewDocumentID(schema.TRANSACTIONS_COL, tr).String(),
 		"records":     schema.RECORDS_COL,
 	})
 	if err != nil {
