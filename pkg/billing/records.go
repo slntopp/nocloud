@@ -31,7 +31,7 @@ import (
 )
 
 var (
-	RabbitMQConn 	string
+	RabbitMQConn string
 )
 
 func init() {
@@ -42,8 +42,8 @@ func init() {
 
 type RecordsServiceServer struct {
 	pb.UnimplementedRecordsServiceServer
-	log *zap.Logger
-	rbmq *amqp.Connection
+	log     *zap.Logger
+	rbmq    *amqp.Connection
 	records graph.RecordsController
 
 	db driver.Database
@@ -59,18 +59,18 @@ func NewRecordsServiceServer(logger *zap.Logger, db driver.Database) *RecordsSer
 	}
 
 	records := graph.NewRecordsController(log, db)
-	
+
 	return &RecordsServiceServer{
-		log: log,
-		rbmq: rbmq,
+		log:     log,
+		rbmq:    rbmq,
 		records: records,
-		
+
 		db: db,
 		ConsumerStatus: &healthpb.RoutineStatus{
 			Routine: "Records Consumer",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
-				Status: healthpb.Status_STOPPED,
+				Status:  healthpb.Status_STOPPED,
 			},
 		},
 	}
@@ -78,7 +78,7 @@ func NewRecordsServiceServer(logger *zap.Logger, db driver.Database) *RecordsSer
 
 func (s *RecordsServiceServer) Consume(ctx context.Context) {
 	log := s.log.Named("Consumer")
-	init:
+init:
 	ch, err := s.rbmq.Channel()
 	if err != nil {
 		log.Error("Failed to open a channel", zap.Error(err))
