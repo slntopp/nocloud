@@ -151,6 +151,8 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 		return nil, status.Error(codes.Internal, "Failed to get Records")
 	}
 
+	log.Debug("Records found", zap.String("transaction", tr.Uuid), zap.Any("records", pool))
+
 	return &pb.Records{
 		Pool: pool,
 	}, nil
