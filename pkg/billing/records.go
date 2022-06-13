@@ -137,21 +137,17 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 		log.Error("Failed to get transaction", zap.String("requestor", requestor), zap.String("uuid", req.Uuid))
 		return nil, status.Error(codes.NotFound, "Transaction not found")
 	}
+	log.Debug("Transaction found", zap.String("requestor", requestor), zap.Any("transaction", tr))
 
-	ok := graph.HasAccess(ctx, s.db, requestor, tr.Transaction.Account, access.SUDO)
+	ok := graph.HasAccess(ctx, s.db, requestor, tr.Account, access.SUDO)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
 
-	recs, err := s.records.Get(ctx, tr.Transaction.Records)
+	pool, err := s.records.Get(ctx, tr.Records)
 	if err != nil {
 		log.Error("Failed to get records", zap.String("requestor", requestor), zap.String("uuid", req.Uuid))
 		return nil, status.Error(codes.Internal, "Failed to get Records")
-	}
-
-	pool := make([]*pb.Record, len(recs))
-	for i, rec := range recs {
-		pool[i] = rec.Record
 	}
 
 	return &pb.Records{

@@ -86,9 +86,9 @@ func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) {
 	}
 }
 
-func (ctrl *RecordsController) Get(ctx context.Context, recs []string) ([]Record, error) {
-	var res []Record
-	_, _, err := ctrl.col.ReadDocuments(ctx, recs, &res)
+func (ctrl *RecordsController) Get(ctx context.Context, recs []string) ([]*pb.Record, error) {
+	var res []*pb.Record
+	_, _, err := ctrl.col.ReadDocuments(ctx, recs, res)
 	if err != nil {
 		ctrl.log.Error("failed to read records", zap.Error(err))
 		return nil, err
