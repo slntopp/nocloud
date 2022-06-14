@@ -246,6 +246,42 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		log.Error("Error while joining service to namespace", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
 	}
+
+	deploy_policies := request.GetDeployPolicies()
+	contexts := make(map[string]*InstancesGroupDriverContext)
+
+	for _, group := range service.GetInstancesGroups() {
+		sp_id := deploy_policies[group.GetUuid()]
+		sp, err := s.sp_ctrl.Get(ctx, sp_id)
+		if err != nil {
+			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
+			return nil, status.Errorf(codes.InvalidArgument, "Error getting ServiceProvider(%s)", sp_id)
+		}
+
+		groupType := group.GetType()
+		client, ok := s.drivers[groupType]
+		if !ok {
+			return nil, status.Errorf(codes.InvalidArgument, "Driver of type '%s' not registered", groupType)
+		}
+		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
+	}
+
+	for _, group := range service.GetInstancesGroups() {
+		c, ok := contexts[group.GetUuid()]
+		if !ok {
+			log.Debug("Instance Group has no context", zap.String("group", group.GetUuid()), zap.String("service", service.GetUuid()))
+			continue
+		}
+		sp := c.sp
+
+		err = s.ctrl.IGController().Provide(ctx, group.Uuid, sp.Uuid)
+		if err != nil {
+			log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
+			continue
+		}
+		log.Debug("Created Group", zap.Any("group", group))
+	}
+
 	return service, nil
 }
 
@@ -295,11 +331,10 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
-	deploy_policies := request.GetDeployPolicies()
 	contexts := make(map[string]*InstancesGroupDriverContext)
 
 	for _, group := range service.GetInstancesGroups() {
-		sp_id := deploy_policies[group.GetUuid()]
+		sp_id := group.GetSp()
 		sp, err := s.sp_ctrl.Get(ctx, sp_id)
 		if err != nil {
 			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
@@ -354,17 +389,6 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 			continue
 		}
 
-		err = s.ctrl.IGController().Provide(ctx, group.Uuid, sp.Uuid)
-		if err != nil {
-			log.Error("Error linking group to ServiceProvider", zap.Any("service_provider", sp.GetUuid()), zap.Any("group", group), zap.Error(err))
-			result.Errors = append(result.Errors, &pb.UpError{
-				Data: map[string]string{
-					"group": group.GetUuid(),
-					"error": err.Error(),
-				},
-			})
-			continue
-		}
 		log.Debug("Updated Group", zap.Any("group", group))
 	}
 
