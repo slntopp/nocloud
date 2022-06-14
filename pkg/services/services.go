@@ -250,8 +250,8 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	deploy_policies := request.GetDeployPolicies()
 	contexts := make(map[string]*InstancesGroupDriverContext)
 
-	for _, group := range service.GetInstancesGroups() {
-		sp_id := deploy_policies[group.GetUuid()]
+	for i, group := range service.GetInstancesGroups() {
+		sp_id := deploy_policies[int32(i)]
 		sp, err := s.sp_ctrl.Get(ctx, sp_id)
 		if err != nil {
 			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
