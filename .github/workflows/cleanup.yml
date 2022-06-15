@@ -18,6 +18,28 @@ jobs:
 
     outputs:
       matrix: ${{steps.set-tags-matrix.outputs.matrix}}
+  clean-ghcr-base:
+    name: Cleanup Base Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Untagged Images (> 1 day)
+        uses: snok/container-retention-policy@v1
+        with:
+          image-names: nocloud/base
+          cut-off: A day ago UTC
+          account-type: personal
+          untagged-only: true
+          token: ${{ secrets.PACKAGES_PAT }}
+
+      - name: Dev Images (> 2 weeks)
+        uses: snok/container-retention-policy@v1
+        with:
+          image-names: nocloud/base
+          cut-off: 2 weeks ago UTC
+          account-type: personal
+          filter-tags: dev-*
+          filter-include-untagged: true
+          token: ${{ secrets.PACKAGES_PAT }}
   clean-ghcr:
     name: Cleanup
     runs-on: ubuntu-latest
