@@ -11,5 +11,6 @@ COPY --from=builder  /go/src/github.com/slntopp/nocloud/edge /edge
 
 EXPOSE 8080
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
+LABEL nocloud.update "true"
 
 ENTRYPOINT ["/edge"]
