@@ -39,17 +39,17 @@ import (
 
 type AccountsServiceServer struct {
 	pb.UnimplementedAccountsServiceServer
-	db driver.Database
-	ctrl graph.AccountsController
+	db      driver.Database
+	ctrl    graph.AccountsController
 	ns_ctrl graph.NamespacesController
 
-	log *zap.Logger
+	log         *zap.Logger
 	SIGNING_KEY []byte
 }
 
 func NewAccountsServer(log *zap.Logger, db driver.Database) *AccountsServiceServer {
 	return &AccountsServiceServer{
-		log: log, db: db, 
+		log: log, db: db,
 		ctrl: graph.NewAccountsController(
 			log.Named("AccountsController"), db,
 		),
@@ -68,7 +68,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 
 	acc, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
-		log.Debug("Error getting account", zap.String("requested_id", request.Uuid),  zap.Any("error", err))
+		log.Debug("Error getting account", zap.String("requested_id", request.Uuid), zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
@@ -197,7 +197,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return res, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.ctrl.SetCredentials(ctx, account, col, cred)
+	err = s.ctrl.SetCredentials(ctx, account, col, cred, roles.OWNER)
 	if err != nil {
 		return res, err
 	}
@@ -232,7 +232,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	return &accountspb.UpdateResponse{Result: true}, nil
 }
 
-func (s *AccountsServiceServer) EnsureRootExists(passwd string) (error) {
+func (s *AccountsServiceServer) EnsureRootExists(passwd string) error {
 	return s.ctrl.EnsureRootExists(passwd)
 }
 
@@ -268,9 +268,9 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 	if has_credentials {
 		err = s.ctrl.UpdateCredentials(ctx, old_cred_key, cred)
 	} else {
-		err = s.ctrl.SetCredentials(ctx, acc, edge, cred)
+		err = s.ctrl.SetCredentials(ctx, acc, edge, cred, roles.OWNER)
 	}
-	
+
 	if err != nil {
 		log.Debug("Error updating/setting credentials", zap.String("type", auth.Type), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error updating/setting credentials")

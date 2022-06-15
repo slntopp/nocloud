@@ -65,10 +65,10 @@ func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, r
 
 	query := `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@namespaces, node) RETURN node`
 	bindVars := map[string]interface{}{
-		"depth": depth,
-		"account": requestor.ID.String(),
+		"depth":             depth,
+		"account":           requestor.ID.String(),
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
-		"@namespaces": schema.NAMESPACES_COL,
+		"@namespaces":       schema.NAMESPACES_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
@@ -80,7 +80,7 @@ func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, r
 
 	var r []Namespace
 	for {
-		var ns Namespace 
+		var ns Namespace
 		_, err := c.ReadDocument(ctx, &ns)
 		if driver.IsNoMoreDocuments(err) {
 			break
@@ -102,31 +102,31 @@ func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Nam
 	if err != nil {
 		return Namespace{}, err
 	}
-	
+
 	ns.DocumentMeta = meta
 	key := ctx.Value(nocloud.NoCloudAccount).(string)
 	acc := Account{
-		DocumentMeta: driver.DocumentMeta {
+		DocumentMeta: driver.DocumentMeta{
 			Key: key,
-			ID: driver.NewDocumentID(schema.ACCOUNTS_COL, key),
+			ID:  driver.NewDocumentID(schema.ACCOUNTS_COL, key),
 		},
 	}
 
 	return ns, ctrl.Link(ctx, acc, ns, access.ADMIN, roles.OWNER)
 }
 
-func (ctrl *NamespacesController) Link(ctx context.Context, acc Account, ns Namespace, access int32, role string) (error) {
+func (ctrl *NamespacesController) Link(ctx context.Context, acc Account, ns Namespace, access int32, role string) error {
 	edge, _ := ctrl.col.Database().Collection(ctx, schema.ACC2NS)
 	return acc.LinkNamespace(ctx, edge, ns, access, role)
 }
 
-func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Namespace, access int32, role string) (error) {
+func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Namespace, access int32, role string) error {
 	edge, _ := ctrl.col.Database().Collection(ctx, schema.NS2ACC)
 	return acc.JoinNamespace(ctx, edge, ns, access, role)
 }
 
-func (ns *Namespace) Delete(ctx context.Context, db driver.Database) (error) {
-	err := DeleteNodeChildren(ctx, db, ns.ID.String())
+func (ns *Namespace) Delete(ctx context.Context, db driver.Database) error {
+	err := DeleteRecursive(ctx, db, ns.ID, schema.PERMISSIONS_GRAPH.Name)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func (ns *Namespace) Delete(ctx context.Context, db driver.Database) (error) {
 	return nil
 }
 
-func (ctrl *NamespacesController) Delete(ctx context.Context, id string) (error) {
+func (ctrl *NamespacesController) Delete(ctx context.Context, id string) error {
 	ns, err := ctrl.Get(ctx, id)
 	if err != nil {
 		return err
