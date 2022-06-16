@@ -270,7 +270,7 @@ export default {
     dragTab(e, i) {
       const width = parseInt(getComputedStyle(e.target).width);
       const all = Array.from(e.target.parentElement.children);
-      const next = Math.round(e.layerX / width * (i + 1));
+      const next = Math.round(e.layerX / width) + i;
       const prev = e.target.getAttribute('data-x');
 
       e.target.style.cssText = `transform: translateX(${e.layerX}px)`;
@@ -280,17 +280,15 @@ export default {
 
       if (!all[next] || next === i) return;
 
-      const nextWidth = parseInt(getComputedStyle(all[next]).width);
-
       all[next].style.transition = '0.3s';
       if (prev < e.layerX) {
-        if (e.layerX > nextWidth / 2) {
+        if (e.layerX > width / 2) {
           all[next].style.transform = `translateX(-${width}px)`;
         } else {
           all[next].style.transform = '';
         }
       } else if (prev > e.layerX) {
-        if (e.layerX > nextWidth / 2) {
+        if (e.layerX > width / 2) {
           all[next].style.transform = '';
         } else {
           all[next].style.transform = `translateX(${width}px)`;
@@ -459,7 +457,7 @@ export default {
       }
     });
 
-    this.getItem();
+    if (this.item) this.getItem();
   },
   computed: {
     template() {
