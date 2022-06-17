@@ -25,13 +25,13 @@ import (
 )
 
 type Record struct {
-	*pb.Transaction
+	*pb.Record
 	driver.DocumentMeta
 }
 
 type RecordsController struct {
 	col driver.Collection // Billing Plans collection
-	db driver.Database
+	db  driver.Database
 	log *zap.Logger
 }
 
@@ -52,9 +52,10 @@ FILTER r.resource == n.resource
 FILTER (n.start < r.end && n.start >= r.start) || (n.start <= r.start && r.start > n.end)
     RETURN r) == 0
 `
+
 func (ctrl *RecordsController) CheckOverlapping(ctx context.Context, r *pb.Record) (ok bool) {
 	c, err := ctrl.db.Query(ctx, checkOverlappingQuery, map[string]interface{}{
-		"record": r,
+		"record":   r,
 		"@records": schema.RECORDS_COL,
 	})
 	if err != nil {
@@ -83,4 +84,36 @@ func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) {
 	if err != nil {
 		ctrl.log.Error("failed to create record", zap.Error(err))
 	}
+}
+
+const getRecordsQuery = `
+LET T = DOCUMENT(@transaction)
+FOR rec IN T.records
+  RETURN DOCUMENT(CONCAT(@records, "/", rec))
+`
+
+func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Record, err error) {
+	c, err := ctrl.db.Query(ctx, getRecordsQuery, map[string]interface{}{
+		"transaction": driver.NewDocumentID(schema.TRANSACTIONS_COL, tr).String(),
+		"records":     schema.RECORDS_COL,
+	})
+	if err != nil {
+		ctrl.log.Error("failed to get records", zap.Error(err))
+		return nil, err
+	}
+	defer c.Close()
+
+	for {
+		var r pb.Record
+		m, err := c.ReadDocument(ctx, &r)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		r.Uuid = m.ID.String()
+		res = append(res, &r)
+	}
+
+	return res, nil
 }

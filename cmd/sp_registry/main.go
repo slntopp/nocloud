@@ -105,6 +105,7 @@ func main() {
 
 	server := sp.NewServicesProviderServer(log, db, rbmq)
 
+	log.Debug("Got drivers", zap.Strings("drivers", drivers))
 	for _, driver := range drivers {
 		log.Info("Registering Driver", zap.String("driver", driver))
 		conn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -120,6 +121,7 @@ func main() {
 		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
 	}
 
+	log.Debug("Got extentions servers", zap.Strings("ext_servers", ext_servers))
 	for _, ext_server := range ext_servers {
 		log.Info("Registering Extention Server", zap.String("ext_server", ext_server))
 		conn, err := grpc.Dial(ext_server, grpc.WithTransportCredentials(insecure.NewCredentials()))

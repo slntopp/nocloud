@@ -17,5 +17,6 @@ RUN go install \
 COPY buf.* ./
 
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
+LABEL nocloud.update "true"
 
 ENTRYPOINT [ "buf", "generate" ]

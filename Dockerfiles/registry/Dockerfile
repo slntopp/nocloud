@@ -12,5 +12,6 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 EXPOSE 8080
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
+LABEL nocloud.update "true"
 
 ENTRYPOINT ["/registry"]

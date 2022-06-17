@@ -16,15 +16,17 @@
 
 `cd examples/nocloud_public`
 
-## Replace `BASE_DOMAIN` in `docker-compose.yml` by nginx service with your domain
+## Fill in .env file
 
-## Init certbot
+Here are `BASE_DOMAIN` and default credentials you should necessary change to yours.
 
-Run init-letsencrypt with your base domain:
+## Traefik
 
-```shell
-./init-letsencrypt.sh example.com
-```
+If you want to access Traefik dashaboard you'd need to white list your IP address or attach some other middleware.
+
+In order to generate certs you ought to write your email address in `traefik.yml`
+
+> You might also need to `chmod 600 letsenctypt/acme.json`
 
 ## Start service
 

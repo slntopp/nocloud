@@ -21,5 +21,6 @@ COPY --from=ui-builder /app/dist /dist
 EXPOSE 8080
 EXPOSE 8000
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
+LABEL nocloud.update "true"
 
 ENTRYPOINT ["/apiserver_web"]

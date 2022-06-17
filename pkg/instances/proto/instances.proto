@@ -44,7 +44,8 @@ message Instance {
     string hash = 8 [(nocloud.hasher.hash) = true];
     nocloud.billing.Plan billing_plan = 9
         [(nocloud.hasher.skipped) = true];
-    optional int32 access_level = 10;
+    optional string product = 10;
+    optional int32 access_level = 11;
 }
 
 message InstancesGroup {

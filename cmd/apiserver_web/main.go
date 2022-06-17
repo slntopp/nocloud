@@ -22,6 +22,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/rs/cors"
 	billingpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	dnspb "github.com/slntopp/nocloud/pkg/dns/proto"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
@@ -32,7 +33,6 @@ import (
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 
-	"github.com/gorilla/handlers"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -43,12 +43,12 @@ import (
 )
 
 var (
-	log 			*zap.Logger
-	
-	apiserver 		string
-	corsAllowed 	[]string
-	insecure 		bool
-	with_block 		bool
+	log *zap.Logger
+
+	apiserver   string
+	corsAllowed []string
+	insecure    bool
+	with_block  bool
 )
 
 func init() {
@@ -60,15 +60,15 @@ func init() {
 	viper.SetDefault("INSECURE", true)
 	viper.SetDefault("WITH_BLOCK", false)
 
-	apiserver   = viper.GetString("APISERVER_HOST")
+	apiserver = viper.GetString("APISERVER_HOST")
 	corsAllowed = strings.Split(viper.GetString("CORS_ALLOWED"), ",")
-	insecure    = viper.GetBool("INSECURE")
-	with_block  = viper.GetBool("WITH_BLOCK")
+	insecure = viper.GetBool("INSECURE")
+	with_block = viper.GetBool("WITH_BLOCK")
 }
 
 func getContentType(path string) (mime string, ok bool) {
 	chunks := strings.Split(path, ".")
-	switch chunks[len(chunks) - 1] {
+	switch chunks[len(chunks)-1] {
 	case "css":
 		return "text/css; charset=utf-8", true
 	default:
@@ -91,7 +91,7 @@ func staticHandler(w http.ResponseWriter, r *http.Request, pathParams map[string
 		w.WriteHeader(404)
 		return
 	}
-	
+
 	mime, ok := getContentType(file)
 	if !ok {
 		mime = mimetype.Detect(index).String()
@@ -167,17 +167,17 @@ func main() {
 		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
 	}
 
-
 	gwmux.HandlePath("GET", "/admin", staticHandler)
 	gwmux.HandlePath("GET", "/admin/{path}", staticHandler)
 	gwmux.HandlePath("GET", "/admin/{path}/{file}", staticHandler)
 
 	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
-	handler := handlers.CORS(
-		handlers.AllowedOrigins(corsAllowed),
-		handlers.AllowedHeaders([]string{"Content-Type"}),
-		handlers.AllowedMethods([]string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"}),
-	)(gwmux)
+	handler := cors.New(cors.Options{
+		AllowedOrigins:   corsAllowed,
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
+		AllowCredentials: true,
+	}).Handler(gwmux)
 
 	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
 	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(http.ListenAndServe(":8000", handler)))

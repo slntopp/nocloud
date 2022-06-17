@@ -45,7 +45,6 @@ func NewBillingPlansController(logger *zap.Logger, db driver.Database) BillingPl
 }
 
 func (ctrl *BillingPlansController) Create(ctx context.Context, plan *pb.Plan) (*BillingPlan, error) {
-	plan.LinkedInstances = []string{}
 	meta, err := ctrl.col.CreateDocument(ctx, plan)
 	if err != nil {
 		return nil, err
@@ -60,7 +59,6 @@ func (ctrl *BillingPlansController) Update(ctx context.Context, plan *pb.Plan) (
 	if plan.Uuid == "" {
 		return nil, errors.New("uuid is empty")
 	}
-	plan.LinkedInstances = []string{}
 	meta, err := ctrl.col.ReplaceDocument(ctx, plan.Uuid, plan)
 	if err != nil {
 		return nil, err
@@ -74,10 +72,6 @@ func (ctrl *BillingPlansController) Update(ctx context.Context, plan *pb.Plan) (
 func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) (err error) {
 	if plan.Uuid == "" {
 		return errors.New("uuid is empty")
-	}
-
-	if len(plan.LinkedInstances) > 0 {
-		return errors.New("requested Billing Plan has linked Instances")
 	}
 
 	_, err = ctrl.col.RemoveDocument(ctx, plan.Uuid)
@@ -124,19 +118,5 @@ func (ctrl *BillingPlansController) List(ctx context.Context) ([]*BillingPlan, e
 		r = append(r, &BillingPlan{&s, meta})
 	}
 
-	return r,  nil
-}
-
-func (ctrl *BillingPlansController) Link(ctx context.Context, uuid string, instances []string) (error) {
-	var plan pb.Plan
-	_, err := ctrl.col.ReadDocument(ctx, uuid, &plan)
-	if err != nil {
-		return err
-	}
-	if plan.LinkedInstances == nil {
-		plan.LinkedInstances = []string{}
-	}
-	plan.LinkedInstances = append(plan.LinkedInstances, instances...)
-	_, err = ctrl.col.ReplaceDocument(ctx, uuid, &plan)
-	return err
+	return r, nil
 }

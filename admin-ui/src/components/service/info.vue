@@ -49,7 +49,7 @@
       </v-col>
     </v-row>
 
-    groups:
+    groups: 
 
     <v-row justify="center" class="px-2 pb-2">
       <v-expansion-panels inset v-model="opened" multiple>

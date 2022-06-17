@@ -46,7 +46,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	query := `FOR t IN @@transactions FILTER t.account == @acc`
 	vars := map[string]interface{}{
 		"@transactions": schema.TRANSACTIONS_COL,
-		"acc": acc,
+		"acc":           acc,
 	}
 	if req.Service != nil {
 		service := *req.Service
@@ -93,7 +93,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	log.Debug("Request received", zap.Any("transaction", t), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY).String()
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.SUDO)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -118,23 +118,24 @@ UPDATE account WITH { balance: -SUM(transactions[*].total) } IN @@accounts
 FOR t IN transactions
     RETURN t
 `
+
 func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessTransactionsRequest) (*pb.Transactions, error) {
 	log := s.log.Named("Reprocess")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY).String()
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.SUDO)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
 	acc := driver.NewDocumentID(schema.ACCOUNTS_COL, req.Account)
 	c, err := s.db.Query(ctx, reprocessTransactions, map[string]interface{}{
-		"@accounts": schema.ACCOUNTS_COL,
+		"@accounts":     schema.ACCOUNTS_COL,
 		"@transactions": schema.TRANSACTIONS_COL,
-		"account": acc.String(),
-		"now": time.Now().Unix(),
+		"account":       acc.String(),
+		"now":           time.Now().Unix(),
 	})
 	if err != nil {
 		log.Error("Error Reprocessing Transactions", zap.Error(err))

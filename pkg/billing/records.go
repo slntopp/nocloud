@@ -23,15 +23,20 @@ import (
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
 	pb "github.com/slntopp/nocloud/pkg/billing/proto"
 	"github.com/slntopp/nocloud/pkg/graph"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/access"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
 var (
-	RabbitMQConn 	string
+	RabbitMQConn string
 )
 
 func init() {
@@ -42,8 +47,8 @@ func init() {
 
 type RecordsServiceServer struct {
 	pb.UnimplementedRecordsServiceServer
-	log *zap.Logger
-	rbmq *amqp.Connection
+	log     *zap.Logger
+	rbmq    *amqp.Connection
 	records graph.RecordsController
 
 	db driver.Database
@@ -59,18 +64,18 @@ func NewRecordsServiceServer(logger *zap.Logger, db driver.Database) *RecordsSer
 	}
 
 	records := graph.NewRecordsController(log, db)
-	
+
 	return &RecordsServiceServer{
-		log: log,
-		rbmq: rbmq,
+		log:     log,
+		rbmq:    rbmq,
 		records: records,
-		
+
 		db: db,
 		ConsumerStatus: &healthpb.RoutineStatus{
 			Routine: "Records Consumer",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
-				Status: healthpb.Status_STOPPED,
+				Status:  healthpb.Status_STOPPED,
 			},
 		},
 	}
@@ -78,7 +83,7 @@ func NewRecordsServiceServer(logger *zap.Logger, db driver.Database) *RecordsSer
 
 func (s *RecordsServiceServer) Consume(ctx context.Context) {
 	log := s.log.Named("Consumer")
-	init:
+init:
 	ch, err := s.rbmq.Channel()
 	if err != nil {
 		log.Error("Failed to open a channel", zap.Error(err))
@@ -117,4 +122,38 @@ func (s *RecordsServiceServer) Consume(ctx context.Context) {
 		s.records.Create(ctx, &record)
 		s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 	}
+}
+
+func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transaction) (*pb.Records, error) {
+	log := s.log.Named("GetRecords")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	if req.Uuid == "" {
+		log.Error("Request has no UUID", zap.String("requestor", requestor))
+		return nil, status.Error(codes.InvalidArgument, "Request has no UUID")
+	}
+
+	tr, err := s.transactions.Get(ctx, req.Uuid)
+	if err != nil {
+		log.Error("Failed to get transaction", zap.String("requestor", requestor), zap.String("uuid", req.Uuid))
+		return nil, status.Error(codes.NotFound, "Transaction not found")
+	}
+	log.Debug("Transaction found", zap.String("requestor", requestor), zap.Any("transaction", tr))
+
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account).String(), access.SUDO)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Permission denied")
+	}
+
+	pool, err := s.records.Get(ctx, req.Uuid)
+	if err != nil {
+		log.Error("Failed to get records", zap.String("requestor", requestor), zap.String("uuid", req.Uuid))
+		return nil, status.Error(codes.Internal, "Failed to get Records")
+	}
+
+	log.Debug("Records found", zap.String("transaction", tr.Uuid), zap.Any("records", pool))
+
+	return &pb.Records{
+		Pool: pool,
+	}, nil
 }
