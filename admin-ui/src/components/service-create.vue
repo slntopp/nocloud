@@ -106,7 +106,17 @@
             :items="types"
             v-model="currentInstancesGroups.body.type"
             label="type"
-          ></v-select>
+          />
+
+          <v-select
+            label="services provider"
+            item-value="uuid"
+            item-text="title"
+            v-model="instances[currentInstancesGroupsIndex].sp"
+            :items="servicesProviders"
+            :rules="rules.req"
+            @change="(newVal) => (currentInstancesGroups.sp = newVal)"
+          />
 
           <component
             :is="templates[currentInstancesGroups.body.type]"
@@ -242,7 +252,11 @@ export default {
       const instances = JSON.parse(JSON.stringify(this.instances));
 
       instances.forEach((inst) => {
-        data.instances_groups.push({ ...inst.body, title: inst.title });
+        data.instances_groups.push({
+          ...inst.body,
+          title: inst.title,
+          sp: inst.sp
+        });
         // console.log(data.instances_groups[inst.title])
         // console.log(data.instances_groups)
         // let ips = 0;
@@ -309,6 +323,9 @@ export default {
     namespacesLoading() {
       return this.$store.getters["namespaces/isLoading"];
     },
+    servicesProviders() {
+      return this.$store.getters["servicesProviders/all"];
+    },
     planRules() {
       return (this.plansVisible)
         ? this.rules.req
@@ -317,6 +334,7 @@ export default {
   },
   created() {
     this.$store.dispatch("namespaces/fetch");
+    this.$store.dispatch("servicesProviders/fetch");
     const types = require.context(
       "@/components/modules/",
       true,
