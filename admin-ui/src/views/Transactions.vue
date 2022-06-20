@@ -15,27 +15,37 @@
       :items="accountsTitles"
     />
 
-    <v-subheader v-if="
-      balanceValues.length > 1 && accountTitle !== 'all'
-    ">
-      Balance:
-    </v-subheader>
-    <v-sparkline
-      color="primary"
-      height="25vh"
-      line-width="1"
-      label-size="4"
-      :labels="balanceLabels"
-      :value="balanceValues"
+    <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
+    <template v-else-if="series.length < 1">
+      <v-subheader v-if="balance.values.length > 1">
+        Balance:
+      </v-subheader>
+      <v-sparkline
+        color="primary"
+        height="25vh"
+        line-width="1"
+        label-size="4"
+        :labels="balance.labels"
+        :value="balance.values"
+      />
+    </template>
+    <apexcharts
+      v-else
+      type="line"
+      height="250"
+      :options="chartOptions"
+      :series="series"
     />
 
     <nocloud-table
       class="mt-4"
+      sort-by="proc"
       :items="transactions"
       :headers="headers"
       :loading="isLoading"
-      :show-select="false"
+      :sort-desc="true"
       :footer-error="fetchError"
+      @input="selectTransaction"
     >
       <template v-slot:[`item.account`]="{ item }">
         {{ account(item.account) }}
@@ -100,16 +110,15 @@
 </template>
 
 <script>
+import api from '@/api.js';
 import snackbar from '@/mixins/snackbar.js';
-import noCloudTable from '@/components/table.vue';
+import nocloudTable from '@/components/table.vue';
 import balance from '@/components/balance.vue';
+import apexcharts from 'vue-apexcharts';
 
 export default {
   name: 'transactions-view',
-  components: {
-    'nocloud-table': noCloudTable,
-    balance
-  },
+  components: { nocloudTable, balance, apexcharts },
   mixins: [snackbar],
   data: () => ({
     headers: [
@@ -120,8 +129,21 @@ export default {
     ],
     accountTitle: '',
     visibleItems: [],
+    selected: [],
     copyed: -1,
-    fetchError: ''
+    fetchError: '',
+
+    series: [],
+    chartLoading: false,
+    chartOptions: {
+      chart: { height: 250, type: 'line' },
+      dataLabels: { enabled: false },
+      stroke: { curve: 'smooth' },
+      xaxis: { type: 'datetime', categories: [] },
+      tooltip: { x: { format: 'dd.MM.yy HH:mm' } },
+      theme: { palette: 'palette10', mode: 'dark' },
+      legend: { showForSingleSeries: true }
+    }
   }),
   methods: {
     account(uuid) {
@@ -135,7 +157,7 @@ export default {
 
       return service?.title;
     },
-    date(timestamp) {
+    date(timestamp, bool) {
       const date = new Date(timestamp * 1000);
       const time = date.toUTCString().split(' ')[4];
       
@@ -143,6 +165,7 @@ export default {
       const month = date.getUTCMonth() + 1;
       const year = date.toUTCString().split(' ')[3];
 
+      if (bool) return `${day}-${month}-${year}T${time}Z`;
       return `${day}.${month}.${year} ${time}`;
     },
     hashTrim(hash) {
@@ -166,28 +189,111 @@ export default {
           message: 'Clipboard is not supported!'
         });
       }
+    },
+    getTransactions() {
+      const { title } = this.$store.getters['auth/userdata'];
+      const accounts = this.accounts.map((acc) => acc.uuid);
+
+      this.accountTitle = title;
+      this.$store.dispatch('services/fetch')
+      this.$store.dispatch('transactions/fetch', accounts)
+        .then(() => {
+          this.fetchError = '';
+        })
+        .catch((err) => {
+          console.error(err);
+
+          this.fetchError = 'Can\'t reach the server';
+          if (err.response) {
+            this.fetchError += `: [ERROR]: ${err.response.data.message}`;
+          } else {
+            this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
+          }
+        });
+    },
+    setTransactions(dates, labels, values) {
+      const min = Math.min(...dates);
+      let counter = 1;
+
+      for (let i = 1; i < dates.length; i++) {
+        const curr = Math.round(dates[i] / min);
+        const spaces = (curr < 10) ? curr : 9;
+
+        if (spaces < 2) continue;
+        const newValues = values.splice(i + counter);
+        const newLabels = labels.splice(i + counter);
+        const diff = (newValues[0] - values.at(-1)) / spaces;
+
+        for (let j = 0; j < spaces - 1; j++) {
+          const prev = values[i + j + counter - 1];
+
+          values[i + j + counter] = prev + diff;
+          labels[i + j + counter] = ' ';
+        }
+
+        counter += spaces - 1;
+        values = values.concat(newValues);
+        labels = labels.concat(newLabels);
+      }
+
+      return [labels, values];
+    },
+    selectTransaction(value) {
+      this.series = [];
+      this.chartLoading = true;
+      this.chartOptions.xaxis.categories = [];
+
+      value.forEach(({ uuid, service }) => {
+        api.transactions.get(uuid)
+          .then(({ pool }) => {
+            pool.forEach((el) => {
+              const name = el.instance.slice(0, 8);
+              const data = { data: [el.total], name, service };
+              const i = this.series.findIndex(
+                (item) => item.name === name
+              );
+
+              if (i !== -1) {
+                this.series[i].data.push(el.total);
+              } else {
+                this.series.push(data);
+              }
+
+              this.chartOptions.xaxis.categories
+                .push(this.date(el.exec, true));
+            })
+          })
+          .catch(() => {
+            this.showSnackbarError({
+              message: 'Records not found'
+            });
+          })
+          .finally(() => {
+            this.series = [...this.series];
+            this.selected = value;
+            this.chartLoading = false;
+          });
+      });
+    },
+    setListenerToLegend() {
+      const legend = document.querySelectorAll('.apexcharts-legend-text');
+
+      legend.forEach((el) => {
+        el.addEventListener('click', (e) => {
+          const { service } = this.series.find((item) =>
+            item.name === e.target.innerText
+          );
+
+          this.$router.push({
+            name: 'Service',
+            params: { serviceId: service }
+          });
+        });
+      });
     }
   },
   created() {
-    const { title } = this.$store.getters['auth/userdata'];
-    const accounts = this.accounts.map((acc) => acc.uuid);
-
-    this.accountTitle = title;
-    this.$store.dispatch('services/fetch')
-    this.$store.dispatch('transactions/fetch', accounts)
-      .then(() => {
-        this.fetchError = '';
-      })
-      .catch((err) => {
-        console.error(err);
-
-        this.fetchError = 'Can\'t reach the server';
-        if (err.response) {
-          this.fetchError += `: [ERROR]: ${err.response.data.message}`;
-        } else {
-          this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
-        }
-      });
+    this.getTransactions();
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
@@ -219,21 +325,30 @@ export default {
     accountsTitles() {
       return [...this.accounts.map((acc) => acc.title), 'all'];
     },
-    balanceLabels() {
-      return this.balanceValues?.map((el) => `${el} NCU`);
-    },
-    balanceValues() {
+    balance() {
+      const dates = [];
+      let labels = ['0 NCU'];
+      let values = [0];
       let balance = 0;
-      const values = (this.accountTitle !== 'all')
-        ? this.transactions?.map((el) =>
-            balance -= el.total
-          )
-        : [];
-      const amount = values.length - 15;
 
-      values.unshift(0);
+      if (this.accountTitle === 'all') {
+        return { labels, values };
+      }
 
-      return (amount > 0) ? values.slice(amount) : values;
+      this.transactions?.forEach((el, i, arr) => {
+        values.push(balance -= el.total);
+        labels.push(`${balance} NCU`);
+        dates.push(el.proc - arr[i - 1]?.proc ||
+          arr[i + 1].proc - el.proc);
+      });
+
+      [labels, values] = this.setTransactions(dates, labels, values);
+
+      const amount = values.length - 12;
+      return {
+        labels: (amount > 0) ? labels.slice(amount) : labels,
+        values: (amount > 0) ? values.slice(amount) : values
+      };
     }
   },
   watch: {
@@ -241,29 +356,17 @@ export default {
       this.fetchError = '';
     },
     accounts() {
-      const { title } = this.$store.getters['auth/userdata'];
-      const accounts = this.accounts.map((acc) => acc.uuid);
-
-      this.accountTitle = title;
-      this.$store.dispatch('transactions/fetch', accounts)
-        .then(() => {
-          this.fetchError = '';
-        })
-        .catch((err) => {
-          console.error(err);
-
-          this.fetchError = 'Can\'t reach the server';
-          if (err.response) {
-            this.fetchError += `: [ERROR]: ${err.response.data.message}`;
-          } else {
-            this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
-          }
-        });
+      this.getTransactions();
+    },
+    chartLoading() {
+      setTimeout(this.setListenerToLegend);
     }
   }
 }
 </script>
 
 <style>
-
+.apexcharts-svg {
+  background: none !important;
+}
 </style>

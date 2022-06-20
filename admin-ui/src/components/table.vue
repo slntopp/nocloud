@@ -14,6 +14,8 @@
 		:expanded="expanded"
 		@update:expanded="(nw) => $emit('update:expanded', nw)"
 		:show-expand="showExpand"
+    :sort-by="sortBy"
+    :sort-desc="sortDesc"
 	>
 	
 		<template
@@ -141,6 +143,8 @@ export default {
     calculateWidths: Boolean,
     fixedHeader: Boolean,
     headersLength: Number,
+    sortBy: String,
+    sortDesc: Boolean,
     expandIcon: {
       type: String,
       default: '$expand'

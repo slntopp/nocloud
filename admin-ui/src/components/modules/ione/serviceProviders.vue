@@ -99,8 +99,8 @@ export default {
 			username: "",
 			password: "",
 			group: "",
-			schedule: "",
-			schedule_ds: "",
+			schedule: {},
+			schedule_ds: {},
 			public_ip_pool : "",
 			private_vnets_pool: "",
 		},
@@ -238,15 +238,15 @@ export default {
 
 			const vars = {}
 			if(this.values.schedule){
-				if(isJSON(this.values.schedule)){
-					vars.sched = {value: JSON.parse(this.values.schedule)};
+				if(isJSON(JSON.stringify(this.values.schedule))){
+					vars.sched = {value: this.values.schedule};
 				} else {
 					errors.sched = ["is not valid JSON"]
 				}
 			}
 			if(this.values.schedule_ds){
-				if(isJSON(this.values.schedule_ds)){
-					vars.sched_ds = {value: JSON.parse(this.values.schedule_ds)};
+				if(isJSON(JSON.stringify(this.values.schedule_ds))){
+					vars.sched_ds = {value: this.values.schedule_ds};
 				} else {
 					errors.sched_ds = ["is not valid JSON"]
 				}

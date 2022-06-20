@@ -212,7 +212,7 @@ export default {
       this.isLoading = true;
       this.refreshData();
 
-      api.put('/billing/transactions', this.transaction)
+      api.transactions.put(this.transaction)
         .then(() => {
           this.showSnackbarSuccess({
             message: 'Transaction created successfully'
