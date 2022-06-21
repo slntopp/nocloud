@@ -36,9 +36,7 @@ export default {
 
       return new Promise((resolve, reject) => {
         const promises = accounts.map((id) =>
-          api.get('/billing/transactions', {
-            params: { account: id }
-          })
+          api.transactions.get(id)
         );
 
         Promise.all(promises)
@@ -58,9 +56,7 @@ export default {
       commit('setLoading', true);
 
       return new Promise((resolve, reject) => {
-        api.get('/billing/transactions', {
-          params: { account: id }
-        })
+        api.transactions.get(id)
           .then((response) => {
             commit('setTransaction', response.pool);
             resolve(response);
