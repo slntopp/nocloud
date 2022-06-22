@@ -254,12 +254,13 @@ services:
     networks:
       - grpc-internal
       - mq
+      - redis
     environment:
       DRIVER_TYPE_KEY: ione
       SIGNING_KEY: "${SIGNING_KEY}"
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       LOG_LEVEL: -1
-
+      REDIS_HOST: redis_settings:6379
 networks:
   proxy:
     driver: bridge
