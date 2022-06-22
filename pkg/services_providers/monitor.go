@@ -116,6 +116,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 				_, err = client.Monitoring(ctx, &driverpb.MonitoringRequest{
 					Groups:           igroups,
 					ServicesProvider: sp.ServicesProvider,
+					Scheduled:        true,
 				})
 				if err != nil {
 					log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
