@@ -7,7 +7,7 @@ require (
 	github.com/arangodb/go-driver v1.3.2
 	github.com/gabriel-vasile/mimetype v1.4.0
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/golang-jwt/jwt/v4 v4.4.1
+	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.10.3
 	github.com/rs/cors v1.8.2
