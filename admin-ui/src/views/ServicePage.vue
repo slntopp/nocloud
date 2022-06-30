@@ -1,7 +1,7 @@
 <template>
   <div class="service pa-4 h-100">
     <div class="page__title mb-5">
-      <router-link :to="{ name: 'Services' }">Services</router-link>
+      <router-link :to="{ name: 'Services' }">{{ navTitle('Services') }}</router-link>
       /
       {{ serviceTitle }}
       <v-chip x-small :color="chipColor"> </v-chip>
@@ -45,6 +45,7 @@
 </template>
 
 <script>
+import config from '@/config.js';
 import serviceTemplate from "@/components/service/template.vue";
 // import serviceControl from "@/components/service/control.vue";
 import serviceInfo from "@/components/service/info.vue";
@@ -59,8 +60,17 @@ export default {
   data: () => ({
     found: false,
     tabs: 0,
+    navTitles: config.navTitles ?? {},
   }),
+  methods: {
+    navTitle(title) {
+      if (title && this.navTitles[title]) {
+        return this.navTitles[title];
+      }
 
+      return title;
+    }
+  },
   computed: {
     service() {
       const items = this.$store.getters["services/all"];

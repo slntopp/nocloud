@@ -22,6 +22,13 @@
         >
         </v-text-field>
       </v-col>
+      <v-col>
+        <v-switch
+          readonly
+          label="template public"
+          :value="template.public"
+        />
+      </v-col>
     </v-row>
 
     <!-- Secrets -->
@@ -231,7 +238,7 @@
           </v-col>
         </v-row>
         <v-card-subtitle class="px-0">Private</v-card-subtitle>
-        <v-row>
+        <v-row ref="private">
           <v-col
             v-if="template.state.meta.networking.private_vnet.error"
             cols="12"
@@ -272,6 +279,30 @@
                 <strong>{{ value }}%</strong>
               </template>
             </v-progress-linear>
+          </v-col>
+          <v-col cols="12">
+            <p>Vlans:</p>
+            <span
+              class="ceil"
+              v-for="(vlan, i) of vlans"
+              :class="(vlan === 0) ? 'occupied' : 'free'"
+              :key="i"
+            />
+            <div class="mt-2">
+              <v-btn
+                class="mr-2"
+                v-if="counter > 1"
+                @click="counter--"
+              >
+                less
+              </v-btn>
+              <v-btn
+                v-if="counter < 8"
+                @click="counter++"
+              >
+                more
+              </v-btn>
+            </div>
           </v-col>
         </v-row>
       </v-col>
@@ -337,6 +368,7 @@
 <script>
 import extentionsMap from "@/components/extentions/map.js";
 import { format } from "date-fns";
+
 export default {
   name: "services-provider-info",
   data: () => ({
@@ -345,6 +377,8 @@ export default {
     opened: [],
     showPassword: false,
     extentionsMap,
+    counter: 1,
+    addition: 0
   }),
   props: {
     template: {
@@ -370,7 +404,38 @@ export default {
         alert('Clipboard is not supported!');
       }
     },
+    addCeils() {
+      if (this.counter > 7) {
+        this.addition = 0;
+        return;
+      }
+      const { clientWidth } = this.$refs.private;
+      const cols = parseInt(clientWidth / 30);
+      const rows = Math.round((512 * this.counter) / cols);
+
+      this.addition = (cols * rows) - (512 * this.counter);
+    }
   },
+  mounted() { this.addCeils() },
+  computed: {
+    vlans() {
+      const { free_vlans } = this.template?.state.meta.networking.private_vnet;
+      let vlans = 0;
+
+      Object.values(free_vlans || {}).forEach((value) => {
+        vlans += +value;
+      });
+
+      const res = Array.from({ length: 512 * this.counter + this.addition })
+        .fill(1, 0, vlans)
+        .fill(0, vlans);
+
+      return res;
+    }
+  },
+  watch: {
+    counter() { this.addCeils() }
+  }
 };
 </script>
 
@@ -382,5 +447,22 @@ export default {
 }
 .v-alert__icon.v-icon {
   margin-top: 5px;
+}
+.apexcharts-svg {
+  background: none !important;
+}
+.ceil {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  margin: 5px;
+  vertical-align: middle;
+  border-radius: 5px;
+}
+.occupied {
+  background: var(--v-success-base);
+}
+.free {
+  background: var(--v-error-base);
 }
 </style>

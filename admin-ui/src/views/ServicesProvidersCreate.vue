@@ -40,6 +40,16 @@
             </v-col>
           </v-row>
 
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader> Public </v-subheader>
+            </v-col>
+
+            <v-col cols="9">
+              <v-switch v-model="provider.public" />
+            </v-col>
+          </v-row>
+
           <v-divider></v-divider>
 
           <component
@@ -184,6 +194,7 @@ export default {
     provider: {
       type: "custom",
       title: "",
+      public: false,
       secrets: {},
       vars: {},
     },

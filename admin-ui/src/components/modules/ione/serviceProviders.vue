@@ -240,6 +240,7 @@ export default {
 			if(this.values.schedule){
 				if(isJSON(JSON.stringify(this.values.schedule))){
 					vars.sched = {value: this.values.schedule};
+					delete errors.schedule
 				} else {
 					errors.sched = ["is not valid JSON"]
 				}
@@ -247,6 +248,7 @@ export default {
 			if(this.values.schedule_ds){
 				if(isJSON(JSON.stringify(this.values.schedule_ds))){
 					vars.sched_ds = {value: this.values.schedule_ds};
+					delete errors.schedule_ds
 				} else {
 					errors.sched_ds = ["is not valid JSON"]
 				}
