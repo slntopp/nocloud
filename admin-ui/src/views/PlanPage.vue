@@ -1,7 +1,7 @@
 <template>
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
-      <router-link :to="{ name: 'Plans' }">Plans</router-link>
+      <router-link :to="{ name: 'Plans' }">{{ navTitle('Plans') }}</router-link>
       /{{ planTitle }}
     </h1>
     <v-tabs
@@ -30,13 +30,23 @@
 </template>
 
 <script>
+import config from '@/config.js';
 import PlansCreate from '@/views/PlansCreate.vue';
 import PlansTemplate from '@/components/plan/template.vue';
 
 export default {
   name: 'plan-view',
   components: { PlansCreate, PlansTemplate },
-  data: () => ({ tabs: 0 }),
+  data: () => ({ tabs: 0, navTitles: config.navTitles ?? {} }),
+  methods: {
+    navTitle(title) {
+      if (title && this.navTitles[title]) {
+        return this.navTitles[title];
+      }
+
+      return title;
+    }
+  },
   computed: {
     plan() {
       return this.$store.getters['plans/one'];

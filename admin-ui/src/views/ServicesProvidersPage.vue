@@ -2,7 +2,7 @@
   <div class="servicesProviders pa-4 flex-wrap">
     <div class="page__title mb-5">
       <router-link :to="{ name: 'ServicesProviders' }"
-        >services providers</router-link
+        >{{ navTitle('services providers') }}</router-link
       >
       /
       {{ title }}
@@ -33,10 +33,13 @@
 </template>
 
 <script>
+import config from '@/config.js';
+
 export default {
   data: () => ({
     found: false,
     tabsIndex: 0,
+    navTitles: config.navTitles ?? {},
     tabs: [
       {
         title: "Info",
@@ -48,6 +51,15 @@ export default {
       },
     ],
   }),
+  methods: {
+    navTitle(title) {
+      if (title && this.navTitles[title]) {
+        return this.navTitles[title];
+      }
+
+      return title;
+    }
+  },
   computed: {
     uuid() {
       return this.$route.params.uuid;
