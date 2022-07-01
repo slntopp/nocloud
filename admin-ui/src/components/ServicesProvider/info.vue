@@ -282,12 +282,22 @@
           </v-col>
           <v-col cols="12">
             <p>Vlans:</p>
-            <span
-              class="ceil"
+            <v-tooltip
+              bottom
+              color="info"
               v-for="(vlan, i) of vlans"
-              :class="(vlan === 0) ? 'occupied' : 'free'"
               :key="i"
-            />
+            >
+              <template v-slot:activator="{ on, attrs }">
+                <span
+                  class="ceil"
+                  v-bind="attrs"
+                  v-on="on"
+                  :class="(vlan === 0) ? 'occupied' : 'free'"
+                />
+              </template>
+              <span>{{ i }}</span>
+            </v-tooltip>
             <div class="mt-2">
               <v-btn
                 class="mr-2"
@@ -377,8 +387,7 @@ export default {
     opened: [],
     showPassword: false,
     extentionsMap,
-    counter: 1,
-    addition: 0
+    counter: 1
   }),
   props: {
     template: {
@@ -404,19 +413,21 @@ export default {
         alert('Clipboard is not supported!');
       }
     },
-    addCeils() {
-      if (this.counter > 7) {
-        this.addition = 0;
-        return;
-      }
+    changeWidth() {
       const { clientWidth } = this.$refs.private;
-      const cols = parseInt(clientWidth / 30);
-      const rows = Math.round((512 * this.counter) / cols);
+      let cols = 64;
 
-      this.addition = (cols * rows) - (512 * this.counter);
+      for (let i = 4; i > 0; i--) {
+        if (clientWidth / 30 >= cols) {
+          this.$refs.private.style.width = `${cols * 30 + 24}px`;
+          break;
+        } else {
+          cols /= 2;
+        }
+      }
     }
   },
-  mounted() { this.addCeils() },
+  mounted() { this.changeWidth() },
   computed: {
     vlans() {
       const { free_vlans } = this.template?.state.meta.networking.private_vnet;
@@ -426,7 +437,7 @@ export default {
         vlans += +value;
       });
 
-      const res = Array.from({ length: 512 * this.counter + this.addition })
+      const res = Array.from({ length: 512 * this.counter })
         .fill(1, 0, vlans)
         .fill(0, vlans);
 
@@ -434,7 +445,7 @@ export default {
     }
   },
   watch: {
-    counter() { this.addCeils() }
+    counter() { this.changeWidth() }
   }
 };
 </script>
