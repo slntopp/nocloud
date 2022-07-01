@@ -45,7 +45,9 @@ message GetRequest {
     string uuid = 1;
 }
 
-message ListRequest {}
+message ListRequest {
+    bool anonymously = 1;
+}
 
 message ListResponse {
     repeated ServicesProvider pool = 1;

@@ -329,7 +329,10 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 	log := s.log.Named("List")
 	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
 
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	var requestor string
+	if !req.Anonymously {
+		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
+	}
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	r, err := s.ctrl.List(ctx, requestor)
