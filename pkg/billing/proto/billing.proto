@@ -38,7 +38,9 @@ message Plan {
     map<string, google.protobuf.Value> meta = 8;
 }
 
-message ListRequest {}
+message ListRequest {
+    bool anonymously = 1;
+}
 message ListResponse {
     repeated Plan pool = 1;
 }

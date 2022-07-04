@@ -167,8 +167,14 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 	return p.Plan, nil
 }
 
-func (s *BillingServiceServer) ListPlans(ctx context.Context, _ *pb.ListRequest) (*pb.ListResponse, error) {
+func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
 	log := s.log.Named("ListPlans")
+
+	var requestor string
+	if !req.Anonymously {
+		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
+	}
+	log.Debug("Requestor", zap.String("id", requestor))
 
 	plans, err := s.plans.List(ctx)
 	if err != nil {
@@ -180,6 +186,13 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, _ *pb.ListRequest)
 	for _, plan := range plans {
 		if plan.Public {
 			result = append(result, plan.Plan)
+			continue
+		}
+		if req.Anonymously {
+			continue
+		}
+		ok := graph.HasAccess(ctx, s.db, requestor, plan.ID.String(), access.READ)
+		if !ok {
 			continue
 		}
 		result = append(result, plan.Plan)
