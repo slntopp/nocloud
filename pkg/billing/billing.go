@@ -30,9 +30,9 @@ import (
 )
 
 type Routine struct {
-	Name string
+	Name     string
 	LastExec string
-	Running bool
+	Running  bool
 }
 
 type BillingServiceServer struct {
@@ -40,36 +40,36 @@ type BillingServiceServer struct {
 
 	log *zap.Logger
 
-	nss graph.NamespacesController
-	plans graph.BillingPlansController
+	nss          graph.NamespacesController
+	plans        graph.BillingPlansController
 	transactions graph.TransactionsController
-	records graph.RecordsController
+	records      graph.RecordsController
 
 	db driver.Database
 
-	gen *healthpb.RoutineStatus
+	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	return &BillingServiceServer{
-		log: log,
-		nss: graph.NewNamespacesController(log, db),
-		plans: graph.NewBillingPlansController(log.Named("PlansController"), db),
+		log:          log,
+		nss:          graph.NewNamespacesController(log, db),
+		plans:        graph.NewBillingPlansController(log.Named("PlansController"), db),
 		transactions: graph.NewTransactionsController(log.Named("TransactionsController"), db),
-		records: graph.NewRecordsController(log.Named("RecordsController"), db),
-		db: db, gen: &healthpb.RoutineStatus {
+		records:      graph.NewRecordsController(log.Named("RecordsController"), db),
+		db:           db, gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
-				Status: healthpb.Status_STOPPED,
+				Status:  healthpb.Status_STOPPED,
 			},
-		}, proc: &healthpb.RoutineStatus {
+		}, proc: &healthpb.RoutineStatus{
 			Routine: "Process Transactions",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
-				Status: healthpb.Status_STOPPED,
+				Status:  healthpb.Status_STOPPED,
 			},
 		},
 	}
@@ -167,10 +167,14 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 	return p.Plan, nil
 }
 
-func (s *BillingServiceServer) ListPlans(ctx context.Context, _ *pb.ListRequest) (*pb.ListResponse, error) {
+func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
 	log := s.log.Named("ListPlans")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	log.Debug("request", zap.String("requestor", requestor))
+
+	var requestor string
+	if !req.Anonymously {
+		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
+	}
+	log.Debug("Requestor", zap.String("id", requestor))
 
 	plans, err := s.plans.List(ctx)
 	if err != nil {
@@ -184,6 +188,9 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, _ *pb.ListRequest)
 			result = append(result, plan.Plan)
 			continue
 		}
+		if req.Anonymously {
+			continue
+		}
 		ok := graph.HasAccess(ctx, s.db, requestor, plan.ID.String(), access.READ)
 		if !ok {
 			continue
@@ -191,5 +198,5 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, _ *pb.ListRequest)
 		result = append(result, plan.Plan)
 	}
 
-	return &pb.ListResponse{ Pool: result }, nil
+	return &pb.ListResponse{Pool: result}, nil
 }

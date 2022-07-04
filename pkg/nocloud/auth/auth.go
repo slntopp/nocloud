@@ -20,8 +20,10 @@ import (
 	"errors"
 
 	"github.com/golang-jwt/jwt/v4"
+	billpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
@@ -32,8 +34,8 @@ import (
 )
 
 var (
-	log *zap.Logger
-	SIGNING_KEY		[]byte
+	log         *zap.Logger
+	SIGNING_KEY []byte
 )
 
 func SetContext(logger *zap.Logger, key []byte) {
@@ -71,8 +73,17 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 		if probe.ProbeType == "PING" {
 			return handler(ctx, req)
 		}
+	case "/nocloud.services_providers.ServicesProvidersService/List":
+		probe := req.(*sppb.ListRequest)
+		if probe.Anonymously {
+			return handler(ctx, req)
+		}
+	case "/nocloud.billing.BillingService/ListPlans":
+		probe := req.(*billpb.ListRequest)
+		if probe.Anonymously {
+			return handler(ctx, req)
+		}
 	}
-
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
 	if err != nil {
 		return nil, err
@@ -102,7 +113,7 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.(string))
 	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, account.(string))
 
-	ctx = func(ctx context.Context)(context.Context){
+	ctx = func(ctx context.Context) context.Context {
 		sp := token[nocloud.NOCLOUD_SP_CLAIM]
 		if sp == nil {
 			return ctx
@@ -111,7 +122,7 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_SP_CLAIM, sp.(string))
 	}(ctx)
 
-	ctx = func(ctx context.Context)(context.Context){
+	ctx = func(ctx context.Context) context.Context {
 		inst := token[nocloud.NOCLOUD_INSTANCE_CLAIM]
 		if inst == nil {
 			return ctx
@@ -121,7 +132,7 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	}(ctx)
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudToken, tokenString)
-	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer " + tokenString)
+	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer "+tokenString)
 
 	return ctx, nil
 }
@@ -133,7 +144,7 @@ func validateToken(tokenString string) (jwt.MapClaims, error) {
 		}
 		return SIGNING_KEY, nil
 	})
-	
+
 	if err != nil {
 		return nil, err
 	}

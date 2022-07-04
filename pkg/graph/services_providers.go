@@ -57,7 +57,7 @@ func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *Service
 }
 
 // Update ServicesProvider in DB
-func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *pb.ServicesProvider) (error) {
+func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *pb.ServicesProvider) error {
 	ctrl.log.Debug("Updating ServicesProvider", zap.Any("sp", sp))
 
 	meta, err := ctrl.col.ReplaceDocument(ctx, sp.GetUuid(), sp)
@@ -94,7 +94,14 @@ func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r 
 func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor string) ([]*ServicesProvider, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
 
-	query := `FOR sp IN @@sps RETURN sp`
+	var query string
+
+	if requestor != "" {
+		query = `FOR sp IN @@sps RETURN sp`
+	} else {
+		// anonymous query
+		query = `FOR sp IN @@sps RETURN {uuid: sp.uuid, type: sp.type, title: sp.title, public_data: sp.public_data}`
+	}
 	bindVars := map[string]interface{}{
 		"@sps": schema.SERVICES_PROVIDERS_COL,
 	}
@@ -119,7 +126,7 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 		r = append(r, &ServicesProvider{&s, meta})
 	}
 
-	return r,  nil
+	return r, nil
 }
 
 const listDeployedGroupsQuery = `
@@ -139,12 +146,13 @@ FILTER IS_SAME_COLLECTION(@groups, group)
         FILTER IS_SAME_COLLECTION(@instances, instance)
             RETURN MERGE(instance, { uuid: instance._key }) )
     RETURN MERGE(group, { uuid: group._key, instances })`
+
 func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider, includeInstances bool) ([]*ipb.InstancesGroup, error) {
 	bindVars := map[string]interface{}{
-		"groups": schema.INSTANCES_GROUPS_COL,
-		"sp": sp.DocumentMeta.ID,
+		"groups":      schema.INSTANCES_GROUPS_COL,
+		"sp":          sp.DocumentMeta.ID,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
-		"instances": schema.INSTANCES_COL,
+		"instances":   schema.INSTANCES_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
@@ -170,5 +178,5 @@ func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp
 		r = append(r, &ig)
 	}
 
-	return r,  nil
+	return r, nil
 }
