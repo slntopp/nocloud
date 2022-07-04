@@ -20,6 +20,7 @@ import (
 	"errors"
 
 	"github.com/golang-jwt/jwt/v4"
+	billpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
@@ -78,7 +79,7 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 			return handler(ctx, req)
 		}
 	case "/nocloud.billing.BillingService/ListPlans":
-		probe := req.(*sppb.ListRequest)
+		probe := req.(*billpb.ListRequest)
 		if probe.Anonymously {
 			return handler(ctx, req)
 		}
