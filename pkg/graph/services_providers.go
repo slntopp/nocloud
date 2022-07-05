@@ -122,7 +122,6 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 			return nil, err
 		}
 		ctrl.log.Debug("Got document", zap.Any("service_provider", &s))
-		s.Uuid = meta.ID.Key()
 		r = append(r, &ServicesProvider{&s, meta})
 	}
 
