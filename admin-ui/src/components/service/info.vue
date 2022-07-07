@@ -143,6 +143,12 @@
                   >
                     <v-expansion-panel-header>
                       {{ instance.title }}
+                      <v-chip
+                        x-small
+                        class="ml-2"
+                        style="max-width: 16px; padding: 0"
+                        :color="stateColor(instance.state && instance.state.state)"
+                      />
                     </v-expansion-panel-header>
                     <v-expansion-panel-content>
                       <v-row v-if="group.type === 'ione' && !editing">
@@ -361,7 +367,9 @@ export default {
             console.error(res);
           });
       } else {
-        alert('Clipboard is not supported!');
+        this.showSnackbarError({
+          message: 'Clipboard is not supported!',
+        });
       }
     },
     hashpart(hash) {
@@ -374,6 +382,18 @@ export default {
       );
 
       return lc?.title || 'not found';
+    },
+    stateColor(state) {
+      const dict = {
+        init: "orange darken-2",
+        up: "green darken-2",
+        del: "gray darken-2",
+        RUNNING: "green darken-2",
+        UNKNOWN: "red darken-2",
+        STOPPED: "orange darken-2",
+      };
+      
+      return dict[state] ?? "blue-grey darken-2";
     },
     editService() {
       if (!this.namespace) {

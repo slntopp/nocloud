@@ -239,6 +239,8 @@ export default {
       return [labels, values];
     },
     selectTransaction(value) {
+      if (value.length < 1) return;
+
       this.series = [];
       this.chartLoading = true;
       this.chartOptions.xaxis.categories = [];
@@ -264,8 +266,10 @@ export default {
             })
           })
           .catch(() => {
-            this.showSnackbarError({
-              message: 'Records not found'
+            this.showSnackbar({
+              message: 'Records not found',
+              buttonColor: 'white',
+              color: 'blue darken-3'
             });
           })
           .finally(() => {
