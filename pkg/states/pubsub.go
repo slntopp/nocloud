@@ -101,6 +101,7 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
+			msg.Nack(false, false)
 			continue
 		}
 		log.Debug("req st", zap.Any("req", &req))
@@ -111,10 +112,12 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		})
 		if err != nil {
 			log.Error("Failed to update state", zap.Error(err))
+			msg.Nack(false, false)
 			continue
 		}
 		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
 		c.Close()
+		msg.Ack(false)
 	}
 }
 
