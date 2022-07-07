@@ -128,10 +128,7 @@ func (ctrl *AccountsController) Create(ctx context.Context, title string) (Accou
 	return Account{&acc, meta}, err
 }
 
-func (ctrl *AccountsController) Update(ctx context.Context, acc Account, title string) (err error) {
-	patch := map[string]interface{}{
-		"title": title,
-	}
+func (ctrl *AccountsController) Update(ctx context.Context, acc Account, patch map[string]interface{}) (err error) {
 	_, err = ctrl.col.UpdateDocument(ctx, acc.Key, patch)
 	return err
 }
