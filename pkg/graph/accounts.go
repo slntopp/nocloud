@@ -109,7 +109,7 @@ func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req
 		} else if err != nil {
 			return nil, err
 		}
-		ctrl.log.Debug("Got document", zap.Any("account", acc))
+		ctrl.log.Debug("Got document", zap.Any("account", &acc))
 		acc.Uuid = meta.ID.Key()
 		r = append(r, Account{&acc, meta})
 	}
@@ -123,7 +123,7 @@ func (ctrl *AccountsController) Exists(ctx context.Context, id string) (bool, er
 
 func (ctrl *AccountsController) Create(ctx context.Context, title string) (Account, error) {
 	acc := pb.Account{Title: title}
-	meta, err := ctrl.col.CreateDocument(ctx, acc)
+	meta, err := ctrl.col.CreateDocument(ctx, &acc)
 	acc.Uuid = meta.ID.Key()
 	return Account{&acc, meta}, err
 }
@@ -180,6 +180,9 @@ func (ctrl *AccountsController) Delete(ctx context.Context, id string) error {
 // Set Account Credentials, ensure account has only one credentials document linked per credentials type
 func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account, edge driver.Collection, c credentials.Credentials, role string) error {
 	cred, err := ctrl.cred.CreateDocument(ctx, c)
+	if err != nil {
+		return status.Error(codes.Internal, "Couldn't create credentials")
+	}
 	_, err = edge.CreateDocument(ctx, credentials.Link{
 		From: acc.ID,
 		To:   cred.ID,
@@ -190,7 +193,7 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 		},
 	})
 	if err != nil {
-		return status.Error(codes.Internal, "Couldn't create credentials")
+		return status.Error(codes.Internal, "Couldn't create credentials link")
 	}
 	return nil
 }
@@ -329,7 +332,7 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 	}
 	_, r := ctrl.Authorize(ctx, "standard", "nocloud", passwd)
 	if !r {
-		return errors.New("Cannot authorize nocloud")
+		return errors.New("cannot authorize nocloud")
 	}
 	return nil
 }
