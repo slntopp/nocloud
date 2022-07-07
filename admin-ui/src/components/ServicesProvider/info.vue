@@ -4,36 +4,41 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.uuid"
           label="template uuid"
           style="display: inline-block; width: 330px"
+          v-if="!editing"
+          :value="template.uuid"
           :append-icon="copyed == 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
           @click:append="addToClipboard(template.uuid, 'rootUUID')"
-        >
-        </v-text-field>
-   
+        />
+        <v-text-field
+          v-else
+          label="title"
+          style="display: inline-block; width: 330px"
+          v-model="provider.title"
+        />
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          :value="template.type"
+        <v-select
           label="template type"
           style="display: inline-block; width: 150px"
-        >
-        </v-text-field>
+          v-model="provider.type"
+          :items="types"
+          :readonly="!editing"
+        />
       </v-col>
       <v-col>
         <v-switch
-          readonly
-          label="template public"
-          :value="template.public"
+          label="public"
+          v-model="provider.public"
+          :readonly="!editing"
         />
       </v-col>
     </v-row>
 
     <!-- Secrets -->
     <v-card-title class="px-0 mb-3"> Secrets:</v-card-title>
-    <v-row>
+    <v-row v-if="!editing">
       <v-col>
         <v-text-field
           readonly
@@ -74,10 +79,16 @@
         </v-text-field>
       </v-col>
     </v-row>
+    <v-row v-else>
+      <json-editor
+        :json="template.secrets"
+        @changeValue="(data) => provider.secrets = data"
+      />
+    </v-row>
 
     <!-- Variables -->
     <v-card-title class="px-0 mb-3">Variables:</v-card-title>
-    <v-row>
+    <v-row v-if="!editing">
       <v-col v-for="(variable, varTitle) in template.vars" :key="varTitle">
         {{ varTitle.replaceAll("_", " ") }}
         <v-row>
@@ -93,7 +104,46 @@
         </v-row>
       </v-col>
     </v-row>
+    <v-row v-else>
+      <json-editor
+        :json="template.vars"
+        @changeValue="(data) => provider.vars = data"
+      />
+    </v-row>
 
+    <!-- Edit -->
+    <v-row justify="end">
+      <v-col col="6" v-if="editing">
+        <v-tooltip bottom :disabled="isTestSuccess">
+          <template v-slot:activator="{ on, attrs }">
+            <div v-bind="attrs" v-on="on" class="d-inline-block">
+              <v-btn
+                color="background-light"
+                class="mr-2"
+                :loading="isLoading"
+                :disabled="!isTestSuccess"
+                @click="editServiceProvider"
+              >
+                Edit
+              </v-btn>
+            </div>
+          </template>
+          <span>Test must be passed before creation.</span>
+        </v-tooltip>
+
+        <v-btn
+          color="background-light"
+          class="mr-2"
+          :loading="isTestLoading"
+          @click="testConfig"
+        >
+          Test
+        </v-btn>
+      </v-col>
+      <v-col>
+        <v-switch v-model="editing" label="editing" />
+      </v-col>
+    </v-row>
     
     <!-- Date -->
     <v-row>
@@ -372,22 +422,56 @@
       >
       </component>
     </template>
+
+    <v-snackbar
+      v-model="snackbar.visibility"
+      :timeout="snackbar.timeout"
+      :color="snackbar.color"
+    >
+      {{ snackbar.message }}
+      <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
+        <router-link :to="snackbar.route"> Look up. </router-link>
+      </template>
+
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          :color="snackbar.buttonColor"
+          text
+          v-bind="attrs"
+          @click="snackbar.visibility = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-card>
 </template>
 
 <script>
+import api from '@/api.js';
+import snackbar from '@/mixins/snackbar.js';
+import JsonEditor from '@/components/JsonEditor.vue';
 import extentionsMap from "@/components/extentions/map.js";
 import { format } from "date-fns";
 
 export default {
   name: "services-provider-info",
+  components: { JsonEditor },
+  mixins: [snackbar],
   data: () => ({
     format,
     copyed: null,
     opened: [],
     showPassword: false,
     extentionsMap,
-    counter: 1
+    counter: 1,
+
+    types: [],
+    provider: {},
+    editing: false,
+    isLoading: false,
+    isTestLoading: false,
+    isTestSuccess: false
   }),
   props: {
     template: {
@@ -425,9 +509,71 @@ export default {
           cols /= 2;
         }
       }
+    },
+    editServiceProvider() {
+      if (!this.isTestSuccess) {
+        this.showSnackbarError({
+          message: 'Error: Test must be passed before creation.',
+        });
+        return;
+      }
+      this.isLoading = true;
+
+      api.servicesProviders
+        .update(this.template.uuid, this.template)
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: 'Service edited successfully'
+          });
+        })
+        .catch((err) => {
+          this.showSnackbarError({
+            message: err
+          });
+        })
+        .finnaly(() => {
+          this.isLoading = false;
+        });
+    },
+    testConfig() {
+      this.isTestLoading = true;
+      api.servicesProviders
+        .testConfig(this.template)
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: 'Tests passed'
+          });
+          this.isTestSuccess = true;
+        })
+        .catch((err) => {
+          this.showSnackbarError({
+            message: err
+          });
+        })
+        .finally(() => {
+          this.isTestLoading = false;
+        });
     }
   },
-  mounted() { this.changeWidth() },
+  mounted() {
+    this.provider = this.template;
+    this.changeWidth();
+  },
+  created() {
+    const types = require.context(
+      "@/components/modules/",
+      true,
+      /serviceCreate\.vue$/
+    );
+    types.keys().forEach((key) => {
+      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i);
+
+      if (matched && matched.length > 1) {
+        const type = matched[1];
+        this.types.push(type);
+      }
+    });
+  },
   computed: {
     vlans() {
       const { free_vlans } = this.template?.state.meta.networking.private_vnet;
