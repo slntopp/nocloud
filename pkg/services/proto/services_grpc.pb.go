@@ -24,7 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type ServicesServiceClient interface {
 	TestConfig(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*TestConfigResponse, error)
 	Create(ctx context.Context, in *CreateRequest, opts ...grpc.CallOption) (*Service, error)
-	Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*Service, error)
+	Update(ctx context.Context, in *Service, opts ...grpc.CallOption) (*Service, error)
 	Delete(ctx context.Context, in *DeleteRequest, opts ...grpc.CallOption) (*DeleteResponse, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*Service, error)
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Services, error)
@@ -58,7 +58,7 @@ func (c *servicesServiceClient) Create(ctx context.Context, in *CreateRequest, o
 	return out, nil
 }
 
-func (c *servicesServiceClient) Update(ctx context.Context, in *UpdateRequest, opts ...grpc.CallOption) (*Service, error) {
+func (c *servicesServiceClient) Update(ctx context.Context, in *Service, opts ...grpc.CallOption) (*Service, error) {
 	out := new(Service)
 	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/Update", in, out, opts...)
 	if err != nil {
@@ -118,7 +118,7 @@ func (c *servicesServiceClient) Down(ctx context.Context, in *DownRequest, opts 
 type ServicesServiceServer interface {
 	TestConfig(context.Context, *CreateRequest) (*TestConfigResponse, error)
 	Create(context.Context, *CreateRequest) (*Service, error)
-	Update(context.Context, *UpdateRequest) (*Service, error)
+	Update(context.Context, *Service) (*Service, error)
 	Delete(context.Context, *DeleteRequest) (*DeleteResponse, error)
 	Get(context.Context, *GetRequest) (*Service, error)
 	List(context.Context, *ListRequest) (*Services, error)
@@ -137,7 +137,7 @@ func (UnimplementedServicesServiceServer) TestConfig(context.Context, *CreateReq
 func (UnimplementedServicesServiceServer) Create(context.Context, *CreateRequest) (*Service, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
 }
-func (UnimplementedServicesServiceServer) Update(context.Context, *UpdateRequest) (*Service, error) {
+func (UnimplementedServicesServiceServer) Update(context.Context, *Service) (*Service, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Update not implemented")
 }
 func (UnimplementedServicesServiceServer) Delete(context.Context, *DeleteRequest) (*DeleteResponse, error) {
@@ -205,7 +205,7 @@ func _ServicesService_Create_Handler(srv interface{}, ctx context.Context, dec f
 }
 
 func _ServicesService_Update_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UpdateRequest)
+	in := new(Service)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func _ServicesService_Update_Handler(srv interface{}, ctx context.Context, dec f
 		FullMethod: "/nocloud.services.ServicesService/Update",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).Update(ctx, req.(*UpdateRequest))
+		return srv.(ServicesServiceServer).Update(ctx, req.(*Service))
 	}
 	return interceptor(ctx, in, info, handler)
 }
