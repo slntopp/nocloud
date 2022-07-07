@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
+	"github.com/cskr/pubsub"
 	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -48,10 +49,12 @@ type ServicesServer struct {
 
 	billing bpb.BillingServiceClient
 
+	ps *pubsub.PubSub
+
 	log *zap.Logger
 }
 
-func NewServicesServer(_log *zap.Logger, db driver.Database) *ServicesServer {
+func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub) *ServicesServer {
 	log := _log.Named("ServicesServer")
 
 	return &ServicesServer{
@@ -59,6 +62,7 @@ func NewServicesServer(_log *zap.Logger, db driver.Database) *ServicesServer {
 		sp_ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl: graph.NewNamespacesController(log, db),
 		drivers: make(map[string]driverpb.DriverServiceClient),
+		ps:      ps,
 	}
 }
 

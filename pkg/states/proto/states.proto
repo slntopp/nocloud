@@ -37,5 +37,6 @@ message State {
 
 message ObjectState {
     string uuid = 1;
-    State state = 2;
+    string service_uuid = 2;
+    State state = 3;
 }

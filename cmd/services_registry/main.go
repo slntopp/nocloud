@@ -108,8 +108,15 @@ func main() {
 		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
 	defer rbmq.Close()
-
-	server := services.NewServicesServer(log, db)
+	/*
+		log.Info("Setting up Pub/Sub")
+		ps, err := pubsub.Setup(log, rbmq, "mqtt.outgoing", "mqtt.incoming")
+		if err != nil {
+			log.Fatal("Error setting up pubsub", zap.Error(err))
+		}
+		log.Info("Pub/Sub setup complete")
+	*/
+	server := services.NewServicesServer(log, db, nil)
 	iserver := instances.NewInstancesServiceServer(log, db, rbmq)
 
 	for _, driver := range drivers {

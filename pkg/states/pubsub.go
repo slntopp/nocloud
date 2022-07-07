@@ -18,8 +18,10 @@ package states
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/arangodb/go-driver"
+	"github.com/cskr/pubsub"
 	pb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
@@ -28,6 +30,8 @@ import (
 
 var (
 	RabbitMQConn string
+	ps           *pubsub.PubSub
+	logger       *zap.Logger
 )
 
 type StatesPubSub struct {
@@ -37,13 +41,13 @@ type StatesPubSub struct {
 }
 
 func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *StatesPubSub {
-	ps := &StatesPubSub{
+	sps := &StatesPubSub{
 		log: log.Named("StatesServer"), rbmq: rbmq,
 	}
 	if db != nil {
-		ps.db = db
+		sps.db = db
 	}
-	return ps
+	return sps
 }
 
 func (s *StatesPubSub) Channel() *amqp.Channel {
@@ -97,13 +101,13 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	log := s.log.Named(col)
 	for msg := range msgs {
 		log.Debug("st upd msg", zap.Any("msg", msg))
-		var req pb.ObjectState
-		err := proto.Unmarshal(msg.Body, &req)
+		var req *pb.ObjectState
+		err := proto.Unmarshal(msg.Body, req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
 			continue
 		}
-		log.Debug("req st", zap.Any("req", &req))
+		log.Debug("req st", zap.Any("req", req))
 		c, err := (*s.db).Query(context.TODO(), updateStateQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
@@ -113,6 +117,10 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			log.Error("Failed to update state", zap.Error(err))
 			continue
 		}
+
+		topic := "service/" + req.ServiceUuid
+		ps.Pub(req, topic)
+
 		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
 		c.Close()
 	}
@@ -131,5 +139,87 @@ func (s *StatesPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pu
 			ContentType: "text/plain",
 			Body:        body,
 		})
+	}
+}
+
+func Setup(Log *zap.Logger, conn *amqp.Connection, pub, sub string) (*pubsub.PubSub, error) {
+	logger = Log
+	ps = pubsub.New(10)
+
+	ch, err := conn.Channel()
+	if err != nil {
+		return nil, err
+	}
+
+	go HandlePublish(ch, pub)
+	go HandleSubscribe(ch, sub)
+
+	return ps, nil
+}
+
+// Reading messages from PubSub and publishing them to RabbitMQ Queue
+func HandlePublish(ch *amqp.Channel, topic string) {
+	log := logger.Named("publish")
+init:
+	q, err := ch.QueueDeclare(
+		topic,
+		true, false, false, true, nil,
+	)
+	if err != nil {
+		log.Warn("Error declaring queue", zap.Error(err))
+		time.Sleep(time.Second)
+		goto init
+	}
+	log.Info("Queue declared", zap.String("name", q.Name))
+
+	incoming := make(chan interface{}, 10)
+	ps.AddSub(incoming, topic)
+
+	for msg := range incoming {
+		state := msg.(*pb.ObjectState)
+		log.Debug("Received message from PubSub", zap.Any("state", state))
+		payload, err := proto.Marshal(state)
+		if err != nil {
+			log.Warn("Error while publishing message:", zap.Error(err))
+			continue
+		}
+		ch.Publish("", q.Name, false, false, amqp.Publishing{
+			ContentType: "text/plain", Body: payload,
+		})
+	}
+}
+
+// Reading messages from RabbitMQ Queue and publishing them to PubSub
+func HandleSubscribe(ch *amqp.Channel, topic string) {
+	log := logger.Named("subscribe")
+init:
+	q, err := ch.QueueDeclare(
+		topic,
+		true, false, false, true, nil,
+	)
+	if err != nil {
+		log.Warn("Error declaring queue", zap.Error(err))
+		time.Sleep(time.Second)
+		goto init
+	}
+	log.Info("Queue declared", zap.String("name", q.Name))
+
+consume:
+	messages, err := ch.Consume(q.Name, "", false, false, false, false, nil)
+	if err != nil {
+		log.Warn("Error setting up consumer", zap.Error(err))
+		time.Sleep(time.Second)
+		goto consume
+	}
+
+	for msg := range messages {
+		state := &pb.ObjectState{}
+		err = proto.Unmarshal(msg.Body, state)
+		if err != nil {
+			log.Warn("Error while consuming message:", zap.Error(err))
+			continue
+		}
+		log.Debug("Received message from RabbitMQ", zap.Any("state", &state))
+		ps.Pub(state, topic, topic+"/"+state.ServiceUuid)
 	}
 }
