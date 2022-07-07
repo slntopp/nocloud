@@ -1435,12 +1435,12 @@
   dependencies:
     "@vue/cli-shared-utils" "^4.5.17"
 
-"@vue/cli-plugin-router@~5.0.6":
-  version "5.0.6"
-  resolved "https://registry.yarnpkg.com/@vue/cli-plugin-router/-/cli-plugin-router-5.0.6.tgz#b65d39845a8a53dc51b9c263bf75bdd24a53d8be"
-  integrity sha512-5ikUdfsSoKqpBhB5GhGYijH6mJnU+ZGqDv3QBf0brDeeh7PhClntxNAOLkB73c+LNxjBrlNCTkItuByF+AD29w==
+"@vue/cli-plugin-router@~5.0.7":
+  version "5.0.7"
+  resolved "https://registry.yarnpkg.com/@vue/cli-plugin-router/-/cli-plugin-router-5.0.7.tgz#0cb102d5e96e640c7d1bac4a331d6a3452058430"
+  integrity sha512-DarQql1AYvmC0qnfOPtlFR0EKnWpVVbmuIyjoAxu9Ki4PQI/mFUa7PL286ntVxmVCvLY8YXIJMCtG1MqBSayuw==
   dependencies:
-    "@vue/cli-shared-utils" "^5.0.6"
+    "@vue/cli-shared-utils" "^5.0.7"
 
 "@vue/cli-plugin-vuex@^4.5.17":
   version "4.5.17"
@@ -1533,10 +1533,10 @@
     semver "^6.1.0"
     strip-ansi "^6.0.0"
 
-"@vue/cli-shared-utils@^5.0.6":
-  version "5.0.6"
-  resolved "https://registry.yarnpkg.com/@vue/cli-shared-utils/-/cli-shared-utils-5.0.6.tgz#f47202d68dfd4c2e41160c63721263b39cd97d1e"
-  integrity sha512-5HmlRtMByOCFO0P3mMUx8dVruTRhZ3pqQ0f1cCH9TmAoDjetmD/Ib7yx/5KxTHV8QY3xZJxYvgAmOU5C49K5xA==
+"@vue/cli-shared-utils@^5.0.6", "@vue/cli-shared-utils@^5.0.7":
+  version "5.0.7"
+  resolved "https://registry.yarnpkg.com/@vue/cli-shared-utils/-/cli-shared-utils-5.0.7.tgz#c6774573ea2e8106e11d3d6df342c2bd2554330a"
+  integrity sha512-SzpqSExsp31gg7w+UAsqdrFyZGxKNTIE8MVwcfkevEx4BgugpLcmUxgcelgDktMs7GGykxluPIm0ZHDk3ytXeg==
   dependencies:
     "@achrinza/node-ipc" "^9.2.5"
     chalk "^4.1.2"
