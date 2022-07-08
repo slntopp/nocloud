@@ -1,6 +1,6 @@
 <template>
   <v-textarea
-    label="JSON"
+    label="YAML"
     v-model="tree"
     :disabled="disabled"
     :rules="typeRule"
@@ -10,6 +10,8 @@
 </template>
 
 <script>
+import yaml from 'yaml';
+
 export default {
   props: {
     json: { type: Object, required: true },
@@ -20,7 +22,7 @@ export default {
   }),
   methods: {
     changeTree () {
-      const tree = JSON.stringify(this.json)
+      const tree = yaml.stringify(this.json)
       let count = 0
 
       this.tree = tree
@@ -37,32 +39,11 @@ export default {
               return `\n${'\t'.repeat(count)}}`
             case ':':
               return ': '
-            case ',':
-              if (this.amountQuotes(i, tree)) {
-                return simbol
-              }
-              return `,\n${'\t'.repeat(count)}`
             default:
               return simbol
           }
         })
         .join('')
-    },
-    amountQuotes(num, tree) {
-      let quotes = 0
-
-      tree
-        .slice(0, num)
-        .split('')
-        .forEach((simbol) => {
-          if (simbol === '"' && quotes) {
-            quotes--
-          } else if (simbol === '"') {
-            quotes++
-          }
-        })
-      
-      return quotes
     },
     formatting ({ target, key }) {
       const start = target.selectionStart
@@ -126,7 +107,7 @@ export default {
     typeRule () {
       return [v => {
         try {
-          return !!JSON.parse(v)
+          return !!yaml.parse(v)
         } catch (e) {
           return e.message
         }

@@ -2,7 +2,7 @@
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
       <router-link :to="{ name: 'Plans' }">{{ navTitle('Plans') }}</router-link>
-      /{{ planTitle }}
+      / {{ planTitle }}
     </h1>
     <v-tabs
       class="rounded-t-lg"
@@ -23,21 +23,84 @@
       </v-tab-item>
       <v-tab-item>
         <v-progress-linear indeterminate class="pt-2" v-if="planLoading" />
-        <plans-template v-if="plan" :template="plan" />
+        <template v-if="!editing">
+          <plans-template v-if="plan" :template="plan" @getType="changeType" />
+          <v-btn
+            class="ma-4 mt-0"
+            @click="editing = true"
+          >
+            Edit
+          </v-btn>
+        </template>
+        <template v-else>
+          <json-textarea class="mx-4" v-if="type === 'JSON'" :json="account" @getTree="changeTree" />
+          <yaml-editor v-else class="mx-4" :json="account" @getTree="changeTree" />
+          <v-btn
+            class="ma-4 mt-0"
+            color="success"
+            :disabled="!isValid"
+            @click="editAccount"
+          >
+            Save
+          </v-btn>
+          <v-btn
+            class="mb-4"
+            @click="cancel"
+          >
+            Cancel
+          </v-btn>
+        </template>
       </v-tab-item>
     </v-tabs-items>
+
+    <v-snackbar
+      v-model="snackbar.visibility"
+      :timeout="snackbar.timeout"
+      :color="snackbar.color"
+    >
+      {{ snackbar.message }}
+      <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
+        <router-link :to="snackbar.route"> Look up. </router-link>
+      </template>
+
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          :color="snackbar.buttonColor"
+          text
+          v-bind="attrs"
+          @click="snackbar.visibility = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template>
 
 <script>
+import yaml from 'yaml';
 import config from '@/config.js';
+import api from "@/api.js";
+import snackbar from "@/mixins/snackbar.js";
 import PlansCreate from '@/views/PlansCreate.vue';
 import PlansTemplate from '@/components/plan/template.vue';
+import JsonTextarea from '@/components/JsonTextarea.vue';
+import YamlEditor from '@/components/YamlEditor.vue';
 
 export default {
   name: 'plan-view',
-  components: { PlansCreate, PlansTemplate },
-  data: () => ({ tabs: 0, navTitles: config.navTitles ?? {} }),
+  components: { PlansCreate, PlansTemplate, JsonTextarea, YamlEditor },
+  mixins: [snackbar],
+  data: () => ({
+    tabs: 0,
+    navTitles: config.navTitles ?? {},
+
+    type: 'YAML',
+    tree: '',
+    isValid: false,
+    isLoading: false,
+    editing: false
+  }),
   methods: {
     navTitle(title) {
       if (title && this.navTitles[title]) {
@@ -45,6 +108,44 @@ export default {
       }
 
       return title;
+    },
+    changeType(value) {
+      this.type = value;
+    },
+    changeTree(value) {
+      try {
+        if (this.type === 'JSON') JSON.parse(value);
+        else yaml.parse(value);
+
+        this.tree = value;
+        this.isValid = true;
+      } catch {
+        this.isValid = false;
+      }
+    },
+    editAccount() {
+      this.isLoading = true;
+      api.accounts.update(this.account.uuid, JSON.parse(this.tree))
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: 'Account edited successfully'
+          });
+
+          setTimeout(() => {
+            this.$router.push({ name: 'Accounts' });
+          }, 1500);
+        })
+        .catch((err) => {
+          this.showSnackbarError({ message: err });
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+    cancel() {
+      this.editing = false;
+      this.isValid = false;
+      this.type = 'YAML';
     }
   },
   computed: {

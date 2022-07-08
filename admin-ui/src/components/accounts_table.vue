@@ -8,6 +8,13 @@
 		:footer-error="fetchError"
 		@input="handleSelect"
 	>
+    <template v-slot:[`item.title`]="{ item }">
+      <router-link
+        :to="{ name: 'Account', params: { accountId: item.uuid } }"
+      >
+        {{ item.title }}
+      </router-link>
+    </template>
     <template v-slot:[`item.balance`]='{ item }'>
       <balance :value="item.balance" />
     </template>

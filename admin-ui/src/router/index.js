@@ -34,6 +34,14 @@ const routes = [
     },
   },
   {
+    path: "/accounts/:accountId",
+    name: "Account",
+    component: () => import("../views/AccountPage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/sp",
     name: "ServicesProviders",
     component: () => import("../views/ServicesProviders.vue"),
