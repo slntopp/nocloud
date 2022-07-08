@@ -1,11 +1,12 @@
 <template>
   <v-card
     elevation="0"
-    color="background-light"
-    :loading="loading"
-    class="flex-shrink-0 flex-grow-1 rounded-lg"
     max-width="520"
-    min-width="450"
+    color="background-light"
+    class="flex-grow-1 rounded-lg"
+    :min-width="(width >= 450) ? 350 : 200"
+    :style="{ 'width': (width < 1375) ? '100%' : 'auto' }"
+    :loading="loading"
   >
     <template slot="progress">
       <v-progress-linear
@@ -34,6 +35,11 @@ export default {
     loading: {
       type: Boolean,
       default: false
+    }
+  },
+  computed: {
+    width() {
+      return document.documentElement.clientWidth;
     }
   }
 }

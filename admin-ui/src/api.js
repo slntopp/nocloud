@@ -2,13 +2,15 @@ import Api from "nocloudjsrest";
 import vuex from "@/store/index.js";
 const api = new Api();
 
-
 api.axios.interceptors.response.use(
   function (response) {
     return response;
   },
   function (error) {
-    if (error.response && error.response?.data?.code === 7) {
+    if (
+      (error.response && error.response?.data?.code === 7) &&
+      !error.response?.config?.url?.includes("transactions")
+    ) {
       // console.log("credentials are not actual");
       vuex.dispatch("auth/logout");
     }

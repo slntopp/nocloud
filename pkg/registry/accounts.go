@@ -35,6 +35,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type AccountsServiceServer struct {
@@ -205,6 +206,12 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	return res, nil
 }
 
+// Update Account
+// Supports updating Title and Data
+// 		Updating Data rules:
+//			1. If Data is nil - it'll be skipped
+//			2. If Data is not nil but has no keys - it'll be wiped
+//			3. If value of one of the Data keys is nil - it'll be deleted from Data
 func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.Account) (*accountspb.UpdateResponse, error) {
 	log := s.log.Named("UpdateAccount")
 	log.Debug("Update request received", zap.Any("request", request), zap.Any("context", ctx))
@@ -223,7 +230,44 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	err = s.ctrl.Update(ctx, acc, request.Title)
+	patch := make(map[string]interface{})
+
+	if acc.Title != request.Title && request.Title != "" {
+		patch["title"] = request.Title
+	}
+
+	data := make(map[string]*structpb.Value)
+	if request.Data == nil {
+		goto patch
+	}
+
+	if len(request.Data) == 0 {
+		patch["data"] = nil
+		goto patch
+	}
+
+	for k, v := range acc.Data {
+		new, ok := request.Data[k]
+		if !ok {
+			data[k] = v
+			continue
+		}
+		switch new.AsInterface().(type) {
+		case nil:
+			continue
+		default:
+			data[k] = new
+		}
+	}
+
+	patch["data"] = data
+
+patch:
+	if len(patch) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Nothing changed")
+	}
+
+	err = s.ctrl.Update(ctx, acc, patch)
 	if err != nil {
 		log.Debug("Error updating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while updating account")

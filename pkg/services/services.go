@@ -102,37 +102,20 @@ var DefaultBillingPlanSettings = sc.Setting[InstanceBillingPlanSettings]{
 	Public:      false,
 }
 
-type CURequest interface {
-	GetService() *pb.Service
-	GetNamespace() string
-}
-
-func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, request CURequest) (*pb.TestConfigResponse, *graph.Namespace, error) {
+func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, service *pb.Service) (*pb.TestConfigResponse, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	response := &pb.TestConfigResponse{Result: true, Errors: make([]*pb.TestConfigError, 0)}
 
-	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
-	if err != nil {
-		s.log.Debug("Error getting namespace", zap.Error(err))
-		return nil, nil, status.Error(codes.NotFound, "Namespace not found")
-	}
-	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, namespace.ID.String(), access.ADMIN)
-	if !ok {
-		return nil, nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
-	}
-
 	var ibps InstanceBillingPlanSettings
-	err = sc.Fetch(IBPSKey, &ibps, &DefaultBillingPlanSettings)
+	err := sc.Fetch(IBPSKey, &ibps, &DefaultBillingPlanSettings)
 	if err != nil {
 		log.Error("Error fetching instance billing plan settings", zap.Error(err))
-		return nil, nil, status.Error(codes.Internal, "Error while fetching Instance Billing Plan Settings")
+		return nil, status.Error(codes.Internal, "Error while fetching Instance Billing Plan Settings")
 	}
 	log.Debug("Instance billing plan settings", zap.Any("settings", ibps))
 
-	service := request.GetService()
 	groups := service.GetInstancesGroups()
 
 	bp_cache := make(map[string]*bpb.Plan)
@@ -160,7 +143,7 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 					plan, err = s.billing.GetPlan(ctx, instance.BillingPlan)
 					if err != nil {
 						log.Error("Error fetching BillingPlan", zap.Error(err))
-						return nil, nil, err
+						return nil, err
 					}
 				}
 				instance.BillingPlan = plan
@@ -218,20 +201,46 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 		log.Debug("Validated Instances Group", zap.String("group", group.Title))
 	}
 
-	return response, &namespace, nil
+	return response, nil
 }
 
 func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateRequest) (*pb.TestConfigResponse, error) {
 	log := s.log.Named("TestServiceConfig")
 	log.Debug("Request received", zap.Any("request", request))
-	response, _, err := s.DoTestServiceConfig(ctx, log, request)
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
+	if err != nil {
+		s.log.Debug("Error getting namespace", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Namespace not found")
+	}
+	// Checking if requestor has access to Namespace Service going to be put in
+	ok := graph.HasAccess(ctx, s.db, requestor, namespace.ID.String(), access.ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
+	}
+
+	response, err := s.DoTestServiceConfig(ctx, log, request.GetService())
 	return response, err
 }
 
 func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) (*pb.Service, error) {
 	log := s.log.Named("CreateService")
 	log.Debug("Request received", zap.Any("request", request))
-	testResult, namespace, err := s.DoTestServiceConfig(ctx, log, request)
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
+	if err != nil {
+		s.log.Debug("Error getting namespace", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Namespace not found")
+	}
+	// Checking if requestor has access to Namespace Service going to be put in
+	ok := graph.HasAccess(ctx, s.db, requestor, namespace.ID.String(), access.ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
+	}
+
+	testResult, err := s.DoTestServiceConfig(ctx, log, request.GetService())
 
 	if err != nil {
 		return nil, err
@@ -246,7 +255,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.Internal, "Error while creating Service")
 	}
 
-	err = s.ctrl.Join(ctx, doc, namespace, access.ADMIN, roles.OWNER)
+	err = s.ctrl.Join(ctx, doc, &namespace, access.ADMIN, roles.OWNER)
 	if err != nil {
 		log.Error("Error while joining service to namespace", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
@@ -290,11 +299,11 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	return service, nil
 }
 
-func (s *ServicesServer) Update(ctx context.Context, request *pb.UpdateRequest) (*pb.Service, error) {
+func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.Service, error) {
 	log := s.log.Named("UpdateService")
-	log.Debug("Request received", zap.Any("request", request))
+	log.Debug("Request received", zap.Any("service", service))
 
-	testResult, _, err := s.DoTestServiceConfig(ctx, log, request)
+	testResult, err := s.DoTestServiceConfig(ctx, log, service)
 
 	if err != nil {
 		return nil, err
@@ -305,13 +314,12 @@ func (s *ServicesServer) Update(ctx context.Context, request *pb.UpdateRequest) 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	docID := driver.NewDocumentID(schema.SERVICES_COL, request.Uuid)
+	docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
 	ok := graph.HasAccess(ctx, s.db, requestor, docID.String(), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
 
-	service := request.GetService()
 	err = s.ctrl.Update(ctx, service, true)
 	if err != nil {
 		log.Error("Error while updating service", zap.Error(err))

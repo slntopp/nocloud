@@ -16,6 +16,8 @@ limitations under the License.
 syntax = "proto3";
 package nocloud.registry.accounts;
 
+import "google/protobuf/struct.proto";
+
 message Credentials {
     string type = 1;
     repeated string data = 2;
@@ -39,8 +41,11 @@ message GetRequest {
 message Account {
     string uuid = 1;
     string title = 2;
-    optional double balance = 3;
-    optional int32 access_level = 4;
+
+    map<string, google.protobuf.Value> data = 3;
+
+    optional double balance = 4;
+    optional int32 access_level = 5;
 }
 
 message UpdateResponse {

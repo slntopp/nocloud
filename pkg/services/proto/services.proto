@@ -66,12 +66,6 @@ message CreateRequest {
     map<int32, string> deploy_policies = 3;  // Map of InstanceGroup UUID to ServiceProvider
 }
 
-message UpdateRequest {
-    string uuid = 1;
-    string namespace = 2;
-    Service service = 3;
-}
-
 message DeleteRequest {
     string uuid = 1;
 }
@@ -130,7 +124,7 @@ service ServicesService {
             body: "*"
         };
     };
-    rpc Update(nocloud.services.UpdateRequest)
+    rpc Update(nocloud.services.Service)
         returns (nocloud.services.Service) {
         option (google.api.http) = {
             patch: "/services/{uuid}"

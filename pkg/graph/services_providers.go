@@ -173,7 +173,7 @@ func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp
 		} else if err != nil {
 			return nil, err
 		}
-		ctrl.log.Debug("Got document", zap.Any("group", ig))
+		ctrl.log.Debug("Got document", zap.Any("group", &ig))
 		r = append(r, &ig)
 	}
 
