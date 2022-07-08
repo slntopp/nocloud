@@ -8,6 +8,7 @@ package proto
 
 import (
 	context "context"
+	proto "github.com/slntopp/nocloud/pkg/states/proto"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -30,6 +31,7 @@ type ServicesServiceClient interface {
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Services, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
+	Stream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (ServicesService_StreamClient, error)
 }
 
 type servicesServiceClient struct {
@@ -112,6 +114,38 @@ func (c *servicesServiceClient) Down(ctx context.Context, in *DownRequest, opts 
 	return out, nil
 }
 
+func (c *servicesServiceClient) Stream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (ServicesService_StreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ServicesService_ServiceDesc.Streams[0], "/nocloud.services.ServicesService/Stream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &servicesServiceStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ServicesService_StreamClient interface {
+	Recv() (*proto.ObjectState, error)
+	grpc.ClientStream
+}
+
+type servicesServiceStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *servicesServiceStreamClient) Recv() (*proto.ObjectState, error) {
+	m := new(proto.ObjectState)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ServicesServiceServer is the server API for ServicesService service.
 // All implementations must embed UnimplementedServicesServiceServer
 // for forward compatibility
@@ -124,6 +158,7 @@ type ServicesServiceServer interface {
 	List(context.Context, *ListRequest) (*Services, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
+	Stream(*StreamRequest, ServicesService_StreamServer) error
 	mustEmbedUnimplementedServicesServiceServer()
 }
 
@@ -154,6 +189,9 @@ func (UnimplementedServicesServiceServer) Up(context.Context, *UpRequest) (*UpRe
 }
 func (UnimplementedServicesServiceServer) Down(context.Context, *DownRequest) (*DownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Down not implemented")
+}
+func (UnimplementedServicesServiceServer) Stream(*StreamRequest, ServicesService_StreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
 }
 func (UnimplementedServicesServiceServer) mustEmbedUnimplementedServicesServiceServer() {}
 
@@ -312,6 +350,27 @@ func _ServicesService_Down_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ServicesService_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ServicesServiceServer).Stream(m, &servicesServiceStreamServer{stream})
+}
+
+type ServicesService_StreamServer interface {
+	Send(*proto.ObjectState) error
+	grpc.ServerStream
+}
+
+type servicesServiceStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *servicesServiceStreamServer) Send(m *proto.ObjectState) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // ServicesService_ServiceDesc is the grpc.ServiceDesc for ServicesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -352,6 +411,12 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ServicesService_Down_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Stream",
+			Handler:       _ServicesService_Stream_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "pkg/services/proto/services.proto",
 }

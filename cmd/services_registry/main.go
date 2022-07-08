@@ -32,6 +32,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/services"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
+	"github.com/slntopp/nocloud/pkg/states"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
@@ -108,15 +109,14 @@ func main() {
 		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
 	defer rbmq.Close()
-	/*
-		log.Info("Setting up Pub/Sub")
-		ps, err := pubsub.Setup(log, rbmq, "mqtt.outgoing", "mqtt.incoming")
-		if err != nil {
-			log.Fatal("Error setting up pubsub", zap.Error(err))
-		}
-		log.Info("Pub/Sub setup complete")
-	*/
-	server := services.NewServicesServer(log, db, nil)
+
+	log.Info("Setting up Pub/Sub")
+	ps, err := states.SetupStatesStreaming()
+	if err != nil {
+		log.Fatal("Failed to setup states streaming", zap.Error(err))
+	}
+
+	server := services.NewServicesServer(log, db, ps)
 	iserver := instances.NewInstancesServiceServer(log, db, rbmq)
 
 	for _, driver := range drivers {

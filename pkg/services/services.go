@@ -32,6 +32,7 @@ import (
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
+	spb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -542,4 +543,32 @@ func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) 
 	}
 
 	return &pb.DeleteResponse{Result: true}, nil
+}
+
+func (s *ServicesServer) Stream(req *pb.StreamRequest, srv pb.ServicesService_StreamServer) (err error) {
+	log := s.log.Named("stream")
+	log.Debug("Request received", zap.Any("req", req))
+
+	messages := make(chan interface{}, 10)
+	topic := "service/" + req.Uuid
+	s.ps.AddSub(messages, topic)
+	defer unsub(s.ps, messages)
+
+	for msg := range messages {
+		state := msg.(*spb.ObjectState)
+		err := srv.Send(state)
+		if err != nil {
+			log.Warn("Unable to send message", zap.Error(err))
+			break
+		}
+	}
+
+	return nil
+}
+
+func unsub[T chan any](ps *pubsub.PubSub, ch chan any) {
+	go ps.Unsub(ch)
+
+	for range ch {
+	}
 }

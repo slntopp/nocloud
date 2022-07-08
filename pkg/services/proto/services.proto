@@ -111,6 +111,10 @@ message GetStatesRequest {
     string uuid = 1; // Service UUID
 }
 
+message StreamRequest {
+    string uuid = 1;
+}
+
 service ServicesService {
     rpc TestConfig(nocloud.services.CreateRequest)
         returns (nocloud.services.TestConfigResponse) {
@@ -165,4 +169,10 @@ service ServicesService {
             body: "*"
         };
     };
+    rpc Stream(StreamRequest) returns (stream nocloud.states.ObjectState) {
+        option (google.api.http) = {
+            post: "/services/{uuid}/stream"
+            body: "*"
+        };
+    }; 
 }
