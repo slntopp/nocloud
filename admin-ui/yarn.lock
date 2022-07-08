@@ -1533,7 +1533,7 @@
     semver "^6.1.0"
     strip-ansi "^6.0.0"
 
-"@vue/cli-shared-utils@^5.0.6", "@vue/cli-shared-utils@^5.0.7":
+"@vue/cli-shared-utils@^5.0.7":
   version "5.0.7"
   resolved "https://registry.yarnpkg.com/@vue/cli-shared-utils/-/cli-shared-utils-5.0.7.tgz#c6774573ea2e8106e11d3d6df342c2bd2554330a"
   integrity sha512-SzpqSExsp31gg7w+UAsqdrFyZGxKNTIE8MVwcfkevEx4BgugpLcmUxgcelgDktMs7GGykxluPIm0ZHDk3ytXeg==
@@ -6637,10 +6637,10 @@ no-case@^2.2.0:
   dependencies:
     lower-case "^1.1.1"
 
-nocloudjsrest@^1.4.15:
-  version "1.4.15"
-  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.15.tgz#74e548ae4d73350812171becb832586d3d601f5f"
-  integrity sha512-vCHgqwGjNMoxzVq1V24KgtZ1sFhudb7NUJXUTbdJAdLLWsnkS5oUxSmA2znQ8khckN37qkUA0dgUDnZjyB3mtg==
+nocloudjsrest@^1.4.17:
+  version "1.4.17"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.17.tgz#3141b1fc7e050ce7cca3584c70b3bf7f5bf974fb"
+  integrity sha512-Drf86Jh4qWep97SFWws586YAcGfAvhmcVoGLWSgcurh2Gdj3ctlv+QD1v7pmHoqybCASitleJLkAFl5XEsOl0A==
   dependencies:
     axios "^0.24.0"
 
