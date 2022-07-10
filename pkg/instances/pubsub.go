@@ -100,7 +100,7 @@ func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
-			msg.Nack(false, false)
+			//msg.Nack(false, false)
 			continue
 		}
 		c, err := (*s.db).Query(context.TODO(), updateDataQuery, map[string]interface{}{
@@ -110,7 +110,7 @@ func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		})
 		if err != nil {
 			log.Error("Failed to update data", zap.Error(err))
-			msg.Nack(false, false)
+			//msg.Nack(false, false)
 			continue
 		}
 		log.Debug("Updated data", zap.String("type", col), zap.String("uuid", req.Uuid))
