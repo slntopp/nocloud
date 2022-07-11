@@ -4,12 +4,12 @@
 		color="background-light"
 		class="pa-4"
 	>
-		Service
+		Template
 		<span
-			class="service__display-trigger"
-			@click="() => ObjectDisplay = (ObjectDisplay == 'YAML' ? 'JSON' : 'YAML')"
+			class="template__display-trigger"
+			@click="() => ObjectDisplay = (ObjectDisplay === 'YAML' ? 'JSON' : 'YAML')"
 		>
-			{{ObjectDisplay}}
+			{{ ObjectDisplay }}
 		</span>
 		<v-switch
 			style="display: inline-flex"
@@ -19,33 +19,33 @@
 		></v-switch>
 		:
 		<pre
-			v-if="ObjectDisplay == 'YAML'"
-			v-html="serviceObjectYAML"
+			v-if="ObjectDisplay === 'YAML'"
+			v-html="templateObjectYAML"
 		></pre>
 		<pre
-			v-else-if="ObjectDisplay == 'JSON'"
-			v-html="serviceObjectJSON"
+			v-else-if="ObjectDisplay === 'JSON'"
+			v-html="templateObjectJSON"
 		></pre>
 	</v-card>
 </template>
 
 <script>
-import yaml from "yaml"
+import yaml from 'yaml';
 
 export default {
-	name: 'service-template',
+	name: 'account-template',
 	data: () => ({
-		ObjectDisplay: "YAML",
+		ObjectDisplay: 'YAML',
 	}),
 	props: {
-		service: {
+		template: {
 			type: Object,
 			required: true
 		}
 	},
 	computed: {
-		serviceObjectJSON(){
-			let json = JSON.stringify(this.service, null, 2);
+		templateObjectJSON(){
+			let json = JSON.stringify(this.template, null, 2);
 			json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 			return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
 				let cls = 'number';
@@ -63,9 +63,9 @@ export default {
 				return '<span class="' + cls + '">' + match + '</span>';
 			});
 		},
-		serviceObjectYAML(){
+		templateObjectYAML(){
 			const doc = new yaml.Document();
-			doc.contents = this.service;
+			doc.contents = this.template;
 
 			return doc.toString();
 		}
@@ -78,10 +78,8 @@ export default {
 }
 </script>
 
-
 <style scoped lang="scss">
-
-.service__display-trigger{
+.template__display-trigger{
 	cursor: pointer;
 	color: var(--v-primary-base)
 }

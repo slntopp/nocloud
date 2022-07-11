@@ -106,27 +106,13 @@
                   </v-text-field>
                 </v-col>
               </template>
-              <template v-else>
-                <v-col>
-                  <v-text-field
-                    label="title"
-                    style="display: inline-block; width: 330px"
-                    v-model="group.title"
-                  />
-                </v-col>
-                <v-col>
-                  <v-select
-                    label="namespace"
-                    item-text="title"
-                    item-value="uuid"
-                    style="display: inline-block; width: 330px"
-                    v-model="namespace"
-                    :rules="[(v) => !!v || 'field required']"
-                    :items="namespaces"
-                    :loading="namespacesLoading"
-                  />
-                </v-col>
-              </template>
+              <v-col v-else>
+                <v-text-field
+                  label="title"
+                  style="display: inline-block; width: 330px"
+                  v-model="group.title"
+                />
+              </v-col>
             </v-row>
             Instances:
             <v-row>
@@ -340,19 +326,12 @@ export default {
     copyed: null,
     opened: [],
     openedInstances: {},
-    namespace: '',
     editing: false,
     isLoading: false
   }),
   computed: {
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];
-    },
-    namespaces() {
-      return this.$store.getters["namespaces/all"];
-    },
-    namespacesLoading() {
-      return this.$store.getters["namespaces/isLoading"];
     }
   },
   methods: {
@@ -396,18 +375,9 @@ export default {
       return dict[state] ?? "blue-grey darken-2";
     },
     editService() {
-      if (!this.namespace) {
-        this.showSnackbarError({
-          message: 'Namespace required',
-        });
-        return;
-      }
       this.isLoading = true;
 
-      api.services._update(this.service.uuid, {
-        namespace: this.namespace,
-        service: this.service
-      })
+      api.services._update(this.service)
         .then(() => {
           this.showSnackbarSuccess({
             message: 'Service edited successfully'
@@ -427,7 +397,7 @@ export default {
     this.$store.dispatch("namespaces/fetch")
       .catch((err) => {
         this.showSnackbarError({
-            message: err,
+          message: err,
         });
       });
   },

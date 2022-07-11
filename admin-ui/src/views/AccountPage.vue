@@ -1,45 +1,30 @@
 <template>
-  <div class="service pa-4 h-100">
-    <div class="page__title mb-5">
-      <router-link :to="{ name: 'Services' }">{{ navTitle('Services') }}</router-link>
-      /
-      {{ serviceTitle }}
-      <v-chip x-small :color="chipColor"> </v-chip>
-    </div>
-
+  <div class="pa-4 h-100">
+    <h1 class="page__title mb-5">
+      <router-link :to="{ name: 'Accounts' }">{{ navTitle('Accounts') }}</router-link>
+      / {{ accountTitle }}
+    </h1>
     <v-tabs
       class="rounded-t-lg"
-      v-model="tabs"
       background-color="background-light"
+      v-model="tabs"
     >
       <v-tab>Info</v-tab>
-      <!-- <v-tab>Control</v-tab> -->
       <v-tab>Template</v-tab>
     </v-tabs>
-
     <v-tabs-items
-      v-model="tabs"
-      style="background: var(--v-background-light-base)"
       class="rounded-b-lg"
+      style="background: var(--v-background-light-base)"
+      v-model="tabs"
     >
       <v-tab-item>
-        <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
-        <service-info v-if="service" :service="service" :chipColor="chipColor" />
+        <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
+        <accounts-info v-if="account" :account="account" />
       </v-tab-item>
-
-      <!-- <v-tab-item>
-        <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
-        <service-control
-          v-if="service"
-          :service="service"
-          :chip-color="chipColor"
-        />
-      </v-tab-item> -->
-
       <v-tab-item>
-        <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
+        <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
         <template v-if="!editing">
-          <service-template v-if="service" :service="service" @getType="changeType" />
+          <accounts-template v-if="account" :template="account" @getType="changeType" />
           <v-btn
             class="ma-4 mt-0"
             @click="editing = true"
@@ -97,24 +82,16 @@ import yaml from 'yaml';
 import config from '@/config.js';
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
-import serviceTemplate from "@/components/service/template.vue";
-// import serviceControl from "@/components/service/control.vue";
-import serviceInfo from "@/components/service/info.vue";
+import AccountsInfo from '@/components/account/info.vue';
+import AccountsTemplate from '@/components/account/template.vue';
 import JsonTextarea from '@/components/JsonTextarea.vue';
 import YamlEditor from '@/components/YamlEditor.vue';
 
 export default {
-  name: "service-view",
-  components: {
-    "service-template": serviceTemplate,
-    // "service-control": serviceControl,
-    "service-info": serviceInfo,
-    JsonTextarea,
-    YamlEditor
-  },
+  name: 'account-view',
+  components: { AccountsInfo, AccountsTemplate, JsonTextarea, YamlEditor },
   mixins: [snackbar],
   data: () => ({
-    found: false,
     tabs: 0,
     navTitles: config.navTitles ?? {},
 
@@ -172,47 +149,31 @@ export default {
     }
   },
   computed: {
-    service() {
-      const items = this.$store.getters["services/all"];
-      const item = items.find((el) => el.uuid == this.serviceId);
+    account() {
+      const id = this.$route.params?.accountId;
 
-      if (item) return item;
-
-      return null;
+      return this.$store.getters['accounts/all']
+        .find(({ uuid }) => uuid === id);
     },
-    serviceId() {
-      return this.$route.params.serviceId;
+    accountTitle() {
+      return this?.account?.title ?? 'not found';
     },
-    chipColor() {
-      const dict = {
-        init: "orange darken-2",
-        up: "green darken-2",
-        del: "gray darken-2",
-      };
-      return dict?.[this?.service?.status] ?? "blue-grey darken-2";
-    },
-    serviceTitle() {
-      return this?.service?.title ?? "not found";
-    },
-    servicesLoading() {
-      return this.$store.getters["services/loading"];
+    accountLoading() {
+      return this.$store.getters['accounts/loading'];
     },
   },
   created() {
-    this.$store.dispatch("servicesProviders/fetch");
-    this.$store.dispatch("services/fetchById", this.serviceId).then(() => {
-      this.found = !!this.service;
-      document.title = `${this.serviceTitle} | NoCloud`;
-    });
+    this.$store.dispatch('accounts/fetch')
+      .then(() => {
+        document.title = `${this.accountTitle} | NoCloud`;
+      });
   },
   mounted() {
-    document.title = `${this.serviceTitle} | NoCloud`;
     this.$store.commit("reloadBtn/setCallback", {
-      type: "services/fetchById",
-      params: this.serviceId,
+      type: 'accounts/fetch'
     });
-  },
-};
+  }
+}
 </script>
 
 <style scoped lang="scss">

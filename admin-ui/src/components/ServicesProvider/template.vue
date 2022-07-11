@@ -69,7 +69,12 @@ export default {
 
 			return doc.toString();
 		}
-	}
+	},
+  watch: {
+    ObjectDisplay() {
+      this.$emit('getType', this.ObjectDisplay);
+    }
+  }
 }
 </script>
 
@@ -91,18 +96,18 @@ pre {
 	white-space: pre-wrap;
 }
 .string {
-	color: green; 
+	color: var(--v-success-base); 
 }
 .number {
-	color: darkorange; 
+	color: var(--v-warning-base); 
 }
 .boolean {
-	color: blue; 
+	color: var(--v-info-base); 
 }
 .null {
-	color: magenta; 
+	color: var(--v-accent-base); 
 }
 .key {
-	color: red; 
+	color: var(--v-error-base); 
 }
 </style>
