@@ -558,8 +558,23 @@ func (s *ServicesServer) Stream(req *pb.StreamRequest, srv pb.ServicesService_St
 	log.Debug("Request received", zap.Any("req", req))
 
 	messages := make(chan interface{}, 10)
-	topic := "service/" + req.Uuid
-	s.ps.AddSub(messages, topic)
+
+	topics := make([]string, 0)
+
+	ctx := context.Background()
+	service, err := s.Get(ctx, &pb.GetRequest{Uuid: req.GetUuid()})
+	if err != nil {
+		log.Error("Couldn't find service", zap.Any("uuid", req.GetUuid()), zap.Error(err))
+		return err
+	}
+
+	for _, ig := range service.GetInstancesGroups() {
+		for _, inst := range ig.GetInstances() {
+			topics = append(topics, "instance/"+inst.Uuid)
+		}
+	}
+
+	s.ps.AddSub(messages, topics...)
 	defer unsub(s.ps, messages)
 
 	for msg := range messages {

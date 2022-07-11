@@ -115,7 +115,7 @@ func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		}
 		log.Debug("Updated data", zap.String("type", col), zap.String("uuid", req.Uuid))
 		c.Close()
-		msg.Ack(false)
+		//msg.Ack(false)
 	}
 }
 

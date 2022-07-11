@@ -117,14 +117,13 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			//msg.Nack(false, false)
 			continue
 		}
-		if uuid := req.ServiceUuid; uuid != "" {
-			topic := "service/" + req.ServiceUuid
-			ps.Pub(&req, topic)
-		}
+
+		topic := "instance/" + req.GetUuid()
+		ps.Pub(&req, topic)
 
 		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
 		c.Close()
-		msg.Ack(false)
+		//msg.Ack(false)
 	}
 }
 
