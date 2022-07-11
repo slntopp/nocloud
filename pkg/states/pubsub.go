@@ -21,6 +21,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
@@ -118,8 +119,10 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			continue
 		}
 
-		topic := "instance/" + req.GetUuid()
-		ps.Pub(&req, topic)
+		if col == schema.INSTANCES_COL {
+			topic := "instance/" + req.GetUuid()
+			ps.Pub(&req, topic)
+		}
 
 		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
 		c.Close()
