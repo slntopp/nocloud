@@ -46,6 +46,7 @@ const (
 const (
 	SERVICES_PROVIDERS_COL = "ServicesProviders"
 	IG2SP                  = INSTANCES_GROUPS_COL + "2" + SERVICES_PROVIDERS_COL
+	SP2BP                  = SERVICES_PROVIDERS_COL + "2" + BILLING_PLANS_COL
 )
 
 const (

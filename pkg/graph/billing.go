@@ -38,7 +38,9 @@ type BillingPlansController struct {
 func NewBillingPlansController(logger *zap.Logger, db driver.Database) BillingPlansController {
 	ctx := context.TODO()
 	log := logger.Named("BillingPlansController")
+	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	plans := GetEnsureCollection(log, ctx, db, schema.BILLING_PLANS_COL)
+	GraphGetEdgeEnsure(log, ctx, graph, schema.SP2BP, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL)
 	return BillingPlansController{
 		log: log, col: plans,
 	}

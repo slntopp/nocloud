@@ -109,6 +109,20 @@ message StreamRequest {
     string uuid = 1;
 }
 
+message BindPlanRequest {
+    string uuid = 1;
+    string plan_uuid = 2;
+}
+
+message BindPlanResponse {}
+
+message UnbindPlanRequest {
+    string uuid = 1;
+    string plan_uuid = 2;
+}
+
+message UnbindPlanResponse {}
+
 service ServicesService {
     rpc TestConfig(nocloud.services.CreateRequest)
         returns (nocloud.services.TestConfigResponse) {
@@ -163,9 +177,21 @@ service ServicesService {
             body: "*"
         };
     };
-    rpc Stream(StreamRequest) returns (stream nocloud.states.ObjectState) {
+    rpc Stream(nocloud.services.StreamRequest) returns (stream nocloud.states.ObjectState) {
         option (google.api.http) = {
             get: "/services/{uuid}/stream"
+        };
+    };
+    rpc BindPlan(nocloud.services.BindPlanRequest) returns (nocloud.services.BindPlanResponse) {
+        option (google.api.http) = {
+            post: "/services/{uuid}/bind_plan/{plan_uuid}"
+            body: '*'
+        };
+    };
+    rpc UnbindPlan(nocloud.services.UnbindPlanRequest) returns (nocloud.services.UnbindPlanResponse) {
+        option (google.api.http) = {
+            post: "/services/{uuid}/unbind_plan/{plan_uuid}"
+            body: '*'
         };
     }; 
 }
