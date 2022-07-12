@@ -107,7 +107,11 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			msg.Nack(false, false)
 			continue
 		}
-		log.Debug("State Request", zap.Any("req", &req))
+		log.Debug("State Request", zap.String("uuid", req.GetUuid()), zap.Any("state", req.GetState()))
+
+		if req.State == nil {
+			log.Warn("State is nil, skipping", zap.String("obj", col), zap.String("uuid", req.GetUuid()))
+		}
 
 		if col == schema.INSTANCES_COL {
 			topic := "instance/" + req.GetUuid()
