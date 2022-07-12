@@ -40,6 +40,8 @@ func NewNamespacesController(logger *zap.Logger, db driver.Database) NamespacesC
 	ctx := context.TODO()
 	log := logger.Named("NamespacesController")
 
+	log.Debug("New Namespaces Controller Creating")
+
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.NAMESPACES_COL)
 
