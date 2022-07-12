@@ -34,7 +34,7 @@
     "@vue/cli-plugin-eslint": "~5.0.7",
     "@vue/cli-plugin-router": "~5.0.7",
     "@vue/cli-plugin-vuex": "~5.0.7",
-    "@vue/cli-service": "~5.0.7",
+    "@vue/cli-service": "~5.0.8",
     "eslint": "^8.19.0",
     "eslint-plugin-vue": "^9.2.0",
     "sass": "~1.32.6",
