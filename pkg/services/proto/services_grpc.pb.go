@@ -32,8 +32,6 @@ type ServicesServiceClient interface {
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
 	Stream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (ServicesService_StreamClient, error)
-	BindPlan(ctx context.Context, in *BindPlanRequest, opts ...grpc.CallOption) (*BindPlanResponse, error)
-	UnbindPlan(ctx context.Context, in *UnbindPlanRequest, opts ...grpc.CallOption) (*UnbindPlanResponse, error)
 }
 
 type servicesServiceClient struct {
@@ -148,24 +146,6 @@ func (x *servicesServiceStreamClient) Recv() (*proto.ObjectState, error) {
 	return m, nil
 }
 
-func (c *servicesServiceClient) BindPlan(ctx context.Context, in *BindPlanRequest, opts ...grpc.CallOption) (*BindPlanResponse, error) {
-	out := new(BindPlanResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/BindPlan", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *servicesServiceClient) UnbindPlan(ctx context.Context, in *UnbindPlanRequest, opts ...grpc.CallOption) (*UnbindPlanResponse, error) {
-	out := new(UnbindPlanResponse)
-	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/UnbindPlan", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // ServicesServiceServer is the server API for ServicesService service.
 // All implementations must embed UnimplementedServicesServiceServer
 // for forward compatibility
@@ -179,8 +159,6 @@ type ServicesServiceServer interface {
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
 	Stream(*StreamRequest, ServicesService_StreamServer) error
-	BindPlan(context.Context, *BindPlanRequest) (*BindPlanResponse, error)
-	UnbindPlan(context.Context, *UnbindPlanRequest) (*UnbindPlanResponse, error)
 	mustEmbedUnimplementedServicesServiceServer()
 }
 
@@ -214,12 +192,6 @@ func (UnimplementedServicesServiceServer) Down(context.Context, *DownRequest) (*
 }
 func (UnimplementedServicesServiceServer) Stream(*StreamRequest, ServicesService_StreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
-}
-func (UnimplementedServicesServiceServer) BindPlan(context.Context, *BindPlanRequest) (*BindPlanResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method BindPlan not implemented")
-}
-func (UnimplementedServicesServiceServer) UnbindPlan(context.Context, *UnbindPlanRequest) (*UnbindPlanResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UnbindPlan not implemented")
 }
 func (UnimplementedServicesServiceServer) mustEmbedUnimplementedServicesServiceServer() {}
 
@@ -399,42 +371,6 @@ func (x *servicesServiceStreamServer) Send(m *proto.ObjectState) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _ServicesService_BindPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(BindPlanRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ServicesServiceServer).BindPlan(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/BindPlan",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).BindPlan(ctx, req.(*BindPlanRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _ServicesService_UnbindPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UnbindPlanRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ServicesServiceServer).UnbindPlan(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/nocloud.services.ServicesService/UnbindPlan",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServiceServer).UnbindPlan(ctx, req.(*UnbindPlanRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // ServicesService_ServiceDesc is the grpc.ServiceDesc for ServicesService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -473,14 +409,6 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Down",
 			Handler:    _ServicesService_Down_Handler,
-		},
-		{
-			MethodName: "BindPlan",
-			Handler:    _ServicesService_BindPlan_Handler,
-		},
-		{
-			MethodName: "UnbindPlan",
-			Handler:    _ServicesService_UnbindPlan_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

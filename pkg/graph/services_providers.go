@@ -35,6 +35,8 @@ type ServicesProvidersController struct {
 	col driver.Collection // Services Providers Collection
 
 	log *zap.Logger
+
+	graph driver.Graph
 }
 
 func NewServicesProvidersController(logger *zap.Logger, db driver.Database) ServicesProvidersController {
@@ -47,7 +49,7 @@ func NewServicesProvidersController(logger *zap.Logger, db driver.Database) Serv
 
 	GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
 
-	return ServicesProvidersController{log: log, col: col}
+	return ServicesProvidersController{log: log, col: col, graph: graph}
 }
 
 func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *ServicesProvider) (err error) {
@@ -127,6 +129,28 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 	}
 
 	return r, nil
+}
+
+func (ctrl *ServicesProvidersController) BindPlan(ctx context.Context, uuid, planUuid string) error {
+	// Attempt get edge collection
+	edge, _, err := ctrl.graph.EdgeCollection(ctx, schema.SP2BP)
+	if err != nil {
+		ctrl.log.Error("Failed to get EdgeCollection", zap.Error(err))
+		return err
+	}
+
+	// Attempt create edge
+	spDocId := driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, uuid)
+	planDocId := driver.NewDocumentID(schema.BILLING_PLANS_COL, planUuid)
+	_, err = edge.CreateDocument(ctx, Access{
+		From: spDocId, To: planDocId,
+	})
+	if err != nil {
+		ctrl.log.Error("Failed to create Edge", zap.Error(err))
+		return err
+	}
+
+	return nil
 }
 
 const listDeployedGroupsQuery = `

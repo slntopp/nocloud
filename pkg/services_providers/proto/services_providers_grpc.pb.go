@@ -31,6 +31,8 @@ type ServicesProvidersServiceClient interface {
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListResponse, error)
 	Invoke(ctx context.Context, in *ActionRequest, opts ...grpc.CallOption) (*structpb.Struct, error)
 	ListExtentions(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*ListExtentionsResponse, error)
+	BindPlan(ctx context.Context, in *BindPlanRequest, opts ...grpc.CallOption) (*BindPlanResponse, error)
+	UnbindPlan(ctx context.Context, in *UnbindPlanRequest, opts ...grpc.CallOption) (*UnbindPlanResponse, error)
 }
 
 type servicesProvidersServiceClient struct {
@@ -113,6 +115,24 @@ func (c *servicesProvidersServiceClient) ListExtentions(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *servicesProvidersServiceClient) BindPlan(ctx context.Context, in *BindPlanRequest, opts ...grpc.CallOption) (*BindPlanResponse, error) {
+	out := new(BindPlanResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services_providers.ServicesProvidersService/BindPlan", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesProvidersServiceClient) UnbindPlan(ctx context.Context, in *UnbindPlanRequest, opts ...grpc.CallOption) (*UnbindPlanResponse, error) {
+	out := new(UnbindPlanResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services_providers.ServicesProvidersService/UnbindPlan", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServicesProvidersServiceServer is the server API for ServicesProvidersService service.
 // All implementations must embed UnimplementedServicesProvidersServiceServer
 // for forward compatibility
@@ -125,6 +145,8 @@ type ServicesProvidersServiceServer interface {
 	List(context.Context, *ListRequest) (*ListResponse, error)
 	Invoke(context.Context, *ActionRequest) (*structpb.Struct, error)
 	ListExtentions(context.Context, *ListRequest) (*ListExtentionsResponse, error)
+	BindPlan(context.Context, *BindPlanRequest) (*BindPlanResponse, error)
+	UnbindPlan(context.Context, *UnbindPlanRequest) (*UnbindPlanResponse, error)
 	mustEmbedUnimplementedServicesProvidersServiceServer()
 }
 
@@ -155,6 +177,12 @@ func (UnimplementedServicesProvidersServiceServer) Invoke(context.Context, *Acti
 }
 func (UnimplementedServicesProvidersServiceServer) ListExtentions(context.Context, *ListRequest) (*ListExtentionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListExtentions not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) BindPlan(context.Context, *BindPlanRequest) (*BindPlanResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BindPlan not implemented")
+}
+func (UnimplementedServicesProvidersServiceServer) UnbindPlan(context.Context, *UnbindPlanRequest) (*UnbindPlanResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UnbindPlan not implemented")
 }
 func (UnimplementedServicesProvidersServiceServer) mustEmbedUnimplementedServicesProvidersServiceServer() {
 }
@@ -314,6 +342,42 @@ func _ServicesProvidersService_ListExtentions_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ServicesProvidersService_BindPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BindPlanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).BindPlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services_providers.ServicesProvidersService/BindPlan",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).BindPlan(ctx, req.(*BindPlanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesProvidersService_UnbindPlan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnbindPlanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesProvidersServiceServer).UnbindPlan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services_providers.ServicesProvidersService/UnbindPlan",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesProvidersServiceServer).UnbindPlan(ctx, req.(*UnbindPlanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ServicesProvidersService_ServiceDesc is the grpc.ServiceDesc for ServicesProvidersService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -352,6 +416,14 @@ var ServicesProvidersService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListExtentions",
 			Handler:    _ServicesProvidersService_ListExtentions_Handler,
+		},
+		{
+			MethodName: "BindPlan",
+			Handler:    _ServicesProvidersService_BindPlan_Handler,
+		},
+		{
+			MethodName: "UnbindPlan",
+			Handler:    _ServicesProvidersService_UnbindPlan_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

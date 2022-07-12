@@ -75,6 +75,20 @@ message ListExtentionsResponse {
     repeated string types = 1;
 }
 
+message BindPlanRequest {
+    string uuid = 1;
+    string plan_uuid = 2;
+}
+
+message BindPlanResponse {}
+
+message UnbindPlanRequest {
+    string uuid = 1;
+    string plan_uuid = 2;
+}
+
+message UnbindPlanResponse {}
+
 service ServicesProvidersService {
     rpc Test(nocloud.services_providers.ServicesProvider) returns (nocloud.services_providers.TestResponse) {
         option (google.api.http) = {
@@ -123,6 +137,20 @@ service ServicesProvidersService {
             get: "/sp-ext"
         };
     }
+
+    rpc BindPlan(nocloud.services_providers.BindPlanRequest) returns (nocloud.services_providers.BindPlanResponse) {
+        option (google.api.http) = {
+            post: "/sp/{uuid}/bind_plan/{plan_uuid}"
+            body: '*'
+        };
+    };
+
+    rpc UnbindPlan(nocloud.services_providers.UnbindPlanRequest) returns (nocloud.services_providers.UnbindPlanResponse) {
+        option (google.api.http) = {
+            post: "/sp/{uuid}/unbind_plan/{plan_uuid}"
+            body: '*'
+        };
+    }; 
 };
 
 message GetTypeRequest {}
