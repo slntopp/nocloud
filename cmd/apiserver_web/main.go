@@ -32,6 +32,7 @@ import (
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
+	"github.com/tmc/grpc-websocket-proxy/wsproxy"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/spf13/viper"
@@ -180,5 +181,5 @@ func main() {
 	}).Handler(gwmux)
 
 	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
-	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(http.ListenAndServe(":8000", handler)))
+	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(http.ListenAndServe(":8000", wsproxy.WebsocketProxy(handler))))
 }

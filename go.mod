@@ -14,12 +14,18 @@ require (
 	github.com/spf13/viper v1.12.0
 	github.com/stoewer/go-strcase v1.2.0
 	github.com/streadway/amqp v1.0.0
+	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e
 	google.golang.org/genproto v0.0.0-20220527130721-00d5c0f3be58
 	google.golang.org/grpc v1.47.0
 	google.golang.org/protobuf v1.28.0
+)
+
+require (
+	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/sirupsen/logrus v1.8.1 // indirect
 )
 
 require (
