@@ -31,18 +31,19 @@ type BillingPlan struct {
 }
 
 type BillingPlansController struct {
-	log *zap.Logger
-	col driver.Collection // Billing Plans collection
+	log   *zap.Logger
+	col   driver.Collection // Billing Plans collection
+	graph driver.Graph
 }
 
 func NewBillingPlansController(logger *zap.Logger, db driver.Database) BillingPlansController {
 	ctx := context.TODO()
 	log := logger.Named("BillingPlansController")
-	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
+	graph := GraphGetEnsure(log, ctx, db, schema.BILLING_GRAPH.Name)
 	plans := GetEnsureCollection(log, ctx, db, schema.BILLING_PLANS_COL)
 	GraphGetEdgeEnsure(log, ctx, graph, schema.SP2BP, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL)
 	return BillingPlansController{
-		log: log, col: plans,
+		log: log, col: plans, graph: graph,
 	}
 }
 
@@ -94,10 +95,12 @@ func (ctrl *BillingPlansController) Get(ctx context.Context, plan *pb.Plan) (*Bi
 	}, nil
 }
 
-func (ctrl *BillingPlansController) List(ctx context.Context) ([]*BillingPlan, error) {
-	query := `FOR plan IN @@plans RETURN plan`
+func (ctrl *BillingPlansController) List(ctx context.Context, spUuid string) ([]*BillingPlan, error) {
+	query := `FOR node, edge IN 1 OUTBOUND @sp GRAPH Billing RETURN Document(edge._to)`
+
+	spDocId := driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, spUuid)
 	bindVars := map[string]interface{}{
-		"@plans": schema.BILLING_PLANS_COL,
+		"sp": spDocId,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 

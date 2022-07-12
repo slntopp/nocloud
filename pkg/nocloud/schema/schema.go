@@ -83,6 +83,13 @@ var CREDENTIALS_GRAPH = NoCloudGraphSchema{
 	},
 }
 
+var BILLING_GRAPH = NoCloudGraphSchema{
+	Name: "Billing",
+	Edges: [][]string{
+		{SERVICES_PROVIDERS_COL, BILLING_PLANS_COL},
+	},
+}
+
 var GRAPHS_SCHEMAS = []NoCloudGraphSchema{
 	PERMISSIONS_GRAPH, CREDENTIALS_GRAPH,
 }

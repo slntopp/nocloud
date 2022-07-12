@@ -39,7 +39,8 @@ message Plan {
 }
 
 message ListRequest {
-    bool anonymously = 1;
+    string sp_uuid = 1;
+    bool anonymously = 2;
 }
 message ListResponse {
     repeated Plan pool = 1;

@@ -19,11 +19,10 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
-	"go.uber.org/zap"
-
 	ipb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
+	"go.uber.org/zap"
 )
 
 type ServicesProvider struct {
@@ -132,6 +131,19 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 }
 
 func (ctrl *ServicesProvidersController) BindPlan(ctx context.Context, uuid, planUuid string) error {
+	ctrl.log.Debug("Binding Plan")
+
+	exist, err := EdgeExist(ctx, ctrl.col.Database(), schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, uuid, planUuid)
+
+	if err != nil {
+		return err
+	}
+
+	if exist {
+		ctrl.log.Debug("Plan Already Binded")
+		return nil
+	}
+
 	// Attempt get edge collection
 	edge, _, err := ctrl.graph.EdgeCollection(ctx, schema.SP2BP)
 	if err != nil {

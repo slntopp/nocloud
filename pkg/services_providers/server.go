@@ -351,7 +351,7 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 
 func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPlanRequest) (res *sppb.BindPlanResponse, err error) {
 	log := s.log.Named("BindPlan")
-	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
+	log.Debug("Request received", zap.Any("request", req))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -367,7 +367,7 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 
 	err = s.ctrl.BindPlan(ctx, req.Uuid, req.PlanUuid)
 
-	return nil, err
+	return &sppb.BindPlanResponse{}, err
 }
 
 func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.UnbindPlanRequest) (res *sppb.UnbindPlanResponse, err error) {
@@ -388,5 +388,5 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 
 	err = graph.DeleteEdge(ctx, s.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, req.Uuid, req.PlanUuid)
 
-	return nil, err
+	return &sppb.UnbindPlanResponse{}, err
 }

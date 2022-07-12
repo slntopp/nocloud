@@ -176,7 +176,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 	}
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	plans, err := s.plans.List(ctx)
+	plans, err := s.plans.List(ctx, req.SpUuid)
 	if err != nil {
 		log.Error("Error listing plans", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error listing plans")
