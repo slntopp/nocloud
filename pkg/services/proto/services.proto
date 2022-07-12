@@ -165,8 +165,7 @@ service ServicesService {
     };
     rpc Stream(StreamRequest) returns (stream nocloud.states.ObjectState) {
         option (google.api.http) = {
-            post: "/services/{uuid}/stream"
-            body: "*"
+            get: "/services/{uuid}/stream"
         };
     }; 
 }
