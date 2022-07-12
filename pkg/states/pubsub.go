@@ -41,7 +41,7 @@ type StatesPubSub struct {
 
 func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *StatesPubSub {
 	sps := &StatesPubSub{
-		log: log.Named("StatesServer"), rbmq: rbmq,
+		log: log.Named("StatesPubSub"), rbmq: rbmq,
 	}
 	if db != nil {
 		sps.db = db
@@ -85,7 +85,7 @@ func (s *StatesPubSub) StatesConsumerInit(ch *amqp.Channel, exchange, subtopic, 
 		log.Fatal("Failed to bind a queue", zap.Error(err))
 	}
 
-	msgs, err := ch.Consume(q.Name, "", true, false, false, false, nil)
+	msgs, err := ch.Consume(q.Name, "", false, false, false, false, nil)
 	if err != nil {
 		log.Fatal("Failed to register a consumer", zap.Error(err))
 	}
@@ -99,15 +99,15 @@ UPDATE DOCUMENT(@@collection, @key) WITH { state: @state } IN @@collection OPTIO
 func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	log := s.log.Named(col)
 	for msg := range msgs {
-		log.Debug("st upd msg", zap.Any("msg", msg))
+		log.Debug("State Update message", zap.Any("msg", msg))
 		var req pb.ObjectState
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
-			//msg.Nack(false, false)
+			msg.Nack(false, false)
 			continue
 		}
-		log.Debug("req st", zap.Any("req", &req))
+		log.Debug("State Request", zap.Any("req", &req))
 		c, err := (*s.db).Query(context.TODO(), updateStateQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
@@ -115,8 +115,13 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		})
 		if err != nil {
 			log.Error("Failed to update state", zap.Error(err))
-			//msg.Nack(false, false)
+			msg.Nack(false, false)
 			continue
+		}
+
+		err = msg.Ack(false)
+		if err != nil {
+			log.Warn("Failed to Acknowledge delivery from RabbitMQ", zap.Error(err))
 		}
 
 		if col == schema.INSTANCES_COL {
@@ -126,7 +131,6 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 
 		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
 		c.Close()
-		//msg.Ack(false)
 	}
 }
 

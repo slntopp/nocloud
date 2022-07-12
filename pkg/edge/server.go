@@ -40,7 +40,7 @@ func NewEdgeServiceServer(log *zap.Logger, rbmq *amqp.Connection) *EdgeServiceSe
 	s := s.NewStatesPubSub(log, nil, rbmq)
 	ch := s.Channel()
 	s.TopicExchange(ch, "states")
-	
+
 	return &EdgeServiceServer{
 		log: log, pub: s.Publisher(ch, "states", "instances"),
 	}
@@ -57,5 +57,10 @@ func (s *EdgeServiceServer) PostState(ctx context.Context, req *stpb.ObjectState
 	}
 	req.Uuid = inst
 
+	if req.State == nil {
+		return nil, status.Error(codes.InvalidArgument, "State is nil")
+	}
+
+	s.log.Debug("Publishing state", zap.String("instance", inst), zap.String("state", req.GetState().String()))
 	return &pb.Empty{}, s.pub(req)
 }
