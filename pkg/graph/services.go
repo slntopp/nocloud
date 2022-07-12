@@ -48,6 +48,7 @@ type ServicesController struct {
 }
 
 func NewServicesController(log *zap.Logger, db driver.Database) ServicesController {
+	log.Debug("New Services Controller creating")
 	ctx := context.TODO()
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)

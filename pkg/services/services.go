@@ -57,6 +57,7 @@ type ServicesServer struct {
 
 func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub) *ServicesServer {
 	log := _log.Named("ServicesServer")
+	log.Debug("New Services Server Creating")
 
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),

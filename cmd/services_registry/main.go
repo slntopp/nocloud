@@ -115,6 +115,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to setup states streaming", zap.Error(err))
 	}
+	log.Info("Pub/Sub setted up")
 
 	server := services.NewServicesServer(log, db, ps)
 	iserver := instances.NewInstancesServiceServer(log, db, rbmq)

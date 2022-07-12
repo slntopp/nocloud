@@ -40,6 +40,8 @@ type InstancesGroupsController struct {
 }
 
 func NewInstancesGroupsController(log *zap.Logger, db driver.Database) *InstancesGroupsController {
+	log.Debug("New InstancesGroups Controller Creating")
+
 	ctx := context.TODO()
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)

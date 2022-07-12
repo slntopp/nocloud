@@ -35,35 +35,43 @@ import (
 type InstancesServer struct {
 	pb.UnimplementedInstancesServiceServer
 	log *zap.Logger
-	
-	ctrl *graph.InstancesController
+
+	ctrl    *graph.InstancesController
 	ig_ctrl *graph.InstancesGroupsController
-	
-	drivers  map[string]driverpb.DriverServiceClient
-	
+
+	drivers map[string]driverpb.DriverServiceClient
+
 	db driver.Database
 }
 
 func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection) *InstancesServer {
 	log := logger.Named("instances")
+	log.Debug("New Instances Server Creating")
 	ig_ctrl := graph.NewInstancesGroupsController(logger, db)
 
+	log.Debug("Setting up StatesPubSub")
 	s := s.NewStatesPubSub(log, &db, rbmq)
 	ch := s.Channel()
+	log.Debug("initializing Exchange with name \"states\" of type \"topic\"")
 	s.TopicExchange(ch, "states") // init Exchange with name "states" of type "topic"
+	log.Debug("initializing Consumer queue of topic \"states.instances\"")
 	s.StatesConsumerInit(ch, "states", "instances", schema.INSTANCES_COL) // init Consumer queue of topic "states.instances"
 
+	log.Debug("Setting up PubSub")
 	d := NewPubSub(log, &db, rbmq)
 	ch = d.Channel()
+	log.Debug("initializing Exchange with name \"datas\" of type \"topic\"")
 	d.TopicExchange(ch, "datas") // init Exchange with name "datas" of type "topic"
+	log.Debug("initializing Consumer queue of topic \"datas.instances\"")
 	d.ConsumerInit(ch, "datas", "instances", schema.INSTANCES_COL) // init Consumer queue of topic "datas.instances"
+	log.Debug("initializing Consumer queue of topic \"datas.instances-groups\"")
 	d.ConsumerInit(ch, "datas", "instances-groups", schema.INSTANCES_GROUPS_COL) // init Consumer queue of topic "datas.instances-groups"
 
 	return &InstancesServer{
 		db: db, log: log,
-		ctrl: ig_ctrl.Instances(),
+		ctrl:    ig_ctrl.Instances(),
 		ig_ctrl: ig_ctrl,
-		drivers:  make(map[string]driverpb.DriverServiceClient),
+		drivers: make(map[string]driverpb.DriverServiceClient),
 	}
 }
 
@@ -104,9 +112,9 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		return nil, status.Error(codes.NotFound, "Driver not found")
 	}
 	return client.Invoke(ctx, &driverpb.InvokeRequest{
-		Instance: &instance,
+		Instance:         &instance,
 		ServicesProvider: r.SP,
-		Method: req.Method,
-		Params: req.Params,
+		Method:           req.Method,
+		Params:           req.Params,
 	})
 }
