@@ -108,6 +108,12 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			continue
 		}
 		log.Debug("State Request", zap.Any("req", &req))
+
+		if col == schema.INSTANCES_COL {
+			topic := "instance/" + req.GetUuid()
+			ps.Pub(&req, topic)
+		}
+
 		c, err := (*s.db).Query(context.TODO(), updateStateQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
@@ -122,11 +128,6 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		err = msg.Ack(false)
 		if err != nil {
 			log.Warn("Failed to Acknowledge delivery from RabbitMQ", zap.Error(err))
-		}
-
-		if col == schema.INSTANCES_COL {
-			topic := "instance/" + req.GetUuid()
-			ps.Pub(&req, topic)
 		}
 
 		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
