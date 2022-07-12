@@ -32,6 +32,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/services"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
+	"github.com/slntopp/nocloud/pkg/states"
 	"github.com/spf13/viper"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
@@ -109,7 +110,13 @@ func main() {
 	}
 	defer rbmq.Close()
 
-	server := services.NewServicesServer(log, db)
+	log.Info("Setting up Pub/Sub")
+	ps, err := states.SetupStatesStreaming()
+	if err != nil {
+		log.Fatal("Failed to setup states streaming", zap.Error(err))
+	}
+
+	server := services.NewServicesServer(log, db, ps)
 	iserver := instances.NewInstancesServiceServer(log, db, rbmq)
 
 	for _, driver := range drivers {

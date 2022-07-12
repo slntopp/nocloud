@@ -25,6 +25,8 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -239,6 +241,47 @@ func (ctrl *ServicesController) Get(ctx context.Context, acc, key string) (*pb.S
 	}
 
 	return &service, nil
+}
+
+const getServiceInstancesUuidQuery = `
+FOR group IN 1 OUTBOUND @service GRAPH @permissions
+    FOR i IN 1 OUTBOUND group
+    GRAPH @permissions
+    FILTER IS_SAME_COLLECTION(@instances, i)
+    	RETURN i.uuid
+`
+
+func (ctrl *ServicesController) GetServiceInstancesUuids(key string) ([]string, error) {
+	ctrl.log.Debug("Getting Service", zap.String("key", key))
+
+	id := driver.NewDocumentID(schema.SERVICES_COL, key)
+	ctx := context.Background()
+	c, err := ctrl.db.Query(ctx, getServiceInstancesUuidQuery, map[string]interface{}{
+		"service":     id,
+		"instances":   schema.INSTANCES_COL,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	uuids := make([]string, 0)
+	for {
+		var uuid string
+		_, err = c.ReadDocument(ctx, &uuid)
+		if err != nil {
+			if driver.IsNoMoreDocuments(err) {
+				break
+			}
+			ctrl.log.Error("Failed to recieve Service Instances UUIDs", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to recieve Service Instances UUIDs")
+		} else {
+			uuids = append(uuids, uuid)
+		}
+	}
+
+	return uuids, nil
 }
 
 // List Services in DB

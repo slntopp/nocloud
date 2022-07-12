@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
+	"github.com/cskr/pubsub"
 	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -31,6 +32,7 @@ import (
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
+	spb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -48,10 +50,12 @@ type ServicesServer struct {
 
 	billing bpb.BillingServiceClient
 
+	ps *pubsub.PubSub
+
 	log *zap.Logger
 }
 
-func NewServicesServer(_log *zap.Logger, db driver.Database) *ServicesServer {
+func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub) *ServicesServer {
 	log := _log.Named("ServicesServer")
 
 	return &ServicesServer{
@@ -59,6 +63,7 @@ func NewServicesServer(_log *zap.Logger, db driver.Database) *ServicesServer {
 		sp_ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl: graph.NewNamespacesController(log, db),
 		drivers: make(map[string]driverpb.DriverServiceClient),
+		ps:      ps,
 	}
 }
 
@@ -546,4 +551,46 @@ func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) 
 	}
 
 	return &pb.DeleteResponse{Result: true}, nil
+}
+
+func (s *ServicesServer) Stream(req *pb.StreamRequest, srv pb.ServicesService_StreamServer) (err error) {
+	log := s.log.Named("stream")
+	log.Debug("Request received", zap.Any("req", req))
+
+	messages := make(chan interface{}, 10)
+
+	uuids, err := s.ctrl.GetServiceInstancesUuids(req.GetUuid())
+	if err != nil {
+		log.Error("Couldn't find service", zap.Any("uuid", req.GetUuid()), zap.Error(err))
+		return err
+	}
+
+	topics := make([]string, len(uuids))
+	for i, id := range uuids {
+		topics[i] = "instance/" + id
+	}
+
+	s.log.Debug("topics", zap.Any("topics", topics))
+
+	s.ps.AddSub(messages, topics...)
+	defer unsub(s.ps, messages)
+
+	for msg := range messages {
+		state := msg.(*spb.ObjectState)
+		log.Debug("state", zap.Any("state", state))
+		err := srv.Send(state)
+		if err != nil {
+			log.Warn("Unable to send message", zap.Error(err))
+			break
+		}
+	}
+
+	return nil
+}
+
+func unsub[T chan any](ps *pubsub.PubSub, ch chan any) {
+	go ps.Unsub(ch)
+
+	for range ch {
+	}
 }

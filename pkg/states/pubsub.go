@@ -20,6 +20,8 @@ import (
 	"log"
 
 	"github.com/arangodb/go-driver"
+	"github.com/cskr/pubsub"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/states/proto"
 	"github.com/streadway/amqp"
 	"go.uber.org/zap"
@@ -28,6 +30,7 @@ import (
 
 var (
 	RabbitMQConn string
+	ps           *pubsub.PubSub
 )
 
 type StatesPubSub struct {
@@ -37,13 +40,13 @@ type StatesPubSub struct {
 }
 
 func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *StatesPubSub {
-	ps := &StatesPubSub{
+	sps := &StatesPubSub{
 		log: log.Named("StatesServer"), rbmq: rbmq,
 	}
 	if db != nil {
-		ps.db = db
+		sps.db = db
 	}
-	return ps
+	return sps
 }
 
 func (s *StatesPubSub) Channel() *amqp.Channel {
@@ -101,7 +104,7 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
-			msg.Nack(false, false)
+			//msg.Nack(false, false)
 			continue
 		}
 		log.Debug("req st", zap.Any("req", &req))
@@ -112,12 +115,18 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		})
 		if err != nil {
 			log.Error("Failed to update state", zap.Error(err))
-			msg.Nack(false, false)
+			//msg.Nack(false, false)
 			continue
 		}
+
+		if col == schema.INSTANCES_COL {
+			topic := "instance/" + req.GetUuid()
+			ps.Pub(&req, topic)
+		}
+
 		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
 		c.Close()
-		msg.Ack(false)
+		//msg.Ack(false)
 	}
 }
 
@@ -135,4 +144,10 @@ func (s *StatesPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pu
 			Body:        body,
 		})
 	}
+}
+
+func SetupStatesStreaming() (*pubsub.PubSub, error) {
+	ps = pubsub.New(10)
+
+	return ps, nil
 }
