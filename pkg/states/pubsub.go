@@ -111,6 +111,8 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 
 		if req.State == nil {
 			log.Warn("State is nil, skipping", zap.String("obj", col), zap.String("uuid", req.GetUuid()))
+			msg.Ack(false)
+			continue
 		}
 
 		if col == schema.INSTANCES_COL {
