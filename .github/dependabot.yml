@@ -21,9 +21,9 @@ updates:
       time: '06:00'
     reviewers:
       - va-ovsyanikov
-      - slntopp
+      - 639852
     assignees:
-      - slntopp
+      - 639852
   - package-ecosystem: github-actions
     directory: ".github/workflows/*"
     schedule:
