@@ -1,14 +1,19 @@
 <template>
 	<div
-    class="widgets gg-15px d-flex px-4 pt-4"
+    class="widgets align-start gg-15px pa-4"
     :class="{
-      'flex-column': (width < 1375),
-      'align-start': (width >= 1375),
-      'align-center': (width < 1375)
+      'd-grid': (width < 1375),
+      'd-flex': (width >= 1375)
     }"
   >
-		<component v-for="widget in Object.keys(widgets)" :key="widget" :is="widgets[widget]">
-		</component>
+		<component
+      v-for="widget of widgets"
+      :key="widget"
+      :is="widget"
+      :class="{
+        'grid-row': widget === 'ServicesWidget' && width >= 1010
+      }"
+    />
 	</div>
 </template>
 
@@ -39,6 +44,18 @@ export default {
 }
 </script>
 
-<style>
+<style scoped lang="scss">
+.d-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
 
+  @media (max-width: 1010px) {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+}
+.grid-row {
+  grid-row: 1 / 3;
+  justify-self: end;
+}
 </style>

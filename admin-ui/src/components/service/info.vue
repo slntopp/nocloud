@@ -133,7 +133,7 @@
                         x-small
                         class="ml-2"
                         style="max-width: 16px; padding: 0"
-                        :color="stateColor(instance.state && instance.state.state)"
+                        :color="stateColor(instance.state && instance.state.meta.state_str)"
                       />
                     </v-expansion-panel-header>
                     <v-expansion-panel-content>
@@ -364,12 +364,12 @@ export default {
     },
     stateColor(state) {
       const dict = {
-        init: "orange darken-2",
-        up: "green darken-2",
-        del: "gray darken-2",
-        RUNNING: "green darken-2",
-        UNKNOWN: "red darken-2",
-        STOPPED: "orange darken-2",
+        INIT: "orange darken-2",
+        ACTIVE: "green darken-2",
+        UNKNOWN: "gray darken-2",
+        POWEROFF: "red darken-2",
+        SUSPENDED: "orange darken-2",
+        OPERATION: "gray darken-2",
       };
       
       return dict[state] ?? "blue-grey darken-2";
