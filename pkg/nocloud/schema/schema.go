@@ -46,6 +46,7 @@ const (
 const (
 	SERVICES_PROVIDERS_COL = "ServicesProviders"
 	IG2SP                  = INSTANCES_GROUPS_COL + "2" + SERVICES_PROVIDERS_COL
+	SP2BP                  = SERVICES_PROVIDERS_COL + "2" + BILLING_PLANS_COL
 )
 
 const (
@@ -79,6 +80,13 @@ var CREDENTIALS_GRAPH = NoCloudGraphSchema{
 	Name: "Credentials",
 	Edges: [][]string{
 		{ACCOUNTS_COL, CREDENTIALS_COL},
+	},
+}
+
+var BILLING_GRAPH = NoCloudGraphSchema{
+	Name: "Billing",
+	Edges: [][]string{
+		{SERVICES_PROVIDERS_COL, BILLING_PLANS_COL},
 	},
 }
 
