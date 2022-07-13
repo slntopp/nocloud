@@ -211,6 +211,27 @@ export default {
       type: "services/fetchById",
       params: this.serviceId,
     });
+
+    const url = 'wss://api.nocloud.ione-cloud.net/services';
+    const socket = new WebSocket(`${url}/${this.serviceId}/stream`);
+
+    socket.onmessage = (msg) => {
+      const response = JSON.parse(msg.data).result;
+      if (!response) {
+        this.showSnackbarError({
+          message: `Empty response, ${msg}`
+        });
+        return;
+      }
+
+      try {
+        this.$store.commit('services/updateInstance', {
+          value: response, uuid: this.serviceId
+        });
+      } catch {
+        socket.close(1000, 'работа закончена');
+      }
+    };
   },
 };
 </script>

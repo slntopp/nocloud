@@ -56,6 +56,20 @@ export default {
       );
       console.log( state.services)
     },
+    updateInstance(state, { value, uuid }) {
+      const i = state.services.findIndex((el) =>
+        uuid === el.uuid
+      );
+      const service = state.services[i];
+
+      service.instancesGroups.forEach((el, i, groups) => {
+        el.instances.forEach(({ uuid }, j) => {
+          if (uuid === value.uuid) {
+            groups[i].instances[j].state = value.state;
+          }
+        });
+      });
+    },
     fetchByIdElem(state, data) {
       state.service = data
     }
