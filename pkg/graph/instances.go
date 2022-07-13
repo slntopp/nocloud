@@ -53,14 +53,27 @@ func NewInstancesController(log *zap.Logger, db driver.Database) *InstancesContr
 	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db}
 }
 
-func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, i *pb.Instance) error {
+func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) error {
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating Instance", zap.Any("instance", i))
+
+	if i.BillingPlan == nil {
+		return errors.New("there is not billing plan")
+	}
+
+	ok, err := EdgeExist(ctx, ctrl.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, sp, i.BillingPlan.Uuid)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		ctrl.log.Error("SP and Billing Plan are not binded", zap.Any("sp", sp), zap.Any("plan", i.BillingPlan.Uuid))
+		return errors.New("SP and Billing Plan are not binded")
+	}
 
 	// ensure status is INIT
 	i.Status = pb.InstanceStatus_INIT
 
-	err := hasher.SetHash(i.ProtoReflect())
+	err = hasher.SetHash(i.ProtoReflect())
 	if err != nil {
 		log.Error("Failed to calculate hash", zap.Error(err))
 		return err
@@ -95,11 +108,10 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	return nil
 }
 
-func (ctrl *InstancesController) Update(ctx context.Context, inst, oldInst *pb.Instance) error {
+func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
-	inst.BillingPlan = nil
 	inst.Data = nil
 	inst.State = nil
 
@@ -120,6 +132,23 @@ func (ctrl *InstancesController) Update(ctx context.Context, inst, oldInst *pb.I
 	}
 	if inst.GetStatus() != oldInst.GetStatus() {
 		mask.Status = inst.GetStatus()
+	}
+
+	if inst.BillingPlan == nil || oldInst.BillingPlan == nil {
+		return errors.New("there is not billing plan")
+	}
+
+	if inst.GetBillingPlan().Uuid != oldInst.GetBillingPlan().Uuid {
+		ok, err := EdgeExist(ctx, ctrl.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, sp, inst.BillingPlan.Uuid)
+		if err != nil {
+			return err
+		}
+		if ok {
+			mask.BillingPlan = inst.GetBillingPlan()
+		} else {
+			ctrl.log.Error("SP and Billing Plan are not binded", zap.Any("sp", sp), zap.Any("plan", inst.BillingPlan.Uuid))
+			return errors.New("SP and Billing Plan are not binded")
+		}
 	}
 
 	_, err = ctrl.col.UpdateDocument(ctx, mask.Uuid, mask)

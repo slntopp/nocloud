@@ -96,11 +96,15 @@ func (ctrl *BillingPlansController) Get(ctx context.Context, plan *pb.Plan) (*Bi
 }
 
 func (ctrl *BillingPlansController) List(ctx context.Context, spUuid string) ([]*BillingPlan, error) {
-	query := `FOR node, edge IN 1 OUTBOUND @sp GRAPH Billing RETURN Document(edge._to)`
+	var query string
+	bindVars := make(map[string]interface{}, 0)
 
-	spDocId := driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, spUuid)
-	bindVars := map[string]interface{}{
-		"sp": spDocId,
+	if spUuid == "" {
+		query = `FOR plan IN BillingPlans RETURN plan`
+	} else {
+		query = `FOR node, edge IN 1 OUTBOUND @sp GRAPH Billing RETURN Document(edge._to)`
+		spDocId := driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, spUuid)
+		bindVars["sp"] = spDocId
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
