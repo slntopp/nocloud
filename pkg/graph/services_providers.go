@@ -146,7 +146,7 @@ func (ctrl *ServicesProvidersController) BindPlan(ctx context.Context, uuid, pla
 	}
 
 	// Attempt get edge collection
-	edge, _, err := ctrl.graph.EdgeCollection(ctx, schema.SP2BP)
+	edge, err := ctrl.col.Database().Collection(ctx, schema.SP2BP)
 	if err != nil {
 		ctrl.log.Error("Failed to get EdgeCollection", zap.Error(err))
 		return err
