@@ -94,7 +94,7 @@ export default {
   created() {
     this.loading = true;
     this.$store
-      .dispatch("servicesProviders/fetch")
+      .dispatch("servicesProviders/fetch", false)
       .then(() => {
         this.fetchError = "";
       })

@@ -10,9 +10,17 @@
 
     <v-select
       label="Account"
-      class="d-inline-block ml-2"
+      class="d-inline-block mr-2"
       v-model="accountTitle"
       :items="accountsTitles"
+    />
+    <v-select
+      label="Service"
+      item-text="title"
+      item-value="uuid"
+      class="d-inline-block"
+      v-model="serviceId"
+      :items="services"
     />
 
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
@@ -132,6 +140,7 @@ export default {
     selected: [],
     copyed: -1,
     fetchError: '',
+    serviceId: null,
 
     series: [],
     chartLoading: false,
@@ -192,11 +201,13 @@ export default {
     },
     getTransactions() {
       const { title } = this.$store.getters['auth/userdata'];
-      const accounts = this.accounts.map((acc) => acc.uuid);
 
       this.accountTitle = title;
       this.$store.dispatch('services/fetch')
-      this.$store.dispatch('transactions/fetch', accounts)
+      this.$store.dispatch('transactions/fetch', {
+        accounts: this.accounts.map((acc) => acc.uuid),
+        service: this.serviceId
+      })
         .then(() => {
           this.fetchError = '';
         })
@@ -246,7 +257,7 @@ export default {
       this.chartOptions.xaxis.categories = [];
 
       value.forEach(({ uuid, service }) => {
-        api.transactions.get(uuid)
+        api.transactions.get({ account: uuid })
           .then(({ pool }) => {
             pool.forEach((el) => {
               const name = el.instance.slice(0, 8);
@@ -302,7 +313,10 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "transactions/fetch",
-      params: this.accounts.map((acc) => acc.uuid)
+      params: {
+        accounts: this.accounts.map((acc) => acc.uuid),
+        service: this.serviceId
+      }
     });
   },
   computed: {
@@ -325,6 +339,14 @@ export default {
     },
     accounts() {
       return this.$store.getters['accounts/all'];
+    },
+    services() {
+      const services = this.$store.getters['services/all'].map((el) => ({
+        title: `${el.title} (${el.uuid.slice(0, 8)})`,
+        uuid: el.uuid
+      }));
+
+      return [...services, { title: 'all', uuid: null }];
     },
     accountsTitles() {
       return [...this.accounts.map((acc) => acc.title), 'all'];
@@ -360,6 +382,9 @@ export default {
       this.fetchError = '';
     },
     accounts() {
+      this.getTransactions();
+    },
+    serviceId() {
       this.getTransactions();
     },
     chartLoading() {

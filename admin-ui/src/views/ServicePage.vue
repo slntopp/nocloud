@@ -38,70 +38,17 @@
 
       <v-tab-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
-        <template v-if="!editing">
-          <service-template v-if="service" :service="service" @getType="changeType" />
-          <v-btn
-            class="ma-4 mt-0"
-            @click="editing = true"
-          >
-            Edit
-          </v-btn>
-        </template>
-        <template v-else>
-          <json-textarea class="mx-4" v-if="type === 'JSON'" :json="account" @getTree="changeTree" />
-          <yaml-editor v-else class="mx-4" :json="account" @getTree="changeTree" />
-          <v-btn
-            class="ma-4 mt-0"
-            color="success"
-            :disabled="!isValid"
-            @click="editAccount"
-          >
-            Save
-          </v-btn>
-          <v-btn
-            class="mb-4"
-            @click="cancel"
-          >
-            Cancel
-          </v-btn>
-        </template>
+        <service-template v-if="service" :template="service" />
       </v-tab-item>
     </v-tabs-items>
-
-    <v-snackbar
-      v-model="snackbar.visibility"
-      :timeout="snackbar.timeout"
-      :color="snackbar.color"
-    >
-      {{ snackbar.message }}
-      <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
-        <router-link :to="snackbar.route"> Look up. </router-link>
-      </template>
-
-      <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
   </div>
 </template>
 
 <script>
-import yaml from 'yaml';
 import config from '@/config.js';
-import api from "@/api.js";
-import snackbar from "@/mixins/snackbar.js";
 import serviceTemplate from "@/components/service/template.vue";
 // import serviceControl from "@/components/service/control.vue";
 import serviceInfo from "@/components/service/info.vue";
-import JsonTextarea from '@/components/JsonTextarea.vue';
-import YamlEditor from '@/components/YamlEditor.vue';
 
 export default {
   name: "service-view",
@@ -109,20 +56,11 @@ export default {
     "service-template": serviceTemplate,
     // "service-control": serviceControl,
     "service-info": serviceInfo,
-    JsonTextarea,
-    YamlEditor
   },
-  mixins: [snackbar],
   data: () => ({
     found: false,
     tabs: 0,
-    navTitles: config.navTitles ?? {},
-
-    type: 'YAML',
-    tree: '',
-    isValid: false,
-    isLoading: false,
-    editing: false
+    navTitles: config.navTitles ?? {}
   }),
   methods: {
     navTitle(title) {
@@ -131,44 +69,6 @@ export default {
       }
 
       return title;
-    },
-    changeType(value) {
-      this.type = value;
-    },
-    changeTree(value) {
-      try {
-        if (this.type === 'JSON') JSON.parse(value);
-        else yaml.parse(value);
-
-        this.tree = value;
-        this.isValid = true;
-      } catch {
-        this.isValid = false;
-      }
-    },
-    editAccount() {
-      this.isLoading = true;
-      api.accounts.update(this.account.uuid, JSON.parse(this.tree))
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: 'Account edited successfully'
-          });
-
-          setTimeout(() => {
-            this.$router.push({ name: 'Accounts' });
-          }, 1500);
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
-    },
-    cancel() {
-      this.editing = false;
-      this.isValid = false;
-      this.type = 'YAML';
     }
   },
   computed: {

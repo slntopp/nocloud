@@ -37,11 +37,11 @@ export default {
     }
   },
   actions: {
-    fetch({ commit }) {
+    fetch({ commit }, params) {
       commit('setLoading', true);
 
       return new Promise((resolve, reject) => {
-        api.plans.list()
+        api.plans.list(params)
           .then((response) => {
             commit('setPlans', response.pool);
             resolve(response);
