@@ -47,6 +47,7 @@ func NewServicesProvidersController(logger *zap.Logger, db driver.Database) Serv
 	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.SERVICES_PROVIDERS_COL)
 
 	GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
+	GraphGetEdgeEnsure(log, ctx, graph, schema.SP2BP, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL)
 
 	return ServicesProvidersController{log: log, col: col, graph: graph}
 }
