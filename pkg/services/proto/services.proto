@@ -163,9 +163,9 @@ service ServicesService {
             body: "*"
         };
     };
-    rpc Stream(StreamRequest) returns (stream nocloud.states.ObjectState) {
+    rpc Stream(nocloud.services.StreamRequest) returns (stream nocloud.states.ObjectState) {
         option (google.api.http) = {
             get: "/services/{uuid}/stream"
         };
-    }; 
+    };
 }

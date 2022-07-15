@@ -348,3 +348,45 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 
 	return res, nil
 }
+
+func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPlanRequest) (res *sppb.BindPlanResponse, err error) {
+	log := s.log.Named("BindPlan")
+	log.Debug("Request received", zap.Any("request", req))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ns_ctrl.Get(ctx, "0")
+	if err != nil {
+		return nil, err
+	}
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	}
+
+	err = s.ctrl.BindPlan(ctx, req.Uuid, req.PlanUuid)
+
+	return &sppb.BindPlanResponse{}, err
+}
+
+func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.UnbindPlanRequest) (res *sppb.UnbindPlanResponse, err error) {
+	log := s.log.Named("UnbindPlan")
+	log.Debug("Request received", zap.Any("request", req), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ns_ctrl.Get(ctx, "0")
+	if err != nil {
+		return nil, err
+	}
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	}
+
+	err = graph.DeleteEdge(ctx, s.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, req.Uuid, req.PlanUuid)
+
+	return &sppb.UnbindPlanResponse{}, err
+}

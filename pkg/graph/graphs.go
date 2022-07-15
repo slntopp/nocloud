@@ -179,3 +179,36 @@ func DeleteEdge(ctx context.Context, db driver.Database, fromCollection, toColle
 
 	return nil
 }
+
+const edgeExistQuery = `
+FOR edge IN @@collection
+    FILTER edge._from == @fromDocID && edge._to == @toDocID
+    LIMIT 1
+    RETURN edge._key
+`
+
+func EdgeExist(ctx context.Context, db driver.Database, fromCollection, toCollection, fromKey, toKey string) (bool, error) {
+	fromDocID := driver.NewDocumentID(fromCollection, fromKey)
+	toDocID := driver.NewDocumentID(toCollection, toKey)
+	collection := fromCollection + "2" + toCollection
+
+	c, err := db.Query(ctx, edgeExistQuery, map[string]interface{}{
+		"@collection": collection,
+		"fromDocID":   fromDocID,
+		"toDocID":     toDocID,
+	})
+	if err != nil {
+		return false, err
+	}
+	defer c.Close()
+
+	var key string
+	_, err = c.ReadDocument(ctx, &key)
+	if driver.IsNoMoreDocuments(err) {
+		return false, nil
+	} else if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}

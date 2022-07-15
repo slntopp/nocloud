@@ -250,6 +250,14 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	}
 
 	service := request.GetService()
+	deploy_policies := request.GetDeployPolicies()
+	contexts := make(map[string]*InstancesGroupDriverContext)
+
+	for idx, ig := range service.InstancesGroups {
+		sp := deploy_policies[int32(idx)]
+		ig.Sp = &sp
+	}
+
 	doc, err := s.ctrl.Create(ctx, service)
 	if err != nil {
 		log.Error("Error while creating service", zap.Error(err))
@@ -261,9 +269,6 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		log.Error("Error while joining service to namespace", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
 	}
-
-	deploy_policies := request.GetDeployPolicies()
-	contexts := make(map[string]*InstancesGroupDriverContext)
 
 	for i, group := range service.GetInstancesGroups() {
 		sp_id := deploy_policies[int32(i)]
