@@ -249,7 +249,7 @@ FOR group IN 1 OUTBOUND @service GRAPH @permissions
     FOR i IN 1 OUTBOUND group
     GRAPH @permissions
     FILTER IS_SAME_COLLECTION(@instances, i)
-    	RETURN i.uuid
+    	RETURN i._key
 `
 
 func (ctrl *ServicesController) GetServiceInstancesUuids(key string) ([]string, error) {
@@ -296,9 +296,9 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	showDeleted := request.GetShowDeleted() == "true"
 	var query string
 	if showDeleted {
-		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) RETURN node`
+		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) RETURN MERGE(node, {uuid: node._key})`
 	} else {
-		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) FILTER node.status != "del" RETURN node`
+		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) FILTER node.status != "del" RETURN MERGE(node, {uuid: node._key})`
 	}
 	bindVars := map[string]interface{}{
 		"depth":             depth,

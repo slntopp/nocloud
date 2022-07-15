@@ -100,10 +100,10 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 	var query string
 
 	if requestor != "" {
-		query = `FOR sp IN @@sps RETURN sp`
+		query = `FOR sp IN @@sps RETURN MERGE(sp, {uuid: sp._key})`
 	} else {
 		// anonymous query
-		query = `FOR sp IN @@sps RETURN {uuid: sp.uuid, type: sp.type, title: sp.title, public_data: sp.public_data}`
+		query = `FOR sp IN @@sps RETURN {uuid: sp._key, type: sp.type, title: sp.title, public_data: sp.public_data}`
 	}
 	bindVars := map[string]interface{}{
 		"@sps": schema.SERVICES_PROVIDERS_COL,
