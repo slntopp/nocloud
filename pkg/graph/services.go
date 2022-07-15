@@ -87,6 +87,12 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 	}
 	service.Uuid = meta.Key
 
+	_, err = ctrl.col.UpdateDocument(ctx, service.Uuid, &pb.Service{Uuid: service.Uuid})
+	if err != nil {
+		log.Debug("Error setting document(Service).Uuid", zap.Error(err))
+		return nil, err
+	}
+
 	log.Debug("Groups", zap.Any("method", service.GetInstancesGroups()), zap.Any("direct", service.InstancesGroups))
 	for _, ig := range service.GetInstancesGroups() {
 		err := ctrl.ig_ctrl.Create(ctx, meta.ID, ig)

@@ -87,6 +87,12 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	}
 	i.Uuid = meta.Key
 
+	_, err = ctrl.col.UpdateDocument(ctx, i.Uuid, &pb.Instance{Uuid: i.Uuid})
+	if err != nil {
+		log.Debug("Error setting Instance.Uuid", zap.Error(err))
+		return err
+	}
+
 	// Attempt get edge collection
 	edge, _, err := ctrl.graph.EdgeCollection(ctx, schema.IG2INST)
 	if err != nil {

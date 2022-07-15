@@ -55,7 +55,11 @@ func NewServicesProvidersController(logger *zap.Logger, db driver.Database) Serv
 func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *ServicesProvider) (err error) {
 	ctrl.log.Debug("Creating Document for ServicesProvider", zap.Any("config", sp))
 	meta, err := ctrl.col.CreateDocument(ctx, *sp)
+	if err != nil {
+		return err
+	}
 	sp.Uuid = meta.Key
+	_, err = ctrl.col.UpdateDocument(ctx, sp.Uuid, &pb.ServicesProvider{Uuid: sp.Uuid})
 	return err
 }
 

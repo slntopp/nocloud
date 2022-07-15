@@ -82,6 +82,12 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	}
 	g.Uuid = meta.Key
 
+	_, err = ctrl.col.UpdateDocument(ctx, g.Uuid, &pb.InstancesGroup{Uuid: g.Uuid})
+	if err != nil {
+		log.Debug("Error setting InstancesGroup.Uuid", zap.Error(err))
+		return err
+	}
+
 	edge, _, err := ctrl.graph.EdgeCollection(ctx, schema.SERV2IG)
 	if err != nil {
 		log.Error("Failed to get edge collection", zap.Error(err))
