@@ -18,20 +18,8 @@
 			false-value="YAML"
 		/>
 		:
-    <template v-if="!editing">
-      <pre
-        v-if="ObjectDisplay === 'YAML'"
-        v-html="templateObjectYAML"
-      />
-      <pre
-        v-else-if="ObjectDisplay === 'JSON'"
-        v-html="templateObjectJSON"
-      />
-      <v-btn @click="editing = true">Edit</v-btn>
-    </template>
-    <template v-else>
-      <json-textarea v-if="ObjectDisplay === 'JSON'" :json="template" @getTree="changeTree" />
-      <yaml-editor v-else :json="template" @getTree="changeTree" />
+    <v-spacer />
+    <template v-if="editing">
       <v-btn
         class="mr-2"
         color="success"
@@ -45,6 +33,19 @@
       >
         Cancel
       </v-btn>
+      <json-textarea class="mt-4" v-if="ObjectDisplay === 'JSON'" :json="template" @getTree="changeTree" />
+      <yaml-editor class="mt-4" v-else :json="template" @getTree="changeTree" />
+    </template>
+    <template v-else>
+      <v-btn @click="editing = true">Edit</v-btn>
+      <pre
+        v-if="ObjectDisplay === 'YAML'"
+        v-html="templateObjectYAML"
+      />
+      <pre
+        v-else-if="ObjectDisplay === 'JSON'"
+        v-html="templateObjectJSON"
+      />
     </template>
 
     <v-snackbar

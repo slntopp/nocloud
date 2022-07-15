@@ -153,6 +153,10 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "plans/fetch",
+      params: {
+        sp_uuid: this.serviceProvider,
+        anonymously: false
+      }
     });
   },
   computed: {
@@ -165,7 +169,7 @@ export default {
     servicesProviders() {
       const sp = this.$store.getters['servicesProviders/all'];
 
-      return [...sp, { title: 'all', uuid: null }];
+      return [...sp, { title: 'none', uuid: null }];
     }
   },
   watch: {

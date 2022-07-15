@@ -162,12 +162,36 @@
     <v-card-title class="px-0 mb-3">Plans:</v-card-title>
     <v-row class="flex-column">
       <v-col>
-        <v-btn class="mr-2" :loading="isLoading" @click="bindPlans">Add</v-btn>
-        <v-btn :loading="isDeleteLoading" @click="unbindPlans">Delete</v-btn>
+        <v-dialog v-model="isDialogVisible">
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              class="mr-2"
+              v-bind="attrs"
+              v-on="on"
+              @click="$store.dispatch('plans/fetch')"
+            >
+              Add
+            </v-btn>
+          </template>
+          <v-card>
+            <nocloud-table
+              :items="plans"
+              :headers="headers"
+              :loading="isPlanLoading"
+              :footer-error="fetchError"
+              v-model="selected"
+            />
+            <v-card-actions style="background: var(--v-background-base)">
+              <v-btn :loading="isLoading" @click="bindPlans">Add</v-btn>
+              <v-btn class="ml-2" @click="isDialogVisible = false">Cancel</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+        <v-btn :loading="isDeleteLoading" @click="unbindPlans">Remove</v-btn>
       </v-col>
       <v-col>
         <nocloud-table
-          :items="plans"
+          :items="relatedPlans"
           :headers="headers"
           :loading="isPlanLoading"
           :footer-error="fetchError"
@@ -499,6 +523,8 @@ export default {
       { text: 'Type ', value: 'type' }
     ],
     isDeleteLoading: false,
+    isDialogVisible: false,
+    relatedPlans: [],
     selected: [],
     fetchError: ''
   }),
@@ -651,8 +677,12 @@ export default {
       }
     });
     
-    this.$store.dispatch('plans/fetch')
+    this.$store.dispatch('plans/fetch', {
+      sp_uuid: this.template.uuid,
+      anonymously: false
+    })
       .then(() => {
+        this.relatedPlans = this.$store.getters['plans/all'];
         this.fetchError = '';
       })
       .catch((err) => {
