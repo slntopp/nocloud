@@ -172,9 +172,6 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service,
 	if oldService.GetTitle() != service.GetTitle() {
 		mask.Title = service.GetTitle()
 	}
-	if oldService.GetStatus() != service.GetStatus() {
-		mask.Status = service.GetStatus()
-	}
 	if hash {
 		mask.Hash = service.GetHash()
 	}
