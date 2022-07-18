@@ -130,9 +130,6 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	if inst.GetTitle() != oldInst.GetTitle() {
 		mask.Title = inst.GetTitle()
 	}
-	if inst.GetStatus() != oldInst.GetStatus() {
-		mask.Status = inst.GetStatus()
-	}
 
 	if inst.BillingPlan == nil || oldInst.BillingPlan == nil {
 		return errors.New("there is not billing plan")
