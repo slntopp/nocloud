@@ -64,6 +64,12 @@ message InvokeRequest {
     map<string, google.protobuf.Value> params = 4;
 }
 
+message SpInvokeRequest {
+    nocloud.services_providers.ServicesProvider services_provider = 1;
+    string method = 2;
+    map<string, google.protobuf.Value> params = 3;
+}
+
 service DriverService {
     rpc TestServiceProviderConfig(nocloud.instance.driver.vanilla.TestServiceProviderConfigRequest) returns (nocloud.services_providers.TestResponse);
     rpc TestInstancesGroupConfig(nocloud.instances.TestInstancesGroupConfigRequest) returns (nocloud.instances.TestInstancesGroupConfigResponse);
@@ -75,4 +81,5 @@ service DriverService {
     rpc Monitoring(MonitoringRequest) returns (MonitoringResponse);
 
     rpc Invoke(InvokeRequest) returns (nocloud.instances.InvokeResponse);
+    rpc SpInvoke(SpInvokeRequest) returns (nocloud.services_providers.InvokeResponse);
 }

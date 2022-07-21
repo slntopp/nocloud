@@ -390,3 +390,32 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 
 	return &sppb.UnbindPlanResponse{}, err
 }
+
+func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeRequest) (*sppb.InvokeResponse, error) {
+	log := s.log.Named("invoke")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	sp_id := driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, req.Uuid)
+	var sp sppb.ServicesProvider
+	err := graph.GetWithAccess(
+		ctx, s.db,
+		driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		sp_id, &sp,
+	)
+	if err != nil {
+		log.Error("Failed to get sp", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	client, ok := s.drivers[sp.Type]
+	if !ok {
+		log.Error("Failed to get driver", zap.String("type", sp.Type))
+		return nil, status.Error(codes.NotFound, "Driver not found")
+	}
+	return client.SpInvoke(ctx, &driverpb.SpInvokeRequest{
+		ServicesProvider: &sp,
+		Method:           req.Method,
+		Params:           req.Params,
+	})
+}

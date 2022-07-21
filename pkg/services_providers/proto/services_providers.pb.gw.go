@@ -308,7 +308,7 @@ func local_request_ServicesProvidersService_List_0(ctx context.Context, marshale
 }
 
 func request_ServicesProvidersService_Invoke_0(ctx context.Context, marshaler runtime.Marshaler, client ServicesProvidersServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ActionRequest
+	var protoReq InvokeRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -326,14 +326,14 @@ func request_ServicesProvidersService_Invoke_0(ctx context.Context, marshaler ru
 		_   = err
 	)
 
-	val, ok = pathParams["services_provider.uuid"]
+	val, ok = pathParams["uuid"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "services_provider.uuid")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "uuid")
 	}
 
-	err = runtime.PopulateFieldFromPath(&protoReq, "services_provider.uuid", val)
+	protoReq.Uuid, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "services_provider.uuid", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "uuid", err)
 	}
 
 	msg, err := client.Invoke(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
@@ -342,7 +342,7 @@ func request_ServicesProvidersService_Invoke_0(ctx context.Context, marshaler ru
 }
 
 func local_request_ServicesProvidersService_Invoke_0(ctx context.Context, marshaler runtime.Marshaler, server ServicesProvidersServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq ActionRequest
+	var protoReq InvokeRequest
 	var metadata runtime.ServerMetadata
 
 	newReader, berr := utilities.IOReaderFactory(req.Body)
@@ -360,14 +360,14 @@ func local_request_ServicesProvidersService_Invoke_0(ctx context.Context, marsha
 		_   = err
 	)
 
-	val, ok = pathParams["services_provider.uuid"]
+	val, ok = pathParams["uuid"]
 	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "services_provider.uuid")
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "uuid")
 	}
 
-	err = runtime.PopulateFieldFromPath(&protoReq, "services_provider.uuid", val)
+	protoReq.Uuid, err = runtime.String(val)
 	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "services_provider.uuid", err)
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "uuid", err)
 	}
 
 	msg, err := server.Invoke(ctx, &protoReq)
@@ -744,7 +744,7 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Invoke", runtime.WithHTTPPathPattern("/sp/{services_provider.uuid}"))
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Invoke", runtime.WithHTTPPathPattern("/sp/{uuid}/invoke"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1005,7 +1005,7 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Invoke", runtime.WithHTTPPathPattern("/sp/{services_provider.uuid}"))
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Invoke", runtime.WithHTTPPathPattern("/sp/{uuid}/invoke"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1100,7 +1100,7 @@ var (
 
 	pattern_ServicesProvidersService_List_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"sp"}, ""))
 
-	pattern_ServicesProvidersService_Invoke_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1}, []string{"sp", "services_provider.uuid"}, ""))
+	pattern_ServicesProvidersService_Invoke_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 1, 0, 4, 1, 5, 1, 2, 2}, []string{"sp", "uuid", "invoke"}, ""))
 
 	pattern_ServicesProvidersService_ListExtentions_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0}, []string{"sp-ext"}, ""))
 
