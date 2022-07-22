@@ -40,6 +40,7 @@
 <script>
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
+
 export default {
   name: "service-state",
   mixins: [snackbar],
@@ -77,7 +78,7 @@ export default {
       this.actualAction = action;
       this.actionLoading = true;
       api.instances
-        .action(this.instance_uuid, action)
+        .action({ uuid: this.instance_uuid, action })
         .then(() => {
           this.showSnackbarSuccess({ message: `Done!` });
         })

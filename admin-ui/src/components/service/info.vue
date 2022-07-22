@@ -260,6 +260,69 @@
                           />
                         </v-col>
                       </v-row>
+                      <v-row class="flex-column">
+                        <v-col>
+                          <h4 class="mb-2">Snapshots:</h4>
+                          <v-menu
+                            bottom
+                            offset-y
+                            transition="slide-y-transition"
+                            v-model="isVisible"
+                            :close-on-content-click="false"
+                          >
+                            <template v-slot:activator="{ on, attrs }">
+                              <v-btn class="mr-2" v-bind="attrs" v-on="on">
+                                Create
+                              </v-btn>
+                            </template>
+                            <v-card class="pa-4">
+                              <v-row>
+                                <v-col>
+                                  <v-text-field
+                                    dense
+                                    label="name"
+                                    v-model="snapshotName"
+                                    :rules="[v => !!v || 'Required!']"
+                                  />
+                                  <v-btn
+                                    :loading="isLoading"
+                                    @click="createSnapshot(instance.uuid)"
+                                  >
+                                    Send
+                                  </v-btn>
+                                </v-col>
+                              </v-row>
+                            </v-card>
+                          </v-menu>
+                          <v-btn
+                            class="mr-2"
+                            :loading="isDeleteLoading"
+                            @click="deleteSnapshot(instance)"
+                          >
+                            Delete
+                          </v-btn>
+                          <v-btn
+                            :loading="isRevertLoading"
+                            @click="revertToSnapshot(instance)"
+                          >
+                            Revert
+                          </v-btn>
+                        </v-col>
+                        <v-col>
+                          <nocloud-table
+                            single-select
+                            item-key="ts"
+                            v-model="selected"
+                            :items="Object.values(instance.state.meta.snapshots || {})"
+                            :loading="!instance.state.meta.snapshots"
+                            :headers="headers"
+                          >
+                            <template v-slot:[`item.ts`]="{ item }">
+                              {{ date(item.ts) }}
+                            </template>
+                          </nocloud-table>
+                        </v-col>
+                      </v-row>
                     </v-expansion-panel-content>
                   </v-expansion-panel>
                 </v-expansion-panels>
@@ -304,12 +367,14 @@ import api from '@/api.js';
 import snackbar from '@/mixins/snackbar.js';
 import ServiceDeploy from "@/components/service/service-deploy.vue";
 import ServiceControl from "@/components/service/service-control.vue";
+import nocloudTable from '@/components/table.vue';
 
 export default {
   name: "service-info",
   components: {
     ServiceDeploy,
     ServiceControl,
+    nocloudTable
   },
   mixins: [snackbar],
   props: {
@@ -327,7 +392,17 @@ export default {
     opened: [],
     openedInstances: {},
     editing: false,
-    isLoading: false
+    isLoading: false,
+    isDeleteLoading: false,
+    isRevertLoading: false,
+
+    headers: [
+      { text: 'Name', value: 'name' },
+      { text: 'Time', value: 'ts' }
+    ],
+    selected: [],
+    isVisible: false,
+    snapshotName: 'Snapshot'
   }),
   computed: {
     servicesProviders() {
@@ -385,19 +460,101 @@ export default {
         })
         .catch((err) => {
           this.showSnackbarError({
-              message: err,
+            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
           });
         })
-        .finnaly(() => {
+        .finally(() => {
           this.isLoading = false;
         });
+    },
+    date(timestamp) {
+      const date = new Date(timestamp * 1000);
+      const time = date.toUTCString().split(' ')[4];
+      
+      const day = date.getUTCDate();
+      const month = date.getUTCMonth() + 1;
+      const year = date.toUTCString().split(' ')[3];
+
+      return `${day}.${month}.${year} ${time}`;
+    },
+    createSnapshot(uuid) {
+      this.isLoading = true;
+
+      api.instances.action({
+        uuid, action: 'snapcreate',
+        params: { snap_name: this.snapshotName }
+      })
+      .then(() => {
+        this.showSnackbarSuccess({
+          message: 'Snapshot edited successfully'
+        });
+      })
+      .catch((err) => {
+        this.showSnackbarError({
+          message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
+        });
+      })
+      .finally(() => {
+        this.isLoading = false;
+        this.isVisible = false;
+      });
+    },
+    deleteSnapshot({ uuid, state }) {
+      const { snapshots } = state.meta;
+      const [id] = Object.entries(snapshots).find(
+        ([, el]) => el.ts === this.selected[0].ts
+      );
+
+      this.isDeleteLoading = true;
+      api.instances.action({
+        uuid, action: 'snapdelete',
+        params: { snap_id: +id }
+      })
+      .then(() => {
+        this.showSnackbarSuccess({
+          message: 'Snapshot deleted successfully'
+        });
+      })
+      .catch((err) => {
+        this.showSnackbarError({
+          message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
+        });
+      })
+      .finally(() => {
+        this.isDeleteLoading = false;
+      });
+    },
+    revertToSnapshot({ uuid, state }) {
+      const { snapshots } = state.meta;
+      const [id] = Object.entries(snapshots).find(
+        ([, el]) => el.ts === this.selected[0].ts
+      );
+
+      this.isRevertLoading = true;
+      api.instances.action({
+        uuid, action: 'snaprevert',
+        params: { snap_id: +id }
+      })
+      .then(() => {
+        this.showSnackbarSuccess({
+          message: 'Snapshot reverted successfully'
+        });
+      })
+      .catch((err) => {
+        this.showSnackbarError({
+          message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
+        });
+      })
+      .finally(() => {
+        this.isRevertLoading = false;
+      });
     }
   },
   created() {
     this.$store.dispatch("namespaces/fetch")
       .catch((err) => {
         this.showSnackbarError({
-          message: err,
+          message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
         });
       });
   },
