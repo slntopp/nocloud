@@ -8,12 +8,21 @@
       Create
     </v-btn>
     <v-btn
+      class="mr-2"
       color="background-light"
       :loading="isDeleteLoading"
       @click="deleteSelectedPlans"
     >
       Delete
     </v-btn>
+    <v-select
+      label="Service Provider"
+      item-text="title"
+      item-value="uuid"
+      class="d-inline-block"
+      v-model="serviceProvider"
+      :items="servicesProviders"
+    />
 
     <nocloud-table
       class="mt-4"
@@ -78,7 +87,8 @@ export default {
     isDeleteLoading: false,
     selected: [],
     copyed: -1,
-    fetchError: ''
+    fetchError: '',
+    serviceProvider: null
   }),
   methods: {
     deleteSelectedPlans() {
@@ -115,27 +125,38 @@ export default {
             this.isDeleteLoading = false;
           });
       }
+    },
+    getPlans() {
+      this.$store.dispatch('plans/fetch', {
+        sp_uuid: this.serviceProvider,
+        anonymously: false
+      })
+        .then(() => {
+          this.fetchError = '';
+        })
+        .catch((err) => {
+          console.error(err);
+
+          this.fetchError = 'Can\'t reach the server';
+          if (err.response) {
+            this.fetchError += `: [ERROR]: ${err.response.data.message}`;
+          } else {
+            this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
+          }
+        });
     }
   },
   created() {
-    this.$store.dispatch('plans/fetch')
-      .then(() => {
-        this.fetchError = '';
-      })
-      .catch((err) => {
-        console.error(err);
-
-        this.fetchError = 'Can\'t reach the server';
-        if (err.response) {
-          this.fetchError += `: [ERROR]: ${err.response.data.message}`;
-        } else {
-          this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
-        }
-      });
+    this.$store.dispatch('servicesProviders/fetch');
+    this.getPlans();
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "plans/fetch",
+      params: {
+        sp_uuid: this.serviceProvider,
+        anonymously: false
+      }
     });
   },
   computed: {
@@ -144,12 +165,16 @@ export default {
     },
     isLoading() {
       return this.$store.getters['plans/isLoading'];
+    },
+    servicesProviders() {
+      const sp = this.$store.getters['servicesProviders/all'];
+
+      return [...sp, { title: 'none', uuid: null }];
     }
   },
   watch: {
-    plans() {
-      this.fetchError = '';
-    }
+    plans() { this.fetchError = '' },
+    serviceProvider() { this.getPlans() }
   }
 }
 </script>

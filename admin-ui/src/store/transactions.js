@@ -31,12 +31,12 @@ export default {
     }
   },
   actions: {
-    fetch({ commit }, accounts) {
+    fetch({ commit }, { accounts, service }) {
       commit('setLoading', true);
 
       return new Promise((resolve, reject) => {
-        const promises = accounts.map((id) =>
-          api.transactions.get(id)
+        const promises = accounts.map((account) =>
+          api.transactions.get({ account, service })
         );
 
         Promise.all(promises)
@@ -52,11 +52,11 @@ export default {
           });
       });
     },
-    fetchById({ commit }, id) {
+    fetchById({ commit }, params) {
       commit('setLoading', true);
 
       return new Promise((resolve, reject) => {
-        api.transactions.get(id)
+        api.transactions.get(params)
           .then((response) => {
             commit('setTransaction', response.pool);
             resolve(response);

@@ -158,6 +158,48 @@
       </v-col>
     </v-row>
 
+    <!-- Plans -->
+    <v-card-title class="px-0 mb-3">Plans:</v-card-title>
+    <v-row class="flex-column">
+      <v-col>
+        <v-dialog v-model="isDialogVisible">
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              class="mr-2"
+              v-bind="attrs"
+              v-on="on"
+              @click="$store.dispatch('plans/fetch')"
+            >
+              Add
+            </v-btn>
+          </template>
+          <v-card>
+            <nocloud-table
+              :items="plans"
+              :headers="headers"
+              :loading="isPlanLoading"
+              :footer-error="fetchError"
+              v-model="selected"
+            />
+            <v-card-actions style="background: var(--v-background-base)">
+              <v-btn :loading="isLoading" @click="bindPlans">Add</v-btn>
+              <v-btn class="ml-2" @click="isDialogVisible = false">Cancel</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+        <v-btn :loading="isDeleteLoading" @click="unbindPlans">Remove</v-btn>
+      </v-col>
+      <v-col>
+        <nocloud-table
+          :items="relatedPlans"
+          :headers="headers"
+          :loading="isPlanLoading"
+          :footer-error="fetchError"
+          v-model="selected"
+        />
+      </v-col>
+    </v-row>
+
     <!-- Hosts -->
     <v-card-title class="px-0 mb-3">Hosts:</v-card-title>
     <v-row class="mb-7">
@@ -452,11 +494,12 @@ import api from '@/api.js';
 import snackbar from '@/mixins/snackbar.js';
 import JsonEditor from '@/components/JsonEditor.vue';
 import extentionsMap from "@/components/extentions/map.js";
+import nocloudTable from '@/components/table.vue';
 import { format } from "date-fns";
 
 export default {
   name: "services-provider-info",
-  components: { JsonEditor },
+  components: { JsonEditor, nocloudTable },
   mixins: [snackbar],
   data: () => ({
     format,
@@ -471,7 +514,19 @@ export default {
     editing: false,
     isLoading: false,
     isTestLoading: false,
-    isTestSuccess: false
+    isTestSuccess: false,
+
+    headers: [
+      { text: 'Title ', value: 'title' },
+      { text: 'UUID ', value: 'uuid' },
+      { text: 'Public ', value: 'public' },
+      { text: 'Type ', value: 'type' }
+    ],
+    isDeleteLoading: false,
+    isDialogVisible: false,
+    relatedPlans: [],
+    selected: [],
+    fetchError: ''
   }),
   props: {
     template: {
@@ -553,6 +608,54 @@ export default {
         .finally(() => {
           this.isTestLoading = false;
         });
+    },
+    bindPlans() {
+      if (this.selected.length < 1) return;
+      this.isLoading = true;
+      
+      const bindPromises = this.selected.map((el) =>
+        api.servicesProviders
+          .bindPlan(this.template.uuid, el.uuid)
+      );
+
+      Promise.all(bindPromises)
+        .then(() => {
+          const ending = bindPromises.length === 1 ? '' : 's';
+
+          this.showSnackbarSuccess({
+            message: `Plan${ending} added successfully.`,
+          });
+        })
+        .catch((err) => {
+          this.showSnackbarError({ message: err });
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+    unbindPlans() {
+      if (this.selected.length < 1) return;
+      this.isDeleteLoading = true;
+      
+      const unbindPromises = this.selected.map((el) =>
+        api.servicesProviders
+          .unbindPlan(this.template.uuid, el.uuid)
+      );
+
+      Promise.all(unbindPromises)
+        .then(() => {
+          const ending = unbindPromises.length === 1 ? '' : 's';
+
+          this.showSnackbarSuccess({
+            message: `Plan${ending} deleted successfully.`,
+          });
+        })
+        .catch((err) => {
+          this.showSnackbarError({ message: err });
+        })
+        .finally(() => {
+          this.isDeleteLoading = false;
+        });
     }
   },
   mounted() {
@@ -573,6 +676,25 @@ export default {
         this.types.push(type);
       }
     });
+    
+    this.$store.dispatch('plans/fetch', {
+      sp_uuid: this.template.uuid,
+      anonymously: false
+    })
+      .then(() => {
+        this.relatedPlans = this.$store.getters['plans/all'];
+        this.fetchError = '';
+      })
+      .catch((err) => {
+        console.error(err);
+
+        this.fetchError = 'Can\'t reach the server';
+        if (err.response) {
+          this.fetchError += `: [ERROR]: ${err.response.data.message}`;
+        } else {
+          this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
+        }
+      });
   },
   computed: {
     vlans() {
@@ -588,6 +710,12 @@ export default {
         .fill(0, vlans);
 
       return res;
+    },
+    plans() {
+      return this.$store.getters['plans/all'];
+    },
+    isPlanLoading() {
+      return this.$store.getters['plans/isLoading'];
     }
   },
   watch: {

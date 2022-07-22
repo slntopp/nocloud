@@ -4,48 +4,137 @@
 		color="background-light"
 		class="pa-4"
 	>
-		Service
+		Template
 		<span
-			class="service__display-trigger"
-			@click="() => ObjectDisplay = (ObjectDisplay == 'YAML' ? 'JSON' : 'YAML')"
+			class="template__display-trigger"
+			@click="() => ObjectDisplay = (ObjectDisplay === 'YAML' ? 'JSON' : 'YAML')"
 		>
-			{{ObjectDisplay}}
+			{{ ObjectDisplay }}
 		</span>
 		<v-switch
 			style="display: inline-flex"
 			v-model="ObjectDisplay"
 			true-value="JSON"
 			false-value="YAML"
-		></v-switch>
+		/>
 		:
-		<pre
-			v-if="ObjectDisplay == 'YAML'"
-			v-html="serviceObjectYAML"
-		></pre>
-		<pre
-			v-else-if="ObjectDisplay == 'JSON'"
-			v-html="serviceObjectJSON"
-		></pre>
+    <v-spacer />
+    <template v-if="editing">
+      <v-btn
+        class="mr-2"
+        color="success"
+        :disabled="!isValid"
+        @click="editService"
+      >
+        Save
+      </v-btn>
+      <v-btn
+        @click="cancel"
+      >
+        Cancel
+      </v-btn>
+      <json-textarea class="mt-4" v-if="ObjectDisplay === 'JSON'" :json="template" @getTree="changeTree" />
+      <yaml-editor class="mt-4" v-else :json="template" @getTree="changeTree" />
+    </template>
+    <template v-else>
+      <v-btn @click="editing = true">Edit</v-btn>
+      <pre
+        v-if="ObjectDisplay === 'YAML'"
+        v-html="templateObjectYAML"
+      />
+      <pre
+        v-else-if="ObjectDisplay === 'JSON'"
+        v-html="templateObjectJSON"
+      />
+    </template>
+
+    <v-snackbar
+      v-model="snackbar.visibility"
+      :timeout="snackbar.timeout"
+      :color="snackbar.color"
+    >
+      {{ snackbar.message }}
+      <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
+        <router-link :to="snackbar.route"> Look up. </router-link>
+      </template>
+
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          :color="snackbar.buttonColor"
+          text
+          v-bind="attrs"
+          @click="snackbar.visibility = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
 	</v-card>
 </template>
 
 <script>
-import yaml from "yaml"
+import api from "@/api.js";
+import yaml from 'yaml';
+import snackbar from "@/mixins/snackbar.js";
+import JsonTextarea from '@/components/JsonTextarea.vue';
+import YamlEditor from '@/components/YamlEditor.vue';
 
 export default {
 	name: 'service-template',
-	data: () => ({
-		ObjectDisplay: "YAML",
-	}),
+  components: { JsonTextarea, YamlEditor },
+  mixins: [snackbar],
 	props: {
-		service: {
+		template: {
 			type: Object,
 			required: true
 		}
 	},
+	data: () => ({
+		ObjectDisplay: 'YAML',
+    tree: '',
+    isValid: false,
+    isLoading: false,
+    editing: false
+	}),
+  methods: {
+    changeTree(value) {
+      try {
+        if (this.ObjectDisplay === 'JSON') JSON.parse(value);
+        else yaml.parse(value);
+
+        this.tree = value;
+        this.isValid = true;
+      } catch {
+        this.isValid = false;
+      }
+    },
+    editService() {
+      this.isLoading = true;
+      api.services._update(JSON.parse(this.tree))
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: 'Service edited successfully'
+          });
+
+          setTimeout(() => {
+            this.$router.push({ name: 'Services' });
+          }, 1500);
+        })
+        .catch((err) => {
+          this.showSnackbarError({ message: err });
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
+    },
+    cancel() {
+      this.editing = false;
+      this.isValid = false;
+    }
+  },
 	computed: {
-		serviceObjectJSON(){
-			let json = JSON.stringify(this.service, null, 2);
+		templateObjectJSON(){
+			let json = JSON.stringify(this.template, null, 2);
 			json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 			return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
 				let cls = 'number';
@@ -63,25 +152,20 @@ export default {
 				return '<span class="' + cls + '">' + match + '</span>';
 			});
 		},
-		serviceObjectYAML(){
+		templateObjectYAML(){
 			const doc = new yaml.Document();
-			doc.contents = this.service;
+			doc.contents = this.template;
 
 			return doc.toString();
 		}
-	},
-  watch: {
-    ObjectDisplay() {
-      this.$emit('getType', this.ObjectDisplay);
-    }
-  }
+	}
 }
 </script>
 
 
 <style scoped lang="scss">
 
-.service__display-trigger{
+.template__display-trigger{
 	cursor: pointer;
 	color: var(--v-primary-base)
 }

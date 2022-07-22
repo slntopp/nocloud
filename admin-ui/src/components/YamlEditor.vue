@@ -2,6 +2,7 @@
   <v-textarea
     label="YAML"
     v-model="tree"
+    :rows="rows"
     :disabled="disabled"
     :rules="typeRule"
     @keyup="formatting"
@@ -112,6 +113,14 @@ export default {
           return e.message
         }
       }]
+    },
+    rows() {
+      let rows = 0
+
+      for (let i = 0; i < this.tree.length; i++) {
+        if (this.tree[i] === '\n') rows++
+      }
+      return rows;
     }
   }
 }

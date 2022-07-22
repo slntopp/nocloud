@@ -24,19 +24,17 @@
                 label="title"
                 v-model="newKey.title"
                 :rules="generalRule"
-              >
-              </v-text-field>
+              />
             </v-col>
           </v-row>
           <v-row>
             <v-col>
-              <v-text-field
+              <v-textarea
                 dense
                 label="key"
                 v-model="newKey.value"
                 :rules="generalRule"
-              >
-              </v-text-field>
+              />
             </v-col>
           </v-row>
           <v-row>
@@ -71,7 +69,7 @@
       :loading="isEditLoading"
       @click="editAccount"
     >
-      Edit
+      Submit
     </v-btn>
 
     <v-snackbar
