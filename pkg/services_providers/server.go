@@ -390,3 +390,24 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 
 	return &sppb.UnbindPlanResponse{}, err
 }
+
+func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeRequest) (*sppb.InvokeResponse, error) {
+	log := s.log.Named("invoke")
+	sp, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		log.Error("Failed to get ServicesProvider", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	client, ok := s.drivers[sp.Type]
+	if !ok {
+		log.Error("Failed to get driver", zap.String("type", sp.Type))
+		return nil, status.Error(codes.NotFound, "Driver not found")
+	}
+
+	return client.SpInvoke(ctx, &driverpb.SpInvokeRequest{
+		ServicesProvider: sp.ServicesProvider,
+		Method:           req.Method,
+		Params:           req.Params,
+	})
+}
