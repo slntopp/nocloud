@@ -20,6 +20,24 @@ import (
 	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 )
 
-func MakeAccountMessage(acc graph.Account) (*accountspb.Account) {
+func MakeAccountMessage(acc graph.Account) *accountspb.Account {
 	return &accountspb.Account{Uuid: acc.Key, Title: acc.Title}
+}
+
+func MergeMaps[K comparable](old map[K]interface{}, new map[K]interface{}) map[K]interface{} {
+	result := make(map[K]interface{})
+	for key, ov := range old {
+		result[key] = ov
+	}
+
+	for key, nv := range new {
+		if nv == nil {
+			delete(result, key)
+			continue
+		}
+
+		result[key] = nv
+	}
+
+	return result
 }

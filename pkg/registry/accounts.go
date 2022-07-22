@@ -35,7 +35,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type AccountsServiceServer struct {
@@ -237,34 +236,19 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		patch["title"] = request.Title
 	}
 
-	data := make(map[string]*structpb.Value)
 	if request.Data == nil {
 		log.Debug("Data patch is not present, skipping")
 		goto patch
 	}
 
-	if len(request.Data) == 0 {
+	if len(request.Data.AsMap()) == 0 {
 		log.Debug("Data patch is empty, wiping data")
 		patch["data"] = nil
 		goto patch
 	}
 
 	log.Debug("Merging data")
-	for k, v := range request.Data {
-		new, ok := acc.Data[k]
-		if !ok {
-			data[k] = v
-			continue
-		}
-		switch new.AsInterface().(type) {
-		case nil:
-			continue
-		default:
-			data[k] = new
-		}
-	}
-
-	patch["data"] = data
+	patch["data"] = MergeMaps(acc.Data.AsMap(), request.Data.AsMap())
 
 patch:
 	if len(patch) == 0 {
