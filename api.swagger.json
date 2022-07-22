@@ -266,6 +266,9 @@
                 "title": {
                   "type": "string"
                 },
+                "data": {
+                  "type": "object"
+                },
                 "balance": {
                   "type": "number",
                   "format": "double"
@@ -330,6 +333,20 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "spUuid",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "anonymously",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
         "tags": [
           "BillingService"
         ]
@@ -408,14 +425,16 @@
             "type": "boolean"
           },
           {
-            "name": "linkedInstances",
+            "name": "kind",
             "in": "query",
             "required": false,
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "collectionFormat": "multi"
+            "type": "string",
+            "enum": [
+              "UNKNOWN",
+              "DYNAMIC",
+              "STATIC"
+            ],
+            "default": "UNKNOWN"
           }
         ],
         "tags": [
@@ -464,14 +483,16 @@
             "type": "boolean"
           },
           {
-            "name": "linkedInstances",
+            "name": "kind",
             "in": "query",
             "required": false,
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "collectionFormat": "multi"
+            "type": "string",
+            "enum": [
+              "UNKNOWN",
+              "DYNAMIC",
+              "STATIC"
+            ],
+            "default": "UNKNOWN"
           }
         ],
         "tags": [
@@ -517,16 +538,25 @@
                 "public": {
                   "type": "boolean"
                 },
+                "kind": {
+                  "$ref": "#/definitions/billingPlanKind"
+                },
                 "resources": {
                   "type": "array",
                   "items": {
                     "$ref": "#/definitions/billingResourceConf"
                   }
                 },
-                "linkedInstances": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
+                "products": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "$ref": "#/definitions/billingProduct"
+                  }
+                },
+                "meta": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
                   }
                 }
               }
@@ -832,7 +862,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/instancesInvokeResponse"
+              "$ref": "#/definitions/nocloudinstancesInvokeResponse"
             }
           },
           "default": {
@@ -1252,11 +1282,33 @@
             "schema": {
               "type": "object",
               "properties": {
-                "namespace": {
+                "version": {
                   "type": "string"
                 },
-                "service": {
-                  "$ref": "#/definitions/servicesService"
+                "title": {
+                  "type": "string"
+                },
+                "status": {
+                  "$ref": "#/definitions/servicesServiceStatus"
+                },
+                "context": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                },
+                "instancesGroups": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/instancesInstancesGroup"
+                  }
+                },
+                "hash": {
+                  "type": "string"
+                },
+                "accessLevel": {
+                  "type": "integer",
+                  "format": "int32"
                 }
               }
             }
@@ -1305,6 +1357,45 @@
         ]
       }
     },
+    "/services/{uuid}/stream": {
+      "get": {
+        "operationId": "ServicesService_Stream",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/statesObjectState"
+                },
+                "error": {
+                  "$ref": "#/definitions/googlerpcStatus"
+                }
+              },
+              "title": "Stream result of statesObjectState"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ServicesService"
+        ]
+      }
+    },
     "/services/{uuid}/up": {
       "post": {
         "operationId": "ServicesService_Up",
@@ -1334,15 +1425,7 @@
             "in": "body",
             "required": true,
             "schema": {
-              "type": "object",
-              "properties": {
-                "deployPolicies": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "string"
-                  }
-                }
-              }
+              "type": "object"
             }
           }
         ],
@@ -1498,6 +1581,14 @@
             }
           }
         },
+        "parameters": [
+          {
+            "name": "anonymously",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
         "tags": [
           "ServicesProvidersService"
         ]
@@ -1580,42 +1671,12 @@
             }
           }
         },
-        "tags": [
-          "ServicesProvidersService"
-        ]
-      }
-    },
-    "/sp/{servicesProvider.uuid}": {
-      "post": {
-        "operationId": "ServicesProvidersService_Invoke",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "type": "object"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/googlerpcStatus"
-            }
-          }
-        },
         "parameters": [
           {
-            "name": "servicesProvider.uuid",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/services_providersActionRequest"
-            }
+            "name": "anonymously",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -1737,10 +1798,153 @@
                 "state": {
                   "$ref": "#/definitions/statesState"
                 },
+                "publicData": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                },
                 "public": {
                   "type": "boolean"
                 }
               }
+            }
+          }
+        ],
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      }
+    },
+    "/sp/{uuid}/bind_plan/{planUuid}": {
+      "post": {
+        "operationId": "ServicesProvidersService_BindPlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/services_providersBindPlanResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "planUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
+            }
+          }
+        ],
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      }
+    },
+    "/sp/{uuid}/invoke": {
+      "post": {
+        "operationId": "ServicesProvidersService_Invoke",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/nocloudservices_providersInvokeResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string"
+                },
+                "params": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        ],
+        "tags": [
+          "ServicesProvidersService"
+        ]
+      }
+    },
+    "/sp/{uuid}/unbind_plan/{planUuid}": {
+      "post": {
+        "operationId": "ServicesProvidersService_UnbindPlan",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/services_providersUnbindPlanResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "planUuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "object"
             }
           }
         ],
@@ -1783,20 +1987,6 @@
     }
   },
   "definitions": {
-    "ActionRequestRequest": {
-      "type": "object",
-      "properties": {
-        "action": {
-          "type": "object"
-        },
-        "params": {
-          "type": "array",
-          "items": {
-            "type": "object"
-          }
-        }
-      }
-    },
     "KeysResponseKey": {
       "type": "object",
       "properties": {
@@ -1867,6 +2057,9 @@
         },
         "title": {
           "type": "string"
+        },
+        "data": {
+          "type": "object"
         },
         "balance": {
           "type": "number",
@@ -1961,17 +2154,70 @@
         "public": {
           "type": "boolean"
         },
+        "kind": {
+          "$ref": "#/definitions/billingPlanKind"
+        },
         "resources": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/billingResourceConf"
           }
         },
-        "linkedInstances": {
-          "type": "array",
-          "items": {
-            "type": "string"
+        "products": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/billingProduct"
           }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "billingPlanKind": {
+      "type": "string",
+      "enum": [
+        "UNKNOWN",
+        "DYNAMIC",
+        "STATIC"
+      ],
+      "default": "UNKNOWN"
+    },
+    "billingProduct": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "$ref": "#/definitions/billingKind"
+        },
+        "title": {
+          "type": "string"
+        },
+        "price": {
+          "type": "number",
+          "format": "double"
+        },
+        "period": {
+          "type": "string",
+          "format": "int64"
+        },
+        "resources": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
+        "sorter": {
+          "type": "integer",
+          "format": "int32"
         }
       }
     },
@@ -2248,6 +2494,9 @@
         "billingPlan": {
           "$ref": "#/definitions/billingPlan"
         },
+        "product": {
+          "type": "string"
+        },
         "accessLevel": {
           "type": "integer",
           "format": "int32"
@@ -2311,20 +2560,6 @@
         "accessLevel": {
           "type": "integer",
           "format": "int32"
-        }
-      }
-    },
-    "instancesInvokeResponse": {
-      "type": "object",
-      "properties": {
-        "result": {
-          "type": "boolean"
-        },
-        "meta": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object"
-          }
         }
       }
     },
@@ -2425,6 +2660,9 @@
         "resource": {
           "type": "string"
         },
+        "product": {
+          "type": "string"
+        },
         "total": {
           "type": "number",
           "format": "double"
@@ -2503,6 +2741,20 @@
       ],
       "default": "UNKNOWN"
     },
+    "nocloudinstancesInvokeResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
     "nocloudservicesCreateRequest": {
       "type": "object",
       "properties": {
@@ -2511,6 +2763,12 @@
         },
         "namespace": {
           "type": "string"
+        },
+        "deployPolicies": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
@@ -2558,6 +2816,20 @@
       "properties": {
         "type": {
           "type": "string"
+        }
+      }
+    },
+    "nocloudservices_providersInvokeResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },
@@ -2798,17 +3070,8 @@
         }
       }
     },
-    "services_providersActionRequest": {
-      "type": "object",
-      "properties": {
-        "servicesProvider": {
-          "$ref": "#/definitions/services_providersServicesProvider"
-        },
-        "request": {
-          "$ref": "#/definitions/ActionRequestRequest"
-        }
-      },
-      "title": "Available only for users with SUPERUSER and ADMIN access to platform namespace"
+    "services_providersBindPlanResponse": {
+      "type": "object"
     },
     "services_providersGenericResponse": {
       "type": "object",
@@ -2865,10 +3128,19 @@
         "state": {
           "$ref": "#/definitions/statesState"
         },
+        "publicData": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
         "public": {
           "type": "boolean"
         }
       }
+    },
+    "services_providersUnbindPlanResponse": {
+      "type": "object"
     },
     "services_providersVar": {
       "type": "object",
@@ -2913,6 +3185,17 @@
         "OPERATION"
       ],
       "default": "INIT"
+    },
+    "statesObjectState": {
+      "type": "object",
+      "properties": {
+        "uuid": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "#/definitions/statesState"
+        }
+      }
     },
     "statesState": {
       "type": "object",

@@ -599,13 +599,12 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Test", runtime.WithHTTPPathPattern("/sp"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Test", runtime.WithHTTPPathPattern("/sp"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesProvidersService_Test_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesProvidersService_Test_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -623,13 +622,12 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Create", runtime.WithHTTPPathPattern("/sp"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Create", runtime.WithHTTPPathPattern("/sp"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesProvidersService_Create_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesProvidersService_Create_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -647,13 +645,12 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Delete", runtime.WithHTTPPathPattern("/sp/{uuid}"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Delete", runtime.WithHTTPPathPattern("/sp/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesProvidersService_Delete_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesProvidersService_Delete_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -671,13 +668,12 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Update", runtime.WithHTTPPathPattern("/sp/{uuid}"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Update", runtime.WithHTTPPathPattern("/sp/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesProvidersService_Update_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesProvidersService_Update_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -695,13 +691,12 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Get", runtime.WithHTTPPathPattern("/sp/{uuid}"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Get", runtime.WithHTTPPathPattern("/sp/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesProvidersService_Get_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesProvidersService_Get_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -719,13 +714,12 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/List", runtime.WithHTTPPathPattern("/sp"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/List", runtime.WithHTTPPathPattern("/sp"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesProvidersService_List_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesProvidersService_List_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -743,13 +737,12 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Invoke", runtime.WithHTTPPathPattern("/sp/{uuid}/invoke"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Invoke", runtime.WithHTTPPathPattern("/sp/{uuid}/invoke"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesProvidersService_Invoke_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesProvidersService_Invoke_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -767,13 +760,12 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/ListExtentions", runtime.WithHTTPPathPattern("/sp-ext"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/ListExtentions", runtime.WithHTTPPathPattern("/sp-ext"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesProvidersService_ListExtentions_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesProvidersService_ListExtentions_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -791,13 +783,12 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/BindPlan", runtime.WithHTTPPathPattern("/sp/{uuid}/bind_plan/{plan_uuid}"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/BindPlan", runtime.WithHTTPPathPattern("/sp/{uuid}/bind_plan/{plan_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesProvidersService_BindPlan_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesProvidersService_BindPlan_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -815,13 +806,12 @@ func RegisterServicesProvidersServiceHandlerServer(ctx context.Context, mux *run
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/UnbindPlan", runtime.WithHTTPPathPattern("/sp/{uuid}/unbind_plan/{plan_uuid}"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/UnbindPlan", runtime.WithHTTPPathPattern("/sp/{uuid}/unbind_plan/{plan_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_ServicesProvidersService_UnbindPlan_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_ServicesProvidersService_UnbindPlan_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -863,7 +853,7 @@ func RegisterServicesProvidersServiceHandlerFromEndpoint(ctx context.Context, mu
 
 // RegisterServicesProvidersServiceHandler registers the http handlers for service ServicesProvidersService to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterServicesProvidersServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+func RegisterServicesProvidersServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn grpc.ClientConnInterface) error {
 	return RegisterServicesProvidersServiceHandlerClient(ctx, mux, NewServicesProvidersServiceClient(conn))
 }
 
@@ -878,13 +868,12 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Test", runtime.WithHTTPPathPattern("/sp"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Test", runtime.WithHTTPPathPattern("/sp"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesProvidersService_Test_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesProvidersService_Test_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -899,13 +888,12 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Create", runtime.WithHTTPPathPattern("/sp"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Create", runtime.WithHTTPPathPattern("/sp"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesProvidersService_Create_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesProvidersService_Create_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -920,13 +908,12 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Delete", runtime.WithHTTPPathPattern("/sp/{uuid}"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Delete", runtime.WithHTTPPathPattern("/sp/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesProvidersService_Delete_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesProvidersService_Delete_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -941,13 +928,12 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Update", runtime.WithHTTPPathPattern("/sp/{uuid}"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Update", runtime.WithHTTPPathPattern("/sp/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesProvidersService_Update_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesProvidersService_Update_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -962,13 +948,12 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Get", runtime.WithHTTPPathPattern("/sp/{uuid}"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Get", runtime.WithHTTPPathPattern("/sp/{uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesProvidersService_Get_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesProvidersService_Get_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -983,13 +968,12 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/List", runtime.WithHTTPPathPattern("/sp"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/List", runtime.WithHTTPPathPattern("/sp"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesProvidersService_List_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesProvidersService_List_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -1004,13 +988,12 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Invoke", runtime.WithHTTPPathPattern("/sp/{uuid}/invoke"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/Invoke", runtime.WithHTTPPathPattern("/sp/{uuid}/invoke"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesProvidersService_Invoke_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesProvidersService_Invoke_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -1025,13 +1008,12 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/ListExtentions", runtime.WithHTTPPathPattern("/sp-ext"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/ListExtentions", runtime.WithHTTPPathPattern("/sp-ext"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesProvidersService_ListExtentions_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesProvidersService_ListExtentions_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -1046,13 +1028,12 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/BindPlan", runtime.WithHTTPPathPattern("/sp/{uuid}/bind_plan/{plan_uuid}"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/BindPlan", runtime.WithHTTPPathPattern("/sp/{uuid}/bind_plan/{plan_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesProvidersService_BindPlan_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesProvidersService_BindPlan_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -1067,13 +1048,12 @@ func RegisterServicesProvidersServiceHandlerClient(ctx context.Context, mux *run
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/UnbindPlan", runtime.WithHTTPPathPattern("/sp/{uuid}/unbind_plan/{plan_uuid}"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.services_providers.ServicesProvidersService/UnbindPlan", runtime.WithHTTPPathPattern("/sp/{uuid}/unbind_plan/{plan_uuid}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_ServicesProvidersService_UnbindPlan_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_ServicesProvidersService_UnbindPlan_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)

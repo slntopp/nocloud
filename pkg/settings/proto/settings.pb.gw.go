@@ -215,13 +215,12 @@ func RegisterSettingsServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.settings.SettingsService/Get", runtime.WithHTTPPathPattern("/settings"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.settings.SettingsService/Get", runtime.WithHTTPPathPattern("/settings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_SettingsService_Get_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_SettingsService_Get_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -239,13 +238,12 @@ func RegisterSettingsServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.settings.SettingsService/Put", runtime.WithHTTPPathPattern("/settings/{key}"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.settings.SettingsService/Put", runtime.WithHTTPPathPattern("/settings/{key}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_SettingsService_Put_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_SettingsService_Put_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -263,13 +261,12 @@ func RegisterSettingsServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.settings.SettingsService/Keys", runtime.WithHTTPPathPattern("/settings"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.settings.SettingsService/Keys", runtime.WithHTTPPathPattern("/settings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_SettingsService_Keys_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_SettingsService_Keys_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -287,13 +284,12 @@ func RegisterSettingsServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.settings.SettingsService/Delete", runtime.WithHTTPPathPattern("/settings/{key}"))
+		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.settings.SettingsService/Delete", runtime.WithHTTPPathPattern("/settings/{key}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_SettingsService_Delete_0(ctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_SettingsService_Delete_0(rctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -335,7 +331,7 @@ func RegisterSettingsServiceHandlerFromEndpoint(ctx context.Context, mux *runtim
 
 // RegisterSettingsServiceHandler registers the http handlers for service SettingsService to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterSettingsServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
+func RegisterSettingsServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn grpc.ClientConnInterface) error {
 	return RegisterSettingsServiceHandlerClient(ctx, mux, NewSettingsServiceClient(conn))
 }
 
@@ -350,13 +346,12 @@ func RegisterSettingsServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.settings.SettingsService/Get", runtime.WithHTTPPathPattern("/settings"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.settings.SettingsService/Get", runtime.WithHTTPPathPattern("/settings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_SettingsService_Get_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_SettingsService_Get_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -371,13 +366,12 @@ func RegisterSettingsServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.settings.SettingsService/Put", runtime.WithHTTPPathPattern("/settings/{key}"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.settings.SettingsService/Put", runtime.WithHTTPPathPattern("/settings/{key}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_SettingsService_Put_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_SettingsService_Put_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -392,13 +386,12 @@ func RegisterSettingsServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.settings.SettingsService/Keys", runtime.WithHTTPPathPattern("/settings"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.settings.SettingsService/Keys", runtime.WithHTTPPathPattern("/settings"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_SettingsService_Keys_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_SettingsService_Keys_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
@@ -413,13 +406,12 @@ func RegisterSettingsServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		var err error
-		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.settings.SettingsService/Delete", runtime.WithHTTPPathPattern("/settings/{key}"))
+		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.settings.SettingsService/Delete", runtime.WithHTTPPathPattern("/settings/{key}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_SettingsService_Delete_0(ctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_SettingsService_Delete_0(rctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
