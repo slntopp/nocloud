@@ -250,8 +250,8 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	}
 
 	log.Debug("Merging data")
-	for k, v := range acc.Data {
-		new, ok := request.Data[k]
+	for k, v := range request.Data {
+		new, ok := acc.Data[k]
 		if !ok {
 			data[k] = v
 			continue
