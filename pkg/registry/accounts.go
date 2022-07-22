@@ -233,19 +233,23 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	patch := make(map[string]interface{})
 
 	if acc.Title != request.Title && request.Title != "" {
+		log.Debug("Title patch detected")
 		patch["title"] = request.Title
 	}
 
 	data := make(map[string]*structpb.Value)
 	if request.Data == nil {
+		log.Debug("Data patch is not present, skipping")
 		goto patch
 	}
 
 	if len(request.Data) == 0 {
+		log.Debug("Data patch is empty, wiping data")
 		patch["data"] = nil
 		goto patch
 	}
 
+	log.Debug("Merging data")
 	for k, v := range acc.Data {
 		new, ok := request.Data[k]
 		if !ok {
@@ -264,9 +268,11 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 
 patch:
 	if len(patch) == 0 {
+		log.Debug("Resulting patch is empty")
 		return nil, status.Error(codes.InvalidArgument, "Nothing changed")
 	}
 
+	log.Debug("Updating Account", zap.String("account", request.Uuid), zap.Any("patch", patch))
 	err = s.ctrl.Update(ctx, acc, patch)
 	if err != nil {
 		log.Debug("Error updating account", zap.Error(err))
