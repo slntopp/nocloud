@@ -331,6 +331,12 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 		log.Error("Error while updating service", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while updating Service")
 	}
+
+	service, err = s.ctrl.Get(ctx, requestor, service.GetUuid())
+	if err != nil {
+		log.Debug("Error getting Service from DB after Patch", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not Found in DB after Patch")
+	}
 	return service, nil
 }
 
