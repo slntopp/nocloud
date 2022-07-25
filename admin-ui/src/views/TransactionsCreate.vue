@@ -212,7 +212,7 @@ export default {
       this.isLoading = true;
       this.refreshData();
 
-      api.transactions.put(this.transaction)
+      api.transactions.create(this.transaction)
         .then(() => {
           this.showSnackbarSuccess({
             message: 'Transaction created successfully'
@@ -267,8 +267,10 @@ export default {
     const day = date.getDate();
     const month = date.getMonth() + 1;
     const year = date.getFullYear();
+    const time = date.toString().split(' ')[4];
 
     this.date.value = `${year}-${month}-${day}`;
+    this.time.value = `${time}`;
     
     this.$store.dispatch('services/fetch')
       .then(() => {

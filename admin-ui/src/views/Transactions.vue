@@ -10,9 +10,11 @@
 
     <v-select
       label="Account"
+      item-text="title"
+      item-value="uuid"
       class="d-inline-block mr-2"
-      v-model="accountTitle"
-      :items="accountsTitles"
+      v-model="accountId"
+      :items="accounts"
     />
     <v-select
       label="Service"
@@ -118,7 +120,6 @@
 </template>
 
 <script>
-import api from '@/api.js';
 import snackbar from '@/mixins/snackbar.js';
 import nocloudTable from '@/components/table.vue';
 import balance from '@/components/balance.vue';
@@ -135,12 +136,12 @@ export default {
       { text: 'Amount ', value: 'total' },
       { text: 'Date ', value: 'proc' }
     ],
-    accountTitle: '',
+    accountId: null,
+    serviceId: null,
     visibleItems: [],
     selected: [],
     copyed: -1,
     fetchError: '',
-    serviceId: null,
 
     series: [],
     chartLoading: false,
@@ -174,7 +175,7 @@ export default {
       const month = date.getUTCMonth() + 1;
       const year = date.toUTCString().split(' ')[3];
 
-      if (bool) return `${day}-${month}-${year}T${time}Z`;
+      if (bool) return `${year}-${month}-${day}T${time}Z`;
       return `${day}.${month}.${year} ${time}`;
     },
     hashTrim(hash) {
@@ -200,9 +201,6 @@ export default {
       }
     },
     getTransactions() {
-      const { title } = this.$store.getters['auth/userdata'];
-
-      this.accountTitle = title;
       this.$store.dispatch('services/fetch')
       this.$store.dispatch('transactions/fetch', {
         accounts: this.accounts.map((acc) => acc.uuid),
@@ -250,45 +248,35 @@ export default {
       return [labels, values];
     },
     selectTransaction(value) {
-      if (value.length < 1) return;
-
       this.series = [];
       this.chartLoading = true;
       this.chartOptions.xaxis.categories = [];
 
-      value.forEach(({ uuid, service }) => {
-        api.transactions.get({ account: uuid })
-          .then(({ pool }) => {
-            pool.forEach((el) => {
-              const name = el.instance.slice(0, 8);
-              const data = { data: [el.total], name, service };
-              const i = this.series.findIndex(
-                (item) => item.name === name
-              );
+      value.forEach(({ total, service, proc }) => {
+        const name = service.slice(0, 8);
+        const data = { data: [total], name, service };
+        const i = this.series.findIndex(
+          (item) => item.name === name
+        );
 
-              if (i !== -1) {
-                this.series[i].data.push(el.total);
-              } else {
-                this.series.push(data);
-              }
+        if (i !== -1) {
+          this.series[i].data.push(total);
+        } else {
+          this.series.push(data);
+        }
 
-              this.chartOptions.xaxis.categories
-                .push(this.date(el.exec, true));
-            })
-          })
-          .catch(() => {
-            this.showSnackbar({
-              message: 'Records not found',
-              buttonColor: 'white',
-              color: 'blue darken-3'
-            });
-          })
-          .finally(() => {
-            this.series = [...this.series];
-            this.selected = value;
-            this.chartLoading = false;
-          });
+        this.chartOptions.xaxis.categories
+          .push(this.date(proc, true));
       });
+      setTimeout(() => { this.chartLoading = false }, 300);
+
+      if (this.series.length < 1) {
+        this.showSnackbar({
+          message: 'Records not found',
+          buttonColor: 'white',
+          color: 'blue darken-3'
+        });
+      }
     },
     setListenerToLegend() {
       const legend = document.querySelectorAll('.apexcharts-legend-text');
@@ -307,10 +295,12 @@ export default {
       });
     }
   },
-  created() {
-    this.getTransactions();
-  },
   mounted() {
+    if (!this.$store.getters['transactions/all'].length) {
+      this.getTransactions();
+    }
+
+    this.accountId = this.user.uuid || null;
     this.$store.commit("reloadBtn/setCallback", {
       type: "transactions/fetch",
       params: {
@@ -322,23 +312,31 @@ export default {
   computed: {
     transactions() {
       const transactions = this.$store.getters['transactions/all'];
-      const account = this.accounts.find((acc) =>
-        acc.title === this.accountTitle
-      );
 
-      if (this.accountTitle === 'all') {
+      if (!this.accountId && !this.serviceId) {
         return transactions;
       }
 
-      return transactions.filter((item) =>
-        item.account === account?.uuid
-      );
+      return transactions
+        .filter((item) => {
+          const equalAccounts = item.account === this.accountId;
+          const equalServices = item.service === this.serviceId;
+
+          if (!this.accountId) return equalServices;
+          else if (!this.serviceId) return equalAccounts;
+          else return equalAccounts && equalServices;
+        });
     },
     isLoading() {
       return this.$store.getters['transactions/isLoading'];
     },
+    user() {
+      return this.$store.getters['auth/userdata'];
+    },
     accounts() {
-      return this.$store.getters['accounts/all'];
+      const accounts = this.$store.getters['accounts/all'];
+
+      return [...accounts, { title: 'all', uuid: null }];
     },
     services() {
       const services = this.$store.getters['services/all'].map((el) => ({
@@ -348,16 +346,13 @@ export default {
 
       return [...services, { title: 'all', uuid: null }];
     },
-    accountsTitles() {
-      return [...this.accounts.map((acc) => acc.title), 'all'];
-    },
     balance() {
       const dates = [];
       let labels = ['0 NCU'];
       let values = [0];
       let balance = 0;
 
-      if (this.accountTitle === 'all') {
+      if (!this.accountId) {
         return { labels, values };
       }
 
@@ -381,14 +376,11 @@ export default {
     transactions() {
       this.fetchError = '';
     },
-    accounts() {
-      this.getTransactions();
-    },
-    serviceId() {
-      this.getTransactions();
-    },
     chartLoading() {
       setTimeout(this.setListenerToLegend);
+    },
+    user() {
+      this.accountId = this.user.uuid;
     }
   }
 }

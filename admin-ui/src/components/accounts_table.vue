@@ -16,7 +16,8 @@
       </router-link>
     </template>
     <template v-slot:[`item.balance`]='{ item }'>
-      <balance :value="item.balance" />
+      <balance v-if="item.balance" :value="item.balance" />
+      <template v-else>-</template>
     </template>
 	</nocloud-table>
 </template>

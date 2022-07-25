@@ -132,7 +132,7 @@
                       <v-chip
                         x-small
                         class="ml-2"
-                        style="max-width: 16px; padding: 0"
+                        style="max-width: 10px; max-height: 10px; padding: 0"
                         :color="stateColor(instance.state && instance.state.meta.state_str)"
                       />
                     </v-expansion-panel-header>
@@ -486,7 +486,7 @@ export default {
       })
       .then(() => {
         this.showSnackbarSuccess({
-          message: 'Snapshot edited successfully'
+          message: 'Snapshot created successfully'
         });
       })
       .catch((err) => {
