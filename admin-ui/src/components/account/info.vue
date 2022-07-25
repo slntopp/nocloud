@@ -168,6 +168,10 @@ export default {
           this.isEditLoading = false;
         });
     }
+  },
+  mounted() {
+    this.title = this.account.title;
+    this.keys = this.account.data.ssh_keys;
   }
 }
 </script>
