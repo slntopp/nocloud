@@ -4031,9 +4031,9 @@ no-case@^3.0.4:
     lower-case "^2.0.2"
     tslib "^2.0.3"
 
-nocloudjsrest@^1.4.18:
-  version "1.4.18"
-  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.18.tgz#3b1e79ff37242386e3c4a32a2d5b46d779b759b6"
+nocloudjsrest@^1.4.19:
+  version "1.4.19"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.19.tgz#82aa082172a759dcf3d24af408d982ab04384296"
   dependencies:
     axios "^0.24.0"
 
