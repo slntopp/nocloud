@@ -5529,9 +5529,9 @@ vue@^2.7.8:
     "@vue/compiler-sfc" "2.7.8"
     csstype "^3.1.0"
 
-vuetify-loader@^1.9.1:
-  version "1.9.1"
-  resolved "https://registry.yarnpkg.com/vuetify-loader/-/vuetify-loader-1.9.1.tgz#9cea0d0ce72a7fe7324ec324d2290a651afdcc9c"
+vuetify-loader@^1.9.2:
+  version "1.9.2"
+  resolved "https://registry.yarnpkg.com/vuetify-loader/-/vuetify-loader-1.9.2.tgz#adcadac71c6d9b24bde42a5b81dfda1871f73f81"
   dependencies:
     acorn "^8.4.1"
     acorn-walk "^8.2.0"
