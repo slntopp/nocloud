@@ -80,7 +80,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		return err
 	}
 
-	ctrl.log.Debug("[CREATING] instance for hash [CREATING]", zap.Any("inst", i))
+	ctrl.log.Debug("instance for hash calculating while Creating", zap.Any("inst", i))
 
 	// Attempt create document
 	meta, err := ctrl.col.CreateDocument(ctx, i)
@@ -125,7 +125,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		return err
 	}
 
-	ctrl.log.Debug("[UPDATING] instance for hash [UPDATING]", zap.Any("inst", inst))
+	ctrl.log.Debug("instance for hash calculating while Updating", zap.Any("inst", inst))
 
 	mask := &pb.Instance{
 		Config:    inst.GetConfig(),
