@@ -71,6 +71,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	}
 
 	// ensure status is INIT
+	i.Uuid = ""
 	i.Status = pb.InstanceStatus_INIT
 
 	err = hasher.SetHash(i.ProtoReflect())
@@ -78,6 +79,8 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		log.Error("Failed to calculate hash", zap.Error(err))
 		return err
 	}
+
+	ctrl.log.Debug("instance for hash calculating while Creating", zap.Any("inst", i))
 
 	// Attempt create document
 	meta, err := ctrl.col.CreateDocument(ctx, i)
@@ -112,6 +115,8 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
+	inst.Uuid = ""
+	inst.Status = pb.InstanceStatus_INIT
 	inst.Data = nil
 	inst.State = nil
 
@@ -120,8 +125,9 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		return err
 	}
 
+	ctrl.log.Debug("instance for hash calculating while Updating", zap.Any("inst", inst))
+
 	mask := &pb.Instance{
-		Uuid:      inst.GetUuid(),
 		Config:    inst.GetConfig(),
 		Resources: inst.GetResources(),
 		Hash:      inst.GetHash(),
@@ -148,7 +154,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		}
 	}
 
-	_, err = ctrl.col.UpdateDocument(ctx, mask.Uuid, mask)
+	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
 	if err != nil {
 		log.Error("Failed to update Instance", zap.Error(err))
 		return err
