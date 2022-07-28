@@ -1,0 +1,9 @@
+version: v1
+managed:
+  enabled: true
+plugins:
+  - name: php
+    out: proto/gen/php
+  - name: php
+    out: proto/gen/php
+    path: /usr/local/bin/grpc_php_plugin
