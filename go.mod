@@ -9,7 +9,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.0
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.1
 	github.com/rs/cors v1.8.2
 	github.com/spf13/viper v1.12.0
 	github.com/stoewer/go-strcase v1.2.0
@@ -18,7 +18,7 @@ require (
 	go.uber.org/zap v1.21.0
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/net v0.0.0-20220708220712-1185a9018129
-	google.golang.org/genproto v0.0.0-20220720214146-176da50484ac
+	google.golang.org/genproto v0.0.0-20220728213248-dd149ef739b9
 	google.golang.org/grpc v1.48.0
 	google.golang.org/protobuf v1.28.1
 )
