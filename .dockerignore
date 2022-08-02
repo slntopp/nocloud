@@ -5,3 +5,4 @@ Dockerfiles/*
 database
 examples
 api.swagger.json
+proto/gen/*
