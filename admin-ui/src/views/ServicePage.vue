@@ -47,16 +47,14 @@
 <script>
 import config from '@/config.js';
 import serviceTemplate from "@/components/service/template.vue";
-// import serviceControl from "@/components/service/control.vue";
 import serviceInfo from "@/components/service/info.vue";
+
+const url = 'wss://api.nocloud.ione-cloud.net/services';
+let socket;
 
 export default {
   name: "service-view",
-  components: {
-    "service-template": serviceTemplate,
-    // "service-control": serviceControl,
-    "service-info": serviceInfo,
-  },
+  components: { serviceTemplate, serviceInfo, },
   data: () => ({
     found: false,
     tabs: 0,
@@ -112,9 +110,7 @@ export default {
       params: this.serviceId,
     });
 
-    const url = 'wss://api.nocloud.ione-cloud.net/services';
-    const socket = new WebSocket(`${url}/${this.serviceId}/stream`);
-
+    socket = new WebSocket(`${url}/${this.serviceId}/stream`);
     socket.onmessage = (msg) => {
       const response = JSON.parse(msg.data).result;
       if (!response) {
@@ -129,10 +125,11 @@ export default {
           value: response, uuid: this.serviceId
         });
       } catch {
-        socket.close(1000, 'работа закончена');
+        socket.close(1000, 'job is done');
       }
     };
   },
+  destroyed() { socket.close(1000, 'job is done') }
 };
 </script>
 

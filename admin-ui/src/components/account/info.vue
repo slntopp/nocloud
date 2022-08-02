@@ -171,7 +171,7 @@ export default {
   },
   mounted() {
     this.title = this.account.title;
-    this.keys = this.account.data.ssh_keys;
+    this.keys = this.account.data?.ssh_keys || [];
   }
 }
 </script>

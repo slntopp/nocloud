@@ -23,6 +23,7 @@
       <v-btn
         class="mr-2"
         color="success"
+        :loading="isLoading"
         :disabled="!isValid"
         @click="editAccount"
       >
@@ -109,8 +110,12 @@ export default {
       }
     },
     editAccount() {
+      const request = (this.ObjectDisplay === 'JSON')
+        ? JSON.parse(this.tree)
+        : yaml.parse(this.tree);
+
       this.isLoading = true;
-      api.accounts.update(this.template.uuid, JSON.parse(this.tree))
+      api.accounts.update(this.template.uuid, request)
         .then(() => {
           this.showSnackbarSuccess({
             message: 'Account edited successfully'

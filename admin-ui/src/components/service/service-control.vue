@@ -3,14 +3,20 @@
     <v-row>
       <v-col>
         <v-btn
-          v-for="(btn, index) in vmControlBtns"
+          class="mr-2"
+          v-for="btn in vmControlBtns"
           :key="btn.action"
-          @click="sendVmAction(btn.action)"
-          :class="{ 'mr-2': index !== vmControlBtns.lenght - 1 }"
           :disabled="actionLoading && actualAction != btn.action"
           :loading="actionLoading && actualAction == btn.action"
+          @click="sendVmAction(btn.action)"
         >
           {{ btn.title || btn.action }}
+        </v-btn>
+        <v-btn
+          :loading="actionLoading"
+          @click="deleteInstance"
+        >
+          Delete
         </v-btn>
       </v-col>
     </v-row>
@@ -45,14 +51,9 @@ export default {
   name: "service-state",
   mixins: [snackbar],
   props: {
-    instance_uuid: {
-      type: String,
-      required: true,
-    },
-    "chip-color": {
-      type: String,
-      required: true,
-    },
+    service: { type: Object, required: true, },
+    instance_uuid: { type: String, required: true, },
+    "chip-color": { type: String, required: true, },
   },
   data: () => ({
     actualAction: "",
@@ -93,6 +94,44 @@ export default {
           this.actionLoading = false;
         });
     },
+    deleteInstance() {
+      const newService = JSON.parse(JSON.stringify(this.service));
+
+      newService.instancesGroups.forEach((group, i, groups) => {
+        group.instances.forEach(({ uuid }, j) => {
+          if (uuid === this.instance_uuid) {
+            groups[i].instances.splice(j, 1);
+          }
+        });
+      });
+
+      this.actualAction = 'delete';
+      this.actionLoading = true;
+      api.services._update(newService)
+        .then(() => {
+          this.$emit('closePanel');
+          this.service.instancesGroups.forEach((group, i, groups) => {
+            group.instances.forEach(({ uuid }, j) => {
+              if (uuid === this.instance_uuid) {
+                groups[i].instances.splice(j, 1);
+              }
+            });
+          });
+
+          setTimeout(() => {
+            this.showSnackbarSuccess({ message: `Done!` });
+          }, 100);
+        })
+        .catch((err) => {
+          this.showSnackbarError({
+            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
+          });
+        })
+        .finally(() => {
+          this.actualAction = '';
+          this.actionLoading = false;
+        });
+    }
   },
 };
 </script>

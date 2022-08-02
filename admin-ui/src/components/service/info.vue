@@ -140,9 +140,11 @@
                       <v-row v-if="group.type === 'ione' && !editing">
                         <v-col>
                           <service-control
+                            :service="service"
                             :instance_uuid=" instance.uuid"
                             :chip-color="chipColor"
-                          ></service-control>
+                            @closePanel="openedInstances = {}"
+                          />
                         </v-col>
                       </v-row>
                       <v-row v-if="!editing">
