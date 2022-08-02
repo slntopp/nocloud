@@ -180,7 +180,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 	res := &accountspb.CreateResponse{Uuid: account.Key}
 
-	if (*request.Access) < access_lvl {
+	if request.Access != nil && (*request.Access) < access_lvl {
 		access_lvl = (*request.Access)
 	}
 
