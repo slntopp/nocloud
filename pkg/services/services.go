@@ -389,6 +389,7 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 		}
 		client := *c.client
 		sp := c.sp
+		group.Status = proto.InstanceStatus_UP
 
 		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
@@ -481,6 +482,7 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 		}
 		client := *c.client
 		sp := c.sp
+		group.Status = proto.InstanceStatus_DOWN
 
 		res, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
