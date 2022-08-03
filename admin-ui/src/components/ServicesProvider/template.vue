@@ -23,6 +23,7 @@
       <v-btn
         class="mr-2"
         color="success"
+        :loading="isLoading"
         :disabled="!isValid"
         @click="editServiceProvider"
       >
@@ -109,8 +110,12 @@ export default {
       }
     },
     editServiceProvider() {
+      const request = (this.ObjectDisplay === 'JSON')
+        ? JSON.parse(this.tree)
+        : yaml.parse(this.tree);
+
       this.isLoading = true;
-      api.servicesProviders.update(this.template.uuid, JSON.parse(this.tree))
+      api.servicesProviders.update(this.template.uuid, request)
         .then(() => {
           this.showSnackbarSuccess({
             message: 'Service provider edited successfully'

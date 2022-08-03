@@ -201,11 +201,14 @@ export default {
       }
     },
     getTransactions() {
+      const accounts = [];
+
+      this.accounts.forEach((acc) => {
+        if (acc.uuid) accounts.push(acc.uuid);
+      });
+
       this.$store.dispatch('services/fetch')
-      this.$store.dispatch('transactions/fetch', {
-        accounts: this.accounts.map((acc) => acc.uuid),
-        service: this.serviceId
-      })
+      this.$store.dispatch('transactions/fetch', { accounts, service: this.serviceId })
         .then(() => {
           this.fetchError = '';
         })
@@ -296,17 +299,19 @@ export default {
     }
   },
   mounted() {
+    const accounts = [];
     if (!this.$store.getters['transactions/all'].length) {
       this.getTransactions();
     }
 
     this.accountId = this.user.uuid || null;
+    this.accounts.forEach((acc) => {
+      if (acc.uuid) accounts.push(acc.uuid);
+    });
+
     this.$store.commit("reloadBtn/setCallback", {
       type: "transactions/fetch",
-      params: {
-        accounts: this.accounts.map((acc) => acc.uuid),
-        service: this.serviceId
-      }
+      params: { accounts, service: this.serviceId }
     });
   },
   computed: {

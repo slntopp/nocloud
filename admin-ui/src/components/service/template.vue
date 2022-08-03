@@ -23,6 +23,7 @@
       <v-btn
         class="mr-2"
         color="success"
+        :loading="isLoading"
         :disabled="!isValid"
         @click="editService"
       >
@@ -109,8 +110,12 @@ export default {
       }
     },
     editService() {
+      const request = (this.ObjectDisplay === 'JSON')
+        ? JSON.parse(this.tree)
+        : yaml.parse(this.tree);
+
       this.isLoading = true;
-      api.services._update(JSON.parse(this.tree))
+      api.services._update(request)
         .then(() => {
           this.showSnackbarSuccess({
             message: 'Service edited successfully'

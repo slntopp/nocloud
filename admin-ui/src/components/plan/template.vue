@@ -23,6 +23,7 @@
       <v-btn
         class="mr-2"
         color="success"
+        :loading="isLoading"
         :disabled="!isValid"
         @click="editPlan"
       >
@@ -109,8 +110,12 @@ export default {
       }
     },
     editPlan() {
+      const request = (this.ObjectDisplay === 'JSON')
+        ? JSON.parse(this.tree)
+        : yaml.parse(this.tree);
+
       this.isLoading = true;
-      api.plans.update(this.plan.uuid, JSON.parse(this.tree))
+      api.plans.update(this.plan.uuid, request)
         .then(() => {
           this.showSnackbarSuccess({
             message: 'Plan edited successfully'
