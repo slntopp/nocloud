@@ -67,8 +67,8 @@ func init() {
 	viper.SetDefault("DRIVERS", "")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
-	viper.SetDefault("SETTINGS_HOST", "settings:8080")
-	viper.SetDefault("BILLING_HOST", "billing:8080")
+	viper.SetDefault("SETTINGS_HOST", "settings:8000")
+	viper.SetDefault("BILLING_HOST", "billing:8000")
 
 	port = viper.GetString("PORT")
 

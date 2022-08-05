@@ -9,7 +9,7 @@ FROM scratch
 WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud/dns_mgmt /dns_mgmt
 
-EXPOSE 8080
+EXPOSE 8000
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
 LABEL nocloud.update "true"
 

@@ -54,7 +54,7 @@ var (
 
 func init() {
 	viper.AutomaticEnv()
-	viper.SetDefault("SETTINGS_HOST", "settings:8080")
+	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	host := viper.GetString("SETTINGS_HOST")
 
 	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))

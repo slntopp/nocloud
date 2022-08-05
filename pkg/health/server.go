@@ -37,7 +37,7 @@ var grpc_services []string
 func init() {
 	viper.AutomaticEnv()
 
-	viper.SetDefault("PROBABLES", "registry:8080,services-registry:8080,sp-registry:8080,settings:8080,dns-mgmt:8080,edge:8080")
+	viper.SetDefault("PROBABLES", "registry:8000,services-registry:8000,sp-registry:8000,settings:8000,dns-mgmt:8000,edge:8000")
 	grpc_services = strings.Split(viper.GetString("PROBABLES"), ",")
 }
 
@@ -55,14 +55,14 @@ func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeReques
 	log := s.log.Named("Health Probe")
 	log.Info("Probe received", zap.String("Type", request.ProbeType))
 
-	switch(request.ProbeType) {
+	switch request.ProbeType {
 	case "PING":
 		return &pb.ProbeResponse{
 			Response: "PONG",
-			Status: pb.Status_SERVING,
+			Status:   pb.Status_SERVING,
 			Serving: []*pb.ServingStatus{{
 				Service: "health",
-				Status: pb.Status_SERVING,
+				Status:  pb.Status_SERVING,
 			}},
 		}, nil
 	case "services":
@@ -73,10 +73,10 @@ func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeReques
 
 	return &pb.ProbeResponse{
 		Response: "ok",
-		Status: pb.Status_SERVING,
+		Status:   pb.Status_SERVING,
 		Serving: []*pb.ServingStatus{{
 			Service: "health",
-			Status: pb.Status_SERVING,
+			Status:  pb.Status_SERVING,
 		}},
 	}, nil
 }
@@ -84,7 +84,7 @@ func (s *HealthServiceServer) Probe(ctx context.Context, request *pb.ProbeReques
 func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.ProbeRequest) (*pb.ProbeResponse, error) {
 	check_services_ch := make(chan *pb.ServingStatus, len(grpc_services))
 	var wg sync.WaitGroup
-	
+
 	for _, service := range grpc_services {
 		wg.Add(1)
 		go func(service string) {
@@ -96,8 +96,8 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 				err_string := err.Error()
 				check_services_ch <- &pb.ServingStatus{
 					Service: service,
-					Status: pb.Status_OFFLINE,
-					Error: &err_string,
+					Status:  pb.Status_OFFLINE,
+					Error:   &err_string,
 				}
 				s.log.Debug("Sent to channel", zap.String("service", service))
 				return
@@ -111,8 +111,8 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 				err_string := err.Error()
 				check_services_ch <- &pb.ServingStatus{
 					Service: service,
-					Status: pb.Status_INTERNAL,
-					Error: &err_string,
+					Status:  pb.Status_INTERNAL,
+					Error:   &err_string,
 				}
 				s.log.Debug("Sent to channel", zap.String("service", service))
 				return
@@ -129,7 +129,7 @@ func (s *HealthServiceServer) CheckServices(ctx context.Context, request *pb.Pro
 
 	res := &pb.ProbeResponse{Status: pb.Status_SERVING}
 	for i := 0; i < len(grpc_services); i++ {
-		r := <- check_services_ch
+		r := <-check_services_ch
 		s.log.Debug("Received response", zap.String("service", r.GetService()))
 		res.Serving = append(res.Serving, r)
 		if r.Status != pb.Status_SERVING {
@@ -158,8 +158,8 @@ func (s *HealthServiceServer) CheckRoutines(ctx context.Context, request *pb.Pro
 				check_routines_ch <- &pb.RoutineStatus{
 					Status: &pb.ServingStatus{
 						Service: service,
-						Status: pb.Status_OFFLINE,
-						Error: &err_string,
+						Status:  pb.Status_OFFLINE,
+						Error:   &err_string,
 					},
 				}
 				log.Debug("Sent to channel", zap.String("service", service))
@@ -175,8 +175,8 @@ func (s *HealthServiceServer) CheckRoutines(ctx context.Context, request *pb.Pro
 				check_routines_ch <- &pb.RoutineStatus{
 					Status: &pb.ServingStatus{
 						Service: service,
-						Status: pb.Status_INTERNAL,
-						Error: &err_string,
+						Status:  pb.Status_INTERNAL,
+						Error:   &err_string,
 					},
 				}
 				log.Debug("Sent to channel", zap.String("service", service))
