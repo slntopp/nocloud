@@ -51,7 +51,7 @@ func main() {
 	proxy.Setup(log, ctrl)
 
 	r := mux.NewRouter()
-	// r.Use(AuthMiddleware)
+	r.Use(AuthMiddleware)
 	r.HandleFunc("/socket", proxy.Handler).Methods("GET")
 	r.Use(mux.CORSMethodMiddleware(r))
 
