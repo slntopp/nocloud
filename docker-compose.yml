@@ -216,6 +216,25 @@ services:
     links:
       - db
 
+  iproxy:
+    image: ghcr.io/slntopp/nocloud/proxy:latest
+    restart: always
+    labels:
+      - traefik.http.routers.iproxy.rule=Host(`*.proxy.${BASE_DOMAIN}`)
+      - traefik.http.routers.iproxy.entrypoints=grpc
+      - traefik.http.services.iproxy.loadbalancer.server.port=8000
+      - traefik.http.services.iproxy.loadbalancer.server.scheme=h2c
+    environment:
+      LOG_LEVEL: -1
+      SIGNING_KEY: "${SIGNING_KEY}"
+      DB_HOST: db:8529
+      DB_CRED: "${DB_USER}:${DB_PASS}"
+    networks:
+      - proxy
+      - arangodb
+    links:
+      - db
+
   db:
     image: arangodb/arangodb:latest
     restart: always
