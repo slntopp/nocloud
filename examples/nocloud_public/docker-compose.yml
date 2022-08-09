@@ -5,8 +5,6 @@ services:
     restart: always
     labels:
       - traefik.enable=true
-      - "traefik.http.middlewares.testIPwhitelist.ipwhitelist.sourcerange=aaa.bbb.ccc.ddd" # Replace with your IP or replace with some other middleware
-      
       - traefik.http.routers.traefik.entrypoints=https
       - traefik.http.routers.traefik.rule=Host(`traefik.${BASE_DOMAIN}`)
       - traefik.http.routers.traefik.tls=true
@@ -58,12 +56,43 @@ services:
 
       - traefik.http.routers.web.service=web@docker
       - traefik.http.services.web.loadbalancer.server.port=8000
+
+      - "traefik.http.middlewares.web_cors.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,DELETE,PATCH,HEAD"
+      - "traefik.http.middlewares.web_cors.headers.accesscontrolalloworiginlist=origin-list-or-null"
+      - "traefik.http.middlewares.web_cors.headers.accesscontrolmaxage=100"
+      - "traefik.http.middlewares.web_cors.headers.accesscontrolallowcredentials=true"
+      - "traefik.http.middlewares.web_cors.headers.addvaryheader=false"
     environment:
       LOG_LEVEL: -1
-      WITH_BLOCK: "false"
-      APISERVER_HOST: "proxy:8000"
+      WITH_BLOCK: "true"
+      APISERVER_HOST: "api.${BASE_DOMAIN}:8000"
+      INSECURE: "false"
+      CORS_ALLOWED: "https://app.${BASE_DOMAIN}, https://*"
     networks:
       - proxy
+
+  iproxy:
+    image: ghcr.io/slntopp/nocloud/proxy:dev-socket-proxy
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.iproxy.entrypoints=https
+      - traefik.http.routers.iproxy.rule=HostRegexp(`proxy.${BASE_DOMAIN}`, `{sp:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}.proxy.${BASE_DOMAIN}`)
+      - traefik.http.routers.iproxy.tls=true
+      - traefik.http.routers.iproxy.tls.certresolver=letsencrypt
+      - traefik.http.routers.iproxy.tls.domains[0].main=proxy.${BASE_DOMAIN}
+      - traefik.http.services.iproxy.loadbalancer.server.port=8000
+    environment:
+      LOG_LEVEL: -1
+      SIGNING_KEY: "${SIGNING_KEY}"
+      DB_HOST: db:8529
+      DB_CRED: "${DB_USER}:${DB_PASS}"
+    networks:
+      - proxy
+      - arangodb
+    links:
+      - db
+
   registry:
     image: ghcr.io/slntopp/nocloud/registry:latest
     restart: always
@@ -264,7 +293,7 @@ services:
     links:
       - db
 
-  db: # You might wanna disable this in production
+  db:
     image: arangodb/arangodb:latest
     restart: always
     labels:
@@ -283,7 +312,7 @@ services:
       - proxy
       - arangodb
 
-  rabbitmq: # You might wanna disable this in production
+  rabbitmq:
     image: rabbitmq:3.9-management
     labels:
       - traefik.enable=true
@@ -299,7 +328,7 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
-  
+
   driver-ione:
     container_name: driver
     restart: always

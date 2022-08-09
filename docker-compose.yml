@@ -47,6 +47,24 @@ services:
       APISERVER_HOST: "proxy:8000"
     networks:
       - proxy
+  iproxy:
+    image: ghcr.io/slntopp/nocloud/proxy:latest
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.iproxy.entrypoints=http
+      - traefik.http.routers.iproxy.rule=HostRegexp(`proxy.${BASE_DOMAIN}`, `{sp:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}.proxy.${BASE_DOMAIN}`)
+      - traefik.http.services.iproxy.loadbalancer.server.port=8000
+    environment:
+      LOG_LEVEL: -1
+      SIGNING_KEY: "${SIGNING_KEY}"
+      DB_HOST: db:8529
+      DB_CRED: "${DB_USER}:${DB_PASS}"
+    networks:
+      - proxy
+      - arangodb
+    links:
+      - db
   registry:
     image: ghcr.io/slntopp/nocloud/registry:latest
     restart: always
@@ -213,25 +231,6 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-    links:
-      - db
-
-  iproxy:
-    image: ghcr.io/slntopp/nocloud/proxy:latest
-    restart: always
-    labels:
-      - traefik.http.routers.iproxy.rule=Host(`*.proxy.${BASE_DOMAIN}`)
-      - traefik.http.routers.iproxy.entrypoints=grpc
-      - traefik.http.services.iproxy.loadbalancer.server.port=8000
-      - traefik.http.services.iproxy.loadbalancer.server.scheme=h2c
-    environment:
-      LOG_LEVEL: -1
-      SIGNING_KEY: "${SIGNING_KEY}"
-      DB_HOST: db:8529
-      DB_CRED: "${DB_USER}:${DB_PASS}"
-    networks:
-      - proxy
-      - arangodb
     links:
       - db
 
