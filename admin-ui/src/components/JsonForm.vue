@@ -108,6 +108,7 @@ export default {
   },
   computed: {
     typeRule () {
+      if (this.typeValue === '') return [];
       return [v => {
         try {
           const value = (this.typeValue !== 'string') ? JSON.parse(v) : v

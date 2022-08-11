@@ -47,53 +47,7 @@
       :series="series"
     />
 
-    <nocloud-table
-      class="mt-4"
-      sort-by="proc"
-      :items="transactions"
-      :headers="headers"
-      :loading="isLoading"
-      :sort-desc="true"
-      :footer-error="fetchError"
-      @input="selectTransaction"
-    >
-      <template v-slot:[`item.account`]="{ item }">
-        {{ account(item.account) }}
-      </template>
-
-      <template v-slot:[`item.service`]="{ item, index }">
-        <template v-if="item.service">
-          <router-link
-            :to="{ name: 'Service', params: { serviceId: item.service } }"
-          >
-            {{ service(item.service) }}
-          </router-link>
-
-          <v-icon
-            class="ml-2"
-            v-if="!visibleItems.includes(index)"
-            @click="visibleItems.push(index)"
-          >
-            mdi-eye-outline
-          </v-icon>
-          <template v-else>
-            ({{ hashTrim(item.service) }})
-            <v-btn icon @click="addToClipboard(item.service, index)">
-              <v-icon v-if="copyed === index"> mdi-check </v-icon>
-              <v-icon v-else> mdi-content-copy </v-icon>
-            </v-btn>
-          </template>
-        </template>
-        <template v-else>-</template>
-      </template>
-
-      <template v-slot:[`item.total`]="{ item }">
-        <balance :value="-item.total" />
-      </template>
-      <template v-slot:[`item.proc`]="{ item }">
-        {{ date(item.proc) }}
-      </template>
-    </nocloud-table>
+    <transactions-table :transactions="transactions" :selectTransaction="selectTransaction" />
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -121,27 +75,16 @@
 
 <script>
 import snackbar from '@/mixins/snackbar.js';
-import nocloudTable from '@/components/table.vue';
-import balance from '@/components/balance.vue';
 import apexcharts from 'vue-apexcharts';
+import transactionsTable from '@/components/transactions_table.vue';
 
 export default {
   name: 'transactions-view',
-  components: { nocloudTable, balance, apexcharts },
+  components: { apexcharts, transactionsTable },
   mixins: [snackbar],
   data: () => ({
-    headers: [
-      { text: 'Account ', value: 'account' },
-      { text: 'Service ', value: 'service' },
-      { text: 'Amount ', value: 'total' },
-      { text: 'Date ', value: 'proc' }
-    ],
     accountId: null,
     serviceId: null,
-    visibleItems: [],
-    selected: [],
-    copyed: -1,
-    fetchError: '',
 
     series: [],
     chartLoading: false,
@@ -156,49 +99,18 @@ export default {
     }
   }),
   methods: {
-    account(uuid) {
-      return this.accounts.find((acc) =>
-        acc.uuid === uuid
-      )?.title;
-    },
-    service(uuid) {
-      const service = this.$store.getters['services/all']
-        .find((serv) => serv.uuid === uuid);
-
-      return service?.title;
-    },
-    date(timestamp, bool) {
+    date(timestamp) {
       const date = new Date(timestamp * 1000);
       const time = date.toUTCString().split(' ')[4];
       
-      const day = date.getUTCDate();
-      const month = date.getUTCMonth() + 1;
       const year = date.toUTCString().split(' ')[3];
+      let month = date.getUTCMonth() + 1;
+      let day = date.getUTCDate();
 
-      if (bool) return `${year}-${month}-${day}T${time}Z`;
-      return `${day}.${month}.${year} ${time}`;
-    },
-    hashTrim(hash) {
-      if (hash) return ` ${hash.slice(0, 12)}... `;
-      else return ' XXXXXXXX... ';
-    },
-    addToClipboard(text, index) {
-      if (navigator?.clipboard) {
-        navigator.clipboard
-          .writeText(text)
-          .then(() => {
-            this.copyed = index;
-          })
-          .catch((err) => {
-            this.showSnackbarError({
-              message: err
-            });
-          });
-      } else {
-        this.showSnackbarError({
-          message: 'Clipboard is not supported!'
-        });
-      }
+      if (`${month}`.length < 2) month = `0${month}`;
+      if (`${day}`.length < 2) day = `0${day}`;
+
+      return `${year}-${month}-${day}T${time}Z`;
     },
     getTransactions() {
       const accounts = [];
@@ -269,7 +181,7 @@ export default {
         }
 
         this.chartOptions.xaxis.categories
-          .push(this.date(proc, true));
+          .push(this.date(proc));
       });
       setTimeout(() => { this.chartLoading = false }, 300);
 
@@ -332,9 +244,6 @@ export default {
           else return equalAccounts && equalServices;
         });
     },
-    isLoading() {
-      return this.$store.getters['transactions/isLoading'];
-    },
     user() {
       return this.$store.getters['auth/userdata'];
     },
@@ -365,7 +274,7 @@ export default {
         values.push(balance -= el.total);
         labels.push(`${balance} NCU`);
         dates.push(el.proc - arr[i - 1]?.proc ||
-          arr[i + 1].proc - el.proc);
+          arr[i + 1]?.proc - el.proc || el.proc);
       });
 
       [labels, values] = this.setTransactions(dates, labels, values);
@@ -378,14 +287,16 @@ export default {
     }
   },
   watch: {
-    transactions() {
-      this.fetchError = '';
-    },
     chartLoading() {
       setTimeout(this.setListenerToLegend);
     },
     user() {
       this.accountId = this.user.uuid;
+    },
+    accounts() {
+      if (!this.$store.getters['transactions/all'].length) {
+        this.getTransactions();
+      }
     }
   }
 }
