@@ -6,7 +6,7 @@
           label="service title"
           :rules="rules.req"
           v-model="service.title"
-        ></v-text-field>
+        />
       </v-col>
       <v-col cols="6" md="4" lg="3">
         <v-select
@@ -17,8 +17,17 @@
           item-text="title"
           item-value="uuid"
           v-model="namespace"
-        >
-        </v-select>
+        />
+      </v-col>
+      <v-col>
+        <v-select
+          label="service provider"
+          item-value="uuid"
+          item-text="title"
+          v-model="serviceProvider"
+          :items="servicesProviders"
+          :rules="rules.req"
+        />
       </v-col>
       <v-col cols="6" md="4" lg="3">
         <v-text-field
@@ -26,7 +35,7 @@
           :rules="rules.req"
           v-model="service.version"
           readonly
-        ></v-text-field>
+        />
       </v-col>
     </v-row>
 
@@ -67,8 +76,15 @@
           <router-link :to="{ name: 'Services' }" style="text-decoration: none">
             <v-btn>cancel</v-btn>
           </router-link>
-          <v-btn class="ml-2" @click="testService"> test </v-btn>
-          <v-btn class="ml-2" @click="createService" :disabled="!testsPassed">
+          <v-btn class="ml-2" :loading="isTestsLoading" @click="testService">
+            test
+          </v-btn>
+          <v-btn
+            class="ml-2"
+            :disabled="!testsPassed"
+            :loading="isLoading"
+            @click="createService"
+          >
             create
           </v-btn>
         </div>
@@ -86,24 +102,41 @@
             @click="() => removeInstance(currentInstancesGroupsIndex)"
             >Remove</v-btn
           >
-          <v-btn class="mx-4 mb-4" @click="applyGroup">apply to group</v-btn>
-          <v-select
-            dense
-						label="plan"
-            style="width: 200px"
-            class="d-inline-block mr-4"
-            v-model="currentInstancesGroups.plan"
-            :items="plans.titles"
-					/>
-          <v-select
-            dense
-						label="product"
-            style="width: 200px"
-            class="d-inline-block"
-            v-model="currentInstancesGroups.product"
-            v-if="plans.products.length > 0"
-            :items="plans.products"
-					/>
+          <v-menu
+            bottom
+            offset-y
+            transition="slide-y-transition"
+            v-model="isVisible"
+            :close-on-content-click="false"
+          >
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn class="mx-4 mb-4" v-on="on" v-bind="attrs">
+                apply plan
+              </v-btn>
+            </template>
+            <v-card>
+              <v-card-title>Apply plan to group</v-card-title>
+              <v-card-actions class="d-flex flex-column align-end">
+                <v-select
+                  dense
+                  label="plan"
+                  style="width: 200px"
+                  v-model="currentInstancesGroups.plan"
+                  :items="plans.titles"
+                  @change="setProducts"
+                />
+                <v-select
+                  dense
+                  label="product"
+                  style="width: 200px"
+                  v-model="currentInstancesGroups.product"
+                  v-if="plans.products.length > 0"
+                  :items="plans.products"
+                />
+                <v-btn @click="applyGroup">apply</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-menu>
 
           <v-text-field
             label="instances group title"
@@ -119,7 +152,7 @@
           />
 
           <v-select
-            label="services provider"
+            label="service provider"
             item-value="uuid"
             item-text="title"
             v-model="instances[currentInstancesGroupsIndex].sp"
@@ -191,6 +224,7 @@ export default {
       instances_groups: [],
     },
     namespace: "",
+    serviceProvider: "",
     instances: [],
     currentInstancesGroups: {},
     currentInstancesGroupsIndex: -1,
@@ -202,6 +236,9 @@ export default {
       products: []
     },
 
+    isVisible: false,
+    isLoading: false,
+    isTestsLoading: false,
     plansVisible: false,
     testsPassed: false,
   }),
@@ -214,9 +251,12 @@ export default {
     },
     removeInstance(index) {
       this.instances.splice(index, 1);
-      let newIndex = Math.max(index - 1, 0);
 
-      this.selectInstance(newIndex);
+      if (this.instances.length > 0) {
+        this.selectInstance(Math.max(index - 1, 0));
+      } else {
+        this.selectInstance(-1);
+      }
     },
     defaultInstance(title = "") {
       return {
@@ -265,12 +305,15 @@ export default {
       });
 
       this.instances[this.currentInstancesGroupsIndex] = current;
+      this.isVisible = false;
     },
     getService() {
       const data = JSON.parse(JSON.stringify(this.service));
       const instances = JSON.parse(JSON.stringify(this.instances));
+      const deploy_policies = { 0: this.serviceProvider }
 
       instances.forEach((inst) => {
+        inst.body.resources.ips_public = inst.body.instances?.length || 0;
         data.instances_groups.push({
           ...inst.body,
           title: inst.title,
@@ -285,7 +328,7 @@ export default {
         // })
         // data.instances_groups[inst.title].resources.ips_public = ips;
       });
-      return { namespace: this.namespace, service: data };
+      return { namespace: this.namespace, service: data, deploy_policies };
     },
     createService() {
       const data = this.getService();
@@ -295,8 +338,9 @@ export default {
         return;
       }
 
+      this.isLoading = true;
       api.services
-        .create(data)
+        ._create(data)
         .then(() => {
           this.showSnackbar({ message: `Service created successfully` });
           this.$router.push({ name: "Services" });
@@ -306,6 +350,9 @@ export default {
               message: err.errors.map((error) => error),
           };
           this.showSnackbarError(opts);
+        })
+        .finally(() => {
+          this.isLoading = false;
         });
     },
     testService() {
@@ -316,6 +363,7 @@ export default {
         return;
       }
 
+      this.isTestsLoading = true;
       api.services
         .testConfig(data)
         .then((res) => {
@@ -332,8 +380,25 @@ export default {
             message: err.errors.map((error) => error),
           };
           this.showSnackbarError(opts);
+        })
+        .finally(() => {
+          this.isTestsLoading = false;
         });
     },
+    setProducts() {
+      const { plan } = this.currentInstancesGroups;
+      const uuid = plan.split('(')[1]?.slice(0, 8);
+      const products = this.plans.list.find((el) =>
+        el.uuid.includes(uuid)
+      )?.products || {};
+
+      this.plans.products = [];
+      delete this.currentInstancesGroups.product;
+      delete this.currentInstancesGroups.products;
+      Object.values(products).forEach(({ title }) => {
+        this.plans.products.push(title);
+      });
+    }
   },
   computed: {
     namespaces() {
@@ -398,20 +463,6 @@ export default {
       },
       deep: true,
     },
-    'currentInstancesGroups.plan'() {
-      const { plan } = this.currentInstancesGroups;
-      const uuid = plan.split('(')[1]?.slice(0, 8);
-      const products = this.plans.list.find((el) =>
-        el.uuid.includes(uuid)
-      )?.products || {};
-
-      this.plans.products = [];
-      delete this.currentInstancesGroups.product;
-      delete this.currentInstancesGroups.products;
-      Object.values(products).forEach(({ title }) => {
-        this.plans.products.push(title);
-      });
-    }
   },
 };
 </script>

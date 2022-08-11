@@ -240,7 +240,13 @@ export default {
       if (key === 'date') {
         this.setPeriod(value, obj);
         return;
+      } else if (key === 'resources') {
+        this.plan.resources = value;
+        return;
+      } else if (key === 'amount') {
+        key = 'resources';
       }
+
       if (this.plan.products[obj]) {
         this.plan.products[obj][key] = value;
       } else {

@@ -141,13 +141,14 @@ export default {
   computed: {
     services() {
       const items = this.$store.getters["services/all"];
+
       if (this.isFiltered) {
-        return items.filter((item) => {
-          return this.$route.query["items[]"].includes(item.uuid);
-        });
+        return items.filter((item) =>
+          this.$route.query["items[]"].includes(item.uuid)
+        );
       }
-      console.log(items)
-      return items;
+
+      return items.filter((el) => el.status !== 'DEL');
     },
     service() {
       return this.$store.getters["services/one"];

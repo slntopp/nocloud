@@ -27,7 +27,7 @@
         color="red"
         class="ml-2 mb-2"
         v-if="key !== null"
-        @click="cancel"
+        @click="reset"
       >
         mdi-cancel
       </v-icon>
@@ -84,15 +84,23 @@ export default {
 
       this.keys = ['/']
       this.addKeys(this.json)
+    },
+    reset () {
+      this.key = null
+      this.cancel()
     }
   },
   mounted () {
     this.addKeys(this.json)
   },
   watch: {
-    isValid () {
-      this.keys = ['/']
-      this.addKeys(this.json)
+    json: {
+      handler() {
+        this.key = null
+        this.keys = ['/']
+        this.addKeys(this.json)
+      },
+      deep: true
     }
   }
 }

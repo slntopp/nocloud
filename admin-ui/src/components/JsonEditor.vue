@@ -174,7 +174,7 @@ export default {
       this.typeValue = ''
       this.newValue = ''
 
-      this.$refs.form.reset()
+      this.$refs.form.resetValidation();
       this.disabledDelete = true
       this.disabled = false
     }
