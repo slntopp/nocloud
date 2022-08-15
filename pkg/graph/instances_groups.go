@@ -226,3 +226,11 @@ func (ctrl *InstancesGroupsController) Provide(ctx context.Context, group, sp st
 	})
 	return err
 }
+
+func (ctrl *InstancesGroupsController) SetStatus(ctx context.Context, ig *pb.InstancesGroup, status pb.InstanceStatus) (err error) {
+	mask := &pb.InstancesGroup{
+		Status: status,
+	}
+	_, err = ctrl.col.UpdateDocument(ctx, ig.Uuid, mask)
+	return err
+}

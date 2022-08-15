@@ -390,6 +390,8 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 		client := *c.client
 		sp := c.sp
 
+		group.Status = proto.InstanceStatus_UP
+
 		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
 			log.Error("Error deploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
@@ -401,6 +403,12 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 			})
 			continue
 		}
+
+		err = s.ctrl.IGController().SetStatus(ctx, group, proto.InstanceStatus_UP)
+		if err != nil {
+			log.Error("Error updating InstancesGroup", zap.Error(err), zap.Any("IG", group))
+		}
+
 		log.Debug("Up Request Result", zap.Any("response", response))
 
 		if len(group.Instances) != len(response.GetGroup().GetInstances()) {
@@ -419,7 +427,7 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 
 	service.Status = pb.ServiceStatus_UP
 	log.Debug("Updated Service", zap.Any("service", service))
-	err = s.ctrl.Update(ctx, service, false)
+	err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_UP)
 	if err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -482,11 +490,19 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 		client := *c.client
 		sp := c.sp
 
+		group.Status = proto.InstanceStatus_INIT
+
 		res, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
 			log.Error("Error undeploying group", zap.Any("service_provider", sp), zap.Any("group", group), zap.Error(err))
 			continue
 		}
+
+		err = s.ctrl.IGController().SetStatus(ctx, group, proto.InstanceStatus_INIT)
+		if err != nil {
+			log.Error("Error updating InstancesGroup", zap.Error(err), zap.Any("IG", group))
+		}
+
 		group := res.GetGroup()
 		// err = s.ctrl.Unprovide(ctx, group.GetUuid())
 		// if err != nil {
