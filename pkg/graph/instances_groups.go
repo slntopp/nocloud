@@ -68,6 +68,8 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating InstancesGroup", zap.Any("group", g))
 
+	g.Status = pb.InstanceStatus_INIT
+
 	err := hasher.SetHash(g.ProtoReflect())
 	if err != nil {
 		return err
