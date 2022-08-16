@@ -68,6 +68,8 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating InstancesGroup", zap.Any("group", g))
 
+	g.Status = pb.InstanceStatus_INIT
+
 	err := hasher.SetHash(g.ProtoReflect())
 	if err != nil {
 		return err
@@ -224,5 +226,13 @@ func (ctrl *InstancesGroupsController) Provide(ctx context.Context, group, sp st
 		From: driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group),
 		To:   driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp),
 	})
+	return err
+}
+
+func (ctrl *InstancesGroupsController) SetStatus(ctx context.Context, ig *pb.InstancesGroup, status pb.InstanceStatus) (err error) {
+	mask := &pb.InstancesGroup{
+		Status: status,
+	}
+	_, err = ctrl.col.UpdateDocument(ctx, ig.Uuid, mask)
 	return err
 }

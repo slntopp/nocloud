@@ -52,16 +52,17 @@ message InstancesGroup {
     string uuid = 1;
     string type = 2;
     string title = 3;
-    map<string, google.protobuf.Value> config = 4
+    InstanceStatus status = 4;
+    map<string, google.protobuf.Value> config = 5
         [(nocloud.hasher.hashed) = true];
-    repeated Instance instances = 5
+    repeated Instance instances = 6
         [(nocloud.hasher.hashed) = true];
-    map<string, google.protobuf.Value> resources = 6
+    map<string, google.protobuf.Value> resources = 7
         [(nocloud.hasher.hashed) = true];
-    map<string, google.protobuf.Value> data = 7;
-    string hash = 8 [(nocloud.hasher.hash) = true];
-    optional string sp = 9;
-    optional int32 access_level = 10;
+    map<string, google.protobuf.Value> data = 8;
+    string hash = 9 [(nocloud.hasher.hash) = true];
+    optional string sp = 10;
+    optional int32 access_level = 11;
 }
 
 message TestInstancesGroupConfigRequest {
