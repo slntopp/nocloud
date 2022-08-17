@@ -13,6 +13,7 @@ import (
 )
 
 func AuthMiddleware(next http.Handler) http.Handler {
+	log.Info("Using Auth Middleware")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		protocol := r.Header.Get("Sec-WebSocket-Protocol")
 
