@@ -79,10 +79,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer srv.Close()
 
-	wg := sync.WaitGroup{}
+	wg := &sync.WaitGroup{}
 	wg.Add(2)
 
-	go func(wg sync.WaitGroup) {
+	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		for {
 			t, p, err := c.ReadMessage()
@@ -99,7 +99,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		}
 	}(wg)
 
-	go func(wg sync.WaitGroup) {
+	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
 		for {
 			t, p, err := srv.ReadMessage()
