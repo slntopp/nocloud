@@ -149,7 +149,7 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				}
 				instance.BillingPlan = plan
 
-				err := s.ctrl.IGController().Instances().ValidateBillingPlan(instance)
+				err := s.ctrl.IGController().Instances().ValidateBillingPlan(ctx, *group.Sp, instance)
 				if err != nil {
 					response.Result = false
 					terr := pb.TestConfigError{
@@ -241,14 +241,6 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
-	testResult, err := s.DoTestServiceConfig(ctx, log, request.GetService())
-
-	if err != nil {
-		return nil, err
-	} else if !testResult.Result {
-		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
-	}
-
 	service := request.GetService()
 	deploy_policies := request.GetDeployPolicies()
 	contexts := make(map[string]*InstancesGroupDriverContext)
@@ -256,6 +248,13 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	for idx, ig := range service.InstancesGroups {
 		sp := deploy_policies[int32(idx)]
 		ig.Sp = &sp
+	}
+
+	testResult, err := s.DoTestServiceConfig(ctx, log, request.GetService())
+	if err != nil {
+		return nil, err
+	} else if !testResult.Result {
+		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
 	}
 
 	doc, err := s.ctrl.Create(ctx, service)
