@@ -100,7 +100,7 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 	var query string
 
 	if requestor != "" {
-		query = `FOR sp IN @@sps RETURN MERGE(sp, {uuid: sp._key})`
+		query = `FOR sp IN @@sps RETURN MERGE(UNSET(sp, ['secrets', 'vars']), {uuid: sp._key})`
 	} else {
 		// anonymous query
 		query = `FOR sp IN @@sps RETURN {uuid: sp._key, type: sp.type, title: sp.title, public_data: sp.public_data}`

@@ -24,6 +24,10 @@ message Var {
     map<string, google.protobuf.Value> value = 1;
 }
 
+message ProxyConf {
+    optional string socket = 1;
+}
+
 message ServicesProvider {
     string uuid = 1;
     string type = 2;
@@ -34,6 +38,8 @@ message ServicesProvider {
     nocloud.states.State state = 7;
     map<string, google.protobuf.Value> public_data = 8;
     bool public = 9; // If set to true, the provider will be visible to all users
+
+    optional ProxyConf proxy = 10;
 }
 
 message TestResponse {

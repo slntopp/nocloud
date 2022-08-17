@@ -322,6 +322,14 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
 	}
 
+	ok := graph.HasAccess(
+		ctx, s.db, requestor,
+		driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY).String(), access.ADMIN)
+	if !ok {
+		r.Secrets = nil
+		r.Vars = nil
+	}
+
 	return r.ServicesProvider, nil
 }
 

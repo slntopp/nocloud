@@ -8,6 +8,8 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.4.2
+	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/websocket v1.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.2
 	github.com/rs/cors v1.8.2
@@ -23,10 +25,7 @@ require (
 	google.golang.org/protobuf v1.28.1
 )
 
-require (
-	github.com/gorilla/websocket v1.4.2 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
-)
+require github.com/sirupsen/logrus v1.8.1 // indirect
 
 require (
 	github.com/arangodb/go-velocypack v0.0.0-20200318135517-5af53c29c67e // indirect
