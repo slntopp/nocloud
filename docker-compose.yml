@@ -53,7 +53,7 @@ services:
     labels:
       - traefik.enable=true
       - traefik.http.routers.iproxy.entrypoints=http
-      - traefik.http.routers.iproxy.rule=HostRegexp(`proxy.${BASE_DOMAIN}`, `{sp:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}}.proxy.${BASE_DOMAIN}`)
+      - traefik.http.routers.iproxy.rule=HostRegexp(`{sp:[a-z0-9\-]+}.proxy.${BASE_DOMAIN}`)
       - traefik.http.services.iproxy.loadbalancer.server.port=8000
     environment:
       LOG_LEVEL: -1
