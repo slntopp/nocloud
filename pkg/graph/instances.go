@@ -57,24 +57,11 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating Instance", zap.Any("instance", i))
 
-	if i.BillingPlan == nil {
-		return errors.New("there is not billing plan")
-	}
-
-	ok, err := EdgeExist(ctx, ctrl.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, sp, i.BillingPlan.Uuid)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		ctrl.log.Error("SP and Billing Plan are not binded", zap.Any("sp", sp), zap.Any("plan", i.BillingPlan.Uuid))
-		return errors.New("SP and Billing Plan are not binded")
-	}
-
 	// ensure status is INIT
 	i.Uuid = ""
 	i.Status = pb.InstanceStatus_INIT
 
-	err = hasher.SetHash(i.ProtoReflect())
+	err := hasher.SetHash(i.ProtoReflect())
 	if err != nil {
 		log.Error("Failed to calculate hash", zap.Error(err))
 		return err
@@ -135,23 +122,6 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	if inst.GetTitle() != oldInst.GetTitle() {
 		mask.Title = inst.GetTitle()
-	}
-
-	if inst.BillingPlan == nil || oldInst.BillingPlan == nil {
-		return errors.New("there is not billing plan")
-	}
-
-	if inst.GetBillingPlan().Uuid != oldInst.GetBillingPlan().Uuid {
-		ok, err := EdgeExist(ctx, ctrl.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, sp, inst.BillingPlan.Uuid)
-		if err != nil {
-			return err
-		}
-		if ok {
-			mask.BillingPlan = inst.GetBillingPlan()
-		} else {
-			ctrl.log.Error("SP and Billing Plan are not binded", zap.Any("sp", sp), zap.Any("plan", inst.BillingPlan.Uuid))
-			return errors.New("SP and Billing Plan are not binded")
-		}
 	}
 
 	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
@@ -231,11 +201,20 @@ func (ctrl *InstancesController) GetGroup(ctx context.Context, i string) (*Group
 	return &r, nil
 }
 
-func (ctrl *InstancesController) ValidateBillingPlan(i *pb.Instance) error {
+func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error {
 	log := ctrl.log.Named("ValidateBillingPlan").Named(i.Title)
 	if i.BillingPlan == nil {
 		log.Debug("Billing plan is not provided, skipping")
 		return nil
+	}
+
+	ok, err := EdgeExist(ctx, ctrl.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, spUuid, i.BillingPlan.Uuid)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		ctrl.log.Error("SP and Billing Plan are not binded", zap.Any("sp", spUuid), zap.Any("plan", i.BillingPlan.Uuid))
+		return errors.New("SP and Billing Plan are not binded")
 	}
 
 	if i.BillingPlan.Kind < 2 { // If Kind is Dynamic or Unknown
