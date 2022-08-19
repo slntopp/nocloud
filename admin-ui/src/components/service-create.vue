@@ -19,16 +19,6 @@
           v-model="namespace"
         />
       </v-col>
-      <v-col>
-        <v-select
-          label="service provider"
-          item-value="uuid"
-          item-text="title"
-          v-model="serviceProvider"
-          :items="servicesProviders"
-          :rules="rules.req"
-        />
-      </v-col>
       <v-col cols="6" md="4" lg="3">
         <v-text-field
           label="version"
@@ -224,7 +214,6 @@ export default {
       instances_groups: [],
     },
     namespace: "",
-    serviceProvider: "",
     instances: [],
     currentInstancesGroups: {},
     currentInstancesGroupsIndex: -1,
@@ -310,10 +299,11 @@ export default {
     getService() {
       const data = JSON.parse(JSON.stringify(this.service));
       const instances = JSON.parse(JSON.stringify(this.instances));
-      const deploy_policies = { 0: this.serviceProvider }
+      const deploy_policies = {};
 
-      instances.forEach((inst) => {
+      instances.forEach((inst, i) => {
         inst.body.resources.ips_public = inst.body.instances?.length || 0;
+        deploy_policies[i] = inst.sp;
         data.instances_groups.push({
           ...inst.body,
           title: inst.title,

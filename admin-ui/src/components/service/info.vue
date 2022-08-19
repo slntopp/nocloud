@@ -262,7 +262,7 @@
                           />
                         </v-col>
                       </v-row>
-                      <v-row class="flex-column">
+                      <v-row class="flex-column" v-if="instance.state">
                         <v-col>
                           <h4 class="mb-2">Snapshots:</h4>
                           <v-menu
@@ -315,8 +315,7 @@
                             single-select
                             item-key="ts"
                             v-model="selected"
-                            :items="Object.values(instance.state.meta.snapshots || {})"
-                            :loading="!instance.state.meta.snapshots"
+                            :items="Object.values(instance.state?.meta?.snapshots || {})"
                             :headers="headers"
                           >
                             <template v-slot:[`item.ts`]="{ item }">

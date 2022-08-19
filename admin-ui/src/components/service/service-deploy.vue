@@ -4,7 +4,10 @@
       <template v-if="service.status == 'up' || service.status == 'del'">
         <v-btn :loading="loading.action" @click="down"> down service </v-btn>
       </template>
-      <template v-else>
+      <v-btn v-else :loading="loading.action" @click="deploy">
+        deploy
+      </v-btn>
+      <!-- <template v-else>
         deploy:
         <v-form ref="deployForm" class="mt-3">
           <v-row>
@@ -12,6 +15,8 @@
               <v-select
                 label="instance group"
                 :items="instancesGroups"
+                item-value="uuid"
+                item-text="title"
                 :rules="[(v) => !!v || 'required']"
                 v-model="deployInstancesGroup"
               >
@@ -43,7 +48,7 @@
             </v-col>
           </v-row>
         </v-form>
-      </template>
+      </template> -->
     </div>
   </div>
 </template>
@@ -58,41 +63,20 @@ export default {
     },
   },
   data: () => ({
-    deployServiceProvider: "",
-    deployInstancesGroup: "",
     loading: {
       action: false,
     },
   }),
   computed: {
-    servicesProviders() {
-      return this.$store.getters["servicesProviders/all"];
-    },
-    instancesGroups() {
-      const result = [];
-      for (const group of this.service.instancesGroups) {
-        result.push({
-          text: group.title,
-          value: group.uuid,
-        });
-      }
-      return result;
-    },
     serviceId() {
-        console.log(this.$route.params.serviceId)
       return this.$route.params.serviceId;
     },
   },
   methods: {
     deploy() {
-      if (!this.$refs.deployForm.validate()) return;
       this.loading.action = true;
       api.services
-        .up(
-          this.serviceId,
-          this.deployInstancesGroup,
-          this.deployServiceProvider
-        )
+        .up(this.serviceId)
         .then(() => {
           this.$store.dispatch("services/fetch");
         })
@@ -112,10 +96,10 @@ export default {
         });
     },
   },
-  mounted() {
-    if (this.service.status != "up" && this.service.status != "del") {
-      this.$store.dispatch("servicesProviders/fetch");
-    }
-  },
+  // mounted() {
+  //   if (this.service.status != "up" && this.service.status != "del") {
+  //     this.$store.dispatch("servicesProviders/fetch");
+  //   }
+  // },
 };
 </script>

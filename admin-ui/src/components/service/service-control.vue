@@ -116,6 +116,7 @@ export default {
                 groups[i].instances.splice(j, 1);
               }
             });
+            groups[i].resources.ips_public = groups[i].instances.length;
           });
 
           setTimeout(() => {
