@@ -1365,9 +1365,9 @@
     semver "^7.3.4"
     strip-ansi "^6.0.0"
 
-"@vue/compiler-sfc@2.7.8":
-  version "2.7.8"
-  resolved "https://registry.yarnpkg.com/@vue/compiler-sfc/-/compiler-sfc-2.7.8.tgz#731aadd6beafdb9c72fd8614ce189ac6cee87612"
+"@vue/compiler-sfc@2.7.9":
+  version "2.7.9"
+  resolved "https://registry.yarnpkg.com/@vue/compiler-sfc/-/compiler-sfc-2.7.9.tgz#aa31813c94de39f4977e4b924eb261c2199218ad"
   dependencies:
     "@babel/parser" "^7.18.4"
     postcss "^8.4.14"
@@ -5552,9 +5552,9 @@ vue-style-loader@^4.1.0, vue-style-loader@^4.1.3:
     hash-sum "^1.0.2"
     loader-utils "^1.0.2"
 
-vue-template-compiler@^2.7.8:
-  version "2.7.8"
-  resolved "https://registry.yarnpkg.com/vue-template-compiler/-/vue-template-compiler-2.7.8.tgz#eadd54ed8fbff55b7deb07093a976c07f451a1dc"
+vue-template-compiler@^2.7.9:
+  version "2.7.9"
+  resolved "https://registry.yarnpkg.com/vue-template-compiler/-/vue-template-compiler-2.7.9.tgz#ffbeb1769ae6af65cd405a6513df6b1e20e33616"
   dependencies:
     de-indent "^1.0.2"
     he "^1.2.0"
@@ -5563,11 +5563,11 @@ vue-template-es2015-compiler@^1.9.0:
   version "1.9.1"
   resolved "https://registry.npmjs.org/vue-template-es2015-compiler/-/vue-template-es2015-compiler-1.9.1.tgz"
 
-vue@^2.7.8:
-  version "2.7.8"
-  resolved "https://registry.yarnpkg.com/vue/-/vue-2.7.8.tgz#34e06553137611d8cecc4b0cd78b7a59f80b1299"
+vue@^2.7.9:
+  version "2.7.9"
+  resolved "https://registry.yarnpkg.com/vue/-/vue-2.7.9.tgz#ac3ccb4a4ac5dd31a8eec4c68a094efe7f83dfbb"
   dependencies:
-    "@vue/compiler-sfc" "2.7.8"
+    "@vue/compiler-sfc" "2.7.9"
     csstype "^3.1.0"
 
 vuetify-loader@^1.9.2:
