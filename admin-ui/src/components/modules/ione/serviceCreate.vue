@@ -127,7 +127,7 @@
 					<v-select
 						label="product"
             v-model="instance.productTitle"
-            v-if="instance.products.length > 0"
+            v-if="instance.products?.length > 0"
             :items="instance.products"
 						@change="(newVal) => setValue(index + '.product', newVal)"
 					/>
