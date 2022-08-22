@@ -20,7 +20,6 @@ updates:
       interval: daily
       time: '06:00'
     reviewers:
-      - va-ovsyanikov
       - 639852
     assignees:
       - 639852
