@@ -72,6 +72,7 @@ services:
     links:
       - db
   services-registry:
+    container_name: services-registry
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     restart: always
     labels:
@@ -87,12 +88,13 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
       BILLING_HOST: billing:8000
-      DRIVERS: driver-ione:8080
+      DRIVERS: driver-ione:8080 driver-ovh:8080
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     depends_on:
       - db
       - billing
       - driver-ione
+      - driver-ovh
     networks:
       - proxy
       - arangodb
@@ -102,6 +104,7 @@ services:
       - db
       - billing
   sp-registry:
+    container_name: sp-registry
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     restart: always
     labels:
@@ -116,11 +119,12 @@ services:
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
-      DRIVERS: driver-ione:8080
+      DRIVERS: driver-ione:8080 driver-ovh:8080
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     depends_on:
       - db
       - driver-ione
+      - driver-ovh
     networks:
       - proxy
       - arangodb
@@ -248,7 +252,7 @@ services:
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
   
   driver-ione:
-    container_name: driver
+    container_name: driver-ione
     restart: always
     image: ghcr.io/slntopp/nocloud-driver-ione:latest
     networks:
@@ -261,6 +265,22 @@ services:
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       LOG_LEVEL: -1
       REDIS_HOST: redis_settings:6379
+
+  driver-ovh:
+    container_name: driver-ovh
+    restart: always
+    image: ghcr.io/support-pl/nocloud-driver-ovh:latest
+    networks:
+      - grpc-internal
+      - mq
+      - redis
+    environment:
+      DRIVER_TYPE_KEY: ovh
+      SIGNING_KEY: "${SIGNING_KEY}"
+      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      LOG_LEVEL: -1
+      REDIS_HOST: redis_settings:6379
+      
 networks:
   proxy:
     driver: bridge

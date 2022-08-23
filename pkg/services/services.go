@@ -180,10 +180,8 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 		res, err := client.TestInstancesGroupConfig(ctx, &proto.TestInstancesGroupConfigRequest{Group: group})
 		if err != nil {
 			response.Result = false
-			config_err.Error = fmt.Sprintf("Error validating group '%s'", group.Title)
-			response.Errors = append(
-				response.Errors, &config_err,
-			)
+			config_err.Error = fmt.Sprintf("Error validating group '%s': %v", group.Title, err)
+			response.Errors = append(response.Errors, &config_err)
 			continue
 		}
 		if !res.GetResult() {
@@ -242,13 +240,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	}
 
 	service := request.GetService()
-	deploy_policies := request.GetDeployPolicies()
 	contexts := make(map[string]*InstancesGroupDriverContext)
-
-	for idx, ig := range service.InstancesGroups {
-		sp := deploy_policies[int32(idx)]
-		ig.Sp = &sp
-	}
 
 	testResult, err := s.DoTestServiceConfig(ctx, log, request.GetService())
 	if err != nil {
@@ -269,8 +261,8 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
 	}
 
-	for i, group := range service.GetInstancesGroups() {
-		sp_id := deploy_policies[int32(i)]
+	for _, group := range service.GetInstancesGroups() {
+		sp_id := *group.Sp
 		sp, err := s.sp_ctrl.Get(ctx, sp_id)
 		if err != nil {
 			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
