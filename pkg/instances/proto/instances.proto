@@ -29,6 +29,7 @@ enum InstanceStatus {
     UP = 3;
     DOWN = 4;
     DEL = 5;
+    SUS = 6;
 }
 
 message Instance {
