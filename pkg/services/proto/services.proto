@@ -64,7 +64,6 @@ message TestConfigResponse {
 message CreateRequest {
     Service service = 1;
     string namespace = 2;
-    map<int32, string> deploy_policies = 3;  // Map of InstanceGroup UUID to ServiceProvider
 }
 
 message DeleteRequest {
