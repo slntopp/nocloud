@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -121,9 +121,9 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 
 	bp_cache := make(map[string]*bpb.Plan)
 
-	log.Debug("Init validation", zap.Any("groups", groups), zap.Int("amount", len(groups)))
+	log.Debug("Init validation", zap.Int("amount", len(groups)))
 	for _, group := range service.GetInstancesGroups() {
-		log.Debug("Validating Instances Group", zap.String("group", group.Title))
+		log.Debug("Validating Instances Group", zap.Any("group", group))
 		groupType := group.GetType()
 
 		for _, instance := range group.GetInstances() {
@@ -149,7 +149,7 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				}
 				instance.BillingPlan = plan
 
-				err := s.ctrl.IGController().Instances().ValidateBillingPlan(ctx, *group.Sp, instance)
+				err := s.ctrl.IGController().Instances().ValidateBillingPlan(ctx, group.GetSp(), instance)
 				if err != nil {
 					response.Result = false
 					terr := pb.TestConfigError{
@@ -242,7 +242,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	service := request.GetService()
 	contexts := make(map[string]*InstancesGroupDriverContext)
 
-	testResult, err := s.DoTestServiceConfig(ctx, log, request.GetService())
+	testResult, err := s.DoTestServiceConfig(ctx, log, service)
 	if err != nil {
 		return nil, err
 	} else if !testResult.Result {
@@ -261,8 +261,16 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
 	}
 
-	for _, group := range service.GetInstancesGroups() {
-		sp_id := *group.Sp
+	for i, group := range service.GetInstancesGroups() {
+		if group.Title == "" {
+			return nil, status.Errorf(codes.InvalidArgument, "InstancesGroup #%d has no title", i)
+		}
+
+		if group.Sp == nil || group.GetSp() == "" {
+			log.Error("Error no ServicesProvider UUID given")
+			return nil, status.Errorf(codes.InvalidArgument, "Error no ServicesProvider UUID given for InstancesGroup(%s)", group.GetTitle())
+		}
+		sp_id := group.GetSp()
 		sp, err := s.sp_ctrl.Get(ctx, sp_id)
 		if err != nil {
 			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", sp_id))
@@ -446,15 +454,15 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 	contexts := make(map[string]*InstancesGroupDriverContext)
 
 	for _, group := range service.GetInstancesGroups() {
-		if group.Sp == nil {
+		if group.Sp == nil || group.GetSp() == "" {
 			log.Debug("Group is unprovisioned, skipping", zap.String("group", group.GetUuid()))
 			continue
 		}
 
-		sp, err := s.sp_ctrl.Get(ctx, *group.Sp)
+		sp, err := s.sp_ctrl.Get(ctx, group.GetSp())
 		if err != nil {
-			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", *group.Sp))
-			return nil, status.Errorf(codes.InvalidArgument, "Error getting ServiceProvider(%s)", *group.Sp)
+			log.Error("Error getting ServiceProvider", zap.Error(err), zap.String("id", group.GetSp()))
+			return nil, status.Errorf(codes.InvalidArgument, "Error getting ServiceProvider(%s)", group.GetSp())
 		}
 
 		groupType := group.GetType()
