@@ -31,6 +31,8 @@ type ServicesServiceClient interface {
 	List(ctx context.Context, in *ListRequest, opts ...grpc.CallOption) (*Services, error)
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
+	Suspend(ctx context.Context, in *SuspendRequest, opts ...grpc.CallOption) (*SuspendResponse, error)
+	Unsuspend(ctx context.Context, in *UnsuspendRequest, opts ...grpc.CallOption) (*UnsuspendResponse, error)
 	Stream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (ServicesService_StreamClient, error)
 }
 
@@ -114,6 +116,24 @@ func (c *servicesServiceClient) Down(ctx context.Context, in *DownRequest, opts 
 	return out, nil
 }
 
+func (c *servicesServiceClient) Suspend(ctx context.Context, in *SuspendRequest, opts ...grpc.CallOption) (*SuspendResponse, error) {
+	out := new(SuspendResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/Suspend", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesServiceClient) Unsuspend(ctx context.Context, in *UnsuspendRequest, opts ...grpc.CallOption) (*UnsuspendResponse, error) {
+	out := new(UnsuspendResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.services.ServicesService/Unsuspend", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *servicesServiceClient) Stream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (ServicesService_StreamClient, error) {
 	stream, err := c.cc.NewStream(ctx, &ServicesService_ServiceDesc.Streams[0], "/nocloud.services.ServicesService/Stream", opts...)
 	if err != nil {
@@ -158,6 +178,8 @@ type ServicesServiceServer interface {
 	List(context.Context, *ListRequest) (*Services, error)
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
+	Suspend(context.Context, *SuspendRequest) (*SuspendResponse, error)
+	Unsuspend(context.Context, *UnsuspendRequest) (*UnsuspendResponse, error)
 	Stream(*StreamRequest, ServicesService_StreamServer) error
 	mustEmbedUnimplementedServicesServiceServer()
 }
@@ -189,6 +211,12 @@ func (UnimplementedServicesServiceServer) Up(context.Context, *UpRequest) (*UpRe
 }
 func (UnimplementedServicesServiceServer) Down(context.Context, *DownRequest) (*DownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Down not implemented")
+}
+func (UnimplementedServicesServiceServer) Suspend(context.Context, *SuspendRequest) (*SuspendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Suspend not implemented")
+}
+func (UnimplementedServicesServiceServer) Unsuspend(context.Context, *UnsuspendRequest) (*UnsuspendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Unsuspend not implemented")
 }
 func (UnimplementedServicesServiceServer) Stream(*StreamRequest, ServicesService_StreamServer) error {
 	return status.Errorf(codes.Unimplemented, "method Stream not implemented")
@@ -350,6 +378,42 @@ func _ServicesService_Down_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ServicesService_Suspend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SuspendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).Suspend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services.ServicesService/Suspend",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).Suspend(ctx, req.(*SuspendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ServicesService_Unsuspend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UnsuspendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServiceServer).Unsuspend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.services.ServicesService/Unsuspend",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServiceServer).Unsuspend(ctx, req.(*UnsuspendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ServicesService_Stream_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(StreamRequest)
 	if err := stream.RecvMsg(m); err != nil {
@@ -409,6 +473,14 @@ var ServicesService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Down",
 			Handler:    _ServicesService_Down_Handler,
+		},
+		{
+			MethodName: "Suspend",
+			Handler:    _ServicesService_Suspend_Handler,
+		},
+		{
+			MethodName: "Unsuspend",
+			Handler:    _ServicesService_Unsuspend_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

@@ -79,6 +79,7 @@ service DriverService {
     rpc Down(nocloud.instance.driver.vanilla.DownRequest) returns (nocloud.instance.driver.vanilla.DownResponse);
 
     rpc Monitoring(MonitoringRequest) returns (MonitoringResponse);
+    rpc SuspendMonitoring(MonitoringRequest) returns (MonitoringResponse);
 
     rpc Invoke(InvokeRequest) returns (nocloud.instances.InvokeResponse);
     rpc SpInvoke(SpInvokeRequest) returns (nocloud.services_providers.InvokeResponse);

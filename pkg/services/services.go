@@ -435,6 +435,68 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 	return &pb.UpResponse{}, nil
 }
 
+func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest) (*pb.SuspendResponse, error) {
+	log := s.log.Named("Suspend")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
+
+	service, err := s.ctrl.Get(ctx, requestor, request.GetUuid())
+	if err != nil {
+		log.Debug("Error getting Service", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not found")
+	}
+	log.Debug("Found Service", zap.Any("service", service))
+
+	if service.AccessLevel == nil || *service.AccessLevel < access.SUDO {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
+	}
+
+	for _, group := range service.GetInstancesGroups() {
+		if err := s.ctrl.IGController().SetStatus(ctx, group, proto.InstanceStatus_SUS); err != nil {
+			return nil, err
+		}
+	}
+
+	err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_SUS)
+	if err != nil {
+		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		return nil, status.Error(codes.Internal, "Error storing updates")
+	}
+
+	return &pb.SuspendResponse{}, nil
+}
+
+func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendRequest) (*pb.UnsuspendResponse, error) {
+	log := s.log.Named("Suspend")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
+
+	service, err := s.ctrl.Get(ctx, requestor, request.GetUuid())
+	if err != nil {
+		log.Debug("Error getting Service", zap.Error(err))
+		return nil, status.Error(codes.NotFound, "Service not found")
+	}
+	log.Debug("Found Service", zap.Any("service", service))
+
+	if service.AccessLevel == nil || *service.AccessLevel < access.SUDO {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
+	}
+
+	for _, group := range service.GetInstancesGroups() {
+		if err := s.ctrl.IGController().SetStatus(ctx, group, proto.InstanceStatus_UP); err != nil {
+			return nil, err
+		}
+	}
+
+	err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_UP)
+	if err != nil {
+		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		return nil, status.Error(codes.Internal, "Error storing updates")
+	}
+
+	return &pb.UnsuspendResponse{}, nil
+}
+
 func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb.DownResponse, error) {
 	log := s.log.Named("Down")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)

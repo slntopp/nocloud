@@ -103,6 +103,7 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 				log.Error("Coudln't get ServicesProvider", zap.String("sp", sp.Uuid), zap.Error(err))
 				continue
 			}
+
 			go func(sp *graph.ServicesProvider) {
 				igroups, err := s.ctrl.ListDeployments(ctx, sp, true)
 				if err != nil {
@@ -116,6 +117,15 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 				if !ok {
 					log.Error("Driver is not registered", zap.String("sp", sp.GetUuid()), zap.String("type", sp.GetType()))
 					return
+				}
+
+				_, err = client.SuspendMonitoring(ctx, &driverpb.MonitoringRequest{
+					Groups:           igroups,
+					ServicesProvider: sp.ServicesProvider,
+					Scheduled:        true,
+				})
+				if err != nil {
+					log.Error("Error Suspend Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 				}
 
 				_, err = client.Monitoring(ctx, &driverpb.MonitoringRequest{
