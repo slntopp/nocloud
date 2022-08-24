@@ -118,16 +118,15 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 					return
 				}
 
-				_, err = client.Monitoring(ctx, &driverpb.MonitoringRequest{
+				_, err = client.SuspendMonitoring(ctx, &driverpb.MonitoringRequest{
 					Groups:           igroups,
 					ServicesProvider: sp.ServicesProvider,
 					Scheduled:        true,
 				})
 				if err != nil {
-					log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
+					log.Error("Error Suspend Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 				}
 			}(sp)
-
 			go func(sp *graph.ServicesProvider) {
 				igroups, err := s.ctrl.ListDeployments(ctx, sp, true)
 				if err != nil {
@@ -143,13 +142,13 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 					return
 				}
 
-				_, err = client.SuspendMonitoring(ctx, &driverpb.MonitoringRequest{
+				_, err = client.Monitoring(ctx, &driverpb.MonitoringRequest{
 					Groups:           igroups,
 					ServicesProvider: sp.ServicesProvider,
 					Scheduled:        true,
 				})
 				if err != nil {
-					log.Error("Error Suspend Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
+					log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 				}
 			}(sp)
 		}
