@@ -1,6 +1,6 @@
 module github.com/slntopp/nocloud/tools/buf
 
-go 1.18
+go 1.19
 
 require (
 	github.com/gogo/protobuf v1.3.2 // indirect
