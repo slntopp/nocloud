@@ -17,7 +17,7 @@ require (
 	github.com/stoewer/go-strcase v1.2.0
 	github.com/streadway/amqp v1.0.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
-	go.uber.org/zap v1.22.0
+	go.uber.org/zap v1.23.0
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/net v0.0.0-20220708220712-1185a9018129
 	google.golang.org/genproto v0.0.0-20220822174746-9e6da59bd2fc
