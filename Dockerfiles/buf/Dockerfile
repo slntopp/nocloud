@@ -1,6 +1,6 @@
 FROM bufbuild/buf:latest as buf
 
-FROM golang:1.18-alpine AS builder
+FROM golang:1.19-alpine AS builder
 
 COPY --from=buf /usr/local/bin/buf /usr/local/bin/buf
 
