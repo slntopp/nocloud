@@ -299,11 +299,9 @@ export default {
     getService() {
       const data = JSON.parse(JSON.stringify(this.service));
       const instances = JSON.parse(JSON.stringify(this.instances));
-      const deploy_policies = {};
 
-      instances.forEach((inst, i) => {
+      instances.forEach((inst) => {
         inst.body.resources.ips_public = inst.body.instances?.length || 0;
-        deploy_policies[i] = inst.sp;
         data.instances_groups.push({
           ...inst.body,
           title: inst.title,
@@ -318,7 +316,7 @@ export default {
         // })
         // data.instances_groups[inst.title].resources.ips_public = ips;
       });
-      return { namespace: this.namespace, service: data, deploy_policies };
+      return { namespace: this.namespace, service: data };
     },
     createService() {
       const data = this.getService();
