@@ -20,9 +20,9 @@ updates:
       interval: daily
       time: '06:00'
     reviewers:
-      - 639852
+      - "639852"
     assignees:
-      - 639852
+      - "639852"
   - package-ecosystem: github-actions
     directory: ".github/workflows/*"
     schedule:
