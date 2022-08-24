@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -98,11 +98,6 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 	if instance.AccessLevel == nil || *instance.AccessLevel < access.MGMT {
 		log.Error("Access denied")
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
-	}
-
-	if _, ok := access.AdminActions[req.GetMethod()]; ok && *instance.AccessLevel < access.ADMIN {
-		log.Error("Access denied")
-		return nil, status.Errorf(codes.PermissionDenied, "Access denied. %s is admin action", req.GetMethod())
 	}
 
 	r, err := s.ctrl.GetGroup(ctx, instance_id.String())
