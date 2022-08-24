@@ -92,26 +92,13 @@ export default {
       chart: { height: 250, type: 'line' },
       dataLabels: { enabled: false },
       stroke: { curve: 'smooth' },
-      xaxis: { type: 'datetime', categories: [] },
+      xaxis: { type: 'datetime' },
       tooltip: { x: { format: 'dd.MM.yy HH:mm' } },
       theme: { palette: 'palette10', mode: 'dark' },
       legend: { showForSingleSeries: true }
     }
   }),
   methods: {
-    date(timestamp) {
-      const date = new Date(timestamp * 1000);
-      const time = date.toUTCString().split(' ')[4];
-      
-      const year = date.toUTCString().split(' ')[3];
-      let month = date.getUTCMonth() + 1;
-      let day = date.getUTCDate();
-
-      if (`${month}`.length < 2) month = `0${month}`;
-      if (`${day}`.length < 2) day = `0${day}`;
-
-      return `${year}-${month}-${day}T${time}Z`;
-    },
     getTransactions() {
       const accounts = [];
 
@@ -165,23 +152,19 @@ export default {
     selectTransaction(value) {
       this.series = [];
       this.chartLoading = true;
-      this.chartOptions.xaxis.categories = [];
 
       value.forEach(({ total, service, proc }) => {
         const name = service.slice(0, 8);
-        const data = { data: [total], name, service };
+        const data = { data: [{ x: proc * 1000, y: total }], name, service };
         const i = this.series.findIndex(
           (item) => item.name === name
         );
 
         if (i !== -1) {
-          this.series[i].data.push(total);
+          this.series[i].data.push({ x: proc * 1000, y: total });
         } else {
           this.series.push(data);
         }
-
-        this.chartOptions.xaxis.categories
-          .push(this.date(proc));
       });
       setTimeout(() => { this.chartLoading = false }, 300);
 
@@ -234,15 +217,14 @@ export default {
         return transactions;
       }
 
-      return transactions
-        .filter((item) => {
-          const equalAccounts = item.account === this.accountId;
-          const equalServices = item.service === this.serviceId;
+      return transactions.filter((item) => {
+        const equalAccounts = item.account === this.accountId;
+        const equalServices = item.service === this.serviceId;
 
-          if (!this.accountId) return equalServices;
-          else if (!this.serviceId) return equalAccounts;
-          else return equalAccounts && equalServices;
-        });
+        if (!this.accountId) return equalServices;
+        else if (!this.serviceId) return equalAccounts;
+        else return equalAccounts && equalServices;
+      });
     },
     user() {
       return this.$store.getters['auth/userdata'];
