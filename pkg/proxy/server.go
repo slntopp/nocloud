@@ -46,8 +46,12 @@ func Resolve(host string) (string, error) {
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
-	log.Debug("Request", zap.String("query", r.URL.Query().Encode()),
-		zap.Any("host", r.Host))
+	if log.Core().Enabled(zap.DebugLevel) {
+		log.Debug(
+			"Request", zap.Any("host", r.Host),
+			zap.String("query", r.URL.Query().Encode()),
+		)
+	}
 
 	host, err := Resolve(r.Host)
 	if err != nil {
