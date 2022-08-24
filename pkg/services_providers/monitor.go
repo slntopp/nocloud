@@ -127,6 +127,31 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 					log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 				}
 			}(sp)
+
+			go func(sp *graph.ServicesProvider) {
+				igroups, err := s.ctrl.ListDeployments(ctx, sp, true)
+				if err != nil {
+					log.Error("Failed to get Services deployed to ServiceProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
+					return
+				}
+
+				log.Debug("Got InstancesGroups", zap.Int("length", len(igroups)))
+
+				client, ok := s.drivers[sp.GetType()]
+				if !ok {
+					log.Error("Driver is not registered", zap.String("sp", sp.GetUuid()), zap.String("type", sp.GetType()))
+					return
+				}
+
+				_, err = client.SuspendMonitoring(ctx, &driverpb.MonitoringRequest{
+					Groups:           igroups,
+					ServicesProvider: sp.ServicesProvider,
+					Scheduled:        true,
+				})
+				if err != nil {
+					log.Error("Error Suspend Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
+				}
+			}(sp)
 		}
 
 		s.monitoring.LastExec = tick.Format("2006-01-02T15:04:05Z07:00")

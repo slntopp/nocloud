@@ -30,6 +30,7 @@ type DriverServiceClient interface {
 	Up(ctx context.Context, in *UpRequest, opts ...grpc.CallOption) (*UpResponse, error)
 	Down(ctx context.Context, in *DownRequest, opts ...grpc.CallOption) (*DownResponse, error)
 	Monitoring(ctx context.Context, in *MonitoringRequest, opts ...grpc.CallOption) (*MonitoringResponse, error)
+	SuspendMonitoring(ctx context.Context, in *MonitoringRequest, opts ...grpc.CallOption) (*MonitoringResponse, error)
 	Invoke(ctx context.Context, in *InvokeRequest, opts ...grpc.CallOption) (*proto1.InvokeResponse, error)
 	SpInvoke(ctx context.Context, in *SpInvokeRequest, opts ...grpc.CallOption) (*proto.InvokeResponse, error)
 }
@@ -96,6 +97,15 @@ func (c *driverServiceClient) Monitoring(ctx context.Context, in *MonitoringRequ
 	return out, nil
 }
 
+func (c *driverServiceClient) SuspendMonitoring(ctx context.Context, in *MonitoringRequest, opts ...grpc.CallOption) (*MonitoringResponse, error) {
+	out := new(MonitoringResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/SuspendMonitoring", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *driverServiceClient) Invoke(ctx context.Context, in *InvokeRequest, opts ...grpc.CallOption) (*proto1.InvokeResponse, error) {
 	out := new(proto1.InvokeResponse)
 	err := c.cc.Invoke(ctx, "/nocloud.instance.driver.vanilla.DriverService/Invoke", in, out, opts...)
@@ -124,6 +134,7 @@ type DriverServiceServer interface {
 	Up(context.Context, *UpRequest) (*UpResponse, error)
 	Down(context.Context, *DownRequest) (*DownResponse, error)
 	Monitoring(context.Context, *MonitoringRequest) (*MonitoringResponse, error)
+	SuspendMonitoring(context.Context, *MonitoringRequest) (*MonitoringResponse, error)
 	Invoke(context.Context, *InvokeRequest) (*proto1.InvokeResponse, error)
 	SpInvoke(context.Context, *SpInvokeRequest) (*proto.InvokeResponse, error)
 	mustEmbedUnimplementedDriverServiceServer()
@@ -150,6 +161,9 @@ func (UnimplementedDriverServiceServer) Down(context.Context, *DownRequest) (*Do
 }
 func (UnimplementedDriverServiceServer) Monitoring(context.Context, *MonitoringRequest) (*MonitoringResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Monitoring not implemented")
+}
+func (UnimplementedDriverServiceServer) SuspendMonitoring(context.Context, *MonitoringRequest) (*MonitoringResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SuspendMonitoring not implemented")
 }
 func (UnimplementedDriverServiceServer) Invoke(context.Context, *InvokeRequest) (*proto1.InvokeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Invoke not implemented")
@@ -278,6 +292,24 @@ func _DriverService_Monitoring_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DriverService_SuspendMonitoring_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MonitoringRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServiceServer).SuspendMonitoring(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.instance.driver.vanilla.DriverService/SuspendMonitoring",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServiceServer).SuspendMonitoring(ctx, req.(*MonitoringRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DriverService_Invoke_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(InvokeRequest)
 	if err := dec(in); err != nil {
@@ -344,6 +376,10 @@ var DriverService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Monitoring",
 			Handler:    _DriverService_Monitoring_Handler,
+		},
+		{
+			MethodName: "SuspendMonitoring",
+			Handler:    _DriverService_SuspendMonitoring_Handler,
 		},
 		{
 			MethodName: "Invoke",
