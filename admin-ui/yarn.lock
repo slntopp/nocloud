@@ -5509,9 +5509,9 @@ vue-apexcharts@^1.6.2:
   version "1.6.2"
   resolved "https://registry.npmjs.org/vue-apexcharts/-/vue-apexcharts-1.6.2.tgz"
 
-vue-cli-plugin-vuetify@~2.5.4:
-  version "2.5.4"
-  resolved "https://registry.yarnpkg.com/vue-cli-plugin-vuetify/-/vue-cli-plugin-vuetify-2.5.4.tgz#ef9ebe2d1f95afc0cb2bd2ae8acff9913907ec95"
+vue-cli-plugin-vuetify@~2.5.5:
+  version "2.5.5"
+  resolved "https://registry.yarnpkg.com/vue-cli-plugin-vuetify/-/vue-cli-plugin-vuetify-2.5.5.tgz#30e0b4807451e800a94fb3222a401061de910b16"
   dependencies:
     null-loader "^4.0.1"
     semver "^7.1.2"
