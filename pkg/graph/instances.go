@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -248,4 +248,12 @@ func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid
 	}
 
 	return nil
+}
+
+func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instance, status pb.InstanceStatus) (err error) {
+	mask := &pb.Instance{
+		Status: status,
+	}
+	_, err = ctrl.col.UpdateDocument(ctx, inst.Uuid, mask)
+	return err
 }

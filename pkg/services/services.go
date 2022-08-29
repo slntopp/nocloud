@@ -452,13 +452,20 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 	}
 
 	for _, group := range service.GetInstancesGroups() {
-		if err := s.ctrl.IGController().SetStatus(ctx, group, proto.InstanceStatus_SUS); err != nil {
+		groupController := s.ctrl.IGController()
+		instancesController := groupController.Instances()
+
+		if err := groupController.SetStatus(ctx, group, proto.InstanceStatus_SUS); err != nil {
 			return nil, err
+		}
+		for _, inst := range group.GetInstances() {
+			if err := instancesController.SetStatus(ctx, inst, proto.InstanceStatus_SUS); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_SUS)
-	if err != nil {
+	if err := s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_SUS); err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
@@ -483,13 +490,19 @@ func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendReq
 	}
 
 	for _, group := range service.GetInstancesGroups() {
-		if err := s.ctrl.IGController().SetStatus(ctx, group, proto.InstanceStatus_UP); err != nil {
+		groupController := s.ctrl.IGController()
+		instancesController := groupController.Instances()
+		if err := groupController.SetStatus(ctx, group, proto.InstanceStatus_UP); err != nil {
 			return nil, err
+		}
+		for _, inst := range group.GetInstances() {
+			if err := instancesController.SetStatus(ctx, inst, proto.InstanceStatus_UP); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_UP)
-	if err != nil {
+	if err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_UP); err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
