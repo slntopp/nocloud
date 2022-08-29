@@ -325,6 +325,10 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
 
+	if service.GetStatus() == pb.ServiceStatus_SUS {
+		return nil, status.Error(codes.PermissionDenied, "Can't update suspended service")
+	}
+
 	err = s.ctrl.Update(ctx, service, true)
 	if err != nil {
 		log.Error("Error while updating service", zap.Error(err))
@@ -353,6 +357,10 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 
 	if service.AccessLevel == nil || *service.AccessLevel < access.MGMT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
+	}
+
+	if service.GetStatus() == pb.ServiceStatus_SUS {
+		return nil, status.Error(codes.PermissionDenied, "Can't deploy suspended service")
 	}
 
 	contexts := make(map[string]*InstancesGroupDriverContext)
@@ -524,6 +532,10 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 
 	if service.AccessLevel == nil || *service.AccessLevel < access.MGMT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
+	}
+
+	if service.GetStatus() == pb.ServiceStatus_SUS {
+		return nil, status.Error(codes.PermissionDenied, "Can't undeploy suspended service")
 	}
 
 	contexts := make(map[string]*InstancesGroupDriverContext)
