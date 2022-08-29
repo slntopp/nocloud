@@ -96,13 +96,13 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if instance.GetStatus() == pb.InstanceStatus_SUS {
-		log.Error("Access denied for suspended machine", zap.String("uuid", instance.GetUuid()))
+	if instance.AccessLevel == nil || *instance.AccessLevel < access.MGMT {
+		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	if instance.AccessLevel == nil || *instance.AccessLevel < access.MGMT {
-		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
+	if instance.GetStatus() == pb.InstanceStatus_SUS {
+		log.Error("Access denied for suspended machine", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
