@@ -102,7 +102,7 @@ func validateToken(tokenString string) (jwt.MapClaims, error) {
 	}
 
 	if !token.Valid {
-		return nil, errors.New("Invalid token")
+		return nil, errors.New("invalid token")
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
