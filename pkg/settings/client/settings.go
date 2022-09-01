@@ -68,6 +68,6 @@ set_default:
 		}
 	}
 
-	_conf = &_default.Value
+	*_conf = (*_default).Value
 	return nil
 }
