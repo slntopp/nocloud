@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -75,7 +75,7 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 	}
 
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(req.GetKey()))
-	r := s.rdb.HSet(ctx, key, "value", req.GetValue(), 
+	r := s.rdb.HSet(ctx, key, "value", req.GetValue(),
 		"desc", req.GetDescription(), "pub", req.GetPublic())
 	_, err := r.Result()
 	if err != nil {
@@ -93,13 +93,13 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 		s.log.Error("Error getting keys from Redis", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error getting keys from Redis")
 	}
-	
+
 	result := make([]*pb.KeysResponse_Key, len(keys))
 	for i, key := range keys {
 		r := s.rdb.HGetAll(ctx, key)
 		data, err := r.Result()
 
-		key = strings.Replace(key, KEYS_PREFIX + ":", "", 1)
+		key = strings.Replace(key, KEYS_PREFIX+":", "", 1)
 		key = strcase.KebabCase(key)
 
 		if err != nil {
@@ -107,9 +107,9 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 			continue
 		}
 		result[i] = &pb.KeysResponse_Key{
-			Key: key,
+			Key:         key,
 			Description: data["desc"],
-			Public: data["pub"] == "1",
+			Public:      data["pub"] == "1",
 		}
 	}
 
@@ -118,12 +118,12 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 
 func (s *SettingsServiceServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(req.GetKey()))
-	
+
 	_, err := s.rdb.Del(ctx, key).Result()
 	if err != nil {
 		s.log.Error("Error deleting key from Redis", zap.String("key", key), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error deleting key from Redis")
 	}
 
-	return &pb.DeleteResponse{ Key: req.GetKey() }, nil
+	return &pb.DeleteResponse{Key: req.GetKey()}, nil
 }

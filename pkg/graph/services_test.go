@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	log *zap.Logger
-	db driver.Database
+	log  *zap.Logger
+	db   driver.Database
 	ctrl graph.ServicesController
 )
 
@@ -39,10 +39,10 @@ func init() {
 func TestCreate(t *testing.T) {
 	service := &pb.Service{
 		Version: "1",
-		Title: randomdata.SillyName(),
+		Title:   randomdata.SillyName(),
 		InstancesGroups: []*ipb.InstancesGroup{
 			{
-				Type: "ione",
+				Type:  "ione",
 				Title: randomdata.SillyName(),
 				Instances: []*ipb.Instance{
 					{
@@ -55,7 +55,7 @@ func TestCreate(t *testing.T) {
 			},
 		},
 	}
-	
+
 	srv, err := ctrl.Create(context.Background(), service)
 	if err != nil {
 		t.Fatalf("Error creating service: %v", err)

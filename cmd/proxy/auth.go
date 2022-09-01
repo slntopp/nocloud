@@ -12,6 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type ContextKey string
+
 func AuthMiddleware(next http.Handler) http.Handler {
 	log.Info("Using Auth Middleware")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -53,7 +55,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "bearer", bearer)
+		ctx := context.WithValue(r.Context(), ContextKey("bearer"), bearer)
 		r.Header.Set("Sec-WebSocket-Protocol", strings.Join(headers[1:], ", "))
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

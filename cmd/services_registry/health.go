@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,7 +31,7 @@ type HealthServer struct {
 	srv *services.ServicesServer
 }
 
-func NewHealthServer(log *zap.Logger, srv *services.ServicesServer) (*HealthServer) {
+func NewHealthServer(log *zap.Logger, srv *services.ServicesServer) *HealthServer {
 	return &HealthServer{
 		log: log, srv: srv,
 	}
@@ -40,7 +40,7 @@ func NewHealthServer(log *zap.Logger, srv *services.ServicesServer) (*HealthServ
 func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.ServingStatus, error) {
 	return &pb.ServingStatus{
 		Service: SERVICE,
-		Status: pb.Status_SERVING,
+		Status:  pb.Status_SERVING,
 	}, nil
 }
 

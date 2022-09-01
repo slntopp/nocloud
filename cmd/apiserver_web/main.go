@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -39,6 +39,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/gabriel-vasile/mimetype"
 )
@@ -46,10 +47,10 @@ import (
 var (
 	log *zap.Logger
 
-	apiserver   string
-	corsAllowed []string
-	insecure    bool
-	with_block  bool
+	apiserver        string
+	corsAllowed      []string
+	insecure_enabled bool
+	with_block       bool
 )
 
 func init() {
@@ -63,7 +64,7 @@ func init() {
 
 	apiserver = viper.GetString("APISERVER_HOST")
 	corsAllowed = strings.Split(viper.GetString("CORS_ALLOWED"), ",")
-	insecure = viper.GetBool("INSECURE")
+	insecure_enabled = viper.GetBool("INSECURE")
 	with_block = viper.GetBool("WITH_BLOCK")
 }
 
@@ -113,8 +114,8 @@ func main() {
 
 	gwmux := runtime.NewServeMux()
 	opts := []grpc.DialOption{}
-	if insecure {
-		opts = append(opts, grpc.WithInsecure())
+	if insecure_enabled {
+		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	} else {
 		creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
 		opts = append(opts, grpc.WithTransportCredentials(creds))

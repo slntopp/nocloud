@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,8 +22,7 @@ import (
 	"go.uber.org/zap"
 )
 
-
-func GraphGetEnsure(log *zap.Logger, ctx context.Context, db driver.Database, name string) (driver.Graph) {
+func GraphGetEnsure(log *zap.Logger, ctx context.Context, db driver.Database, name string) driver.Graph {
 	exists, err := db.GraphExists(ctx, name)
 	if err != nil {
 		log.Fatal("Error checking graph existence", zap.Error(err))
@@ -65,7 +64,7 @@ func GraphGetVertexEnsure(log *zap.Logger, ctx context.Context, db driver.Databa
 	return col
 }
 
-func GraphGetEdgeEnsure(log *zap.Logger, ctx context.Context, graph driver.Graph, name, from, to string) (driver.Collection) {
+func GraphGetEdgeEnsure(log *zap.Logger, ctx context.Context, graph driver.Graph, name, from, to string) driver.Collection {
 	exists, err := graph.EdgeCollectionExists(ctx, name)
 	if err != nil {
 		log.Fatal("Error checking if edge collection exists", zap.Error(err))
@@ -91,7 +90,7 @@ func GraphGetEdgeEnsure(log *zap.Logger, ctx context.Context, graph driver.Graph
 	return col
 }
 
-func GetEnsureCollection(log *zap.Logger, ctx context.Context, db driver.Database, name string) (driver.Collection) {
+func GetEnsureCollection(log *zap.Logger, ctx context.Context, db driver.Database, name string) driver.Collection {
 	exists, err := db.CollectionExists(ctx, name)
 	if err != nil {
 		log.Fatal("Error checking if collection exists", zap.Error(err))

@@ -12,8 +12,8 @@ import (
 	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
 )
 
-//Delete unmarked fields from messages.
-//Structs is a implementation protobuf Messages in Go, and protoreflect like Go-reflect
+// Delete unmarked fields from messages.
+// Structs is a implementation protobuf Messages in Go, and protoreflect like Go-reflect
 func redact(msg protoreflect.Message) (save4hash bool) {
 	save4hash = false
 	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
@@ -22,7 +22,7 @@ func redact(msg protoreflect.Message) (save4hash bool) {
 			return false
 		}
 
-		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Hashed).(bool)  {
+		if proto.GetExtension(fd.Options().(*descriptorpb.FieldOptions), pb.E_Hashed).(bool) {
 			save4hash = true
 			return true
 		}
@@ -86,7 +86,7 @@ func getHash(msg protoreflect.Message) (string, error) {
 	return hex.EncodeToString(byteSl[:]), nil
 }
 
-//Setting hash values in hash fields
+// Setting hash values in hash fields
 func SetHash(msg protoreflect.Message) (err_sh error) {
 	err_sh = nil
 

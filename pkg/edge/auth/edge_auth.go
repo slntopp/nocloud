@@ -32,8 +32,8 @@ import (
 )
 
 var (
-	log *zap.Logger
-	SIGNING_KEY		[]byte
+	log         *zap.Logger
+	SIGNING_KEY []byte
 )
 
 func SetContext(logger *zap.Logger, key []byte) {
@@ -90,7 +90,7 @@ func validateToken(tokenString string) (jwt.MapClaims, error) {
 		}
 		return SIGNING_KEY, nil
 	})
-	
+
 	if err != nil {
 		return nil, err
 	}

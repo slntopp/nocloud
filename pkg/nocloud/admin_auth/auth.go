@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,8 +31,8 @@ import (
 )
 
 var (
-	log *zap.Logger
-	SIGNING_KEY		[]byte
+	log         *zap.Logger
+	SIGNING_KEY []byte
 )
 
 func SetContext(logger *zap.Logger, key []byte) {
@@ -84,7 +84,7 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	ctx = context.WithValue(ctx, nocloud.NoCloudRootAccess, lvl)
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudToken, tokenString)
-	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer " + tokenString)
+	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer "+tokenString)
 
 	return ctx, nil
 }
@@ -96,13 +96,13 @@ func validateToken(tokenString string) (jwt.MapClaims, error) {
 		}
 		return SIGNING_KEY, nil
 	})
-	
+
 	if err != nil {
 		return nil, err
 	}
 
 	if !token.Valid {
-		return nil, errors.New("Invalid token")
+		return nil, errors.New("invalid token")
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {

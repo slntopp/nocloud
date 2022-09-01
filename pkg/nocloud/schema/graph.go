@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -100,14 +100,16 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 	}
 	log.Debug("DataBase", zap.Bool("Exists", dbExists))
 
-	var db driver.Database
 	if !dbExists {
-		db, err = c.CreateDatabase(context.TODO(), DB_NAME, nil)
+		_, err = c.CreateDatabase(context.TODO(), DB_NAME, nil)
 		if err != nil {
 			log.Fatal("Error creating DataBase", zap.Error(err))
 		}
 	}
-	db, err = c.Database(context.TODO(), DB_NAME)
+	db, err := c.Database(context.TODO(), DB_NAME)
+	if err != nil {
+		log.Fatal("Error getting Database", zap.Error(err))
+	}
 
 	CheckAndRegisterCollections(log, db, COLLECTIONS)
 

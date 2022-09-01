@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -33,8 +33,8 @@ import (
 
 type NamespacesServiceServer struct {
 	pb.UnimplementedNamespacesServiceServer
-	db driver.Database
-	ctrl graph.NamespacesController
+	db       driver.Database
+	ctrl     graph.NamespacesController
 	acc_ctrl graph.AccountsController
 
 	log *zap.Logger
@@ -59,10 +59,10 @@ func (s *NamespacesServiceServer) Create(ctx context.Context, request *namespace
 	ns, err := s.ctrl.Create(ctx, request.Title)
 	if err != nil {
 		s.log.Debug("Error creating namespace", zap.Error(err))
-		return  &namespacespb.CreateResponse{}, status.Error(codes.Internal, "Can't create Namespace")
+		return &namespacespb.CreateResponse{}, status.Error(codes.Internal, "Can't create Namespace")
 	}
 
-	return &namespacespb.CreateResponse{ Uuid: ns.Key }, nil
+	return &namespacespb.CreateResponse{Uuid: ns.Key}, nil
 }
 
 func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacespb.ListRequest) (*namespacespb.ListResponse, error) {
@@ -89,7 +89,7 @@ func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacesp
 
 	result := make([]*namespacespb.Namespace, len(pool))
 	for i, ns := range pool {
-		result[i] = &namespacespb.Namespace{Uuid: ns.Key, Title:  ns.Title }
+		result[i] = &namespacespb.Namespace{Uuid: ns.Key, Title: ns.Title}
 	}
 	log.Debug("Convert result", zap.Any("pool", result))
 

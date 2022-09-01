@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -45,10 +45,10 @@ func NewDNSServer(log *zap.Logger, rdb *redis.Client) *DNSServer {
 
 func (s *DNSServer) Get(ctx context.Context, req *pb.Zone) (*pb.Zone, error) {
 	domain := req.GetName()
-	r := s.rdb.HGetAll(ctx, KEYS_PREFIX + ":" + domain)
+	r := s.rdb.HGetAll(ctx, KEYS_PREFIX+":"+domain)
 	records, err := r.Result()
 	if err != nil {
-		s.log.Error("Error getting records from Redis", zap.String("zone", KEYS_PREFIX + ":" + req.GetName()), zap.Error(err))
+		s.log.Error("Error getting records from Redis", zap.String("zone", KEYS_PREFIX+":"+req.GetName()), zap.Error(err))
 		return nil, status.Error(codes.InvalidArgument, "Error getting records from Redis")
 	}
 	locations := make(map[string]*pb.Record)
@@ -66,7 +66,7 @@ func (s *DNSServer) Get(ctx context.Context, req *pb.Zone) (*pb.Zone, error) {
 }
 
 func (s *DNSServer) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
-	r := s.rdb.Keys(ctx, KEYS_PREFIX + ":*")
+	r := s.rdb.Keys(ctx, KEYS_PREFIX+":*")
 	keys, err := r.Result()
 	if err != nil {
 		s.log.Error("Error getting keys from Redis", zap.Error(err))
@@ -95,10 +95,10 @@ func (s *DNSServer) Put(ctx context.Context, req *pb.Zone) (*pb.Result, error) {
 		data[key] = r
 		s.log.Debug("record result", zap.ByteString("string", r))
 	}
-	r := s.rdb.HSet(ctx, KEYS_PREFIX + ":" + req.GetName(), data)
+	r := s.rdb.HSet(ctx, KEYS_PREFIX+":"+req.GetName(), data)
 	upd, err := r.Result()
 	if err != nil {
-		s.log.Error("Error putting hash to Redis", zap.String("zone", KEYS_PREFIX + ":" + req.GetName()), zap.Error(err))
+		s.log.Error("Error putting hash to Redis", zap.String("zone", KEYS_PREFIX+":"+req.GetName()), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error putting hash to Redis")
 	}
 	return &pb.Result{Result: upd}, nil
@@ -110,10 +110,10 @@ func (s *DNSServer) Delete(ctx context.Context, req *pb.Zone) (*pb.Result, error
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
 	}
 
-	r := s.rdb.Del(ctx, KEYS_PREFIX + ":" + req.GetName())
+	r := s.rdb.Del(ctx, KEYS_PREFIX+":"+req.GetName())
 	res, err := r.Result()
 	if err != nil {
-		s.log.Error("Error deleting zone in Redis", zap.String("zone", KEYS_PREFIX + ":" + req.GetName()), zap.Error(err))
+		s.log.Error("Error deleting zone in Redis", zap.String("zone", KEYS_PREFIX+":"+req.GetName()), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error deleting zone in Redis")
 	}
 	return &pb.Result{Result: res}, nil

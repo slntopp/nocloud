@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -18,7 +18,7 @@ package credentials
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -30,6 +30,7 @@ import (
 	pb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 var settingsClient pb.SettingsServiceClient
@@ -97,7 +98,12 @@ func (c *WHMCSCredentials) Authorize(args ...string) bool {
 	}
 
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		c.log.Error("Error reading Response Body", zap.Error(err))
+		return false
+	}
 	for _, el := range strings.Split(string(body), ";") {
 		data := strings.Split(el, "=")
 		if data[0] == "result" {
@@ -134,7 +140,7 @@ func init() {
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	host := viper.GetString("SETTINGS_HOST")
 
-	conn, err := grpc.Dial(host, grpc.WithInsecure())
+	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)
 	}

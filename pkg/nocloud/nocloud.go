@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -28,8 +28,9 @@ const NOCLOUD_ROOT_CLAIM = "root"
 const NOCLOUD_SP_CLAIM = "sp"
 const NOCLOUD_INSTANCE_CLAIM = "instance"
 
-type ContextKey string;
-const NoCloudAccount = ContextKey("account");
+type ContextKey string
+
+const NoCloudAccount = ContextKey("account")
 const NoCloudRootAccess = ContextKey("root_access")
 const NoCloudSp = ContextKey("sp")
 const NoCloudInstance = ContextKey("instance")

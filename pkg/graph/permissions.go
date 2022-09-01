@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -23,16 +23,16 @@ import (
 )
 
 type Access struct {
-	From driver.DocumentID `json:"_from"`
-	To driver.DocumentID `json:"_to"`
-	Level int32 `json:"level"`
-	Role string `json:"role"`
+	From  driver.DocumentID `json:"_from"`
+	To    driver.DocumentID `json:"_to"`
+	Level int32             `json:"level"`
+	Role  string            `json:"role"`
 
 	driver.DocumentMeta
 }
 
 // account - Account Key, node - DocumentID
-func HasAccess(ctx context.Context, db driver.Database, account string, node string, level int32) (bool) {
+func HasAccess(ctx context.Context, db driver.Database, account string, node string, level int32) bool {
 	if (schema.ACCOUNTS_COL + "/" + account) == node {
 		return true
 	}
@@ -44,8 +44,8 @@ func HasAccess(ctx context.Context, db driver.Database, account string, node str
 func AccessLevel(ctx context.Context, db driver.Database, account string, node string) (bool, int32) {
 	query := `FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node GRAPH @permissions RETURN path.edges[0].level`
 	c, err := db.Query(ctx, query, map[string]interface{}{
-		"account": schema.ACCOUNTS_COL + "/" + account,
-		"node": node,
+		"account":     schema.ACCOUNTS_COL + "/" + account,
+		"node":        node,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	})
 	if err != nil {

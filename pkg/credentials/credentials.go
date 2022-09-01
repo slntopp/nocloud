@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -68,21 +68,21 @@ func Find(ctx context.Context, db driver.Database, log *zap.Logger, auth_type st
 	case "whmcs":
 		cred = &WHMCSCredentials{Email: args[0]}
 	default:
-		return nil, errors.New("Unknown auth type")
+		return nil, errors.New("unknown auth type")
 	}
 
 	cred.SetLogger(log)
 
 	ok = cred.Find(ctx, db)
 	if !ok {
-		return nil, errors.New("Couldn't find credentials")
+		return nil, errors.New("couldn't find credentials")
 	}
 
 	if cred.Authorize(args...) {
 		return cred, nil
 	}
 
-	return nil, errors.New("Couldn't authorize")
+	return nil, errors.New("couldn't authorize")
 }
 
 func MakeCredentials(credentials *accountspb.Credentials, log *zap.Logger) (Credentials, error) {
@@ -94,7 +94,7 @@ func MakeCredentials(credentials *accountspb.Credentials, log *zap.Logger) (Cred
 	case "whmcs":
 		cred, err = NewWHMCSCredentials(credentials.Data[0])
 	default:
-		return nil, errors.New("Auth type is wrong")
+		return nil, errors.New("auth type is wrong")
 	}
 
 	cred.SetLogger(log)
