@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -207,10 +207,11 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 
 // Update Account
 // Supports updating Title and Data
-// 		Updating Data rules:
-//			1. If Data is nil - it'll be skipped
-//			2. If Data is not nil but has no keys - it'll be wiped
-//			3. If value of one of the Data keys is nil - it'll be deleted from Data
+//
+//	Updating Data rules:
+//		1. If Data is nil - it'll be skipped
+//		2. If Data is not nil but has no keys - it'll be wiped
+//		3. If value of one of the Data keys is nil - it'll be deleted from Data
 func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.Account) (*accountspb.UpdateResponse, error) {
 	log := s.log.Named("UpdateAccount")
 	log.Debug("Update request received", zap.Any("request", request), zap.Any("context", ctx))

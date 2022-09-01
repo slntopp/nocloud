@@ -20,9 +20,9 @@ func Setup(logger *zap.Logger, _ctx context.Context, c *pb.SettingsServiceClient
 }
 
 type Setting[T any] struct {
-	Value T
+	Value       T
 	Description string
-	Public bool
+	Public      bool
 }
 
 func Fetch[T any](key string, _conf *T, _default *Setting[T]) error {
@@ -30,7 +30,7 @@ func Fetch[T any](key string, _conf *T, _default *Setting[T]) error {
 		return errors.New("error: Settings Client unset")
 	}
 	c := *client
-	
+
 	r, err := c.Get(ctx, &pb.GetRequest{Keys: []string{key}})
 	if err != nil {
 		log.Warn("Failed to Get setting", zap.Error(err))
@@ -49,7 +49,7 @@ func Fetch[T any](key string, _conf *T, _default *Setting[T]) error {
 	}
 	return nil
 
-	set_default:
+set_default:
 	log.Info("Setting default conf")
 	if _default == nil {
 		log.Error("No default conf")
@@ -58,10 +58,10 @@ func Fetch[T any](key string, _conf *T, _default *Setting[T]) error {
 	payload, err := json.Marshal(_default.Value)
 	if err == nil {
 		_, err := c.Put(ctx, &pb.PutRequest{
-			Key: key,
-			Value: string(payload),
+			Key:         key,
+			Value:       string(payload),
 			Description: &_default.Description,
-			Public: &_default.Public,
+			Public:      &_default.Public,
 		})
 		if err != nil {
 			log.Error("Error Putting Monitoring Configuration", zap.Error(err))

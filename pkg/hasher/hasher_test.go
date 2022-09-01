@@ -48,7 +48,7 @@ func initMessage() *services.Service {
 		Resources: svm0,
 		BillingPlan: &billing.Plan{
 			Title: randomdata.SillyName(),
-			Type: "whatever",
+			Type:  "whatever",
 			Resources: []*billing.ResourceConf{
 				{
 					On: []states.NoCloudState{
@@ -111,7 +111,7 @@ func TestRedact(t *testing.T) {
 // Must be empty hash, enum shouldn't cause panic
 func TestRedactWithBP(t *testing.T) {
 	i := instances.Instance{
-		Title: randomdata.SillyName(),
+		Title:  randomdata.SillyName(),
 		Config: map[string]*structpb.Value{},
 	}
 
@@ -122,7 +122,7 @@ func TestRedactWithBP(t *testing.T) {
 
 	i.BillingPlan = &billing.Plan{
 		Title: randomdata.SillyName(),
-		Type: "whatever",
+		Type:  "whatever",
 		Resources: []*billing.ResourceConf{
 			{
 				On: []states.NoCloudState{

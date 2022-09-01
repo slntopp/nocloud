@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -44,7 +44,7 @@ func MakeDBConnection(log *zap.Logger, host, cred string) (db driver.Database) {
 	log.Debug("Instantiated DB client", zap.Any("client", c))
 
 	db_connect_attempts := 0
-	db_connect:
+db_connect:
 	log.Info("Trying to connect to DB")
 	db, err = c.Database(context.TODO(), schema.DB_NAME)
 	if e, isArangoError := driver.AsArangoError(err); isArangoError && e.ErrorMessage == "database not found" {
@@ -57,8 +57,8 @@ func MakeDBConnection(log *zap.Logger, host, cred string) (db driver.Database) {
 		goto db_connect
 	} else if err != nil {
 		db_connect_attempts++
-		log.Error("Failed to connect DB", zap.Error(err), zap.Int("attempts", db_connect_attempts), zap.Int("next_attempt", db_connect_attempts * 5))
-		time.Sleep(time.Duration(db_connect_attempts * 5) * time.Second)
+		log.Error("Failed to connect DB", zap.Error(err), zap.Int("attempts", db_connect_attempts), zap.Int("next_attempt", db_connect_attempts*5))
+		time.Sleep(time.Duration(db_connect_attempts*5) * time.Second)
 		goto db_connect
 	}
 

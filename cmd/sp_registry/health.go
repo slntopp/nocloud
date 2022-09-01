@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,7 +31,7 @@ type HealthServer struct {
 	srv *services_providers.ServicesProviderServer
 }
 
-func NewHealthServer(log *zap.Logger, srv *services_providers.ServicesProviderServer) (*HealthServer) {
+func NewHealthServer(log *zap.Logger, srv *services_providers.ServicesProviderServer) *HealthServer {
 	return &HealthServer{
 		log: log, srv: srv,
 	}
@@ -40,17 +40,17 @@ func NewHealthServer(log *zap.Logger, srv *services_providers.ServicesProviderSe
 func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.ServingStatus, error) {
 	return &pb.ServingStatus{
 		Service: SERVICE,
-		Status: pb.Status_SERVING,
+		Status:  pb.Status_SERVING,
 	}, nil
 }
 
 func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutinesStatus, error) {
 	state := s.srv.MonitoringRoutineState()
-	status := &pb.RoutineStatus {
+	status := &pb.RoutineStatus{
 		Routine: state.Name,
 		Status: &pb.ServingStatus{
 			Service: SERVICE,
-			Status: pb.Status_STOPPED,
+			Status:  pb.Status_STOPPED,
 		},
 		LastExecution: state.LastExec,
 	}
@@ -58,7 +58,7 @@ func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.Routi
 		status.Status.Status = pb.Status_RUNNING
 	}
 
-	return &pb.RoutinesStatus {
+	return &pb.RoutinesStatus{
 		Routines: []*pb.RoutineStatus{status},
 	}, nil
 }
