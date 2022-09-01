@@ -8,7 +8,7 @@ RUN upx ./billing
 FROM scratch
 WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud/billing /billing
-
+USER nocloud
 EXPOSE 8000
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
 LABEL nocloud.update "true"

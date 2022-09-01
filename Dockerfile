@@ -11,6 +11,8 @@ RUN go mod download
 COPY pkg pkg
 COPY cmd cmd
 
+USER nocloud
+HEALTHCHECK NONE
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
 LABEL nocloud.update "true"
 

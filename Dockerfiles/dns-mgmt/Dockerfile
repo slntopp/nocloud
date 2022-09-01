@@ -8,7 +8,7 @@ RUN upx ./dns_mgmt
 FROM scratch
 WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud/dns_mgmt /dns_mgmt
-
+USER nocloud
 EXPOSE 8000
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
 LABEL nocloud.update "true"
