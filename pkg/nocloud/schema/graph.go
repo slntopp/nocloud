@@ -100,14 +100,16 @@ func InitDB(log *zap.Logger, dbHost, dbCred, rootPass string) {
 	}
 	log.Debug("DataBase", zap.Bool("Exists", dbExists))
 
-	var db driver.Database
 	if !dbExists {
-		db, err = c.CreateDatabase(context.TODO(), DB_NAME, nil)
+		_, err = c.CreateDatabase(context.TODO(), DB_NAME, nil)
 		if err != nil {
 			log.Fatal("Error creating DataBase", zap.Error(err))
 		}
 	}
-	db, err = c.Database(context.TODO(), DB_NAME)
+	db, err := c.Database(context.TODO(), DB_NAME)
+	if err != nil {
+		log.Fatal("Error getting Database", zap.Error(err))
+	}
 
 	CheckAndRegisterCollections(log, db, COLLECTIONS)
 
