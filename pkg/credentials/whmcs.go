@@ -18,7 +18,7 @@ package credentials
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"strings"
@@ -98,7 +98,12 @@ func (c *WHMCSCredentials) Authorize(args ...string) bool {
 	}
 
 	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		c.log.Error("Error reading Response Body", zap.Error(err))
+		return false
+	}
 	for _, el := range strings.Split(string(body), ";") {
 		data := strings.Split(el, "=")
 		if data[0] == "result" {
