@@ -5,9 +5,12 @@ FROM ghcr.io/slntopp/nocloud/base:${IMAGE_TAG} as builder
 RUN CGO_ENABLED=0 GOARCH=${ARCH} go build -ldflags="-s -w" -buildvcs=false ./cmd/services_registry
 RUN upx ./services_registry
 
+RUN adduser -SD nocloud
+
 FROM scratch
 WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud/services_registry /services_registry
+COPY --from=builder /etc/passwd /etc/passwd
 USER nocloud
 EXPOSE 8000
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
