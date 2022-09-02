@@ -54,7 +54,7 @@ services:
       - traefik.enable=true
       - traefik.http.routers.iproxy.entrypoints=http
       - traefik.http.routers.iproxy.rule=HostRegexp(`{sp:[a-z0-9\-]+}.proxy.${BASE_DOMAIN}`)
-      - traefik.http.services.iproxy.loadbalancer.server.port=8000
+      - traefik.http.services.iproxy.loadbalancer.server.port=8080
     environment:
       LOG_LEVEL: -1
       SIGNING_KEY: "${SIGNING_KEY}"
