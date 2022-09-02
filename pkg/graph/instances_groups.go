@@ -37,6 +37,9 @@ type InstancesGroupsController struct {
 	inst_ctrl *InstancesController
 
 	log *zap.Logger
+
+	serv2ig driver.Collection
+	ig2sp   driver.Collection
 }
 
 func NewInstancesGroupsController(log *zap.Logger, db driver.Database) *InstancesGroupsController {
@@ -47,16 +50,19 @@ func NewInstancesGroupsController(log *zap.Logger, db driver.Database) *Instance
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.INSTANCES_GROUPS_COL)
 
+	/* #nosec */
 	col.EnsurePersistentIndex(ctx, []string{"type"}, &driver.EnsurePersistentIndexOptions{
 		Unique: false, Sparse: true, InBackground: true, Name: "sp-type",
 	})
 
-	GraphGetEdgeEnsure(log, ctx, graph, schema.SERV2IG, schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL)
-	GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
+	serv2ig := GraphGetEdgeEnsure(log, ctx, graph, schema.SERV2IG, schema.SERVICES_COL, schema.INSTANCES_GROUPS_COL)
+	ig2sp := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
 
 	return &InstancesGroupsController{
 		log: log.Named("InstancesGroupsController"), inst_ctrl: NewInstancesController(log, db),
 		col: col, graph: graph,
+		serv2ig: serv2ig,
+		ig2sp:   ig2sp,
 	}
 }
 
@@ -84,19 +90,14 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	}
 	g.Uuid = meta.Key
 
-	edge, _, err := ctrl.graph.EdgeCollection(ctx, schema.SERV2IG)
-	if err != nil {
-		log.Error("Failed to get edge collection", zap.Error(err))
-		ctrl.col.RemoveDocument(ctx, meta.Key)
-		return err
-	}
-
-	_, err = edge.CreateDocument(ctx, Access{
+	_, err = ctrl.serv2ig.CreateDocument(ctx, Access{
 		From: service, To: meta.ID,
 	})
 	if err != nil {
 		log.Error("Failed to create Edge", zap.Error(err))
-		ctrl.col.RemoveDocument(ctx, meta.Key)
+		if _, err = ctrl.col.RemoveDocument(ctx, meta.Key); err != nil {
+			log.Warn("Failed to cleanup", zap.String("uuid", meta.Key), zap.Error(err))
+		}
 		return err
 	}
 
@@ -216,13 +217,7 @@ func (ctrl *InstancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 	return nil
 }
 func (ctrl *InstancesGroupsController) Provide(ctx context.Context, group, sp string) error {
-	edge, _, err := ctrl.graph.EdgeCollection(ctx, schema.IG2SP)
-	if err != nil {
-		ctrl.log.Error("Failed to get edge collection", zap.Error(err))
-		return err
-	}
-
-	_, err = edge.CreateDocument(ctx, Access{
+	_, err := ctrl.ig2sp.CreateDocument(ctx, Access{
 		From: driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group),
 		To:   driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp),
 	})
