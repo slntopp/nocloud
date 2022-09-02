@@ -169,9 +169,12 @@ func main() {
 		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
 	}
 
-	gwmux.HandlePath("GET", "/admin", staticHandler)
-	gwmux.HandlePath("GET", "/admin/{path}", staticHandler)
-	gwmux.HandlePath("GET", "/admin/{path}/{file}", staticHandler)
+	for _, p := range []string{"/admin", "/admin/{path}", "/admin/{path}/{file}"} {
+		err = gwmux.HandlePath("GET", p, staticHandler)
+		if err != nil {
+			log.Fatal("Failed to register custom static handler", zap.String("path", p), zap.Error(err))
+		}
+	}
 
 	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
 	handler := cors.New(cors.Options{
