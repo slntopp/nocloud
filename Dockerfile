@@ -1,3 +1,5 @@
+ARG ARCH=amd64
+
 FROM golang:1.19-alpine AS builder
 
 RUN apk add upx
@@ -11,6 +13,11 @@ RUN go mod download
 COPY pkg pkg
 COPY cmd cmd
 
+RUN CGO_ENABLED=0 GOARCH=${ARCH} go build -ldflags="-s -w" -buildvcs=false ./cmd/docker_health_check
+RUN upx ./docker_health_check
+RUN mv ./docker_health_check /docker_health_check
+
+HEALTHCHECK NONE
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
 LABEL nocloud.update "true"
 

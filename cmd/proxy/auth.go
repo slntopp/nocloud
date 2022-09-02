@@ -44,14 +44,18 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		if claims, ok = token.Claims.(jwt.MapClaims); !ok {
 			log.Warn("Error converting Claims", zap.Any("claims", token.Claims))
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Error converting claims"))
+			if _, err = w.Write([]byte("Error converting claims")); err != nil {
+				log.Warn("Couldn't Write response bytes", zap.Error(err))
+			}
 			return
 		}
 
 		if _, ok := claims[nocloud.NOCLOUD_ACCOUNT_CLAIM]; !ok {
 			log.Warn("Error reading Claims", zap.Any("claims", claims))
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("Claims don't contain Account UUID"))
+			if _, err = w.Write([]byte("Claims don't contain Account UUID")); err != nil {
+				log.Warn("Couldn't Write response bytes", zap.Error(err))
+			}
 			return
 		}
 

@@ -41,6 +41,8 @@ type InstancesController struct {
 	log *zap.Logger
 
 	db driver.Database
+
+	ig2inst driver.Collection
 }
 
 func NewInstancesController(log *zap.Logger, db driver.Database) *InstancesController {
@@ -48,9 +50,9 @@ func NewInstancesController(log *zap.Logger, db driver.Database) *InstancesContr
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.INSTANCES_COL)
-	GraphGetEdgeEnsure(log, ctx, graph, schema.IG2INST, schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL)
+	ig2inst := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2INST, schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL)
 
-	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db}
+	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst}
 }
 
 func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) error {
@@ -77,21 +79,15 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	}
 	i.Uuid = meta.Key
 
-	// Attempt get edge collection
-	edge, _, err := ctrl.graph.EdgeCollection(ctx, schema.IG2INST)
-	if err != nil {
-		log.Error("Failed to get EdgeCollection", zap.Error(err))
-		ctrl.col.RemoveDocument(ctx, meta.Key) // if failed - remove instance from DataBase
-		return err
-	}
-
 	// Attempt create edge
-	_, err = edge.CreateDocument(ctx, Access{
+	_, err = ctrl.ig2inst.CreateDocument(ctx, Access{
 		From: group, To: meta.ID,
 	})
 	if err != nil {
-		log.Error("Failed to create Edge", zap.Error(err))
-		ctrl.col.RemoveDocument(ctx, meta.Key) // if failed - remove instance from DataBase
+		log.Error("Failed to create Edge", zap.Error(err)) // if failed - remove instance from DataBase
+		if _, err = ctrl.col.RemoveDocument(ctx, meta.Key); err != nil {
+			log.Warn("Failed to cleanup", zap.String("uuid", meta.Key), zap.Error(err))
+		}
 		return err
 	}
 

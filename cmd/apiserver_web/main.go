@@ -100,7 +100,9 @@ func staticHandler(w http.ResponseWriter, r *http.Request, pathParams map[string
 	}
 	log.Debug("Content-Type", zap.String("mime", mime))
 	w.Header().Set("Content-Type", mime)
-	w.Write(index)
+	if _, err = w.Write(index); err != nil {
+		log.Warn("Coulnd't write index.html", zap.Error(err))
+	}
 }
 
 func main() {
@@ -117,6 +119,7 @@ func main() {
 	if insecure_enabled {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	} else {
+		/* #nosec */
 		creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	}
@@ -169,9 +172,12 @@ func main() {
 		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
 	}
 
-	gwmux.HandlePath("GET", "/admin", staticHandler)
-	gwmux.HandlePath("GET", "/admin/{path}", staticHandler)
-	gwmux.HandlePath("GET", "/admin/{path}/{file}", staticHandler)
+	for _, p := range []string{"/admin", "/admin/{path}", "/admin/{path}/{file}"} {
+		err = gwmux.HandlePath("GET", p, staticHandler)
+		if err != nil {
+			log.Fatal("Failed to register custom static handler", zap.String("path", p), zap.Error(err))
+		}
+	}
 
 	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
 	handler := cors.New(cors.Options{
@@ -182,5 +188,6 @@ func main() {
 	}).Handler(gwmux)
 
 	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
+	/* #nosec */
 	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(http.ListenAndServe(":8000", wsproxy.WebsocketProxy(handler))))
 }

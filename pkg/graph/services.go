@@ -53,6 +53,7 @@ func NewServicesController(log *zap.Logger, db driver.Database) ServicesControll
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.SERVICES_COL)
+	/* #nosec */
 	col.EnsurePersistentIndex(ctx, []string{"status"}, &driver.EnsurePersistentIndexOptions{
 		Unique: false, Sparse: true, InBackground: true, Name: "service-status",
 	})

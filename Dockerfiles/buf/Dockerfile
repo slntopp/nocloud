@@ -16,6 +16,7 @@ RUN go install \
 
 COPY buf.* ./
 
+HEALTHCHECK NONE
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
 LABEL nocloud.update "true"
 

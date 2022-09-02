@@ -79,9 +79,15 @@ func GraphGetEdgeEnsure(log *zap.Logger, ctx context.Context, graph driver.Graph
 		return col
 	}
 
-	graph.SetVertexConstraints(ctx, name, driver.VertexConstraints{
+	err = graph.SetVertexConstraints(ctx, name, driver.VertexConstraints{
 		From: []string{from}, To: []string{to},
 	})
+	if err != nil {
+		log.Fatal("Error setting vertex constraints for edge collection",
+			zap.String("col", name), zap.String("from", from),
+			zap.String("to", to), zap.Error(err),
+		)
+	}
 
 	col, _, err := graph.EdgeCollection(ctx, name)
 	if err != nil {

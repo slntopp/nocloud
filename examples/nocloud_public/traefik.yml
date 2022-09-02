@@ -13,7 +13,7 @@ entryPoints:
       redirections:
         entryPoint:
           to: https
-          scheme: https  
+          scheme: https
   https:
     address: ":443"
   grpc:
@@ -26,6 +26,5 @@ certificatesResolvers:
       email: "acme@example.com" # Replace with your email
       storage: /etc/traefik/acme/acme.json
       caServer: "https://acme-v02.api.letsencrypt.org/directory"
-
 # log:
 #   level: DEBUG
