@@ -185,5 +185,6 @@ func main() {
 	}).Handler(gwmux)
 
 	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
+	/* #nosec */
 	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(http.ListenAndServe(":8000", wsproxy.WebsocketProxy(handler))))
 }
