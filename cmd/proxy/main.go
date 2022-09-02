@@ -54,5 +54,6 @@ func main() {
 	r.HandleFunc("/socket", proxy.Handler).Methods("GET")
 	r.Use(mux.CORSMethodMiddleware(r))
 
-	http.ListenAndServe(":8000", r)
+	/* #nosec */
+	log.Fatal("Failed to serve proxy", zap.Error(http.ListenAndServe(":8000", r)))
 }
