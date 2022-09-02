@@ -57,7 +57,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Warn("Error resolving proxy host from ServicesProvider", zap.Error(err))
 		w.WriteHeader(404)
-		w.Write([]byte("Host not found or Proxy not enabled"))
+		if _, err = w.Write([]byte("Host not found or Proxy not enabled")); err != nil {
+			log.Warn("Error writing response", zap.Error(err))
+		}
 		return
 	}
 
