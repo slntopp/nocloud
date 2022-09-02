@@ -12,7 +12,7 @@ WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud/billing /billing
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /docker_health_check /docker_health_check
-HEALTHCHECK --start-period=10s CMD /docker_health_check
+HEALTHCHECK --start-period=10s CMD ["/docker_health_check"]
 
 USER nocloud
 EXPOSE 8000
