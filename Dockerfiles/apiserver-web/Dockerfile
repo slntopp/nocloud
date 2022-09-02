@@ -23,6 +23,7 @@ COPY --from=ui-builder /app/dist /dist
 COPY --from=builder /etc/passwd /etc/passwd
 USER nocloud
 
+HEALTHCHECK NONE
 EXPOSE 8000
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
 LABEL nocloud.update "true"

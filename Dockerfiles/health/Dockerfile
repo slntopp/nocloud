@@ -12,6 +12,8 @@ WORKDIR /
 COPY --from=builder  /go/src/github.com/slntopp/nocloud/health /health
 COPY --from=builder /etc/passwd /etc/passwd
 
+HEALTHCHECK NONE
+
 USER nocloud
 EXPOSE 8000
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
