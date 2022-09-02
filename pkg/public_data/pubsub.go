@@ -117,7 +117,9 @@ func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 			continue
 		}
 		log.Debug("Updated public_data", zap.String("type", col), zap.String("uuid", req.Uuid))
-		c.Close()
+		if err = c.Close(); err != nil {
+			log.Warn("Error closing Driver cursor", zap.Error(err))
+		}
 		//msg.Ack(false)
 	}
 }
