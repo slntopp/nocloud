@@ -45,6 +45,10 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 	l := log.Named("Interceptor")
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
 
+	if info.FullMethod == "/nocloud.health.InternalProbeService/Service" {
+		return handler(ctx, req)
+	}
+
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
 	if err != nil {
 		return nil, err
