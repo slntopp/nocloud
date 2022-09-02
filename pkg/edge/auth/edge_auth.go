@@ -47,7 +47,7 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
 
 	switch info.FullMethod {
-	case "/nocloud.edge.EdgeService/Test":
+	case "/nocloud.edge.EdgeService/Test", "/nocloud.health.InternalProbeService/Service":
 		return handler(ctx, req)
 	}
 
