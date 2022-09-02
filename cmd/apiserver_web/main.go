@@ -100,7 +100,9 @@ func staticHandler(w http.ResponseWriter, r *http.Request, pathParams map[string
 	}
 	log.Debug("Content-Type", zap.String("mime", mime))
 	w.Header().Set("Content-Type", mime)
-	w.Write(index)
+	if _, err = w.Write(index); err != nil {
+		log.Warn("Coulnd't write index.html", zap.Error(err))
+	}
 }
 
 func main() {
@@ -117,6 +119,7 @@ func main() {
 	if insecure_enabled {
 		opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	} else {
+		/* #nosec */
 		creds := credentials.NewTLS(&tls.Config{InsecureSkipVerify: true})
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	}
