@@ -142,7 +142,9 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		}
 
 		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
-		c.Close()
+		if err = c.Close(); err != nil {
+			log.Warn("Failed to close database cursor connection", zap.Error(err))
+		}
 	}
 }
 
