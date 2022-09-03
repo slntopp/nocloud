@@ -22,6 +22,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
@@ -125,7 +126,19 @@ func (ctrl *AccountsController) Create(ctx context.Context, title string) (Accou
 	acc := pb.Account{Title: title}
 	meta, err := ctrl.col.CreateDocument(ctx, &acc)
 	acc.Uuid = meta.ID.Key()
-	return Account{&acc, meta}, err
+	account := Account{&acc, meta}
+
+	if err == nil {
+		nsController := NewNamespacesController(ctrl.log, ctrl.col.Database())
+		ns, err := nsController.Create(ctx, title)
+		if err != nil {
+			ctrl.log.Warn("Cannot create a namespace for new Account", zap.String("account", acc.Uuid))
+		} else {
+			nsController.Link(ctx, account, ns, access.ADMIN, roles.OWNER)
+		}
+	}
+
+	return account, err
 }
 
 func (ctrl *AccountsController) Update(ctx context.Context, acc Account, patch map[string]interface{}) (err error) {
