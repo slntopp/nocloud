@@ -29,9 +29,23 @@ import (
 
 	"github.com/slntopp/nocloud/pkg/credentials"
 	pb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+
+	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+const shouldCreateNamespaceKey = "should-create-namespace"
+
+type AccountSettings struct {
+	ShouldCreateNamespace bool `json:"ns"`
+}
+
+var defaultSettings = &sc.Setting[AccountSettings]{
+	Value:       AccountSettings{ShouldCreateNamespace: true},
+	Description: "Create personal namespace on account creation",
+	Public:      false,
+}
 
 type Account struct {
 	*pb.Account
@@ -39,10 +53,10 @@ type Account struct {
 }
 
 type AccountsController struct {
-	col  driver.Collection // Accounts Collection
-	cred driver.Collection // Credentials Collection
-
-	log *zap.Logger
+	col     driver.Collection // Accounts Collection
+	cred    driver.Collection // Credentials Collection
+	ns_ctrl NamespacesController
+	log     *zap.Logger
 }
 
 func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsController {
@@ -61,7 +75,9 @@ func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsContr
 
 	GraphGetEdgeEnsure(log, ctx, graph, schema.CREDENTIALS_EDGE_COL, schema.ACCOUNTS_COL, schema.CREDENTIALS_COL)
 
-	return AccountsController{log: log, col: col, cred: cred}
+	nsController := NewNamespacesController(log, col.Database())
+
+	return AccountsController{log: log, col: col, cred: cred, ns_ctrl: nsController}
 }
 
 func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, error) {
@@ -127,15 +143,28 @@ func (ctrl *AccountsController) Create(ctx context.Context, title string) (Accou
 	meta, err := ctrl.col.CreateDocument(ctx, &acc)
 	acc.Uuid = meta.ID.Key()
 	account := Account{&acc, meta}
+	if err != nil {
+		return account, err
+	}
 
-	if err == nil {
-		nsController := NewNamespacesController(ctrl.log, ctrl.col.Database())
-		ns, err := nsController.Create(ctx, title)
-		if err != nil {
-			ctrl.log.Warn("Cannot create a namespace for new Account", zap.String("account", acc.Uuid))
-		} else {
-			nsController.Link(ctx, account, ns, access.ADMIN, roles.OWNER)
-		}
+	var settings AccountSettings
+	if scErr := sc.Fetch(shouldCreateNamespaceKey, &settings, defaultSettings); scErr != nil {
+		ctrl.log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	if !settings.ShouldCreateNamespace {
+		return account, err
+	}
+
+	ns, err := ctrl.ns_ctrl.Create(ctx, title)
+	if err != nil {
+		ctrl.log.Warn("Cannot create a namespace for new Account", zap.String("account", acc.Uuid))
+		return account, err
+	}
+
+	if err := ctrl.ns_ctrl.Link(ctx, account, ns, access.ADMIN, roles.OWNER); err != nil {
+		ctrl.log.Warn("Cannot link namespace with new Account", zap.String("account", acc.Uuid), zap.String("namespace", string(ns.ID)))
+		return account, err
 	}
 
 	return account, err

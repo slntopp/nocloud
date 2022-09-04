@@ -26,10 +26,14 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
 
+	"google.golang.org/grpc/credentials/insecure"
+
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	accounting "github.com/slntopp/nocloud/pkg/registry"
+	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	pb "github.com/slntopp/nocloud/pkg/registry/proto"
@@ -42,8 +46,8 @@ var (
 	arangodbHost    string
 	arangodbCred    string
 	nocloudRootPass string
-
-	SIGNING_KEY []byte
+	settingsHost    string
+	SIGNING_KEY     []byte
 )
 
 func init() {
@@ -55,6 +59,7 @@ func init() {
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("NOCLOUD_ROOT_PASSWORD", "secret")
+	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
@@ -63,6 +68,7 @@ func init() {
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
 	nocloudRootPass = viper.GetString("NOCLOUD_ROOT_PASSWORD")
+	settingsHost = viper.GetString("SETTINGS_HOST")
 
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 }
@@ -89,8 +95,23 @@ func main() {
 		)),
 	)
 
+	// Start settings client for ns check
+	setconn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	defer setconn.Close()
+
+	settingsClient := settingspb.NewSettingsServiceClient(setconn)
+
+	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		log.Fatal("Can't generate token", zap.Error(err))
+	}
+
 	accounts_server := accounting.NewAccountsServer(log, db)
 	accounts_server.SIGNING_KEY = SIGNING_KEY
+	accounts_server.SetupSettingsClient(settingsClient, token)
 	err = accounts_server.EnsureRootExists(nocloudRootPass)
 	if err != nil {
 		log.Fatal("Couldn't ensure root Account(and Namespace) exist", zap.Error(err))
