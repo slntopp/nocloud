@@ -1,0 +1,105 @@
+/*
+Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+syntax = "proto3";
+package nocloud.chats;
+
+import "google/api/annotations.proto";
+import "google/protobuf/struct.proto";
+
+message Chat{
+    string uuid = 1;
+    string owner = 2;
+}
+
+message ChatMessage{
+    string uuid = 1;
+    string from = 2;
+    string to = 3;
+    string message = 4;
+}
+
+message ChatMessageStreamRequest {
+    string uuid = 1;
+}
+message SendMessageRequest {
+    ChatMessage message = 1;
+}
+message DeleteMessageRequest {
+    string uuid = 1;
+}
+
+message CreateChatRequest {
+    Chat chat = 1;
+}
+message DeleteChatRequest {
+    string uuid = 1;
+}
+
+message Response {}
+
+service ChatService {
+    rpc SendMessage(nocloud.chats.SendMessageRequest) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            put: "/messages"
+            body: "*"
+        };
+    };
+
+    rpc DeleteMessage(nocloud.chats.DeleteMessageRequest) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            delete: "/messages"
+        };
+    };
+
+    rpc UpdateMessage(nocloud.chats.ChatMessage) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            patch: "/messages"
+            body: "*"
+        };
+    };
+
+    rpc CreateChat(nocloud.chats.CreateChatRequest) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            put: "/chats"
+            body: "*"
+        };
+    };
+
+    rpc DeleteChat(nocloud.chats.DeleteChatRequest) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            delete: "/chats"
+        };
+    };
+
+    rpc UpdateChat(nocloud.chats.Chat) 
+        returns (nocloud.chats.Response) {
+        option (google.api.http) = {
+            patch: "/chats"
+            body: "*"
+        };
+    };
+
+    rpc Stream(nocloud.chats.ChatMessageStreamRequest) returns (stream nocloud.chats.ChatMessage) {
+        option (google.api.http) = {
+            get: "/messages/{uuid}/stream"
+        };
+    };
+}
