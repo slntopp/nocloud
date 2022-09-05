@@ -31,12 +31,9 @@ import (
 
 	pb "github.com/slntopp/nocloud/pkg/registry/proto"
 	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
-	sc "github.com/slntopp/nocloud/pkg/settings/client"
-	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -60,14 +57,6 @@ func NewAccountsServer(log *zap.Logger, db driver.Database) *AccountsServiceServ
 			log.Named("NamespacesController"), db,
 		),
 	}
-}
-
-func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.SettingsServiceClient, internal_token string) {
-	sc.Setup(
-		s.log, metadata.AppendToOutgoingContext(
-			context.Background(), "authorization", "bearer "+internal_token,
-		), &settingsClient,
-	)
 }
 
 func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.GetRequest) (*accountspb.Account, error) {
