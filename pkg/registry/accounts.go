@@ -40,18 +40,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const accountPostCreateSettingsKey = "post-create-account"
-
-type AccountPostCreateSettings struct {
-	CreateNamespace bool `json:"create-ns"`
-}
-
-var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
-	Value:       AccountPostCreateSettings{CreateNamespace: true},
-	Description: "Create personal namespace on account creation",
-	Public:      false,
-}
-
 type AccountsServiceServer struct {
 	pb.UnimplementedAccountsServiceServer
 	db      driver.Database
@@ -176,19 +164,6 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	return &accountspb.TokenResponse{Token: token_string}, nil
 }
 
-func (s *AccountsServiceServer) createPersonalNamespace(ctx context.Context, account graph.Account) error {
-	ns, err := s.ns_ctrl.Create(ctx, account.Title)
-	if err != nil {
-		s.log.Warn("Cannot create a namespace for new Account", zap.String("account", account.Uuid), zap.Error(err))
-		return err
-	}
-	if err := s.ns_ctrl.Link(ctx, account, ns, access.ADMIN, roles.OWNER); err != nil {
-		s.log.Warn("Cannot link namespace with new Account", zap.String("account", account.Uuid), zap.String("namespace", string(ns.ID)), zap.Error(err))
-		return err
-	}
-	return nil
-}
-
 func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
 	log := s.log.Named("CreateAccount")
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
@@ -220,14 +195,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		access_lvl = (*request.Access)
 	}
 
-	var settings AccountPostCreateSettings
-	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
-		log.Warn("Cannot fetch settings", zap.Error(scErr))
-	}
-
-	if settings.CreateNamespace {
-		s.createPersonalNamespace(ctx, account)
-	}
+	s.PostCreateActions(ctx, account)
 
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
 	err = account.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)

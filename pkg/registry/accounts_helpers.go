@@ -16,8 +16,14 @@ limitations under the License.
 package registry
 
 import (
+	"context"
+
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/access"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+	sc "github.com/slntopp/nocloud/pkg/settings/client"
+	"go.uber.org/zap"
 )
 
 func MakeAccountMessage(acc graph.Account) *accountspb.Account {
@@ -40,4 +46,40 @@ func MergeMaps[K comparable](old map[K]interface{}, new map[K]interface{}) map[K
 	}
 
 	return result
+}
+
+const accountPostCreateSettingsKey = "post-create-account"
+
+type AccountPostCreateSettings struct {
+	CreateNamespace bool `json:"create-ns"`
+}
+
+var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
+	Value:       AccountPostCreateSettings{CreateNamespace: true},
+	Description: "Create personal namespace on account creation",
+	Public:      false,
+}
+
+func (s *AccountsServiceServer) PostCreateActions(ctx context.Context, account graph.Account) {
+	log := s.log.Named("PostCreateActions")
+	var settings AccountPostCreateSettings
+	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
+		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	if settings.CreateNamespace {
+		_CreatePersonalNamespace(ctx, log, s.ns_ctrl, account)
+	}
+}
+
+func _CreatePersonalNamespace(ctx context.Context, log *zap.Logger, ns_ctrl graph.NamespacesController, account graph.Account) {
+	ns, err := ns_ctrl.Create(ctx, account.Title)
+	if err != nil {
+		log.Warn("Cannot create a namespace for new Account", zap.String("account", account.Uuid), zap.Error(err))
+		return
+	}
+	if err := ns_ctrl.Link(ctx, account, ns, access.ADMIN, roles.OWNER); err != nil {
+		log.Warn("Cannot link namespace with new Account", zap.String("account", account.Uuid), zap.String("namespace", string(ns.ID)), zap.Error(err))
+		return
+	}
 }
