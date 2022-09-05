@@ -106,13 +106,24 @@
                   </v-text-field>
                 </v-col>
               </template>
-              <v-col v-else>
-                <v-text-field
-                  label="title"
-                  style="display: inline-block; width: 330px"
-                  v-model="group.title"
-                />
-              </v-col>
+              <template v-else>
+                <v-col>
+                  <v-text-field
+                    label="title"
+                    style="display: inline-block; width: 330px"
+                    v-model="group.title"
+                  />
+                </v-col>
+                <v-col v-if="!group.type">
+                  <v-select
+                    label="type"
+                    style="display: inline-block; width: 330px"
+                    v-model="instancesGroup.type"
+                    :items="types"
+                    @change="instancesGroup.uuid = group.uuid"
+                  />
+                </v-col>
+              </template>
             </v-row>
             Instances:
             <v-row>
@@ -141,7 +152,7 @@
                         <v-col>
                           <service-control
                             :service="service"
-                            :instance_uuid=" instance.uuid"
+                            :instance_uuid="instance.uuid"
                             :chip-color="chipColor"
                             @closePanel="openedInstances = {}"
                           />
@@ -180,15 +191,16 @@
                             style="display: inline-block; width: 160px"
                           />
                         </v-col>
-                        <v-col>
+                        <v-col v-if="group.type === 'ione'">
                           <v-text-field
                             :readonly="!editing"
-                            v-model="instance.config.template_id"
+                            :value="instance.config.template_id"
                             label="template id"
                             style="display: inline-block; width: 160px"
+                            @change="(v) => instance.config.template_id = parseInt(v)"
                           />
                         </v-col>
-                        <v-col>
+                        <v-col v-if="group.type === 'ione'">
                           <v-text-field
                             :readonly="!editing"
                             v-model="instance.config.password"
@@ -197,51 +209,66 @@
                           />
                         </v-col>
                       </v-row>
-                      <v-row>
+                      <v-row v-if="group.type !== 'ione'">
+                        <json-editor
+                          v-if="editing"
+                          :json="instance.config"
+                          @changeValue="(data) => instance.config = data"
+                        />
+                        <json-textarea v-else :json="instance.config" :readonly="true" />
+                      </v-row>
+                      <v-row v-else>
                         <v-col>
                           <v-text-field
                             :readonly="!editing"
-                            v-model="instance.resources.cpu"
+                            :value="instance.resources.cpu"
                             label="CPU"
                             style="display: inline-block; width: 100px"
-                          >
-                          </v-text-field>
+                            @change="(v) => instance.resources.cpu = parseInt(v)"
+                          />
                         </v-col>
                         <v-col>
                           <v-text-field
                             :readonly="!editing"
-                            v-model="instance.resources.ram"
+                            :value="instance.resources.ram"
                             label="RAM"
                             style="display: inline-block; width: 100px"
-                          >
-                          </v-text-field>
+                            @change="(v) => instance.resources.ram = parseInt(v)"
+                          />
                         </v-col>
                         <v-col>
                           <v-text-field
                             :readonly="!editing"
-                            v-model="instance.resources.drive_size"
+                            :value="instance.resources.drive_size"
                             label="drive size"
                             style="display: inline-block; width: 100px"
-                          >
-                          </v-text-field>
+                            @change="(v) => instance.resources.drive_size = parseInt(v)"
+                          />
                         </v-col>
                         <v-col>
                           <v-text-field
-                            :readonly="!editing"
+                            readonly
+                            v-if="!editing"
+                            :value="instance.resources.drive_type"
+                            label="drive type"
+                            style="display: inline-block; width: 100px"
+                          />
+                          <v-select
+                            v-else
                             v-model="instance.resources.drive_type"
                             label="drive type"
                             style="display: inline-block; width: 100px"
-                          >
-                          </v-text-field>
+                            :items="['SSD', 'HDD']"
+                          />
                         </v-col>
                         <v-col>
                           <v-text-field
                             :readonly="!editing"
-                            v-model="instance.resources.ips_private"
+                            :value="instance.resources.ips_private"
                             label="ips private"
                             style="display: inline-block; width: 100px"
-                          >
-                          </v-text-field>
+                            @change="(v) => instance.resources.ips_private = parseInt(v)"
+                          />
                         </v-col>
                         <v-col>
                           <v-text-field
@@ -249,8 +276,8 @@
                             :value="instance.resources.ips_public"
                             label="ips public"
                             style="display: inline-block; width: 100px"
-                          >
-                          </v-text-field>
+                            @change="(v) => instance.resources.ips_public = parseInt(v)"
+                          />
                         </v-col>
                         <v-col>
                           <v-text-field
@@ -262,7 +289,7 @@
                           />
                         </v-col>
                       </v-row>
-                      <v-row class="flex-column" v-if="instance.state">
+                      <v-row class="flex-column" v-if="instance.state && !editing">
                         <v-col>
                           <h4 class="mb-2">Snapshots:</h4>
                           <v-menu
@@ -369,13 +396,17 @@ import snackbar from '@/mixins/snackbar.js';
 import ServiceDeploy from "@/components/service/service-deploy.vue";
 import ServiceControl from "@/components/service/service-control.vue";
 import nocloudTable from '@/components/table.vue';
+import JsonEditor from '../JsonEditor.vue';
+import JsonTextarea from '../JsonTextarea.vue';
 
 export default {
   name: "service-info",
   components: {
     ServiceDeploy,
     ServiceControl,
-    nocloudTable
+    nocloudTable,
+    JsonEditor,
+    JsonTextarea
   },
   mixins: [snackbar],
   props: {
@@ -401,6 +432,8 @@ export default {
       { text: 'Name', value: 'name' },
       { text: 'Time', value: 'ts' }
     ],
+    instancesGroup: { uuid: '', type: '' },
+    types: [],
     selected: [],
     isVisible: false,
     snapshotName: 'Snapshot'
@@ -452,6 +485,13 @@ export default {
     },
     editService() {
       this.isLoading = true;
+      if (this.instancesGroup.uuid) {
+        this.service.instancesGroups.forEach((el, i, arr) => {
+          if (el.uuid === this.instancesGroup.uuid) {
+            arr[i].type = this.instancesGroup.type;
+          }
+        });
+      }
 
       api.services._update(this.service)
         .then(() => {
@@ -560,12 +600,23 @@ export default {
       });
   },
   mounted() {
+    const types = require.context(
+      "@/components/modules/",
+      true,
+      /serviceProviders\.vue$/
+    );
+    types.keys().forEach((key) => {
+      const matched = key.match(
+        /\.\/([A-Za-z0-9-_,\s]*)\/serviceProviders\.vue/i
+      );
+      if (matched && matched.length > 1) {
+        this.types.push(matched[1]);
+      }
+    });
     this.opened.push(0);
     Object.keys(this.service.instancesGroups).forEach((key) => {
       this.$set(this.openedInstances, key, [0]);
     });
-  },
-};
+  }
+}
 </script>
-
-<style></style>

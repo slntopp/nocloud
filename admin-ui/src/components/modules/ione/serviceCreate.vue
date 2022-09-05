@@ -6,7 +6,6 @@
 			elevation="0"
 			color="background"
 		>
-			
 			<v-row>
 				<v-col
 					cols="6"
@@ -117,8 +116,10 @@
 				<v-col cols="6">
 					<v-select
 						label="plan"
+            item-text="title"
+            item-value="uuid"
             v-model="instance.plan"
-            :items="plans.titles"
+            :items="plans.list"
             :rules="planRules"
 						@change="(newVal) => setValue(index + '.billing_plan', newVal)"
 					/>
@@ -183,9 +184,8 @@ export default {
 	methods: { 
     addProducts(instance) {
       const { plan, billing_plan } = instance;
-      const uuid = plan.split('(')[1]?.slice(0, 8);
       const products = this.plans.list.find((el) =>
-        el.uuid.includes(uuid)
+        el.uuid.includes(plan.uuid)
       )?.products || {};
 
       if (billing_plan.kind === 'STATIC') {
@@ -207,8 +207,8 @@ export default {
 			this.change(data)
 		},
 		remove(index){
-			// this.instances.splice(index, 1);
 			const data = JSON.parse(this.instancesGroup);
+
 			data.body.instances.splice(index, 1);
 			this.change(data);
 		},
@@ -217,11 +217,11 @@ export default {
       const i = path.split('.')[0]
 
       if (path.includes('plan')) {
-        const plan = this.plans.list
-          .find(({ title }) => val.includes(title))
+        const plan = this.plans.list.find(({ uuid }) => val.includes(uuid))
+        const j = plan.title.length - 14
 
         data.body.instances[i].plan = val
-        val = plan
+        val = { ...plan, title: plan.title.slice(0, j) }
       }
       if (path.includes('product')) {
         const plan = data.body.instances[i].billing_plan
@@ -233,7 +233,7 @@ export default {
       }
 
 			setToValue(data.body.instances, val, path)
-      this.addProducts(data.body.instances[i])
+      if (path.includes('plan')) this.addProducts(data.body.instances[i])
 			this.change(data)
 		},
 		change(data){

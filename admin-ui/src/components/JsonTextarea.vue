@@ -3,6 +3,7 @@
     label="JSON"
     v-model="tree"
     :rows="rows"
+    :readonly="readonly"
     :disabled="disabled"
     :rules="typeRule"
     @keyup="formatting"
@@ -14,7 +15,8 @@
 export default {
   props: {
     json: { type: Object, required: true },
-    disabled: { type: Boolean }
+    disabled: { type: Boolean },
+    readonly: { type: Boolean }
   },
   data: () => ({
     tree: ''
@@ -37,7 +39,10 @@ export default {
               if (arr[i - 1] === '{') return simbol
               return `\n${'\t'.repeat(count)}}`
             case ':':
-              return ': '
+              if (arr[i - 1] === '"') {
+                return ': '
+              }
+              return simbol
             case ',':
               if (this.amountQuotes(i, tree)) {
                 return simbol
@@ -134,7 +139,7 @@ export default {
       }]
     },
     rows() {
-      let rows = 0
+      let rows = 1
 
       for (let i = 0; i < this.tree.length; i++) {
         if (this.tree[i] === '\n') rows++

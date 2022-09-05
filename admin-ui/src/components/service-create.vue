@@ -111,8 +111,10 @@
                   dense
                   label="plan"
                   style="width: 200px"
+                  item-text="title"
+                  item-value="uuid"
                   v-model="currentInstancesGroups.plan"
-                  :items="plans.titles"
+                  :items="filteredPlans"
                   @change="setProducts"
                 />
                 <v-select
@@ -130,32 +132,31 @@
 
           <v-text-field
             label="instances group title"
-            :rules="rules.req"
             v-model="instances[currentInstancesGroupsIndex].title"
-            @change="(newVal) => (currentInstancesGroups.title = newVal)"
+            :rules="rules.req"
+            @change="(value) => (currentInstancesGroups.title = value)"
           />
 
           <v-select
-            :items="types"
-            v-model="currentInstancesGroups.body.type"
             label="type"
+            v-model="currentInstancesGroups.body.type"
+            :items="types"
           />
 
           <v-select
             label="service provider"
             item-value="uuid"
             item-text="title"
-            v-model="instances[currentInstancesGroupsIndex].sp"
+            v-model="currentInstancesGroups.sp"
             :items="servicesProviders"
             :rules="rules.req"
-            @change="(newVal) => (currentInstancesGroups.sp = newVal)"
           />
 
           <component
             :is="templates[currentInstancesGroups.body.type]"
             :instances-group="JSON.stringify(currentInstancesGroups)"
             :planRules="planRules"
-            :plans="plans"
+            :plans="{ list: filteredPlans, products :plans.products }"
             @update:instances-group="receiveObject"
           >
           </component>
@@ -220,7 +221,6 @@ export default {
     types: ["ione", "custom"],
     templates: {},
     plans: {
-      titles: [],
       list: [],
       products: []
     },
@@ -278,7 +278,7 @@ export default {
       const current = this.currentInstancesGroups;
       const instances = current.body.instances;
       const plan = this.plans.list.find((plan) =>
-        current.plan.includes(plan.title)
+        current.plan.includes(plan.uuid)
       );
       const [product] = Object.entries(plan.products)
         .find(([, prod]) =>
@@ -301,6 +301,9 @@ export default {
       const instances = JSON.parse(JSON.stringify(this.instances));
 
       instances.forEach((inst) => {
+        if (inst.body.type === 'ovh') {
+          inst.body.data = { projectId: "2ccca3cf77574a80b4d0496f6f2539ec" };
+        }
         inst.body.resources.ips_public = inst.body.instances?.length || 0;
         data.instances_groups.push({
           ...inst.body,
@@ -375,9 +378,8 @@ export default {
     },
     setProducts() {
       const { plan } = this.currentInstancesGroups;
-      const uuid = plan.split('(')[1]?.slice(0, 8);
       const products = this.plans.list.find((el) =>
-        el.uuid.includes(uuid)
+        el.uuid.includes(plan.uuid)
       )?.products || {};
 
       this.plans.products = [];
@@ -396,7 +398,13 @@ export default {
       return this.$store.getters["namespaces/isLoading"];
     },
     servicesProviders() {
-      return this.$store.getters["servicesProviders/all"];
+      return this.$store.getters["servicesProviders/all"]
+        .filter((el) => el.type === this.currentInstancesGroups.body.type);
+    },
+    filteredPlans() {
+      const type = this.currentInstancesGroups.body.type;
+
+      return this.plans.list.filter((plan) => plan.type === type);
     },
     planRules() {
       return (this.plansVisible)
@@ -427,8 +435,7 @@ export default {
         .forEach((plan) => {
           const title = `${plan.title} (${plan.uuid.slice(0, 8)}...)`;
 
-          this.plans.titles.push(title)
-          this.plans.list.push(plan)
+          this.plans.list.push({ ...plan, title });
         })
       )
 
@@ -451,6 +458,10 @@ export default {
       },
       deep: true,
     },
+    'currentInstancesGroups.body.type'() {
+      this.currentInstancesGroups.body.instances = [];
+      this.currentInstancesGroups.sp = '';
+    }
   },
 };
 </script>

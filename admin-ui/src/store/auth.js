@@ -21,8 +21,9 @@ export default {
   actions: {
 		login({commit}, {login, password}){
 			return new Promise((resolve, reject) => {
-				api.auth(login, password)
+				api.authorizeStandard(login, password, true)
 				.then(response => {
+          api.applyToken(response.token)
 					Cookies.set(COOKIES_NAME, response.token)
 					commit('setToken', response.token);
 					resolve(response);
