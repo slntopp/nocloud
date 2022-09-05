@@ -55,6 +55,13 @@ const (
 	RECORDS_COL       = "Records"
 )
 
+const (
+	CHATS_COL          = "Chats"
+	NS2CHTS            = NAMESPACES_COL + "2" + CHATS_COL
+	CHATS_MESSAGES_COL = "ChatsMessages"
+	CHT2MSG            = CHATS_MESSAGES_COL + "2" + CHATS_COL
+)
+
 type NoCloudGraphSchema struct {
 	Name  string
 	Edges [][]string
@@ -64,6 +71,7 @@ var COLLECTIONS = []string{
 	ACCOUNTS_COL, NAMESPACES_COL, CREDENTIALS_COL,
 	SERVICES_PROVIDERS_COL, SERVICES_COL,
 	BILLING_PLANS_COL, TRANSACTIONS_COL, RECORDS_COL,
+	CHATS_COL, CHATS_MESSAGES_COL,
 }
 
 var PERMISSIONS_GRAPH = NoCloudGraphSchema{
@@ -74,6 +82,7 @@ var PERMISSIONS_GRAPH = NoCloudGraphSchema{
 		{NAMESPACES_COL, SERVICES_COL},
 		{NAMESPACES_COL, BILLING_PLANS_COL},
 		{NAMESPACES_COL, SERVICES_PROVIDERS_COL},
+		{NAMESPACES_COL, CHATS_COL},
 	},
 }
 var CREDENTIALS_GRAPH = NoCloudGraphSchema{
