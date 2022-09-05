@@ -40,6 +40,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const accoutPostCreateSettingsKey = "post-create-account"
+
+type AccountPostCreateSettings struct {
+	CreateNamespace bool `json:"create-ns"`
+}
+
+var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
+	Value:       AccountPostCreateSettings{CreateNamespace: true},
+	Description: "Create personal namespace on account creation",
+	Public:      false,
+}
+
 type AccountsServiceServer struct {
 	pb.UnimplementedAccountsServiceServer
 	db      driver.Database
@@ -193,6 +205,22 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 
 	if request.Access != nil && (*request.Access) < access_lvl {
 		access_lvl = (*request.Access)
+	}
+
+	var settings AccountPostCreateSettings
+	if scErr := sc.Fetch(accoutPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
+		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	if settings.CreateNamespace {
+		ns, err := s.ns_ctrl.Create(ctx, account.Title)
+		if err != nil {
+			log.Warn("Cannot create a namespace for new Account", zap.String("account", account.Uuid))
+		}
+
+		if err := s.ns_ctrl.Link(ctx, account, ns, access.ADMIN, roles.OWNER); err != nil {
+			log.Warn("Cannot link namespace with new Account", zap.String("account", account.Uuid), zap.String("namespace", string(ns.ID)))
+		}
 	}
 
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
