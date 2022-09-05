@@ -73,6 +73,16 @@ func init() {
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 }
 
+func SetupSettingsClient() (settingspb.SettingsServiceClient, *grpc.ClientConn) {
+	// Start settings client
+	conn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+
+	return settingspb.NewSettingsServiceClient(conn), conn
+}
+
 func main() {
 	defer func() {
 		_ = log.Sync()
@@ -95,23 +105,17 @@ func main() {
 		)),
 	)
 
-	// Start settings client for ns check
-	setconn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	defer setconn.Close()
-
-	settingsClient := settingspb.NewSettingsServiceClient(setconn)
-
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
 
+	sc, sconn := SetupSettingsClient()
+	defer sconn.Close()
+
 	accounts_server := accounting.NewAccountsServer(log, db)
 	accounts_server.SIGNING_KEY = SIGNING_KEY
-	accounts_server.SetupSettingsClient(settingsClient, token)
+	accounts_server.SetupSettingsClient(sc, token)
 	err = accounts_server.EnsureRootExists(nocloudRootPass)
 	if err != nil {
 		log.Fatal("Couldn't ensure root Account(and Namespace) exist", zap.Error(err))
