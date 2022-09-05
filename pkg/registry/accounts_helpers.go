@@ -56,7 +56,7 @@ type AccountPostCreateSettings struct {
 
 var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
 	Value:       AccountPostCreateSettings{CreateNamespace: true},
-	Description: "Create personal namespace on account creation",
+	Description: "Post Account Creation Actions",
 	Public:      false,
 }
 
