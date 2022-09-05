@@ -16,11 +16,9 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"fmt"
 	"net"
 
-	"github.com/arangodb/go-driver"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
@@ -28,9 +26,7 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"google.golang.org/grpc"
 
-	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/metadata"
 
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
@@ -77,39 +73,6 @@ func init() {
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 }
 
-func SetupSettingsClient(log *zap.Logger, db driver.Database, s *grpc.Server) {
-	// Start settings client for ns check
-	setconn, err := grpc.Dial(
-		settingsHost,
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	defer setconn.Close()
-
-	settingsClient := settingspb.NewSettingsServiceClient(setconn)
-
-	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
-	if err != nil {
-		log.Fatal("Can't generate token", zap.Error(err))
-	}
-
-	accounts_server := accounting.NewAccountsServer(log, db)
-	accounts_server.SIGNING_KEY = SIGNING_KEY
-	sc.Setup(
-		log, metadata.AppendToOutgoingContext(
-			context.Background(), "authorization", "bearer "+token,
-		), &settingsClient,
-	)
-	err = accounts_server.EnsureRootExists(nocloudRootPass)
-	if err != nil {
-		log.Fatal("Couldn't ensure root Account(and Namespace) exist",
-			zap.Error(err))
-	}
-	pb.RegisterAccountsServiceServer(s, accounts_server)
-
-}
-
 func main() {
 	defer func() {
 		_ = log.Sync()
@@ -133,7 +96,31 @@ func main() {
 		)),
 	)
 
-	SetupSettingsClient(log, db, s)
+	// Start settings client for ns check
+	setconn, err := grpc.Dial(
+		settingsHost,
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	defer setconn.Close()
+
+	settingsClient := settingspb.NewSettingsServiceClient(setconn)
+
+	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	if err != nil {
+		log.Fatal("Can't generate token", zap.Error(err))
+	}
+
+	accounts_server := accounting.NewAccountsServer(log, db)
+	accounts_server.SIGNING_KEY = SIGNING_KEY
+	accounts_server.SetupSettingsClient(settingsClient, token)
+	err = accounts_server.EnsureRootExists(nocloudRootPass)
+	if err != nil {
+		log.Fatal("Couldn't ensure root Account(and Namespace) exist",
+			zap.Error(err))
+	}
+	pb.RegisterAccountsServiceServer(s, accounts_server)
 
 	namespaces_server := accounting.NewNamespacesServer(log, db)
 	pb.RegisterNamespacesServiceServer(s, namespaces_server)
