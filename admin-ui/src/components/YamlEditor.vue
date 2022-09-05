@@ -39,6 +39,9 @@ export default {
               if (arr[i - 1] === '{') return simbol
               return `\n${'\t'.repeat(count)}}`
             case ':':
+              for (let j = i; arr[j] !== '\n'; j--) {
+                if (arr[j] === ':') return simbol
+              }
               return ': '
             default:
               return simbol

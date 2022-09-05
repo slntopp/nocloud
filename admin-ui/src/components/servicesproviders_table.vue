@@ -88,6 +88,7 @@ export default {
           params: { uuid: el.uuid },
         },
         state: el?.state?.state ?? "UNKNOWN",
+        region: el.secrets?.endpoint?.split('-')[1] ?? '-',
       }));
     },
   },
@@ -95,7 +96,13 @@ export default {
     this.loading = true;
     this.$store
       .dispatch("servicesProviders/fetch", false)
-      .then(() => {
+      .then(({ pool }) => {
+        pool.forEach((el) => {
+          if (el.type === 'ovh') {
+            Headers.push({ text: "region", value: "region" });
+            this.$store.dispatch('servicesProviders/fetchById', el.uuid);
+          }
+        });
         this.fetchError = "";
       })
       .finally(() => {

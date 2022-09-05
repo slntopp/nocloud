@@ -186,11 +186,11 @@ export default {
   methods: {
     titleSP(group) {
       let data = this.servicesProviders.find((el) => {
-        if (group.sp) {
+        if (group?.sp) {
           return el.uuid == group.sp;
         }
       });
-      return data.title;
+      return data?.title || 'not found';
     },
     // treeview(item) {
     //   const result = [];

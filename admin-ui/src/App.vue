@@ -95,9 +95,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{
-              navTitle("Services Providers")
-            }}</v-list-item-title>
+            <v-list-item-title>{{ navTitle("Services Providers") }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -218,7 +216,7 @@
 
 <script>
 import config from "@/config";
-import balance from './components/balance.vue';
+import balance from '@/components/balance.vue';
 
 export default {
   components: { balance },
