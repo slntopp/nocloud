@@ -176,6 +176,19 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	return &accountspb.TokenResponse{Token: token_string}, nil
 }
 
+func (s *AccountsServiceServer) createPersonalNamespace(ctx context.Context, account graph.Account) error {
+	ns, err := s.ns_ctrl.Create(ctx, account.Title)
+	if err != nil {
+		s.log.Warn("Cannot create a namespace for new Account", zap.String("account", account.Uuid), zap.Error(err))
+		return err
+	}
+	if err := s.ns_ctrl.Link(ctx, account, ns, access.ADMIN, roles.OWNER); err != nil {
+		s.log.Warn("Cannot link namespace with new Account", zap.String("account", account.Uuid), zap.String("namespace", string(ns.ID)), zap.Error(err))
+		return err
+	}
+	return nil
+}
+
 func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
 	log := s.log.Named("CreateAccount")
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
@@ -213,14 +226,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 
 	if settings.CreateNamespace {
-		ns, err := s.ns_ctrl.Create(ctx, account.Title)
-		if err != nil {
-			log.Warn("Cannot create a namespace for new Account", zap.String("account", account.Uuid))
-		}
-
-		if err := s.ns_ctrl.Link(ctx, account, ns, access.ADMIN, roles.OWNER); err != nil {
-			log.Warn("Cannot link namespace with new Account", zap.String("account", account.Uuid), zap.String("namespace", string(ns.ID)))
-		}
+		s.createPersonalNamespace(ctx, account)
 	}
 
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
