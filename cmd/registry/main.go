@@ -84,7 +84,8 @@ func main() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
+		log.Fatal("Failed to listen",
+			zap.String("address", port), zap.Error(err))
 	}
 
 	auth.SetContext(log, SIGNING_KEY)
@@ -96,7 +97,9 @@ func main() {
 	)
 
 	// Start settings client for ns check
-	setconn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	setconn, err := grpc.Dial(
+		settingsHost,
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)
 	}
@@ -114,7 +117,8 @@ func main() {
 	accounts_server.SetupSettingsClient(settingsClient, token)
 	err = accounts_server.EnsureRootExists(nocloudRootPass)
 	if err != nil {
-		log.Fatal("Couldn't ensure root Account(and Namespace) exist", zap.Error(err))
+		log.Fatal("Couldn't ensure root Account(and Namespace) exist",
+			zap.Error(err))
 	}
 	pb.RegisterAccountsServiceServer(s, accounts_server)
 
