@@ -128,9 +128,7 @@ func (ctrl *AccountsController) Create(ctx context.Context, title string) (Accou
 	acc := pb.Account{Title: title}
 	meta, err := ctrl.col.CreateDocument(ctx, &acc)
 	acc.Uuid = meta.ID.Key()
-	account := Account{&acc, meta}
-
-	return account, err
+	return Account{&acc, meta}, err
 }
 
 func (ctrl *AccountsController) Update(ctx context.Context, acc Account, patch map[string]interface{}) (err error) {

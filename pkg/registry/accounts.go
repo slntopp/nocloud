@@ -40,7 +40,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const accoutPostCreateSettingsKey = "post-create-account"
+const accountPostCreateSettingsKey = "post-create-account"
 
 type AccountPostCreateSettings struct {
 	CreateNamespace bool `json:"create-ns"`
@@ -208,7 +208,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 
 	var settings AccountPostCreateSettings
-	if scErr := sc.Fetch(accoutPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
+	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
 		log.Warn("Cannot fetch settings", zap.Error(scErr))
 	}
 
