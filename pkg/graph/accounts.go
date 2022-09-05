@@ -28,6 +28,7 @@ import (
 
 	"github.com/slntopp/nocloud/pkg/credentials"
 	pb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -38,10 +39,10 @@ type Account struct {
 }
 
 type AccountsController struct {
-	col  driver.Collection // Accounts Collection
-	cred driver.Collection // Credentials Collection
-
-	log *zap.Logger
+	col     driver.Collection // Accounts Collection
+	cred    driver.Collection // Credentials Collection
+	ns_ctrl NamespacesController
+	log     *zap.Logger
 }
 
 func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsController {
@@ -60,7 +61,9 @@ func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsContr
 
 	GraphGetEdgeEnsure(log, ctx, graph, schema.CREDENTIALS_EDGE_COL, schema.ACCOUNTS_COL, schema.CREDENTIALS_COL)
 
-	return AccountsController{log: log, col: col, cred: cred}
+	nsController := NewNamespacesController(log, col.Database())
+
+	return AccountsController{log: log, col: col, cred: cred, ns_ctrl: nsController}
 }
 
 func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, error) {
