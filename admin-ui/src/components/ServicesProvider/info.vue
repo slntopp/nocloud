@@ -37,10 +37,12 @@
 
     <component :is="spTypes" :template="template" :editing="editing">
       <v-row v-if="editing">
-        <json-editor
-          :json="template.secrets"
-          @changeValue="(data) => provider.secrets = data"
-        />
+        <v-col :cols="12" :md="6">
+          <json-editor
+            :json="template.secrets"
+            @changeValue="(data) => provider.secrets = data"
+          />
+        </v-col>
       </v-row>
 
       <!-- Variables -->
@@ -62,10 +64,12 @@
         </v-col>
       </v-row>
       <v-row v-else>
-        <json-editor
-          :json="template.vars"
-          @changeValue="(data) => provider.vars = data"
-        />
+        <v-col :cols="12" :md="6">
+          <json-editor
+            :json="template.vars"
+            @changeValue="(data) => provider.vars = data"
+          />
+        </v-col>
       </v-row>
 
       <!-- Edit -->
