@@ -25,9 +25,7 @@
 				<v-col cols="6">
 					<v-select
 						label="model"
-            item-text="name"
-            item-value="id"
-						v-model="instance.config.flavorId"
+						v-model="config[index].flavor"
             :items="flavors"
             :rules="rules.req"
             :loading="isFlavorsLoading"
@@ -40,21 +38,18 @@
 						v-model="instance.config.region"
 						:items="regions"
             :rules="rules.req"
-            :loading="isRegionsLoading"
+            :disabled="!config[index].flavor"
             @change="(value) => setValue(index + '.config.region', value)"
 					/>
 				</v-col>
 				<v-col cols="6">
 					<v-select
 						label="OS type"
-						v-model="OS.type"
+						v-model="config[index].os"
             :items="['baremetal-linux', 'bsd', 'linux', 'windows']"
-            :rules="rules.OS"
-            :disabled="!instance.config.flavorId"
-            @change="(value) => getOS(instance.config, value)"
 					/>
 				</v-col>
-				<v-col cols="6" v-if="OS.type">
+				<v-col cols="6">
 					<v-select
 						label="OS"
             item-text="name"
@@ -63,6 +58,7 @@
 						:items="images"
             :rules="rules.req"
             :loading="isOSLoading"
+            :disabled="!instance.config.flavorId"
             @change="(value) => setValue(index + '.config.imageId', value)"
 					/>
 				</v-col>
@@ -139,14 +135,13 @@ export default {
       "billing_plan": {}
 		},
     rules: {
-      req: [(v) => !!v || "required field"],
-      OS: []
+      req: [(v) => !!v || "required field"]
     },
-    OS: { type: '' },
+    config: {},
 
     isFlavorsLoading: false,
-    isRegionsLoading: false,
     isOSLoading: false,
+    allFlavors: [],
     flavors: [],
     regions: [],
     images: []
@@ -154,13 +149,12 @@ export default {
 	methods: { 
     addProducts(instance) {
       const { plan, billing_plan } = instance;
-      const products = this.plans.list.find((el) =>
-        el.uuid.includes(plan.uuid)
-      )?.products || {};
+      const products = this.plans.list.find((el) => el.uuid === plan.uuid)
+        ?.products;
 
       if (billing_plan.kind === 'STATIC') {
         instance.products = [];
-        Object.values(products).forEach(({ title }) => {
+        Object.values(products || {}).forEach(({ title }) => {
           instance.products.push(title);
         });
       } else {
@@ -170,16 +164,16 @@ export default {
     },
 		addInstance(){
 			const item = JSON.parse(JSON.stringify(this.defaultItem));
-			const data = JSON.parse(this.instancesGroup)
-			item.title += "#" + (data.body.instances.length + 1);
+			const data = JSON.parse(this.instancesGroup);
+      const i = data.body.instances.length;
 
+			item.title += "#" + (i + 1);
+      this.config[i] = { flavor: null, os: null };
 			data.body.instances.push(item);
-			this.change(data)
+			this.change(data);
 		},
-    getOS({ region, flavorId }, os){
+    getOS({ region, flavor, os }){
       const data = JSON.parse(this.instancesGroup);
-      const flavor = this.flavors.find((el) => el.id === flavorId)
-        ?.name.split(' ')[0];
 
       this.isOSLoading = true;
       api.post(`/sp/${data.sp}/invoke`, {
@@ -204,7 +198,7 @@ export default {
       const i = path.split('.')[0]
 
       if (path.includes('plan')) {
-        const plan = this.plans.list.find(({ uuid }) => val.includes(uuid))
+        const plan = this.plans.list.find(({ uuid }) => val === uuid)
         const j = plan.title.length - 14
 
         data.body.instances[i].plan = val
@@ -217,6 +211,21 @@ export default {
 
         data.body.instances[i].productTitle = val
         val = product
+      }
+      if (path.includes('flavor')) {
+        this.allFlavors.forEach((el) => {
+          if (el.name === val) this.regions.push(el.region)
+        })
+        val = null
+      }
+      if (path.includes('region')) {
+        const { config } = data.body.instances[i];
+
+        config.flavorId = this.allFlavors.find((el) =>
+          (el.region === val) && (el.name === this.config[i].flavor)
+        )?.id;
+        this.config[i].region = val;
+        this.getOS(this.config[i]);
       }
 
 			setToValue(data.body.instances, val, path)
@@ -241,9 +250,7 @@ export default {
 	created() {
 		const data = JSON.parse(this.instancesGroup);
 
-		if (!data.body.instances) {
-			data.body.instances = [];
-		}
+		if (!data.body.instances) data.body.instances = [];
 
 		this.change(data);
 	},
@@ -259,21 +266,14 @@ export default {
       this.isFlavorsLoading = true;
       api.post(`/sp/${data.sp}/invoke`, { method: 'flavors' })
         .then(({ meta }) => {
-          this.flavors = meta.result.map((el) => ({
-            ...el, name: `${el.name} (${el.id.slice(0, 8)}...)`
-          }));
+          this.allFlavors = meta.result;
+          meta.result.forEach((el) => {
+            if (this.flavors.includes(el.name)) return;
+            this.flavors.push(el.name);
+          });
         })
         .finally(() => {
           this.isFlavorsLoading = false;
-        });
-
-      this.isRegionsLoading = true;
-      api.post(`/sp/${data.sp}/invoke`, { method: 'regions' })
-        .then(({ meta }) => {
-          this.regions = meta.result;
-        })
-        .finally(() => {
-          this.isRegionsLoading = false;
         });
     }
   }

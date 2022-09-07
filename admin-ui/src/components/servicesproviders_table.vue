@@ -99,7 +99,11 @@ export default {
       .then(({ pool }) => {
         pool.forEach((el) => {
           if (el.type === 'ovh') {
-            Headers.push({ text: "region", value: "region" });
+            const isRegionIncludes = Headers.find((el) => el.value === 'region');
+
+            if (!isRegionIncludes) {
+              Headers.push({ text: "region", value: "region" });
+            }
             this.$store.dispatch('servicesProviders/fetchById', el.uuid);
           }
         });
