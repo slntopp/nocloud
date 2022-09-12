@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="control">
-      <template v-if="service.status == 'up' || service.status == 'del'">
+      <template v-if="service.status === 'UP' || service.status === 'DEL'">
         <v-btn :loading="loading.action" @click="down"> down service </v-btn>
       </template>
       <v-btn v-else :loading="loading.action" @click="deploy">
@@ -78,7 +78,7 @@ export default {
       api.services
         .up(this.serviceId)
         .then(() => {
-          this.$store.dispatch("services/fetch");
+          this.$store.dispatch("services/fetchById", this.serviceId);
         })
         .finally(() => {
           this.loading.action = false;
@@ -89,7 +89,7 @@ export default {
       api.services
         .down(this.serviceId)
         .then(() => {
-          this.$store.dispatch("services/fetch");
+          this.$store.dispatch("services/fetchById", this.serviceId);
         })
         .finally(() => {
           this.loading.action = false;

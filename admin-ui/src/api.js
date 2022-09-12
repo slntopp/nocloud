@@ -9,7 +9,8 @@ api.axios.interceptors.response.use(
   function (error) {
     if (
       (error.response && error.response?.data?.code === 7) &&
-      !error.response?.config?.url?.includes("transactions")
+      !error.response?.config?.url?.includes("transactions") &&
+      !error.response?.config?.url?.includes("services")
     ) {
       // console.log("credentials are not actual");
       vuex.dispatch("auth/logout");
