@@ -128,6 +128,12 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 
 		for _, instance := range group.GetInstances() {
 			log.Debug("Instance BillingPlan is", zap.Bool("provided", instance.BillingPlan != nil))
+			terr := s.ensureSPBounds(ctx, instance, group)
+			if terr != nil {
+				response.Result = false
+				response.Errors = append(response.Errors, terr)
+			}
+
 			if ibps.Required && instance.BillingPlan == nil {
 				response.Result = false
 				terr := pb.TestConfigError{
