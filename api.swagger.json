@@ -555,7 +555,9 @@
                 },
                 "meta": {
                   "type": "object",
-                  "additionalProperties": {}
+                  "additionalProperties": {
+                    "type": "object"
+                  }
                 }
               }
             }
@@ -889,7 +891,9 @@
                 },
                 "params": {
                   "type": "object",
-                  "additionalProperties": {}
+                  "additionalProperties": {
+                    "type": "object"
+                  }
                 }
               }
             }
@@ -1289,7 +1293,9 @@
                 },
                 "context": {
                   "type": "object",
-                  "additionalProperties": {}
+                  "additionalProperties": {
+                    "type": "object"
+                  }
                 },
                 "instancesGroups": {
                   "type": "array",
@@ -1849,7 +1855,9 @@
                 },
                 "secrets": {
                   "type": "object",
-                  "additionalProperties": {}
+                  "additionalProperties": {
+                    "type": "object"
+                  }
                 },
                 "vars": {
                   "type": "object",
@@ -1868,13 +1876,21 @@
                 },
                 "publicData": {
                   "type": "object",
-                  "additionalProperties": {}
+                  "additionalProperties": {
+                    "type": "object"
+                  }
                 },
                 "public": {
                   "type": "boolean"
                 },
                 "proxy": {
                   "$ref": "#/definitions/services_providersProxyConf"
+                },
+                "locations": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/services_providersLocationConf"
+                  }
                 }
               }
             }
@@ -1965,7 +1981,9 @@
                 },
                 "params": {
                   "type": "object",
-                  "additionalProperties": {}
+                  "additionalProperties": {
+                    "type": "object"
+                  }
                 }
               }
             }
@@ -2238,7 +2256,9 @@
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },
@@ -2270,11 +2290,15 @@
         },
         "resources": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "sorter": {
           "type": "integer",
@@ -2357,7 +2381,9 @@
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {},
+          "additionalProperties": {
+            "type": "object"
+          },
           "title": "Transaction meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity\nprice_atm: \u003cnumber\u003e // hourly price per quant of resouce at the moment, e.g. 1 NCU \n[other keys]: \u003cany\u003e // for example Drive Type(SSD/HDD/NVMe/etc)\n}"
         }
       }
@@ -2528,15 +2554,21 @@
         },
         "config": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "resources": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "data": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "state": {
           "$ref": "#/definitions/statesState"
@@ -2586,7 +2618,9 @@
         },
         "config": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "instances": {
           "type": "array",
@@ -2596,11 +2630,15 @@
         },
         "resources": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "data": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "hash": {
           "type": "string"
@@ -2720,7 +2758,9 @@
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {},
+          "additionalProperties": {
+            "type": "object"
+          },
           "title": "Record meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity\nprice_atm: \u003cnumber\u003e // hourly price per quant of resouce at the moment, e.g. 1 NCU \n[other keys]: \u003cany\u003e // for example Drive Type(SSD/HDD/NVMe/etc)\n}"
         }
       }
@@ -2798,7 +2838,9 @@
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },
@@ -2868,7 +2910,9 @@
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },
@@ -3027,7 +3071,9 @@
         },
         "context": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "instancesGroups": {
           "type": "array",
@@ -3139,6 +3185,31 @@
         }
       }
     },
+    "services_providersLocationConf": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "format": "float"
+        },
+        "y": {
+          "type": "number",
+          "format": "float"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "extra": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object"
+          }
+        }
+      }
+    },
     "services_providersProxyConf": {
       "type": "object",
       "properties": {
@@ -3161,7 +3232,9 @@
         },
         "secrets": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "vars": {
           "type": "object",
@@ -3180,13 +3253,21 @@
         },
         "publicData": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "public": {
           "type": "boolean"
         },
         "proxy": {
           "$ref": "#/definitions/services_providersProxyConf"
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/services_providersLocationConf"
+          }
         }
       }
     },
@@ -3198,7 +3279,9 @@
       "properties": {
         "value": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         }
       }
     },
@@ -3254,7 +3337,9 @@
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {
+            "type": "object"
+          }
         },
         "ts": {
           "type": "string",
