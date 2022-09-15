@@ -177,7 +177,18 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 			continue
 		}
 
-		res, err := client.TestInstancesGroupConfig(ctx, &proto.TestInstancesGroupConfigRequest{Group: group})
+		sp, err := s.sp_ctrl.Get(ctx, group.GetSp())
+		if err != nil {
+			response.Result = false
+			config_err.Error = fmt.Sprintf("Error getting sp %s while validating group '%s': %v",
+				group.GetSp(), group.Title, err)
+			response.Errors = append(response.Errors, &config_err)
+			continue
+		}
+		res, err := client.TestInstancesGroupConfig(ctx, &proto.TestInstancesGroupConfigRequest{
+			Group: group,
+			Sp:    sp.ServicesProvider,
+		})
 		if err != nil {
 			response.Result = false
 			config_err.Error = fmt.Sprintf("Error validating group '%s': %v", group.Title, err)

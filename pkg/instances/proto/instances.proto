@@ -20,6 +20,7 @@ import "google/protobuf/struct.proto";
 import "pkg/hasher/hasherpb/hasher.proto";
 import "pkg/states/proto/states.proto";
 import "pkg/billing/proto/billing.proto";
+import "pkg/services_providers/proto/services_providers.proto";
 import "google/api/annotations.proto";
 
 enum InstanceStatus {
@@ -68,6 +69,7 @@ message InstancesGroup {
 
 message TestInstancesGroupConfigRequest {
     InstancesGroup group = 1;
+    nocloud.services_providers.ServicesProvider sp = 2;
 }
 
 message TestInstancesGroupConfigError {
