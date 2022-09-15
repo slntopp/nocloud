@@ -26,31 +26,35 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
      */
     protected $title = '';
     /**
-     * Generated from protobuf field <code>map<string, .google.protobuf.Value> config = 4 [json_name = "config", (.nocloud.hasher.hashed) = true];</code>
+     * Generated from protobuf field <code>.nocloud.instances.InstanceStatus status = 4 [json_name = "status"];</code>
+     */
+    protected $status = 0;
+    /**
+     * Generated from protobuf field <code>map<string, .google.protobuf.Value> config = 5 [json_name = "config", (.nocloud.hasher.hashed) = true];</code>
      */
     private $config;
     /**
-     * Generated from protobuf field <code>repeated .nocloud.instances.Instance instances = 5 [json_name = "instances", (.nocloud.hasher.hashed) = true];</code>
+     * Generated from protobuf field <code>repeated .nocloud.instances.Instance instances = 6 [json_name = "instances", (.nocloud.hasher.hashed) = true];</code>
      */
     private $instances;
     /**
-     * Generated from protobuf field <code>map<string, .google.protobuf.Value> resources = 6 [json_name = "resources", (.nocloud.hasher.hashed) = true];</code>
+     * Generated from protobuf field <code>map<string, .google.protobuf.Value> resources = 7 [json_name = "resources", (.nocloud.hasher.hashed) = true];</code>
      */
     private $resources;
     /**
-     * Generated from protobuf field <code>map<string, .google.protobuf.Value> data = 7 [json_name = "data"];</code>
+     * Generated from protobuf field <code>map<string, .google.protobuf.Value> data = 8 [json_name = "data"];</code>
      */
     private $data;
     /**
-     * Generated from protobuf field <code>string hash = 8 [json_name = "hash", (.nocloud.hasher.hash) = true];</code>
+     * Generated from protobuf field <code>string hash = 9 [json_name = "hash", (.nocloud.hasher.hash) = true];</code>
      */
     protected $hash = '';
     /**
-     * Generated from protobuf field <code>optional string sp = 9 [json_name = "sp"];</code>
+     * Generated from protobuf field <code>optional string sp = 10 [json_name = "sp"];</code>
      */
     protected $sp = null;
     /**
-     * Generated from protobuf field <code>optional int32 access_level = 10 [json_name = "accessLevel"];</code>
+     * Generated from protobuf field <code>optional int32 access_level = 11 [json_name = "accessLevel"];</code>
      */
     protected $access_level = null;
 
@@ -63,6 +67,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
      *     @type string $uuid
      *     @type string $type
      *     @type string $title
+     *     @type int $status
      *     @type array|\Google\Protobuf\Internal\MapField $config
      *     @type array<\Nocloud\Instances\Instance>|\Google\Protobuf\Internal\RepeatedField $instances
      *     @type array|\Google\Protobuf\Internal\MapField $resources
@@ -144,7 +149,29 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>map<string, .google.protobuf.Value> config = 4 [json_name = "config", (.nocloud.hasher.hashed) = true];</code>
+     * Generated from protobuf field <code>.nocloud.instances.InstanceStatus status = 4 [json_name = "status"];</code>
+     * @return int
+     */
+    public function getStatus()
+    {
+        return $this->status;
+    }
+
+    /**
+     * Generated from protobuf field <code>.nocloud.instances.InstanceStatus status = 4 [json_name = "status"];</code>
+     * @param int $var
+     * @return $this
+     */
+    public function setStatus($var)
+    {
+        GPBUtil::checkEnum($var, \Nocloud\Instances\InstanceStatus::class);
+        $this->status = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>map<string, .google.protobuf.Value> config = 5 [json_name = "config", (.nocloud.hasher.hashed) = true];</code>
      * @return \Google\Protobuf\Internal\MapField
      */
     public function getConfig()
@@ -153,7 +180,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>map<string, .google.protobuf.Value> config = 4 [json_name = "config", (.nocloud.hasher.hashed) = true];</code>
+     * Generated from protobuf field <code>map<string, .google.protobuf.Value> config = 5 [json_name = "config", (.nocloud.hasher.hashed) = true];</code>
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
@@ -166,7 +193,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>repeated .nocloud.instances.Instance instances = 5 [json_name = "instances", (.nocloud.hasher.hashed) = true];</code>
+     * Generated from protobuf field <code>repeated .nocloud.instances.Instance instances = 6 [json_name = "instances", (.nocloud.hasher.hashed) = true];</code>
      * @return \Google\Protobuf\Internal\RepeatedField
      */
     public function getInstances()
@@ -175,7 +202,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>repeated .nocloud.instances.Instance instances = 5 [json_name = "instances", (.nocloud.hasher.hashed) = true];</code>
+     * Generated from protobuf field <code>repeated .nocloud.instances.Instance instances = 6 [json_name = "instances", (.nocloud.hasher.hashed) = true];</code>
      * @param array<\Nocloud\Instances\Instance>|\Google\Protobuf\Internal\RepeatedField $var
      * @return $this
      */
@@ -188,7 +215,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>map<string, .google.protobuf.Value> resources = 6 [json_name = "resources", (.nocloud.hasher.hashed) = true];</code>
+     * Generated from protobuf field <code>map<string, .google.protobuf.Value> resources = 7 [json_name = "resources", (.nocloud.hasher.hashed) = true];</code>
      * @return \Google\Protobuf\Internal\MapField
      */
     public function getResources()
@@ -197,7 +224,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>map<string, .google.protobuf.Value> resources = 6 [json_name = "resources", (.nocloud.hasher.hashed) = true];</code>
+     * Generated from protobuf field <code>map<string, .google.protobuf.Value> resources = 7 [json_name = "resources", (.nocloud.hasher.hashed) = true];</code>
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
@@ -210,7 +237,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>map<string, .google.protobuf.Value> data = 7 [json_name = "data"];</code>
+     * Generated from protobuf field <code>map<string, .google.protobuf.Value> data = 8 [json_name = "data"];</code>
      * @return \Google\Protobuf\Internal\MapField
      */
     public function getData()
@@ -219,7 +246,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>map<string, .google.protobuf.Value> data = 7 [json_name = "data"];</code>
+     * Generated from protobuf field <code>map<string, .google.protobuf.Value> data = 8 [json_name = "data"];</code>
      * @param array|\Google\Protobuf\Internal\MapField $var
      * @return $this
      */
@@ -232,7 +259,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string hash = 8 [json_name = "hash", (.nocloud.hasher.hash) = true];</code>
+     * Generated from protobuf field <code>string hash = 9 [json_name = "hash", (.nocloud.hasher.hash) = true];</code>
      * @return string
      */
     public function getHash()
@@ -241,7 +268,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>string hash = 8 [json_name = "hash", (.nocloud.hasher.hash) = true];</code>
+     * Generated from protobuf field <code>string hash = 9 [json_name = "hash", (.nocloud.hasher.hash) = true];</code>
      * @param string $var
      * @return $this
      */
@@ -254,7 +281,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>optional string sp = 9 [json_name = "sp"];</code>
+     * Generated from protobuf field <code>optional string sp = 10 [json_name = "sp"];</code>
      * @return string
      */
     public function getSp()
@@ -273,7 +300,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>optional string sp = 9 [json_name = "sp"];</code>
+     * Generated from protobuf field <code>optional string sp = 10 [json_name = "sp"];</code>
      * @param string $var
      * @return $this
      */
@@ -286,7 +313,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>optional int32 access_level = 10 [json_name = "accessLevel"];</code>
+     * Generated from protobuf field <code>optional int32 access_level = 11 [json_name = "accessLevel"];</code>
      * @return int
      */
     public function getAccessLevel()
@@ -305,7 +332,7 @@ class InstancesGroup extends \Google\Protobuf\Internal\Message
     }
 
     /**
-     * Generated from protobuf field <code>optional int32 access_level = 10 [json_name = "accessLevel"];</code>
+     * Generated from protobuf field <code>optional int32 access_level = 11 [json_name = "accessLevel"];</code>
      * @param int $var
      * @return $this
      */

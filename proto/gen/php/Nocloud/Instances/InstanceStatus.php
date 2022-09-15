@@ -35,6 +35,10 @@ class InstanceStatus
      * Generated from protobuf enum <code>DEL = 5;</code>
      */
     const DEL = 5;
+    /**
+     * Generated from protobuf enum <code>SUS = 6;</code>
+     */
+    const SUS = 6;
 
     private static $valueToName = [
         self::UNSPECIFIED => 'UNSPECIFIED',
@@ -43,6 +47,7 @@ class InstanceStatus
         self::UP => 'UP',
         self::DOWN => 'DOWN',
         self::DEL => 'DEL',
+        self::SUS => 'SUS',
     ];
 
     public static function name($value)

@@ -116,6 +116,20 @@ class DriverServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * @param \Nocloud\Instance\Driver\Vanilla\MonitoringRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function SuspendMonitoring(\Nocloud\Instance\Driver\Vanilla\MonitoringRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/nocloud.instance.driver.vanilla.DriverService/SuspendMonitoring',
+        $argument,
+        ['\Nocloud\Instance\Driver\Vanilla\MonitoringResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \Nocloud\Instance\Driver\Vanilla\InvokeRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

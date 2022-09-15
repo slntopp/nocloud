@@ -17,6 +17,10 @@ class TestInstancesGroupConfigRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>.nocloud.instances.InstancesGroup group = 1 [json_name = "group"];</code>
      */
     protected $group = null;
+    /**
+     * Generated from protobuf field <code>.nocloud.services_providers.ServicesProvider sp = 2 [json_name = "sp"];</code>
+     */
+    protected $sp = null;
 
     /**
      * Constructor.
@@ -25,6 +29,7 @@ class TestInstancesGroupConfigRequest extends \Google\Protobuf\Internal\Message
      *     Optional. Data for populating the Message object.
      *
      *     @type \Nocloud\Instances\InstancesGroup $group
+     *     @type \Nocloud\ServicesProviders\ServicesProvider $sp
      * }
      */
     public function __construct($data = NULL) {
@@ -60,6 +65,38 @@ class TestInstancesGroupConfigRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkMessage($var, \Nocloud\Instances\InstancesGroup::class);
         $this->group = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>.nocloud.services_providers.ServicesProvider sp = 2 [json_name = "sp"];</code>
+     * @return \Nocloud\ServicesProviders\ServicesProvider|null
+     */
+    public function getSp()
+    {
+        return $this->sp;
+    }
+
+    public function hasSp()
+    {
+        return isset($this->sp);
+    }
+
+    public function clearSp()
+    {
+        unset($this->sp);
+    }
+
+    /**
+     * Generated from protobuf field <code>.nocloud.services_providers.ServicesProvider sp = 2 [json_name = "sp"];</code>
+     * @param \Nocloud\ServicesProviders\ServicesProvider $var
+     * @return $this
+     */
+    public function setSp($var)
+    {
+        GPBUtil::checkMessage($var, \Nocloud\ServicesProviders\ServicesProvider::class);
+        $this->sp = $var;
 
         return $this;
     }

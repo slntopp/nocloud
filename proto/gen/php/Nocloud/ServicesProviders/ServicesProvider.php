@@ -53,6 +53,14 @@ class ServicesProvider extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>bool public = 9 [json_name = "public"];</code>
      */
     protected $public = false;
+    /**
+     * Generated from protobuf field <code>optional .nocloud.services_providers.ProxyConf proxy = 10 [json_name = "proxy"];</code>
+     */
+    protected $proxy = null;
+    /**
+     * Generated from protobuf field <code>repeated .nocloud.services_providers.LocationConf locations = 11 [json_name = "locations"];</code>
+     */
+    private $locations;
 
     /**
      * Constructor.
@@ -71,6 +79,8 @@ class ServicesProvider extends \Google\Protobuf\Internal\Message
      *     @type array|\Google\Protobuf\Internal\MapField $public_data
      *     @type bool $public
      *           If set to true, the provider will be visible to all users
+     *     @type \Nocloud\ServicesProviders\ProxyConf $proxy
+     *     @type array<\Nocloud\ServicesProviders\LocationConf>|\Google\Protobuf\Internal\RepeatedField $locations
      * }
      */
     public function __construct($data = NULL) {
@@ -290,6 +300,60 @@ class ServicesProvider extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkBool($var);
         $this->public = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>optional .nocloud.services_providers.ProxyConf proxy = 10 [json_name = "proxy"];</code>
+     * @return \Nocloud\ServicesProviders\ProxyConf|null
+     */
+    public function getProxy()
+    {
+        return $this->proxy;
+    }
+
+    public function hasProxy()
+    {
+        return isset($this->proxy);
+    }
+
+    public function clearProxy()
+    {
+        unset($this->proxy);
+    }
+
+    /**
+     * Generated from protobuf field <code>optional .nocloud.services_providers.ProxyConf proxy = 10 [json_name = "proxy"];</code>
+     * @param \Nocloud\ServicesProviders\ProxyConf $var
+     * @return $this
+     */
+    public function setProxy($var)
+    {
+        GPBUtil::checkMessage($var, \Nocloud\ServicesProviders\ProxyConf::class);
+        $this->proxy = $var;
+
+        return $this;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .nocloud.services_providers.LocationConf locations = 11 [json_name = "locations"];</code>
+     * @return \Google\Protobuf\Internal\RepeatedField
+     */
+    public function getLocations()
+    {
+        return $this->locations;
+    }
+
+    /**
+     * Generated from protobuf field <code>repeated .nocloud.services_providers.LocationConf locations = 11 [json_name = "locations"];</code>
+     * @param array<\Nocloud\ServicesProviders\LocationConf>|\Google\Protobuf\Internal\RepeatedField $var
+     * @return $this
+     */
+    public function setLocations($var)
+    {
+        $arr = GPBUtil::checkRepeatedField($var, \Google\Protobuf\Internal\GPBType::MESSAGE, \Nocloud\ServicesProviders\LocationConf::class);
+        $this->locations = $arr;
 
         return $this;
     }

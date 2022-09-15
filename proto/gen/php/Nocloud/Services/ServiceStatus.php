@@ -39,6 +39,10 @@ class ServiceStatus
      * Generated from protobuf enum <code>PROC = 6;</code>
      */
     const PROC = 6;
+    /**
+     * Generated from protobuf enum <code>SUS = 7;</code>
+     */
+    const SUS = 7;
 
     private static $valueToName = [
         self::UNSPECIFIED => 'UNSPECIFIED',
@@ -48,6 +52,7 @@ class ServiceStatus
         self::DOWN => 'DOWN',
         self::DEL => 'DEL',
         self::PROC => 'PROC',
+        self::SUS => 'SUS',
     ];
 
     public static function name($value)

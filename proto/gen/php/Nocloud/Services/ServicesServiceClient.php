@@ -144,6 +144,34 @@ class ServicesServiceClient extends \Grpc\BaseStub {
     }
 
     /**
+     * @param \Nocloud\Services\SuspendRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function Suspend(\Nocloud\Services\SuspendRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/nocloud.services.ServicesService/Suspend',
+        $argument,
+        ['\Nocloud\Services\SuspendResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
+     * @param \Nocloud\Services\UnsuspendRequest $argument input argument
+     * @param array $metadata metadata
+     * @param array $options call options
+     * @return \Grpc\UnaryCall
+     */
+    public function Unsuspend(\Nocloud\Services\UnsuspendRequest $argument,
+      $metadata = [], $options = []) {
+        return $this->_simpleRequest('/nocloud.services.ServicesService/Unsuspend',
+        $argument,
+        ['\Nocloud\Services\UnsuspendResponse', 'decode'],
+        $metadata, $options);
+    }
+
+    /**
      * @param \Nocloud\Services\StreamRequest $argument input argument
      * @param array $metadata metadata
      * @param array $options call options

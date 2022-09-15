@@ -21,12 +21,6 @@ class CreateRequest extends \Google\Protobuf\Internal\Message
      * Generated from protobuf field <code>string namespace = 2 [json_name = "namespace"];</code>
      */
     protected $namespace = '';
-    /**
-     * Map of InstanceGroup UUID to ServiceProvider
-     *
-     * Generated from protobuf field <code>map<int32, string> deploy_policies = 3 [json_name = "deployPolicies"];</code>
-     */
-    private $deploy_policies;
 
     /**
      * Constructor.
@@ -36,8 +30,6 @@ class CreateRequest extends \Google\Protobuf\Internal\Message
      *
      *     @type \Nocloud\Services\Service $service
      *     @type string $namespace
-     *     @type array|\Google\Protobuf\Internal\MapField $deploy_policies
-     *           Map of InstanceGroup UUID to ServiceProvider
      * }
      */
     public function __construct($data = NULL) {
@@ -95,32 +87,6 @@ class CreateRequest extends \Google\Protobuf\Internal\Message
     {
         GPBUtil::checkString($var, True);
         $this->namespace = $var;
-
-        return $this;
-    }
-
-    /**
-     * Map of InstanceGroup UUID to ServiceProvider
-     *
-     * Generated from protobuf field <code>map<int32, string> deploy_policies = 3 [json_name = "deployPolicies"];</code>
-     * @return \Google\Protobuf\Internal\MapField
-     */
-    public function getDeployPolicies()
-    {
-        return $this->deploy_policies;
-    }
-
-    /**
-     * Map of InstanceGroup UUID to ServiceProvider
-     *
-     * Generated from protobuf field <code>map<int32, string> deploy_policies = 3 [json_name = "deployPolicies"];</code>
-     * @param array|\Google\Protobuf\Internal\MapField $var
-     * @return $this
-     */
-    public function setDeployPolicies($var)
-    {
-        $arr = GPBUtil::checkMapField($var, \Google\Protobuf\Internal\GPBType::INT32, \Google\Protobuf\Internal\GPBType::STRING);
-        $this->deploy_policies = $arr;
 
         return $this;
     }
