@@ -28,6 +28,14 @@ message ProxyConf {
     optional string socket = 1;
 }
 
+message LocationConf {
+    float x = 1;
+    float y = 2;
+    string id = 3;
+    string title = 4;
+    map<string, google.protobuf.Value> extra = 5;
+}
+
 message ServicesProvider {
     string uuid = 1;
     string type = 2;
@@ -40,6 +48,7 @@ message ServicesProvider {
     bool public = 9; // If set to true, the provider will be visible to all users
 
     optional ProxyConf proxy = 10;
+    repeated LocationConf locations = 11;
 }
 
 message TestResponse {
