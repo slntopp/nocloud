@@ -53,9 +53,11 @@ func (*WHMCSCredentials) Type() string {
 
 func (c *WHMCSCredentials) SetLogger(log *zap.Logger) {
 	c.log = log.Named("WHMCS")
+	c.log.Debug("Logger is now set")
 }
 
 func (c *WHMCSCredentials) Authorize(args ...string) bool {
+	c.log.Debug("Authorize Attempt", zap.String("login", args[0]), zap.String("email", c.Email))
 	conf := &WHMCSConfig{}
 	err := _GetWHMCSConfig(conf)
 	if err != nil {

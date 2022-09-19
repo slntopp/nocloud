@@ -51,7 +51,8 @@ func (*StandardCredentials) Type() string {
 }
 
 func (c *StandardCredentials) SetLogger(log *zap.Logger) {
-	c.log = log.Named("Standard Auth")
+	c.log = log.Named("Standard")
+	c.log.Debug("Logger is now set")
 }
 
 func (cred *StandardCredentials) Find(ctx context.Context, db driver.Database) bool {
