@@ -77,12 +77,13 @@ func RegisterHealthServiceHandlerServer(ctx context.Context, mux *runtime.ServeM
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.health.HealthService/Probe", runtime.WithHTTPPathPattern("/health/probe"))
+		var err error
+		ctx, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.health.HealthService/Probe", runtime.WithHTTPPathPattern("/health/probe"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_HealthService_Probe_0(rctx, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_HealthService_Probe_0(ctx, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
@@ -124,7 +125,7 @@ func RegisterHealthServiceHandlerFromEndpoint(ctx context.Context, mux *runtime.
 
 // RegisterHealthServiceHandler registers the http handlers for service HealthService to "mux".
 // The handlers forward requests to the grpc endpoint over "conn".
-func RegisterHealthServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn grpc.ClientConnInterface) error {
+func RegisterHealthServiceHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
 	return RegisterHealthServiceHandlerClient(ctx, mux, NewHealthServiceClient(conn))
 }
 
@@ -139,12 +140,13 @@ func RegisterHealthServiceHandlerClient(ctx context.Context, mux *runtime.ServeM
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		rctx, err := runtime.AnnotateContext(ctx, mux, req, "/nocloud.health.HealthService/Probe", runtime.WithHTTPPathPattern("/health/probe"))
+		var err error
+		ctx, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.health.HealthService/Probe", runtime.WithHTTPPathPattern("/health/probe"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_HealthService_Probe_0(rctx, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_HealthService_Probe_0(ctx, inboundMarshaler, client, req, pathParams)
 		ctx = runtime.NewServerMetadataContext(ctx, md)
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
