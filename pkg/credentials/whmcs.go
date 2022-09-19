@@ -69,7 +69,7 @@ func (c *WHMCSCredentials) Authorize(args ...string) bool {
 	log.Debug("Attempt request to WHMCS", zap.Any("conf", conf))
 
 	if conf.Api == "" || conf.User == "" || conf.Pass == "" {
-		c.log.Error("Some settings are empty", zap.Any("conf", conf))
+		log.Error("Some settings are empty", zap.Any("conf", conf))
 		return false
 	}
 
@@ -82,20 +82,20 @@ func (c *WHMCSCredentials) Authorize(args ...string) bool {
 	_ = writer.WriteField("action", "ValidateLogin")
 	err = writer.Close()
 	if err != nil {
-		c.log.Error("Error writing FormData", zap.Error(err))
+		log.Error("Error writing FormData", zap.Error(err))
 		return false
 	}
 
 	client := &http.Client{}
 	req, err := http.NewRequest("POST", conf.Api, payload)
 	if err != nil {
-		c.log.Error("Error making Request", zap.Error(err))
+		log.Error("Error making Request", zap.Error(err))
 		return false
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	res, err := client.Do(req)
 	if err != nil {
-		c.log.Error("Error performing HTTP request", zap.Error(err))
+		log.Error("Error performing HTTP request", zap.Error(err))
 		return false
 	}
 
@@ -103,9 +103,11 @@ func (c *WHMCSCredentials) Authorize(args ...string) bool {
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		c.log.Error("Error reading Response Body", zap.Error(err))
+		log.Error("Error reading Response Body", zap.Error(err))
 		return false
 	}
+
+	log.Debug("Response", zap.ByteString("body", body))
 	for _, el := range strings.Split(string(body), ";") {
 		data := strings.Split(el, "=")
 		if data[0] == "result" {
@@ -113,7 +115,7 @@ func (c *WHMCSCredentials) Authorize(args ...string) bool {
 		}
 	}
 
-	c.log.Debug("No result found", zap.String("body", string(body)))
+	log.Debug("No result found", zap.String("body", string(body)))
 	return false
 }
 
