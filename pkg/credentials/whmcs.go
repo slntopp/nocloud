@@ -27,19 +27,20 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/arangodb/go-driver"
-	pb "github.com/slntopp/nocloud/pkg/settings/proto"
-	"github.com/spf13/viper"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	sc "github.com/slntopp/nocloud/pkg/settings/client"
 )
-
-var settingsClient pb.SettingsServiceClient
 
 type WHMCSCredentials struct {
 	Email string `json:"email"`
 
 	log *zap.Logger
 	driver.DocumentMeta
+}
+
+type WHMCSConfig struct {
+	Api  string `json:"api"`
+	User string `json:"user"`
+	Pass string `json:"pass_hash"`
 }
 
 func NewWHMCSCredentials(email string) (Credentials, error) {
@@ -51,23 +52,19 @@ func (*WHMCSCredentials) Type() string {
 }
 
 func (c *WHMCSCredentials) SetLogger(log *zap.Logger) {
-	c.log = log.Named("WHMCS Auth")
+	c.log = log.Named("WHMCS")
 }
 
 func (c *WHMCSCredentials) Authorize(args ...string) bool {
-	vars, err := settingsClient.Get(context.Background(), &pb.GetRequest{Keys: []string{
-		"whmcs:api", "whmcs:user", "whmcs:pass_hash",
-	}})
+	conf := &WHMCSConfig{}
+	err := _GetWHMCSConfig(conf)
 	if err != nil {
 		c.log.Error("Error getting settings", zap.Error(err))
 		return false
 	}
 
-	api := vars.Fields["whmcs:api"].GetStringValue()
-	user := vars.Fields["whmcs:user"].GetStringValue()
-	pass := vars.Fields["whmcs:pass_hash"].GetStringValue()
-	if api == "" || user == "" || pass == "" {
-		c.log.Error("Some settings are empty", zap.Strings("vars", []string{api, user, pass}))
+	if conf.Api == "" || conf.User == "" || conf.Pass == "" {
+		c.log.Error("Some settings are empty", zap.Any("vars", conf))
 		return false
 	}
 
@@ -75,8 +72,8 @@ func (c *WHMCSCredentials) Authorize(args ...string) bool {
 	writer := multipart.NewWriter(payload)
 	_ = writer.WriteField("email", c.Email)
 	_ = writer.WriteField("password2", args[1])
-	_ = writer.WriteField("username", user)
-	_ = writer.WriteField("password", pass)
+	_ = writer.WriteField("username", conf.User)
+	_ = writer.WriteField("password", conf.Pass)
 	_ = writer.WriteField("action", "ValidateLogin")
 	err = writer.Close()
 	if err != nil {
@@ -85,7 +82,7 @@ func (c *WHMCSCredentials) Authorize(args ...string) bool {
 	}
 
 	client := &http.Client{}
-	req, err := http.NewRequest("POST", api, payload)
+	req, err := http.NewRequest("POST", conf.Api, payload)
 	if err != nil {
 		c.log.Error("Error making Request", zap.Error(err))
 		return false
@@ -135,15 +132,10 @@ func (cred *WHMCSCredentials) FindByKey(ctx context.Context, col driver.Collecti
 	return err
 }
 
-func init() {
-	viper.AutomaticEnv()
-	viper.SetDefault("SETTINGS_HOST", "settings:8000")
-	host := viper.GetString("SETTINGS_HOST")
-
-	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-
-	settingsClient = pb.NewSettingsServiceClient(conn)
+func _GetWHMCSConfig(conf *WHMCSConfig) error {
+	return sc.Fetch("whmcs", conf, &sc.Setting[WHMCSConfig]{
+		Value:       *conf,
+		Description: "WHMCS Credentials Settings (API Endpoint, username, password)",
+		Public:      false,
+	})
 }
