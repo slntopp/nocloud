@@ -21,8 +21,23 @@ import (
 
 	"github.com/arangodb/go-driver"
 	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+	sc "github.com/slntopp/nocloud/pkg/settings/client"
+	pb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/metadata"
 )
+
+func SetupSettingsClient(logger *zap.Logger, settingsClient pb.SettingsServiceClient, internal_token string) {
+	sc.Setup(
+		logger, metadata.AppendToOutgoingContext(
+			context.Background(), "authorization", "bearer "+internal_token,
+		), &settingsClient,
+	)
+
+	_GetWHMCSConfig(&WHMCSConfig{
+		Api: "", User: "api", Pass: "",
+	})
+}
 
 type Link struct {
 	From driver.DocumentID `json:"_from"`

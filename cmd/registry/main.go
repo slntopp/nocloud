@@ -28,6 +28,7 @@ import (
 
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/slntopp/nocloud/pkg/credentials"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
@@ -115,6 +116,7 @@ func main() {
 
 	accounts_server := accounting.NewAccountsServer(log, db)
 	accounts_server.SIGNING_KEY = SIGNING_KEY
+	credentials.SetupSettingsClient(log.Named("Credentials"), sc, token)
 	accounts_server.SetupSettingsClient(sc, token)
 	err = accounts_server.EnsureRootExists(nocloudRootPass)
 	if err != nil {
