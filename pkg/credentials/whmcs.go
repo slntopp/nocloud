@@ -57,16 +57,19 @@ func (c *WHMCSCredentials) SetLogger(log *zap.Logger) {
 }
 
 func (c *WHMCSCredentials) Authorize(args ...string) bool {
-	c.log.Debug("Authorize Attempt", zap.String("login", args[0]), zap.String("email", c.Email))
+	log := c.log.Named("Authorize")
+	log.Debug("Authorize Attempt", zap.String("login", args[0]), zap.String("email", c.Email))
+
 	conf := &WHMCSConfig{}
 	err := _GetWHMCSConfig(conf)
 	if err != nil {
 		c.log.Error("Error getting settings", zap.Error(err))
 		return false
 	}
+	log.Debug("Attempt request to WHMCS", zap.Any("conf", conf))
 
 	if conf.Api == "" || conf.User == "" || conf.Pass == "" {
-		c.log.Error("Some settings are empty", zap.Any("vars", conf))
+		c.log.Error("Some settings are empty", zap.Any("conf", conf))
 		return false
 	}
 
