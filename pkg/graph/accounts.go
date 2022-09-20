@@ -250,14 +250,17 @@ func Authorisable(ctx context.Context, cred *credentials.Credentials, db driver.
 }
 
 func (ctrl *AccountsController) Authorize(ctx context.Context, auth_type string, args ...string) (Account, bool) {
-	ctrl.log.Debug("Authorization request", zap.String("type", auth_type))
+	log := ctrl.log.Named("Authorize")
+
+	log.Debug("Request received", zap.String("type", auth_type))
 
 	credentials, err := credentials.Find(ctx, ctrl.col.Database(), ctrl.log, auth_type, args...)
 	// Check if could authorize
 	if err != nil {
-		ctrl.log.Info("Coudn't authorize", zap.Error(err))
+		log.Debug("Coudn't authorize", zap.String("type", auth_type), zap.Error(err))
 		return Account{}, false
 	}
+	log.Debug("Found credentials", zap.Any("credentials", credentials))
 
 	account, ok := Authorisable(ctx, &credentials, ctrl.col.Database())
 	ctrl.log.Debug("Authorized account", zap.Bool("result", ok), zap.Any("account", account))
