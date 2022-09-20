@@ -375,15 +375,9 @@ export default {
               ? 'Plan edited successfully'
               : 'Plan created successfully'
           });
-
-          setTimeout(() => {
-            this.$router.push({ name: 'Plans' });
-          }, 1500);
         })
         .catch((err) => {
-          this.showSnackbarError({
-              message: err,
-          });
+          this.showSnackbarError({ message: err });
         })
         .finally(() => {
           this.isLoading = false;
