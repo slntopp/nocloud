@@ -104,9 +104,7 @@ export default {
       { title: 'Month', model: 'month' },
       { title: 'Quarter', model: 'quarter' },
       { title: 'Year', model: 'year' },
-      { title: 'Time', model: 'time' },
-      { title: 'Hour' },
-      { title: 'Minute' }
+      { title: 'Time', model: 'time' }
     ],
 
     rules: {
