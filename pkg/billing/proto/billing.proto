@@ -26,6 +26,17 @@ enum PlanKind {
     STATIC = 2;
 }
 
+message FeeRange {
+    double from = 1;
+    double to = 2;
+    double factor = 3;
+}
+
+message Fee {
+    double default = 1;
+    repeated FeeRange ranges = 2;
+}
+
 message Plan {
     string uuid = 1;
     string title = 2;
@@ -36,6 +47,7 @@ message Plan {
     repeated ResourceConf resources = 6; // Resources confs to make plan dynamic
     map<string, Product> products = 7; // Products to make plan pre defined(map key is product key like sm, lg or whatever)
     map<string, google.protobuf.Value> meta = 8;
+    Fee fee = 9;
 }
 
 message ListRequest {
@@ -61,6 +73,7 @@ message ResourceConf {
     // If except set to false then transaction will be created if Instance is NOT in one of the states listed in on
     bool except = 5;
     repeated nocloud.states.NoCloudState on = 6;
+    Fee fee = 7;
 }
 
 message Product {
