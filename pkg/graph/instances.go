@@ -26,6 +26,7 @@ import (
 	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	"github.com/slntopp/nocloud/pkg/hasher"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 )
@@ -82,6 +83,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	// Attempt create edge
 	_, err = ctrl.ig2inst.CreateDocument(ctx, Access{
 		From: group, To: meta.ID,
+		Role: roles.OWNER,
 	})
 	if err != nil {
 		log.Error("Failed to create Edge", zap.Error(err)) // if failed - remove instance from DataBase
