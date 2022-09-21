@@ -15,7 +15,7 @@ updates:
     assignees:
       - slntopp
   - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/tools/buf" # Location of package manifests
+    directory: "tools/buf" # Location of package manifests
     schedule:
       interval: daily
       time: '06:00'
