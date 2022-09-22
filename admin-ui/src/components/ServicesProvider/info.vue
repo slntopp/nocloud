@@ -401,11 +401,11 @@ export default {
 }
 .ceil {
   display: inline-block;
-  width: 20px;
-  height: 20px;
+  width: 15px;
+  height: 15px;
   margin: 5px;
   vertical-align: middle;
-  border-radius: 5px;
+  border-radius: 2px;
 }
 .occupied {
   background: var(--v-success-base);

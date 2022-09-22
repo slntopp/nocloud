@@ -19,9 +19,9 @@ export default {
 		}
   },
   actions: {
-		login({commit}, {login, password}){
+		login({commit}, {login, password,type}){
 			return new Promise((resolve, reject) => {
-				api.authorizeStandard(login, password, true)
+				api.authorizeWithType(login, password,type, true)
 				.then(response => {
           api.applyToken(response.token)
 					Cookies.set(COOKIES_NAME, response.token)
@@ -33,7 +33,6 @@ export default {
 				})
 			})
 		},
-
 		logout({commit}){
 			commit('setToken', '');
 			Cookies.remove(COOKIES_NAME);
