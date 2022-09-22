@@ -27,14 +27,18 @@
         </v-card>
       </v-menu>
 
-      <v-btn
-        color="background-light"
-        class="mr-8"
+      <confirm-dialog
+        @confirm="deleteSelectedNamespace"
         :disabled="selected.length < 1"
-        @click="deleteSelectedNamespace"
       >
-        delete
-      </v-btn>
+        <v-btn
+          color="background-light"
+          class="mr-8"
+          :disabled="selected.length < 1"
+        >
+          delete
+        </v-btn>
+      </confirm-dialog>
 
       <v-dialog v-model="joinAccount.modalVisible" width="500" scrollable>
         <template v-slot:activator="{ on, attrs }">
@@ -154,12 +158,14 @@ import accountsTable from "@/components/accounts_table.vue";
 import api from "@/api.js";
 
 import snackbar from "@/mixins/snackbar.js";
+import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
   name: "namespaces-view",
   components: {
     "namespaces-table": namespacesTable,
     "accounts-table": accountsTable,
+    ConfirmDialog,
   },
   mixins: [snackbar],
   data() {
@@ -287,7 +293,10 @@ export default {
     },
   },
   mounted() {
-    this.$store.commit("reloadBtn/setCallback", { type: "namespaces/fetch" });
+    this.$store.commit("reloadBtn/setCallback", {
+      func: this.$store.dispatch,
+      params: ["namespaces/fetch"],
+    });
   },
 };
 </script>

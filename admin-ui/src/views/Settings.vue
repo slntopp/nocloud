@@ -56,15 +56,11 @@
           </v-row>
         </v-card>
       </v-menu>
-
-      <v-btn
-        color="background-light"
-        class="mr-8"
-        :disabled="selected.length < 1"
-        @click="deleteSelectedKeys"
-      >
-        delete
-      </v-btn>
+      <confirm-dialog :disabled="selected.length < 1"  @confirm="deleteSelectedKeys">
+          <v-btn :disabled="selected.length < 1" color="background-light" class="mr-8">
+            delete
+          </v-btn>
+      </confirm-dialog>
     </div>
 
     <nocloud-table
@@ -72,6 +68,7 @@
       :loading="loading"
       :headers="headers"
       :items="settings"
+      sortBy="description"
       show-select
       v-model="selected"
       :footer-error="fetchError"
@@ -82,7 +79,7 @@
           v-if="edit.key == 'description' && edit.data == item"
         >
           <div class="control">
-            <v-icon @click="saveEditDescription()" class="edit-btn mr-2">
+            <v-icon @click="saveEdit()" class="edit-btn mr-2">
               mdi-content-save-outline
             </v-icon>
             <v-icon @click="stopEdit()" class="edit-btn mr-3">
@@ -92,20 +89,34 @@
           <v-text-field v-model="edit.data.description"></v-text-field>
         </div>
         <template v-else>
-          <v-icon
-            @click="setEditSettingValue('description', item)"
-            class="edit-btn"
-          >
+          <v-icon @click="startEdit('description', item)" class="edit-btn">
             mdi-border-color
           </v-icon>
           {{ item.description }}
         </template>
       </template>
+
       <template v-slot:[`item.value`]="{ item }">
-        <v-icon @click="startEditValue(item)" class="edit-btn">
-          mdi-border-color
-        </v-icon>
-        {{ item.value }}
+        <div
+          class="d-flex align-center"
+          v-if="edit.key == 'value' && edit.data == item"
+        >
+          <div class="control">
+            <v-icon @click="saveEdit()" class="edit-btn mr-2">
+              mdi-content-save-outline
+            </v-icon>
+            <v-icon @click="stopEdit()" class="edit-btn mr-3">
+              mdi-close-circle-outline
+            </v-icon>
+          </div>
+          <v-text-field v-model="edit.data.value"></v-text-field>
+        </div>
+        <template v-else>
+          <v-icon @click="startEdit('value', item)" class="edit-btn">
+            mdi-border-color
+          </v-icon>
+          {{ item.value }}
+        </template>
       </template>
     </nocloud-table>
 
@@ -130,23 +141,6 @@
         </v-btn>
       </template>
     </v-snackbar>
-    <template v-if="isModalEditOpen">
-      <v-dialog
-        max-width="800px"
-        v-model="isModalEditOpen"
-      >
-        <div class="edit-modal">
-          <json-editor
-            @changeValue="(data) => changeSettingValue(data)"
-            :json="edit.data ? JSON.parse(edit.data) : {}"
-          />
-          <div class="buttons">
-            <v-btn depressed color="error" @click="isModalEditOpen=false"> Close </v-btn>
-            <v-btn depressed color="success" @click="saveModalEdit"> Save </v-btn>
-          </div>
-        </div>
-      </v-dialog>
-    </template>
   </div>
 </template>
 
@@ -155,7 +149,7 @@ import { mapGetters } from "vuex";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import noCloudTable from "@/components/table.vue";
-import JsonEditor from "@/components/JsonEditor.vue";
+import ConfirmDialog from '../components/confirmDialog.vue';
 
 const headers = [
   { text: "key", value: "key" },
@@ -193,7 +187,7 @@ export default {
   },
   components: {
     "nocloud-table": noCloudTable,
-    JsonEditor,
+    ConfirmDialog,
   },
   mixins: [snackbar],
   data: () => ({
@@ -211,8 +205,8 @@ export default {
       key: "",
       data: {},
     },
-    isModalEditOpen: false,
     fetchError: "",
+    sortBy:'description'
   }),
   computed: {
     ...mapGetters("settings", {
@@ -228,7 +222,7 @@ export default {
         );
         Promise.all(deletePromices)
           .then((res) => {
-            if (res.every((el) => el.key)) {
+            if (res.every((el) => el.result)) {
               this.$store.dispatch("settings/fetch");
 
               const ending = deletePromices.length == 1 ? "" : "s";
@@ -300,29 +294,19 @@ export default {
           });
       });
     },
-    startEditValue(data) {
-      this.setEditSettingValue(data.key, data.value);
-      this.isModalEditOpen = true;
-    },
-    setEditSettingValue(key, data) {
+    startEdit(key, data) {
       this.edit.key = key;
       this.edit.data = data;
     },
     stopEdit() {
       this.edit.key = "";
       this.edit.data = {};
-      this.isModalEditOpen = false;
     },
-    changeSettingValue(data) {
-      this.edit.data = JSON.stringify(data);
-    },
-    saveEditDescription() {
+    saveEdit() {
       const data = JSON.parse(JSON.stringify(this.edit.data));
       const key = this.edit.data.key;
       delete data.key;
-      this.saveSettingVallue(key, data);
-    },
-    saveSettingVallue(key, data) {
+
       this.sendKey(key, data)
         .then(() => {
           this.$store.dispatch("settings/fetch");
@@ -333,49 +317,21 @@ export default {
           this.showSnackbarError({ message: err.response.data.message });
         });
     },
-    saveModalEdit() {
-      const data = JSON.parse(JSON.stringify(this.edit.data));
-      const key = this.edit.key;
-      const el = { ...this.settings.find((d) => d.key === key) };
-      el.value = data;
-      delete el.key;
-      this.saveSettingVallue(key, el);
-    },
   },
   mounted() {
-    this.$store.commit("reloadBtn/setCallback", { type: "settings/fetch" });
-  },
-  watch: {
-    settings() {
-      this.fetchError = "";
-    },
+    this.$store.commit("reloadBtn/setCallback", {
+      func: this.$store.dispatch,
+      params: ["settings/fetch"],
+    });
   },
 };
 </script>
 
-<style scoped lang="scss">
-.edit-btn {
-  opacity: 0.4;
-  margin-right: 4px;
+<style scoped lang="sass">
+.edit-btn
+	opacity: 0.4
+	margin-right: 4px
 
-  &:hover {
-    opacity: 1;
-  }
-}
-
-.edit-modal {
-  background-color: rgba(12, 12, 60, 0.9);
-  overflow: hidden;
-  border: 1px solid white;
-  border-radius: 15px;
-  padding: 30px;
-}
-.buttons{
-  margin-top: 15px;
-  display: flex;
-  justify-content: right;
-  button{
-    margin: 0 10px
-  }
-}
+	&:hover
+		opacity: 1
 </style>
