@@ -711,19 +711,19 @@ export default {
   height: calc(100vh - 220px);
   margin-top: 10px;
 }
-.v-input--dense > .v-input__control > .v-input__slot {
+#mapMain .v-input--dense > .v-input__control > .v-input__slot {
   margin-bottom: -21px;
 }
 
-.theme--dark.v-text-field--solo > .v-input__control > .v-input__slot {
+#mapMain .theme--dark.v-text-field--solo > .v-input__control > .v-input__slot {
   background: #ffffff;
   color: #000;
 }
-.theme--dark.v-input input,
+#mapMain .theme--dark.v-input input,
 .theme--dark.v-input textarea {
   color: #000;
 }
-.v-application--is-ltr .v-messages {
+#mapMain .v-application--is-ltr .v-messages {
   z-index: -10;
 }
 </style>
