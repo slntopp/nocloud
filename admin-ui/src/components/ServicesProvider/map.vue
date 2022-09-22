@@ -369,8 +369,10 @@ export default {
           const ref =
             this.$refs["textFiel_" + el.id + "_" + el.x + "_" + el.y][0];
           this.mouseEnterHandler(el.id + "_" + el.x + "_" + el.y);
-          ref.focus();
-          // console.log("inputHandler ref = ", ref);
+          setTimeout(() => {
+            ref.focus();
+          }, 100);
+
           error = 1;
         }
       });
@@ -407,6 +409,8 @@ export default {
       this.markersSave = JSON.parse(JSON.stringify(this.markers));
       this.selectedC = "";
 
+      this.mouseLeaveHandler();
+
       // console.log("this.markerOrder = ", this.markerOrder);
     },
     CancelSelectedCountry() {
@@ -424,16 +428,14 @@ export default {
     },
     // ---------------------------
     mapClickHandler({ target, offsetX, offsetY }) {
+      if (!target.id) {
+        return false;
+      }
       // -------------------------
       const kx = this.widthMap / (this.widthMap * this.scale);
       const ky = this.heightMap / (this.heightMap * this.scale);
       const w = this.$refs.viewport.getAttribute("transform").split(" ")[4];
       const h = this.$refs.viewport.getAttribute("transform").split(" ")[5];
-
-      if (target.dataset.id) {
-        this.selected = target.getAttribute("data-id");
-        this.$emit("input", this.selected);
-      }
 
       this.x = parseInt(offsetX * kx - parseInt(w) / (this.scale * 1.03));
       this.y = parseInt(offsetY * ky - parseInt(h) / (this.scale * 1.161));
