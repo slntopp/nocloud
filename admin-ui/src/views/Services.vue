@@ -26,10 +26,20 @@
           delete
         </v-btn>
       </confirm-dialog>
-      <v-btn color="background-light" class="mr-2" @click="upServices">
+      <v-btn
+        color="background-light"
+        class="mr-2"
+        @click="upServices"
+        :disabled="selected.length < 1"
+      >
         UP
       </v-btn>
-      <v-btn color="background-light" class="mr-2" @click="downServices">
+      <v-btn
+        color="background-light"
+        class="mr-2"
+        @click="downServices"
+        :disabled="selected.length < 1"
+      >
         DOWN
       </v-btn>
     </div>
@@ -250,7 +260,7 @@ export default {
         })
       );
 
-      this.fetchAfterTimeout()
+      this.fetchAfterTimeout();
     },
     downServices() {
       const servicesToDown = this.getSelectedServicesWithStatus("UP");
@@ -262,7 +272,7 @@ export default {
           return api.services.down(s.uuid);
         })
       );
-      this.fetchAfterTimeout()
+      this.fetchAfterTimeout();
     },
     getSelectedServicesWithStatus(status) {
       const services = this.selected.filter(
@@ -273,9 +283,9 @@ export default {
       }
       return services;
     },
-    fetchAfterTimeout(ms=500){
-      setTimeout(this.fetchServices,ms)
-    }
+    fetchAfterTimeout(ms = 500) {
+      setTimeout(this.fetchServices, ms);
+    },
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
