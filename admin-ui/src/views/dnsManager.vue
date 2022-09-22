@@ -25,14 +25,18 @@
         </v-card>
       </v-menu>
 
-      <v-btn
-        color="background-light"
-        class="mr-8"
+      <confirm-dialog
+        @confirm="deleteSelectedZones"
         :disabled="selected.length < 1"
-        @click="deleteSelectedZones"
       >
-        delete
-      </v-btn>
+        <v-btn
+          color="background-light"
+          class="mr-8"
+          :disabled="selected.length < 1"
+        >
+          delete
+        </v-btn>
+      </confirm-dialog>
     </div>
 
     <zones-table v-model="selected" single-select> </zones-table>
@@ -66,11 +70,13 @@ import zones from "@/components/zones_table.vue";
 import api from "@/api.js";
 
 import snackbar from "@/mixins/snackbar.js";
+import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
   name: "dns-manager",
   components: {
     "zones-table": zones,
+    ConfirmDialog,
   },
   mixins: [snackbar],
   data() {
@@ -134,7 +140,10 @@ export default {
     },
   },
   mounted() {
-    this.$store.commit("reloadBtn/setCallback", { type: "dns/fetch" });
+    this.$store.commit("reloadBtn/setCallback", {
+      func: this.$store.dispatch,
+      params: ["dns/fetch"],
+    });
   },
 };
 </script>
