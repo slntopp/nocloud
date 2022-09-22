@@ -1,9 +1,9 @@
 <template>
   <div class="servicesProviders pa-4 flex-wrap">
     <div class="page__title mb-5">
-      <router-link :to="{ name: 'ServicesProviders' }"
-        >{{ navTitle('Services Providers') }}</router-link
-      >
+      <router-link :to="{ name: 'ServicesProviders' }">{{
+        navTitle("Services Providers")
+      }}</router-link>
       /
       {{ title }}
     </div>
@@ -25,17 +25,21 @@
     >
       <v-tab-item v-for="tab in tabs" :key="tab.title">
         <v-progress-linear v-if="loading" indeterminate class="pt-2" />
-        <component v-if="!loading && item" :is="tab.component" :template="item" />
+        <component
+          v-if="!loading && item"
+          :is="tab.component"
+          :template="item"
+        />
       </v-tab-item>
     </v-tabs-items>
   </div>
 </template>
 
 <script>
-import config from '@/config.js';
+import config from "@/config.js";
 
 export default {
-  name: 'service-providers-view',
+  name: "service-providers-view",
   data: () => ({
     found: false,
     tabsIndex: 0,
@@ -49,7 +53,11 @@ export default {
         title: "Template",
         component: () => import("@/components/ServicesProvider/template.vue"),
       },
-    ]
+      {
+        title: "Map",
+        component: () => import("@/components/ServicesProvider/map.vue"),
+      },
+    ],
   }),
   methods: {
     navTitle(title) {
@@ -58,7 +66,7 @@ export default {
       }
 
       return title;
-    }
+    },
   },
   computed: {
     uuid() {
