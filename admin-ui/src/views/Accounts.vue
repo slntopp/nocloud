@@ -43,7 +43,7 @@
                 </v-text-field>
               </v-col>
             </v-row>
-            <v-row>
+            <v-row v-if="newAccount.data.auth.type==='Standard'">
               <v-col>
                 <v-text-field
                   dense
@@ -71,6 +71,15 @@
                   :items="accessLevels"
                   v-model="newAccount.data.access"
                   label="access"
+                ></v-select>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                <v-select
+                  :items="typesAccounts"
+                  v-model="newAccount.data.auth.type"
+                  label="type"
                 ></v-select>
               </v-col>
             </v-row>
@@ -142,7 +151,7 @@ export default {
         data: {
           title: "",
           auth: {
-            type: "standard",
+            type: "Standard",
             data: ["", ""],
           },
           namespace: "",
@@ -160,14 +169,20 @@ export default {
       },
       deletingLoading: false,
       accessLevels: [0, 1, 2, 3],
+      typesAccounts:["Standard","WHMCS"]
     };
   },
   methods: {
     createAccount() {
       if (!this.newAccount.formValid) return;
       this.newAccount.loading = true;
+      const dto={...this.newAccount.data}
+      if(this.newAccount.data.auth.type==="WHMCS"){
+        dto.auth.data=[dto.auth.data[0]]
+      }
+      dto.auth.type=dto.auth.type.toLowerCase()
       api.accounts
-        .create(this.newAccount.data)
+        .create(dto)
         .then(() => {
           this.newAccount.title = "";
           this.createMenuVisible = false;
@@ -176,7 +191,7 @@ export default {
           this.newAccount.data = {
             title: "",
             auth: {
-              type: "standard",
+              type: "Standard",
               data: ["", ""],
             },
             namespace: "",
