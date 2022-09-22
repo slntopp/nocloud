@@ -2,9 +2,7 @@
   <div class="services pa-4">
     <div v-if="isFiltered" class="page__title">
       Used in
-      {{
-        $route.query.provider ? '"' + $route.query.provider + '"' : ""
-      }}
+      {{ $route.query.provider ? '"' + $route.query.provider + '"' : "" }}
       service provider
       <v-btn small :to="{ name: 'Services' }"> clear </v-btn>
     </div>
@@ -28,6 +26,12 @@
           delete
         </v-btn>
       </confirm-dialog>
+      <v-btn color="background-light" class="mr-2" @click="upServices">
+        UP
+      </v-btn>
+      <v-btn color="background-light" class="mr-2" @click="downServices">
+        DOWN
+      </v-btn>
     </div>
 
     <nocloud-table
@@ -122,22 +126,25 @@ export default {
     },
   },
   created() {
-    this.$store
-      .dispatch("services/fetch")
-      .then(() => {
-        this.fetchError = "";
-      })
-      .catch((err) => {
-        console.log(`err`, err);
-        this.fetchError = "Can't reach the server";
-        if (err.response) {
-          this.fetchError += `: [ERROR]: ${err.response.data.message}`;
-        } else {
-          this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
-        }
-      });
+    this.fetchServices();
   },
   methods: {
+    fetchServices() {
+      this.$store
+        .dispatch("services/fetch")
+        .then(() => {
+          this.fetchError = "";
+        })
+        .catch((err) => {
+          console.log(`err`, err);
+          this.fetchError = "Can't reach the server";
+          if (err.response) {
+            this.fetchError += `: [ERROR]: ${err.response.data.message}`;
+          } else {
+            this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
+          }
+        });
+    },
     treeview(item) {
       const result = [];
       let index = 0;
@@ -232,6 +239,43 @@ export default {
           });
       }
     },
+    upServices() {
+      const servicesToUp = this.getSelectedServicesWithStatus("INIT");
+      if (!servicesToUp) {
+        return;
+      }
+      Promise.all(
+        servicesToUp.map((s) => {
+          return api.services.up(s.uuid);
+        })
+      );
+
+      this.fetchAfterTimeout()
+    },
+    downServices() {
+      const servicesToDown = this.getSelectedServicesWithStatus("UP");
+      if (!servicesToDown) {
+        return;
+      }
+      Promise.all(
+        servicesToDown.map((s) => {
+          return api.services.down(s.uuid);
+        })
+      );
+      this.fetchAfterTimeout()
+    },
+    getSelectedServicesWithStatus(status) {
+      const services = this.selected.filter(
+        (service) => service.status === status
+      );
+      if (!services.length) {
+        return;
+      }
+      return services;
+    },
+    fetchAfterTimeout(ms=500){
+      setTimeout(this.fetchServices,ms)
+    }
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
