@@ -292,6 +292,9 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if newVars := req.GetVars(); newVars != nil {
 		sp.Vars = newVars
 	}
+	if newLocations := req.GetLocations(); newLocations != nil {
+		sp.Locations = newLocations
+	}
 
 	testRes, err := s.Test(ctx, sp.ServicesProvider)
 	if err != nil {
