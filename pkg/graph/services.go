@@ -153,6 +153,10 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service,
 				log.Error("Error while creating instances group", zap.Error(err))
 				return err
 			}
+			if err := ctrl.ig_ctrl.Provide(ctx, ig.GetUuid(), ig.GetSp()); err != nil {
+				log.Error("Error while providing instances group", zap.Error(err))
+				return err
+			}
 		}
 	}
 
