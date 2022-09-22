@@ -32,7 +32,7 @@ const (
 )
 
 type InstancesGroupsController struct {
-	col   driver.Collection // Instances Collection
+	col   driver.Collection // Instances Groups Collection
 	graph driver.Graph
 
 	inst_ctrl *InstancesController
