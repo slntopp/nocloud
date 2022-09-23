@@ -6,6 +6,19 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
+              <v-subheader>Plan UUID</v-subheader>
+            </v-col>
+            <v-col cols="9">
+             <v-text-field
+                label="UUID"
+                readonly
+                v-model="plan.uuid"
+                :rules="generalRule"
+              />
+            </v-col>
+          </v-row>
+          <v-row align="center">
+            <v-col cols="3">
               <v-subheader>Plan type</v-subheader>
             </v-col>
             <v-col cols="9">
@@ -17,7 +30,6 @@
               />
             </v-col>
           </v-row>
-
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Plan title</v-subheader>
@@ -36,11 +48,7 @@
               <v-subheader>Plan kind</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-radio-group
-                row
-                mandatory
-                v-model="plan.kind"
-              >
+              <v-radio-group row mandatory v-model="plan.kind">
                 <v-radio
                   v-for="item of kinds"
                   :key="item"
@@ -71,37 +79,27 @@
               @drag="(e) => dragTab(e, i)"
               @dragstart="dragTabStart"
               @dragend="dragTabEnd"
-              @dblclick="edit = {
-                isVisible: true,
-                title
-              }"
+              @dblclick="
+                edit = {
+                  isVisible: true,
+                  title,
+                }
+              "
             >
               {{ title }}
-              <v-icon
-                small
-                right
-                color="error"
-                @click="removeConfig(title)"
-              >
+              <v-icon small right color="error" @click="removeConfig(title)">
                 mdi-close
               </v-icon>
             </v-tab>
             <v-text-field
               dense
               outlined
-              :label="(edit.isVisible)
-                ? `Edit ${edit.title}`
-                : 'New config'
-              "
+              :label="edit.isVisible ? `Edit ${edit.title}` : 'New config'"
               class="ml-2 mt-1 mw-20"
               v-if="isVisible || edit.isVisible"
               @change="addConfig"
             />
-            <v-icon
-              v-else
-              class="ml-2"
-              @click="isVisible = true"
-            >
+            <v-icon v-else class="ml-2" @click="isVisible = true">
               mdi-plus
             </v-icon>
           </v-tabs>
@@ -113,10 +111,7 @@
           </v-subheader>
 
           <v-tabs-items v-model="form.title">
-            <v-tab-item
-              v-for="(title, i) of form.titles"
-              :key="title"
-            >
+            <v-tab-item v-for="(title, i) of form.titles" :key="title">
               <component
                 :is="template"
                 :keyForm="title"
@@ -130,7 +125,7 @@
           </v-tabs-items>
         </v-col>
       </v-row>
-      
+
       <v-row>
         <v-col>
           <v-btn
@@ -140,13 +135,9 @@
             :disabled="!isTestSuccess"
             @click="tryToSend"
           >
-            {{ item ? 'Edit' : 'Create' }}
+            {{ item ? "Edit" : "Create" }}
           </v-btn>
-          <v-btn
-            class="mr-2"
-            :color="testButtonColor"
-            @click="testConfig"
-          >
+          <v-btn class="mr-2" :color="testButtonColor" @click="testConfig">
             Test
           </v-btn>
         </v-col>
@@ -178,39 +169,39 @@
 </template>
 
 <script>
-import api from '@/api.js';
-import snackbar from '@/mixins/snackbar.js';
+import api from "@/api.js";
+import snackbar from "@/mixins/snackbar.js";
 
 export default {
-  name: 'plansCreate-view',
+  name: "plansCreate-view",
   mixins: [snackbar],
-  props: ['item'],
+  props: ["item"],
   data: () => ({
     types: [],
-    kinds: ['DYNAMIC', 'STATIC'],
+    kinds: ["DYNAMIC", "STATIC"],
     plan: {
-      title: '',
-      type: 'custom',
-      kind: '',
+      title: "",
+      type: "custom",
+      kind: "",
       public: false,
       resources: [],
-      products: {}
+      products: {},
     },
     form: {
-      title: '',
-      titles: []
+      title: "",
+      titles: [],
     },
     edit: {
       isVisible: false,
-      title: ''
+      title: "",
     },
-    generalRule: [v => !!v || 'This field is required!'],
+    generalRule: [(v) => !!v || "This field is required!"],
 
     isVisible: true,
     isValid: false,
     isLoading: false,
     isTestSuccess: false,
-    testButtonColor: 'background-light',
+    testButtonColor: "background-light",
   }),
   methods: {
     changeResource(num, { key, value }) {
@@ -220,7 +211,7 @@ export default {
         value;
       }
 
-      if (key === 'date') {
+      if (key === "date") {
         this.setPeriod(value, num);
         return;
       }
@@ -237,14 +228,14 @@ export default {
         value;
       }
 
-      if (key === 'date') {
+      if (key === "date") {
         this.setPeriod(value, obj);
         return;
-      } else if (key === 'resources') {
+      } else if (key === "resources") {
         this.plan.resources = value;
         return;
-      } else if (key === 'amount') {
-        key = 'resources';
+      } else if (key === "amount") {
+        key = "resources";
       }
 
       if (this.plan.products[obj]) {
@@ -259,43 +250,43 @@ export default {
       if (this.plan.products[title]) {
         return this.plan.products[title].resources;
       }
-      if (this.plan.type === 'custom') return;
+      if (this.plan.type === "custom") return;
       return {
         cpu: 1,
         ram: 1024,
-        ip_public: 0
-      }
+        ip_public: 0,
+      };
     },
     dragTabStart(e) {
-      const el = document.createElement('div');
+      const el = document.createElement("div");
 
-      e.dataTransfer.dropEffect = 'move';
-      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.dropEffect = "move";
+      e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setDragImage(el, 0, 0);
     },
     dragTab(e, i) {
       const width = parseInt(getComputedStyle(e.target).width);
       const all = Array.from(e.target.parentElement.children);
       const next = Math.round(e.layerX / width) + i;
-      const prev = e.target.getAttribute('data-x');
+      const prev = e.target.getAttribute("data-x");
 
       e.target.style.cssText = `transform: translateX(${e.layerX}px)`;
-      e.target.setAttribute('data-x', `${e.layerX}`);
+      e.target.setAttribute("data-x", `${e.layerX}`);
       all.shift();
       all.pop();
 
       if (!all[next] || next === i) return;
 
-      all[next].style.transition = '0.3s';
+      all[next].style.transition = "0.3s";
       if (prev < e.layerX) {
         if (e.layerX > width / 2) {
           all[next].style.transform = `translateX(-${width}px)`;
         } else {
-          all[next].style.transform = '';
+          all[next].style.transform = "";
         }
       } else if (prev > e.layerX) {
         if (e.layerX > width / 2) {
-          all[next].style.transform = '';
+          all[next].style.transform = "";
         } else {
           all[next].style.transform = `translateX(${width}px)`;
         }
@@ -305,20 +296,20 @@ export default {
       const [newTitle] = titles.splice(i, 1);
 
       titles.splice(next, 0, newTitle);
-      localStorage.setItem('titles', JSON.stringify(titles));
+      localStorage.setItem("titles", JSON.stringify(titles));
     },
     dragTabEnd(e) {
       const all = Array.from(e.target.parentElement.children);
-      const titles = localStorage.getItem('titles');
+      const titles = localStorage.getItem("titles");
       const wrapper = all.shift();
 
-      all.forEach((el) => el.removeAttribute('style'));
+      all.forEach((el) => el.removeAttribute("style"));
       this.form.titles = JSON.parse(titles);
-      localStorage.removeItem('titles');
+      localStorage.removeItem("titles");
 
       setTimeout(() => {
         const left = all.find((el) =>
-          el.className.includes('tab--active')
+          el.className.includes("tab--active")
         ).offsetLeft;
 
         wrapper.style.left = `${left}px`;
@@ -326,8 +317,7 @@ export default {
     },
     addConfig(title) {
       if (this.edit.isVisible) {
-        const i = this.form.titles
-          .indexOf(this.edit.title);
+        const i = this.form.titles.indexOf(this.edit.title);
 
         this.form.titles[i] = title;
         this.edit.isVisible = false;
@@ -339,8 +329,7 @@ export default {
       this.isVisible = false;
     },
     removeConfig(title) {
-      this.form.titles = this.form.titles
-        .filter((el) => el !== title);
+      this.form.titles = this.form.titles.filter((el) => el !== title);
 
       if (this.form.titles.length <= 0) {
         this.isVisible = true;
@@ -349,31 +338,30 @@ export default {
     tryToSend() {
       if (!this.isValid) {
         this.$refs.form.validate();
-        this.testButtonColor = 'background-light';
+        this.testButtonColor = "background-light";
         this.isTestSuccess = false;
 
         return;
       }
 
       this.isLoading = true;
-      Object.entries(this.plan.products)
-        .forEach(([key, form]) => {
-          const num = this.form.titles
-            .findIndex((el) => el === key);
-          
-          form.sorter = num;
-        });
+      Object.entries(this.plan.products).forEach(([key, form]) => {
+        const num = this.form.titles.findIndex((el) => el === key);
+
+        form.sorter = num;
+      });
 
       const id = this.$route.params?.planId;
-      const request = (this.item)
+      const request = this.item
         ? api.plans.update(id, this.plan)
         : api.plans.create(this.plan);
 
-      request.then(() => {
+      request
+        .then(() => {
           this.showSnackbarSuccess({
-            message: (this.item)
-              ? 'Plan edited successfully'
-              : 'Plan created successfully'
+            message: this.item
+              ? "Plan edited successfully"
+              : "Plan created successfully",
           });
         })
         .catch((err) => {
@@ -386,23 +374,23 @@ export default {
     testConfig() {
       if (!this.isValid) {
         this.$refs.form.validate();
-        this.testButtonColor = 'background-light';
+        this.testButtonColor = "background-light";
         this.isTestSuccess = false;
 
         this.showSnackbarError({
-          message: 'Validation failed!',
+          message: "Validation failed!",
         });
 
         return;
       }
 
-      this.testButtonColor = 'success';
+      this.testButtonColor = "success";
       this.isTestSuccess = true;
     },
     setPeriod(date, res) {
       const period = this.getTimestamp(date);
 
-      if (this.plan.kind === 'DYNAMIC') {
+      if (this.plan.kind === "DYNAMIC") {
         this.plan.resources[res].period = period;
         this.plan.products = {};
       } else {
@@ -416,15 +404,13 @@ export default {
       day = +day + week * 7 + 1;
 
       if (`${day}`.length < 2) {
-        day = '0' + day;
+        day = "0" + day;
       }
       if (`${month}`.length < 2) {
-        month = '0' + month;
+        month = "0" + month;
       }
 
-      return Date.parse(
-        `${year}-${month}-${day}T${time}Z`
-      ) / 1000;
+      return Date.parse(`${year}-${month}-${day}T${time}Z`) / 1000;
     },
     getItem() {
       this.form.titles = [];
@@ -439,7 +425,7 @@ export default {
           this.form.titles.push(key);
         });
       }
-    }
+    },
   },
   created() {
     const types = require.context(
@@ -463,23 +449,23 @@ export default {
     template() {
       let type;
       switch (this.plan.kind) {
-        case 'DYNAMIC':
-          type = 'resources';
+        case "DYNAMIC":
+          type = "resources";
           break;
         default:
-          type = 'products';
+          type = "products";
       }
 
       return () => import(`@/components/plans_form_${type}.vue`);
-    }
+    },
   },
   watch: {
-    'plan.type'() {
+    "plan.type"() {
       switch (this.plan.type) {
-        case 'ione':
-          if (this.plan.kind === 'STATIC') return;
+        case "ione":
+          if (this.plan.kind === "STATIC") return;
 
-          this.form.titles = ['cpu', 'ram', 'ip_public'];
+          this.form.titles = ["cpu", "ram", "ip_public"];
           this.isVisible = false;
           break;
         default:
@@ -489,9 +475,9 @@ export default {
     },
     item() {
       this.getItem();
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style scoped>

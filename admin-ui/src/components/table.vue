@@ -20,6 +20,9 @@
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
         {{ props.value }}
+      <v-btn icon @click="hideID(props.index)">
+        <v-icon>mdi-close-circle-outline</v-icon>
+      </v-btn>
       </template>
       <v-btn v-else icon @click="showID(props.index)">
         <v-icon>mdi-eye-outline</v-icon>
@@ -156,10 +159,12 @@ export default {
     showID(index) {
       this.showed.push(index);
     },
+    hideID(index){
+      this.showed=this.showed.filter(i=>i!==index)
+    }
   },
   computed:{
     sortByTable(){
-		console.log(this.sortBy);
       return this.sortBy || 'title'
     }
   }

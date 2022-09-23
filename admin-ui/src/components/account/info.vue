@@ -1,5 +1,6 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
+    <v-text-field v-model="uuid" readonly label="UUID" style="width: 330px" />
     <v-text-field v-model="title" label="name" style="width: 330px" />
     <v-card-title class="px-0">SSH keys:</v-card-title>
 
@@ -171,6 +172,7 @@ export default {
   },
   mounted() {
     this.title = this.account.title;
+    this.uuid=this.account.uuid
     this.keys = this.account.data?.ssh_keys || [];
   }
 }
