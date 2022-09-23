@@ -722,10 +722,14 @@ export default {
   color: #000;
 }
 #mapMain .theme--dark.v-input input,
-.theme--dark.v-input textarea {
+#mapMain .theme--dark.v-input textarea {
   color: #000;
 }
 #mapMain .v-application--is-ltr .v-messages {
+  z-index: -10;
+}
+
+#mapMain .v-text-field.v-text-field--enclosed .v-text-field__details {
   z-index: -10;
 }
 </style>
