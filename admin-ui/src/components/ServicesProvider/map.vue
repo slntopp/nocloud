@@ -290,6 +290,8 @@ import api from "@/api.js";
 export default {
   mixins: [snackbar],
   name: "support-map",
+  props: { template: { type: Object, required: true } },
+
   data: () => ({
     selected: "",
     hovered: "",
@@ -300,6 +302,7 @@ export default {
     maxScale: 10,
     minScale: 1,
     selectedDrag: null,
+    dragF: false,
     svg: null,
     mapData,
     // markersInComponent: [],
@@ -350,6 +353,10 @@ export default {
         return false;
       }
 
+      if (this.dragF) {
+        return false;
+      }
+
       this.selectedC = id;
       this.titleMarker = country;
     },
@@ -386,8 +393,8 @@ export default {
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
 
-      console.log("this.item = ", this.item);
-      console.log("this.uuid = ", this.uuid);
+      // console.log("this.item = ", this.item);
+      // console.log("this.uuid = ", this.uuid);
 
       api.servicesProviders
         .update(this.uuid, this.item)
@@ -431,32 +438,53 @@ export default {
       if (!target.id) {
         return false;
       }
-      // -------------------------
+      let stop = false;
+
       const kx = this.widthMap / (this.widthMap * this.scale);
       const ky = this.heightMap / (this.heightMap * this.scale);
       const w = this.$refs.viewport.getAttribute("transform").split(" ")[4];
       const h = this.$refs.viewport.getAttribute("transform").split(" ")[5];
+      this.x =
+        parseInt(offsetX * kx - parseInt(w) / this.scale) -
+        12 -
+        this.scale * 0.12;
+      this.y =
+        parseInt(offsetY * ky - parseInt(h) / this.scale) -
+        35 -
+        this.scale * 0.07;
 
-      this.x = parseInt(offsetX * kx - parseInt(w) / (this.scale * 1.03));
-      this.y = parseInt(offsetY * ky - parseInt(h) / (this.scale * 1.161));
+      this.markers.forEach((el) => {
+        if (el.x == this.x && el.y == this.y) {
+          stop = true;
+        }
+      });
 
-      const obg = {
-        id: JSON.parse(JSON.stringify(this.selectedC)),
-        // title: JSON.parse(JSON.stringify(this.titleMarker)),
-        title: " ",
-        x: JSON.parse(JSON.stringify(this.x)),
-        y: JSON.parse(JSON.stringify(this.y)),
-      };
-
-      this.markers.push(obg);
-
-      this.mouseEnterHandler(obg.id + "_" + obg.x + "_" + obg.y);
+      if (stop) {
+        return false;
+      }
 
       setTimeout(() => {
-        const ref =
-          this.$refs["textFiel_" + obg.id + "_" + obg.x + "_" + obg.y][0];
-        ref.focus();
-      }, 200);
+        if (this.dragF) {
+          this.dragF = false;
+          return false;
+        }
+        const obg = {
+          id: JSON.parse(JSON.stringify(this.selectedC)),
+          title: " ",
+          x: JSON.parse(JSON.stringify(this.x)),
+          y: JSON.parse(JSON.stringify(this.y)),
+        };
+
+        this.markers.push(obg);
+
+        this.mouseEnterHandler(obg.id + "_" + obg.x + "_" + obg.y);
+
+        setTimeout(() => {
+          const ref =
+            this.$refs["textFiel_" + obg.id + "_" + obg.x + "_" + obg.y][0];
+          ref.focus();
+        }, 200);
+      }, 10);
     },
     mouseEnterHandler(id) {
       this.hovered = id;
@@ -505,6 +533,15 @@ export default {
         newMatrix = currentMatrix.translate(dx / this.scale, dy / this.scale),
         transform = this.svg.createSVGTransformFromMatrix(newMatrix);
       this.selectedDrag.transform.baseVal.initialize(transform);
+
+      if (
+        this.selectedDrag.dataset.startMouseX != dx + startX ||
+        this.selectedDrag.dataset.startMouseY != dy + startY
+      ) {
+        this.dragF = true;
+      } else {
+        this.dragF = false;
+      }
       this.selectedDrag.dataset.startMouseX = dx + startX;
       this.selectedDrag.dataset.startMouseY = dy + startY;
     },
@@ -559,63 +596,19 @@ export default {
   },
 
   mounted() {
-    this.markers = JSON.parse(JSON.stringify(this.markersSave));
+    // this.markers = JSON.parse(JSON.stringify(this.markersSave));
     this.widthMap = +this.$refs.map.getBoundingClientRect().width;
     this.heightMap = +this.$refs.map.getBoundingClientRect().height;
 
-    this.uuid = this.$route.params.uuid;
-    api.servicesProviders
-      .list()
-      .then((response) => {
-        this.item = response.pool.find((el) => el.uuid == this.uuid);
-      })
-      .catch((error) => {
-        console.log("error = ", error);
-      })
-      .finally(() => {});
-
-    //---------------------------
+    this.uuid = this.template.uuid;
+    this.item = this.template;
+    this.markers = this.template.locations;
     const container = this.$refs.viewport;
-    const min = { x: Infinity, y: Infinity };
-    const max = { x: 0, y: 0 };
-
-    let x, y;
-    this.markers.forEach(({ x, y }) => {
-      if (min.x > x) min.x = x;
-      if (min.y > y) min.y = y;
-      if (max.x < x) max.x = x;
-      if (max.y < y) max.y = y;
-    });
-    this.scale = this.widthMap / (max.x - min.x);
-    if (this.scale > this.maxScale) {
-      this.scale = this.maxScale;
-    } else {
-      if (this.scale < this.minScale) {
-        this.scale = this.minScale;
-      }
-    }
-    x =
-      (min.x + (max.x - min.x) / 2 - this.widthMap / (2 * this.scale * 1.028)) *
-      this.scale *
-      1.028;
-    y =
-      (min.y +
-        (max.y - min.y) / 2 -
-        this.heightMap / (2 * this.scale * 1.143)) *
-      this.scale *
-      1.143;
-    if (!x) {
-      x = 0;
-    }
-    if (!y) {
-      y = 0;
-    }
-
+    let x = parseInt(this.widthMap - 1010) / 2;
+    let y = parseInt(this.heightMap - 666) / 2;
     this.svg = this.$refs.svgwrapper;
-    container.setAttribute(
-      "transform",
-      `matrix(${this.scale} 0 0 ${this.scale} ${-x} ${-y})`
-    );
+    container.setAttribute("transform", `matrix(1 0 0 1 ${x} ${y})`);
+
     window.addEventListener("mouseup", this.endDrag);
   },
   beforeUnmount() {
