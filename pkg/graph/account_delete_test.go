@@ -101,6 +101,64 @@ func TestDeleteAccount(t *testing.T) {
 	if _, err := instc.col.ReadDocument(ctx, inst.GetUuid(), &proto.Instance{}); err == nil {
 		t.Error("Found orphan instance")
 	}
+}
+
+func TestDeleteAccountCredentials(t *testing.T) {
+	ctx := context.TODO()
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	db.Info(ctx)
+
+	ac := NewAccountsController(log, db)
+	nsc := NewNamespacesController(log, db)
+	spc := NewServicesProvidersController(log, db)
+	srvc := NewServicesController(log, db)
+
+	account, err := ac.Create(ctx, "test_user")
+	if err != nil {
+		t.Error("Can't create account")
+	}
+
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.ID.Key())
+
+	namespace, err := nsc.Create(ctx, "test_namespace")
+	if err != nil {
+		t.Error("Can't create namespace")
+	}
+
+	if err := nsc.Join(ctx, account, namespace, access.ADMIN, roles.OWNER); err != nil {
+		t.Error("Can't join namespace")
+	}
+
+	sp := &ServicesProvider{
+		ServicesProvider: &spb.ServicesProvider{},
+	}
+	err = spc.Create(ctx, sp)
+	if err != nil {
+		t.Error("Can't create sp")
+	}
+
+	service, err := srvc.Create(ctx, &pb.Service{
+		InstancesGroups: []*proto.InstancesGroup{
+			{
+				Title: "test",
+				Sp:    &sp.Uuid,
+				Instances: []*proto.Instance{
+					{
+						Title: "test",
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Error("Can't create service")
+	}
+
+	if err := srvc.Join(ctx, service, &namespace, access.ADMIN, roles.OWNER); err != nil {
+		t.Error("Can't join service")
+	}
+
+	ac.Delete(ctx, account.Uuid)
 
 	// Check if Credentials graph is empty as well
 
