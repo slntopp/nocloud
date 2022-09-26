@@ -3,10 +3,10 @@
     show-expand
     class="mt-4"
     sort-by="proc"
+    sort-desc
     :items="transactions"
     :headers="headers"
     :loading="isLoading"
-    :sort-desc="true"
     :expanded.sync="expanded"
     :footer-error="fetchError"
     @input="selectTransaction"
