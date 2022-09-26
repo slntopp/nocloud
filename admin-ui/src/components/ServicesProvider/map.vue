@@ -1,6 +1,6 @@
 <template>
-  <div class="container">
-    <v-list flat dark color="rgba(12, 12, 60, 0.9)">
+  <div :class="{container:isOvh}">
+    <v-list v-if="isOvh" flat dark color="rgba(12, 12, 60, 0.9)">
       <v-list-item-group v-model="selectedRegion" color="primary">
         <v-list-item v-for="(item, i) in allRegions" :key="i">
           {{ item }}
@@ -306,7 +306,7 @@ import api from "@/api.js";
 export default {
   mixins: [snackbar],
   name: "support-map",
-  props: { template: { type: Object, required: true } },
+  props: { template: { type: Object, required: true }},
 
   data: () => ({
     selectedRegion: "",
@@ -323,6 +323,7 @@ export default {
     dragF: false,
     svg: null,
     mapData,
+    isOvh:false,
     // markersInComponent: [],
 
     widthMap: 1010,
@@ -411,7 +412,7 @@ export default {
 
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
-      if (this.selectedRegion) {
+      if (this.isOvh && this.selectedRegion) {
         this.item.locations[this.item.locations.length - 1].extra = {
           [this.allRegions[this.selectedRegion]]:
             this.allRegions[this.selectedRegion],
@@ -623,13 +624,15 @@ export default {
 
     this.uuid = this.template.uuid;
     this.item = this.template;
+    this.isOvh=this.item.type==='ovh'
     this.markers = this.template.locations;
     const container = this.$refs.viewport;
     let x = parseInt(this.widthMap - 1010) / 2;
     let y = parseInt(this.heightMap - 666) / 2;
     this.svg = this.$refs.svgwrapper;
     container.setAttribute("transform", `matrix(1 0 0 1 ${x} ${y})`);
-    api
+    if(this.isOvh){
+       api
       .post(`/sp/${this.uuid}/invoke`, { method: "flavors" })
       .then(({ meta }) => {
         this.allRegions = meta.result
@@ -642,6 +645,7 @@ export default {
           message: "Error: Cannot download regions",
         });
       });
+    }
     window.addEventListener("mouseup", this.endDrag);
   },
   beforeUnmount() {
