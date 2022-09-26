@@ -81,7 +81,8 @@ export default {
         api.services
           .list()
           .then((response) => {
-            commit("setServices", response.pool);
+            const servicesWithoutDel=response.pool.filter(s=>s.status!=='DEL')
+            commit("setServices", servicesWithoutDel);
             resolve(response);
           })
           .catch((error) => {
