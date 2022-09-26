@@ -4,11 +4,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	spb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"github.com/spf13/viper"
@@ -98,5 +100,25 @@ func TestDeleteAccount(t *testing.T) {
 	}
 	if _, err := instc.col.ReadDocument(ctx, inst.GetUuid(), &proto.Instance{}); err == nil {
 		t.Error("Found orphan instance")
+	}
+
+	// Check if Credentials graph is empty as well
+
+	graph := GraphGetEnsure(log, ctx, db, schema.CREDENTIALS_GRAPH.Name)
+	acc2cred := GraphGetEdgeEnsure(log, ctx, graph, schema.ACC2CRED, schema.ACCOUNTS_COL, schema.CREDENTIALS_COL)
+
+	cursor, err := acc2cred.Database().Query(ctx,
+		`FOR edge in @@col 
+			FILTER edge._from == @acc
+			RETURN edge`,
+		map[string]interface{}{
+			"@col": schema.ACC2CRED,
+			"acc":  driver.NewDocumentID(schema.ACCOUNTS_COL, account.Uuid),
+		})
+	if err != nil {
+		t.Error("Unexpected error while credentials query")
+	}
+	if cursor.Count() != 0 {
+		t.Error("Found orphan credential nodes")
 	}
 }
