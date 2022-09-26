@@ -1,13 +1,29 @@
 <template>
   <div class="container">
-    <v-list flat dark color="rgba(12, 12, 60, 0.9)">
+    <v-progress-circular
+      v-if="!allRegions.length"
+      class="spinner"
+      size="40"
+      color="primary"
+      indeterminate
+    />
+    <v-list v-else flat dark color="rgba(12, 12, 60, 0.9)">
+      <v-subheader>REGIONS</v-subheader>
       <v-list-item-group v-model="selectedRegion" color="primary">
         <v-list-item v-for="(item, i) in allRegions" :key="i">
           {{ item }}
         </v-list-item>
       </v-list-item-group>
     </v-list>
-    <support-map :multiSelect="true" @save="onSavePin" :template="template" />
+    <support-map
+      @errorAddPin="errorAddPin"
+      :activePinTitle="activePinTitle"
+      :canAddPin="canAddPin"
+      :multiSelect="true"
+      :error="mapError"
+      :template="template"
+      @save="onSavePin"
+    />
   </div>
 </template>
 
@@ -18,19 +34,34 @@ import api from "@/api.js";
 export default {
   name: "ovh-map",
   data() {
-    return { selectedRegion: "", allRegions: [] };
+    return { selectedRegion: "", allRegions: [], mapError: "" };
   },
   components: {
     supportMap,
   },
   props: { template: { required: true, type: Object } },
   methods: {
+    errorAddPin() {
+      this.mapError = "Error: Choose the region";
+    },
     onSavePin(item) {
-      if (this.selectedRegion) {
-        item.locations[item.locations.length - 1].extra = {
-          region: this.allRegions[this.selectedRegion],
-        };
-      }
+      item.locations[item.locations.length - 1].extra = {
+        region: this.allRegions[this.selectedRegion],
+      };
+    },
+  },
+  computed: {
+    activePinTitle() {
+      const selectedLocation = this.template.locations.find(
+        (l) =>
+          l.extra?.region &&
+          this.allRegions[this.selectedRegion] &&
+          l.extra?.region === this.allRegions[this.selectedRegion]
+      );
+      return selectedLocation?.title || "";
+    },
+    canAddPin() {
+      return !!this.selectedRegion || this.selectedRegion===0;
     },
   },
   mounted() {
@@ -39,14 +70,10 @@ export default {
       .then(({ meta }) => {
         this.allRegions = meta.result
           .map((el) => el.region)
-          .filter((element, index, arr) => {
-            return arr.indexOf(element) === index;
-          });
+          .filter((element, index, arr) => arr.indexOf(element) === index);
       })
       .catch(() => {
-        this.showSnackbarError({
-          message: "Error: Cannot download regions",
-        });
+        this.mapError = "Error: Cannot download regions";
       });
   },
 };
@@ -57,5 +84,9 @@ export default {
   display: grid;
   grid-template-columns: 100px 1fr;
   grid-column-gap: 20px;
+}
+.spinner {
+  margin: auto;
+  margin-top: 150px;
 }
 </style>

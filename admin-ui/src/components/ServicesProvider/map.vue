@@ -38,7 +38,6 @@
             <path
               d="M14,0 C21.732,0 28,5.641 28,12.6 C28,23.963 14,36 14,36 C14,36 0,24.064 0,12.6 C0,5.641 6.268,0 14,0 Z"
               id="Shape"
-              fill="#FF6E6E"
             ></path>
             <circle
               id="elips"
@@ -83,7 +82,10 @@
           >
             <use
               :href="`#${marker.svgId || 'marker'}`"
-              class="map__marker"
+              :class="{
+                map__marker: true,
+                active: activePinTitle && activePinTitle === marker.title,
+              }"
               :data-id="marker.id + '_' + marker.x + '_' + marker.y"
               x="0"
               y="0"
@@ -293,6 +295,9 @@ export default {
   props: {
     template: { type: Object, required: true },
     multiSelect: { type: Boolean, default: false },
+    activePinTitle: { type: String, default: "" },
+    canAddPin: { type: Boolean, default: true },
+    error: { type: String, default: "" },
   },
 
   data: () => ({
@@ -372,16 +377,15 @@ export default {
           error = 1;
         }
       });
-
       if (error) {
         this.showSnackbarError({
           message: "Error: Enter location names.",
         });
         return;
       }
+      this.$emit('save',this.item)
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
-      this.$emit("save", this.item);
       api.servicesProviders
         .update(this.uuid, this.item)
         .then(() => {
@@ -421,7 +425,13 @@ export default {
     },
     // ---------------------------
     mapClickHandler({ target, offsetX, offsetY }) {
+      if (!this.canAddPin) {
+        this.selectedC = "";
+        this.$emit("errorAddPin");
+        return;
+      }
       if (!target.id) {
+        parseInt;
         return false;
       }
       let stop = false;
@@ -569,6 +579,13 @@ export default {
       );
     },
   },
+  watch: {
+    error(newVallue) {
+      this.showSnackbarError({
+        message: newVallue,
+      });
+    },
+  },
   computed: {
     markerOrder() {
       const tempMarkers = [...this.markers];
@@ -612,7 +629,13 @@ export default {
 
 .map__marker {
   cursor: pointer;
+  fill: red;
 }
+
+.map__marker.active {
+  fill: rgb(76, 175, 80);
+}
+
 .map__popup {
   visibility: hidden;
   opacity: 0;

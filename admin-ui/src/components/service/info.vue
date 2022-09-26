@@ -181,6 +181,17 @@
                           >
                           </v-text-field>
                         </v-col>
+                        <v-col md="2">
+                          <v-text-field
+                            readonly
+                            :value="
+                              instance.state && instance.billingPlan.title
+                            "
+                            label="billingPlan"
+                            style="display: inline-block; width: 100px"
+                          >
+                          </v-text-field>
+                        </v-col>
                       </v-row>
                       <v-row v-else>
                         <v-col>
