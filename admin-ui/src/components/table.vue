@@ -13,6 +13,7 @@
     :single-select="singleSelect"
     :headers="headers"
     :sort-by.sync="sortByTable"
+    :sort-desc="sortDesc"
     :expanded="expanded"
     @update:expanded="(nw) => $emit('update:expanded', nw)"
     :show-expand="showExpand"
@@ -76,6 +77,7 @@ export default {
   name: "nocloud-table",
   props: {
     sortBy: { type: String},
+    sortDesc:{type:Boolean},
     loading: Boolean,
     items: {
       type: Array,
@@ -166,7 +168,7 @@ export default {
   computed:{
     sortByTable(){
       return this.sortBy || 'title'
-    }
+    },
   }
 };
 </script>

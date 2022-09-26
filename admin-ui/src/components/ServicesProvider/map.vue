@@ -1,284 +1,300 @@
 <template>
-  <div ref="map" class="map" id="mapMain">
-    <div style="position: absolute; right: 25px; top: 13px">
-      <v-btn
-        style="margin-right: 5px; font-size: 20px"
-        @click="(e) => zoom(e, 1)"
-      >
-        +
-      </v-btn>
-      <v-btn style="font-size: 20px" @click="(e) => zoom(e, -1)"> - </v-btn>
-    </div>
-
-    <!-- byn  .ant-btn-primary -->
-    <div v-if="selectedC" style="position: absolute; right: 25px; bottom: 13px">
-      <v-btn
-        @click="saveCountry"
-        style="margin-right: 5px; background-color: #4caf50"
-        class="ant-btn-primary"
-      >
-        Save
-      </v-btn>
-      <v-btn @click="CancelSelectedCountry" style="background-color: #272727">
-        Cancel
-      </v-btn>
-    </div>
-    <!-- end byn -->
-    <svg
-      ref="svgwrapper"
-      :viewBox="`0 0 ${widthMap} ${heightMap}`"
-      @click="mapClickHandler"
-      @mousemove="drag"
-      @mousedown="beginDrag"
-      @mousewheel="zoom"
-    >
-      <defs>
-        <g id="marker">
-          <slot name="marker">
-            <path
-              d="M14,0 C21.732,0 28,5.641 28,12.6 C28,23.963 14,36 14,36 C14,36 0,24.064 0,12.6 C0,5.641 6.268,0 14,0 Z"
-              id="Shape"
-              fill="#FF6E6E"
-            ></path>
-            <circle
-              id="elips"
-              fill="#FFFFFF"
-              fill-rule="nonzero"
-              cx="14"
-              cy="14"
-              r="7"
-            ></circle>
-          </slot>
-        </g>
-      </defs>
-      <g class="map__viewport" ref="viewport" transform="matrix(1 0 0 1 0 0)">
-        <g v-for="country in mapData.countries" :key="country.id">
-          <title>{{ country.title }}</title>
-          <path
-            :key="country.id + country.title"
-            :class="{
-              'map__part--selected': selected == country.id,
-              'is-settings': isSettings,
-              'is-settings-selected': selectedC === country.id,
-              'to-del': toDel === country.id,
-              'settings-selected': checkSettingsSelected(country.id),
-            }"
-            class="map__part"
-            :id="country.id"
-            :title="country.title"
-            :d="country.d"
-            @click="(e) => selectedCountry(country.id, country.title)"
-          />
-        </g>
-
-        <g
-          @click.stop
-          class="map_ui"
-          ref="notscale"
-          transform="matrix(1 0 0 1 0 0)"
+  <div :class="{container:isOvh}">
+    <v-list v-if="isOvh" flat dark color="rgba(12, 12, 60, 0.9)">
+      <v-list-item-group v-model="selectedRegion" color="primary">
+        <v-list-item v-for="(item, i) in allRegions" :key="i">
+          {{ item }}
+        </v-list-item>
+      </v-list-item-group>
+    </v-list>
+    <div ref="map" class="map" id="mapMain">
+      <div style="position: absolute; right: 25px; top: 13px">
+        <v-btn
+          style="margin-right: 5px; font-size: 20px"
+          @click="(e) => zoom(e, 1)"
         >
-          <g
-            v-for="marker in markerOrder"
-            :key="marker.id + '_' + marker.x + '_' + marker.y + '_1'"
-          >
-            <use
-              :href="`#${marker.svgId || 'marker'}`"
-              class="map__marker"
-              :data-id="marker.id + '_' + marker.x + '_' + marker.y"
-              x="0"
-              y="0"
-              :transform="`matrix(${0.8 / scale} 0 0 ${0.8 / scale} ${
-                marker.x
-              } ${marker.y})`"
-              transform-origin="14 36"
-              @mouseenter="
-                (e) =>
-                  mouseEnterHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-              @mouseleave="
-                (e) =>
-                  mouseLeaveHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
+          +
+        </v-btn>
+        <v-btn style="font-size: 20px" @click="(e) => zoom(e, -1)"> - </v-btn>
+      </div>
+
+      <!-- byn  .ant-btn-primary -->
+      <div
+        v-if="selectedC"
+        style="position: absolute; right: 25px; bottom: 13px"
+      >
+        <v-btn
+          @click="saveCountry"
+          style="margin-right: 5px; background-color: #4caf50"
+          class="ant-btn-primary"
+        >
+          Save
+        </v-btn>
+        <v-btn @click="CancelSelectedCountry" style="background-color: #272727">
+          Cancel
+        </v-btn>
+      </div>
+      <!-- end byn -->
+      <svg
+        ref="svgwrapper"
+        :viewBox="`0 0 ${widthMap} ${heightMap}`"
+        @click="mapClickHandler"
+        @mousemove="drag"
+        @mousedown="beginDrag"
+        @mousewheel="zoom"
+      >
+        <defs>
+          <g id="marker">
+            <slot name="marker">
+              <path
+                d="M14,0 C21.732,0 28,5.641 28,12.6 C28,23.963 14,36 14,36 C14,36 0,24.064 0,12.6 C0,5.641 6.268,0 14,0 Z"
+                id="Shape"
+                fill="#FF6E6E"
+              ></path>
+              <circle
+                id="elips"
+                fill="#FFFFFF"
+                fill-rule="nonzero"
+                cx="14"
+                cy="14"
+                r="7"
+              ></circle>
+            </slot>
+          </g>
+        </defs>
+        <g class="map__viewport" ref="viewport" transform="matrix(1 0 0 1 0 0)">
+          <g v-for="country in mapData.countries" :key="country.id">
+            <title>{{ country.title }}</title>
+            <path
+              :key="country.id + country.title"
+              :class="{
+                'map__part--selected': selected == country.id,
+                'is-settings': isSettings,
+                'is-settings-selected': selectedC === country.id,
+                'to-del': toDel === country.id,
+                'settings-selected': checkSettingsSelected(country.id),
+              }"
+              class="map__part"
+              :id="country.id"
+              :title="country.title"
+              :d="country.d"
+              @click="(e) => selectedCountry(country.id, country.title)"
             />
           </g>
-          <g
-            v-for="marker in markerOrder"
-            :key="marker.id + '_' + marker.x + '_' + marker.y + '_2'"
-            class="map__popup"
-            :class="{
-              'map__popup--active':
-                selected == marker.id + '_' + marker.x + '_' + marker.y,
-              'map__popup--hovered':
-                hovered == marker.id + '_' + marker.x + '_' + marker.y,
-            }"
-          >
-            <!-- popup -->
-            <rect
-              x="0"
-              y="0"
-              :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(
-                marker.x + 14 - popupWidth / 2,
-                1
-              )} ${marker.y - 45})`"
-              :transform-origin="`${popupWidth / 2} 80`"
-              :width="popupWidth"
-              height="40"
-              fill="#fff"
-              stroke-width="1"
-              stroke="#000"
-              rx="8"
-              @mouseenter="
-                (e) =>
-                  mouseEnterHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-              @mouseleave="
-                (e) =>
-                  mouseLeaveHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-            ></rect>
-            <!-- text -->
-            <foreignObject
-              v-if="marker.title"
-              x="0"
-              y="0"
-              :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(
-                marker.x + 14 - popupWidth / 2,
-                1
-              )} ${marker.y - 45})`"
-              :transform-origin="`${popupWidth / 2} 80`"
-              :width="popupWidth"
-              height="40"
-              @mouseenter="
-                (e) =>
-                  mouseEnterHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-              @mouseleave="
-                (e) =>
-                  mouseLeaveHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-            >
-              <div class="map__popup-content">
-                <slot name="popup" :marker="marker">
-                  <div class="map__popup-content--default">
-                    <!-- {{ marker.title }} -->
-                    <v-form>
-                      <v-text-field
-                        :ref="
-                          'textFiel_' +
-                          marker.id +
-                          '_' +
-                          marker.x +
-                          '_' +
-                          marker.y
-                        "
-                        @keyup.enter="
-                          (e) =>
-                            onEnterHandler(
-                              marker.id + '_' + marker.x + '_' + marker.y,
-                              e
-                            )
-                        "
-                        @input="
-                          (e) =>
-                            inputHandler(
-                              marker.id + '_' + marker.x + '_' + marker.y,
-                              e,
-                              marker
-                            )
-                        "
-                        v-model="marker.title"
-                        label=""
-                        solo
-                        dense
-                      >
-                      </v-text-field>
-                    </v-form>
-                  </div>
-                </slot>
-              </div>
-            </foreignObject>
 
-            <foreignObject
-              v-if="marker.title"
-              x="65"
-              y="40"
-              :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(
-                marker.x + 14 - popupWidth / 2,
-                1
-              )} ${marker.y - 45})`"
-              :transform-origin="`${popupWidth / 2} 80`"
-              width="40"
-              height="40"
-              @mouseenter="
-                (e) =>
-                  mouseEnterHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-              @mouseleave="
-                (e) =>
-                  mouseLeaveHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
+          <g
+            @click.stop
+            class="map_ui"
+            ref="notscale"
+            transform="matrix(1 0 0 1 0 0)"
+          >
+            <g
+              v-for="marker in markerOrder"
+              :key="marker.id + '_' + marker.x + '_' + marker.y + '_1'"
             >
-              <div class="map__popup-content">
-                <slot name="popup" :marker="marker">
-                  <div
-                    @click="(e) => delMarker(e, marker.id, marker.x, marker.y)"
-                    class="map__popup-content--default del"
-                  >
-                    X
-                  </div>
-                </slot>
-              </div>
-            </foreignObject>
+              <use
+                :href="`#${marker.svgId || 'marker'}`"
+                class="map__marker"
+                :data-id="marker.id + '_' + marker.x + '_' + marker.y"
+                x="0"
+                y="0"
+                :transform="`matrix(${0.8 / scale} 0 0 ${0.8 / scale} ${
+                  marker.x
+                } ${marker.y})`"
+                transform-origin="14 36"
+                @mouseenter="
+                  (e) =>
+                    mouseEnterHandler(
+                      marker.id + '_' + marker.x + '_' + marker.y,
+                      e
+                    )
+                "
+                @mouseleave="
+                  (e) =>
+                    mouseLeaveHandler(
+                      marker.id + '_' + marker.x + '_' + marker.y,
+                      e
+                    )
+                "
+              />
+            </g>
+            <g
+              v-for="marker in markerOrder"
+              :key="marker.id + '_' + marker.x + '_' + marker.y + '_2'"
+              class="map__popup"
+              :class="{
+                'map__popup--active':
+                  selected == marker.id + '_' + marker.x + '_' + marker.y,
+                'map__popup--hovered':
+                  hovered == marker.id + '_' + marker.x + '_' + marker.y,
+              }"
+            >
+              <!-- popup -->
+              <rect
+                x="0"
+                y="0"
+                :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(
+                  marker.x + 14 - popupWidth / 2,
+                  1
+                )} ${marker.y - 45})`"
+                :transform-origin="`${popupWidth / 2} 80`"
+                :width="popupWidth"
+                height="40"
+                fill="#fff"
+                stroke-width="1"
+                stroke="#000"
+                rx="8"
+                @mouseenter="
+                  (e) =>
+                    mouseEnterHandler(
+                      marker.id + '_' + marker.x + '_' + marker.y,
+                      e
+                    )
+                "
+                @mouseleave="
+                  (e) =>
+                    mouseLeaveHandler(
+                      marker.id + '_' + marker.x + '_' + marker.y,
+                      e
+                    )
+                "
+              ></rect>
+              <!-- text -->
+              <foreignObject
+                v-if="marker.title"
+                x="0"
+                y="0"
+                :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(
+                  marker.x + 14 - popupWidth / 2,
+                  1
+                )} ${marker.y - 45})`"
+                :transform-origin="`${popupWidth / 2} 80`"
+                :width="popupWidth"
+                height="40"
+                @mouseenter="
+                  (e) =>
+                    mouseEnterHandler(
+                      marker.id + '_' + marker.x + '_' + marker.y,
+                      e
+                    )
+                "
+                @mouseleave="
+                  (e) =>
+                    mouseLeaveHandler(
+                      marker.id + '_' + marker.x + '_' + marker.y,
+                      e
+                    )
+                "
+              >
+                <div class="map__popup-content">
+                  <slot name="popup" :marker="marker">
+                    <div class="map__popup-content--default">
+                      <!-- {{ marker.title }} -->
+                      <v-form>
+                        <v-text-field
+                          :ref="
+                            'textFiel_' +
+                            marker.id +
+                            '_' +
+                            marker.x +
+                            '_' +
+                            marker.y
+                          "
+                          @keyup.enter="
+                            (e) =>
+                              onEnterHandler(
+                                marker.id + '_' + marker.x + '_' + marker.y,
+                                e
+                              )
+                          "
+                          @input="
+                            (e) =>
+                              inputHandler(
+                                marker.id + '_' + marker.x + '_' + marker.y,
+                                e,
+                                marker
+                              )
+                          "
+                          v-model="marker.title"
+                          label=""
+                          solo
+                          dense
+                        >
+                        </v-text-field>
+                      </v-form>
+                    </div>
+                  </slot>
+                </div>
+              </foreignObject>
+
+              <foreignObject
+                v-if="marker.title"
+                x="65"
+                y="40"
+                :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(
+                  marker.x + 14 - popupWidth / 2,
+                  1
+                )} ${marker.y - 45})`"
+                :transform-origin="`${popupWidth / 2} 80`"
+                width="40"
+                height="40"
+                @mouseenter="
+                  (e) =>
+                    mouseEnterHandler(
+                      marker.id + '_' + marker.x + '_' + marker.y,
+                      e
+                    )
+                "
+                @mouseleave="
+                  (e) =>
+                    mouseLeaveHandler(
+                      marker.id + '_' + marker.x + '_' + marker.y,
+                      e
+                    )
+                "
+              >
+                <div class="map__popup-content">
+                  <slot name="popup" :marker="marker">
+                    <div
+                      @click="
+                        (e) => delMarker(e, marker.id, marker.x, marker.y)
+                      "
+                      class="map__popup-content--default del"
+                    >
+                      X
+                    </div>
+                  </slot>
+                </div>
+              </foreignObject>
+            </g>
           </g>
         </g>
-      </g>
-    </svg>
+      </svg>
 
-    <v-snackbar
-      v-model="snackbar.visibility"
-      :timeout="snackbar.timeout"
-      :color="snackbar.color"
-    >
-      {{ snackbar.message }}
-      <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
-        <router-link :to="snackbar.route"> Look up. </router-link>
-      </template>
-
-      <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
+      <v-snackbar
+        v-model="snackbar.visibility"
+        :timeout="snackbar.timeout"
+        :color="snackbar.color"
+      >
+        {{ snackbar.message }}
+        <template
+          v-if="snackbar.route && Object.keys(snackbar.route).length > 0"
         >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
+          <router-link :to="snackbar.route"> Look up. </router-link>
+        </template>
+
+        <template v-slot:action="{ attrs }">
+          <v-btn
+            :color="snackbar.buttonColor"
+            text
+            v-bind="attrs"
+            @click="snackbar.visibility = false"
+          >
+            Close
+          </v-btn>
+        </template>
+      </v-snackbar>
+    </div>
   </div>
 </template>
 
@@ -290,9 +306,11 @@ import api from "@/api.js";
 export default {
   mixins: [snackbar],
   name: "support-map",
-  props: { template: { type: Object, required: true } },
+  props: { template: { type: Object, required: true }},
 
   data: () => ({
+    selectedRegion: "",
+    allRegions: [],
     selected: "",
     hovered: "",
     popupWidth: 120,
@@ -305,6 +323,7 @@ export default {
     dragF: false,
     svg: null,
     mapData,
+    isOvh:false,
     // markersInComponent: [],
 
     widthMap: 1010,
@@ -390,12 +409,15 @@ export default {
         });
         return;
       }
+
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
-
-      // console.log("this.item = ", this.item);
-      // console.log("this.uuid = ", this.uuid);
-
+      if (this.isOvh && this.selectedRegion) {
+        this.item.locations[this.item.locations.length - 1].extra = {
+          [this.allRegions[this.selectedRegion]]:
+            this.allRegions[this.selectedRegion],
+        };
+      }
       api.servicesProviders
         .update(this.uuid, this.item)
         .then(() => {
@@ -602,13 +624,28 @@ export default {
 
     this.uuid = this.template.uuid;
     this.item = this.template;
+    this.isOvh=this.item.type==='ovh'
     this.markers = this.template.locations;
     const container = this.$refs.viewport;
     let x = parseInt(this.widthMap - 1010) / 2;
     let y = parseInt(this.heightMap - 666) / 2;
     this.svg = this.$refs.svgwrapper;
     container.setAttribute("transform", `matrix(1 0 0 1 ${x} ${y})`);
-
+    if(this.isOvh){
+       api
+      .post(`/sp/${this.uuid}/invoke`, { method: "flavors" })
+      .then(({ meta }) => {
+        this.allRegions = meta.result
+          .map((el) => el.region)
+          .filter((element, index, arr) => {
+            return arr.indexOf(element) === index;
+          });
+      }).catch(()=>{
+        this.showSnackbarError({
+          message: "Error: Cannot download regions",
+        });
+      });
+    }
     window.addEventListener("mouseup", this.endDrag);
   },
   beforeUnmount() {
@@ -724,5 +761,11 @@ export default {
 
 #mapMain .v-text-field.v-text-field--enclosed .v-text-field__details {
   z-index: -10;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  grid-column-gap: 20px;
 }
 </style>
