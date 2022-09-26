@@ -44,20 +44,7 @@ export default {
     found: false,
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
-    tabs: [
-      {
-        title: "Info",
-        component: () => import("@/components/ServicesProvider/info.vue"),
-      },
-      {
-        title: "Template",
-        component: () => import("@/components/ServicesProvider/template.vue"),
-      },
-      {
-        title: "Map",
-        component: () => import("@/components/ServicesProvider/map.vue"),
-      },
-    ],
+    item:null
   }),
   methods: {
     navTitle(title) {
@@ -72,13 +59,24 @@ export default {
     uuid() {
       return this.$route.params.uuid;
     },
-    item() {
-      const items = this.$store.getters["servicesProviders/all"];
-      const item = items.find((el) => el.uuid == this.uuid);
-
-      if (item) return item;
-
-      return null;
+    tabs() {
+      return [
+        {
+          title: "Info",
+          component: () => import("@/components/ServicesProvider/info.vue"),
+        },
+        {
+          title: "Template",
+          component: () => import("@/components/ServicesProvider/template.vue"),
+        },
+        {
+          title: "Map",
+          component:
+            this.item?.type === "ovh"
+              ? () => import("@/components/ServicesProvider/ovhMap.vue")
+              : () => import("@/components/ServicesProvider/map.vue"),
+        },
+      ];
     },
     title() {
       return this?.item?.title ?? "not found";
@@ -92,6 +90,8 @@ export default {
       this.found = !!this.service;
       document.title = `${this.title} | NoCloud`;
     });
+    const items = this.$store.getters["servicesProviders/all"];
+    this.item=items.find((el) => el.uuid == this.uuid);
   },
   mounted() {
     document.title = `${this.title} | NoCloud`;
