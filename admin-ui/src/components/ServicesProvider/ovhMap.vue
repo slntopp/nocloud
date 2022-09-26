@@ -1,6 +1,12 @@
 <template>
   <div class="container">
-    <v-progress-circular v-if="!allRegions.length" class="spinner" size="40" color="primary" indeterminate/>
+    <v-progress-circular
+      v-if="!allRegions.length"
+      class="spinner"
+      size="40"
+      color="primary"
+      indeterminate
+    />
     <v-list v-else flat dark color="rgba(12, 12, 60, 0.9)">
       <v-list-item-group v-model="selectedRegion" color="primary">
         <v-list-item v-for="(item, i) in allRegions" :key="i">
@@ -8,7 +14,12 @@
         </v-list-item>
       </v-list-item-group>
     </v-list>
-    <support-map :multiSelect="true" @save="onSavePin" :template="template" />
+    <support-map
+      :activePinTitle="activePinTitle"
+      :multiSelect="true"
+      @save="onSavePin"
+      :template="template"
+    />
   </div>
 </template>
 
@@ -32,6 +43,17 @@ export default {
           region: this.allRegions[this.selectedRegion],
         };
       }
+    },
+  },
+  computed: {
+    activePinTitle() {
+      const selectedLocation = this.template.locations.find(
+        (l) =>
+          l.extra.region &&
+          this.allRegions[this.selectedRegion] &&
+          l.extra.region === this.allRegions[this.selectedRegion]
+      );
+      return selectedLocation?.title || "";
     },
   },
   mounted() {
@@ -59,7 +81,7 @@ export default {
   grid-template-columns: 100px 1fr;
   grid-column-gap: 20px;
 }
-.spinner{
+.spinner {
   margin: auto;
   margin-top: 150px;
 }
