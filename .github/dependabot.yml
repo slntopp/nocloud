@@ -30,6 +30,8 @@ updates:
       time: '06:00'
     reviewers:
       - "639852"
+      - dimkapzd
+      - SazukinPavel
     assignees:
       - "639852"
   - package-ecosystem: github-actions
