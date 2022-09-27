@@ -294,6 +294,8 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	}
 	if newLocations := req.GetLocations(); newLocations != nil {
 		sp.Locations = newLocations
+	} else {
+		sp.Locations = []*sppb.LocationConf{}
 	}
 
 	testRes, err := s.Test(ctx, sp.ServicesProvider)
