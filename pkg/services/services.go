@@ -686,7 +686,7 @@ func (s *ServicesServer) Stream(req *pb.StreamRequest, srv pb.ServicesService_St
 
 	messages := make(chan interface{}, 10)
 
-	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccessLevel() < access.MGMT {
+	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccessLevel() < access.READ {
 		log.Warn("Failed access check", zap.String("uuid", req.GetUuid()))
 		return errors.New("failed access check")
 	}
