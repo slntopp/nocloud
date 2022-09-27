@@ -26,6 +26,7 @@ import (
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -59,6 +60,21 @@ func MakeTokenInstance(instance string) (string, error) {
 	claims[nocloud.NOCLOUD_INSTANCE_CLAIM] = instance
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(SIGNING_KEY)
+}
+
+func JWT_STREAM_INTERCEPTOR(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	l := log.Named("StreamInterceptor")
+	l.Debug("Invoked", zap.String("method", info.FullMethod))
+
+	ctx, err := JWT_AUTH_MIDDLEWARE(stream.Context())
+	if err != nil {
+		return err
+	}
+
+	return handler(srv, &grpc_middleware.WrappedServerStream{
+		ServerStream:   stream,
+		WrappedContext: ctx,
+	})
 }
 
 func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
