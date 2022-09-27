@@ -383,7 +383,7 @@ export default {
         });
         return;
       }
-      this.$emit('save',this.item)
+      this.$emit("save", this.item);
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
       api.servicesProviders
@@ -425,7 +425,6 @@ export default {
     },
     // ---------------------------
     mapClickHandler({ target, offsetX, offsetY }) {
-      console.log(this.canAddPin);
       if (!this.canAddPin) {
         this.selectedC = "";
         this.$emit("errorAddPin");
@@ -488,6 +487,7 @@ export default {
     },
     mouseEnterHandler(id) {
       this.hovered = id;
+      this.$emit("pinHover", id.substring(0, id.indexOf("_")));
       clearInterval(this.leaveDelayInterval);
     },
     mouseLeaveHandler() {

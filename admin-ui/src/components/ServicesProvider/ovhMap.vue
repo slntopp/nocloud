@@ -23,6 +23,7 @@
       :error="mapError"
       :template="template"
       @save="onSavePin"
+      @pinHover="onPinHover"
     />
   </div>
 </template>
@@ -41,11 +42,17 @@ export default {
   },
   props: { template: { required: true, type: Object } },
   methods: {
+    onPinHover(id) {
+      if (this.allRegions) {
+        const location = this.template.locations.find((l) => l.id === id);
+        this.selectedRegion = this.allRegions.indexOf(location.extra.region);
+      }
+    },
     errorAddPin() {
-      if(this.selectedLocation){
+      if (this.selectedLocation) {
         console.log(1);
         this.mapError = "Error: This region alredy taken";
-      }else{
+      } else {
         this.mapError = "Error: Choose the region";
       }
     },
@@ -61,7 +68,7 @@ export default {
     activePinTitle() {
       return this.selectedLocation?.title || "";
     },
-    selectedLocation(){
+    selectedLocation() {
       return this.template.locations.find(
         (l) =>
           l.extra?.region &&
@@ -70,7 +77,10 @@ export default {
       );
     },
     canAddPin() {
-      return !this.selectedLocation && (!!this.selectedRegion || this.selectedRegion === 0);
+      return (
+        !this.selectedLocation &&
+        (!!this.selectedRegion || this.selectedRegion === 0)
+      );
     },
   },
   mounted() {
