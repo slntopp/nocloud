@@ -87,11 +87,12 @@ export default {
   },
   created() {
     this.$store.dispatch("servicesProviders/fetchById", this.uuid).then(() => {
+          const items = this.$store.getters["servicesProviders/all"];
+        this.item = items.find((el) => el.uuid == this.uuid);
       this.found = !!this.service;
       document.title = `${this.title} | NoCloud`;
     });
-    const items = this.$store.getters["servicesProviders/all"];
-    this.item = items.find((el) => el.uuid == this.uuid);
+
   },
   mounted() {
     document.title = `${this.title} | NoCloud`;
