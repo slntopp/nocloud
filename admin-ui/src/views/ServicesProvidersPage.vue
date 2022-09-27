@@ -44,7 +44,7 @@ export default {
     found: false,
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
-    item:null
+    item: null,
   }),
   methods: {
     navTitle(title) {
@@ -66,15 +66,15 @@ export default {
           component: () => import("@/components/ServicesProvider/info.vue"),
         },
         {
-          title: "Template",
-          component: () => import("@/components/ServicesProvider/template.vue"),
-        },
-        {
           title: "Map",
           component:
             this.item?.type === "ovh"
               ? () => import("@/components/ServicesProvider/ovhMap.vue")
               : () => import("@/components/ServicesProvider/map.vue"),
+        },
+        {
+          title: "Template",
+          component: () => import("@/components/ServicesProvider/template.vue"),
         },
       ];
     },
@@ -91,7 +91,7 @@ export default {
       document.title = `${this.title} | NoCloud`;
     });
     const items = this.$store.getters["servicesProviders/all"];
-    this.item=items.find((el) => el.uuid == this.uuid);
+    this.item = items.find((el) => el.uuid == this.uuid);
   },
   mounted() {
     document.title = `${this.title} | NoCloud`;
