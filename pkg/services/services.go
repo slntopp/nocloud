@@ -17,6 +17,7 @@ package services
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/arangodb/go-driver"
@@ -681,8 +682,14 @@ func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) 
 func (s *ServicesServer) Stream(req *pb.StreamRequest, srv pb.ServicesService_StreamServer) (err error) {
 	log := s.log.Named("stream")
 	log.Debug("Request received", zap.Any("req", req))
+	requestor := srv.Context().Value(nocloud.NoCloudAccount).(string)
 
 	messages := make(chan interface{}, 10)
+
+	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccessLevel() < access.MGMT {
+		log.Warn("Failed access check", zap.String("uuid", req.GetUuid()))
+		return errors.New("failed access check")
+	}
 
 	uuids, err := s.ctrl.GetServiceInstancesUuids(req.GetUuid())
 	if err != nil {
