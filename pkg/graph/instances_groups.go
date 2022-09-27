@@ -23,6 +23,7 @@ import (
 
 	"github.com/slntopp/nocloud/pkg/hasher"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
+	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
@@ -31,7 +32,7 @@ const (
 )
 
 type InstancesGroupsController struct {
-	col   driver.Collection // Instances Collection
+	col   driver.Collection // Instances Groups Collection
 	graph driver.Graph
 
 	inst_ctrl *InstancesController
@@ -92,6 +93,7 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 
 	_, err = ctrl.serv2ig.CreateDocument(ctx, Access{
 		From: service, To: meta.ID,
+		Role: roles.OWNER,
 	})
 	if err != nil {
 		log.Error("Failed to create Edge", zap.Error(err))
