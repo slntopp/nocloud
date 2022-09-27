@@ -111,12 +111,9 @@
             <v-text-field
               dense
               outlined
-              :label="(edit.isVisible)
-                ? `Edit ${edit.title}`
-                : 'New config'
-              "
               class="mx-2 mt-1 mw-20"
               v-if="isVisible || edit.isVisible"
+              :label="(edit.isVisible) ? `Edit ${edit.title}` : 'New config'"
               @change="addConfig"
             />
             <v-icon
@@ -182,14 +179,8 @@ export default {
     amountResources: {},
     fullDate: null,
 
-    form: {
-      title: '',
-      titles: []
-    },
-    edit: {
-      isVisible: false,
-      title: ''
-    },
+    form: { title: '', titles: [] },
+    edit: { isVisible: false, title: '' },
     isVisible: false,
     isDialogVisible: false,
     generalRule: [v => !!v || 'This field is required!'],
@@ -233,9 +224,7 @@ export default {
         month = '0' + month;
       }
 
-      return Date.parse(
-        `${year}-${month}-${day}T${time}Z`
-      ) / 1000;
+      return Date.parse(`${year}-${month}-${day}T${time}Z`) / 1000;
     },
     addConfig(title) {
       if (this.edit.isVisible) {
@@ -289,12 +278,12 @@ export default {
             time: time[time.length - 2]
           };
           this.date = 'Custom';
-          this.$emit('change:product', {
-            key: 'date',
-            value: this.fullDate
-          });
-        } else if (key === 'resources') {
+          this.$emit('change:product', { key: 'date', value: this.fullDate });
+        } else if (key === 'amount') {
           this.amountResources = value;
+        } else if (key === 'resources') {
+          this.resources = value;
+          value.forEach(({ key }) => { this.form.titles.push(key) });
         } else {
           this[key] = value;
         }
