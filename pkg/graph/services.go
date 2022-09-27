@@ -315,8 +315,11 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	}
 	showDeleted := request.GetShowDeleted() == "true"
 
-	if !showDeleted {
-		getServiceList = fmt.Sprintf(getServiceList, `FILTER service.status != "del"`)
+	var query string
+	if showDeleted {
+		query = fmt.Sprintf(getServiceList, "")
+	} else {
+		query = fmt.Sprintf(getServiceList, `FILTER service.status != "del"`)
 	}
 	bindVars := map[string]interface{}{
 		"depth":             depth,
@@ -327,7 +330,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
 
-	c, err := ctrl.db.Query(ctx, getServiceList, bindVars)
+	c, err := ctrl.db.Query(ctx, query, bindVars)
 	if err != nil {
 		return nil, err
 	}
