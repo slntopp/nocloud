@@ -425,6 +425,7 @@ export default {
     },
     // ---------------------------
     mapClickHandler({ target, offsetX, offsetY }) {
+      console.log(this.canAddPin);
       if (!this.canAddPin) {
         this.selectedC = "";
         this.$emit("errorAddPin");

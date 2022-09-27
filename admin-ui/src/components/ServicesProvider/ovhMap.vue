@@ -42,26 +42,35 @@ export default {
   props: { template: { required: true, type: Object } },
   methods: {
     errorAddPin() {
-      this.mapError = "Error: Choose the region";
+      if(this.selectedLocation){
+        console.log(1);
+        this.mapError = "Error: This region alredy taken";
+      }else{
+        this.mapError = "Error: Choose the region";
+      }
     },
     onSavePin(item) {
       item.locations[item.locations.length - 1].extra = {
         region: this.allRegions[this.selectedRegion],
       };
+      this.selectedRegion = null;
+      this.mapError = "";
     },
   },
   computed: {
     activePinTitle() {
-      const selectedLocation = this.template.locations.find(
+      return this.selectedLocation?.title || "";
+    },
+    selectedLocation(){
+      return this.template.locations.find(
         (l) =>
           l.extra?.region &&
           this.allRegions[this.selectedRegion] &&
           l.extra?.region === this.allRegions[this.selectedRegion]
       );
-      return selectedLocation?.title || "";
     },
     canAddPin() {
-      return !!this.selectedRegion || this.selectedRegion===0;
+      return !this.selectedLocation && (!!this.selectedRegion || this.selectedRegion === 0);
     },
   },
   mounted() {
