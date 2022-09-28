@@ -115,6 +115,9 @@ export default {
         : yaml.parse(this.tree);
 
       this.isLoading = true;
+      if (request.locations.length < 1) {
+        request.locations = [{ id: '_nocloud.remove' }];
+      }
       api.servicesProviders.update(this.template.uuid, request)
         .then(() => {
           this.showSnackbarSuccess({
