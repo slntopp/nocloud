@@ -289,15 +289,15 @@ func (ctrl *ServicesController) GetServiceInstancesUuids(key string) ([]string, 
 
 var getServiceList = `
 FOR service IN 0..@depth OUTBOUND @account
-    GRAPH @permissions
+    GRAPH @permissions_graph
     FILTER IS_SAME_COLLECTION(@@services, service)
 	%s 
         LET instances_groups = (
     	FOR group IN 1 OUTBOUND service
-    	GRAPH @permissions
+    	GRAPH @permissions_graph
     		LET instances = (
     			FOR i IN 1 OUTBOUND group
-    			GRAPH @permissions
+    			GRAPH @permissions_graph
     			FILTER IS_SAME_COLLECTION(@instances, i)
     				RETURN MERGE(i, { uuid: i._key }) )
     		RETURN MERGE(group, { uuid: group._key, instances })
