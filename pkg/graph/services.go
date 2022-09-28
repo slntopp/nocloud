@@ -290,6 +290,7 @@ func (ctrl *ServicesController) GetServiceInstancesUuids(key string) ([]string, 
 var getServiceList = `
 FOR service IN 0..@depth OUTBOUND @account
     GRAPH @permissions_graph
+	OPTIONS {order: "bfs", uniqueVertices: "global"}
     FILTER IS_SAME_COLLECTION(@@services, service)
 	%s 
         LET instances_groups = (
@@ -302,7 +303,7 @@ FOR service IN 0..@depth OUTBOUND @account
     				RETURN MERGE(i, { uuid: i._key }) )
     		RETURN MERGE(group, { uuid: group._key, instances })
         )
-return MERGE(service, {uuid:service._key, instances_groups})
+RETURN MERGE(service, {uuid:service._key, instances_groups})
 `
 
 // List Services in DB
