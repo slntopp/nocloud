@@ -83,6 +83,11 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
+	// Provide public information without access check
+	if request.GetPublic() {
+		return &accountspb.Account{Title: acc.Account.GetTitle()}, nil
+	}
+
 	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.READ)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
