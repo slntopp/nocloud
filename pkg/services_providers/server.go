@@ -293,9 +293,10 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 		sp.Vars = newVars
 	}
 	if newLocations := req.GetLocations(); newLocations != nil {
+		if len(newLocations) == 1 && newLocations[0].Id == "_nocloud.remove" {
+			newLocations[0].Id = ""
+		}
 		sp.Locations = newLocations
-	} else {
-		sp.Locations = []*sppb.LocationConf{}
 	}
 
 	testRes, err := s.Test(ctx, sp.ServicesProvider)
