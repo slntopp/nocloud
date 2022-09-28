@@ -287,6 +287,24 @@ func (ctrl *ServicesController) GetServiceInstancesUuids(key string) ([]string, 
 	return uuids, nil
 }
 
+var getServiceList = `
+FOR service IN 0..@depth OUTBOUND @account
+    GRAPH @permissions
+    FILTER IS_SAME_COLLECTION(@@services, service)
+	%s 
+        LET instances_groups = (
+    	FOR group IN 1 OUTBOUND service
+    	GRAPH @permissions
+    		LET instances = (
+    			FOR i IN 1 OUTBOUND group
+    			GRAPH @permissions
+    			FILTER IS_SAME_COLLECTION(@instances, i)
+    				RETURN MERGE(i, { uuid: i._key }) )
+    		RETURN MERGE(group, { uuid: group._key, instances })
+        )
+return MERGE(service, {uuid:service._key, instances_groups})
+`
+
 // List Services in DB
 func (ctrl *ServicesController) List(ctx context.Context, requestor string, request *pb.ListRequest) ([]*pb.Service, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
@@ -296,17 +314,19 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		depth = 5
 	}
 	showDeleted := request.GetShowDeleted() == "true"
+
 	var query string
 	if showDeleted {
-		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) RETURN MERGE(node, {uuid: node._key})`
+		query = fmt.Sprintf(getServiceList, "")
 	} else {
-		query = `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@services, node) FILTER node.status != "del" RETURN MERGE(node, {uuid: node._key})`
+		query = fmt.Sprintf(getServiceList, `FILTER service.status != "del"`)
 	}
 	bindVars := map[string]interface{}{
 		"depth":             depth,
 		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"@services":         schema.SERVICES_COL,
+		"instances":         schema.INSTANCES_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
 
