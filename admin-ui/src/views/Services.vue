@@ -6,46 +6,60 @@
       service provider
       <v-btn small :to="{ name: 'Services' }"> clear </v-btn>
     </div>
-    <div class="buttons__inline pb-4">
-      <v-btn
-        color="background-light"
-        class="mr-2"
-        :to="{ name: 'Service create' }"
-      >
-        create
-      </v-btn>
-      <confirm-dialog
-        :disabled="selected.length < 1"
-        @confirm="deleteSelectedServices"
-      >
+    <div class="pb-4 buttons">
+      <div class="buttons__inline">
         <v-btn
-          :disabled="selected.length < 1"
           color="background-light"
           class="mr-2"
+          :to="{ name: 'Service create' }"
         >
-          delete
+          create
         </v-btn>
-      </confirm-dialog>
-      <v-btn
-        color="background-light"
-        class="mr-2"
-        @click="upServices"
-        :disabled="selected.length < 1"
-      >
-        UP
-      </v-btn>
-      <v-btn
-        color="background-light"
-        class="mr-2"
-        @click="downServices"
-        :disabled="selected.length < 1"
-      >
-        DOWN
-      </v-btn>
+        <confirm-dialog
+          :disabled="selected.length < 1"
+          @confirm="deleteSelectedServices"
+        >
+          <v-btn
+            :disabled="selected.length < 1"
+            color="background-light"
+            class="mr-2"
+          >
+            delete
+          </v-btn>
+        </confirm-dialog>
+        <v-btn
+          color="background-light"
+          class="mr-2"
+          @click="upServices"
+          :disabled="selected.length < 1"
+        >
+          UP
+        </v-btn>
+        <v-btn
+          color="background-light"
+          class="mr-2"
+          @click="downServices"
+          :disabled="selected.length < 1"
+        >
+          DOWN
+        </v-btn>
+      </div>
+      <div>
+        <v-text-field
+          v-model="searchParam"
+          class="service-search mr-2"
+          hide-details
+          prepend-inner-icon="mdi-magnify"
+          placeholder="Search..."
+          background-color="background-light"
+          dence
+          rounded
+        ></v-text-field>
+      </div>
     </div>
 
     <nocloud-table
-      :items="services"
+      :items="filteredServices"
       :headers="headers"
       :expanded.sync="expanded"
       @input="(v) => (selected = v)"
@@ -116,6 +130,7 @@ export default {
     expanded: [],
     selected: [],
     fetchError: "",
+    searchParam: "",
   }),
   computed: {
     services() {
@@ -127,6 +142,14 @@ export default {
         });
       }
       return items;
+    },
+    filteredServices() {
+      if (this.searchParam) {
+        return this.services.filter((service) =>
+          service.title.toLowerCase().includes(this.searchParam.toLowerCase())
+        );
+      }
+      return this.services;
     },
     isFiltered() {
       return this.$route.query.filter == "uuid" && this.$route.query["items[]"];
@@ -304,5 +327,15 @@ export default {
   font-family: "Quicksand", sans-serif;
   line-height: 1em;
   margin-bottom: 10px;
+}
+.buttons {
+  display: flex;
+  justify-content: space-between;
+}
+
+.service-search {
+  margin-top: 0px;
+  font-size: 1.2rem;
+  padding-top: 0px;
 }
 </style>
