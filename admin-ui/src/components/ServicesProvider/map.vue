@@ -386,6 +386,10 @@ export default {
       this.$emit("save", this.item);
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
+
+      if (this.item.locations.length < 1) {
+        this.item.locations = [{ id: '_nocloud.remove' }];
+      }
       api.servicesProviders
         .update(this.uuid, this.item)
         .then(() => {

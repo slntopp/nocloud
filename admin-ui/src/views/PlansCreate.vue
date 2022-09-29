@@ -79,12 +79,7 @@
               @drag="(e) => dragTab(e, i)"
               @dragstart="dragTabStart"
               @dragend="dragTabEnd"
-              @dblclick="
-                edit = {
-                  isVisible: true,
-                  title,
-                }
-              "
+              @dblclick="edit = { isVisible: true, title }"
             >
               {{ title }}
               <v-icon small right color="error" @click="removeConfig(title)">
@@ -116,7 +111,7 @@
                 :is="template"
                 :keyForm="title"
                 :resource="plan.resources[i]"
-                :product="plan.products[title]"
+                :product="getProduct(plan.products[title])"
                 :preset="preset(i)"
                 @change:resource="(data) => changeResource(i, data)"
                 @change:product="(data) => changeProduct(title, data)"
@@ -395,7 +390,6 @@ export default {
         this.plan.products = {};
       } else {
         this.plan.products[res].period = period;
-        this.plan.resources = [];
       }
     },
     getTimestamp({ day, month, year, quarter, week, time }) {
@@ -403,12 +397,8 @@ export default {
       month = +month + quarter * 3 + 1;
       day = +day + week * 7 + 1;
 
-      if (`${day}`.length < 2) {
-        day = "0" + day;
-      }
-      if (`${month}`.length < 2) {
-        month = "0" + month;
-      }
+      if (`${day}`.length < 2) day = "0" + day;
+      if (`${month}`.length < 2) month = "0" + month;
 
       return Date.parse(`${year}-${month}-${day}T${time}Z`) / 1000;
     },
@@ -418,14 +408,25 @@ export default {
         this.plan = this.item;
         this.isVisible = false;
 
-        this.item.resources.forEach((el) => {
-          this.form.titles.push(el.key);
-        });
-        Object.keys(this.item.products).forEach((key) => {
-          this.form.titles.push(key);
-        });
+        if (this.item.kind === 'DYNAMIC') {
+          this.item.resources.forEach((el) => {
+            this.form.titles.push(el.key);
+          });
+        } else {
+          Object.keys(this.item.products).forEach((key) => {
+            this.form.titles.push(key);
+          });
+        }
       }
     },
+    getProduct(product) {
+      if (!product) return {};
+      return {
+        ...product,
+        amount: product.resources,
+        resources: this.item.resources
+      };
+    }
   },
   created() {
     const types = require.context(
