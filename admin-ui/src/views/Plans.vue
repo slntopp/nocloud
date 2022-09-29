@@ -70,11 +70,13 @@
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import noCloudTable from "@/components/table.vue";
+import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
   name: "plans-view",
   components: {
     "nocloud-table": noCloudTable,
+    ConfirmDialog
   },
   mixins: [snackbar],
   data: () => ({
