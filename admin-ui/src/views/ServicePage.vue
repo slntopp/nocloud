@@ -48,6 +48,7 @@
 import config from '@/config.js';
 import serviceTemplate from "@/components/service/template.vue";
 import serviceInfo from "@/components/service/info.vue";
+import snackbar from "@/mixins/snackbar.js";
 
 const url = 'wss://api.nocloud.ione-cloud.net/services';
 let socket;
@@ -55,6 +56,7 @@ let socket;
 export default {
   name: "service-view",
   components: { serviceTemplate, serviceInfo, },
+  mixins:[snackbar],
   data: () => ({
     found: false,
     tabs: 0,
