@@ -1,20 +1,22 @@
 <template>
   <div class="pa-4">
-    <v-btn
-      class="mr-2"
-      color="background-light"
-      :to="{ name: 'Plans create' }"
-    >
+    <v-btn class="mr-2" color="background-light" :to="{ name: 'Plans create' }">
       Create
     </v-btn>
-    <v-btn
-      class="mr-2"
-      color="background-light"
-      :loading="isDeleteLoading"
-      @click="deleteSelectedPlans"
+    <confirm-dialog
+      :disabled="this.selected.length < 1"
+      @confirm="deleteSelectedPlans"
     >
-      Delete
-    </v-btn>
+      <v-btn
+        class="mr-2"
+        color="background-light"
+        :disabled="this.selected.length < 1"
+        :loading="isDeleteLoading"
+      >
+        Delete
+      </v-btn>
+    </confirm-dialog>
+
     <v-select
       label="Service Provider"
       item-text="title"
@@ -34,9 +36,7 @@
       @input="(v) => (selected = v)"
     >
       <template v-slot:[`item.title`]="{ item }">
-        <router-link
-          :to="{ name: 'Plan', params: { planId: item.uuid } }"
-        >
+        <router-link :to="{ name: 'Plan', params: { planId: item.uuid } }">
           {{ item.title }}
         </router-link>
       </template>
@@ -67,87 +67,88 @@
 </template>
 
 <script>
-import api from '@/api.js';
-import snackbar from '@/mixins/snackbar.js';
-import noCloudTable from '@/components/table.vue';
+import api from "@/api.js";
+import snackbar from "@/mixins/snackbar.js";
+import noCloudTable from "@/components/table.vue";
+import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
-  name: 'plans-view',
+  name: "plans-view",
   components: {
-    'nocloud-table': noCloudTable
+    "nocloud-table": noCloudTable,
+    ConfirmDialog
   },
   mixins: [snackbar],
   data: () => ({
     headers: [
-      { text: 'Title ', value: 'title' },
-      { text: 'UUID ', value: 'uuid' },
-      { text: 'Public ', value: 'public' },
-      { text: 'Type ', value: 'type' }
+      { text: "Title ", value: "title" },
+      { text: "UUID ", value: "uuid" },
+      { text: "Public ", value: "public" },
+      { text: "Type ", value: "type" },
     ],
     isDeleteLoading: false,
     selected: [],
     copyed: -1,
-    fetchError: '',
-    serviceProvider: null
+    fetchError: "",
+    serviceProvider: null,
   }),
   methods: {
     deleteSelectedPlans() {
-      if (this.selected.length > 0) {
-        this.isDeleteLoading = true;
+      this.isDeleteLoading = true;
 
-        const deletePromises = this.selected.map((el) =>
-          api.plans.delete(el.uuid)
-        );
-        Promise.all(deletePromises)
-          .then(() => {
-            const ending = deletePromises.length === 1 ? '' : 's';
+      const deletePromises = this.selected.map((el) =>
+        api.plans.delete(el.uuid)
+      );
+      Promise.all(deletePromises)
+        .then(() => {
+          const ending = deletePromises.length === 1 ? "" : "s";
 
-              this.$store.dispatch('plans/fetch');
-              this.showSnackbar({
-                message: `Plan${ending} deleted successfully.`,
-              });
-          })
-          .catch((err) => {
-            if (err.response.status >= 500 || err.response.status < 600) {
-              this.showSnackbarError({
-                message: `Plan Unavailable: ${
-                  err?.response?.data?.message ?? 'Unknown'
-                }.`,
-                timeout: 0,
-              });
-            } else {
-              this.showSnackbarError({
-                message: `Error: ${err?.response?.data?.message ?? 'Unknown'}.`,
-              });
-            }
-          })
-          .finally(() => {
-            this.isDeleteLoading = false;
+          this.$store.dispatch("plans/fetch");
+          this.showSnackbar({
+            message: `Plan${ending} deleted successfully.`,
           });
-      }
+        })
+        .catch((err) => {
+          if (err.response.status >= 500 || err.response.status < 600) {
+            this.showSnackbarError({
+              message: `Plan Unavailable: ${
+                err?.response?.data?.message ?? "Unknown"
+              }.`,
+              timeout: 0,
+            });
+          } else {
+            this.showSnackbarError({
+              message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
+            });
+          }
+        })
+        .finally(() => {
+          this.isDeleteLoading = false;
+        });
     },
     getPlans() {
-      this.$store.dispatch('plans/fetch', {
-        sp_uuid: this.serviceProvider,
-        anonymously: false
-      })
+      this.$store
+        .dispatch("plans/fetch", {
+          sp_uuid: this.serviceProvider,
+          anonymously: false,
+        })
         .then(() => {
-          this.fetchError = '';
+          this.fetchError = "";
         })
         .catch((err) => {
           console.error(err);
 
-          this.fetchError = 'Can\'t reach the server';
+          this.fetchError = "Can't reach the server";
           if (err.response) {
             this.fetchError += `: [ERROR]: ${err.response.data.message}`;
           } else {
             this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
           }
         });
-    }
+    },
   },
   created() {
-    this.$store.dispatch('servicesProviders/fetch');
+    this.$store.dispatch("servicesProviders/fetch");
     this.getPlans();
   },
   mounted() {
@@ -155,26 +156,30 @@ export default {
       type: "plans/fetch",
       params: {
         sp_uuid: this.serviceProvider,
-        anonymously: false
-      }
+        anonymously: false,
+      },
     });
   },
   computed: {
     plans() {
-      return this.$store.getters['plans/all'];
+      return this.$store.getters["plans/all"];
     },
     isLoading() {
-      return this.$store.getters['plans/isLoading'];
+      return this.$store.getters["plans/isLoading"];
     },
     servicesProviders() {
-      const sp = this.$store.getters['servicesProviders/all'];
+      const sp = this.$store.getters["servicesProviders/all"];
 
-      return [...sp, { title: 'none', uuid: null }];
-    }
+      return [...sp, { title: "none", uuid: null }];
+    },
   },
   watch: {
-    plans() { this.fetchError = '' },
-    serviceProvider() { this.getPlans() }
-  }
-}
+    plans() {
+      this.fetchError = "";
+    },
+    serviceProvider() {
+      this.getPlans();
+    },
+  },
+};
 </script>

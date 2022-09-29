@@ -76,15 +76,20 @@
         </v-card>
       </v-menu>
 
-      <v-btn
+     
+       <confirm-dialog
+        @confirm="deleteSelectedZones"
+        :disabled="selected.length < 1"
+      >
+         <v-btn
         color="background-light"
         class="mr-8"
         :disabled="selected.length < 1"
-        @click="deleteSelectedZones"
         :loading="deleteLoading"
       >
         delete
       </v-btn>
+      </confirm-dialog>
     </div>
 
     <zone-hosts-table v-model="selected"> </zone-hosts-table>
@@ -116,13 +121,16 @@
 <script>
 import hosts from "@/components/single_zone_table.vue";
 import api from "@/api.js";
+import ConfirmDialog from "../components/confirmDialog.vue";
 
 import snackbar from "@/mixins/snackbar.js";
 
 export default {
+  
   name: "zone-manager",
   components: {
     "zone-hosts-table": hosts,
+    ConfirmDialog
   },
   mixins: [snackbar],
   data() {

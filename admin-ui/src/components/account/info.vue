@@ -116,7 +116,7 @@ export default {
     ],
     generalRule: [v => !!v || 'Required field'],
     navTitles: config.navTitles ?? {},
-
+    uuid:'',
     title: '',
     keys: [],
     selected: [],

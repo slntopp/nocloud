@@ -263,18 +263,17 @@ export default {
       api.servicesProviders
         .update(this.template.uuid, this.template)
         .then(() => {
+          this.isLoading = false;
           this.showSnackbarSuccess({
             message: 'Service edited successfully'
           });
         })
         .catch((err) => {
+          this.isLoading = false;
           this.showSnackbarError({
             message: err
           });
         })
-        .finnaly(() => {
-          this.isLoading = false;
-        });
     },
     testConfig() {
       this.isTestLoading = true;

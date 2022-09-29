@@ -62,7 +62,7 @@
               Reset
             </v-btn>
             <v-btn text color="primary" @click="menuVisible = false">
-              Close
+              Save
             </v-btn>
           </v-card-actions>
         </v-card>
