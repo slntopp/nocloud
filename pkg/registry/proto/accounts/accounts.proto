@@ -36,6 +36,7 @@ message CreateResponse {
 
 message GetRequest {
     string uuid = 1;
+    bool public = 2;
 }
 
 message Account {
