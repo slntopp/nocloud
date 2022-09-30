@@ -32,9 +32,17 @@ message FeeRange {
     double factor = 3;
 }
 
+enum Round {
+    FLOOR = 0;
+    ROUND = 1;
+    CEIL = 2;
+}
+
 message Fee {
-    double default = 1;
-    repeated FeeRange ranges = 2;
+    int64 precision = 1;
+    Round round = 2;
+    double default = 3;
+    repeated FeeRange ranges = 4;
 }
 
 message Plan {
