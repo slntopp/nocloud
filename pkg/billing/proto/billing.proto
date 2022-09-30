@@ -33,9 +33,10 @@ message FeeRange {
 }
 
 enum Round {
-    FLOOR = 0;
-    ROUND = 1;
-    CEIL = 2;
+    NONE = 0;
+    FLOOR = 1;
+    ROUND = 2;
+    CEIL = 3;
 }
 
 message Fee {
