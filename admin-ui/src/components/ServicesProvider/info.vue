@@ -40,7 +40,7 @@
         <v-col :cols="12" :md="6">
           <json-editor
             :json="template.secrets"
-            @changeValue="(data) => provider.secrets = data"
+            @changeValue="(data) => (provider.secrets = data)"
           />
         </v-col>
       </v-row>
@@ -67,7 +67,7 @@
         <v-col :cols="12" :md="6">
           <json-editor
             :json="template.vars"
-            @changeValue="(data) => provider.vars = data"
+            @changeValue="(data) => (provider.vars = data)"
           />
         </v-col>
       </v-row>
@@ -105,14 +105,19 @@
           <v-switch v-model="editing" label="editing" />
         </v-col>
       </v-row>
-      
+
       <!-- Date -->
       <v-row>
         <v-col cols="12" lg="6" class="mt-5 mb-5">
           <v-alert dark type="info" color="indigo ">
             <span class="mr-2 text-h6">Last Monitored:</span>
             <template v-if="template.state && template.state.meta.ts">
-              {{ format(new Date(template.state.meta.ts * 1000), "dd MMMM yyy  H:mm") }}
+              {{
+                format(
+                  new Date(template.state.meta.ts * 1000),
+                  "dd MMMM yyy  H:mm"
+                )
+              }}
             </template>
             <template v-else>unknown</template>
           </v-alert>
@@ -144,11 +149,20 @@
               />
               <v-card-actions style="background: var(--v-background-base)">
                 <v-btn :loading="isLoading" @click="bindPlans">Add</v-btn>
-                <v-btn class="ml-2" @click="isDialogVisible = false">Cancel</v-btn>
+                <v-btn class="ml-2" @click="isDialogVisible = false"
+                  >Cancel</v-btn
+                >
               </v-card-actions>
             </v-card>
           </v-dialog>
-          <v-btn :loading="isDeleteLoading" @click="unbindPlans">Remove</v-btn>
+          <confirm-dialog
+            :disabled="selected.length < 1"
+            @confirm="unbindPlans"
+          >
+            <v-btn :disabled="selected.length < 1" :loading="isDeleteLoading"
+              >Remove</v-btn
+            >
+          </confirm-dialog>
         </v-col>
         <v-col>
           <nocloud-table
@@ -200,16 +214,17 @@
 </template>
 
 <script>
-import api from '@/api.js';
-import snackbar from '@/mixins/snackbar.js';
-import JsonEditor from '@/components/JsonEditor.vue';
+import api from "@/api.js";
+import snackbar from "@/mixins/snackbar.js";
+import JsonEditor from "@/components/JsonEditor.vue";
 import extentionsMap from "@/components/extentions/map.js";
-import nocloudTable from '@/components/table.vue';
+import nocloudTable from "@/components/table.vue";
+import ConfirmDialog from "@/components/confirmDialog.vue";
 import { format } from "date-fns";
 
 export default {
   name: "services-provider-info",
-  components: { JsonEditor, nocloudTable },
+  components: { JsonEditor, nocloudTable, ConfirmDialog },
   props: { template: { type: Object, required: true } },
   mixins: [snackbar],
   data: () => ({
@@ -225,16 +240,16 @@ export default {
     isTestSuccess: false,
 
     headers: [
-      { text: 'Title ', value: 'title' },
-      { text: 'UUID ', value: 'uuid' },
-      { text: 'Public ', value: 'public' },
-      { text: 'Type ', value: 'type' }
+      { text: "Title ", value: "title" },
+      { text: "UUID ", value: "uuid" },
+      { text: "Public ", value: "public" },
+      { text: "Type ", value: "type" },
     ],
     isDeleteLoading: false,
     isDialogVisible: false,
     relatedPlans: [],
     selected: [],
-    fetchError: ''
+    fetchError: "",
   }),
   methods: {
     addToClipboard(text, index) {
@@ -248,13 +263,13 @@ export default {
             console.error(res);
           });
       } else {
-        alert('Clipboard is not supported!');
+        alert("Clipboard is not supported!");
       }
     },
     editServiceProvider() {
       if (!this.isTestSuccess) {
         this.showSnackbarError({
-          message: 'Error: Test must be passed before creation.',
+          message: "Error: Test must be passed before creation.",
         });
         return;
       }
@@ -265,15 +280,15 @@ export default {
         .then(() => {
           this.isLoading = false;
           this.showSnackbarSuccess({
-            message: 'Service edited successfully'
+            message: "Service edited successfully",
           });
         })
         .catch((err) => {
           this.isLoading = false;
           this.showSnackbarError({
-            message: err
+            message: err,
           });
-        })
+        });
     },
     testConfig() {
       this.isTestLoading = true;
@@ -281,13 +296,13 @@ export default {
         .testConfig(this.template)
         .then(() => {
           this.showSnackbarSuccess({
-            message: 'Tests passed'
+            message: "Tests passed",
           });
           this.isTestSuccess = true;
         })
         .catch((err) => {
           this.showSnackbarError({
-            message: err
+            message: err,
           });
         })
         .finally(() => {
@@ -297,15 +312,14 @@ export default {
     bindPlans() {
       if (this.selected.length < 1) return;
       this.isLoading = true;
-      
+
       const bindPromises = this.selected.map((el) =>
-        api.servicesProviders
-          .bindPlan(this.template.uuid, el.uuid)
+        api.servicesProviders.bindPlan(this.template.uuid, el.uuid)
       );
 
       Promise.all(bindPromises)
         .then(() => {
-          const ending = bindPromises.length === 1 ? '' : 's';
+          const ending = bindPromises.length === 1 ? "" : "s";
 
           this.showSnackbarSuccess({
             message: `Plan${ending} added successfully.`,
@@ -319,17 +333,15 @@ export default {
         });
     },
     unbindPlans() {
-      if (this.selected.length < 1) return;
       this.isDeleteLoading = true;
-      
+
       const unbindPromises = this.selected.map((el) =>
-        api.servicesProviders
-          .unbindPlan(this.template.uuid, el.uuid)
+        api.servicesProviders.unbindPlan(this.template.uuid, el.uuid)
       );
 
       Promise.all(unbindPromises)
         .then(() => {
-          const ending = unbindPromises.length === 1 ? '' : 's';
+          const ending = unbindPromises.length === 1 ? "" : "s";
 
           this.showSnackbarSuccess({
             message: `Plan${ending} deleted successfully.`,
@@ -341,22 +353,25 @@ export default {
         .finally(() => {
           this.isDeleteLoading = false;
         });
-    }
+    },
   },
-  mounted() { this.provider = this.template },
+  mounted() {
+    this.provider = this.template;
+  },
   created() {
-    this.$store.dispatch('plans/fetch', {
-      sp_uuid: this.template.uuid,
-      anonymously: false
-    })
+    this.$store
+      .dispatch("plans/fetch", {
+        sp_uuid: this.template.uuid,
+        anonymously: false,
+      })
       .then(() => {
-        this.relatedPlans = this.$store.getters['plans/all'];
-        this.fetchError = '';
+        this.relatedPlans = this.$store.getters["plans/all"];
+        this.fetchError = "";
       })
       .catch((err) => {
         console.error(err);
 
-        this.fetchError = 'Can\'t reach the server';
+        this.fetchError = "Can't reach the server";
         if (err.response) {
           this.fetchError += `: [ERROR]: ${err.response.data.message}`;
         } else {
@@ -366,24 +381,28 @@ export default {
   },
   computed: {
     plans() {
-      return this.$store.getters['plans/all']
-        .filter((plan) => plan.type === this.template.type);
+      return this.$store.getters["plans/all"].filter(
+        (plan) => plan.type === this.template.type
+      );
     },
     isPlanLoading() {
-      return this.$store.getters['plans/isLoading'];
+      return this.$store.getters["plans/isLoading"];
     },
     spTypes() {
       switch (this.template.type) {
-        case 'ione':
-          return () => import('@/components/modules/ione/serviceProviderInfo.vue');
-        case 'ovh':
-          return () => import('@/components/modules/ovh/serviceProviderInfo.vue');
+        case "ione":
+          return () =>
+            import("@/components/modules/ione/serviceProviderInfo.vue");
+        case "ovh":
+          return () =>
+            import("@/components/modules/ovh/serviceProviderInfo.vue");
         default:
-          return () => import('@/components/modules/custom/serviceProviderInfo.vue');
+          return () =>
+            import("@/components/modules/custom/serviceProviderInfo.vue");
       }
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style>
