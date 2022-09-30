@@ -145,9 +145,14 @@ export default {
     },
     filteredServices() {
       if (this.searchParam) {
-        return this.services.filter((service) =>
-          service.title.toLowerCase().includes(this.searchParam.toLowerCase())
-        );
+        return this.services.filter((service) => {
+          const ips = this.getPublicIpsFromService(service);
+          const isItIpExists = ips.find((ip) => ip.includes(this.searchParam));
+          const isTitleIncludes = service.title
+            .toLowerCase()
+            .includes(this.searchParam.toLowerCase());
+          return isTitleIncludes || isItIpExists;
+        });
       }
       return this.services;
     },
@@ -308,6 +313,19 @@ export default {
     },
     fetchAfterTimeout(ms = 500) {
       setTimeout(this.fetchServices, ms);
+    },
+    getPublicIpsFromService(service) {
+      const ips = [];
+      service.instancesGroups.forEach((group) =>
+        group.instances.forEach((instance) =>
+          instance.state.meta.networking.public.forEach((p) => {
+            if (typeof p === "string") {
+              ips.push(p);
+            }
+          })
+        )
+      );
+      return ips;
     },
   },
   mounted() {
