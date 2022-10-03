@@ -54,18 +54,17 @@
           background-color="background-light"
           dence
           rounded
-        ></v-text-field>
+        />
       </div>
     </div>
 
     <nocloud-table
+      show-expand
+      v-model="selected"
       :items="filteredServices"
       :headers="headers"
-      :expanded.sync="expanded"
-      @input="(v) => (selected = v)"
-      :value="selected"
-      show-expand
       :loading="isLoading"
+      :expanded.sync="expanded"
       :footer-error="fetchError"
     >
       <template v-slot:[`item.hash`]="{ item, index }">
@@ -76,11 +75,11 @@
         {{ hashTrim(item.hash) }}
       </template>
 
-      <template v-slot:[`item.title`]="slotData">
+      <template v-slot:[`item.title`]="{ item }">
         <router-link
-          :to="{ name: 'Service', params: { serviceId: slotData.item.uuid } }"
+          :to="{ name: 'Service', params: { serviceId: item.uuid } }"
         >
-          {{ slotData.item.title }}
+          {{ item.title }}
         </router-link>
       </template>
 
@@ -92,9 +91,49 @@
 
       <template v-slot:expanded-item="{ headers, item }">
         <td :colspan="headers.length" style="padding: 0">
-          <v-card class="pa-4" color="background">
+          <div v-for="(itemService, index) in services" :key="index">
+            <v-expansion-panels
+              inset
+              multiple
+              v-model="opened[index]"
+              v-if="item.uuid == itemService.uuid"
+              @change="clickColumn(index)"
+            >
+              <v-expansion-panel
+                style="background: var(--v-background-light-base)"
+                v-for="(group, i) in itemService.instancesGroups"
+                :key="i"
+              >
+                <v-expansion-panel-header>
+                  {{ group.title }} | Type: {{ group.type }} -
+                  {{ titleSP(group) }}
+                </v-expansion-panel-header>
+                <v-expansion-panel-content
+                  style="background: var(--v-background-base)"
+                >
+                  <v-row>
+                    <serveces-instances-item
+                      v-for="(instance, index) in group.instances"
+                      :key="index"
+                      :title="instance.title"
+                      :state="instance.state ? instance.state.state : 'UNKNOWN'"
+                      :cpu="instance.resources.cpu"
+                      :drive_type="instance.resources.drive_type"
+                      :drive_size="instance.resources.drive_size"
+                      :ram="instance.resources.ram"
+                      :hash="instance.hash"
+                      :index="index"
+                      :chipColor="chipColor"
+                      :hashTrim="hashTrim"
+                    />
+                  </v-row>
+                </v-expansion-panel-content>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </div>
+          <!-- <v-card class="pa-4" color="background">
             <v-treeview :items="treeview(item)"> </v-treeview>
-          </v-card>
+          </v-card> -->
         </td>
       </template>
     </nocloud-table>
@@ -102,14 +141,16 @@
 </template>
 
 <script>
-import noCloudTable from "@/components/table.vue";
 import api from "@/api";
+import nocloudTable from "@/components/table.vue";
+import servecesInstancesItem from "@/components/serveces_instances_item.vue";
 import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
   name: "Services-view",
   components: {
-    "nocloud-table": noCloudTable,
+    nocloudTable,
+    servecesInstancesItem,
     ConfirmDialog,
   },
   data: () => ({
@@ -121,12 +162,10 @@ export default {
         align: "start",
         value: "uuid",
       },
-      {
-        text: "hash",
-        value: "hash",
-      },
+      { text: "hash", value: "hash" },
     ],
     copyed: -1,
+    opened: {},
     expanded: [],
     selected: [],
     fetchError: "",
@@ -137,9 +176,9 @@ export default {
       const items = this.$store.getters["services/all"];
 
       if (this.isFiltered) {
-        return items.filter((item) => {
-          return this.$route.query["items[]"].includes(item.uuid);
-        });
+        return items.filter((item) =>
+          this.$route.query["items[]"].includes(item.uuid)
+        );
       }
       return items;
     },
@@ -157,11 +196,21 @@ export default {
     isLoading() {
       return this.$store.getters["services/isLoading"];
     },
+    servicesProviders() {
+      return this.$store.getters["servicesProviders/all"];
+    },
   },
   created() {
+    this.$store.dispatch("servicesProviders/fetch");
     this.fetchServices();
   },
   methods: {
+    titleSP(group) {
+      const data = this.servicesProviders.find((el) =>
+        el.uuid == group?.sp
+      );
+      return data?.title || 'not found';
+    },
     fetchServices() {
       this.$store
         .dispatch("services/fetch")
@@ -203,31 +252,27 @@ export default {
       else return "XXXXXXXX...";
     },
     addToClipboard(text, index) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => {
-          console.log(index);
-          console.log(this.copyed);
-          this.copyed = index;
-        })
-        .catch((res) => {
-          console.error(res);
-        });
-    },
-    clickColumn(slotData) {
-      // const indexRow = slotData.index;
-      const indexExpanded = this.expanded.findIndex((i) => i === slotData.item);
-      if (indexExpanded > -1) {
-        this.expanded.splice(indexExpanded, 1);
+      if (navigator?.clipboard) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            this.copyed = index;
+          })
+          .catch((res) => {
+            console.error(res);
+          });
       } else {
-        this.expanded.push(slotData.item);
+        alert('Clipboard is not supported!');
       }
     },
     chipColor(state) {
       const dict = {
-        init: "orange darken-2",
-        up: "green darken-2",
-        del: "gray darken-2",
+        INIT: "orange darken-2",
+        UP: "green darken-2",
+        DEL: "gray darken-2",
+        RUNNING: "green darken-2",
+        UNKNOWN: "red darken-2",
+        STOPPED: "orange darken-2",
       };
       return dict[state] ?? "blue-grey darken-2";
     },
@@ -312,9 +357,20 @@ export default {
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      func: this.$store.dispatch,
-      params: ["services/fetch"],
+      type: "services/fetch",
     });
+  },
+  watch: {
+    expanded(value) {
+      Object.values(value).forEach((el) => {
+        const i = this.services.findIndex(({ uuid }) => uuid === el.uuid);
+
+        if (!this.opened[i]) this.opened[i] = [0];
+      });
+    },
+    services() {
+      this.fetchError = '';
+    }
   },
 };
 </script>
@@ -328,6 +384,7 @@ export default {
   line-height: 1em;
   margin-bottom: 10px;
 }
+
 .buttons {
   display: flex;
   justify-content: space-between;
@@ -337,5 +394,9 @@ export default {
   margin-top: 0px;
   font-size: 1.2rem;
   padding-top: 0px;
+}
+
+.v-expansion-panel-content .v-expansion-panel-content__wrap {
+  padding: 22px;
 }
 </style>

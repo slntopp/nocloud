@@ -17,6 +17,8 @@
     :expanded="expanded"
     @update:expanded="(nw) => $emit('update:expanded', nw)"
     :show-expand="showExpand"
+    :page.sync="page"
+    :items-per-page.sync="itemsPerPage"
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
@@ -142,6 +144,8 @@ export default {
       showed: [],
       copyed: -1,
       VDataTable,
+      page: 1,
+      itemsPerPage: 10,
     };
   },
   methods: {
@@ -149,28 +153,54 @@ export default {
       this.$emit("input", item);
     },
     addToClipboard(text, index) {
-      navigator.clipboard
-        .writeText(text)
-        .then(() => {
-          this.copyed = index;
-        })
-        .catch((res) => {
-          console.error(res);
-        });
+      if (navigator?.clipboard) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            this.copyed = index;
+          })
+          .catch((res) => {
+            console.error(res);
+          });
+      } else {
+        alert('Clipboard is not supported!');
+      }
     },
     showID(index) {
       this.showed.push(index);
     },
     hideID(index){
-      this.showed=this.showed.filter(i=>i!==index)
+      this.showed = this.showed.filter((i) => i !== index);
     }
   },
   computed:{
     sortByTable(){
       return this.sortBy || 'title'
     },
-  }
-};
-</script>
+  },
+  watch: {
+    page(value) {
+      localStorage.setItem('page', value);
+      localStorage.setItem('url', this.$route.path);
+    },
+    itemsPerPage(value) {
+      localStorage.setItem('itemsPerPage', value);
+      localStorage.setItem('url', this.$route.path);
+    }
+  },
+  mounted() {
+    const page = localStorage.getItem('page');
+    const items = localStorage.getItem('itemsPerPage');
 
-<style></style>
+    if (items) this.itemsPerPage = +items;
+    if (page) setTimeout(() => { this.page = +page }, 100);
+  },
+  destroyed() {
+    const url = localStorage.getItem('url');
+
+    if (this.$route.path.includes(url)) return;
+    localStorage.removeItem('page');
+    localStorage.removeItem('itemsPerPage');
+  }
+}
+</script>

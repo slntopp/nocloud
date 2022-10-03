@@ -179,6 +179,13 @@ export default {
     },
     serviceProvider() {
       this.getPlans();
+      this.$store.commit("reloadBtn/setCallback", {
+        type: "plans/fetch",
+        params: {
+          sp_uuid: this.serviceProvider,
+          anonymously: false,
+        },
+      });
     },
   },
 };
