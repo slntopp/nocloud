@@ -289,7 +289,6 @@ export default {
         return;
       }
       this.isLoading = true;
-      console.log(this.provider);
       api.servicesProviders
         .update(this.template.uuid, this.provider)
         .then(() => {
@@ -372,7 +371,6 @@ export default {
   },
   mounted() {
     this.provider = this.template;
-    console.log(this.provider.proxy);
     if(!this.provider.proxy){
       this.provider.proxy={ socket:'' }
     }
