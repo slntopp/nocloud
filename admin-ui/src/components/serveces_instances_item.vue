@@ -28,7 +28,7 @@
         <p class="d-flex  mb-0">
           <v-chip class="hash" label :color="copyed == index ? 'green' : ''">
             Hash:
-            <v-btn icon @click="addToClipboardItem(hash, index)">
+            <v-btn icon @click="addToClipboard(hash, index)">
               <v-icon v-if="copyed == index"> mdi-check </v-icon>
               <v-icon v-else> mdi-content-copy </v-icon>
             </v-btn>
@@ -95,15 +95,19 @@ export default {
     driveSize(data) {
       return (data / 1024).toFixed(2);
     },
-    addToClipboardItem(hash, index) {
-      navigator.clipboard
-        .writeText(hash)
-        .then(() => {
-          this.copyed = index;
-        })
-        .catch((res) => {
-          console.error(res);
-        });
+    addToClipboard(text, index) {
+      if (navigator?.clipboard) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            this.copyed = index;
+          })
+          .catch((res) => {
+            console.error(res);
+          });
+      } else {
+        alert('Clipboard is not supported!');
+      }
     },
   },
 };
