@@ -7,9 +7,9 @@
           label="template uuid"
           style="display: inline-block; width: 330px"
           v-if="!editing"
-          :value="template.uuid"
+          :value="provider.uuid"
           :append-icon="copyed == 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
-          @click:append="addToClipboard(template.uuid, 'rootUUID')"
+          @click:append="addToClipboard(provider.uuid, 'rootUUID')"
         />
         <v-text-field
           v-else
@@ -23,7 +23,22 @@
           readonly
           label="template type"
           style="display: inline-block; width: 150px"
-          :value="template.type"
+          :value="provider.type"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          v-if="!editing"
+          readonly
+          label="proxy"
+          style="display: inline-block; width: 250px"
+          :value="provider.proxy?.socket"
+        />
+        <v-text-field
+          v-else
+          label="proxy"
+          style="display: inline-block; width: 250px"
+          v-model="provider.proxy.socket"
         />
       </v-col>
       <v-col>
@@ -35,11 +50,11 @@
       </v-col>
     </v-row>
 
-    <component :is="spTypes" :template="template" :editing="editing">
+    <component :is="spTypes" :template="provider" :editing="editing">
       <v-row v-if="editing">
         <v-col :cols="12" :md="6">
           <json-editor
-            :json="template.secrets"
+            :json="provider.secrets"
             @changeValue="(data) => (provider.secrets = data)"
           />
         </v-col>
@@ -48,7 +63,7 @@
       <!-- Variables -->
       <v-card-title class="px-0 mb-3">Variables:</v-card-title>
       <v-row v-if="!editing">
-        <v-col v-for="(variable, varTitle) in template.vars" :key="varTitle">
+        <v-col v-for="(variable, varTitle) in provider.vars" :key="varTitle">
           {{ varTitle.replaceAll("_", " ") }}
           <v-row>
             <v-col :cols="12" v-for="(value, key) in variable.value" :key="key">
@@ -66,7 +81,7 @@
       <v-row v-else>
         <v-col :cols="12" :md="6">
           <json-editor
-            :json="template.vars"
+            :json="provider.vars"
             @changeValue="(data) => (provider.vars = data)"
           />
         </v-col>
@@ -111,10 +126,10 @@
         <v-col cols="12" lg="6" class="mt-5 mb-5">
           <v-alert dark type="info" color="indigo ">
             <span class="mr-2 text-h6">Last Monitored:</span>
-            <template v-if="template.state && template.state.meta.ts">
+            <template v-if="provider.state && template.state.meta.ts">
               {{
                 format(
-                  new Date(template.state.meta.ts * 1000),
+                  new Date(provider.state.meta.ts * 1000),
                   "dd MMMM yyy  H:mm"
                 )
               }}
@@ -177,11 +192,11 @@
     </component>
 
     <template
-      v-if="template.extentions && Object.keys(template.extentions).length > 0"
+      v-if="provider.extentions && Object.keys(provider.extentions).length > 0"
     >
       <v-card-title class="px-0">Extentions:</v-card-title>
       <component
-        v-for="(extention, extName) in template.extentions"
+        v-for="(extention, extName) in provider.extentions"
         :is="extentionsMap[extName].pageComponent"
         :key="extName"
         :data="extention"
@@ -274,9 +289,8 @@ export default {
         return;
       }
       this.isLoading = true;
-
       api.servicesProviders
-        .update(this.template.uuid, this.template)
+        .update(this.template.uuid, this.provider)
         .then(() => {
           this.isLoading = false;
           this.showSnackbarSuccess({
@@ -357,6 +371,9 @@ export default {
   },
   mounted() {
     this.provider = this.template;
+    if(!this.provider.proxy){
+      this.provider.proxy={ socket:'' }
+    }
   },
   created() {
     this.$store
@@ -382,14 +399,14 @@ export default {
   computed: {
     plans() {
       return this.$store.getters["plans/all"].filter(
-        (plan) => plan.type === this.template.type
+        (plan) => plan.type === this.provider.type
       );
     },
     isPlanLoading() {
       return this.$store.getters["plans/isLoading"];
     },
     spTypes() {
-      switch (this.template.type) {
+      switch (this.provider.type) {
         case "ione":
           return () =>
             import("@/components/modules/ione/serviceProviderInfo.vue");
