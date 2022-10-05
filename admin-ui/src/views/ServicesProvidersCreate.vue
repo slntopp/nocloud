@@ -286,7 +286,6 @@ export default {
         });
     },
     tryToSend() {
-      console.log(this.isTestSuccess);
       if (!this.isPassed || !this.isTestSuccess) {
         const opts = {
           message: `Error: Test must be passed before creation.`,
