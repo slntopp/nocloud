@@ -25,7 +25,7 @@
           <v-text-field
             @change="
               (newVal) =>
-                setValue(index + '.resources.user.first_name', +newVal)
+                setValue(index + '.resources.user.first_name', newVal)
             "
             label="first name"
             v-model="instance.resources.user.first_name"
@@ -46,7 +46,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) => setValue(index + '.resources.user.org_name', +newVal)
+              (newVal) => setValue(index + '.resources.user.org_name', newVal)
             "
             label="organization name"
             v-model="instance.resources.user.org_name"
@@ -55,7 +55,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) => setValue(index + '.resources.user.address1', +newVal)
+              (newVal) => setValue(index + '.resources.user.address1', newVal)
             "
             label="address1"
             v-model="instance.resources.user.address1"
@@ -64,7 +64,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) => setValue(index + '.resources.user.address2', +newVal)
+              (newVal) => setValue(index + '.resources.user.address2', newVal)
             "
             label="address2"
             v-model="instance.resources.user.address2"
@@ -73,7 +73,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) => setValue(index + '.resources.user.city', +newVal)
+              (newVal) => setValue(index + '.resources.user.city', newVal)
             "
             label="city"
             v-model="instance.resources.user.city"
@@ -82,7 +82,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) => setValue(index + '.resources.user.country', +newVal)
+              (newVal) => setValue(index + '.resources.user.country', newVal)
             "
             label="country"
             v-model="instance.resources.user.country"
@@ -91,7 +91,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) => setValue(index + '.resources.user.state', +newVal)
+              (newVal) => setValue(index + '.resources.user.state', newVal)
             "
             label="state"
             v-model="instance.resources.user.state"
@@ -101,7 +101,7 @@
           <v-text-field
             @change="
               (newVal) =>
-                setValue(index + '.resources.user.postal_code', +newVal)
+                setValue(index + '.resources.user.postal_code', newVal)
             "
             label="postal_code"
             v-model="instance.resources.user.postal_code"
@@ -110,7 +110,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) => setValue(index + '.resources.user.phone', +newVal)
+              (newVal) => setValue(index + '.resources.user.phone', newVal)
             "
             label="phone"
             v-model="instance.resources.user.phone"
@@ -119,7 +119,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) => setValue(index + '.resources.user.email', +newVal)
+              (newVal) => setValue(index + '.resources.user.email', newVal)
             "
             label="email"
             v-model="instance.resources.user.email"
@@ -130,7 +130,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) => setValue(index + '.resources.reg_username', +newVal)
+              (newVal) => setValue(index + '.resources.reg_username', newVal)
             "
             label="reg_username"
             v-model="instance.resources.reg_username"
@@ -139,7 +139,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) => setValue(index + '.resources.reg_password', +newVal)
+              (newVal) => setValue(index + '.resources.reg_password', newVal)
             "
             label="reg_password"
             v-model="instance.resources.reg_password"
@@ -150,7 +150,7 @@
         <v-col cols="4">
           <v-switch
             @change="
-              (newVal) => setValue(index + '.resources.auto_renew', +newVal)
+              (newVal) => setValue(index + '.resources.auto_renew', newVal)
             "
             v-model="instance.resources.auto_renew"
             label="auto_renew"
@@ -159,7 +159,7 @@
         <v-col cols="4">
           <v-switch
             @change="
-              (newVal) => setValue(index + '.resources.who_is_privacy', +newVal)
+              (newVal) => setValue(index + '.resources.who_is_privacy', newVal)
             "
             v-model="instance.resources.who_is_privacy"
             label="who_is_privacy"
@@ -168,7 +168,7 @@
         <v-col cols="4">
           <v-switch
             @change="
-              (newVal) => setValue(index + '.resources.lock_domain', +newVal)
+              (newVal) => setValue(index + '.resources.lock_domain', newVal)
             "
             v-model="instance.resources.lock_domain"
             label="lock_domain"
