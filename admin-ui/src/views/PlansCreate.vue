@@ -98,7 +98,7 @@
                 :is="template"
                 :keyForm="title"
                 :resource="plan.resources[i]"
-                :product="getProduct(plan.products[title])"
+                :product="getProduct(plan.products[i])"
                 :preset="preset(i)"
                 @change:resource="(data) => changeResource(i, data)"
                 @change:product="(data) => changeProduct(title, data)"
@@ -407,6 +407,7 @@ export default {
       }
     },
     getProduct(product) {
+      console.log(product);
       if (!product) return {};
       return {
         ...product,
