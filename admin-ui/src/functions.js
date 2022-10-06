@@ -112,7 +112,7 @@ export function filterArrayIncludes(array, { key, value }) {
   return array.filter(
     (item) =>
       (typeof item[key] === "string" &&
-        item[key].toLowerCase().includes(value)) ||
+        item[key].toLowerCase().startsWith(value)) ||
       false
   );
 }
