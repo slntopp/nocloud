@@ -6,19 +6,6 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Plan UUID</v-subheader>
-            </v-col>
-            <v-col cols="9">
-             <v-text-field
-                label="UUID"
-                readonly
-                v-model="plan.uuid"
-                :rules="generalRule"
-              />
-            </v-col>
-          </v-row>
-          <v-row align="center">
-            <v-col cols="3">
               <v-subheader>Plan type</v-subheader>
             </v-col>
             <v-col cols="9">
@@ -408,7 +395,7 @@ export default {
         this.plan = this.item;
         this.isVisible = false;
 
-        if (this.item.kind === 'DYNAMIC') {
+        if (this.item.kind === "DYNAMIC") {
           this.item.resources.forEach((el) => {
             this.form.titles.push(el.key);
           });
@@ -424,9 +411,9 @@ export default {
       return {
         ...product,
         amount: product.resources,
-        resources: this.item.resources
+        resources: this.item.resources,
       };
-    }
+    },
   },
   created() {
     const types = require.context(

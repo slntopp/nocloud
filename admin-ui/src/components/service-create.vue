@@ -156,7 +156,7 @@
             :is="templates[currentInstancesGroups.body.type]"
             :instances-group="JSON.stringify(currentInstancesGroups)"
             :planRules="planRules"
-            :plans="{ list: filteredPlans, products :plans.products }"
+            :plans="{ list: filteredPlans, products: plans.products }"
             @update:instances-group="receiveObject"
           >
           </component>
@@ -222,7 +222,7 @@ export default {
     templates: {},
     plans: {
       list: [],
-      products: []
+      products: [],
     },
 
     isVisible: false,
@@ -256,7 +256,7 @@ export default {
             ips_public: 0,
           },
         },
-        plan: ''
+        plan: "",
       };
     },
     selectInstance(index = -1) {
@@ -280,9 +280,9 @@ export default {
       const plan = this.plans.list.find((plan) =>
         current.plan.includes(plan.uuid)
       );
-      const [product] = Object.entries(plan.products)
-        .find(([, prod]) =>
-          prod.title === current.product
+      const [product] =
+        Object.entries(plan.products).find(
+          ([, prod]) => prod.title === current.product
         ) || [];
 
       instances.forEach((inst) => {
@@ -301,14 +301,14 @@ export default {
       const instances = JSON.parse(JSON.stringify(this.instances));
 
       instances.forEach((inst) => {
-        if (inst.body.type === 'ovh') {
+        if (inst.body.type === "ovh") {
           inst.body.data = { projectId: "2ccca3cf77574a80b4d0496f6f2539ec" };
         }
         inst.body.resources.ips_public = inst.body.instances?.length || 0;
         data.instances_groups.push({
           ...inst.body,
           title: inst.title,
-          sp: inst.sp
+          sp: inst.sp,
         });
         // console.log(data.instances_groups[inst.title])
         // console.log(data.instances_groups)
@@ -338,7 +338,7 @@ export default {
         })
         .catch((err) => {
           const opts = {
-              message: err.errors.map((error) => error),
+            message: err.errors.map((error) => error),
           };
           this.showSnackbarError(opts);
         })
@@ -378,9 +378,9 @@ export default {
     },
     setProducts() {
       const { plan } = this.currentInstancesGroups;
-      const products = this.plans.list.find((el) =>
-        el.uuid.includes(plan.uuid)
-      )?.products || {};
+      const products =
+        this.plans.list.find((el) => el.uuid.includes(plan.uuid))?.products ||
+        {};
 
       this.plans.products = [];
       delete this.currentInstancesGroups.product;
@@ -388,9 +388,12 @@ export default {
       Object.values(products).forEach(({ title }) => {
         this.plans.products.push(title);
       });
-    }
+    },
   },
   computed: {
+    currentType() {
+      return this.currentInstancesGroups.body.type;
+    },
     namespaces() {
       return this.$store.getters["namespaces/all"];
     },
@@ -398,19 +401,16 @@ export default {
       return this.$store.getters["namespaces/isLoading"];
     },
     servicesProviders() {
-      return this.$store.getters["servicesProviders/all"]
-        .filter((el) => el.type === this.currentInstancesGroups.body.type);
+      return this.$store.getters["servicesProviders/all"].filter(
+        (el) => el.type === this.currentType
+      );
     },
     filteredPlans() {
-      const type = this.currentInstancesGroups.body.type;
-
-      return this.plans.list.filter((plan) => plan.type === type);
+      return this.plans.list.filter((plan) => plan.type === this.currentType);
     },
     planRules() {
-      return (this.plansVisible)
-        ? this.rules.req
-        : []
-    }
+      return this.plansVisible ? this.rules.req : [];
+    },
   },
   created() {
     this.$store.dispatch("namespaces/fetch");
@@ -429,27 +429,24 @@ export default {
           import(`@/components/modules/${type}/serviceCreate.vue`);
       }
     });
-    
-    api.plans.list()
-      .then((res) => res.pool
-        .forEach((plan) => {
-          const title = `${plan.title} (${plan.uuid.slice(0, 8)}...)`;
 
-          this.plans.list.push({ ...plan, title });
-        })
-      )
+    api.plans.list().then((res) =>
+      res.pool.forEach((plan) => {
+        const title = `${plan.title} (${plan.uuid.slice(0, 8)}...)`;
 
-    api.settings
-      .get(['instance-billing-plan-settings'])
-      .then((res) => {
-        const key = res['instance-billing-plan-settings']
-
-        if (key) {
-          this.plansVisible = JSON.parse(key).required
-        } else {
-          this.plansVisible = false
-        }
+        this.plans.list.push({ ...plan, title });
       })
+    );
+
+    api.settings.get(["instance-billing-plan-settings"]).then((res) => {
+      const key = res["instance-billing-plan-settings"];
+
+      if (key) {
+        this.plansVisible = JSON.parse(key).required;
+      } else {
+        this.plansVisible = false;
+      }
+    });
   },
   watch: {
     service: {
@@ -458,10 +455,10 @@ export default {
       },
       deep: true,
     },
-    'currentInstancesGroups.body.type'() {
+    "currentInstancesGroups.body.type"() {
       this.currentInstancesGroups.body.instances = [];
-      this.currentInstancesGroups.sp = '';
-    }
+      this.currentInstancesGroups.sp = "";
+    },
   },
 };
 </script>
