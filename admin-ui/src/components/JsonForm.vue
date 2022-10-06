@@ -55,8 +55,8 @@
       <v-select
         dense
         required
-        label="Value"
         v-if="typeValue === 'boolean'"
+        :label="(add) ? 'New value' : 'Value'"
         :value="newValue"
         :items="['true', 'false']"
         :rules="generalRule"
@@ -65,13 +65,13 @@
       <v-text-field
         dense
         disabled
-        label="Value"
+        :label="(add) ? 'New value' : 'Value'"
         value="{}"
         v-else-if="typeValue === 'object'"
       />
       <v-text-field
         dense
-        label="Value"
+        :label="(add) ? 'New value' : 'Value'"
         v-else
         :value="newValue"
         :rules="typeRule"
@@ -103,6 +103,8 @@ export default {
     typeValue () {
       if (this.typeValue === '') {
         this.$emit('changeAdd', false)
+      } else if (this.typeValue === 'object') {
+        this.changeValue('newValue', '{}')
       }
     }
   },

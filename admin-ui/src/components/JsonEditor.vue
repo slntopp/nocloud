@@ -71,34 +71,28 @@ export default {
       if (this.fieldKey !== '/') {
         const tree = JSON.parse(JSON.stringify(this.json))
 
-        this.deleteNode(tree)
+        const path = this.fieldKey.split('/')
+        const key = path.pop()
+        let node = tree
+
+        path.forEach((el) => { node = node[el] })
+        delete node[key]
 
         this.$emit('changeValue', tree)
       }
 
       this.cancel()
     },
-    deleteNode (tree) {
-      for (const [key, value] of Object.entries(tree)) {
-        if (key === this.fieldKey) {
-          delete tree[this.fieldKey]
-          return
-        } else if (typeof value === 'object') {
-          this.deleteNode(value)
-        }
-      }
-    },
     changeField () {
       if (this.tree !== '') {
         const tree = JSON.parse(this.tree)
 
         this.$emit('changeValue', tree)
-
         this.disabled = true
         this.isValid = false
         this.tree = ''
-        setTimeout(this.cancel)
 
+        setTimeout(this.cancel)
         return
       }
 
@@ -112,9 +106,7 @@ export default {
       const tree = JSON.parse(JSON.stringify(this.json))
 
       this.findNode(tree, value)
-
       this.$emit('changeValue', tree)
-
       this.cancel()
     },
     findNode (tree, newValue) {
@@ -122,28 +114,23 @@ export default {
         tree[this.newKey] = newValue
         return
       }
+      const path = this.fieldKey.split('/')
+      const key = path.pop()
+      let node = tree
 
-      for (const [key, value] of Object.entries(tree)) {
-        const isObject = typeof value === 'object'
-        const isUndefined = newValue === undefined
+      path.forEach((el) => { node = node[el] })
 
-        switch (this.fieldKey) {
-          case key:
-            if (isObject && !isUndefined && this.add) {
-              tree[key][this.newKey] = newValue
-            } else if (!isUndefined) {
-              delete tree[this.fieldKey]
+      const isObject = typeof node[key] === 'object'
+      const isUndefined = newValue === undefined
 
-              tree[this.newKey] = newValue
-            } else {
-              return { key, value, type: typeof value }
-            }
-            return
-          default:
-            if (isObject) {
-              return this.findNode(value, newValue)
-            }
-        }
+      if (isObject && !isUndefined && this.add) {
+        node[key][this.newKey] = newValue
+      } else if (!isUndefined) {
+        delete node[key]
+
+        node[this.newKey] = newValue
+      } else {
+        return { key, value: node[key], type: typeof node[key] }
       }
     },
     changeFields () {

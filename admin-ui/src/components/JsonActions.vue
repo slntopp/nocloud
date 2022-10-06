@@ -1,6 +1,6 @@
 <template>
   <v-row dense>
-    <v-col class="column justify-end">
+    <v-col class="column justify-end" cols="4">
       <v-btn
         dark
         small
@@ -11,7 +11,7 @@
         Save
       </v-btn>
     </v-col>
-    <v-col class="d-flex">
+    <v-col class="d-flex" cols="4">
       <v-select
         dense
         required
@@ -32,7 +32,7 @@
         mdi-cancel
       </v-icon>
     </v-col>
-    <v-col class="column">
+    <v-col class="column" cols="4">
       <v-btn
         dark
         small
@@ -61,24 +61,24 @@ export default {
     keys: ['/']
   }),
   methods: {
-    addKeys (tree, prevKey = '') {
+    addKeys (tree, prevKey = '/') {
       Object.entries(tree).forEach(([key, value]) => {
         if (typeof value === 'object') {
           this.keys.push(`${prevKey}${key}`)
 
-          this.addKeys(value, `${key}/`)
+          this.addKeys(value, `${prevKey}${key}/`)
         } else {
           this.keys.push(`${prevKey}${key}`)
         }
       })
     },
     changeKeys () {
-      if (this.key === null) {
-        this.$emit('changeKey', '')
+      if (this.key === '/') {
+        this.$emit('changeKey', '/')
       } else if (this.key.includes('/', 1)) {
-        this.$emit('changeKey', this.key.split('/')[1])
+        this.$emit('changeKey', this.key.replace('/', ''))
       } else {
-        this.$emit('changeKey', this.key)
+        this.$emit('changeKey', this.key.replace('/', ''))
       }
       this.$emit('changeDisable')
 

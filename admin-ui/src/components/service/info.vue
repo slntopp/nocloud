@@ -148,7 +148,7 @@
                       />
                     </v-expansion-panel-header>
                     <v-expansion-panel-content>
-                      <v-row v-if="group.type === 'ione' && !editing">
+                      <v-row v-if="!editing">
                         <v-col>
                           <service-control
                             :service="service"
@@ -159,38 +159,49 @@
                         </v-col>
                       </v-row>
                       <v-row v-if="!editing">
+                        <template v-if="group.type === 'ovh'">
+                          <v-col md="2">
+                            <v-text-field
+                              readonly
+                              :value="instance.state && instance.state.meta.state"
+                              label="state"
+                              style="display: inline-block; width: 100px"
+                            />
+                          </v-col>
+                          <v-col md="2">
+                            <v-text-field
+                              readonly
+                              :value="instance.state && instance.state.state"
+                              label="lcm state"
+                              style="display: inline-block; width: 100px"
+                            />
+                          </v-col>
+                        </template>
+                        <template v-else>
+                          <v-col md="2">
+                            <v-text-field
+                              readonly
+                              :value="instance.state && instance.state.meta.state_str"
+                              label="state"
+                              style="display: inline-block; width: 100px"
+                            />
+                          </v-col>
+                          <v-col md="2">
+                            <v-text-field
+                              readonly
+                              :value="instance.state && instance.state.meta.lcm_state_str"
+                              label="lcm state"
+                              style="display: inline-block; width: 100px"
+                            />
+                          </v-col>
+                        </template>
                         <v-col md="2">
                           <v-text-field
                             readonly
-                            :value="
-                              instance.state && instance.state.meta.state_str
-                            "
-                            label="state"
+                            :value="instance.billingPlan.title"
+                            label="billing plan"
                             style="display: inline-block; width: 100px"
-                          >
-                          </v-text-field>
-                        </v-col>
-                        <v-col md="2">
-                          <v-text-field
-                            readonly
-                            :value="
-                              instance.state && instance.state.meta.lcm_state_str
-                            "
-                            label="lcm state"
-                            style="display: inline-block; width: 100px"
-                          >
-                          </v-text-field>
-                        </v-col>
-                        <v-col md="2">
-                          <v-text-field
-                            readonly
-                            :value="
-                              instance.state && instance.billingPlan.title
-                            "
-                            label="billingPlan"
-                            style="display: inline-block; width: 100px"
-                          >
-                          </v-text-field>
+                          />
                         </v-col>
                       </v-row>
                       <v-row v-else>
