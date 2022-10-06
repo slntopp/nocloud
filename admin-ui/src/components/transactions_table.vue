@@ -75,13 +75,18 @@
             </v-btn>
           </template>
           <template v-slot:[`header.product`]="{ header }">
-            {{ (records[item.uuid] && records[item.uuid][0].product)
-              ? header.text : 'Resource' }}
+            {{
+              records[item.uuid] && records[item.uuid][0].product
+                ? header.text
+                : "Resource"
+            }}
           </template>
           <template v-slot:[`item.product`]="{ item }">
-            {{ (item.product)
-              ? item.product.replaceAll('_', ' ').toUpperCase()
-              : item.resource.toUpperCase() }}
+            {{
+              item.product
+                ? item.product.replaceAll("_", " ").toUpperCase()
+                : item.resource.toUpperCase()
+            }}
           </template>
           <template v-slot:[`item.total`]="{ item }">
             <balance :value="-item.total" />
@@ -96,29 +101,29 @@
 </template>
 
 <script>
-import api from '@/api.js';
-import nocloudTable from '@/components/table.vue';
-import balance from '@/components/balance.vue';
+import api from "@/api.js";
+import nocloudTable from "@/components/table.vue";
+import balance from "@/components/balance.vue";
 
 export default {
-  name: 'transactions-table',
-  components: { nocloudTable, balance, },
+  name: "transactions-table",
+  components: { nocloudTable, balance },
   props: {
     selectTransaction: { type: Function, required: true },
     transactions: { type: Array, required: true },
   },
   data: () => ({
     headers: [
-      { text: 'Account ', value: 'account' },
-      { text: 'Service ', value: 'service' },
-      { text: 'Amount ', value: 'total' },
-      { text: 'Date ', value: 'proc' },
+      { text: "Account ", value: "account" },
+      { text: "Service ", value: "service" },
+      { text: "Amount ", value: "total" },
+      { text: "Date ", value: "proc" },
     ],
     recordHeaders: [
-      { text: 'Instance', value: 'instance' },
-      { text: 'Product', value: 'product' },
-      { text: 'Amount ', value: 'total' },
-      { text: 'Date ', value: 'exec' },
+      { text: "Instance", value: "instance" },
+      { text: "Product", value: "product" },
+      { text: "Amount ", value: "total" },
+      { text: "Date ", value: "exec" },
     ],
     isRecordsLoading: false,
     records: {},
@@ -127,25 +132,24 @@ export default {
     selected: [],
     expanded: [],
     copyed: -1,
-    fetchError: '',
+    fetchError: "",
   }),
   methods: {
     account(uuid) {
-      return this.accounts.find((acc) =>
-        acc.uuid === uuid
-      )?.title;
+      return this.accounts.find((acc) => acc.uuid === uuid)?.title;
     },
     service(uuid) {
-      const service = this.$store.getters['services/all']
-        .find((serv) => serv.uuid === uuid);
+      const service = this.$store.getters["services/all"].find(
+        (serv) => serv.uuid === uuid
+      );
 
       return service?.title;
     },
     date(timestamp) {
       const date = new Date(timestamp * 1000);
-      const time = date.toUTCString().split(' ')[4];
-      
-      const year = date.toUTCString().split(' ')[3];
+      const time = date.toUTCString().split(" ")[4];
+
+      const year = date.toUTCString().split(" ")[3];
       let month = date.getUTCMonth() + 1;
       let day = date.getUTCDate();
 
@@ -156,7 +160,7 @@ export default {
     },
     hashTrim(hash) {
       if (hash) return ` ${hash.slice(0, 12)}... `;
-      else return ' XXXXXXXX... ';
+      else return " XXXXXXXX... ";
     },
     addToClipboard(text, index) {
       if (navigator?.clipboard) {
@@ -167,12 +171,12 @@ export default {
           })
           .catch((err) => {
             this.showSnackbarError({
-              message: err
+              message: err,
             });
           });
       } else {
         this.showSnackbarError({
-          message: 'Clipboard is not supported!'
+          message: "Clipboard is not supported!",
         });
       }
     },
@@ -180,14 +184,15 @@ export default {
       if (this.records[uuid]) return;
 
       this.isRecordsLoading = true;
-      api.get(`/billing/transactions/${uuid}`)
+      api
+        .get(`/billing/transactions/${uuid}`)
         .then(({ pool }) => {
           this.records[uuid] = pool;
         })
         .catch((err) => {
           this.showSnackbarError({
-            message: err
-          })
+            message: err,
+          });
         })
         .finally(() => {
           this.isRecordsLoading = false;
@@ -196,15 +201,15 @@ export default {
   },
   computed: {
     accounts() {
-      return this.$store.getters['accounts/all'];
+      return this.$store.getters["accounts/all"];
     },
     isLoading() {
-      return this.$store.getters['transactions/isLoading'];
+      return this.$store.getters["transactions/isLoading"];
     },
   },
   watch: {
     transactions() {
-      this.fetchError = '';
+      this.fetchError = "";
     },
     expanded() {
       this.expanded.forEach(({ uuid }) => {
@@ -212,5 +217,5 @@ export default {
       });
     },
   },
-}
+};
 </script>

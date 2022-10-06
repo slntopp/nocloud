@@ -1,7 +1,7 @@
 <template>
   <nocloud-table
     :loading="loading"
-    :items="tableData"
+    :items="filteredSp"
     :value="selected"
     @input="handleSelect"
     :single-select="singleSelect"
@@ -19,6 +19,7 @@
 
 <script>
 import noCloudTable from "@/components/table.vue";
+import { filterArrayByTitleAndUuid } from "@/functions";
 
 const Headers = [
   { text: "title", value: "titleLink" },
@@ -45,6 +46,10 @@ export default {
     "single-select": {
       type: Boolean,
       default: false,
+    },
+    searchParam: {
+      type: String,
+      default: "",
     },
   },
   data() {
@@ -88,8 +93,19 @@ export default {
           params: { uuid: el.uuid },
         },
         state: el?.state?.state ?? "UNKNOWN",
-        region: el.secrets?.endpoint?.split('-')[1] ?? '-',
+        region: el.secrets?.endpoint?.split("-")[1] ?? "-",
       }));
+    },
+    filteredSp() {
+      if (this.searchParam) {
+        return filterArrayByTitleAndUuid(
+          this.tableData,
+          this.searchParam,
+          true,
+          "titleLink"
+        );
+      }
+      return this.tableData;
     },
   },
   created() {
@@ -98,13 +114,15 @@ export default {
       .dispatch("servicesProviders/fetch", false)
       .then(({ pool }) => {
         pool.forEach((el) => {
-          if (el.type === 'ovh') {
-            const isRegionIncludes = Headers.find((el) => el.value === 'region');
+          if (el.type === "ovh") {
+            const isRegionIncludes = Headers.find(
+              (el) => el.value === "region"
+            );
 
             if (!isRegionIncludes) {
               Headers.push({ text: "region", value: "region" });
             }
-            this.$store.dispatch('servicesProviders/fetchById', el.uuid);
+            this.$store.dispatch("servicesProviders/fetchById", el.uuid);
           }
         });
         this.fetchError = "";
@@ -124,9 +142,9 @@ export default {
   },
   watch: {
     tableData() {
-      this.fetchError = '';
-    }
-  }
+      this.fetchError = "";
+    },
+  },
 };
 </script>
 
