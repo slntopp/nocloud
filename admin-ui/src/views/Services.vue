@@ -379,13 +379,6 @@ export default {
     });
   },
   watch: {
-    expanded(value) {
-      Object.values(value).forEach((el) => {
-        const i = this.services.findIndex(({ uuid }) => uuid === el.uuid);
-
-        if (!this.opened[i]) this.opened[i] = [0];
-      });
-    },
     services() {
       this.fetchError = '';
     }
