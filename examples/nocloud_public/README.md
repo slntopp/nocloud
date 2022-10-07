@@ -12,9 +12,13 @@
 
 `git clone https://github.com/slntopp/nocloud`
 
-## Navigate to public deployment assets dir
+## Naviage to the directory you want to deploy
 
-`cd examples/nocloud_public`
+Create an empty directory, we suggest `deployment`(meaning the example configs are using that name)
+
+## Copy the assets
+
+`cp -r path/to/nocloud/examples/nocloud_public/* ./`
 
 ## Fill in .env file
 
