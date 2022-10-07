@@ -5,7 +5,7 @@ accessLog: {}
 providers:
   docker:
     exposedByDefault: false
-    network: nocloud_proxy # might need to change this
+    network: deployment_proxy # might need to change this
 entryPoints:
   http:
     address: ":80"
