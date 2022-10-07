@@ -112,15 +112,24 @@ init:
 		log.Debug("Message unmarshalled", zap.Any("record", &record))
 		if err != nil {
 			log.Error("Failed to unmarshal record", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Warn("Failed to Negatively Acknowledge the delivery", zap.Error(err))
+			}
 			continue
 		}
 		if record.Total == 0 {
 			log.Warn("Got zero record, skipping", zap.Any("record", &record))
+			if err = msg.Nack(false, false); err != nil {
+				log.Warn("Failed to Negatively Acknowledge the delivery", zap.Error(err))
+			}
 			continue
 		}
 
 		s.records.Create(ctx, &record)
 		s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		}
 	}
 }
 

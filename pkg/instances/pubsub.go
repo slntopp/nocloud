@@ -100,7 +100,9 @@ func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
-			//msg.Nack(false, false)
+			if err = msg.Nack(false, false); err != nil {
+				log.Warn("Failed to Negatively Acknowledge the delivery", zap.Error(err))
+			}
 			continue
 		}
 		c, err := (*s.db).Query(context.TODO(), updateDataQuery, map[string]interface{}{
@@ -110,14 +112,18 @@ func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		})
 		if err != nil {
 			log.Error("Failed to update data", zap.Error(err))
-			//msg.Nack(false, false)
+			if err = msg.Nack(false, false); err != nil {
+				log.Warn("Failed to Negatively Acknowledge the delivery", zap.Error(err))
+			}
 			continue
 		}
 		log.Debug("Updated data", zap.String("type", col), zap.String("uuid", req.Uuid))
 		if err = c.Close(); err != nil {
 			log.Warn("Error closing Driver cursor", zap.Error(err))
 		}
-		//msg.Ack(false)
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		}
 	}
 }
 
