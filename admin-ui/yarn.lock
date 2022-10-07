@@ -4676,10 +4676,10 @@ no-case@^3.0.4:
     lower-case "^2.0.2"
     tslib "^2.0.3"
 
-nocloudjsrest@^1.4.20:
-  version "1.4.20"
-  resolved "https://registry.npmjs.org/nocloudjsrest/-/nocloudjsrest-1.4.20.tgz"
-  integrity sha512-JHNZ+lazAau/DLfVJyvOSpAoUM2YBRuaBFZPDuGFT6avPgI+UXXYpCSFdOF/nDNh9+QQeQB5tqCL0RM6ym9Zew==
+nocloudjsrest@^1.4.21:
+  version "1.4.21"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.4.21.tgz#97a6952954b72b658ce264a5f711ced26b060de8"
+  integrity sha512-BBi3X5V5sa5mPhjpm5nH3NP2g4XIRsscuKBlxE/zGHOPYXfP6mT/Al2vgRkWjWuZWyjRstWxeEdWd6eaVdOXgA==
   dependencies:
     axios "^0.24.0"
 
