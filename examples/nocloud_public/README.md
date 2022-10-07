@@ -33,3 +33,13 @@ In order to generate certs you ought to write your email address in `traefik.yml
 ```shell
 docker-compose up -d
 ```
+
+## Proxy and Wildcard domains
+
+1. Stop traefik
+2. Uncomment `iproxy` service in `docker-compose.yml`
+3. `docker compose up -d iproxy`
+4. Enable debug logs in `traefik.yml`
+5. `docker compose run -it traefik`
+6. Follow the instructions from traefik logs to perform DNS challenge
+7. Once done, exit traefik and do `docker compose up -d` one more time

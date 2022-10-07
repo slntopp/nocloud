@@ -71,28 +71,28 @@ services:
     networks:
       - proxy
 
-  iproxy:
-    image: ghcr.io/slntopp/nocloud/proxy:dev-socket-proxy
-    restart: always
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.iproxy.entrypoints=https
-      - traefik.http.routers.iproxy.rule=HostRegexp(`{sp:[a-z0-9\-]+}.proxy.${BASE_DOMAIN}`)
-      - traefik.http.routers.iproxy.tls=true
-      - traefik.http.routers.iproxy.tls.certresolver=letsencrypt
-      - traefik.http.routers.iproxy.tls.domains[0].main=proxy.${BASE_DOMAIN}
-      - traefik.http.routers.iproxy.tls.domains[0].sans=*.proxy.${BASE_DOMAIN}
-      - traefik.http.services.iproxy.loadbalancer.server.port=8000
-    environment:
-      LOG_LEVEL: -1
-      SIGNING_KEY: "${SIGNING_KEY}"
-      DB_HOST: db:8529
-      DB_CRED: "${DB_USER}:${DB_PASS}"
-    networks:
-      - proxy
-      - arangodb
-    links:
-      - db
+  # iproxy:
+  #   image: ghcr.io/slntopp/nocloud/proxy:dev-socket-proxy
+  #   restart: always
+  #   labels:
+  #     - traefik.enable=true
+  #     - traefik.http.routers.iproxy.entrypoints=https
+  #     - traefik.http.routers.iproxy.rule=HostRegexp(`{sp:[a-z0-9\-]+}.proxy.${BASE_DOMAIN}`)
+  #     - traefik.http.routers.iproxy.tls=true
+  #     - traefik.http.routers.iproxy.tls.certresolver=letsencrypt_wild
+  #     - traefik.http.routers.iproxy.tls.domains[0].main=proxy.${BASE_DOMAIN}
+  #     - traefik.http.routers.iproxy.tls.domains[0].sans=*.proxy.${BASE_DOMAIN}
+  #     - traefik.http.services.iproxy.loadbalancer.server.port=8000
+  #   environment:
+  #     LOG_LEVEL: -1
+  #     SIGNING_KEY: "${SIGNING_KEY}"
+  #     DB_HOST: db:8529
+  #     DB_CRED: "${DB_USER}:${DB_PASS}"
+  #   networks:
+  #     - proxy
+  #     - arangodb
+  #   links:
+  #     - db
 
   registry:
     image: ghcr.io/slntopp/nocloud/registry:latest
