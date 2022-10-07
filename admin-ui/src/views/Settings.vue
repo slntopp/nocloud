@@ -56,10 +56,17 @@
           </v-row>
         </v-card>
       </v-menu>
-      <confirm-dialog :disabled="selected.length < 1"  @confirm="deleteSelectedKeys">
-          <v-btn :disabled="selected.length < 1" color="background-light" class="mr-8">
-            delete
-          </v-btn>
+      <confirm-dialog
+        :disabled="selected.length < 1"
+        @confirm="deleteSelectedKeys"
+      >
+        <v-btn
+          :disabled="selected.length < 1"
+          color="background-light"
+          class="mr-8"
+        >
+          delete
+        </v-btn>
       </confirm-dialog>
     </div>
 
@@ -67,7 +74,7 @@
       item-key="key"
       :loading="loading"
       :headers="headers"
-      :items="settings"
+      :items="filtredSettings"
       sortBy="description"
       show-select
       v-model="selected"
@@ -148,8 +155,10 @@
 import { mapGetters } from "vuex";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
+import search from "@/mixins/search.js";
 import noCloudTable from "@/components/table.vue";
-import ConfirmDialog from '../components/confirmDialog.vue';
+import ConfirmDialog from "../components/confirmDialog.vue";
+import { filterArrayIncludes } from "@/functions";
 
 const headers = [
   { text: "key", value: "key" },
@@ -189,7 +198,7 @@ export default {
     "nocloud-table": noCloudTable,
     ConfirmDialog,
   },
-  mixins: [snackbar],
+  mixins: [snackbar, search],
   data: () => ({
     headers,
     selected: [],
@@ -206,13 +215,25 @@ export default {
       data: {},
     },
     fetchError: "",
-    sortBy:'description'
+    sortBy: "description",
   }),
   computed: {
     ...mapGetters("settings", {
       settings: "all",
       loading: "isLoading",
     }),
+    filtredSettings() {
+      if (this.searchParam) {
+        return filterArrayIncludes(this.settings, {
+          key: "key",
+          value: this.searchParam,
+        });
+      }
+      return this.settings;
+    },
+    searchParam() {
+      return this.$store["appSearch/param"];
+    },
   },
   methods: {
     deleteSelectedKeys() {

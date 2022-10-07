@@ -12,6 +12,7 @@ import reloadBtn from "./reloadbtn";
 import services from "./services";
 import plans from "./plans";
 import transactions from "./transactions";
+import appSearch from "./appSearch";
 
 Vue.use(Vuex);
 
@@ -29,6 +30,7 @@ export default new Vuex.Store({
     services,
     reloadBtn,
     plans,
-    transactions
+    transactions,
+    appSearch
   },
 });

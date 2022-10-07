@@ -28,7 +28,7 @@
 
     <nocloud-table
       class="mt-4"
-      :items="plans"
+      :items="filtredPlans"
       :headers="headers"
       :value="selected"
       :loading="isLoading"
@@ -69,16 +69,18 @@
 <script>
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
+import search from "@/mixins/search.js";
 import noCloudTable from "@/components/table.vue";
 import ConfirmDialog from "../components/confirmDialog.vue";
+import { filterArrayByTitleAndUuid } from "@/functions";
 
 export default {
   name: "plans-view",
   components: {
     "nocloud-table": noCloudTable,
-    ConfirmDialog
+    ConfirmDialog,
   },
-  mixins: [snackbar],
+  mixins: [snackbar, search],
   data: () => ({
     headers: [
       { text: "Title ", value: "title" },
@@ -163,6 +165,15 @@ export default {
   computed: {
     plans() {
       return this.$store.getters["plans/all"];
+    },
+    searchParam() {
+      return this.$store.getters["appSearch/param"];
+    },
+    filtredPlans() {
+      if (this.searchParam) {
+        return filterArrayByTitleAndUuid(this.plans, this.searchParam);
+      }
+      return this.plans;
     },
     isLoading() {
       return this.$store.getters["plans/isLoading"];
