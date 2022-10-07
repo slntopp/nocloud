@@ -23,12 +23,8 @@
       </confirm-dialog>
     </div>
 
-<<<<<<< HEAD
-    <services-providers v-model="selected"> </services-providers>
-=======
     <services-providers :searchParam="searchParam" v-model="selected">
     </services-providers>
->>>>>>> 785e24b93e84c5cfce779cfa0abfa872928917be
 
     <v-snackbar
       v-model="snackbar.visibility"

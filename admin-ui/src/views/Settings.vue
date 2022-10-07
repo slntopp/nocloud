@@ -232,7 +232,7 @@ export default {
       return this.settings;
     },
     searchParam() {
-      return this.$store["appSearch/param"];
+      return this.$store.getters["appSearch/param"];
     },
   },
   methods: {
