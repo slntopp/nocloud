@@ -12,9 +12,13 @@
 
 `git clone https://github.com/slntopp/nocloud`
 
-## Navigate to public deployment assets dir
+## Naviage to the directory you want to deploy
 
-`cd examples/nocloud_public`
+Create an empty directory, we suggest `deployment`(meaning the example configs are using that name)
+
+## Copy the assets
+
+`cp -r path/to/nocloud/examples/nocloud_public/* ./`
 
 ## Fill in .env file
 
@@ -33,3 +37,13 @@ In order to generate certs you ought to write your email address in `traefik.yml
 ```shell
 docker-compose up -d
 ```
+
+## Proxy and Wildcard domains
+
+1. Stop traefik
+2. Uncomment `iproxy` service in `docker-compose.yml`
+3. `docker compose up -d iproxy`
+4. Enable debug logs in `traefik.yml`
+5. `docker compose run -it traefik`
+6. Follow the instructions from traefik logs to perform DNS challenge
+7. Once done, exit traefik and do `docker compose up -d` one more time

@@ -5,7 +5,7 @@ accessLog: {}
 providers:
   docker:
     exposedByDefault: false
-    network: nocloud_proxy # might need to change this
+    network: deployment_proxy # might need to change this
 entryPoints:
   http:
     address: ":80"
@@ -23,6 +23,13 @@ certificatesResolvers:
   letsencrypt:
     acme:
       tlsChallenge: {}
+      email: "acme@example.com" # Replace with your email
+      storage: /etc/traefik/acme/acme.json
+      caServer: "https://acme-v02.api.letsencrypt.org/directory"
+  letsencrypt_wild:
+    acme:
+      dnsChallenge:
+        provider: manual
       email: "acme@example.com" # Replace with your email
       storage: /etc/traefik/acme/acme.json
       caServer: "https://acme-v02.api.letsencrypt.org/directory"

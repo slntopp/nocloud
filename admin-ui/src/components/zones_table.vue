@@ -1,7 +1,7 @@
 <template>
   <nocloud-table
     :loading="loading"
-    :items="tableData"
+    :items="filtredZones"
     :value="selected"
     @input="handleSelect"
     :single-select="singleSelect"
@@ -14,6 +14,7 @@
 
 <script>
 import noCloudTable from "@/components/table.vue";
+import { filterArrayIncludes } from "@/functions";
 
 const Headers = [{ text: "title", value: "titleLink" }];
 
@@ -30,6 +31,10 @@ export default {
     "single-select": {
       type: Boolean,
       default: false,
+    },
+    searchParam: {
+      type: String,
+      default: "",
     },
   },
   data() {
@@ -52,6 +57,12 @@ export default {
         original: el,
         route: { name: "Zone manager", params: { dnsname: el } },
       }));
+    },
+    filtredZones() {
+      if (this.searchParam) {
+        return filterArrayIncludes(this.tableData, {key:"titleLink", value:this.searchParam});
+      }
+      return this.tableData;
     },
   },
   created() {
@@ -76,9 +87,9 @@ export default {
   },
   watch: {
     tableData() {
-      this.fetchError = '';
-    }
-  }
+      this.fetchError = "";
+    },
+  },
 };
 </script>
 

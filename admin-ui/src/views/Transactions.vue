@@ -27,9 +27,7 @@
 
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
     <template v-else-if="series.length < 1">
-      <v-subheader v-if="balance.values.length > 1">
-        Balance:
-      </v-subheader>
+      <v-subheader v-if="balance.values.length > 1"> Balance: </v-subheader>
       <v-sparkline
         color="primary"
         height="25vh"
@@ -47,7 +45,10 @@
       :series="series"
     />
 
-    <transactions-table :transactions="transactions" :selectTransaction="selectTransaction" />
+    <transactions-table
+      :transactions="filtredTransactions"
+      :selectTransaction="selectTransaction"
+    />
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -74,14 +75,16 @@
 </template>
 
 <script>
-import snackbar from '@/mixins/snackbar.js';
-import apexcharts from 'vue-apexcharts';
-import transactionsTable from '@/components/transactions_table.vue';
+import snackbar from "@/mixins/snackbar.js";
+import search from "@/mixins/search.js";
+import apexcharts from "vue-apexcharts";
+import transactionsTable from "@/components/transactions_table.vue";
+import { filterArrayIncludes, filterArrayBy } from "@/functions";
 
 export default {
-  name: 'transactions-view',
+  name: "transactions-view",
   components: { apexcharts, transactionsTable },
-  mixins: [snackbar],
+  mixins: [snackbar, search],
   data: () => ({
     accountId: null,
     serviceId: null,
@@ -89,14 +92,14 @@ export default {
     series: [],
     chartLoading: false,
     chartOptions: {
-      chart: { height: 250, type: 'line' },
+      chart: { height: 250, type: "line" },
       dataLabels: { enabled: false },
-      stroke: { curve: 'smooth' },
-      xaxis: { type: 'datetime' },
-      tooltip: { x: { format: 'dd.MM.yy HH:mm' } },
-      theme: { palette: 'palette10', mode: 'dark' },
-      legend: { showForSingleSeries: true }
-    }
+      stroke: { curve: "smooth" },
+      xaxis: { type: "datetime" },
+      tooltip: { x: { format: "dd.MM.yy HH:mm" } },
+      theme: { palette: "palette10", mode: "dark" },
+      legend: { showForSingleSeries: true },
+    },
   }),
   methods: {
     getTransactions() {
@@ -106,15 +109,16 @@ export default {
         if (acc.uuid) accounts.push(acc.uuid);
       });
 
-      this.$store.dispatch('services/fetch')
-      this.$store.dispatch('transactions/fetch', { accounts, service: this.serviceId })
+      this.$store.dispatch("services/fetch");
+      this.$store
+        .dispatch("transactions/fetch", { accounts, service: this.serviceId })
         .then(() => {
-          this.fetchError = '';
+          this.fetchError = "";
         })
         .catch((err) => {
           console.error(err);
 
-          this.fetchError = 'Can\'t reach the server';
+          this.fetchError = "Can't reach the server";
           if (err.response) {
             this.fetchError += `: [ERROR]: ${err.response.data.message}`;
           } else {
@@ -128,7 +132,7 @@ export default {
 
       for (let i = 1; i < dates.length; i++) {
         const curr = Math.round(dates[i] / min);
-        const spaces = (curr < 10) ? curr : 9;
+        const spaces = curr < 10 ? curr : 9;
 
         if (spaces < 2) continue;
         const newValues = values.splice(i + counter);
@@ -139,7 +143,7 @@ export default {
           const prev = values[i + j + counter - 1];
 
           values[i + j + counter] = prev + diff;
-          labels[i + j + counter] = ' ';
+          labels[i + j + counter] = " ";
         }
 
         counter += spaces - 1;
@@ -156,9 +160,7 @@ export default {
       value.forEach(({ total, service, proc }) => {
         const name = service.slice(0, 8);
         const data = { data: [{ x: proc * 1000, y: total }], name, service };
-        const i = this.series.findIndex(
-          (item) => item.name === name
-        );
+        const i = this.series.findIndex((item) => item.name === name);
 
         if (i !== -1) {
           this.series[i].data.push({ x: proc * 1000, y: total });
@@ -166,36 +168,38 @@ export default {
           this.series.push(data);
         }
       });
-      setTimeout(() => { this.chartLoading = false }, 300);
+      setTimeout(() => {
+        this.chartLoading = false;
+      }, 300);
 
       if (this.series.length < 1) {
         this.showSnackbar({
-          message: 'Records not found',
-          buttonColor: 'white',
-          color: 'blue darken-3'
+          message: "Records not found",
+          buttonColor: "white",
+          color: "blue darken-3",
         });
       }
     },
     setListenerToLegend() {
-      const legend = document.querySelectorAll('.apexcharts-legend-text');
+      const legend = document.querySelectorAll(".apexcharts-legend-text");
 
       legend.forEach((el) => {
-        el.addEventListener('click', (e) => {
-          const { service } = this.series.find((item) =>
-            item.name === e.target.innerText
+        el.addEventListener("click", (e) => {
+          const { service } = this.series.find(
+            (item) => item.name === e.target.innerText
           );
 
           this.$router.push({
-            name: 'Service',
-            params: { serviceId: service }
+            name: "Service",
+            params: { serviceId: service },
           });
         });
       });
-    }
+    },
   },
   mounted() {
     const accounts = [];
-    if (!this.$store.getters['transactions/all'].length) {
+    if (!this.$store.getters["transactions/all"].length) {
       this.getTransactions();
     }
 
@@ -206,12 +210,12 @@ export default {
 
     this.$store.commit("reloadBtn/setCallback", {
       type: "transactions/fetch",
-      params: { accounts, service: this.serviceId }
+      params: { accounts, service: this.serviceId },
     });
   },
   computed: {
     transactions() {
-      const transactions = this.$store.getters['transactions/all'];
+      const transactions = this.$store.getters["transactions/all"];
 
       if (!this.accountId && !this.serviceId) {
         return transactions;
@@ -226,25 +230,43 @@ export default {
         else return equalAccounts && equalServices;
       });
     },
+    filtredTransactions() {
+      if (this.searchParam) {
+        const byUuid = filterArrayIncludes(this.transactions, {
+          key: "uuid",
+          value: this.searchParam,
+        });
+        const byServiceUuid = filterArrayIncludes(this.transactions, {
+          key: "service",
+          value: this.searchParam,
+        });
+        const byTotal = filterArrayBy(this.transactions, {
+          key: "total",
+          value: +this.searchParam,
+        });
+        return [...new Set([...byUuid, ...byServiceUuid, ...byTotal])];
+      }
+      return this.transactions;
+    },
     user() {
-      return this.$store.getters['auth/userdata'];
+      return this.$store.getters["auth/userdata"];
     },
     accounts() {
-      const accounts = this.$store.getters['accounts/all'];
+      const accounts = this.$store.getters["accounts/all"];
 
-      return [...accounts, { title: 'all', uuid: null }];
+      return [...accounts, { title: "all", uuid: null }];
     },
     services() {
-      const services = this.$store.getters['services/all'].map((el) => ({
+      const services = this.$store.getters["services/all"].map((el) => ({
         title: `${el.title} (${el.uuid.slice(0, 8)})`,
-        uuid: el.uuid
+        uuid: el.uuid,
       }));
 
-      return [...services, { title: 'all', uuid: null }];
+      return [...services, { title: "all", uuid: null }];
     },
     balance() {
       const dates = [];
-      let labels = ['0 NCU'];
+      let labels = ["0 NCU"];
       let values = [0];
       let balance = 0;
 
@@ -253,20 +275,24 @@ export default {
       }
 
       this.transactions?.forEach((el, i, arr) => {
-        values.push(balance -= el.total);
+        values.push((balance -= el.total));
         labels.push(`${balance} NCU`);
-        dates.push(el.proc - arr[i - 1]?.proc ||
-          arr[i + 1]?.proc - el.proc || el.proc);
+        dates.push(
+          el.proc - arr[i - 1]?.proc || arr[i + 1]?.proc - el.proc || el.proc
+        );
       });
 
       [labels, values] = this.setTransactions(dates, labels, values);
 
       const amount = values.length - 12;
       return {
-        labels: (amount > 0) ? labels.slice(amount) : labels,
-        values: (amount > 0) ? values.slice(amount) : values
+        labels: amount > 0 ? labels.slice(amount) : labels,
+        values: amount > 0 ? values.slice(amount) : values,
       };
-    }
+    },
+    searchParam() {
+      return this.$store.getters["appSearch/param"];
+    },
   },
   watch: {
     chartLoading() {
@@ -276,12 +302,12 @@ export default {
       this.accountId = this.user.uuid;
     },
     accounts() {
-      if (!this.$store.getters['transactions/all'].length) {
+      if (!this.$store.getters["transactions/all"].length) {
         this.getTransactions();
       }
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style>

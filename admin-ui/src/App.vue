@@ -95,7 +95,9 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Services Providers") }}</v-list-item-title>
+            <v-list-item-title>{{
+              navTitle("Services Providers")
+            }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -117,7 +119,9 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Transactions") }}</v-list-item-title>
+            <v-list-item-title>{{
+              navTitle("Transactions")
+            }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -155,6 +159,7 @@
             single-line
             background-color="background-light"
             dence
+            v-model="searchParam"
             rounded
           ></v-text-field>
         </v-col>
@@ -216,7 +221,7 @@
 
 <script>
 import config from "@/config";
-import balance from '@/components/balance.vue';
+import balance from "@/components/balance.vue";
 
 export default {
   components: { balance },
@@ -276,6 +281,14 @@ export default {
           dark: this.asideDark,
         };
       else return {};
+    },
+    searchParam: {
+      get() {
+        return this.$store.getters["appSearch/param"];
+      },
+      set(newValue) {
+        this.$store.commit("appSearch/setSearchParam", newValue);
+      },
     },
   },
   created() {

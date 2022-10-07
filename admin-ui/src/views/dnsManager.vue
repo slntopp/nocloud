@@ -39,7 +39,7 @@
       </confirm-dialog>
     </div>
 
-    <zones-table v-model="selected" single-select> </zones-table>
+    <zones-table :searchParam="searchParam" v-model="selected" single-select> </zones-table>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -70,6 +70,7 @@ import zones from "@/components/zones_table.vue";
 import api from "@/api.js";
 
 import snackbar from "@/mixins/snackbar.js";
+import search from "@/mixins/search.js";
 import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
@@ -78,7 +79,7 @@ export default {
     "zones-table": zones,
     ConfirmDialog,
   },
-  mixins: [snackbar],
+  mixins: [snackbar,search],
   data() {
     return {
       createMenuVisible: false,
@@ -89,6 +90,11 @@ export default {
         modalVisible: false,
       },
     };
+  },
+  computed:{
+    searchParam(){
+      return this.$store.getters['appSearch/param']
+    }
   },
   methods: {
     createZone() {

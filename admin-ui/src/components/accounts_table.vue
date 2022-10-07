@@ -23,6 +23,7 @@
 <script>
 import noCloudTable from "@/components/table.vue";
 import Balance from "./balance.vue";
+import {filterArrayByTitleAndUuid} from "@/functions"
 
 export default {
   name: "accounts-table",
@@ -67,9 +68,7 @@ export default {
     },
     filtredAccounts() {
       if (this.searchParam) {
-        return this.tableData.filter((account) =>
-          account.title.toLowerCase().includes(this.searchParam)
-        );
+        return filterArrayByTitleAndUuid(this.tableData,this.searchParam)
       }
       return this.tableData;
     },

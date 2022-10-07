@@ -126,7 +126,7 @@
       </v-dialog>
     </div>
 
-    <namespaces-table v-model="selected" single-select> </namespaces-table>
+    <namespaces-table :searchParam="searchParam" v-model="selected" single-select> </namespaces-table>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -158,6 +158,8 @@ import accountsTable from "@/components/accounts_table.vue";
 import api from "@/api.js";
 
 import snackbar from "@/mixins/snackbar.js";
+import search from "@/mixins/search.js";
+
 import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
@@ -167,7 +169,7 @@ export default {
     "accounts-table": accountsTable,
     ConfirmDialog,
   },
-  mixins: [snackbar],
+  mixins: [snackbar,search],
   data() {
     return {
       createMenuVisible: false,
@@ -191,6 +193,11 @@ export default {
         },
       },
     };
+  },
+  computed: {
+    searchParam() {
+      return this.$store.getters["appSearch/param"];
+    },
   },
   methods: {
     createNamespace() {

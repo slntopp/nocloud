@@ -6,56 +6,42 @@
       service provider
       <v-btn small :to="{ name: 'Services' }"> clear </v-btn>
     </div>
-    <div class="pb-4 buttons">
-      <div class="buttons__inline">
+    <div class="pb-4 buttons__inline">
+      <v-btn
+        color="background-light"
+        class="mr-2"
+        :to="{ name: 'Service create' }"
+      >
+        create
+      </v-btn>
+      <confirm-dialog
+        :disabled="selected.length < 1"
+        @confirm="deleteSelectedServices"
+      >
         <v-btn
+          :disabled="selected.length < 1"
           color="background-light"
           class="mr-2"
-          :to="{ name: 'Service create' }"
         >
-          create
+          delete
         </v-btn>
-        <confirm-dialog
-          :disabled="selected.length < 1"
-          @confirm="deleteSelectedServices"
-        >
-          <v-btn
-            :disabled="selected.length < 1"
-            color="background-light"
-            class="mr-2"
-          >
-            delete
-          </v-btn>
-        </confirm-dialog>
-        <v-btn
-          color="background-light"
-          class="mr-2"
-          @click="upServices"
-          :disabled="selected.length < 1"
-        >
-          UP
-        </v-btn>
-        <v-btn
-          color="background-light"
-          class="mr-2"
-          @click="downServices"
-          :disabled="selected.length < 1"
-        >
-          DOWN
-        </v-btn>
-      </div>
-      <div>
-        <v-text-field
-          v-model="searchParam"
-          class="service-search mr-2"
-          hide-details
-          prepend-inner-icon="mdi-magnify"
-          placeholder="Search..."
-          background-color="background-light"
-          dence
-          rounded
-        />
-      </div>
+      </confirm-dialog>
+      <v-btn
+        color="background-light"
+        class="mr-2"
+        @click="upServices"
+        :disabled="selected.length < 1"
+      >
+        UP
+      </v-btn>
+      <v-btn
+        color="background-light"
+        class="mr-2"
+        @click="downServices"
+        :disabled="selected.length < 1"
+      >
+        DOWN
+      </v-btn>
     </div>
 
     <nocloud-table
@@ -151,6 +137,8 @@ import api from "@/api";
 import nocloudTable from "@/components/table.vue";
 import servecesInstancesItem from "@/components/serveces_instances_item.vue";
 import ConfirmDialog from "../components/confirmDialog.vue";
+import search from "@/mixins/search.js";
+import { filterArrayByTitleAndUuid } from "@/functions";
 
 export default {
   name: "Services-view",
@@ -159,6 +147,7 @@ export default {
     servecesInstancesItem,
     ConfirmDialog,
   },
+  mixins: [search],
   data: () => ({
     headers: [
       { text: "title", value: "title" },
@@ -175,7 +164,6 @@ export default {
     expanded: [],
     selected: [],
     fetchError: "",
-    searchParam: "",
   }),
   computed: {
     services() {
@@ -190,14 +178,13 @@ export default {
     },
     filteredServices() {
       if (this.searchParam) {
-        return this.services.filter((service) => {
-          const ips = this.getPublicIpsFromService(service);
-          const isItIpExists = ips.find((ip) => ip.includes(this.searchParam));
-          const isTitleIncludes = service.title
-            .toLowerCase()
-            .includes(this.searchParam.toLowerCase());
-          return isTitleIncludes || isItIpExists;
-        });
+        const byIps = this.filtredByPublicIps();
+        const byTitleAndUud = filterArrayByTitleAndUuid(
+          this.services,
+          this.searchParam,
+          { unique: false }
+        );
+        return [...new Set([...byIps, ...byTitleAndUud])];
       }
       return this.services;
     },
@@ -209,6 +196,9 @@ export default {
     },
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];
+    },
+    searchParam() {
+      return this.$store.getters["appSearch/param"];
     },
   },
   created() {
@@ -255,6 +245,16 @@ export default {
         result.push(temp);
       }
       return result;
+    },
+    filtredByPublicIps() {
+      return this.services.filter((service) => {
+        const ips = this.getPublicIpsFromService(service);
+        const isItIpExists = ips.find((ip) => ip.includes(this.searchParam));
+        const isTitleIncludes = service.title
+          .toLowerCase()
+          .includes(this.searchParam.toLowerCase());
+        return isTitleIncludes || isItIpExists;
+      });
     },
     hashTrim(hash) {
       if (hash) return hash.slice(0, 8) + "...";
@@ -372,15 +372,19 @@ export default {
     },
     getPublicIpsFromService(service) {
       const ips = [];
-      service.instancesGroups.forEach((group) =>
-        group.instances.forEach((instance) =>
-          instance.state.meta.networking.public.forEach((p) => {
-            if (typeof p === "string") {
-              ips.push(p);
-            }
-          })
-        )
-      );
+
+      service.instancesGroups.forEach((group) => {
+        if (group.type === "ione") {
+          group.instances.forEach((instance) => {
+            instance.state?.meta?.networking?.public.forEach((p) => {
+              if (typeof p === "string") {
+                ips.push(p);
+              }
+            });
+          });
+        }
+      });
+
       return ips;
     },
   },
@@ -405,17 +409,6 @@ export default {
   font-family: "Quicksand", sans-serif;
   line-height: 1em;
   margin-bottom: 10px;
-}
-
-.buttons {
-  display: flex;
-  justify-content: space-between;
-}
-
-.service-search {
-  margin-top: 0px;
-  font-size: 1.2rem;
-  padding-top: 0px;
 }
 
 .v-expansion-panel-content .v-expansion-panel-content__wrap {

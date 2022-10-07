@@ -23,7 +23,12 @@
       </confirm-dialog>
     </div>
 
+<<<<<<< HEAD
     <services-providers v-model="selected"> </services-providers>
+=======
+    <services-providers :searchParam="searchParam" v-model="selected">
+    </services-providers>
+>>>>>>> 785e24b93e84c5cfce779cfa0abfa872928917be
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -54,6 +59,7 @@ import api from "@/api.js";
 import servicesProviders from "@/components/servicesproviders_table.vue";
 
 import snackbar from "@/mixins/snackbar.js";
+import search from "@/mixins/search.js";
 import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
@@ -62,11 +68,16 @@ export default {
     servicesProviders,
     ConfirmDialog,
   },
-  mixins: [snackbar],
+  mixins: [snackbar, search],
   data() {
     return {
       selected: [],
     };
+  },
+  computed: {
+    searchParam() {
+      return this.$store.getters["appSearch/param"];
+    },
   },
   methods: {
     deleteSelectedServicesProviders() {
@@ -129,7 +140,7 @@ export default {
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      type: "servicesProviders/fetch",
+      type: "servicesProviders/fetch"
     });
   },
 };

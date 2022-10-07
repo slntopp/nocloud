@@ -1,7 +1,6 @@
 <template>
   <div class="namespaces pa-4 flex-wrap">
-    <div class="pb-4 buttons">
-      <div class="buttons__inline">
+      <div class="buttons__inline pb4">
         <v-menu
           offset-y
           transition="slide-y-transition"
@@ -98,19 +97,6 @@
             delete
           </v-btn>
         </confirm-dialog>
-      </div>
-      <div>
-        <v-text-field
-          v-model="searchParam"
-          class="accounts-search mr-2"
-          hide-details
-          prepend-inner-icon="mdi-magnify"
-          placeholder="Search..."
-          background-color="background-light"
-          dence
-          rounded
-        ></v-text-field>
-      </div>
     </div>
 
     <accounts-table :searchParam="searchParam" v-model="selected">
@@ -145,6 +131,8 @@ import accountsTable from "@/components/accounts_table.vue";
 import api from "@/api.js";
 
 import snackbar from "@/mixins/snackbar.js";
+import search from "@/mixins/search.js";
+
 import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
@@ -153,7 +141,7 @@ export default {
     "accounts-table": accountsTable,
     ConfirmDialog,
   },
-  mixins: [snackbar],
+  mixins: [snackbar,search],
   data() {
     return {
       createMenuVisible: false,
@@ -180,7 +168,6 @@ export default {
       },
       deletingLoading: false,
       accessLevels: [0, 1, 2, 3],
-      searchParam: "",
     };
   },
   methods: {
@@ -252,6 +239,9 @@ export default {
       }));
       return namespaces;
     },
+    searchParam() {
+      return this.$store.getters["appSearch/param"];
+    },
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
@@ -262,14 +252,5 @@ export default {
 </script>
 
 <style>
-.buttons {
-  display: flex;
-  justify-content: space-between;
-}
 
-.accounts-search {
-  margin-top: 0px;
-  font-size: 1.2rem;
-  padding-top: 0px;
-}
 </style>
