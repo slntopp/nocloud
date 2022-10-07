@@ -97,7 +97,6 @@
               multiple
               v-model="opened[index]"
               v-if="item.uuid == itemService.uuid"
-              @change="clickColumn(index)"
             >
               <v-expansion-panel
                 style="background: var(--v-background-light-base)"
