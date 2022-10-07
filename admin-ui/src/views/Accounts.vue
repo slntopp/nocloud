@@ -255,8 +255,7 @@ export default {
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      func: this.$store.dispatch,
-      params: ["accounts/fetch"],
+      type: "accounts/fetch",
     });
   },
 };
