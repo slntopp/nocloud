@@ -28,7 +28,8 @@ certificatesResolvers:
       caServer: "https://acme-v02.api.letsencrypt.org/directory"
   letsencrypt_wild:
     acme:
-      dnsChallenge: {}
+      dnsChallenge:
+        provider: manual
       email: "acme@example.com" # Replace with your email
       storage: /etc/traefik/acme/acme.json
       caServer: "https://acme-v02.api.letsencrypt.org/directory"
