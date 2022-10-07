@@ -18,6 +18,7 @@
 
         <v-col cols="10">
           <v-text-field
+            readonly
             @change="(data) => emitNewHostname(data)"
             :value="hostname"
             label="enter at main form"
@@ -26,6 +27,15 @@
           ></v-text-field>
         </v-col>
       </v-row>
+      <v-row align="center">
+				<v-col cols="2">
+					<v-subheader>hash</v-subheader>
+				</v-col>
+
+				<v-col cols="10">
+					<v-text-field label="your certificate hash" v-model="fingerprint" />
+				</v-col>
+			</v-row>
       <v-row align="center">
         <v-col cols="2">
           <v-subheader> cerificate </v-subheader>
@@ -59,6 +69,7 @@
 <script>
 import { PEM, ASN1 } from "@sardinefish/asn1";
 import { createHash } from "sha256-uint8array";
+import { Buffer } from "buffer";
 
 export default {
   name: "tunnelmesh-extention-create",
