@@ -106,6 +106,13 @@
                 <v-expansion-panel-header>
                   {{ group.title }} | Type: {{ group.type }} -
                   {{ titleSP(group) }}
+                  <v-chip
+                    class="instance-group-status"
+                    small
+                    :color="instanceCountColor(group)"
+                  >
+                    {{ group.instances.length }}
+                  </v-chip>
                 </v-expansion-panel-header>
                 <v-expansion-panel-content
                   style="background: var(--v-background-base)"
@@ -210,10 +217,8 @@ export default {
   },
   methods: {
     titleSP(group) {
-      const data = this.servicesProviders.find((el) =>
-        el.uuid == group?.sp
-      );
-      return data?.title || 'not found';
+      const data = this.servicesProviders.find((el) => el.uuid == group?.sp);
+      return data?.title || "not found";
     },
     fetchServices() {
       this.$store
@@ -266,7 +271,7 @@ export default {
             console.error(res);
           });
       } else {
-        alert('Clipboard is not supported!');
+        alert("Clipboard is not supported!");
       }
     },
     chipColor(state) {
@@ -279,6 +284,13 @@ export default {
         STOPPED: "orange darken-2",
       };
       return dict[state] ?? "blue-grey darken-2";
+    },
+
+    instanceCountColor(group){
+      if(group.instances.length){
+        return this.chipColor(group.status)
+      }
+      return this.chipColor('DEL')
     },
 
     deleteSelectedServices() {
@@ -379,8 +391,8 @@ export default {
   },
   watch: {
     services() {
-      this.fetchError = '';
-    }
+      this.fetchError = "";
+    },
   },
 };
 </script>
@@ -408,5 +420,11 @@ export default {
 
 .v-expansion-panel-content .v-expansion-panel-content__wrap {
   padding: 22px;
+}
+
+.instance-group-status {
+  max-width: 30px;
+  align-items: center;
+  margin-left: 25px;
 }
 </style>
