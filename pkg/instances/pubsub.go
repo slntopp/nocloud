@@ -20,8 +20,8 @@ import (
 	"log"
 
 	"github.com/arangodb/go-driver"
+	amqp "github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
-	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )

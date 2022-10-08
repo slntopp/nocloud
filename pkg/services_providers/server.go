@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
+	amqp "github.com/rabbitmq/amqp091-go"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -28,7 +29,7 @@ import (
 	p "github.com/slntopp/nocloud/pkg/public_data"
 	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	s "github.com/slntopp/nocloud/pkg/states"
-	"github.com/streadway/amqp"
+	"github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -183,6 +184,8 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 		s.UnregisterExtentions(ctx, log, sp)
 		return req, status.Error(codes.Internal, testRes.Error)
 	}
+
+	sp.State.State = proto.NoCloudState_INIT
 
 	err = s.ctrl.Create(ctx, sp)
 	if err != nil {

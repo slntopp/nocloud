@@ -19,11 +19,11 @@ package edge
 import (
 	"context"
 
+	amqp "github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud/pkg/edge/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	s "github.com/slntopp/nocloud/pkg/states"
 	stpb "github.com/slntopp/nocloud/pkg/states/proto"
-	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
