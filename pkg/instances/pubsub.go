@@ -18,6 +18,7 @@ package instances
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -136,9 +137,13 @@ func (s *PubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
 		if err != nil {
 			return err
 		}
-		return ch.Publish(exchange, topic, false, false, amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        body,
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		return ch.PublishWithContext(ctx, exchange, topic, false, false, amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			ContentType:  "text/plain",
+			Body:         body,
 		})
 	}
 }
