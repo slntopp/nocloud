@@ -114,7 +114,7 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 
 		if req.State == nil {
 			log.Warn("State is nil, skipping", zap.String("obj", col), zap.String("uuid", req.GetUuid()))
-			if err = msg.Ack(false); err != nil {
+			if err = msg.Nack(false, false); err != nil {
 				log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
 			}
 			continue
