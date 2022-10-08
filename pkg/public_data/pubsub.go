@@ -135,8 +135,8 @@ type Pub func(msg *pb.ObjectPublicData) error
 
 func (s *PublicDataPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	return func(msg *pb.ObjectPublicData) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		body, err := proto.Marshal(msg)
 		if err != nil {
