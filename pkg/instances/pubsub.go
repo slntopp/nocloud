@@ -132,14 +132,13 @@ type Pub func(msg *pb.ObjectData) error
 
 func (s *PubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	return func(msg *pb.ObjectData) error {
+		defer cancel()
 		body, err := proto.Marshal(msg)
 		if err != nil {
 			return err
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-
 		return ch.PublishWithContext(ctx, exchange, topic, false, false, amqp.Publishing{
 			DeliveryMode: amqp.Persistent,
 			ContentType:  "text/plain",
