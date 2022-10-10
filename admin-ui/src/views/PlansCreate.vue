@@ -345,6 +345,9 @@ export default {
               ? "Plan edited successfully"
               : "Plan created successfully",
           });
+          setTimeout(() => {
+            this.$router.push({ name: 'Plans' });
+          }, 100);
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
