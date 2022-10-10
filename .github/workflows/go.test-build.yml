@@ -41,6 +41,6 @@ jobs:
       - name: Go Modules
         run: go mod download
       - name: Attempt build
-        run: go build -ldflags="-s -w" -buildvcs=false cmd/${{ matrix.dir }}
+        run: go build -ldflags="-s -w" -buildvcs=false ./cmd/${{ matrix.dir }}
         env:
           CGO_ENABLED: 0
