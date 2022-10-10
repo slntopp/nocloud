@@ -7,6 +7,14 @@ on:
       - dev-*
       - dev
 
+    paths-ignore:
+      - ".github/workflows/**"
+      - "examples/**"
+      - "proto/**"
+      - "tools/**/*.sh"
+      - "README.md"
+      - "traefik.yml"
+
 env:
   REGISTRY: ghcr.io
   IMAGE_TAG: ${{github.ref_name == 'master' && 'latest' || github.ref_name}}
