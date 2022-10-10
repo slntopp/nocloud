@@ -31,8 +31,8 @@ jobs:
       matrix:
         dir: ${{fromJson(needs.prepare.outputs.matrix)}}
     steps:
-      - name: Set up Go 1.13
-        uses: actions/setup-go@v1
+      - name: Set up Go 1.19
+        uses: actions/setup-go@v3
         with:
           go-version: ${{ needs.prepare.outputs.go_version }}
       - name: Checkout
