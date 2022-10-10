@@ -103,8 +103,8 @@ func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
-			if err = msg.Nack(false, false); err != nil {
-				log.Warn("Failed to Negatively Acknowledge the delivery", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
 			}
 			continue
 		}
@@ -117,7 +117,7 @@ func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		if err != nil {
 			log.Error("Failed to update public_data", zap.Error(err))
 			if err = msg.Nack(false, false); err != nil {
-				log.Warn("Failed to Negatively Acknowledge the delivery", zap.Error(err))
+				log.Warn("Failed to Acknowledge the delivery while Update db", zap.Error(err))
 			}
 			continue
 		}

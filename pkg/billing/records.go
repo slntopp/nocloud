@@ -112,15 +112,15 @@ init:
 		log.Debug("Message unmarshalled", zap.Any("record", &record))
 		if err != nil {
 			log.Error("Failed to unmarshal record", zap.Error(err))
-			if err = msg.Nack(false, false); err != nil {
-				log.Warn("Failed to Negatively Acknowledge the delivery", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
 			}
 			continue
 		}
 		if record.Total == 0 {
 			log.Warn("Got zero record, skipping", zap.Any("record", &record))
-			if err = msg.Nack(false, false); err != nil {
-				log.Warn("Failed to Negatively Acknowledge the delivery", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery with 0 Records", zap.Error(err))
 			}
 			continue
 		}
