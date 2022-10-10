@@ -3,6 +3,7 @@ name: "Go: Attempt build"
 on:
   push:
     paths:
+      - .github/workflows/go.test-build.yml
       - "**/*.go"
 
 jobs:
@@ -42,9 +43,11 @@ jobs:
           path: go/src/github.com/slntopp/nocloud
       - name: Go Modules
         run: go mod download
+        working-directory: go/src/github.com/slntopp/nocloud
         env:
           GOPATH: /home/runner/work/nocloud/go
       - name: Attempt build
         run: go build cmd/${{ matrix.dir }}
+        working-directory: go/src/github.com/slntopp/nocloud
         env:
           GOPATH: /home/runner/work/nocloud/go
