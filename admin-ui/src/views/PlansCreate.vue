@@ -346,7 +346,7 @@ export default {
               : "Plan created successfully",
           });
           setTimeout(() => {
-            this.$router.push({ name: 'Plans' });
+            this.$router.push({ name: "Plans" });
           }, 100);
         })
         .catch((err) => {
@@ -356,16 +356,47 @@ export default {
           this.isLoading = false;
         });
     },
+    checkPeriods(periods) {
+      const wrongPeriod = periods.find((p) => p.period === 0);
+      console.log(wrongPeriod);
+
+      return (
+        wrongPeriod &&
+        `Period cannot be zero in an ${
+          wrongPeriod.key || wrongPeriod.title
+        } config`
+      );
+    },
+    checkPlanPeriods(plan) {
+      if (
+        !Object.keys(plan.products).length &&
+        !Array.isArray(plan.resources)
+      ) {
+        return;
+      } else if (plan.products) {
+        return this.checkPeriods(Object.values(plan.products));
+      } else {
+        return this.checkPeriods(plan.resources);
+      }
+    },
     testConfig() {
+      let message = "";
+
       if (!this.isValid) {
         this.$refs.form.validate();
+        message = "Validation failed!";
+      }
+
+      if (!message) {
+        message = this.checkPlanPeriods(this.plan);
+      }
+
+      if (message) {
         this.testButtonColor = "background-light";
         this.isTestSuccess = false;
-
         this.showSnackbarError({
-          message: "Validation failed!",
+          message,
         });
-
         return;
       }
 

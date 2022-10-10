@@ -178,7 +178,6 @@ export default {
     resources: [],
     amountResources: {},
     fullDate: null,
-
     form: { title: '', titles: [] },
     edit: { isVisible: false, title: '' },
     isVisible: false,
