@@ -498,6 +498,13 @@ export default {
     item() {
       this.getItem();
     },
+    "plan.kind"() {
+      if(this.plan.kind==='STATIC'){
+        this.plan.products={}
+      }else{
+        this.plan.resources=[]
+      }
+    }, 
   },
 };
 </script>
