@@ -1,23 +1,21 @@
 <template>
-	<v-card
-		elevation="0"
-		color="background-light"
-		class="pa-4"
-	>
-		Template
-		<span
-			class="template__display-trigger"
-			@click="() => ObjectDisplay = (ObjectDisplay === 'YAML' ? 'JSON' : 'YAML')"
-		>
-			{{ ObjectDisplay }}
-		</span>
-		<v-switch
-			style="display: inline-flex"
-			v-model="ObjectDisplay"
-			true-value="JSON"
-			false-value="YAML"
-		/>
-		:
+  <v-card elevation="0" color="background-light" class="pa-4">
+    Template
+    <span
+      class="template__display-trigger"
+      @click="
+        () => (ObjectDisplay = ObjectDisplay === 'YAML' ? 'JSON' : 'YAML')
+      "
+    >
+      {{ ObjectDisplay }}
+    </span>
+    <v-switch
+      style="display: inline-flex"
+      v-model="ObjectDisplay"
+      true-value="JSON"
+      false-value="YAML"
+    />
+    :
     <v-spacer />
     <template v-if="editing">
       <v-btn
@@ -29,24 +27,19 @@
       >
         Save
       </v-btn>
-      <v-btn
-        @click="cancel"
-      >
-        Cancel
-      </v-btn>
-      <json-textarea class="mt-4" v-if="ObjectDisplay === 'JSON'" :json="template" @getTree="changeTree" />
+      <v-btn @click="cancel"> Cancel </v-btn>
+      <json-textarea
+        class="mt-4"
+        v-if="ObjectDisplay === 'JSON'"
+        :json="template"
+        @getTree="changeTree"
+      />
       <yaml-editor class="mt-4" v-else :json="template" @getTree="changeTree" />
     </template>
     <template v-else>
       <v-btn @click="editing = true">Edit</v-btn>
-      <pre
-        v-if="ObjectDisplay === 'YAML'"
-        v-html="templateObjectYAML"
-      />
-      <pre
-        v-else-if="ObjectDisplay === 'JSON'"
-        v-html="templateObjectJSON"
-      />
+      <pre v-if="ObjectDisplay === 'YAML'" v-html="templateObjectYAML" />
+      <pre v-else-if="ObjectDisplay === 'JSON'" v-html="templateObjectJSON" />
     </template>
 
     <v-snackbar
@@ -70,37 +63,37 @@
         </v-btn>
       </template>
     </v-snackbar>
-	</v-card>
+  </v-card>
 </template>
 
 <script>
 import api from "@/api.js";
-import yaml from 'yaml';
+import yaml from "yaml";
 import snackbar from "@/mixins/snackbar.js";
-import JsonTextarea from '@/components/JsonTextarea.vue';
-import YamlEditor from '@/components/YamlEditor.vue';
+import JsonTextarea from "@/components/JsonTextarea.vue";
+import YamlEditor from "@/components/YamlEditor.vue";
 
 export default {
-	name: 'plan-template',
+  name: "plan-template",
   components: { JsonTextarea, YamlEditor },
   mixins: [snackbar],
-	props: {
-		template: {
-			type: Object,
-			required: true
-		}
-	},
-	data: () => ({
-		ObjectDisplay: 'YAML',
-    tree: '',
+  props: {
+    template: {
+      type: Object,
+      required: true,
+    },
+  },
+  data: () => ({
+    ObjectDisplay: "YAML",
+    tree: "",
     isValid: false,
     isLoading: false,
-    editing: false
-	}),
+    editing: false,
+  }),
   methods: {
     changeTree(value) {
       try {
-        if (this.ObjectDisplay === 'JSON') JSON.parse(value);
+        if (this.ObjectDisplay === "JSON") JSON.parse(value);
         else yaml.parse(value);
 
         this.tree = value;
@@ -110,19 +103,21 @@ export default {
       }
     },
     editPlan() {
-      const request = (this.ObjectDisplay === 'JSON')
-        ? JSON.parse(this.tree)
-        : yaml.parse(this.tree);
+      const request =
+        this.ObjectDisplay === "JSON"
+          ? JSON.parse(this.tree)
+          : yaml.parse(this.tree);
 
       this.isLoading = true;
-      api.plans.update(this.plan.uuid, request)
+      api.plans
+        .update(this.template.uuid, request)
         .then(() => {
           this.showSnackbarSuccess({
-            message: 'Plan edited successfully'
+            message: "Plan edited successfully",
           });
 
           setTimeout(() => {
-            this.$router.push({ name: 'Plans' });
+            this.$router.push({ name: "Plans" });
           }, 1500);
         })
         .catch((err) => {
@@ -135,66 +130,72 @@ export default {
     cancel() {
       this.editing = false;
       this.isValid = false;
-    }
+    },
   },
-	computed: {
-		templateObjectJSON(){
-			let json = JSON.stringify(this.template, null, 2);
-			json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-			return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
-				let cls = 'number';
-				if (/^"/.test(match)) {
-					if (/:$/.test(match)) {
-						cls = 'key';
-					} else {
-						cls = 'string';
-					}
-				} else if (/true|false/.test(match)) {
-					cls = 'boolean';
-				} else if (/null/.test(match)) {
-					cls = 'null';
-				}
-				return '<span class="' + cls + '">' + match + '</span>';
-			});
-		},
-		templateObjectYAML(){
-			const doc = new yaml.Document();
-			doc.contents = this.template;
+  computed: {
+    templateObjectJSON() {
+      let json = JSON.stringify(this.template, null, 2);
+      json = json
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+      return json.replace(
+        /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+        function (match) {
+          let cls = "number";
+          if (/^"/.test(match)) {
+            if (/:$/.test(match)) {
+              cls = "key";
+            } else {
+              cls = "string";
+            }
+          } else if (/true|false/.test(match)) {
+            cls = "boolean";
+          } else if (/null/.test(match)) {
+            cls = "null";
+          }
+          return '<span class="' + cls + '">' + match + "</span>";
+        }
+      );
+    },
+    templateObjectYAML() {
+      const doc = new yaml.Document();
+      doc.contents = this.template;
 
-			return doc.toString();
-		}
-	}
-}
+      return doc.toString();
+    },
+  },
+};
 </script>
 
 <style scoped lang="scss">
-.template__display-trigger{
-	cursor: pointer;
-	color: var(--v-primary-base)
+.template__display-trigger {
+  cursor: pointer;
+  color: var(--v-primary-base);
 }
 </style>
 
 <style lang="scss">
 pre {
-	padding: 5px;
-	margin: 5px;
-	background-color: var(--v-background-light-base);
-	border-radius: 4px;
-	white-space: pre-wrap;
+  padding: 5px;
+  margin: 5px;
+  background-color: var(--v-background-light-base);
+  border-radius: 4px;
+  white-space: pre-wrap;
 }
 .string {
-	color: var(--v-success-base); 
+  color: var(--v-success-base);
 }
 .number {
-	color: var(--v-warning-base); 
+  color: var(--v-warning-base);
 }
 .boolean {
-	color: var(--v-info-base); 
+  color: var(--v-info-base);
 }
 .null {
-	color: var(--v-accent-base); 
+  color: var(--v-accent-base);
 }
 .key {
-	color: var(--v-error-base); 
+  color: var(--v-error-base);
 }
 </style>

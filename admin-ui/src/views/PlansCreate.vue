@@ -410,7 +410,6 @@ export default {
       }
     },
     getProduct(product) {
-      console.log(product);
       if (!product) return {};
       return {
         ...product,
