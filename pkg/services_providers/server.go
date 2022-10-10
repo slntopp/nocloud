@@ -185,7 +185,9 @@ func (s *ServicesProviderServer) Create(ctx context.Context, req *sppb.ServicesP
 		return req, status.Error(codes.Internal, testRes.Error)
 	}
 
-	sp.State.State = proto.NoCloudState_INIT
+	if sp.State == nil {
+		sp.State = &proto.State{State: proto.NoCloudState_INIT}
+	}
 
 	err = s.ctrl.Create(ctx, sp)
 	if err != nil {
