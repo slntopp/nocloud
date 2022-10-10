@@ -271,7 +271,7 @@
               <img :src="'img/OS/' + OS.name.replace(/[^a-zA-Z]+/g, '').toLowerCase() + '.png'" :alt="OS.name" />
             </div>
             <div class="newCloud__template-name">
-              {{ OS.desc }}
+              {{ OS.name }}
             </div>
           </div>
         </div>

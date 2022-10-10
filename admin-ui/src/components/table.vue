@@ -6,7 +6,7 @@
     :loading="loading"
     loading-text="Loading... Please wait"
     color="background-light"
-    :items="items"
+    :items="itemsWithShortId"
     show-select
     :value="selected"
     @input="handleSelect"
@@ -22,10 +22,12 @@
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
-        {{ props.value }}
-      <v-btn icon @click="hideID(props.index)">
-        <v-icon>mdi-close-circle-outline</v-icon>
-      </v-btn>
+        <v-chip color="gray">
+          {{ props.value }}
+        </v-chip>
+        <v-btn icon @click="hideID(props.index)">
+          <v-icon>mdi-close-circle-outline</v-icon>
+        </v-btn>
       </template>
       <v-btn v-else icon @click="showID(props.index)">
         <v-icon>mdi-eye-outline</v-icon>
@@ -78,8 +80,8 @@ const defaultHeaders = [
 export default {
   name: "nocloud-table",
   props: {
-    sortBy: { type: String},
-    sortDesc:{type:Boolean},
+    sortBy: { type: String },
+    sortDesc: { type: Boolean },
     loading: Boolean,
     items: {
       type: Array,
@@ -163,44 +165,54 @@ export default {
             console.error(res);
           });
       } else {
-        alert('Clipboard is not supported!');
+        alert("Clipboard is not supported!");
       }
     },
     showID(index) {
       this.showed.push(index);
     },
-    hideID(index){
+    hideID(index) {
       this.showed = this.showed.filter((i) => i !== index);
-    }
+    },
   },
-  computed:{
-    sortByTable(){
-      return this.sortBy || 'title'
+  computed: {
+    sortByTable() {
+      return this.sortBy || "title";
+    },
+    itemsWithShortId() {
+      return this.items.map((i) => {
+        return {
+          ...i,
+          [this.itemKey]: i[this.itemKey].slice(0, 8) + "...",
+        };
+      });
     },
   },
   watch: {
     page(value) {
-      localStorage.setItem('page', value);
-      localStorage.setItem('url', this.$route.path);
+      localStorage.setItem("page", value);
+      localStorage.setItem("url", this.$route.path);
     },
     itemsPerPage(value) {
-      localStorage.setItem('itemsPerPage', value);
-      localStorage.setItem('url', this.$route.path);
-    }
+      localStorage.setItem("itemsPerPage", value);
+      localStorage.setItem("url", this.$route.path);
+    },
   },
   mounted() {
-    const page = localStorage.getItem('page');
-    const items = localStorage.getItem('itemsPerPage');
-
+    const page = localStorage.getItem("page");
+    const items = localStorage.getItem("itemsPerPage");
     if (items) this.itemsPerPage = +items;
-    if (page) setTimeout(() => { this.page = +page }, 100);
+    if (page)
+      setTimeout(() => {
+        this.page = +page;
+      }, 100);
   },
   destroyed() {
-    const url = localStorage.getItem('url');
+    const url = localStorage.getItem("url");
 
     if (this.$route.path.includes(url)) return;
-    localStorage.removeItem('page');
-    localStorage.removeItem('itemsPerPage');
-  }
-}
+    localStorage.removeItem("page");
+    localStorage.removeItem("itemsPerPage");
+  },
+};
 </script>

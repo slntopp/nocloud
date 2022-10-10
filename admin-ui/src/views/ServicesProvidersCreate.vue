@@ -194,7 +194,7 @@ export default {
     provider: {
       type: "custom",
       title: "",
-      public: false,
+      public: true,
       secrets: {},
       vars: {},
     },

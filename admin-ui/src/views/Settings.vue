@@ -232,7 +232,7 @@ export default {
       return this.settings;
     },
     searchParam() {
-      return this.$store["appSearch/param"];
+      return this.$store.getters["appSearch/param"];
     },
   },
   methods: {
@@ -341,8 +341,7 @@ export default {
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      func: this.$store.dispatch,
-      params: ["settings/fetch"],
+      type: "settings/fetch",
     });
   },
 };

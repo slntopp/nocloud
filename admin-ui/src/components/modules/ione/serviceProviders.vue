@@ -173,7 +173,7 @@ export default {
 				type: 'number',
 				subheader: "Public IPs Pool ID",
 				rules: [
-					(value) => !!value || 'Field is required',
+					(value) => (!!value || value===0) || 'Field is required',
 				],
 				label: "pip",
 				bind: {
@@ -182,13 +182,13 @@ export default {
 			},
 			private_vnets_pool: {
 				type: 'number',
-				subheader: "Private Networks Pool ID",
+				subheader: "Private Networks Template ID",
 				rules: [
-					(value) => !!value || 'Field is required',
+					(value) => (!!value || value===0) || 'Field is required',
 				],
 				label: "pvp",
 				bind: {
-					min: 0
+					min: 0,
 				}
 			},
 		}

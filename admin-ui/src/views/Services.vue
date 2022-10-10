@@ -83,7 +83,6 @@
               multiple
               v-model="opened[index]"
               v-if="item.uuid == itemService.uuid"
-              @change="clickColumn(index)"
             >
               <v-expansion-panel
                 style="background: var(--v-background-light-base)"
@@ -93,6 +92,13 @@
                 <v-expansion-panel-header>
                   {{ group.title }} | Type: {{ group.type }} -
                   {{ titleSP(group) }}
+                  <v-chip
+                    class="instance-group-status"
+                    small
+                    :color="instanceCountColor(group)"
+                  >
+                    {{ group.instances.length }}
+                  </v-chip>
                 </v-expansion-panel-header>
                 <v-expansion-panel-content
                   style="background: var(--v-background-base)"
@@ -280,6 +286,13 @@ export default {
       return dict[state] ?? "blue-grey darken-2";
     },
 
+    instanceCountColor(group){
+      if(group.instances.length){
+        return this.chipColor(group.status)
+      }
+      return this.chipColor('DEL')
+    },
+
     deleteSelectedServices() {
       if (this.selected.length > 0) {
         const deletePromices = this.selected.map((el) =>
@@ -381,13 +394,6 @@ export default {
     });
   },
   watch: {
-    expanded(value) {
-      Object.values(value).forEach((el) => {
-        const i = this.services.findIndex(({ uuid }) => uuid === el.uuid);
-
-        if (!this.opened[i]) this.opened[i] = [0];
-      });
-    },
     services() {
       this.fetchError = "";
     },
@@ -407,5 +413,11 @@ export default {
 
 .v-expansion-panel-content .v-expansion-panel-content__wrap {
   padding: 22px;
+}
+
+.instance-group-status {
+  max-width: 30px;
+  align-items: center;
+  margin-left: 25px;
 }
 </style>

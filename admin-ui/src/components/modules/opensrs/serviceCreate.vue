@@ -263,10 +263,6 @@ export default {
   name: "ione-create-service-module",
   props: ["instances-group", "plans", "planRules"],
   data: () => ({
-    periodRule: (v) => {
-      if (!isNaN(parseFloat(v)) && v >= 0 && v <= 10) return true;
-      return "Number has to be between 0 and 10";
-    },
     prices: {},
     selectedPeriodIndex: 0,
     avaliableDomains: [],

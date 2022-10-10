@@ -98,7 +98,7 @@
                 :is="template"
                 :keyForm="title"
                 :resource="plan.resources[i]"
-                :product="getProduct(plan.products[i])"
+                :product="getProduct(i)"
                 :preset="preset(i)"
                 @change:resource="(data) => changeResource(i, data)"
                 @change:product="(data) => changeProduct(title, data)"
@@ -161,6 +161,7 @@ export default {
   data: () => ({
     types: [],
     kinds: ["DYNAMIC", "STATIC"],
+    products:[],
     plan: {
       title: "",
       type: "custom",
@@ -345,6 +346,9 @@ export default {
               ? "Plan edited successfully"
               : "Plan created successfully",
           });
+          setTimeout(() => {
+            this.$router.push({ name: "Plans" });
+          }, 100);
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -353,16 +357,46 @@ export default {
           this.isLoading = false;
         });
     },
+    checkPeriods(periods) {
+      const wrongPeriod = periods.find((p) => p.period === 0);
+
+      return (
+        wrongPeriod &&
+        `Period cannot be zero in an ${
+          wrongPeriod.key || wrongPeriod.title
+        } config`
+      );
+    },
+    checkPlanPeriods(plan) {
+      if (
+        !Object.keys(plan.products).length &&
+        !Array.isArray(plan.resources)
+      ) {
+        return;
+      } else if (plan.products) {
+        return this.checkPeriods(Object.values(plan.products));
+      } else {
+        return this.checkPeriods(plan.resources);
+      }
+    },
     testConfig() {
+      let message = "";
+
       if (!this.isValid) {
         this.$refs.form.validate();
+        message = "Validation failed!";
+      }
+
+      if (!message) {
+        message = this.checkPlanPeriods(this.plan);
+      }
+
+      if (message) {
         this.testButtonColor = "background-light";
         this.isTestSuccess = false;
-
         this.showSnackbarError({
-          message: "Validation failed!",
+          message,
         });
-
         return;
       }
 
@@ -375,7 +409,7 @@ export default {
       if (this.plan.kind === "DYNAMIC") {
         this.plan.resources[res].period = period;
         this.plan.products = {};
-      } else {
+      } else if(this.plan.products[res]){
         this.plan.products[res].period = period;
       }
     },
@@ -400,14 +434,15 @@ export default {
             this.form.titles.push(el.key);
           });
         } else {
+          this.products=this.item.products
           Object.keys(this.item.products).forEach((key) => {
             this.form.titles.push(key);
           });
         }
       }
     },
-    getProduct(product) {
-      console.log(product);
+    getProduct(index) {
+      const product=Object.values(this.products)[index]
       if (!product) return {};
       return {
         ...product,
@@ -462,9 +497,13 @@ export default {
           this.isVisible = true;
       }
     },
-    item() {
-      this.getItem();
-    },
+    "plan.kind"() {
+      if(this.plan.kind==='STATIC'){
+        this.plan.products={}
+      }else{
+        this.plan.resources=[]
+      }
+    }, 
   },
 };
 </script>
