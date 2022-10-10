@@ -6,6 +6,9 @@ on:
       - master
       - dev-*
       - dev
+    paths-ignore:
+      - ".github/**"
+      - "!.github/workflows/checks.yml"
   pull_request:
 
 jobs:

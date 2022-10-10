@@ -14,9 +14,13 @@ name: "CodeQL"
 on:
   push:
     branches: [master]
+    paths-ignore:
+      - ".github/**"
   pull_request:
     # The branches below must be a subset of the branches above
     branches: [master]
+    paths-ignore:
+      - ".github/**"
   schedule:
     - cron: "38 5 * * 6"
 
@@ -38,7 +42,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
