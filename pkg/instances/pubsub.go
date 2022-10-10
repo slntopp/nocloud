@@ -83,7 +83,7 @@ func (s *PubSub) ConsumerInit(ch *amqp.Channel, exchange, subtopic, col string) 
 		log.Fatal("Failed to bind a queue", zap.Error(err))
 	}
 
-	msgs, err := ch.Consume(q.Name, "", true, false, false, false, nil)
+	msgs, err := ch.Consume(q.Name, "", false, false, false, false, nil)
 	if err != nil {
 		log.Fatal("Failed to register a consumer", zap.Error(err))
 	}
