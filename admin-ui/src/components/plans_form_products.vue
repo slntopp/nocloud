@@ -208,7 +208,6 @@ export default {
     },
     setPeriod(date, res) {
       const period = this.getTimestamp(date);
-
       this.resources[res].period = period;
     },
     getTimestamp({ day, month, year, quarter, week, time }) {
@@ -267,7 +266,6 @@ export default {
         if (key === 'period') {
           const date = new Date(value * 1000);
           const time = date.toUTCString().split(' ');
-
           this.fullDate = {
             day: `${date.getUTCDate() - 1}`,
             month: `${date.getUTCMonth()}`,

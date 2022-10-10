@@ -98,7 +98,7 @@
                 :is="template"
                 :keyForm="title"
                 :resource="plan.resources[i]"
-                :product="getProduct(plan.products[i])"
+                :product="getProduct(i)"
                 :preset="preset(i)"
                 @change:resource="(data) => changeResource(i, data)"
                 @change:product="(data) => changeProduct(title, data)"
@@ -161,6 +161,7 @@ export default {
   data: () => ({
     types: [],
     kinds: ["DYNAMIC", "STATIC"],
+    products:[],
     plan: {
       title: "",
       type: "custom",
@@ -358,7 +359,6 @@ export default {
     },
     checkPeriods(periods) {
       const wrongPeriod = periods.find((p) => p.period === 0);
-      console.log(wrongPeriod);
 
       return (
         wrongPeriod &&
@@ -409,7 +409,7 @@ export default {
       if (this.plan.kind === "DYNAMIC") {
         this.plan.resources[res].period = period;
         this.plan.products = {};
-      } else {
+      } else if(this.plan.products[res]){
         this.plan.products[res].period = period;
       }
     },
@@ -434,13 +434,15 @@ export default {
             this.form.titles.push(el.key);
           });
         } else {
+          this.products=this.item.products
           Object.keys(this.item.products).forEach((key) => {
             this.form.titles.push(key);
           });
         }
       }
     },
-    getProduct(product) {
+    getProduct(index) {
+      const product=Object.values(this.products)[index]
       if (!product) return {};
       return {
         ...product,
@@ -494,9 +496,6 @@ export default {
           this.form.titles = [];
           this.isVisible = true;
       }
-    },
-    item() {
-      this.getItem();
     },
     "plan.kind"() {
       if(this.plan.kind==='STATIC'){

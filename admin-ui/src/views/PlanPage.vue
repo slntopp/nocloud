@@ -1,7 +1,7 @@
 <template>
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
-      <router-link :to="{ name: 'Plans' }">{{ navTitle('Plans') }}</router-link>
+      <router-link :to="{ name: 'Plans' }">{{ navTitle("Plans") }}</router-link>
       / {{ planTitle }}
     </h1>
     <v-tabs
@@ -30,12 +30,12 @@
 </template>
 
 <script>
-import config from '@/config.js';
-import PlansCreate from '@/views/PlansCreate.vue';
-import PlansTemplate from '@/components/plan/template.vue';
+import config from "@/config.js";
+import PlansCreate from "@/views/PlansCreate.vue";
+import PlansTemplate from "@/components/plan/template.vue";
 
 export default {
-  name: 'plan-view',
+  name: "plan-view",
   components: { PlansCreate, PlansTemplate },
   data: () => ({ tabs: 0, navTitles: config.navTitles ?? {} }),
   methods: {
@@ -45,34 +45,32 @@ export default {
       }
 
       return title;
-    }
+    },
   },
   computed: {
     plan() {
-      return this.$store.getters['plans/one'];
+      return this.$store.getters["plans/one"];
     },
     planTitle() {
-      return this?.plan.title ?? 'not found';
+      return this?.plan.title ?? "not found";
     },
     planLoading() {
-      return this.$store.getters['plans/loading'];
+      return this.$store.getters["plans/loading"];
     },
   },
   created() {
     const id = this.$route.params?.planId;
-
-    this.$store.dispatch('plans/fetchItem', id)
-      .then(() => {
-        document.title = `${this.planTitle} | NoCloud`;
-      });
+    this.$store.dispatch("plans/fetchItem", id).then(() => {
+      document.title = `${this.planTitle} | NoCloud`;
+    });
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      type: 'plans/fetchItem',
+      type: "plans/fetchItem",
       params: this.$route.params?.planId,
     });
-  }
-}
+  },
+};
 </script>
 
 <style scoped lang="scss">
