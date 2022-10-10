@@ -20,8 +20,8 @@ import (
 	"time"
 
 	"github.com/arangodb/go-driver"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/viper"
-	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -112,15 +112,24 @@ init:
 		log.Debug("Message unmarshalled", zap.Any("record", &record))
 		if err != nil {
 			log.Error("Failed to unmarshal record", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			}
 			continue
 		}
 		if record.Total == 0 {
 			log.Warn("Got zero record, skipping", zap.Any("record", &record))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery with 0 Records", zap.Error(err))
+			}
 			continue
 		}
 
 		s.records.Create(ctx, &record)
 		s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		}
 	}
 }
 

@@ -19,6 +19,7 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
+	amqp "github.com/rabbitmq/amqp091-go"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
@@ -26,7 +27,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	s "github.com/slntopp/nocloud/pkg/states"
-	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

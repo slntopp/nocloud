@@ -18,12 +18,13 @@ package states
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	pb "github.com/slntopp/nocloud/pkg/states/proto"
-	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )
@@ -104,8 +105,8 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
-			if err = msg.Nack(false, false); err != nil {
-				log.Warn("Failed to Negatively Acknowledge the delivery", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
 			}
 			continue
 		}
@@ -114,7 +115,7 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		if req.State == nil {
 			log.Warn("State is nil, skipping", zap.String("obj", col), zap.String("uuid", req.GetUuid()))
 			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+				log.Warn("Failed to Acknowledge the delivery when State is nil", zap.Error(err))
 			}
 			continue
 		}
@@ -132,7 +133,7 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		if err != nil {
 			log.Error("Failed to update state", zap.Error(err))
 			if err = msg.Nack(false, false); err != nil {
-				log.Warn("Failed to Negatively Acknowledge the delivery", zap.Error(err))
+				log.Warn("Failed to Negatively Acknowledge the delivery while Update db", zap.Error(err))
 			}
 			continue
 		}
@@ -153,13 +154,16 @@ type Pub func(msg *pb.ObjectState) error
 func (s *StatesPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
 	return func(msg *pb.ObjectState) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		body, err := proto.Marshal(msg)
 		if err != nil {
 			return err
 		}
-		return ch.Publish(exchange, topic, false, false, amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        body,
+		return ch.PublishWithContext(ctx, exchange, topic, false, false, amqp.Publishing{
+			ContentType:  "text/plain",
+			DeliveryMode: amqp.Persistent,
+			Body:         body,
 		})
 	}
 }

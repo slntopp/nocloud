@@ -18,10 +18,11 @@ package states
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/arangodb/go-driver"
+	amqp "github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
-	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )
@@ -102,7 +103,9 @@ func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
-			//msg.Nack(false, false)
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			}
 			continue
 		}
 		log.Debug("req pd", zap.Any("req", &req))
@@ -113,14 +116,18 @@ func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		})
 		if err != nil {
 			log.Error("Failed to update public_data", zap.Error(err))
-			//msg.Nack(false, false)
+			if err = msg.Nack(false, false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while Update db", zap.Error(err))
+			}
 			continue
 		}
 		log.Debug("Updated public_data", zap.String("type", col), zap.String("uuid", req.Uuid))
 		if err = c.Close(); err != nil {
 			log.Warn("Error closing Driver cursor", zap.Error(err))
 		}
-		//msg.Ack(false)
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		}
 	}
 }
 
@@ -129,13 +136,16 @@ type Pub func(msg *pb.ObjectPublicData) error
 func (s *PublicDataPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
 	return func(msg *pb.ObjectPublicData) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		body, err := proto.Marshal(msg)
 		if err != nil {
 			return err
 		}
-		return ch.Publish(exchange, topic, false, false, amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        body,
+		return ch.PublishWithContext(ctx, exchange, topic, false, false, amqp.Publishing{
+			ContentType:  "text/plain",
+			DeliveryMode: amqp.Persistent,
+			Body:         body,
 		})
 	}
 }

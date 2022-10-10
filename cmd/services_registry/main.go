@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 
+	amqp "github.com/rabbitmq/amqp091-go"
 	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
@@ -34,7 +35,6 @@ import (
 	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"github.com/slntopp/nocloud/pkg/states"
 	"github.com/spf13/viper"
-	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"

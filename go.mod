@@ -12,10 +12,10 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3
+	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/rs/cors v1.8.2
 	github.com/spf13/viper v1.13.0
 	github.com/stoewer/go-strcase v1.2.0
-	github.com/streadway/amqp v1.0.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
 	go.uber.org/zap v1.23.0
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d

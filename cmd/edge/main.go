@@ -27,7 +27,7 @@ import (
 	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/spf13/viper"
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )

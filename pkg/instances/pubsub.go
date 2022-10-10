@@ -18,10 +18,11 @@ package instances
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/arangodb/go-driver"
+	amqp "github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
-	"github.com/streadway/amqp"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )
@@ -100,7 +101,9 @@ func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
 			log.Error("Failed to unmarshal request", zap.Error(err))
-			//msg.Nack(false, false)
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			}
 			continue
 		}
 		c, err := (*s.db).Query(context.TODO(), updateDataQuery, map[string]interface{}{
@@ -110,14 +113,18 @@ func (s *PubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		})
 		if err != nil {
 			log.Error("Failed to update data", zap.Error(err))
-			//msg.Nack(false, false)
+			if err = msg.Nack(false, false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while Update db", zap.Error(err))
+			}
 			continue
 		}
 		log.Debug("Updated data", zap.String("type", col), zap.String("uuid", req.Uuid))
 		if err = c.Close(); err != nil {
 			log.Warn("Error closing Driver cursor", zap.Error(err))
 		}
-		//msg.Ack(false)
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		}
 	}
 }
 
@@ -126,13 +133,16 @@ type Pub func(msg *pb.ObjectData) error
 func (s *PubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
 	return func(msg *pb.ObjectData) error {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 		body, err := proto.Marshal(msg)
 		if err != nil {
 			return err
 		}
-		return ch.Publish(exchange, topic, false, false, amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        body,
+		return ch.PublishWithContext(ctx, exchange, topic, false, false, amqp.Publishing{
+			DeliveryMode: amqp.Persistent,
+			ContentType:  "text/plain",
+			Body:         body,
 		})
 	}
 }
