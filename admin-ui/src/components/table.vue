@@ -6,7 +6,7 @@
     :loading="loading"
     loading-text="Loading... Please wait"
     color="background-light"
-    :items="itemsWithShortId"
+    :items="items"
     show-select
     :value="selected"
     @input="handleSelect"
@@ -23,7 +23,7 @@
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
         <v-chip color="gray">
-          {{ props.value }}
+          {{ makeIdShort(props.value) }}
         </v-chip>
         <v-btn icon @click="hideID(props.index)">
           <v-icon>mdi-close-circle-outline</v-icon>
@@ -174,18 +174,13 @@ export default {
     hideID(index) {
       this.showed = this.showed.filter((i) => i !== index);
     },
+    makeIdShort(id){
+      return id.slice(0,8)+'...'
+    }
   },
   computed: {
     sortByTable() {
       return this.sortBy || "title";
-    },
-    itemsWithShortId() {
-      return this.items.map((i) => {
-        return {
-          ...i,
-          [this.itemKey]: i[this.itemKey].slice(0, 8) + "...",
-        };
-      });
     },
   },
   watch: {
