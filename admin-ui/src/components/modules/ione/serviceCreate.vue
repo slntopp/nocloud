@@ -117,8 +117,8 @@
           <v-select
             label="product"
             v-model="instance.productTitle"
-            v-if="instance.products?.length > 0"
-            :items="instance.products"
+            v-if="getPlanProducts(index)?.length > 0"
+            :items="getPlanProducts(index)"
             @change="(newVal) => setValue(index + '.product', newVal)"
           />
         </v-col>
@@ -230,13 +230,19 @@ export default {
 
       this.setValue(index + ".config.template_id", osId);
     },
+    getPlanProducts(index){
+      if(!this.instances[index].billing_plan.products){
+        return
+      }
+      return Object.values(this.instances[index].billing_plan.products).map(p=>p.title)
+    }
   },
   computed: {
     instances() {
       const data = JSON.parse(this.instancesGroup);
-
       return data.body.instances;
     },
+
     getOsTemplates() {
       const data = JSON.parse(this.instancesGroup);
 
