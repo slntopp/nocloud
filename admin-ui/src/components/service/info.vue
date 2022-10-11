@@ -197,7 +197,7 @@
                             style="display: inline-block; width: 100px" v-if="!editing" />
                         </v-col>
                       </v-row>
-                      <v-row class="flex-column" v-if="instance.state && !editing">
+                      <v-row class="flex-column" v-if="isIone(i) && instance.state && !editing">
                         <v-col>
                           <h4 class="mb-2">Snapshots:</h4>
                           <v-menu bottom offset-y transition="slide-y-transition" v-model="isVisible"
@@ -322,6 +322,9 @@ export default {
     },
   },
   methods: {
+    isIone(index){
+     return this.service.instancesGroups[index].type==='ione';
+    },
     addToClipboard(text, index) {
       if (navigator?.clipboard) {
         navigator.clipboard
