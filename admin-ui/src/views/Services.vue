@@ -138,6 +138,7 @@ import nocloudTable from "@/components/table.vue";
 import servecesInstancesItem from "@/components/serveces_instances_item.vue";
 import ConfirmDialog from "../components/confirmDialog.vue";
 import search from "@/mixins/search.js";
+import snackbar from "@/mixins/snackbar.js";
 import { filterArrayByTitleAndUuid } from "@/functions";
 
 export default {
@@ -147,7 +148,7 @@ export default {
     servecesInstancesItem,
     ConfirmDialog,
   },
-  mixins: [search],
+  mixins: [snackbar,search],
   data: () => ({
     headers: [
       { text: "title", value: "title" },
@@ -309,9 +310,9 @@ export default {
                 message: `Service${ending} deleted successfully.`,
               });
             } else {
-              this.showSnackbar({
+              console.log(this.showSnackbar);
+              this.showSnackbarError({
                 message: `Can’t delete Services Provider: Has Services deployed.`,
-                route: { name: "Home" },
               });
             }
           })

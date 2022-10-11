@@ -42,6 +42,33 @@
         >
         </v-text-field>
       </v-col>
+      <v-col>
+        <v-text-field
+          readonly
+          :value="vlansKey"
+          label="vlans key"
+          style="display: inline-block; width: 330px"
+        >
+        </v-text-field>
+      </v-col>
+      <v-col>
+        <v-text-field
+          readonly
+          :value="template.secrets.vlans[vlansKey].size"
+          label="size"
+          style="display: inline-block; width: 330px"
+        >
+        </v-text-field>
+      </v-col>
+      <v-col>
+        <v-text-field
+          readonly
+          :value="template.secrets.vlans[vlansKey].start"
+          label="start"
+          style="display: inline-block; width: 330px"
+        >
+        </v-text-field>
+      </v-col>
     </v-row>
     <slot></slot>
     <!-- Hosts -->
@@ -330,6 +357,9 @@ export default {
     this.changeWidth();
   },
   computed: {
+    vlansKey(){
+      return Object.keys(this.template.secrets.vlans)[0]
+    },
     vlans() {
       const { free_vlans } = this.template?.state.meta.networking.private_vnet;
       let vlans = 0;
@@ -338,12 +368,16 @@ export default {
         vlans += +value;
       });
 
-      const res = Array.from({ length: 504 * this.counter })
+      const oneBlockLength=this.vlansCount/8
+
+      const res = Array.from({ length: oneBlockLength * this.counter })
         .fill(1, 0, vlans)
         .fill(0, vlans);
-
       return res;
     },
+    vlansCount(){
+      return this.template.secrets.vlans[this.vlansKey]?.size
+    }
   },
   watch: {
     counter() {
