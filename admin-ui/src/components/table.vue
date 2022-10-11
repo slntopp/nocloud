@@ -23,15 +23,21 @@
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
         <v-chip color="gray">
-          {{ makeIdShort(props.value) }}
+          {{ props.value }}
         </v-chip>
         <v-btn icon @click="hideID(props.index)">
           <v-icon>mdi-close-circle-outline</v-icon>
         </v-btn>
       </template>
-      <v-btn v-else icon @click="showID(props.index)">
-        <v-icon>mdi-eye-outline</v-icon>
-      </v-btn>
+      <template v-else>
+        <v-chip color="gray">
+          {{ makeIdShort(props.value) }}
+        </v-chip>
+        <v-btn icon @click="showID(props.index)">
+          <v-icon>mdi-eye-outline</v-icon>
+        </v-btn>
+      </template>
+
       <v-btn icon @click="addToClipboard(props.value, props.index)">
         <v-icon v-if="copyed == props.index"> mdi-check </v-icon>
         <v-icon v-else> mdi-content-copy </v-icon>
@@ -174,9 +180,9 @@ export default {
     hideID(index) {
       this.showed = this.showed.filter((i) => i !== index);
     },
-    makeIdShort(id){
-      return id.slice(0,8)+'...'
-    }
+    makeIdShort(id) {
+      return id.slice(0, 8) + "...";
+    },
   },
   computed: {
     sortByTable() {
