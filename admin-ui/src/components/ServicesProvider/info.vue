@@ -306,6 +306,33 @@ export default {
     },
     testConfig() {
       this.isTestLoading = true;
+      if (this.template.type === "ione") {
+        const maxVlans = 4096;
+        let errorMessage = "";
+
+        const vlansKeys = Object.keys(this.template.secrets.vlans);
+        if (vlansKeys.length > 1) {
+          errorMessage = "Can be only one vlan key!";
+        }
+
+        const vlanStart = this.template.secrets.vlans[vlansKeys[0]].start;
+        const vlanSize = this.template.secrets.vlans[vlansKeys[0]].size;
+        if (!errorMessage && vlanStart===undefined || vlanSize===undefined) {
+          errorMessage = `Vlans need size and start keys!`;
+        }
+
+        if (!errorMessage && vlanSize + vlanStart > maxVlans) {
+          errorMessage = `Vlans cant be more then ${maxVlans}!`;
+        }
+
+        if (errorMessage) {
+          this.isTestLoading = false;
+          this.showSnackbarError({
+            message: errorMessage,
+          });
+          return;
+        }
+      }
       api.servicesProviders
         .testConfig(this.template)
         .then(() => {
@@ -371,8 +398,8 @@ export default {
   },
   mounted() {
     this.provider = this.template;
-    if(!this.provider.proxy){
-      this.provider.proxy={ socket:'' }
+    if (!this.provider.proxy) {
+      this.provider.proxy = { socket: "" };
     }
   },
   created() {
