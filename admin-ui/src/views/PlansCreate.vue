@@ -157,11 +157,11 @@ import snackbar from "@/mixins/snackbar.js";
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  props: ["item"],
+  props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
     kinds: ["DYNAMIC", "STATIC"],
-    products:[],
+    products: [],
     plan: {
       title: "",
       type: "custom",
@@ -409,7 +409,7 @@ export default {
       if (this.plan.kind === "DYNAMIC") {
         this.plan.resources[res].period = period;
         this.plan.products = {};
-      } else if(this.plan.products[res]){
+      } else if (this.plan.products[res]) {
         this.plan.products[res].period = period;
       }
     },
@@ -428,13 +428,12 @@ export default {
       if (Object.keys(this.item).length > 0) {
         this.plan = this.item;
         this.isVisible = false;
-
         if (this.item.kind === "DYNAMIC") {
           this.item.resources.forEach((el) => {
             this.form.titles.push(el.key);
           });
         } else {
-          this.products=this.item.products
+          this.products = this.item.products;
           Object.keys(this.item.products).forEach((key) => {
             this.form.titles.push(key);
           });
@@ -442,7 +441,7 @@ export default {
       }
     },
     getProduct(index) {
-      const product=Object.values(this.products)[index]
+      const product = Object.values(this.products)[index];
       if (!product) return {};
       return {
         ...product,
@@ -452,6 +451,9 @@ export default {
     },
   },
   created() {
+    if (this.isEdit) {
+      this.plan.resources = this.item.resources;
+    }
     const types = require.context(
       "@/components/modules/",
       true,
@@ -498,12 +500,16 @@ export default {
       }
     },
     "plan.kind"() {
-      if(this.plan.kind==='STATIC'){
-        this.plan.products={}
-      }else{
-        this.plan.resources=[]
+      if (this.plan.kind === "STATIC") {
+        if (!this.isEdit) {
+          this.plan.products = {};
+        }
+      } else {
+        if (!this.isEdit) {
+          this.plan.resources = [];
+        }
       }
-    }, 
+    },
   },
 };
 </script>

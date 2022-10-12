@@ -19,11 +19,11 @@
     >
       <v-tab-item>
         <v-progress-linear indeterminate class="pt-2" v-if="planLoading" />
-        <plans-create v-if="plan" :item="plan" />
+        <plans-create :isEdit="true" v-else :item="plan" />
       </v-tab-item>
       <v-tab-item>
         <v-progress-linear indeterminate class="pt-2" v-if="planLoading" />
-        <plans-template v-if="plan" :template="plan" />
+        <plans-template v-else :template="plan" />
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -55,7 +55,7 @@ export default {
       return this?.plan.title ?? "not found";
     },
     planLoading() {
-      return this.$store.getters["plans/loading"];
+      return this.$store.getters["plans/isLoading"];
     },
   },
   created() {
