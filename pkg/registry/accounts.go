@@ -68,6 +68,10 @@ func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.Se
 			context.Background(), "authorization", "bearer "+internal_token,
 		), &settingsClient,
 	)
+	var settings AccountPostCreateSettings
+	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
+		s.log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
 }
 
 func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.GetRequest) (*accountspb.Account, error) {

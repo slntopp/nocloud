@@ -84,6 +84,12 @@ func (s *ServicesServer) SetupSettingsClient(stC stpb.SettingsServiceClient, int
 			context.Background(), "authorization", "bearer "+internal_token,
 		), &stC,
 	)
+
+	var ibps InstanceBillingPlanSettings
+	err := sc.Fetch(IBPSKey, &ibps, defaultBillingPlanSettings)
+	if err != nil {
+		s.log.Error("Error fetching instance billing plan settings", zap.Error(err))
+	}
 }
 
 func (s *ServicesServer) SetupBillingClient(bC bpb.BillingServiceClient) {
@@ -96,13 +102,15 @@ type InstanceBillingPlanSettings struct {
 
 const IBPSKey = "instance-billing-plan-settings"
 
-var DefaultBillingPlanSettings = sc.Setting[InstanceBillingPlanSettings]{
-	Value: InstanceBillingPlanSettings{
-		Required: true,
-	},
-	Description: "Instances Billing Plans Settings",
-	Public:      false,
-}
+var (
+	defaultBillingPlanSettings = &sc.Setting[InstanceBillingPlanSettings]{
+		Value: InstanceBillingPlanSettings{
+			Required: true,
+		},
+		Description: "Instances Billing Plans Settings",
+		Public:      false,
+	}
+)
 
 func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, service *pb.Service) (*pb.TestConfigResponse, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -111,7 +119,7 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 	response := &pb.TestConfigResponse{Result: true, Errors: make([]*pb.TestConfigError, 0)}
 
 	var ibps InstanceBillingPlanSettings
-	err := sc.Fetch(IBPSKey, &ibps, &DefaultBillingPlanSettings)
+	err := sc.Fetch(IBPSKey, &ibps, defaultBillingPlanSettings)
 	if err != nil {
 		log.Error("Error fetching instance billing plan settings", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while fetching Instance Billing Plan Settings")
