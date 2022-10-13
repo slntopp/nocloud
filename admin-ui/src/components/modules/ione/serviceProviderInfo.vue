@@ -314,7 +314,7 @@
               :class="vlan === 0 ? 'occupied' : 'free'"
             />
           </template>
-          <span>{{ i }}</span>
+          <span>{{ getVlanIndex(i) }}</span>
         </v-tooltip>
         <div class="mt-2">
           <v-btn class="mr-2" v-if="counter > 1" @click="counter--">
@@ -352,6 +352,9 @@ export default {
         }
       }
     },
+    getVlanIndex(index){
+      return this.vlansStart? this.vlansStart+index:index
+    }
   },
   mounted() {
     this.changeWidth();
@@ -370,13 +373,16 @@ export default {
 
       const oneBlockLength=this.vlansCount/8
 
-      const res = Array.from({ length: oneBlockLength * this.counter })
+      const res = Array.from({ length: oneBlockLength * this.counter+1 })
         .fill(1, 0, vlans)
         .fill(0, vlans);
       return res;
     },
     vlansCount(){
       return this.template.secrets.vlans[this.vlansKey]?.size
+    },
+    vlansStart(){
+      return this.template.secrets.vlans[this.vlansKey]?.start
     }
   },
   watch: {
