@@ -92,7 +92,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		return &accountspb.Account{Title: acc.Account.GetTitle()}, nil
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.READ)
+	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID().String(), access.READ)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
@@ -135,19 +135,19 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	log := s.log.Named("Token")
 
 	log.Debug("Token request received", zap.Any("request", request))
-	account, ok := s.ctrl.Authorize(ctx, request.Auth.Type, request.Auth.Data...)
+	acc, ok := s.ctrl.Authorize(ctx, request.Auth.Type, request.Auth.Data...)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "Wrong credentials given")
 	}
-	log.Debug("Authorized user", zap.String("ID", account.ID.String()))
+	log.Debug("Authorized user", zap.String("ID", acc.ID().String()))
 
 	claims := jwt.MapClaims{}
-	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = account.Key
+	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = acc.Key
 	claims["exp"] = request.Exp
 
 	if request.GetRootClaim() {
 		ns := fmt.Sprintf("%s/0", schema.NAMESPACES_COL)
-		ok, lvl := graph.AccessLevel(ctx, s.db, account.Key, ns)
+		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, ns)
 		if !ok {
 			lvl = 0
 		}
@@ -156,7 +156,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	}
 
 	if sp := request.GetSpClaim(); sp != "" {
-		ok, lvl := graph.AccessLevel(ctx, s.db, account.Key, driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp).String())
+		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp).String())
 		if !ok {
 			lvl = 0
 		}
@@ -186,28 +186,28 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return nil, err
 	}
 
-	ok, access_lvl := graph.AccessLevel(ctx, s.db, requestor, ns.ID.String())
+	ok, access_lvl := graph.AccessLevel(ctx, s.db, requestor, ns.ID().String())
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "No Access")
 	} else if access_lvl < access.MGMT {
 		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
 	}
 
-	account, err := s.ctrl.Create(ctx, request.Title)
+	acc, err := s.ctrl.Create(ctx, request.Title)
 	if err != nil {
 		log.Debug("Error creating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating account")
 	}
-	res := &accountspb.CreateResponse{Uuid: account.Key}
+	res := &accountspb.CreateResponse{Uuid: acc.Key}
 
 	if request.Access != nil && (*request.Access) < access_lvl {
 		access_lvl = (*request.Access)
 	}
 
-	s.PostCreateActions(ctx, account)
+	s.PostCreateActions(ctx, acc)
 
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
-	err = account.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
+	err = acc.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
 	if err != nil {
 		log.Debug("Error linking to namespace")
 		return res, err
@@ -219,7 +219,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return res, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.ctrl.SetCredentials(ctx, account, col, cred, roles.OWNER)
+	err = s.ctrl.SetCredentials(ctx, acc, col, cred, roles.OWNER)
 	if err != nil {
 		return res, err
 	}
@@ -247,7 +247,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID().String(), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
@@ -306,7 +306,7 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, acc.ID().String(), access.ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
@@ -349,7 +349,7 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, acc.ID().String(), access.ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 

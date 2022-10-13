@@ -85,11 +85,10 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
-	var instance pb.Instance
-	err := graph.GetWithAccess(
+	var instance graph.Instance
+	instance, err := graph.GetWithAccess[graph.Instance](
 		ctx, s.db,
-		driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
-		instance_id, &instance,
+		instance_id,
 	)
 	if err != nil {
 		log.Error("Failed to get instance", zap.Error(err))
@@ -118,7 +117,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		return nil, status.Error(codes.NotFound, "Driver not found")
 	}
 	return client.Invoke(ctx, &driverpb.InvokeRequest{
-		Instance:         &instance,
+		Instance:         instance.Instance,
 		ServicesProvider: r.SP,
 		Method:           req.Method,
 		Params:           req.Params,

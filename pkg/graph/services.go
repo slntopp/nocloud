@@ -352,11 +352,11 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 }
 
 // Join Service into Namespace
-func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, namespace *Namespace, access int32, role string) error {
+func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, ns *Namespace, access int32, role string) error {
 	ctrl.log.Debug("Joining service to namespace")
 	edge, _ := ctrl.db.Collection(ctx, schema.NS2SERV)
 	_, err := edge.CreateDocument(ctx, Access{
-		From:  namespace.ID,
+		From:  ns.ID(),
 		To:    driver.NewDocumentID(schema.SERVICES_COL, service.Uuid),
 		Level: access,
 		Role:  role,

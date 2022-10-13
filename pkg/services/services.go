@@ -229,13 +229,13 @@ func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateReque
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
+	ns, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
 	if err != nil {
 		s.log.Debug("Error getting namespace", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, namespace.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID().String(), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -249,13 +249,13 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
+	ns, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
 	if err != nil {
 		s.log.Debug("Error getting namespace", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, namespace.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID().String(), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -276,7 +276,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.Internal, "Error while creating Service")
 	}
 
-	err = s.ctrl.Join(ctx, doc, &namespace, access.ADMIN, roles.OWNER)
+	err = s.ctrl.Join(ctx, doc, &ns, access.ADMIN, roles.OWNER)
 	if err != nil {
 		log.Error("Error while joining service to namespace", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")

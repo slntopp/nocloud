@@ -122,12 +122,12 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	}
 	log.Debug("Validated token", zap.Any("claims", token))
 
-	account := token[nocloud.NOCLOUD_ACCOUNT_CLAIM]
-	if account == nil {
+	acc := token[nocloud.NOCLOUD_ACCOUNT_CLAIM]
+	if acc == nil {
 		return nil, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
 	}
-	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.(string))
-	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, account.(string))
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.(string))
+	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, acc.(string))
 
 	ctx = func(ctx context.Context) context.Context {
 		sp := token[nocloud.NOCLOUD_SP_CLAIM]

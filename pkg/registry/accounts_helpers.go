@@ -72,14 +72,14 @@ func (s *AccountsServiceServer) PostCreateActions(ctx context.Context, account g
 	}
 }
 
-func _CreatePersonalNamespace(ctx context.Context, log *zap.Logger, ns_ctrl graph.NamespacesController, account graph.Account) {
-	ns, err := ns_ctrl.Create(ctx, account.Title)
+func _CreatePersonalNamespace(ctx context.Context, log *zap.Logger, ns_ctrl graph.NamespacesController, acc graph.Account) {
+	ns, err := ns_ctrl.Create(ctx, acc.Title)
 	if err != nil {
-		log.Warn("Cannot create a namespace for new Account", zap.String("account", account.Uuid), zap.Error(err))
+		log.Warn("Cannot create a namespace for new Account", zap.String("account", acc.Uuid), zap.Error(err))
 		return
 	}
-	if err := ns_ctrl.Link(ctx, account, ns, access.ADMIN, roles.OWNER); err != nil {
-		log.Warn("Cannot link namespace with new Account", zap.String("account", account.Uuid), zap.String("namespace", string(ns.ID)), zap.Error(err))
+	if err := ns_ctrl.Link(ctx, acc, ns, access.ADMIN, roles.OWNER); err != nil {
+		log.Warn("Cannot link namespace with new Account", zap.String("account", acc.Uuid), zap.String("namespace", ns.ID().String()), zap.Error(err))
 		return
 	}
 }

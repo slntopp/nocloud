@@ -21,6 +21,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/access"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
@@ -28,6 +29,15 @@ import (
 type Node struct {
 	Collection string `json:"collection"`
 	Key        string `json:"key"`
+}
+
+type Accessible interface {
+	GetAccess() *access.Access
+}
+
+type Indentifiable interface {
+	GetAccess() *access.Access
+	ID() driver.DocumentID
 }
 
 type Deletable interface {
@@ -138,28 +148,27 @@ GRAPH @permissions SORT path.edges[0].level
 	})
 `
 
-type Accessible interface {
-	GetAccess() *access.Access
-}
+func GetWithAccess[T Indentifiable](ctx context.Context, db driver.Database, id driver.DocumentID) (T, error) {
+	var o T
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-func GetWithAccess(ctx context.Context, db driver.Database, acc, id driver.DocumentID, node Accessible) error {
 	vars := map[string]interface{}{
-		"account":     acc,
+		"account":     driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
 		"node":        id,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	}
 	c, err := db.Query(ctx, getWithAccessLevel, vars)
 	if err != nil {
-		return err
+		return o, err
 	}
 	defer c.Close()
 
-	_, err = c.ReadDocument(ctx, node)
+	_, err = c.ReadDocument(ctx, &o)
 	if err != nil {
-		return err
+		return o, err
 	}
 
-	return nil
+	return o, nil
 }
 
 const deleteEdgeQuery = `
