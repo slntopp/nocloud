@@ -88,6 +88,7 @@
                 style="background: var(--v-background-light-base)"
                 v-for="(group, i) in itemService.instancesGroups"
                 :key="i"
+                :disabled="!group.instances.length"
               >
                 <v-expansion-panel-header>
                   {{ group.title }} | Type: {{ group.type }} -
