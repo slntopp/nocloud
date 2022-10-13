@@ -394,16 +394,10 @@ export default {
       return this.template.secrets.vlans[this.vlansKey]?.start;
     },
     vlansRowCount() {
-      if (this.vlansCount < 300) {
+      if (this.vlansCount < 400) {
         return 1;
       }
-      if (this.vlansCount < 1000) {
-        return 4;
-      }
-      if (this.vlansCount < 2000) {
-        return 6;
-      }
-      return 8;
+      return this.vlansCount < 2000?4:8;
     },
   },
   watch: {
