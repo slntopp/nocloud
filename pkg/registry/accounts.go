@@ -115,7 +115,7 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	log.Debug("Requestor", zap.Any("account", acc))
 
 	var pool []graph.Account
-	pool, err = s.ctrl.List(ctx, acc, request.Depth)
+	pool, err = s.ctrl.List(ctx, acc, request.GetDepth())
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")

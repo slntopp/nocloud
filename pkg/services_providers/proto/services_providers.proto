@@ -19,6 +19,7 @@ package nocloud.services_providers;
 import "google/protobuf/struct.proto";
 import "google/api/annotations.proto";
 import "pkg/states/proto/states.proto";
+import "pkg/access/access.proto";
 
 message Var {
     map<string, google.protobuf.Value> value = 1;
@@ -49,6 +50,7 @@ message ServicesProvider {
 
     optional ProxyConf proxy = 10;
     repeated LocationConf locations = 11;
+    optional nocloud.access.Access access = 12;
 }
 
 message TestResponse {

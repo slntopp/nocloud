@@ -21,6 +21,7 @@ import "pkg/instances/proto/instances.proto";
 import "google/api/annotations.proto";
 import "pkg/hasher/hasherpb/hasher.proto";
 import "pkg/states/proto/states.proto";
+import "pkg/access/access.proto";
 
 enum ServiceStatus {
     UNSPECIFIED = 0;
@@ -43,7 +44,7 @@ message Service {
         [(nocloud.hasher.hashed) = true];
     repeated nocloud.instances.InstancesGroup instances_groups = 6;
     string hash = 7 [(nocloud.hasher.hash) = true];
-    optional int32 access_level = 8;
+    optional nocloud.access.Access access = 8;
 }
 
 message Services {

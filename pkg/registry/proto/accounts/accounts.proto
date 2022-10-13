@@ -17,6 +17,7 @@ syntax = "proto3";
 package nocloud.registry.accounts;
 
 import "google/protobuf/struct.proto";
+import "pkg/access/access.proto";
 
 message Credentials {
     string type = 1;
@@ -46,7 +47,7 @@ message Account {
     google.protobuf.Struct data = 3;
 
     optional double balance = 4;
-    optional int32 access_level = 5;
+    optional nocloud.access.Access access = 5;
 }
 
 message UpdateResponse {

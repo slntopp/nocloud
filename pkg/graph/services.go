@@ -194,12 +194,10 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service,
 const getServiceQuery = `
 LET service = (
     FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @service
-    GRAPH @permissions SORT path.edges[0].level
-    	RETURN MERGE(path.vertices[-1], {
-    	    access_level: path.edges[0].level ? : 0
-    	})
+    GRAPH @permissions SORT path.edges[0].level DESC
+		LET perm = path.edges[0]
+    	RETURN MERGE(path.vertices[-1], { access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key }})
 )[0]
-
 LET instances_groups = (
     FOR group IN 1 OUTBOUND service
     GRAPH @permissions
@@ -207,13 +205,13 @@ LET instances_groups = (
             FOR i IN 1 OUTBOUND group
             GRAPH @permissions
             FILTER IS_SAME_COLLECTION(@instances, i)
-                RETURN MERGE(i, { uuid: i._key }) )
+                RETURN MERGE(i, { uuid: i._key, access: service.access }) )
         LET sp = (
             FOR s IN 1 OUTBOUND group
             GRAPH @permissions
             FILTER IS_SAME_COLLECTION(@sps, s)
                 RETURN s._key )
-        RETURN MERGE(group, { uuid: group._key, instances, sp: sp[0] })
+        RETURN MERGE(group, { uuid: group._key, instances, sp: sp[0], access: service.access })
 )
 
 RETURN MERGE(service, { uuid: service._key, instances_groups })

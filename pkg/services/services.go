@@ -22,6 +22,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
+	accesspb "github.com/slntopp/nocloud/pkg/access"
 	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -375,7 +376,7 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.MGMT {
+	if service.GetAccess().GetLevel() < accesspb.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -475,7 +476,7 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.SUDO {
+	if service.GetAccess().GetLevel() < accesspb.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -513,7 +514,7 @@ func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendReq
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.SUDO {
+	if service.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -550,7 +551,7 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.MGMT {
+	if service.GetAccess().GetLevel() < accesspb.Level_MGMT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -640,7 +641,7 @@ func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.READ {
+	if service.GetAccess().GetLevel() < accesspb.Level_MGMT {
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
@@ -674,7 +675,7 @@ func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) 
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.ADMIN {
+	if service.GetAccess().GetLevel() < accesspb.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
@@ -694,7 +695,7 @@ func (s *ServicesServer) Stream(req *pb.StreamRequest, srv pb.ServicesService_St
 
 	messages := make(chan interface{}, 10)
 
-	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccessLevel() < access.READ {
+	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccess().GetLevel() < accesspb.Level_READ {
 		log.Warn("Failed access check", zap.String("uuid", req.GetUuid()))
 		return errors.New("failed access check")
 	}

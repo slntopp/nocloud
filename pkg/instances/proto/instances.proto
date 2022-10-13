@@ -22,6 +22,7 @@ import "pkg/states/proto/states.proto";
 import "pkg/billing/proto/billing.proto";
 import "pkg/services_providers/proto/services_providers.proto";
 import "google/api/annotations.proto";
+import "pkg/access/access.proto";
 
 enum InstanceStatus {
     UNSPECIFIED = 0;
@@ -47,7 +48,7 @@ message Instance {
     nocloud.billing.Plan billing_plan = 9
         [(nocloud.hasher.skipped) = true];
     optional string product = 10;
-    optional int32 access_level = 11;
+    optional nocloud.access.Access access = 11;
 }
 
 message InstancesGroup {
@@ -64,7 +65,7 @@ message InstancesGroup {
     map<string, google.protobuf.Value> data = 8;
     string hash = 9 [(nocloud.hasher.hash) = true];
     optional string sp = 10;
-    optional int32 access_level = 11;
+    optional nocloud.access.Access access = 11;
 }
 
 message TestInstancesGroupConfigRequest {

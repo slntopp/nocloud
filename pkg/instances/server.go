@@ -20,11 +20,11 @@ import (
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
+	accesspb "github.com/slntopp/nocloud/pkg/access"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
 	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	s "github.com/slntopp/nocloud/pkg/states"
 	"go.uber.org/zap"
@@ -96,7 +96,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if instance.AccessLevel == nil || *instance.AccessLevel < access.MGMT {
+	if instance.GetAccess().GetLevel() < accesspb.Level_MGMT {
 		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}

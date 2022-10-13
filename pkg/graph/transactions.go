@@ -46,7 +46,7 @@ func NewTransactionsController(logger *zap.Logger, db driver.Database) Transacti
 }
 
 func (ctrl *TransactionsController) Create(ctx context.Context, tx *pb.Transaction) (*Transaction, error) {
-	if tx.Account == "" {
+	if tx.GetAccount() == "" {
 		return nil, errors.New("account is required")
 	}
 	if tx.Total == 0 {

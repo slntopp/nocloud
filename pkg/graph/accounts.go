@@ -80,44 +80,25 @@ func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, er
 	return Account{&r, meta}, err
 }
 
-func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req_depth *int32) ([]Account, error) {
-	var depth int32
-	if req_depth == nil || *req_depth < 2 {
-		depth = 2
-	} else {
-		depth = *req_depth
+func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req_depth int32) ([]Account, error) {
+	me := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	if req_depth < 2 {
+		req_depth = 2
 	}
 
-	query := `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@accounts, node) RETURN node`
-	bindVars := map[string]interface{}{
-		"depth":             depth,
-		"account":           requestor.ID.String(),
-		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
-		"@accounts":         schema.ACCOUNTS_COL,
-	}
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
-
-	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	r, err := ListWithAccess[Account](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.ACCOUNTS_COL, req_depth)
 	if err != nil {
-		return nil, err
-	}
-	defer c.Close()
-
-	var r []Account
-	for {
-		var acc pb.Account
-		meta, err := c.ReadDocument(ctx, &acc)
-		if driver.IsNoMoreDocuments(err) {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		ctrl.log.Debug("Got document", zap.Any("account", &acc))
-		acc.Uuid = meta.ID.Key()
-		r = append(r, Account{&acc, meta})
+		return r, err
 	}
 
-	return r, nil
+	account, err := ctrl.Get(ctx, me)
+	if err != nil {
+		return r, err
+	}
+	r = append(r, account)
+
+	return r, err
 }
 
 func (ctrl *AccountsController) Exists(ctx context.Context, id string) (bool, error) {
