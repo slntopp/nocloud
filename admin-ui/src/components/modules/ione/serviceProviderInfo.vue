@@ -42,6 +42,9 @@
         >
         </v-text-field>
       </v-col>
+    </v-row>
+    <v-card-title class="px-0 mb-3"> Vlans:</v-card-title>
+    <v-row>
       <v-col>
         <v-text-field
           readonly
@@ -54,8 +57,8 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.vlans[vlansKey].size"
-          label="size"
+          :value="template.secrets.vlans[vlansKey].start"
+          label="start"
           style="display: inline-block; width: 330px"
         >
         </v-text-field>
@@ -63,8 +66,8 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.vlans[vlansKey].start"
-          label="start"
+          :value="template.secrets.vlans[vlansKey].size"
+          label="size"
           style="display: inline-block; width: 330px"
         >
         </v-text-field>
@@ -397,7 +400,7 @@ export default {
       if (this.vlansCount < 400) {
         return 1;
       }
-      return this.vlansCount < 2000?4:8;
+      return this.vlansCount < 2000 ? 4 : 8;
     },
   },
   watch: {
