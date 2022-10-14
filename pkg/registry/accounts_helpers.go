@@ -79,7 +79,7 @@ func _CreatePersonalNamespace(ctx context.Context, log *zap.Logger, ns_ctrl grap
 		return
 	}
 	if err := ns_ctrl.Link(ctx, acc, ns, access.ADMIN, roles.OWNER); err != nil {
-		log.Warn("Cannot link namespace with new Account", zap.String("account", acc.Uuid), zap.String("namespace", ns.ID().String()), zap.Error(err))
+		log.Warn("Cannot link namespace with new Account", zap.String("account", acc.Uuid), zap.String("namespace", ns.ID.String()), zap.Error(err))
 		return
 	}
 }

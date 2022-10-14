@@ -32,10 +32,6 @@ type Namespace struct {
 	driver.DocumentMeta
 }
 
-func (o Namespace) ID() driver.DocumentID {
-	return o.DocumentMeta.ID
-}
-
 type NamespacesController struct {
 	col driver.Collection
 	log *zap.Logger
@@ -61,7 +57,7 @@ func (ctrl *NamespacesController) Get(ctx context.Context, id string) (Namespace
 }
 
 func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, req_depth int32) ([]*namespaces.Namespace, error) {
-	return ListWithAccess[*namespaces.Namespace](ctx, ctrl.log, ctrl.col.Database(), requestor.ID(), schema.NAMESPACES_COL, req_depth)
+	return ListWithAccess[*namespaces.Namespace](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.NAMESPACES_COL, req_depth)
 }
 
 func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Namespace, error) {
@@ -96,7 +92,7 @@ func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Name
 }
 
 func (ns *Namespace) Delete(ctx context.Context, db driver.Database) error {
-	err := DeleteRecursive(ctx, db, ns.ID(), schema.PERMISSIONS_GRAPH.Name)
+	err := DeleteRecursive(ctx, db, ns.ID, schema.PERMISSIONS_GRAPH.Name)
 	if err != nil {
 		return err
 	}

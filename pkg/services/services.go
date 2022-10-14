@@ -235,7 +235,7 @@ func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateReque
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID().String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -255,7 +255,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID().String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}

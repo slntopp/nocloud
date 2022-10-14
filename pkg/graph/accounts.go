@@ -39,10 +39,6 @@ type Account struct {
 	driver.DocumentMeta
 }
 
-func (o Account) ID() driver.DocumentID {
-	return o.DocumentMeta.ID
-}
-
 type AccountsController struct {
 	col     driver.Collection // Accounts Collection
 	cred    driver.Collection // Credentials Collection
@@ -91,7 +87,7 @@ func (ctrl *AccountsController) List(ctx context.Context, requestor Account, req
 		req_depth = 2
 	}
 
-	r, err := ListWithAccess[Account](ctx, ctrl.log, ctrl.col.Database(), requestor.ID(), schema.ACCOUNTS_COL, req_depth)
+	r, err := ListWithAccess[Account](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.ACCOUNTS_COL, req_depth)
 	if err != nil {
 		return r, err
 	}
@@ -124,8 +120,8 @@ func (ctrl *AccountsController) Update(ctx context.Context, acc Account, patch m
 // Grant account access to namespace
 func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) error {
 	_, err := edge.CreateDocument(ctx, Access{
-		From:  acc.ID(),
-		To:    ns.ID(),
+		From:  acc.ID,
+		To:    ns.ID,
 		Level: level,
 		Role:  role,
 		DocumentMeta: driver.DocumentMeta{
@@ -138,8 +134,8 @@ func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, n
 // Grant namespace access to account
 func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) error {
 	_, err := edge.CreateDocument(ctx, Access{
-		From:  ns.ID(),
-		To:    acc.ID(),
+		From:  ns.ID,
+		To:    acc.ID,
 		Level: level,
 		Role:  role,
 		DocumentMeta: driver.DocumentMeta{
@@ -150,7 +146,7 @@ func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, n
 }
 
 func (acc *Account) Delete(ctx context.Context, db driver.Database) error {
-	err := DeleteRecursive(ctx, db, acc.ID(), schema.PERMISSIONS_GRAPH.Name)
+	err := DeleteRecursive(ctx, db, acc.ID, schema.PERMISSIONS_GRAPH.Name)
 	if err != nil {
 		return err
 	}
@@ -172,7 +168,7 @@ func (ctrl *AccountsController) SetCredentials(ctx context.Context, acc Account,
 		return status.Error(codes.Internal, "Couldn't create credentials")
 	}
 	_, err = edge.CreateDocument(ctx, credentials.Link{
-		From: acc.ID(),
+		From: acc.ID,
 		To:   cred.ID,
 		Type: c.Type(),
 		Role: role,

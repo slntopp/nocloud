@@ -40,10 +40,6 @@ type Instance struct {
 	*pb.Instance
 }
 
-func (o Instance) ID() driver.DocumentID {
-	return o.DocumentMeta.ID
-}
-
 type InstancesController struct {
 	col   driver.Collection // Instances Collection
 	graph driver.Graph

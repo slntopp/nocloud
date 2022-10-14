@@ -356,7 +356,7 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, n
 	ctrl.log.Debug("Joining service to namespace")
 	edge, _ := ctrl.db.Collection(ctx, schema.NS2SERV)
 	_, err := edge.CreateDocument(ctx, Access{
-		From:  ns.ID(),
+		From:  ns.ID,
 		To:    driver.NewDocumentID(schema.SERVICES_COL, service.Uuid),
 		Level: access,
 		Role:  role,

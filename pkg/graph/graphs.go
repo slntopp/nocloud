@@ -35,15 +35,6 @@ type Accessible interface {
 	GetAccess() *access.Access
 }
 
-type Indentifiable interface {
-	GetAccess() *access.Access
-	ID() driver.DocumentID
-}
-
-type Deletable interface {
-	Delete(context.Context, driver.Database) error
-}
-
 func DeleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID) error {
 	col, err := db.Collection(ctx, id.Collection())
 	if err != nil {
@@ -144,11 +135,12 @@ const getWithAccessLevel = `
 FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
 GRAPH @permissions SORT path.edges[0].level
 	RETURN MERGE(path.vertices[-1], {
-	    access: {level: path.edges[0].level ? : 0, uuid: path.vertices[-1]._key, role: path.edges[0].role ? : "none" }
+		uuid: path.vertices[-1]._key,
+	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none" }
 	})
 `
 
-func GetWithAccess[T Indentifiable](ctx context.Context, db driver.Database, id driver.DocumentID) (T, error) {
+func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id driver.DocumentID) (T, error) {
 	var o T
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
