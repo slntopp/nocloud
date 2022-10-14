@@ -230,7 +230,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -276,7 +276,7 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -335,7 +335,7 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 
 	ok := graph.HasAccess(
 		ctx, s.db, requestor,
-		driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY).String(), access.ADMIN)
+		driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.ADMIN)
 	if !ok {
 		r.Secrets = nil
 		r.Vars = nil
@@ -379,7 +379,7 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -400,7 +400,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}

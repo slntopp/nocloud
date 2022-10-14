@@ -17,7 +17,6 @@ package registry
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/arangodb/go-driver"
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -92,7 +91,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		return &accountspb.Account{Title: acc.Account.GetTitle()}, nil
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.READ)
+	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID, access.READ)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
@@ -146,7 +145,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	claims["exp"] = request.Exp
 
 	if request.GetRootClaim() {
-		ns := fmt.Sprintf("%s/0", schema.NAMESPACES_COL)
+		ns := driver.NewDocumentID(schema.NAMESPACES_COL, "0")
 		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, ns)
 		if !ok {
 			lvl = 0
@@ -156,7 +155,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	}
 
 	if sp := request.GetSpClaim(); sp != "" {
-		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp).String())
+		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp))
 		if !ok {
 			lvl = 0
 		}
@@ -186,7 +185,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return nil, err
 	}
 
-	ok, access_lvl := graph.AccessLevel(ctx, s.db, requestor, ns.ID.String())
+	ok, access_lvl := graph.AccessLevel(ctx, s.db, requestor, ns.ID)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "No Access")
 	} else if access_lvl < access.MGMT {
@@ -247,7 +246,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
@@ -306,7 +305,7 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, acc.ID, access.ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
@@ -349,7 +348,7 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, acc.ID, access.ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 

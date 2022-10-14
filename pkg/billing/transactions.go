@@ -38,7 +38,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	acc := requestor
 	if req.Account != nil {
 		acc = *req.Account
-		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc).String()
+		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
 		if !graph.HasAccess(ctx, s.db, requestor, node, access.ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
@@ -50,7 +50,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	}
 	if req.Service != nil {
 		service := *req.Service
-		node := driver.NewDocumentID(schema.SERVICES_COL, service).String()
+		node := driver.NewDocumentID(schema.SERVICES_COL, service)
 		if !graph.HasAccess(ctx, s.db, requestor, node, access.ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
@@ -92,7 +92,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("transaction", t), zap.String("requestor", requestor))
 
-	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY).String()
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.SUDO)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
@@ -124,7 +124,7 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessT
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
-	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY).String()
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.SUDO)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")

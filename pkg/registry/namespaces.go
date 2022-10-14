@@ -105,12 +105,12 @@ func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacesp
 
 	var ok bool
 	var level int32
-	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), acc.ID.String())
+	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), acc.ID)
 	if !ok || level < access.ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID.String())
+	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID)
 	if !ok || level < access.ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -144,7 +144,7 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 
-	ok, level := graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID.String())
+	ok, level := graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID)
 	if !ok || level < access.ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -176,7 +176,7 @@ func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespace
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
