@@ -149,7 +149,7 @@ export default {
     servecesInstancesItem,
     ConfirmDialog,
   },
-  mixins: [snackbar,search],
+  mixins: [snackbar, search],
   data: () => ({
     headers: [
       { text: "title", value: "title" },
@@ -288,11 +288,11 @@ export default {
       return dict[state] ?? "blue-grey darken-2";
     },
 
-    instanceCountColor(group){
-      if(group.instances.length){
-        return this.chipColor(group.status)
+    instanceCountColor(group) {
+      if (group.instances.length) {
+        return this.chipColor(group.status);
       }
-      return this.chipColor('DEL')
+      return this.chipColor("DEL");
     },
 
     deleteSelectedServices() {
