@@ -63,6 +63,7 @@ services:
       NOCLOUD_ROOT_PASSWORD: "${NOCLOUD_ROOT_PASS}"
       SIGNING_KEY: "${SIGNING_KEY}"
       SETTINGS_HOST: settings:8000
+      SERVICES_HOST: services-registry:8000
     depends_on:
       - db
     networks:
@@ -215,6 +216,7 @@ services:
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
+      REGISTRY_HOST: registry:8000
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     links:
       - db
@@ -248,7 +250,7 @@ services:
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
   
   driver-ione:
-    container_name: driver
+    container_name: driver-ione
     restart: always
     image: ghcr.io/slntopp/nocloud-driver-ione:latest
     networks:
@@ -261,6 +263,7 @@ services:
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       LOG_LEVEL: -1
       REDIS_HOST: redis_settings:6379
+
 networks:
   proxy:
     driver: bridge

@@ -59,6 +59,16 @@ service AccountsService {
             delete: "/accounts/{uuid}"
         };
     };
+    rpc Suspend(nocloud.registry.accounts.SuspendRequest) returns (nocloud.registry.accounts.SuspendResponse) {
+        option (google.api.http) = {
+            get: "/accounts/{uuid}/suspend"
+        };
+    };
+    rpc Unsuspend(nocloud.registry.accounts.UnsuspendRequest) returns (nocloud.registry.accounts.UnsuspendResponse) {
+        option (google.api.http) = {
+            get: "/accounts/{uuid}/unsuspend"
+        };
+    };
 }
 
 import "pkg/registry/proto/namespaces/namespaces.proto";

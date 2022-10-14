@@ -21,6 +21,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	jwt "github.com/golang-jwt/jwt/v4"
+	"github.com/spf13/viper"
 
 	"github.com/slntopp/nocloud/pkg/credentials"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -28,6 +29,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 
 	pb "github.com/slntopp/nocloud/pkg/registry/proto"
 	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
@@ -35,10 +37,28 @@ import (
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+var (
+	servicesClient servicespb.ServicesServiceClient
+)
+
+func init() {
+	viper.AutomaticEnv()
+	viper.SetDefault("SERVICES_HOST", "services-registry:8000")
+	servicesHost := viper.GetString("SERVICES_HOST")
+
+	servicesConn, err := grpc.Dial(servicesHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	servicesClient = servicespb.NewServicesServiceClient(servicesConn)
+}
 
 type AccountsServiceServer struct {
 	pb.UnimplementedAccountsServiceServer
@@ -70,6 +90,104 @@ func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.Se
 	)
 }
 
+const getOwnServices = `
+FOR node, edge, path IN 2 OUTBOUND @account
+    GRAPH Permissions
+    FILTER path.edges[*].role == ["owner","owner"]
+    FILTER IS_SAME_COLLECTION(node, Services)
+    RETURN node._key
+`
+
+func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.SuspendRequest) (*accountspb.SuspendResponse, error) {
+	log := s.log.Named("SuspendAccount")
+	log.Debug("Suspend request received", zap.Any("request", req), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	cursor, err := s.db.Query(ctx, getOwnServices, map[string]interface{}{
+		"account": req.Uuid,
+	})
+	if err != nil {
+		log.Error("Error Quering Services to Suspend", zap.Error(err))
+		return &accountspb.SuspendResponse{Result: false}, err
+	}
+	defer cursor.Close()
+
+	for {
+		var serviceUuid string
+		meta, err := cursor.ReadDocument(ctx, &serviceUuid)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			log.Error("Error Reading Service UUID", zap.Error(err), zap.Any("meta", meta))
+			continue
+		}
+		if _, err := servicesClient.Suspend(ctx, &servicespb.SuspendRequest{Uuid: serviceUuid}); err != nil {
+			log.Error("Error Suspending Service", zap.Error(err))
+		}
+	}
+
+	acc, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		log.Debug("Error getting account", zap.String("requested_id", req.Uuid), zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if err := s.ctrl.Update(ctx, acc, map[string]interface{}{"suspended": true}); err != nil {
+		log.Debug("Error updating account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while updating account")
+	}
+
+	log.Debug("Suspend request end")
+	return &accountspb.SuspendResponse{Result: true}, nil
+}
+
+func (s *AccountsServiceServer) Unsuspend(ctx context.Context, req *accountspb.UnsuspendRequest) (*accountspb.UnsuspendResponse, error) {
+	log := s.log.Named("UnsuspendAccount")
+	log.Debug("Unsuspend request received", zap.Any("request", req), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	cursor, err := s.db.Query(ctx, getOwnServices, map[string]interface{}{
+		"account": req.Uuid,
+	})
+	if err != nil {
+		log.Error("Error Quering Services to Unsuspend", zap.Error(err))
+		return &accountspb.UnsuspendResponse{Result: false}, err
+	}
+	defer cursor.Close()
+
+	for {
+		var serviceUuid string
+		meta, err := cursor.ReadDocument(ctx, &serviceUuid)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			log.Error("Error Reading Service UUID", zap.Error(err), zap.Any("meta", meta))
+			continue
+		}
+		if _, err := servicesClient.Suspend(ctx, &servicespb.SuspendRequest{Uuid: serviceUuid}); err != nil {
+			log.Error("Error Unsuspending Service", zap.Error(err))
+		}
+	}
+
+	acc, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		log.Debug("Error getting account", zap.String("requested_id", req.GetUuid()), zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if err := s.ctrl.Update(ctx, acc, map[string]interface{}{"suspended": false}); err != nil {
+		log.Debug("Error updating account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while updating account")
+	}
+
+	log.Debug("Unsuspend request end")
+	return &accountspb.UnsuspendResponse{Result: true}, nil
+}
+
 func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.GetRequest) (*accountspb.Account, error) {
 	log := s.log.Named("GetAccount")
 	log.Debug("Get request received", zap.Any("request", request), zap.Any("context", ctx))
@@ -91,6 +209,11 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.READ)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	ok = graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.SUDO)
+	if !ok {
+		acc.SuspendConf = nil
 	}
 
 	return acc.Account, nil
@@ -118,8 +241,12 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	}
 	log.Debug("List result", zap.Any("pool", pool))
 
+	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.SUDO)
 	result := make([]*accountspb.Account, len(pool))
 	for i, acc := range pool {
+		if !ok {
+			acc.Account.SuspendConf = nil
+		}
 		result[i] = acc.Account
 	}
 	log.Debug("Convert result", zap.Any("pool", result))
@@ -246,6 +373,12 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	ok = graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.SUDO)
+	if !ok {
+		request.SuspendConf = nil
+		request.Suspended = nil
 	}
 
 	patch := make(map[string]interface{})

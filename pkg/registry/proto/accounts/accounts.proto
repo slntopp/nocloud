@@ -39,6 +39,11 @@ message GetRequest {
     bool public = 2;
 }
 
+message SuspendConf {
+    optional bool immune = 1;
+    optional float limit = 2;
+}
+
 message Account {
     string uuid = 1;
     string title = 2;
@@ -47,6 +52,8 @@ message Account {
 
     optional double balance = 4;
     optional int32 access_level = 5;
+    optional SuspendConf suspend_conf = 6;
+    optional bool suspended = 7;
 }
 
 message UpdateResponse {
@@ -88,5 +95,21 @@ message DeleteRequest {
 }
 
 message DeleteResponse {
+    bool result = 1;
+}
+
+message SuspendRequest {
+    string uuid = 1;
+}
+
+message SuspendResponse {
+    bool result = 1;
+}
+
+message UnsuspendRequest {
+    string uuid = 1;
+}
+
+message UnsuspendResponse {
     bool result = 1;
 }

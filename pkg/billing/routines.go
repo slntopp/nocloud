@@ -19,8 +19,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/arangodb/go-driver"
 	hpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	regpb "github.com/slntopp/nocloud/pkg/registry/proto"
+	accpb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"github.com/spf13/viper"
@@ -31,44 +34,122 @@ import (
 
 var (
 	settingsClient settingspb.SettingsServiceClient
+	accClient      regpb.AccountsServiceClient
 )
 
 // Settings Key storing routine conf
-const monFreqKey string = "billing-gen-transactions-routine"
+const (
+	monFreqKey string = "billing-gen-transactions-routine"
+	suspKey    string = "global-suspend-conf"
+)
 
 type RoutineConf struct {
 	Frequency int `json:"freq"` // Frequency in Seconds
 }
 
+type SuspendSchedule struct {
+	Day  int  `json:"day"`
+	Off  bool `json:"off"`
+	From int  `json:"from"`
+	To   int  `json:"to"`
+}
+
+type SuspendConf struct {
+	IsEnabled      bool              `json:"is_enabled"`
+	Limit          float64           `json:"limit"`
+	Schedule       []SuspendSchedule `json:"schedule"`
+	IsExtraEnabled bool              `json:"is_extra_enabled"`
+	ExtraLimit     float64           `json:"extra_limit"`
+}
+
 var (
-	defaultSetting = &sc.Setting[RoutineConf]{
+	routineSetting = &sc.Setting[RoutineConf]{
 		Value: RoutineConf{
 			Frequency: 60,
 		},
 		Description: "Transactions Generating and Processing Routine Configuration",
 		Public:      false,
 	}
+	suspendedSetting = &sc.Setting[SuspendConf]{
+		Value: SuspendConf{
+			IsEnabled: true,
+			Limit:     10,
+			Schedule: []SuspendSchedule{
+				{
+					Day: 0,
+					Off: true,
+				},
+				{
+					Day:  1,
+					From: 10,
+					To:   22,
+				},
+				{
+					Day:  2,
+					From: 10,
+					To:   22,
+				},
+				{
+					Day:  3,
+					From: 10,
+					To:   22,
+				},
+				{
+					Day:  4,
+					From: 10,
+					To:   22,
+				},
+				{
+					Day:  5,
+					From: 10,
+					To:   22,
+				},
+				{
+					Day: 6,
+					Off: true,
+				},
+			},
+			// IsExtraEnabled: true,
+			// ExtraLimit: -100,
+		},
+	}
 )
 
 func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
-	host := viper.GetString("SETTINGS_HOST")
+	viper.SetDefault("REGISTRY_HOST", "registry:8000")
+	settingsHost := viper.GetString("SETTINGS_HOST")
+	registryHost := viper.GetString("REGISTRY_HOST")
 
-	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)
 	}
+	settingsClient = settingspb.NewSettingsServiceClient(settingsConn)
 
-	settingsClient = settingspb.NewSettingsServiceClient(conn)
+	accConn, err := grpc.Dial(registryHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	accClient = regpb.NewAccountsServiceClient(accConn)
 }
 
-func MakeConf(ctx context.Context, log *zap.Logger) (conf RoutineConf) {
+func MakeRoutineConf(ctx context.Context, log *zap.Logger) (conf RoutineConf) {
 	sc.Setup(log, ctx, &settingsClient)
 
-	err := sc.Fetch(monFreqKey, &conf, defaultSetting)
-	if err != nil {
-		return defaultSetting.Value
+	if err := sc.Fetch(monFreqKey, &conf, routineSetting); err != nil {
+		conf = routineSetting.Value
+	}
+
+	return conf
+}
+
+func MakeSuspendConf(ctx context.Context, log *zap.Logger) (conf SuspendConf) {
+	sc.Setup(log, ctx, &settingsClient)
+
+	if err := sc.Fetch(suspKey, &conf, suspendedSetting); err != nil {
+		conf = suspendedSetting.Value
 	}
 
 	return conf
@@ -83,11 +164,15 @@ func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatu
 func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 	log := s.log.Named("Routine")
 
-	conf := MakeConf(ctx, log)
-	log.Info("Got Configuration", zap.Any("conf", conf))
-	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
+	routineConf := MakeRoutineConf(ctx, log)
+	log.Info("Got Configuration", zap.Any("routine", routineConf))
+
+	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
 	tick := time.Now()
 	for {
+		suspConf := MakeSuspendConf(ctx, log)
+		log.Info("Got Configuration", zap.Any("suspend", suspConf))
+
 		log.Info("Starting Generating Transactions Sub-Routine", zap.Time("tick", tick))
 		s.gen.Status.Status = hpb.Status_RUNNING
 		s.gen.Status.Error = nil
@@ -124,10 +209,121 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			s.proc.Status.Error = &err_s
 		}
 
+		cursor, err := s.db.Query(ctx, accToSuspend, map[string]interface{}{
+			"conf": suspConf,
+		})
+		if err != nil {
+			log.Error("Error Quering Accounts to Suspend", zap.Error(err))
+		}
+		defer cursor.Close()
+
+		for {
+			acc := &accpb.Account{}
+			meta, err := cursor.ReadDocument(ctx, &acc)
+			if driver.IsNoMoreDocuments(err) {
+				break
+			} else if err != nil {
+				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
+				continue
+			}
+			// log.Debug("acc", zap.String("uuid", acc.GetUuid()), zap.Any("value", acc))
+			if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+				log.Error("Error Suspending Account", zap.Error(err))
+			}
+		}
+
+		cursor2, err := s.db.Query(ctx, accToUnsuspend, map[string]interface{}{
+			"conf": suspConf,
+		})
+		if err != nil {
+			log.Error("Error Quering Accounts to Unsuspend", zap.Error(err))
+		}
+		defer cursor2.Close()
+
+		for {
+			acc := &accpb.Account{}
+			meta, err := cursor2.ReadDocument(ctx, &acc)
+			if driver.IsNoMoreDocuments(err) {
+				break
+			} else if err != nil {
+				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
+				continue
+			}
+			// log.Debug("acc", zap.String("uuid", acc.GetUuid()), zap.Any("value", acc))
+			if _, err := accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+				log.Error("Error Unsuspending Account", zap.Error(err))
+			}
+		}
+
 		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		tick = <-ticker.C
 	}
 }
+
+const accToUnsuspend = `
+let conf = @conf
+
+let local = (
+    for acc in Accounts
+        filter acc.suspended
+        filter acc.suspend['limit'] && (acc.balance > acc.suspend['limit'])
+        return acc
+)
+    
+let global = (
+    for acc in Accounts
+        filter acc.suspended
+        filter acc.balance > conf['limit']
+        filter acc.balance > acc.suspend['limit']
+        return acc
+)
+
+FOR acc IN union_distinct(local, global)
+    RETURN MERGE(acc, {uuid:acc._key})
+`
+
+const accToSuspend = `
+LET conf = @conf
+
+LET now = DATE_NOW()
+LET day = DATE_DAYOFWEEK(now)
+LET hour = DATE_HOUR(now)
+LET now_matching = !conf.schedule[day].off && hour >= conf.schedule[day].from && hour <= conf.schedule[day].to
+
+LET candidates = (
+    FOR acc IN Accounts
+        FILTER acc.balance != null
+		FILTER !acc.suspended
+        FILTER !acc.suspend_conf.immune
+        return acc
+)
+
+LET global = (
+    FOR acc IN candidates
+        FILTER now_matching
+        FILTER conf.is_enabled
+        FILTER acc.balance <= conf['limit']
+        FILTER (acc.balance - acc.suspend_conf['limit']) <= 0
+        RETURN acc
+)
+
+LET extra = (
+    FOR acc IN candidates
+        FILTER conf.is_extra_enabled
+        FILTER acc.balance <= conf.extra_limit
+        RETURN acc
+)
+
+LET local = (
+    FOR acc IN candidates
+		FILTER now_matching
+        FILTER acc.balance <= acc.suspend_conf['limit']
+        RETURN acc
+)
+
+FOR acc IN UNION_DISTINCT(global, local, extra)
+	RETURN MERGE(acc, {uuid: acc._key})
+`
 
 const generateTransactions = `
 FOR service IN @@services // Iterate over Services
