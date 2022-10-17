@@ -228,7 +228,7 @@ export default {
         }
       }
 
-      this.setValue(index + ".config.template_id", osId);
+      this.setValue(index + ".config.template_id", +osId);
     },
     getPlanProducts(index){
       if(!this.instances[index].billing_plan.products){

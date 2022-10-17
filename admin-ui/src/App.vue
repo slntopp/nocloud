@@ -1,5 +1,5 @@
 <template>
-  <v-app :style="{ background: $vuetify.theme.themes.dark.background }">
+  <v-app v-if="!isVNC" :style="{ background: $vuetify.theme.themes.dark.background }">
     <v-navigation-drawer
       app
       permanent
@@ -209,7 +209,6 @@
           </v-menu>
         </v-col>
       </v-row>
-
       <v-spacer></v-spacer>
     </v-app-bar>
 
@@ -217,6 +216,7 @@
       <router-view />
     </v-main>
   </v-app>
+  <router-view v-else/>
 </template>
 
 <script>
@@ -290,6 +290,9 @@ export default {
         this.$store.commit("appSearch/setSearchParam", newValue);
       },
     },
+    isVNC(){
+      return this.$route.path.includes('vnc')
+    }
   },
   created() {
     this.$store.dispatch("auth/load");

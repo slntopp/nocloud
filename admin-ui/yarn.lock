@@ -6356,6 +6356,11 @@ vary@~1.1.2:
   resolved "https://registry.npmjs.org/vary/-/vary-1.1.2.tgz"
   integrity sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==
 
+vnc-ui-vue@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/vnc-ui-vue/-/vnc-ui-vue-1.0.0.tgz#85146d4fbe239a7d9d76a615f15b1adf0c40c5f2"
+  integrity sha512-cUHef7fLPR6u6hR7Igeu7h+JMPeIwI9vRW0zdQqKnmidQSndaBV4uB7QgDFo2TcYqy/C+Wn+tmfFLDnUmYsGUg==
+
 vue-apexcharts@^1.6.2:
   version "1.6.2"
   resolved "https://registry.npmjs.org/vue-apexcharts/-/vue-apexcharts-1.6.2.tgz"

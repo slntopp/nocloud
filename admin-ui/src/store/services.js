@@ -54,7 +54,6 @@ export default {
       state.services = state.services.map((serv) =>
         serv.uuid === service.uuid ? service : serv
       );
-      console.log( state.services)
     },
     updateInstance(state, { value, uuid }) {
       const i = state.services.findIndex((el) =>
