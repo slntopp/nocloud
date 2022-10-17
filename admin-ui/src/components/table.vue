@@ -22,17 +22,23 @@
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
-        <v-chip color="gray">
+        <v-chip v-if="isKeyInCircle" color="gray">
           {{ props.value }}
         </v-chip>
+        <template v-else>
+          {{ props.value }}
+        </template>
         <v-btn icon @click="hideID(props.index)">
           <v-icon>mdi-close-circle-outline</v-icon>
         </v-btn>
       </template>
       <template v-else>
-        <v-chip color="gray">
+        <v-chip v-if="isKeyInCircle" color="gray">
           {{ makeIdShort(props.value) }}
         </v-chip>
+        <template v-else>
+          {{ makeIdShort(props.value) }}
+        </template>
         <v-btn icon @click="showID(props.index)">
           <v-icon>mdi-eye-outline</v-icon>
         </v-btn>
@@ -144,6 +150,10 @@ export default {
     "footer-error": {
       type: String,
       default: "",
+    },
+    isKeyInCircle: {
+      type: Boolean,
+      default: true,
     },
   },
   data() {

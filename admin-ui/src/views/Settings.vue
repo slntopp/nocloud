@@ -71,6 +71,7 @@
     </div>
 
     <nocloud-table
+      :isKeyInCircle="false"
       item-key="key"
       :loading="loading"
       :headers="headers"
