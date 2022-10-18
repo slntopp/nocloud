@@ -14,10 +14,15 @@ jobs:
 
       - name: Set target tags
         id: set-tags-matrix
-        run: echo "::set-output name=matrix::$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')"
+        run: |
+          TAGS_JSON=$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')
+          echo "matrix=$TAGS_JSON" >> $GITHUB_OUTPUT
+          echo "### Discovered Containers :whale:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for title in $(echo $TAGS_JSON | jq -r '.[]'); do
+            echo "* $title" |  tr '-' ' ' >> $GITHUB_STEP_SUMMARY
+          done
 
-    outputs:
-      matrix: ${{steps.set-tags-matrix.outputs.matrix}}
   clean-ghcr-base:
     name: Cleanup Base Image
     runs-on: ubuntu-latest
@@ -62,7 +67,7 @@ jobs:
     needs: [prepare]
     strategy:
       matrix:
-        tag: ${{fromJson(needs.prepare.outputs.matrix)}}
+        tag: ${{fromJson(needs.prepare.steps.set-tags-matrix.outputs.matrix)}}
     steps:
       - name: Untagged Images (> 1 day)
         id: untagged
