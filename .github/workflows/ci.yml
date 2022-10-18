@@ -29,7 +29,7 @@ jobs:
 
       - name: Set target tags
         id: set-tags-matrix
-        run: echo "matrix=$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')" >> $GITHUB_ENV
+        run: echo "matrix=$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')" >> $GITHUB_OUTPUT
 
   wait-for-checks:
     runs-on: ubuntu-latest
@@ -80,7 +80,7 @@ jobs:
     needs: [prepare, build-and-push-base-image]
     strategy:
       matrix:
-        tag: ${{fromJson(env.matrix)}}
+        tag: ${{fromJson(needs.prepare.steps.set-tags-matrix.outputs.matrix)}}
     permissions:
       contents: read
       packages: write
