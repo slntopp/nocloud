@@ -37,6 +37,12 @@ jobs:
           for title in $(echo $TAGS_JSON | jq -r '.[]'); do
             echo "* $title" |  tr '-' ' ' >> $GITHUB_STEP_SUMMARY
           done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Raw" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "$TAGS_JSON" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
 
   wait-for-checks:
     runs-on: ubuntu-latest
