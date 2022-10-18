@@ -68,7 +68,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v4.0.1
+        uses: docker/metadata-action@v4.1.1
         with:
           tags: type=raw,value=${{env.IMAGE_TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/base
