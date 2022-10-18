@@ -43,7 +43,8 @@ jobs:
           echo "```" >> $GITHUB_STEP_SUMMARY
           echo "$TAGS_JSON" >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
-
+    outputs:
+      matrix: ${{ steps.set-tags-matrix.outputs.matrix }}
   wait-for-checks:
     runs-on: ubuntu-latest
     steps:
@@ -93,7 +94,7 @@ jobs:
     needs: [prepare, build-and-push-base-image]
     strategy:
       matrix:
-        tag: ${{fromJson(needs.prepare.steps.set-tags-matrix.outputs.matrix)}}
+        tag: ${{fromJson(needs.prepare.outputs.matrix)}}
     permissions:
       contents: read
       packages: write
