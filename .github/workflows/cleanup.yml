@@ -37,10 +37,14 @@ jobs:
           untagged-only: true
           token: ${{ secrets.PACKAGES_PAT }}
       - run: |
-          echo "### Deleted Untagged Images of Base :wastebasket:" >> $GITHUB_STEP_SUMMARY
+          echo "### Deleted Untagged Images:wastebasket:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          for c in $(echo ${{ steps.untagged-base.deleted }} | sed "s/,/ /g")
-          do
+          for c in $(echo ${{ steps.untagged-base.deleted }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "### Failed to delete Untagged Images :warning:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.untagged-base.failed }} | sed "s/,/ /g"); do
               echo " - $c" >> $GITHUB_STEP_SUMMARY
           done
 
@@ -55,10 +59,14 @@ jobs:
           filter-include-untagged: true
           token: ${{ secrets.PACKAGES_PAT }}
       - run: |
-          echo "### Deleted Dev Images of Base :wastebasket:" >> $GITHUB_STEP_SUMMARY
+          echo "### Deleted Dev Images :wastebasket:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          for c in $(echo ${{ steps.dev-base.deleted }} | sed "s/,/ /g")
-          do
+          for c in $(echo ${{ steps.dev-base.deleted }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "### Failed to delete Untagged Images :warning:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.dev-base.failed }} | sed "s/,/ /g"); do
               echo " - $c" >> $GITHUB_STEP_SUMMARY
           done
   clean-ghcr:
@@ -81,8 +89,12 @@ jobs:
       - run: |
           echo "### Deleted Untagged Images :wastebasket:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          for c in $(echo ${{ steps.untagged.deleted }} | sed "s/,/ /g")
-          do
+          for c in $(echo ${{ steps.untagged.deleted }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "### Failed to delete Untagged Images :warning:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.untagged.failed }} | sed "s/,/ /g"); do
               echo " - $c" >> $GITHUB_STEP_SUMMARY
           done
 
@@ -99,7 +111,11 @@ jobs:
       - run: |
           echo "### Deleted Dev Images :wastebasket:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          for c in $(echo ${{ steps.dev.deleted }} | sed "s/,/ /g")
-          do
+          for c in $(echo ${{ steps.dev.deleted }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "### Failed to delete Untagged Images :warning:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.dev.failed }} | sed "s/,/ /g"); do
               echo " - $c" >> $GITHUB_STEP_SUMMARY
           done
