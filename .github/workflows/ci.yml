@@ -128,9 +128,10 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: IMAGE_TAG=${{env.IMAGE_TAG}}
 
-      - run: |
-          echo "### :whale: Published new image with ID: ${{ steps.build.outputs.imageid }}" >> $GITHUB_STEP_SUMMARY
+      - name: Summary
+        run: |
+          echo "### :whale: Published new image: ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
-          echo "${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.build.outputs.imageid }}" >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
