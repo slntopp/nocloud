@@ -34,7 +34,7 @@ jobs:
           echo "matrix=$TAGS_JSON" >> $GITHUB_OUTPUT
           echo "### Discovered Containers :whale:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          for title in $(echo $TEST | jq -r '.[]'); do
+          for title in $(echo $TAGS_JSON | jq -r '.[]'); do
             echo "* $title" |  tr '-' ' ' >> $GITHUB_STEP_SUMMARY
           done
 
