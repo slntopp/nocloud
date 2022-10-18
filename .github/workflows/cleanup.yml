@@ -75,7 +75,7 @@ jobs:
     needs: [prepare]
     strategy:
       matrix:
-        tag: ${{fromJson(needs.prepare.steps.set-tags-matrix.outputs.matrix)}}
+        tag: ${{fromJson(needs.prepare.outputs.matrix)}}
     steps:
       - name: Untagged Images (> 1 day)
         id: untagged
