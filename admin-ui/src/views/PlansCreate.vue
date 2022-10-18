@@ -1,6 +1,17 @@
 <template>
   <div class="pa-4">
-    <h1 class="page__title" v-if="!item">Create plan</h1>
+    <div class="d-flex">
+      <h1 class="page__title" v-if="!item">Create plan</h1>
+      <v-icon
+      class="mx-3"
+      large
+      color="light"
+      @click="openPlanWiki"
+    >
+      mdi-information-outline
+    </v-icon>
+    </div>
+  
     <v-form v-model="isValid" ref="form">
       <v-row>
         <v-col lg="6" cols="12">
@@ -35,11 +46,12 @@
             </v-col>
             <v-col cols="9">
               <v-radio-group row mandatory>
-                <confirm-dialog v-for="item in kinds"  @confirm="changePlan(item)" :key="item">
-                  <v-radio
-                    :value="item"
-                    :label="item.toLowerCase()"
-                  />
+                <confirm-dialog
+                  v-for="item in kinds"
+                  @confirm="changePlan(item)"
+                  :key="item"
+                >
+                  <v-radio :value="item" :label="item.toLowerCase()" />
                 </confirm-dialog>
               </v-radio-group>
             </v-col>
@@ -157,7 +169,7 @@ import ConfirmDialog from "../components/confirmDialog.vue";
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  components:{ConfirmDialog},
+  components: { ConfirmDialog },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
@@ -450,8 +462,11 @@ export default {
         resources: this.item.resources,
       };
     },
-    changePlan(item){
-      this.plan.kind=item
+    changePlan(item) {
+      this.plan.kind = item;
+    },
+    openPlanWiki(){
+      window.open('https://github.com/slntopp/nocloud/wiki/Billing-Plans', '_blank');
     }
   },
   created() {
