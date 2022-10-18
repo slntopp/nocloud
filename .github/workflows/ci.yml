@@ -40,7 +40,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Raw" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "```json" >> $GITHUB_STEP_SUMMARY
           echo "$TAGS_JSON" >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
     outputs:
@@ -130,8 +130,12 @@ jobs:
 
       - name: Summary
         run: |
-          echo "### :whale: Published new image: ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}" >> $GITHUB_STEP_SUMMARY
+          echo "### :whale: Published new image" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "`docker pull ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}:${{env.IMAGE_TAG}}`"
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.build.outputs.imageid }}" >> $GITHUB_STEP_SUMMARY
           echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Operator would automatically pull new image, otherwise use the command above"
