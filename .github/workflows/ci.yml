@@ -29,7 +29,13 @@ jobs:
 
       - name: Set target tags
         id: set-tags-matrix
-        run: echo "matrix=$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')" >> $GITHUB_OUTPUT
+        run: |
+          TAGS_JSON=$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')
+          echo "matrix=$TAGS_JSON" >> $GITHUB_OUTPUT
+          echo "### Discovered Containers :whale:\n" >> $GITHUB_STEP_SUMMARY
+          for title in $(echo $TEST | jq -r '.[]'); do
+            echo "* $title" |  tr '-' ' ' >> $GITHUB_STEP_SUMMARY
+          done
 
   wait-for-checks:
     runs-on: ubuntu-latest
