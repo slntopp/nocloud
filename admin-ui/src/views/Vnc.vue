@@ -372,6 +372,8 @@ export default {
   name: "vnc-view",
   data: () => ({ desktopName: "", token: "", url: "", rfb: null }),
   created() {
+    document.title = `Console ${this.instanceId} | NoCloud`;
+
     const instances = this.$store.getters["vnc/getInstances"];
     if (instances.length > 0) return;
 

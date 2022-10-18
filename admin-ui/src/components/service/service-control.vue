@@ -91,7 +91,7 @@ export default {
         });
     },
     openVnc(){
-      this.$router.push({name:'vnc',params:{instanceId:this.instance_uuid}})
+      this.$router.push({name:'Vnc',params:{instanceId:this.instance_uuid}})
     },
     deleteInstance() {
       const newService = JSON.parse(JSON.stringify(this.service));
