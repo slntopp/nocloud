@@ -29,19 +29,18 @@
               />
             </v-col>
           </v-row>
-
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Plan kind</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-radio-group row mandatory v-model="plan.kind">
-                <v-radio
-                  v-for="item of kinds"
-                  :key="item"
-                  :value="item"
-                  :label="item.toLowerCase()"
-                />
+              <v-radio-group row mandatory>
+                <confirm-dialog v-for="item in kinds"  @confirm="changePlan(item)" :key="item">
+                  <v-radio
+                    :value="item"
+                    :label="item.toLowerCase()"
+                  />
+                </confirm-dialog>
               </v-radio-group>
             </v-col>
           </v-row>
@@ -153,10 +152,12 @@
 <script>
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
+import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
+  components:{ConfirmDialog},
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
@@ -449,6 +450,9 @@ export default {
         resources: this.item.resources,
       };
     },
+    changePlan(item){
+      this.plan.kind=item
+    }
   },
   created() {
     if (this.isEdit) {
@@ -500,6 +504,7 @@ export default {
       }
     },
     "plan.kind"() {
+      this.form.titles = [];
       if (this.plan.kind === "STATIC") {
         if (!this.isEdit) {
           this.plan.products = {};
