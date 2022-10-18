@@ -114,6 +114,14 @@ const routes = [
     },
   },
   {
+    path: "/instances/:instanceId/vnc",
+    component: () => import("../components/vnc.vue"),
+    name: "vnc",
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/login",
     name: "Login",
     component: () =>

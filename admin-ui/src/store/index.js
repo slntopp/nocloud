@@ -13,6 +13,7 @@ import services from "./services";
 import plans from "./plans";
 import transactions from "./transactions";
 import appSearch from "./appSearch";
+import vnc from "./vnc";
 
 Vue.use(Vuex);
 
@@ -31,6 +32,7 @@ export default new Vuex.Store({
     reloadBtn,
     plans,
     transactions,
-    appSearch
+    appSearch,
+    vnc
   },
 });
