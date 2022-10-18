@@ -119,6 +119,7 @@ jobs:
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v3.2.0
+        id: build
         with:
           context: .
           file: Dockerfiles/${{matrix.tag}}/Dockerfile
@@ -126,3 +127,10 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: IMAGE_TAG=${{env.IMAGE_TAG}}
+
+      - run: |
+          echo "### :whale: Published new image with ID: ${{ steps.build.outputs.imageid }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.build.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "```" >> $GITHUB_STEP_SUMMARY
