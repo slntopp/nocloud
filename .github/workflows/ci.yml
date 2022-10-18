@@ -9,6 +9,7 @@ on:
 
     paths-ignore:
       - ".github/workflows/**"
+      - "!.github/workflows/ci.yml"
       - "examples/**"
       - "proto/**"
       - "tools/**/*.sh"
