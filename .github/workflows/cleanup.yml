@@ -22,6 +22,8 @@ jobs:
           for title in $(echo $TAGS_JSON | jq -r '.[]'); do
             echo "* $title" |  tr '-' ' ' >> $GITHUB_STEP_SUMMARY
           done
+    outputs:
+      matrix: ${{ steps.set-tags-matrix.outputs.matrix }}
 
   clean-ghcr-base:
     name: Cleanup Base Image
