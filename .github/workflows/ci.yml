@@ -40,9 +40,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Raw" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "```json" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
           echo "$TAGS_JSON" >> $GITHUB_STEP_SUMMARY
-          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
     outputs:
       matrix: ${{ steps.set-tags-matrix.outputs.matrix }}
   wait-for-checks:
@@ -132,10 +132,10 @@ jobs:
         run: |
           echo "### :whale: Published new image" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "`docker pull ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}:${{env.IMAGE_TAG}}`"
+          echo '`docker pull ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}:${{env.IMAGE_TAG}}`' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
           echo "${{ steps.build.outputs.imageid }}" >> $GITHUB_STEP_SUMMARY
-          echo "```" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "> Operator would automatically pull new image, otherwise use the command above"
+          echo "> Operator would automatically pull new image, otherwise use the command above" >> $GITHUB_STEP_SUMMARY
