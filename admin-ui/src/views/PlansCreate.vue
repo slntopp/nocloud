@@ -179,7 +179,7 @@ export default {
       title: "",
       type: "custom",
       kind: "",
-      public: false,
+      public: true,
       resources: [],
       products: {},
     },
