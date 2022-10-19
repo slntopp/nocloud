@@ -12,7 +12,7 @@
         >
           {{ btn.title || btn.action }}
         </v-btn>
-        <v-btn @click="openVnc" class="mr-2" v-if="serviceType==='ione'"> vnc </v-btn>
+        <v-btn @click="openVnc" class="mr-2" v-if="serviceType==='ione'"> console </v-btn>
         <v-btn :loading="actionLoading" @click="deleteInstance"> Delete </v-btn>
       </v-col>
     </v-row>
@@ -91,7 +91,7 @@ export default {
         });
     },
     openVnc(){
-      this.$router.push({name:'vnc',params:{instanceId:this.instance_uuid}})
+      this.$router.push({name:'Vnc',params:{instanceId:this.instance_uuid}})
     },
     deleteInstance() {
       const newService = JSON.parse(JSON.stringify(this.service));
