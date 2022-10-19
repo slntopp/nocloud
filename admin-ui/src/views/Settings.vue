@@ -1,6 +1,9 @@
 <template>
   <div class="settings pa-4">
     <div class="buttons__inline pb-4">
+      <v-btn color="background-light" class="mr-2" to="/settigns/app">
+        app settings
+      </v-btn>
       <v-menu
         offset-y
         transition="slide-y-transition"

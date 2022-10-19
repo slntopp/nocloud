@@ -90,6 +90,14 @@ const routes = [
     },
   },
   {
+    path:'/settigns/app',
+    name:'AppSetting',
+    component: () => import("../views/AppSettings.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/services",
     name: "Services",
     component: () => import("../views/Services.vue"),
