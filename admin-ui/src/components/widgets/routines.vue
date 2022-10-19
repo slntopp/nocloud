@@ -1,54 +1,37 @@
 <template>
-  <widget
-    title="Routines"
-    :loading="loading"
-  >
-    <v-alert
-			type="error"
-			v-if="err"
-    >
-      {{err.name}}: {{err.message}}
+  <widget title="Routines" :loading="loading">
+    <v-alert type="error" v-if="err">
+      {{ err.name }}: {{ err.message }}
     </v-alert>
 
-		<v-list
-			dense
-			class="mb-4"
-			color="transparent"
-		>
-			<v-list-item v-for="item in state" :key="item.service" class="px-0">
-				<v-list-item-content>
-					<v-list-item-title>
-						{{item.status.service}}{{ item.routine ? ": " + item.routine : "" }}
-					</v-list-item-title>
+    <v-list dense class="mb-4" color="transparent">
+      <v-list-item v-for="item in state" :key="item.service" class="px-0">
+        <v-list-item-content>
+          <v-list-item-title>
+            {{ item.status.service
+            }}{{ item.routine ? ": " + item.routine : "" }}
+          </v-list-item-title>
 
-					<v-list-item-subtitle v-if="lastExecution(item.lastExecution)">
-						Last execution: {{ts2str(item.lastExecution)}}
-					</v-list-item-subtitle>
-				</v-list-item-content>
-				
-				<v-list-item-icon>
-					<v-chip
-						small
-						:color="chipsColor(item.status.status)"
-					>
-						{{item.status.status}}
-					</v-chip>
-				</v-list-item-icon>
-			</v-list-item>
+          <v-list-item-subtitle v-if="lastExecution(item.lastExecution)">
+            Last execution: {{ ts2str(item.lastExecution) }}
+          </v-list-item-subtitle>
+        </v-list-item-content>
 
-		</v-list>
+        <v-list-item-icon>
+          <v-chip small :color="chipsColor(item.status.status)">
+            {{ item.status.status }}
+          </v-chip>
+        </v-list-item-icon>
+      </v-list-item>
+    </v-list>
 
-		<v-btn
-			@click="checkHealth"
-		>
-			retry
-		</v-btn>
+    <v-btn @click="checkHealth"> retry </v-btn>
   </widget>
 </template>
 
 <script>
 import widget from "./widget.vue";
-import api from "@/api.js"
+import api from "@/api.js";
 
 const formatDateNumber = (num, n = 2) => {
   num = num.toString();
@@ -69,82 +52,87 @@ const date2Object = (date) => {
 };
 
 export default {
-  name: 'routines-widget',
+  name: "routines-widget",
   components: {
-    widget
+    widget,
   },
-  data: ()=>({
+  data: () => ({
     loading: false,
-		err: null,
-    state: {}
+    err: null,
+    state: {},
   }),
   computed: {
-    alertText(){
-      if(this.loading){
-        return 'Loading...'
+    alertText() {
+      if (this.loading) {
+        return "Loading...";
       }
 
-      return this.isHealthOk ? "All systems works just fine" : "Something went wrong";
+      return this.isHealthOk
+        ? "All systems works just fine"
+        : "Something went wrong";
     },
-    alertAttrs(){
-      if(this.loading){
+    alertAttrs() {
+      if (this.loading) {
         return {
           icon: "mdi-help-circle",
-          color: "grey darken-1"
-        }
+          color: "grey darken-1",
+        };
       }
 
-      if(this.isHealthOk){
+      if (this.isHealthOk) {
         return {
-          type: "success"
-        }
+          type: "success",
+        };
       } else {
         return {
-          type: "error"
-        }
+          type: "error",
+        };
       }
-    }
+    },
   },
-  created(){
-		this.checkHealth();
+  created() {
+    this.checkHealth();
   },
-	methods: {
-		checkHealth(){
-			this.loading = true;
-			api.health.routines()
-			.then(res => {
-				this.state = res.routines.filter(el => el.status.status !== 'NOEXIST');
-				this.err = null;
-			})
-			.catch(err => {
-				console.error(err);
-				this.err = err;
-			})
-			.finally(()=>{
-				this.loading = false;
-			})
-		},
-		lastExecution(time){
-			if(!time) return ""
+  methods: {
+    checkHealth() {
+      this.loading = true;
+      api.health
+        .routines()
+        .then((res) => {
+          this.state = res.routines.filter(
+            (el) => el.status.status !== "NOEXIST"
+          );
+          this.err = null;
+        })
+        .catch((err) => {
+          console.error(err);
+          this.err = err;
+        })
+        .finally(() => {
+          this.loading = false;
+        });
+    },
+    lastExecution(time) {
+      if (!time) return "";
 
-			const date = new Date(time)
-			return new Intl.DateTimeFormat().format(date)
-		},
-		chipsColor(state){
-			switch (state) {
-				case 'RUNNING':
-					return 'success'
-				case 'INTERNAL':
-					return 'error'
-				case 'STOPPED':
-					return 'warning'
-				case 'NOEXIST':
-					return 'gray'
-		
-				default:
-					return 'gray';
-			}
-		},
+      const date = new Date(time);
+      return new Intl.DateTimeFormat().format(date);
+    },
+    chipsColor(state) {
+      switch (state) {
+        case "RUNNING":
+          return "success";
+        case "INTERNAL":
+          return "error";
+        case "STOPPED":
+          return "warning";
+        case "NOEXIST":
+          return "gray";
+
+        default:
+          return "gray";
+      }
+    },
     ts2str(ts) {
       let today = date2Object(new Date());
       let date = new Date(Date.parse(ts));
@@ -174,10 +162,8 @@ export default {
       )}:${formatDateNumber(date.second)}`;
       return result;
     },
-	}
-}
+  },
+};
 </script>
 
-<style>
-
-</style>
+<style></style>
