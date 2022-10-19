@@ -164,7 +164,7 @@ export default {
         type: "application/json",
       });
       if (window.navigator.msSaveOrOpenBlob) {
-        window.navigator.msSaveBlob(blob, "settings");
+        window.navigator.msSaveBlob(blob, "config");
       } else {
         const elem = window.document.createElement("a");
         elem.href = window.URL.createObjectURL(blob);
