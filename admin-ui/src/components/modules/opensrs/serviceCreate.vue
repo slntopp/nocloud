@@ -24,8 +24,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) =>
-                setValue(index + '.resources.user.first_name', newVal)
+              (newVal) => setValue(index + '.resources.user.first_name', newVal)
             "
             label="first name"
             v-model="instance.resources.user.first_name"
@@ -197,8 +196,19 @@
           </p>
           <v-progress-circular v-else indeterminate color="primary" />
         </v-col>
-        <v-col cols="2" >
-          <v-select v-model="selectedPeriodIndex" :items="domainPeriods" />
+        <v-col cols="2">
+          <v-select
+            @change="(newVal) => setValue(index + '.resources.period', +newVal)"
+            v-model="selectedPeriodIndex"
+            :items="domainPeriods"
+          >
+            <template v-slot:selection="{ item }">
+              {{ item + " years" }}
+            </template>
+            <template v-slot:item="{ item }">
+              {{ item + " years" }}
+            </template>
+          </v-select>
         </v-col>
       </v-row>
       <template v-if="avaliableDomains.length">
