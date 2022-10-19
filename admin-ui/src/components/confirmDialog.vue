@@ -8,7 +8,7 @@
             Are you sure you want to do this?
           </v-card-title>
           <v-card-actions class="buttons">
-            <v-btn color="red darken-1" @click="dialog = false"> Cancel </v-btn>
+            <v-btn color="red darken-1" @click="onCancel"> Cancel </v-btn>
             <v-btn color="primary darken-1" @click="onConfirm"> Confirm </v-btn>
           </v-card-actions>
         </div>
@@ -18,8 +18,8 @@
 </template>
 <script>
 export default {
-  props:{
-    disabled:{default:false}
+  props: {
+    disabled: { default: false },
   },
   name: "confirm-dialog",
   data() {
@@ -29,12 +29,16 @@ export default {
   },
   methods: {
     open() {
-      if(!this.disabled){
+      if (!this.disabled) {
         this.dialog = true;
       }
     },
     onConfirm() {
       this.$emit("confirm");
+      this.dialog = false;
+    },
+    onCancel() {
+      this.$emit("cancel");
       this.dialog = false;
     },
   },
