@@ -387,6 +387,300 @@
         ]
       }
     },
+    "/billing/currencies": {
+      "get": {
+        "operationId": "CurrencyService_GetCurrencies",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingGetCurrenciesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "CurrencyService"
+        ]
+      }
+    },
+    "/billing/currencies/convert": {
+      "post": {
+        "operationId": "CurrencyService_Convert",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingConversionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "amount",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "format": "double"
+          }
+        ],
+        "tags": [
+          "CurrencyService"
+        ]
+      }
+    },
+    "/billing/currencies/rate": {
+      "get": {
+        "operationId": "CurrencyService_GetExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingGetExchangeRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          }
+        ],
+        "tags": [
+          "CurrencyService"
+        ]
+      },
+      "delete": {
+        "operationId": "CurrencyService_DeleteExchangeRateRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingCreateExchangeRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "rate",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "format": "double"
+          }
+        ],
+        "tags": [
+          "CurrencyService"
+        ]
+      },
+      "post": {
+        "operationId": "CurrencyService_CreateExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingCreateExchangeRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "rate",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "format": "double"
+          }
+        ],
+        "tags": [
+          "CurrencyService"
+        ]
+      },
+      "put": {
+        "operationId": "CurrencyService_UpdateExchangeRateRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingCreateExchangeRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "rate",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "format": "double"
+          }
+        ],
+        "tags": [
+          "CurrencyService"
+        ]
+      }
+    },
     "/billing/plans": {
       "get": {
         "operationId": "BillingService_ListPlans",
@@ -2374,6 +2668,28 @@
           "type": "boolean"
         }
       }
+    },
+    "billingConversionResponse": {
+      "type": "object",
+      "properties": {
+        "amount": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "billingCreateExchangeRateResponse": {
+      "type": "object"
+    },
+    "billingCurrency": {
+      "type": "string",
+      "enum": [
+        "USD",
+        "EUR",
+        "BYN",
+        "PLN"
+      ],
+      "default": "USD"
     },
     "billingFee": {
       "type": "object",
