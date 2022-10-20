@@ -405,7 +405,7 @@
       }
     },
     "/billing/currencies/rate": {
-      "post": {
+      "get": {
         "operationId": "CurrencyService_GetExchangeRate",
         "responses": {
           "200": {
@@ -447,6 +447,171 @@
               "PLN"
             ],
             "default": "USD"
+          }
+        ],
+        "tags": [
+          "CurrencyService"
+        ]
+      },
+      "delete": {
+        "operationId": "CurrencyService_DeleteExchangeRateRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingCreateExchangeRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "rate",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "format": "double"
+          }
+        ],
+        "tags": [
+          "CurrencyService"
+        ]
+      },
+      "post": {
+        "operationId": "CurrencyService_CreateExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingCreateExchangeRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "rate",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "format": "double"
+          }
+        ],
+        "tags": [
+          "CurrencyService"
+        ]
+      },
+      "put": {
+        "operationId": "CurrencyService_UpdateExchangeRateRequest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingCreateExchangeRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ],
+            "default": "USD"
+          },
+          {
+            "name": "rate",
+            "in": "query",
+            "required": false,
+            "type": "number",
+            "format": "double"
           }
         ],
         "tags": [
@@ -2406,6 +2571,9 @@
           "format": "double"
         }
       }
+    },
+    "billingCreateExchangeRateResponse": {
+      "type": "object"
     },
     "billingCurrency": {
       "type": "string",

@@ -228,6 +228,24 @@ enum Currency {
     PLN = 3;
 }
 
+message CreateExchangeRateRequest {
+    Currency from = 1;
+    Currency to = 2;
+    double rate = 3;
+}
+message CreateExchangeRateResponse {}
+message UpdateExchangeRateRequest {
+    Currency from = 1;
+    Currency to = 2;
+    double rate = 3;
+}
+message UpdateExchangeRateResponse {}
+message DeleteExchangeRateRequest {
+    Currency from = 1;
+    Currency to = 2;
+}
+message DeleteExchangeRateResponse{}
+
 message GetCurrenciesRequest {}
 message GetCurrenciesResponse {
     repeated Currency currencies = 1;
@@ -260,7 +278,22 @@ service CurrencyService {
     };
     rpc GetExchangeRate(GetExchangeRateRequest) returns (GetExchangeRateResponse){
         option (google.api.http) = {
+            get: "/billing/currencies/rate"
+        };
+    };
+    rpc CreateExchangeRate(CreateExchangeRateRequest) returns (CreateExchangeRateResponse){
+        option (google.api.http) = {
             post: "/billing/currencies/rate"
+        };
+    };
+    rpc UpdateExchangeRateRequest(CreateExchangeRateRequest) returns (CreateExchangeRateResponse){
+        option (google.api.http) = {
+            put: "/billing/currencies/rate"
+        };
+    };
+    rpc DeleteExchangeRateRequest(CreateExchangeRateRequest) returns (CreateExchangeRateResponse){
+        option (google.api.http) = {
+            delete: "/billing/currencies/rate"
         };
     };
     rpc Convert(ConversionRequest) returns (ConversionResponse) {

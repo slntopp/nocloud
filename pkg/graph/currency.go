@@ -69,6 +69,35 @@ func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Curren
 	return edge["rate"], nil
 }
 
+func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate float64) error {
+	edge := map[string]interface{}{
+		"_key": fmt.Sprintf("%d2%d", from, to),
+		"rate": rate,
+	}
+	_, err := c.edges.CreateDocument(ctx, &edge)
+
+	return err
+}
+
+func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate float64) error {
+	key := fmt.Sprintf("%d2%d", from, to)
+
+	edge := map[string]interface{}{
+		"rate": rate,
+	}
+	_, err := c.edges.UpdateDocument(ctx, key, &edge)
+
+	return err
+}
+
+func (c *CurrencyController) DeleteExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) error {
+	key := fmt.Sprintf("%d2%d", from, to)
+
+	_, err := c.edges.RemoveDocument(ctx, key)
+
+	return err
+}
+
 func (c *CurrencyController) Convert(ctx context.Context, from pb.Currency, to pb.Currency, amount float64) (float64, error) {
 
 	rate, err := c.GetExchangeRate(ctx, from, to)
