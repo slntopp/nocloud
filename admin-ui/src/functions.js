@@ -147,3 +147,15 @@ export function filterArrayByTitleAndUuid(
 
   return [...new Set([...byTitle, ...byUuid])];
 }
+
+export function levenshtein(s, t) {
+  if (!s.length) return t.length;
+  if (!t.length) return s.length;
+
+  return Math.min(
+    levenshtein(s.substring(1), t) + 1,
+    levenshtein(t.substring(1), s) + 1,
+    levenshtein(s.substring(1), t.substring(1)) +
+      (s[0] !== t[0] ? 1 : 0)
+  );
+}

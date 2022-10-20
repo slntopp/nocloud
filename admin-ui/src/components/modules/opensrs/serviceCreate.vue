@@ -24,8 +24,7 @@
         <v-col cols="6">
           <v-text-field
             @change="
-              (newVal) =>
-                setValue(index + '.resources.user.first_name', newVal)
+              (newVal) => setValue(index + '.resources.user.first_name', newVal)
             "
             label="first name"
             v-model="instance.resources.user.first_name"
@@ -197,47 +196,23 @@
           </p>
           <v-progress-circular v-else indeterminate color="primary" />
         </v-col>
-        <v-col cols="2" >
+        <v-col cols="2">
           <v-select v-model="selectedPeriodIndex" :items="domainPeriods" />
         </v-col>
       </v-row>
-      <template v-if="avaliableDomains.length">
-        <v-row class="pa-md-4">
-          <v-list
-            :disabled="isPriceLoading"
-            width="80%"
-            flat
-            dark
-            color="rgb(0,0,51)"
-          >
-            <v-subheader>domains</v-subheader>
-            <v-list-item-group
-              @change="(newVal) => changeDomain(newVal, index)"
-              v-model="selectedDomainIndex"
-              color="primary"
-            >
-              <v-list-item v-for="(item, i) in visibleDomains" :key="i">
-                <v-list-item-content>
-                  <v-list-item-title>
-                    {{ item }}
-                  </v-list-item-title>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list-item-group>
-          </v-list>
-        </v-row>
-        <v-row>
-          <v-col cols="12">
-            <div class="text-center">
-              <v-pagination
-                color="rgb(0,0,51)"
-                v-model="selectedDomainPage"
-                :length="domainPaginationLength"
-              />
-            </div>
-          </v-col>
-        </v-row>
-      </template>
+      <v-row class="flex-column pa-md-5">
+        <nocloud-table
+          @input="(item) => changeDomain(item, index)"
+          :footer-error="tableError"
+          item-key="domain"
+          single-select
+          no-hide-uuid
+          v-model="selectedDomain"
+          :items="domains"
+          :headers="headers"
+          :loading="isDomainsLoading"
+        />
+      </v-row>
     </v-card>
     <v-row>
       <v-col class="d-flex justify-center">
@@ -258,17 +233,26 @@
 
 <script>
 import api from "@/api";
+import nocloudTable from "@/components/table.vue";
+import snackbar from "@/mixins/snackbar.js";
+import { levenshtein } from "@/functions";
 
 export default {
   name: "ione-create-service-module",
   props: ["instances-group", "plans", "planRules"],
+  components: { nocloudTable },
+  mixins: [snackbar],
   data: () => ({
+    headers: [
+      { text: "domain", value: "domain" },
+      { text: "status", value: "status" },
+    ],
+    tableError: "",
     prices: {},
     selectedPeriodIndex: 0,
-    avaliableDomains: [],
+    domains: [],
     searchDomainString: "",
-    selectedDomainPage: 1,
-    selectedDomainIndex: null,
+    selectedDomain: [],
     isDomainsLoading: false,
     isPriceLoading: false,
     defaultItem: {
@@ -317,10 +301,6 @@ export default {
 
       const data = JSON.parse(this.instancesGroup);
 
-      if (path.includes("domain")) {
-        val = this.visibleDomains[val];
-      }
-
       setToValue(data.body.instances, val, path);
       this.change(data);
     },
@@ -341,32 +321,37 @@ export default {
           },
         })
         .then((data) => {
-          const freeDomains = [];
-          data.meta.domains.forEach((d) => {
-            if (d.Status === "available") {
-              freeDomains.push(d.Domain);
-            }
-          });
-
-          this.avaliableDomains = freeDomains;
+          this.domains = this.sortDomainsLSM(
+            data.meta.domains,
+            this.searchDomainString.toLowerCase()
+          );
         })
         .finally(() => {
           this.isDomainsLoading = false;
         });
     },
     changeDomain(newVal, index) {
+      const currentDomain = newVal[0];
+
+      if (!currentDomain) {
+        this.tableError = "";
+        return this.resetDomain(index);
+      } else if (currentDomain.status === "taken") {
+        this.tableError = "This domain already taken!";
+        return this.resetDomain(index);
+      }
+
       this.isPriceLoading = true;
 
-      this.setValue(index + ".resources.domain", newVal);
-
-      const domain = this.visibleDomains[newVal];
+      this.setValue(index + ".resources.domain", currentDomain.domain);
+      this.tableError = "";
 
       api.servicesProviders
         .action({
           uuid: this.spUuid,
           action: "get_domain_price",
           params: {
-            domain,
+            domain: currentDomain.domain,
           },
         })
         .then((data) => {
@@ -375,6 +360,17 @@ export default {
         .finally(() => {
           this.isPriceLoading = false;
         });
+    },
+    resetDomain(index) {
+      this.setValue(index + ".resources.domain", "");
+      this.prices = [];
+    },
+    sortDomainsLSM(domains, searchkey) {
+      return domains.sort(function (a, b) {
+        return (
+          levenshtein(a.domain, searchkey) - levenshtein(b.domain, searchkey)
+        );
+      });
     },
   },
   computed: {
@@ -392,11 +388,7 @@ export default {
       return JSON.parse(this.instancesGroup).sp;
     },
     domainPaginationLength() {
-      return Math.ceil(this.avaliableDomains.length / 10) - 1;
-    },
-    visibleDomains() {
-      const start = this.selectedDomainPage * 10;
-      return this.avaliableDomains.slice(start, start + 10);
+      return Math.ceil(this.domains.length / 10) - 1;
     },
     domainPeriods() {
       if (Object.keys(this.prices).length === 0) {
@@ -416,11 +408,6 @@ export default {
     }
 
     this.change(data);
-  },
-  watch: {
-    selectedDomainPage() {
-      this.selectedDomainIndex = null;
-    },
   },
 };
 
