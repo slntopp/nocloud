@@ -352,7 +352,7 @@ export default {
   }),
   methods: {
     changeWidth() {
-      const { clientWidth } = this.$refs.private;
+      const { clientWidth } = this.$refs?.private;
       let cols = 64;
 
       for (let i = 4; i > 0; i--) {
@@ -373,10 +373,11 @@ export default {
   },
   computed: {
     vlansKey() {
-      return Object.keys(this.template.secrets.vlans)[0];
+      return Object.keys(this.template.secrets.vlans ?? {})[0];
     },
     vlans() {
-      const { free_vlans } = this.template?.state.meta.networking.private_vnet;
+      const { free_vlans } =
+        this.template?.state?.meta?.networking?.private_vnet;
       let vlans = 0;
 
       Object.values(free_vlans || {}).forEach((value) => {
