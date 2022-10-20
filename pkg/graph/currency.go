@@ -69,7 +69,7 @@ func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Curren
 	return edge["rate"], nil
 }
 
-func (c *CurrencyController) Exchange(ctx context.Context, from pb.Currency, to pb.Currency, amount float64) (float64, error) {
+func (c *CurrencyController) Convert(ctx context.Context, from pb.Currency, to pb.Currency, amount float64) (float64, error) {
 
 	rate, err := c.GetExchangeRate(ctx, from, to)
 	if err != nil {
