@@ -322,7 +322,7 @@ export default {
         })
         .then((data) => {
           this.domains = this.sortDomainsLSM(
-            data.meta.domains,
+            data.meta.domains.filter(d=>d.status!=='undetermined'),
             this.searchDomainString.toLowerCase()
           );
         })
