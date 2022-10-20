@@ -549,3 +549,161 @@ var BillingService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "pkg/billing/proto/billing.proto",
 }
+
+// CurrencyServiceClient is the client API for CurrencyService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type CurrencyServiceClient interface {
+	GetCurrencies(ctx context.Context, in *GetCurrenciesRequest, opts ...grpc.CallOption) (*GetCurrenciesResponse, error)
+	GetExchangeRate(ctx context.Context, in *GetExchangeRateRequest, opts ...grpc.CallOption) (*GetExchangeRateResponse, error)
+	Convert(ctx context.Context, in *ConversionRequest, opts ...grpc.CallOption) (*ConversionResponse, error)
+}
+
+type currencyServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewCurrencyServiceClient(cc grpc.ClientConnInterface) CurrencyServiceClient {
+	return &currencyServiceClient{cc}
+}
+
+func (c *currencyServiceClient) GetCurrencies(ctx context.Context, in *GetCurrenciesRequest, opts ...grpc.CallOption) (*GetCurrenciesResponse, error) {
+	out := new(GetCurrenciesResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.CurrencyService/GetCurrencies", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *currencyServiceClient) GetExchangeRate(ctx context.Context, in *GetExchangeRateRequest, opts ...grpc.CallOption) (*GetExchangeRateResponse, error) {
+	out := new(GetExchangeRateResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.CurrencyService/GetExchangeRate", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *currencyServiceClient) Convert(ctx context.Context, in *ConversionRequest, opts ...grpc.CallOption) (*ConversionResponse, error) {
+	out := new(ConversionResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.billing.CurrencyService/Convert", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CurrencyServiceServer is the server API for CurrencyService service.
+// All implementations must embed UnimplementedCurrencyServiceServer
+// for forward compatibility
+type CurrencyServiceServer interface {
+	GetCurrencies(context.Context, *GetCurrenciesRequest) (*GetCurrenciesResponse, error)
+	GetExchangeRate(context.Context, *GetExchangeRateRequest) (*GetExchangeRateResponse, error)
+	Convert(context.Context, *ConversionRequest) (*ConversionResponse, error)
+	mustEmbedUnimplementedCurrencyServiceServer()
+}
+
+// UnimplementedCurrencyServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedCurrencyServiceServer struct {
+}
+
+func (UnimplementedCurrencyServiceServer) GetCurrencies(context.Context, *GetCurrenciesRequest) (*GetCurrenciesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCurrencies not implemented")
+}
+func (UnimplementedCurrencyServiceServer) GetExchangeRate(context.Context, *GetExchangeRateRequest) (*GetExchangeRateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetExchangeRate not implemented")
+}
+func (UnimplementedCurrencyServiceServer) Convert(context.Context, *ConversionRequest) (*ConversionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Convert not implemented")
+}
+func (UnimplementedCurrencyServiceServer) mustEmbedUnimplementedCurrencyServiceServer() {}
+
+// UnsafeCurrencyServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CurrencyServiceServer will
+// result in compilation errors.
+type UnsafeCurrencyServiceServer interface {
+	mustEmbedUnimplementedCurrencyServiceServer()
+}
+
+func RegisterCurrencyServiceServer(s grpc.ServiceRegistrar, srv CurrencyServiceServer) {
+	s.RegisterService(&CurrencyService_ServiceDesc, srv)
+}
+
+func _CurrencyService_GetCurrencies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCurrenciesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CurrencyServiceServer).GetCurrencies(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.CurrencyService/GetCurrencies",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CurrencyServiceServer).GetCurrencies(ctx, req.(*GetCurrenciesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CurrencyService_GetExchangeRate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetExchangeRateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CurrencyServiceServer).GetExchangeRate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.CurrencyService/GetExchangeRate",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CurrencyServiceServer).GetExchangeRate(ctx, req.(*GetExchangeRateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CurrencyService_Convert_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ConversionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CurrencyServiceServer).Convert(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.billing.CurrencyService/Convert",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CurrencyServiceServer).Convert(ctx, req.(*ConversionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// CurrencyService_ServiceDesc is the grpc.ServiceDesc for CurrencyService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var CurrencyService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "nocloud.billing.CurrencyService",
+	HandlerType: (*CurrencyServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetCurrencies",
+			Handler:    _CurrencyService_GetCurrencies_Handler,
+		},
+		{
+			MethodName: "GetExchangeRate",
+			Handler:    _CurrencyService_GetExchangeRate_Handler,
+		},
+		{
+			MethodName: "Convert",
+			Handler:    _CurrencyService_Convert_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/billing/proto/billing.proto",
+}
