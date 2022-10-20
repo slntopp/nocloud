@@ -181,12 +181,15 @@ export default {
     filteredServices() {
       if (this.searchParam) {
         const byIps = this.filtredByPublicIps();
-        const byTitleAndUud = filterArrayByTitleAndUuid(
+        const byDomains = this.filtredByDomains();
+
+        const byTitleAndUuid = filterArrayByTitleAndUuid(
           this.services,
           this.searchParam,
           { unique: false }
         );
-        return [...new Set([...byIps, ...byTitleAndUud])];
+
+        return [...new Set([...byIps, ...byTitleAndUuid, ...byDomains])];
       }
       return this.services;
     },
@@ -256,6 +259,25 @@ export default {
           .toLowerCase()
           .includes(this.searchParam.toLowerCase());
         return isTitleIncludes || isItIpExists;
+      });
+    },
+    filtredByDomains() {
+      return this.services.filter((service) => {
+        const domains = [];
+
+        service.instancesGroups.forEach((serviceInstance) => {
+          if (serviceInstance.type === "opensrs") {
+            serviceInstance.instances.forEach((instance) => {
+              domains.push(instance.resources.domain);
+            });
+          } else {
+            return false;
+          }
+        });
+
+        return domains.find((d) =>
+          d.toLowerCase().startsWith(this.searchParam.toLowerCase())
+        );
       });
     },
     hashTrim(hash) {

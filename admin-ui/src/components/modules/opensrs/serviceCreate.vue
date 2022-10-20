@@ -197,7 +197,18 @@
           <v-progress-circular v-else indeterminate color="primary" />
         </v-col>
         <v-col cols="2">
-          <v-select v-model="selectedPeriodIndex" :items="domainPeriods" />
+          <v-select
+            @change="(newVal) => setValue(index + '.resources.period', +newVal)"
+            v-model="selectedPeriodIndex"
+            :items="domainPeriods"
+          >
+            <template v-slot:selection="{ item }">
+              {{ item + " years" }}
+            </template>
+            <template v-slot:item="{ item }">
+              {{ item + " years" }}
+            </template>
+          </v-select>
         </v-col>
       </v-row>
       <v-row class="flex-column pa-md-5">
