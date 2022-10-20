@@ -220,3 +220,53 @@ service BillingService {
         };
     };
 }
+
+enum Currency {
+    USD = 0;
+    EUR = 1;
+    BYN = 2;
+    PLN = 3;
+}
+
+message GetCurrenciesRequest {}
+message GetCurrenciesResponse {
+    repeated Currency currencies = 1;
+}
+
+message GetExchangeRateRequest {
+    Currency from = 1;
+    Currency to = 2;
+}
+
+message GetExchangeRateResponse {
+    double rate = 1;
+}
+
+message ConversionRequest {
+    Currency from = 1;
+    Currency to = 2;
+    double amount = 3;
+}
+
+message ConversionResponse {
+    double amount = 1;
+}
+
+service CurrencyService {
+    rpc GetCurrencies(GetCurrenciesRequest) returns (GetCurrenciesResponse){
+        option (google.api.http) = {
+            get: "/billing/currencies"
+        };
+    };
+    rpc GetExchangeRate(GetExchangeRateRequest) returns (GetExchangeRateResponse){
+        option (google.api.http) = {
+            post: "/billing/currencies/rate"
+        };
+    };
+    rpc Convert(ConversionRequest) returns (ConversionResponse) {
+        option (google.api.http) = {
+            post: "/billing/currencies/convert"
+        };
+    };
+}
+

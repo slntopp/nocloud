@@ -59,7 +59,8 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 		plans:        graph.NewBillingPlansController(log.Named("PlansController"), db),
 		transactions: graph.NewTransactionsController(log.Named("TransactionsController"), db),
 		records:      graph.NewRecordsController(log.Named("RecordsController"), db),
-		db:           db, gen: &healthpb.RoutineStatus{
+		db:           db,
+		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",

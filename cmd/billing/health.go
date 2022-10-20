@@ -30,11 +30,12 @@ type HealthServer struct {
 	log *zap.Logger
 	srv *billing.BillingServiceServer
 	rec *billing.RecordsServiceServer
+	cur *billing.CurrencyServiceServer
 }
 
-func NewHealthServer(log *zap.Logger, srv *billing.BillingServiceServer, rec *billing.RecordsServiceServer) *HealthServer {
+func NewHealthServer(log *zap.Logger, srv *billing.BillingServiceServer, rec *billing.RecordsServiceServer, cur *billing.CurrencyServiceServer) *HealthServer {
 	return &HealthServer{
-		log: log, srv: srv, rec: rec,
+		log: log, srv: srv, rec: rec, cur: cur,
 	}
 }
 

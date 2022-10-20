@@ -42,6 +42,8 @@ const (
 	SERV2IG              = SERVICES_COL + "2" + INSTANCES_GROUPS_COL
 	INSTANCES_COL        = "Instances"
 	IG2INST              = INSTANCES_GROUPS_COL + "2" + INSTANCES_COL
+	CUR_COL              = "Currencies"
+	CUR2CUR              = CUR_COL + "2" + CUR_COL
 )
 const (
 	SERVICES_PROVIDERS_COL = "ServicesProviders"

@@ -87,6 +87,8 @@ func main() {
 	)
 
 	server := billing.NewBillingServiceServer(log, db)
+	currencies := billing.NewCurrencyServiceServer(log, db)
+	log.Info("Starting Currencies Service")
 
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
@@ -107,8 +109,11 @@ func main() {
 	log.Info("Registering RecordsService Server")
 	pb.RegisterRecordsServiceServer(s, records)
 
+	log.Info("Registering CurrencyService Server")
+	pb.RegisterCurrencyServiceServer(s, currencies)
+
 	log.Info("Registering Internal HealthProbe Server")
-	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server, records))
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server, records, currencies))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
