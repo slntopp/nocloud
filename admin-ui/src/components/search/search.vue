@@ -1,6 +1,6 @@
 <template>
   <v-text-field
-    v-if="!isAdvancesSearch"
+    v-if="!isAdvancedSearch"
     hide-details
     prepend-inner-icon="mdi-magnify"
     placeholder="Search..."
@@ -25,7 +25,7 @@
         v-on="on"
       ></v-text-field>
     </template>
-    
+    <component :is="searchMenuComponent" />
   </v-menu>
 </template>
 
@@ -44,12 +44,13 @@ export default {
     isAdvancedSearch() {
       return this.$store.getters["appSearch/isAdvancedSearch"];
     },
-    searchMenuName(){
+    searchMenuName() {
       return this.$store.getters["appSearch/searchMenuName"];
     },
-    searchMenuComponent(){
-        return () => import(`@/components/search/menus/${this.searchMenuName}.vue`)
-    }
+    searchMenuComponent() {
+      return () =>
+        import(`@/components/search/menus/${this.searchMenuName}.vue`);
+    },
   },
 };
 </script>
