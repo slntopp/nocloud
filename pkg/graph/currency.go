@@ -58,21 +58,21 @@ FOR CURRENCY in @@currencies
 `
 
 func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) (float64, error) {
-	edge := map[string]float64{
-		"rate": 0.0,
-	}
-	_, err := c.edges.ReadDocument(ctx, fmt.Sprintf("%d2%d", from, to), &edge)
+	edge := map[string]interface{}{}
+	_, err := c.edges.ReadDocument(ctx, fmt.Sprintf("%d-%d", from, to), &edge)
 	if err != nil {
 		return 0, err
 	}
-
-	return edge["rate"], nil
+	rate := edge["rate"].(float64)
+	return rate, err
 }
 
 func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate float64) error {
 	edge := map[string]interface{}{
-		"_key": fmt.Sprintf("%d2%d", from, to),
-		"rate": rate,
+		"_key":  fmt.Sprintf("%d-%d", from, to),
+		"_from": fmt.Sprintf("%s/%d", schema.CUR_COL, from),
+		"_to":   fmt.Sprintf("%s/%d", schema.CUR_COL, to),
+		"rate":  rate,
 	}
 	_, err := c.edges.CreateDocument(ctx, &edge)
 
@@ -80,7 +80,7 @@ func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Cur
 }
 
 func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate float64) error {
-	key := fmt.Sprintf("%d2%d", from, to)
+	key := fmt.Sprintf("%d-%d", from, to)
 
 	edge := map[string]interface{}{
 		"rate": rate,
@@ -91,7 +91,7 @@ func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Cur
 }
 
 func (c *CurrencyController) DeleteExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) error {
-	key := fmt.Sprintf("%d2%d", from, to)
+	key := fmt.Sprintf("%d-%d", from, to)
 
 	_, err := c.edges.RemoveDocument(ctx, key)
 
