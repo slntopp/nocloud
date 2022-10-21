@@ -244,7 +244,7 @@ export default {
       return extentionsMap;
     },
     serviceProviderBody() {
-      if (Object.keys(this.extentions.data).length >  0) {
+      if (Object.keys(this.extentions.data).length > 0) {
         if (this.provider.type === "custom") {
           return {
             ...this.provider,
@@ -308,6 +308,27 @@ export default {
     },
     testConfig() {
       this.isTestLoading = true;
+      console.log(this.serviceProviderBody.secrets);
+
+      if (this.serviceProviderBody.type === "ione") {
+        let isWrongVlans = false;
+
+        for (const value of Object.values(
+          this.serviceProviderBody.secrets.vlans
+        )) {
+          if (value.start && value.size) {
+            console.log(value.start + value.size );
+            isWrongVlans = !(value.start + value.size < 4096);
+          }
+        }
+
+        if (isWrongVlans) {
+          this.showSnackbarError({ message: "Vlans cant be more 4096" });
+          this.isTestLoading = false;
+          return;
+        }
+      }
+
       api.servicesProviders
         .testConfig(this.serviceProviderBody)
         .then((res) => {

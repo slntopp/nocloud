@@ -33,6 +33,6 @@ export default new Vuex.Store({
     plans,
     transactions,
     appSearch,
-    vnc
+    vnc,
   },
 });

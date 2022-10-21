@@ -5,6 +5,7 @@ export default {
     onclick: {
       type: null,
       params: null,
+      event:null
     },
     btnStates: {
       disabled: false,
@@ -20,9 +21,10 @@ export default {
     },
   },
   mutations: {
-    setCallback(state, { type, params }) {
+    setCallback(state, { type, params,event }) {
       state.onclick.type = type;
       state.onclick.params = params !== undefined ? params : null;
+      state.onclick.event = event
     },
     clear(state) {
       state.onclick = { type: null, params: null };
@@ -36,6 +38,10 @@ export default {
   },
   actions: {
     async onclick({ state, commit, dispatch }) {
+      if(state.onclick.event){
+        state.onclick.event()
+        return
+      }
       if (!state.onclick.type) return;
       commit("setLoading", true);
       dispatch(state.onclick.type, state.onclick.params, {

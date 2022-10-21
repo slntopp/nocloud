@@ -4,8 +4,8 @@
     max-width="520"
     color="background-light"
     class="flex-grow-1 rounded-lg"
-    :min-width="(width >= 450) ? 350 : 200"
-    :style="{ 'width': (width < 1375) ? '100%' : 'auto' }"
+    :min-width="width >= 450 ? 350 : 200"
+    :style="{ width: width < 1375 ? '100%' : 'auto' }"
     :loading="loading"
   >
     <template slot="progress">
@@ -13,17 +13,16 @@
         color="primary"
         height="5"
         indeterminate
-				absolute
+        absolute
       ></v-progress-linear>
     </template>
-    <v-card-title>{{title}}</v-card-title>
+    <v-card-title>{{ title }}</v-card-title>
 
     <v-divider class="mx-4"></v-divider>
 
     <v-card-text>
       <slot></slot>
     </v-card-text>
-
   </v-card>
 </template>
 
@@ -34,17 +33,15 @@ export default {
     title: String,
     loading: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
   computed: {
     width() {
       return document.documentElement.clientWidth;
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
-<style>
-
-</style>
+<style></style>

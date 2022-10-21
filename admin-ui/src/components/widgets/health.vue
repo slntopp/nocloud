@@ -1,86 +1,77 @@
 <template>
-  <widget
-    title="Health"
-    :loading="loading"
-  >
-    <v-alert
-
-      v-bind="alertAttrs"
-    >
-      {{alertText}}
+  <widget title="Health" :loading="loading">
+    <v-alert v-bind="alertAttrs">
+      {{ alertText }}
     </v-alert>
 
-		<v-btn
-			@click="checkHealth"
-		>
-			retry
-		</v-btn>
+    <v-btn @click="checkHealth"> retry </v-btn>
   </widget>
 </template>
 
 <script>
 import widget from "./widget.vue";
-import api from "@/api.js"
+import api from "@/api.js";
 
 export default {
-  name: 'health-widget',
+  name: "health-widget",
   components: {
-    widget
+    widget,
   },
-  data: ()=>({
+  data: () => ({
     loading: false,
-    isHealthOk: false
+    isHealthOk: false,
   }),
   computed: {
-    alertText(){
-      if(this.loading){
-        return 'Loading...'
+    alertText() {
+      if (this.loading) {
+        return "Loading...";
       }
 
-      return this.isHealthOk ? "All systems works just fine" : "Something went wrong";
+      return this.isHealthOk
+        ? "All systems works just fine"
+        : "Something went wrong";
     },
-    alertAttrs(){
-      if(this.loading){
+    alertAttrs() {
+      if (this.loading) {
         return {
           icon: "mdi-help-circle",
-          color: "grey darken-1"
-        }
+          color: "grey darken-1",
+        };
       }
 
-      if(this.isHealthOk){
+      if (this.isHealthOk) {
         return {
-          type: "success"
-        }
+          type: "success",
+        };
       } else {
         return {
-          type: "error"
-        }
+          type: "error",
+        };
       }
-    }
+    },
   },
-  created(){
-		this.checkHealth();
+  created() {
+    this.checkHealth();
   },
-	methods: {
-		checkHealth(){
-			this.loading = true;
-			api.health.ping()
-			.then(res => {
-				if(res.response == "PONG"){
-					this.isHealthOk = true;
-				}
-			})
-			.catch(err => {
-				console.error(err);
-			})
-			.finally(()=>{
-				this.loading = false;
-			})
-		}
-	}
-}
+  methods: {
+    checkHealth() {
+      this.loading = true;
+      api.health
+        .ping()
+        .then((res) => {
+          if (res.response == "PONG") {
+            this.isHealthOk = true;
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+        })
+        .finally(() => {
+          this.loading = false;
+        });
+    },
+  },
+};
 </script>
 
-<style>
-
-</style>
+<style></style>

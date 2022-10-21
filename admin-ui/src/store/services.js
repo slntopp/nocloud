@@ -35,19 +35,17 @@ export default {
     setService(state, service) {
       if (state.service.length) {
         let isProductExists = false;
-        state.service.find(item => {
+        state.service.find((item) => {
           if (item.uuid === service.uuid) {
-            isProductExists = true
+            isProductExists = true;
           }
-        })
+        });
         if (!isProductExists) {
           state.service.push(service);
         }
       } else {
         state.service.push(service);
       }
-
-
     },
     updateService(state, service) {
       if (!state.services.length) state.services.push(service);
@@ -56,9 +54,7 @@ export default {
       );
     },
     updateInstance(state, { value, uuid }) {
-      const i = state.services.findIndex((el) =>
-        uuid === el.uuid
-      );
+      const i = state.services.findIndex((el) => uuid === el.uuid);
       const service = state.services[i];
 
       service.instancesGroups.forEach((el, i, groups) => {
@@ -70,8 +66,8 @@ export default {
       });
     },
     fetchByIdElem(state, data) {
-      state.service = data
-    }
+      state.service = data;
+    },
   },
   actions: {
     fetch({ commit }) {
@@ -80,7 +76,9 @@ export default {
         api.services
           .list()
           .then((response) => {
-            const servicesWithoutDel=response.pool.filter(s=>s.status!=='DEL')
+            const servicesWithoutDel = response.pool.filter(
+              (s) => s.status !== "DEL"
+            );
             commit("setServices", servicesWithoutDel);
             resolve(response);
           })

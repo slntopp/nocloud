@@ -22,7 +22,6 @@
         </v-list-item-icon>
       </v-list-item>
     </v-list>
-
     <v-btn @click="checkHealth"> retry </v-btn>
   </widget>
 </template>

@@ -2,16 +2,11 @@
   <div class="pa-4">
     <div class="d-flex">
       <h1 class="page__title" v-if="!item">Create plan</h1>
-      <v-icon
-      class="mx-3"
-      large
-      color="light"
-      @click="openPlanWiki"
-    >
-      mdi-information-outline
-    </v-icon>
+      <v-icon class="mx-3" large color="light" @click="openPlanWiki">
+        mdi-information-outline
+      </v-icon>
     </div>
-  
+
     <v-form v-model="isValid" ref="form">
       <v-row>
         <v-col lg="6" cols="12">
@@ -45,15 +40,16 @@
               <v-subheader>Plan kind</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-radio-group row mandatory>
-                <confirm-dialog
-                  v-for="item in kinds"
-                  @confirm="changePlan(item)"
-                  :key="item"
-                >
-                  <v-radio :value="item" :label="item.toLowerCase()" />
-                </confirm-dialog>
-              </v-radio-group>
+              <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">
+                <v-radio-group v-model="selectedKind" row mandatory>
+                  <v-radio
+                    v-for="item in kinds"
+                    :key="item"
+                    :value="item"
+                    :label="item.toLowerCase()"
+                  />
+                </v-radio-group>
+              </confirm-dialog>
             </v-col>
           </v-row>
 
@@ -174,12 +170,13 @@ export default {
   data: () => ({
     types: [],
     kinds: ["DYNAMIC", "STATIC"],
+    selectedKind: "",
     products: [],
     plan: {
       title: "",
       type: "custom",
       kind: "",
-      public: false,
+      public: true,
       resources: [],
       products: {},
     },
@@ -462,12 +459,19 @@ export default {
         resources: this.item.resources,
       };
     },
-    changePlan(item) {
-      this.plan.kind = item;
+    changePlan(isReset) {
+      if (isReset) {
+        this.selectedKind = "";
+        return;
+      }
+      this.plan.kind = this.selectedKind;
     },
-    openPlanWiki(){
-      window.open('https://github.com/slntopp/nocloud/wiki/Billing-Plans', '_blank');
-    }
+    openPlanWiki() {
+      window.open(
+        "https://github.com/slntopp/nocloud/wiki/Billing-Plans",
+        "_blank"
+      );
+    },
   },
   created() {
     if (this.isEdit) {
@@ -519,7 +523,9 @@ export default {
       }
     },
     "plan.kind"() {
-      this.form.titles = [];
+      if (!this.isEdit) {
+        this.form.titles = [];
+      }
       if (this.plan.kind === "STATIC") {
         if (!this.isEdit) {
           this.plan.products = {};

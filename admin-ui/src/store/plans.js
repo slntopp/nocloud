@@ -1,11 +1,11 @@
-import api from '@/api.js';
+import api from "@/api.js";
 
 export default {
   namespaced: true,
   state: {
     plans: [],
     plan: {},
-    loading: false
+    loading: false,
   },
   getters: {
     all(state) {
@@ -16,7 +16,7 @@ export default {
     },
     isLoading(state) {
       return state.loading;
-    }
+    },
   },
   mutations: {
     setPlans(state, plans) {
@@ -29,64 +29,65 @@ export default {
       state.loading = data;
     },
     updatePlan(state, newPlan) {
-      state.plan = state.plan
-        .map((plan) => (newPlan.uuid === plan.uuid)
-          ? newPlan
-          : plan
-        );
-    }
+      state.plan = state.plan.map((plan) =>
+        newPlan.uuid === plan.uuid ? newPlan : plan
+      );
+    },
   },
   actions: {
     fetch({ commit }, params) {
-      commit('setLoading', true);
+      commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
-        api.plans.list(params)
+        api.plans
+          .list(params)
           .then((response) => {
-            commit('setPlans', response.pool);
+            commit("setPlans", response.pool);
             resolve(response);
           })
           .catch((error) => {
             reject(error);
           })
           .finally(() => {
-            commit('setLoading', false);
+            commit("setLoading", false);
           });
       });
     },
     fetchById({ commit }, id) {
-      commit('setLoading', true);
+      commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
-        api.plans.get(id)
+        api.plans
+          .get(id)
           .then((response) => {
-            commit('updatePlan', response);
+            commit("updatePlan", response);
             resolve(response);
           })
           .catch((error) => {
             reject(error);
           })
           .finally(() => {
-            commit('setLoading', false);
+            commit("setLoading", false);
           });
       });
     },
     fetchItem({ commit }, id) {
-      commit('setLoading', true);
+      commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
-        api.plans.get(id)
+        api.plans
+          .get(id)
           .then((response) => {
-            commit('setPlan', response);
+            commit("setPlan", response);
             resolve(response);
           })
           .catch((error) => {
             reject(error);
           })
           .finally(() => {
-            commit('setLoading', false);
+            commit("setLoading", false);
           });
       });
-    }
+    },
   },
 };
