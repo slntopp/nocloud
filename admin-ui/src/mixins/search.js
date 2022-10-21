@@ -1,6 +1,6 @@
 const searchMixin = {
   mounted(){
-    this.$store.commit("appSearch/resetSearchParam");
+    this.$store.commit("appSearch/resetSearchParams");
   }
 };
 

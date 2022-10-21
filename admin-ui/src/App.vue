@@ -213,7 +213,7 @@
 <script>
 import config from "@/config";
 import balance from "@/components/balance.vue";
-import appSearch from "@/components/search.vue";
+import appSearch from "@/components/search/search.vue";
 
 export default {
   components: { balance ,appSearch},
