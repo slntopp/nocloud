@@ -18,7 +18,7 @@
     <v-row>
       <v-col cols="3">
         <v-text-field
-          :value="settings.whmcs.site_url"
+          v-model="settings.whmcs.site_url"
           label="Whmcs site url"
           style="display: inline-block; width: 330px"
         />
@@ -42,10 +42,10 @@
     <v-card-title class="px-0 mb-3"> App:</v-card-title>
     <v-row>
       <v-col cols="2">
-        <v-text-field :value="settings.app.folder" label="App folder" />
+        <v-text-field v-model="settings.app.folder" label="App folder" />
       </v-col>
       <v-col cols="2">
-        <v-text-field :value="settings.app.title" label="App title" />
+        <v-text-field v-model="settings.app.title" label="App title" />
       </v-col>
       <v-col cols="2">
         <template>
@@ -53,7 +53,7 @@
             <template v-slot:activator="{ on }">
               <v-text-field
                 v-on="on"
-                :value="settings.app.logo"
+                v-model="settings.app.logo"
                 label="Logo filekey"
               />
             </template>
@@ -77,7 +77,10 @@
       <v-col cols="3" v-for="(value, key) in settings.app.colors" :key="key">
         <v-menu>
           <template v-slot:activator="{ on }">
-            <v-text-field readonly v-on="on" :value="value" :label="key" />
+            <div class="d-flex justify-center align-center"  :v-ripple="false">
+              <v-text-field v-model="settings.app.colors[key]" :label="key"/>
+              <v-icon class="ml-3" style="height:25px" v-on="on"> mdi-palette </v-icon>
+            </div>
           </template>
           <v-color-picker
             mode="hexa"
@@ -90,13 +93,13 @@
     <v-card-title class="px-0 mb-3"> Currency:</v-card-title>
     <v-row>
       <v-col cols="2">
-        <v-text-field :value="settings.currency.prefix" label="Prefix" />
+        <v-text-field v-model="settings.currency.prefix" label="Prefix" />
       </v-col>
       <v-col cols="2">
-        <v-text-field :value="settings.currency.suffix" label="Suffix" />
+        <v-text-field v-model="settings.currency.suffix" label="Suffix" />
       </v-col>
       <v-col cols="2">
-        <v-text-field :value="settings.currency.code" label="Code" />
+        <v-text-field v-model="settings.currency.code" label="Code" />
       </v-col>
     </v-row>
     <v-row>
@@ -164,7 +167,7 @@ export default {
         type: "application/json",
       });
       if (window.navigator.msSaveOrOpenBlob) {
-        window.navigator.msSaveBlob(blob, "settings");
+        window.navigator.msSaveBlob(blob, "config");
       } else {
         const elem = window.document.createElement("a");
         elem.href = window.URL.createObjectURL(blob);

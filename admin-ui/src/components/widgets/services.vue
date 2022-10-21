@@ -1,108 +1,96 @@
 <template>
-  <widget
-    title="Services"
-    :loading="loading"
-  >
-    <v-alert
-			type="error"
-			v-if="err"
-    >
-      {{err.name}}: {{err.message}}
+  <widget title="Services" :loading="loading">
+    <v-alert type="error" v-if="err">
+      {{ err.name }}: {{ err.message }}
     </v-alert>
 
-		<v-list
-			dense
-			class="mb-4"
-			color="transparent"
-		>
-			<v-list-item v-for="item in state" :key="item.service" class="px-0">
-				<v-list-item-content>
-					{{item.service}}
-				</v-list-item-content>
-				<v-list-item-icon>
-					<v-chip
-						small
-						:color="item.status == 'SERVING' ? 'success' : 'error'"
-					>
-						{{item.status}}
-					</v-chip>
-				</v-list-item-icon>
-			</v-list-item>
+    <v-list dense class="mb-4" color="transparent">
+      <v-list-item v-for="item in state" :key="item.service" class="px-0">
+        <v-list-item-content>
+          <v-list-item-title>
+            {{ item.service || item.routine }}
+          </v-list-item-title>
+          <v-list-item-subtitle v-if="item.status.error">
+            Error: {{ item.status.error }}
+          </v-list-item-subtitle>
+        </v-list-item-content>
 
-		</v-list>
-
-		<v-btn
-			@click="checkHealth"
-		>
-			retry
-		</v-btn>
+        <v-list-item-icon>
+          <v-chip small :color="item.status == 'SERVING' ? 'success' : 'error'">
+            {{ item.status.status || item.status}}
+          </v-chip>
+        </v-list-item-icon>
+      </v-list-item>
+    </v-list>
+    <v-btn @click="checkHealth"> retry </v-btn>
   </widget>
 </template>
 
 <script>
 import widget from "./widget.vue";
-import api from "@/api.js"
+import api from "@/api.js";
 
 export default {
-  name: 'services-widget',
+  name: "services-widget",
   components: {
-    widget
+    widget,
   },
-  data: ()=>({
+  data: () => ({
     loading: false,
-		err: null,
-    state: {}
+    err: null,
+    state: {},
   }),
   computed: {
-    alertText(){
-      if(this.loading){
-        return 'Loading...'
+    alertText() {
+      if (this.loading) {
+        return "Loading...";
       }
 
-      return this.isHealthOk ? "All systems works just fine" : "Something went wrong";
+      return this.isHealthOk
+        ? "All systems works just fine"
+        : "Something went wrong";
     },
-    alertAttrs(){
-      if(this.loading){
+    alertAttrs() {
+      if (this.loading) {
         return {
           icon: "mdi-help-circle",
-          color: "grey darken-1"
-        }
+          color: "grey darken-1",
+        };
       }
 
-      if(this.isHealthOk){
+      if (this.isHealthOk) {
         return {
-          type: "success"
-        }
+          type: "success",
+        };
       } else {
         return {
-          type: "error"
-        }
+          type: "error",
+        };
       }
-    }
+    },
   },
-  created(){
-		this.checkHealth();
+  created() {
+    this.checkHealth();
   },
-	methods: {
-		checkHealth(){
-			this.loading = true;
-			api.health.services()
-			.then(res => {
-				this.state = res.serving;
-				this.err = null;
-			})
-			.catch(err => {
-				console.error(err);
-				this.err = err;
-			})
-			.finally(()=>{
-				this.loading = false;
-			})
-		}
-	}
-}
+  methods: {
+    checkHealth() {
+      this.loading = true;
+      api.health
+        .services()
+        .then((res) => {
+          this.state = res.serving.length > 0 ? res.serving : res.routines;
+          this.err = null;
+        })
+        .catch((err) => {
+          console.error(err);
+          this.err = err;
+        })
+        .finally(() => {
+          this.loading = false;
+        });
+    },
+  },
+};
 </script>
 
-<style>
-
-</style>
+<style></style>
