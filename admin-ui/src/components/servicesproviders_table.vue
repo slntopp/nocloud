@@ -47,9 +47,9 @@ export default {
       type: Boolean,
       default: false,
     },
-    searchParam: {
-      type: String,
-      default: "",
+    searchParams: {
+      type: Object,
+      default: null,
     },
   },
   data() {
@@ -81,6 +81,9 @@ export default {
           return "gray";
       }
     },
+    filterSpByTypes(spArray, types) {
+      return spArray.filter((sp) => types.includes(sp.type));
+    },
   },
   computed: {
     tableData() {
@@ -97,13 +100,24 @@ export default {
       }));
     },
     filteredSp() {
-      if (this.searchParam) {
-        return filterArrayByTitleAndUuid(
-          this.tableData,
-          this.searchParam,
-          true,
-          "titleLink"
-        );
+      const isAdvanced = this.searchParams.advanced?.types?.length > 0;
+      if (this.searchParams.param || isAdvanced) {
+        const filtred =
+          !this.searchParams.advanced?.types?.includes("all") && isAdvanced > 0
+            ? this.filterSpByTypes(
+                this.tableData,
+                this.searchParams.advanced.types
+              )
+            : this.tableData;
+
+        return this.searchParams.param
+          ? filterArrayByTitleAndUuid(
+              filtred,
+              this.searchParams.param,
+              true,
+              "titleLink"
+            )
+          : filtred;
       }
       return this.tableData;
     },
