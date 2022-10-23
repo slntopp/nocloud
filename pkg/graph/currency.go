@@ -117,6 +117,7 @@ func (c *CurrencyController) Get(ctx context.Context) ([]pb.Currency, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer cursor.Close()
 
 	for cursor.HasMore() {
 		doc := &driver.DocumentMeta{}
