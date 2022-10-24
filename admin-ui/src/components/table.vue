@@ -33,11 +33,13 @@
         </v-btn>
       </template>
       <template v-else>
-        <v-chip v-if="isKeyInCircle" color="gray">
-          {{ makeIdShort(props.value) }}
-        </v-chip>
-        <template v-else>
-          {{ makeIdShort(props.value) }}
+        <template v-if="!isKeyOnlyAfterClick">
+          <v-chip v-if="isKeyInCircle" color="gray">
+            {{ makeIdShort(props.value) }}
+          </v-chip>
+          <template v-else>
+            {{ makeIdShort(props.value) }}
+          </template>
         </template>
         <v-btn icon @click="showID(props.index)">
           <v-icon>mdi-eye-outline</v-icon>
@@ -154,6 +156,10 @@ export default {
     isKeyInCircle: {
       type: Boolean,
       default: true,
+    },
+    isKeyOnlyAfterClick: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {

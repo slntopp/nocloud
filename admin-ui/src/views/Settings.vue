@@ -74,6 +74,7 @@
     </div>
 
     <nocloud-table
+      isKeyOnlyAfterClick
       :isKeyInCircle="false"
       item-key="key"
       :loading="loading"
