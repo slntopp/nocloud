@@ -19,11 +19,16 @@
         single-line
         background-color="background-light"
         dence
-        :value="getAllTags"
         rounded
         readonly
         v-on="on"
-      ></v-text-field>
+      >
+      <template v-slot:label>
+        <v-chip style="height:20px" class="mr-1" small color="gray" v-for="tag in getAllTags" :key="tag">
+          {{ tag }}
+        </v-chip>
+      </template>
+      </v-text-field>
     </template>
     <component :is="searchMenuComponent">
       <v-text-field
@@ -53,10 +58,10 @@ export default {
       },
     },
     getAllTags() {
-      if(!this.searchParam){
-        return this.tags.join(', ')
+      if (!this.searchParam) {
+        return this.tags;
       }
-      return [this.searchParam, ...this.tags].join(", ");
+      return [this.searchParam, ...this.tags];
     },
     isAdvancedSearch() {
       return this.$store.getters["appSearch/isAdvancedSearch"];
