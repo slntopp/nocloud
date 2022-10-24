@@ -23,7 +23,7 @@
       </confirm-dialog>
     </div>
 
-    <services-providers :searchParam="searchParam" v-model="selected">
+    <services-providers :searchParams="searchParams" v-model="selected">
     </services-providers>
 
     <v-snackbar
@@ -71,8 +71,8 @@ export default {
     };
   },
   computed: {
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
+    searchParams() {
+      return this.$store.getters["appSearch/advancedParams"];
     },
   },
   methods: {
@@ -136,8 +136,9 @@ export default {
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      type: "servicesProviders/fetch"
+      type: "servicesProviders/fetch",
     });
+    this.setAdvancedSearch("serviceProvidersMenu");
   },
 };
 </script>
