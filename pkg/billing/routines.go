@@ -19,7 +19,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/arangodb/go-driver"
 	hpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	regpb "github.com/slntopp/nocloud/pkg/registry/proto"
@@ -55,6 +54,7 @@ type SuspendSchedule struct {
 }
 
 type SuspendConf struct {
+	AutoResume     bool              `json:"auto_resume"`
 	IsEnabled      bool              `json:"is_enabled"`
 	Limit          float64           `json:"limit"`
 	Schedule       []SuspendSchedule `json:"schedule"`
@@ -72,8 +72,9 @@ var (
 	}
 	suspendedSetting = &sc.Setting[SuspendConf]{
 		Value: SuspendConf{
-			IsEnabled: true,
-			Limit:     10,
+			AutoResume: true,
+			IsEnabled:  true,
+			Limit:      10,
 			Schedule: []SuspendSchedule{
 				{
 					Day: 0,
@@ -217,12 +218,10 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		}
 		defer cursor.Close()
 
-		for {
+		for cursor.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor.ReadDocument(ctx, &acc)
-			if driver.IsNoMoreDocuments(err) {
-				break
-			} else if err != nil {
+			if err != nil {
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
 			}
@@ -240,12 +239,10 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		}
 		defer cursor2.Close()
 
-		for {
+		for cursor2.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor2.ReadDocument(ctx, &acc)
-			if driver.IsNoMoreDocuments(err) {
-				break
-			} else if err != nil {
+			if err != nil {
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
 			}
@@ -263,16 +260,21 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 const accToUnsuspend = `
 let conf = @conf
 
+let candidates = (
+	for acc in Accounts
+		filter acc.suspended
+		filter conf.auto_resume
+		return acc
+)
+
 let local = (
-    for acc in Accounts
-        filter acc.suspended
+    for acc in candidates
         filter acc.suspend['limit'] && (acc.balance > acc.suspend['limit'])
         return acc
 )
     
 let global = (
-    for acc in Accounts
-        filter acc.suspended
+    for acc in candidates
         filter acc.balance > conf['limit']
         filter acc.balance > acc.suspend['limit']
         return acc

@@ -61,12 +61,12 @@ service AccountsService {
     };
     rpc Suspend(nocloud.registry.accounts.SuspendRequest) returns (nocloud.registry.accounts.SuspendResponse) {
         option (google.api.http) = {
-            get: "/accounts/{uuid}/suspend"
+            post: "/accounts/{uuid}/suspend"
         };
     };
     rpc Unsuspend(nocloud.registry.accounts.UnsuspendRequest) returns (nocloud.registry.accounts.UnsuspendResponse) {
         option (google.api.http) = {
-            get: "/accounts/{uuid}/unsuspend"
+            post: "/accounts/{uuid}/unsuspend"
         };
     };
 }
