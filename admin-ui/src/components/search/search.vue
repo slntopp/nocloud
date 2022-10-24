@@ -53,6 +53,9 @@ export default {
       },
     },
     getAllTags() {
+      if(!this.searchParam){
+        return this.tags.join(', ')
+      }
       return [this.searchParam, ...this.tags].join(", ");
     },
     isAdvancedSearch() {
