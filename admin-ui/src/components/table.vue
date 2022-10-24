@@ -41,7 +41,7 @@
             {{ makeIdShort(props.value) }}
           </template>
         </template>
-        <v-btn icon @click="showID(props.index)">
+        <v-btn v-if="!isIdShort(props.value)" icon @click="showID(props.index)">
           <v-icon>mdi-eye-outline</v-icon>
         </v-btn>
       </template>
@@ -196,7 +196,13 @@ export default {
     hideID(index) {
       this.showed = this.showed.filter((i) => i !== index);
     },
+    isIdShort(id){
+      return id.length<=8
+    },
     makeIdShort(id) {
+      if(this.isIdShort(id)){
+        return id
+      }
       return id.slice(0, 8) + "...";
     },
   },
