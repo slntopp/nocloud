@@ -1,7 +1,8 @@
+v-col
 <template>
   <div class="sp-ione">
     <v-row
-      v-for="field in Object.keys(fields)"
+      v-for="field in fieldKeys"
       :key="field"
       :align="!fields[field].isJSON ? 'center' : null"
     >
@@ -52,6 +53,21 @@
         />
       </v-col>
     </v-row>
+    <!-- Vlans key -->
+    <v-row>
+      <v-col cols="4" v-for="field in vlansKeys" :key="field">
+        <v-text-field
+          :placeholder="fields[field].label"
+          @change="(data) => changeHandler(field, data)"
+          :value="getValue(field)"
+          :label="fields[field].subheader"
+          :rules="fields[field].rules"
+          :error-messages="errors[field]"
+          :type="fields[field].type"
+          v-bind="fields[field].bind || {}"
+        />
+      </v-col>
+    </v-row>
   </div>
 </template>
 
@@ -93,7 +109,6 @@ export default {
       username: [],
       password: [],
       group: [],
-      vlansKey: [],
       size: [],
       start: [],
       schedule: [],
@@ -106,7 +121,6 @@ export default {
       username: "",
       password: "",
       group: "",
-      vlansKey: "",
       start: 0,
       size: 0,
       schedule: {},
@@ -159,16 +173,14 @@ export default {
       vlansKey: {
         type: "text",
         subheader: "Vlans key",
-        rules: [(value) => !!value || "Field is required"],
         label: "vlans key",
+        rules: [() => true],
       },
       start: {
         type: "number",
         subheader: "Start",
-        rules: [
-          (value) => !!value || value === 0 || "Field is required",
-          (value) => +value < 4096 || "Valns cant be more thna 4096",
-        ],
+        label: "number between 1 and 4096",
+        rules: [(value) => +value <= 4096 || "Vlаns cant be more thna 4096"],
         bind: {
           min: 0,
         },
@@ -176,10 +188,8 @@ export default {
       size: {
         type: "number",
         subheader: "Size",
-        rules: [
-          (value) => !!value || value === 0 || "Field is required",
-          (value) => +value < 4096 || "Valns cant be more thna 4096",
-        ],
+        label: "number between 1 and 4096",
+        rules: [(value) => +value <= 4096 || "Vlаns cant be more thna 4096"],
         bind: {
           min: 0,
         },
@@ -244,7 +254,6 @@ export default {
     changeHandler(input, data) {
       this.values[input] = data;
       let errors = {};
-
       Object.keys(this.fields).forEach((fieldName) => {
         this.fields[fieldName].rules.forEach((rule) => {
           const result = rule(this.values[fieldName]);
@@ -325,7 +334,6 @@ export default {
       this.$emit(`change:secrets`, secrets);
       this.$emit(`change:vars`, vars);
       this.$emit(`change:full`, result);
-      console.log(errors);
       // let passed = Object.keys(errors).every(el => errors)
       this.$emit(`passed`, Object.keys(errors).length == 0);
     },
@@ -352,6 +360,17 @@ export default {
         default:
           return "";
       }
+    },
+    isVlansKey(field) {
+      return this.vlansKeys.includes(field);
+    },
+  },
+  computed: {
+    vlansKeys() {
+      return ["vlansKey", "start", "size"];
+    },
+    fieldKeys() {
+      return Object.keys(this.fields).filter((key) => !this.isVlansKey(key));
     },
   },
   watch: {
