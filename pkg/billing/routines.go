@@ -216,8 +216,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		if err != nil {
 			log.Error("Error Quering Accounts to Suspend", zap.Error(err))
 		}
-		defer cursor.Close()
-
+		
 		for cursor.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor.ReadDocument(ctx, &acc)
@@ -237,8 +236,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		if err != nil {
 			log.Error("Error Quering Accounts to Unsuspend", zap.Error(err))
 		}
-		defer cursor2.Close()
-
+		
 		for cursor2.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor2.ReadDocument(ctx, &acc)
