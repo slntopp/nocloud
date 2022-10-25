@@ -293,19 +293,12 @@
         <p>OS's:</p>
         <div class="newCloud__template">
           <div
-            v-for="OS in template.publicData.templates"
+            v-for="OS in getPublicTemplates"
             class="newCloud__template-item"
             :key="OS.name"
           >
             <div class="newCloud__template-image">
-              <img
-                :src="
-                  'img/OS/' +
-                  OS.name.replace(/[^a-zA-Z]+/g, '').toLowerCase() +
-                  '.png'
-                "
-                :alt="OS.name"
-              />
+              <img :src="getOSImgLink(OS.name)" :alt="OS.name" />
             </div>
             <div class="newCloud__template-name">
               {{ OS.name }}
@@ -367,6 +360,13 @@ export default {
     getVlanIndex(index) {
       return this.vlansStart ? this.vlansStart + index : index;
     },
+    getOSImgLink(name) {
+      console.log(name);
+      console.log(
+        "img/OS/" + name.replace(/[^a-zA-Z]+/g, "").toLowerCase() + ".png"
+      );
+      return "img/OS/" + name.replace(/[^a-zA-Z]+/g, "").toLowerCase() + ".png";
+    },
   },
   mounted() {
     this.changeWidth();
@@ -402,6 +402,15 @@ export default {
         return 1;
       }
       return this.vlansCount < 2000 ? 4 : 8;
+    },
+    getPublicTemplates() {
+      if (!this.template.publicData.templates) {
+        return [];
+      }
+
+      return Object.values(this.template.publicData.templates).filter(
+        (t) => t.is_public
+      );
     },
   },
   watch: {
