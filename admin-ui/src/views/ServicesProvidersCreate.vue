@@ -308,16 +308,17 @@ export default {
     },
     testConfig() {
       this.isTestLoading = true;
-      console.log(this.serviceProviderBody.secrets);
-
-      if (this.serviceProviderBody.type === "ione") {
+      
+      if (
+        this.serviceProviderBody.type === "ione" &&
+        this.serviceProviderBody.secrets.vlans
+      ) {
         let isWrongVlans = false;
 
         for (const value of Object.values(
           this.serviceProviderBody.secrets.vlans
         )) {
           if (value.start && value.size) {
-            console.log(value.start + value.size );
             isWrongVlans = !(value.start + value.size < 4096);
           }
         }

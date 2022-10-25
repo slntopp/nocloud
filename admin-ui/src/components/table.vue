@@ -33,13 +33,15 @@
         </v-btn>
       </template>
       <template v-else>
-        <v-chip v-if="isKeyInCircle" color="gray">
-          {{ makeIdShort(props.value) }}
-        </v-chip>
-        <template v-else>
-          {{ makeIdShort(props.value) }}
+        <template v-if="!isKeyOnlyAfterClick">
+          <v-chip v-if="isKeyInCircle" color="gray">
+            {{ makeIdShort(props.value) }}
+          </v-chip>
+          <template v-else>
+            {{ makeIdShort(props.value) }}
+          </template>
         </template>
-        <v-btn icon @click="showID(props.index)">
+        <v-btn v-if="!isIdShort(props.value)" icon @click="showID(props.index)">
           <v-icon>mdi-eye-outline</v-icon>
         </v-btn>
       </template>
@@ -155,6 +157,10 @@ export default {
       type: Boolean,
       default: true,
     },
+    isKeyOnlyAfterClick: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -190,7 +196,13 @@ export default {
     hideID(index) {
       this.showed = this.showed.filter((i) => i !== index);
     },
+    isIdShort(id){
+      return id.length<=8
+    },
     makeIdShort(id) {
+      if(this.isIdShort(id)){
+        return id
+      }
       return id.slice(0, 8) + "...";
     },
   },
