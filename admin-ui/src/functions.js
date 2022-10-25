@@ -219,3 +219,13 @@ export function downloadJSONFile(obj,name){
     document.body.removeChild(elem);
   }
 }
+
+export function readFile(file,onResult){
+  if (!file) return;
+  let reader = new FileReader();
+  reader.onload = (e) => {
+    const result = JSON.parse(e.target.result);
+    onResult(result)
+  };
+  reader.readAsText(file);
+}
