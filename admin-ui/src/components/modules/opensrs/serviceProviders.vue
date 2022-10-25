@@ -52,6 +52,9 @@ export default {
       type: Boolean,
       default: false,
     },
+    secrets: {
+      type: Object,
+    },
   },
   data: () => ({
     hostWarning: false,
@@ -143,6 +146,11 @@ export default {
           return this.api_key;
       }
     },
+  },
+  created() {
+    this.host=this.secrets.host;
+    this.user=this.secrets.username;
+    this.api_key=this.secrets.api_key;
   },
   watch: {
     host(newVal) {

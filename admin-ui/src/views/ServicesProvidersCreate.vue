@@ -151,14 +151,15 @@
           </v-btn>
         </v-col>
         <v-col cols="6">
-          <div class="d-flex align-start">
-            <v-btn color="background-light" class="mr-2" @click="downloadJSON">
-              Download JSON
+          <div class="d-flex align-start justify-center">
+            <v-switch class="mr-2" style="margin-top:5px;padding-top:5px" v-model="isJson" :label="!isJson ? 'YAML' : 'JSON'" />
+            <v-btn color="background-light" class="mr-2" @click="downloadFile">
+              Download {{ isJson ? "JSON" : "YAML" }}
             </v-btn>
             <v-file-input
               class="mr-2 file-input"
-              label="upload json sp..."
-              accept=".json"
+              :label="`upload ${isJson ? 'json' : 'yaml'} sp...`"
+              :accept="isJson ? '.json' : '.yaml'"
               @change="onJsonInputChange"
             />
           </div>
@@ -195,7 +196,13 @@ import Vue from "vue";
 import extentionsMap from "@/components/extentions/map.js";
 import snackbar from "@/mixins/snackbar.js";
 
-import { mergeDeep, downloadJSONFile, readFile } from "@/functions.js";
+import {
+  mergeDeep,
+  downloadJSONFile,
+  readJSONFile,
+  readYAMLFile,
+  downloadYAMLFile,
+} from "@/functions.js";
 
 export default {
   name: "servicesProviders-create",
@@ -227,6 +234,8 @@ export default {
     },
 
     tooltipVisible: false,
+
+    isJson: true,
   }),
   created() {
     const types = require.context(
@@ -277,13 +286,13 @@ export default {
   },
   methods: {
     handleFieldsChange(type, data) {
-      if (type == "secrets") {
+      if (type == "secrets" ) {
         this.provider.secrets = data;
       }
-      if (type == "vars") {
+      if (type == "vars" ) {
         this.provider.vars = data;
       }
-
+      
       this.testButtonColor = "background-light";
       this.isTestSuccess = false;
     },
@@ -391,33 +400,45 @@ export default {
     mergeDeep(target, ...sources) {
       return mergeDeep(target, ...sources);
     },
-    onJsonInputChange(file) {
-      readFile(file)
-        .then((res) => {
-          const requiredKeys = ["vars", "secrets", "title", "public", "type"];
+    setSP(res) {
+      const requiredKeys = ["vars", "secrets", "title", "public", "type"];
 
-          for (const key of requiredKeys) {
-            if (res[key] === undefined) {
-              throw new Error("JSON need keys:" + requiredKeys.join(", "));
-            }
-          }
+      for (const key of requiredKeys) {
+        if (res[key] === undefined) {
+          throw new Error("JSON need keys:" + requiredKeys.join(", "));
+        }
+      }
 
-          if (!this.types.includes(res.type)) {
-            throw new Error(`Type ${res.type} not exists!`);
-          }
+      if (!this.types.includes(res.type)) {
+        throw new Error(`Type ${res.type} not exists!`);
+      }
 
-          this.provider = res;
-        })
-        .catch(({ message }) => {
-          this.showSnackbarError({ message });
-        });
+      this.provider = res;
     },
-    downloadJSON() {
+    onJsonInputChange(file) {
+      if (this.isJson) {
+        readJSONFile(file)
+          .then((res) => this.setSP(res))
+          .catch(({ message }) => {
+            this.showSnackbarError({ message });
+          });
+      } else {
+        readYAMLFile(file)
+          .then((res) => this.setSP(res))
+          .catch(({ message }) => {
+            this.showSnackbarError({ message });
+          });
+      }
+    },
+    downloadFile() {
       const name = this.serviceProviderBody.title
         ? this.serviceProviderBody.title.replaceAll(" ", "_")
         : "unknown_sp";
-
-      downloadJSONFile(this.serviceProviderBody, name);
+      if (this.isJson) {
+        downloadJSONFile(this.serviceProviderBody, name);
+      } else {
+        downloadYAMLFile(this.serviceProviderBody, name);
+      }
     },
   },
 };

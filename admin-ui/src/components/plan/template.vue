@@ -68,10 +68,12 @@
 
 <script>
 import api from "@/api.js";
-import yaml from "yaml";
 import snackbar from "@/mixins/snackbar.js";
 import JsonTextarea from "@/components/JsonTextarea.vue";
 import YamlEditor from "@/components/YamlEditor.vue";
+import yaml from "yaml";
+
+import {objectToYamlString } from "@/functions.js";
 
 export default {
   name: "plan-template",
@@ -159,10 +161,7 @@ export default {
       );
     },
     templateObjectYAML() {
-      const doc = new yaml.Document();
-      doc.contents = this.template;
-
-      return doc.toString();
+      return objectToYamlString(this.template)
     },
   },
 };

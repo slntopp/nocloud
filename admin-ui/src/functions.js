@@ -1,3 +1,5 @@
+import yaml from "yaml";
+
 export function isObject(item) {
   return item && typeof item === "object" && !Array.isArray(item);
 }
@@ -148,18 +150,6 @@ export function filterArrayByTitleAndUuid(
   return [...new Set([...byTitle, ...byUuid])];
 }
 
-// export function levenshtein(s, t) {
-//   if (!s.length) return t.length;
-//   if (!t.length) return s.length;
-
-//   return Math.min(
-//     levenshtein(s.substring(1), t) + 1,
-//     levenshtein(t.substring(1), s) + 1,
-//     levenshtein(s.substring(1), t.substring(1)) +
-//       (s[0] !== t[0] ? 1 : 0)
-//   );
-// }
-
 export function levenshtein(s, t) {
   var d = []; //2d matrix
 
@@ -203,28 +193,59 @@ export function levenshtein(s, t) {
   return d[n][m];
 }
 
-export function downloadJSONFile(obj, name) {
-  const blob = new Blob([JSON.stringify(obj)], {
-    type: "application/json",
-  });
+export function downloadFile(blob, name, extension = "json") {
   if (window.navigator.msSaveOrOpenBlob) {
     window.navigator.msSaveBlob(blob, name);
   } else {
     const elem = window.document.createElement("a");
     elem.href = window.URL.createObjectURL(blob);
-    elem.download = name;
+    elem.download = name + "." + extension;
     document.body.appendChild(elem);
     elem.click();
     document.body.removeChild(elem);
   }
 }
 
-export function readFile(file) {
+export function downloadJSONFile(obj, name) {
+  const blob = new Blob([JSON.stringify(obj)], {
+    type: "application/json",
+  });
+  downloadFile(blob, name);
+}
+
+export function objectToYAMLString(obj) {
+  const doc = new yaml.Document();
+  doc.contents = obj;
+
+  return doc.toString();
+}
+
+export function downloadYAMLFile(obj, name) {
+  const blob = new Blob([objectToYAMLString(obj)], {});
+
+  downloadFile(blob, name, "yaml");
+}
+
+export function readJSONFile(file) {
   return new Promise((resolve) => {
     if (!file) return;
+
     let reader = new FileReader();
     reader.onload = (e) => {
       const result = JSON.parse(e.target.result);
+      resolve(result);
+    };
+    reader.readAsText(file);
+  });
+}
+
+export function readYAMLFile(file) {
+  return new Promise((resolve) => {
+    if (!file) return;
+
+    let reader = new FileReader();
+    reader.onload = (e) => {
+      const result = yaml.parse(e.target.result);
       resolve(result);
     };
     reader.readAsText(file);
