@@ -203,3 +203,19 @@ export function levenshtein(s, t) {
   // Step 7
   return d[n][m];
 }
+
+export function downloadJSONFile(obj,name){
+  const blob = new Blob([JSON.stringify(obj)], {
+    type: "application/json",
+  });
+  if (window.navigator.msSaveOrOpenBlob) {
+    window.navigator.msSaveBlob(blob, name);
+  } else {
+    const elem = window.document.createElement("a");
+    elem.href = window.URL.createObjectURL(blob);
+    elem.download = name;
+    document.body.appendChild(elem);
+    elem.click();
+    document.body.removeChild(elem);
+  }
+}
