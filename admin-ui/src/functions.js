@@ -176,35 +176,34 @@ export function levenshtein(s, t) {
   for (var jf = m; jf >= 0; jf--) d[0][jf] = jf;
 
   for (var i = 1; i <= n; i++) {
-      var s_i = s.charAt(i - 1);
+    var s_i = s.charAt(i - 1);
 
-      for (var j = 1; j <= m; j++) {
+    for (var j = 1; j <= m; j++) {
+      if (i == j && d[i][j] > 4) return n;
 
-          if (i == j && d[i][j] > 4) return n;
+      var t_j = t.charAt(j - 1);
+      var cost = s_i == t_j ? 0 : 1; // Step 5
 
-          var t_j = t.charAt(j - 1);
-          var cost = (s_i == t_j) ? 0 : 1; // Step 5
+      var mi = d[i - 1][j] + 1;
+      var b = d[i][j - 1] + 1;
+      var c = d[i - 1][j - 1] + cost;
 
-          var mi = d[i - 1][j] + 1;
-          var b = d[i][j - 1] + 1;
-          var c = d[i - 1][j - 1] + cost;
+      if (b < mi) mi = b;
+      if (c < mi) mi = c;
 
-          if (b < mi) mi = b;
-          if (c < mi) mi = c;
+      d[i][j] = mi; // Step 6
 
-          d[i][j] = mi; // Step 6
-
-          if (i > 1 && j > 1 && s_i == t.charAt(j - 2) && s.charAt(i - 2) == t_j) {
-              d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + cost);
-          }
+      if (i > 1 && j > 1 && s_i == t.charAt(j - 2) && s.charAt(i - 2) == t_j) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + cost);
       }
+    }
   }
 
   // Step 7
   return d[n][m];
 }
 
-export function downloadJSONFile(obj,name){
+export function downloadJSONFile(obj, name) {
   const blob = new Blob([JSON.stringify(obj)], {
     type: "application/json",
   });
@@ -220,12 +219,14 @@ export function downloadJSONFile(obj,name){
   }
 }
 
-export function readFile(file,onResult){
-  if (!file) return;
-  let reader = new FileReader();
-  reader.onload = (e) => {
-    const result = JSON.parse(e.target.result);
-    onResult(result)
-  };
-  reader.readAsText(file);
+export function readFile(file) {
+  return new Promise((resolve) => {
+    if (!file) return;
+    let reader = new FileReader();
+    reader.onload = (e) => {
+      const result = JSON.parse(e.target.result);
+      resolve(result);
+    };
+    reader.readAsText(file);
+  });
 }

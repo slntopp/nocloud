@@ -157,7 +157,7 @@ export default {
   },
   methods: {
     onFileChange(file) {
-      readFile(file,(res)=>this.settings=res);
+      readFile(file).then(res=>this.settings=res);
     },
     downloadSettings() {
       downloadJSONFile(this.settings, "settings");
