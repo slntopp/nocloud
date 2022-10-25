@@ -149,6 +149,13 @@
           >
             Test
           </v-btn>
+          <v-btn
+            color="background-light"
+            class="mr-2"
+            @click="downloadJSON"
+          >
+            Download JSON
+          </v-btn>
         </v-col>
       </v-row>
     </v-container>
@@ -182,7 +189,7 @@ import Vue from "vue";
 import extentionsMap from "@/components/extentions/map.js";
 import snackbar from "@/mixins/snackbar.js";
 
-import { mergeDeep } from "@/functions.js";
+import { mergeDeep, downloadJSONFile} from "@/functions.js";
 
 export default {
   name: "servicesProviders-create",
@@ -378,6 +385,11 @@ export default {
     mergeDeep(target, ...sources) {
       return mergeDeep(target, ...sources);
     },
+    downloadJSON(){
+      const name=this.serviceProviderBody.title? this.serviceProviderBody.title.replaceAll(' ','_'):'unknown_sp';
+
+      downloadJSONFile(this.serviceProviderBody,name)
+    }
   },
 };
 </script>
