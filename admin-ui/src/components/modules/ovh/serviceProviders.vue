@@ -85,19 +85,6 @@ export default {
       const errors = {};
       const newSecrets = {};
 
-      Object.keys(this.fields).forEach((fieldName) => {
-        this.fields[fieldName].rules.forEach((rule) => {
-          const result = rule(this.secrets[fieldName]);
-
-          if (typeof result === "string") {
-            this.errors[fieldName] = [result];
-            errors[fieldName] = result;
-          } else {
-            this.errors[fieldName] = [];
-          }
-        });
-      });
-
       for (const key of Object.keys(this.secrets)) {
         newSecrets[key] = this.secrets[key];
       }
@@ -105,6 +92,16 @@ export default {
       newSecrets[input] = data;
       this.$emit(`change:secrets`, newSecrets);
       this.$emit(`passed`, Object.keys(errors).length === 0);
+
+      this.fields[input].rules.forEach((rule) => {
+        const result = rule(data);
+        if (typeof result == "string") {
+          this.errors[input] = [result];
+          errors[input] = result;
+        } else {
+          this.errors[input] = [];
+        }
+      });
     },
     getValue(fieldName) {
       return this.secrets[fieldName];
