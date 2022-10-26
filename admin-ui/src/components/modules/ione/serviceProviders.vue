@@ -31,7 +31,7 @@ v-col
 
       <v-col cols="8">
         <v-switch
-          v-if="fields[field].type === 'bool'"
+          v-if="fields[field]?.type === 'bool'"
           v-model="fields[field].bind"
           :label="fields[field].label"
           @change="(data) => changeHandler(field, data)"
@@ -55,7 +55,7 @@ v-col
     </v-row>
     <!-- Vlans key -->
     <v-row>
-      <v-col cols="4" v-for="field in vlansKeys" :key="field">
+      <v-col cols="4" v-for="field in vlansKeys()" :key="field">
         <v-text-field
           :placeholder="fields[field].label"
           @change="(data) => changeHandler(field, data)"
@@ -106,28 +106,15 @@ export default {
     hostWarning: false,
     errors: {
       host: [],
-      username: [],
-      password: [],
+      user: [],
+      pass: [],
       group: [],
       size: [],
       start: [],
-      schedule: [],
-      schedule_ds: [],
+      sched: [],
+      sched_ds: [],
       public_ip_pool: [],
       private_vnets_pool: [],
-    },
-    values: {
-      host: "",
-      username: "",
-      password: "",
-      group: "",
-      start: 0,
-      size: 0,
-      schedule: {},
-      schedule_ds: {},
-      public_ip_pool: "",
-      private_vnets_pool: "",
-      private_vnet_ban: false,
     },
     fields: {
       host: {
@@ -146,17 +133,17 @@ export default {
         ],
         label: "example.com",
       },
-      username: {
+      user: {
         type: "text",
-        subheader: "Username(Login)",
+        subheader: "user(Login)",
         rules: [(value) => !!value || "Field is required"],
-        label: "username",
+        label: "user",
       },
-      password: {
-        type: "password",
-        subheader: "Password or Token",
+      pass: {
+        type: "pass",
+        subheader: "pass or Token",
         rules: [(value) => !!value || "Field is required"],
-        label: "password",
+        label: "pass",
       },
       group: {
         type: "number",
@@ -194,9 +181,9 @@ export default {
           min: 0,
         },
       },
-      schedule: {
+      sched: {
         type: "text",
-        subheader: "Scheduler rules",
+        subheader: "schedr rules",
         isJSON: true,
         rules: [
           (value) => !!value || "Field is required",
@@ -204,9 +191,9 @@ export default {
         ],
         label: "JSON",
       },
-      schedule_ds: {
+      sched_ds: {
         type: "text",
-        subheader: "DataStore Scheduler rules",
+        subheader: "DataStore schedr rules",
         isJSON: true,
         rules: [
           (value) => !!value || "Field is required",
@@ -252,76 +239,58 @@ export default {
       return value === Number(value) || "Is not valid domain";
     },
     changeHandler(input, data) {
-      this.values[input] = data;
       let errors = {};
-      Object.keys(this.fields).forEach((fieldName) => {
-        this.fields[fieldName].rules.forEach((rule) => {
-          const result = rule(this.values[fieldName]);
-          if (typeof result == "string") {
-            this.errors[fieldName] = [result];
-            errors[fieldName] = result;
-          } else {
-            this.errors[fieldName] = [];
-          }
-        });
-      });
-
-      // console.error(`errors`, errors);
-
       const secrets = {};
-      if (this.values.host) {
-        secrets.host = this.values.host;
-      }
-      if (this.values.username) {
-        secrets.user = this.values.username;
-      }
-      if (this.values.password) {
-        secrets.pass = this.values.password;
-      }
-      if (this.values.group) {
-        secrets.group = +this.values.group;
-      }
-
-      if (this.values.vlansKey && this.values.start && this.values.size) {
-        secrets.vlans = {
-          [this.values.vlansKey]: {
-            start: +this.values.start,
-            size: +this.values.size,
-          },
-        };
-      }
-
       const vars = {};
-      if (this.values.schedule) {
-        if (isJSON(JSON.stringify(this.values.schedule))) {
-          vars.sched = { value: this.values.schedule };
-          delete errors.schedule;
+
+      // Object.keys(this.fields).forEach((fieldName) => {
+      //   this.fields[fieldName].rules.forEach((rule) => {
+      //     const result = rule(this.getValue(fieldName));
+      //     if (typeof result == "string") {
+      //       this.errors[fieldName] = [result];
+      //       errors[fieldName] = result;
+      //     } else {
+      //       this.errors[fieldName] = [];
+      //     }
+      //   });
+      // });
+
+      for (const secretKey of this.secretsKeys()) {
+        secrets[secretKey] =
+          secretKey === input ? data : this.getValue(secretKey);
+      }
+
+      secrets.group = "group" === input ? +data : +this.getValue("group");
+
+      if (this.getValue("vlansKey") || input === "vlansKey") {
+        if (input === "vlansKey") {
+          secrets.vlans = {
+            [data]: {
+              start: +(this.getValue("start") ?? 0),
+              size: +(this.getValue("size") ?? 0),
+            },
+          };
         } else {
-          errors.sched = ["is not valid JSON"];
+          secrets.vlans = {
+            [this.getValue("vlansKey")]: {
+              start: +(this.getValue("start") ?? 0),
+              size: +(this.getValue("size") ?? 0),
+            },
+          };
         }
       }
-      if (this.values.schedule_ds) {
-        if (isJSON(JSON.stringify(this.values.schedule_ds))) {
-          vars.sched_ds = { value: this.values.schedule_ds };
-          delete errors.schedule_ds;
-        } else {
-          errors.sched_ds = ["is not valid JSON"];
-        }
+
+      for (const varKey of this.jsonVarsKeys()) {
+        this.setVarsValueJSON(vars, varKey, errors, varKey === input, data);
       }
-      if (this.values.public_ip_pool) {
-        vars.public_ip_pool = {
-          value: { default: +this.values.public_ip_pool },
-        };
-      }
-      if (this.values.private_vnets_pool) {
-        vars.private_vnets_pool = {
-          value: { default: +this.values.private_vnets_pool },
-        };
-      }
-      if (this.values.private_vnet_ban) {
-        vars.private_vnet_ban = {
-          value: { default: this.values.private_vnet_ban },
-        };
+
+      const defaultVars = [
+        "public_ip_pool",
+        "private_vnets_pool",
+        "private_vnet_ban",
+      ];
+      for (const varKey of defaultVars) {
+        this.setVarsValueDefault(vars, varKey, varKey === input, data);
       }
 
       const result = {
@@ -329,28 +298,59 @@ export default {
         vars,
       };
 
-      // console.error(`errors`, errors, Object.keys(errors).length);
-
       this.$emit(`change:secrets`, secrets);
       this.$emit(`change:vars`, vars);
       this.$emit(`change:full`, result);
-      // let passed = Object.keys(errors).every(el => errors)
       this.$emit(`passed`, Object.keys(errors).length == 0);
+
+      this.fields[input].rules.forEach((rule) => {
+        const result = rule(data);
+        if (typeof result == "string") {
+          this.errors[input] = [result];
+          errors[input] = result;
+        } else {
+          this.errors[input] = [];
+        }
+      });
     },
+
+    setVarsValueDefault(vars, fieldName, isChange, data) {
+      vars[fieldName] = {
+        value: { default: isChange ? data : this.getValue(fieldName) },
+      };
+    },
+
+    setVarsValueJSON(vars, fieldName, errors, isChange, data) {
+      if (isJSON(JSON.stringify(this.getValue(fieldName)))) {
+        vars[fieldName] = { value: isChange ? data : this.getValue(fieldName) };
+        delete errors[fieldName];
+      } else {
+        errors[fieldName] = ["is not valid JSON"];
+      }
+    },
+
     getValue(fieldName) {
+      if (this.isVlansKey(fieldName)) {
+        const vlansKey = Object.keys(this.secrets.vlansKey ?? {})[0];
+
+        if (fieldName === "vlansKey") {
+          return vlansKey ?? "";
+        } else if ("start" === fieldName) {
+          return vlansKey ? this.secrets.vlansKey[vlansKey]?.start : 0;
+        } else {
+          return vlansKey ? this.secrets.vlansKey[vlansKey]?.size : 0;
+        }
+      }
+
+      if (this.secretsKeys().includes(fieldName) || fieldName === "group") {
+        return this.secrets[fieldName];
+      }
+
+      if (this.jsonVarsKeys().includes(fieldName)) {
+        return this.vars[fieldName]?.value ?? {};
+      }
+
       switch (fieldName) {
-        case "domain":
-          return this.secrets.host;
-        case "username":
-          return this.secrets.user;
-        case "password":
-          return this.secrets.pass;
-        case "group":
-          return this.secrets.group;
-        case "schedule":
-          return this.vars?.sched?.value ?? {};
-        case "schedule_ds":
-          return this.vars?.sched_ds?.value ?? {};
         case "public_ip_pool":
           return this.vars.public_ip_pool?.value?.default ?? "";
         case "private_vnets_pool":
@@ -362,13 +362,19 @@ export default {
       }
     },
     isVlansKey(field) {
-      return this.vlansKeys.includes(field);
+      return this.vlansKeys().includes(field);
     },
-  },
-  computed: {
     vlansKeys() {
       return ["vlansKey", "start", "size"];
     },
+    secretsKeys() {
+      return ["host", "user", "pass"];
+    },
+    jsonVarsKeys() {
+      return ["sched_ds", "sched"];
+    },
+  },
+  computed: {
     fieldKeys() {
       return Object.keys(this.fields).filter((key) => !this.isVlansKey(key));
     },
