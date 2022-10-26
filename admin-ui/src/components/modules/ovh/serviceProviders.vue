@@ -98,41 +98,16 @@ export default {
         });
       });
 
-      if (this.secrets.app_key) {
-        newSecrets.app_key = this.secrets.app_key;
-      }
-      if (this.secrets.app_secret) {
-        newSecrets.app_secret = this.secrets.app_secret;
-      }
-      if (this.secrets.consumer_key) {
-        newSecrets.consumer_key = this.secrets.consumer_key;
-      }
-      if (this.secrets.endpoint) {
-        newSecrets.endpoint = this.secrets.endpoint;
+      for (const key of Object.keys(this.secrets)) {
+        newSecrets[key] = this.secrets[key];
       }
 
       newSecrets[input] = data;
-
-      console.log(this.secrets);
-      console.log(newSecrets);
-
       this.$emit(`change:secrets`, newSecrets);
       this.$emit(`passed`, Object.keys(errors).length === 0);
-      console.log(errors);
     },
     getValue(fieldName) {
-      switch (fieldName) {
-        case "app_key":
-          return this.secrets.app_key;
-        case "app_secret":
-          return this.secrets.app_secret;
-        case "consumer_key":
-          return this.secrets.consumer_key;
-        case "endpoint":
-          return this.secrets.endpoint;
-        default:
-          return "";
-      }
+      return this.secrets[fieldName];
     },
   },
 };
