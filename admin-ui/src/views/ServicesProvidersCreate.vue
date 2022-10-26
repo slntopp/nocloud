@@ -55,6 +55,7 @@
           <component
             :is="templates[provider.type]"
             :secrets="provider.secrets"
+            :key="providerKey"
             @change:secrets="(data) => handleFieldsChange('secrets', data)"
             :vars="provider.vars"
             @change:vars="(data) => handleFieldsChange('vars', data)"
@@ -152,7 +153,12 @@
         </v-col>
         <v-col cols="6">
           <div class="d-flex align-start justify-center">
-            <v-switch class="mr-2" style="margin-top:5px;padding-top:5px" v-model="isJson" :label="!isJson ? 'YAML' : 'JSON'" />
+            <v-switch
+              class="mr-2"
+              style="margin-top: 5px; padding-top: 5px"
+              v-model="isJson"
+              :label="!isJson ? 'YAML' : 'JSON'"
+            />
             <v-btn color="background-light" class="mr-2" @click="downloadFile">
               Download {{ isJson ? "JSON" : "YAML" }}
             </v-btn>
@@ -218,6 +224,7 @@ export default {
       secrets: {},
       vars: {},
     },
+    providerKey:'',
 
     isPassed: false,
     isLoading: false,
@@ -255,6 +262,8 @@ export default {
       }
     });
 
+    this.providerKey=this.generateComponentId()
+
     this.fetchExtentions();
   },
   computed: {
@@ -285,6 +294,9 @@ export default {
     },
   },
   methods: {
+    generateComponentId(){
+      return "id" + Math.random().toString(16).slice(2)
+    },
     handleFieldsChange(type, data) {
       if (type == "secrets" ) {
         this.provider.secrets = data;
@@ -292,7 +304,7 @@ export default {
       if (type == "vars" ) {
         this.provider.vars = data;
       }
-      
+
       this.testButtonColor = "background-light";
       this.isTestSuccess = false;
     },
@@ -412,6 +424,8 @@ export default {
       if (!this.types.includes(res.type)) {
         throw new Error(`Type ${res.type} not exists!`);
       }
+
+      this.providerKey=this.generateComponentId()
 
       this.provider = res;
     },
