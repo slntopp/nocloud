@@ -63,11 +63,6 @@ export default {
       username: [],
       api_key: [],
     },
-    values: {
-      host: "",
-      username: "",
-      api_key: "",
-    },
     fields: {
       host: {
         type: "text",
@@ -101,32 +96,14 @@ export default {
   }),
   methods: {
     changeHandler(input, data) {
-      this.values[input] = data;
-      let errors = {};
-
-      Object.keys(this.fields).forEach((fieldName) => {
-        this.fields[fieldName].rules.forEach((rule) => {
-          const result = rule(this.values[fieldName]);
-          if (typeof result == "string") {
-            this.errors[fieldName] = [result];
-            errors[fieldName] = result;
-          } else {
-            this.errors[fieldName] = [];
-          }
-        });
-      });
-
+      const errors = {};
       const secrets = {};
-      if (this.values.host) {
-        secrets.host = this.values.host;
+
+      for (const key of Object.keys(this.secrets)) {
+        secrets[key] = this.secrets[key];
       }
-      if (this.values.username) {
-        secrets.username = this.values.username;
-      }
-      console.log(this.values);
-      if (this.values.api_key) {
-        secrets.api_key = this.values.api_key;
-      }
+
+      secrets[input] = data;
 
       const result = {
         secrets,
@@ -135,22 +112,25 @@ export default {
       this.$emit(`change:secrets`, secrets);
       this.$emit(`change:full`, result);
       this.$emit(`passed`, Object.keys(errors).length == 0);
+
+      this.fields[input].rules.forEach((rule) => {
+        const result = rule(data);
+        if (typeof result == "string") {
+          this.errors[input] = [result];
+          errors[input] = result;
+        } else {
+          this.errors[input] = [];
+        }
+      });
     },
     getValue(fieldName) {
-      switch (fieldName) {
-        case "host":
-          return this.host;
-        case "username":
-          return this.user;
-        case "api_key":
-          return this.api_key;
-      }
+      return this.secrets[fieldName];
     },
   },
   created() {
-    this.host=this.secrets.host;
-    this.user=this.secrets.username;
-    this.api_key=this.secrets.api_key;
+    this.host = this.secrets.host;
+    this.user = this.secrets.username;
+    this.api_key = this.secrets.api_key;
   },
   watch: {
     host(newVal) {
