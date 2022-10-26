@@ -112,6 +112,8 @@
               />
             </v-tab-item>
           </v-tabs-items>
+
+          <plans-form-fee @change="changeFee" />
         </v-col>
       </v-row>
 
@@ -160,12 +162,13 @@
 <script>
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
-import ConfirmDialog from "../components/confirmDialog.vue";
+import confirmDialog from "@/components/confirmDialog.vue";
+import plansFormFee from '@/components/plans_form_fee.vue';
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  components: { ConfirmDialog },
+  components: { confirmDialog, plansFormFee },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
@@ -179,6 +182,7 @@ export default {
       public: true,
       resources: [],
       products: {},
+      fee: {},
     },
     form: {
       title: "",
@@ -199,7 +203,7 @@ export default {
   methods: {
     changeResource(num, { key, value }) {
       try {
-        value = JSON.parse(value, num);
+        value = JSON.parse(value);
       } catch {
         value;
       }
@@ -236,6 +240,15 @@ export default {
       } else {
         this.plan.products[obj] = { [key]: value };
       }
+    },
+    changeFee({ key, value }) {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        value;
+      }
+
+      this.plan.fee[key] = value;
     },
     preset(i) {
       const title = this.form.titles[i - 1];
@@ -510,6 +523,7 @@ export default {
   },
   watch: {
     "plan.type"() {
+      this.plan.fee = {};
       switch (this.plan.type) {
         case "ione":
           if (this.plan.kind === "STATIC") return;
