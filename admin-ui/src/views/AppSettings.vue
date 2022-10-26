@@ -122,7 +122,7 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import JsonEditor from "@/components/JsonEditor.vue";
-import { downloadJSONFile,readFile} from "@/functions.js";
+import { downloadJSONFile,readJSONFile} from "@/functions.js";
 
 export default {
   key: "app-settings",
@@ -157,7 +157,7 @@ export default {
   },
   methods: {
     onFileChange(file) {
-      readFile(file).then(res=>this.settings=res);
+      readJSONFile(file).then(res=>this.settings=res);
     },
     downloadSettings() {
       downloadJSONFile(this.settings, "settings");

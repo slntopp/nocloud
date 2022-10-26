@@ -73,7 +73,7 @@ import JsonTextarea from "@/components/JsonTextarea.vue";
 import YamlEditor from "@/components/YamlEditor.vue";
 import yaml from "yaml";
 
-import {objectToYamlString } from "@/functions.js";
+import {objectToYAMLString } from "@/functions.js";
 
 export default {
   name: "plan-template",
@@ -161,7 +161,7 @@ export default {
       );
     },
     templateObjectYAML() {
-      return objectToYamlString(this.template)
+      return objectToYAMLString(this.template)
     },
   },
 };
