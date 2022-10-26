@@ -52,24 +52,18 @@ export default {
       consumerKey: [],
       endpoint: [],
     },
-    values: {
-      appKey: "",
-      appSecret: "",
-      consumerKey: "",
-      endpoint: "",
-    },
     fields: {
-      appKey: {
+      app_key: {
         label: "app key",
         subheader: "App key",
         rules: [(value) => !!value || "Field is required"],
       },
-      appSecret: {
+      app_secret: {
         label: "app secret",
         subheader: "App secret",
         rules: [(value) => !!value || "Field is required"],
       },
-      consumerKey: {
+      consumer_key: {
         label: "consumer key",
         subheader: "Consumer key",
         rules: [(value) => !!value || "Field is required"],
@@ -89,12 +83,11 @@ export default {
   methods: {
     changeHandler(input, data) {
       const errors = {};
-      const secrets = {};
-      this.values[input] = data;
+      const newSecrets = {};
 
       Object.keys(this.fields).forEach((fieldName) => {
         this.fields[fieldName].rules.forEach((rule) => {
-          const result = rule(this.values[fieldName]);
+          const result = rule(this.secrets[fieldName]);
 
           if (typeof result === "string") {
             this.errors[fieldName] = [result];
@@ -105,30 +98,35 @@ export default {
         });
       });
 
-      if (this.values.appKey) {
-        secrets.app_key = this.values.appKey;
+      if (this.secrets.app_key) {
+        newSecrets.app_key = this.secrets.app_key;
       }
-      if (this.values.appSecret) {
-        secrets.app_secret = this.values.appSecret;
+      if (this.secrets.app_secret) {
+        newSecrets.app_secret = this.secrets.app_secret;
       }
-      if (this.values.consumerKey) {
-        secrets.consumer_key = this.values.consumerKey;
+      if (this.secrets.consumer_key) {
+        newSecrets.consumer_key = this.secrets.consumer_key;
       }
-      if (this.values.endpoint) {
-        secrets.endpoint = this.values.endpoint;
+      if (this.secrets.endpoint) {
+        newSecrets.endpoint = this.secrets.endpoint;
       }
 
-      this.$emit(`change:secrets`, secrets);
+      newSecrets[input] = data;
+
+      console.log(this.secrets);
+      console.log(newSecrets);
+
+      this.$emit(`change:secrets`, newSecrets);
       this.$emit(`passed`, Object.keys(errors).length === 0);
       console.log(errors);
     },
     getValue(fieldName) {
       switch (fieldName) {
-        case "appKey":
+        case "app_key":
           return this.secrets.app_key;
-        case "appSecret":
+        case "app_secret":
           return this.secrets.app_secret;
-        case "consumerKey":
+        case "consumer_key":
           return this.secrets.consumer_key;
         case "endpoint":
           return this.secrets.endpoint;
