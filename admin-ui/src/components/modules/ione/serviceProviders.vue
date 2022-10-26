@@ -347,7 +347,10 @@ export default {
       }
 
       if (this.jsonVarsKeys().includes(fieldName)) {
-        return this.vars[fieldName]?.value ?? {};
+        if (typeof (this.vars[fieldName]?.value ?? {}) === "object") {
+          return this.vars[fieldName]?.value ?? {};
+        }
+        return {};
       }
 
       switch (fieldName) {
