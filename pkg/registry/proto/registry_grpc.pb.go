@@ -31,6 +31,8 @@ type AccountsServiceClient interface {
 	Get(ctx context.Context, in *accounts.GetRequest, opts ...grpc.CallOption) (*accounts.Account, error)
 	List(ctx context.Context, in *accounts.ListRequest, opts ...grpc.CallOption) (*accounts.ListResponse, error)
 	Delete(ctx context.Context, in *accounts.DeleteRequest, opts ...grpc.CallOption) (*accounts.DeleteResponse, error)
+	Suspend(ctx context.Context, in *accounts.SuspendRequest, opts ...grpc.CallOption) (*accounts.SuspendResponse, error)
+	Unsuspend(ctx context.Context, in *accounts.UnsuspendRequest, opts ...grpc.CallOption) (*accounts.UnsuspendResponse, error)
 }
 
 type accountsServiceClient struct {
@@ -104,6 +106,24 @@ func (c *accountsServiceClient) Delete(ctx context.Context, in *accounts.DeleteR
 	return out, nil
 }
 
+func (c *accountsServiceClient) Suspend(ctx context.Context, in *accounts.SuspendRequest, opts ...grpc.CallOption) (*accounts.SuspendResponse, error) {
+	out := new(accounts.SuspendResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.registry.AccountsService/Suspend", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *accountsServiceClient) Unsuspend(ctx context.Context, in *accounts.UnsuspendRequest, opts ...grpc.CallOption) (*accounts.UnsuspendResponse, error) {
+	out := new(accounts.UnsuspendResponse)
+	err := c.cc.Invoke(ctx, "/nocloud.registry.AccountsService/Unsuspend", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AccountsServiceServer is the server API for AccountsService service.
 // All implementations must embed UnimplementedAccountsServiceServer
 // for forward compatibility
@@ -115,6 +135,8 @@ type AccountsServiceServer interface {
 	Get(context.Context, *accounts.GetRequest) (*accounts.Account, error)
 	List(context.Context, *accounts.ListRequest) (*accounts.ListResponse, error)
 	Delete(context.Context, *accounts.DeleteRequest) (*accounts.DeleteResponse, error)
+	Suspend(context.Context, *accounts.SuspendRequest) (*accounts.SuspendResponse, error)
+	Unsuspend(context.Context, *accounts.UnsuspendRequest) (*accounts.UnsuspendResponse, error)
 	mustEmbedUnimplementedAccountsServiceServer()
 }
 
@@ -142,6 +164,12 @@ func (UnimplementedAccountsServiceServer) List(context.Context, *accounts.ListRe
 }
 func (UnimplementedAccountsServiceServer) Delete(context.Context, *accounts.DeleteRequest) (*accounts.DeleteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Delete not implemented")
+}
+func (UnimplementedAccountsServiceServer) Suspend(context.Context, *accounts.SuspendRequest) (*accounts.SuspendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Suspend not implemented")
+}
+func (UnimplementedAccountsServiceServer) Unsuspend(context.Context, *accounts.UnsuspendRequest) (*accounts.UnsuspendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Unsuspend not implemented")
 }
 func (UnimplementedAccountsServiceServer) mustEmbedUnimplementedAccountsServiceServer() {}
 
@@ -282,6 +310,42 @@ func _AccountsService_Delete_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AccountsService_Suspend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(accounts.SuspendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServiceServer).Suspend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.registry.AccountsService/Suspend",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServiceServer).Suspend(ctx, req.(*accounts.SuspendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AccountsService_Unsuspend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(accounts.UnsuspendRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AccountsServiceServer).Unsuspend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/nocloud.registry.AccountsService/Unsuspend",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AccountsServiceServer).Unsuspend(ctx, req.(*accounts.UnsuspendRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AccountsService_ServiceDesc is the grpc.ServiceDesc for AccountsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -316,6 +380,14 @@ var AccountsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Delete",
 			Handler:    _AccountsService_Delete_Handler,
+		},
+		{
+			MethodName: "Suspend",
+			Handler:    _AccountsService_Suspend_Handler,
+		},
+		{
+			MethodName: "Unsuspend",
+			Handler:    _AccountsService_Unsuspend_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

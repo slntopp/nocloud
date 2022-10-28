@@ -304,9 +304,6 @@ export default {
       const instances = JSON.parse(JSON.stringify(this.instances));
 
       instances.forEach((inst) => {
-        if (inst.body.type === "ovh") {
-          inst.body.data = { projectId: "2ccca3cf77574a80b4d0496f6f2539ec" };
-        }
         inst.body.resources.ips_public = inst.body.instances?.length || 0;
         data.instances_groups.push({
           ...inst.body,
