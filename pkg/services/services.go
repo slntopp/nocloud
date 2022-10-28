@@ -139,6 +139,8 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 			log.Debug("Instance BillingPlan is", zap.Bool("provided", instance.BillingPlan != nil))
 			if ibps.Required && instance.BillingPlan == nil {
 				response.Result = false
+				log.Error("ibps req", zap.Bool("ibps", ibps.Required))
+				log.Error("instance.BillingPlan", zap.Any("bill plan", instance.BillingPlan))
 				terr := pb.TestConfigError{
 					Error:         "Instance has no billing plan and no default is set",
 					Instance:      instance.Title,
@@ -161,6 +163,7 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				err := s.ctrl.IGController().Instances().ValidateBillingPlan(ctx, group.GetSp(), instance)
 				if err != nil {
 					response.Result = false
+					log.Error("IGCONTROLLER err", zap.String("err", err.Error()))
 					terr := pb.TestConfigError{
 						Error:         err.Error(),
 						Instance:      instance.Title,
@@ -179,6 +182,7 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 		client, ok := s.drivers[groupType]
 		if !ok {
 			response.Result = false
+			log.Error("Not such driver", zap.Any("any", client))
 			config_err.Error = fmt.Sprintf("Driver Type '%s' not registered", groupType)
 			response.Errors = append(
 				response.Errors, &config_err,
@@ -189,6 +193,7 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 		sp, err := s.sp_ctrl.Get(ctx, group.GetSp())
 		if err != nil {
 			response.Result = false
+			log.Error("Sp ctrl get", zap.String("any", err.Error()))
 			config_err.Error = fmt.Sprintf("Error getting sp %s while validating group '%s': %v",
 				group.GetSp(), group.Title, err)
 			response.Errors = append(response.Errors, &config_err)
@@ -199,6 +204,7 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 			Sp:    sp.ServicesProvider,
 		})
 		if err != nil {
+			log.Error("Test ig config err", zap.String("any", err.Error()))
 			response.Result = false
 			config_err.Error = fmt.Sprintf("Error validating group '%s': %v", group.Title, err)
 			response.Errors = append(response.Errors, &config_err)
@@ -206,6 +212,7 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 		}
 		if !res.GetResult() {
 			response.Result = false
+			log.Error("No result", zap.Bool("asdqwe", res.GetResult()))
 			errors := make([]*pb.TestConfigError, 0)
 			for _, confErr := range res.Errors {
 				errors = append(errors, &pb.TestConfigError{
