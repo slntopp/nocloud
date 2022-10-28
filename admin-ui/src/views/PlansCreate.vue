@@ -122,8 +122,6 @@
               />
             </v-tab-item>
           </v-tabs-items>
-
-          <plans-form-fee @change="changeFee" />
         </v-col>
       </v-row>
 
