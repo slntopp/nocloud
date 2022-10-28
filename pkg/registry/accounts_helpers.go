@@ -19,8 +19,7 @@ import (
 	"context"
 
 	"github.com/slntopp/nocloud/pkg/graph"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
-	"github.com/slntopp/nocloud/pkg/nocloud/roles"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"go.uber.org/zap"
@@ -73,13 +72,10 @@ func (s *AccountsServiceServer) PostCreateActions(ctx context.Context, account g
 }
 
 func _CreatePersonalNamespace(ctx context.Context, log *zap.Logger, ns_ctrl graph.NamespacesController, account graph.Account) {
-	ns, err := ns_ctrl.Create(ctx, account.Title)
-	if err != nil {
+	personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, account.Uuid)
+
+	if _, err := ns_ctrl.Create(personal_ctx, account.Title); err != nil {
 		log.Warn("Cannot create a namespace for new Account", zap.String("account", account.Uuid), zap.Error(err))
-		return
-	}
-	if err := ns_ctrl.Link(ctx, account, ns, access.ADMIN, roles.OWNER); err != nil {
-		log.Warn("Cannot link namespace with new Account", zap.String("account", account.Uuid), zap.String("namespace", string(ns.ID)), zap.Error(err))
 		return
 	}
 }
