@@ -78,7 +78,7 @@ export default {
     api.instances
       .action({ action: "get_dns", uuid: this.instanceId })
       .then((res) => {
-        const keys = Object.keys(res);
+        const keys = Object.keys(res.meta.records);
 
         keys.forEach((key) => {
           res.meta.records[key].forEach((dns) => {
@@ -91,6 +91,7 @@ export default {
         });
       })
       .catch((e) => {
+        console.log(e);
         this.showSnackbarError(e);
       });
   },
@@ -131,7 +132,6 @@ export default {
         dto.dns[type] = this.dns
           .filter((dns) => dns.type === type)
           .map((dns) => {
-            delete dns.id;
             return dns;
           });
       });

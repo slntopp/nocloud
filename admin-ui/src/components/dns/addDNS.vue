@@ -40,8 +40,8 @@ export default {
   methods: {
     setDefaultDNS() {
       this.newDNS = {
-        type: "AAAA",
-        ipv6_adress: "",
+        type:'A',
+        ip_adress: "",
         subdomain: "",
       };
     },
