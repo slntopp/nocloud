@@ -55,6 +55,7 @@
           <component
             :is="templates[provider.type]"
             :secrets="provider.secrets"
+            :key="providerKey"
             @change:secrets="(data) => handleFieldsChange('secrets', data)"
             :vars="provider.vars"
             @change:vars="(data) => handleFieldsChange('vars', data)"
@@ -122,8 +123,8 @@
         </v-col>
       </v-row>
 
-      <v-row justify="end">
-        <v-col col="6">
+      <v-row class="justify-end">
+        <v-col cols="6">
           <v-tooltip bottom :disabled="isTestSuccess">
             <template v-slot:activator="{ on, attrs }">
               <div v-bind="attrs" v-on="on" style="display: inline-block">
@@ -149,6 +150,25 @@
           >
             Test
           </v-btn>
+        </v-col>
+        <v-col cols="6">
+          <div class="d-flex align-start justify-center">
+            <v-switch
+              class="mr-2"
+              style="margin-top: 5px; padding-top: 5px"
+              v-model="isJson"
+              :label="!isJson ? 'YAML' : 'JSON'"
+            />
+            <v-btn color="background-light" class="mr-2" @click="downloadFile">
+              Download {{ isJson ? "JSON" : "YAML" }}
+            </v-btn>
+            <v-file-input
+              class="mr-2 file-input"
+              :label="`upload ${isJson ? 'json' : 'yaml'} sp...`"
+              :accept="isJson ? '.json' : '.yaml'"
+              @change="onJsonInputChange"
+            />
+          </div>
         </v-col>
       </v-row>
     </v-container>
@@ -182,7 +202,13 @@ import Vue from "vue";
 import extentionsMap from "@/components/extentions/map.js";
 import snackbar from "@/mixins/snackbar.js";
 
-import { mergeDeep } from "@/functions.js";
+import {
+  mergeDeep,
+  downloadJSONFile,
+  readJSONFile,
+  readYAMLFile,
+  downloadYAMLFile,
+} from "@/functions.js";
 
 export default {
   name: "servicesProviders-create",
@@ -198,6 +224,7 @@ export default {
       secrets: {},
       vars: {},
     },
+    providerKey:'',
 
     isPassed: false,
     isLoading: false,
@@ -214,6 +241,8 @@ export default {
     },
 
     tooltipVisible: false,
+
+    isJson: true,
   }),
   created() {
     const types = require.context(
@@ -232,6 +261,8 @@ export default {
           import(`@/components/modules/${type}/serviceProviders.vue`);
       }
     });
+
+    this.providerKey=this.generateComponentId()
 
     this.fetchExtentions();
   },
@@ -263,11 +294,14 @@ export default {
     },
   },
   methods: {
+    generateComponentId(){
+      return "id" + Math.random().toString(16).slice(2)
+    },
     handleFieldsChange(type, data) {
-      if (type == "secrets") {
+      if (type == "secrets" ) {
         this.provider.secrets = data;
       }
-      if (type == "vars") {
+      if (type == "vars" ) {
         this.provider.vars = data;
       }
 
@@ -308,7 +342,7 @@ export default {
     },
     testConfig() {
       this.isTestLoading = true;
-      
+
       if (
         this.serviceProviderBody.type === "ione" &&
         this.serviceProviderBody.secrets.vlans
@@ -378,6 +412,48 @@ export default {
     mergeDeep(target, ...sources) {
       return mergeDeep(target, ...sources);
     },
+    setSP(res) {
+      const requiredKeys = ["vars", "secrets", "title", "public", "type"];
+
+      for (const key of requiredKeys) {
+        if (res[key] === undefined) {
+          throw new Error("JSON need keys:" + requiredKeys.join(", "));
+        }
+      }
+
+      if (!this.types.includes(res.type)) {
+        throw new Error(`Type ${res.type} not exists!`);
+      }
+
+      this.providerKey=this.generateComponentId()
+
+      this.provider = res;
+    },
+    onJsonInputChange(file) {
+      if (this.isJson) {
+        readJSONFile(file)
+          .then((res) => this.setSP(res))
+          .catch(({ message }) => {
+            this.showSnackbarError({ message });
+          });
+      } else {
+        readYAMLFile(file)
+          .then((res) => this.setSP(res))
+          .catch(({ message }) => {
+            this.showSnackbarError({ message });
+          });
+      }
+    },
+    downloadFile() {
+      const name = this.serviceProviderBody.title
+        ? this.serviceProviderBody.title.replaceAll(" ", "_")
+        : "unknown_sp";
+      if (this.isJson) {
+        downloadJSONFile(this.serviceProviderBody, name);
+      } else {
+        downloadYAMLFile(this.serviceProviderBody, name);
+      }
+    },
   },
 };
 </script>
@@ -390,6 +466,13 @@ export default {
   font-family: "Quicksand", sans-serif;
   line-height: 1em;
   margin-bottom: 10px;
+}
+
+.file-input {
+  max-width: 200px;
+  min-width: 200px;
+  margin-top: 0;
+  padding-top: 0;
 }
 
 // .page__content{

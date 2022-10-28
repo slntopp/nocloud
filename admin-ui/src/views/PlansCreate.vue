@@ -35,6 +35,16 @@
               />
             </v-col>
           </v-row>
+
+          <!-- Opensrs props -->
+          <plan-opensrs
+            @changeFee="(data) => (plan.fee = data)"
+            @onValid="(data) => (isFeeValid = data)"
+            v-if="plan.type === 'opensrs'"
+            :fee="plan.fee"
+            :isEdit="isEdit"
+          />
+
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Plan kind</v-subheader>
@@ -162,13 +172,13 @@
 <script>
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
-import confirmDialog from "@/components/confirmDialog.vue";
-import plansFormFee from '@/components/plans_form_fee.vue';
+import ConfirmDialog from "@/components/confirmDialog.vue";
+import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  components: { confirmDialog, plansFormFee },
+  components: { ConfirmDialog, PlanOpensrs },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
@@ -178,11 +188,11 @@ export default {
     plan: {
       title: "",
       type: "custom",
-      kind: "",
+      kind: "DYNAMIC",
       public: true,
       resources: [],
       products: {},
-      fee: {},
+      fee: null,
     },
     form: {
       title: "",
@@ -196,6 +206,7 @@ export default {
 
     isVisible: true,
     isValid: false,
+    isFeeValid: true,
     isLoading: false,
     isTestSuccess: false,
     testButtonColor: "background-light",
@@ -405,9 +416,18 @@ export default {
     testConfig() {
       let message = "";
 
-      if (!this.isValid) {
+      if (!this.isValid || !this.isFeeValid) {
         this.$refs.form.validate();
         message = "Validation failed!";
+      }
+
+      if (
+        (!message &&
+          this.plan.type === "opensrs" &&
+          this.plan.fee?.ranges?.length === 0) ||
+        !this.plan.fee?.ranges
+      ) {
+        message = "Ranges cant be empty!";
       }
 
       if (!message) {
@@ -539,13 +559,9 @@ export default {
     "plan.kind"() {
       if (!this.isEdit) {
         this.form.titles = [];
-      }
-      if (this.plan.kind === "STATIC") {
-        if (!this.isEdit) {
+        if (this.plan.kind === "STATIC") {
           this.plan.products = {};
-        }
-      } else {
-        if (!this.isEdit) {
+        } else {
           this.plan.resources = [];
         }
       }

@@ -77,9 +77,11 @@
       <v-col cols="3" v-for="(value, key) in settings.app.colors" :key="key">
         <v-menu>
           <template v-slot:activator="{ on }">
-            <div class="d-flex justify-center align-center"  :v-ripple="false">
-              <v-text-field v-model="settings.app.colors[key]" :label="key"/>
-              <v-icon class="ml-3" style="height:25px" v-on="on"> mdi-palette </v-icon>
+            <div class="d-flex justify-center align-center" :v-ripple="false">
+              <v-text-field v-model="settings.app.colors[key]" :label="key" />
+              <v-icon class="ml-3" style="height: 25px" v-on="on">
+                mdi-palette
+              </v-icon>
             </div>
           </template>
           <v-color-picker
@@ -120,6 +122,7 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import JsonEditor from "@/components/JsonEditor.vue";
+import { downloadJSONFile,readJSONFile} from "@/functions.js";
 
 export default {
   key: "app-settings",
@@ -154,28 +157,10 @@ export default {
   },
   methods: {
     onFileChange(file) {
-      if (!file) return;
-      let reader = new FileReader();
-      reader.onload = (e) => {
-        const newSettings = JSON.parse(e.target.result);
-        this.settings = newSettings;
-      };
-      reader.readAsText(file);
+      readJSONFile(file).then(res=>this.settings=res);
     },
     downloadSettings() {
-      const blob = new Blob([JSON.stringify(this.settings)], {
-        type: "application/json",
-      });
-      if (window.navigator.msSaveOrOpenBlob) {
-        window.navigator.msSaveBlob(blob, "config");
-      } else {
-        const elem = window.document.createElement("a");
-        elem.href = window.URL.createObjectURL(blob);
-        elem.download = "settings";
-        document.body.appendChild(elem);
-        elem.click();
-        document.body.removeChild(elem);
-      }
+      downloadJSONFile(this.settings, "settings");
     },
     edit(data) {
       this.settings = data;

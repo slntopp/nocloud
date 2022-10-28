@@ -41,7 +41,7 @@
             {{ makeIdShort(props.value) }}
           </template>
         </template>
-        <v-btn v-if="!isIdShort(props.value)" icon @click="showID(props.index)">
+        <v-btn v-if="!isIdShort(props.value) || isKeyOnlyAfterClick" icon @click="showID(props.index)">
           <v-icon>mdi-eye-outline</v-icon>
         </v-btn>
       </template>
