@@ -1,11 +1,14 @@
 #!/bin/bash
-### version 0.1
-### only backups of arango databases
-### dont forget to chmod +x backup.sh
-### cron example: 00 */1 * * * /bin/bash /root/deployment/backup.sh
+# -------------------------------------------------------------------------- #
+# version 0.1                                                                #
+# only backups of arango databases                                           #
+# dont forget to chmod +x backup.sh                                          #
+# cron example: 00 */1 * * * /bin/bash /root/deployment/backup.sh            #
+# -------------------------------------------------------------------------- #
 
 host_backup_path="/backups_nocloud"                                             # Where to store arango backups on host; Better to use remote or nfs storage
 nocloud_pass_file=".env"                                                        # Nocloud file with db root pass
+
 host_date=$(date "+%d-%b-%y-%Hh-%Mm-%Ss")                                       # Pretty-print date
 arangodump_dir="/arango_dumps_$host_date"                                       # tmp dir to store backup in container
 mysql_root_pass=$(cat $nocloud_pass_file | grep DB_PASS | cut -d\= -f2)         # arangodb root pass
