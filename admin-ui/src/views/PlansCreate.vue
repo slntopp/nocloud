@@ -122,8 +122,6 @@
               />
             </v-tab-item>
           </v-tabs-items>
-
-          <plans-form-fee @change="changeFee" />
         </v-col>
       </v-row>
 
@@ -416,7 +414,7 @@ export default {
     testConfig() {
       let message = "";
 
-      if (!this.isValid || !this.isFeeValid) {
+      if (!this.isValid || (!this.isFeeValid && this.plan.type==='opensrs')) {
         this.$refs.form.validate();
         message = "Validation failed!";
       }
