@@ -19,12 +19,12 @@
         <v-subheader>Round</v-subheader>
       </v-col>
       <v-col cols="9">
-        <v-text-field
-          type="number"
+        <v-select
+          item-text="key"
+          item-value="value"
           @change="changeFee"
-          :rules="generalRule"
-          label="round"
           v-model="currentFee.round"
+          :items="availableRoundes"
         />
       </v-col>
     </v-row>
@@ -134,8 +134,13 @@ export default {
         ranges: [],
         default: 0,
         precision: 0,
-        round: 0,
+        round: 2,
       },
+      availableRoundes: [
+        { key: "floor", value: 1 },
+        { key: "round", value: 2 },
+        { key: "ceil", value: 3 },
+      ],
       newRange: { from: 0, to: 0, factor: 0 },
       isValid: false,
       isNewRangeValid: false,
@@ -145,6 +150,11 @@ export default {
   created() {
     if (this.isEdit) {
       this.currentFee = this.fee;
+      
+      const round=this.availableRoundes.find(item=>item.key.toLowerCase()===this.fee?.round.toLowerCase())
+      if(round){
+        this.currentFee.round=round.value
+      }
     }
   },
   methods: {
@@ -158,7 +168,11 @@ export default {
         this.$refs.newRangeForm.validate();
         return;
       }
-      this.currentFee.ranges.push(this.newRange);
+
+      const { to, from, factor } = this.newRange;
+
+      this.currentFee.ranges.push({ to: +to, from: +from, factor: +factor });
+
       this.newRange = { from: 0, to: 0, factor: 0 };
     },
     changeFee() {
@@ -166,7 +180,15 @@ export default {
         this.$refs.opensrsForm.validate();
         return;
       }
-      this.$emit("changeFee", this.currentFee);
+
+      const { precision, round, ranges } = this.currentFee;
+
+      this.$emit("changeFee", {
+        precision: +precision,
+        round,
+        default: +this.currentFee.default,
+        ranges,
+      });
     },
     generateKey(id) {
       return id + Math.random().toString(16).slice(2);
