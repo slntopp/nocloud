@@ -124,12 +124,13 @@ func (c *CurrencyController) Get(ctx context.Context) ([]pb.Currency, error) {
 		doc := &driver.DocumentMeta{}
 		cursor.ReadDocument(ctx, doc)
 
-		id, err := strconv.Atoi(doc.Key)
+		// specify bitsize to parse int32 exactly
+		id, err := strconv.ParseInt(doc.Key, 10, 32)
 		if err != nil {
 			return currencies, err
 		}
 
-		currencies = append(currencies, pb.Currency(id))
+		currencies = append(currencies, pb.Currency(int32(id)))
 	}
 
 	return currencies, nil
