@@ -12,6 +12,7 @@ import (
 )
 
 var currencies []pb.Currency = []pb.Currency{
+	pb.Currency_NCU,
 	pb.Currency_USD,
 	pb.Currency_EUR,
 	pb.Currency_BYN,
