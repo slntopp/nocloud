@@ -105,9 +105,9 @@ func MakeCredentials(credentials *accountspb.Credentials, log *zap.Logger) (Cred
 	var err error
 	switch credentials.Type {
 	case "standard":
-		cred, err = NewStandardCredentials(credentials.Data[0], credentials.Data[1])
+		cred, err = NewStandardCredentials(credentials.Data)
 	case "whmcs":
-		cred, err = NewWHMCSCredentials(credentials.Data[0])
+		cred, err = NewWHMCSCredentials(credentials.Data)
 	default:
 		return nil, errors.New("auth type is wrong")
 	}

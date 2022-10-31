@@ -18,6 +18,7 @@ package credentials
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -43,7 +44,11 @@ type WHMCSConfig struct {
 	Pass string `json:"pass_hash"`
 }
 
-func NewWHMCSCredentials(email string) (Credentials, error) {
+func NewWHMCSCredentials(data []string) (Credentials, error) {
+	if len(data) < 1 {
+		return nil, errors.New("Empty Credentials")
+	}
+	email := data[0]
 	return &WHMCSCredentials{Email: email}, nil
 }
 

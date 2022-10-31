@@ -305,7 +305,7 @@ func (ctrl *AccountsController) EnsureRootExists(passwd string) (err error) {
 
 	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 	cred_edge_col, _ := ctrl.col.Database().Collection(context.TODO(), schema.ACC2CRED)
-	cred, err := credentials.NewStandardCredentials("nocloud", passwd)
+	cred, err := credentials.NewStandardCredentials([]string{"nocloud", passwd})
 	if err != nil {
 		return err
 	}
