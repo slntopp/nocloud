@@ -225,7 +225,7 @@ FOR node, edge, path IN 0..@depth OUTBOUND @from
 GRAPH @permissions_graph
 OPTIONS {order: "bfs", uniqueVertices: "global"}
 FILTER IS_SAME_COLLECTION(@@kind, node)
-FILTER edge.level > 0
+// FILTER edge.level > 0 // TODO: ensure all edges have level
     LET perm = path.edges[0]
 	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
 `
@@ -246,6 +246,8 @@ func ListWithAccess[T Accessible](
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"@kind":             collectionName,
 	}
+
+	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
 	c, err := db.Query(ctx, listObjectsOfKind, bindVars)
 	if err != nil {
 		return list, err
