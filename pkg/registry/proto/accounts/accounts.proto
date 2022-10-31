@@ -17,99 +17,78 @@ syntax = "proto3";
 package nocloud.registry.accounts;
 
 import "google/protobuf/struct.proto";
+import "pkg/access/access.proto";
 
 message Credentials {
-    string type = 1;
-    repeated string data = 2;
+  string type = 1;
+  repeated string data = 2;
 }
 
 message CreateRequest {
-    string title = 1; // New Account title
-    Credentials auth = 2; // Credentials for New Account
-    string namespace = 3; // Namespace to put Account under
-    optional int32 access = 4; // Account access level to parent namespace
+  string title = 1;          // New Account title
+  Credentials auth = 2;      // Credentials for New Account
+  string namespace = 3;      // Namespace to put Account under
+  optional int32 access = 4; // Account access level to parent namespace
 }
 
-message CreateResponse {
-    string uuid = 1;
-}
+message CreateResponse { string uuid = 1; }
 
 message GetRequest {
-    string uuid = 1;
-    bool public = 2;
+  string uuid = 1;
+  bool public = 2;
 }
 
 message SuspendConf {
-    optional bool immune = 1;
-    optional float limit = 2;
+  optional bool immune = 1;
+  optional float limit = 2;
 }
 
 message Account {
-    string uuid = 1;
-    string title = 2;
+  string uuid = 1;
+  string title = 2;
 
-    google.protobuf.Struct data = 3;
+  google.protobuf.Struct data = 3;
 
-    optional double balance = 4;
-    optional int32 access_level = 5;
-    optional SuspendConf suspend_conf = 6;
-    optional bool suspended = 7;
+  optional double balance = 4;
+  optional nocloud.access.Access access = 5;
+  optional SuspendConf suspend_conf = 6;
+  optional bool suspended = 7;
 }
 
-message UpdateResponse {
-    bool result = 1;
-}
+message UpdateResponse { bool result = 1; }
 
 message ListRequest {
-    optional string namespace = 1; // Namespace ID to seek account in
-    optional int32 depth = 2; // Depth 
+  optional string namespace = 1; // Namespace ID to seek account in
+  optional int32 depth = 2;      // Depth
 }
 
-message ListResponse {
-    repeated Account pool = 1;
-}
+message ListResponse { repeated Account pool = 1; }
 
 message SetCredentialsRequest {
-    string account = 1;
-    Credentials auth = 2;
+  string account = 1;
+  Credentials auth = 2;
 }
 
-message SetCredentialsResponse {
-    bool result = 1;
-}
+message SetCredentialsResponse { bool result = 1; }
 
 message TokenRequest {
-    Credentials auth = 1;
-    int32 exp = 2;
-    bool root_claim = 3;
-    string sp_claim = 4;
-    string instance_claim = 5;
+  Credentials auth = 1;
+  int32 exp = 2;
+  bool root_claim = 3;
+  string sp_claim = 4;
+  string instance_claim = 5;
 }
 
-message TokenResponse {
-    string token = 1;
-}
+message TokenResponse { string token = 1; }
 
-message DeleteRequest {
-    string uuid = 1;
-}
+message DeleteRequest { string uuid = 1; }
 
-message DeleteResponse {
-    bool result = 1;
-}
+message DeleteResponse { bool result = 1; }
 
-message SuspendRequest {
-    string uuid = 1;
-}
+message SuspendRequest { string uuid = 1; }
 
-message SuspendResponse {
-    bool result = 1;
-}
+message SuspendResponse { bool result = 1; }
 
-message UnsuspendRequest {
-    string uuid = 1;
-}
+message UnsuspendRequest { string uuid = 1; }
 
-message UnsuspendResponse {
-    bool result = 1;
-}
+message UnsuspendResponse { bool result = 1; }

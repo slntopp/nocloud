@@ -32,8 +32,8 @@ type Access struct {
 }
 
 // account - Account Key, node - DocumentID
-func HasAccess(ctx context.Context, db driver.Database, account string, node string, level int32) bool {
-	if (schema.ACCOUNTS_COL + "/" + account) == node {
+func HasAccess(ctx context.Context, db driver.Database, account string, node driver.DocumentID, level int32) bool {
+	if (schema.ACCOUNTS_COL + "/" + account) == node.String() {
 		return true
 	}
 	_, r := AccessLevel(ctx, db, account, node)
@@ -41,7 +41,7 @@ func HasAccess(ctx context.Context, db driver.Database, account string, node str
 }
 
 // account - Account Key, node - DocumentID
-func AccessLevel(ctx context.Context, db driver.Database, account string, node string) (bool, int32) {
+func AccessLevel(ctx context.Context, db driver.Database, account string, node driver.DocumentID) (bool, int32) {
 	query := `FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node GRAPH @permissions RETURN path.edges[0].level`
 	c, err := db.Query(ctx, query, map[string]interface{}{
 		"account":     schema.ACCOUNTS_COL + "/" + account,

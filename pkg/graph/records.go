@@ -111,7 +111,7 @@ func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Re
 		} else if err != nil {
 			return nil, err
 		}
-		r.Uuid = m.ID.String()
+		r.Uuid = m.ID.Key()
 		res = append(res, &r)
 	}
 

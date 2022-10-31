@@ -16,6 +16,8 @@ limitations under the License.
 syntax = "proto3";
 package nocloud.registry.namespaces;
 
+import "pkg/access/access.proto";
+
 message CreateRequest {
     string title = 1;
 }
@@ -27,7 +29,7 @@ message CreateResponse {
 message Namespace {
     string uuid = 1;
     string title = 2;
-    optional int32 access_level = 3;
+    optional nocloud.access.Access access = 3;
 }
 
 message JoinRequest {

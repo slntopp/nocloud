@@ -23,11 +23,12 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"github.com/slntopp/nocloud/pkg/registry/proto/namespaces"
 	"go.uber.org/zap"
 )
 
 type Namespace struct {
-	Title string `json:"title"`
+	*namespaces.Namespace
 	driver.DocumentMeta
 }
 
@@ -52,53 +53,16 @@ func NewNamespacesController(logger *zap.Logger, db driver.Database) NamespacesC
 }
 
 func (ctrl *NamespacesController) Get(ctx context.Context, id string) (Namespace, error) {
-	var r Namespace
-	_, err := ctrl.col.ReadDocument(context.TODO(), id, &r)
-	return r, err
+	return GetWithAccess[Namespace](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.NAMESPACES_COL, id))
 }
 
-func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, req_depth *int32) ([]Namespace, error) {
-	var depth int32
-	if req_depth == nil || *req_depth < 2 {
-		depth = 2
-	} else {
-		depth = *req_depth
-	}
-
-	query := `FOR node IN 0..@depth OUTBOUND @account GRAPH @permissions_graph OPTIONS {order: "bfs", uniqueVertices: "global"} FILTER IS_SAME_COLLECTION(@@namespaces, node) RETURN node`
-	bindVars := map[string]interface{}{
-		"depth":             depth,
-		"account":           requestor.ID.String(),
-		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
-		"@namespaces":       schema.NAMESPACES_COL,
-	}
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
-
-	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
-	if err != nil {
-		return nil, err
-	}
-	defer c.Close()
-
-	var r []Namespace
-	for {
-		var ns Namespace
-		_, err := c.ReadDocument(ctx, &ns)
-		if driver.IsNoMoreDocuments(err) {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		ctrl.log.Debug("Got document", zap.Any("namespace", ns))
-		r = append(r, ns)
-	}
-
-	return r, nil
+func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, req_depth int32) ([]*namespaces.Namespace, error) {
+	return ListWithAccess[*namespaces.Namespace](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.NAMESPACES_COL, req_depth)
 }
 
 func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Namespace, error) {
 	ns := Namespace{
-		Title: title,
+		Namespace: &namespaces.Namespace{Title: title},
 	}
 	meta, err := ctrl.col.CreateDocument(ctx, ns)
 	if err != nil {

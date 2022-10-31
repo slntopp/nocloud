@@ -17,6 +17,7 @@ package credentials
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -32,7 +33,12 @@ type StandardCredentials struct {
 	driver.DocumentMeta
 }
 
-func NewStandardCredentials(username, password string) (Credentials, error) {
+func NewStandardCredentials(data []string) (Credentials, error) {
+	if len(data) < 2 {
+		return nil, fmt.Errorf("some credentials data is missing, expected data length to be 2, got: %d", len(data))
+	}
+
+	username, password := data[0], data[1]
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 14)
 	return &StandardCredentials{
 		Username:     username,

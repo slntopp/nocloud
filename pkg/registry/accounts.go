@@ -17,7 +17,6 @@ package registry
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/arangodb/go-driver"
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -31,6 +30,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 
+	accesspb "github.com/slntopp/nocloud/pkg/access"
 	pb "github.com/slntopp/nocloud/pkg/registry/proto"
 	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
@@ -199,24 +199,33 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := s.ctrl.Get(ctx, request.Uuid)
-	if err != nil {
-		log.Debug("Error getting account", zap.String("requested_id", request.Uuid), zap.Any("error", err))
+	requested := request.GetUuid()
+	if requested == "me" {
+		requested = requestor
+	}
+
+	log.Debug("Retrieving account", zap.String("uuid", requested))
+	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	if err != nil || acc.Access == nil {
+		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
+	log.Debug("Retrieved account", zap.Any("account", acc))
 
 	// Provide public information without access check
 	if request.GetPublic() {
 		return &accountspb.Account{Title: acc.Account.GetTitle()}, nil
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.READ)
-	if !ok {
+	if acc.Key == requestor {
+		return acc.Account, nil
+	}
+
+	if acc.Access.Level < accesspb.Level_READ {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	ok = graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.SUDO)
-	if !ok {
+	if acc.Access.Level < accesspb.Level_ROOT {
 		acc.SuspendConf = nil
 	}
 
@@ -232,23 +241,20 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	acc, err := s.ctrl.Get(ctx, requestor)
 	if err != nil {
-		log.Debug("Error getting account", zap.Any("error", err))
+		log.Debug("Error getting requestor account", zap.Any("error", err))
 		return nil, status.Error(codes.PermissionDenied, "Requestor Account not found")
 	}
-	log.Debug("Requestor", zap.Any("account", acc))
 
-	var pool []graph.Account
-	pool, err = s.ctrl.List(ctx, acc, request.Depth)
+	pool, err := graph.ListWithAccess[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, request.GetDepth())
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")
 	}
 	log.Debug("List result", zap.Any("pool", pool))
 
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.SUDO)
 	result := make([]*accountspb.Account, len(pool))
 	for i, acc := range pool {
-		if !ok {
+		if acc.Access.Level < accesspb.Level_ROOT {
 			acc.Account.SuspendConf = nil
 		}
 		result[i] = acc.Account
@@ -262,19 +268,19 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	log := s.log.Named("Token")
 
 	log.Debug("Token request received", zap.Any("request", request))
-	account, ok := s.ctrl.Authorize(ctx, request.Auth.Type, request.Auth.Data...)
+	acc, ok := s.ctrl.Authorize(ctx, request.Auth.Type, request.Auth.Data...)
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "Wrong credentials given")
 	}
-	log.Debug("Authorized user", zap.String("ID", account.ID.String()))
+	log.Debug("Authorized user", zap.String("ID", acc.ID.String()))
 
 	claims := jwt.MapClaims{}
-	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = account.Key
+	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = acc.Key
 	claims["exp"] = request.Exp
 
 	if request.GetRootClaim() {
-		ns := fmt.Sprintf("%s/0", schema.NAMESPACES_COL)
-		ok, lvl := graph.AccessLevel(ctx, s.db, account.Key, ns)
+		ns := driver.NewDocumentID(schema.NAMESPACES_COL, "0")
+		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, ns)
 		if !ok {
 			lvl = 0
 		}
@@ -283,7 +289,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	}
 
 	if sp := request.GetSpClaim(); sp != "" {
-		ok, lvl := graph.AccessLevel(ctx, s.db, account.Key, driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp).String())
+		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp))
 		if !ok {
 			lvl = 0
 		}
@@ -313,28 +319,28 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return nil, err
 	}
 
-	ok, access_lvl := graph.AccessLevel(ctx, s.db, requestor, ns.ID.String())
+	ok, access_lvl := graph.AccessLevel(ctx, s.db, requestor, ns.ID)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "No Access")
 	} else if access_lvl < access.MGMT {
 		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
 	}
 
-	account, err := s.ctrl.Create(ctx, request.Title)
+	acc, err := s.ctrl.Create(ctx, request.Title)
 	if err != nil {
 		log.Debug("Error creating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating account")
 	}
-	res := &accountspb.CreateResponse{Uuid: account.Key}
+	res := &accountspb.CreateResponse{Uuid: acc.Key}
 
 	if request.Access != nil && (*request.Access) < access_lvl {
 		access_lvl = (*request.Access)
 	}
 
-	s.PostCreateActions(ctx, account)
+	s.PostCreateActions(ctx, acc)
 
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
-	err = account.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
+	err = acc.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
 	if err != nil {
 		log.Debug("Error linking to namespace")
 		return res, err
@@ -346,7 +352,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return res, status.Error(codes.Internal, err.Error())
 	}
 
-	err = s.ctrl.SetCredentials(ctx, account, col, cred, roles.OWNER)
+	err = s.ctrl.SetCredentials(ctx, acc, col, cred, roles.OWNER)
 	if err != nil {
 		return res, err
 	}
@@ -368,19 +374,19 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := s.ctrl.Get(ctx, request.Uuid)
+	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
 	if err != nil {
 		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
-
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN)
-	if !ok {
+	if acc.Access == nil {
+		log.Warn("Error Access is nil")
+	}
+	if acc.Access == nil || acc.Access.Level < accesspb.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	ok = graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.SUDO)
-	if !ok {
+	if acc.Access.Level < accesspb.Level_ROOT {
 		request.SuspendConf = nil
 		request.Suspended = nil
 	}
@@ -439,7 +445,7 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, acc.ID, access.ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
@@ -482,7 +488,7 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, acc.ID, access.ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
+	accesspb "github.com/slntopp/nocloud/pkg/access"
 	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
 	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -235,13 +236,13 @@ func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateReque
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
+	ns, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
 	if err != nil {
 		s.log.Debug("Error getting namespace", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, namespace.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -255,13 +256,13 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	namespace, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
+	ns, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
 	if err != nil {
 		s.log.Debug("Error getting namespace", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, namespace.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -282,7 +283,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.Internal, "Error while creating Service")
 	}
 
-	err = s.ctrl.Join(ctx, doc, &namespace, access.ADMIN, roles.OWNER)
+	err = s.ctrl.Join(ctx, doc, &ns, access.ADMIN, roles.OWNER)
 	if err != nil {
 		log.Error("Error while joining service to namespace", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
@@ -347,7 +348,7 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
-	ok := graph.HasAccess(ctx, s.db, requestor, docID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, docID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -382,7 +383,7 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.MGMT {
+	if service.GetAccess().GetLevel() < accesspb.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -482,7 +483,7 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.SUDO {
+	if service.GetAccess().GetLevel() < accesspb.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -520,7 +521,7 @@ func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendReq
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.SUDO {
+	if service.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -557,7 +558,7 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.MGMT {
+	if service.GetAccess().GetLevel() < accesspb.Level_MGMT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -647,7 +648,7 @@ func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.READ {
+	if service.GetAccess().GetLevel() < accesspb.Level_MGMT {
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
@@ -681,7 +682,7 @@ func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) 
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
-	if service.AccessLevel == nil || *service.AccessLevel < access.ADMIN {
+	if service.GetAccess().GetLevel() < accesspb.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
@@ -701,7 +702,7 @@ func (s *ServicesServer) Stream(req *pb.StreamRequest, srv pb.ServicesService_St
 
 	messages := make(chan interface{}, 10)
 
-	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccessLevel() < access.READ {
+	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccess().GetLevel() < accesspb.Level_READ {
 		log.Warn("Failed access check", zap.String("uuid", req.GetUuid()))
 		return errors.New("failed access check")
 	}

@@ -84,7 +84,7 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, plan *pb.Plan) (*
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -107,7 +107,7 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, plan *pb.Plan) (*
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -130,7 +130,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID.String(), access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -159,7 +159,7 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 		return p.Plan, nil
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, p.ID.String(), access.READ)
+	ok := graph.HasAccess(ctx, s.db, requestor, p.ID, access.READ)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -191,7 +191,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 		if req.Anonymously {
 			continue
 		}
-		ok := graph.HasAccess(ctx, s.db, requestor, plan.ID.String(), access.READ)
+		ok := graph.HasAccess(ctx, s.db, requestor, plan.ID, access.READ)
 		if !ok {
 			continue
 		}

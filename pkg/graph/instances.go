@@ -35,6 +35,11 @@ const (
 	INSTANCES_COL = "Instances"
 )
 
+type Instance struct {
+	driver.DocumentMeta
+	*pb.Instance
+}
+
 type InstancesController struct {
 	col   driver.Collection // Instances Collection
 	graph driver.Graph

@@ -149,7 +149,7 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 	}
 	log.Debug("Transaction found", zap.String("requestor", requestor), zap.Any("transaction", tr))
 
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account).String(), access.SUDO)
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.SUDO)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}

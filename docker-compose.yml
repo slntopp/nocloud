@@ -202,6 +202,8 @@ services:
     image: redis
     restart: always
     command: redis-server --save 60 1
+    labels:
+      - traefik.enable=false
     networks:
       - redis
     volumes:

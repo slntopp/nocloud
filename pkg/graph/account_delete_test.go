@@ -46,19 +46,19 @@ func TestDeleteAccount(t *testing.T) {
 	spc := NewServicesProvidersController(log, db)
 	srvc := NewServicesController(log, db)
 
-	account, err := ac.Create(ctx, "test_user")
+	acc, err := ac.Create(ctx, "test_user")
 	if err != nil {
 		t.Error("Can't create account")
 	}
 
-	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.ID.Key())
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.ID.Key())
 
 	namespace, err := nsc.Create(ctx, "test_namespace")
 	if err != nil {
 		t.Error("Can't create namespace")
 	}
 
-	if err := nsc.Join(ctx, account, namespace, access.ADMIN, roles.OWNER); err != nil {
+	if err := nsc.Join(ctx, acc, namespace, access.ADMIN, roles.OWNER); err != nil {
 		t.Error("Can't join namespace")
 	}
 
@@ -91,7 +91,7 @@ func TestDeleteAccount(t *testing.T) {
 		t.Error("Can't join service")
 	}
 
-	ac.Delete(ctx, account.Uuid)
+	ac.Delete(ctx, acc.Uuid)
 
 	ig := service.GetInstancesGroups()[0]
 	inst := ig.GetInstances()[0]
@@ -113,19 +113,19 @@ func TestDeleteAccountCredentials(t *testing.T) {
 	spc := NewServicesProvidersController(log, db)
 	srvc := NewServicesController(log, db)
 
-	account, err := ac.Create(ctx, "test_user")
+	acc, err := ac.Create(ctx, "test_user")
 	if err != nil {
 		t.Error("Can't create account")
 	}
 
-	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, account.ID.Key())
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.ID.Key())
 
 	namespace, err := nsc.Create(ctx, "test_namespace")
 	if err != nil {
 		t.Error("Can't create namespace")
 	}
 
-	if err := nsc.Join(ctx, account, namespace, access.ADMIN, roles.OWNER); err != nil {
+	if err := nsc.Join(ctx, acc, namespace, access.ADMIN, roles.OWNER); err != nil {
 		t.Error("Can't join namespace")
 	}
 
@@ -158,7 +158,7 @@ func TestDeleteAccountCredentials(t *testing.T) {
 		t.Error("Can't join service")
 	}
 
-	ac.Delete(ctx, account.Uuid)
+	ac.Delete(ctx, acc.Uuid)
 
 	// Check if Credentials graph is empty as well
 
@@ -171,7 +171,7 @@ func TestDeleteAccountCredentials(t *testing.T) {
 			RETURN edge`,
 		map[string]interface{}{
 			"@col": schema.ACC2CRED,
-			"acc":  driver.NewDocumentID(schema.ACCOUNTS_COL, account.Uuid),
+			"acc":  driver.NewDocumentID(schema.ACCOUNTS_COL, acc.Uuid),
 		})
 	if err != nil {
 		t.Error("Unexpected error while credentials query")

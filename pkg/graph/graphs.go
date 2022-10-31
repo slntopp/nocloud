@@ -20,7 +20,10 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud/pkg/access"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"go.uber.org/zap"
 )
 
 type Node struct {
@@ -28,8 +31,8 @@ type Node struct {
 	Key        string `json:"key"`
 }
 
-type Deletable interface {
-	Delete(context.Context, driver.Database) error
+type Accessible interface {
+	GetAccess() *access.Access
 }
 
 func DeleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID) error {
@@ -132,28 +135,32 @@ const getWithAccessLevel = `
 FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
 GRAPH @permissions SORT path.edges[0].level
 	RETURN MERGE(path.vertices[-1], {
-	    access_level: path.edges[0].level ? : 0, uuid: path.vertices[-1]._key
+		uuid: path.vertices[-1]._key,
+	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none" }
 	})
 `
 
-func GetWithAccess(ctx context.Context, db driver.Database, acc, id driver.DocumentID, node interface{}) error {
+func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id driver.DocumentID) (T, error) {
+	var o T
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
 	vars := map[string]interface{}{
-		"account":     acc,
+		"account":     driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
 		"node":        id,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	}
 	c, err := db.Query(ctx, getWithAccessLevel, vars)
 	if err != nil {
-		return err
+		return o, err
 	}
 	defer c.Close()
 
-	_, err = c.ReadDocument(ctx, node)
+	_, err = c.ReadDocument(ctx, &o)
 	if err != nil {
-		return err
+		return o, err
 	}
 
-	return nil
+	return o, nil
 }
 
 const deleteEdgeQuery = `
@@ -211,4 +218,49 @@ func EdgeExist(ctx context.Context, db driver.Database, fromCollection, toCollec
 	}
 
 	return true, nil
+}
+
+const listObjectsOfKind = `
+FOR node, edge, path IN 0..@depth OUTBOUND @from
+GRAPH @permissions_graph
+OPTIONS {order: "bfs", uniqueVertices: "global"}
+FILTER IS_SAME_COLLECTION(@@kind, node)
+// FILTER edge.level > 0 // TODO: ensure all edges have level
+    LET perm = path.edges[0]
+	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+`
+
+func ListWithAccess[T Accessible](
+	ctx context.Context,
+	log *zap.Logger,
+	db driver.Database,
+	fromDocument driver.DocumentID,
+	collectionName string,
+	depth int32,
+) ([]T, error) {
+	var list []T
+
+	bindVars := map[string]interface{}{
+		"depth":             depth,
+		"from":              fromDocument,
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"@kind":             collectionName,
+	}
+
+	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
+	c, err := db.Query(ctx, listObjectsOfKind, bindVars)
+	if err != nil {
+		return list, err
+	}
+
+	for c.HasMore() {
+		var o T
+		_, err := c.ReadDocument(ctx, &o)
+		if err != nil {
+			log.Warn("Could not append entity to query results", zap.Any("object", &o))
+		}
+		list = append(list, o)
+	}
+
+	return list, nil
 }
