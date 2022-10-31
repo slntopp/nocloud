@@ -1,3 +1,14 @@
 {
-    
+  "localePrefix": "en",
+  "localeLang": "English",
+  "SPInfo": {
+    "ione": {
+      "host": "Opennebula RPC2 (xmlrpc) endpoint. By default it is http://opennebula_IP:2633/RPC2",
+      "user": "Opennebula admin username. By default it is oneadmin, but you may create new user with admin privilege",
+      "group": "Grop for new VMs and users. By default it is 1",
+      "sched": "Opennebula host scheduler rules. For example:{\"default\": \"ID=\"2\"\"} - all VMs will be placed on host ID=2.{\"default\": \"ID=\"2\" | ID=\"13\"\"}- the host will be chosen between 2 and 13 according to the scheduler opennebula policy. Read more: https://docs.opennebula.io/6.4/installation_and_configuration/opennebula_services/scheduler.html",
+      "sched_ds": "Opennebula datastore scheduler rules. For example:{\"nvme\": \"ID=\"10\"\"\"ssd\": \"ID=\"11\"\"\"hdd\": \"ID=\"12\"\"\"sata\": \"ID=\"13\"\"}- the datastore will be chosen between 10-13 according to the one selected when ordering in the application. Read more: https://docs.opennebula.io/6.4/installation_and_configuration/opennebula_services/scheduler.html",
+      "private_vnet_ban": "disabled \\ enabled"
+    }
+  }
 }
