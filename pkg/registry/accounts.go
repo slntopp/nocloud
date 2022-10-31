@@ -204,6 +204,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
+	log.Debug("Retrieved account", zap.Any("account", acc))
 
 	// Provide public information without access check
 	if request.GetPublic() {
