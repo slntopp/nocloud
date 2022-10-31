@@ -245,7 +245,12 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 		return nil, status.Error(codes.PermissionDenied, "Requestor Account not found")
 	}
 
-	pool, err := graph.ListWithAccess[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, request.GetDepth())
+	depth := request.GetDepth()
+	if request.GetDepth() == 0 {
+		depth = 4
+	}
+
+	pool, err := graph.ListWithAccess[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, depth)
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")
