@@ -72,10 +72,10 @@ func (s *AccountsServiceServer) PostCreateActions(ctx context.Context, account g
 }
 
 func _CreatePersonalNamespace(ctx context.Context, log *zap.Logger, ns_ctrl graph.NamespacesController, account graph.Account) {
-	personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, account.ID.Key())
+	personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, account.GetUuid())
 
-	if _, err := ns_ctrl.Create(personal_ctx, account.Account.Title); err != nil {
-		log.Warn("Cannot create a namespace for new Account", zap.String("account", account.Uuid), zap.Error(err))
+	if _, err := ns_ctrl.Create(personal_ctx, account.GetTitle()); err != nil {
+		log.Warn("Cannot create a namespace for new Account", zap.String("account", account.GetUuid()), zap.Error(err))
 		return
 	}
 }
