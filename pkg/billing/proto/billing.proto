@@ -21,285 +21,284 @@ import "google/protobuf/struct.proto";
 import "google/api/annotations.proto";
 
 enum PlanKind {
-    UNKNOWN = 0; // Default value; should never be used but will be treated as DYNAMIC
-    DYNAMIC = 1;
-    STATIC = 2;
+  UNKNOWN =
+      0; // Default value; should never be used but will be treated as DYNAMIC
+  DYNAMIC = 1;
+  STATIC = 2;
 }
 
 message FeeRange {
-    double from = 1;
-    double to = 2;
-    double factor = 3;
+  double from = 1;
+  double to = 2;
+  double factor = 3;
 }
 
 enum Round {
-    NONE = 0;
-    FLOOR = 1;
-    ROUND = 2;
-    CEIL = 3;
+  NONE = 0;
+  FLOOR = 1;
+  ROUND = 2;
+  CEIL = 3;
 }
 
 message Fee {
-    int64 precision = 1;
-    Round round = 2;
-    double default = 3;
-    repeated FeeRange ranges = 4;
+  int64 precision = 1;
+  Round round = 2;
+  double default = 3;
+  repeated FeeRange ranges = 4;
 }
 
 message Plan {
-    string uuid = 1;
-    string title = 2;
-    string type = 3; // Instance / InstanceGroup type supported by this plan
-    bool public = 4; // if true, then this plan is available for all users
+  string uuid = 1;
+  string title = 2;
+  string type = 3; // Instance / InstanceGroup type supported by this plan
+  bool public = 4; // if true, then this plan is available for all users
 
-    PlanKind kind = 5; // dynamic(based on resources) or static(based on products)
-    repeated ResourceConf resources = 6; // Resources confs to make plan dynamic
-    map<string, Product> products = 7; // Products to make plan pre defined(map key is product key like sm, lg or whatever)
-    map<string, google.protobuf.Value> meta = 8;
-    Fee fee = 9;
+  PlanKind kind = 5; // dynamic(based on resources) or static(based on products)
+  repeated ResourceConf resources = 6; // Resources confs to make plan dynamic
+  map<string, Product> products =
+      7; // Products to make plan pre defined(map key is product key like sm, lg
+         // or whatever)
+  map<string, google.protobuf.Value> meta = 8;
+  Fee fee = 9;
 }
 
 message ListRequest {
-    string sp_uuid = 1;
-    bool anonymously = 2;
+  string sp_uuid = 1;
+  bool anonymously = 2;
 }
-message ListResponse {
-    repeated Plan pool = 1;
-}
+message ListResponse { repeated Plan pool = 1; }
 
 enum Kind {
-    UNSPECIFIED = 0; // Shall never be used, requests will be rejected
-    POSTPAID    = 1; // Transaction must be processed based on End time
-    PREPAID     = 2; // Transaction must be processed based on Start time
+  UNSPECIFIED = 0; // Shall never be used, requests will be rejected
+  POSTPAID = 1;    // Transaction must be processed based on End time
+  PREPAID = 2;     // Transaction must be processed based on Start time
 }
 
 message ResourceConf {
-    string key = 1;
-    Kind kind = 2;
-    double price = 3; // Price in NCU per period
-    int64 period = 4; // if set to 0, then it's a one-time payment
-    // If except set to true then transaction will be created if Instance is in one of the states listed in on
-    // If except set to false then transaction will be created if Instance is NOT in one of the states listed in on
-    bool except = 5;
-    repeated nocloud.states.NoCloudState on = 6;
-    Fee fee = 7;
+  string key = 1;
+  Kind kind = 2;
+  double price = 3; // Price in NCU per period
+  int64 period = 4; // if set to 0, then it's a one-time payment
+  // If except set to true then transaction will be created if Instance is in
+  // one of the states listed in on If except set to false then transaction will
+  // be created if Instance is NOT in one of the states listed in on
+  bool except = 5;
+  repeated nocloud.states.NoCloudState on = 6;
+  Fee fee = 7;
 }
 
 message Product {
-    Kind kind = 1;
-    string title = 2; // Product title
-    double price = 3; // Product price in NCU per period
-    int64 period = 4;
-    map<string, google.protobuf.Value> resources = 5; // Map of resources keys to fixed units amount
-    map<string, google.protobuf.Value> meta = 6;
+  Kind kind = 1;
+  string title = 2; // Product title
+  double price = 3; // Product price in NCU per period
+  int64 period = 4;
+  map<string, google.protobuf.Value> resources =
+      5; // Map of resources keys to fixed units amount
+  map<string, google.protobuf.Value> meta = 6;
 
-    optional int32 sorter = 7; // Sorting order, might be needed in UIs
+  optional int32 sorter = 7; // Sorting order, might be needed in UIs
 }
 
 message Transaction {
-    string uuid = 1; // transaction UUID
-    int64 exec = 2; // Timestamp of Transaction planned execution time
-    int64 proc = 3; // Timestamp of Transaction processing time
-    bool processed = 4; // Wether Transaction has been processed(applied to Account balance, etc)
+  string uuid = 1;    // transaction UUID
+  int64 exec = 2;     // Timestamp of Transaction planned execution time
+  int64 proc = 3;     // Timestamp of Transaction processing time
+  bool processed = 4; // Wether Transaction has been processed(applied to
+                      // Account balance, etc)
 
-    string account = 5;
-    string service = 6;
-    repeated string records = 7; // list of records UUIDs
+  string account = 5;
+  string service = 6;
+  repeated string records = 7; // list of records UUIDs
 
-    double total = 8; // Transaction total value in NCU
-    /* Transaction meta data, like
-        meta: {
-            total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity
-            price_atm: <number> // hourly price per quant of resouce at the moment, e.g. 1 NCU 
-            [other keys]: <any> // for example Drive Type(SSD/HDD/NVMe/etc)
-        }
-    */
-    map<string, google.protobuf.Value> meta = 9;
+  double total = 8; // Transaction total value in NCU
+  /* Transaction meta data, like
+      meta: {
+          total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive
+     Mb, IP quantity price_atm: <number> // hourly price per quant of resouce at
+     the moment, e.g. 1 NCU [other keys]: <any> // for example Drive
+     Type(SSD/HDD/NVMe/etc)
+      }
+  */
+  map<string, google.protobuf.Value> meta = 9;
 }
 
-message Transactions {
-    repeated Transaction pool = 1;
-}
+message Transactions { repeated Transaction pool = 1; }
 
 message Record {
-    string uuid = 1; // Record UUID
-    int64 start = 2; // Timestamp of Record coverage frame start
-    int64 end = 3; // Timestamp of Record coverage frame end
-    int64 exec = 4; // Time when Record must be processed
+  string uuid = 1; // Record UUID
+  int64 start = 2; // Timestamp of Record coverage frame start
+  int64 end = 3;   // Timestamp of Record coverage frame end
+  int64 exec = 4;  // Time when Record must be processed
 
-    bool processed = 5; // Wether Record has been processed(converted to Transaction)
+  bool processed =
+      5; // Wether Record has been processed(converted to Transaction)
 
-    string instance = 6; // Instance UUID
-    nocloud.states.NoCloudState state = 7; // Instance state
+  string instance = 6;                   // Instance UUID
+  nocloud.states.NoCloudState state = 7; // Instance state
 
-    string resource = 8; // Resource key
-    string product = 9; // Product key
+  string resource = 8; // Resource key
+  string product = 9;  // Product key
 
-    double total = 10; // Record total value in NCU
-    /* Record meta data, like
-        meta: {
-            total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity
-            price_atm: <number> // hourly price per quant of resouce at the moment, e.g. 1 NCU 
-            [other keys]: <any> // for example Drive Type(SSD/HDD/NVMe/etc)
-        }
-    */
-    map<string, google.protobuf.Value> meta = 11;
+  double total = 10; // Record total value in NCU
+  /* Record meta data, like
+      meta: {
+          total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive
+     Mb, IP quantity price_atm: <number> // hourly price per quant of resouce at
+     the moment, e.g. 1 NCU [other keys]: <any> // for example Drive
+     Type(SSD/HDD/NVMe/etc)
+      }
+  */
+  map<string, google.protobuf.Value> meta = 11;
 }
 
-message Records {
-    repeated Record pool = 1;
-}
+message Records { repeated Record pool = 1; }
 
 message GetActiveRequest {
-    string uuid = 1; // Instance UUID
+  string uuid = 1; // Instance UUID
 }
 
 message GetTransactionsRequest {
-    optional string account = 1;
-    optional string service = 2;
+  optional string account = 1;
+  optional string service = 2;
 }
 
-message ReprocessTransactionsRequest {
-    string account = 1;
-}
+message ReprocessTransactionsRequest { string account = 1; }
 
 service RecordsService {
-    rpc GetActive(GetActiveRequest) returns (Records);
-    rpc Create(Records) returns (Records);
-    rpc Update(Records) returns (Records);
+  rpc GetActive(GetActiveRequest) returns (Records);
+  rpc Create(Records) returns (Records);
+  rpc Update(Records) returns (Records);
 }
 
 service BillingService {
-    rpc CreatePlan(Plan) returns (Plan) {
-        option (google.api.http) = {
-            put: "/billing/plans"
-            body: "*"
-        };
+  rpc CreatePlan(Plan) returns (Plan) {
+    option (google.api.http) = {
+      put : "/billing/plans"
+      body : "*"
     };
-    rpc UpdatePlan(Plan) returns (Plan) {
-        option (google.api.http) = {
-            patch: "/billing/plans/{uuid}"
-            body: "*"
-        };
+  };
+  rpc UpdatePlan(Plan) returns (Plan) {
+    option (google.api.http) = {
+      patch : "/billing/plans/{uuid}"
+      body : "*"
     };
-    rpc GetPlan(Plan) returns (Plan) {
-        option (google.api.http) = {
-            get: "/billing/plans/{uuid}"
-        };
+  };
+  rpc GetPlan(Plan) returns (Plan) {
+    option (google.api.http) = {
+      get : "/billing/plans/{uuid}"
     };
-    rpc ListPlans(ListRequest) returns (ListResponse) {
-        option (google.api.http) = {
-            get: "/billing/plans"
-        };
+  };
+  rpc ListPlans(ListRequest) returns (ListResponse) {
+    option (google.api.http) = {
+      get : "/billing/plans"
     };
-    rpc DeletePlan(Plan) returns (Plan) {
-        option (google.api.http) = {
-            delete: "/billing/plans/{uuid}"
-        };
+  };
+  rpc DeletePlan(Plan) returns (Plan) {
+    option (google.api.http) = {
+      delete : "/billing/plans/{uuid}"
     };
+  };
 
-    rpc CreateTransaction(Transaction) returns (Transaction) {
-        option (google.api.http) = {
-            put: "/billing/transactions"
-            body: "*"
-        };
+  rpc CreateTransaction(Transaction) returns (Transaction) {
+    option (google.api.http) = {
+      put : "/billing/transactions"
+      body : "*"
     };
-    rpc GetTransactions(GetTransactionsRequest) returns (Transactions) {
-        option (google.api.http) = {
-            get: "/billing/transactions"
-        };
+  };
+  rpc GetTransactions(GetTransactionsRequest) returns (Transactions) {
+    option (google.api.http) = {
+      get : "/billing/transactions"
     };
-    rpc GetRecords(Transaction) returns (Records) {
-        option (google.api.http) = {
-            get: "/billing/transactions/{uuid}"
-        };
+  };
+  rpc GetRecords(Transaction) returns (Records) {
+    option (google.api.http) = {
+      get : "/billing/transactions/{uuid}"
     };
-    rpc Reprocess(ReprocessTransactionsRequest) returns (Transactions) {
-        option (google.api.http) = {
-            post: "/billing/account/{account}/reprocess"
-        };
+  };
+  rpc Reprocess(ReprocessTransactionsRequest) returns (Transactions) {
+    option (google.api.http) = {
+      post : "/billing/account/{account}/reprocess"
     };
+  };
 }
 
 enum Currency {
-    USD = 0;
-    EUR = 1;
-    BYN = 2;
-    PLN = 3;
+  NCU = 0;
+  USD = 1;
+  EUR = 2;
+  BYN = 3;
+  PLN = 4;
 }
 
 message CreateExchangeRateRequest {
-    Currency from = 1;
-    Currency to = 2;
-    double rate = 3;
+  Currency from = 1;
+  Currency to = 2;
+  double rate = 3;
 }
 message CreateExchangeRateResponse {}
 message UpdateExchangeRateRequest {
-    Currency from = 1;
-    Currency to = 2;
-    double rate = 3;
+  Currency from = 1;
+  Currency to = 2;
+  double rate = 3;
 }
 message UpdateExchangeRateResponse {}
 message DeleteExchangeRateRequest {
-    Currency from = 1;
-    Currency to = 2;
+  Currency from = 1;
+  Currency to = 2;
 }
-message DeleteExchangeRateResponse{}
+message DeleteExchangeRateResponse {}
 
 message GetCurrenciesRequest {}
-message GetCurrenciesResponse {
-    repeated Currency currencies = 1;
-}
+message GetCurrenciesResponse { repeated Currency currencies = 1; }
 
 message GetExchangeRateRequest {
-    Currency from = 1;
-    Currency to = 2;
+  Currency from = 1;
+  Currency to = 2;
 }
 
-message GetExchangeRateResponse {
-    double rate = 1;
-}
+message GetExchangeRateResponse { double rate = 1; }
 
 message ConversionRequest {
-    Currency from = 1;
-    Currency to = 2;
-    double amount = 3;
+  Currency from = 1;
+  Currency to = 2;
+  double amount = 3;
 }
 
-message ConversionResponse {
-    double amount = 1;
-}
+message ConversionResponse { double amount = 1; }
 
 service CurrencyService {
-    rpc GetCurrencies(GetCurrenciesRequest) returns (GetCurrenciesResponse){
-        option (google.api.http) = {
-            get: "/billing/currencies"
-        };
+  rpc GetCurrencies(GetCurrenciesRequest) returns (GetCurrenciesResponse) {
+    option (google.api.http) = {
+      get : "/billing/currencies"
     };
-    rpc GetExchangeRate(GetExchangeRateRequest) returns (GetExchangeRateResponse){
-        option (google.api.http) = {
-            get: "/billing/currencies/rate"
-        };
+  };
+  rpc GetExchangeRate(GetExchangeRateRequest)
+      returns (GetExchangeRateResponse) {
+    option (google.api.http) = {
+      get : "/billing/currencies/rate"
     };
-    rpc CreateExchangeRate(CreateExchangeRateRequest) returns (CreateExchangeRateResponse){
-        option (google.api.http) = {
-            post: "/billing/currencies/rate"
-        };
+  };
+  rpc CreateExchangeRate(CreateExchangeRateRequest)
+      returns (CreateExchangeRateResponse) {
+    option (google.api.http) = {
+      post : "/billing/currencies/rate"
     };
-    rpc UpdateExchangeRateRequest(CreateExchangeRateRequest) returns (CreateExchangeRateResponse){
-        option (google.api.http) = {
-            put: "/billing/currencies/rate"
-        };
+  };
+  rpc UpdateExchangeRateRequest(CreateExchangeRateRequest)
+      returns (CreateExchangeRateResponse) {
+    option (google.api.http) = {
+      put : "/billing/currencies/rate"
     };
-    rpc DeleteExchangeRateRequest(CreateExchangeRateRequest) returns (CreateExchangeRateResponse){
-        option (google.api.http) = {
-            delete: "/billing/currencies/rate"
-        };
+  };
+  rpc DeleteExchangeRateRequest(CreateExchangeRateRequest)
+      returns (CreateExchangeRateResponse) {
+    option (google.api.http) = {
+      delete : "/billing/currencies/rate"
     };
-    rpc Convert(ConversionRequest) returns (ConversionResponse) {
-        option (google.api.http) = {
-            post: "/billing/currencies/convert"
-        };
+  };
+  rpc Convert(ConversionRequest) returns (ConversionResponse) {
+    option (google.api.http) = {
+      post : "/billing/currencies/convert"
     };
+  };
 }
-
