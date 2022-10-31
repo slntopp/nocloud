@@ -35,7 +35,7 @@ type StandardCredentials struct {
 
 func NewStandardCredentials(data []string) (Credentials, error) {
 	if len(data) < 2 {
-		return nil, fmt.Errorf("Some credentials data is missing, expected data length to be 2, got: %d", len(data))
+		return nil, fmt.Errorf("some credentials data is missing, expected data length to be 2, got: %d", len(data))
 	}
 
 	username, password := data[0], data[1]

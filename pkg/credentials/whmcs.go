@@ -46,7 +46,7 @@ type WHMCSConfig struct {
 
 func NewWHMCSCredentials(data []string) (Credentials, error) {
 	if len(data) < 1 {
-		return nil, errors.New("Empty Credentials")
+		return nil, errors.New("empty Credentials")
 	}
 	email := data[0]
 	return &WHMCSCredentials{Email: email}, nil
