@@ -30,7 +30,7 @@
     </v-row>
 
     <v-row>
-      <v-col cols="4" md="4" lg="3">
+      <v-col cols="4" md="4" lg="4">
         <v-list dence color="background-light">
           <v-subheader>instances groups</v-subheader>
 
@@ -66,6 +66,7 @@
           <router-link :to="{ name: 'Services' }" style="text-decoration: none">
             <v-btn>cancel</v-btn>
           </router-link>
+          <v-btn class="ml-2" @click="downloadJSON"> download </v-btn>
           <v-btn class="ml-2" :loading="isTestsLoading" @click="testService">
             test
           </v-btn>
@@ -79,7 +80,7 @@
           </v-btn>
         </div>
       </v-col>
-      <v-col cols="8" md="8" lg="9">
+      <v-col cols="8" md="8" lg="8">
         <v-card
           v-if="currentInstancesGroupsIndex != -1"
           color="background-light"
@@ -196,6 +197,8 @@
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 
+import { downloadJSONFile } from "@/functions.js";
+
 export default {
   name: "service-create",
   data: () => ({
@@ -301,9 +304,6 @@ export default {
       const instances = JSON.parse(JSON.stringify(this.instances));
 
       instances.forEach((inst) => {
-        if (inst.body.type === "ovh") {
-          inst.body.data = { projectId: "2ccca3cf77574a80b4d0496f6f2539ec" };
-        }
         inst.body.resources.ips_public = inst.body.instances?.length || 0;
         data.instances_groups.push({
           ...inst.body,
@@ -389,6 +389,14 @@ export default {
         this.plans.products.push(title);
       });
     },
+    downloadJSON() {
+      const data = this.getService();
+      const name = data.service.title
+        ? (data.service.title + " service").replaceAll(" ", "_")
+        : "unknown_service";
+
+      downloadJSONFile(data, name);
+    },
   },
   computed: {
     currentType() {
@@ -463,4 +471,5 @@ export default {
 };
 </script>
 
-<style></style>
+<style>
+</style>

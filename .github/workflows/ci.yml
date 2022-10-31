@@ -9,6 +9,7 @@ on:
 
     paths-ignore:
       - ".github/workflows/**"
+      - "!.github/workflows/ci.yml"
       - "examples/**"
       - "proto/**"
       - "tools/**/*.sh"
@@ -28,16 +29,27 @@ jobs:
 
       - name: Set target tags
         id: set-tags-matrix
-        run: echo "::set-output name=matrix::$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')"
-
+        run: |
+          TAGS_JSON=$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')
+          echo "matrix=$TAGS_JSON" >> $GITHUB_OUTPUT
+          echo "### Discovered Containers :whale:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for title in $(echo $TAGS_JSON | jq -r '.[]'); do
+            echo "* $title" |  tr '-' ' ' >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Raw" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          echo "$TAGS_JSON" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
     outputs:
-      matrix: ${{steps.set-tags-matrix.outputs.matrix}}
-
+      matrix: ${{ steps.set-tags-matrix.outputs.matrix }}
   wait-for-checks:
     runs-on: ubuntu-latest
     steps:
       - name: Wait for tests to succeed
-        uses: lewagon/wait-on-check-action@v1.0.0
+        uses: lewagon/wait-on-check-action@v1.2.0
         with:
           ref: ${{ github.ref }}
           check-name: checks
@@ -56,20 +68,20 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v4.0.1
+        uses: docker/metadata-action@v4.1.1
         with:
           tags: type=raw,value=${{env.IMAGE_TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/base
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v2.0.0
+        uses: docker/login-action@v2.1.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v3.1.1
+        uses: docker/build-push-action@v3.2.0
         with:
           context: .
           file: Dockerfile
@@ -93,20 +105,21 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v4.0.1
+        uses: docker/metadata-action@v4.1.1
         with:
           tags: type=raw,value=${{env.IMAGE_TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}
 
       - name: Log in to the Container registry
-        uses: docker/login-action@v2.0.0
+        uses: docker/login-action@v2.1.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v3.1.1
+        uses: docker/build-push-action@v3.2.0
+        id: build
         with:
           context: .
           file: Dockerfiles/${{matrix.tag}}/Dockerfile
@@ -114,3 +127,19 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: IMAGE_TAG=${{env.IMAGE_TAG}}
+
+      - name: Summary
+        run: |
+          echo "### :whale: Published new image" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Digest:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.build.outputs.imageid }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo 'docker pull ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}:${{env.IMAGE_TAG}}' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "> Operator would automatically pull new image, otherwise use the command above" >> $GITHUB_STEP_SUMMARY

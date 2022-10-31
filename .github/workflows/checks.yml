@@ -9,6 +9,7 @@ on:
     paths-ignore:
       - ".github/**"
       - "!.github/workflows/checks.yml"
+      - "!.github/workflows/ci.yml"
   pull_request:
 
 jobs:

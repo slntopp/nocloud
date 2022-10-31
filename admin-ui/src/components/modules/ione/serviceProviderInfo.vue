@@ -42,6 +42,9 @@
         >
         </v-text-field>
       </v-col>
+    </v-row>
+    <v-card-title class="px-0 mb-3"> Vlans:</v-card-title>
+    <v-row>
       <v-col>
         <v-text-field
           readonly
@@ -54,8 +57,8 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.vlans[vlansKey].size"
-          label="size"
+          :value="template.secrets.vlans[vlansKey].start"
+          label="start"
           style="display: inline-block; width: 330px"
         >
         </v-text-field>
@@ -63,8 +66,8 @@
       <v-col>
         <v-text-field
           readonly
-          :value="template.secrets.vlans[vlansKey].start"
-          label="start"
+          :value="template.secrets.vlans[vlansKey].size"
+          label="size"
           style="display: inline-block; width: 330px"
         >
         </v-text-field>
@@ -290,12 +293,12 @@
         <p>OS's:</p>
         <div class="newCloud__template">
           <div
-            v-for="OS in template.publicData.templates"
+            v-for="OS in getPublicTemplates"
             class="newCloud__template-item"
             :key="OS.name"
           >
             <div class="newCloud__template-image">
-              <img :src="'img/OS/' + OS.name.replace(/[^a-zA-Z]+/g, '').toLowerCase() + '.png'" :alt="OS.name" />
+              <img :src="getOSImgLink(OS.name)" :alt="OS.name" />
             </div>
             <div class="newCloud__template-name">
               {{ OS.name }}
@@ -314,13 +317,15 @@
               :class="vlan === 0 ? 'occupied' : 'free'"
             />
           </template>
-          <span>{{ i }}</span>
+          <span>{{ getVlanIndex(i) }}</span>
         </v-tooltip>
         <div class="mt-2">
           <v-btn class="mr-2" v-if="counter > 1" @click="counter--">
             less
           </v-btn>
-          <v-btn v-if="counter < 8" @click="counter++"> more </v-btn>
+          <v-btn v-if="counter < vlansRowCount" @click="counter++">
+            more
+          </v-btn>
         </div>
       </v-col>
     </v-row>
@@ -340,7 +345,7 @@ export default {
   }),
   methods: {
     changeWidth() {
-      const { clientWidth } = this.$refs.private;
+      const { clientWidth } = this.$refs?.private;
       let cols = 64;
 
       for (let i = 4; i > 0; i--) {
@@ -352,32 +357,61 @@ export default {
         }
       }
     },
+    getVlanIndex(index) {
+      return this.vlansStart ? this.vlansStart + index : index;
+    },
+    getOSImgLink(name) {
+      console.log(name);
+      console.log(
+        "img/OS/" + name.replace(/[^a-zA-Z]+/g, "").toLowerCase() + ".png"
+      );
+      return "img/OS/" + name.replace(/[^a-zA-Z]+/g, "").toLowerCase() + ".png";
+    },
   },
   mounted() {
     this.changeWidth();
   },
   computed: {
-    vlansKey(){
-      return Object.keys(this.template.secrets.vlans)[0]
+    vlansKey() {
+      return Object.keys(this.template.secrets.vlans ?? {})[0];
     },
     vlans() {
-      const { free_vlans } = this.template?.state.meta.networking.private_vnet;
+      const { free_vlans } =
+        this.template?.state?.meta?.networking?.private_vnet;
       let vlans = 0;
 
       Object.values(free_vlans || {}).forEach((value) => {
         vlans += +value;
       });
 
-      const oneBlockLength=this.vlansCount/8
-
-      const res = Array.from({ length: oneBlockLength * this.counter })
+      const res = Array.from({
+        length: (this.vlansCount / this.vlansRowCount) * this.counter + 1,
+      })
         .fill(1, 0, vlans)
         .fill(0, vlans);
       return res;
     },
-    vlansCount(){
-      return this.template.secrets.vlans[this.vlansKey]?.size
-    }
+    vlansCount() {
+      return this.template.secrets.vlans[this.vlansKey]?.size;
+    },
+    vlansStart() {
+      return this.template.secrets.vlans[this.vlansKey]?.start;
+    },
+    vlansRowCount() {
+      if (this.vlansCount < 400) {
+        return 1;
+      }
+      return this.vlansCount < 2000 ? 4 : 8;
+    },
+    getPublicTemplates() {
+      if (!this.template.publicData.templates) {
+        return [];
+      }
+
+      return Object.values(this.template.publicData.templates).filter(
+        (t) => t.is_public
+      );
+    },
   },
   watch: {
     counter() {
@@ -414,7 +448,7 @@ export default {
   &:not(:last-child) {
     margin-right: 10px;
   }
-   &:first-child {
+  &:first-child {
     margin-left: 0px;
   }
   &:hover {
@@ -423,17 +457,16 @@ export default {
   }
 }
 
-  .newCloud__template-image {
-    padding: 10px;
-  }
-  .newCloud__template-image img {
-    margin: auto;
-    width: 90%;
-    height: 100%;
-  }
+.newCloud__template-image {
+  padding: 10px;
+}
+.newCloud__template-image img {
+  margin: auto;
+  width: 90%;
+  height: 100%;
+}
 
 .newCloud__template-name {
   padding: 10px;
 }
-
 </style>

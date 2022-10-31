@@ -1,5 +1,5 @@
 <template>
-  <v-app :style="{ background: $vuetify.theme.themes.dark.background }">
+  <v-app v-if="!isVNC" :style="{ background: $vuetify.theme.themes.dark.background }">
     <v-navigation-drawer
       app
       permanent
@@ -152,16 +152,7 @@
     <v-app-bar v-if="isLoggedIn" app color="background" elevation="0">
       <v-row style="width: 100%" justify="center" align="center">
         <v-col>
-          <v-text-field
-            hide-details
-            prepend-inner-icon="mdi-magnify"
-            placeholder="Search..."
-            single-line
-            background-color="background-light"
-            dence
-            v-model="searchParam"
-            rounded
-          ></v-text-field>
+          <app-search/>
         </v-col>
         <v-col class="d-flex justify-center">
           <v-btn
@@ -209,7 +200,6 @@
           </v-menu>
         </v-col>
       </v-row>
-
       <v-spacer></v-spacer>
     </v-app-bar>
 
@@ -217,14 +207,16 @@
       <router-view />
     </v-main>
   </v-app>
+  <router-view v-else/>
 </template>
 
 <script>
 import config from "@/config";
 import balance from "@/components/balance.vue";
+import appSearch from "@/components/search/search.vue";
 
 export default {
-  components: { balance },
+  components: { balance ,appSearch},
   name: "App",
 
   data: () => ({
@@ -282,14 +274,9 @@ export default {
         };
       else return {};
     },
-    searchParam: {
-      get() {
-        return this.$store.getters["appSearch/param"];
-      },
-      set(newValue) {
-        this.$store.commit("appSearch/setSearchParam", newValue);
-      },
-    },
+    isVNC(){
+      return this.$route.path.includes('vnc')
+    }
   },
   created() {
     this.$store.dispatch("auth/load");

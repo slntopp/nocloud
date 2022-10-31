@@ -88,6 +88,7 @@
                 style="background: var(--v-background-light-base)"
                 v-for="(group, i) in itemService.instancesGroups"
                 :key="i"
+                :disabled="!group.instances.length"
               >
                 <v-expansion-panel-header>
                   {{ group.title }} | Type: {{ group.type }} -
@@ -148,7 +149,7 @@ export default {
     servecesInstancesItem,
     ConfirmDialog,
   },
-  mixins: [snackbar,search],
+  mixins: [snackbar, search],
   data: () => ({
     headers: [
       { text: "title", value: "title" },
@@ -180,12 +181,15 @@ export default {
     filteredServices() {
       if (this.searchParam) {
         const byIps = this.filtredByPublicIps();
-        const byTitleAndUud = filterArrayByTitleAndUuid(
+        const byDomains = this.filtredByDomains();
+
+        const byTitleAndUuid = filterArrayByTitleAndUuid(
           this.services,
           this.searchParam,
           { unique: false }
         );
-        return [...new Set([...byIps, ...byTitleAndUud])];
+
+        return [...new Set([...byIps, ...byTitleAndUuid, ...byDomains])];
       }
       return this.services;
     },
@@ -257,6 +261,25 @@ export default {
         return isTitleIncludes || isItIpExists;
       });
     },
+    filtredByDomains() {
+      return this.services.filter((service) => {
+        const domains = [];
+
+        service.instancesGroups.forEach((serviceInstance) => {
+          if (serviceInstance.type === "opensrs") {
+            serviceInstance.instances.forEach((instance) => {
+              domains.push(instance.resources.domain);
+            });
+          } else {
+            return false;
+          }
+        });
+
+        return domains.find((d) =>
+          d.toLowerCase().startsWith(this.searchParam.toLowerCase())
+        );
+      });
+    },
     hashTrim(hash) {
       if (hash) return hash.slice(0, 8) + "...";
       else return "XXXXXXXX...";
@@ -287,11 +310,11 @@ export default {
       return dict[state] ?? "blue-grey darken-2";
     },
 
-    instanceCountColor(group){
-      if(group.instances.length){
-        return this.chipColor(group.status)
+    instanceCountColor(group) {
+      if (group.instances.length) {
+        return this.chipColor(group.status);
       }
-      return this.chipColor('DEL')
+      return this.chipColor("DEL");
     },
 
     deleteSelectedServices() {

@@ -12,12 +12,9 @@
         >
           {{ btn.title || btn.action }}
         </v-btn>
-        <v-btn
-          :loading="actionLoading"
-          @click="deleteInstance"
-        >
-          Delete
-        </v-btn>
+        <v-btn @click="openVnc" class="mr-2" v-if="serviceType==='ione'"> console </v-btn>
+        <v-btn @click="changeDNS" class="mr-2" v-if="serviceType==='opensrs'"> dns </v-btn>
+        <v-btn :loading="actionLoading" @click="deleteInstance"> Delete </v-btn>
       </v-col>
     </v-row>
     <v-snackbar
@@ -94,6 +91,12 @@ export default {
           this.actionLoading = false;
         });
     },
+    openVnc(){
+      this.$router.push({name:'Vnc',params:{instanceId:this.instance_uuid}})
+    },
+    changeDNS(){
+     this.$router.push({name:'InstanceDns',params:{instanceId:this.instance_uuid}})
+    },
     deleteInstance() {
       const newService = JSON.parse(JSON.stringify(this.service));
 
@@ -134,5 +137,13 @@ export default {
         });
     }
   },
+  computed:{
+    serviceType(){
+      const instance = this.service.instancesGroups.find(i=>{
+        return i.instances.find(instance=>instance.uuid===this.instance_uuid)
+      });
+      return instance.type
+    }
+  }
 };
 </script>

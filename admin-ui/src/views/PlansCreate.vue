@@ -1,6 +1,12 @@
 <template>
   <div class="pa-4">
-    <h1 class="page__title" v-if="!item">Create plan</h1>
+    <div class="d-flex">
+      <h1 class="page__title" v-if="!item">Create plan</h1>
+      <v-icon class="mx-3" large color="light" @click="openPlanWiki">
+        mdi-information-outline
+      </v-icon>
+    </div>
+
     <v-form v-model="isValid" ref="form">
       <v-row>
         <v-col lg="6" cols="12">
@@ -30,19 +36,30 @@
             </v-col>
           </v-row>
 
+          <!-- Opensrs props -->
+          <plan-opensrs
+            @changeFee="(data) => (plan.fee = data)"
+            @onValid="(data) => (isFeeValid = data)"
+            v-if="plan.type === 'opensrs'"
+            :fee="plan.fee"
+            :isEdit="isEdit"
+          />
+
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Plan kind</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-radio-group row mandatory v-model="plan.kind">
-                <v-radio
-                  v-for="item of kinds"
-                  :key="item"
-                  :value="item"
-                  :label="item.toLowerCase()"
-                />
-              </v-radio-group>
+              <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">
+                <v-radio-group v-model="selectedKind" row mandatory>
+                  <v-radio
+                    v-for="item in kinds"
+                    :key="item"
+                    :value="item"
+                    :label="item.toLowerCase()"
+                  />
+                </v-radio-group>
+              </confirm-dialog>
             </v-col>
           </v-row>
 
@@ -153,22 +170,27 @@
 <script>
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
+import ConfirmDialog from "@/components/confirmDialog.vue";
+import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
+  components: { ConfirmDialog, PlanOpensrs },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
     kinds: ["DYNAMIC", "STATIC"],
+    selectedKind: "",
     products: [],
     plan: {
       title: "",
       type: "custom",
-      kind: "",
-      public: false,
+      kind: "DYNAMIC",
+      public: true,
       resources: [],
       products: {},
+      fee: null,
     },
     form: {
       title: "",
@@ -182,6 +204,7 @@ export default {
 
     isVisible: true,
     isValid: false,
+    isFeeValid: true,
     isLoading: false,
     isTestSuccess: false,
     testButtonColor: "background-light",
@@ -189,7 +212,7 @@ export default {
   methods: {
     changeResource(num, { key, value }) {
       try {
-        value = JSON.parse(value, num);
+        value = JSON.parse(value);
       } catch {
         value;
       }
@@ -226,6 +249,15 @@ export default {
       } else {
         this.plan.products[obj] = { [key]: value };
       }
+    },
+    changeFee({ key, value }) {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        value;
+      }
+
+      this.plan.fee[key] = value;
     },
     preset(i) {
       const title = this.form.titles[i - 1];
@@ -382,9 +414,18 @@ export default {
     testConfig() {
       let message = "";
 
-      if (!this.isValid) {
+      if (!this.isValid || (!this.isFeeValid && this.plan.type==='opensrs')) {
         this.$refs.form.validate();
         message = "Validation failed!";
+      }
+
+      if (
+        (!message &&
+          this.plan.type === "opensrs" &&
+          this.plan.fee?.ranges?.length === 0) ||
+        !this.plan.fee?.ranges
+      ) {
+        message = "Ranges cant be empty!";
       }
 
       if (!message) {
@@ -449,6 +490,19 @@ export default {
         resources: this.item.resources,
       };
     },
+    changePlan(isReset) {
+      if (isReset) {
+        this.selectedKind = "";
+        return;
+      }
+      this.plan.kind = this.selectedKind;
+    },
+    openPlanWiki() {
+      window.open(
+        "https://github.com/slntopp/nocloud/wiki/Billing-Plans",
+        "_blank"
+      );
+    },
   },
   created() {
     if (this.isEdit) {
@@ -487,6 +541,7 @@ export default {
   },
   watch: {
     "plan.type"() {
+      this.plan.fee = {};
       switch (this.plan.type) {
         case "ione":
           if (this.plan.kind === "STATIC") return;
@@ -500,12 +555,11 @@ export default {
       }
     },
     "plan.kind"() {
-      if (this.plan.kind === "STATIC") {
-        if (!this.isEdit) {
+      if (!this.isEdit) {
+        this.form.titles = [];
+        if (this.plan.kind === "STATIC") {
           this.plan.products = {};
-        }
-      } else {
-        if (!this.isEdit) {
+        } else {
           this.plan.resources = [];
         }
       }

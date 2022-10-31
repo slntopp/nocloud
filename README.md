@@ -113,7 +113,7 @@ Then see usage [usage](#usage)
 
 #### AUR (Arch Linux, Manjaro, etc.)
 
-If you have `yaourt` package must be found automatically by label `nocloud-bin`
+If you have `yaourt` or `yay` package must be found automatically by label `nocloud-bin`
 
 Otherwise,
 

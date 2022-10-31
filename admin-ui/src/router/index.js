@@ -90,6 +90,14 @@ const routes = [
     },
   },
   {
+    path: "/settigns/app",
+    name: "AppSetting",
+    component: () => import("../views/AppSettings.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/services",
     name: "Services",
     component: () => import("../views/Services.vue"),
@@ -109,6 +117,22 @@ const routes = [
     path: "/services/:serviceId",
     name: "Service",
     component: () => import("../views/ServicePage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/instances/:instanceId/vnc",
+    component: () => import("../views/Vnc.vue"),
+    name: "Vnc",
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/instances/:instanceId/dns",
+    component: () => import("../views/InstanceDNS.vue"),
+    name: "InstanceDns",
     meta: {
       requireLogin: true,
     },

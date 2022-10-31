@@ -9,7 +9,7 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: daily
-      time: '06:00'
+      time: "06:00"
     reviewers:
       - slntopp
     assignees:
@@ -18,7 +18,7 @@ updates:
     directory: "tools/buf" # Location of package manifests
     schedule:
       interval: daily
-      time: '06:00'
+      time: "06:00"
     reviewers:
       - slntopp
     assignees:
@@ -27,7 +27,7 @@ updates:
     directory: "admin-ui"
     schedule:
       interval: daily
-      time: '06:00'
+      time: "06:00"
     reviewers:
       - "639852"
       - dimkapzd
@@ -35,10 +35,10 @@ updates:
     assignees:
       - "639852"
   - package-ecosystem: github-actions
-    directory: ".github/workflows/*"
+    directory: "/"
     schedule:
       interval: daily
-      time: '06:00'
+      time: "06:00"
     reviewers:
       - slntopp
     assignees:

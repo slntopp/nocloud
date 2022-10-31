@@ -1,11 +1,11 @@
-import api from '@/api.js';
+import api from "@/api.js";
 
 export default {
   namespaced: true,
   state: {
     transactions: [],
     transaction: [],
-    loading: false
+    loading: false,
   },
   getters: {
     all(state) {
@@ -16,23 +16,25 @@ export default {
     },
     isLoading(state) {
       return state.loading;
-    }
+    },
   },
   mutations: {
     setTransactions(state, transactions) {
-      state.transactions = transactions
-        .reduce((acc, item) => [...acc, ...item.pool], []);
+      state.transactions = transactions.reduce(
+        (acc, item) => [...acc, ...item.pool],
+        []
+      );
     },
     setTransaction(state, transaction) {
       state.transaction = transaction;
     },
     setLoading(state, data) {
       state.loading = data;
-    }
+    },
   },
   actions: {
     fetch({ commit }, { accounts, service }) {
-      commit('setLoading', true);
+      commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
         const promises = accounts.map((account) =>
@@ -41,33 +43,34 @@ export default {
 
         Promise.all(promises)
           .then((response) => {
-            commit('setTransactions', response);
+            commit("setTransactions", response);
             resolve(response);
           })
           .catch((error) => {
             reject(error);
           })
           .finally(() => {
-            commit('setLoading', false);
+            commit("setLoading", false);
           });
       });
     },
     fetchById({ commit }, params) {
-      commit('setLoading', true);
+      commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
-        api.transactions.get(params)
+        api.transactions
+          .get(params)
           .then((response) => {
-            commit('setTransaction', response.pool);
+            commit("setTransaction", response.pool);
             resolve(response);
           })
           .catch((error) => {
             reject(error);
           })
           .finally(() => {
-            commit('setLoading', false);
+            commit("setLoading", false);
           });
       });
-    }
+    },
   },
 };

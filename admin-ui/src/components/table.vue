@@ -22,18 +22,26 @@
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
-        <v-chip color="gray">
+        <v-chip v-if="isKeyInCircle" color="gray">
           {{ props.value }}
         </v-chip>
+        <template v-else>
+          {{ props.value }}
+        </template>
         <v-btn icon @click="hideID(props.index)">
           <v-icon>mdi-close-circle-outline</v-icon>
         </v-btn>
       </template>
       <template v-else>
-        <v-chip color="gray">
-          {{ makeIdShort(props.value) }}
-        </v-chip>
-        <v-btn icon @click="showID(props.index)">
+        <template v-if="!isKeyOnlyAfterClick">
+          <v-chip v-if="isKeyInCircle" color="gray">
+            {{ makeIdShort(props.value) }}
+          </v-chip>
+          <template v-else>
+            {{ makeIdShort(props.value) }}
+          </template>
+        </template>
+        <v-btn v-if="!isIdShort(props.value) || isKeyOnlyAfterClick" icon @click="showID(props.index)">
           <v-icon>mdi-eye-outline</v-icon>
         </v-btn>
       </template>
@@ -145,6 +153,14 @@ export default {
       type: String,
       default: "",
     },
+    isKeyInCircle: {
+      type: Boolean,
+      default: true,
+    },
+    isKeyOnlyAfterClick: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -180,7 +196,13 @@ export default {
     hideID(index) {
       this.showed = this.showed.filter((i) => i !== index);
     },
+    isIdShort(id){
+      return id.length<=8
+    },
     makeIdShort(id) {
+      if(this.isIdShort(id)){
+        return id
+      }
       return id.slice(0, 8) + "...";
     },
   },

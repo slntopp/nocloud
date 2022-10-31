@@ -2,7 +2,7 @@ name: Delete old container images
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # every day at midnight
+    - cron: "0 0 * * *" # every day at midnight
   workflow_dispatch:
 
 jobs:
@@ -14,15 +14,23 @@ jobs:
 
       - name: Set target tags
         id: set-tags-matrix
-        run: echo "::set-output name=matrix::$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')"
-
+        run: |
+          TAGS_JSON=$(ls Dockerfiles | jq -cnR '[inputs | select(length>0)]')
+          echo "matrix=$TAGS_JSON" >> $GITHUB_OUTPUT
+          echo "### Discovered Containers :whale:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for title in $(echo $TAGS_JSON | jq -r '.[]'); do
+            echo "* $title" |  tr '-' ' ' >> $GITHUB_STEP_SUMMARY
+          done
     outputs:
-      matrix: ${{steps.set-tags-matrix.outputs.matrix}}
+      matrix: ${{ steps.set-tags-matrix.outputs.matrix }}
+
   clean-ghcr-base:
     name: Cleanup Base Image
     runs-on: ubuntu-latest
     steps:
       - name: Untagged Images (> 1 day)
+        id: untagged-base
         uses: snok/container-retention-policy@v1
         with:
           image-names: nocloud/base
@@ -30,8 +38,20 @@ jobs:
           account-type: personal
           untagged-only: true
           token: ${{ secrets.PACKAGES_PAT }}
+      - run: |
+          echo "### Deleted Untagged Images:wastebasket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.untagged-base.deleted }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "### Failed to delete Untagged Images :warning:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.untagged-base.failed }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
 
       - name: Dev Images (> 2 weeks)
+        id: dev-base
         uses: snok/container-retention-policy@v1
         with:
           image-names: nocloud/base
@@ -40,6 +60,17 @@ jobs:
           filter-tags: dev-*
           filter-include-untagged: true
           token: ${{ secrets.PACKAGES_PAT }}
+      - run: |
+          echo "### Deleted Dev Images :wastebasket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.dev-base.deleted }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "### Failed to delete Untagged Images :warning:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.dev-base.failed }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
   clean-ghcr:
     name: Cleanup
     runs-on: ubuntu-latest
@@ -49,6 +80,7 @@ jobs:
         tag: ${{fromJson(needs.prepare.outputs.matrix)}}
     steps:
       - name: Untagged Images (> 1 day)
+        id: untagged
         uses: snok/container-retention-policy@v1
         with:
           image-names: nocloud/${{matrix.tag}}
@@ -56,8 +88,20 @@ jobs:
           account-type: personal
           untagged-only: true
           token: ${{ secrets.PACKAGES_PAT }}
+      - run: |
+          echo "### Deleted Untagged Images :wastebasket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.untagged.deleted }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "### Failed to delete Untagged Images :warning:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.untagged.failed }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
 
       - name: Dev Images (> 2 weeks)
+        id: dev
         uses: snok/container-retention-policy@v1
         with:
           image-names: nocloud/${{matrix.tag}}
@@ -66,3 +110,14 @@ jobs:
           filter-tags: dev-*
           filter-include-untagged: true
           token: ${{ secrets.PACKAGES_PAT }}
+      - run: |
+          echo "### Deleted Dev Images :wastebasket:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.dev.deleted }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "### Failed to delete Untagged Images :warning:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          for c in $(echo ${{ steps.dev.failed }} | sed "s/,/ /g"); do
+              echo " - $c" >> $GITHUB_STEP_SUMMARY
+          done

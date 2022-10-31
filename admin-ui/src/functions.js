@@ -1,3 +1,5 @@
+import yaml from "yaml";
+
 export function isObject(item) {
   return item && typeof item === "object" && !Array.isArray(item);
 }
@@ -146,4 +148,104 @@ export function filterArrayByTitleAndUuid(
   }
 
   return [...new Set([...byTitle, ...byUuid])];
+}
+
+export function levenshtein(s, t) {
+  const d = [];
+
+  const n = s.length,
+    m = t.length;
+
+  if (n == 0) return m;
+  if (m == 0) return n;
+
+  for (let ik = n; ik >= 0; ik--) d[ik] = [];
+
+  for (let ix = n; ix >= 0; ix--) d[ix][0] = i;
+  for (let jf = m; jf >= 0; jf--) d[0][jf] = jf;
+
+  for (var i = 1; i <= n; i++) {
+    const s_i = s.charAt(i - 1);
+
+    for (let j = 1; j <= m; j++) {
+      if (i == j && d[i][j] > 4) return n;
+
+      const t_j = t.charAt(j - 1);
+      const cost = s_i == t_j ? 0 : 1;
+
+      let mi = d[i - 1][j] + 1;
+      const b = d[i][j - 1] + 1;
+      const c = d[i - 1][j - 1] + cost;
+
+      if (b < mi) mi = b;
+      if (c < mi) mi = c;
+
+      d[i][j] = mi;
+
+      if (i > 1 && j > 1 && s_i == t.charAt(j - 2) && s.charAt(i - 2) == t_j) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + cost);
+      }
+    }
+  }
+
+  return d[n][m];
+}
+
+export function downloadFile(blob, name, extension = "json") {
+  if (window.navigator.msSaveOrOpenBlob) {
+    window.navigator.msSaveBlob(blob, name);
+  } else {
+    const elem = window.document.createElement("a");
+    elem.href = window.URL.createObjectURL(blob);
+    elem.download = name + "." + extension;
+    document.body.appendChild(elem);
+    elem.click();
+    document.body.removeChild(elem);
+  }
+}
+
+export function downloadJSONFile(obj, name) {
+  const blob = new Blob([JSON.stringify(obj)], {
+    type: "application/json",
+  });
+  downloadFile(blob, name);
+}
+
+export function objectToYAMLString(obj) {
+  const doc = new yaml.Document();
+  doc.contents = obj;
+
+  return doc.toString();
+}
+
+export function downloadYAMLFile(obj, name) {
+  const blob = new Blob([objectToYAMLString(obj)], {});
+
+  downloadFile(blob, name, "yaml");
+}
+
+export function readJSONFile(file) {
+  return new Promise((resolve) => {
+    if (!file) return;
+
+    let reader = new FileReader();
+    reader.onload = (e) => {
+      const result = JSON.parse(e.target.result);
+      resolve(result);
+    };
+    reader.readAsText(file);
+  });
+}
+
+export function readYAMLFile(file) {
+  return new Promise((resolve) => {
+    if (!file) return;
+
+    let reader = new FileReader();
+    reader.onload = (e) => {
+      const result = yaml.parse(e.target.result);
+      resolve(result);
+    };
+    reader.readAsText(file);
+  });
 }
