@@ -281,9 +281,75 @@
                 },
                 "access": {
                   "$ref": "#/definitions/accessAccess"
+                },
+                "suspendConf": {
+                  "$ref": "#/definitions/accountsSuspendConf"
+                },
+                "suspended": {
+                  "type": "boolean"
                 }
               }
             }
+          }
+        ],
+        "tags": [
+          "AccountsService"
+        ]
+      }
+    },
+    "/accounts/{uuid}/suspend": {
+      "post": {
+        "operationId": "AccountsService_Suspend",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/registryaccountsSuspendResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "AccountsService"
+        ]
+      }
+    },
+    "/accounts/{uuid}/unsuspend": {
+      "post": {
+        "operationId": "AccountsService_Unsuspend",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/registryaccountsUnsuspendResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "uuid",
+            "in": "path",
+            "required": true,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1458,7 +1524,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/servicesSuspendResponse"
+              "$ref": "#/definitions/nocloudservicesSuspendResponse"
             }
           },
           "default": {
@@ -1496,7 +1562,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/servicesUnsuspendResponse"
+              "$ref": "#/definitions/nocloudservicesUnsuspendResponse"
             }
           },
           "default": {
@@ -2229,6 +2295,12 @@
         },
         "access": {
           "$ref": "#/definitions/accessAccess"
+        },
+        "suspendConf": {
+          "$ref": "#/definitions/accountsSuspendConf"
+        },
+        "suspended": {
+          "type": "boolean"
         }
       }
     },
@@ -2251,6 +2323,18 @@
       "properties": {
         "result": {
           "type": "boolean"
+        }
+      }
+    },
+    "accountsSuspendConf": {
+      "type": "object",
+      "properties": {
+        "immune": {
+          "type": "boolean"
+        },
+        "limit": {
+          "type": "number",
+          "format": "float"
         }
       }
     },
@@ -2973,6 +3057,12 @@
     "nocloudservicesDownResponse": {
       "type": "object"
     },
+    "nocloudservicesSuspendResponse": {
+      "type": "object"
+    },
+    "nocloudservicesUnsuspendResponse": {
+      "type": "object"
+    },
     "nocloudservicesUpResponse": {
       "type": "object",
       "properties": {
@@ -3121,6 +3211,22 @@
         }
       }
     },
+    "registryaccountsSuspendResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
+    "registryaccountsUnsuspendResponse": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": "boolean"
+        }
+      }
+    },
     "registrynamespacesCreateRequest": {
       "type": "object",
       "properties": {
@@ -3214,9 +3320,6 @@
         }
       }
     },
-    "servicesSuspendResponse": {
-      "type": "object"
-    },
     "servicesTestConfigError": {
       "type": "object",
       "properties": {
@@ -3244,9 +3347,6 @@
           }
         }
       }
-    },
-    "servicesUnsuspendResponse": {
-      "type": "object"
     },
     "servicesUpError": {
       "type": "object",
