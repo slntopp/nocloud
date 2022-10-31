@@ -26,8 +26,6 @@ const localLang = localStorage.getItem("lang");
 
 const lang = AppLangs.find((appLang) => appLang === localLang) || "en";
 
-console.log(lang);
-
 export default new VueI18n({
   locale: lang,
   silentTranslationWarn: true,

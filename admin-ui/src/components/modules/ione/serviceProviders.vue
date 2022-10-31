@@ -38,6 +38,15 @@ v-col
     </v-row>
     <!-- Vlans key -->
     <v-row>
+      <v-col cols="4">
+        <v-select
+          :items="vlansKeysItems"
+          v-bind="fields['vlansKey'].bind || {}"
+          :value="getValue('vlansKey')"
+          :placeholder="fields['vlansKey'].label"
+          @change="(data) => changeHandler('vlansKey', data)"
+        />
+      </v-col>
       <v-col cols="4" v-for="field in vlansKeys()" :key="field">
         <v-text-field
           :placeholder="fields[field].label"
@@ -87,6 +96,7 @@ export default {
     },
   },
   data: () => ({
+    vlansKeysItems: ["vcenter"],
     hostWarning: false,
     errors: {
       host: [],
@@ -227,18 +237,6 @@ export default {
       const secrets = {};
       const vars = {};
 
-      // Object.keys(this.fields).forEach((fieldName) => {
-      //   this.fields[fieldName].rules.forEach((rule) => {
-      //     const result = rule(this.getValue(fieldName));
-      //     if (typeof result == "string") {
-      //       this.errors[fieldName] = [result];
-      //       errors[fieldName] = result;
-      //     } else {
-      //       this.errors[fieldName] = [];
-      //     }
-      //   });
-      // });
-
       for (const secretKey of this.secretsKeys()) {
         secrets[secretKey] =
           secretKey === input ? data : this.getValue(secretKey);
@@ -352,7 +350,7 @@ export default {
       return this.vlansKeys().includes(field);
     },
     vlansKeys() {
-      return ["vlansKey", "start", "size"];
+      return ["start", "size"];
     },
     secretsKeys() {
       return ["host", "user", "pass"];
