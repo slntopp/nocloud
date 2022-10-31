@@ -230,23 +230,20 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	acc, err := s.ctrl.Get(ctx, requestor)
 	if err != nil {
-		log.Debug("Error getting account", zap.Any("error", err))
+		log.Debug("Error getting requestor account", zap.Any("error", err))
 		return nil, status.Error(codes.PermissionDenied, "Requestor Account not found")
 	}
-	log.Debug("Requestor", zap.Any("account", acc))
 
-	var pool []graph.Account
-	pool, err = s.ctrl.List(ctx, acc, request.GetDepth())
+	pool, err := graph.ListWithAccess[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, request.GetDepth())
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")
 	}
 	log.Debug("List result", zap.Any("pool", pool))
 
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID, access.SUDO)
 	result := make([]*accountspb.Account, len(pool))
 	for i, acc := range pool {
-		if !ok {
+		if acc.Access.Level < accesspb.Level_ROOT {
 			acc.Account.SuspendConf = nil
 		}
 		result[i] = acc.Account
