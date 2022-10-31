@@ -204,6 +204,7 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		requested = requestor
 	}
 
+	log.Debug("Retrieving account", zap.String("uuid", requested))
 	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
 	if err != nil || acc.Access == nil {
 		log.Debug("Error getting account", zap.Any("error", err))
