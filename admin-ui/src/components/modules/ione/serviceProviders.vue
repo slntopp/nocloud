@@ -7,26 +7,9 @@ v-col
       :align="!fields[field].isJSON ? 'center' : null"
     >
       <v-col cols="4">
-        <v-subheader>
+        <subheader-with-info :infoText="`SPInfo.ione.${field}`">
           {{ fields[field].subheader || field }}
-
-          <v-tooltip
-            v-if="field == 'host' && hostWarning"
-            bottom
-            color="warning"
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-icon class="ml-2" color="warning" v-bind="attrs" v-on="on">
-                mdi-alert-outline
-              </v-icon>
-            </template>
-
-            <span
-              >Non-standard RPC path: "{{ hostWarning }}" instead of
-              "/RPC2"</span
-            >
-          </v-tooltip>
-        </v-subheader>
+        </subheader-with-info>
       </v-col>
 
       <v-col cols="8">
@@ -73,6 +56,7 @@ v-col
 
 <script>
 import JsonEditor from "@/components/JsonEditor.vue";
+import subheaderWithInfo from "@/components/ui/subheaderWithInfo.vue";
 
 function isJSON(str) {
   try {
@@ -86,7 +70,7 @@ function isJSON(str) {
 // const domainRegex = /^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z0-9-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/;
 // const domainRegex = /^(https?):\/\/(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$/
 export default {
-  components: { JsonEditor },
+  components: { JsonEditor, subheaderWithInfo },
   name: "servicesProviders-create-ione",
   props: {
     secrets: {
@@ -221,7 +205,7 @@ export default {
       },
       private_vnet_ban: {
         type: "bool",
-        label: "Private Network Ban",
+        label: "Private networking feature",
         rules: [() => true],
       },
     },
