@@ -211,6 +211,10 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		return &accountspb.Account{Title: acc.Account.GetTitle()}, nil
 	}
 
+	if acc.Key == requestor {
+		return acc.Account, nil
+	}
+
 	if acc.Access.Level < accesspb.Level_READ {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
