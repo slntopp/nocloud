@@ -30,6 +30,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 
+	accesspb "github.com/slntopp/nocloud/pkg/access"
 	pb "github.com/slntopp/nocloud/pkg/registry/proto"
 	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
@@ -198,9 +199,9 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := s.ctrl.Get(ctx, request.Uuid)
-	if err != nil {
-		log.Debug("Error getting account", zap.String("requested_id", request.Uuid), zap.Any("error", err))
+	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	if err != nil || acc.Access == nil {
+		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
@@ -209,13 +210,11 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		return &accountspb.Account{Title: acc.Account.GetTitle()}, nil
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID, access.READ)
-	if !ok {
+	if acc.Access.Level < accesspb.Level_READ {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	ok = graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.SUDO)
-	if !ok {
+	if acc.Access.Level < accesspb.Level_ROOT {
 		acc.SuspendConf = nil
 	}
 
@@ -244,7 +243,7 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	}
 	log.Debug("List result", zap.Any("pool", pool))
 
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.SUDO)
+	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID, access.SUDO)
 	result := make([]*accountspb.Account, len(pool))
 	for i, acc := range pool {
 		if !ok {
@@ -367,19 +366,19 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	acc, err := s.ctrl.Get(ctx, request.Uuid)
+	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
 	if err != nil {
 		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
-
-	ok := graph.HasAccess(ctx, s.db, requestor, acc.ID, access.ADMIN)
-	if !ok {
+	if acc.Access == nil {
+		log.Warn("Error Access is nil")
+	}
+	if acc.Access == nil || acc.Access.Level < accesspb.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	ok = graph.HasAccess(ctx, s.db, requestor, acc.ID.String(), access.SUDO)
-	if !ok {
+	if acc.Access.Level < accesspb.Level_ROOT {
 		request.SuspendConf = nil
 		request.Suspended = nil
 	}
