@@ -422,8 +422,8 @@ export default {
       if (
         (!message &&
           this.plan.type === "opensrs" &&
-          this.plan.fee?.ranges?.length === 0) ||
-        !this.plan.fee?.ranges
+          (!this.plan.fee?.ranges ||
+          this.plan.fee?.ranges?.length === 0))
       ) {
         message = "Ranges cant be empty!";
       }
