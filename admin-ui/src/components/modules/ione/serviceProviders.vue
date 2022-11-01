@@ -37,18 +37,18 @@ v-col
       </v-col>
     </v-row>
     <!-- Vlans key -->
-    <v-row>
-      <v-col cols="4">
-        <v-select
-          :items="vlansKeysItems"
-          v-bind="fields['vlansKey'].bind || {}"
-          :value="getValue('vlansKey')"
-          :placeholder="fields['vlansKey'].label"
-          @change="(data) => changeHandler('vlansKey', data)"
-        />
-      </v-col>
+    <v-row class="ml-2">
       <v-col cols="4" v-for="field in vlansKeys()" :key="field">
+        <v-select
+          v-if="fields[field].type === 'select'"
+          :items="vlansKeysItems"
+          v-bind="fields[field].bind || {}"
+          :value="getValue(field)"
+          :placeholder="fields[field].label"
+          @change="(data) => changeHandler(field, data)"
+        />
         <v-text-field
+          v-else
           :placeholder="fields[field].label"
           @change="(data) => changeHandler(field, data)"
           :value="getValue(field)"
@@ -152,7 +152,7 @@ export default {
         },
       },
       vlansKey: {
-        type: "text",
+        type: "select",
         subheader: "Vlans key",
         label: "vlans key",
         rules: [() => true],
@@ -350,7 +350,7 @@ export default {
       return this.vlansKeys().includes(field);
     },
     vlansKeys() {
-      return ["start", "size"];
+      return ["vlansKey", "start", "size"];
     },
     secretsKeys() {
       return ["host", "user", "pass"];
