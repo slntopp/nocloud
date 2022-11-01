@@ -18,6 +18,7 @@ package nocloud.registry.accounts;
 
 import "google/protobuf/struct.proto";
 import "pkg/access/access.proto";
+import "pkg/billing/proto/billing.proto";
 
 message Credentials {
   string type = 1;
@@ -53,6 +54,7 @@ message Account {
   optional nocloud.access.Access access = 5;
   optional SuspendConf suspend_conf = 6;
   optional bool suspended = 7;
+  optional nocloud.billing.Currency currency = 8;
 }
 
 message UpdateResponse { bool result = 1; }

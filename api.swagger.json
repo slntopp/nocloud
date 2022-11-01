@@ -290,6 +290,9 @@
                 },
                 "suspended": {
                   "type": "boolean"
+                },
+                "currency": {
+                  "$ref": "#/definitions/billingCurrency"
                 }
               }
             }
@@ -2623,6 +2626,9 @@
         },
         "suspended": {
           "type": "boolean"
+        },
+        "currency": {
+          "$ref": "#/definitions/billingCurrency"
         }
       }
     },
