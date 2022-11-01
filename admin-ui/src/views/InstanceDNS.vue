@@ -25,6 +25,7 @@
                 @close="closeModal"
                 @editDNS="editDNS"
                 @addDNS="addDNS"
+                :isOpen="dialog"
                 :item="editedItem"
                 :isEdit="isEdit"
               />
@@ -93,6 +94,7 @@ export default {
       .catch((e) => {
         console.log(e);
         this.showSnackbarError(e);
+        this.$router.go(-1);
       });
   },
   computed: {
