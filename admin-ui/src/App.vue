@@ -1,5 +1,8 @@
 <template>
-  <v-app v-if="!isVNC" :style="{ background: $vuetify.theme.themes.dark.background }">
+  <v-app
+    v-if="!isVNC"
+    :style="{ background: $vuetify.theme.themes.dark.background }"
+  >
     <v-navigation-drawer
       app
       permanent
@@ -152,7 +155,7 @@
     <v-app-bar v-if="isLoggedIn" app color="background" elevation="0">
       <v-row style="width: 100%" justify="center" align="center">
         <v-col>
-          <app-search/>
+          <app-search />
         </v-col>
         <v-col class="d-flex justify-center">
           <v-btn
@@ -169,6 +172,7 @@
         </v-col>
         <v-col class="d-flex justify-end align-center">
           <balance title="Balance: " />
+          <languages />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
@@ -207,16 +211,17 @@
       <router-view />
     </v-main>
   </v-app>
-  <router-view v-else/>
+  <router-view v-else />
 </template>
 
 <script>
 import config from "@/config";
 import balance from "@/components/balance.vue";
+import languages from "@/components/languages.vue";
 import appSearch from "@/components/search/search.vue";
 
 export default {
-  components: { balance ,appSearch},
+  components: { balance, appSearch, languages },
   name: "App",
 
   data: () => ({
@@ -274,9 +279,9 @@ export default {
         };
       else return {};
     },
-    isVNC(){
-      return this.$route.path.includes('vnc')
-    }
+    isVNC() {
+      return this.$route.path.includes("vnc");
+    },
   },
   created() {
     this.$store.dispatch("auth/load");

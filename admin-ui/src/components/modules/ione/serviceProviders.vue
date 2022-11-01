@@ -7,26 +7,9 @@ v-col
       :align="!fields[field].isJSON ? 'center' : null"
     >
       <v-col cols="4">
-        <v-subheader>
+        <subheader-with-info :infoText="`SPInfo.ione.${field}`">
           {{ fields[field].subheader || field }}
-
-          <v-tooltip
-            v-if="field == 'host' && hostWarning"
-            bottom
-            color="warning"
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-icon class="ml-2" color="warning" v-bind="attrs" v-on="on">
-                mdi-alert-outline
-              </v-icon>
-            </template>
-
-            <span
-              >Non-standard RPC path: "{{ hostWarning }}" instead of
-              "/RPC2"</span
-            >
-          </v-tooltip>
-        </v-subheader>
+        </subheader-with-info>
       </v-col>
 
       <v-col cols="8">
@@ -55,6 +38,15 @@ v-col
     </v-row>
     <!-- Vlans key -->
     <v-row>
+      <v-col cols="4">
+        <v-select
+          :items="vlansKeysItems"
+          v-bind="fields['vlansKey'].bind || {}"
+          :value="getValue('vlansKey')"
+          :placeholder="fields['vlansKey'].label"
+          @change="(data) => changeHandler('vlansKey', data)"
+        />
+      </v-col>
       <v-col cols="4" v-for="field in vlansKeys()" :key="field">
         <v-text-field
           :placeholder="fields[field].label"
@@ -73,6 +65,7 @@ v-col
 
 <script>
 import JsonEditor from "@/components/JsonEditor.vue";
+import subheaderWithInfo from "@/components/ui/subheaderWithInfo.vue";
 
 function isJSON(str) {
   try {
@@ -86,7 +79,7 @@ function isJSON(str) {
 // const domainRegex = /^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z0-9-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/;
 // const domainRegex = /^(https?):\/\/(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$/
 export default {
-  components: { JsonEditor },
+  components: { JsonEditor, subheaderWithInfo },
   name: "servicesProviders-create-ione",
   props: {
     secrets: {
@@ -103,6 +96,7 @@ export default {
     },
   },
   data: () => ({
+    vlansKeysItems: ["vcenter"],
     hostWarning: false,
     errors: {
       host: [],
@@ -221,7 +215,7 @@ export default {
       },
       private_vnet_ban: {
         type: "bool",
-        label: "Private Network Ban",
+        label: "Private networking feature",
         rules: [() => true],
       },
     },
@@ -242,18 +236,6 @@ export default {
       let errors = {};
       const secrets = {};
       const vars = {};
-
-      // Object.keys(this.fields).forEach((fieldName) => {
-      //   this.fields[fieldName].rules.forEach((rule) => {
-      //     const result = rule(this.getValue(fieldName));
-      //     if (typeof result == "string") {
-      //       this.errors[fieldName] = [result];
-      //       errors[fieldName] = result;
-      //     } else {
-      //       this.errors[fieldName] = [];
-      //     }
-      //   });
-      // });
 
       for (const secretKey of this.secretsKeys()) {
         secrets[secretKey] =
@@ -368,7 +350,7 @@ export default {
       return this.vlansKeys().includes(field);
     },
     vlansKeys() {
-      return ["vlansKey", "start", "size"];
+      return ["start", "size"];
     },
     secretsKeys() {
       return ["host", "user", "pass"];

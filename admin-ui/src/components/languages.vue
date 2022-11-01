@@ -1,0 +1,43 @@
+<template>
+  <v-select
+    prepend-icon="mdi-translate-variant"
+    class="mr-3 ml-3 mt-5 select-langs"
+    :items="availableLangs"
+    v-model="currentLang"
+    @change="changeLang"
+  >
+  </v-select>
+</template>
+
+<script>
+import config from "@/config.js";
+
+export default {
+  name: "app-languages",
+  data() {
+    return { currentLang: "" };
+  },
+  created() {
+    const lang = localStorage.getItem("lang");
+    if (lang != undefined) this.$i18n.locale = lang;
+    this.currentLang = this.$i18n.locale;
+  },
+  computed: {
+    availableLangs() {
+      return config.languages;
+    },
+  },
+  methods: {
+    changeLang(lang) {
+      this.$i18n.locale = lang;
+      localStorage.setItem("lang", this.$i18n.locale);
+    },
+  },
+};
+</script>
+
+<style>
+.select-langs {
+  max-width: 100px;
+}
+</style>
