@@ -414,16 +414,15 @@ export default {
     testConfig() {
       let message = "";
 
-      if (!this.isValid || (!this.isFeeValid && this.plan.type==='opensrs')) {
+      if (!this.isValid || (!this.isFeeValid && this.plan.type === "opensrs")) {
         this.$refs.form.validate();
         message = "Validation failed!";
       }
 
       if (
-        (!message &&
-          this.plan.type === "opensrs" &&
-          (!this.plan.fee?.ranges ||
-          this.plan.fee?.ranges?.length === 0))
+        !message &&
+        this.plan.type === "opensrs" &&
+        (!this.plan.fee?.ranges || this.plan.fee?.ranges?.length === 0)
       ) {
         message = "Ranges cant be empty!";
       }
@@ -461,8 +460,13 @@ export default {
 
       if (`${day}`.length < 2) day = "0" + day;
       if (`${month}`.length < 2) month = "0" + month;
+      let seconds = Date.parse(`${year}-${month}-${day}T${time}Z`) / 1000;
 
-      return Date.parse(`${year}-${month}-${day}T${time}Z`) / 1000;
+      if (month > 1) {
+        seconds -= 60 * 60 * 24 * (month - 1);
+      }
+
+      return seconds;
     },
     getItem() {
       this.form.titles = [];
