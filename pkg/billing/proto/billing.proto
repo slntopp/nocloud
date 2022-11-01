@@ -120,6 +120,7 @@ message Transaction {
       }
   */
   map<string, google.protobuf.Value> meta = 9;
+  Currency currency = 10;
 }
 
 message Transactions { repeated Transaction pool = 1; }
@@ -149,6 +150,7 @@ message Record {
       }
   */
   map<string, google.protobuf.Value> meta = 11;
+  Currency currency = 12;
 }
 
 message Records { repeated Record pool = 1; }
