@@ -1,6 +1,5 @@
 <template>
   <v-select
-    prepend-icon="mdi-translate-variant"
     class="mr-3 ml-3 mt-5 select-langs"
     :items="availableLangs"
     v-model="currentLang"
@@ -20,11 +19,11 @@ export default {
   created() {
     const lang = localStorage.getItem("lang");
     if (lang != undefined) this.$i18n.locale = lang;
-    this.currentLang = this.$i18n.locale;
+    this.currentLang = this.$i18n.locale.toUpperCase();
   },
   computed: {
     availableLangs() {
-      return config.languages;
+      return config.languages.map(lang=>lang.toUpperCase());
     },
   },
   methods: {
@@ -38,6 +37,6 @@ export default {
 
 <style>
 .select-langs {
-  max-width: 100px;
+  max-width: 70px;
 }
 </style>
