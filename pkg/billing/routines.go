@@ -38,12 +38,17 @@ var (
 
 // Settings Key storing routine conf
 const (
-	monFreqKey string = "billing-gen-transactions-routine"
-	suspKey    string = "global-suspend-conf"
+	monFreqKey  string = "billing-gen-transactions-routine"
+	currencyKey string = "billing-platform-currency"
+	suspKey     string = "global-suspend-conf"
 )
 
 type RoutineConf struct {
 	Frequency int `json:"freq"` // Frequency in Seconds
+}
+
+type CurrencyConf struct {
+	Currency int `json:"currency"` // Default currency for platform
 }
 
 type SuspendSchedule struct {
@@ -68,6 +73,13 @@ var (
 			Frequency: 60,
 		},
 		Description: "Transactions Generating and Processing Routine Configuration",
+		Public:      false,
+	}
+	currencySetting = &sc.Setting[CurrencyConf]{
+		Value: CurrencyConf{
+			Currency: 0,
+		},
+		Description: "Default currency for platform",
 		Public:      false,
 	}
 	suspendedSetting = &sc.Setting[SuspendConf]{
@@ -146,6 +158,16 @@ func MakeRoutineConf(ctx context.Context, log *zap.Logger) (conf RoutineConf) {
 	return conf
 }
 
+func MakeCurrencyConf(ctx context.Context, log *zap.Logger) (conf CurrencyConf) {
+	sc.Setup(log, ctx, &settingsClient)
+
+	if err := sc.Fetch(currencyKey, &conf, currencySetting); err != nil {
+		conf = currencySetting.Value
+	}
+
+	return conf
+}
+
 func MakeSuspendConf(ctx context.Context, log *zap.Logger) (conf SuspendConf) {
 	sc.Setup(log, ctx, &settingsClient)
 
@@ -168,6 +190,9 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 	routineConf := MakeRoutineConf(ctx, log)
 	log.Info("Got Configuration", zap.Any("routine", routineConf))
 
+	currencyConf := MakeCurrencyConf(ctx, log)
+	log.Info("Got Configuration", zap.Any("routine", currencyConf))
+
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
 	tick := time.Now()
 	for {
@@ -185,6 +210,9 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			"@accounts":     schema.ACCOUNTS_COL,
 			"permissions":   schema.PERMISSIONS_GRAPH.Name,
 			"now":           tick.Unix(),
+			// Collection used as string, so it's not an expression operand
+			"rates":    schema.CUR2CUR,
+			"currency": currencyConf.Currency,
 		})
 		if err != nil {
 			log.Error("Error Generating Transactions", zap.Error(err))
@@ -216,7 +244,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		if err != nil {
 			log.Error("Error Quering Accounts to Suspend", zap.Error(err))
 		}
-		
+
 		for cursor.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor.ReadDocument(ctx, &acc)
@@ -236,7 +264,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		if err != nil {
 			log.Error("Error Quering Accounts to Unsuspend", zap.Error(err))
 		}
-		
+
 		for cursor2.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor2.ReadDocument(ctx, &acc)
@@ -347,7 +375,13 @@ FOR service IN @@services // Iterate over Services
         FILTER record.exec <= @now
         FILTER !record.processed
         FILTER record.instance IN instances
-            UPDATE record._key WITH { processed: true } IN @@records RETURN NEW
+		LET currency = account.currency != null ? account.currency : @currency
+		LET edge = DOCUMENT(CONCAT(@rates, "/", record.currency, "-", currency))
+		LET rate = edge != null ? edge.rate : 1.0
+            UPDATE record._key WITH { 
+				processed: true, 
+				total: record.total * rate  
+			} IN @@records RETURN NEW
     )
     
     FILTER LENGTH(records) > 0 // Skip if no Records (no empty Transaction)

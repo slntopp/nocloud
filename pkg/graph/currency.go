@@ -101,6 +101,10 @@ func (c *CurrencyController) DeleteExchangeRate(ctx context.Context, from pb.Cur
 
 func (c *CurrencyController) Convert(ctx context.Context, from pb.Currency, to pb.Currency, amount float64) (float64, error) {
 
+	if from == to {
+		return amount, nil
+	}
+
 	rate, err := c.GetExchangeRate(ctx, from, to)
 	if err != nil {
 		return 0, err
