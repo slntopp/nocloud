@@ -230,6 +230,9 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			"@accounts":     schema.ACCOUNTS_COL,
 			"accounts":      schema.ACCOUNTS_COL,
 			"now":           tick.Unix(),
+			// Collection used as string, so it's not an expression operand
+			"rates":    schema.CUR2CUR,
+			"currency": currencyConf.Currency,
 		})
 		if err != nil {
 			log.Error("Error Processing Transactions", zap.Error(err))
@@ -370,17 +373,19 @@ FOR service IN @@services // Iterate over Services
         RETURN node
     )
     
+	LET currency = account.currency != null ? account.currency : @currency
+
     LET records = ( // Collect all unprocessed records
         FOR record IN @@records
         FILTER record.exec <= @now
         FILTER !record.processed
         FILTER record.instance IN instances
-		LET currency = account.currency != null ? account.currency : @currency
 		LET edge = DOCUMENT(CONCAT(@rates, "/", record.currency, "-", currency))
 		LET rate = edge != null ? edge.rate : 1.0
             UPDATE record._key WITH { 
 				processed: true, 
-				total: record.total * rate  
+				total: record.total * rate,
+				currency: currency
 			} IN @@records RETURN NEW
     )
     
@@ -388,6 +393,7 @@ FOR service IN @@services // Iterate over Services
     INSERT {
         exec: @now, // Timestamp in seconds
         processed: false,
+		currency: currency,
         account: account._key,
         service: service._key,
         records: records[*]._key,
@@ -400,6 +406,15 @@ FOR t IN @@transactions // Iterate over Transactions
 FILTER t.exec <= @now
 FILTER !t.processed
     LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
-    UPDATE account WITH { balance: account.balance - t.total } IN @@accounts
-    UPDATE t WITH { processed: true, proc: @now } IN @@transactions
+	LET currency = account.currency != null ? account.currency : @currency
+	LET edge = DOCUMENT(CONCAT(@rates, "/", t.currency, "-", currency))
+	LET rate = edge != null ? edge.rate : 1.0
+
+    UPDATE account WITH { balance: account.balance - t.total * rate} IN @@accounts
+    UPDATE t WITH { 
+		processed: true, 
+		proc: @now,
+		total: t.total * rate,
+		currency: currency
+	} IN @@transactions
 `
