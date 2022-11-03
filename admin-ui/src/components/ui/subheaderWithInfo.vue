@@ -5,6 +5,7 @@
       open-on-click
       :open-on-hover="false"
       :open-on-focus="false"
+      :offset-overflow="true"
       v-if="infoText && isInfoExists"
       bottom
     >
@@ -38,5 +39,6 @@ export default {
   inline-size: 250px;
   overflow-wrap: break-word;
   user-select: text;
+  pointer-events: all;
 }
 </style>

@@ -40,7 +40,7 @@
           <plan-opensrs
             @changeFee="(data) => (plan.fee = data)"
             @onValid="(data) => (isFeeValid = data)"
-            v-if="plan.type === 'opensrs'"
+            v-if="plan.type === 'opensrs' || plan.type === 'ovh'"
             :fee="plan.fee"
             :isEdit="isEdit"
           />
@@ -545,8 +545,9 @@ export default {
       switch (this.plan.type) {
         case "ione":
           if (this.plan.kind === "STATIC") return;
+          if (this.isEdit) return;
 
-          this.form.titles = ["cpu", "ram", "ip_public"];
+          this.form.titles = ["cpu", "ram", "ips_public"];
           this.isVisible = false;
           break;
         default:
