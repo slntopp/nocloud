@@ -184,63 +184,61 @@ func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatu
 	}
 }
 
-func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
-	log := s.log.Named("Routine")
+func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Logger, tick time.Time,
+	currencyConf CurrencyConf) {
+	log.Info("Starting Generating Transactions Sub-Routine", zap.Time("tick", tick))
+	s.gen.Status.Status = hpb.Status_RUNNING
+	s.gen.Status.Error = nil
+	_, err := s.db.Query(ctx, generateTransactions, map[string]interface{}{
+		"@transactions": schema.TRANSACTIONS_COL,
+		"@instances":    schema.INSTANCES_COL,
+		"@services":     schema.SERVICES_COL,
+		"@records":      schema.RECORDS_COL,
+		"@accounts":     schema.ACCOUNTS_COL,
+		"permissions":   schema.PERMISSIONS_GRAPH.Name,
+		"now":           tick.Unix(),
+		// Collection used as string, so it's not an expression operand
+		"rates":    schema.CUR2CUR,
+		"currency": currencyConf.Currency,
+	})
+	if err != nil {
+		log.Error("Error Generating Transactions", zap.Error(err))
+		s.gen.Status.Status = hpb.Status_HASERRS
+		err_s := err.Error()
+		s.gen.Status.Error = &err_s
+	}
+	s.gen.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
+
+	log.Info("Starting Processing Transactions Sub-Routine", zap.Time("tick", tick))
+	s.proc.Status.Status = hpb.Status_RUNNING
+	s.gen.Status.Error = nil
+	_, err = s.db.Query(ctx, processTransactions, map[string]interface{}{
+		"@transactions": schema.TRANSACTIONS_COL,
+		"@accounts":     schema.ACCOUNTS_COL,
+		"accounts":      schema.ACCOUNTS_COL,
+		"now":           tick.Unix(),
+		// Collection used as string, so it's not an expression operand
+		"rates":    schema.CUR2CUR,
+		"currency": currencyConf.Currency,
+	})
+	if err != nil {
+		log.Error("Error Processing Transactions", zap.Error(err))
+		s.proc.Status.Status = hpb.Status_HASERRS
+		err_s := err.Error()
+		s.proc.Status.Error = &err_s
+	}
+}
+
+func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
+	log := s.log.Named("AccountSuspendRoutine")
+	suspConf := MakeSuspendConf(ctx, log)
+	log.Info("Got Configuration", zap.Any("suspend", suspConf))
 
 	routineConf := MakeRoutineConf(ctx, log)
 	log.Info("Got Configuration", zap.Any("routine", routineConf))
 
-	currencyConf := MakeCurrencyConf(ctx, log)
-	log.Info("Got Configuration", zap.Any("routine", currencyConf))
-
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
-	tick := time.Now()
 	for {
-		suspConf := MakeSuspendConf(ctx, log)
-		log.Info("Got Configuration", zap.Any("suspend", suspConf))
-
-		log.Info("Starting Generating Transactions Sub-Routine", zap.Time("tick", tick))
-		s.gen.Status.Status = hpb.Status_RUNNING
-		s.gen.Status.Error = nil
-		_, err := s.db.Query(ctx, generateTransactions, map[string]interface{}{
-			"@transactions": schema.TRANSACTIONS_COL,
-			"@instances":    schema.INSTANCES_COL,
-			"@services":     schema.SERVICES_COL,
-			"@records":      schema.RECORDS_COL,
-			"@accounts":     schema.ACCOUNTS_COL,
-			"permissions":   schema.PERMISSIONS_GRAPH.Name,
-			"now":           tick.Unix(),
-			// Collection used as string, so it's not an expression operand
-			"rates":    schema.CUR2CUR,
-			"currency": currencyConf.Currency,
-		})
-		if err != nil {
-			log.Error("Error Generating Transactions", zap.Error(err))
-			s.gen.Status.Status = hpb.Status_HASERRS
-			err_s := err.Error()
-			s.gen.Status.Error = &err_s
-		}
-		s.gen.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
-
-		log.Info("Starting Processing Transactions Sub-Routine", zap.Time("tick", tick))
-		s.proc.Status.Status = hpb.Status_RUNNING
-		s.gen.Status.Error = nil
-		_, err = s.db.Query(ctx, processTransactions, map[string]interface{}{
-			"@transactions": schema.TRANSACTIONS_COL,
-			"@accounts":     schema.ACCOUNTS_COL,
-			"accounts":      schema.ACCOUNTS_COL,
-			"now":           tick.Unix(),
-			// Collection used as string, so it's not an expression operand
-			"rates":    schema.CUR2CUR,
-			"currency": currencyConf.Currency,
-		})
-		if err != nil {
-			log.Error("Error Processing Transactions", zap.Error(err))
-			s.proc.Status.Status = hpb.Status_HASERRS
-			err_s := err.Error()
-			s.proc.Status.Error = &err_s
-		}
-
 		cursor, err := s.db.Query(ctx, accToSuspend, map[string]interface{}{
 			"conf": suspConf,
 		})
@@ -280,7 +278,24 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 				log.Error("Error Unsuspending Account", zap.Error(err))
 			}
 		}
+		<-ticker.C
+	}
 
+}
+
+func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
+	log := s.log.Named("Routine")
+
+	routineConf := MakeRoutineConf(ctx, log)
+	log.Info("Got Configuration", zap.Any("routine", routineConf))
+
+	currencyConf := MakeCurrencyConf(ctx, log)
+	log.Info("Got Configuration", zap.Any("routine", currencyConf))
+
+	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
+	tick := time.Now()
+	for {
+		s.GenTransactions(ctx, log, tick, currencyConf)
 		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		tick = <-ticker.C
 	}
@@ -380,7 +395,7 @@ FOR service IN @@services // Iterate over Services
         FILTER record.exec <= @now
         FILTER !record.processed
         FILTER record.instance IN instances
-		LET edge = DOCUMENT(CONCAT(@rates, "/", record.currency, "-", currency))
+		LET edge = DOCUMENT(CONCAT(@rates, "/", record.currency, "-", @currency))
 		LET rate = edge != null ? edge.rate : 1.0
             UPDATE record._key WITH { 
 				processed: true, 
