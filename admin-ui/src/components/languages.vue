@@ -23,12 +23,12 @@ export default {
   },
   computed: {
     availableLangs() {
-      return config.languages.map(lang=>lang.toUpperCase());
+      return config.languages.map((lang) => lang.toUpperCase());
     },
   },
   methods: {
     changeLang(lang) {
-      this.$i18n.locale = lang;
+      this.$i18n.locale = lang.toLowerCase();
       localStorage.setItem("lang", this.$i18n.locale);
     },
   },
