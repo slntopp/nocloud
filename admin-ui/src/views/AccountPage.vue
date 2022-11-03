@@ -1,7 +1,9 @@
 <template>
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
-      <router-link :to="{ name: 'Accounts' }">{{ navTitle('Accounts') }}</router-link>
+      <router-link :to="{ name: 'Accounts' }">{{
+        navTitle("Accounts")
+      }}</router-link>
       / {{ accountTitle }}
     </h1>
     <v-tabs
@@ -30,12 +32,12 @@
 </template>
 
 <script>
-import config from '@/config.js';
-import AccountsInfo from '@/components/account/info.vue';
-import AccountsTemplate from '@/components/account/template.vue';
+import config from "@/config.js";
+import AccountsInfo from "@/components/account/info.vue";
+import AccountsTemplate from "@/components/account/template.vue";
 
 export default {
-  name: 'account-view',
+  name: "account-view",
   components: { AccountsInfo, AccountsTemplate },
   data: () => ({ tabs: 0, navTitles: config.navTitles ?? {} }),
   methods: {
@@ -45,34 +47,38 @@ export default {
       }
 
       return title;
-    }
+    },
   },
   computed: {
     account() {
       const id = this.$route.params?.accountId;
 
-      return this.$store.getters['accounts/all']
-        .find(({ uuid }) => uuid === id);
+      return this.$store.getters["accounts/all"].find(
+        ({ uuid }) => uuid === id
+      );
     },
     accountTitle() {
-      return this?.account?.title ?? 'not found';
+      return this?.account?.title ?? "not found";
     },
     accountLoading() {
-      return this.$store.getters['accounts/loading'];
+      return this.$store.getters["accounts/loading"];
+    },
+    accountId() {
+      return this.$route.params.accountId;
     },
   },
   created() {
-    this.$store.dispatch('accounts/fetch')
-      .then(() => {
-        document.title = `${this.accountTitle} | NoCloud`;
-      });
+    this.$store.dispatch("accounts/fetchById", this.accountId).then(() => {
+      document.title = `${this.accountTitle} | NoCloud`;
+    });
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      type: 'accounts/fetch'
+      type: "accounts/fetchById",
+      params: this.accountId,
     });
-  }
-}
+  },
+};
 </script>
 
 <style scoped lang="scss">

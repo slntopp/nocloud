@@ -10,6 +10,15 @@ export default {
     setAccounts(state, accounts) {
       state.accounts = accounts;
     },
+    pushAccount(state, account) {
+      const index = state.accounts.findIndex((a) => a.uuid === account.uuid);
+
+      if (index !== -1) {
+        state.accounts[index] = account;
+      } else {
+        state.accounts.push(account);
+      }
+    },
     setLoading(state, data) {
       state.loading = data;
     },
@@ -22,6 +31,23 @@ export default {
           .list()
           .then((response) => {
             commit("setAccounts", response.pool);
+            resolve(response);
+          })
+          .catch((error) => {
+            reject(error);
+          })
+          .finally(() => {
+            commit("setLoading", false);
+          });
+      });
+    },
+    fetchById({ commit }, id) {
+      commit("setLoading", true);
+      return new Promise((resolve, reject) => {
+        api.accounts
+          .get(id)
+          .then((response) => {
+            commit("pushAccount", response);
             resolve(response);
           })
           .catch((error) => {

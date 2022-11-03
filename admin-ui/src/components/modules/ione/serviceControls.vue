@@ -12,8 +12,7 @@
         >
           {{ btn.title || btn.action }}
         </v-btn>
-        <v-btn @click="openVnc" class="mr-2" v-if="serviceType==='ione'"> console </v-btn>
-        <v-btn @click="changeDNS" class="mr-2" v-if="serviceType==='opensrs'"> dns </v-btn>
+        <v-btn @click="openVnc" class="mr-2"> console </v-btn>
         <v-btn :loading="actionLoading" @click="deleteInstance"> Delete </v-btn>
       </v-col>
     </v-row>
@@ -48,9 +47,9 @@ export default {
   name: "service-state",
   mixins: [snackbar],
   props: {
-    service: { type: Object, required: true, },
-    instance_uuid: { type: String, required: true, },
-    "chip-color": { type: String, required: true, },
+    service: { type: Object, required: true },
+    instance_uuid: { type: String, required: true },
+    "chip-color": { type: String, required: true },
   },
   data: () => ({
     actualAction: "",
@@ -91,11 +90,11 @@ export default {
           this.actionLoading = false;
         });
     },
-    openVnc(){
-      this.$router.push({name:'Vnc',params:{instanceId:this.instance_uuid}})
-    },
-    changeDNS(){
-     this.$router.push({name:'InstanceDns',params:{instanceId:this.instance_uuid}})
+    openVnc() {
+      this.$router.push({
+        name: "Vnc",
+        params: { instanceId: this.instance_uuid },
+      });
     },
     deleteInstance() {
       const newService = JSON.parse(JSON.stringify(this.service));
@@ -108,11 +107,12 @@ export default {
         });
       });
 
-      this.actualAction = 'delete';
+      this.actualAction = "delete";
       this.actionLoading = true;
-      api.services._update(newService)
+      api.services
+        ._update(newService)
         .then(() => {
-          this.$emit('closePanel');
+          this.$emit("closePanel");
           this.service.instancesGroups.forEach((group, i, groups) => {
             group.instances.forEach(({ uuid }, j) => {
               if (uuid === this.instance_uuid) {
@@ -132,18 +132,10 @@ export default {
           });
         })
         .finally(() => {
-          this.actualAction = '';
+          this.actualAction = "";
           this.actionLoading = false;
         });
-    }
+    },
   },
-  computed:{
-    serviceType(){
-      const instance = this.service.instancesGroups.find(i=>{
-        return i.instances.find(instance=>instance.uuid===this.instance_uuid)
-      });
-      return instance.type
-    }
-  }
 };
 </script>
