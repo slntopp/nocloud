@@ -43,10 +43,21 @@ import (
 	"google.golang.org/grpc"
 )
 
-func TestProcessTransactions(t *testing.T) {
-}
-
 func TestGenerateTransactions(t *testing.T) {
+	testCases := []struct {
+		Rounding     string
+		UserCurrency pb.Currency
+		RecCurrency  pb.Currency
+		Price        float64
+		Want         float64
+		Balance      float64
+	}{
+		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_NCU, Price: 1.0, Want: 0.0, Balance: 1.0},
+		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_USD, Price: 1.0, Want: 0.0, Balance: 2.0},
+		{Rounding: "FLOOR", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_NCU, Price: 0.5, Want: 1.0, Balance: 1.0},
+		{Rounding: "FLOOR", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_NCU, Price: 0.5, Want: 1.0, Balance: 1.0},
+	}
+
 	viper.AutomaticEnv()
 	log := nocloud.NewLogger()
 
@@ -94,8 +105,17 @@ func TestGenerateTransactions(t *testing.T) {
 	recordsController := nograph.NewRecordsController(log, db)
 	nsConroller := nograph.NewNamespacesController(log, db)
 	srvConroller := nograph.NewServicesController(log, db)
+	currencyController := nograph.NewCurrencyController(log, db)
 
 	ctx := context.Background()
+
+	currencyController.DeleteExchangeRate(ctx, pb.Currency_NCU, pb.Currency_USD)
+	currencyController.DeleteExchangeRate(ctx, pb.Currency_USD, pb.Currency_NCU)
+	currencyController.DeleteExchangeRate(ctx, pb.Currency_EUR, pb.Currency_NCU)
+	currencyController.DeleteExchangeRate(ctx, pb.Currency_EUR, pb.Currency_USD)
+
+	currencyController.CreateExchangeRate(ctx, pb.Currency_USD, pb.Currency_NCU, 2.0)
+	currencyController.CreateExchangeRate(ctx, pb.Currency_EUR, pb.Currency_USD, 2.0)
 
 	acc, err := accountConroller.Create(ctx, "test_account")
 	if err != nil {
@@ -158,30 +178,39 @@ func TestGenerateTransactions(t *testing.T) {
 		t.Error(err)
 	}
 
-	accountConroller.Update(ctx, acc, map[string]interface{}{
-		"balance": 2.0,
-	})
+	// Use i in records to prevent overlapping
+	for i, tc := range testCases {
+		accountConroller.Update(ctx, acc, map[string]interface{}{
+			"balance": tc.Balance,
+		})
 
-	recordsController.Create(ctx, &pb.Record{
-		Start:     time.Now().Add(-2 * time.Hour).Unix(),
-		End:       time.Now().Add(-time.Hour).Unix(),
-		Exec:      time.Now().Add(-time.Hour).Unix(),
-		Resource:  "meme",
-		Total:     1.0,
-		Currency:  pb.Currency_NCU,
-		Instance:  instanceMeta.Key,
-		Processed: false,
-	})
+		recordsController.Create(ctx, &pb.Record{
+			Start:     time.Now().Add(time.Duration(i) * time.Hour).Unix(),
+			End:       time.Now().Add(time.Duration(i-1) * time.Hour).Unix(),
+			Exec:      time.Now().Add(time.Duration(i-1) * time.Hour).Unix(),
+			Resource:  "meme",
+			Total:     tc.Price,
+			Currency:  tc.RecCurrency,
+			Instance:  instanceMeta.Key,
+			Processed: false,
+		})
 
-	billingServer.GenTransactions(ctx, log, time.Now(), CurrencyConf{
-		Currency: int(pb.Currency_NCU),
-	})
+		billingServer.GenTransactions(ctx, log, time.Now(),
+			CurrencyConf{
+				Currency: int(tc.UserCurrency),
+			},
+			RoundingConf{
+				Rounding: tc.Rounding,
+			},
+		)
 
-	acc, err = accountConroller.Get(ctx, acc.ID.Key())
-	if err != nil {
-		t.Error(err)
+		acc, err = accountConroller.Get(ctx, acc.ID.Key())
+		if err != nil {
+			t.Error(err)
+		}
+		if acc.GetBalance() != tc.Want {
+			t.Errorf("Got wrong balance. Got %f. Wanted %f.", acc.GetBalance(), tc.Want)
+		}
 	}
-	if acc.GetBalance() != 1.0 {
-		t.Error("Got wrong balance")
-	}
+
 }

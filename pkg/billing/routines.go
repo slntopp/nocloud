@@ -23,7 +23,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	regpb "github.com/slntopp/nocloud/pkg/registry/proto"
 	accpb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
-	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -34,98 +33,6 @@ import (
 var (
 	settingsClient settingspb.SettingsServiceClient
 	accClient      regpb.AccountsServiceClient
-)
-
-// Settings Key storing routine conf
-const (
-	monFreqKey  string = "billing-gen-transactions-routine"
-	currencyKey string = "billing-platform-currency"
-	suspKey     string = "global-suspend-conf"
-)
-
-type RoutineConf struct {
-	Frequency int `json:"freq"` // Frequency in Seconds
-}
-
-type CurrencyConf struct {
-	Currency int `json:"currency"` // Default currency for platform
-}
-
-type SuspendSchedule struct {
-	Day  int  `json:"day"`
-	Off  bool `json:"off"`
-	From int  `json:"from"`
-	To   int  `json:"to"`
-}
-
-type SuspendConf struct {
-	AutoResume     bool              `json:"auto_resume"`
-	IsEnabled      bool              `json:"is_enabled"`
-	Limit          float64           `json:"limit"`
-	Schedule       []SuspendSchedule `json:"schedule"`
-	IsExtraEnabled bool              `json:"is_extra_enabled"`
-	ExtraLimit     float64           `json:"extra_limit"`
-}
-
-var (
-	routineSetting = &sc.Setting[RoutineConf]{
-		Value: RoutineConf{
-			Frequency: 60,
-		},
-		Description: "Transactions Generating and Processing Routine Configuration",
-		Public:      false,
-	}
-	currencySetting = &sc.Setting[CurrencyConf]{
-		Value: CurrencyConf{
-			Currency: 0,
-		},
-		Description: "Default currency for platform",
-		Public:      false,
-	}
-	suspendedSetting = &sc.Setting[SuspendConf]{
-		Value: SuspendConf{
-			AutoResume: true,
-			IsEnabled:  true,
-			Limit:      10,
-			Schedule: []SuspendSchedule{
-				{
-					Day: 0,
-					Off: true,
-				},
-				{
-					Day:  1,
-					From: 10,
-					To:   22,
-				},
-				{
-					Day:  2,
-					From: 10,
-					To:   22,
-				},
-				{
-					Day:  3,
-					From: 10,
-					To:   22,
-				},
-				{
-					Day:  4,
-					From: 10,
-					To:   22,
-				},
-				{
-					Day:  5,
-					From: 10,
-					To:   22,
-				},
-				{
-					Day: 6,
-					Off: true,
-				},
-			},
-			// IsExtraEnabled: true,
-			// ExtraLimit: -100,
-		},
-	}
 )
 
 func init() {
@@ -148,36 +55,6 @@ func init() {
 	accClient = regpb.NewAccountsServiceClient(accConn)
 }
 
-func MakeRoutineConf(ctx context.Context, log *zap.Logger) (conf RoutineConf) {
-	sc.Setup(log, ctx, &settingsClient)
-
-	if err := sc.Fetch(monFreqKey, &conf, routineSetting); err != nil {
-		conf = routineSetting.Value
-	}
-
-	return conf
-}
-
-func MakeCurrencyConf(ctx context.Context, log *zap.Logger) (conf CurrencyConf) {
-	sc.Setup(log, ctx, &settingsClient)
-
-	if err := sc.Fetch(currencyKey, &conf, currencySetting); err != nil {
-		conf = currencySetting.Value
-	}
-
-	return conf
-}
-
-func MakeSuspendConf(ctx context.Context, log *zap.Logger) (conf SuspendConf) {
-	sc.Setup(log, ctx, &settingsClient)
-
-	if err := sc.Fetch(suspKey, &conf, suspendedSetting); err != nil {
-		conf = suspendedSetting.Value
-	}
-
-	return conf
-}
-
 func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatus {
 	return []*hpb.RoutineStatus{
 		s.gen, s.proc,
@@ -185,7 +62,7 @@ func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatu
 }
 
 func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Logger, tick time.Time,
-	currencyConf CurrencyConf) {
+	currencyConf CurrencyConf, roundingConf RoundingConf) {
 	log.Info("Starting Generating Transactions Sub-Routine", zap.Time("tick", tick))
 	s.gen.Status.Status = hpb.Status_RUNNING
 	s.gen.Status.Error = nil
@@ -200,6 +77,7 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 		// Collection used as string, so it's not an expression operand
 		"rates":    schema.CUR2CUR,
 		"currency": currencyConf.Currency,
+		"round":    roundingConf.Rounding,
 	})
 	if err != nil {
 		log.Error("Error Generating Transactions", zap.Error(err))
@@ -220,6 +98,7 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 		// Collection used as string, so it's not an expression operand
 		"rates":    schema.CUR2CUR,
 		"currency": currencyConf.Currency,
+		"round":    roundingConf.Rounding,
 	})
 	if err != nil {
 		log.Error("Error Processing Transactions", zap.Error(err))
@@ -289,13 +168,16 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 	routineConf := MakeRoutineConf(ctx, log)
 	log.Info("Got Configuration", zap.Any("routine", routineConf))
 
+	roundingConf := MakeRoundingConf(ctx, log)
+	log.Info("Got Configuration", zap.Any("routine", routineConf))
+
 	currencyConf := MakeCurrencyConf(ctx, log)
 	log.Info("Got Configuration", zap.Any("routine", currencyConf))
 
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
 	tick := time.Now()
 	for {
-		s.GenTransactions(ctx, log, tick, currencyConf)
+		s.GenTransactions(ctx, log, tick, currencyConf, roundingConf)
 		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 		tick = <-ticker.C
 	}
@@ -397,9 +279,10 @@ FOR service IN @@services // Iterate over Services
         FILTER record.instance IN instances
 		LET edge = DOCUMENT(CONCAT(@rates, "/", record.currency, "-", @currency))
 		LET rate = edge != null ? edge.rate : 1.0
+        LET total = record.total * rate
             UPDATE record._key WITH { 
 				processed: true, 
-				total: record.total * rate,
+				total: @round == "CEIL" ? CEIL(total) : @round == "FLOOR" ? FLOOR(total) : ROUND(total),
 				currency: currency
 			} IN @@records RETURN NEW
     )
@@ -424,12 +307,13 @@ FILTER !t.processed
 	LET currency = account.currency != null ? account.currency : @currency
 	LET edge = DOCUMENT(CONCAT(@rates, "/", t.currency, "-", currency))
 	LET rate = edge != null ? edge.rate : 1.0
+	LET total = t.total * rate
 
     UPDATE account WITH { balance: account.balance - t.total * rate} IN @@accounts
     UPDATE t WITH { 
 		processed: true, 
 		proc: @now,
-		total: t.total * rate,
+		total: @round == "CEIL" ? CEIL(total) : @round == "FLOOR" ? FLOOR(total) : ROUND(total),
 		currency: currency
 	} IN @@transactions
 `
