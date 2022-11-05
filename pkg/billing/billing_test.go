@@ -55,11 +55,13 @@ func TestGenerateTransactions(t *testing.T) {
 		// EUR -> USD: 2.0
 		// USD -> NCU: 2.0
 		// EUR -> USD -> NCU: 2.0 * 2.0 = 4.0
+		// Unspecified exchange rates should be defaulted to 1.0
 		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_NCU, TotalPrice: 1.0, FinalBalance: 0.0, InitialBalance: 1.0},
 		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_USD, TotalPrice: 1.0, FinalBalance: 0.0, InitialBalance: 2.0},
 		{Rounding: "FLOOR", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_NCU, TotalPrice: 0.5, FinalBalance: 1.0, InitialBalance: 1.0},
 		{Rounding: "ROUND", UserCurrency: pb.Currency_USD, RecCurrency: pb.Currency_USD, TotalPrice: 0.5, FinalBalance: 0.0, InitialBalance: 1.0},
 		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_EUR, TotalPrice: 1.0, FinalBalance: 1.0, InitialBalance: 5.0},
+		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_PLN, TotalPrice: 1.0, FinalBalance: 4.0, InitialBalance: 5.0},
 	}
 
 	viper.AutomaticEnv()
