@@ -45,17 +45,21 @@ import (
 
 func TestGenerateTransactions(t *testing.T) {
 	testCases := []struct {
-		Rounding     string
-		UserCurrency pb.Currency
-		RecCurrency  pb.Currency
-		Price        float64
-		Want         float64
-		Balance      float64
+		Rounding       string
+		UserCurrency   pb.Currency
+		RecCurrency    pb.Currency
+		TotalPrice     float64
+		FinalBalance   float64
+		InitialBalance float64
 	}{
-		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_NCU, Price: 1.0, Want: 0.0, Balance: 1.0},
-		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_USD, Price: 1.0, Want: 0.0, Balance: 2.0},
-		{Rounding: "FLOOR", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_NCU, Price: 0.5, Want: 1.0, Balance: 1.0},
-		{Rounding: "FLOOR", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_NCU, Price: 0.5, Want: 1.0, Balance: 1.0},
+		// EUR -> USD: 2.0
+		// USD -> NCU: 2.0
+		// EUR -> USD -> NCU: 2.0 * 2.0 = 4.0
+		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_NCU, TotalPrice: 1.0, FinalBalance: 0.0, InitialBalance: 1.0},
+		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_USD, TotalPrice: 1.0, FinalBalance: 0.0, InitialBalance: 2.0},
+		{Rounding: "FLOOR", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_NCU, TotalPrice: 0.5, FinalBalance: 1.0, InitialBalance: 1.0},
+		{Rounding: "ROUND", UserCurrency: pb.Currency_USD, RecCurrency: pb.Currency_USD, TotalPrice: 0.5, FinalBalance: 0.0, InitialBalance: 1.0},
+		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_EUR, TotalPrice: 1.0, FinalBalance: 1.0, InitialBalance: 5.0},
 	}
 
 	viper.AutomaticEnv()
@@ -181,15 +185,13 @@ func TestGenerateTransactions(t *testing.T) {
 	// Use i in records to prevent overlapping
 	for i, tc := range testCases {
 		accountConroller.Update(ctx, acc, map[string]interface{}{
-			"balance": tc.Balance,
+			"balance": tc.InitialBalance,
 		})
 
 		recordsController.Create(ctx, &pb.Record{
-			Start:     time.Now().Add(time.Duration(i) * time.Hour).Unix(),
-			End:       time.Now().Add(time.Duration(i-1) * time.Hour).Unix(),
-			Exec:      time.Now().Add(time.Duration(i-1) * time.Hour).Unix(),
+			Exec:      time.Now().Add(time.Duration(-i-1) * time.Hour).Unix(),
 			Resource:  "meme",
-			Total:     tc.Price,
+			Total:     tc.TotalPrice,
 			Currency:  tc.RecCurrency,
 			Instance:  instanceMeta.Key,
 			Processed: false,
@@ -208,8 +210,8 @@ func TestGenerateTransactions(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 		}
-		if acc.GetBalance() != tc.Want {
-			t.Errorf("Got wrong balance. Got %f. Wanted %f.", acc.GetBalance(), tc.Want)
+		if acc.GetBalance() != tc.FinalBalance {
+			t.Errorf("Got wrong balance. Got %f. Wanted %f.", acc.GetBalance(), tc.FinalBalance)
 		}
 	}
 

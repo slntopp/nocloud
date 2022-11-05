@@ -74,10 +74,13 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 		"@accounts":     schema.ACCOUNTS_COL,
 		"permissions":   schema.PERMISSIONS_GRAPH.Name,
 		"now":           tick.Unix(),
-		// Collection used as string, so it's not an expression operand
-		"rates":    schema.CUR2CUR,
+		"graph":         schema.BILLING_GRAPH.Name,
+		"currencies":    schema.CUR_COL,
+
+		// Default currency for platform
 		"currency": currencyConf.Currency,
-		"round":    roundingConf.Rounding,
+		// May be CEIL, FLOOR, ROUND
+		"round": roundingConf.Rounding,
 	})
 	if err != nil {
 		log.Error("Error Generating Transactions", zap.Error(err))
@@ -95,10 +98,10 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 		"@accounts":     schema.ACCOUNTS_COL,
 		"accounts":      schema.ACCOUNTS_COL,
 		"now":           tick.Unix(),
-		// Collection used as string, so it's not an expression operand
-		"rates":    schema.CUR2CUR,
-		"currency": currencyConf.Currency,
-		"round":    roundingConf.Rounding,
+		"graph":         schema.BILLING_GRAPH.Name,
+		"currencies":    schema.CUR_COL,
+		"currency":      currencyConf.Currency,
+		"round":         roundingConf.Rounding,
 	})
 	if err != nil {
 		log.Error("Error Processing Transactions", zap.Error(err))
@@ -259,17 +262,19 @@ FOR service IN @@services // Iterate over Services
         FOR i IN 2 OUTBOUND service
         GRAPH @permissions
         FILTER IS_SAME_COLLECTION(@@instances, i)
-            RETURN i._key )
+            RETURN i._key 
+	)
 
     LET account = LAST( // Find Service owner Account
-    FOR node, edge, path IN 2
-    INBOUND service
-    GRAPH @permissions
-    FILTER path.edges[*].role == ["owner","owner"]
-    FILTER IS_SAME_COLLECTION(node, @@accounts)
-        RETURN node
+		FOR node, edge, path IN 2
+		INBOUND service
+		GRAPH @permissions
+		FILTER path.edges[*].role == ["owner","owner"]
+		FILTER IS_SAME_COLLECTION(node, @@accounts)
+			RETURN node
     )
-    
+
+	// Prefer user currency to default if present
 	LET currency = account.currency != null ? account.currency : @currency
 
     LET records = ( // Collect all unprocessed records
@@ -277,8 +282,13 @@ FOR service IN @@services // Iterate over Services
         FILTER record.exec <= @now
         FILTER !record.processed
         FILTER record.instance IN instances
-		LET edge = DOCUMENT(CONCAT(@rates, "/", record.currency, "-", @currency))
-		LET rate = edge != null ? edge.rate : 1.0
+		LET rate = PRODUCT(
+			FOR vertex, edge IN OUTBOUND SHORTEST_PATH
+			// Cast to NCU if currency is not specified
+			DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency))) TO
+			DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+				RETURN edge.rate
+		)
         LET total = record.total * rate
             UPDATE record._key WITH { 
 				processed: true, 
@@ -304,9 +314,14 @@ FOR t IN @@transactions // Iterate over Transactions
 FILTER t.exec <= @now
 FILTER !t.processed
     LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
+	// Prefer user currency to default if present
 	LET currency = account.currency != null ? account.currency : @currency
-	LET edge = DOCUMENT(CONCAT(@rates, "/", t.currency, "-", currency))
-	LET rate = edge != null ? edge.rate : 1.0
+	LET rate = PRODUCT(
+		FOR vertex, edge IN OUTBOUND SHORTEST_PATH
+		DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency))) TO
+		DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+			RETURN edge.rate
+	)
 	LET total = t.total * rate
 
     UPDATE account WITH { balance: account.balance - t.total * rate} IN @@accounts
