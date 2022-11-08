@@ -79,7 +79,12 @@ func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacesp
 	}
 	log.Debug("Requestor", zap.Any("account", acc))
 
-	pool, err := s.ctrl.List(ctx, acc, request.GetDepth())
+	depth := request.GetDepth()
+	if depth == 0 {
+		depth = 10
+	}
+
+	pool, err := s.ctrl.List(ctx, acc, depth)
 	if err != nil {
 		s.log.Debug("Error listing namespaces", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing namespaces")
