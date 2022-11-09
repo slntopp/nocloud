@@ -129,23 +129,45 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.(string))
 	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, acc.(string))
 
-	ctx = func(ctx context.Context) context.Context {
+	ctx, err = func(ctx context.Context) (context.Context, error) {
 		sp := token[nocloud.NOCLOUD_SP_CLAIM]
 		if sp == nil {
-			return ctx
+			return ctx, nil
 		}
-		ctx = context.WithValue(ctx, nocloud.NoCloudSp, sp.(string))
-		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_SP_CLAIM, sp.(string))
+
+		s, ok := sp.(string)
+
+		if !ok {
+			return ctx, errors.New("wrong type of sp")
+		}
+
+		ctx = context.WithValue(ctx, nocloud.NoCloudSp, s)
+		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_SP_CLAIM, sp.(string)), nil
 	}(ctx)
 
-	ctx = func(ctx context.Context) context.Context {
+	if err != nil {
+		return ctx, err
+	}
+
+	ctx, err = func(ctx context.Context) (context.Context, error) {
 		inst := token[nocloud.NOCLOUD_INSTANCE_CLAIM]
 		if inst == nil {
-			return ctx
+			return ctx, nil
 		}
-		ctx = context.WithValue(ctx, nocloud.NoCloudInstance, inst.(string))
-		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_INSTANCE_CLAIM, inst.(string))
+
+		s, ok := inst.(string)
+
+		if !ok {
+			return ctx, errors.New("wrong type of inst")
+		}
+
+		ctx = context.WithValue(ctx, nocloud.NoCloudInstance, s)
+		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_INSTANCE_CLAIM, inst.(string)), nil
 	}(ctx)
+
+	if err != nil {
+		return ctx, err
+	}
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudToken, tokenString)
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer "+tokenString)
