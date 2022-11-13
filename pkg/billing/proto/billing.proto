@@ -284,14 +284,14 @@ service CurrencyService {
       post : "/billing/currencies/rate"
     };
   };
-  rpc UpdateExchangeRateRequest(CreateExchangeRateRequest)
-      returns (CreateExchangeRateResponse) {
+  rpc UpdateExchangeRate(UpdateExchangeRateRequest)
+      returns (UpdateExchangeRateResponse) {
     option (google.api.http) = {
       put : "/billing/currencies/rate"
     };
   };
-  rpc DeleteExchangeRateRequest(CreateExchangeRateRequest)
-      returns (CreateExchangeRateResponse) {
+  rpc DeleteExchangeRate(DeleteExchangeRateRequest)
+      returns (DeleteExchangeRateResponse) {
     option (google.api.http) = {
       delete : "/billing/currencies/rate"
     };

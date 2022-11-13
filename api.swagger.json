@@ -17,6 +17,9 @@
       "name": "BillingService"
     },
     {
+      "name": "CurrencyService"
+    },
+    {
       "name": "DNS"
     },
     {
@@ -433,12 +436,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "to",
@@ -446,12 +450,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "amount",
@@ -490,12 +495,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "to",
@@ -503,12 +509,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           }
         ],
         "tags": [
@@ -516,12 +523,12 @@
         ]
       },
       "delete": {
-        "operationId": "CurrencyService_DeleteExchangeRateRequest",
+        "operationId": "CurrencyService_DeleteExchangeRate",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/billingCreateExchangeRateResponse"
+              "$ref": "#/definitions/billingDeleteExchangeRateResponse"
             }
           },
           "default": {
@@ -538,12 +545,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "to",
@@ -551,19 +559,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
-          },
-          {
-            "name": "rate",
-            "in": "query",
-            "required": false,
-            "type": "number",
-            "format": "double"
+            "default": "NCU"
           }
         ],
         "tags": [
@@ -593,12 +595,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "to",
@@ -606,12 +609,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "rate",
@@ -626,12 +630,12 @@
         ]
       },
       "put": {
-        "operationId": "CurrencyService_UpdateExchangeRateRequest",
+        "operationId": "CurrencyService_UpdateExchangeRate",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/billingCreateExchangeRateResponse"
+              "$ref": "#/definitions/billingUpdateExchangeRateResponse"
             }
           },
           "default": {
@@ -648,12 +652,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "to",
@@ -661,12 +666,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "rate",
@@ -974,7 +980,8 @@
                 },
                 "meta": {
                   "type": "object",
-                  "additionalProperties": {}
+                  "additionalProperties": {},
+                  "title": "or whatever)"
                 },
                 "fee": {
                   "$ref": "#/definitions/billingFee"
@@ -2684,12 +2691,16 @@
     "billingCurrency": {
       "type": "string",
       "enum": [
+        "NCU",
         "USD",
         "EUR",
         "BYN",
         "PLN"
       ],
-      "default": "USD"
+      "default": "NCU"
+    },
+    "billingDeleteExchangeRateResponse": {
+      "type": "object"
     },
     "billingFee": {
       "type": "object",
@@ -2725,6 +2736,26 @@
           "format": "double"
         },
         "factor": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
+    "billingGetCurrenciesResponse": {
+      "type": "object",
+      "properties": {
+        "currencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/billingCurrency"
+          }
+        }
+      }
+    },
+    "billingGetExchangeRateResponse": {
+      "type": "object",
+      "properties": {
+        "rate": {
           "type": "number",
           "format": "double"
         }
@@ -2771,7 +2802,8 @@
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {},
+          "title": "or whatever)"
         },
         "fee": {
           "$ref": "#/definitions/billingFee"
@@ -2848,7 +2880,7 @@
         },
         "except": {
           "type": "boolean",
-          "title": "If except set to true then transaction will be created if Instance is in one of the states listed in on\nIf except set to false then transaction will be created if Instance is NOT in one of the states listed in on"
+          "title": "If except set to true then transaction will be created if Instance is in\none of the states listed in on If except set to false then transaction will\nbe created if Instance is NOT in one of the states listed in on"
         },
         "on": {
           "type": "array",
@@ -2907,7 +2939,7 @@
         "meta": {
           "type": "object",
           "additionalProperties": {},
-          "title": "Transaction meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity\nprice_atm: \u003cnumber\u003e // hourly price per quant of resouce at the moment, e.g. 1 NCU \n[other keys]: \u003cany\u003e // for example Drive Type(SSD/HDD/NVMe/etc)\n}"
+          "title": "Transaction meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive\nMb, IP quantity price_atm: \u003cnumber\u003e // hourly price per quant of resouce at\nthe moment, e.g. 1 NCU [other keys]: \u003cany\u003e // for example Drive\nType(SSD/HDD/NVMe/etc)\n}"
         }
       }
     },
@@ -2921,6 +2953,9 @@
           }
         }
       }
+    },
+    "billingUpdateExchangeRateResponse": {
+      "type": "object"
     },
     "dnsResult": {
       "type": "object",
@@ -3267,7 +3302,7 @@
         "meta": {
           "type": "object",
           "additionalProperties": {},
-          "title": "Record meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity\nprice_atm: \u003cnumber\u003e // hourly price per quant of resouce at the moment, e.g. 1 NCU \n[other keys]: \u003cany\u003e // for example Drive Type(SSD/HDD/NVMe/etc)\n}"
+          "title": "Record meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive\nMb, IP quantity price_atm: \u003cnumber\u003e // hourly price per quant of resouce at\nthe moment, e.g. 1 NCU [other keys]: \u003cany\u003e // for example Drive\nType(SSD/HDD/NVMe/etc)\n}"
         }
       }
     },
