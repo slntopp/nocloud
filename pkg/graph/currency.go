@@ -105,8 +105,8 @@ func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Cur
 		"_key":  fmt.Sprintf("%d-%d", from, to),
 		"_from": fmt.Sprintf("%s/%d", schema.CUR_COL, from),
 		"_to":   fmt.Sprintf("%s/%d", schema.CUR_COL, to),
-		"from":  fmt.Sprintf("%s/%d", schema.CUR_COL, from),
-		"to":    fmt.Sprintf("%s/%d", schema.CUR_COL, to),
+		"from":  from,
+		"to":    to,
 		"rate":  rate,
 	}
 	_, err := c.edges.CreateDocument(ctx, &edge)
