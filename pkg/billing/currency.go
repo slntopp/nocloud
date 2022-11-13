@@ -35,6 +35,15 @@ func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, req *pb.Get
 	return &pb.GetExchangeRateResponse{Rate: rate}, nil
 }
 
+func (s *CurrencyServiceServer) GetExchangeRates(ctx context.Context, req *pb.GetExchangeRatesRequest) (*pb.GetExchangeRatesResponse, error) {
+	rates, err := s.ctrl.ListExchangeRates(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetExchangeRatesResponse{Rates: rates}, nil
+}
+
 func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, req *pb.CreateExchangeRateRequest) (*pb.CreateExchangeRateResponse, error) {
 	err := s.ctrl.CreateExchangeRate(ctx, req.From, req.To, req.Rate)
 	return &pb.CreateExchangeRateResponse{}, err

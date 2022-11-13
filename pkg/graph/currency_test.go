@@ -47,6 +47,11 @@ func TestConvert(t *testing.T) {
 
 	testRate := 2.0
 	c.CreateExchangeRate(ctx, pb.Currency_USD, pb.Currency_BYN, testRate)
+	c.CreateExchangeRate(ctx, pb.Currency_EUR, pb.Currency_BYN, testRate)
+	rates, err := c.ListExchangeRates(ctx)
+	if len(rates) != 2 {
+		t.Error("Didn't fetch all exchange rates")
+	}
 
 	rate, err := c.GetExchangeRate(ctx, pb.Currency_USD, pb.Currency_BYN)
 	if err != nil {
