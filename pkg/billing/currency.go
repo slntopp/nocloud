@@ -60,10 +60,19 @@ func (s *CurrencyServiceServer) Convert(ctx context.Context, req *pb.ConversionR
 }
 
 func (s *CurrencyServiceServer) GetCurrencies(ctx context.Context, req *pb.GetCurrenciesRequest) (*pb.GetCurrenciesResponse, error) {
-	currencies, err := s.ctrl.Get(ctx)
+	currencies, err := s.ctrl.GetCurrencies(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	return &pb.GetCurrenciesResponse{Currencies: currencies}, nil
+}
+
+func (s *CurrencyServiceServer) GetExchangeRates(ctx context.Context, req *pb.GetExchangeRatesRequest) (*pb.GetExchangeRatesResponse, error) {
+	rates, err := s.ctrl.GetExchangeRates(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetExchangeRatesResponse{Rates: rates}, nil
 }

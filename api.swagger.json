@@ -474,14 +474,14 @@
         ]
       }
     },
-    "/billing/currencies/rate": {
-      "get": {
-        "operationId": "CurrencyService_GetExchangeRate",
+    "/billing/currencies/rate/{from}/{to}": {
+      "delete": {
+        "operationId": "CurrencyService_DeleteExchangeRate",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/billingGetExchangeRateResponse"
+              "$ref": "#/definitions/billingDeleteExchangeRateResponse"
             }
           },
           "default": {
@@ -494,8 +494,8 @@
         "parameters": [
           {
             "name": "from",
-            "in": "query",
-            "required": false,
+            "in": "path",
+            "required": true,
             "type": "string",
             "enum": [
               "NCU",
@@ -503,13 +503,12 @@
               "EUR",
               "BYN",
               "PLN"
-            ],
-            "default": "NCU"
+            ]
           },
           {
             "name": "to",
-            "in": "query",
-            "required": false,
+            "in": "path",
+            "required": true,
             "type": "string",
             "enum": [
               "NCU",
@@ -517,21 +516,22 @@
               "EUR",
               "BYN",
               "PLN"
-            ],
-            "default": "NCU"
+            ]
           }
         ],
         "tags": [
           "CurrencyService"
         ]
-      },
-      "delete": {
-        "operationId": "CurrencyService_DeleteExchangeRateRequest",
+      }
+    },
+    "/billing/currencies/rates": {
+      "get": {
+        "operationId": "CurrencyService_GetExchangeRates",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/billingCreateExchangeRateResponse"
+              "$ref": "#/definitions/billingGetExchangeRatesResponse"
             }
           },
           "default": {
@@ -541,43 +541,6 @@
             }
           }
         },
-        "parameters": [
-          {
-            "name": "from",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "NCU",
-              "USD",
-              "EUR",
-              "BYN",
-              "PLN"
-            ],
-            "default": "NCU"
-          },
-          {
-            "name": "to",
-            "in": "query",
-            "required": false,
-            "type": "string",
-            "enum": [
-              "NCU",
-              "USD",
-              "EUR",
-              "BYN",
-              "PLN"
-            ],
-            "default": "NCU"
-          },
-          {
-            "name": "rate",
-            "in": "query",
-            "required": false,
-            "type": "number",
-            "format": "double"
-          }
-        ],
         "tags": [
           "CurrencyService"
         ]
@@ -640,12 +603,12 @@
         ]
       },
       "put": {
-        "operationId": "CurrencyService_UpdateExchangeRateRequest",
+        "operationId": "CurrencyService_UpdateExchangeRate",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/billingCreateExchangeRateResponse"
+              "$ref": "#/definitions/billingUpdateExchangeRateResponse"
             }
           },
           "default": {
@@ -690,6 +653,56 @@
             "required": false,
             "type": "number",
             "format": "double"
+          }
+        ],
+        "tags": [
+          "CurrencyService"
+        ]
+      }
+    },
+    "/billing/currencies/rates/{from}/{to}": {
+      "get": {
+        "operationId": "CurrencyService_GetExchangeRate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/billingGetExchangeRateResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/googlerpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "from",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "NCU",
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ]
+          },
+          {
+            "name": "to",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "enum": [
+              "NCU",
+              "USD",
+              "EUR",
+              "BYN",
+              "PLN"
+            ]
           }
         ],
         "tags": [
@@ -2726,6 +2739,9 @@
       ],
       "default": "NCU"
     },
+    "billingDeleteExchangeRateResponse": {
+      "type": "object"
+    },
     "billingFee": {
       "type": "object",
       "properties": {
@@ -2779,9 +2795,26 @@
     "billingGetExchangeRateResponse": {
       "type": "object",
       "properties": {
+        "from": {
+          "$ref": "#/definitions/billingCurrency"
+        },
+        "to": {
+          "$ref": "#/definitions/billingCurrency"
+        },
         "rate": {
           "type": "number",
           "format": "double"
+        }
+      }
+    },
+    "billingGetExchangeRatesResponse": {
+      "type": "object",
+      "properties": {
+        "rates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/billingGetExchangeRateResponse"
+          }
         }
       }
     },
@@ -2980,6 +3013,9 @@
           }
         }
       }
+    },
+    "billingUpdateExchangeRateResponse": {
+      "type": "object"
     },
     "dnsResult": {
       "type": "object",

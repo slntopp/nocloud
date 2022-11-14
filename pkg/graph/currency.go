@@ -73,6 +73,8 @@ func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Cur
 		"_key":  fmt.Sprintf("%d-%d", from, to),
 		"_from": fmt.Sprintf("%s/%d", schema.CUR_COL, from),
 		"_to":   fmt.Sprintf("%s/%d", schema.CUR_COL, to),
+		"from":  from,
+		"to":    to,
 		"rate":  rate,
 	}
 	_, err := c.edges.CreateDocument(ctx, &edge)
@@ -113,7 +115,7 @@ func (c *CurrencyController) Convert(ctx context.Context, from pb.Currency, to p
 	return amount * rate, nil
 }
 
-func (c *CurrencyController) Get(ctx context.Context) ([]pb.Currency, error) {
+func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]pb.Currency, error) {
 	currencies := []pb.Currency{}
 
 	cursor, err := c.db.Query(ctx, getCurrenciesQuery, map[string]interface{}{
@@ -138,4 +140,36 @@ func (c *CurrencyController) Get(ctx context.Context) ([]pb.Currency, error) {
 	}
 
 	return currencies, nil
+}
+
+const getRatesQuery = `
+FOR RATE in @@rates
+	return RATE
+`
+
+func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExchangeRateResponse, error) {
+	rates := []*pb.GetExchangeRateResponse{}
+
+	cursor, err := c.db.Query(ctx, getRatesQuery, map[string]interface{}{
+		"@rates": schema.CUR2CUR,
+	})
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close()
+
+	for cursor.HasMore() {
+		obj := &struct {
+			driver.DocumentMeta
+			*pb.GetExchangeRateResponse
+		}{}
+		_, err := cursor.ReadDocument(ctx, obj)
+		if err != nil {
+			return nil, err
+		}
+
+		rates = append(rates, obj.GetExchangeRateResponse)
+	}
+
+	return rates, nil
 }

@@ -519,20 +519,41 @@ func local_request_CurrencyService_GetCurrencies_0(ctx context.Context, marshale
 
 }
 
-var (
-	filter_CurrencyService_GetExchangeRate_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-)
-
 func request_CurrencyService_GetExchangeRate_0(ctx context.Context, marshaler runtime.Marshaler, client CurrencyServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var protoReq GetExchangeRateRequest
 	var metadata runtime.ServerMetadata
 
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	var (
+		val string
+		e   int32
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["from"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "from")
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CurrencyService_GetExchangeRate_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+
+	e, err = runtime.Enum(val, Currency_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "from", err)
 	}
+
+	protoReq.From = Currency(e)
+
+	val, ok = pathParams["to"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "to")
+	}
+
+	e, err = runtime.Enum(val, Currency_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "to", err)
+	}
+
+	protoReq.To = Currency(e)
 
 	msg, err := client.GetExchangeRate(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
@@ -543,14 +564,57 @@ func local_request_CurrencyService_GetExchangeRate_0(ctx context.Context, marsha
 	var protoReq GetExchangeRateRequest
 	var metadata runtime.ServerMetadata
 
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CurrencyService_GetExchangeRate_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	var (
+		val string
+		e   int32
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["from"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "from")
 	}
 
+	e, err = runtime.Enum(val, Currency_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "from", err)
+	}
+
+	protoReq.From = Currency(e)
+
+	val, ok = pathParams["to"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "to")
+	}
+
+	e, err = runtime.Enum(val, Currency_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "to", err)
+	}
+
+	protoReq.To = Currency(e)
+
 	msg, err := server.GetExchangeRate(ctx, &protoReq)
+	return msg, metadata, err
+
+}
+
+func request_CurrencyService_GetExchangeRates_0(ctx context.Context, marshaler runtime.Marshaler, client CurrencyServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq GetExchangeRatesRequest
+	var metadata runtime.ServerMetadata
+
+	msg, err := client.GetExchangeRates(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	return msg, metadata, err
+
+}
+
+func local_request_CurrencyService_GetExchangeRates_0(ctx context.Context, marshaler runtime.Marshaler, server CurrencyServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq GetExchangeRatesRequest
+	var metadata runtime.ServerMetadata
+
+	msg, err := server.GetExchangeRates(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -592,73 +656,119 @@ func local_request_CurrencyService_CreateExchangeRate_0(ctx context.Context, mar
 }
 
 var (
-	filter_CurrencyService_UpdateExchangeRateRequest_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
+	filter_CurrencyService_UpdateExchangeRate_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
 )
 
-func request_CurrencyService_UpdateExchangeRateRequest_0(ctx context.Context, marshaler runtime.Marshaler, client CurrencyServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CreateExchangeRateRequest
+func request_CurrencyService_UpdateExchangeRate_0(ctx context.Context, marshaler runtime.Marshaler, client CurrencyServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq UpdateExchangeRateRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CurrencyService_UpdateExchangeRateRequest_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CurrencyService_UpdateExchangeRate_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := client.UpdateExchangeRateRequest(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	msg, err := client.UpdateExchangeRate(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_CurrencyService_UpdateExchangeRateRequest_0(ctx context.Context, marshaler runtime.Marshaler, server CurrencyServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CreateExchangeRateRequest
+func local_request_CurrencyService_UpdateExchangeRate_0(ctx context.Context, marshaler runtime.Marshaler, server CurrencyServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq UpdateExchangeRateRequest
 	var metadata runtime.ServerMetadata
 
 	if err := req.ParseForm(); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CurrencyService_UpdateExchangeRateRequest_0); err != nil {
+	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CurrencyService_UpdateExchangeRate_0); err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
-	msg, err := server.UpdateExchangeRateRequest(ctx, &protoReq)
+	msg, err := server.UpdateExchangeRate(ctx, &protoReq)
 	return msg, metadata, err
 
 }
 
-var (
-	filter_CurrencyService_DeleteExchangeRateRequest_0 = &utilities.DoubleArray{Encoding: map[string]int{}, Base: []int(nil), Check: []int(nil)}
-)
-
-func request_CurrencyService_DeleteExchangeRateRequest_0(ctx context.Context, marshaler runtime.Marshaler, client CurrencyServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CreateExchangeRateRequest
+func request_CurrencyService_DeleteExchangeRate_0(ctx context.Context, marshaler runtime.Marshaler, client CurrencyServiceClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq DeleteExchangeRateRequest
 	var metadata runtime.ServerMetadata
 
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CurrencyService_DeleteExchangeRateRequest_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	var (
+		val string
+		e   int32
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["from"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "from")
 	}
 
-	msg, err := client.DeleteExchangeRateRequest(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
+	e, err = runtime.Enum(val, Currency_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "from", err)
+	}
+
+	protoReq.From = Currency(e)
+
+	val, ok = pathParams["to"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "to")
+	}
+
+	e, err = runtime.Enum(val, Currency_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "to", err)
+	}
+
+	protoReq.To = Currency(e)
+
+	msg, err := client.DeleteExchangeRate(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
 	return msg, metadata, err
 
 }
 
-func local_request_CurrencyService_DeleteExchangeRateRequest_0(ctx context.Context, marshaler runtime.Marshaler, server CurrencyServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var protoReq CreateExchangeRateRequest
+func local_request_CurrencyService_DeleteExchangeRate_0(ctx context.Context, marshaler runtime.Marshaler, server CurrencyServiceServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+	var protoReq DeleteExchangeRateRequest
 	var metadata runtime.ServerMetadata
 
-	if err := req.ParseForm(); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
-	}
-	if err := runtime.PopulateQueryParameters(&protoReq, req.Form, filter_CurrencyService_DeleteExchangeRateRequest_0); err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "%v", err)
+	var (
+		val string
+		e   int32
+		ok  bool
+		err error
+		_   = err
+	)
+
+	val, ok = pathParams["from"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "from")
 	}
 
-	msg, err := server.DeleteExchangeRateRequest(ctx, &protoReq)
+	e, err = runtime.Enum(val, Currency_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "from", err)
+	}
+
+	protoReq.From = Currency(e)
+
+	val, ok = pathParams["to"]
+	if !ok {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "to")
+	}
+
+	e, err = runtime.Enum(val, Currency_value)
+	if err != nil {
+		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "to", err)
+	}
+
+	protoReq.To = Currency(e)
+
+	msg, err := server.DeleteExchangeRate(ctx, &protoReq)
 	return msg, metadata, err
 
 }
@@ -972,7 +1082,7 @@ func RegisterCurrencyServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.CurrencyService/GetExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rate"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.CurrencyService/GetExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rates/{from}/{to}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -989,6 +1099,31 @@ func RegisterCurrencyServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 
 	})
 
+	mux.Handle("GET", pattern_CurrencyService_GetExchangeRates_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		var stream runtime.ServerTransportStream
+		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.CurrencyService/GetExchangeRates", runtime.WithHTTPPathPattern("/billing/currencies/rates"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := local_request_CurrencyService_GetExchangeRates_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CurrencyService_GetExchangeRates_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("POST", pattern_CurrencyService_CreateExchangeRate_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
@@ -997,7 +1132,7 @@ func RegisterCurrencyServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.CurrencyService/CreateExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rate"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.CurrencyService/CreateExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rates"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1014,7 +1149,7 @@ func RegisterCurrencyServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 
 	})
 
-	mux.Handle("PUT", pattern_CurrencyService_UpdateExchangeRateRequest_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("PUT", pattern_CurrencyService_UpdateExchangeRate_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -1022,12 +1157,12 @@ func RegisterCurrencyServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.CurrencyService/UpdateExchangeRateRequest", runtime.WithHTTPPathPattern("/billing/currencies/rate"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.CurrencyService/UpdateExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rates"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_CurrencyService_UpdateExchangeRateRequest_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_CurrencyService_UpdateExchangeRate_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -1035,11 +1170,11 @@ func RegisterCurrencyServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 			return
 		}
 
-		forward_CurrencyService_UpdateExchangeRateRequest_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_CurrencyService_UpdateExchangeRate_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("DELETE", pattern_CurrencyService_DeleteExchangeRateRequest_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("DELETE", pattern_CurrencyService_DeleteExchangeRate_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -1047,12 +1182,12 @@ func RegisterCurrencyServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.CurrencyService/DeleteExchangeRateRequest", runtime.WithHTTPPathPattern("/billing/currencies/rate"))
+		annotatedContext, err = runtime.AnnotateIncomingContext(ctx, mux, req, "/nocloud.billing.CurrencyService/DeleteExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rate/{from}/{to}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_CurrencyService_DeleteExchangeRateRequest_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_CurrencyService_DeleteExchangeRate_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
@@ -1060,7 +1195,7 @@ func RegisterCurrencyServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 			return
 		}
 
-		forward_CurrencyService_DeleteExchangeRateRequest_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_CurrencyService_DeleteExchangeRate_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -1437,7 +1572,7 @@ func RegisterCurrencyServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.CurrencyService/GetExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rate"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.CurrencyService/GetExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rates/{from}/{to}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1453,13 +1588,35 @@ func RegisterCurrencyServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 
 	})
 
+	mux.Handle("GET", pattern_CurrencyService_GetExchangeRates_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+		ctx, cancel := context.WithCancel(req.Context())
+		defer cancel()
+		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
+		var err error
+		var annotatedContext context.Context
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.CurrencyService/GetExchangeRates", runtime.WithHTTPPathPattern("/billing/currencies/rates"))
+		if err != nil {
+			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
+			return
+		}
+		resp, md, err := request_CurrencyService_GetExchangeRates_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
+		if err != nil {
+			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
+			return
+		}
+
+		forward_CurrencyService_GetExchangeRates_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+
+	})
+
 	mux.Handle("POST", pattern_CurrencyService_CreateExchangeRate_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.CurrencyService/CreateExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rate"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.CurrencyService/CreateExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rates"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -1475,47 +1632,47 @@ func RegisterCurrencyServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 
 	})
 
-	mux.Handle("PUT", pattern_CurrencyService_UpdateExchangeRateRequest_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("PUT", pattern_CurrencyService_UpdateExchangeRate_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.CurrencyService/UpdateExchangeRateRequest", runtime.WithHTTPPathPattern("/billing/currencies/rate"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.CurrencyService/UpdateExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rates"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_CurrencyService_UpdateExchangeRateRequest_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_CurrencyService_UpdateExchangeRate_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_CurrencyService_UpdateExchangeRateRequest_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_CurrencyService_UpdateExchangeRate_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
-	mux.Handle("DELETE", pattern_CurrencyService_DeleteExchangeRateRequest_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle("DELETE", pattern_CurrencyService_DeleteExchangeRate_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
 		var err error
 		var annotatedContext context.Context
-		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.CurrencyService/DeleteExchangeRateRequest", runtime.WithHTTPPathPattern("/billing/currencies/rate"))
+		annotatedContext, err = runtime.AnnotateContext(ctx, mux, req, "/nocloud.billing.CurrencyService/DeleteExchangeRate", runtime.WithHTTPPathPattern("/billing/currencies/rate/{from}/{to}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_CurrencyService_DeleteExchangeRateRequest_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_CurrencyService_DeleteExchangeRate_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
 
-		forward_CurrencyService_DeleteExchangeRateRequest_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_CurrencyService_DeleteExchangeRate_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 
 	})
 
@@ -1547,13 +1704,15 @@ func RegisterCurrencyServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 var (
 	pattern_CurrencyService_GetCurrencies_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1}, []string{"billing", "currencies"}, ""))
 
-	pattern_CurrencyService_GetExchangeRate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"billing", "currencies", "rate"}, ""))
+	pattern_CurrencyService_GetExchangeRate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4}, []string{"billing", "currencies", "rates", "from", "to"}, ""))
 
-	pattern_CurrencyService_CreateExchangeRate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"billing", "currencies", "rate"}, ""))
+	pattern_CurrencyService_GetExchangeRates_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"billing", "currencies", "rates"}, ""))
 
-	pattern_CurrencyService_UpdateExchangeRateRequest_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"billing", "currencies", "rate"}, ""))
+	pattern_CurrencyService_CreateExchangeRate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"billing", "currencies", "rates"}, ""))
 
-	pattern_CurrencyService_DeleteExchangeRateRequest_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"billing", "currencies", "rate"}, ""))
+	pattern_CurrencyService_UpdateExchangeRate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"billing", "currencies", "rates"}, ""))
+
+	pattern_CurrencyService_DeleteExchangeRate_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4}, []string{"billing", "currencies", "rate", "from", "to"}, ""))
 
 	pattern_CurrencyService_Convert_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"billing", "currencies", "convert"}, ""))
 )
@@ -1563,11 +1722,13 @@ var (
 
 	forward_CurrencyService_GetExchangeRate_0 = runtime.ForwardResponseMessage
 
+	forward_CurrencyService_GetExchangeRates_0 = runtime.ForwardResponseMessage
+
 	forward_CurrencyService_CreateExchangeRate_0 = runtime.ForwardResponseMessage
 
-	forward_CurrencyService_UpdateExchangeRateRequest_0 = runtime.ForwardResponseMessage
+	forward_CurrencyService_UpdateExchangeRate_0 = runtime.ForwardResponseMessage
 
-	forward_CurrencyService_DeleteExchangeRateRequest_0 = runtime.ForwardResponseMessage
+	forward_CurrencyService_DeleteExchangeRate_0 = runtime.ForwardResponseMessage
 
 	forward_CurrencyService_Convert_0 = runtime.ForwardResponseMessage
 )

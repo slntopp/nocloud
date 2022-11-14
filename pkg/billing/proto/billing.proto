@@ -258,7 +258,17 @@ message GetExchangeRateRequest {
   Currency to = 2;
 }
 
-message GetExchangeRateResponse { double rate = 1; }
+message GetExchangeRatesRequest {}
+
+message GetExchangeRateResponse {
+  Currency from = 1;
+  Currency to = 2;
+  double rate = 3; 
+}
+
+message GetExchangeRatesResponse {
+  repeated GetExchangeRateResponse rates = 1;
+}
 
 message ConversionRequest {
   Currency from = 1;
@@ -277,25 +287,31 @@ service CurrencyService {
   rpc GetExchangeRate(GetExchangeRateRequest)
       returns (GetExchangeRateResponse) {
     option (google.api.http) = {
-      get : "/billing/currencies/rate"
+      get : "/billing/currencies/rates/{from}/{to}"
+    };
+  };
+  rpc GetExchangeRates(GetExchangeRatesRequest)
+      returns (GetExchangeRatesResponse) {
+    option (google.api.http) = {
+      get : "/billing/currencies/rates"
     };
   };
   rpc CreateExchangeRate(CreateExchangeRateRequest)
       returns (CreateExchangeRateResponse) {
     option (google.api.http) = {
-      post : "/billing/currencies/rate"
+      post : "/billing/currencies/rates"
     };
   };
-  rpc UpdateExchangeRateRequest(CreateExchangeRateRequest)
-      returns (CreateExchangeRateResponse) {
+  rpc UpdateExchangeRate(UpdateExchangeRateRequest)
+      returns (UpdateExchangeRateResponse) {
     option (google.api.http) = {
-      put : "/billing/currencies/rate"
+      put : "/billing/currencies/rates"
     };
   };
-  rpc DeleteExchangeRateRequest(CreateExchangeRateRequest)
-      returns (CreateExchangeRateResponse) {
+  rpc DeleteExchangeRate(DeleteExchangeRateRequest)
+      returns (DeleteExchangeRateResponse) {
     option (google.api.http) = {
-      delete : "/billing/currencies/rate"
+      delete : "/billing/currencies/rate/{from}/{to}"
     };
   };
   rpc Convert(ConversionRequest) returns (ConversionResponse) {
