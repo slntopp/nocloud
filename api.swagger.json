@@ -17,6 +17,9 @@
       "name": "BillingService"
     },
     {
+      "name": "CurrencyService"
+    },
+    {
       "name": "DNS"
     },
     {
@@ -86,12 +89,14 @@
         "parameters": [
           {
             "name": "namespace",
+            "description": "Namespace ID to seek account in",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "depth",
+            "description": "Depth",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -433,12 +438,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "to",
@@ -446,12 +452,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "amount",
@@ -490,12 +497,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "to",
@@ -503,12 +511,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           }
         ],
         "tags": [
@@ -538,12 +547,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "to",
@@ -551,12 +561,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "rate",
@@ -593,12 +604,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "to",
@@ -606,12 +618,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "rate",
@@ -648,12 +661,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "to",
@@ -661,12 +675,13 @@
             "required": false,
             "type": "string",
             "enum": [
+              "NCU",
               "USD",
               "EUR",
               "BYN",
               "PLN"
             ],
-            "default": "USD"
+            "default": "NCU"
           },
           {
             "name": "rate",
@@ -779,18 +794,21 @@
           },
           {
             "name": "type",
+            "description": "Instance / InstanceGroup type supported by this plan",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "public",
+            "description": "if true, then this plan is available for all users",
             "in": "query",
             "required": false,
             "type": "boolean"
           },
           {
             "name": "kind",
+            "description": "dynamic(based on resources) or static(based on products)\n\n - UNKNOWN: Default value; should never be used but will be treated as DYNAMIC",
             "in": "query",
             "required": false,
             "type": "string",
@@ -864,18 +882,21 @@
           },
           {
             "name": "type",
+            "description": "Instance / InstanceGroup type supported by this plan",
             "in": "query",
             "required": false,
             "type": "string"
           },
           {
             "name": "public",
+            "description": "if true, then this plan is available for all users",
             "in": "query",
             "required": false,
             "type": "boolean"
           },
           {
             "name": "kind",
+            "description": "dynamic(based on resources) or static(based on products)\n\n - UNKNOWN: Default value; should never be used but will be treated as DYNAMIC",
             "in": "query",
             "required": false,
             "type": "string",
@@ -952,29 +973,35 @@
                   "type": "string"
                 },
                 "type": {
-                  "type": "string"
+                  "type": "string",
+                  "title": "Instance / InstanceGroup type supported by this plan"
                 },
                 "public": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "title": "if true, then this plan is available for all users"
                 },
                 "kind": {
-                  "$ref": "#/definitions/billingPlanKind"
+                  "$ref": "#/definitions/billingPlanKind",
+                  "title": "dynamic(based on resources) or static(based on products)"
                 },
                 "resources": {
                   "type": "array",
                   "items": {
                     "$ref": "#/definitions/billingResourceConf"
-                  }
+                  },
+                  "title": "Resources confs to make plan dynamic"
                 },
                 "products": {
                   "type": "object",
                   "additionalProperties": {
                     "$ref": "#/definitions/billingProduct"
-                  }
+                  },
+                  "title": "Products to make plan pre defined(map key is product key like sm, lg"
                 },
                 "meta": {
                   "type": "object",
-                  "additionalProperties": {}
+                  "additionalProperties": {},
+                  "title": "or whatever)"
                 },
                 "fee": {
                   "$ref": "#/definitions/billingFee"
@@ -1074,12 +1101,14 @@
         "parameters": [
           {
             "name": "uuid",
+            "description": "transaction UUID",
             "in": "path",
             "required": true,
             "type": "string"
           },
           {
             "name": "exec",
+            "description": "Timestamp of Transaction planned execution time",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1087,6 +1116,7 @@
           },
           {
             "name": "proc",
+            "description": "Timestamp of Transaction processing time",
             "in": "query",
             "required": false,
             "type": "string",
@@ -1094,6 +1124,7 @@
           },
           {
             "name": "processed",
+            "description": "Wether Transaction has been processed(applied to",
             "in": "query",
             "required": false,
             "type": "boolean"
@@ -1112,6 +1143,7 @@
           },
           {
             "name": "records",
+            "description": "list of records UUIDs",
             "in": "query",
             "required": false,
             "type": "array",
@@ -1122,6 +1154,7 @@
           },
           {
             "name": "total",
+            "description": "Transaction total value in NCU",
             "in": "query",
             "required": false,
             "type": "number",
@@ -1342,6 +1375,7 @@
         "parameters": [
           {
             "name": "depth",
+            "description": "Depth",
             "in": "query",
             "required": false,
             "type": "integer",
@@ -1419,7 +1453,8 @@
                 },
                 "access": {
                   "type": "integer",
-                  "format": "int32"
+                  "format": "int32",
+                  "title": "Account access level to namespace"
                 }
               }
             }
@@ -1466,7 +1501,8 @@
                 },
                 "access": {
                   "type": "integer",
-                  "format": "int32"
+                  "format": "int32",
+                  "title": "Account access level to namespace"
                 },
                 "role": {
                   "type": "string"
@@ -2270,7 +2306,8 @@
                 },
                 "secrets": {
                   "type": "object",
-                  "additionalProperties": {}
+                  "additionalProperties": {},
+                  "title": "json"
                 },
                 "vars": {
                   "type": "object",
@@ -2292,7 +2329,8 @@
                   "additionalProperties": {}
                 },
                 "public": {
-                  "type": "boolean"
+                  "type": "boolean",
+                  "title": "If set to true, the provider will be visible to all users"
                 },
                 "proxy": {
                   "$ref": "#/definitions/services_providersProxyConf"
@@ -2684,12 +2722,13 @@
     "billingCurrency": {
       "type": "string",
       "enum": [
+        "NCU",
         "USD",
         "EUR",
         "BYN",
         "PLN"
       ],
-      "default": "USD"
+      "default": "NCU"
     },
     "billingFee": {
       "type": "object",
@@ -2730,6 +2769,26 @@
         }
       }
     },
+    "billingGetCurrenciesResponse": {
+      "type": "object",
+      "properties": {
+        "currencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/billingCurrency"
+          }
+        }
+      }
+    },
+    "billingGetExchangeRateResponse": {
+      "type": "object",
+      "properties": {
+        "rate": {
+          "type": "number",
+          "format": "double"
+        }
+      }
+    },
     "billingKind": {
       "type": "string",
       "enum": [
@@ -2737,7 +2796,8 @@
         "POSTPAID",
         "PREPAID"
       ],
-      "default": "UNSPECIFIED"
+      "default": "UNSPECIFIED",
+      "title": "- UNSPECIFIED: Shall never be used, requests will be rejected\n - POSTPAID: Transaction must be processed based on End time\n - PREPAID: Transaction must be processed based on Start time"
     },
     "billingPlan": {
       "type": "object",
@@ -2749,29 +2809,35 @@
           "type": "string"
         },
         "type": {
-          "type": "string"
+          "type": "string",
+          "title": "Instance / InstanceGroup type supported by this plan"
         },
         "public": {
-          "type": "boolean"
+          "type": "boolean",
+          "title": "if true, then this plan is available for all users"
         },
         "kind": {
-          "$ref": "#/definitions/billingPlanKind"
+          "$ref": "#/definitions/billingPlanKind",
+          "title": "dynamic(based on resources) or static(based on products)"
         },
         "resources": {
           "type": "array",
           "items": {
             "$ref": "#/definitions/billingResourceConf"
-          }
+          },
+          "title": "Resources confs to make plan dynamic"
         },
         "products": {
           "type": "object",
           "additionalProperties": {
             "$ref": "#/definitions/billingProduct"
-          }
+          },
+          "title": "Products to make plan pre defined(map key is product key like sm, lg"
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {},
+          "title": "or whatever)"
         },
         "fee": {
           "$ref": "#/definitions/billingFee"
@@ -2785,7 +2851,8 @@
         "DYNAMIC",
         "STATIC"
       ],
-      "default": "UNKNOWN"
+      "default": "UNKNOWN",
+      "title": "- UNKNOWN: Default value; should never be used but will be treated as DYNAMIC"
     },
     "billingProduct": {
       "type": "object",
@@ -2794,11 +2861,13 @@
           "$ref": "#/definitions/billingKind"
         },
         "title": {
-          "type": "string"
+          "type": "string",
+          "title": "Product title"
         },
         "price": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "title": "Product price in NCU per period"
         },
         "period": {
           "type": "string",
@@ -2806,7 +2875,8 @@
         },
         "resources": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {},
+          "title": "Map of resources keys to fixed units amount"
         },
         "meta": {
           "type": "object",
@@ -2814,7 +2884,8 @@
         },
         "sorter": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "title": "Sorting order, might be needed in UIs"
         }
       }
     },
@@ -2840,15 +2911,17 @@
         },
         "price": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "title": "Price in NCU per period"
         },
         "period": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "title": "if set to 0, then it's a one-time payment"
         },
         "except": {
           "type": "boolean",
-          "title": "If except set to true then transaction will be created if Instance is in one of the states listed in on\nIf except set to false then transaction will be created if Instance is NOT in one of the states listed in on"
+          "title": "If except set to true then transaction will be created if Instance is in\none of the states listed in on If except set to false then transaction will\nbe created if Instance is NOT in one of the states listed in on"
         },
         "on": {
           "type": "array",
@@ -2875,18 +2948,22 @@
       "type": "object",
       "properties": {
         "uuid": {
-          "type": "string"
+          "type": "string",
+          "title": "transaction UUID"
         },
         "exec": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "title": "Timestamp of Transaction planned execution time"
         },
         "proc": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "title": "Timestamp of Transaction processing time"
         },
         "processed": {
-          "type": "boolean"
+          "type": "boolean",
+          "title": "Wether Transaction has been processed(applied to"
         },
         "account": {
           "type": "string"
@@ -2898,16 +2975,18 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "title": "list of records UUIDs"
         },
         "total": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "title": "Transaction total value in NCU"
         },
         "meta": {
           "type": "object",
           "additionalProperties": {},
-          "title": "Transaction meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity\nprice_atm: \u003cnumber\u003e // hourly price per quant of resouce at the moment, e.g. 1 NCU \n[other keys]: \u003cany\u003e // for example Drive Type(SSD/HDD/NVMe/etc)\n}"
+          "title": "Transaction meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive\nMb, IP quantity price_atm: \u003cnumber\u003e // hourly price per quant of resouce at\nthe moment, e.g. 1 NCU [other keys]: \u003cany\u003e // for example Drive\nType(SSD/HDD/NVMe/etc)\n}"
         }
       }
     },
@@ -3231,43 +3310,56 @@
       "type": "object",
       "properties": {
         "uuid": {
-          "type": "string"
+          "type": "string",
+          "title": "Record UUID"
         },
         "start": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "title": "Timestamp of Record coverage frame start"
         },
         "end": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "title": "Timestamp of Record coverage frame end"
         },
         "exec": {
           "type": "string",
-          "format": "int64"
+          "format": "int64",
+          "title": "Time when Record must be processed"
         },
         "processed": {
+          "type": "boolean",
+          "title": "Wether Record has been processed(converted to Transaction)"
+        },
+        "isUrgent": {
           "type": "boolean"
         },
         "instance": {
-          "type": "string"
+          "type": "string",
+          "title": "Instance UUID"
         },
         "state": {
-          "$ref": "#/definitions/statesNoCloudState"
+          "$ref": "#/definitions/statesNoCloudState",
+          "title": "Instance state"
         },
         "resource": {
-          "type": "string"
+          "type": "string",
+          "title": "Resource key"
         },
         "product": {
-          "type": "string"
+          "type": "string",
+          "title": "Product key"
         },
         "total": {
           "type": "number",
-          "format": "double"
+          "format": "double",
+          "title": "Record total value in NCU"
         },
         "meta": {
           "type": "object",
           "additionalProperties": {},
-          "title": "Record meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive Mb, IP quantity\nprice_atm: \u003cnumber\u003e // hourly price per quant of resouce at the moment, e.g. 1 NCU \n[other keys]: \u003cany\u003e // for example Drive Type(SSD/HDD/NVMe/etc)\n}"
+          "title": "Record meta data, like\nmeta: {\ntotal: \u003cnumber\u003e // resource \"quantity\", e.g. CPU cores, RAM Mb, Drive\nMb, IP quantity price_atm: \u003cnumber\u003e // hourly price per quant of resouce at\nthe moment, e.g. 1 NCU [other keys]: \u003cany\u003e // for example Drive\nType(SSD/HDD/NVMe/etc)\n}"
         }
       }
     },
@@ -3334,7 +3426,8 @@
         "HASERRS",
         "NOEXIST"
       ],
-      "default": "UNKNOWN"
+      "default": "UNKNOWN",
+      "title": "- SERVING: Service is up and running\n - OFFLINE: Service is offline(down)\n - RUNNING: Routine is running\n - STOPPED: Routine is stopped\n - INTERNAL: Internal error while making status\n - HASERRS: Check has errors\n - NOEXIST: Service has no Routines"
     },
     "nocloudinstancesInvokeResponse": {
       "type": "object",
@@ -3486,17 +3579,21 @@
       "type": "object",
       "properties": {
         "title": {
-          "type": "string"
+          "type": "string",
+          "title": "New Account title"
         },
         "auth": {
-          "$ref": "#/definitions/accountsCredentials"
+          "$ref": "#/definitions/accountsCredentials",
+          "title": "Credentials for New Account"
         },
         "namespace": {
-          "type": "string"
+          "type": "string",
+          "title": "Namespace to put Account under"
         },
         "access": {
           "type": "integer",
-          "format": "int32"
+          "format": "int32",
+          "title": "Account access level to parent namespace"
         }
       }
     },
@@ -3745,7 +3842,8 @@
         },
         "secrets": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {},
+          "title": "json"
         },
         "vars": {
           "type": "object",
@@ -3767,7 +3865,8 @@
           "additionalProperties": {}
         },
         "public": {
-          "type": "boolean"
+          "type": "boolean",
+          "title": "If set to true, the provider will be visible to all users"
         },
         "proxy": {
           "$ref": "#/definitions/services_providersProxyConf"
@@ -3843,11 +3942,13 @@
       "type": "object",
       "properties": {
         "state": {
-          "$ref": "#/definitions/statesNoCloudState"
+          "$ref": "#/definitions/statesNoCloudState",
+          "title": "NoCloud Instance State"
         },
         "meta": {
           "type": "object",
-          "additionalProperties": {}
+          "additionalProperties": {},
+          "title": "Driver(Provider/Hypervisor) State data"
         },
         "ts": {
           "type": "string",

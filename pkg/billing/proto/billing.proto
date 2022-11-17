@@ -133,13 +133,14 @@ message Record {
   bool processed =
       5; // Wether Record has been processed(converted to Transaction)
 
-  string instance = 6;                   // Instance UUID
-  nocloud.states.NoCloudState state = 7; // Instance state
+  bool isUrgent = 6;
+  string instance = 7;                   // Instance UUID
+  nocloud.states.NoCloudState state = 8; // Instance state
 
-  string resource = 8; // Resource key
-  string product = 9;  // Product key
+  string resource = 9; // Resource key
+  string product = 10;  // Product key
 
-  double total = 10; // Record total value in NCU
+  double total = 11; // Record total value in NCU
   /* Record meta data, like
       meta: {
           total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive
@@ -148,7 +149,7 @@ message Record {
      Type(SSD/HDD/NVMe/etc)
       }
   */
-  map<string, google.protobuf.Value> meta = 11;
+  map<string, google.protobuf.Value> meta = 12;
 }
 
 message Records { repeated Record pool = 1; }
