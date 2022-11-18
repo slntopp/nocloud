@@ -74,54 +74,57 @@
 
           <v-divider />
 
-          <v-tabs v-model="form.title" background-color="background-light">
-            <v-tab
-              draggable="true"
-              active-class="background"
-              v-for="(title, i) of form.titles"
-              :key="title"
-              @drag="(e) => dragTab(e, i)"
-              @dragstart="dragTabStart"
-              @dragend="dragTabEnd"
-              @dblclick="edit = { isVisible: true, title }"
-            >
-              {{ title }}
-              <v-icon small right color="error" @click="removeConfig(title)">
-                mdi-close
-              </v-icon>
-            </v-tab>
-            <v-text-field
-              dense
-              outlined
-              :label="edit.isVisible ? `Edit ${edit.title}` : 'New config'"
-              class="ml-2 mt-1 mw-20"
-              v-if="isVisible || edit.isVisible"
-              @change="addConfig"
-            />
-            <v-icon v-else class="ml-2" @click="isVisible = true">
-              mdi-plus
-            </v-icon>
-          </v-tabs>
-
-          <v-divider />
-
-          <v-subheader v-if="form.titles.length > 0">
-            To edit the title, double-click the LMB
-          </v-subheader>
-
-          <v-tabs-items v-model="form.title">
-            <v-tab-item v-for="(title, i) of form.titles" :key="title">
-              <component
-                :is="template"
-                :keyForm="title"
-                :resource="plan.resources[i]"
-                :product="getProduct(i)"
-                :preset="preset(i)"
-                @change:resource="(data) => changeResource(i, data)"
-                @change:product="(data) => changeProduct(title, data)"
+          <plans-ovh-table v-if="plan.type === 'ovh' && item" :plan="item" />
+          <template v-else-if="plan.type !== 'ovh'">
+            <v-tabs v-model="form.title" background-color="background-light">
+              <v-tab
+                draggable="true"
+                active-class="background"
+                v-for="(title, i) of form.titles"
+                :key="title"
+                @drag="(e) => dragTab(e, i)"
+                @dragstart="dragTabStart"
+                @dragend="dragTabEnd"
+                @dblclick="edit = { isVisible: true, title }"
+              >
+                {{ title }}
+                <v-icon small right color="error" @click="removeConfig(title)">
+                  mdi-close
+                </v-icon>
+              </v-tab>
+              <v-text-field
+                dense
+                outlined
+                :label="edit.isVisible ? `Edit ${edit.title}` : 'New config'"
+                class="ml-2 mt-1 mw-20"
+                v-if="isVisible || edit.isVisible"
+                @change="addConfig"
               />
-            </v-tab-item>
-          </v-tabs-items>
+              <v-icon v-else class="ml-2" @click="isVisible = true">
+                mdi-plus
+              </v-icon>
+            </v-tabs>
+
+            <v-divider />
+
+            <v-subheader v-if="form.titles.length > 0">
+              To edit the title, double-click the LMB
+            </v-subheader>
+
+            <v-tabs-items v-model="form.title">
+              <v-tab-item v-for="(title, i) of form.titles" :key="title">
+                <component
+                  :is="template"
+                  :keyForm="title"
+                  :resource="plan.resources[i]"
+                  :product="getProduct(i)"
+                  :preset="preset(i)"
+                  @change:resource="(data) => changeResource(i, data)"
+                  @change:product="(data) => changeProduct(title, data)"
+                />
+              </v-tab-item>
+            </v-tabs-items>
+          </template>
         </v-col>
       </v-row>
 
@@ -172,11 +175,12 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
+import plansOvhTable from '../components/plans_ovh_table.vue';
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  components: { ConfirmDialog, PlanOpensrs },
+  components: { ConfirmDialog, PlanOpensrs, plansOvhTable },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],

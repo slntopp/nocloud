@@ -16,13 +16,11 @@ export default {
   },
   computed: {
     balance() {
-      if (this.value) return this.value;
+      if (this.value) return parseFloat(this.value).toFixed(2);
 
-      const { title } = this.$store.getters['auth/userdata'];
+      const { balance } = this.$store.getters['auth/userdata'];
 
-      return this.$store.getters['accounts/all']
-        .find((account) => account.title === title)
-        ?.balance;
+      return parseFloat(balance).toFixed(2);
     },
     colorChip() {
       if (this.balance > 0) {
