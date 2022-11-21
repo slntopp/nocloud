@@ -288,7 +288,10 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		if reqAcc.Access.Level < accesspb.Level(access.SUDO) {
+		if acc.ID == reqAcc.ID {
+			acc.Access.Level = reqAcc.Access.Level
+		}
+		if acc.Access.Level < accesspb.Level(access.SUDO) {
 			log.Warn("Need SUDO Access token", zap.String("requestor", requestor.(string)))
 			return nil, status.Error(codes.Unauthenticated, "Wrong credentials")
 		}

@@ -71,12 +71,11 @@ func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, er
 	if id == "me" {
 		id = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
-	var r pb.Account
 	account, err := GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
 	if err != nil {
 		return Account{}, err
 	}
-	ctrl.log.Debug("Got document", zap.Any("account", &r))
+	ctrl.log.Debug("Got document", zap.Any("account", account))
 	return account, err
 }
 
