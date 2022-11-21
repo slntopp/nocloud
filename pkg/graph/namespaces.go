@@ -92,14 +92,7 @@ func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Name
 }
 
 func (ns *Namespace) Delete(ctx context.Context, db driver.Database) error {
-	err := DeleteRecursive(ctx, db, ns.ID, schema.PERMISSIONS_GRAPH.Name)
-	if err != nil {
-		return err
-	}
-
-	graph, _ := db.Graph(ctx, schema.PERMISSIONS_GRAPH.Name)
-	col, _ := graph.VertexCollection(ctx, schema.NAMESPACES_COL)
-	_, err = col.RemoveDocument(ctx, ns.Key)
+	err := DeleteRecursive(ctx, db, ns.ID)
 	if err != nil {
 		return err
 	}
