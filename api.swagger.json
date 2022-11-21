@@ -2854,6 +2854,14 @@
       "default": "UNKNOWN",
       "title": "- UNKNOWN: Default value; should never be used but will be treated as DYNAMIC"
     },
+    "billingPriority": {
+      "type": "string",
+      "enum": [
+        "NORMAL",
+        "URGENT"
+      ],
+      "default": "NORMAL"
+    },
     "billingProduct": {
       "type": "object",
       "properties": {
@@ -3332,8 +3340,8 @@
           "type": "boolean",
           "title": "Wether Record has been processed(converted to Transaction)"
         },
-        "isUrgent": {
-          "type": "boolean"
+        "priority": {
+          "$ref": "#/definitions/billingPriority"
         },
         "instance": {
           "type": "string",
