@@ -72,99 +72,7 @@ services:
       - grpc-internal
     links:
       - db
-  services-registry:
-    image: ghcr.io/slntopp/nocloud/services-registry:latest
-    restart: always
-    labels:
-      - traefik.http.routers.services.rule=PathPrefix("/nocloud.services.", "/nocloud.instances.")
-      - traefik.http.routers.services.entrypoints=grpc
-      - traefik.http.services.services.loadbalancer.server.port=8000
-      - traefik.http.services.services.loadbalancer.server.scheme=h2c
-    environment:
-      LOG_LEVEL: -1
-      PORT: 8000
-      SIGNING_KEY: "${SIGNING_KEY}"
-      DB_HOST: db:8529
-      DB_CRED: "${DB_USER}:${DB_PASS}"
-      SETTINGS_HOST: settings:8000
-      BILLING_HOST: billing:8000
-      DRIVERS: driver-ione:8080
-      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-    depends_on:
-      - db
-      - billing
-      - driver-ione
-    networks:
-      - proxy
-      - arangodb
-      - grpc-internal
-      - mq
-    links:
-      - db
-      - billing
-  sp-registry:
-    image: ghcr.io/slntopp/nocloud/sp-registry:latest
-    restart: always
-    labels:
-      - traefik.http.routers.services_providers.rule=PathPrefix("/nocloud.services_providers.")
-      - traefik.http.routers.services_providers.entrypoints=grpc
-      - traefik.http.services.services_providers.loadbalancer.server.port=8000
-      - traefik.http.services.services_providers.loadbalancer.server.scheme=h2c
-    environment:
-      LOG_LEVEL: -1
-      PORT: 8000
-      SIGNING_KEY: "${SIGNING_KEY}"
-      DB_HOST: db:8529
-      DB_CRED: "${DB_USER}:${DB_PASS}"
-      SETTINGS_HOST: settings:8000
-      DRIVERS: driver-ione:8080
-      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-    depends_on:
-      - db
-      - driver-ione
-    networks:
-      - proxy
-      - arangodb
-      - grpc-internal
-      - mq
-    links:
-      - db
-  edge:
-    image: ghcr.io/slntopp/nocloud/edge:latest
-    restart: always
-    labels:
-      - traefik.http.routers.edge.rule=PathPrefix("/nocloud.edge.")
-      - traefik.http.routers.edge.entrypoints=grpc
-      - traefik.http.services.edge.loadbalancer.server.port=8000
-      - traefik.http.services.edge.loadbalancer.server.scheme=h2c
-    environment:
-      LOG_LEVEL: -1
-      PORT: 8000
-      SIGNING_KEY: "${SIGNING_KEY}"
-      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-    networks:
-      - proxy
-      - mq
-    links:
-      - db
-
-  dns-mgmt:
-    image: ghcr.io/slntopp/nocloud/dns-mgmt:latest
-    restart: always
-    labels:
-      - traefik.http.routers.dns.rule=PathPrefix("/nocloud.dns.")
-      - traefik.http.routers.dns.entrypoints=grpc
-      - traefik.http.services.dns.loadbalancer.server.port=8000
-      - traefik.http.services.dns.loadbalancer.server.scheme=h2c
-    networks:
-      - proxy
-      - grpc-internal
-      - redis
-    environment:
-      LOG_LEVEL: -1
-      PORT: 8000
-      SIGNING_KEY: "${SIGNING_KEY}"
-      REDIS_HOST: redis_settings:6379
+  
   settings:
     image: ghcr.io/slntopp/nocloud/settings:latest
     restart: always
@@ -184,6 +92,7 @@ services:
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
       REDIS_HOST: redis_settings:6379
+
   redis_settings:
     image: redis
     restart: always
@@ -192,34 +101,6 @@ services:
       - redis
     volumes:
       - redis-settings-data:/data
-
-  billing:
-    image: ghcr.io/slntopp/nocloud/billing:latest
-    restart: always
-    labels:
-      - traefik.http.routers.billing.rule=PathPrefix("/nocloud.billing.")
-      - traefik.http.routers.billing.entrypoints=grpc
-      - traefik.http.services.billing.loadbalancer.server.port=8000
-      - traefik.http.services.billing.loadbalancer.server.scheme=h2c
-    depends_on:
-      - db
-      - settings
-    networks:
-      - proxy
-      - arangodb
-      - grpc-internal
-      - mq
-    environment:
-      LOG_LEVEL: -1
-      PORT: 8000
-      SIGNING_KEY: "${SIGNING_KEY}"
-      DB_HOST: db:8529
-      DB_CRED: "${DB_USER}:${DB_PASS}"
-      SETTINGS_HOST: settings:8000
-      REGISTRY_HOST: registry:8000
-      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-    links:
-      - db
 
   db:
     image: arangodb/arangodb:latest
@@ -236,33 +117,27 @@ services:
       - proxy
       - arangodb
 
-  rabbitmq:
-    image: rabbitmq:3.9-management
+  crm:
+    image: ghcr.io/support-pl/nocloud-crm-integration:latest
     labels:
-      - traefik.http.routers.rabbitmq.rule=Host(`rbmq.nocloud.local`)
-      - traefik.http.routers.rabbitmq.entrypoints=http
-      - traefik.http.services.rabbitmq.loadbalancer.server.port=15672
-    networks:
-      - mq
-      - proxy
-    environment:
-      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
-      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
-  
-  driver-ione:
-    container_name: driver-ione
+      - traefik.http.routers.crm.rule=Host(`crm.${BASE_DOMAIN}`)
+      - traefik.http.routers.crm.entrypoints=http
+      - traefik.http.services.crm.loadbalancer.server.port=80
     restart: always
-    image: ghcr.io/slntopp/nocloud-driver-ione:latest
+    depends_on:
+      - settings
+    # ports:
+    #   - 8008:80
     networks:
+      - proxy
       - grpc-internal
-      - mq
-      - redis
     environment:
-      DRIVER_TYPE_KEY: ione
-      SIGNING_KEY: "${SIGNING_KEY}"
-      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
       LOG_LEVEL: -1
-      REDIS_HOST: redis_settings:6379
+      PORT: 80
+      SETTINGS_HOST: settings:8000
+      APISERVER_HOST: proxy:8000
+      SIGNING_KEY: "${SIGNING_KEY}"
+      CORS_ALLOWED: http://localhost:8080/
 
 networks:
   proxy:

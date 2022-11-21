@@ -17,6 +17,7 @@ package registry
 
 import (
 	"context"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -271,12 +272,35 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.TokenRequest) (*accountspb.TokenResponse, error) {
 	log := s.log.Named("Token")
-
 	log.Debug("Token request received", zap.Any("request", request))
-	acc, ok := s.ctrl.Authorize(ctx, request.Auth.Type, request.Auth.Data...)
-	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "Wrong credentials given")
+
+	var acc graph.Account
+	var ok bool
+
+	if requestor := ctx.Value(nocloud.NoCloudAccount); requestor != nil && request.Uuid != nil {
+		var err error
+		acc, err = s.ctrl.Get(ctx, *request.Uuid)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		reqAcc, err := s.ctrl.Get(ctx, requestor.(string))
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		if reqAcc.Access.Level < accesspb.Level(access.SUDO) {
+			log.Warn("Need SUDO Access token", zap.String("requestor", requestor.(string)))
+			return nil, status.Error(codes.Unauthenticated, "Wrong credentials")
+		}
+
+		request.Exp = int32(time.Now().Unix() + int64(time.Minute.Seconds())*5)
+	} else {
+		acc, ok = s.ctrl.Authorize(ctx, request.Auth.Type, request.Auth.Data...)
+		if !ok {
+			return nil, status.Error(codes.Unauthenticated, "Wrong credentials given")
+		}
 	}
+
 	log.Debug("Authorized user", zap.String("ID", acc.ID.String()))
 
 	claims := jwt.MapClaims{}

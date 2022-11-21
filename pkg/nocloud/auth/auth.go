@@ -101,7 +101,7 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 		}
 	}
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
-	if err != nil {
+	if info.FullMethod != "/infinimesh.node.AccountsService/Token" && err != nil {
 		return nil, err
 	}
 
