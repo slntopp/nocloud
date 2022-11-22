@@ -130,8 +130,80 @@ init:
 		if err = msg.Ack(false); err != nil {
 			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
 		}
+		if record.Priority == pb.Priority_URGENT {
+			tick := time.Now()
+			_, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
+				"@transactions": schema.TRANSACTIONS_COL,
+				"@instances":    schema.INSTANCES_COL,
+				"@services":     schema.SERVICES_COL,
+				"@records":      schema.RECORDS_COL,
+				"@accounts":     schema.ACCOUNTS_COL,
+				"permissions":   schema.PERMISSIONS_GRAPH.Name,
+				"priority":      pb.Priority_URGENT,
+				"now":           tick.Unix(),
+			})
+			if err != nil {
+				log.Error("Error Generating Transactions", zap.Error(err))
+			}
+			_, err = s.db.Query(ctx, processUrgentTransactions, map[string]interface{}{
+				"@transactions": schema.TRANSACTIONS_COL,
+				"@accounts":     schema.ACCOUNTS_COL,
+				"accounts":      schema.ACCOUNTS_COL,
+				"priority":      pb.Priority_URGENT,
+				"now":           tick.Unix(),
+			})
+			if err != nil {
+				log.Error("Error Process Transactions", zap.Error(err))
+			}
+		}
 	}
 }
+
+const generateUrgentTransactions = `
+FOR service IN @@services // Iterate over Services
+	LET instances = (
+        FOR i IN 2 OUTBOUND service
+        GRAPH @permissions
+        FILTER IS_SAME_COLLECTION(@@instances, i)
+            RETURN i._key )
+
+    LET account = LAST( // Find Service owner Account
+    FOR node, edge, path IN 2
+    INBOUND service
+    GRAPH @permissions
+    FILTER path.edges[*].role == ["owner","owner"]
+    FILTER IS_SAME_COLLECTION(node, @@accounts)
+        RETURN node
+    )
+    
+    LET records = ( // Collect all unprocessed records
+        FOR record IN @@records
+        FILTER record.priority == @priority
+        FILTER !record.processed
+        FILTER record.instance IN instances
+            UPDATE record._key WITH { processed: true } IN @@records RETURN NEW
+    )
+    
+    FILTER LENGTH(records) > 0 // Skip if no Records (no empty Transaction)
+    INSERT {
+        exec: @now, // Timestamp in seconds
+        processed: false,
+        account: account._key,
+		priority: @priority
+        service: service._key,
+        records: records[*]._key,
+        total: SUM(records[*].total) // Calculate Total
+    } IN @@transactions RETURN NEW
+`
+
+const processUrgentTransactions = `
+FOR t IN @@transactions // Iterate over Transactions
+FILTER !t.processed
+FILTER t.priority == @priority
+    LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
+    UPDATE account WITH { balance: account.balance - t.total } IN @@accounts
+    UPDATE t WITH { processed: true, proc: @now } IN @@transactions
+`
 
 func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transaction) (*pb.Records, error) {
 	log := s.log.Named("GetRecords")
