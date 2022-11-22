@@ -18,7 +18,7 @@ package main
 import (
 	"context"
 
-	pb "github.com/slntopp/nocloud/pkg/health/proto"
+	pb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

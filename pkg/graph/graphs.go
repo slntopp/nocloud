@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud/pkg/access"
+	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"

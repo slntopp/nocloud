@@ -28,16 +28,16 @@ import (
 
 	"google.golang.org/grpc/credentials/insecure"
 
+	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/credentials"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	accounting "github.com/slntopp/nocloud/pkg/registry"
-	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 
-	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
-	pb "github.com/slntopp/nocloud/pkg/registry/proto"
+	healthpb "github.com/slntopp/nocloud-proto/health"
+	pb "github.com/slntopp/nocloud-proto/registry"
 )
 
 var (

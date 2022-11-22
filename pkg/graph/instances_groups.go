@@ -21,8 +21,8 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/slntopp/nocloud/pkg/hasher"
-	pb "github.com/slntopp/nocloud/pkg/instances/proto"
+	"github.com/slntopp/nocloud-proto/hasher"
+	pb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )

@@ -27,11 +27,11 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
-	pb "github.com/slntopp/nocloud/pkg/billing/proto"
+	"github.com/slntopp/nocloud-proto/access"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/graph"
-	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
 
@@ -149,7 +149,7 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 	}
 	log.Debug("Transaction found", zap.String("requestor", requestor), zap.Any("transaction", tr))
 
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.SUDO)
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}

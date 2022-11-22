@@ -20,10 +20,10 @@ import (
 	"context"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	pb "github.com/slntopp/nocloud/pkg/edge/proto"
+	pb "github.com/slntopp/nocloud-proto/edge"
+	stpb "github.com/slntopp/nocloud-proto/states"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	s "github.com/slntopp/nocloud/pkg/states"
-	stpb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

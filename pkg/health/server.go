@@ -20,7 +20,7 @@ import (
 	"strings"
 	"sync"
 
-	pb "github.com/slntopp/nocloud/pkg/health/proto"
+	pb "github.com/slntopp/nocloud-proto/health"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

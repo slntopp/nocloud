@@ -21,13 +21,13 @@ import (
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	amqp "github.com/rabbitmq/amqp091-go"
+	pb "github.com/slntopp/nocloud-proto/edge"
+	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/edge"
 	"github.com/slntopp/nocloud/pkg/edge/auth"
-	pb "github.com/slntopp/nocloud/pkg/edge/proto"
-	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/spf13/viper"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
