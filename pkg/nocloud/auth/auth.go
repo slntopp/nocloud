@@ -82,7 +82,7 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
 
 	switch info.FullMethod {
-	case "/nocloud.registry.AccountsService/Token", "/nocloud.health.InternalProbeService/Service":
+	case "/nocloud.health.InternalProbeService/Service":
 		return handler(ctx, req)
 	case "/nocloud.health.HealthService/Probe":
 		probe := req.(*healthpb.ProbeRequest)
@@ -101,7 +101,7 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 		}
 	}
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
-	if err != nil {
+	if info.FullMethod != "/nocloud.registry.AccountsService/Token" && err != nil {
 		return nil, err
 	}
 
