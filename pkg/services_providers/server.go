@@ -21,15 +21,15 @@ import (
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
-	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
+	"github.com/slntopp/nocloud-proto/access"
+	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	sppb "github.com/slntopp/nocloud-proto/services_providers"
+	proto "github.com/slntopp/nocloud-proto/states"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	p "github.com/slntopp/nocloud/pkg/public_data"
-	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	s "github.com/slntopp/nocloud/pkg/states"
-	"github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -230,7 +230,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -276,7 +276,7 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -335,7 +335,7 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 
 	ok := graph.HasAccess(
 		ctx, s.db, requestor,
-		driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.ADMIN)
+		driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
 	if !ok {
 		r.Secrets = nil
 		r.Vars = nil
@@ -379,7 +379,7 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -400,7 +400,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}

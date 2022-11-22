@@ -5,14 +5,14 @@ import (
 	"testing"
 
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud/pkg/instances/proto"
+	"github.com/slntopp/nocloud-proto/access"
+	proto "github.com/slntopp/nocloud-proto/instances"
+	pb "github.com/slntopp/nocloud-proto/services"
+	spb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	pb "github.com/slntopp/nocloud/pkg/services/proto"
-	spb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )
@@ -58,7 +58,7 @@ func TestDeleteAccount(t *testing.T) {
 		t.Error("Can't create namespace")
 	}
 
-	if err := nsc.Join(ctx, acc, namespace, access.ADMIN, roles.OWNER); err != nil {
+	if err := nsc.Join(ctx, acc, namespace, access.Level_ADMIN, roles.OWNER); err != nil {
 		t.Error("Can't join namespace")
 	}
 
@@ -87,7 +87,7 @@ func TestDeleteAccount(t *testing.T) {
 		t.Error("Can't create service")
 	}
 
-	if err := srvc.Join(ctx, service, &namespace, access.ADMIN, roles.OWNER); err != nil {
+	if err := srvc.Join(ctx, service, &namespace, access.Level_ADMIN, roles.OWNER); err != nil {
 		t.Error("Can't join service")
 	}
 
@@ -125,7 +125,7 @@ func TestDeleteAccountCredentials(t *testing.T) {
 		t.Error("Can't create namespace")
 	}
 
-	if err := nsc.Join(ctx, acc, namespace, access.ADMIN, roles.OWNER); err != nil {
+	if err := nsc.Join(ctx, acc, namespace, access.Level_ADMIN, roles.OWNER); err != nil {
 		t.Error("Can't join namespace")
 	}
 
@@ -154,7 +154,7 @@ func TestDeleteAccountCredentials(t *testing.T) {
 		t.Error("Can't create service")
 	}
 
-	if err := srvc.Join(ctx, service, &namespace, access.ADMIN, roles.OWNER); err != nil {
+	if err := srvc.Join(ctx, service, &namespace, access.Level_ADMIN, roles.OWNER); err != nil {
 		t.Error("Can't join service")
 	}
 

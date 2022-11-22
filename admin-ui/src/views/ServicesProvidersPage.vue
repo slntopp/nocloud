@@ -60,7 +60,7 @@ export default {
       return this.$route.params.uuid;
     },
     tabs() {
-      return [
+      const tabs = [
         {
           title: "Info",
           component: () => import("@/components/ServicesProvider/info.vue"),
@@ -77,6 +77,12 @@ export default {
           component: () => import("@/components/ServicesProvider/template.vue"),
         },
       ];
+
+      if (this.item?.type === 'ovh') tabs.push({
+        title: "Prices",
+        component: () => import("@/components/ServicesProvider/table.vue")
+      });
+      return tabs;
     },
     title() {
       return this?.item?.title ?? "not found";

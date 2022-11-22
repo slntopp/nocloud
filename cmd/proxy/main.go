@@ -28,7 +28,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
-	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
+	healthpb "github.com/slntopp/nocloud-proto/health"
 )
 
 var (

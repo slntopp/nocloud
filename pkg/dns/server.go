@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	redis "github.com/go-redis/redis/v8"
-	pb "github.com/slntopp/nocloud/pkg/dns/proto"
+	pb "github.com/slntopp/nocloud-proto/dns"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"

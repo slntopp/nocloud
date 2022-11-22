@@ -20,9 +20,9 @@ import (
 	"errors"
 
 	"github.com/arangodb/go-driver"
-	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
+	pb "github.com/slntopp/nocloud-proto/settings"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
-	pb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/metadata"
 )

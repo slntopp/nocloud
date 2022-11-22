@@ -14,18 +14,21 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.14.0
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/rs/cors v1.8.2
+	github.com/slntopp/nocloud-proto v0.0.0-20221122151021-7e8158586b2e
 	github.com/spf13/viper v1.14.0
 	github.com/stoewer/go-strcase v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
 	go.uber.org/zap v1.23.0
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/net v0.2.0
-	google.golang.org/genproto v0.0.0-20221114212237-e4508ebdbee1
-	google.golang.org/grpc v1.50.1
+	google.golang.org/grpc v1.51.0
 	google.golang.org/protobuf v1.28.1
 )
 
-require github.com/sirupsen/logrus v1.8.1 // indirect
+require (
+	github.com/sirupsen/logrus v1.8.1 // indirect
+	google.golang.org/genproto v0.0.0-20221114212237-e4508ebdbee1 // indirect
+)
 
 require (
 	github.com/arangodb/go-velocypack v0.0.0-20200318135517-5af53c29c67e // indirect

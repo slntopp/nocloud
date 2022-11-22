@@ -19,11 +19,11 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
-	pb "github.com/slntopp/nocloud/pkg/billing/proto"
+	"github.com/slntopp/nocloud-proto/access"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/graph"
-	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -85,7 +85,7 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, plan *pb.Plan) (*
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -108,7 +108,7 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, plan *pb.Plan) (*
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -131,7 +131,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 	if err != nil {
 		return nil, err
 	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -160,7 +160,7 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 		return p.Plan, nil
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, p.ID, access.READ)
+	ok := graph.HasAccess(ctx, s.db, requestor, p.ID, access.Level_READ)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -192,7 +192,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 		if req.Anonymously {
 			continue
 		}
-		ok := graph.HasAccess(ctx, s.db, requestor, plan.ID, access.READ)
+		ok := graph.HasAccess(ctx, s.db, requestor, plan.ID, access.Level_READ)
 		if !ok {
 			continue
 		}

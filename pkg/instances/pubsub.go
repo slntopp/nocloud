@@ -22,7 +22,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
-	pb "github.com/slntopp/nocloud/pkg/instances/proto"
+	pb "github.com/slntopp/nocloud-proto/instances"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )

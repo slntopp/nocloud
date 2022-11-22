@@ -108,7 +108,7 @@ export default {
       sched: [],
       sched_ds: [],
       public_ip_pool: [],
-      private_vnets_pool: [],
+      private_vnet_tmpl: [],
     },
     fields: {
       host: {
@@ -198,16 +198,22 @@ export default {
       public_ip_pool: {
         type: "number",
         subheader: "Public IPs Pool ID",
-        rules: [(value) => !!value || value === 0 || "Field is required"],
+        rules: [
+          (value) => !!value || value === 0 || "Field is required",
+          (value) => !!Number(value) || "Field must be number"
+        ],
         label: "pip",
         bind: {
           min: 0,
         },
       },
-      private_vnets_pool: {
+      private_vnet_tmpl: {
         type: "number",
         subheader: "Private Networks Template ID",
-        rules: [(value) => !!value || value === 0 || "Field is required"],
+        rules: [
+          (value) => !!value || value === 0 || "Field is required",
+          (value) => !!Number(value) || "Field must be number"
+        ],
         label: "pvp",
         bind: {
           min: 0,
@@ -268,7 +274,7 @@ export default {
 
       const defaultVars = [
         "public_ip_pool",
-        "private_vnets_pool",
+        "private_vnet_tmpl",
         "private_vnet_ban",
       ];
       for (const varKey of defaultVars) {
@@ -298,7 +304,7 @@ export default {
 
     setVarsValueDefault(vars, fieldName, isChange, data) {
       vars[fieldName] = {
-        value: { default: isChange ? data : this.getValue(fieldName) },
+        value: { default: isChange ? JSON.parse(data) : this.getValue(fieldName) },
       };
     },
 
@@ -337,9 +343,9 @@ export default {
 
       switch (fieldName) {
         case "public_ip_pool":
-          return this.vars.public_ip_pool?.value?.default ?? "";
-        case "private_vnets_pool":
-          return this.vars.private_vnets_pool?.value?.default ?? "";
+          return this.vars.public_ip_pool?.value?.default ?? 0;
+        case "private_vnet_tmpl":
+          return this.vars.private_vnet_tmpl?.value?.default ?? 0;
         case "private_vnet_ban":
           return this.vars.private_vnet_ban?.default ?? false;
         default:

@@ -19,12 +19,12 @@ import (
 	"context"
 	"time"
 
-	hpb "github.com/slntopp/nocloud/pkg/health/proto"
+	hpb "github.com/slntopp/nocloud-proto/health"
+	regpb "github.com/slntopp/nocloud-proto/registry"
+	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
+	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	regpb "github.com/slntopp/nocloud/pkg/registry/proto"
-	accpb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
-	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -216,7 +216,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		if err != nil {
 			log.Error("Error Quering Accounts to Suspend", zap.Error(err))
 		}
-		
+
 		for cursor.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor.ReadDocument(ctx, &acc)
@@ -236,7 +236,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		if err != nil {
 			log.Error("Error Quering Accounts to Unsuspend", zap.Error(err))
 		}
-		
+
 		for cursor2.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor2.ReadDocument(ctx, &acc)

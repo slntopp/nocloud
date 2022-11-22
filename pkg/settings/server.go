@@ -21,8 +21,8 @@ import (
 	"strings"
 
 	redis "github.com/go-redis/redis/v8"
+	pb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	pb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"

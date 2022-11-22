@@ -17,10 +17,12 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud/pkg/access"
+	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
@@ -49,94 +51,128 @@ func DeleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID
 	return nil
 }
 
-func DeleteInBoundEdges(ctx context.Context, db driver.Database, id driver.DocumentID, graph string) error {
-	query := `FOR node, edge IN INBOUND @node GRAPH @graph RETURN edge._id`
+func ListOwnedDeep(ctx context.Context, db driver.Database, id driver.DocumentID) (res *access.Nodes, err error) {
+	query := `FOR node, edge IN 1..100 OUTBOUND @node GRAPH Permissions FILTER edge.role == "owner" RETURN {edge: edge._id, to: edge._to}`
 	c, err := db.Query(ctx, query, map[string]interface{}{
-		"node":  id,
-		"graph": graph,
+		"node": id,
 	})
 	if err != nil {
-		return err
+		return res, err
 	}
 	defer c.Close()
 
+	var nodes []*access.Node
 	for {
-		var id driver.DocumentID
-		_, err := c.ReadDocument(ctx, &id)
-		if driver.IsNoMoreDocuments(err) {
-			break
-		} else if err != nil {
-			return err
+		var node access.Node
+		_, err := c.ReadDocument(ctx, &node)
+		if err != nil {
+			if driver.IsNoMoreDocuments(err) {
+				break
+			}
+			return res, err
+		}
+		nodes = append(nodes, &node)
+	}
+
+	return &access.Nodes{Nodes: nodes}, nil
+}
+
+func DeleteRecursive(ctx context.Context, db driver.Database, id driver.DocumentID) error {
+	nodes, err := ListOwnedDeep(ctx, db, id)
+	if err != nil {
+		return err
+	}
+
+	cols := make(map[string]driver.Collection)
+	for i := len(nodes.Nodes) - 1; i >= 0; i-- {
+		node := nodes.Nodes[i]
+
+		if node.Node != "" {
+			err := handleDeleteNodeInRecursion(ctx, db, node.Node, cols)
+			if err != nil {
+				if err.Error() == "ERR_ROOT_OBJECT_CANNOT_BE_DELETED" {
+					continue
+				}
+				return err
+			}
 		}
 
-		err = DeleteByDocID(ctx, db, id)
-		if err != nil {
-			return fmt.Errorf("error while deleting inbound edge: %v, id: %s", err, id)
+		if node.Edge != "" {
+			err := handleDeleteNodeInRecursion(ctx, db, node.Edge, cols)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	return nil
 }
 
-func DeleteRecursive(ctx context.Context, db driver.Database, id driver.DocumentID, graph string) error {
-	query := `FOR node, edge IN 1..100 OUTBOUND @node GRAPH @graph FILTER edge.role == "owner" RETURN {edge: edge._id, to: edge._to}`
-	c, err := db.Query(ctx, query, map[string]interface{}{
-		"node":  id,
-		"graph": graph,
+func handleDeleteNodeInRecursion(ctx context.Context, db driver.Database, node string, cols map[string]driver.Collection) (err error) {
+	id := strings.SplitN(node, "/", 2)
+	col, ok := cols[id[0]]
+	if !ok {
+		col, err = db.Collection(ctx, id[0])
+		if err != nil {
+			return err
+		}
+		cols[id[0]] = col
+	}
+
+	if id[0] == schema.ACCOUNTS_COL {
+		if id[1] == schema.ROOT_ACCOUNT_KEY {
+			return errors.New("ERR_ROOT_OBJECT_CANNOT_BE_DELETED")
+		}
+		nodes, err := ListCredentialsAndEdges(ctx, col.Database(), driver.DocumentID(node))
+		if err != nil {
+			return err
+		}
+		for _, node := range nodes {
+			err = handleDeleteNodeInRecursion(ctx, col.Database(), node, cols)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	if id[0] == schema.NAMESPACES_COL && id[1] == schema.ROOT_NAMESPACE_KEY {
+		return errors.New("ERR_ROOT_OBJECT_CANNOT_BE_DELETED")
+	}
+
+	_, err = col.RemoveDocument(ctx, id[1])
+	if e, ok := driver.AsArangoError(err); ok && e.Code == 404 {
+		return nil
+	}
+	return err
+}
+
+func ListCredentialsAndEdges(ctx context.Context, db driver.Database, account driver.DocumentID) (nodes []string, err error) {
+	c, err := db.Query(ctx, listCredentialsAndEdgesQuery, map[string]interface{}{
+		"account":     account,
+		"credentials": schema.CREDENTIALS_COL,
 	})
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer c.Close()
 
-	for {
-		var obj map[string]driver.DocumentID
-		_, err := c.ReadDocument(ctx, &obj)
-		if driver.IsNoMoreDocuments(err) {
-			break
-		} else if err != nil {
-			return err
-		}
-
-		err = DeleteByDocID(ctx, db, obj["edge"])
-		if err != nil {
-			return fmt.Errorf("error while deleting 'edge': %v, obj: %v", err, obj)
-		}
-		if obj["to"].Collection() == schema.ACCOUNTS_COL {
-			err = DeleteRecursive(ctx, db, id, schema.CREDENTIALS_GRAPH.Name)
-			if err != nil {
-				return fmt.Errorf("error while deleting 'to': %v, obj: %v", err, obj)
-			}
-		} else {
-			err = DeleteInBoundEdges(ctx, db, obj["to"], schema.PERMISSIONS_GRAPH.Name)
-			if err != nil {
-				return fmt.Errorf("error while deleting 'to' inbound edges: %v, obj: %v", err, obj)
-			}
-			err = DeleteByDocID(ctx, db, obj["to"])
-			if err != nil {
-				return fmt.Errorf("error while deleting 'to': %v, obj: %v", err, obj)
-			}
-		}
-	}
-
-	err = DeleteInBoundEdges(ctx, db, id, schema.PERMISSIONS_GRAPH.Name)
-	if err != nil {
-		return fmt.Errorf("error while deleting node's inbound edges: %v, node: %v", err, id)
-	}
-	err = DeleteByDocID(ctx, db, id)
-	if err != nil {
-		return fmt.Errorf("error while deleting node: %v, DocID: %s", err, id)
-	}
-
-	return nil
+	_, err = c.ReadDocument(ctx, &nodes)
+	return nodes, err
 }
+
+const listCredentialsAndEdgesQuery = `
+RETURN FLATTEN(
+FOR node, edge IN 1 OUTBOUND @account
+GRAPH @credentials
+    RETURN [ node._id, edge._id ]
+)
+`
 
 const getWithAccessLevel = `
 FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
 GRAPH @permissions SORT path.edges[0].level
-	RETURN MERGE(path.vertices[-1], {
-		uuid: path.vertices[-1]._key,
-	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none" }
+    RETURN MERGE(path.vertices[-1], {
+        uuid: path.vertices[-1]._key,
+	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
 	})
 `
 
