@@ -64,12 +64,12 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	tokenString, err := grpc_auth.AuthFromMD(ctx, "bearer")
 	if err != nil {
 		l.Debug("Error extracting token", zap.Any("error", err))
-		return nil, err
+		return ctx, err
 	}
 
 	token, err := validateToken(tokenString)
 	if err != nil {
-		return nil, err
+		return ctx, err
 	}
 	log.Debug("Validated token", zap.Any("claims", token))
 
