@@ -1130,6 +1130,18 @@
             "type": "boolean"
           },
           {
+            "name": "priority",
+            "description": "Account balance, etc)",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "enum": [
+              "NORMAL",
+              "URGENT"
+            ],
+            "default": "NORMAL"
+          },
+          {
             "name": "account",
             "in": "query",
             "required": false,
@@ -2972,6 +2984,10 @@
         "processed": {
           "type": "boolean",
           "title": "Wether Transaction has been processed(applied to"
+        },
+        "priority": {
+          "$ref": "#/definitions/billingPriority",
+          "title": "Account balance, etc)"
         },
         "account": {
           "type": "string"

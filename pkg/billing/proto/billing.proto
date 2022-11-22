@@ -99,18 +99,24 @@ message Product {
   optional int32 sorter = 7; // Sorting order, might be needed in UIs
 }
 
+enum Priority{
+  NORMAL = 0;
+  URGENT = 1;
+}
+
 message Transaction {
   string uuid = 1;    // transaction UUID
   int64 exec = 2;     // Timestamp of Transaction planned execution time
   int64 proc = 3;     // Timestamp of Transaction processing time
   bool processed = 4; // Wether Transaction has been processed(applied to
                       // Account balance, etc)
+  Priority priority = 5;
 
-  string account = 5;
-  string service = 6;
-  repeated string records = 7; // list of records UUIDs
+  string account = 6;
+  string service = 7;
+  repeated string records = 8; // list of records UUIDs
 
-  double total = 8; // Transaction total value in NCU
+  double total = 9; // Transaction total value in NCU
   /* Transaction meta data, like
       meta: {
           total: <number> // resource "quantity", e.g. CPU cores, RAM Mb, Drive
@@ -119,15 +125,10 @@ message Transaction {
      Type(SSD/HDD/NVMe/etc)
       }
   */
-  map<string, google.protobuf.Value> meta = 9;
+  map<string, google.protobuf.Value> meta = 10;
 }
 
 message Transactions { repeated Transaction pool = 1; }
-
-enum Priority{
-  NORMAL = 0;
-  URGENT = 1;
-}
 
 message Record {
   string uuid = 1; // Record UUID
