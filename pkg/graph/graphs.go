@@ -134,10 +134,9 @@ func DeleteRecursive(ctx context.Context, db driver.Database, id driver.Document
 const getWithAccessLevel = `
 FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
 GRAPH @permissions SORT path.edges[0].level
-    LET ns = (FOR ns IN Namespaces FILTER ns._id == path.edges[0]._to RETURN ns)[0]
-	RETURN MERGE(path.vertices[-1], {
-		uuid: path.vertices[-1]._key,
-	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: ns._key }
+    RETURN MERGE(path.vertices[-1], {
+        uuid: path.vertices[-1]._key,
+	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
 	})
 `
 
