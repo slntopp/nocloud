@@ -72,18 +72,19 @@ func (ctrl *RecordsController) CheckOverlapping(ctx context.Context, r *pb.Recor
 	return ok
 }
 
-func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) {
+func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) driver.DocumentID {
 	ok := ctrl.CheckOverlapping(ctx, r)
 	ctrl.log.Debug("Pre-flight checks", zap.Bool("overlapping", ok))
 	if !ok {
 		ctrl.log.Warn("Skipping creating transactions: overlapping", zap.Any("record", r))
-		return
+		return ""
 	}
 
-	_, err := ctrl.col.CreateDocument(ctx, r)
+	meta, err := ctrl.col.CreateDocument(ctx, r)
 	if err != nil {
 		ctrl.log.Error("failed to create record", zap.Error(err))
 	}
+	return meta.ID
 }
 
 const getRecordsQuery = `
