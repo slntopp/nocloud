@@ -51,10 +51,17 @@ func DeleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID
 	return nil
 }
 
+const listOwnedQuery = `
+FOR node, edge IN 0..100
+OUTBOUND @from
+GRAPH Permissions
+FILTER !edge || edge.role == "owner"
+    RETURN MERGE({ node: node._id }, edge ? { edge: edge._id, parent: edge._from } : { edge: null, parent: null })
+`
+
 func ListOwnedDeep(ctx context.Context, db driver.Database, id driver.DocumentID) (res *access.Nodes, err error) {
-	query := `FOR node, edge IN 1..100 OUTBOUND @node GRAPH Permissions FILTER edge.role == "owner" RETURN {edge: edge._id, to: edge._to}`
-	c, err := db.Query(ctx, query, map[string]interface{}{
-		"node": id,
+	c, err := db.Query(ctx, listOwnedQuery, map[string]interface{}{
+		"from": id,
 	})
 	if err != nil {
 		return res, err
