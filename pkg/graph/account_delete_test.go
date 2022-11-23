@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/credentials"
 	"testing"
 
 	"github.com/arangodb/go-driver"
@@ -116,6 +117,14 @@ func TestDeleteAccountCredentials(t *testing.T) {
 	acc, err := ac.Create(ctx, "test_user")
 	if err != nil {
 		t.Error("Can't create account")
+	}
+
+	cred_edge_col, _ := db.Collection(context.TODO(), schema.ACC2CRED)
+	cred, _ := credentials.NewStandardCredentials([]string{"test_user", "test_user"})
+
+	err = ac.SetCredentials(ctx, acc, cred_edge_col, cred, roles.OWNER)
+	if err != nil {
+		t.Error("Can't set credentials")
 	}
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.ID.Key())
