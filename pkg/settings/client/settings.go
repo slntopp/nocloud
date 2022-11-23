@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	pb "github.com/slntopp/nocloud/pkg/settings/proto"
+	pb "github.com/slntopp/nocloud-proto/settings"
 	"go.uber.org/zap"
 )
 

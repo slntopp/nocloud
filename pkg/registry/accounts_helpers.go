@@ -18,9 +18,9 @@ package registry
 import (
 	"context"
 
+	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"go.uber.org/zap"
 )

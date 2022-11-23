@@ -22,19 +22,18 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
-	accesspb "github.com/slntopp/nocloud/pkg/access"
-	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
-	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
+	accesspb "github.com/slntopp/nocloud-proto/access"
+	bpb "github.com/slntopp/nocloud-proto/billing"
+	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	proto "github.com/slntopp/nocloud-proto/instances"
+	pb "github.com/slntopp/nocloud-proto/services"
+	stpb "github.com/slntopp/nocloud-proto/settings"
+	spb "github.com/slntopp/nocloud-proto/states"
 	"github.com/slntopp/nocloud/pkg/graph"
-	"github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
-	stpb "github.com/slntopp/nocloud/pkg/settings/proto"
-	spb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -242,7 +241,7 @@ func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateReque
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, accesspb.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -262,7 +261,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, accesspb.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -283,7 +282,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.Internal, "Error while creating Service")
 	}
 
-	err = s.ctrl.Join(ctx, doc, &ns, access.ADMIN, roles.OWNER)
+	err = s.ctrl.Join(ctx, doc, &ns, accesspb.Level_ADMIN, roles.OWNER)
 	if err != nil {
 		log.Error("Error while joining service to namespace", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
@@ -348,7 +347,7 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
-	ok := graph.HasAccess(ctx, s.db, requestor, docID, access.ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, docID, accesspb.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}

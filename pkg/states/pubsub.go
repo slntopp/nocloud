@@ -23,8 +23,8 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
 	amqp "github.com/rabbitmq/amqp091-go"
+	pb "github.com/slntopp/nocloud-proto/states"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	pb "github.com/slntopp/nocloud/pkg/states/proto"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 )

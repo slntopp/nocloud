@@ -23,19 +23,18 @@ import (
 	jwt "github.com/golang-jwt/jwt/v4"
 	"github.com/spf13/viper"
 
+	"github.com/slntopp/nocloud-proto/access"
+	servicespb "github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/credentials"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	servicespb "github.com/slntopp/nocloud/pkg/services/proto"
 
-	accesspb "github.com/slntopp/nocloud/pkg/access"
-	pb "github.com/slntopp/nocloud/pkg/registry/proto"
-	accountspb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
+	pb "github.com/slntopp/nocloud-proto/registry"
+	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
+	settingspb "github.com/slntopp/nocloud-proto/settings"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
-	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -228,11 +227,11 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 		return acc.Account, nil
 	}
 
-	if acc.Access.Level < accesspb.Level_READ {
+	if acc.Access.Level < access.Level_READ {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	if acc.Access.Level < accesspb.Level_ROOT {
+	if acc.Access.Level < access.Level_ROOT {
 		acc.SuspendConf = nil
 	}
 
@@ -266,7 +265,7 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	result := make([]*accountspb.Account, len(pool))
 	for i, acc := range pool {
-		if acc.Access.Level < accesspb.Level_ROOT {
+		if acc.Access.Level < access.Level_ROOT {
 			acc.Account.SuspendConf = nil
 		}
 		result[i] = acc.Account
@@ -297,7 +296,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 		if acc.ID == reqAcc.ID {
 			acc.Access.Level = reqAcc.Access.Level
 		}
-		if acc.Access.Level < accesspb.Level(access.SUDO) {
+		if acc.Access.Level < access.Level(access.Level_ROOT) {
 			log.Warn("Need SUDO Access token", zap.String("requestor", requestor.(string)))
 			return nil, status.Error(codes.Unauthenticated, "Wrong credentials")
 		}
@@ -320,18 +319,18 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 		ns := driver.NewDocumentID(schema.NAMESPACES_COL, "0")
 		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, ns)
 		if !ok {
-			lvl = 0
+			lvl = access.Level_NONE
 		}
-		log.Debug("Adding Root claim to the token", zap.Int32("access_lvl", lvl))
+		log.Debug("Adding Root claim to the token", zap.Int32("access_lvl", int32(lvl)))
 		claims[nocloud.NOCLOUD_ROOT_CLAIM] = lvl
 	}
 
 	if sp := request.GetSpClaim(); sp != "" {
 		ok, lvl := graph.AccessLevel(ctx, s.db, acc.Key, driver.NewDocumentID(schema.SERVICES_PROVIDERS_COL, sp))
 		if !ok {
-			lvl = 0
+			lvl = access.Level_NONE
 		}
-		log.Debug("Adding ServicesProvider claim to the token", zap.Int32("access_lvl", lvl))
+		log.Debug("Adding ServicesProvider claim to the token", zap.Int32("access_lvl", int32(lvl)))
 		claims[nocloud.NOCLOUD_SP_CLAIM] = lvl
 	}
 
@@ -360,7 +359,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	ok, access_lvl := graph.AccessLevel(ctx, s.db, requestor, ns.ID)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "No Access")
-	} else if access_lvl < access.MGMT {
+	} else if access_lvl < access.Level_MGMT {
 		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
 	}
 
@@ -371,8 +370,8 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 	res := &accountspb.CreateResponse{Uuid: acc.Key}
 
-	if request.Access != nil && (*request.Access) < access_lvl {
-		access_lvl = (*request.Access)
+	if request.Access != nil && access.Level(*request.Access) < access_lvl {
+		access_lvl = access.Level(*request.Access)
 	}
 
 	s.PostCreateActions(ctx, acc)
@@ -420,11 +419,11 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	if acc.Access == nil {
 		log.Warn("Error Access is nil")
 	}
-	if acc.Access == nil || acc.Access.Level < accesspb.Level_ADMIN {
+	if acc.Access == nil || acc.Access.Level < access.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
-	if acc.Access.Level < accesspb.Level_ROOT {
+	if acc.Access.Level < access.Level_ROOT {
 		request.SuspendConf = nil
 		request.Suspended = nil
 	}
@@ -483,7 +482,7 @@ func (s *AccountsServiceServer) SetCredentials(ctx context.Context, request *acc
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, acc.ID, access.ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, acc.ID, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
@@ -526,7 +525,7 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, acc.ID, access.ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, acc.ID, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 

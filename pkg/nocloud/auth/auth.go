@@ -20,10 +20,10 @@ import (
 	"errors"
 
 	"github.com/golang-jwt/jwt/v4"
-	billpb "github.com/slntopp/nocloud/pkg/billing/proto"
-	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
+	billpb "github.com/slntopp/nocloud-proto/billing"
+	healthpb "github.com/slntopp/nocloud-proto/health"
+	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"

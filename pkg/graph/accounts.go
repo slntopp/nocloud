@@ -26,9 +26,10 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 
+	"github.com/slntopp/nocloud-proto/access"
+	pb "github.com/slntopp/nocloud-proto/registry/accounts"
+	"github.com/slntopp/nocloud-proto/registry/namespaces"
 	"github.com/slntopp/nocloud/pkg/credentials"
-	pb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
-	"github.com/slntopp/nocloud/pkg/registry/proto/namespaces"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -117,7 +118,7 @@ func (ctrl *AccountsController) Update(ctx context.Context, acc Account, patch m
 }
 
 // Grant account access to namespace
-func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) error {
+func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level access.Level, role string) error {
 	_, err := edge.CreateDocument(ctx, Access{
 		From:  acc.ID,
 		To:    ns.ID,
@@ -131,7 +132,7 @@ func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, n
 }
 
 // Grant namespace access to account
-func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) error {
+func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level access.Level, role string) error {
 	_, err := edge.CreateDocument(ctx, Access{
 		From:  ns.ID,
 		To:    acc.ID,

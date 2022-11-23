@@ -6,11 +6,11 @@ import (
 
 	"github.com/Pallinder/go-randomdata"
 	"github.com/arangodb/go-driver"
+	ipb "github.com/slntopp/nocloud-proto/instances"
+	pb "github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/graph"
-	ipb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
-	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 )

@@ -19,9 +19,9 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
-	ipb "github.com/slntopp/nocloud/pkg/instances/proto"
+	ipb "github.com/slntopp/nocloud-proto/instances"
+	pb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	pb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 )
 

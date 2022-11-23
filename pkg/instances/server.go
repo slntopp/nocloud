@@ -20,10 +20,10 @@ import (
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
-	accesspb "github.com/slntopp/nocloud/pkg/access"
-	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
+	accesspb "github.com/slntopp/nocloud-proto/access"
+	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	pb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/graph"
-	pb "github.com/slntopp/nocloud/pkg/instances/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	s "github.com/slntopp/nocloud/pkg/states"

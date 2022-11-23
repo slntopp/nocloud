@@ -20,10 +20,11 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
-	"github.com/slntopp/nocloud/pkg/hasher"
+	"github.com/slntopp/nocloud-proto/access"
+	hasher "github.com/slntopp/nocloud-proto/hasher"
+	pb "github.com/slntopp/nocloud-proto/services"
 	nocloud "github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	pb "github.com/slntopp/nocloud/pkg/services/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -352,7 +353,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 }
 
 // Join Service into Namespace
-func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, ns *Namespace, access int32, role string) error {
+func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, ns *Namespace, access access.Level, role string) error {
 	ctrl.log.Debug("Joining service to namespace")
 	edge, _ := ctrl.db.Collection(ctx, schema.NS2SERV)
 	_, err := edge.CreateDocument(ctx, Access{

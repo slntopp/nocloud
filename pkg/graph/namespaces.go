@@ -19,11 +19,11 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud-proto/access"
+	"github.com/slntopp/nocloud-proto/registry/namespaces"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"github.com/slntopp/nocloud/pkg/registry/proto/namespaces"
 	"go.uber.org/zap"
 )
 
@@ -78,15 +78,15 @@ func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Nam
 		},
 	}
 
-	return ns, ctrl.Link(ctx, acc, ns, access.ADMIN, roles.OWNER)
+	return ns, ctrl.Link(ctx, acc, ns, access.Level_ADMIN, roles.OWNER)
 }
 
-func (ctrl *NamespacesController) Link(ctx context.Context, acc Account, ns Namespace, access int32, role string) error {
+func (ctrl *NamespacesController) Link(ctx context.Context, acc Account, ns Namespace, access access.Level, role string) error {
 	edge, _ := ctrl.col.Database().Collection(ctx, schema.ACC2NS)
 	return acc.LinkNamespace(ctx, edge, ns, access, role)
 }
 
-func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Namespace, access int32, role string) error {
+func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Namespace, access access.Level, role string) error {
 	edge, _ := ctrl.col.Database().Collection(ctx, schema.NS2ACC)
 	return acc.JoinNamespace(ctx, edge, ns, access, role)
 }
