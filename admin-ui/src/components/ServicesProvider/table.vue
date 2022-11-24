@@ -12,10 +12,21 @@
     />
 
     <v-row>
+      <v-col cols="6">
+        Fee:
+        <plan-opensrs
+          @changeFee="(data) => (fee = data)"
+          @onValid="(data) => (isValid = data)"
+        />
+      </v-col>
+      <v-col cols="6" />
+      <v-col cols="12">
+        <v-btn @click="setFee">Set fee</v-btn>
+      </v-col>
       <v-col lg="6" md="12">
+        Plans:
         <nocloud-table
           item-key="id"
-          group-by="name"
           :show-expand="true"
           :show-select="false"
           :show-group-by="true"
@@ -53,8 +64,8 @@
         </nocloud-table>
       </v-col>
       <v-col lg="6" md="12">
+        Addons:
         <nocloud-table
-          group-by="name"
           :show-select="false"
           :show-group-by="true"
           :items="addons"
@@ -100,13 +111,14 @@
 </template>
 
 <script>
+import planOpensrs from '../plan/opensrs/planOpensrs.vue';
 import nocloudTable from "@/components/table.vue";
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
 
 export default {
   name: 'sevices-provider-table',
-  components: { nocloudTable },
+  components: { nocloudTable, planOpensrs },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
   data: () => ({
@@ -130,6 +142,8 @@ export default {
       { text: 'Sell', value: 'sell', sortable: false, class: 'groupable', width: 100 }
     ],
 
+    fee: {},
+    isValid: true,
     isPlansLoading: false,
     nocloudPlan: '',
     fetchError: ''
@@ -241,11 +255,43 @@ export default {
 
       this.addons = result;
     },
+    setFee() {
+      [this.plans, this.addons].forEach((el) => {
+        el.forEach((plan, i, arr) => {
+          const n = Math.pow(10, this.fee.precision);
+          let percent = (this.fee?.default ?? 0) / 100 + 1;
+          let round;
+
+          switch (this.fee.round) {
+            case 1:
+              round = 'floor';
+              break;
+            case 2:
+              round = 'round';
+              break;
+            case 3:
+              round = 'ceil';
+          }
+
+          for (let range of this.fee.ranges) {
+            if (plan.value <= range.from) continue;
+            if (plan.value > range.to) continue;
+            percent = range.factor / 100 + 1;
+          }
+          arr[i].value = Math[round](plan.price.value * percent * n) / n;
+        });
+      });
+    },
     editPlan() {
       if (!this.nocloudPlan) {
         this.showSnackbarError({ message: 'Please select plan' });
         return;
       }
+      if (!this.isValid) {
+        this.showSnackbarError({ message: 'Fee is not valid' });
+        return;
+      }
+
       const plan = {
         ...this.nocloudPlans.find(({ uuid }) => uuid === this.nocloudPlan),
         resources: [], products: {}
@@ -348,7 +394,6 @@ export default {
   },
   watch: {
     nocloudPlan(value) {
-      console.log(value);
       const plan = this.nocloudPlans.find(({ uuid }) => uuid === value);
 
       plan.resources.forEach(({ key, price }) => {

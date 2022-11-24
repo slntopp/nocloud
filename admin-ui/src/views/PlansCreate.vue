@@ -418,16 +418,12 @@ export default {
     testConfig() {
       let message = "";
 
-      if (!this.isValid || (!this.isFeeValid && this.plan.type === "opensrs")) {
+      if (!this.isValid || !this.isFeeValid) {
         this.$refs.form.validate();
         message = "Validation failed!";
       }
 
-      if (
-        !message &&
-        this.plan.type === "opensrs" &&
-        (!this.plan.fee?.ranges || this.plan.fee?.ranges?.length === 0)
-      ) {
+      if (!message && (!this.plan.fee?.ranges || this.plan.fee?.ranges?.length === 0)) {
         message = "Ranges cant be empty!";
       }
 
