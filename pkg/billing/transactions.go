@@ -103,8 +103,34 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		log.Error("Failed to create transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
 	}
+
+	if r.Transaction.Priority == pb.Priority_URGENT {
+		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
+		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
+
+		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
+			"@accounts":      schema.ACCOUNTS_COL,
+			"@transactions":  schema.TRANSACTIONS_COL,
+			"accountKey":     acc.String(),
+			"transactionKey": transaction.String(),
+			"now":            time.Now().Unix(),
+		})
+		log.Error("Failed to process transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to create transaction")
+	}
+
 	return r.Transaction, nil
 }
+
+const processUrgentTransaction = `
+LET account = DOCUMENT(@accountKey)
+LET transaction = DOCUMENT(@transactionKey)
+
+UPDATE transaction WITH {processed: true, proc: @now} IN @@transactions
+UPDATE account WITH { balance: -transaction.total } IN @@accounts
+
+return account
+`
 
 const reprocessTransactions = `
 LET account = UNSET(DOCUMENT(@account), "balance")
