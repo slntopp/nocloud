@@ -20,10 +20,10 @@ import (
 	"errors"
 
 	"github.com/golang-jwt/jwt/v4"
-	billpb "github.com/slntopp/nocloud/pkg/billing/proto"
-	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
+	billpb "github.com/slntopp/nocloud-proto/billing"
+	healthpb "github.com/slntopp/nocloud-proto/health"
+	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"go.uber.org/zap"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -82,7 +82,7 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 	l.Debug("Invoked", zap.String("method", info.FullMethod))
 
 	switch info.FullMethod {
-	case "/nocloud.registry.AccountsService/Token", "/nocloud.health.InternalProbeService/Service":
+	case "/nocloud.health.InternalProbeService/Service":
 		return handler(ctx, req)
 	case "/nocloud.health.HealthService/Probe":
 		probe := req.(*healthpb.ProbeRequest)
@@ -101,7 +101,7 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 		}
 	}
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
-	if err != nil {
+	if info.FullMethod != "/nocloud.registry.AccountsService/Token" && err != nil {
 		return nil, err
 	}
 
@@ -113,39 +113,61 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	tokenString, err := grpc_auth.AuthFromMD(ctx, "bearer")
 	if err != nil {
 		l.Debug("Error extracting token", zap.Any("error", err))
-		return nil, err
+		return ctx, err
 	}
 
 	token, err := validateToken(tokenString)
 	if err != nil {
-		return nil, err
+		return ctx, err
 	}
 	log.Debug("Validated token", zap.Any("claims", token))
 
 	acc := token[nocloud.NOCLOUD_ACCOUNT_CLAIM]
 	if acc == nil {
-		return nil, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
+		return ctx, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
 	}
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.(string))
 	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, acc.(string))
 
-	ctx = func(ctx context.Context) context.Context {
+	ctx, err = func(ctx context.Context) (context.Context, error) {
 		sp := token[nocloud.NOCLOUD_SP_CLAIM]
 		if sp == nil {
-			return ctx
+			return ctx, nil
 		}
-		ctx = context.WithValue(ctx, nocloud.NoCloudSp, sp.(string))
-		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_SP_CLAIM, sp.(string))
+
+		s, ok := sp.(string)
+
+		if !ok {
+			return ctx, errors.New("wrong type of sp")
+		}
+
+		ctx = context.WithValue(ctx, nocloud.NoCloudSp, s)
+		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_SP_CLAIM, sp.(string)), nil
 	}(ctx)
 
-	ctx = func(ctx context.Context) context.Context {
+	if err != nil {
+		return ctx, err
+	}
+
+	ctx, err = func(ctx context.Context) (context.Context, error) {
 		inst := token[nocloud.NOCLOUD_INSTANCE_CLAIM]
 		if inst == nil {
-			return ctx
+			return ctx, nil
 		}
-		ctx = context.WithValue(ctx, nocloud.NoCloudInstance, inst.(string))
-		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_INSTANCE_CLAIM, inst.(string))
+
+		s, ok := inst.(string)
+
+		if !ok {
+			return ctx, errors.New("wrong type of inst")
+		}
+
+		ctx = context.WithValue(ctx, nocloud.NoCloudInstance, s)
+		return metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_INSTANCE_CLAIM, inst.(string)), nil
 	}(ctx)
+
+	if err != nil {
+		return ctx, err
+	}
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudToken, tokenString)
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer "+tokenString)

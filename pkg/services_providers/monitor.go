@@ -19,9 +19,9 @@ import (
 	"context"
 	"time"
 
-	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
+	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	settingspb "github.com/slntopp/nocloud-proto/settings"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
-	settingspb "github.com/slntopp/nocloud/pkg/settings/proto"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

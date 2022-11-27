@@ -18,8 +18,8 @@ package main
 import (
 	"context"
 
+	pb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/billing"
-	pb "github.com/slntopp/nocloud/pkg/health/proto"
 	"go.uber.org/zap"
 )
 

@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"net"
 
+	pb "github.com/slntopp/nocloud-proto/billing"
+	healthpb "github.com/slntopp/nocloud-proto/health"
 	billing "github.com/slntopp/nocloud/pkg/billing"
-	pb "github.com/slntopp/nocloud/pkg/billing/proto"
-	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"

@@ -1,4 +1,5 @@
 export default {
+	languages: ['en', 'ru'],
 	colors: global.colors,
 	dark: global.dark,
 	logoSrc: global.logoSrc ?? "",

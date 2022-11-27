@@ -26,9 +26,10 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 
+	"github.com/slntopp/nocloud-proto/access"
+	pb "github.com/slntopp/nocloud-proto/registry/accounts"
+	"github.com/slntopp/nocloud-proto/registry/namespaces"
 	"github.com/slntopp/nocloud/pkg/credentials"
-	pb "github.com/slntopp/nocloud/pkg/registry/proto/accounts"
-	"github.com/slntopp/nocloud/pkg/registry/proto/namespaces"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -71,12 +72,11 @@ func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, er
 	if id == "me" {
 		id = ctx.Value(nocloud.NoCloudAccount).(string)
 	}
-	var r pb.Account
 	account, err := GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
 	if err != nil {
 		return Account{}, err
 	}
-	ctrl.log.Debug("Got document", zap.Any("account", &r))
+	ctrl.log.Debug("Got document", zap.Any("account", account))
 	return account, err
 }
 
@@ -118,7 +118,7 @@ func (ctrl *AccountsController) Update(ctx context.Context, acc Account, patch m
 }
 
 // Grant account access to namespace
-func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) error {
+func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level access.Level, role string) error {
 	_, err := edge.CreateDocument(ctx, Access{
 		From:  acc.ID,
 		To:    ns.ID,
@@ -132,7 +132,7 @@ func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, n
 }
 
 // Grant namespace access to account
-func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level int32, role string) error {
+func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level access.Level, role string) error {
 	_, err := edge.CreateDocument(ctx, Access{
 		From:  ns.ID,
 		To:    acc.ID,
@@ -146,7 +146,7 @@ func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, n
 }
 
 func (acc *Account) Delete(ctx context.Context, db driver.Database) error {
-	err := DeleteRecursive(ctx, db, acc.ID, schema.PERMISSIONS_GRAPH.Name)
+	err := DeleteRecursive(ctx, db, acc.ID)
 	if err != nil {
 		return err
 	}

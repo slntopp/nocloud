@@ -361,11 +361,7 @@ export default {
       return this.vlansStart ? this.vlansStart + index : index;
     },
     getOSImgLink(name) {
-      console.log(name);
-      console.log(
-        "img/OS/" + name.replace(/[^a-zA-Z]+/g, "").toLowerCase() + ".png"
-      );
-      return "img/OS/" + name.replace(/[^a-zA-Z]+/g, "").toLowerCase() + ".png";
+      return "/admin/img/OS/" + name.replace(/[^a-zA-Z]+/g, "").toLowerCase() + ".png";
     },
   },
   mounted() {

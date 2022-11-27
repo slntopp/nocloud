@@ -21,14 +21,14 @@ import (
 	"net"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	driverpb "github.com/slntopp/nocloud/pkg/drivers/instance/vanilla"
-	healthpb "github.com/slntopp/nocloud/pkg/health/proto"
+	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	healthpb "github.com/slntopp/nocloud-proto/health"
+	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sp "github.com/slntopp/nocloud/pkg/services_providers"
-	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 

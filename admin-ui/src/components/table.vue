@@ -7,7 +7,7 @@
     loading-text="Loading... Please wait"
     color="background-light"
     :items="items"
-    show-select
+    :show-select="showSelect"
     :value="selected"
     @input="handleSelect"
     :single-select="singleSelect"
@@ -19,6 +19,8 @@
     :show-expand="showExpand"
     :page.sync="page"
     :items-per-page.sync="itemsPerPage"
+    :show-group-by="showGroupBy"
+    :group-by="groupBy"
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
@@ -125,12 +127,16 @@ export default {
       type: Array,
       default: () => [],
     },
-    showSelect: Boolean,
+    showSelect: {
+      type: Boolean,
+      default: true,
+    },
     checkboxColor: String,
     showExpand: Boolean,
     showGroupBy: Boolean,
     height: [Number, String],
     hideDefaultHeader: Boolean,
+    groupBy: String,
     caption: String,
     dense: Boolean,
     headerProps: Object,

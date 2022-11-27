@@ -23,12 +23,12 @@ import (
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
 
-	bpb "github.com/slntopp/nocloud/pkg/billing/proto"
-	"github.com/slntopp/nocloud/pkg/hasher"
-	pb "github.com/slntopp/nocloud/pkg/instances/proto"
+	bpb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud-proto/hasher"
+	pb "github.com/slntopp/nocloud-proto/instances"
+	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	sppb "github.com/slntopp/nocloud/pkg/services_providers/proto"
 )
 
 const (

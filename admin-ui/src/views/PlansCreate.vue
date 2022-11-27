@@ -40,7 +40,7 @@
           <plan-opensrs
             @changeFee="(data) => (plan.fee = data)"
             @onValid="(data) => (isFeeValid = data)"
-            v-if="plan.type === 'opensrs'"
+            v-if="plan.type === 'opensrs' || plan.type === 'ovh'"
             :fee="plan.fee"
             :isEdit="isEdit"
           />
@@ -74,54 +74,57 @@
 
           <v-divider />
 
-          <v-tabs v-model="form.title" background-color="background-light">
-            <v-tab
-              draggable="true"
-              active-class="background"
-              v-for="(title, i) of form.titles"
-              :key="title"
-              @drag="(e) => dragTab(e, i)"
-              @dragstart="dragTabStart"
-              @dragend="dragTabEnd"
-              @dblclick="edit = { isVisible: true, title }"
-            >
-              {{ title }}
-              <v-icon small right color="error" @click="removeConfig(title)">
-                mdi-close
-              </v-icon>
-            </v-tab>
-            <v-text-field
-              dense
-              outlined
-              :label="edit.isVisible ? `Edit ${edit.title}` : 'New config'"
-              class="ml-2 mt-1 mw-20"
-              v-if="isVisible || edit.isVisible"
-              @change="addConfig"
-            />
-            <v-icon v-else class="ml-2" @click="isVisible = true">
-              mdi-plus
-            </v-icon>
-          </v-tabs>
-
-          <v-divider />
-
-          <v-subheader v-if="form.titles.length > 0">
-            To edit the title, double-click the LMB
-          </v-subheader>
-
-          <v-tabs-items v-model="form.title">
-            <v-tab-item v-for="(title, i) of form.titles" :key="title">
-              <component
-                :is="template"
-                :keyForm="title"
-                :resource="plan.resources[i]"
-                :product="getProduct(i)"
-                :preset="preset(i)"
-                @change:resource="(data) => changeResource(i, data)"
-                @change:product="(data) => changeProduct(title, data)"
+          <plans-ovh-table v-if="plan.type === 'ovh' && item" :plan="item" />
+          <template v-else-if="plan.type !== 'ovh'">
+            <v-tabs v-model="form.title" background-color="background-light">
+              <v-tab
+                draggable="true"
+                active-class="background"
+                v-for="(title, i) of form.titles"
+                :key="title"
+                @drag="(e) => dragTab(e, i)"
+                @dragstart="dragTabStart"
+                @dragend="dragTabEnd"
+                @dblclick="edit = { isVisible: true, title }"
+              >
+                {{ title }}
+                <v-icon small right color="error" @click="removeConfig(title)">
+                  mdi-close
+                </v-icon>
+              </v-tab>
+              <v-text-field
+                dense
+                outlined
+                :label="edit.isVisible ? `Edit ${edit.title}` : 'New config'"
+                class="ml-2 mt-1 mw-20"
+                v-if="isVisible || edit.isVisible"
+                @change="addConfig"
               />
-            </v-tab-item>
-          </v-tabs-items>
+              <v-icon v-else class="ml-2" @click="isVisible = true">
+                mdi-plus
+              </v-icon>
+            </v-tabs>
+
+            <v-divider />
+
+            <v-subheader v-if="form.titles.length > 0">
+              To edit the title, double-click the LMB
+            </v-subheader>
+
+            <v-tabs-items v-model="form.title">
+              <v-tab-item v-for="(title, i) of form.titles" :key="title">
+                <component
+                  :is="template"
+                  :keyForm="title"
+                  :resource="plan.resources[i]"
+                  :product="getProduct(i)"
+                  :preset="preset(i)"
+                  @change:resource="(data) => changeResource(i, data)"
+                  @change:product="(data) => changeProduct(title, data)"
+                />
+              </v-tab-item>
+            </v-tabs-items>
+          </template>
         </v-col>
       </v-row>
 
@@ -172,11 +175,12 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
+import plansOvhTable from '../components/plans_ovh_table.vue';
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  components: { ConfirmDialog, PlanOpensrs },
+  components: { ConfirmDialog, PlanOpensrs, plansOvhTable },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
@@ -414,17 +418,12 @@ export default {
     testConfig() {
       let message = "";
 
-      if (!this.isValid || (!this.isFeeValid && this.plan.type==='opensrs')) {
+      if (!this.isValid || !this.isFeeValid) {
         this.$refs.form.validate();
         message = "Validation failed!";
       }
 
-      if (
-        (!message &&
-          this.plan.type === "opensrs" &&
-          this.plan.fee?.ranges?.length === 0) ||
-        !this.plan.fee?.ranges
-      ) {
+      if (!message && (!this.plan.fee?.ranges || this.plan.fee?.ranges?.length === 0)) {
         message = "Ranges cant be empty!";
       }
 
@@ -461,8 +460,13 @@ export default {
 
       if (`${day}`.length < 2) day = "0" + day;
       if (`${month}`.length < 2) month = "0" + month;
+      let seconds = Date.parse(`${year}-${month}-${day}T${time}Z`) / 1000;
 
-      return Date.parse(`${year}-${month}-${day}T${time}Z`) / 1000;
+      if (month > 1) {
+        seconds -= 60 * 60 * 24 * (month - 1);
+      }
+
+      return seconds;
     },
     getItem() {
       this.form.titles = [];
@@ -545,8 +549,9 @@ export default {
       switch (this.plan.type) {
         case "ione":
           if (this.plan.kind === "STATIC") return;
+          if (this.isEdit) return;
 
-          this.form.titles = ["cpu", "ram", "ip_public"];
+          this.form.titles = ["cpu", "ram", "ips_public"];
           this.isVisible = false;
           break;
         default:

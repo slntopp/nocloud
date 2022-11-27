@@ -20,10 +20,10 @@ import (
 	"time"
 
 	"github.com/arangodb/go-driver"
-	pb "github.com/slntopp/nocloud/pkg/billing/proto"
+	"github.com/slntopp/nocloud-proto/access"
+	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -39,7 +39,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.ADMIN) {
+		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 	}
@@ -51,7 +51,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	if req.Service != nil {
 		service := *req.Service
 		node := driver.NewDocumentID(schema.SERVICES_COL, service)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.ADMIN) {
+		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		query += ` && t.service == @service`
@@ -93,7 +93,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	log.Debug("Request received", zap.Any("transaction", t), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.SUDO)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
@@ -103,8 +103,34 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		log.Error("Failed to create transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
 	}
+
+	if r.Transaction.Priority == pb.Priority_URGENT {
+		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
+		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
+
+		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
+			"@accounts":      schema.ACCOUNTS_COL,
+			"@transactions":  schema.TRANSACTIONS_COL,
+			"accountKey":     acc.String(),
+			"transactionKey": transaction.String(),
+			"now":            time.Now().Unix(),
+		})
+		log.Error("Failed to process transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to create transaction")
+	}
+
 	return r.Transaction, nil
 }
+
+const processUrgentTransaction = `
+LET account = DOCUMENT(@accountKey)
+LET transaction = DOCUMENT(@transactionKey)
+
+UPDATE transaction WITH {processed: true, proc: @now} IN @@transactions
+UPDATE account WITH { balance: -transaction.total } IN @@accounts
+
+return account
+`
 
 const reprocessTransactions = `
 LET account = UNSET(DOCUMENT(@account), "balance")
@@ -125,7 +151,7 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessT
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
-	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.SUDO)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}

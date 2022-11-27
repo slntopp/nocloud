@@ -6,7 +6,7 @@ import (
 	"strconv"
 
 	"github.com/arangodb/go-driver"
-	pb "github.com/slntopp/nocloud/pkg/billing/proto"
+	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )

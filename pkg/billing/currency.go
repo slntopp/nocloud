@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
-	pb "github.com/slntopp/nocloud/pkg/billing/proto"
+	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"go.uber.org/zap"
 )

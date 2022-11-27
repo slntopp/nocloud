@@ -61,11 +61,7 @@
         >
           <v-expansion-panel-header>
             {{ group.title }} | Type: {{ group.type }} |
-            <v-chip
-              class="instance-group-status"
-              small
-              color="grey"
-            >
+            <v-chip class="instance-group-status" small color="grey">
               {{ group.instances.length }}
             </v-chip>
           </v-expansion-panel-header>
@@ -154,264 +150,14 @@
                       />
                     </v-expansion-panel-header>
                     <v-expansion-panel-content>
-                      <v-row v-if="!editing">
-                        <v-col>
-                          <service-control
-                            :service="service"
-                            :instance_uuid="instance.uuid"
-                            :chip-color="chipColor"
-                            @closePanel="openedInstances = {}"
-                          />
-                        </v-col>
-                      </v-row>
-                      <v-row v-if="!editing">
-                        <template v-if="group.type === 'ovh'">
-                          <v-col md="2">
-                            <v-text-field
-                              readonly
-                              :value="
-                                instance.state && instance.state.meta.state
-                              "
-                              label="state"
-                              style="display: inline-block; width: 100px"
-                            />
-                          </v-col>
-                          <v-col md="2">
-                            <v-text-field
-                              readonly
-                              :value="instance.state && instance.state.state"
-                              label="lcm state"
-                              style="display: inline-block; width: 100px"
-                            />
-                          </v-col>
-                        </template>
-                        <template v-else>
-                          <v-col md="2">
-                            <v-text-field
-                              readonly
-                              :value="
-                                instance.state && instance.state.meta.state_str
-                              "
-                              label="state"
-                              style="display: inline-block; width: 100px"
-                            />
-                          </v-col>
-                          <v-col md="2">
-                            <v-text-field
-                              readonly
-                              :value="
-                                instance.state &&
-                                instance.state.meta.lcm_state_str
-                              "
-                              label="lcm state"
-                              style="display: inline-block; width: 100px"
-                            />
-                          </v-col>
-                        </template>
-                        <v-col md="2">
-                          <v-text-field
-                            readonly
-                            :value="instance.billingPlan.title"
-                            label="billing plan"
-                            style="display: inline-block; width: 100px"
-                          />
-                        </v-col>
-                      </v-row>
-                      <v-row v-else>
-                        <v-col>
-                          <v-text-field
-                            v-if="editing"
-                            v-model="instance.title"
-                            label="title"
-                            style="display: inline-block; width: 160px"
-                          />
-                        </v-col>
-                        <v-col v-if="group.type === 'ione'">
-                          <v-text-field
-                            :readonly="!editing"
-                            :value="instance.config.template_id"
-                            label="template id"
-                            style="display: inline-block; width: 160px"
-                            @change="
-                              (v) => (instance.config.template_id = parseInt(v))
-                            "
-                          />
-                        </v-col>
-                        <v-col v-if="group.type === 'ione'">
-                          <v-text-field
-                            :readonly="!editing"
-                            v-model="instance.config.password"
-                            label="password"
-                            style="display: inline-block; width: 160px"
-                          />
-                        </v-col>
-                      </v-row>
-                      <v-row v-if="group.type !== 'ione'">
-                        <json-editor
-                          v-if="editing"
-                          :json="instance.config"
-                          @changeValue="(data) => (instance.config = data)"
-                        />
-                        <json-textarea
-                          v-else
-                          :json="instance.config"
-                          :readonly="true"
-                        />
-                      </v-row>
-                      <v-row v-else>
-                        <v-col>
-                          <v-text-field
-                            :readonly="!editing"
-                            :value="instance.resources.cpu"
-                            label="CPU"
-                            style="display: inline-block; width: 100px"
-                            @change="
-                              (v) => (instance.resources.cpu = parseInt(v))
-                            "
-                          />
-                        </v-col>
-                        <v-col>
-                          <v-text-field
-                            :readonly="!editing"
-                            :value="instance.resources.ram"
-                            label="RAM"
-                            style="display: inline-block; width: 100px"
-                            @change="
-                              (v) => (instance.resources.ram = parseInt(v))
-                            "
-                          />
-                        </v-col>
-                        <v-col>
-                          <v-text-field
-                            :readonly="!editing"
-                            :value="instance.resources.drive_size"
-                            label="drive size"
-                            style="display: inline-block; width: 100px"
-                            @change="
-                              (v) =>
-                                (instance.resources.drive_size = parseInt(v))
-                            "
-                          />
-                        </v-col>
-                        <v-col>
-                          <v-text-field
-                            readonly
-                            v-if="!editing"
-                            :value="instance.resources.drive_type"
-                            label="drive type"
-                            style="display: inline-block; width: 100px"
-                          />
-                          <v-select
-                            v-else
-                            v-model="instance.resources.drive_type"
-                            label="drive type"
-                            style="display: inline-block; width: 100px"
-                            :items="['SSD', 'HDD']"
-                          />
-                        </v-col>
-                        <v-col>
-                          <v-text-field
-                            :readonly="!editing"
-                            :value="instance.resources.ips_private"
-                            label="ips private"
-                            style="display: inline-block; width: 100px"
-                            @change="
-                              (v) =>
-                                (instance.resources.ips_private = parseInt(v))
-                            "
-                          />
-                        </v-col>
-                        <v-col>
-                          <v-text-field
-                            :readonly="!editing"
-                            :value="instance.resources.ips_public"
-                            label="ips public"
-                            style="display: inline-block; width: 100px"
-                            @change="
-                              (v) =>
-                                (instance.resources.ips_public = parseInt(v))
-                            "
-                          />
-                        </v-col>
-                        <v-col>
-                          <v-text-field
-                            readonly
-                            :value="instance.config.template_id"
-                            label="template id"
-                            style="display: inline-block; width: 100px"
-                            v-if="!editing"
-                          />
-                        </v-col>
-                      </v-row>
-                      <v-row
-                        class="flex-column"
-                        v-if="isIone(i) && instance.state && !editing"
-                      >
-                        <v-col>
-                          <h4 class="mb-2">Snapshots:</h4>
-                          <v-menu
-                            bottom
-                            offset-y
-                            transition="slide-y-transition"
-                            v-model="isVisible"
-                            :close-on-content-click="false"
-                          >
-                            <template v-slot:activator="{ on, attrs }">
-                              <v-btn class="mr-2" v-bind="attrs" v-on="on">
-                                Create
-                              </v-btn>
-                            </template>
-                            <v-card class="pa-4">
-                              <v-row>
-                                <v-col>
-                                  <v-text-field
-                                    dense
-                                    label="name"
-                                    v-model="snapshotName"
-                                    :rules="[(v) => !!v || 'Required!']"
-                                  />
-                                  <v-btn
-                                    :loading="isLoading"
-                                    @click="createSnapshot(instance.uuid)"
-                                  >
-                                    Send
-                                  </v-btn>
-                                </v-col>
-                              </v-row>
-                            </v-card>
-                          </v-menu>
-                          <v-btn
-                            class="mr-2"
-                            :loading="isDeleteLoading"
-                            @click="deleteSnapshot(instance)"
-                          >
-                            Delete
-                          </v-btn>
-                          <v-btn
-                            :loading="isRevertLoading"
-                            @click="revertToSnapshot(instance)"
-                          >
-                            Revert
-                          </v-btn>
-                        </v-col>
-                        <v-col>
-                          <nocloud-table
-                            single-select
-                            item-key="ts"
-                            v-model="selected"
-                            :items="
-                              Object.values(
-                                instance.state?.meta?.snapshots || {}
-                              )
-                            "
-                            :headers="headers"
-                          >
-                            <template v-slot:[`item.ts`]="{ item }">
-                              {{ date(item.ts) }}
-                            </template>
-                          </nocloud-table>
-                        </v-col>
-                      </v-row>
+                      <component
+                        :is="getInstanceCardComponent(group.type)"
+                        :chipColor="chipColor"
+                        :type="group.type"
+                        :editing="editing"
+                        :instance="instance"
+                        :service="service"
+                      ></component>
                     </v-expansion-panel-content>
                   </v-expansion-panel>
                 </v-expansion-panels>
@@ -455,19 +201,11 @@
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import ServiceDeploy from "@/components/service/service-deploy.vue";
-import ServiceControl from "@/components/service/service-control.vue";
-import nocloudTable from "@/components/table.vue";
-import JsonEditor from "../JsonEditor.vue";
-import JsonTextarea from "../JsonTextarea.vue";
 
 export default {
   name: "service-info",
   components: {
     ServiceDeploy,
-    ServiceControl,
-    nocloudTable,
-    JsonEditor,
-    JsonTextarea,
   },
   mixins: [snackbar],
   props: {
@@ -486,18 +224,10 @@ export default {
     openedInstances: {},
     editing: false,
     isLoading: false,
-    isDeleteLoading: false,
-    isRevertLoading: false,
 
-    headers: [
-      { text: "Name", value: "name" },
-      { text: "Time", value: "ts" },
-    ],
     instancesGroup: { uuid: "", type: "" },
     types: [],
-    selected: [],
-    isVisible: false,
-    snapshotName: "Snapshot",
+    templates: {},
   }),
   computed: {
     servicesProviders() {
@@ -505,9 +235,6 @@ export default {
     },
   },
   methods: {
-    isIone(index) {
-      return this.service.instancesGroups[index].type === "ione";
-    },
     addToClipboard(text, index) {
       if (navigator?.clipboard) {
         navigator.clipboard
@@ -571,96 +298,28 @@ export default {
           this.isLoading = false;
         });
     },
-    date(timestamp) {
-      const date = new Date(timestamp * 1000);
-      const time = date.toUTCString().split(" ")[4];
-
-      const day = date.getUTCDate();
-      const month = date.getUTCMonth() + 1;
-      const year = date.toUTCString().split(" ")[3];
-
-      return `${day}.${month}.${year} ${time}`;
-    },
-    createSnapshot(uuid) {
-      this.isLoading = true;
-
-      api.instances
-        .action({
-          uuid,
-          action: "snapcreate",
-          params: { snap_name: this.snapshotName },
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Snapshot created successfully",
-          });
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          });
-        })
-        .finally(() => {
-          this.isLoading = false;
-          this.isVisible = false;
-        });
-    },
-    deleteSnapshot({ uuid, state }) {
-      const { snapshots } = state.meta;
-      const [id] = Object.entries(snapshots).find(
-        ([, el]) => el.ts === this.selected[0].ts
-      );
-
-      this.isDeleteLoading = true;
-      api.instances
-        .action({
-          uuid,
-          action: "snapdelete",
-          params: { snap_id: +id },
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Snapshot deleted successfully",
-          });
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          });
-        })
-        .finally(() => {
-          this.isDeleteLoading = false;
-        });
-    },
-    revertToSnapshot({ uuid, state }) {
-      const { snapshots } = state.meta;
-      const [id] = Object.entries(snapshots).find(
-        ([, el]) => el.ts === this.selected[0].ts
-      );
-
-      this.isRevertLoading = true;
-      api.instances
-        .action({
-          uuid,
-          action: "snaprevert",
-          params: { snap_id: +id },
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Snapshot reverted successfully",
-          });
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          });
-        })
-        .finally(() => {
-          this.isRevertLoading = false;
-        });
+    getInstanceCardComponent(type) {
+      console.log(type);
+      console.log(this.templates[type]);
+      return this.templates[type];
     },
   },
   created() {
+    const types = require.context(
+      "@/components/modules/",
+      true,
+      /instanceCard\.vue$/
+    );
+
+    types.keys().forEach((key) => {
+      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCard\.vue/i);
+      if (matched && matched.length > 1) {
+        const type = matched[1];
+        this.templates[type] = () =>
+          import(`@/components/modules/${type}/instanceCard.vue`);
+      }
+    });
+
     this.$store.dispatch("namespaces/fetch").catch((err) => {
       this.showSnackbarError({
         message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
@@ -673,10 +332,12 @@ export default {
       true,
       /serviceProviders\.vue$/
     );
+
     types.keys().forEach((key) => {
       const matched = key.match(
         /\.\/([A-Za-z0-9-_,\s]*)\/serviceProviders\.vue/i
       );
+
       if (matched && matched.length > 1) {
         this.types.push(matched[1]);
       }

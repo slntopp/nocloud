@@ -21,6 +21,7 @@ export default {
   props: {
     item: { type: Object },
     isEdit: { type: Boolean, default: false },
+    isOpen: { type: Boolean, default: false },
   },
   data() {
     return {
@@ -40,7 +41,7 @@ export default {
   methods: {
     setDefaultDNS() {
       this.newDNS = {
-        type:'A',
+        type: "A",
         ip_adress: "",
         subdomain: "",
       };
@@ -67,10 +68,14 @@ export default {
     dnsKeys() {
       const withoutType = { ...this.newDNS };
       delete withoutType.type;
+      delete withoutType.id;
       return withoutType;
     },
   },
   watch: {
+    isOpen() {
+      this.setDefaultDNS();
+    },
     item() {
       if (this.isEdit) {
         this.newDNS = this.item;

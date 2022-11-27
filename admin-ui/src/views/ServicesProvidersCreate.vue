@@ -42,6 +42,19 @@
 
           <v-row align="center">
             <v-col cols="3">
+              <v-subheader> Proxy </v-subheader>
+            </v-col>
+
+            <v-col cols="9">
+              <v-text-field
+                v-model="provider.proxy.socket"
+                label="Socket"
+              ></v-text-field>
+            </v-col>
+          </v-row>
+
+          <v-row align="center">
+            <v-col cols="3">
               <v-subheader> Public </v-subheader>
             </v-col>
 
@@ -221,6 +234,7 @@ export default {
       type: "custom",
       title: "",
       public: true,
+      proxy: { socket: '' },
       secrets: {},
       vars: {},
     },

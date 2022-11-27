@@ -7,26 +7,9 @@ v-col
       :align="!fields[field].isJSON ? 'center' : null"
     >
       <v-col cols="4">
-        <v-subheader>
+        <subheader-with-info :infoText="`SPInfo.ione.${field}`">
           {{ fields[field].subheader || field }}
-
-          <v-tooltip
-            v-if="field == 'host' && hostWarning"
-            bottom
-            color="warning"
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-icon class="ml-2" color="warning" v-bind="attrs" v-on="on">
-                mdi-alert-outline
-              </v-icon>
-            </template>
-
-            <span
-              >Non-standard RPC path: "{{ hostWarning }}" instead of
-              "/RPC2"</span
-            >
-          </v-tooltip>
-        </v-subheader>
+        </subheader-with-info>
       </v-col>
 
       <v-col cols="8">
@@ -54,9 +37,18 @@ v-col
       </v-col>
     </v-row>
     <!-- Vlans key -->
-    <v-row>
+    <v-row class="ml-2">
       <v-col cols="4" v-for="field in vlansKeys()" :key="field">
+        <v-select
+          v-if="fields[field].type === 'select'"
+          :items="vlansKeysItems"
+          v-bind="fields[field].bind || {}"
+          :value="getValue(field)"
+          :placeholder="fields[field].label"
+          @change="(data) => changeHandler(field, data)"
+        />
         <v-text-field
+          v-else
           :placeholder="fields[field].label"
           @change="(data) => changeHandler(field, data)"
           :value="getValue(field)"
@@ -73,6 +65,7 @@ v-col
 
 <script>
 import JsonEditor from "@/components/JsonEditor.vue";
+import subheaderWithInfo from "@/components/ui/subheaderWithInfo.vue";
 
 function isJSON(str) {
   try {
@@ -86,7 +79,7 @@ function isJSON(str) {
 // const domainRegex = /^((https?:\/\/)|(www.))(?:(\.?[a-zA-Z0-9-]+){1,}|(\d+\.\d+.\d+.\d+))(\.[a-zA-Z]{2,})?(:\d{4})?\/?$/;
 // const domainRegex = /^(https?):\/\/(((?!-))(xn--|_{1,1})?[a-z0-9-]{0,61}[a-z0-9]{1,1}\.)*(xn--)?([a-z0-9][a-z0-9-]{0,60}|[a-z0-9-]{1,30}\.[a-z]{2,})$/
 export default {
-  components: { JsonEditor },
+  components: { JsonEditor, subheaderWithInfo },
   name: "servicesProviders-create-ione",
   props: {
     secrets: {
@@ -103,6 +96,7 @@ export default {
     },
   },
   data: () => ({
+    vlansKeysItems: ["vcenter"],
     hostWarning: false,
     errors: {
       host: [],
@@ -114,7 +108,7 @@ export default {
       sched: [],
       sched_ds: [],
       public_ip_pool: [],
-      private_vnets_pool: [],
+      private_vnet_tmpl: [],
     },
     fields: {
       host: {
@@ -158,7 +152,7 @@ export default {
         },
       },
       vlansKey: {
-        type: "text",
+        type: "select",
         subheader: "Vlans key",
         label: "vlans key",
         rules: [() => true],
@@ -204,16 +198,22 @@ export default {
       public_ip_pool: {
         type: "number",
         subheader: "Public IPs Pool ID",
-        rules: [(value) => !!value || value === 0 || "Field is required"],
+        rules: [
+          (value) => !!value || value === 0 || "Field is required",
+          (value) => !!Number(value) || "Field must be number"
+        ],
         label: "pip",
         bind: {
           min: 0,
         },
       },
-      private_vnets_pool: {
+      private_vnet_tmpl: {
         type: "number",
         subheader: "Private Networks Template ID",
-        rules: [(value) => !!value || value === 0 || "Field is required"],
+        rules: [
+          (value) => !!value || value === 0 || "Field is required",
+          (value) => !!Number(value) || "Field must be number"
+        ],
         label: "pvp",
         bind: {
           min: 0,
@@ -221,7 +221,7 @@ export default {
       },
       private_vnet_ban: {
         type: "bool",
-        label: "Private Network Ban",
+        label: "Private networking feature",
         rules: [() => true],
       },
     },
@@ -242,18 +242,6 @@ export default {
       let errors = {};
       const secrets = {};
       const vars = {};
-
-      // Object.keys(this.fields).forEach((fieldName) => {
-      //   this.fields[fieldName].rules.forEach((rule) => {
-      //     const result = rule(this.getValue(fieldName));
-      //     if (typeof result == "string") {
-      //       this.errors[fieldName] = [result];
-      //       errors[fieldName] = result;
-      //     } else {
-      //       this.errors[fieldName] = [];
-      //     }
-      //   });
-      // });
 
       for (const secretKey of this.secretsKeys()) {
         secrets[secretKey] =
@@ -286,7 +274,7 @@ export default {
 
       const defaultVars = [
         "public_ip_pool",
-        "private_vnets_pool",
+        "private_vnet_tmpl",
         "private_vnet_ban",
       ];
       for (const varKey of defaultVars) {
@@ -316,7 +304,7 @@ export default {
 
     setVarsValueDefault(vars, fieldName, isChange, data) {
       vars[fieldName] = {
-        value: { default: isChange ? data : this.getValue(fieldName) },
+        value: { default: isChange ? JSON.parse(data) : this.getValue(fieldName) },
       };
     },
 
@@ -355,9 +343,9 @@ export default {
 
       switch (fieldName) {
         case "public_ip_pool":
-          return this.vars.public_ip_pool?.value?.default ?? "";
-        case "private_vnets_pool":
-          return this.vars.private_vnets_pool?.value?.default ?? "";
+          return this.vars.public_ip_pool?.value?.default ?? 0;
+        case "private_vnet_tmpl":
+          return this.vars.private_vnet_tmpl?.value?.default ?? 0;
         case "private_vnet_ban":
           return this.vars.private_vnet_ban?.default ?? false;
         default:

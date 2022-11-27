@@ -62,27 +62,27 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	tokenString, err := grpc_auth.AuthFromMD(ctx, "bearer")
 	if err != nil {
 		l.Debug("Error extracting token", zap.Any("error", err))
-		return nil, err
+		return ctx, err
 	}
 
 	token, err := validateToken(tokenString)
 	if err != nil {
-		return nil, err
+		return ctx, err
 	}
 	log.Debug("Validated token", zap.Any("claims", token))
 
 	acc := token[nocloud.NOCLOUD_ACCOUNT_CLAIM]
 	if acc == nil {
-		return nil, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
+		return ctx, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
 	}
 	rootAccessClaim := token[nocloud.NOCLOUD_ROOT_CLAIM]
 	lvlF, ok := rootAccessClaim.(float64)
 	if !ok {
-		return nil, status.Error(codes.Unauthenticated, "Root Access Claim not provided")
+		return ctx, status.Error(codes.Unauthenticated, "Root Access Claim not provided")
 	}
 	lvl := int32(lvlF)
 	if lvl == 0 {
-		return nil, status.Error(codes.PermissionDenied, "Account has no root access")
+		return ctx, status.Error(codes.PermissionDenied, "Account has no root access")
 	}
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.(string))
 	ctx = context.WithValue(ctx, nocloud.NoCloudRootAccess, lvl)

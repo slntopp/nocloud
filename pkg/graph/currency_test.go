@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	pb "github.com/slntopp/nocloud/pkg/billing/proto"
+	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"

@@ -19,12 +19,12 @@ import (
 	"context"
 
 	"github.com/arangodb/go-driver"
-	pb "github.com/slntopp/nocloud/pkg/registry/proto"
-	namespacespb "github.com/slntopp/nocloud/pkg/registry/proto/namespaces"
+	pb "github.com/slntopp/nocloud-proto/registry"
+	namespacespb "github.com/slntopp/nocloud-proto/registry/namespaces"
 
+	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
@@ -79,7 +79,12 @@ func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacesp
 	}
 	log.Debug("Requestor", zap.Any("account", acc))
 
-	pool, err := s.ctrl.List(ctx, acc, request.GetDepth())
+	depth := request.GetDepth()
+	if depth == 0 {
+		depth = 10
+	}
+
+	pool, err := s.ctrl.List(ctx, acc, depth)
 	if err != nil {
 		s.log.Debug("Error listing namespaces", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing namespaces")
@@ -104,21 +109,21 @@ func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacesp
 	}
 
 	var ok bool
-	var level int32
+	var level access.Level
 	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), acc.ID)
-	if !ok || level < access.ADMIN {
+	if !ok || level < access.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
 	}
 
 	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID)
-	if !ok || level < access.ADMIN {
+	if !ok || level < access.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
 	if request.Access == nil {
 		level = level - 1
 	} else {
-		level = *request.Access
+		level = access.Level(*request.Access)
 	}
 
 	err = s.ctrl.Join(ctx, acc, ns, level, roles.DEFAULT)
@@ -145,14 +150,14 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 	}
 
 	ok, level := graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID)
-	if !ok || level < access.ADMIN {
+	if !ok || level < access.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
 	if request.Access == nil {
 		level = level - 1
 	} else {
-		level = *request.Access
+		level = access.Level(*request.Access)
 	}
 
 	err = s.ctrl.Link(ctx, acc, ns, level, roles.DEFAULT)
@@ -176,7 +181,7 @@ func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespace
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, ns.ID, access.ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "NoAccess")
 	}
 
