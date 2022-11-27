@@ -26,8 +26,10 @@ import (
 	"github.com/Pallinder/go-randomdata"
 	"github.com/arangodb/go-driver"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	"github.com/slntopp/nocloud/pkg/access"
+	"github.com/slntopp/nocloud-proto/access"
+	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/edge/auth"
+	"github.com/slntopp/nocloud/pkg/graph"
 	nograph "github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
@@ -36,12 +38,69 @@ import (
 	"go.uber.org/zap"
 
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	pb "github.com/slntopp/nocloud/pkg/billing/proto"
-	ipb "github.com/slntopp/nocloud/pkg/instances/proto"
-	srvpb "github.com/slntopp/nocloud/pkg/services/proto"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	ipb "github.com/slntopp/nocloud-proto/instances"
+	srvpb "github.com/slntopp/nocloud-proto/services"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 )
+
+var (
+	log           *zap.Logger
+	port          string
+	arangodbHost  string
+	arangodbCred  string
+	SIGNING_KEY   []byte
+	db            driver.Database
+	billingServer *BillingServiceServer
+)
+
+func init() {
+
+	viper.AutomaticEnv()
+	log = nocloud.NewLogger()
+
+	viper.SetDefault("PORT", "8000")
+
+	viper.SetDefault("DB_HOST", "localhost:8529")
+	viper.SetDefault("DB_CRED", "root:openSesame")
+	viper.SetDefault("DRIVERS", "")
+	viper.SetDefault("EXTENTION_SERVERS", "")
+	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+
+	port = viper.GetString("PORT")
+
+	arangodbHost = viper.GetString("DB_HOST")
+	arangodbCred = viper.GetString("DB_CRED")
+	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
+	if err != nil {
+		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
+	}
+
+	defer func() {
+		_ = log.Sync()
+	}()
+
+	log.Info("Setting up DB Connection")
+	db = connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	log.Info("DB connection established")
+
+	auth.SetContext(log, SIGNING_KEY)
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_zap.UnaryServerInterceptor(log),
+			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
+		)),
+	)
+
+	billingServer = NewBillingServiceServer(log, db)
+
+	pb.RegisterBillingServiceServer(s, billingServer)
+	go s.Serve(lis)
+
+}
 
 func TestGenerateTransactions(t *testing.T) {
 	testCases := []struct {
@@ -63,51 +122,8 @@ func TestGenerateTransactions(t *testing.T) {
 		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_EUR, TotalPrice: 1.0, FinalBalance: 1.0, InitialBalance: 5.0},
 		{Rounding: "CEIL", UserCurrency: pb.Currency_NCU, RecCurrency: pb.Currency_PLN, TotalPrice: 1.0, FinalBalance: 4.0, InitialBalance: 5.0},
 	}
-
-	viper.AutomaticEnv()
-	log := nocloud.NewLogger()
-
-	viper.SetDefault("PORT", "8000")
-
-	viper.SetDefault("DB_HOST", "localhost:8529")
-	viper.SetDefault("DB_CRED", "root:openSesame")
-	viper.SetDefault("DRIVERS", "")
-	viper.SetDefault("EXTENTION_SERVERS", "")
-	viper.SetDefault("SIGNING_KEY", "seeeecreet")
-
-	port := viper.GetString("PORT")
-
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
-	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
-	}
-
-	arangodbHost := viper.GetString("DB_HOST")
-	arangodbCred := viper.GetString("DB_CRED")
-	SIGNING_KEY := []byte(viper.GetString("SIGNING_KEY"))
-
-	defer func() {
-		_ = log.Sync()
-	}()
-
-	log.Info("Setting up DB Connection")
-	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
-	log.Info("DB connection established")
-
-	auth.SetContext(log, SIGNING_KEY)
-	s := grpc.NewServer(
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			grpc_zap.UnaryServerInterceptor(log),
-			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
-		)),
-	)
-
-	billingServer := NewBillingServiceServer(log, db)
-
-	pb.RegisterBillingServiceServer(s, billingServer)
-	go s.Serve(lis)
 	// currencyController := nograph.NewCurrencyController(log, db)
-	accountConroller := nograph.NewAccountsController(log, db)
+	accountController := nograph.NewAccountsController(log, db)
 	recordsController := nograph.NewRecordsController(log, db)
 	nsConroller := nograph.NewNamespacesController(log, db)
 	srvConroller := nograph.NewServicesController(log, db)
@@ -123,7 +139,7 @@ func TestGenerateTransactions(t *testing.T) {
 	currencyController.CreateExchangeRate(ctx, pb.Currency_USD, pb.Currency_NCU, 2.0)
 	currencyController.CreateExchangeRate(ctx, pb.Currency_EUR, pb.Currency_USD, 2.0)
 
-	acc, err := accountConroller.Create(ctx, "test_account")
+	acc, err := accountController.Create(ctx, "test_account")
 	if err != nil {
 		t.Error(err)
 	}
@@ -135,7 +151,7 @@ func TestGenerateTransactions(t *testing.T) {
 		t.Error(err)
 	}
 
-	nsConroller.Link(ctx, acc, ns, int32(access.Level_ADMIN), roles.OWNER)
+	nsConroller.Link(ctx, acc, ns, access.Level_ADMIN, roles.OWNER)
 
 	sp := "biliboba"
 	srv, err := srvConroller.Create(ctx, &srvpb.Service{
@@ -180,13 +196,13 @@ func TestGenerateTransactions(t *testing.T) {
 		t.Error(err)
 	}
 
-	if err := srvConroller.Join(ctx, srv, &ns, int32(access.Level_ADMIN), roles.OWNER); err != nil {
+	if err := srvConroller.Join(ctx, srv, &ns, access.Level_ADMIN, roles.OWNER); err != nil {
 		t.Error(err)
 	}
 
 	// Use i in records to prevent overlapping
 	for i, tc := range testCases {
-		accountConroller.Update(ctx, acc, map[string]interface{}{
+		accountController.Update(ctx, acc, map[string]interface{}{
 			"balance": tc.InitialBalance,
 		})
 
@@ -208,7 +224,7 @@ func TestGenerateTransactions(t *testing.T) {
 			},
 		)
 
-		acc, err = accountConroller.Get(ctx, acc.ID.Key())
+		acc, err = accountController.Get(ctx, acc.ID.Key())
 		if err != nil {
 			t.Error(err)
 		}
@@ -216,5 +232,63 @@ func TestGenerateTransactions(t *testing.T) {
 			t.Errorf("Got wrong balance. Got %f. Wanted %f.", acc.GetBalance(), tc.FinalBalance)
 		}
 	}
+}
 
+func TestReprocessTransactions(t *testing.T) {
+	total := 10.0
+	rate := 2.1
+	amount := 4
+	accountUuid := randomdata.RandStringRunes(10)
+
+	ctx := context.TODO()
+	g := graph.GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
+	acccol := graph.GraphGetVertexEnsure(log, ctx, db, g, schema.ACCOUNTS_COL)
+	nscol := graph.GraphGetVertexEnsure(log, ctx, db, g, schema.NAMESPACES_COL)
+	currencyController := nograph.NewCurrencyController(log, db)
+	trController := nograph.NewTransactionsController(log, db)
+
+	for i := 0; i < amount; i++ {
+		trController.Create(ctx, &pb.Transaction{
+			Account:  accountUuid,
+			Currency: pb.Currency_NCU,
+			Total:    10,
+		})
+	}
+
+	currencyController.DeleteExchangeRate(ctx, pb.Currency_NCU, pb.Currency_USD)
+	if err := currencyController.CreateExchangeRate(ctx, pb.Currency_NCU, pb.Currency_USD, rate); err != nil {
+		t.Fatal(err)
+	}
+
+	acccol.CreateDocument(ctx, map[string]interface{}{
+		"_key":     accountUuid,
+		"currency": pb.Currency_USD,
+	})
+
+	nscol.CreateDocument(ctx, map[string]interface{}{
+		"_key": schema.ROOT_NAMESPACE_KEY,
+	})
+
+	acc2ns := graph.GraphGetEdgeEnsure(log, ctx, g, schema.ACC2NS, schema.ACCOUNTS_COL, schema.NAMESPACES_COL)
+	if _, err := acc2ns.CreateDocument(ctx, &graph.Access{
+		From:  driver.NewDocumentID(schema.ACCOUNTS_COL, accountUuid),
+		To:    driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY),
+		Role:  roles.OWNER,
+		Level: access.Level_ROOT,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, accountUuid)
+	if _, err := billingServer.Reprocess(ctx, &pb.ReprocessTransactionsRequest{Account: accountUuid}); err != nil {
+		t.Fatal(err)
+	}
+
+	account := &accpb.Account{}
+	acccol.ReadDocument(ctx, accountUuid, account)
+	want := -float64(amount) * total * rate
+	got := account.GetBalance()
+	if got != want {
+		t.Errorf("Wrong balance: got %f, wanted %f\n", got, want)
+	}
 }
