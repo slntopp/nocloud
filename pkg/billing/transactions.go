@@ -115,8 +115,10 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 			"transactionKey": transaction.String(),
 			"now":            time.Now().Unix(),
 		})
-		log.Error("Failed to process transaction", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to create transaction")
+		if err != nil {
+			log.Error("Failed to process transaction", zap.String("err", err.Error()))
+			return nil, status.Error(codes.Internal, "Failed to process transaction")
+		}
 	}
 
 	return r.Transaction, nil
