@@ -3,6 +3,7 @@ package billing
 import (
 	"context"
 
+	pb "github.com/slntopp/nocloud-proto/billing"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"go.uber.org/zap"
 )
@@ -20,7 +21,7 @@ type RoutineConf struct {
 }
 
 type CurrencyConf struct {
-	Currency int `json:"currency"` // Default currency for platform
+	Currency int32 `json:"currency"` // Default currency for platform
 }
 
 type RoundingConf struct {
@@ -53,7 +54,7 @@ var (
 	}
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
-			Currency: 0,
+			Currency: int32(pb.Currency_NCU),
 		},
 		Description: "Default currency for platform",
 		Public:      false,

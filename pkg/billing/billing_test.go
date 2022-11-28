@@ -29,7 +29,6 @@ import (
 	"github.com/slntopp/nocloud-proto/access"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/edge/auth"
-	"github.com/slntopp/nocloud/pkg/graph"
 	nograph "github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
@@ -217,7 +216,7 @@ func TestGenerateTransactions(t *testing.T) {
 
 		billingServer.GenTransactions(ctx, log, time.Now(),
 			CurrencyConf{
-				Currency: int(tc.UserCurrency),
+				Currency: int32(tc.UserCurrency),
 			},
 			RoundingConf{
 				Rounding: tc.Rounding,
@@ -241,9 +240,9 @@ func TestReprocessTransactions(t *testing.T) {
 	accountUuid := randomdata.RandStringRunes(10)
 
 	ctx := context.TODO()
-	g := graph.GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
-	acccol := graph.GraphGetVertexEnsure(log, ctx, db, g, schema.ACCOUNTS_COL)
-	nscol := graph.GraphGetVertexEnsure(log, ctx, db, g, schema.NAMESPACES_COL)
+	graph := nograph.GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
+	acccol := nograph.GraphGetVertexEnsure(log, ctx, db, graph, schema.ACCOUNTS_COL)
+	nscol := nograph.GraphGetVertexEnsure(log, ctx, db, graph, schema.NAMESPACES_COL)
 	currencyController := nograph.NewCurrencyController(log, db)
 	trController := nograph.NewTransactionsController(log, db)
 
@@ -269,8 +268,8 @@ func TestReprocessTransactions(t *testing.T) {
 		"_key": schema.ROOT_NAMESPACE_KEY,
 	})
 
-	acc2ns := graph.GraphGetEdgeEnsure(log, ctx, g, schema.ACC2NS, schema.ACCOUNTS_COL, schema.NAMESPACES_COL)
-	if _, err := acc2ns.CreateDocument(ctx, &graph.Access{
+	acc2ns := nograph.GraphGetEdgeEnsure(log, ctx, graph, schema.ACC2NS, schema.ACCOUNTS_COL, schema.NAMESPACES_COL)
+	if _, err := acc2ns.CreateDocument(ctx, &nograph.Access{
 		From:  driver.NewDocumentID(schema.ACCOUNTS_COL, accountUuid),
 		To:    driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY),
 		Role:  roles.OWNER,
