@@ -129,7 +129,7 @@ LET account = DOCUMENT(@accountKey)
 LET transaction = DOCUMENT(@transactionKey)
 
 UPDATE transaction WITH {processed: true, proc: @now} IN @@transactions
-UPDATE account WITH { balance: -transaction.total } IN @@accounts
+UPDATE account WITH { balance: account.balance - transaction.total } IN @@accounts
 
 return account
 `
