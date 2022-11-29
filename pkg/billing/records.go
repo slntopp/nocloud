@@ -189,7 +189,7 @@ FOR service IN @@services // Iterate over Services
         exec: @now, // Timestamp in seconds
         processed: false,
         account: account._key,
-		priority: @priority
+		priority: @priority,
         service: service._key,
         records: records[*]._key,
         total: SUM(records[*].total) // Calculate Total
