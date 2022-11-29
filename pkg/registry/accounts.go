@@ -303,6 +303,9 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 		request.Exp = int32(time.Now().Unix() + int64(time.Minute.Seconds())*5)
 	} else {
+		if request.GetAuth() == nil {
+			return nil, status.Error(codes.InvalidArgument, "Auth data was not presented")
+		}
 		acc, ok = s.ctrl.Authorize(ctx, request.Auth.Type, request.Auth.Data...)
 		if !ok {
 			return nil, status.Error(codes.Unauthenticated, "Wrong credentials given")
