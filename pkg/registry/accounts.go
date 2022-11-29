@@ -419,10 +419,10 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 
 	if acc.Access == nil {
 		log.Warn("Error Access is nil")
-		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+		return nil, status.Error(codes.PermissionDenied, "Error Access is nil")
 	}
 
-	if requestor != request.GetUuid() {
+	if requestor == request.GetUuid() {
 		acc.Access.Level = access.Level_ROOT
 	}
 
