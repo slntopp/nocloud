@@ -174,10 +174,4 @@ See [CLI repo](https://github.com/slntopp/nocloud-cli) for source and instructio
 
 ## Building Proto
 
-Simply navigate to cloned repo directory and run:
-
-```shell
-docker run -it \
-  -v $(pwd)/pkg:/go/src/github.com/slntopp/nocloud/pkg \
-  ghcr.io/slntopp/nocloud/buf:latest
-```
+For docs and scripts navigate to [Proto repo](https://github.com/slntopp/nocloud-proto).
