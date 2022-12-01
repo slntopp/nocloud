@@ -254,7 +254,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 					break
 				}
 				if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
-					log.Error("Error Suspending Account", zap.Error(err))
+					log.Error("Error Suspending Service", zap.Error(err))
 				}
 			}
 		}
@@ -292,7 +292,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 					break
 				}
 				if _, err := accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
-					log.Error("Error Suspending Account", zap.Error(err))
+					log.Error("Error Unsuspending service", zap.Error(err))
 				}
 			}
 		}
