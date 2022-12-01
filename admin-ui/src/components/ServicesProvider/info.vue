@@ -50,16 +50,7 @@
       </v-col>
     </v-row>
 
-    <component :is="spTypes" :template="provider" :editing="editing">
-      <v-row v-if="editing">
-        <v-col :cols="12" :md="6">
-          <json-editor
-            :json="provider.secrets"
-            @changeValue="(data) => (provider.secrets = data)"
-          />
-        </v-col>
-      </v-row>
-
+    <component :is="spTypes" :template="provider">
       <!-- Variables -->
       <v-card-title class="px-0 mb-3">Variables:</v-card-title>
       <v-row v-if="!editing">

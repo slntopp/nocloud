@@ -7,6 +7,7 @@
           <v-card-title class="text-h6">
             Are you sure you want to do this?
           </v-card-title>
+          <v-card-text v-if="text">{{ text }}</v-card-text>
           <v-card-actions class="buttons">
             <v-btn color="red darken-1" @click="onCancel"> Cancel </v-btn>
             <v-btn color="primary darken-1" @click="onConfirm"> Confirm </v-btn>
@@ -19,14 +20,11 @@
 <script>
 export default {
   props: {
-    disabled: { default: false },
+    disabled: { type: Boolean, default: false },
+    text: { type: String, default: null }
   },
   name: "confirm-dialog",
-  data() {
-    return {
-      dialog: false,
-    };
-  },
+  data: () => ({ dialog: false }),
   methods: {
     open() {
       if (!this.disabled) {

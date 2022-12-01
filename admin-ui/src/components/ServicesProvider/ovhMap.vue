@@ -85,11 +85,9 @@ export default {
   },
   mounted() {
     api
-      .post(`/sp/${this.template.uuid}/invoke`, { method: "flavors" })
+      .post(`/sp/${this.template.uuid}/invoke`, { method: "regions" })
       .then(({ meta }) => {
-        this.allRegions = meta.result
-          .map((el) => el.region)
-          .filter((element, index, arr) => arr.indexOf(element) === index);
+        this.allRegions = meta.datacenters;
       })
       .catch(() => {
         this.mapError = "Error: Cannot download regions";
