@@ -253,7 +253,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 					log.Error("Error Read Srv uuid", zap.Error(err))
 					break
 				}
-				if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+				if _, err := srvClient.Suspend(ctx, &srvpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 					log.Error("Error Suspending Service", zap.Error(err))
 				}
 			}
@@ -291,7 +291,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 					log.Error("Error Read Srv uuid", zap.Error(err))
 					break
 				}
-				if _, err := accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+				if _, err := srvClient.Unsuspend(ctx, &srvpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 					log.Error("Error Unsuspending service", zap.Error(err))
 				}
 			}
