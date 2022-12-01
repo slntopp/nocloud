@@ -18,7 +18,7 @@ require (
 	github.com/spf13/viper v1.14.0
 	github.com/stoewer/go-strcase v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
-	go.uber.org/zap v1.23.0
+	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.0.0-20220622213112-05595931fe9d
 	golang.org/x/net v0.2.0
 	google.golang.org/grpc v1.51.0
