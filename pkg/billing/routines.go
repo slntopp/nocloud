@@ -17,11 +17,13 @@ package billing
 
 import (
 	"context"
+	"github.com/arangodb/go-driver"
 	"time"
 
 	hpb "github.com/slntopp/nocloud-proto/health"
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
+	srvpb "github.com/slntopp/nocloud-proto/services"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
@@ -34,6 +36,7 @@ import (
 var (
 	settingsClient settingspb.SettingsServiceClient
 	accClient      regpb.AccountsServiceClient
+	srvClient      srvpb.ServicesServiceClient
 )
 
 // Settings Key storing routine conf
@@ -120,8 +123,10 @@ func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
+	viper.SetDefault("SERVICES_HOST", "registry:8000")
 	settingsHost := viper.GetString("SETTINGS_HOST")
 	registryHost := viper.GetString("REGISTRY_HOST")
+	servicesHost := viper.GetString("REGISTRY_HOST")
 
 	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -134,6 +139,12 @@ func init() {
 		panic(err)
 	}
 	accClient = regpb.NewAccountsServiceClient(accConn)
+
+	srvConn, err := grpc.Dial(servicesHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	srvClient = srvpb.NewServicesServiceClient(srvConn)
 }
 
 func MakeRoutineConf(ctx context.Context, log *zap.Logger) (conf RoutineConf) {
@@ -228,6 +239,24 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Suspending Account", zap.Error(err))
 			}
+
+			accDocumentId := driver.NewDocumentID(schema.ACCOUNTS_COL, acc.GetUuid())
+
+			servicesCursor, _ := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
+				"account":     accDocumentId,
+				"permissions": schema.PERMISSIONS_GRAPH,
+			})
+			if servicesCursor.HasMore() {
+				var srvId string
+				_, err := servicesCursor.ReadDocument(ctx, &srvId)
+				if err != nil {
+					log.Error("Error Read Srv uuid", zap.Error(err))
+					break
+				}
+				if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+					log.Error("Error Suspending Account", zap.Error(err))
+				}
+			}
 		}
 
 		cursor2, err := s.db.Query(ctx, accToUnsuspend, map[string]interface{}{
@@ -247,6 +276,24 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			// log.Debug("acc", zap.String("uuid", acc.GetUuid()), zap.Any("value", acc))
 			if _, err := accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Unsuspending Account", zap.Error(err))
+			}
+
+			accDocumentId := driver.NewDocumentID(schema.ACCOUNTS_COL, acc.GetUuid())
+
+			servicesCursor, _ := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
+				"account":     accDocumentId,
+				"permissions": schema.PERMISSIONS_GRAPH,
+			})
+			if servicesCursor.HasMore() {
+				var srvId string
+				_, err := servicesCursor.ReadDocument(ctx, &srvId)
+				if err != nil {
+					log.Error("Error Read Srv uuid", zap.Error(err))
+					break
+				}
+				if _, err := accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+					log.Error("Error Suspending Account", zap.Error(err))
+				}
 			}
 		}
 
@@ -368,4 +415,10 @@ FILTER !t.processed
     LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
     UPDATE account WITH { balance: account.balance - t.total } IN @@accounts
     UPDATE t WITH { processed: true, proc: @now } IN @@transactions
+`
+
+const getServicesOfAccount = `
+FOR node IN 2 OUTBOUND @account
+graph @permissions
+    return node.uuid
 `
