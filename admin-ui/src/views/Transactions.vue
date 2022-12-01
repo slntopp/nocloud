@@ -199,6 +199,9 @@ export default {
   },
   mounted() {
     const accounts = [];
+    if (this.accounts.length < 2) {
+      this.$store.dispatch('accounts/fetch');
+    }
     if (!this.$store.getters["transactions/all"].length) {
       this.getTransactions();
     }
@@ -276,7 +279,7 @@ export default {
 
       this.transactions?.forEach((el, i, arr) => {
         values.push((balance -= el.total));
-        labels.push(`${balance} NCU`);
+        labels.push(`${balance.toFixed(2)} NCU`);
         dates.push(
           el.proc - arr[i - 1]?.proc || arr[i + 1]?.proc - el.proc || el.proc
         );

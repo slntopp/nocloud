@@ -29,7 +29,16 @@
           v-if="!loading && item"
           :is="tab.component"
           :template="item"
-        />
+        >
+          <v-row>
+            <v-col :cols="12" :md="6">
+              <json-editor
+                :json="item.secrets"
+                @changeValue="(data) => (provider.secrets = data)"
+              />
+            </v-col>
+          </v-row>
+        </component>
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -37,8 +46,10 @@
 
 <script>
 import config from "@/config.js";
+import JsonEditor from '../components/JsonEditor.vue';
 
 export default {
+  components: { JsonEditor },
   name: "service-providers-view",
   data: () => ({
     found: false,
@@ -66,11 +77,15 @@ export default {
           component: () => import("@/components/ServicesProvider/info.vue"),
         },
         {
+          title: "Secrets",
+          component: () => import(`@/components/modules/${this.item?.type}/serviceProviderSecrets.vue`)
+            .catch(() => import("@/components/modules/custom/serviceProviderSecrets.vue")),
+        },
+        {
           title: "Map",
-          component:
-            this.item?.type === "ovh"
-              ? () => import("@/components/ServicesProvider/ovhMap.vue")
-              : () => import("@/components/ServicesProvider/map.vue"),
+          component: (this.item?.type === "ovh")
+            ? () => import("@/components/ServicesProvider/ovhMap.vue")
+            : () => import("@/components/ServicesProvider/map.vue"),
         },
         {
           title: "Template",
@@ -78,9 +93,13 @@ export default {
         },
       ];
 
-      if (this.item?.type === 'ovh') tabs.push({
+      if (this.item?.type === 'ovh') tabs.splice(tabs.length - 1, 0, {
         title: "Prices",
-        component: () => import("@/components/ServicesProvider/table.vue")
+        component: () => import("@/components/ServicesProvider/ovhPrices.vue")
+      });
+      else if (this.item?.type === 'goget') tabs.splice(tabs.length - 1, 0, {
+        title: "Prices",
+        component: () => import("@/components/ServicesProvider/gogetPrices.vue")
       });
       return tabs;
     },

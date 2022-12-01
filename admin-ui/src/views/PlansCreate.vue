@@ -75,7 +75,8 @@
           <v-divider />
 
           <plans-ovh-table v-if="plan.type === 'ovh' && item" :plan="item" />
-          <template v-else-if="plan.type !== 'ovh'">
+          <plans-goget-table v-else-if="plan.type === 'goget' && item" :plan="item" />
+          <template v-else-if="item">
             <v-tabs v-model="form.title" background-color="background-light">
               <v-tab
                 draggable="true"
@@ -176,11 +177,12 @@ import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import plansOvhTable from '../components/plans_ovh_table.vue';
+import Plans_goget_table from '../components/plans_goget_table.vue';
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  components: { ConfirmDialog, PlanOpensrs, plansOvhTable },
+  components: { ConfirmDialog, PlanOpensrs, plansOvhTable, Plans_goget_table },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
@@ -423,8 +425,10 @@ export default {
         message = "Validation failed!";
       }
 
-      if (!message && (!this.plan.fee?.ranges || this.plan.fee?.ranges?.length === 0)) {
-        message = "Ranges cant be empty!";
+      if (!message && (this.plan.fee?.ranges?.length === 0)) {
+        if (this.plan.type === 'ovh' || this.plan.type === 'opensrs') {
+          message = "Ranges cant be empty!";
+        }
       }
 
       if (!message) {
@@ -434,9 +438,7 @@ export default {
       if (message) {
         this.testButtonColor = "background-light";
         this.isTestSuccess = false;
-        this.showSnackbarError({
-          message,
-        });
+        this.showSnackbarError({ message });
         return;
       }
 

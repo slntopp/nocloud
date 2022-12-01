@@ -1,32 +1,60 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
-    <v-btn @click="editPlan">Save</v-btn>
     <v-select
       label="Plan"
       item-text="title"
       item-value="uuid"
-      class="d-inline-block ml-4"
+      class="d-inline-block"
       v-model="nocloudPlan"
+      v-if="nocloudPlans.length > 1"
       :items="nocloudPlans"
     />
 
     <v-row>
       <v-col cols="6">
-        Fee:
-        <plan-opensrs
-          @changeFee="(data) => (fee = data)"
-          @onValid="(data) => (isValid = data)"
-        />
+        <v-expansion-panels>
+          <v-expansion-panel>
+            <v-expansion-panel-header color="background-light">
+              Fee:
+            </v-expansion-panel-header>
+            <v-expansion-panel-content color="background-light">
+              <plan-opensrs
+                @changeFee="(data) => (fee = data)"
+                @onValid="(data) => (isValid = data)"
+              />
+            </v-expansion-panel-content>
+          </v-expansion-panel>
+        </v-expansion-panels>
       </v-col>
       <v-col cols="6" />
       <v-col cols="12">
-        <v-btn @click="setFee">Set fee</v-btn>
+        <confirm-dialog
+          text="This will apply the fee markup parameters to all prices"
+          @confirm="setFee"
+        >
+          <v-btn>Set fee</v-btn>
+        </confirm-dialog>
       </v-col>
-      <v-col lg="6" md="12">
-        Plans:
+    </v-row>
+
+    <v-switch
+      style="width: fit-content"
+      :label="tabs[tabsIndex]"
+      @change="(value) => tabsIndex = +value"
+    />
+
+    <v-tabs-items
+      v-model="tabsIndex"
+      style="background: var(--v-background-light-base)"
+      class="rounded-b-lg"
+    >
+      <v-tab-item v-for="tab in tabs" :key="tab">
+        <v-progress-linear v-if="isPlansLoading" indeterminate class="pt-1" />
+
         <nocloud-table
           item-key="id"
+          v-else-if="tab === 'Tariffs'"
           :show-expand="true"
           :show-select="false"
           :show-group-by="true"
@@ -40,7 +68,7 @@
             {{ value }} {{ 'NCU' || item.price.currencyCode }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
-            <v-text-field v-model="item.value" />
+            <v-text-field style="width: 150px" v-model="item.value" />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
             <v-switch v-model="item.sell" />
@@ -53,7 +81,7 @@
                 {{ item.windows.price.value }}
                 {{ 'NCU' || item.price.currencyCode }}
               </td>
-              <td><v-text-field v-model="item.windows.value" /></td>
+              <td><v-text-field style="width: 150px" v-model="item.windows.value" /></td>
               <td></td>
             </template>
             <template v-else>
@@ -62,10 +90,9 @@
             </template>
           </template>
         </nocloud-table>
-      </v-col>
-      <v-col lg="6" md="12">
-        Addons:
+
         <nocloud-table
+          v-else-if="tab === 'Addons'"
           :show-select="false"
           :show-group-by="true"
           :items="addons"
@@ -77,14 +104,15 @@
             {{ value }} {{ 'NCU' || item.price.currencyCode }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
-            <v-text-field v-model="item.value" />
+            <v-text-field style="width: 150px" v-model="item.value" />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
             <v-switch v-model="item.sell" />
           </template>
         </nocloud-table>
-      </v-col>
-    </v-row>
+      </v-tab-item>
+    </v-tabs-items>
+    <v-btn class="mt-4" @click="editPlan">Save</v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -111,14 +139,15 @@
 </template>
 
 <script>
-import planOpensrs from '../plan/opensrs/planOpensrs.vue';
+import planOpensrs from '@/components/plan/opensrs/planOpensrs.vue';
 import nocloudTable from "@/components/table.vue";
+import confirmDialog from '@/components/confirmDialog.vue';
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
 
 export default {
   name: 'sevices-provider-table',
-  components: { nocloudTable, planOpensrs },
+  components: { nocloudTable, planOpensrs, confirmDialog },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
   data: () => ({
@@ -126,10 +155,10 @@ export default {
     expanded: [],
     headers: [
       { text: '', value: 'data-table-expand', groupable: false },
-      { text: 'Plan', value: 'name', sortable: false, class: 'groupable' },
+      { text: 'Tariff', value: 'name', sortable: false, class: 'groupable' },
       { text: 'Duration', value: 'duration', sortable: false, class: 'groupable' },
-      { text: 'OVH price', value: 'price.value', groupable: false },
-      { text: 'Price', value: 'value', groupable: false, width: 150 },
+      { text: 'Price', value: 'price.value', groupable: false },
+      { text: 'New price', value: 'value', groupable: false },
       { text: 'Sell', value: 'sell', sortable: false, class: 'groupable', width: 100 }
     ],
 
@@ -137,12 +166,14 @@ export default {
     addonsHeaders: [
       { text: 'Addon', value: 'name', sortable: false, class: 'groupable' },
       { text: 'Duration', value: 'duration', sortable: false, class: 'groupable' },
-      { text: 'OVH price', value: 'price.value', groupable: false },
-      { text: 'Price', value: 'value', groupable: false, width: 150 },
+      { text: 'Price', value: 'price.value', groupable: false },
+      { text: 'New price', value: 'value', groupable: false },
       { text: 'Sell', value: 'sell', sortable: false, class: 'groupable', width: 100 }
     ],
 
     fee: {},
+    tabs: ['Tariffs', 'Addons'],
+    tabsIndex: 0,
     isValid: true,
     isPlansLoading: false,
     nocloudPlan: '',
@@ -256,7 +287,13 @@ export default {
       this.addons = result;
     },
     setFee() {
-      [this.plans, this.addons].forEach((el) => {
+      const windows = [];
+
+      this.plans.forEach((el) => {
+        if (el.windows) windows.push(el.windows);
+      });
+
+      [this.plans, this.addons, windows].forEach((el) => {
         el.forEach((plan, i, arr) => {
           const n = Math.pow(10, this.fee.precision);
           let percent = (this.fee?.default ?? 0) / 100 + 1;
@@ -283,19 +320,16 @@ export default {
       });
     },
     editPlan() {
-      if (!this.nocloudPlan) {
-        this.showSnackbarError({ message: 'Please select plan' });
-        return;
-      }
       if (!this.isValid) {
         this.showSnackbarError({ message: 'Fee is not valid' });
         return;
       }
 
-      const plan = {
-        ...this.nocloudPlans.find(({ uuid }) => uuid === this.nocloudPlan),
-        resources: [], products: {}
-      };
+      const plan = (this.nocloudPlan)
+        ? this.nocloudPlans.find(({ uuid }) => uuid === this.nocloudPlan)
+        : { title: 'ovh-plan', type: 'ovh', public: true, kind: 'STATIC' };
+
+      const newPlan = { ...plan, fee: this.fee, resources: [], products: {} };
 
       this.plans.forEach((el) => {
         if (el.sell) {
@@ -303,13 +337,13 @@ export default {
           const meta = {};
 
           if (el.windows) meta[el.windows.code] = el.windows.value;
-          plan.products[el.id] = {
+          newPlan.products[el.id] = {
             kind: 'PREPAID',
             title: el.name,
             price: el.value,
             period: this.getPeriod(el.duration),
             resources: { cpu: +cpu, ram: ram * 1024, disk: disk * 1024 },
-            sorter: Object.keys(plan.products).length,
+            sorter: Object.keys(newPlan.products).length,
             meta
           }
         }
@@ -317,7 +351,7 @@ export default {
 
       this.addons.forEach((el) => {
         if (el.sell) {
-          plan.resources.push({
+          newPlan.resources.push({
             key: el.id,
             kind: 'PREPAID',
             price: el.value,
@@ -328,20 +362,23 @@ export default {
         }
       });
 
-      this.isLoading = true;
-      api.plans.update(plan.uuid, plan)
-        .then(() => {
-          this.showSnackbarSuccess({ message: 'Plan edited successfully' });
-        })
-        .catch((err) => {
-          const message = err.response?.data?.message ?? err.message ?? err;
+      const request = (newPlan.uuid)
+        ? api.plans.update(newPlan.uuid, newPlan)
+        : api.plans.create(newPlan);
 
-          this.showSnackbarError({ message });
-          console.error(err);
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
+      this.isLoading = true;
+      request.then(() => {
+        this.showSnackbarSuccess({ message: 'Plan edited successfully' });
+      })
+      .catch((err) => {
+        const message = err.response?.data?.message ?? err.message ?? err;
+
+        this.showSnackbarError({ message });
+        console.error(err);
+      })
+      .finally(() => {
+        this.isLoading = false;
+      });
     },
     getPeriod(duration) {
       switch (duration) {
@@ -353,7 +390,6 @@ export default {
     }
   },
   created() {
-    this.changeIcon();
     this.isPlansLoading = true;
     this.$store.dispatch('plans/fetch', {
       sp_uuid: this.template.uuid,
@@ -377,6 +413,9 @@ export default {
         footerButtons.forEach((element) => {
           element.addEventListener('click', this.changeClose);
         });
+
+        if (this.nocloudPlans.length === 1) this.nocloudPlan = this.nocloudPlans[0].uuid;
+        this.changeIcon();
         this.changeClose();
       })
       .catch((err) => {
@@ -411,6 +450,12 @@ export default {
         ovhPlan.sell = true;
         if (winKey) ovhPlan.windows.value = product.meta[winKey];
       });
+
+      this.fee = plan.fee;
+    },
+    tabsIndex() {
+      this.changeIcon();
+      this.changeClose();
     }
   }
 }
