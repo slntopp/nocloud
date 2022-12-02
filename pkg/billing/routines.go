@@ -254,7 +254,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 					log.Error("Error Read Srv uuid", zap.Error(err))
 					break
 				}
-				if _, err := srvClient.Suspend(ctx, &srvpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+				if _, err := srvClient.Suspend(ctx, &srvpb.SuspendRequest{Uuid: srvId}); err != nil {
 					log.Error("Error Suspending Service", zap.Error(err))
 				}
 			}
@@ -288,11 +288,12 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			if servicesCursor.HasMore() {
 				var srvId string
 				_, err := servicesCursor.ReadDocument(ctx, &srvId)
+				log.Info("Attempt to unsuspend services", zap.String("id", srvId))
 				if err != nil {
 					log.Error("Error Read Srv uuid", zap.Error(err))
 					break
 				}
-				if _, err := srvClient.Unsuspend(ctx, &srvpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
+				if _, err := srvClient.Unsuspend(ctx, &srvpb.UnsuspendRequest{Uuid: srvId}); err != nil {
 					log.Error("Error Unsuspending service", zap.Error(err))
 				}
 			}
@@ -421,5 +422,5 @@ FILTER !t.processed
 const getServicesOfAccount = `
 FOR node IN 2 OUTBOUND @account
 graph @permissions
-    return node.uuid
+    return node._key
 `
