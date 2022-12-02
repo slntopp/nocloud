@@ -249,6 +249,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			if servicesCursor.HasMore() {
 				var srvId string
 				_, err := servicesCursor.ReadDocument(ctx, &srvId)
+				log.Info("Attempt to suspend services", zap.String("id", srvId))
 				if err != nil {
 					log.Error("Error Read Srv uuid", zap.Error(err))
 					break
