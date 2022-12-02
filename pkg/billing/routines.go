@@ -242,17 +242,23 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 
 			accDocumentId := driver.NewDocumentID(schema.ACCOUNTS_COL, acc.GetUuid())
 
-			servicesCursor, _ := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
+			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
 				"account":     accDocumentId,
 				"permissions": schema.PERMISSIONS_GRAPH,
 			})
-			if servicesCursor.HasMore() {
+
+			if err != nil {
+				log.Error("Get services err", zap.String("Err", err.Error()))
+				continue
+			}
+
+			for servicesCursor.HasMore() {
 				var srvId string
 				_, err := servicesCursor.ReadDocument(ctx, &srvId)
 				log.Info("Attempt to suspend services", zap.String("id", srvId))
 				if err != nil {
 					log.Error("Error Read Srv uuid", zap.Error(err))
-					break
+					continue
 				}
 				if _, err := srvClient.Suspend(ctx, &srvpb.SuspendRequest{Uuid: srvId}); err != nil {
 					log.Error("Error Suspending Service", zap.Error(err))
@@ -281,17 +287,23 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 
 			accDocumentId := driver.NewDocumentID(schema.ACCOUNTS_COL, acc.GetUuid())
 
-			servicesCursor, _ := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
+			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
 				"account":     accDocumentId,
 				"permissions": schema.PERMISSIONS_GRAPH,
 			})
-			if servicesCursor.HasMore() {
+
+			if err != nil {
+				log.Error("Get services err", zap.String("Err", err.Error()))
+				continue
+			}
+
+			for servicesCursor.HasMore() {
 				var srvId string
 				_, err := servicesCursor.ReadDocument(ctx, &srvId)
 				log.Info("Attempt to unsuspend services", zap.String("id", srvId))
 				if err != nil {
 					log.Error("Error Read Srv uuid", zap.Error(err))
-					break
+					continue
 				}
 				if _, err := srvClient.Unsuspend(ctx, &srvpb.UnsuspendRequest{Uuid: srvId}); err != nil {
 					log.Error("Error Unsuspending service", zap.Error(err))
