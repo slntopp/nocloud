@@ -235,6 +235,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
 			}
+			log.Info("Acc", zap.String("id", acc.GetUuid()))
 			// log.Debug("acc", zap.String("uuid", acc.GetUuid()), zap.Any("value", acc))
 			if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Suspending Account", zap.Error(err))
