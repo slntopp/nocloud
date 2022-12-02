@@ -18,6 +18,7 @@ package credentials
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"errors"
 	"io"
 	"mime/multipart"
@@ -39,9 +40,10 @@ type WHMCSCredentials struct {
 }
 
 type WHMCSConfig struct {
-	Api  string `json:"api"`
-	User string `json:"user"`
-	Pass string `json:"pass_hash"`
+	Api        string `json:"api"`
+	User       string `json:"user"`
+	Pass       string `json:"pass_hash"`
+	DangerMode bool   `json:"danger_mode"`
 }
 
 func NewWHMCSCredentials(data []string) (Credentials, error) {
@@ -92,6 +94,13 @@ func (c *WHMCSCredentials) Authorize(args ...string) bool {
 	}
 
 	client := &http.Client{}
+	if conf.DangerMode {
+		client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
 	req, err := http.NewRequest("POST", conf.Api, payload)
 	if err != nil {
 		log.Error("Error making Request", zap.Error(err))
