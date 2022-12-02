@@ -112,7 +112,7 @@ func (c *WHMCSCredentials) Authorize(args ...string) bool {
 		return false
 	}
 
-	log.Debug("Response", zap.ByteString("body", body))
+	log.Debug("Response", zap.Int("code", res.StatusCode), zap.ByteString("body", body))
 	for _, el := range strings.Split(string(body), ";") {
 		data := strings.Split(el, "=")
 		if data[0] == "result" {
