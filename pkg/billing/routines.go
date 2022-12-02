@@ -126,7 +126,7 @@ func init() {
 	viper.SetDefault("SERVICES_HOST", "services-registry:8000")
 	settingsHost := viper.GetString("SETTINGS_HOST")
 	registryHost := viper.GetString("REGISTRY_HOST")
-	servicesHost := viper.GetString("REGISTRY_HOST")
+	servicesHost := viper.GetString("SERVICES_HOST")
 
 	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
