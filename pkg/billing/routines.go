@@ -241,7 +241,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 
 			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
 				"account":     meta.ID,
-				"permissions": schema.PERMISSIONS_GRAPH,
+				"permissions": schema.PERMISSIONS_GRAPH.Name,
 			})
 
 			if err != nil {
