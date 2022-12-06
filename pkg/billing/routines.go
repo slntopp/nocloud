@@ -17,7 +17,6 @@ package billing
 
 import (
 	"context"
-	"github.com/arangodb/go-driver"
 	"time"
 
 	hpb "github.com/slntopp/nocloud-proto/health"
@@ -231,20 +230,17 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		for cursor.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor.ReadDocument(ctx, &acc)
+			log.Info("Acc id", zap.Any("id", meta.ID))
 			if err != nil {
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
 			}
-			log.Info("Acc", zap.String("id", acc.GetUuid()))
-			// log.Debug("acc", zap.String("uuid", acc.GetUuid()), zap.Any("value", acc))
 			if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Suspending Account", zap.Error(err))
 			}
 
-			accDocumentId := driver.NewDocumentID(schema.ACCOUNTS_COL, acc.GetUuid())
-
 			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
-				"account":     accDocumentId,
+				"account":     meta.ID,
 				"permissions": schema.PERMISSIONS_GRAPH,
 			})
 
@@ -254,14 +250,14 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			}
 
 			for servicesCursor.HasMore() {
-				var srvId string
-				_, err := servicesCursor.ReadDocument(ctx, &srvId)
-				log.Info("Attempt to suspend services", zap.String("id", srvId))
+				srv := &srvpb.Service{}
+				_, err := servicesCursor.ReadDocument(ctx, &srv)
+				log.Info("Attempt to suspend services", zap.Any("srv", srv))
 				if err != nil {
 					log.Error("Error Read Srv uuid", zap.Error(err))
 					continue
 				}
-				if _, err := srvClient.Suspend(ctx, &srvpb.SuspendRequest{Uuid: srvId}); err != nil {
+				if _, err := srvClient.Suspend(ctx, &srvpb.SuspendRequest{Uuid: srv.GetUuid()}); err != nil {
 					log.Error("Error Suspending Service", zap.Error(err))
 				}
 			}
@@ -277,6 +273,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		for cursor2.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor2.ReadDocument(ctx, &acc)
+			log.Info("Acc id", zap.Any("id", meta.ID))
 			if err != nil {
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
@@ -286,10 +283,8 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 				log.Error("Error Unsuspending Account", zap.Error(err))
 			}
 
-			accDocumentId := driver.NewDocumentID(schema.ACCOUNTS_COL, acc.GetUuid())
-
 			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
-				"account":     accDocumentId,
+				"account":     meta.ID,
 				"permissions": schema.PERMISSIONS_GRAPH,
 			})
 
@@ -299,14 +294,14 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			}
 
 			for servicesCursor.HasMore() {
-				var srvId string
-				_, err := servicesCursor.ReadDocument(ctx, &srvId)
-				log.Info("Attempt to unsuspend services", zap.String("id", srvId))
+				srv := &srvpb.Service{}
+				_, err := servicesCursor.ReadDocument(ctx, &srv)
+				log.Info("Attempt to unsuspend services", zap.Any("srv", srv))
 				if err != nil {
 					log.Error("Error Read Srv uuid", zap.Error(err))
 					continue
 				}
-				if _, err := srvClient.Unsuspend(ctx, &srvpb.UnsuspendRequest{Uuid: srvId}); err != nil {
+				if _, err := srvClient.Unsuspend(ctx, &srvpb.UnsuspendRequest{Uuid: srv.GetUuid()}); err != nil {
 					log.Error("Error Unsuspending service", zap.Error(err))
 				}
 			}
@@ -435,5 +430,5 @@ FILTER !t.processed
 const getServicesOfAccount = `
 FOR node IN 2 OUTBOUND @account
 graph @permissions
-    return node._key
+    return node
 `
