@@ -242,6 +242,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
 				"account":     meta.ID,
 				"permissions": schema.PERMISSIONS_GRAPH.Name,
+				"@services":   schema.SERVICES_COL,
 			})
 
 			if err != nil {
@@ -285,7 +286,8 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 
 			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
 				"account":     meta.ID,
-				"permissions": schema.PERMISSIONS_GRAPH,
+				"permissions": schema.PERMISSIONS_GRAPH.Name,
+				"@services":   schema.SERVICES_COL,
 			})
 
 			if err != nil {
@@ -428,7 +430,8 @@ FILTER !t.processed
 `
 
 const getServicesOfAccount = `
-FOR node IN 2 OUTBOUND @account
-graph @permissions
+FOR node, edge, path IN 2 OUTBOUND @account GRAPH @permissions
+    FILTER path.edges[*].role == ["owner","owner"]
+    FILTER IS_SAME_COLLECTION(node, @@services)
     return node
 `
