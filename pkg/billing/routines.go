@@ -17,7 +17,6 @@ package billing
 
 import (
 	"context"
-	"github.com/arangodb/go-driver"
 	"time"
 
 	hpb "github.com/slntopp/nocloud-proto/health"
@@ -231,6 +230,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		for cursor.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor.ReadDocument(ctx, &acc)
+			log.Info("Acc id", zap.Any("id", meta.ID))
 			if err != nil {
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
@@ -273,6 +273,7 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 		for cursor2.HasMore() {
 			acc := &accpb.Account{}
 			meta, err := cursor2.ReadDocument(ctx, &acc)
+			log.Info("Acc id", zap.Any("id", meta.ID))
 			if err != nil {
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
@@ -282,10 +283,8 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 				log.Error("Error Unsuspending Account", zap.Error(err))
 			}
 
-			accDocumentId := driver.NewDocumentID(schema.ACCOUNTS_COL, acc.GetUuid())
-
 			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
-				"account":     accDocumentId,
+				"account":     meta.ID,
 				"permissions": schema.PERMISSIONS_GRAPH,
 			})
 
