@@ -150,7 +150,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 		return nil, status.Error(codes.Internal, "Error getting instances")
 	}
 
-	if cursor.Count() != 0 {
+	if cursor.HasMore() {
 		return nil, status.Error(codes.DataLoss, "Сan't delete plan due to related instances")
 	}
 
