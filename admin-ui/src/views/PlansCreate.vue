@@ -37,13 +37,28 @@
           </v-row>
 
           <!-- Opensrs props -->
-          <plan-opensrs
-            @changeFee="(data) => (plan.fee = data)"
-            @onValid="(data) => (isFeeValid = data)"
-            v-if="plan.type === 'opensrs' || plan.type === 'ovh'"
-            :fee="plan.fee"
-            :isEdit="isEdit"
-          />
+          <v-row v-if="plan.type === 'opensrs' || plan.type === 'ovh'">
+            <v-col cols="12">
+              <v-expansion-panels>
+                <v-expansion-panel>
+                  <v-expansion-panel-header
+                    color="background-light"
+                    style="padding-left: 16px; color: rgba(255, 255, 255, 0.7)"
+                  >
+                    Fee
+                  </v-expansion-panel-header>
+                  <v-expansion-panel-content color="background-light">
+                    <plan-opensrs
+                      @changeFee="(data) => (plan.fee = data)"
+                      @onValid="(data) => (isFeeValid = data)"
+                      :fee="plan.fee"
+                      :isEdit="isEdit"
+                    />
+                  </v-expansion-panel-content>
+                </v-expansion-panel>
+              </v-expansion-panels>
+            </v-col>
+          </v-row>
 
           <v-row align="center">
             <v-col cols="3">
@@ -74,9 +89,7 @@
 
           <v-divider />
 
-          <plans-ovh-table v-if="plan.type === 'ovh' && item" :plan="item" />
-          <plans-goget-table v-else-if="plan.type === 'goget' && item" :plan="item" />
-          <template v-else-if="item">
+          <template v-if="!['ovh', 'goget'].includes(plan.type) && item">
             <v-tabs v-model="form.title" background-color="background-light">
               <v-tab
                 draggable="true"
@@ -134,15 +147,38 @@
           <v-btn
             class="mr-2"
             color="background-light"
-            :loading="isLoading"
+            v-if="isEdit"
             :disabled="!isTestSuccess"
-            @click="tryToSend"
+            @click="isDialogVisible = true"
           >
-            {{ item ? "Edit" : "Create" }}
+            Save
           </v-btn>
-          <v-btn class="mr-2" :color="testButtonColor" @click="testConfig">
-            Test
+          <v-btn
+            v-else
+            class="mr-2"
+            color="background-light"
+            :loading="isLoading"
+            @click="tryToSend('create')"
+          >
+            Create
           </v-btn>
+          <v-btn :color="testButtonColor" @click="testConfig">Test</v-btn>
+        </v-col>
+        <v-col>
+          <v-dialog :max-width="600" v-model="isDialogVisible">
+            <v-card color="background-light">
+              <v-card-title>Do you really want to change your current plan?</v-card-title>
+              <v-card-subtitle>You can also create a new plan based on the current one.</v-card-subtitle>
+              <v-card-actions>
+                <v-btn class="mr-2" :loading="isLoading" @click="tryToSend('create')">
+                  Create
+                </v-btn>
+                <v-btn v-if="item" :loading="isLoading" @click="tryToSend('edit')">
+                  Edit
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
         </v-col>
       </v-row>
     </v-form>
@@ -176,13 +212,11 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
-import plansOvhTable from '../components/plans_ovh_table.vue';
-import Plans_goget_table from '../components/plans_goget_table.vue';
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  components: { ConfirmDialog, PlanOpensrs, plansOvhTable, Plans_goget_table },
+  components: { ConfirmDialog, PlanOpensrs },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
@@ -208,6 +242,7 @@ export default {
     },
     generalRule: [(v) => !!v || "This field is required!"],
 
+    isDialogVisible: false,
     isVisible: true,
     isValid: false,
     isFeeValid: true,
@@ -356,13 +391,17 @@ export default {
         this.isVisible = true;
       }
     },
-    tryToSend() {
+    tryToSend(action) {
       if (!this.isValid) {
         this.$refs.form.validate();
         this.testButtonColor = "background-light";
         this.isTestSuccess = false;
 
         return;
+      }
+      if (action === 'create') {
+        this.plan.title += ' 2.0';
+        delete this.plan.uuid;
       }
 
       this.isLoading = true;
@@ -373,27 +412,26 @@ export default {
       });
 
       const id = this.$route.params?.planId;
-      const request = this.item
+      const request = (action === 'edit')
         ? api.plans.update(id, this.plan)
         : api.plans.create(this.plan);
 
-      request
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: this.item
-              ? "Plan edited successfully"
-              : "Plan created successfully",
-          });
-          setTimeout(() => {
-            this.$router.push({ name: "Plans" });
-          }, 100);
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isLoading = false;
+      request.then(() => {
+        this.showSnackbarSuccess({
+          message: (action === 'edit')
+            ? "Plan edited successfully"
+            : "Plan created successfully",
         });
+        setTimeout(() => {
+          this.$router.push({ name: "Plans" });
+        }, 100);
+      })
+      .catch((err) => {
+        this.showSnackbarError({ message: err });
+      })
+      .finally(() => {
+        this.isLoading = false;
+      });
     },
     checkPeriods(periods) {
       const wrongPeriod = periods.find((p) => p.period === 0);

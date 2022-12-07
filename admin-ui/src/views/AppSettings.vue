@@ -122,7 +122,7 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import JsonEditor from "@/components/JsonEditor.vue";
-import { downloadJSONFile,readJSONFile} from "@/functions.js";
+import { downloadJSONFile,readJSONFile } from "@/functions.js";
 
 export default {
   key: "app-settings",
@@ -130,12 +130,12 @@ export default {
   mixins: [snackbar],
   data() {
     return {
-      existedServices: ["VM", "Domains", "Virtual", "SSL", "IaaS (Cloud)"],
+      existedServices: ["VM", "Domains", "Virtual", "SSL"],
       positionTypes: ["top", "right", "bottom", "left", "relative"],
       settings: {
         whmcs: { site_url: "" },
         app: {
-          folder: "",
+          shared_folder: "virtualHosting",
           title: "",
           logo: "",
           logo_position: "top",
@@ -149,7 +149,7 @@ export default {
             bright_bg: "#fff",
           },
         },
-        currency: { prefix: "", suffix: "BYN", code: "BYN" },
+        currency: { prefix: "", suffix: "USD", code: "USD" },
         services: [],
         dangerModeNoSSLCheck: false,
       },

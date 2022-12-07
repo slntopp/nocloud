@@ -44,8 +44,11 @@
     </v-row>
     <v-expansion-panels>
       <v-expansion-panel>
-        <v-expansion-panel-header color="background-light">
-          Ranges
+        <v-expansion-panel-header
+          color="background-light"
+          style="padding-left: 16px; color: rgba(255, 255, 255, 0.7)"
+        >
+          Margin
         </v-expansion-panel-header>
         <v-expansion-panel-content color="background-light">
           <v-list v-if="currentFee.ranges.length > 0" color="background-light">
@@ -55,9 +58,9 @@
                   <template v-slot:default>
                     <v-list-item-content>
                       <v-list-item-title>
-                        From:{{ item.from }} To:{{ item.to }} Factor:{{
-                          item.factor
-                        }}
+                        From: {{ item.from }} NCU,
+                        To: {{ item.to }} NCU,
+                        Factor: {{ item.factor }} %
                       </v-list-item-title>
                     </v-list-item-content>
 
@@ -81,7 +84,7 @@
               </template>
             </v-list-item-group>
           </v-list>
-          <p v-else class="text-center">Ranges clear</p>
+          <p v-else class="text-center">Margin clear</p>
           <v-form
             class="d-flex ma-5"
             ref="newRangeForm"
@@ -148,7 +151,7 @@ export default {
     };
   },
   created() {
-    if (this.isEdit) {
+    if (this.isEdit && ('ranges' in this.fee)) {
       this.currentFee = this.fee;
       
       const round=this.availableRoundes.find(item=>item.key.toLowerCase()===this.fee?.round.toLowerCase())
