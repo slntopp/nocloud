@@ -3,18 +3,54 @@
     <v-btn class="mr-2" color="background-light" :to="{ name: 'Plans create' }">
       Create
     </v-btn>
-    <confirm-dialog
-      :disabled="this.selected.length < 1"
-      @confirm="deleteSelectedPlans"
-    >
+
+    <confirm-dialog v-if="linked.length < 1" @confirm="deleteSelectedPlan">
       <v-btn
         class="mr-2"
         color="background-light"
-        :disabled="this.selected.length < 1"
+        :disabled="selected.length < 1"
         :loading="isDeleteLoading"
       >
         Delete
       </v-btn>
+    </confirm-dialog>
+
+    <confirm-dialog
+      v-else
+      title="You can't delete a plan while there are instances using it!"
+      subtitle="To delete plan, select the plan that these instances will use."
+      :width="625"
+      :disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
+      @confirm="deleteSelectedPlan"
+    >
+      <v-btn
+        class="mr-2"
+        color="background-light"
+        :disabled="selected.length < 1"
+        :loading="isDeleteLoading"
+      >
+        Delete
+      </v-btn>
+      <template #actions>
+        <nocloud-table :show-select="false" :items="linked" :headers="linkedHeaders">
+          <template v-slot:[`item.title`]="{ item }">
+            <router-link :to="{ name: 'Service', params: { serviceId: item.service } }">
+              {{ item.title }}
+            </router-link>
+          </template>
+          <template v-slot:[`item.plan`]="{ item }">
+            <v-select
+              dense
+              placeholder="none"
+              item-text="title"
+              item-value="uuid"
+              style="max-width: 200px"
+              v-model="item.plan"
+              :items="availablePlans"
+            />
+          </template>
+        </nocloud-table>
+      </template>
     </confirm-dialog>
 
     <v-select
@@ -27,6 +63,7 @@
     />
 
     <nocloud-table
+      single-select
       class="mt-4"
       :items="filtredPlans"
       :headers="headers"
@@ -70,16 +107,13 @@
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
-import noCloudTable from "@/components/table.vue";
-import ConfirmDialog from "../components/confirmDialog.vue";
+import nocloudTable from "@/components/table.vue";
+import confirmDialog from "@/components/confirmDialog.vue";
 import { filterArrayByTitleAndUuid } from "@/functions";
 
 export default {
   name: "plans-view",
-  components: {
-    "nocloud-table": noCloudTable,
-    ConfirmDialog,
-  },
+  components: { nocloudTable, confirmDialog },
   mixins: [snackbar, search],
   data: () => ({
     headers: [
@@ -88,6 +122,12 @@ export default {
       { text: "Public ", value: "public" },
       { text: "Type ", value: "type" },
     ],
+    linkedHeaders: [
+      { text: "Instance", value: "title" },
+      { text: "Plan", value: "plan" },
+    ],
+
+    linked: [],
     isDeleteLoading: false,
     selected: [],
     copyed: -1,
@@ -95,19 +135,49 @@ export default {
     serviceProvider: null,
   }),
   methods: {
-    deleteSelectedPlans() {
+    changePlan() {
+      this.linked = [];
+      this.services.forEach((service) => {
+        service.instancesGroups.forEach((({ instances, sp }) => {
+          instances.forEach(({ uuid, title, billingPlan }) => {
+            if (billingPlan.uuid === this.selected[0]?.uuid) {
+              this.linked.push({
+                uuid, title, sp,
+                service: service.uuid,
+                plan: billingPlan.uuid
+              });
+            }
+          });
+        }));
+      });
+    },
+    deleteSelectedPlan() {
+      this.linked.forEach((el) => {
+        const service = this.services.find(({ uuid }) => uuid === el.service);
+        const group = service.instancesGroups.find(({ sp }) => sp === el.sp);
+        const inst = group.instances.find(({ uuid }) => uuid === el.uuid);
+
+        inst.billingPlan = this.plans.find(({ uuid }) => uuid === el.plan);
+      });
+
+      const promises = [];
+      if (this.linked.length > 0) {
+        const services = new Set(this.linked.map(({ service }) => service));
+
+        services.forEach((el) => {
+          const service = this.services.find(({ uuid }) => uuid === el);
+
+          promises.push(api.services._update(service));
+        });
+      }
+
       this.isDeleteLoading = true;
-
-      const deletePromises = this.selected.map((el) =>
-        api.plans.delete(el.uuid)
-      );
-      Promise.all(deletePromises)
+      Promise.all(promises)
+        .then(() => api.plans.delete(this.selected[0].uuid))
         .then(() => {
-          const ending = deletePromises.length === 1 ? "" : "s";
-
           this.$store.dispatch("plans/fetch");
           this.showSnackbar({
-            message: `Plan${ending} deleted successfully.`,
+            message: "Plan deleted successfully."
           });
         })
         .catch((err) => {
@@ -150,6 +220,7 @@ export default {
     },
   },
   created() {
+    this.$store.dispatch("services/fetch");
     this.$store.dispatch("servicesProviders/fetch");
     this.getPlans();
   },
@@ -166,8 +237,19 @@ export default {
     plans() {
       return this.$store.getters["plans/all"];
     },
+    services() {
+      return this.$store.getters["services/all"];
+    },
     searchParam() {
       return this.$store.getters["appSearch/param"];
+    },
+    availablePlans() {
+      const plan = this.selected[0];
+
+      if (!plan) return [];
+      return this.plans.filter(({ uuid, type }) =>
+        uuid !== plan.uuid && type === plan.type
+      );
     },
     filtredPlans() {
       if (this.searchParam) {
@@ -198,6 +280,7 @@ export default {
         },
       });
     },
+    selected() { this.changePlan() }
   },
 };
 </script>

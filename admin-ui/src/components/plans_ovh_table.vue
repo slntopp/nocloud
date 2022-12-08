@@ -47,7 +47,7 @@ export default {
   props: { plan: { type: Object, required: true } },
   data: () => ({
     headers: [
-      { text: 'OVH plan', value: 'title' },
+      { text: 'Tariff', value: 'title' },
       { text: 'Price', value: 'price' },
       { text: 'Windows', value: 'windows' },
       { text: 'Period', value: 'period' }

@@ -33,8 +33,8 @@
           <v-row>
             <v-col :cols="12" :md="6">
               <json-editor
-                :json="item.secrets"
-                @changeValue="(data) => (provider.secrets = data)"
+                :json="item[tab.title.toLowerCase()]"
+                @changeValue="(data) => (item[tab.title.toLowerCase()] = data)"
               />
             </v-col>
           </v-row>
@@ -77,11 +77,6 @@ export default {
           component: () => import("@/components/ServicesProvider/info.vue"),
         },
         {
-          title: "Secrets",
-          component: () => import(`@/components/modules/${this.item?.type}/serviceProviderSecrets.vue`)
-            .catch(() => import("@/components/modules/custom/serviceProviderSecrets.vue")),
-        },
-        {
           title: "Map",
           component: (this.item?.type === "ovh")
             ? () => import("@/components/ServicesProvider/ovhMap.vue")
@@ -93,14 +88,16 @@ export default {
         },
       ];
 
-      if (this.item?.type === 'ovh') tabs.splice(tabs.length - 1, 0, {
-        title: "Prices",
-        component: () => import("@/components/ServicesProvider/ovhPrices.vue")
+      if (Object.keys(this.item?.secrets).length > 0) tabs.splice(1, 0, {
+        title: "Secrets",
+        component: () => import(`@/components/modules/${this.item?.type}/serviceProviderSecrets.vue`)
+          .catch(() => import("@/components/modules/custom/serviceProviderSecrets.vue")),
       });
-      else if (this.item?.type === 'goget') tabs.splice(tabs.length - 1, 0, {
-        title: "Prices",
-        component: () => import("@/components/ServicesProvider/gogetPrices.vue")
+      if (Object.keys(this.item?.vars).length > 0) tabs.splice(2, 0, {
+        title: "Vars",
+        component: () => import("@/components/modules/custom/serviceProviderVars.vue"),
       });
+
       return tabs;
     },
     title() {

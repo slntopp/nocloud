@@ -201,7 +201,7 @@ export default {
       const newPlan = { ...plan, fee: this.fee, resources: [], products: {} };
 
       this.plans.forEach((plan) => {
-        plan.forEach((el) => {
+        plan.prices.forEach((el) => {
           if (el.sell) {
             const id = `${el.period} ${plan.id}`;
 

@@ -7,23 +7,24 @@
     <v-tabs
       class="rounded-t-lg"
       background-color="background-light"
-      v-model="tabs"
+      v-model="tabsIndex"
     >
-      <v-tab>Info</v-tab>
-      <v-tab>Template</v-tab>
+      <v-tab v-for="tab of tabs" :key="tab.title">{{ tab.title }}</v-tab>
     </v-tabs>
     <v-tabs-items
       class="rounded-b-lg"
       style="background: var(--v-background-light-base)"
-      v-model="tabs"
+      v-model="tabsIndex"
     >
-      <v-tab-item>
+      <v-tab-item v-for="tab of tabs" :key="tab.title">
         <v-progress-linear indeterminate class="pt-2" v-if="planLoading" />
-        <plans-create :isEdit="true" v-else :item="plan" />
-      </v-tab-item>
-      <v-tab-item>
-        <v-progress-linear indeterminate class="pt-2" v-if="planLoading" />
-        <plans-template v-else :template="plan" />
+        <component
+          v-else-if="plan"
+          :is="tab.component"
+          :isEdit="true"
+          :item="plan"
+          :template="plan"
+        />
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -31,13 +32,23 @@
 
 <script>
 import config from "@/config.js";
-import PlansCreate from "@/views/PlansCreate.vue";
-import PlansTemplate from "@/components/plan/template.vue";
 
 export default {
   name: "plan-view",
-  components: { PlansCreate, PlansTemplate },
-  data: () => ({ tabs: 0, navTitles: config.navTitles ?? {} }),
+  data: () => ({
+    tabsIndex: 0,
+    navTitles: config.navTitles ?? {},
+    tabs: [
+      {
+        title: "Info",
+        component: () => import("@/views/PlansCreate.vue")
+      },
+      {
+        title: "Template",
+        component: () => import("@/components/plan/template.vue")
+      }
+    ]
+  }),
   methods: {
     navTitle(title) {
       if (title && this.navTitles[title]) {
@@ -70,6 +81,16 @@ export default {
       params: this.$route.params?.planId,
     });
   },
+  watch: {
+    plan() {
+      if (['ovh', 'goget'].includes(this.plan.type)) {
+        this.tabs.splice(this.tabs.length - 1, 0, {
+          title: 'Prices',
+          component: () => import(`@/components/plan/${this.plan.type}Prices.vue`)
+        });
+      }
+    }
+  }
 };
 </script>
 
