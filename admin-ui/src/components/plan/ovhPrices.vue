@@ -53,14 +53,40 @@
           :loading="isPlansLoading"
           :footer-error="fetchError"
         >
-          <template v-slot:[`item.name`]="{ item }">
-            <v-text-field v-model="item.name" />
+          <template v-slot:[`item.group`]="{ item }">
+            <template v-if="mode === 'edit' && planId === item.id">
+              <v-text-field dense class="d-inline-block mr-1" style="width: 200px" v-model="newGroupName" />
+              <v-icon @click="editGroup(item.group)">mdi-content-save</v-icon>
+              <v-icon @click="mode = 'none'">mdi-close</v-icon>
+            </template>
+
+            <template v-if="mode === 'create' && planId === item.id">
+              <v-text-field dense class="d-inline-block mr-1" style="width: 200px" v-model="newGroupName" />
+              <v-icon @click="createGroup(item)">mdi-content-save</v-icon>
+              <v-icon @click="mode = 'none'">mdi-close</v-icon>
+            </template>
+
+            <template v-if="mode === 'none'">
+              <v-select
+                dense 
+                class="d-inline-block"
+                style="width: 200px"
+                v-model="item.group"
+                :items="groups"
+                @change="item.name = getName(item)"
+              />
+              <v-icon @click="changeMode('create', item)">mdi-plus</v-icon>
+              <v-icon @click="changeMode('edit', item)">mdi-pencil</v-icon>
+              <v-icon v-if="groups.length > 1" @click="deleteGroup(item.group)">mdi-delete</v-icon>
+            </template>
+
+            <template v-else-if="planId !== item.id">{{ item.group }}</template>
           </template>
           <template v-slot:[`item.price.value`]="{ item, value }">
             {{ value }} {{ 'NCU' || item.price.currencyCode }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
-            <v-text-field style="width: 150px" v-model="item.value" />
+            <v-text-field dense style="width: 150px" v-model="item.value" />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
             <v-switch v-model="item.sell" />
@@ -73,7 +99,7 @@
                 {{ item.windows.price.value }}
                 {{ 'NCU' || item.price.currencyCode }}
               </td>
-              <td><v-text-field style="width: 150px" v-model="item.windows.value" /></td>
+              <td><v-text-field dense style="width: 150px" v-model="item.windows.value" /></td>
               <td></td>
             </template>
             <template v-else>
@@ -96,7 +122,7 @@
             {{ value }} {{ 'NCU' || item.price.currencyCode }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
-            <v-text-field style="width: 150px" v-model="item.value" />
+            <v-text-field dense style="width: 150px" v-model="item.value" />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
             <v-switch v-model="item.sell" />
@@ -148,6 +174,7 @@ export default {
     headers: [
       { text: '', value: 'data-table-expand', groupable: false },
       { text: 'Tariff', value: 'name', sortable: false, class: 'groupable' },
+      { text: 'Group', value: 'group', sortable: false, class: 'groupable' },
       { text: 'Duration', value: 'duration', sortable: false, class: 'groupable' },
       { text: 'Price', value: 'price.value', groupable: false },
       { text: 'New price', value: 'value', groupable: false },
@@ -164,6 +191,10 @@ export default {
     ],
 
     fee: {},
+    groups: [],
+    newGroupName: '',
+    planId: -1,
+    mode: 'none',
     tabs: ['Tariffs', 'Addons'],
     tabsIndex: 0,
     isValid: true,
@@ -226,14 +257,16 @@ export default {
             result.push({
               ...plan,
               planCode,
-              pricingMode,
               price,
               duration,
               name: productName,
+              group: planCode.split('-')[1],
               value: price.value,
               sell: false,
               id: `${duration} ${planCode}`
             });
+
+            this.groups.push(planCode.split('-')[1]);
           }
         });
       });
@@ -262,8 +295,6 @@ export default {
 
             if (isMonthly || isYearly) {
               result.push({
-                planCode,
-                pricingMode,
                 price,
                 duration,
                 name: productName,
@@ -314,6 +345,10 @@ export default {
     editPlan() {
       if (!this.isValid) {
         this.showSnackbarError({ message: 'Fee is not valid' });
+        return;
+      }
+      if (!this.plans.every(({ group }) => this.groups.includes(group))) {
+        this.showSnackbarError({ message: 'You must select a group for the tariff!' });
         return;
       }
 
@@ -372,6 +407,43 @@ export default {
         case 'P1Y':
           return 3600 * 24 * 30 * 12;
       }
+    },
+    getName({ name, group }) {
+      const newGroup = `${group[0].toUpperCase()}${group.slice(1)}`;
+
+      return `VPS ${newGroup} ${name.split(' ').at(-1)}`;
+    },
+    editGroup(group) {
+      const i = this.groups.indexOf(group);
+
+      this.groups.splice(i, 1, this.newGroupName);
+      this.plans.forEach((plan, index) => {
+        if (plan.group !== group) return;
+        this.plans[index].group = this.newGroupName;
+        this.plans[index].name = this.getName(plan);
+      });
+
+      this.changeMode('none', { id: -1, group: '' });
+    },
+    createGroup(plan) {
+      this.groups.push(this.newGroupName);
+      plan.group = this.newGroupName;
+      plan.name = this.getName(plan);
+
+      this.changeMode('none', { id: -1, group: '' });
+    },
+    deleteGroup(group) {
+      this.groups = this.groups.filter((el) => el !== group);
+      this.plans.forEach((plan, i) => {
+        if (plan.group !== group) return;
+        this.plans[i].group = this.groups[0];
+        this.plans[i].name = this.getName(plan);
+      });
+    },
+    changeMode(mode, { id, group }) {
+      this.mode = mode;
+      this.planId = id;
+      this.newGroupName = group;
     }
   },
   created() {
@@ -416,13 +488,19 @@ export default {
         addon.sell = true;
       });
 
+      this.groups = [];
       Object.entries(this.template.products).forEach(([key, product]) => {
         const ovhPlan = this.plans.find((el) => el.id === key);
         const winKey = Object.keys(product.meta).find((el) => el.includes('windows'));
+        const group = product.title.split(' ')[1].toLowerCase();
 
+        ovhPlan.name = product.title;
         ovhPlan.value = product.price;
+        ovhPlan.group = group;
         ovhPlan.sell = true;
+
         if (winKey) ovhPlan.windows.value = product.meta[winKey];
+        this.groups.push(group);
       });
 
       this.fee = this.template.fee;

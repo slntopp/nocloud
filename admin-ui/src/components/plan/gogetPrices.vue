@@ -65,7 +65,7 @@
               {{ value }} {{ 'NCU' }}
             </template>
             <template v-slot:[`item.value`]="{ item }">
-              <v-text-field style="width: 150px" v-model="item.value" />
+              <v-text-field dense style="width: 150px" v-model="item.value" />
             </template>
             <template v-slot:[`item.sell`]="{ item }">
               <v-switch v-model="item.sell" />
