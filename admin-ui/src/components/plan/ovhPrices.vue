@@ -199,7 +199,6 @@ export default {
     tabsIndex: 0,
     isValid: true,
     isPlansLoading: false,
-    nocloudPlan: '',
     fetchError: ''
   }),
   methods: {
@@ -260,13 +259,11 @@ export default {
               price,
               duration,
               name: productName,
-              group: planCode.split('-')[1],
+              group: productName.split(' ')[1],
               value: price.value,
               sell: false,
               id: `${duration} ${planCode}`
             });
-
-            this.groups.push(planCode.split('-')[1]);
           }
         });
       });
@@ -464,6 +461,7 @@ export default {
           element.addEventListener('click', this.changeClose);
         });
 
+        this.fetchError = '';
         this.changeIcon();
         this.changeClose();
       })
@@ -489,19 +487,23 @@ export default {
       });
 
       this.groups = [];
-      Object.entries(this.template.products).forEach(([key, product]) => {
-        const ovhPlan = this.plans.find((el) => el.id === key);
-        const winKey = Object.keys(product.meta).find((el) => el.includes('windows'));
-        const group = product.title.split(' ')[1].toLowerCase();
+      this.plans.forEach(({ id, name }, i) => {
+        const product = this.template.products[id];
+        const winKey = Object.keys(product?.meta || {}).find((el) => el.includes('windows'));
+        const group = product?.title.split(' ')[1] || name.split(' ')[1];
 
-        ovhPlan.name = product.title;
-        ovhPlan.value = product.price;
-        ovhPlan.group = group;
-        ovhPlan.sell = true;
+        if (product) {
+          this.plans[i].name = product.title;
+          this.plans[i].value = product.price;
+          this.plans[i].group = group;
+          this.plans[i].sell = true;
 
-        if (winKey) ovhPlan.windows.value = product.meta[winKey];
-        this.groups.push(group);
+          if (winKey) this.plans[i].windows.value = product.meta[winKey];
+        }
+        if (!this.groups.includes(group)) this.groups.push(group);
       });
+
+
 
       this.fee = this.template.fee;
     }

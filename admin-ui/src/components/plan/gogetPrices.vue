@@ -1,16 +1,6 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
-    <v-select
-      label="Plan"
-      item-text="title"
-      item-value="uuid"
-      class="d-inline-block"
-      v-model="nocloudPlan"
-      v-if="nocloudPlans.length > 1"
-      :items="nocloudPlans"
-    />
-
     <v-row>
       <v-col cols="6">
         <v-expansion-panels>
@@ -23,18 +13,15 @@
                 @changeFee="(data) => (fee = data)"
                 @onValid="(data) => (isValid = data)"
               />
+              <confirm-dialog
+                text="This will apply the fee markup parameters to all prices"
+                @confirm="setFee"
+              >
+                <v-btn class="mt-4">Set fee</v-btn>
+              </confirm-dialog>
             </v-expansion-panel-content>
           </v-expansion-panel>
         </v-expansion-panels>
-      </v-col>
-      <v-col cols="6" />
-      <v-col cols="12">
-        <confirm-dialog
-          text="This will apply the fee markup parameters to all prices"
-          @confirm="setFee"
-        >
-          <v-btn>Set fee</v-btn>
-        </confirm-dialog>
       </v-col>
     </v-row>
 
@@ -130,7 +117,6 @@ export default {
 
     isValid: true,
     isPlansLoading: false,
-    nocloudPlan: '',
     fetchError: ''
   }),
   methods: {
@@ -194,11 +180,7 @@ export default {
         return;
       }
 
-      const plan = (this.nocloudPlan)
-        ? this.nocloudPlans.find(({ uuid }) => uuid === this.nocloudPlan)
-        : { title: 'goget-plan', type: 'ovh', public: true, kind: 'STATIC' };
-
-      const newPlan = { ...plan, fee: this.fee, resources: [], products: {} };
+      const newPlan = { ...this.template, fee: this.fee, resources: [], products: {} };
 
       this.plans.forEach((plan) => {
         plan.prices.forEach((el) => {
@@ -216,12 +198,8 @@ export default {
         });
       });
 
-      const request = (newPlan.uuid)
-        ? api.plans.update(newPlan.uuid, newPlan)
-        : api.plans.create(newPlan);
-
       this.isLoading = true;
-      request.then(() => {
+      api.plans.update(newPlan.uuid, newPlan).then(() => {
         this.showSnackbarSuccess({ message: 'Plan edited successfully' });
       })
       .catch((err) => {
@@ -244,21 +222,13 @@ export default {
     }
   },
   created() {
-    this.changeIcon();
     this.isPlansLoading = true;
-    this.$store.dispatch('plans/fetch', {
-      sp_uuid: this.template.uuid,
-      anonymously: false
-    })
-      .then(() => this.fetchError = '')
-      .catch((err) => {
-        this.fetchError = err.response?.data?.message ?? err.message ?? err;
-        console.error(err);
-      });
+    this.$store.dispatch('servicesProviders/fetch')
+      .then(({ pool }) => {
+        const sp = pool.find(({ type }) => type === 'goget');
 
-    api.post(`/sp/${this.template.uuid}/invoke`, {
-      method: 'get_certificate'
-    })
+        return api.post(`/sp/${sp.uuid}/invoke`, { method: 'get_certificate' });
+      })
       .then(({ meta: { cert } }) => {
         this.plans = cert.products;
 
@@ -272,7 +242,8 @@ export default {
           element.addEventListener('click', this.changeClose);
         });
 
-        if (this.nocloudPlans.length === 1) this.nocloudPlan = this.nocloudPlans[0].uuid;
+        this.fetchError = '';
+        this.changeIcon();
         this.changeClose();
       })
       .catch((err) => {
@@ -283,16 +254,9 @@ export default {
         this.isPlansLoading = false;
       });
   },
-  computed: {
-    nocloudPlans() {
-      return this.$store.getters['plans/all'].filter(({ type }) => type === 'goget');
-    }
-  },
   watch: {
-    nocloudPlan(value) {
-      const plan = this.nocloudPlans.find(({ uuid }) => uuid === value);
-
-      Object.entries(plan.products).forEach(([key, value]) => {
+    plans() {
+      Object.entries(this.template.products).forEach(([key, value]) => {
         const [period, id] = key.split(' ');
         const product = this.plans.find((el) => el.id === id);
 
@@ -300,7 +264,7 @@ export default {
         product[period].sell = true;
       });
 
-      this.fee = plan.fee;
+      this.fee = this.template.fee;
     }
   }
 }
