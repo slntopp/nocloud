@@ -6,7 +6,7 @@
 
 1. git
 2. docker | ^20
-3. docker-compose
+3. docker compose | ^2+
 
 ## Clone nocloud repo
 
@@ -35,7 +35,7 @@ In order to generate certs you ought to write your email address in `traefik.yml
 ## Start service
 
 ```shell
-docker-compose up -d
+docker compose up -d
 ```
 
 ## Proxy and Wildcard domains
