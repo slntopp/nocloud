@@ -1,8 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"time"
 
+	"github.com/slntopp/nocloud/pkg/eventbus"
 	"github.com/spf13/viper"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -19,6 +22,10 @@ func init() {
 	rbmq = viper.GetString("RABBITMQ_CONN")
 }
 
+type Message struct {
+	Text string `json:"text"`
+}
+
 func main() {
 
 	rbmq, err := amqp.Dial(rbmq)
@@ -27,7 +34,22 @@ func main() {
 	}
 	defer rbmq.Close()
 
-	// bus := event.NewBus(rbmq)
-	// messageBus := event.NewTypedBus[]()
+	bus := eventbus.New(rbmq)
+
+	counter := 0
+	for {
+		time.Sleep(time.Second)
+
+		if err := bus.Pub(Message{
+			Text: fmt.Sprint(counter),
+		}, ""); err != nil {
+			log.Println(err)
+			continue
+		}
+
+		counter++
+
+		log.Println("message sent")
+	}
 
 }
