@@ -31,7 +31,7 @@ func (s *EventBusServer) Publish(ctx context.Context, event *pb.Event) (*pb.Resp
 
 	s.log.Info("got publish request")
 
-	if err := s.bus.Pub(event); err != nil {
+	if err := s.bus.Pub(ctx, event); err != nil {
 		return nil, err
 	}
 

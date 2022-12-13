@@ -7,13 +7,6 @@ import (
 	pb "github.com/slntopp/nocloud-proto/events"
 )
 
-const (
-	// Consume properties
-	CONSUME_AUTO_ACK = false
-	// Common properties
-	NO_WAIT = false
-)
-
 type EventBus struct {
 	ch       *Channel
 	exchange *Exchange
@@ -28,7 +21,7 @@ func NewEventBus(conn *amqp.Connection) (*EventBus, error) {
 
 	ch := NewChannel(channel)
 
-	exchange, err := NewExchange(ch, EXCHANGE_NAME, Alternate)
+	exchange, err := NewExchange(ch, EXCHANGE_NAME, AlternateExchange)
 	if err != nil {
 		return nil, err
 	}
@@ -43,8 +36,8 @@ func NewEventBus(conn *amqp.Connection) (*EventBus, error) {
 	return bus, nil
 }
 
-func (bus *EventBus) Pub(event *pb.Event) (err error) {
-	return
+func (bus *EventBus) Pub(ctx context.Context, event *pb.Event) (err error) {
+	return bus.exchange.Send(ctx, event)
 }
 
 func (bus *EventBus) Sub(key string) (<-chan *pb.Event, error) {

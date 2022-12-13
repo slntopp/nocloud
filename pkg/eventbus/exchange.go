@@ -7,17 +7,6 @@ import (
 	pb "github.com/slntopp/nocloud-proto/events"
 )
 
-const (
-	// Exchange properties
-	EXCHANGE_NAME        = "nocloud-event-bus"
-	EXCHANGE_BUFFER      = EXCHANGE_NAME + "-buffer"
-	EXCHANGE_DURABLE     = true // essential for retention
-	EXCHANGE_AUTO_DELETE = false
-	EXCHANGE_INTERNAL    = false
-	EXCHANGE_NO_WAIT     = false
-	EXCHANGE_KIND        = "topic"
-)
-
 type Exchange struct {
 	ch   *Channel
 	Name string
@@ -26,15 +15,15 @@ type Exchange struct {
 type ExchangeType int64
 
 const (
-	Default ExchangeType = iota
-	Alternate
+	DefaultExchange ExchangeType = iota
+	AlternateExchange
 )
 
 func NewExchange(ch *Channel, name string, t ExchangeType) (*Exchange, error) {
 
 	args := amqp091.Table{}
 
-	if t == Alternate {
+	if t == AlternateExchange {
 		args["alternate-exchange"] = EXCHANGE_BUFFER
 	}
 

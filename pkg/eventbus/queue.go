@@ -8,13 +8,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const (
-	// Queue properties
-	QUEUE_DURABLE     = true
-	QUEUE_AUTO_DELETE = true
-	QUEUE_EXCLUSIVE   = true
-)
-
 type Queue struct {
 	amqp091.Queue
 	ch *Channel
