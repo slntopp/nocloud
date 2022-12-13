@@ -17,8 +17,8 @@
 
     <confirm-dialog
       v-else
-      title="You can't delete a plan while there are instances using it!"
-      subtitle="To delete plan, select the plan that these instances will use."
+      title="You can't delete a price model while there are instances using it!"
+      subtitle="To delete price model, select the price model that these instances will use."
       :width="625"
       :disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
       @confirm="deleteSelectedPlan"
@@ -54,7 +54,7 @@
     </confirm-dialog>
 
     <v-select
-      label="Service Provider"
+      label="Filter by SP"
       item-text="title"
       item-value="uuid"
       class="d-inline-block"
@@ -124,7 +124,7 @@ export default {
     ],
     linkedHeaders: [
       { text: "Instance", value: "title" },
-      { text: "Plan", value: "plan" },
+      { text: "Price model", value: "plan" },
     ],
 
     linked: [],
@@ -177,13 +177,13 @@ export default {
         .then(() => {
           this.$store.dispatch("plans/fetch");
           this.showSnackbar({
-            message: "Plan deleted successfully."
+            message: "Price model deleted successfully."
           });
         })
         .catch((err) => {
           if (err.response.status >= 500 || err.response.status < 600) {
             this.showSnackbarError({
-              message: `Plan Unavailable: ${
+              message: `Price model Unavailable: ${
                 err?.response?.data?.message ?? "Unknown"
               }.`,
               timeout: 0,
@@ -263,7 +263,7 @@ export default {
     servicesProviders() {
       const sp = this.$store.getters["servicesProviders/all"];
 
-      return [...sp, { title: "none", uuid: null }];
+      return [...sp, { title: "all", uuid: null }];
     },
   },
   watch: {

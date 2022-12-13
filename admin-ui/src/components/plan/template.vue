@@ -115,7 +115,7 @@ export default {
         .update(this.template.uuid, request)
         .then(() => {
           this.showSnackbarSuccess({
-            message: "Plan edited successfully",
+            message: "Price model edited successfully",
           });
 
           setTimeout(() => {

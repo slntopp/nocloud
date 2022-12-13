@@ -1,7 +1,7 @@
 <template>
   <div class="pa-4">
     <div class="d-flex">
-      <h1 class="page__title" v-if="!item">Create plan</h1>
+      <h1 class="page__title" v-if="!item">Create price model</h1>
       <v-icon class="mx-3" large color="light" @click="openPlanWiki">
         mdi-information-outline
       </v-icon>
@@ -12,7 +12,7 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Plan type</v-subheader>
+              <v-subheader>Price model type</v-subheader>
             </v-col>
             <v-col cols="9">
               <v-select
@@ -25,7 +25,7 @@
           </v-row>
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Plan title</v-subheader>
+              <v-subheader>Price model title</v-subheader>
             </v-col>
             <v-col cols="9">
               <v-text-field
@@ -45,7 +45,7 @@
                     color="background-light"
                     style="padding-left: 16px; color: rgba(255, 255, 255, 0.7)"
                   >
-                    Fee
+                    Margin rules
                   </v-expansion-panel-header>
                   <v-expansion-panel-content color="background-light">
                     <plan-opensrs
@@ -62,7 +62,7 @@
 
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Plan kind</v-subheader>
+              <v-subheader>Price model kind</v-subheader>
             </v-col>
             <v-col cols="9">
               <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">
@@ -89,7 +89,7 @@
 
           <v-divider />
 
-          <template v-if="!['ovh', 'goget'].includes(plan.type) && item">
+          <template v-if="!['ovh', 'goget'].includes(plan.type)">
             <v-tabs v-model="form.title" background-color="background-light">
               <v-tab
                 draggable="true"
@@ -167,8 +167,8 @@
         <v-col>
           <v-dialog :max-width="600" v-model="isDialogVisible">
             <v-card color="background-light">
-              <v-card-title>Do you really want to change your current plan?</v-card-title>
-              <v-card-subtitle>You can also create a new plan based on the current one.</v-card-subtitle>
+              <v-card-title>Do you really want to change your current price model?</v-card-title>
+              <v-card-subtitle>You can also create a new price model based on the current one.</v-card-subtitle>
               <v-card-actions>
                 <v-btn class="mr-2" :loading="isLoading" @click="tryToSend('create')">
                   Create
@@ -419,8 +419,8 @@ export default {
       request.then(() => {
         this.showSnackbarSuccess({
           message: (action === 'edit')
-            ? "Plan edited successfully"
-            : "Plan created successfully",
+            ? "Price model edited successfully"
+            : "Price model created successfully",
         });
         setTimeout(() => {
           this.$router.push({ name: "Plans" });

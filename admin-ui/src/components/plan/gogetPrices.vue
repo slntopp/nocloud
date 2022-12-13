@@ -3,10 +3,10 @@
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
     <v-row>
       <v-col cols="6">
-        <v-expansion-panels>
+        <v-expansion-panels :value="0">
           <v-expansion-panel>
             <v-expansion-panel-header color="background-light">
-              Fee:
+              Margin rules:
             </v-expansion-panel-header>
             <v-expansion-panel-content color="background-light">
               <plan-opensrs
@@ -14,10 +14,10 @@
                 @onValid="(data) => (isValid = data)"
               />
               <confirm-dialog
-                text="This will apply the fee markup parameters to all prices"
+                text="This will apply the rules markup parameters to all prices"
                 @confirm="setFee"
               >
-                <v-btn class="mt-4">Set fee</v-btn>
+                <v-btn class="mt-4">Set rules</v-btn>
               </confirm-dialog>
             </v-expansion-panel-content>
           </v-expansion-panel>
@@ -110,8 +110,8 @@ export default {
     ],
     pricesHeaders: [
       { text: 'Period', value: 'period' },
-      { text: 'Price', value: 'price' },
-      { text: 'New price', value: 'value' },
+      { text: 'Income price', value: 'price' },
+      { text: 'Sale price', value: 'value' },
       { text: 'Sell', value: 'sell', width: 100 }
     ],
 
@@ -165,9 +165,9 @@ export default {
               round = 'ceil';
           }
 
-          for (let range of this.fee.ranges) {
-            if (price.value <= range.from) continue;
-            if (price.value > range.to) continue;
+          for (let range of this.fee?.ranges) {
+            if (price.price <= range.from) continue;
+            if (price.price > range.to) continue;
             percent = range.factor / 100 + 1;
           }
           arr[i].value = Math[round](price.price * percent * n) / n;
@@ -176,7 +176,7 @@ export default {
     },
     editPlan() {
       if (!this.isValid) {
-        this.showSnackbarError({ message: 'Fee is not valid' });
+        this.showSnackbarError({ message: 'Margin rules is not valid' });
         return;
       }
 
@@ -200,7 +200,7 @@ export default {
 
       this.isLoading = true;
       api.plans.update(newPlan.uuid, newPlan).then(() => {
-        this.showSnackbarSuccess({ message: 'Plan edited successfully' });
+        this.showSnackbarSuccess({ message: 'Price model edited successfully' });
       })
       .catch((err) => {
         const message = err.response?.data?.message ?? err.message ?? err;

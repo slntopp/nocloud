@@ -3,10 +3,10 @@
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
     <v-row>
       <v-col cols="6">
-        <v-expansion-panels>
+        <v-expansion-panels :value="0">
           <v-expansion-panel>
             <v-expansion-panel-header color="background-light">
-              Fee:
+              Margin rules:
             </v-expansion-panel-header>
             <v-expansion-panel-content color="background-light">
               <plan-opensrs
@@ -14,10 +14,10 @@
                 @onValid="(data) => (isValid = data)"
               />
               <confirm-dialog
-                text="This will apply the fee markup parameters to all prices"
+                text="This will apply the rules markup parameters to all prices"
                 @confirm="setFee"
               >
-                <v-btn class="mt-4">Set fee</v-btn>
+                <v-btn class="mt-4">Set rules</v-btn>
               </confirm-dialog>
             </v-expansion-panel-content>
           </v-expansion-panel>
@@ -82,6 +82,9 @@
 
             <template v-else-if="planId !== item.id">{{ item.group }}</template>
           </template>
+          <template v-slot:[`item.duration`]="{ value }">
+            {{ (value === 'P1M') ? 'monthly' : 'yearly' }}
+          </template>
           <template v-slot:[`item.price.value`]="{ item, value }">
             {{ value }} {{ 'NCU' || item.price.currencyCode }}
           </template>
@@ -118,6 +121,9 @@
           :loading="isPlansLoading"
           :footer-error="fetchError"
         >
+          <template v-slot:[`item.duration`]="{ value }">
+            {{ (value === 'P1M') ? 'monthly' : 'yearly' }}
+          </template>
           <template v-slot:[`item.price.value`]="{ item, value }">
             {{ value }} {{ 'NCU' || item.price.currencyCode }}
           </template>
@@ -175,18 +181,18 @@ export default {
       { text: '', value: 'data-table-expand', groupable: false },
       { text: 'Tariff', value: 'name', sortable: false, class: 'groupable' },
       { text: 'Group', value: 'group', sortable: false, class: 'groupable' },
-      { text: 'Duration', value: 'duration', sortable: false, class: 'groupable' },
-      { text: 'Price', value: 'price.value', groupable: false },
-      { text: 'New price', value: 'value', groupable: false },
+      { text: 'Payment', value: 'duration', sortable: false, class: 'groupable' },
+      { text: 'Income price', value: 'price.value', groupable: false },
+      { text: 'Sale price', value: 'value', groupable: false },
       { text: 'Sell', value: 'sell', sortable: false, class: 'groupable', width: 100 }
     ],
 
     addons: [],
     addonsHeaders: [
       { text: 'Addon', value: 'name', sortable: false, class: 'groupable' },
-      { text: 'Duration', value: 'duration', sortable: false, class: 'groupable' },
-      { text: 'Price', value: 'price.value', groupable: false },
-      { text: 'New price', value: 'value', groupable: false },
+      { text: 'Payment', value: 'duration', sortable: false, class: 'groupable' },
+      { text: 'Income price', value: 'price.value', groupable: false },
+      { text: 'Sale price', value: 'value', groupable: false },
       { text: 'Sell', value: 'sell', sortable: false, class: 'groupable', width: 100 }
     ],
 
@@ -331,8 +337,8 @@ export default {
           }
 
           for (let range of this.fee.ranges) {
-            if (plan.value <= range.from) continue;
-            if (plan.value > range.to) continue;
+            if (plan.price.value <= range.from) continue;
+            if (plan.price.value > range.to) continue;
             percent = range.factor / 100 + 1;
           }
           arr[i].value = Math[round](plan.price.value * percent * n) / n;
@@ -341,7 +347,7 @@ export default {
     },
     editPlan() {
       if (!this.isValid) {
-        this.showSnackbarError({ message: 'Fee is not valid' });
+        this.showSnackbarError({ message: 'Margin rules is not valid' });
         return;
       }
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
@@ -385,7 +391,7 @@ export default {
       this.isLoading = true;
       api.plans.update(newPlan.uuid, newPlan)
         .then(() => {
-          this.showSnackbarSuccess({ message: 'Plan edited successfully' });
+          this.showSnackbarSuccess({ message: 'Price model edited successfully' });
         })
         .catch((err) => {
           const message = err.response?.data?.message ?? err.message ?? err;

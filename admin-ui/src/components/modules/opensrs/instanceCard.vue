@@ -15,7 +15,7 @@
         <v-text-field
           readonly
           :value="localInstance.billingPlan.title"
-          label="billing plan"
+          label="price model"
         />
       </v-col>
     </v-row>

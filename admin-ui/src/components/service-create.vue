@@ -102,15 +102,15 @@
           >
             <template v-slot:activator="{ on, attrs }">
               <v-btn class="mx-4 mb-4" v-on="on" v-bind="attrs">
-                apply plan
+                apply price model
               </v-btn>
             </template>
             <v-card>
-              <v-card-title>Apply plan to group</v-card-title>
+              <v-card-title>Apply price model to group</v-card-title>
               <v-card-actions class="d-flex flex-column align-end">
                 <v-select
                   dense
-                  label="plan"
+                  label="price model"
                   style="width: 200px"
                   item-text="title"
                   item-value="uuid"
