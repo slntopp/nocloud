@@ -104,7 +104,7 @@
         </v-col>
         <v-col cols="6">
           <v-select
-            label="plan"
+            label="price model"
             item-text="title"
             item-value="uuid"
             v-model="instance.plan"

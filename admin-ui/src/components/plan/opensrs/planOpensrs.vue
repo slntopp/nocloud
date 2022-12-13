@@ -30,7 +30,7 @@
     </v-row>
     <v-row align="center">
       <v-col cols="3">
-        <v-subheader>Default</v-subheader>
+        <v-subheader>Fixed margin (%)</v-subheader>
       </v-col>
       <v-col cols="9">
         <v-text-field
@@ -42,13 +42,13 @@
         />
       </v-col>
     </v-row>
-    <v-expansion-panels>
+    <v-expansion-panels :value="0">
       <v-expansion-panel>
         <v-expansion-panel-header
           color="background-light"
           style="padding-left: 16px; color: rgba(255, 255, 255, 0.7)"
         >
-          Margin
+          Ranged margin (%)
         </v-expansion-panel-header>
         <v-expansion-panel-content color="background-light">
           <v-list v-if="currentFee.ranges.length > 0" color="background-light">
@@ -60,7 +60,7 @@
                       <v-list-item-title>
                         From: {{ item.from }} NCU,
                         To: {{ item.to }} NCU,
-                        Factor: {{ item.factor }} %
+                        Factor: {{ item.factor }}%
                       </v-list-item-title>
                     </v-list-item-content>
 
@@ -140,9 +140,9 @@ export default {
         round: 2,
       },
       availableRoundes: [
-        { key: "floor", value: 1 },
-        { key: "round", value: 2 },
-        { key: "ceil", value: 3 },
+        { key: "rounding down", value: 1 },
+        { key: "rounding arithmetically", value: 2 },
+        { key: "rounding up", value: 3 },
       ],
       newRange: { from: 0, to: 0, factor: 0 },
       isValid: false,
@@ -173,6 +173,24 @@ export default {
       }
 
       const { to, from, factor } = this.newRange;
+      const range = this.currentFee.ranges.find((el) => {
+        if (el.from <= from && from <= el.to) return true;
+        if (el.from <= to && to <= el.to) return true;
+        if (el.from >= from && to >= el.to) return true;
+      });
+
+      if (+to <= +from) {
+        alert('The value to must be greater than the value from!');
+        return;
+      }
+      if (+from < 0) {
+        alert('The value to must be greater or equal than 0!');
+        return;
+      }
+      if (range) {
+        alert('The Rule for proposed price range has been existed already!');
+        return;
+      }
 
       this.currentFee.ranges.push({ to: +to, from: +from, factor: +factor });
 

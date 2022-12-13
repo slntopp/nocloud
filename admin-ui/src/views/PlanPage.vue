@@ -1,7 +1,7 @@
 <template>
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
-      <router-link :to="{ name: 'Plans' }">{{ navTitle("Plans") }}</router-link>
+      <router-link :to="{ name: 'Plans' }">{{ navTitle("Price Models") }}</router-link>
       / {{ planTitle }}
     </h1>
     <v-tabs

@@ -112,7 +112,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Plans") }}</v-list-item-title>
+            <v-list-item-title>{{ navTitle("Price Models") }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 

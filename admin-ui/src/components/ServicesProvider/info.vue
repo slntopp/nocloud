@@ -326,7 +326,7 @@ export default {
           const ending = bindPromises.length === 1 ? "" : "s";
 
           this.showSnackbarSuccess({
-            message: `Plan${ending} added successfully.`,
+            message: `Price model${ending} added successfully.`,
           });
         })
         .catch((err) => {
@@ -348,7 +348,7 @@ export default {
           const ending = unbindPromises.length === 1 ? "" : "s";
 
           this.showSnackbarSuccess({
-            message: `Plan${ending} deleted successfully.`,
+            message: `Price model${ending} deleted successfully.`,
           });
         })
         .catch((err) => {
