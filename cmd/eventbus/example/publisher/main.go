@@ -34,7 +34,7 @@ func main() {
 	}
 	defer rbmq.Close()
 
-	bus := eventbus.New(rbmq)
+	bus := eventbus.NewEventBus(rbmq)
 
 	counter := 0
 	for {

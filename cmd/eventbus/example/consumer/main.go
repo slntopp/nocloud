@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/slntopp/nocloud/pkg/eventbus"
 	"github.com/spf13/viper"
@@ -32,11 +33,13 @@ func main() {
 	}
 	defer rbmq.Close()
 
-	bus := eventbus.New(rbmq)
+	bus := eventbus.NewEventBus(rbmq)
 	ch, err := bus.Sub("")
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	time.Sleep(time.Second * 5)
 
 	for msg := range eventbus.Cast[Message](ch) {
 		log.Println(msg.Text)

@@ -15,9 +15,15 @@ type EventBusServer struct {
 }
 
 func NewServer(log *zap.Logger, conn *amqp091.Connection) *EventBusServer {
+
+	bus, err := NewEventBus(conn)
+	if err != nil {
+		log.Fatal("cannot create EventBus", zap.Error(err))
+	}
+
 	return &EventBusServer{
 		log: log.Named("EventBusServer"),
-		bus: New(conn),
+		bus: bus,
 	}
 }
 
@@ -25,7 +31,7 @@ func (s *EventBusServer) Publish(ctx context.Context, event *pb.Event) (*pb.Resp
 
 	s.log.Info("got publish request")
 
-	if err := s.bus.Pub(event.Body, event.Topic); err != nil {
+	if err := s.bus.Pub(event); err != nil {
 		return nil, err
 	}
 
@@ -36,15 +42,13 @@ func (s *EventBusServer) Consume(req *pb.ConsumeRequest, srv pb.EventsService_Co
 
 	s.log.Info("got consume request")
 
-	ch, err := s.bus.Sub(req.Topic)
+	ch, err := s.bus.Sub(req.Key)
 	if err != nil {
 		return err
 	}
 
 	for msg := range ch {
-		srv.Send(&pb.Event{
-			Body: msg,
-		})
+		srv.Send(msg)
 	}
 
 	return nil

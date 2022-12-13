@@ -2,114 +2,85 @@ package eventbus
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"log"
-	"time"
 
-	"github.com/pkg/errors"
 	amqp "github.com/rabbitmq/amqp091-go"
+	pb "github.com/slntopp/nocloud-proto/events"
 )
 
 const (
-	EXCHANGE_NAME        = "nocloud-event-bus"
-	EXCHANGE_DURABLE     = true // essential for retention
-	EXCHANGE_AUTO_DELETE = false
-	EXCHANGE_INTERNAL    = false
-	EXCHANGE_NO_WAIT     = false
+	// Consume properties
+	CONSUME_AUTO_ACK = false
+	// Common properties
+	NO_WAIT = false
 )
 
 type EventBus struct {
-	ch *amqp.Channel
+	ch       *Channel
+	exchange *Exchange
 }
 
-func New(conn *amqp.Connection) *EventBus {
+func NewEventBus(conn *amqp.Connection) (*EventBus, error) {
 
 	channel, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("cannot create rbmq channel")
-	}
-
-	if err := channel.ExchangeDeclare(
-		EXCHANGE_NAME,
-		"topic",
-		EXCHANGE_DURABLE,
-		EXCHANGE_AUTO_DELETE,
-		EXCHANGE_INTERNAL,
-		EXCHANGE_NO_WAIT,
-		nil,
-	); err != nil {
-		log.Fatalf("cannot create rbmq exchange")
-	}
-
-	return &EventBus{
-		ch: channel,
-	}
-}
-
-func (bus *EventBus) Pub(msg any, topic string) (err error) {
-	var payload []byte
-
-	switch msg.(type) {
-	case []byte:
-		payload = (msg).([]byte)
-	default:
-		payload, err = json.Marshal(msg)
-		if err != nil {
-			return err
-		}
-	}
-
-	return bus.ch.PublishWithContext(context.Background(), EXCHANGE_NAME, topic, false, false, amqp.Publishing{
-		DeliveryMode: amqp.Persistent,
-		Body:         payload,
-	})
-}
-
-func (bus *EventBus) Sub(topic string) (<-chan []byte, error) {
-
-	queueName := fmt.Sprintf("%d-%s", time.Now().UnixNano(), topic)
-
-	if _, err := bus.ch.QueueDeclare(queueName, true, true, true, false, nil); err != nil {
 		return nil, err
 	}
 
-	if err := bus.ch.QueueBind(
-		queueName,
-		topic,
-		EXCHANGE_NAME,
-		false,
-		nil,
-	); err != nil {
-		return nil, err
-	}
+	ch := NewChannel(channel)
 
-	deliveries, err := bus.ch.Consume(queueName, "", true, false, false, false, nil)
+	exchange, err := NewExchange(ch, EXCHANGE_NAME, Alternate)
 	if err != nil {
-		return nil, errors.Wrap(err, "consume")
+		return nil, err
 	}
 
-	ch := make(chan []byte)
+	bus := &EventBus{
+		ch:       ch,
+		exchange: exchange,
+	}
 
-	go func() {
-		for delivery := range deliveries {
-			ch <- delivery.Body
-		}
-	}()
+	go bus.sync()
+
+	return bus, nil
+}
+
+func (bus *EventBus) Pub(event *pb.Event) (err error) {
+	return
+}
+
+func (bus *EventBus) Sub(key string) (<-chan *pb.Event, error) {
+	q, err := NewQueue(bus.ch, "")
+	if err != nil {
+		return nil, err
+	}
+
+	bus.exchange.Bind(q, key)
+
+	ch, err := q.Consume()
+	if err != nil {
+		return nil, err
+	}
 
 	return ch, nil
 }
 
-func Cast[T any](ch <-chan []byte) <-chan T {
-	buffer := make(chan T)
-	go func() {
-		for bytes := range ch {
-			var msg T
-			if err := json.Unmarshal(bytes, &msg); err == nil {
-				buffer <- msg
-			}
-		}
-	}()
+func (bus *EventBus) sync() {
 
-	return buffer
+	q, err := NewQueue(bus.ch, EXCHANGE_BUFFER)
+	if err != nil {
+		return
+	}
+
+	ch, err := q.Consume()
+	if err != nil {
+		return
+	}
+
+	for event := range ch {
+		_, err = NewQueue(bus.ch, event.Key)
+		if err != nil {
+			continue
+		}
+
+		bus.exchange.Send(context.Background(), event)
+	}
 }
