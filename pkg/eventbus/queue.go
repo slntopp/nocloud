@@ -47,9 +47,10 @@ func (q *Queue) Consume() (<-chan *pb.Event, error) {
 	go func() {
 		for del := range dels {
 			event := &pb.Event{}
-			proto.Unmarshal(del.Body, event)
-			ch <- event
-			del.Ack(false)
+			if err := proto.Unmarshal(del.Body, event); err == nil {
+				ch <- event
+				del.Ack(false)
+			}
 		}
 	}()
 

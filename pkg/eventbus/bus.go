@@ -5,14 +5,20 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud-proto/events"
+	"go.uber.org/zap"
 )
 
 type EventBus struct {
 	conn     *Connection
 	exchange *Exchange
+	log      *zap.Logger
 }
 
-func NewEventBus(conn *amqp.Connection) (*EventBus, error) {
+func NewEventBus(conn *amqp.Connection, logger *zap.Logger) (*EventBus, error) {
+
+	log := logger.Named("EventBus")
+
+	log.Info("creating new EventBus instance")
 
 	connection, err := NewConnection(conn)
 	if err != nil {
@@ -27,12 +33,15 @@ func NewEventBus(conn *amqp.Connection) (*EventBus, error) {
 	bus := &EventBus{
 		conn:     connection,
 		exchange: exchange,
+		log:      log,
 	}
 
 	return bus, nil
 }
 
 func (bus *EventBus) Pub(ctx context.Context, event *pb.Event) error {
+
+	bus.log.Info("publishing event", zap.Any("event", event))
 
 	_, err := bus.exchange.DeriveQueue(event.Key)
 	if err != nil {
@@ -43,6 +52,8 @@ func (bus *EventBus) Pub(ctx context.Context, event *pb.Event) error {
 }
 
 func (bus *EventBus) Sub(key string) (<-chan *pb.Event, error) {
+
+	bus.log.Info("consuming events", zap.String("key", key))
 
 	// Disconnect other consumers
 	if err := bus.conn.Channel().Cancel(key, NO_WAIT); err != nil {

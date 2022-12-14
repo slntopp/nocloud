@@ -14,15 +14,19 @@ type EventBusServer struct {
 	bus *EventBus
 }
 
-func NewServer(log *zap.Logger, conn *amqp091.Connection) *EventBusServer {
+func NewServer(logger *zap.Logger, conn *amqp091.Connection) *EventBusServer {
 
-	bus, err := NewEventBus(conn)
+	log := logger.Named("EventBusServer")
+
+	log.Info("creating new EvenBusServer instance")
+
+	bus, err := NewEventBus(conn, log)
 	if err != nil {
 		log.Fatal("cannot create EventBus", zap.Error(err))
 	}
 
 	return &EventBusServer{
-		log: log.Named("EventBusServer"),
+		log: log,
 		bus: bus,
 	}
 }
