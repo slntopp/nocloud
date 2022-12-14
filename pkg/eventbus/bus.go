@@ -8,45 +8,51 @@ import (
 )
 
 type EventBus struct {
-	ch       *Channel
+	conn     *Connection
 	exchange *Exchange
 }
 
 func NewEventBus(conn *amqp.Connection) (*EventBus, error) {
 
-	channel, err := conn.Channel()
+	connection, err := NewConnection(conn)
 	if err != nil {
 		return nil, err
 	}
 
-	ch := NewChannel(channel)
-
-	exchange, err := NewExchange(ch, EXCHANGE_NAME, AlternateExchange)
+	exchange, err := NewExchange(connection, EXCHANGE_NAME, DefaultExchange)
 	if err != nil {
 		return nil, err
 	}
 
 	bus := &EventBus{
-		ch:       ch,
+		conn:     connection,
 		exchange: exchange,
 	}
-
-	go bus.sync()
 
 	return bus, nil
 }
 
-func (bus *EventBus) Pub(ctx context.Context, event *pb.Event) (err error) {
+func (bus *EventBus) Pub(ctx context.Context, event *pb.Event) error {
+
+	_, err := bus.exchange.DeriveQueue(event.Key)
+	if err != nil {
+		return err
+	}
+
 	return bus.exchange.Send(ctx, event)
 }
 
 func (bus *EventBus) Sub(key string) (<-chan *pb.Event, error) {
-	q, err := NewQueue(bus.ch, "")
-	if err != nil {
+
+	// Disconnect other consumers
+	if err := bus.conn.Channel().Cancel(key, NO_WAIT); err != nil {
 		return nil, err
 	}
 
-	bus.exchange.Bind(q, key)
+	q, err := bus.exchange.DeriveQueue(key)
+	if err != nil {
+		return nil, err
+	}
 
 	ch, err := q.Consume()
 	if err != nil {
@@ -54,26 +60,4 @@ func (bus *EventBus) Sub(key string) (<-chan *pb.Event, error) {
 	}
 
 	return ch, nil
-}
-
-func (bus *EventBus) sync() {
-
-	q, err := NewQueue(bus.ch, EXCHANGE_BUFFER)
-	if err != nil {
-		return
-	}
-
-	ch, err := q.Consume()
-	if err != nil {
-		return
-	}
-
-	for event := range ch {
-		_, err = NewQueue(bus.ch, event.Key)
-		if err != nil {
-			continue
-		}
-
-		bus.exchange.Send(context.Background(), event)
-	}
 }

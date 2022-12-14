@@ -2,7 +2,9 @@ package eventbus
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud-proto/events"
 	"google.golang.org/protobuf/proto"
@@ -10,11 +12,22 @@ import (
 
 type Queue struct {
 	amqp091.Queue
-	ch *Channel
+	conn *Connection
 }
 
-func NewQueue(ch *Channel, name string) (*Queue, error) {
-	q, err := ch.QueueDeclare(name, QUEUE_DURABLE, QUEUE_AUTO_DELETE, QUEUE_EXCLUSIVE, NO_WAIT, nil)
+type QueueType int64
+
+const (
+	DefaultQueue QueueType = iota
+	UniqueQueue
+)
+
+func NewQueue(ch *Connection, name string, t QueueType) (*Queue, error) {
+	if t == UniqueQueue {
+		name = fmt.Sprintf("%s.%s", name, uuid.New())
+	}
+
+	q, err := ch.Channel().QueueDeclare(name, QUEUE_DURABLE, QUEUE_AUTO_DELETE, QUEUE_EXCLUSIVE, NO_WAIT, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +36,8 @@ func NewQueue(ch *Channel, name string) (*Queue, error) {
 }
 
 func (q *Queue) Consume() (<-chan *pb.Event, error) {
-	dels, err := q.ch.Consume(q.Name, "", CONSUME_AUTO_ACK, QUEUE_EXCLUSIVE, false, NO_WAIT, nil)
+
+	dels, err := q.conn.Channel().Consume(q.Name, q.Name, CONSUME_AUTO_ACK, QUEUE_EXCLUSIVE, false, NO_WAIT, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -35,6 +49,7 @@ func (q *Queue) Consume() (<-chan *pb.Event, error) {
 			event := &pb.Event{}
 			proto.Unmarshal(del.Body, event)
 			ch <- event
+			del.Ack(false)
 		}
 	}()
 
@@ -42,5 +57,5 @@ func (q *Queue) Consume() (<-chan *pb.Event, error) {
 }
 
 func (q *Queue) Send(ctx context.Context, event *pb.Event) error {
-	return q.ch.Send(ctx, "", event)
+	return q.conn.Send(ctx, "", event)
 }

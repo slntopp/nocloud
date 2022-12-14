@@ -8,7 +8,7 @@ import (
 )
 
 type Exchange struct {
-	ch   *Channel
+	conn *Connection
 	Name string
 }
 
@@ -19,7 +19,7 @@ const (
 	AlternateExchange
 )
 
-func NewExchange(ch *Channel, name string, t ExchangeType) (*Exchange, error) {
+func NewExchange(conn *Connection, name string, t ExchangeType) (*Exchange, error) {
 
 	args := amqp091.Table{}
 
@@ -27,12 +27,12 @@ func NewExchange(ch *Channel, name string, t ExchangeType) (*Exchange, error) {
 		args["alternate-exchange"] = EXCHANGE_BUFFER
 	}
 
-	if err := ch.ExchangeDeclare(name, EXCHANGE_KIND, EXCHANGE_DURABLE, EXCHANGE_AUTO_DELETE, EXCHANGE_INTERNAL, NO_WAIT, args); err != nil {
+	if err := conn.Channel().ExchangeDeclare(name, EXCHANGE_KIND, EXCHANGE_DURABLE, EXCHANGE_AUTO_DELETE, EXCHANGE_INTERNAL, NO_WAIT, args); err != nil {
 		return nil, err
 	}
 
 	return &Exchange{
-		ch:   ch,
+		conn: conn,
 		Name: name,
 	}, nil
 }
@@ -41,7 +41,7 @@ func NewExchange(ch *Channel, name string, t ExchangeType) (*Exchange, error) {
 //
 //	Exchange -> Queue
 func (e *Exchange) Bind(q *Queue, key string) error {
-	return e.ch.QueueBind(
+	return e.conn.Channel().QueueBind(
 		q.Name,
 		key,
 		e.Name,
@@ -51,5 +51,20 @@ func (e *Exchange) Bind(q *Queue, key string) error {
 }
 
 func (e *Exchange) Send(ctx context.Context, msg *pb.Event) error {
-	return e.ch.Send(ctx, e.Name, msg)
+	return e.conn.Send(ctx, e.Name, msg)
+}
+
+// Create queue that is binded to exchange
+func (e *Exchange) DeriveQueue(name string) (*Queue, error) {
+
+	q, err := NewQueue(e.conn, name, DefaultQueue)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := e.Bind(q, name); err != nil {
+		return nil, err
+	}
+
+	return q, nil
 }

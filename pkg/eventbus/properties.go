@@ -18,6 +18,15 @@ const (
 
 	// Queue properties
 	QUEUE_DURABLE     = true
-	QUEUE_AUTO_DELETE = true
-	QUEUE_EXCLUSIVE   = true
+	QUEUE_AUTO_DELETE = false
+	QUEUE_EXCLUSIVE   = false
+
+	// Qos properties
+	PREFETCH_COUNT  = 1
+	PREFETCH_SIZE   = 0
+	PREFETCH_GLOBAL = false
+
+	// Publish properties
+	PUBLISH_IMEDIATE  = false
+	PUBLISH_MANDATORY = false
 )
