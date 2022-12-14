@@ -11,7 +11,7 @@
     </div>
 
     <!-- byn  .ant-btn-primary -->
-    <div v-if="selectedC" style="position: absolute; right: 25px; bottom: 13px">
+    <div v-if="selectedC || multiSelect" style="position: absolute; right: 25px; bottom: 13px">
       <v-btn
         @click="saveCountry"
         style="margin-right: 5px; background-color: #4caf50"
@@ -285,7 +285,7 @@
 </template>
 
 <script>
-import mapData from "../../map.json";
+import mapData from "@/map.json";
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
 
@@ -294,6 +294,7 @@ export default {
   name: "support-map",
   props: {
     template: { type: Object, required: true },
+    region: { type: String, default: "" },
     multiSelect: { type: Boolean, default: false },
     activePinTitle: { type: String, default: "" },
     canAddPin: { type: Boolean, default: true },
@@ -410,8 +411,6 @@ export default {
       this.markersSave = JSON.parse(JSON.stringify(this.markers));
       this.selectedC = "";
 
-      this.mouseLeaveHandler();
-
       // console.log("this.markerOrder = ", this.markerOrder);
     },
     CancelSelectedCountry() {
@@ -475,7 +474,7 @@ export default {
           y: JSON.parse(JSON.stringify(this.y)),
         };
         if (this.multiSelect) {
-          this.markers.push(obg);
+          this.markers.push({ ...obg, extra: { region: this.region } });
         } else {
           this.markers = [obg];
         }

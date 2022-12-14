@@ -35,31 +35,6 @@
               />
             </v-col>
           </v-row>
-
-          <!-- Opensrs props -->
-          <v-row v-if="plan.type === 'opensrs' || plan.type === 'ovh'">
-            <v-col cols="12">
-              <v-expansion-panels>
-                <v-expansion-panel>
-                  <v-expansion-panel-header
-                    color="background-light"
-                    style="padding-left: 16px; color: rgba(255, 255, 255, 0.7)"
-                  >
-                    Margin rules
-                  </v-expansion-panel-header>
-                  <v-expansion-panel-content color="background-light">
-                    <plan-opensrs
-                      @changeFee="(data) => (plan.fee = data)"
-                      @onValid="(data) => (isFeeValid = data)"
-                      :fee="plan.fee"
-                      :isEdit="isEdit"
-                    />
-                  </v-expansion-panel-content>
-                </v-expansion-panel>
-              </v-expansion-panels>
-            </v-col>
-          </v-row>
-
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Price model kind</v-subheader>

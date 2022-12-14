@@ -22,6 +22,7 @@
       :multiSelect="true"
       :error="mapError"
       :template="template"
+      :region="allRegions[selectedRegion]"
       @save="onSavePin"
       @pinHover="onPinHover"
     />
@@ -34,23 +35,19 @@ import api from "@/api.js";
 
 export default {
   name: "ovh-map",
-  data() {
-    return { selectedRegion: "", allRegions: [], mapError: "" };
-  },
-  components: {
-    supportMap,
-  },
+  components: { supportMap },
   props: { template: { required: true, type: Object } },
+  data: () => ({ selectedRegion: "", allRegions: [], mapError: "" }),
   methods: {
     onPinHover(id) {
       if (this.allRegions) {
-        const location = this.template.locations.find((l) => l.id === id);
+        const location = this.template.locations.find((el) => el.id === id);
+
         this.selectedRegion = this.allRegions.indexOf(location.extra.region);
       }
     },
     errorAddPin() {
       if (this.selectedLocation) {
-        console.log(1);
         this.mapError = "Error: This region alredy taken";
       } else {
         this.mapError = "Error: Choose the region";
@@ -84,8 +81,7 @@ export default {
     },
   },
   mounted() {
-    api
-      .post(`/sp/${this.template.uuid}/invoke`, { method: "regions" })
+    api.post(`/sp/${this.template.uuid}/invoke`, { method: "regions" })
       .then(({ meta }) => {
         this.allRegions = meta.datacenters;
       })
