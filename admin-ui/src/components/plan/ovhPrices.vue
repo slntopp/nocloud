@@ -1,29 +1,27 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
-    <v-row>
-      <v-col cols="6">
-        <v-expansion-panels :value="0">
-          <v-expansion-panel>
-            <v-expansion-panel-header color="background-light">
-              Margin rules:
-            </v-expansion-panel-header>
-            <v-expansion-panel-content color="background-light">
-              <plan-opensrs
-                @changeFee="(data) => (fee = data)"
-                @onValid="(data) => (isValid = data)"
-              />
-              <confirm-dialog
-                text="This will apply the rules markup parameters to all prices"
-                @confirm="setFee"
-              >
-                <v-btn class="mt-4">Set rules</v-btn>
-              </confirm-dialog>
-            </v-expansion-panel-content>
-          </v-expansion-panel>
-        </v-expansion-panels>
-      </v-col>
-    </v-row>
+    <v-expansion-panels v-if="!isPlansLoading" :value="0">
+      <v-expansion-panel>
+        <v-expansion-panel-header color="background-light">
+          Margin rules:
+        </v-expansion-panel-header>
+        <v-expansion-panel-content color="background-light">
+          <plan-opensrs
+            :fee="fee"
+            :isEdit="true"
+            @changeFee="(data) => (fee = data)"
+            @onValid="(data) => (isValid = data)"
+          />
+          <confirm-dialog
+            text="This will apply the rules markup parameters to all prices"
+            @confirm="setFee"
+          >
+            <v-btn class="mt-4">Set rules</v-btn>
+          </confirm-dialog>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
 
     <v-tabs
       class="rounded-t-lg"
@@ -46,7 +44,6 @@
           v-else-if="tab === 'Tariffs'"
           :show-expand="true"
           :show-select="false"
-          :show-group-by="true"
           :items="plans"
           :headers="headers"
           :expanded.sync="expanded"
@@ -82,6 +79,9 @@
 
             <template v-else-if="planId !== item.id">{{ item.group }}</template>
           </template>
+          <template v-slot:[`item.margin`]="{ item }">
+            {{ getMargin(item) }}
+          </template>
           <template v-slot:[`item.duration`]="{ value }">
             {{ (value === 'P1M') ? 'monthly' : 'yearly' }}
           </template>
@@ -115,7 +115,6 @@
         <nocloud-table
           v-else-if="tab === 'Addons'"
           :show-select="false"
-          :show-group-by="true"
           :items="addons"
           :headers="addonsHeaders"
           :loading="isPlansLoading"
@@ -136,7 +135,8 @@
         </nocloud-table>
       </v-tab-item>
     </v-tabs-items>
-    <v-btn class="mt-4" @click="editPlan">Save</v-btn>
+    <v-btn class="mt-4 mr-2" color="secondary" :disabled="!isTestSuccess" @click="editPlan">Save</v-btn>
+    <v-btn class="mt-4" :color="testButtonColor" @click="testConfig">Test</v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -178,12 +178,13 @@ export default {
     plans: [],
     expanded: [],
     headers: [
-      { text: '', value: 'data-table-expand', groupable: false },
+      { text: '', value: 'data-table-expand' },
       { text: 'Tariff', value: 'name', sortable: false, class: 'groupable' },
       { text: 'Group', value: 'group', sortable: false, class: 'groupable' },
+      { text: 'Margin', value: 'margin', sortable: false, class: 'groupable' },
       { text: 'Payment', value: 'duration', sortable: false, class: 'groupable' },
-      { text: 'Income price', value: 'price.value', groupable: false },
-      { text: 'Sale price', value: 'value', groupable: false },
+      { text: 'Income price', value: 'price.value' },
+      { text: 'Sale price', value: 'value' },
       { text: 'Sell', value: 'sell', sortable: false, class: 'groupable', width: 100 }
     ],
 
@@ -191,8 +192,8 @@ export default {
     addonsHeaders: [
       { text: 'Addon', value: 'name', sortable: false, class: 'groupable' },
       { text: 'Payment', value: 'duration', sortable: false, class: 'groupable' },
-      { text: 'Income price', value: 'price.value', groupable: false },
-      { text: 'Sale price', value: 'value', groupable: false },
+      { text: 'Income price', value: 'price.value' },
+      { text: 'Sale price', value: 'value' },
       { text: 'Sell', value: 'sell', sortable: false, class: 'groupable', width: 100 }
     ],
 
@@ -205,6 +206,8 @@ export default {
     tabsIndex: 0,
     isValid: true,
     isPlansLoading: false,
+    isTestSuccess: false,
+    testButtonColor: 'secondary',
     fetchError: ''
   }),
   methods: {
@@ -212,26 +215,13 @@ export default {
       setTimeout(() => {
         const headers = document.querySelectorAll('.groupable');
 
-        headers.forEach(({ lastElementChild }) => {
-          const icon = document.querySelector('.group-icon').cloneNode(true);
+        headers.forEach(({ firstElementChild, children }) => {
+          if (!children[1]?.className.includes('group-icon')) {
+            const icon = document.querySelector('.group-icon').cloneNode(true);
 
-          lastElementChild.innerHTML = '';
-          lastElementChild.append(icon);
-
-          icon.style = 'display: inline-flex';
-          icon.addEventListener('click', () => {
-            this.changeClose();
-            this.changeIcon();
-          });
-        });
-      }, 100);
-    },
-    changeClose() {
-      setTimeout(() => {
-        const close = document.querySelectorAll('.v-row-group__header .v-btn__content');
-
-        close.forEach((element) => {
-          element.addEventListener('click', this.changeIcon);
+            firstElementChild.after(icon);
+            icon.style = 'display: inline-flex';
+          }
         });
       }, 100);
     },
@@ -346,15 +336,6 @@ export default {
       });
     },
     editPlan() {
-      if (!this.isValid) {
-        this.showSnackbarError({ message: 'Margin rules is not valid' });
-        return;
-      }
-      if (!this.plans.every(({ group }) => this.groups.includes(group))) {
-        this.showSnackbarError({ message: 'You must select a group for the tariff!' });
-        return;
-      }
-
       const newPlan = { ...this.template, fee: this.fee, resources: [], products: {} };
 
       this.plans.forEach((el) => {
@@ -403,6 +384,25 @@ export default {
           this.isLoading = false;
         });
     },
+    testConfig() {
+      let message = '';
+      if (!this.isValid) {
+        message = 'Margin rules is not valid';
+      }
+      if (!this.plans.every(({ group }) => this.groups.includes(group))) {
+        message = 'You must select a group for the tariff!';
+      }
+
+      if (message) {
+        this.testButtonColor = 'secondary';
+        this.isTestSuccess = false;
+        this.showSnackbarError({ message });
+        return;
+      }
+
+      this.testButtonColor = 'success';
+      this.isTestSuccess = true;
+    },
     getPeriod(duration) {
       switch (duration) {
         case 'P1M':
@@ -415,6 +415,38 @@ export default {
       const newGroup = `${group[0].toUpperCase()}${group.slice(1)}`;
 
       return `VPS ${newGroup} ${name.split(' ').at(-1)}`;
+    },
+    getMargin({ value, price }) {
+      if (!this.fee.ranges) return 'none';
+      const range = this.fee.ranges.find(({ from, to }) =>
+        from <= price.value && to >= price.value
+      );
+      const n = Math.pow(10, this.fee.precision);
+      let percent = range?.factor / 100 + 1;
+      let round;
+
+      switch (this.fee.round) {
+        case 1:
+          round = 'floor';
+          break;
+        case 2:
+          round = 'round';
+          break;
+        case 3:
+          round = 'ceil';
+      }
+
+      if (value === Math[round](price.value * percent * n) / n) return 'ranged';
+      else percent = this.fee.default / 100 + 1;
+
+      switch (value) {
+        case price.value:
+          return 'none';
+        case Math[round](price.value * percent * n) / n:
+          return 'fixed';
+        default:
+          return 'manual';
+      }
     },
     editGroup(group) {
       const i = this.groups.indexOf(group);
@@ -461,15 +493,8 @@ export default {
         this.changePlans(meta);
         this.changeAddons(meta);
 
-        const footerButtons = document.querySelectorAll('.v-data-footer .v-btn__content');
-
-        footerButtons.forEach((element) => {
-          element.addEventListener('click', this.changeClose);
-        });
-
         this.fetchError = '';
         this.changeIcon();
-        this.changeClose();
       })
       .catch((err) => {
         this.fetchError = err.response?.data?.message ?? err.message ?? err;
@@ -480,10 +505,7 @@ export default {
       });
   },
   watch: {
-    tabsIndex() {
-      this.changeIcon();
-      this.changeClose();
-    },
+    tabsIndex() { this.changeIcon() },
     addons() {
       this.template.resources.forEach(({ key, price }) => {
         const addon = this.addons.find((el) => el.id === key);
@@ -523,6 +545,7 @@ export default {
   margin: 0 0 2px 4px;
   font-size: 18px;
   opacity: 0.5;
+  cursor: pointer;
 }
 
 .v-data-table__expanded__content {

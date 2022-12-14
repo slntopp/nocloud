@@ -1,29 +1,27 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
-    <v-row>
-      <v-col cols="6">
-        <v-expansion-panels :value="0">
-          <v-expansion-panel>
-            <v-expansion-panel-header color="background-light">
-              Margin rules:
-            </v-expansion-panel-header>
-            <v-expansion-panel-content color="background-light">
-              <plan-opensrs
-                @changeFee="(data) => (fee = data)"
-                @onValid="(data) => (isValid = data)"
-              />
-              <confirm-dialog
-                text="This will apply the rules markup parameters to all prices"
-                @confirm="setFee"
-              >
-                <v-btn class="mt-4">Set rules</v-btn>
-              </confirm-dialog>
-            </v-expansion-panel-content>
-          </v-expansion-panel>
-        </v-expansion-panels>
-      </v-col>
-    </v-row>
+    <v-expansion-panels v-if="!isPlansLoading" :value="0">
+      <v-expansion-panel>
+        <v-expansion-panel-header color="background-light">
+          Margin rules:
+        </v-expansion-panel-header>
+        <v-expansion-panel-content color="background-light">
+          <plan-opensrs
+            :fee="fee"
+            :isEdit="true"
+            @changeFee="(data) => (fee = data)"
+            @onValid="(data) => (isValid = data)"
+          />
+          <confirm-dialog
+            text="This will apply the rules markup parameters to all prices"
+            @confirm="setFee"
+          >
+            <v-btn class="mt-4">Set rules</v-btn>
+          </confirm-dialog>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
 
     <nocloud-table
       item-key="id"
@@ -61,7 +59,8 @@
         </td>
       </template>
     </nocloud-table>
-    <v-btn class="mt-4" @click="editPlan">Save</v-btn>
+    <v-btn class="mt-4 mr-2" color="secondary" :disabled="!isTestSuccess" @click="editPlan">Save</v-btn>
+    <v-btn class="mt-4" :color="testButtonColor" @click="testConfig">Test</v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -117,6 +116,8 @@ export default {
 
     isValid: true,
     isPlansLoading: false,
+    isTestSuccess: false,
+    testButtonColor: 'secondary',
     fetchError: ''
   }),
   methods: {
@@ -175,11 +176,6 @@ export default {
       });
     },
     editPlan() {
-      if (!this.isValid) {
-        this.showSnackbarError({ message: 'Margin rules is not valid' });
-        return;
-      }
-
       const newPlan = { ...this.template, fee: this.fee, resources: [], products: {} };
 
       this.plans.forEach((plan) => {
@@ -211,6 +207,23 @@ export default {
       .finally(() => {
         this.isLoading = false;
       });
+    },
+    testConfig() {
+      let message = '';
+
+      if (!this.isValid) {
+        message = 'Margin rules is not valid';
+      }
+
+      if (message) {
+        this.testButtonColor = 'secondary';
+        this.isTestSuccess = false;
+        this.showSnackbarError({ message });
+        return;
+      }
+
+      this.testButtonColor = 'success';
+      this.isTestSuccess = true;
     },
     getPrices(obj) {
       const result = [];

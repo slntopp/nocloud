@@ -88,12 +88,12 @@ export default {
         },
       ];
 
-      if (Object.keys(this.item?.secrets).length > 0) tabs.splice(1, 0, {
+      if (Object.keys(this.item?.secrets ?? {}).length > 0) tabs.splice(1, 0, {
         title: "Secrets",
         component: () => import(`@/components/modules/${this.item?.type}/serviceProviderSecrets.vue`)
           .catch(() => import("@/components/modules/custom/serviceProviderSecrets.vue")),
       });
-      if (Object.keys(this.item?.vars).length > 0) tabs.splice(2, 0, {
+      if (Object.keys(this.item?.vars ?? {}).length > 0) tabs.splice(2, 0, {
         title: "Vars",
         component: () => import("@/components/modules/custom/serviceProviderVars.vue"),
       });
