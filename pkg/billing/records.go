@@ -125,6 +125,13 @@ init:
 			continue
 		}
 
+		isSkip, err := s.checkRecord(ctx, &record, log)
+
+		if isSkip && err == nil {
+			log.Info("Skip prepaid record for suspended account", zap.Any("record", &record))
+			continue
+		}
+
 		s.records.Create(ctx, &record)
 		s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 		if err = msg.Ack(false); err != nil {
@@ -158,6 +165,90 @@ init:
 		}
 	}
 }
+
+func (s *RecordsServiceServer) checkRecord(ctx context.Context, rec *pb.Record, log *zap.Logger) (bool, error) {
+	if rec.Product == "" {
+		return false, nil
+	}
+
+	inst := driver.NewDocumentID(schema.INSTANCES_COL, rec.Instance)
+
+	accCursor, err := s.db.Query(ctx, getAccountStatus, map[string]interface{}{
+		"inst":        inst,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"@services":   schema.SERVICES_COL,
+		"@accounts":   schema.ACCOUNTS_COL,
+	})
+	if err != nil {
+		log.Error("Cannot get acc status", zap.Error(err))
+		return false, err
+	}
+
+	isSuspended := false
+
+	if accCursor.HasMore() {
+		_, err := accCursor.ReadDocument(ctx, &isSuspended)
+		if err != nil {
+			log.Error("Cannot get acc status", zap.Error(err))
+			return false, err
+		}
+	}
+
+	instCursor, err := s.db.Query(ctx, getPlanFromRecord, map[string]interface{}{
+		"inst":    inst,
+		"product": rec.Product,
+	})
+	if err != nil {
+		log.Error("Cannot get instance plan", zap.Error(err))
+		return false, err
+	}
+
+	kind := pb.Kind_POSTPAID
+
+	if instCursor.HasMore() {
+		_, err := accCursor.ReadDocument(ctx, &kind)
+		if err != nil {
+			log.Error("Cannot get instance plan", zap.Error(err))
+			return false, err
+		}
+	}
+
+	if kind == pb.Kind_PREPAID && isSuspended == true {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+const getAccountStatus = `
+LET doc = DOCUMENT(@inst)
+
+LET srv = LAST(
+FOR node, edge, path IN 2
+    INBOUND doc
+    GRAPH @permissions
+    FILTER path.edges[*].role == ["owner","owner"]
+    FILTER IS_SAME_COLLECTION(node, @@services)
+        RETURN node
+    )
+
+LET account = LAST(
+    FOR node, edge, path IN 2
+    INBOUND srv
+    GRAPH @permissions
+    FILTER path.edges[*].role == ["owner","owner"]
+    FILTER IS_SAME_COLLECTION(node, @@accounts)
+        RETURN node
+    )
+    
+RETURN account.suspended
+`
+
+const getPlanFromRecord = `
+LET doc = DOCUMENT(@inst)
+LET d = doc.billing_plan.products[@product]
+RETURN d.kind
+`
 
 const generateUrgentTransactions = `
 FOR service IN @@services // Iterate over Services
