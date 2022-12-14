@@ -8,6 +8,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// EventBus handles interservice communication throuh RabbitMQ
 type EventBus struct {
 	conn     *Connection
 	exchange *Exchange

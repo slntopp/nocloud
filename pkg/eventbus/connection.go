@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// Connection wraps amqp connection to handle reconnects
 type Connection struct {
 	ch   *amqp091.Channel
 	conn *amqp091.Connection
@@ -27,6 +28,7 @@ func NewConnection(conn *amqp091.Connection) (*Connection, error) {
 	return c, nil
 }
 
+// Get existing channel if open. Otherwise open new channel
 func (c *Connection) Channel() *amqp091.Channel {
 	if c.ch.IsClosed() {
 
@@ -56,6 +58,7 @@ func (c *Connection) newChannel() (*amqp091.Channel, error) {
 	return channel, nil
 }
 
+// Send event to given exchange
 func (c *Connection) Send(ctx context.Context, exchange string, event *pb.Event) error {
 	bytes, err := proto.Marshal(event)
 	if err != nil {

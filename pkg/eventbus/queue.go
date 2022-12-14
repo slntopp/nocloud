@@ -19,10 +19,11 @@ type QueueType int64
 
 const (
 	DefaultQueue QueueType = iota
-	UniqueQueue
+	UniqueQueue            // Add suffix to queue name
 )
 
 func NewQueue(ch *Connection, name string, t QueueType) (*Queue, error) {
+
 	if t == UniqueQueue {
 		name = fmt.Sprintf("%s.%s", name, uuid.New())
 	}
@@ -35,6 +36,7 @@ func NewQueue(ch *Connection, name string, t QueueType) (*Queue, error) {
 	return &Queue{q, ch}, nil
 }
 
+// Consume events from the queue
 func (q *Queue) Consume() (<-chan *pb.Event, error) {
 
 	dels, err := q.conn.Channel().Consume(q.Name, q.Name, CONSUME_AUTO_ACK, QUEUE_EXCLUSIVE, false, NO_WAIT, nil)
@@ -57,6 +59,7 @@ func (q *Queue) Consume() (<-chan *pb.Event, error) {
 	return ch, nil
 }
 
+// Send event to default exchange with routing key equal queue name
 func (q *Queue) Send(ctx context.Context, event *pb.Event) error {
 	return q.conn.Send(ctx, "", event)
 }

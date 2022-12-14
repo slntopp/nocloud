@@ -50,8 +50,9 @@ func (e *Exchange) Bind(q *Queue, key string) error {
 	)
 }
 
-func (e *Exchange) Send(ctx context.Context, msg *pb.Event) error {
-	return e.conn.Send(ctx, e.Name, msg)
+// Send event to the exchange
+func (e *Exchange) Send(ctx context.Context, event *pb.Event) error {
+	return e.conn.Send(ctx, e.Name, event)
 }
 
 // Create queue that is binded to exchange
