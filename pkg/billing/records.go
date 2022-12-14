@@ -213,7 +213,7 @@ func (s *RecordsServiceServer) checkRecord(ctx context.Context, rec *pb.Record, 
 		}
 	}
 
-	if kind == pb.Kind_PREPAID && isSuspended == true {
+	if kind == pb.Kind_PREPAID && isSuspended {
 		return true, nil
 	}
 
