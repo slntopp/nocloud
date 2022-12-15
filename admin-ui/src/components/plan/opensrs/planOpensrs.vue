@@ -5,13 +5,13 @@
         <v-expansion-panels :value="0">
           <v-expansion-panel>
             <v-expansion-panel-header
-              color="background-light"
+              color="indigo darken-4"
               style="padding-left: 16px; color: rgba(255, 255, 255, 0.7)"
             >
               Ranged margin (%)
             </v-expansion-panel-header>
-            <v-expansion-panel-content color="background-light">
-              <v-list v-if="currentFee.ranges.length > 0" color="background-light">
+            <v-expansion-panel-content color="indigo darken-4">
+              <v-list v-if="currentFee.ranges.length > 0" color="indigo darken-4">
                 <v-list-item-group>
                   <template v-for="(item, index) in currentFee.ranges">
                     <v-list-item :key="generateKey(index)">
@@ -75,7 +75,7 @@
                   />
                 </v-col>
                 <v-col cols="2" class="d-flex justify-center align-center">
-                  <v-btn color="background-light" @click="addRange">Add</v-btn>
+                  <v-btn color="secondary" @click="addRange">Add</v-btn>
                 </v-col>
               </v-form>
             </v-expansion-panel-content>

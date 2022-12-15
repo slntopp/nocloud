@@ -1,7 +1,7 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
-    <v-expansion-panels v-if="!isPlansLoading" :value="0">
+    <v-expansion-panels v-if="!isPlansLoading">
       <v-expansion-panel>
         <v-expansion-panel-header color="background-light">
           Margin rules:
@@ -59,8 +59,7 @@
         </td>
       </template>
     </nocloud-table>
-    <v-btn class="mt-4 mr-2" color="secondary" :disabled="!isTestSuccess" @click="editPlan">Save</v-btn>
-    <v-btn class="mt-4" :color="testButtonColor" @click="testConfig">Test</v-btn>
+    <v-btn class="mt-4" color="secondary" @click="editPlan">Save</v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -94,7 +93,7 @@ import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
 
 export default {
-  name: 'sevices-provider-table',
+  name: 'plan-prices',
   components: { nocloudTable, planOpensrs, confirmDialog },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
@@ -116,8 +115,6 @@ export default {
 
     isValid: true,
     isPlansLoading: false,
-    isTestSuccess: false,
-    testButtonColor: 'secondary',
     fetchError: ''
   }),
   methods: {
@@ -176,6 +173,7 @@ export default {
       });
     },
     editPlan() {
+      if (!this.testConfig()) return;
       const newPlan = { ...this.template, fee: this.fee, resources: [], products: {} };
 
       this.plans.forEach((plan) => {
@@ -216,14 +214,11 @@ export default {
       }
 
       if (message) {
-        this.testButtonColor = 'secondary';
-        this.isTestSuccess = false;
         this.showSnackbarError({ message });
-        return;
+        return false;
       }
 
-      this.testButtonColor = 'success';
-      this.isTestSuccess = true;
+      return true;
     },
     getPrices(obj) {
       const result = [];
