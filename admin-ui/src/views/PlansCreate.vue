@@ -374,12 +374,17 @@ export default {
 
         return;
       }
-      if (action === 'create') {
-        this.plan.title += ' 2.0';
-        delete this.plan.uuid;
+      if (action === 'create') delete this.plan.uuid;
+
+      function checkName(name, obj, num = 2) {
+        const value = obj.find(({ title }) => title === name);
+
+        if (value) return checkName(`${name} ${num}`, obj, num + 1);
+        else return name;
       }
 
       this.isLoading = true;
+      this.plan.title = checkName(this.plan.title, this.plans);
       Object.entries(this.plan.products).forEach(([key, form]) => {
         const num = this.form.titles.findIndex((el) => el === key);
 
@@ -455,8 +460,17 @@ export default {
         return;
       }
 
-      this.testButtonColor = "success";
-      this.isTestSuccess = true;
+      this.$store.dispatch('plans/fetch')
+        .then(() => {
+          this.testButtonColor = "success";
+          this.isTestSuccess = true;
+        })
+        .catch((err) => {
+          const message = err.response?.data?.message ?? err.message ?? err;
+
+          this.showSnackbarError({ message })
+          console.error(err);
+        });
     },
     setPeriod(date, res) {
       const period = this.getTimestamp(date);
@@ -557,6 +571,9 @@ export default {
 
       return () => import(`@/components/plans_form_${type}.vue`);
     },
+    plans() {
+      return this.$store.getters['plans/all'];
+    }
   },
   watch: {
     "plan.type"() {

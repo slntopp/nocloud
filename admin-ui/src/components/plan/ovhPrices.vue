@@ -1,12 +1,28 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <v-icon class="group-icon">mdi-format-list-group</v-icon>
-    <v-expansion-panels v-if="!isPlansLoading" :value="0">
+    <v-menu :value="true" :close-on-content-click="false">
+      <template v-slot:activator="{ on, attrs }">
+        <v-icon class="group-icon" v-bind="attrs" v-on="on">mdi-filter</v-icon>
+      </template>
+
+      <v-list dense>
+        <v-list-item dense v-for="item of filters[column]" :key="item">
+          <v-checkbox
+            dense
+            v-model="selected[column]"
+            :value="item"
+            :label="item"
+            @change="selected = Object.assign({}, selected)"
+          />
+        </v-list-item>
+      </v-list>
+    </v-menu>
+    <v-expansion-panels v-if="!isPlansLoading">
       <v-expansion-panel>
-        <v-expansion-panel-header color="background-light">
+        <v-expansion-panel-header color="indigo darken-4">
           Margin rules:
         </v-expansion-panel-header>
-        <v-expansion-panel-content color="background-light">
+        <v-expansion-panel-content color="indigo darken-4">
           <plan-opensrs
             :fee="fee"
             :isEdit="true"
@@ -17,7 +33,7 @@
             text="This will apply the rules markup parameters to all prices"
             @confirm="setFee"
           >
-            <v-btn class="mt-4">Set rules</v-btn>
+            <v-btn class="mt-4" color="secondary">Set rules</v-btn>
           </confirm-dialog>
         </v-expansion-panel-content>
       </v-expansion-panel>
@@ -44,7 +60,7 @@
           v-else-if="tab === 'Tariffs'"
           :show-expand="true"
           :show-select="false"
-          :items="plans"
+          :items="filteredPlans"
           :headers="headers"
           :expanded.sync="expanded"
           :loading="isPlansLoading"
@@ -83,7 +99,7 @@
             {{ getMargin(item) }}
           </template>
           <template v-slot:[`item.duration`]="{ value }">
-            {{ (value === 'P1M') ? 'monthly' : 'yearly' }}
+            {{ getPayment(value) }}
           </template>
           <template v-slot:[`item.price.value`]="{ item, value }">
             {{ value }} {{ 'NCU' || item.price.currencyCode }}
@@ -121,7 +137,7 @@
           :footer-error="fetchError"
         >
           <template v-slot:[`item.duration`]="{ value }">
-            {{ (value === 'P1M') ? 'monthly' : 'yearly' }}
+            {{ getPayment(value)  }}
           </template>
           <template v-slot:[`item.price.value`]="{ item, value }">
             {{ value }} {{ 'NCU' || item.price.currencyCode }}
@@ -135,8 +151,7 @@
         </nocloud-table>
       </v-tab-item>
     </v-tabs-items>
-    <v-btn class="mt-4 mr-2" color="secondary" :disabled="!isTestSuccess" @click="editPlan">Save</v-btn>
-    <v-btn class="mt-4" :color="testButtonColor" @click="testConfig">Test</v-btn>
+    <v-btn class="mt-4" color="secondary" @click="editPlan">Save</v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -170,7 +185,7 @@ import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
 
 export default {
-  name: 'sevices-provider-table',
+  name: 'plan-prices',
   components: { nocloudTable, planOpensrs, confirmDialog },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
@@ -179,7 +194,7 @@ export default {
     expanded: [],
     headers: [
       { text: '', value: 'data-table-expand' },
-      { text: 'Tariff', value: 'name', sortable: false, class: 'groupable' },
+      { text: 'Tariff', value: 'name' },
       { text: 'Group', value: 'group', sortable: false, class: 'groupable' },
       { text: 'Margin', value: 'margin', sortable: false, class: 'groupable' },
       { text: 'Payment', value: 'duration', sortable: false, class: 'groupable' },
@@ -190,7 +205,7 @@ export default {
 
     addons: [],
     addonsHeaders: [
-      { text: 'Addon', value: 'name', sortable: false, class: 'groupable' },
+      { text: 'Addon', value: 'name' },
       { text: 'Payment', value: 'duration', sortable: false, class: 'groupable' },
       { text: 'Income price', value: 'price.value' },
       { text: 'Sale price', value: 'value' },
@@ -198,17 +213,21 @@ export default {
     ],
 
     fee: {},
+    filters: {},
+    selected: {},
     groups: [],
-    newGroupName: '',
-    planId: -1,
-    mode: 'none',
     tabs: ['Tariffs', 'Addons'],
+
+    column: '',
+    fetchError: '',
+    newGroupName: '',
+    mode: 'none',
+
+    planId: -1,
     tabsIndex: 0,
-    isValid: true,
+
     isPlansLoading: false,
-    isTestSuccess: false,
-    testButtonColor: 'secondary',
-    fetchError: ''
+    isValid: true
   }),
   methods: {
     changeIcon() {
@@ -217,10 +236,28 @@ export default {
 
         headers.forEach(({ firstElementChild, children }) => {
           if (!children[1]?.className.includes('group-icon')) {
-            const icon = document.querySelector('.group-icon').cloneNode(true);
+            const element = document.querySelector('.group-icon');
+            const icon = element.cloneNode(true);
 
             firstElementChild.after(icon);
             icon.style = 'display: inline-flex';
+
+            icon.addEventListener('click', () => {
+              const menu = document.querySelector('.v-menu__content');
+              const { x, y } = icon.getBoundingClientRect();
+
+              if (menu.className.includes('menuable__content__active')) return;
+
+              this.column = firstElementChild.innerText;
+
+              this.filters = Object.assign({}, this.filters);
+              element.dispatchEvent(new Event('click'));
+
+              setTimeout(() => {
+                menu.style.left = `${x + 20 + window.scrollX}px`;
+                menu.style.top = `${y + window.scrollY}px`;
+              });
+            });
           }
         });
       }, 100);
@@ -302,9 +339,27 @@ export default {
 
       this.addons = result;
     },
+    changeFilters(plan, filters) {
+      filters.forEach((text) => {
+        if (!this.filters[text]) this.filters[text] = [];
+        if (!this.selected[text]) this.selected[text] = [];
+
+        const { value } = this.headers.find((el) => el.text === text);
+        const filter = `${plan[value]}`;
+
+        if (!this.filters[text].includes(filter)) {
+          this.filters[text].push(filter);
+        }
+        if (!this.selected[text].includes(filter)) {
+          this.selected[text].push(filter);
+        }
+      });
+    },
     setFee() {
       const windows = [];
 
+      this.filters.Margin = [];
+      this.selected.Margin = [];
       this.plans.forEach((el) => {
         if (el.windows) windows.push(el.windows);
       });
@@ -336,6 +391,7 @@ export default {
       });
     },
     editPlan() {
+      if (!this.testConfig()) return;
       const newPlan = { ...this.template, fee: this.fee, resources: [], products: {} };
 
       this.plans.forEach((el) => {
@@ -394,14 +450,11 @@ export default {
       }
 
       if (message) {
-        this.testButtonColor = 'secondary';
-        this.isTestSuccess = false;
         this.showSnackbarError({ message });
-        return;
+        return false;
       }
 
-      this.testButtonColor = 'success';
-      this.isTestSuccess = true;
+      return true;
     },
     getPeriod(duration) {
       switch (duration) {
@@ -411,13 +464,26 @@ export default {
           return 3600 * 24 * 30 * 12;
       }
     },
+    getPayment(duration, filter = true) {
+      switch (duration) {
+        case 'P1M':
+          if (filter) this.changeFilters({ duration: 'monthly' }, ['Payment']);
+          return 'monthly';
+        case 'P1Y':
+          if (filter) this.changeFilters({ duration: 'yearly' }, ['Payment']);
+          return 'yearly';
+      }
+    },
     getName({ name, group }) {
       const newGroup = `${group[0].toUpperCase()}${group.slice(1)}`;
 
       return `VPS ${newGroup} ${name.split(' ').at(-1)}`;
     },
-    getMargin({ value, price }) {
-      if (!this.fee.ranges) return 'none';
+    getMargin({ value, price }, filter = true) {
+      if (!this.fee.ranges) {
+        if (filter) this.changeFilters({ margin: 'none' }, ['Margin']);
+        return 'none';
+      }
       const range = this.fee.ranges.find(({ from, to }) =>
         from <= price.value && to >= price.value
       );
@@ -436,15 +502,21 @@ export default {
           round = 'ceil';
       }
 
-      if (value === Math[round](price.value * percent * n) / n) return 'ranged';
+      if (value === Math[round](price.value * percent * n) / n) {
+        if (filter) this.changeFilters({ margin: 'ranged' }, ['Margin']);
+        return 'ranged';
+      }
       else percent = this.fee.default / 100 + 1;
 
       switch (value) {
         case price.value:
+          if (filter) this.changeFilters({ margin: 'none' }, ['Margin']);
           return 'none';
         case Math[round](price.value * percent * n) / n:
+          if (filter) this.changeFilters({ margin: 'fixed' }, ['Margin']);
           return 'fixed';
         default:
+          if (filter) this.changeFilters({ margin: 'manual' }, ['Margin']);
           return 'manual';
       }
     },
@@ -504,6 +576,36 @@ export default {
         this.isPlansLoading = false;
       });
   },
+  mounted() {
+    const icon = document.querySelector('.group-icon');
+
+    icon.dispatchEvent(new Event('click'));
+  },
+  computed: {
+    filteredPlans() {
+      return this.plans.filter((plan) => {
+        const result = [];
+
+        Object.entries(this.selected).forEach(([key, filters]) => {
+          const { value } = this.headers.find(({ text }) => text === key);
+          let filter = `${plan[value]}`;
+
+          switch (key) {
+            case 'Payment':
+              filter = this.getPayment(plan[value], false);
+              break;
+            case 'Margin':
+              filter = this.getMargin(plan, false);
+          }
+
+          if (filters.includes(filter)) result.push(true);
+          else result.push(false);
+        });
+
+        return result.every((el) => el);
+      });
+    }
+  },
   watch: {
     tabsIndex() { this.changeIcon() },
     addons() {
@@ -515,10 +617,10 @@ export default {
       });
 
       this.groups = [];
-      this.plans.forEach(({ id, name }, i) => {
-        const product = this.template.products[id];
+      this.plans.forEach((plan, i) => {
+        const product = this.template.products[plan.id];
         const winKey = Object.keys(product?.meta || {}).find((el) => el.includes('windows'));
-        const group = product?.title.split(' ')[1] || name.split(' ')[1];
+        const group = product?.title.split(' ')[1] || plan.name.split(' ')[1];
 
         if (product) {
           this.plans[i].name = product.title;
@@ -529,9 +631,9 @@ export default {
           if (winKey) this.plans[i].windows.value = product.meta[winKey];
         }
         if (!this.groups.includes(group)) this.groups.push(group);
+
+        this.changeFilters(plan, ['Group', 'Sell']);
       });
-
-
 
       this.fee = this.template.fee;
     }

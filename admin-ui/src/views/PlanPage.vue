@@ -24,6 +24,7 @@
           :isEdit="true"
           :item="plan"
           :template="plan"
+          :margin="plan.fee"
         />
       </v-tab-item>
     </v-tabs-items>
