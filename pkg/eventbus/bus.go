@@ -57,7 +57,7 @@ func (bus *EventBus) Sub(key string) (<-chan *pb.Event, error) {
 	bus.log.Info("consuming events", zap.String("key", key))
 
 	// Disconnect other consumers
-	if err := bus.conn.Channel().Cancel(key, NO_WAIT); err != nil {
+	if err := bus.Unsub(key); err != nil {
 		return nil, err
 	}
 
@@ -72,4 +72,8 @@ func (bus *EventBus) Sub(key string) (<-chan *pb.Event, error) {
 	}
 
 	return ch, nil
+}
+
+func (bus *EventBus) Unsub(key string) error {
+	return bus.conn.Channel().Cancel(key, NO_WAIT)
 }

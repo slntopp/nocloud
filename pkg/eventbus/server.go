@@ -44,6 +44,8 @@ func (s *EventBusServer) Publish(ctx context.Context, event *pb.Event) (*pb.Resp
 
 func (s *EventBusServer) Consume(req *pb.ConsumeRequest, srv pb.EventsService_ConsumeServer) error {
 
+	defer s.bus.Unsub(req.Key)
+
 	s.log.Info("got consume request")
 
 	ch, err := s.bus.Sub(req.Key)
@@ -51,9 +53,15 @@ func (s *EventBusServer) Consume(req *pb.ConsumeRequest, srv pb.EventsService_Co
 		return err
 	}
 
-	for msg := range ch {
-		srv.Send(msg)
-	}
+	done := srv.Context().Done()
+
+	go func() {
+		for msg := range ch {
+			srv.Send(msg)
+		}
+	}()
+
+	<-done
 
 	return nil
 }
