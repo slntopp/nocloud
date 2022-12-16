@@ -3,10 +3,10 @@
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
     <v-expansion-panels v-if="!isPlansLoading">
       <v-expansion-panel>
-        <v-expansion-panel-header color="background-light">
+        <v-expansion-panel-header color="indigo darken-4">
           Margin rules:
         </v-expansion-panel-header>
-        <v-expansion-panel-content color="background-light">
+        <v-expansion-panel-content color="indigo darken-4">
           <plan-opensrs
             :fee="fee"
             :isEdit="true"
@@ -113,6 +113,7 @@ export default {
       { text: 'Sell', value: 'sell', width: 100 }
     ],
 
+    fee: {},
     isValid: true,
     isPlansLoading: false,
     fetchError: ''
@@ -267,12 +268,14 @@ export default {
       Object.entries(this.template.products).forEach(([key, value]) => {
         const [period, id] = key.split(' ');
         const product = this.plans.find((el) => el.id === id);
+        const price = product.prices.find((el) => el.period === period);
 
-        product[period].value = value.price;
-        product[period].sell = true;
+        price.value = value.price;
+        price.sell = true;
       });
 
-      this.fee = this.template.fee;
+      this.fee = this.template.margin;
+      this.setFee();
     }
   }
 }

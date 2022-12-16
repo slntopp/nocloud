@@ -6,13 +6,13 @@
       </template>
 
       <v-list dense>
-        <v-list-item dense v-for="item of filters[column]" :key="item">
+        <v-list-item dense v-for="item of filters[tabsIndex][column]" :key="item">
           <v-checkbox
             dense
-            v-model="selected[column]"
+            v-model="selected[tabsIndex][column]"
             :value="item"
             :label="item"
-            @change="selected = Object.assign({}, selected)"
+            @change="selected[tabsIndex] = Object.assign({}, selected[tabsIndex])"
           />
         </v-list-item>
       </v-list>
@@ -96,7 +96,7 @@
             <template v-else-if="planId !== item.id">{{ item.group }}</template>
           </template>
           <template v-slot:[`item.margin`]="{ item }">
-            {{ getMargin(item) }}
+            {{ getMargin(item, false) }}
           </template>
           <template v-slot:[`item.duration`]="{ value }">
             {{ getPayment(value) }}
@@ -131,11 +131,14 @@
         <nocloud-table
           v-else-if="tab === 'Addons'"
           :show-select="false"
-          :items="addons"
+          :items="filteredAddons"
           :headers="addonsHeaders"
           :loading="isPlansLoading"
           :footer-error="fetchError"
         >
+          <template v-slot:[`item.margin`]="{ item }">
+            {{ getMargin(item, false) }}
+          </template>
           <template v-slot:[`item.duration`]="{ value }">
             {{ getPayment(value)  }}
           </template>
@@ -206,6 +209,7 @@ export default {
     addons: [],
     addonsHeaders: [
       { text: 'Addon', value: 'name' },
+      { text: 'Margin', value: 'margin', sortable: false, class: 'groupable' },
       { text: 'Payment', value: 'duration', sortable: false, class: 'groupable' },
       { text: 'Income price', value: 'price.value' },
       { text: 'Sale price', value: 'value' },
@@ -213,8 +217,14 @@ export default {
     ],
 
     fee: {},
-    filters: {},
-    selected: {},
+    filters: {
+      0: { Sell: ['true', 'false'], Payment: ['monthly', 'yearly'] },
+      1: { Sell: ['true', 'false'], Payment: ['monthly', 'yearly'] }
+    },
+    selected: {
+      0: { Sell: ['true', 'false'], Payment: ['monthly', 'yearly'] },
+      1: { Sell: ['true', 'false'], Payment: ['monthly', 'yearly'] }
+    },
     groups: [],
     tabs: ['Tariffs', 'Addons'],
 
@@ -249,14 +259,25 @@ export default {
               if (menu.className.includes('menuable__content__active')) return;
 
               this.column = firstElementChild.innerText;
+              if (this.column === 'Group') {
+                this.filters[this.tabsIndex].Group = this.groups;
+                this.selected[this.tabsIndex].Group = this.groups;
+              }
 
-              this.filters = Object.assign({}, this.filters);
+              this.filters[this.tabsIndex] = Object.assign({}, this.filters[this.tabsIndex]);
               element.dispatchEvent(new Event('click'));
 
               setTimeout(() => {
-                menu.style.left = `${x + 20 + window.scrollX}px`;
-                menu.style.top = `${y + window.scrollY}px`;
-              });
+                const width = document.documentElement.offsetWidth;
+                const menuWidth = menu.offsetWidth;
+                let marginLeft = 20;
+
+                if (width < menuWidth + x) marginLeft = width - (menuWidth + x) - 35;
+                const marginTop = (marginLeft < 20) ? 20 : 0
+
+                menu.style.left = `${x + marginLeft + window.scrollX}px`;
+                menu.style.top = `${y + marginTop + window.scrollY}px`;
+              }, 100);
             });
           }
         });
@@ -341,25 +362,32 @@ export default {
     },
     changeFilters(plan, filters) {
       filters.forEach((text) => {
-        if (!this.filters[text]) this.filters[text] = [];
-        if (!this.selected[text]) this.selected[text] = [];
+        if (!this.filters[this.tabsIndex][text]) {
+          this.filters[this.tabsIndex][text] = [];
+        }
+        if (!this.selected[this.tabsIndex][text]) {
+          this.selected[this.tabsIndex][text] = [];
+        }
 
         const { value } = this.headers.find((el) => el.text === text);
         const filter = `${plan[value]}`;
 
-        if (!this.filters[text].includes(filter)) {
-          this.filters[text].push(filter);
+        if (!this.filters[this.tabsIndex][text].includes(filter)) {
+          this.filters[this.tabsIndex][text].push(filter);
         }
-        if (!this.selected[text].includes(filter)) {
-          this.selected[text].push(filter);
+        if (!this.selected[this.tabsIndex][text].includes(filter)) {
+          this.selected[this.tabsIndex][text].push(filter);
         }
       });
     },
     setFee() {
       const windows = [];
 
-      this.filters.Margin = [];
-      this.selected.Margin = [];
+      this.filters['0'].Margin = ['manual'];
+      this.selected['0'].Margin = ['manual'];
+      this.filters['1'].Margin = ['manual'];
+      this.selected['1'].Margin = ['manual'];
+
       this.plans.forEach((el) => {
         if (el.windows) windows.push(el.windows);
       });
@@ -387,6 +415,8 @@ export default {
             percent = range.factor / 100 + 1;
           }
           arr[i].value = Math[round](plan.price.value * percent * n) / n;
+
+          this.getMargin(arr[i]);
         });
       });
     },
@@ -464,13 +494,11 @@ export default {
           return 3600 * 24 * 30 * 12;
       }
     },
-    getPayment(duration, filter = true) {
+    getPayment(duration) {
       switch (duration) {
         case 'P1M':
-          if (filter) this.changeFilters({ duration: 'monthly' }, ['Payment']);
           return 'monthly';
         case 'P1Y':
-          if (filter) this.changeFilters({ duration: 'yearly' }, ['Payment']);
           return 'yearly';
       }
     },
@@ -551,6 +579,29 @@ export default {
       this.mode = mode;
       this.planId = id;
       this.newGroupName = group;
+    },
+    applyFilter(values, i) {
+      return values.filter((plan) => {
+        const result = [];
+
+        Object.entries(this.selected[i]).forEach(([key, filters]) => {
+          const { value } = this.headers.find(({ text }) => text === key);
+          let filter = `${plan[value]}`;
+
+          switch (key) {
+            case 'Payment':
+              filter = this.getPayment(plan[value]);
+              break;
+            case 'Margin':
+              filter = this.getMargin(plan, false);
+          }
+
+          if (filters.includes(filter)) result.push(true);
+          else result.push(false);
+        });
+
+        return result.every((el) => el);
+      });
     }
   },
   created() {
@@ -583,31 +634,17 @@ export default {
   },
   computed: {
     filteredPlans() {
-      return this.plans.filter((plan) => {
-        const result = [];
-
-        Object.entries(this.selected).forEach(([key, filters]) => {
-          const { value } = this.headers.find(({ text }) => text === key);
-          let filter = `${plan[value]}`;
-
-          switch (key) {
-            case 'Payment':
-              filter = this.getPayment(plan[value], false);
-              break;
-            case 'Margin':
-              filter = this.getMargin(plan, false);
-          }
-
-          if (filters.includes(filter)) result.push(true);
-          else result.push(false);
-        });
-
-        return result.every((el) => el);
-      });
+      return this.applyFilter(this.plans, 0);
+    },
+    filteredAddons() {
+      return this.applyFilter(this.addons, 1);
     }
   },
   watch: {
-    tabsIndex() { this.changeIcon() },
+    tabsIndex() {
+      this.changeIcon();
+      this.setFee();
+    },
     addons() {
       this.template.resources.forEach(({ key, price }) => {
         const addon = this.addons.find((el) => el.id === key);
@@ -631,11 +668,19 @@ export default {
           if (winKey) this.plans[i].windows.value = product.meta[winKey];
         }
         if (!this.groups.includes(group)) this.groups.push(group);
-
-        this.changeFilters(plan, ['Group', 'Sell']);
       });
 
-      this.fee = this.template.fee;
+      if (this.template.resources.length === this.addons.length) {
+        this.filters['1'].Sell = ['true'];
+        this.selected['1'].Sell = ['true'];
+      }
+      if (Object.keys(this.template.products).length === this.plans.length) {
+        this.filters['0'].Sell = ['true'];
+        this.selected['0'].Sell = ['true'];
+      }
+
+      this.fee = this.template.margin;
+      this.setFee();
     }
   }
 }
