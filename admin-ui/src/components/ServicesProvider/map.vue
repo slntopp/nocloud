@@ -56,7 +56,7 @@
           <path
             :key="country.id + country.title"
             :class="{
-              'map__part--selected': selected == country.id,
+              'map__part--selected': selected === country.id,
               'is-settings': isSettings,
               'is-settings-selected': selectedC === country.id,
               'to-del': toDel === country.id,
@@ -352,7 +352,8 @@ export default {
         return false;
       }
 
-      this.selectedC = id;
+      if (this.multiSelect) this.selectedC = `${id}-${this.region}`;
+      else this.selectedC = id;
       this.titleMarker = country;
     },
     delMarker(e, id, x, y) {
@@ -420,7 +421,7 @@ export default {
     checkSettingsSelected(countryId) {
       let f = false;
       this.markerOrder.forEach((el) => {
-        if (el.id === countryId) {
+        if (el.id.includes(countryId)) {
           f = true;
         }
       });

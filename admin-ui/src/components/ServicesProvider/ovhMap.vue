@@ -9,7 +9,7 @@
     />
     <v-list v-else flat dark color="rgba(12, 12, 60, 0.9)">
       <v-subheader>REGIONS</v-subheader>
-      <v-list-item-group v-model="selectedRegion" color="primary">
+      <v-list-item-group mandatory v-model="selectedRegion" color="primary">
         <v-list-item v-for="(item, i) in allRegions" :key="i">
           {{ item }}
         </v-list-item>
