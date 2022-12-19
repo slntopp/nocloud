@@ -33,7 +33,7 @@ func NewServer(logger *zap.Logger, conn *amqp091.Connection) *EventBusServer {
 
 func (s *EventBusServer) Publish(ctx context.Context, event *pb.Event) (*pb.Response, error) {
 
-	s.log.Info("got publish request")
+	s.log.Info("got publish request", zap.Any("event", event))
 
 	if err := s.bus.Pub(ctx, event); err != nil {
 		return nil, err
@@ -44,11 +44,11 @@ func (s *EventBusServer) Publish(ctx context.Context, event *pb.Event) (*pb.Resp
 
 func (s *EventBusServer) Consume(req *pb.ConsumeRequest, srv pb.EventsService_ConsumeServer) error {
 
-	defer s.bus.Unsub(req.Key)
+	defer s.bus.Unsub(req)
 
-	s.log.Info("got consume request")
+	s.log.Info("got consume request", zap.Any("request", req))
 
-	ch, err := s.bus.Sub(req.Key)
+	ch, err := s.bus.Sub(srv.Context(), req)
 	if err != nil {
 		return err
 	}

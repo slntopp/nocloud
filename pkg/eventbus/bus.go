@@ -44,7 +44,7 @@ func (bus *EventBus) Pub(ctx context.Context, event *pb.Event) error {
 
 	bus.log.Info("publishing event", zap.Any("event", event))
 
-	_, err := bus.exchange.DeriveQueue(event.Key)
+	_, err := bus.exchange.DeriveQueue(Topic(event))
 	if err != nil {
 		return err
 	}
@@ -52,16 +52,18 @@ func (bus *EventBus) Pub(ctx context.Context, event *pb.Event) error {
 	return bus.exchange.Send(ctx, event)
 }
 
-func (bus *EventBus) Sub(key string) (<-chan *pb.Event, error) {
+func (bus *EventBus) Sub(ctx context.Context, req *pb.ConsumeRequest) (<-chan *pb.Event, error) {
 
-	bus.log.Info("consuming events", zap.String("key", key))
+	topic := Topic(req)
+
+	bus.log.Info("consuming events", zap.String("key", topic))
 
 	// Disconnect other consumers
-	if err := bus.Unsub(key); err != nil {
+	if err := bus.Unsub(req); err != nil {
 		return nil, err
 	}
 
-	q, err := bus.exchange.DeriveQueue(key)
+	q, err := bus.exchange.DeriveQueue(topic)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +76,6 @@ func (bus *EventBus) Sub(key string) (<-chan *pb.Event, error) {
 	return ch, nil
 }
 
-func (bus *EventBus) Unsub(key string) error {
-	return bus.conn.Channel().Cancel(key, NO_WAIT)
+func (bus *EventBus) Unsub(req *pb.ConsumeRequest) error {
+	return bus.conn.Channel().Cancel(Topic(req), NO_WAIT)
 }

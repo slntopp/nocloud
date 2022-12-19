@@ -65,7 +65,7 @@ func (c *Connection) Send(ctx context.Context, exchange string, event *pb.Event)
 		return err
 	}
 
-	return c.ch.PublishWithContext(ctx, exchange, event.Key, PUBLISH_IMEDIATE, PUBLISH_MANDATORY, amqp091.Publishing{
+	return c.ch.PublishWithContext(ctx, exchange, Topic(event), PUBLISH_IMEDIATE, PUBLISH_MANDATORY, amqp091.Publishing{
 		Body: bytes,
 	})
 }
