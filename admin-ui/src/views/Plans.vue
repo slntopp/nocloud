@@ -200,10 +200,10 @@ export default {
     },
     getPlans() {
       this.$store
-        .dispatch("plans/fetch", {
+        .dispatch("plans/fetch", { params: {
           sp_uuid: this.serviceProvider,
           anonymously: false,
-        })
+        }})
         .then(() => {
           this.fetchError = "";
         })
