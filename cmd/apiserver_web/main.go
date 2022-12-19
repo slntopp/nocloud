@@ -25,6 +25,7 @@ import (
 	"github.com/rs/cors"
 	billingpb "github.com/slntopp/nocloud-proto/billing"
 	dnspb "github.com/slntopp/nocloud-proto/dns"
+	buspb "github.com/slntopp/nocloud-proto/events"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	registrypb "github.com/slntopp/nocloud-proto/registry"
@@ -170,6 +171,11 @@ func main() {
 	err = billingpb.RegisterBillingServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
+	}
+	log.Info("Registering EventBusService Gateway")
+	err = buspb.RegisterEventsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	if err != nil {
+		log.Fatal("Failed to register EventBusService gateway", zap.Error(err))
 	}
 
 	for _, p := range []string{"/admin", "/admin/{path}", "/admin/{path}/{file}"} {
