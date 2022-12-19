@@ -106,7 +106,7 @@
                   :is="template"
                   :keyForm="title"
                   :resource="plan.resources[i]"
-                  :product="getProduct(i)"
+                  :product="getProduct(title)"
                   :preset="preset(i)"
                   @change:resource="(data) => changeResource(i, data)"
                   @change:product="(data) => changeProduct(title, data)"
@@ -460,17 +460,8 @@ export default {
         return;
       }
 
-      this.$store.dispatch('plans/fetch')
-        .then(() => {
-          this.testButtonColor = "success";
-          this.isTestSuccess = true;
-        })
-        .catch((err) => {
-          const message = err.response?.data?.message ?? err.message ?? err;
-
-          this.showSnackbarError({ message })
-          console.error(err);
-        });
+      this.testButtonColor = "success";
+      this.isTestSuccess = true;
     },
     setPeriod(date, res) {
       const period = this.getTimestamp(date);
@@ -508,14 +499,15 @@ export default {
           });
         } else {
           this.products = this.item.products;
-          Object.keys(this.item.products).forEach((key) => {
-            this.form.titles.push(key);
+          Object.entries(this.item.products).forEach(([key, { sorter }]) => {
+            this.form.titles.splice(sorter, 0, key);
           });
         }
       }
     },
-    getProduct(index) {
-      const product = Object.values(this.products)[index];
+    getProduct(title) {
+      const product = Object.values(this.products).find((el) => el.title === title);
+
       if (!product) return {};
       return {
         ...product,
@@ -538,6 +530,14 @@ export default {
     },
   },
   created() {
+    this.$store.dispatch('plans/fetch', { silent: true })
+      .catch((err) => {
+        const message = err.response?.data?.message ?? err.message ?? err;
+
+        this.showSnackbarError({ message })
+        console.error(err);
+      });
+
     if (this.isEdit) {
       this.plan.resources = this.item.resources;
     }
