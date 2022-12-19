@@ -65,3 +65,15 @@ func (s *EventBusServer) Consume(req *pb.ConsumeRequest, srv pb.EventsService_Co
 
 	return nil
 }
+
+func (s *EventBusServer) List(ctx context.Context,  req *pb.ConsumeRequest) (*pb.Events, error) {
+
+	s.log.Info("got list request", zap.Any("request", req))
+
+	events, err := s.bus.List(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.Events{Events: events}, nil
+}

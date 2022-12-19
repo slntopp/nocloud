@@ -79,3 +79,18 @@ func (bus *EventBus) Sub(ctx context.Context, req *pb.ConsumeRequest) (<-chan *p
 func (bus *EventBus) Unsub(req *pb.ConsumeRequest) error {
 	return bus.conn.Channel().Cancel(Topic(req), NO_WAIT)
 }
+
+func (bus *EventBus) List(ctx context.Context, req *pb.ConsumeRequest) ([]*pb.Event, error)  {
+
+	// Disconnect other consumers
+	if err := bus.Unsub(req); err != nil {
+		return nil, err
+	}
+
+	q, err := bus.exchange.DeriveQueue(Topic(req)) 
+	if err != nil {
+		return nil, err
+	}
+
+	return q.List(ctx) 
+}

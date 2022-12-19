@@ -218,6 +218,8 @@ github.com/slntopp/nocloud-proto v0.0.0-20221219083654-d6155cb71fae h1:6ea7BoWb0
 github.com/slntopp/nocloud-proto v0.0.0-20221219083654-d6155cb71fae/go.mod h1:F22cB+K8C7ym1+Ldg+ji0azXm8GP4En1NUq8Nzvkgxw=
 github.com/slntopp/nocloud-proto v0.0.0-20221219111355-1518eefc8b31 h1:M4qrbpcCGXk3ElJCSAaoTIuMtmTTNc+7MH2BPHrdX6Y=
 github.com/slntopp/nocloud-proto v0.0.0-20221219111355-1518eefc8b31/go.mod h1:F22cB+K8C7ym1+Ldg+ji0azXm8GP4En1NUq8Nzvkgxw=
+github.com/slntopp/nocloud-proto v0.0.0-20221219195547-d6904f1a4164 h1:IKD56ownOA94jhnlUOwEsP8rxra/NPBKPRZz7Sd8a7s=
+github.com/slntopp/nocloud-proto v0.0.0-20221219195547-d6904f1a4164/go.mod h1:F22cB+K8C7ym1+Ldg+ji0azXm8GP4En1NUq8Nzvkgxw=
 github.com/spf13/afero v1.9.2 h1:j49Hj62F0n+DaZ1dDCvhABaPNSGNkt32oRFxI33IEMw=
 github.com/spf13/afero v1.9.2/go.mod h1:iUV7ddyEEZPO5gA3zD4fJt6iStLlL+Lg4m2cihcDf8Y=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
