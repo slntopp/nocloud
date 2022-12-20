@@ -113,9 +113,7 @@ func (q *Queue) Cancel(ctx context.Context, id string) error {
 	}
 
 	for _, event := range events {
-		if err := q.Send(ctx, event); err != nil {
-			// return err
-		}
+		_ = q.Send(ctx, event)
 	}
 
 	return nil
