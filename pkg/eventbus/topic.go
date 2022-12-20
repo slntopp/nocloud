@@ -17,6 +17,8 @@ func Topic(msg interface{}) string {
 		return fmt.Sprintf(TOPIC_FORMAT, v.Type, v.Uuid)
 	case *pb.Event:
 		return fmt.Sprintf(TOPIC_FORMAT, v.Type, v.Uuid)
+	case *pb.CancelRequest:
+		return fmt.Sprintf(TOPIC_FORMAT, v.Type, v.Uuid)
 	default:
 		return ""
 	}

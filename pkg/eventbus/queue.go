@@ -62,7 +62,7 @@ func (q *Queue) Consume() (<-chan *pb.Event, error) {
 func (q *Queue) List(ctx context.Context) ([]*pb.Event, error) {
 
 	events := []*pb.Event{}
-	
+
 	for {
 
 		del, ok, err := q.conn.Channel().Get(q.Name, true)
@@ -88,6 +88,37 @@ func (q *Queue) List(ctx context.Context) ([]*pb.Event, error) {
 	}
 
 	return events, nil
+}
+
+func (q *Queue) Cancel(ctx context.Context, id string) error {
+
+	events := []*pb.Event{}
+
+	for {
+
+		del, ok, err := q.conn.Channel().Get(q.Name, true)
+		if err != nil {
+			return err
+		}
+
+		event := &pb.Event{}
+		if err := proto.Unmarshal(del.Body, event); err == nil && event.Id != id {
+			events = append(events, event)
+		}
+
+		if !ok {
+			break
+		}
+
+	}
+
+	for _, event := range events {
+		if err := q.Send(ctx, event); err != nil {
+			// return err
+		}
+	}
+
+	return nil
 }
 
 // Send event to default exchange with routing key equal queue name

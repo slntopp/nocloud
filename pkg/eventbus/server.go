@@ -3,6 +3,7 @@ package eventbus
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/rabbitmq/amqp091-go"
 	pb "github.com/slntopp/nocloud-proto/events"
 	"go.uber.org/zap"
@@ -35,6 +36,8 @@ func (s *EventBusServer) Publish(ctx context.Context, event *pb.Event) (*pb.Resp
 
 	s.log.Info("got publish request", zap.Any("event", event))
 
+	event.Id = uuid.New().String()
+
 	if err := s.bus.Pub(ctx, event); err != nil {
 		return nil, err
 	}
@@ -66,7 +69,7 @@ func (s *EventBusServer) Consume(req *pb.ConsumeRequest, srv pb.EventsService_Co
 	return nil
 }
 
-func (s *EventBusServer) List(ctx context.Context,  req *pb.ConsumeRequest) (*pb.Events, error) {
+func (s *EventBusServer) List(ctx context.Context, req *pb.ConsumeRequest) (*pb.Events, error) {
 
 	s.log.Info("got list request", zap.Any("request", req))
 
@@ -76,4 +79,11 @@ func (s *EventBusServer) List(ctx context.Context,  req *pb.ConsumeRequest) (*pb
 	}
 
 	return &pb.Events{Events: events}, nil
+}
+
+func (s *EventBusServer) Cancel(ctx context.Context, req *pb.CancelRequest) (*pb.Response, error) {
+
+	s.log.Info("got cancel request", zap.Any("request", req))
+
+	return &pb.Response{}, s.bus.Cancel(ctx, req)
 }
