@@ -67,12 +67,8 @@
             <v-btn>cancel</v-btn>
           </router-link>
           <v-btn class="ml-2" @click="downloadJSON"> download </v-btn>
-          <v-btn class="ml-2" :loading="isTestsLoading" @click="testService">
-            test
-          </v-btn>
           <v-btn
             class="ml-2"
-            :disabled="!testsPassed"
             :loading="isLoading"
             @click="createService"
           >
@@ -230,9 +226,7 @@ export default {
 
     isVisible: false,
     isLoading: false,
-    isTestsLoading: false,
     plansVisible: false,
-    testsPassed: false,
   }),
   mixins: [snackbar],
   methods: {
@@ -330,8 +324,11 @@ export default {
       }
 
       this.isLoading = true;
-      api.services
-        ._create(data)
+      api.services.testConfig(data)
+        .then((res) => {
+          if (res.result) return api.services._create(data);
+          else throw res;
+        })
         .then(() => {
           this.showSnackbar({ message: `Service created successfully` });
           this.$router.push({ name: "Services" });
@@ -344,36 +341,6 @@ export default {
         })
         .finally(() => {
           this.isLoading = false;
-        });
-    },
-    testService() {
-      const data = this.getService();
-
-      if (!this.formValid) {
-        this.$refs.form.validate();
-        return;
-      }
-
-      this.isTestsLoading = true;
-      api.services
-        .testConfig(data)
-        .then((res) => {
-          if (res.result) {
-            this.showSnackbar({ message: `Service passed tests successfully` });
-            this.testsPassed = true;
-          } else {
-            throw res;
-          }
-        })
-        .catch((err) => {
-          this.testsPassed = false;
-          const opts = {
-            message: err.errors.map((error) => error),
-          };
-          this.showSnackbarError(opts);
-        })
-        .finally(() => {
-          this.isTestsLoading = false;
         });
     },
     setProducts() {
