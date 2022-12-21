@@ -9,7 +9,7 @@
     />
     <v-list v-else flat dark color="rgba(12, 12, 60, 0.9)">
       <v-subheader>REGIONS</v-subheader>
-      <v-list-item-group v-model="selectedRegion" color="primary">
+      <v-list-item-group mandatory v-model="selectedRegion" color="primary">
         <v-list-item v-for="(item, i) in allRegions" :key="i">
           {{ item }}
         </v-list-item>
@@ -22,6 +22,7 @@
       :multiSelect="true"
       :error="mapError"
       :template="template"
+      :region="allRegions[selectedRegion]"
       @save="onSavePin"
       @pinHover="onPinHover"
     />
@@ -34,32 +35,25 @@ import api from "@/api.js";
 
 export default {
   name: "ovh-map",
-  data() {
-    return { selectedRegion: "", allRegions: [], mapError: "" };
-  },
-  components: {
-    supportMap,
-  },
+  components: { supportMap },
   props: { template: { required: true, type: Object } },
+  data: () => ({ selectedRegion: "", allRegions: [], mapError: "" }),
   methods: {
     onPinHover(id) {
       if (this.allRegions) {
-        const location = this.template.locations.find((l) => l.id === id);
+        const location = this.template.locations.find((el) => el.id === id);
+
         this.selectedRegion = this.allRegions.indexOf(location.extra.region);
       }
     },
     errorAddPin() {
       if (this.selectedLocation) {
-        console.log(1);
         this.mapError = "Error: This region alredy taken";
       } else {
         this.mapError = "Error: Choose the region";
       }
     },
-    onSavePin(item) {
-      item.locations[item.locations.length - 1].extra = {
-        region: this.allRegions[this.selectedRegion],
-      };
+    onSavePin() {
       this.selectedRegion = null;
       this.mapError = "";
     },
@@ -84,12 +78,9 @@ export default {
     },
   },
   mounted() {
-    api
-      .post(`/sp/${this.template.uuid}/invoke`, { method: "flavors" })
+    api.post(`/sp/${this.template.uuid}/invoke`, { method: "regions" })
       .then(({ meta }) => {
-        this.allRegions = meta.result
-          .map((el) => el.region)
-          .filter((element, index, arr) => arr.indexOf(element) === index);
+        this.allRegions = meta.datacenters;
       })
       .catch(() => {
         this.mapError = "Error: Cannot download regions";

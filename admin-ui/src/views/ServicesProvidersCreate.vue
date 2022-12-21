@@ -138,30 +138,13 @@
 
       <v-row class="justify-end">
         <v-col cols="6">
-          <v-tooltip bottom :disabled="isTestSuccess">
-            <template v-slot:activator="{ on, attrs }">
-              <div v-bind="attrs" v-on="on" style="display: inline-block">
-                <v-btn
-                  color="background-light"
-                  class="mr-2"
-                  @click="tryToSend"
-                  :loading="isLoading"
-                  :disabled="!isTestSuccess"
-                >
-                  create
-                </v-btn>
-              </div>
-            </template>
-            <span>Test must be passed before creation.</span>
-          </v-tooltip>
-
           <v-btn
-            :color="testButtonColor"
             class="mr-2"
-            @click="testConfig"
-            :loading="isTestLoading"
+            color="background-light"
+            :loading="isLoading"
+            @click="tryToSend"
           >
-            Test
+            create
           </v-btn>
         </v-col>
         <v-col cols="6">
@@ -242,9 +225,6 @@ export default {
 
     isPassed: false,
     isLoading: false,
-    isTestLoading: false,
-    testButtonColor: "background-light",
-    isTestSuccess: false,
 
     tabs: null,
     extentions: {
@@ -334,29 +314,13 @@ export default {
         });
     },
     tryToSend() {
-      if (!this.isPassed || !this.isTestSuccess) {
+      if (!this.isPassed) {
         const opts = {
           message: `Error: Test must be passed before creation.`,
         };
         this.showSnackbarError(opts);
         return;
       }
-      this.isLoading = true;
-      api.servicesProviders
-        .create(this.serviceProviderBody)
-        .then(() => {
-          this.$router.push({ name: "ServicesProviders" });
-        })
-        .finally(() => {
-          this.isLoading = false;
-        })
-        .catch((err) => {
-          this.errorDisplay(err);
-        });
-    },
-    testConfig() {
-      this.isTestLoading = true;
-
       if (
         this.serviceProviderBody.type === "ione" &&
         this.serviceProviderBody.secrets.vlans
@@ -373,25 +337,24 @@ export default {
 
         if (isWrongVlans) {
           this.showSnackbarError({ message: "Vlans cant be more 4096" });
-          this.isTestLoading = false;
           return;
         }
       }
 
-      api.servicesProviders
-        .testConfig(this.serviceProviderBody)
+      this.isLoading = true;
+      api.servicesProviders.testConfig(this.serviceProviderBody)
         .then((res) => {
-          if (!res.result) {
-            throw res;
-          }
-          this.testButtonColor = "success";
-          this.isTestSuccess = true;
+          if (res.result) return api.servicesProviders.create(this.serviceProviderBody);
+          else throw res;
+        })
+        .then(() => {
+          this.$router.push({ name: "ServicesProviders" });
         })
         .catch((err) => {
           this.errorDisplay(err);
         })
         .finally(() => {
-          this.isTestLoading = false;
+          this.isLoading = false;
         });
     },
     errorDisplay(err) {

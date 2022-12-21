@@ -1,7 +1,7 @@
 <template>
   <div class="pa-4">
     <div class="d-flex">
-      <h1 class="page__title" v-if="!item">Create plan</h1>
+      <h1 class="page__title" v-if="!item">Create price model</h1>
       <v-icon class="mx-3" large color="light" @click="openPlanWiki">
         mdi-information-outline
       </v-icon>
@@ -12,7 +12,7 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Plan type</v-subheader>
+              <v-subheader>Price model type</v-subheader>
             </v-col>
             <v-col cols="9">
               <v-select
@@ -25,7 +25,7 @@
           </v-row>
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Plan title</v-subheader>
+              <v-subheader>Price model title</v-subheader>
             </v-col>
             <v-col cols="9">
               <v-text-field
@@ -35,19 +35,9 @@
               />
             </v-col>
           </v-row>
-
-          <!-- Opensrs props -->
-          <plan-opensrs
-            @changeFee="(data) => (plan.fee = data)"
-            @onValid="(data) => (isFeeValid = data)"
-            v-if="plan.type === 'opensrs' || plan.type === 'ovh'"
-            :fee="plan.fee"
-            :isEdit="isEdit"
-          />
-
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Plan kind</v-subheader>
+              <v-subheader>Price model kind</v-subheader>
             </v-col>
             <v-col cols="9">
               <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">
@@ -74,8 +64,7 @@
 
           <v-divider />
 
-          <plans-ovh-table v-if="plan.type === 'ovh' && item" :plan="item" />
-          <template v-else-if="plan.type !== 'ovh'">
+          <template v-if="!['ovh', 'goget'].includes(plan.type)">
             <v-tabs v-model="form.title" background-color="background-light">
               <v-tab
                 draggable="true"
@@ -117,7 +106,7 @@
                   :is="template"
                   :keyForm="title"
                   :resource="plan.resources[i]"
-                  :product="getProduct(i)"
+                  :product="getProduct(title)"
                   :preset="preset(i)"
                   @change:resource="(data) => changeResource(i, data)"
                   @change:product="(data) => changeProduct(title, data)"
@@ -133,15 +122,36 @@
           <v-btn
             class="mr-2"
             color="background-light"
-            :loading="isLoading"
-            :disabled="!isTestSuccess"
-            @click="tryToSend"
+            v-if="isEdit"
+            @click="isDialogVisible = true"
           >
-            {{ item ? "Edit" : "Create" }}
+            Save
           </v-btn>
-          <v-btn class="mr-2" :color="testButtonColor" @click="testConfig">
-            Test
+          <v-btn
+            v-else
+            class="mr-2"
+            color="background-light"
+            :loading="isLoading"
+            @click="tryToSend('create')"
+          >
+            Create
           </v-btn>
+        </v-col>
+        <v-col>
+          <v-dialog :max-width="600" v-model="isDialogVisible">
+            <v-card color="background-light">
+              <v-card-title>Do you really want to change your current price model?</v-card-title>
+              <v-card-subtitle>You can also create a new price model based on the current one.</v-card-subtitle>
+              <v-card-actions>
+                <v-btn class="mr-2" :loading="isLoading" @click="tryToSend('create')">
+                  Create
+                </v-btn>
+                <v-btn v-if="item" :loading="isLoading" @click="tryToSend('edit')">
+                  Edit
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
         </v-col>
       </v-row>
     </v-form>
@@ -175,12 +185,11 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
-import plansOvhTable from '../components/plans_ovh_table.vue';
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  components: { ConfirmDialog, PlanOpensrs, plansOvhTable },
+  components: { ConfirmDialog, PlanOpensrs },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
@@ -206,12 +215,11 @@ export default {
     },
     generalRule: [(v) => !!v || "This field is required!"],
 
+    isDialogVisible: false,
     isVisible: true,
     isValid: false,
     isFeeValid: true,
     isLoading: false,
-    isTestSuccess: false,
-    testButtonColor: "background-light",
   }),
   methods: {
     changeResource(num, { key, value }) {
@@ -354,44 +362,71 @@ export default {
         this.isVisible = true;
       }
     },
-    tryToSend() {
-      if (!this.isValid) {
-        this.$refs.form.validate();
-        this.testButtonColor = "background-light";
-        this.isTestSuccess = false;
+    tryToSend(action) {
+      let message = "";
 
+      if (!this.isValid || !this.isFeeValid) {
+        this.$refs.form.validate();
+        message = "Validation failed!";
+      }
+
+      if (!message && (this.plan.fee?.ranges?.length === 0)) {
+        if (this.plan.type === 'ovh' || this.plan.type === 'opensrs') {
+          message = "Ranges cant be empty!";
+        }
+      }
+
+      if (!message) {
+        message = this.checkPlanPeriods(this.plan);
+      }
+
+      if (message) {
+        this.showSnackbarError({ message });
         return;
+      }
+      if (action === 'create') delete this.plan.uuid;
+
+      function checkName({ title, uuid }, obj, num = 2) {
+        const value = obj.find((el) => el.title === title && el.uuid !== uuid);
+        const oldTitle = title.split(' ');
+
+        if (oldTitle.length > 1) oldTitle[oldTitle.length - 1] = num;
+        else oldTitle.push(num);
+
+        const plan = { title: oldTitle.join(' '), uuid }
+
+        if (value) return checkName(plan, obj, num + 1);
+        else return title;
       }
 
       this.isLoading = true;
+      this.plan.title = checkName(this.plan, this.plans);
       Object.entries(this.plan.products).forEach(([key, form]) => {
-        const num = this.form.titles.findIndex((el) => el === key);
-
-        form.sorter = num;
+        form.sorter = this.form.titles.findIndex((el) => el === key);
+        if (form.sorter === -1) delete this.plan.products[key];
       });
 
       const id = this.$route.params?.planId;
-      const request = this.item
+      const request = (action === 'edit')
         ? api.plans.update(id, this.plan)
         : api.plans.create(this.plan);
 
-      request
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: this.item
-              ? "Plan edited successfully"
-              : "Plan created successfully",
-          });
-          setTimeout(() => {
-            this.$router.push({ name: "Plans" });
-          }, 100);
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isLoading = false;
+      request.then(() => {
+        this.showSnackbarSuccess({
+          message: (action === 'edit')
+            ? "Price model edited successfully"
+            : "Price model created successfully",
         });
+        setTimeout(() => {
+          this.$router.push({ name: "Plans" });
+        }, 100);
+      })
+      .catch((err) => {
+        this.showSnackbarError({ message: err });
+      })
+      .finally(() => {
+        this.isLoading = false;
+      });
     },
     checkPeriods(periods) {
       const wrongPeriod = periods.find((p) => p.period === 0);
@@ -414,34 +449,6 @@ export default {
       } else {
         return this.checkPeriods(plan.resources);
       }
-    },
-    testConfig() {
-      let message = "";
-
-      if (!this.isValid || !this.isFeeValid) {
-        this.$refs.form.validate();
-        message = "Validation failed!";
-      }
-
-      if (!message && (!this.plan.fee?.ranges || this.plan.fee?.ranges?.length === 0)) {
-        message = "Ranges cant be empty!";
-      }
-
-      if (!message) {
-        message = this.checkPlanPeriods(this.plan);
-      }
-
-      if (message) {
-        this.testButtonColor = "background-light";
-        this.isTestSuccess = false;
-        this.showSnackbarError({
-          message,
-        });
-        return;
-      }
-
-      this.testButtonColor = "success";
-      this.isTestSuccess = true;
     },
     setPeriod(date, res) {
       const period = this.getTimestamp(date);
@@ -479,14 +486,15 @@ export default {
           });
         } else {
           this.products = this.item.products;
-          Object.keys(this.item.products).forEach((key) => {
-            this.form.titles.push(key);
+          Object.entries(this.item.products).forEach(([key, { sorter }]) => {
+            this.form.titles.splice(sorter, 0, key);
           });
         }
       }
     },
-    getProduct(index) {
-      const product = Object.values(this.products)[index];
+    getProduct(title) {
+      const product = Object.values(this.products).find((el) => el.title === title);
+
       if (!product) return {};
       return {
         ...product,
@@ -509,6 +517,14 @@ export default {
     },
   },
   created() {
+    this.$store.dispatch('plans/fetch', { silent: true })
+      .catch((err) => {
+        const message = err.response?.data?.message ?? err.message ?? err;
+
+        this.showSnackbarError({ message })
+        console.error(err);
+      });
+
     if (this.isEdit) {
       this.plan.resources = this.item.resources;
     }
@@ -542,6 +558,9 @@ export default {
 
       return () => import(`@/components/plans_form_${type}.vue`);
     },
+    plans() {
+      return this.$store.getters['plans/all'];
+    }
   },
   watch: {
     "plan.type"() {
@@ -569,6 +588,13 @@ export default {
         }
       }
     },
+    plan: {
+      handler() {
+        this.testButtonColor = "background-light";
+        this.isTestSuccess = false;
+      },
+      deep: true
+    }
   },
 };
 </script>

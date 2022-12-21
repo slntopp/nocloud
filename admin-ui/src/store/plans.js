@@ -35,8 +35,8 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }, params) {
-      commit("setLoading", true);
+    fetch({ commit }, { params, silent }) {
+      if (!silent) commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
         api.plans

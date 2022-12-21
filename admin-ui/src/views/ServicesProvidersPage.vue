@@ -29,7 +29,16 @@
           v-if="!loading && item"
           :is="tab.component"
           :template="item"
-        />
+        >
+          <v-row>
+            <v-col :cols="12" :md="6">
+              <json-editor
+                :json="item[tab.title.toLowerCase()]"
+                @changeValue="(data) => (item[tab.title.toLowerCase()] = data)"
+              />
+            </v-col>
+          </v-row>
+        </component>
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -37,8 +46,10 @@
 
 <script>
 import config from "@/config.js";
+import JsonEditor from '../components/JsonEditor.vue';
 
 export default {
+  components: { JsonEditor },
   name: "service-providers-view",
   data: () => ({
     found: false,
@@ -67,10 +78,9 @@ export default {
         },
         {
           title: "Map",
-          component:
-            this.item?.type === "ovh"
-              ? () => import("@/components/ServicesProvider/ovhMap.vue")
-              : () => import("@/components/ServicesProvider/map.vue"),
+          component: (this.item?.type === "ovh")
+            ? () => import("@/components/ServicesProvider/ovhMap.vue")
+            : () => import("@/components/ServicesProvider/map.vue"),
         },
         {
           title: "Template",
@@ -78,10 +88,16 @@ export default {
         },
       ];
 
-      if (this.item?.type === 'ovh') tabs.push({
-        title: "Prices",
-        component: () => import("@/components/ServicesProvider/table.vue")
+      if (Object.keys(this.item?.secrets ?? {}).length > 0) tabs.splice(1, 0, {
+        title: "Secrets",
+        component: () => import(`@/components/modules/${this.item?.type}/serviceProviderSecrets.vue`)
+          .catch(() => import("@/components/modules/custom/serviceProviderSecrets.vue")),
       });
+      if (Object.keys(this.item?.vars ?? {}).length > 0) tabs.splice(2, 0, {
+        title: "Vars",
+        component: () => import("@/components/modules/custom/serviceProviderVars.vue"),
+      });
+
       return tabs;
     },
     title() {

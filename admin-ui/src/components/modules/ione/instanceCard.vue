@@ -31,7 +31,7 @@
         <v-text-field
           readonly
           :value="localInstance.billingPlan.title"
-          label="billing plan"
+          label="price model"
           style="display: inline-block; width: 100px"
         />
       </v-col>

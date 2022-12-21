@@ -17,6 +17,7 @@ package billing
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -136,6 +137,23 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
+	planId := driver.NewDocumentID(schema.BILLING_PLANS_COL, plan.GetUuid())
+
+	cursor, err := s.db.Query(ctx, getInstances, map[string]interface{}{
+		"permissions":       schema.PERMISSIONS_GRAPH.Name,
+		"plan":              planId,
+		"@instances_groups": schema.INSTANCES_GROUPS_COL,
+		"@instances":        schema.INSTANCES_COL,
+	})
+	if err != nil {
+		log.Error("Error getting instances", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting instances")
+	}
+
+	if cursor.HasMore() {
+		return nil, status.Error(codes.DataLoss, "Сan't delete plan due to related instances")
+	}
+
 	err = s.plans.Delete(ctx, plan)
 	if err != nil {
 		log.Error("Error deleting plan", zap.Error(err))
@@ -201,3 +219,17 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 
 	return &pb.ListResponse{Pool: result}, nil
 }
+
+const getInstances = `
+LET igs = (
+    FOR node IN 2 INBOUND @plan GRAPH @permissions
+    FILTER IS_SAME_COLLECTION(node, @@instances_groups)
+    RETURN node._id
+)
+
+FOR ig in igs
+    FOR node, edge IN 1 OUTBOUND ig GRAPH @permissions
+    FILTER IS_SAME_COLLECTION(node, @@instances)
+    FILTER edge.role == "owner"
+    RETURN node
+`
