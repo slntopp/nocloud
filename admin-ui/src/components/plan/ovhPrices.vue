@@ -641,9 +641,13 @@ export default {
     }
   },
   watch: {
-    tabsIndex() {
+    tabsIndex(value) {
       this.changeIcon();
-      this.setFee();
+
+      const items = [this.plans, this.addons];
+
+      items[value].forEach((el) => this.getMargin(el));
+      this.fee = Object.assign({}, this.fee);
     },
     addons() {
       this.template.resources.forEach(({ key, price }) => {

@@ -53,10 +53,7 @@ export default {
         this.mapError = "Error: Choose the region";
       }
     },
-    onSavePin(item) {
-      item.locations[item.locations.length - 1].extra = {
-        region: this.allRegions[this.selectedRegion],
-      };
+    onSavePin() {
       this.selectedRegion = null;
       this.mapError = "";
     },

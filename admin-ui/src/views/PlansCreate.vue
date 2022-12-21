@@ -123,7 +123,6 @@
             class="mr-2"
             color="background-light"
             v-if="isEdit"
-            :disabled="!isTestSuccess"
             @click="isDialogVisible = true"
           >
             Save
@@ -137,7 +136,6 @@
           >
             Create
           </v-btn>
-          <v-btn :color="testButtonColor" @click="testConfig">Test</v-btn>
         </v-col>
         <v-col>
           <v-dialog :max-width="600" v-model="isDialogVisible">
@@ -222,8 +220,6 @@ export default {
     isValid: false,
     isFeeValid: true,
     isLoading: false,
-    isTestSuccess: false,
-    testButtonColor: "background-light",
   }),
   methods: {
     changeResource(num, { key, value }) {
@@ -367,28 +363,47 @@ export default {
       }
     },
     tryToSend(action) {
-      if (!this.isValid) {
-        this.$refs.form.validate();
-        this.testButtonColor = "background-light";
-        this.isTestSuccess = false;
+      let message = "";
 
+      if (!this.isValid || !this.isFeeValid) {
+        this.$refs.form.validate();
+        message = "Validation failed!";
+      }
+
+      if (!message && (this.plan.fee?.ranges?.length === 0)) {
+        if (this.plan.type === 'ovh' || this.plan.type === 'opensrs') {
+          message = "Ranges cant be empty!";
+        }
+      }
+
+      if (!message) {
+        message = this.checkPlanPeriods(this.plan);
+      }
+
+      if (message) {
+        this.showSnackbarError({ message });
         return;
       }
       if (action === 'create') delete this.plan.uuid;
 
-      function checkName(name, obj, num = 2) {
-        const value = obj.find(({ title }) => title === name);
+      function checkName({ title, uuid }, obj, num = 2) {
+        const value = obj.find((el) => el.title === title && el.uuid !== uuid);
+        const oldTitle = title.split(' ');
 
-        if (value) return checkName(`${name} ${num}`, obj, num + 1);
-        else return name;
+        if (oldTitle.length > 1) oldTitle[oldTitle.length - 1] = num;
+        else oldTitle.push(num);
+
+        const plan = { title: oldTitle.join(' '), uuid }
+
+        if (value) return checkName(plan, obj, num + 1);
+        else return title;
       }
 
       this.isLoading = true;
-      this.plan.title = checkName(this.plan.title, this.plans);
+      this.plan.title = checkName(this.plan, this.plans);
       Object.entries(this.plan.products).forEach(([key, form]) => {
-        const num = this.form.titles.findIndex((el) => el === key);
-
-        form.sorter = num;
+        form.sorter = this.form.titles.findIndex((el) => el === key);
+        if (form.sorter === -1) delete this.plan.products[key];
       });
 
       const id = this.$route.params?.planId;
@@ -434,34 +449,6 @@ export default {
       } else {
         return this.checkPeriods(plan.resources);
       }
-    },
-    testConfig() {
-      let message = "";
-
-      if (!this.isValid || !this.isFeeValid) {
-        this.$refs.form.validate();
-        message = "Validation failed!";
-      }
-
-      if (!message && (this.plan.fee?.ranges?.length === 0)) {
-        if (this.plan.type === 'ovh' || this.plan.type === 'opensrs') {
-          message = "Ranges cant be empty!";
-        }
-      }
-
-      if (!message) {
-        message = this.checkPlanPeriods(this.plan);
-      }
-
-      if (message) {
-        this.testButtonColor = "background-light";
-        this.isTestSuccess = false;
-        this.showSnackbarError({ message });
-        return;
-      }
-
-      this.testButtonColor = "success";
-      this.isTestSuccess = true;
     },
     setPeriod(date, res) {
       const period = this.getTimestamp(date);
@@ -601,6 +588,13 @@ export default {
         }
       }
     },
+    plan: {
+      handler() {
+        this.testButtonColor = "background-light";
+        this.isTestSuccess = false;
+      },
+      deep: true
+    }
   },
 };
 </script>
