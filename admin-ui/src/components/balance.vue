@@ -18,7 +18,7 @@ export default {
     balance() {
       if (this.value) return parseFloat(this.value).toFixed(2);
 
-      const { balance } = this.$store.getters['auth/userdata'];
+      const { balance = 0 } = this.$store.getters['auth/userdata'];
 
       return parseFloat(balance).toFixed(2);
     },

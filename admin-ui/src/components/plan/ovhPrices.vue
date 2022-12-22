@@ -233,6 +233,7 @@ export default {
     newGroupName: '',
     mode: 'none',
 
+    rate: 1,
     planId: -1,
     tabsIndex: 0,
 
@@ -294,14 +295,16 @@ export default {
           if (isMonthly || isYearly) {
             const code = planCode.split('-').slice(1).join('-');
             const option = windows.find((el) => el.planCode.includes(code));
+            const newPrice = parseFloat((price.value * this.rate).toFixed(2));
             const plan = { windows: null };
 
             if (option) {
               const { price: { value } } = option.prices.find((el) =>
                 el.duration === duration && el.pricingMode === pricingMode);
+              const newPrice = parseFloat((value * this.rate).toFixed(2));
 
               plan.windows = {
-                value, price: { value },
+                value, price: { value: newPrice },
                 name: option.productName,
                 code: option.planCode
               };
@@ -310,7 +313,7 @@ export default {
             result.push({
               ...plan,
               planCode,
-              price,
+              price: { value: newPrice },
               duration,
               name: productName,
               group: productName.split(' ')[1],
@@ -345,8 +348,10 @@ export default {
             const isYearly = duration === 'P1Y' && pricingMode === 'upfront12';
 
             if (isMonthly || isYearly) {
+              const newPrice = parseFloat((price.value * this.rate).toFixed(2));
+
               result.push({
-                price,
+                price: { value: newPrice },
                 duration,
                 name: productName,
                 value: price.value,
@@ -608,6 +613,10 @@ export default {
   },
   created() {
     this.isPlansLoading = true;
+    api.get(`/billing/currencies/rates/PLN/NCU`)
+      .then((res) => this.rate = res.rate)
+      .catch((err) => console.error(err));
+
     this.$store.dispatch('servicesProviders/fetch')
       .then(({ pool }) => {
         const sp = pool.find(({ type }) => type === 'ovh');

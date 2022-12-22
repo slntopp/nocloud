@@ -112,14 +112,6 @@ export default {
       const items = this.$store.getters["servicesProviders/all"];
       this.item = items.find((el) => el.uuid == this.uuid);
       this.found = !!this.service;
-      if (!this.item.secrets.vlans && this.item.type === "ione") {
-        this.item.secrets.vlans = {
-          vcenter: {
-            start: 0,
-            size: 0,
-          },
-        };
-      }
       document.title = `${this.title} | NoCloud`;
     });
   },
