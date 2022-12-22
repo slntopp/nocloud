@@ -408,6 +408,7 @@ export default {
             case 3:
               round = 'ceil';
           }
+          if (this.fee.round  === 'NONE') round = 'round';
 
           for (let range of this.fee.ranges) {
             if (plan.price.value <= range.from) continue;
@@ -529,6 +530,7 @@ export default {
         case 3:
           round = 'ceil';
       }
+      if (this.fee.round === 'NONE') round = 'round';
 
       if (value === Math[round](price.value * percent * n) / n) {
         if (filter) this.changeFilters({ margin: 'ranged' }, ['Margin']);
