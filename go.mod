@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.14.0
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.0
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/rs/cors v1.8.2
 	github.com/slntopp/nocloud-proto v0.0.0-20221202100550-f1f7d489d7ca
