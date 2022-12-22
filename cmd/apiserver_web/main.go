@@ -171,6 +171,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
 	}
+	log.Info("Registering CurrencyService Gateway")
+	err = billingpb.RegisterCurrencyServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	if err != nil {
+		log.Fatal("Failed to register CurrencyService gateway", zap.Error(err))
+	}
 
 	for _, p := range []string{"/admin", "/admin/{path}", "/admin/{path}/{file}"} {
 		err = gwmux.HandlePath("GET", p, staticHandler)
