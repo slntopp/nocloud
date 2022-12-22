@@ -367,10 +367,10 @@ export default {
   },
   created() {
     this.$store
-      .dispatch("plans/fetch", {
+      .dispatch("plans/fetch", { params: {
         sp_uuid: this.template.uuid,
         anonymously: false,
-      })
+      } })
       .then(() => {
         this.relatedPlans = this.$store.getters["plans/all"];
         this.fetchError = "";
@@ -388,8 +388,10 @@ export default {
   },
   computed: {
     plans() {
-      return this.$store.getters["plans/all"].filter(
-        (plan) => plan.type === this.provider.type
+      const plans = this.relatedPlans.map(({ uuid }) => uuid);
+
+      return this.$store.getters["plans/all"].filter((plan) =>
+        plan.type === this.provider.type && !plans.includes(plan.uuid)
       );
     },
     isPlanLoading() {

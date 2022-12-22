@@ -186,6 +186,14 @@ const routes = [
       requireLogin: true,
     },
   },
+  {
+    path: "/currencies",
+    name: "Currencies",
+    component: () => import("../views/Currencies.vue"),
+    meta: {
+      requireLogin: true,
+    }
+  },
 ];
 
 const router = new VueRouter({
