@@ -1,48 +1,5 @@
 <template>
   <div>
-    <!-- Secrets -->
-    <v-card-title class="px-0 mb-3"> Secrets:</v-card-title>
-    <v-row v-if="!editing">
-      <v-col>
-        <v-text-field
-          readonly
-          :value="template.secrets.group"
-          label="group"
-          style="display: inline-block; width: 330px"
-        >
-        </v-text-field>
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          :value="template.secrets.host"
-          label="host"
-          style="display: inline-block; width: 330px"
-        >
-        </v-text-field>
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          :value="template.secrets.user"
-          label="user"
-          style="display: inline-block; width: 330px"
-        >
-        </v-text-field>
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          :value="template.secrets.pass"
-          label="password"
-          style="display: inline-block; width: 330px"
-          :type="showPassword ? 'text' : 'password'"
-          :append-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
-          @click:append="() => (showPassword = !showPassword)"
-        >
-        </v-text-field>
-      </v-col>
-    </v-row>
     <slot></slot>
     <!-- Hosts -->
     <v-card-title class="px-0 mb-3">Hosts:</v-card-title>
@@ -310,14 +267,8 @@
 <script>
 export default {
   name: "service-provider-ione",
-  props: {
-    template: { type: Object, required: true },
-    editing: { type: Boolean, required: true },
-  },
-  data: () => ({
-    showPassword: false,
-    counter: 1,
-  }),
+  props: { template: { type: Object, required: true } },
+  data: () => ({ counter: 1 }),
   methods: {
     changeWidth() {
       const { clientWidth } = this.$refs.private;

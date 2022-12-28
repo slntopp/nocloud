@@ -50,43 +50,7 @@
       </v-col>
     </v-row>
 
-    <component :is="spTypes" :template="provider" :editing="editing">
-      <v-row v-if="editing">
-        <v-col :cols="12" :md="6">
-          <json-editor
-            :json="provider.secrets"
-            @changeValue="(data) => (provider.secrets = data)"
-          />
-        </v-col>
-      </v-row>
-
-      <!-- Variables -->
-      <v-card-title class="px-0 mb-3">Variables:</v-card-title>
-      <v-row v-if="!editing">
-        <v-col v-for="(variable, varTitle) in provider.vars" :key="varTitle">
-          {{ varTitle.replaceAll("_", " ") }}
-          <v-row>
-            <v-col :cols="12" v-for="(value, key) in variable.value" :key="key">
-              <v-text-field
-                readonly
-                :value="JSON.stringify(value)"
-                :label="key"
-                style="display: inline-block; width: 200px"
-              >
-              </v-text-field>
-            </v-col>
-          </v-row>
-        </v-col>
-      </v-row>
-      <v-row v-else>
-        <v-col :cols="12" :md="6">
-          <json-editor
-            :json="provider.vars"
-            @changeValue="(data) => (provider.vars = data)"
-          />
-        </v-col>
-      </v-row>
-
+    <component :is="spTypes" :template="provider">
       <!-- Edit -->
       <v-row justify="end">
         <v-col col="6" v-if="editing">
@@ -120,7 +84,6 @@
           <v-switch v-model="editing" label="editing" />
         </v-col>
       </v-row>
-
       <!-- Date -->
       <v-row>
         <v-col cols="12" lg="6" class="mt-5 mb-5">
@@ -363,7 +326,7 @@ export default {
           const ending = bindPromises.length === 1 ? "" : "s";
 
           this.showSnackbarSuccess({
-            message: `Plan${ending} added successfully.`,
+            message: `Price model${ending} added successfully.`,
           });
         })
         .catch((err) => {
@@ -385,7 +348,7 @@ export default {
           const ending = unbindPromises.length === 1 ? "" : "s";
 
           this.showSnackbarSuccess({
-            message: `Plan${ending} deleted successfully.`,
+            message: `Price model${ending} deleted successfully.`,
           });
         })
         .catch((err) => {
@@ -404,10 +367,10 @@ export default {
   },
   created() {
     this.$store
-      .dispatch("plans/fetch", {
+      .dispatch("plans/fetch", { params: {
         sp_uuid: this.template.uuid,
         anonymously: false,
-      })
+      } })
       .then(() => {
         this.relatedPlans = this.$store.getters["plans/all"];
         this.fetchError = "";
@@ -425,8 +388,10 @@ export default {
   },
   computed: {
     plans() {
-      return this.$store.getters["plans/all"].filter(
-        (plan) => plan.type === this.provider.type
+      const plans = this.relatedPlans.map(({ uuid }) => uuid);
+
+      return this.$store.getters["plans/all"].filter((plan) =>
+        plan.type === this.provider.type && !plans.includes(plan.uuid)
       );
     },
     isPlanLoading() {

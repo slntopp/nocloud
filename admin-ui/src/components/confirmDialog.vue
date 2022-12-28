@@ -1,15 +1,16 @@
 <template>
   <div class="empty">
     <div class="empty" @click.stop="open"><slot></slot></div>
-    <v-dialog v-model="dialog" max-width="400">
+    <v-dialog v-model="dialog" :max-width="width">
       <v-card>
         <div class="confirm-card">
-          <v-card-title class="text-h6">
-            Are you sure you want to do this?
-          </v-card-title>
+          <v-card-title class="text-h6">{{ title }}</v-card-title>
+          <v-card-subtitle v-if="subtitle">{{ subtitle }}</v-card-subtitle>
+          <v-card-text style="white-space: break-spaces" v-if="text">{{ text }}</v-card-text>
+          <slot name="actions" />
           <v-card-actions class="buttons">
             <v-btn color="red darken-1" @click="onCancel"> Cancel </v-btn>
-            <v-btn color="primary darken-1" @click="onConfirm"> Confirm </v-btn>
+            <v-btn color="primary darken-1" :disabled="disabled" @click="onConfirm"> Confirm </v-btn>
           </v-card-actions>
         </div>
       </v-card>
@@ -19,19 +20,17 @@
 <script>
 export default {
   props: {
-    disabled: { default: false },
+    disabled: { type: Boolean, default: false },
+    text: { type: String, default: null },
+    title: { type: String, default: 'Are you sure you want to do this?' },
+    subtitle: { type: String, default: null },
+    width: { type: Number, default: 400 }
   },
   name: "confirm-dialog",
-  data() {
-    return {
-      dialog: false,
-    };
-  },
+  data: () => ({ dialog: false }),
   methods: {
     open() {
-      if (!this.disabled) {
-        this.dialog = true;
-      }
+      this.dialog = true;
     },
     onConfirm() {
       this.$emit("confirm");
@@ -52,10 +51,7 @@ export default {
 .confirm-card {
   background-color: rgba(12, 12, 60, 0.9);
   padding: 30px;
-  div,
-  p {
-    background-color: rgba(12, 12, 60, 0.9);
-  }
+
   .buttons {
     margin-top: 10px;
     display: flex;

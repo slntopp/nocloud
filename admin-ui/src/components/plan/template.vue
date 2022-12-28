@@ -115,7 +115,7 @@ export default {
         .update(this.template.uuid, request)
         .then(() => {
           this.showSnackbarSuccess({
-            message: "Plan edited successfully",
+            message: "Price model edited successfully",
           });
 
           setTimeout(() => {
@@ -136,7 +136,10 @@ export default {
   },
   computed: {
     templateObjectJSON() {
-      let json = JSON.stringify(this.template, null, 2);
+      const object = { ...this.template, fee: this.template.margin };
+      delete object.margin;
+
+      let json = JSON.stringify(object, null, 2);
       json = json
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -161,7 +164,10 @@ export default {
       );
     },
     templateObjectYAML() {
-      return objectToYAMLString(this.template)
+      const object = { ...this.template, fee: this.template.margin };
+      delete object.margin;
+
+      return objectToYAMLString(object)
     },
   },
 };

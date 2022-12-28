@@ -125,17 +125,9 @@
             class="mr-2"
             color="background-light"
             :loading="isLoading"
-            :disabled="!isTestSuccess"
             @click="tryToSend"
           >
             Create
-          </v-btn>
-          <v-btn
-            class="mr-2"
-            :color="testButtonColor"
-            @click="testConfig"
-          >
-            Test
           </v-btn>
         </v-col>
       </v-row>
@@ -196,16 +188,15 @@ export default {
 
     isValid: false,
     isLoading: false,
-    isTestSuccess: false,
-    testButtonColor: 'background-light',
   }),
   methods: {
     tryToSend() {
       if (!this.isValid) {
         this.$refs.form.validate();
-        this.testButtonColor = 'background-light';
-        this.isTestSuccess = false;
 
+        this.showSnackbarError({
+          message: 'Validation failed!',
+        });
         return;
       }
 
@@ -231,32 +222,14 @@ export default {
           this.isLoading = false;
         });
     },
-    testConfig() {
-      if (!this.isValid) {
-        this.$refs.form.validate();
-        this.testButtonColor = 'background-light';
-        this.isTestSuccess = false;
-
-        this.showSnackbarError({
-          message: 'Validation failed!',
-        });
-
-        return;
-      }
-
-      this.testButtonColor = 'success';
-      this.isTestSuccess = true;
-    },
     refreshData() {
-      this.transaction.account = this.accounts
-        .find((acc) =>
-          acc.title === this.transaction.account
-        ).uuid;
+      this.transaction.account = this.accounts.find((acc) =>
+        acc.title === this.transaction.account
+      ).uuid;
 
-      this.transaction.service = this.services
-        .find((service) =>
-          service.title === this.transaction.service
-        )?.uuid || '';
+      this.transaction.service = this.services.find((service) =>
+        service.title === this.transaction.service
+      )?.uuid || '';
 
       this.transaction.exec = this.exec;
       this.transaction.total *= 1;

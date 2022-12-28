@@ -112,7 +112,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Plans") }}</v-list-item-title>
+            <v-list-item-title>{{ navTitle("Price Models") }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -122,9 +122,17 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{
-              navTitle("Transactions")
-            }}</v-list-item-title>
+            <v-list-item-title>{{ navTitle("Transactions") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Currencies' }">
+          <v-list-item-icon>
+            <v-icon>mdi-cash</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Currencies") }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 

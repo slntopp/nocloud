@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
 	accesspb "github.com/slntopp/nocloud-proto/access"
@@ -111,6 +110,25 @@ var (
 		Public:      false,
 	}
 )
+
+var getStatusQuey = `
+	LET acc = DOCUMENT(@account)
+	return acc.suspended
+`
+
+func (s *ServicesServer) CheckRequestorStatus(ctx context.Context, id driver.DocumentID) bool {
+	cur, _ := s.db.Query(ctx, getStatusQuey, map[string]interface{}{
+		"account": id,
+	})
+
+	isSuspended := false
+
+	for cur.HasMore() {
+		cur.ReadDocument(ctx, &isSuspended)
+	}
+
+	return isSuspended
+}
 
 func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logger, service *pb.Service) (*pb.TestConfigResponse, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -255,6 +273,14 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	log.Debug("Request received", zap.Any("request", request))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	requestorDoc := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
+	isSuspended := s.CheckRequestorStatus(ctx, requestorDoc)
+
+	if isSuspended {
+		return nil, status.Error(codes.Unavailable, "Requestor account is suspended")
+	}
+
 	ns, err := s.ns_ctrl.Get(ctx, request.GetNamespace())
 	if err != nil {
 		s.log.Debug("Error getting namespace", zap.Error(err))
@@ -345,6 +371,13 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
+
+	requestorDoc := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
+	isSuspended := s.CheckRequestorStatus(ctx, requestorDoc)
+
+	if isSuspended {
+		return nil, status.Error(codes.Unavailable, "Requestor account is suspended")
+	}
 
 	docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
 	ok := graph.HasAccess(ctx, s.db, requestor, docID, accesspb.Level_ADMIN)
