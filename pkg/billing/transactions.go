@@ -136,11 +136,18 @@ return account
 
 const reprocessTransactions = `
 LET account = UNSET(DOCUMENT(@account), "balance")
+LET currency = account.currency != null ? account.currency : @currency
 LET transactions = (
 FOR t IN @@transactions // Iterate over Transactions
 FILTER t.exec <= @now
 FILTER t.account == account._key
-    UPDATE t WITH { processed: true, proc: @now } IN @@transactions RETURN NEW )
+	LET rate = PRODUCT(
+		FOR vertex, edge IN OUTBOUND SHORTEST_PATH
+		DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency))) TO
+		DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+			RETURN edge.rate
+	)
+    UPDATE t WITH { processed: true, proc: @now, total: t.total * rate, currency: currency } IN @@transactions RETURN NEW )
 
 UPDATE account WITH { balance: -SUM(transactions[*].total) } IN @@accounts
 FOR t IN transactions
@@ -151,6 +158,8 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessT
 	log := s.log.Named("Reprocess")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+
+	currencyConf := MakeCurrencyConf(ctx, log)
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
@@ -164,6 +173,9 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessT
 		"@transactions": schema.TRANSACTIONS_COL,
 		"account":       acc.String(),
 		"now":           time.Now().Unix(),
+		"currency":      currencyConf.Currency,
+		"currencies":    schema.CUR_COL,
+		"graph":         schema.BILLING_GRAPH.Name,
 	})
 	if err != nil {
 		log.Error("Error Reprocessing Transactions", zap.Error(err))

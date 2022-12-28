@@ -37,7 +37,7 @@ func TestConvert(t *testing.T) {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
 
 	c := NewCurrencyController(log, db)
-	list, err := c.Get(ctx)
+	list, err := c.GetCurrencies(ctx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -47,6 +47,14 @@ func TestConvert(t *testing.T) {
 
 	testRate := 2.0
 	c.CreateExchangeRate(ctx, pb.Currency_USD, pb.Currency_BYN, testRate)
+	c.CreateExchangeRate(ctx, pb.Currency_EUR, pb.Currency_BYN, testRate)
+	rates, err := c.GetExchangeRates(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rates) != 2 {
+		t.Error("Didn't fetch all exchange rates")
+	}
 
 	rate, err := c.GetExchangeRate(ctx, pb.Currency_USD, pb.Currency_BYN)
 	if err != nil {
