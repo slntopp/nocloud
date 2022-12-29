@@ -35,12 +35,12 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }, params) {
-      commit("setLoading", true);
+    fetch({ commit }, options) {
+      if (!options?.silent) commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
         api.plans
-          .list(params)
+          .list(options?.params)
           .then((response) => {
             commit("setPlans", response.pool);
             resolve(response);

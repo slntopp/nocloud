@@ -326,7 +326,7 @@ export default {
           const ending = bindPromises.length === 1 ? "" : "s";
 
           this.showSnackbarSuccess({
-            message: `Plan${ending} added successfully.`,
+            message: `Price model${ending} added successfully.`,
           });
         })
         .catch((err) => {
@@ -348,7 +348,7 @@ export default {
           const ending = unbindPromises.length === 1 ? "" : "s";
 
           this.showSnackbarSuccess({
-            message: `Plan${ending} deleted successfully.`,
+            message: `Price model${ending} deleted successfully.`,
           });
         })
         .catch((err) => {
@@ -367,10 +367,10 @@ export default {
   },
   created() {
     this.$store
-      .dispatch("plans/fetch", {
+      .dispatch("plans/fetch", { params: {
         sp_uuid: this.template.uuid,
         anonymously: false,
-      })
+      } })
       .then(() => {
         this.relatedPlans = this.$store.getters["plans/all"];
         this.fetchError = "";
@@ -388,8 +388,10 @@ export default {
   },
   computed: {
     plans() {
-      return this.$store.getters["plans/all"].filter(
-        (plan) => plan.type === this.provider.type
+      const plans = this.relatedPlans.map(({ uuid }) => uuid);
+
+      return this.$store.getters["plans/all"].filter((plan) =>
+        plan.type === this.provider.type && !plans.includes(plan.uuid)
       );
     },
     isPlanLoading() {

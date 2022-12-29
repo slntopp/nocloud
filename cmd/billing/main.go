@@ -99,6 +99,9 @@ func main() {
 	log.Info("Starting Transaction Generator-Processor")
 	go server.GenTransactionsRoutine(ctx)
 
+	log.Info("Starting Account Suspension Routine")
+	go server.SuspendAccountsRoutine(ctx)
+
 	log.Info("Registering BillingService Server")
 	pb.RegisterBillingServiceServer(s, server)
 

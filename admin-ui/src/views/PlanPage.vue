@@ -1,7 +1,7 @@
 <template>
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
-      <router-link :to="{ name: 'Plans' }">{{ navTitle("Plans") }}</router-link>
+      <router-link :to="{ name: 'Plans' }">{{ navTitle("Price Models") }}</router-link>
       / {{ planTitle }}
     </h1>
     <v-tabs
@@ -73,6 +73,16 @@ export default {
     const id = this.$route.params?.planId;
     this.$store.dispatch("plans/fetchItem", id).then(() => {
       document.title = `${this.planTitle} | NoCloud`;
+      this.plan.margin = { ...this.plan.fee };
+
+      const roundes = [
+        { key: 'floor', value: 1 },
+        { key: 'round', value: 2 },
+        { key: 'ceil', value: 3 }
+      ];
+      const round = roundes.find(({ key }) => key === this.plan.margin?.round?.toLowerCase());
+
+      if (round) this.plan.margin.round = round.value;
     });
   },
   mounted() {
@@ -83,12 +93,13 @@ export default {
   },
   watch: {
     plan() {
-      if (['ovh', 'goget'].includes(this.plan.type)) {
-        this.tabs.splice(this.tabs.length - 1, 0, {
-          title: 'Prices',
-          component: () => import(`@/components/plan/${this.plan.type}Prices.vue`)
-        });
-      }
+      if (!['ovh', 'goget'].includes(this.plan.type)) return;
+      if (this.tabs.find(({ title }) => title === 'Prices')) return;
+
+      this.tabs.splice(this.tabs.length - 1, 0, {
+        title: 'Prices',
+        component: () => import(`@/components/plan/${this.plan.type}Prices.vue`)
+      });
     }
   }
 };

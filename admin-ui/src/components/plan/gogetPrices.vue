@@ -1,29 +1,27 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
-    <v-row>
-      <v-col cols="6">
-        <v-expansion-panels>
-          <v-expansion-panel>
-            <v-expansion-panel-header color="background-light">
-              Fee:
-            </v-expansion-panel-header>
-            <v-expansion-panel-content color="background-light">
-              <plan-opensrs
-                @changeFee="(data) => (fee = data)"
-                @onValid="(data) => (isValid = data)"
-              />
-              <confirm-dialog
-                text="This will apply the fee markup parameters to all prices"
-                @confirm="setFee"
-              >
-                <v-btn class="mt-4">Set fee</v-btn>
-              </confirm-dialog>
-            </v-expansion-panel-content>
-          </v-expansion-panel>
-        </v-expansion-panels>
-      </v-col>
-    </v-row>
+    <v-expansion-panels v-if="!isPlansLoading">
+      <v-expansion-panel>
+        <v-expansion-panel-header color="indigo darken-4">
+          Margin rules:
+        </v-expansion-panel-header>
+        <v-expansion-panel-content color="indigo darken-4">
+          <plan-opensrs
+            :fee="fee"
+            :isEdit="true"
+            @changeFee="(data) => (fee = data)"
+            @onValid="(data) => (isValid = data)"
+          />
+          <confirm-dialog
+            text="This will apply the rules markup parameters to all prices"
+            @confirm="setFee"
+          >
+            <v-btn class="mt-4">Set rules</v-btn>
+          </confirm-dialog>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
 
     <nocloud-table
       item-key="id"
@@ -61,7 +59,7 @@
         </td>
       </template>
     </nocloud-table>
-    <v-btn class="mt-4" @click="editPlan">Save</v-btn>
+    <v-btn class="mt-4" color="secondary" @click="editPlan">Save</v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -95,7 +93,7 @@ import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
 
 export default {
-  name: 'sevices-provider-table',
+  name: 'plan-prices',
   components: { nocloudTable, planOpensrs, confirmDialog },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
@@ -110,11 +108,12 @@ export default {
     ],
     pricesHeaders: [
       { text: 'Period', value: 'period' },
-      { text: 'Price', value: 'price' },
-      { text: 'New price', value: 'value' },
+      { text: 'Income price', value: 'price' },
+      { text: 'Sale price', value: 'value' },
       { text: 'Sell', value: 'sell', width: 100 }
     ],
 
+    fee: {},
     isValid: true,
     isPlansLoading: false,
     fetchError: ''
@@ -165,9 +164,9 @@ export default {
               round = 'ceil';
           }
 
-          for (let range of this.fee.ranges) {
-            if (price.value <= range.from) continue;
-            if (price.value > range.to) continue;
+          for (let range of this.fee?.ranges) {
+            if (price.price <= range.from) continue;
+            if (price.price > range.to) continue;
             percent = range.factor / 100 + 1;
           }
           arr[i].value = Math[round](price.price * percent * n) / n;
@@ -175,11 +174,7 @@ export default {
       });
     },
     editPlan() {
-      if (!this.isValid) {
-        this.showSnackbarError({ message: 'Fee is not valid' });
-        return;
-      }
-
+      if (!this.testConfig()) return;
       const newPlan = { ...this.template, fee: this.fee, resources: [], products: {} };
 
       this.plans.forEach((plan) => {
@@ -200,7 +195,7 @@ export default {
 
       this.isLoading = true;
       api.plans.update(newPlan.uuid, newPlan).then(() => {
-        this.showSnackbarSuccess({ message: 'Plan edited successfully' });
+        this.showSnackbarSuccess({ message: 'Price model edited successfully' });
       })
       .catch((err) => {
         const message = err.response?.data?.message ?? err.message ?? err;
@@ -211,6 +206,20 @@ export default {
       .finally(() => {
         this.isLoading = false;
       });
+    },
+    testConfig() {
+      let message = '';
+
+      if (!this.isValid) {
+        message = 'Margin rules is not valid';
+      }
+
+      if (message) {
+        this.showSnackbarError({ message });
+        return false;
+      }
+
+      return true;
     },
     getPrices(obj) {
       const result = [];
@@ -259,12 +268,14 @@ export default {
       Object.entries(this.template.products).forEach(([key, value]) => {
         const [period, id] = key.split(' ');
         const product = this.plans.find((el) => el.id === id);
+        const price = product.prices.find((el) => el.period === period);
 
-        product[period].value = value.price;
-        product[period].sell = true;
+        price.value = value.price;
+        price.sell = true;
       });
 
-      this.fee = this.template.fee;
+      this.fee = this.template.margin;
+      this.setFee();
     }
   }
 }

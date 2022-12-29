@@ -12,8 +12,7 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-package main
+*/package main
 
 import (
 	"context"
@@ -25,7 +24,6 @@ import (
 	"github.com/rs/cors"
 	billingpb "github.com/slntopp/nocloud-proto/billing"
 	dnspb "github.com/slntopp/nocloud-proto/dns"
-	buspb "github.com/slntopp/nocloud-proto/events"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	registrypb "github.com/slntopp/nocloud-proto/registry"
@@ -48,6 +46,7 @@ import (
 var (
 	log *zap.Logger
 
+	gatewayHost      string
 	apiserver        string
 	corsAllowed      []string
 	insecure_enabled bool
@@ -60,9 +59,11 @@ func init() {
 
 	viper.SetDefault("CORS_ALLOWED", []string{"*"})
 	viper.SetDefault("APISERVER_HOST", "proxy:8000")
+	viper.SetDefault("GATEWAY_HOST", ":8000")
 	viper.SetDefault("INSECURE", true)
 	viper.SetDefault("WITH_BLOCK", false)
 
+	gatewayHost = viper.GetString("GATEWAY_HOST")
 	apiserver = viper.GetString("APISERVER_HOST")
 	corsAllowed = strings.Split(viper.GetString("CORS_ALLOWED"), ",")
 	insecure_enabled = viper.GetBool("INSECURE")
@@ -128,32 +129,62 @@ func main() {
 		opts = append(opts, grpc.WithBlock())
 	}
 	log.Info("Registering HealthService Gateway")
-	err = healthpb.RegisterHealthServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = healthpb.RegisterHealthServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
 	if err != nil {
 		log.Fatal("Failed to register HealthService gateway", zap.Error(err))
 	}
 	log.Info("Registering AccountsService Gateway")
-	err = registrypb.RegisterAccountsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = registrypb.RegisterAccountsServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
 	if err != nil {
 		log.Fatal("Failed to register AccountsService gateway", zap.Error(err))
 	}
 	log.Info("Registering NamespacesService Gateway")
-	err = registrypb.RegisterNamespacesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = registrypb.RegisterNamespacesServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
 	if err != nil {
 		log.Fatal("Failed to register NamespacesService gateway", zap.Error(err))
 	}
 	log.Info("Registering ServicesProvidersService Gateway")
-	err = sppb.RegisterServicesProvidersServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = sppb.RegisterServicesProvidersServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
 	if err != nil {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
 	}
 	log.Info("Registering ServicesService Gateway")
-	err = servicespb.RegisterServicesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = servicespb.RegisterServicesServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
 	if err != nil {
 		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
 	}
 	log.Info("Registering InstancesService Gateway")
-	err = instancespb.RegisterInstancesServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = instancespb.RegisterInstancesServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
 	if err != nil {
 		log.Fatal("Failed to register InstancesService gateway", zap.Error(err))
 	}
@@ -163,25 +194,44 @@ func main() {
 		log.Fatal("Failed to register DNS gateway", zap.Error(err))
 	}
 	log.Info("Registering SettingsService Gateway")
-	err = settingspb.RegisterSettingsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = settingspb.RegisterSettingsServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
 	if err != nil {
 		log.Fatal("Failed to register SettingsService gateway", zap.Error(err))
 	}
 	log.Info("Registering BillingService Gateway")
-	err = billingpb.RegisterBillingServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	err = billingpb.RegisterBillingServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
 	if err != nil {
 		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
 	}
-	log.Info("Registering EventBusService Gateway")
-	err = buspb.RegisterEventsServiceHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
+	log.Info("Registering CurrencyService Gateway")
+	err = billingpb.RegisterCurrencyServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
 	if err != nil {
-		log.Fatal("Failed to register EventBusService gateway", zap.Error(err))
+		log.Fatal("Failed to register CurrencyService gateway", zap.Error(err))
 	}
 
 	for _, p := range []string{"/admin", "/admin/{path}", "/admin/{path}/{file}"} {
 		err = gwmux.HandlePath("GET", p, staticHandler)
 		if err != nil {
-			log.Fatal("Failed to register custom static handler", zap.String("path", p), zap.Error(err))
+			log.Fatal(
+				"Failed to register custom static handler",
+				zap.String("path", p),
+				zap.Error(err),
+			)
 		}
 	}
 
@@ -193,7 +243,10 @@ func main() {
 		AllowCredentials: true,
 	}).Handler(gwmux)
 
-	log.Info("Serving gRPC-Gateway on http://0.0.0.0:8000")
+	log.Info("Serving gRPC-Gateway on " + gatewayHost)
 	/* #nosec */
-	log.Fatal("Failed to Listen and Serve Gateway-Server", zap.Error(http.ListenAndServe(":8000", wsproxy.WebsocketProxy(handler))))
+	log.Fatal(
+		"Failed to Listen and Serve Gateway-Server",
+		zap.Error(http.ListenAndServe(gatewayHost, wsproxy.WebsocketProxy(handler))),
+	)
 }
