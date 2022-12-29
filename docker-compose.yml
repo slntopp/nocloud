@@ -235,6 +235,20 @@ services:
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     links:
       - db
+  eventbus:
+    image: ghcr.io/slntopp/nocloud/eventbus:latest
+    restart: always
+    labels:
+      - traefik.http.routers.services_providers.rule=PathPrefix("/nocloud.eventbus.")
+      - traefik.http.routers.services_providers.entrypoints=grpc
+      - traefik.http.services.services_providers.loadbalancer.server.port=8000
+      - traefik.http.services.services_providers.loadbalancer.server.scheme=h2c
+    environment:
+      PORT: 8000
+      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+    networks:
+      - proxy
+      - mq
 
   db:
     image: arangodb/arangodb:latest

@@ -9,6 +9,7 @@ import (
 
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	pb "github.com/slntopp/nocloud-proto/events"
+	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/eventbus"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/spf13/viper"
@@ -57,6 +58,8 @@ func main() {
 
 	server := eventbus.NewServer(log, conn)
 	pb.RegisterEventsServiceServer(s, server)
+
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
