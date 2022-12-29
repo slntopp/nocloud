@@ -53,6 +53,19 @@
             </v-col>
           </v-row>
 
+          <v-row align="center" v-if="selectedKind === 'STATIC'">
+            <v-col cols="3">
+              <v-subheader>Default tariff</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-select
+                label="Tariff"
+                v-model="plan.meta.product"
+                :items="form.titles"
+              />
+            </v-col>
+          </v-row>
+
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Public</v-subheader>
@@ -278,11 +291,7 @@ export default {
         return this.plan.products[title].resources;
       }
       if (this.plan.type === "custom") return;
-      return {
-        cpu: 1,
-        ram: 1024,
-        ip_public: 0,
-      };
+      return { cpu: 1, ram: 1024 };
     },
     dragTabStart(e) {
       const el = document.createElement("div");
@@ -480,14 +489,17 @@ export default {
       if (Object.keys(this.item).length > 0) {
         this.plan = this.item;
         this.isVisible = false;
+        this.selectedKind = this.item.kind;
+
         if (this.item.kind === "DYNAMIC") {
           this.item.resources.forEach((el) => {
             this.form.titles.push(el.key);
           });
         } else {
           this.products = this.item.products;
+          this.form.titles.length = Object.values(this.item.products).length;
           Object.entries(this.item.products).forEach(([key, { sorter }]) => {
-            this.form.titles.splice(sorter, 0, key);
+            this.form.titles.splice(sorter, 1, key);
           });
         }
       }
@@ -504,7 +516,7 @@ export default {
     },
     changePlan(isReset) {
       if (isReset) {
-        this.selectedKind = "";
+        this.selectedKind = this.item.kind;
         return;
       }
       this.plan.kind = this.selectedKind;

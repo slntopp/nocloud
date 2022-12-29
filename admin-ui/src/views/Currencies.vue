@@ -24,8 +24,11 @@
               :items="currenciesTo"
             />
           </v-col>
+          <v-col cols="12">
+            <v-text-field dense label="Rate" v-model="currency.rate" />
+          </v-col>
           <v-col>
-            <v-btn @click="addCurrency">Save</v-btn>
+            <v-btn :loading="isCreateLoading" @click="addCurrency">Save</v-btn>
           </v-col>
         </v-row>
       </v-card>
@@ -40,12 +43,19 @@
     <nocloud-table
       class="mt-4"
       item-key="id"
+      v-model="selected"
       :items="currencies"
       :headers="headers"
       :loading="isLoading"
       :footer-error="fetchError"
-      v-model="selected"
-    />
+    >
+      <template v-slot:[`item.rate`]="{ item }">
+        <v-text-field dense style="width: 200px" v-model="item.rate" />
+      </template>
+      <template v-slot:[`item.actions`]="{ item }">
+        <v-icon @click="editCurrency(item)">mdi-content-save-edit-outline</v-icon>
+      </template>
+    </nocloud-table>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -86,36 +96,106 @@ export default {
       { text: "Currency 1 ", value: "from" },
       { text: "Currency 2 ", value: "to" },
       { text: "Rate ", value: "rate" },
+      { text: "Actions", value: "actions", sortable: false },
     ],
     currenciesList: ['NCU', 'USD', 'EUR', 'BYN', 'PLN'],
     currencies: [],
     selected: [],
-    currency: { from: "", to: "" },
+
+    currency: { from: "", to: "", rate: 1 },
     isLoading: false,
+    isCreateLoading: false,
     fetchError: "",
   }),
   methods: {
     addCurrency() {
-      this.currencies.push({
-        from: this.currency.from,
-        to: this.currency.to,
-        rate: Math.round(Math.random() * 100),
-        id: `${this.currency.from} ${this.currency.to}`
-      });
+      if (this.currency.from === "" || this.currency.to === "") return;
+      const newCurrency = {
+        rate: +this.currency.rate,
+        from: this.currenciesList.indexOf(this.currency.from),
+        to: this.currenciesList.indexOf(this.currency.to)
+      };
 
-      this.currency = { from: "", to: "" };
+      this.isCreateLoading = true;
+      api.post('/billing/currencies/rates', newCurrency)
+        .then(() => {
+          this.currencies.push({
+            ...this.currency,
+            id: `${this.currency.from} ${this.currency.to}`
+          });
+          this.currency = { from: "", to: "", rate: 1 };
+        })
+        .catch((err) => {
+          const message = err.response?.data?.message ?? err.message ?? err;
+
+          this.showSnackbarError({ message });
+          console.error(err);
+        })
+        .finally(() => this.isCreateLoading = false);
+    },
+    editCurrency(currency) {
+      const newCurrency = {
+        rate: +currency.rate,
+        from: this.currenciesList.indexOf(currency.from),
+        to: this.currenciesList.indexOf(currency.to)
+      };
+
+      this.isLoading = true;
+      api.put('/billing/currencies/rates', newCurrency)
+        .then(() => {
+          this.showSnackbarSuccess({ message: 'Done' });
+        })
+        .catch((err) => {
+          const message = err.response?.data?.message ?? err.message ?? err;
+
+          this.showSnackbarError({ message });
+          console.error(err);
+        })
+        .finally(() => this.isLoading = false);
     },
     deleteSelectedCurrencies() {
-      this.currencies = this.currencies.filter(({ id }) =>
-        !this.selected.find((el) => el.id === id)
+      this.isLoading = true;
+      const promises = this.selected.filter(({ id }) =>
+        this.currencies.find((el) => el.id === id)
+      ).map(({ from, to }) =>
+        api.delete(`/billing/currencies/rates/${from}/${to}`)
       );
-      this.selected = [];
+
+      Promise.all(promises).then(() => {
+        this.currencies = this.currencies.filter(({ id }) =>
+          !this.selected.find((el) => el.id === id)
+        );
+        this.selected = [];
+      })
+      .catch((err) => {
+        const message = err.response?.data?.message ?? err.message ?? err;
+
+        this.showSnackbarError({ message });
+        console.error(err);
+      })
+      .finally(() => this.isLoading = false);
     }
   },
   created() {
+    this.isLoading = true;
     api.get('/billing/currencies')
-      .then((res) => console.log(res))
-      .catch((err) => console.error(err));
+      .then((res) => {
+        this.currenciesList = res.currencies;
+
+        return api.get('/billing/currencies/rates');
+      })
+      .then((res) => {
+        this.currencies = res.rates.map((el) => ({
+          ...el, id: `${el.from} ${el.to}`
+        }));
+      })
+      .catch((err) => {
+        const message = err.response?.data?.message ?? err.message ?? err;
+
+        this.showSnackbarError({ message });
+        console.error(err);
+      })
+      .finally(() => this.isLoading = false);
   },
   computed: {
     currenciesFrom() {

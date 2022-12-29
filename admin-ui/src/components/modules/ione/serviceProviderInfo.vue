@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-card-title class="px-0 mb-3"> Vlans:</v-card-title>
-    <v-row>
+    <v-row v-if="template.secrets.vlans">
       <v-col>
         <v-text-field
           readonly
@@ -160,7 +160,7 @@
           </v-col>
         </v-row>
         <v-card-subtitle class="px-0">Private</v-card-subtitle>
-        <v-row ref="private">
+        <v-row>
           <v-col
             v-if="template.state.meta.networking.private_vnet.error"
             cols="12"
@@ -246,7 +246,7 @@
           </v-col>
         </v-row>
       </v-col>
-      <v-col>
+      <v-col cols="12">
         <p>OS's:</p>
         <div class="newCloud__template">
           <div
@@ -263,7 +263,7 @@
           </div>
         </div>
       </v-col>
-      <v-col cols="12">
+      <v-col ref="private">
         <p>Vlans:</p>
         <v-tooltip bottom color="info" v-for="(vlan, i) of vlans" :key="i">
           <template v-slot:activator="{ on, attrs }">
@@ -300,8 +300,8 @@ export default {
       let cols = 64;
 
       for (let i = 4; i > 0; i--) {
-        if (clientWidth / 30 >= cols) {
-          this.$refs.private.style.width = `${cols * 30 + 24}px`;
+        if (clientWidth / 20 >= cols) {
+          this.$refs.private.style.maxWidth = `${cols * 20 + 24}px`;
           break;
         } else {
           cols /= 2;
@@ -312,7 +312,20 @@ export default {
       return this.vlansStart ? this.vlansStart + index : index;
     },
     getOSImgLink(name) {
-      return "/admin/img/OS/" + name.replace(/[^a-zA-Z]+/g, "").toLowerCase() + ".png";
+      const os = name.replace(/[^a-zA-Z]+/g, "").toLowerCase();
+
+      try {
+        const context = require.context("@/../public/img/OS/", true);
+        let path = '';
+
+        context.keys().forEach((key) => {
+          if (key.includes(os)) path = key.slice(2);
+        });
+
+        return `/admin/img/OS/${path}`;
+      } catch {
+        return '/admin/img/OS/' + os + ".png";
+      }
     },
   },
   mounted() {
@@ -339,9 +352,11 @@ export default {
       return res;
     },
     vlansCount() {
+      if (!this.template.secrets.vlans) return 0;
       return this.template.secrets.vlans[this.vlansKey]?.size;
     },
     vlansStart() {
+      if (!this.template.secrets.vlans) return 0;
       return this.template.secrets.vlans[this.vlansKey]?.start;
     },
     vlansRowCount() {
