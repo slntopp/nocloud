@@ -77,6 +77,9 @@
           {{ item.title }}
         </router-link>
       </template>
+      <template v-slot:[`item.kind`]="{ value }">
+        {{ value.toLowerCase() }}
+      </template>
     </nocloud-table>
 
     <v-snackbar
@@ -119,7 +122,7 @@ export default {
     headers: [
       { text: "Title ", value: "title" },
       { text: "UUID ", value: "uuid" },
-      { text: "Public ", value: "public" },
+      { text: "Kind ", value: "kind" },
       { text: "Type ", value: "type" },
     ],
     linkedHeaders: [

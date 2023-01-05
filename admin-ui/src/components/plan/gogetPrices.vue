@@ -163,6 +163,10 @@ export default {
             case 3:
               round = 'ceil';
           }
+          if (this.fee.round === 'NONE') round = 'round';
+          if (typeof this.fee.round === 'string') {
+            round = this.fee.round.toLowerCase();
+          }
 
           for (let range of this.fee?.ranges) {
             if (price.price <= range.from) continue;
@@ -274,7 +278,7 @@ export default {
         price.sell = true;
       });
 
-      this.fee = this.template.margin;
+      this.fee = this.template.fee;
       this.setFee();
     }
   }
