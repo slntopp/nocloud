@@ -542,7 +542,7 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 }
 
 func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendRequest) (*pb.UnsuspendResponse, error) {
-	log := s.log.Named("Suspend")
+	log := s.log.Named("Unsuspend")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", request), zap.String("requestor", requestor))
 
