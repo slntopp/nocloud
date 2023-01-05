@@ -515,7 +515,7 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.GetAccess().GetLevel() < accesspb.Level_ADMIN {
+	if service.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -553,7 +553,7 @@ func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendReq
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.GetAccess().GetLevel() < accesspb.Level_ADMIN {
+	if service.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
