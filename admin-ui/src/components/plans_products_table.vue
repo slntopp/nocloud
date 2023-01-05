@@ -221,6 +221,7 @@ watch(table, (value) => {
   const height = parseInt(getComputedStyle(allElements[0]).height);
 
   allElements.forEach((element, i) => {
+    element.id = i;
     element.draggable = true;
     element.style.cursor = 'grab';
     // element.style.transition = '0.3s';
@@ -232,55 +233,45 @@ watch(table, (value) => {
       e.dataTransfer.effectAllowed = 'move';
 
       e.dataTransfer.setDragImage(img, 0, 0);
-      e.dataTransfer.setData('text/plain', i);
+      e.dataTransfer.setData('text/id', element.id);
       e.dataTransfer.setData('text/y', e.clientY);
     });
 
     element.addEventListener('dragover', (e) => {
-      const i = +e.dataTransfer.getData('text/plain');
+      const i = +e.dataTransfer.getData('text/id');
       const initY = e.dataTransfer.getData('text/y');
-      // const prevY = allElements[i].getAttribute('data-y');
       const nextIndex = Math.round((e.clientY - initY) / height) + i;
 
       allElements[i].style.cssText = `transform: translateY(${e.clientY - initY}px)`;
       allElements[i].setAttribute('data-i', nextIndex);
-      // allElements[i].setAttribute('data-y', `${e.clientY}`);
       e.preventDefault();
-
-      // if (nextIndex < 0 || nextIndex === i || nextIndex >= allElements.length) return;
-      // if (prevY < e.clientY) {
-      //   if (e.clientY > height) {
-      //     allElements[nextIndex].style.transform = '';
-      //   } else {
-      //     allElements[nextIndex].style.transform = `translateY(-${height}px)`;
-      //   }
-      // } else if (prevY > e.clientY) {
-      //   if (e.clientY > height) {
-      //     allElements[nextIndex].style.transform = `translateY(${height}px)`;
-      //   } else {
-      //     allElements[nextIndex].style.transform = '';
-      //   }
-      // }
     });
 
     element.addEventListener('dragend', (e) => {
       allElements.forEach((el) => {
-        const i = +el.getAttribute('data-i');
-        const j = +e.dataTransfer.getData('text/plain');
+        const j = +e.dataTransfer.getData('text/id');
+        let i = +el.getAttribute('data-i');
 
-        if (i && j && i !== -1) {
+        if (i >= allElements.length) i = allElements.length - 1;
+        if (isFinite(i) && i > -1 && i !== j) {
           const product1 = productsArray.value.find((el) => el.sorter === i).key;
           const product2 = productsArray.value.find((el) => el.sorter === j).key;
 
           products.value[product1].sorter = j;
           products.value[product2].sorter = i;
+          [allElements[i], allElements[j]] = [allElements[j], allElements[i]];
         }
+
         el.removeAttribute('style');
         el.removeAttribute('data-i');
 
         el.style.cursor = 'grab';
         // el.style.transition = '0.3s';
       });
+
+      for (let i = 0; i < allElements.length; i++) {
+        allElements[i].id = i;
+      }
     });
   });
 });

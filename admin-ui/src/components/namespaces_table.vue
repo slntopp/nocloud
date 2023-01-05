@@ -2,11 +2,17 @@
   <nocloud-table
     :loading="loading"
     :items="filtredNamespaces"
+    :headers="headers"
     :value="selected"
     @input="handleSelect"
     :single-select="singleSelect"
     :footer-error="fetchError"
   >
+    <template v-slot:[`item.access`]="{ item }">
+      <v-chip color="info">
+        {{ getName(item.access.namespace) }} ({{ item.access.level }})
+      </v-chip>
+    </template>
   </nocloud-table>
 </template>
 
@@ -35,6 +41,11 @@ export default {
   },
   data() {
     return {
+      headers: [
+        { text: "Title", value: "title" },
+        { text: "UUID", value: "uuid" },
+        { text: "Access", value: "access" }
+      ],
       selected: this.value,
       loading: false,
       fetchError: "",
@@ -43,6 +54,9 @@ export default {
   methods: {
     handleSelect(item) {
       this.$emit("input", item);
+    },
+    getName(account) {
+      return this.accounts.find(({ uuid }) => account === uuid)?.title ?? '';
     },
   },
   computed: {
@@ -55,11 +69,14 @@ export default {
       }
       return this.tableData;
     },
+    accounts() {
+      return this.$store.getters["accounts/all"];
+    },
   },
   created() {
     this.loading = true;
-    this.$store
-      .dispatch("namespaces/fetch")
+    this.$store.dispatch("accounts/fetch");
+    this.$store.dispatch("namespaces/fetch")
       .then(() => {
         this.fetchError = "";
       })

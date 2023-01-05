@@ -42,6 +42,24 @@
         >
         </v-text-field>
       </v-col>
+      <v-col>
+        <v-text-field
+          readonly
+          :value="service.access?.namespace"
+          label="namespace"
+          style="display: inline-block; width: 150px"
+        >
+        </v-text-field>
+      </v-col>
+      <v-col>
+        <v-text-field
+          readonly
+          :value="service.access?.level"
+          label="level"
+          style="display: inline-block; width: 150px"
+        >
+        </v-text-field>
+      </v-col>
     </v-row>
     <v-row class="mb-5">
       <v-col>
@@ -299,8 +317,6 @@ export default {
         });
     },
     getInstanceCardComponent(type) {
-      console.log(type);
-      console.log(this.templates[type]);
       return this.templates[type];
     },
   },

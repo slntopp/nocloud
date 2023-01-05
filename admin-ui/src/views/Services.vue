@@ -74,6 +74,11 @@
           {{ value }}
         </v-chip>
       </template>
+      <template v-slot:[`item.access`]="{ item }">
+        <v-chip :color="accessColor(item.access?.level)">
+          {{ getName(item.access?.namespace) }} ({{ item.access?.level ?? "NONE" }})
+        </v-chip>
+      </template>
 
       <template v-slot:expanded-item="{ headers, item }">
         <td :colspan="headers.length" style="padding: 0">
@@ -154,12 +159,9 @@ export default {
     headers: [
       { text: "title", value: "title" },
       { text: "status", value: "status" },
-      {
-        text: "UUID",
-        align: "start",
-        value: "uuid",
-      },
+      { text: "UUID", value: "uuid", align: "start" },
       { text: "hash", value: "hash" },
+      { text: "Access", value: "access" },
     ],
     copyed: -1,
     opened: {},
@@ -202,18 +204,25 @@ export default {
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];
     },
+    namespaces() {
+      return this.$store.getters["namespaces/all"];
+    },
     searchParam() {
       return this.$store.getters["appSearch/param"];
     },
   },
   created() {
     this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("namespaces/fetch");
     this.fetchServices();
   },
   methods: {
     titleSP(group) {
       const data = this.servicesProviders.find((el) => el.uuid == group?.sp);
       return data?.title || "not found";
+    },
+    getName(namespace) {
+      return this.namespaces.find(({ uuid }) => namespace === uuid)?.title ?? '';
     },
     fetchServices() {
       this.$store
@@ -308,6 +317,20 @@ export default {
         STOPPED: "orange darken-2",
       };
       return dict[state] ?? "blue-grey darken-2";
+    },
+    accessColor(level) {
+      switch (level) {
+        case 'ROOT':
+          return 'info';
+        case 'ADMIN':
+          return 'success';
+        case 'MGMT':
+          return 'warning';
+        case 'READ':
+          return 'gray';
+        case 'NONE':
+          return 'error';
+      }
     },
 
     instanceCountColor(group) {
