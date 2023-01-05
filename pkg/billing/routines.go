@@ -162,14 +162,14 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 			}
 
 			for servicesCursor.HasMore() {
-				srv := &srvpb.Service{}
+				var srv string
 				_, err := servicesCursor.ReadDocument(ctx, &srv)
 				log.Info("Attempt to suspend services", zap.Any("srv", srv))
 				if err != nil {
 					log.Error("Error Read Srv uuid", zap.Error(err))
 					continue
 				}
-				if _, err := srvClient.Suspend(ctx, &srvpb.SuspendRequest{Uuid: srv.GetUuid()}); err != nil {
+				if _, err := srvClient.Suspend(ctx, &srvpb.SuspendRequest{Uuid: srv}); err != nil {
 					log.Error("Error Suspending Service", zap.Error(err))
 				}
 			}
@@ -207,14 +207,14 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 			}
 
 			for servicesCursor.HasMore() {
-				srv := &srvpb.Service{}
+				var srv string
 				_, err := servicesCursor.ReadDocument(ctx, &srv)
 				log.Info("Attempt to unsuspend services", zap.Any("srv", srv))
 				if err != nil {
 					log.Error("Error Read Srv uuid", zap.Error(err))
 					continue
 				}
-				if _, err := srvClient.Unsuspend(ctx, &srvpb.UnsuspendRequest{Uuid: srv.GetUuid()}); err != nil {
+				if _, err := srvClient.Unsuspend(ctx, &srvpb.UnsuspendRequest{Uuid: srv}); err != nil {
 					log.Error("Error Unsuspending service", zap.Error(err))
 				}
 			}
@@ -396,5 +396,5 @@ const getServicesOfAccount = `
 FOR node, edge, path IN 2 OUTBOUND @account GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@services)
-    return node
+    return node._key
 `

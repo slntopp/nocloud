@@ -206,7 +206,7 @@ func (s *RecordsServiceServer) checkRecord(ctx context.Context, rec *pb.Record, 
 	kind := pb.Kind_POSTPAID
 
 	if instCursor.HasMore() {
-		_, err := accCursor.ReadDocument(ctx, &kind)
+		_, err := instCursor.ReadDocument(ctx, &kind)
 		if err != nil {
 			log.Error("Cannot get instance plan", zap.Error(err))
 			return false, err
