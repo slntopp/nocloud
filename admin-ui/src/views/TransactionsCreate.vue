@@ -168,6 +168,7 @@ export default {
   mixins: [snackbar],
   data: () => ({
     transaction: {
+      priority: 1,
       account: '',
       service: '',
       total: '',

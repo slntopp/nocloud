@@ -73,16 +73,6 @@ export default {
     const id = this.$route.params?.planId;
     this.$store.dispatch("plans/fetchItem", id).then(() => {
       document.title = `${this.planTitle} | NoCloud`;
-      this.plan.margin = { ...this.plan.fee };
-
-      const roundes = [
-        { key: 'floor', value: 1 },
-        { key: 'round', value: 2 },
-        { key: 'ceil', value: 3 }
-      ];
-      const round = roundes.find(({ key }) => key === this.plan.margin?.round?.toLowerCase());
-
-      if (round) this.plan.margin.round = round.value;
     });
   },
   mounted() {

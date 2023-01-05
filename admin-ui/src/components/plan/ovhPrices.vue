@@ -536,6 +536,9 @@ export default {
           round = 'ceil';
       }
       if (this.fee.round === 'NONE') round = 'round';
+      if (typeof this.fee.round === 'string') {
+        round = this.fee.round.toLowerCase();
+      }
 
       if (value === Math[round](price.value * percent * n) / n) {
         if (filter) this.changeFilters({ margin: 'ranged' }, ['Margin']);
@@ -694,7 +697,7 @@ export default {
         this.selected['0'].Sell = ['true'];
       }
 
-      this.fee = this.template.margin;
+      this.fee = this.template.fee;
       this.setFee();
     }
   }

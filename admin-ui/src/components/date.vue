@@ -1,30 +1,29 @@
 <template>
-  <v-row align="center">
-    <v-col cols="3">
-      <v-subheader>Period</v-subheader>
-    </v-col>
-    <v-col :cols="this.date === 'Custom' ? 8 : 7">
+  <v-row dense align="center">
+    <v-col cols="10">
       <v-select
-        label="Period"
+        dense
         v-model="date"
         :items="typesDate"
         :rules="rules.general"
       />
     </v-col>
-    <v-col cols="2" v-if="this.date !== 'Custom'">
+    <v-col cols="2" v-if="date !== 'Custom'">
       <v-text-field
+        dense
         v-model="amountDate"
         v-if="date === 'Time'"
         :rules="rules.time"
       />
       <v-text-field
+        dense
         v-else
         type="number"
         v-model="amountDate"
         :rules="rules.number"
       />
     </v-col>
-    <v-col cols="1" v-else>
+    <v-col cols="2" v-else>
       <v-menu left v-model="menuVisible" :close-on-content-click="false">
         <template v-slot:activator="{ on, attrs }">
           <v-icon v-bind="attrs" v-on="on"> mdi-playlist-edit </v-icon>
@@ -36,6 +35,7 @@
               <v-list-item-title>{{ item.title }}</v-list-item-title>
               <v-list-item-action>
                 <v-text-field
+                  dense
                   v-model="fullDate[item.model]"
                   :type="item.model === 'time' ? 'text' : 'number'"
                   :rules="item.model === 'time' ? rules.time : rules.customNumber"
@@ -46,7 +46,7 @@
 
           <v-card-actions>
             <v-spacer />
-            <v-btn text @click="() => resetDate(this.fullDate)"> Reset </v-btn>
+            <v-btn text @click="resetDate(fullDate)">Reset</v-btn>
             <v-btn text color="primary" @click="menuVisible = false">
               Save
             </v-btn>
@@ -58,120 +58,125 @@
 </template>
 
 <script>
-export default {
-  name: "date-field",
-  props: { period: Object },
-  data: () => ({
-    date: "",
-    amountDate: "1",
-    fullDate: {
-      day: "0",
-      month: "0",
-      year: "0",
-      quarter: "0",
-      week: "0",
-      time: "00:01:00",
-    },
-    typesDate: [
-      "Day",
-      "Week",
-      "Month",
-      "Quarter",
-      "Year",
-      "Time",
-      "Hour",
-      "Minute",
-      "Custom",
-    ],
-    items: [
-      { title: "Day", model: "day" },
-      { title: "Week", model: "week" },
-      { title: "Month", model: "month" },
-      { title: "Quarter", model: "quarter" },
-      { title: "Year", model: "year" },
-      { title: "Time", model: "time" },
-    ],
+export default { name: "date-field" }
+</script>
 
-    rules: {
-      general: [(v) => !!v || "This field is required!"],
-      number: [
-        (value) => !!value || "Is required!",
-        (value) => /^[1-9][0-9]{0,1}$/.test(value) || "Invalid!",
-      ],
-      customNumber: [
-        (value) => !!value || "Is required!",
-        (value) => /^[1-9][0-9]{0,1}|0$/.test(value) || "Invalid!",
-      ],
-      time: [
-        (value) => !!value || "Is required!",
-        (value) =>
-          /^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/.test(value) ||
-          "Invalid!",
-      ],
-    },
+<script setup>
+import { onMounted, ref, toRefs, watch } from 'vue';
 
-    menuVisible: false,
-  }),
-  methods: {
-    resetDate(date) {
-      Object.keys(date).forEach((key) => {
-        date[key] = key === "time" ? "00:00:00" : "0";
-      });
-    },
-  },
-  mounted() {
-    if (this.period) {
-      this.date = "Custom";
-      this.fullDate = this.period;
-    }
-  },
-  watch: {
-    date() {
-      if (this.date === "Custom") return;
+const props = defineProps({ period: Object });
+const emits = defineEmits(["changeDate"]);
+const { period } = toRefs(props);
 
-      const key = this.date.toLowerCase();
-      const value = key === "time" ? "00:00:00" : "1";
+const date = ref("");
+const amountDate = ref("1");
+const menuVisible = ref(false);
 
-      this.resetDate(this.fullDate);
+let fullDate = ref({
+  day: "0",
+  month: "0",
+  year: "0",
+  quarter: "0",
+  week: "0",
+  time: "00:01:00",
+});
+const typesDate = [
+  "Day",
+  "Week",
+  "Month",
+  "Quarter",
+  "Year",
+  "Time",
+  "Hour",
+  "Minute",
+  "Custom",
+];
 
-      this.fullDate[key] = value;
-      this.amountDate = value;
-    },
-    amountDate() {
-      if (this.date === "") return;
+const items = [
+  { title: "Day", model: "day" },
+  { title: "Week", model: "week" },
+  { title: "Month", model: "month" },
+  { title: "Quarter", model: "quarter" },
+  { title: "Year", model: "year" },
+  { title: "Time", model: "time" },
+];
 
-      let key = this.date.toLowerCase();
-      let value = this.amountDate;
-      const newValue = value.length < 2 ? `0${value}` : value;
-
-      switch (key) {
-        case "hour":
-          key = "time";
-          value = `${newValue}:00:00`;
-          break;
-        case "minute":
-          key = "time";
-          value = `00:${newValue}:00`;
-      }
-
-      this.resetDate(this.fullDate);
-
-      this.fullDate[key] = value;
-    },
-    fullDate: {
-      handler() {
-        this.$emit("changeDate", this.fullDate);
-      },
-      deep: true,
-    },
-    period() {
-      if (this.period) {
-        this.date = "Custom";
-        this.fullDate = this.period;
-      }
-    },
-  },
+const rules = {
+  general: [(v) => !!v || "This field is required!"],
+  number: [
+    (value) => !!value || "Is required!",
+    (value) => /^[1-9][0-9]{0,1}$/.test(value) || "Invalid!",
+  ],
+  customNumber: [
+    (value) => !!value || "Is required!",
+    (value) => /^[1-9][0-9]{0,1}|0$/.test(value) || "Invalid!",
+  ],
+  time: [
+    (value) => !!value || "Is required!",
+    (value) =>
+      /^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/.test(value) ||
+      "Invalid!",
+  ],
 };
+
+function resetDate(date) {
+  Object.keys(date).forEach((key) => {
+    date[key] = key === "time" ? "00:00:00" : "0";
+  });
+}
+
+onMounted(() => {
+  if (period.value) {
+    date.value = "Custom";
+    fullDate.value = period.value;
+  }
+});
+
+watch(date, (value) => {
+  if (value === "Custom") return;
+
+  const key = value.toLowerCase();
+  const amount = key === "time" ? "00:00:00" : "1";
+
+  resetDate(fullDate.value);
+
+  fullDate.value[key] = value;
+  amountDate.value = amount;
+});
+
+watch(amountDate, (value) => {
+  if (date.value === "") return;
+
+  let key = date.value.toLowerCase();
+  const newValue = value.length < 2 ? `0${value}` : value;
+
+  switch (key) {
+    case "hour":
+      key = "time";
+      value = `${newValue}:00:00`;
+      break;
+    case "minute":
+      key = "time";
+      value = `00:${newValue}:00`;
+  }
+
+  resetDate(fullDate.value);
+
+  fullDate.value[key] = value;
+});
+
+watch(
+  () => fullDate,
+  (value) => { emits("changeDate", value) },
+  { deep: true }
+);
+
+watch(period, (value) => {
+  if (value) {
+    date.value = "Custom";
+    fullDate.value = value;
+  }
+});
 </script>
 
 <style scoped lang="scss">

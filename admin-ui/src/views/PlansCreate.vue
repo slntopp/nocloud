@@ -41,7 +41,7 @@
             </v-col>
             <v-col cols="9">
               <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">
-                <v-radio-group v-model="selectedKind" row mandatory>
+                <v-radio-group row mandatory v-model="selectedKind">
                   <v-radio
                     v-for="item in kinds"
                     :key="item"
@@ -61,7 +61,7 @@
               <v-select
                 label="Tariff"
                 v-model="plan.meta.product"
-                :items="form.titles"
+                :items="Object.keys(plan.products)"
               />
             </v-col>
           </v-row>
@@ -71,62 +71,20 @@
               <v-subheader>Public</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-switch v-model="plan.public" />
+              <v-switch style="width: fit-content" v-model="plan.public" />
             </v-col>
           </v-row>
 
           <v-divider />
 
-          <template v-if="!['ovh', 'goget'].includes(plan.type)">
-            <v-tabs v-model="form.title" background-color="background-light">
-              <v-tab
-                draggable="true"
-                active-class="background"
-                v-for="(title, i) of form.titles"
-                :key="title"
-                @drag="(e) => dragTab(e, i)"
-                @dragstart="dragTabStart"
-                @dragend="dragTabEnd"
-                @dblclick="edit = { isVisible: true, title }"
-              >
-                {{ title }}
-                <v-icon small right color="error" @click="removeConfig(title)">
-                  mdi-close
-                </v-icon>
-              </v-tab>
-              <v-text-field
-                dense
-                outlined
-                :label="edit.isVisible ? `Edit ${edit.title}` : 'New config'"
-                class="ml-2 mt-1 mw-20"
-                v-if="isVisible || edit.isVisible"
-                @change="addConfig"
-              />
-              <v-icon v-else class="ml-2" @click="isVisible = true">
-                mdi-plus
-              </v-icon>
-            </v-tabs>
-
-            <v-divider />
-
-            <v-subheader v-if="form.titles.length > 0">
-              To edit the title, double-click the LMB
-            </v-subheader>
-
-            <v-tabs-items v-model="form.title">
-              <v-tab-item v-for="(title, i) of form.titles" :key="title">
-                <component
-                  :is="template"
-                  :keyForm="title"
-                  :resource="plan.resources[i]"
-                  :product="getProduct(title)"
-                  :preset="preset(i)"
-                  @change:resource="(data) => changeResource(i, data)"
-                  @change:product="(data) => changeProduct(title, data)"
-                />
-              </v-tab-item>
-            </v-tabs-items>
-          </template>
+          <component
+            v-if="!['ovh', 'goget'].includes(plan.type)"
+            :is="template"
+            :resources="plan.resources"
+            :products="plan.products"
+            @change:resource="(data) => changeConfig(data, 'resource')"
+            @change:product="(data) => changeConfig(data, 'product')"
+          />
         </v-col>
       </v-row>
 
@@ -196,19 +154,18 @@
 <script>
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
-import ConfirmDialog from "@/components/confirmDialog.vue";
-import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
+import confirmDialog from "@/components/confirmDialog.vue";
+import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  components: { ConfirmDialog, PlanOpensrs },
+  components: { confirmDialog, planOpensrs },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
     kinds: ["DYNAMIC", "STATIC"],
     selectedKind: "",
-    products: [],
     plan: {
       title: "",
       type: "custom",
@@ -217,14 +174,6 @@ export default {
       resources: [],
       products: {},
       fee: null,
-    },
-    form: {
-      title: "",
-      titles: [],
-    },
-    edit: {
-      isVisible: false,
-      title: "",
     },
     generalRule: [(v) => !!v || "This field is required!"],
 
@@ -235,141 +184,28 @@ export default {
     isLoading: false,
   }),
   methods: {
-    changeResource(num, { key, value }) {
-      try {
-        value = JSON.parse(value);
-      } catch {
-        value;
+    changeConfig({ key, value, id }, type) {
+      try { value = JSON.parse(value) }
+      catch { value }
+
+      const configs = (type === "resource") ? this.plan.resources : Object.values(this.plan.products);
+      const product = configs.find((el) => el.id === id);
+
+      switch (key) {
+        case "date":
+          this.setPeriod(value, id);
+          return;
+        case "resources":
+          this.plan.resources = value;
+          return;
+        case "products":
+          this.plan.products = value;
+          return;
+        case "amount":
+          key = "resources";
       }
 
-      if (key === "date") {
-        this.setPeriod(value, num);
-        return;
-      }
-      if (this.plan.resources[num]) {
-        this.plan.resources[num][key] = value;
-      } else {
-        this.plan.resources.push({ [key]: value });
-      }
-    },
-    changeProduct(obj, { key, value }) {
-      try {
-        value = JSON.parse(value);
-      } catch {
-        value;
-      }
-
-      if (key === "date") {
-        this.setPeriod(value, obj);
-        return;
-      } else if (key === "resources") {
-        this.plan.resources = value;
-        return;
-      } else if (key === "amount") {
-        key = "resources";
-      }
-
-      if (this.plan.products[obj]) {
-        this.plan.products[obj][key] = value;
-      } else {
-        this.plan.products[obj] = { [key]: value };
-      }
-    },
-    changeFee({ key, value }) {
-      try {
-        value = JSON.parse(value);
-      } catch {
-        value;
-      }
-
-      this.plan.fee[key] = value;
-    },
-    preset(i) {
-      const title = this.form.titles[i - 1];
-
-      if (this.plan.products[title]) {
-        return this.plan.products[title].resources;
-      }
-      if (this.plan.type === "custom") return;
-      return { cpu: 1, ram: 1024 };
-    },
-    dragTabStart(e) {
-      const el = document.createElement("div");
-
-      e.dataTransfer.dropEffect = "move";
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setDragImage(el, 0, 0);
-    },
-    dragTab(e, i) {
-      const width = parseInt(getComputedStyle(e.target).width);
-      const all = Array.from(e.target.parentElement.children);
-      const next = Math.round(e.layerX / width) + i;
-      const prev = e.target.getAttribute("data-x");
-
-      e.target.style.cssText = `transform: translateX(${e.layerX}px)`;
-      e.target.setAttribute("data-x", `${e.layerX}`);
-      all.shift();
-      all.pop();
-
-      if (!all[next] || next === i) return;
-
-      all[next].style.transition = "0.3s";
-      if (prev < e.layerX) {
-        if (e.layerX > width / 2) {
-          all[next].style.transform = `translateX(-${width}px)`;
-        } else {
-          all[next].style.transform = "";
-        }
-      } else if (prev > e.layerX) {
-        if (e.layerX > width / 2) {
-          all[next].style.transform = "";
-        } else {
-          all[next].style.transform = `translateX(${width}px)`;
-        }
-      }
-
-      const titles = [...this.form.titles];
-      const [newTitle] = titles.splice(i, 1);
-
-      titles.splice(next, 0, newTitle);
-      localStorage.setItem("titles", JSON.stringify(titles));
-    },
-    dragTabEnd(e) {
-      const all = Array.from(e.target.parentElement.children);
-      const titles = localStorage.getItem("titles");
-      const wrapper = all.shift();
-
-      all.forEach((el) => el.removeAttribute("style"));
-      this.form.titles = JSON.parse(titles);
-      localStorage.removeItem("titles");
-
-      setTimeout(() => {
-        const left = all.find((el) =>
-          el.className.includes("tab--active")
-        ).offsetLeft;
-
-        wrapper.style.left = `${left}px`;
-      });
-    },
-    addConfig(title) {
-      if (this.edit.isVisible) {
-        const i = this.form.titles.indexOf(this.edit.title);
-
-        this.form.titles[i] = title;
-        this.edit.isVisible = false;
-
-        return;
-      }
-
-      this.form.titles.push(title);
-      this.isVisible = false;
-    },
-    removeConfig(title) {
-      this.form.titles = this.form.titles.filter((el) => el !== title);
-
-      if (this.form.titles.length <= 0) {
-        this.isVisible = true;
-      }
+      if (product) product[key] = value;
     },
     tryToSend(action) {
       let message = "";
@@ -410,10 +246,6 @@ export default {
 
       this.isLoading = true;
       this.plan.title = checkName(this.plan, this.plans);
-      Object.entries(this.plan.products).forEach(([key, form]) => {
-        form.sorter = this.form.titles.findIndex((el) => el === key);
-        if (form.sorter === -1) delete this.plan.products[key];
-      });
 
       const id = this.$route.params?.planId;
       const request = (action === 'edit')
@@ -459,14 +291,16 @@ export default {
         return this.checkPeriods(plan.resources);
       }
     },
-    setPeriod(date, res) {
+    setPeriod(date, id) {
       const period = this.getTimestamp(date);
+      const resource = this.plan.resources.find((el) => el.id === id);
+      const product = Object.values(this.plan.products).find((el) => el.id === id);
 
       if (this.plan.kind === "DYNAMIC") {
-        this.plan.resources[res].period = period;
+        resource.period = period;
         this.plan.products = {};
-      } else if (this.plan.products[res]) {
-        this.plan.products[res].period = period;
+      } else if (product) {
+        product.period = period;
       }
     },
     getTimestamp({ day, month, year, quarter, week, time }) {
@@ -485,34 +319,18 @@ export default {
       return seconds;
     },
     getItem() {
-      this.form.titles = [];
       if (Object.keys(this.item).length > 0) {
         this.plan = this.item;
         this.isVisible = false;
         this.selectedKind = this.item.kind;
 
-        if (this.item.kind === "DYNAMIC") {
-          this.item.resources.forEach((el) => {
-            this.form.titles.push(el.key);
-          });
-        } else {
-          this.products = this.item.products;
-          this.form.titles.length = Object.values(this.item.products).length;
-          Object.entries(this.item.products).forEach(([key, { sorter }]) => {
-            this.form.titles.splice(sorter, 1, key);
-          });
-        }
+        this.item.resources.forEach((_, i) => {
+          this.plan.resources[i].id = Math.random().toString(16).slice(2);
+        });
+        Object.entries(this.item.products).forEach(([key]) => {
+          this.plan.products[key].id = Math.random().toString(16).slice(2);
+        });
       }
-    },
-    getProduct(title) {
-      const product = Object.values(this.products).find((el) => el.title === title);
-
-      if (!product) return {};
-      return {
-        ...product,
-        amount: product.resources,
-        resources: this.item.resources,
-      };
     },
     changePlan(isReset) {
       if (isReset) {
@@ -559,53 +377,23 @@ export default {
   },
   computed: {
     template() {
-      let type;
-      switch (this.plan.kind) {
-        case "DYNAMIC":
-          type = "resources";
-          break;
-        default:
-          type = "products";
-      }
+      const type = (this.plan.kind === "DYNAMIC") ? "resources" : "products";
 
-      return () => import(`@/components/plans_form_${type}.vue`);
+      return () => import(`@/components/plans_${type}_table.vue`);
     },
     plans() {
       return this.$store.getters['plans/all'];
     }
   },
   watch: {
-    "plan.type"() {
-      this.plan.fee = {};
-      switch (this.plan.type) {
-        case "ione":
-          if (this.plan.kind === "STATIC") return;
-          if (this.isEdit) return;
-
-          this.form.titles = ["cpu", "ram", "ips_public"];
-          this.isVisible = false;
-          break;
-        default:
-          this.form.titles = [];
-          this.isVisible = true;
-      }
-    },
     "plan.kind"() {
       if (!this.isEdit) {
-        this.form.titles = [];
         if (this.plan.kind === "STATIC") {
           this.plan.products = {};
         } else {
           this.plan.resources = [];
         }
       }
-    },
-    plan: {
-      handler() {
-        this.testButtonColor = "background-light";
-        this.isTestSuccess = false;
-      },
-      deep: true
     }
   },
 };

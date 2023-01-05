@@ -1,0 +1,293 @@
+<template>
+  <div class="pa-4">
+    <v-tabs
+      class="rounded-t-lg"
+      v-model="tabsIndex"
+      background-color="background-light"
+    >
+      <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
+    </v-tabs>
+
+    <v-tabs-items
+      v-model="tabsIndex"
+      style="background: var(--v-background-light-base)"
+      class="rounded-b-lg"
+    >
+      <v-tab-item v-for="tab in tabs" :key="tab">
+        <nocloud-table
+          item-key="id"
+          sort-by="sorter"
+          ref="table"
+          v-if="tab === 'Products'"
+          v-model="selected"
+          :show-expand="true"
+          :items="productsArray"
+          :headers="headers"
+          :expanded.sync="expanded"
+        >
+          <template v-slot:top>
+            <v-toolbar flat color="background">
+              <v-toolbar-title>Actions</v-toolbar-title>
+              <v-divider inset vertical class="mx-4" />
+              <v-spacer />
+
+              <v-btn class="mr-2" color="background-light" @click="addConfig">
+                Create
+              </v-btn>
+              <confirm-dialog @confirm="removeConfig">
+                <v-btn color="background-light" :disabled="selected.length < 1">
+                  Delete
+                </v-btn>
+              </confirm-dialog>
+            </v-toolbar>
+          </template>
+
+          <template v-slot:[`item.key`]="{ item }">
+            <v-text-field
+              dense
+              :value="item.key"
+              :rules="generalRule"
+              @change="(value) => changeProduct('key', value, item.id)"
+            />
+          </template>
+          <template v-slot:[`item.title`]="{ item }">
+            <v-text-field
+              dense
+              :value="item.title"
+              :rules="generalRule"
+              @change="(value) => changeProduct('title', value, item.id)"
+            />
+          </template>
+          <template v-slot:[`item.price`]="{ item }">
+            <v-text-field
+              dense
+              type="number"
+              :value="item.price"
+              :rules="generalRule"
+              @change="(value) => changeProduct('price', value, item.id)"
+            />
+          </template>
+          <template v-slot:[`item.period`]="{ item }">
+            <date-field
+              :period="fullDate[item.id]"
+              @changeDate="(value) => changeDate(value, item.id)"
+            />
+          </template>
+          <template v-slot:[`item.kind`]="{ item }">
+            <v-radio-group
+              row mandatory
+              :value="item.kind"
+              @change="(value) => changeProduct('kind', value, item.id)"
+            >
+              <v-radio
+                v-for="(kind, i) of kinds"
+                :style="{ marginRight: (i === kinds.length - 1) ? 0 : 16 }"
+                :key="kind"
+                :value="kind"
+                :label="kind.toLowerCase()"
+              />
+            </v-radio-group>
+          </template>
+          <template v-slot:expanded-item="{ headers, item }">
+            <td />
+            <td :colspan="headers.length - 1">
+              <v-subheader class="px-0">Amount of resources:</v-subheader>
+              <json-editor
+                :json="item.resources"
+                @changeValue="(value) => changeProduct('amount', value, item.id)"
+              />
+            </td>
+          </template>
+        </nocloud-table>
+
+        <plans-resources-table
+          v-else-if="tab === 'Resources'"
+          :resources="resources"
+          @change:resource="changeResource"
+        />
+      </v-tab-item>
+    </v-tabs-items>
+  </div>
+</template>
+
+<script setup>
+import { computed, ref, toRefs, watch } from 'vue';
+import dateField from '@/components/date.vue';
+import JsonEditor from '@/components/JsonEditor.vue';
+import nocloudTable from '@/components/table.vue';
+import plansResourcesTable from '@/components/plans_resources_table.vue';
+import confirmDialog from '@/components/confirmDialog.vue';
+
+const props = defineProps({
+  products: { type: Object, required: true },
+  resources: { type: Array, required: true }
+});
+const emits = defineEmits(['change:resource', 'change:product']);
+const { products, resources } = toRefs(props);
+
+const table = ref();
+const fullDate = ref({});
+const selected = ref([]);
+const expanded = ref([]);
+const tabsIndex = ref(0);
+
+const generalRule = [v => !!v || 'This field is required!'];
+const kinds = ['POSTPAID', 'PREPAID'];
+const tabs = ['Products', 'Resources'];
+
+const headers = [
+  { text: 'Key', value: 'key' },
+  { text: 'Title', value: 'title' },
+  { text: 'Price', value: 'price' },
+  { text: 'Period', value: 'period' },
+  { text: 'Kind', value: 'kind', width: 228 }
+];
+
+function changeDate({ value }, id) {
+  fullDate.value[id] = value;
+  emits('change:product', { key: 'date', value, id });
+}
+
+function changeProduct(key, value, id) {
+  emits('change:product', { key, value, id });
+}
+
+function changeResource(data) {
+  emits('change:resource', data);
+}
+
+function addConfig() {
+  const value = [...productsArray.value];
+  const result = {};
+
+  value.push({
+    key: '',
+    title: '',
+    kind: 'POSTPAID',
+    price: 0,
+    period: 0,
+    resources: {},
+    sorter: value.length,
+    id: Math.random().toString(16).slice(2)
+  });
+
+  value.forEach((product, i) => {
+    const { key } = product;
+
+    delete product.key;
+    product.sorter = i;
+    result[key] = product;
+  });
+  changeProduct('products', result);
+}
+
+function removeConfig() {
+  const value = productsArray.value.filter(({ id }) =>
+    !selected.value.find((el) => el.id === id)
+  );
+  const result = {};
+
+  value.forEach((product, i) => {
+    const { key } = product;
+
+    delete product.key;
+    product.sorter = i;
+    result[key] = product;
+  });
+  changeProduct('products', result);
+}
+
+Object.values(products.value).forEach(({ period, id }) => {
+  const date = new Date(period * 1000);
+  const time = date.toUTCString().split(' ');
+
+  fullDate.value[id] = {
+    day: `${date.getUTCDate() - 1}`,
+    month: `${date.getUTCMonth()}`,
+    year: `${date.getUTCFullYear() - 1970}`,
+    quarter: '0',
+    week: '0',
+    time: time.at(-2)
+  };
+});
+
+const productsArray = computed(() =>
+  Object.entries(products.value).map(([key, value]) => ({ key, ...value }))
+);
+
+watch(table, (value) => {
+  const { rows } = value[0].$el.children[1].children[0];
+  const allElements = Object.values(rows).slice(1);
+  const height = parseInt(getComputedStyle(allElements[0]).height);
+
+  allElements.forEach((element, i) => {
+    element.draggable = true;
+    element.style.cursor = 'grab';
+    // element.style.transition = '0.3s';
+
+    element.addEventListener('dragstart', (e) => {
+      const img = document.createElement('img');
+
+      e.dataTransfer.dropEffect = 'move';
+      e.dataTransfer.effectAllowed = 'move';
+
+      e.dataTransfer.setDragImage(img, 0, 0);
+      e.dataTransfer.setData('text/plain', i);
+      e.dataTransfer.setData('text/y', e.clientY);
+    });
+
+    element.addEventListener('dragover', (e) => {
+      const i = +e.dataTransfer.getData('text/plain');
+      const initY = e.dataTransfer.getData('text/y');
+      // const prevY = allElements[i].getAttribute('data-y');
+      const nextIndex = Math.round((e.clientY - initY) / height) + i;
+
+      allElements[i].style.cssText = `transform: translateY(${e.clientY - initY}px)`;
+      allElements[i].setAttribute('data-i', nextIndex);
+      // allElements[i].setAttribute('data-y', `${e.clientY}`);
+      e.preventDefault();
+
+      // if (nextIndex < 0 || nextIndex === i || nextIndex >= allElements.length) return;
+      // if (prevY < e.clientY) {
+      //   if (e.clientY > height) {
+      //     allElements[nextIndex].style.transform = '';
+      //   } else {
+      //     allElements[nextIndex].style.transform = `translateY(-${height}px)`;
+      //   }
+      // } else if (prevY > e.clientY) {
+      //   if (e.clientY > height) {
+      //     allElements[nextIndex].style.transform = `translateY(${height}px)`;
+      //   } else {
+      //     allElements[nextIndex].style.transform = '';
+      //   }
+      // }
+    });
+
+    element.addEventListener('dragend', (e) => {
+      allElements.forEach((el) => {
+        const i = +el.getAttribute('data-i');
+        const j = +e.dataTransfer.getData('text/plain');
+
+        if (i && j && i !== -1) {
+          const product1 = productsArray.value.find((el) => el.sorter === i).key;
+          const product2 = productsArray.value.find((el) => el.sorter === j).key;
+
+          products.value[product1].sorter = j;
+          products.value[product2].sorter = i;
+        }
+        el.removeAttribute('style');
+        el.removeAttribute('data-i');
+
+        el.style.cursor = 'grab';
+        // el.style.transition = '0.3s';
+      });
+    });
+  });
+});
+</script>
+
+<style scoped>
+.mw-20 {
+  max-width: 150px;
+}
+</style>
