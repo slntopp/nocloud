@@ -22,7 +22,6 @@ import (
 	hpb "github.com/slntopp/nocloud-proto/health"
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
-	srvpb "github.com/slntopp/nocloud-proto/services"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/spf13/viper"
@@ -34,17 +33,14 @@ import (
 var (
 	settingsClient settingspb.SettingsServiceClient
 	accClient      regpb.AccountsServiceClient
-	srvClient      srvpb.ServicesServiceClient
 )
 
 func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
-	viper.SetDefault("SERVICES_HOST", "services-registry:8000")
 	settingsHost := viper.GetString("SETTINGS_HOST")
 	registryHost := viper.GetString("REGISTRY_HOST")
-	servicesHost := viper.GetString("SERVICES_HOST")
 
 	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -57,12 +53,6 @@ func init() {
 		panic(err)
 	}
 	accClient = regpb.NewAccountsServiceClient(accConn)
-
-	srvConn, err := grpc.Dial(servicesHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	srvClient = srvpb.NewServicesServiceClient(srvConn)
 }
 
 func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatus {
@@ -149,30 +139,6 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 			if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Suspending Account", zap.Error(err))
 			}
-
-			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
-				"account":     meta.ID,
-				"permissions": schema.PERMISSIONS_GRAPH.Name,
-				"@services":   schema.SERVICES_COL,
-			})
-
-			if err != nil {
-				log.Error("Get services err", zap.String("Err", err.Error()))
-				continue
-			}
-
-			for servicesCursor.HasMore() {
-				var srv string
-				_, err := servicesCursor.ReadDocument(ctx, &srv)
-				log.Info("Attempt to suspend services", zap.Any("srv", srv))
-				if err != nil {
-					log.Error("Error Read Srv uuid", zap.Error(err))
-					continue
-				}
-				if _, err := srvClient.Suspend(ctx, &srvpb.SuspendRequest{Uuid: srv}); err != nil {
-					log.Error("Error Suspending Service", zap.Error(err))
-				}
-			}
 		}
 
 		cursor2, err := s.db.Query(ctx, accToUnsuspend, map[string]interface{}{
@@ -190,33 +156,8 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
 			}
-			// log.Debug("acc", zap.String("uuid", acc.GetUuid()), zap.Any("value", acc))
 			if _, err := accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Unsuspending Account", zap.Error(err))
-			}
-
-			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
-				"account":     meta.ID,
-				"permissions": schema.PERMISSIONS_GRAPH.Name,
-				"@services":   schema.SERVICES_COL,
-			})
-
-			if err != nil {
-				log.Error("Get services err", zap.String("Err", err.Error()))
-				continue
-			}
-
-			for servicesCursor.HasMore() {
-				var srv string
-				_, err := servicesCursor.ReadDocument(ctx, &srv)
-				log.Info("Attempt to unsuspend services", zap.Any("srv", srv))
-				if err != nil {
-					log.Error("Error Read Srv uuid", zap.Error(err))
-					continue
-				}
-				if _, err := srvClient.Unsuspend(ctx, &srvpb.UnsuspendRequest{Uuid: srv}); err != nil {
-					log.Error("Error Unsuspending service", zap.Error(err))
-				}
 			}
 		}
 		<-ticker.C
@@ -390,11 +331,4 @@ FILTER !t.processed
 		total: @round == "CEIL" ? CEIL(total) : @round == "FLOOR" ? FLOOR(total) : ROUND(total),
 		currency: currency
 	} IN @@transactions
-`
-
-const getServicesOfAccount = `
-FOR node, edge, path IN 2 OUTBOUND @account GRAPH @permissions
-    FILTER path.edges[*].role == ["owner","owner"]
-    FILTER IS_SAME_COLLECTION(node, @@services)
-    return node._key
 `
