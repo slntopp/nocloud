@@ -96,10 +96,10 @@ func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.Se
 
 const getOwnServices = `
 FOR node, edge, path IN 2 OUTBOUND @account
-    GRAPH Permissions
+	GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner"]
-    FILTER IS_SAME_COLLECTION(node, Services)
-    RETURN node._key
+    FILTER IS_SAME_COLLECTION(node, @@services)
+    return node._key
 `
 
 func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.SuspendRequest) (*accountspb.SuspendResponse, error) {
@@ -110,7 +110,9 @@ func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.Sus
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	cursor, err := s.db.Query(ctx, getOwnServices, map[string]interface{}{
-		"account": req.Uuid,
+		"account":     req.Uuid,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"@services":   schema.SERVICES_COL,
 	})
 	if err != nil {
 		log.Error("Error Quering Services to Suspend", zap.Error(err))
@@ -155,7 +157,9 @@ func (s *AccountsServiceServer) Unsuspend(ctx context.Context, req *accountspb.U
 	log.Debug("Requestor", zap.String("id", requestor))
 
 	cursor, err := s.db.Query(ctx, getOwnServices, map[string]interface{}{
-		"account": req.Uuid,
+		"account":     req.Uuid,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"@services":   schema.SERVICES_COL,
 	})
 	if err != nil {
 		log.Error("Error Quering Services to Unsuspend", zap.Error(err))

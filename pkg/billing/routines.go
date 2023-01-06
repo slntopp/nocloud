@@ -149,30 +149,6 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 			if _, err := accClient.Suspend(ctx, &accpb.SuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Suspending Account", zap.Error(err))
 			}
-
-			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
-				"account":     meta.ID,
-				"permissions": schema.PERMISSIONS_GRAPH.Name,
-				"@services":   schema.SERVICES_COL,
-			})
-
-			if err != nil {
-				log.Error("Get services err", zap.String("Err", err.Error()))
-				continue
-			}
-
-			for servicesCursor.HasMore() {
-				var srv string
-				_, err := servicesCursor.ReadDocument(ctx, &srv)
-				log.Info("Attempt to suspend services", zap.Any("srv", srv))
-				if err != nil {
-					log.Error("Error Read Srv uuid", zap.Error(err))
-					continue
-				}
-				if _, err := srvClient.Suspend(ctx, &srvpb.SuspendRequest{Uuid: srv}); err != nil {
-					log.Error("Error Suspending Service", zap.Error(err))
-				}
-			}
 		}
 
 		cursor2, err := s.db.Query(ctx, accToUnsuspend, map[string]interface{}{
@@ -190,33 +166,8 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 				log.Error("Error Reading Account", zap.Error(err), zap.Any("meta", meta))
 				continue
 			}
-			// log.Debug("acc", zap.String("uuid", acc.GetUuid()), zap.Any("value", acc))
 			if _, err := accClient.Unsuspend(ctx, &accpb.UnsuspendRequest{Uuid: acc.GetUuid()}); err != nil {
 				log.Error("Error Unsuspending Account", zap.Error(err))
-			}
-
-			servicesCursor, err := s.db.Query(ctx, getServicesOfAccount, map[string]interface{}{
-				"account":     meta.ID,
-				"permissions": schema.PERMISSIONS_GRAPH.Name,
-				"@services":   schema.SERVICES_COL,
-			})
-
-			if err != nil {
-				log.Error("Get services err", zap.String("Err", err.Error()))
-				continue
-			}
-
-			for servicesCursor.HasMore() {
-				var srv string
-				_, err := servicesCursor.ReadDocument(ctx, &srv)
-				log.Info("Attempt to unsuspend services", zap.Any("srv", srv))
-				if err != nil {
-					log.Error("Error Read Srv uuid", zap.Error(err))
-					continue
-				}
-				if _, err := srvClient.Unsuspend(ctx, &srvpb.UnsuspendRequest{Uuid: srv}); err != nil {
-					log.Error("Error Unsuspending service", zap.Error(err))
-				}
 			}
 		}
 		<-ticker.C
@@ -390,11 +341,4 @@ FILTER !t.processed
 		total: @round == "CEIL" ? CEIL(total) : @round == "FLOOR" ? FLOOR(total) : ROUND(total),
 		currency: currency
 	} IN @@transactions
-`
-
-const getServicesOfAccount = `
-FOR node, edge, path IN 2 OUTBOUND @account GRAPH @permissions
-    FILTER path.edges[*].role == ["owner","owner"]
-    FILTER IS_SAME_COLLECTION(node, @@services)
-    return node._key
 `
