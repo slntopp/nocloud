@@ -99,7 +99,7 @@ FOR node, edge, path IN 2 OUTBOUND @account
 	GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@services)
-    return node._key
+    RETURN node._key
 `
 
 func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.SuspendRequest) (*accountspb.SuspendResponse, error) {
