@@ -22,7 +22,6 @@ import (
 	hpb "github.com/slntopp/nocloud-proto/health"
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
-	srvpb "github.com/slntopp/nocloud-proto/services"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/spf13/viper"
@@ -34,7 +33,6 @@ import (
 var (
 	settingsClient settingspb.SettingsServiceClient
 	accClient      regpb.AccountsServiceClient
-	srvClient      srvpb.ServicesServiceClient
 )
 
 func init() {
@@ -44,7 +42,6 @@ func init() {
 	viper.SetDefault("SERVICES_HOST", "services-registry:8000")
 	settingsHost := viper.GetString("SETTINGS_HOST")
 	registryHost := viper.GetString("REGISTRY_HOST")
-	servicesHost := viper.GetString("SERVICES_HOST")
 
 	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -57,12 +54,6 @@ func init() {
 		panic(err)
 	}
 	accClient = regpb.NewAccountsServiceClient(accConn)
-
-	srvConn, err := grpc.Dial(servicesHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	srvClient = srvpb.NewServicesServiceClient(srvConn)
 }
 
 func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatus {
