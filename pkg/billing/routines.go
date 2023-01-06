@@ -39,7 +39,6 @@ func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
-	viper.SetDefault("SERVICES_HOST", "services-registry:8000")
 	settingsHost := viper.GetString("SETTINGS_HOST")
 	registryHost := viper.GetString("REGISTRY_HOST")
 
