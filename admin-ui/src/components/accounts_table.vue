@@ -17,6 +17,11 @@
       <balance v-if="item.balance" :value="item.balance" />
       <template v-else>-</template>
     </template>
+    <template v-slot:[`item.access`]="{ item }">
+      <v-chip :color="colorChip(item.access.level)">
+        {{ getName(item.uuid) }} ({{ item.access.level }})
+      </v-chip>
+    </template>
   </nocloud-table>
 </template>
 
@@ -54,12 +59,30 @@ export default {
         { text: "Title", value: "title" },
         { text: "UUID", value: "uuid" },
         { text: "Balance", value: "balance" },
+        { text: "Access", value: "access" }
       ],
     };
   },
   methods: {
     handleSelect(item) {
       this.$emit("input", item);
+    },
+    getName(uuid) {
+      return this.namespaces.find(({ access }) => access.namespace === uuid)?.title ?? '';
+    },
+    colorChip(level) {
+      switch (level) {
+        case 'ROOT':
+          return 'info';
+        case 'ADMIN':
+          return 'success';
+        case 'MGMT':
+          return 'warning';
+        case 'READ':
+          return 'gray';
+        case 'NONE':
+          return 'error';
+      }
     },
   },
   computed: {
@@ -72,11 +95,14 @@ export default {
       }
       return this.tableData;
     },
+    namespaces() {
+      return this.$store.getters["namespaces/all"];
+    },
   },
   created() {
     this.loading = true;
-    this.$store
-      .dispatch("accounts/fetch")
+    this.$store.dispatch("namespaces/fetch");
+    this.$store.dispatch("accounts/fetch")
       .then(() => {
         this.fetchError = "";
       })

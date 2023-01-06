@@ -20,7 +20,7 @@
             </v-btn>
           </template>
           <v-card class="pa-4">
-            <v-from ref="form" v-model="newAccount.formValid">
+            <v-form ref="form" v-model="newAccount.formValid">
               <v-row>
                 <v-col>
                   <v-text-field
@@ -81,7 +81,7 @@
                   </v-btn>
                 </v-col>
               </v-row>
-            </v-from>
+            </v-form>
           </v-card>
         </v-menu>
         <confirm-dialog

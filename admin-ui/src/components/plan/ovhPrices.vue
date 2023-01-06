@@ -414,6 +414,9 @@ export default {
               round = 'ceil';
           }
           if (this.fee.round  === 'NONE') round = 'round';
+          if (typeof this.fee.round === 'string') {
+            round = this.fee.round.toLowerCase();
+          }
 
           for (let range of this.fee.ranges) {
             if (plan.price.value <= range.from) continue;
@@ -617,6 +620,7 @@ export default {
   created() {
     this.isPlansLoading = true;
     api.get(`/billing/currencies/rates/PLN/NCU`)
+      .catch(() => api.get(`/billing/currencies/rates/NCU/PLN`))
       .then((res) => this.rate = res.rate)
       .catch((err) => console.error(err));
 
