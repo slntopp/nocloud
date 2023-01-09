@@ -180,7 +180,7 @@ func (s *AccountsServiceServer) Unsuspend(ctx context.Context, req *accountspb.U
 			log.Error("Error Reading Service UUID", zap.Error(err), zap.Any("meta", meta))
 			continue
 		}
-		if _, err := servicesClient.Suspend(ctx, &servicespb.SuspendRequest{Uuid: serviceUuid}); err != nil {
+		if _, err := servicesClient.Unsuspend(ctx, &servicespb.UnsuspendRequest{Uuid: serviceUuid}); err != nil {
 			log.Error("Error Unsuspending Service", zap.Error(err))
 		}
 	}
