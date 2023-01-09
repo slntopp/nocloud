@@ -101,8 +101,8 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 	}
 
 	if instance.GetStatus() == pb.InstanceStatus_SUS {
-		log.Error("Access denied for suspended machine", zap.String("uuid", instance.GetUuid()))
-		return nil, status.Error(codes.PermissionDenied, "Access denied")
+		log.Error("Machine is suspended. Functionality is limited", zap.String("uuid", instance.GetUuid()))
+		return nil, status.Error(codes.Unavailable, "Machine is suspended. Functionality is limited")
 	}
 
 	r, err := s.ctrl.GetGroup(ctx, instance_id.String())
