@@ -109,8 +109,10 @@ func (s *AccountsServiceServer) Suspend(ctx context.Context, req *accountspb.Sus
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
+	accId := driver.NewDocumentID(schema.ACCOUNTS_COL, req.Uuid)
+
 	cursor, err := s.db.Query(ctx, getOwnServices, map[string]interface{}{
-		"account":     req.Uuid,
+		"account":     accId,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 		"@services":   schema.SERVICES_COL,
 	})
@@ -156,8 +158,10 @@ func (s *AccountsServiceServer) Unsuspend(ctx context.Context, req *accountspb.U
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
+	accId := driver.NewDocumentID(schema.ACCOUNTS_COL, req.Uuid)
+
 	cursor, err := s.db.Query(ctx, getOwnServices, map[string]interface{}{
-		"account":     req.Uuid,
+		"account":     accId,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 		"@services":   schema.SERVICES_COL,
 	})
