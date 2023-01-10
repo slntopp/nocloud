@@ -226,7 +226,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, "0")
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, "0")
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, "0")
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +396,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, "0")
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}
@@ -411,7 +411,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 }
 
 func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeRequest) (*sppb.InvokeResponse, error) {
-	log := s.log.Named("invoke")
+	log := s.log.Named("Invoke")
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())
 	if err != nil {
 		log.Error("Failed to get ServicesProvider", zap.Error(err))
@@ -429,4 +429,30 @@ func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeReq
 		Method:           req.Method,
 		Params:           req.Params,
 	})
+}
+
+func (s *ServicesProviderServer) Prep(ctx context.Context, req *sppb.PrepSP) (*sppb.PrepSP, error) {
+	log := s.log.Named("Prep")
+
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
+	if err != nil {
+		return nil, err
+	}
+	if ns.Access == nil || ns.Access.Level != access.Level_ROOT {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Preparation")
+	}
+
+	sp := req.GetSp()
+
+	if sp == nil {
+		return nil, status.Error(codes.InvalidArgument, "ServicesProvider base config is not present")
+	}
+
+	client, ok := s.drivers[sp.Type]
+	if !ok {
+		log.Error("Failed to get driver", zap.String("type", sp.Type))
+		return nil, status.Error(codes.NotFound, "Driver not found")
+	}
+
+	return client.SpPrep(ctx, req)
 }

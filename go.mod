@@ -15,7 +15,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.0
 	github.com/rabbitmq/amqp091-go v1.5.0
 	github.com/rs/cors v1.8.3
-	github.com/slntopp/nocloud-proto v0.0.0-20221229100830-3f3661737a4d
+	github.com/slntopp/nocloud-proto v0.0.0-20230110160023-a953531a6b05
 	github.com/spf13/viper v1.14.0
 	github.com/stoewer/go-strcase v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
