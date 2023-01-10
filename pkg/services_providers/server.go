@@ -411,7 +411,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 }
 
 func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeRequest) (*sppb.InvokeResponse, error) {
-	log := s.log.Named("invoke")
+	log := s.log.Named("Invoke")
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())
 	if err != nil {
 		log.Error("Failed to get ServicesProvider", zap.Error(err))
