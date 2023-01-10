@@ -430,3 +430,29 @@ func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeReq
 		Params:           req.Params,
 	})
 }
+
+func (s *ServicesProviderServer) Prep(ctx context.Context, req *sppb.PrepSP) (*sppb.PrepSP, error) {
+	log := s.log.Named("Prep")
+
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
+	if err != nil {
+		return nil, err
+	}
+	if ns.Access == nil || ns.Access.Level != access.Level_ROOT {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Preparation")
+	}
+
+	sp := req.GetSp()
+
+	if sp == nil {
+		return nil, status.Error(codes.InvalidArgument, "ServicesProvider base config is not present")
+	}
+
+	client, ok := s.drivers[sp.Type]
+	if !ok {
+		log.Error("Failed to get driver", zap.String("type", sp.Type))
+		return nil, status.Error(codes.NotFound, "Driver not found")
+	}
+
+	return client.SpPrep(ctx, req)
+}
