@@ -1,5 +1,5 @@
 /*
-Copyright © 2021-2022 Nikita Ivanovski info@slnt-opp.xyz
+Copyright © 2021-2023 Nikita Ivanovski info@slnt-opp.xyz
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package billing
 
 import (
 	"context"
+
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 
 	"github.com/arangodb/go-driver"
