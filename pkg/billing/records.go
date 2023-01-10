@@ -129,6 +129,9 @@ init:
 
 		if isSkip && err == nil {
 			log.Info("Skip prepaid record for suspended account", zap.Any("record", &record))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery after skipped prepaid record for suspended account", zap.Error(err))
+			}
 			continue
 		}
 
