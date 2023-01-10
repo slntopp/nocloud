@@ -83,7 +83,7 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, plan *pb.Plan) (*
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("request", zap.Any("plan", plan), zap.String("requestor", requestor))
 
-	ns, err := s.nss.Get(ctx, "0")
+	ns, err := s.nss.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, plan *pb.Plan) (*
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("request", zap.Any("plan", plan), zap.String("requestor", requestor))
 
-	ns, err := s.nss.Get(ctx, "0")
+	ns, err := s.nss.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("request", zap.Any("plan", plan), zap.String("requestor", requestor))
 
-	ns, err := s.nss.Get(ctx, "0")
+	ns, err := s.nss.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}

@@ -226,7 +226,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, "0")
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}
@@ -272,7 +272,7 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, "0")
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}
@@ -375,7 +375,7 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, "0")
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +396,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, "0")
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
 	if err != nil {
 		return nil, err
 	}
