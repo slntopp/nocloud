@@ -89,7 +89,7 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 	}
 	service.Uuid = meta.Key
 
-	log.Debug("Groups", zap.Any("method", service.GetInstancesGroups()), zap.Any("direct", service.InstancesGroups))
+	log.Debug("Creating Groups", zap.Any("method", service.GetInstancesGroups()), zap.Any("direct", service.InstancesGroups))
 	for _, ig := range service.GetInstancesGroups() {
 		err := ctrl.ig_ctrl.Create(ctx, meta.ID, ig)
 		if err != nil {
