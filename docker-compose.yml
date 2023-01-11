@@ -28,7 +28,7 @@ services:
       LOG_LEVEL: -1
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
-      PROBABLES: registry:8000,billing:8000,services-registry:8000,sp-registry:8000,settings:8000,dns-mgmt:8000,edge:8000
+      PROBABLES: registry:8000,billing:8000,services-registry:8000,sp-registry:8000,settings:8000,dns-mgmt:8000,edge:8000,eventbus:8000
     networks:
       - proxy
       - grpc-internal
