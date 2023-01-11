@@ -244,6 +244,9 @@ services:
       - traefik.http.services.eventbus.loadbalancer.server.port=8000
       - traefik.http.services.eventbus.loadbalancer.server.scheme=h2c
     environment:
+      SIGNING_KEY: "${SIGNING_KEY}"
+      DB_HOST: db:8529
+      DB_CRED: "${DB_USER}:${DB_PASS}"
       PORT: 8000
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     networks:
