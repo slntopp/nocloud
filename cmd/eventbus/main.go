@@ -43,6 +43,8 @@ func init() {
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 
+	port = viper.GetString("PORT")
+
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
 
@@ -69,7 +71,7 @@ func main() {
 	defer conn.Close()
 	log.Info("RabbitMQ connection established")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 	if err != nil {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
@@ -89,6 +91,6 @@ func main() {
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
-	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
+	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%s", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
 }
