@@ -333,11 +333,22 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
 	}
 
-	ok := graph.HasAccess(
-		ctx, s.db, requestor,
-		driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN)
-	if !ok {
+	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
+	acc := access.Access{
+		Level: access.Level_NONE, Role: "",
+	}
+
+	if err != nil {
+		log.Warn("Error retrieving Namespace", zap.Error(err))
+
+	} else if ns.Access != nil {
+		acc = *ns.Access
+	}
+
+	if acc.Level < access.Level_ROOT {
 		r.Secrets = nil
+	}
+	if acc.Level < access.Level_ADMIN {
 		r.Vars = nil
 	}
 
