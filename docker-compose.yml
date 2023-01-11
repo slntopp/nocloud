@@ -235,11 +235,12 @@ services:
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     links:
       - db
+
   eventbus:
     image: ghcr.io/slntopp/nocloud/eventbus:latest
     restart: always
     labels:
-      - traefik.http.routers.eventbus.rule=PathPrefix("/nocloud.eventbus.")
+      - traefik.http.routers.eventbus.rule=PathPrefix("/nocloud.events.")
       - traefik.http.routers.eventbus.entrypoints=grpc
       - traefik.http.services.eventbus.loadbalancer.server.port=8000
       - traefik.http.services.eventbus.loadbalancer.server.scheme=h2c
@@ -251,6 +252,7 @@ services:
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     networks:
       - proxy
+      - arangodb
       - mq
 
   db:
