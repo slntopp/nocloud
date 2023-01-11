@@ -71,7 +71,7 @@ func main() {
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
-		log.Fatal("failed to listen", zap.String("address", port), zap.Error(err))
+		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 	auth.SetContext(log, SIGNING_KEY)
 	s := grpc.NewServer(
@@ -89,6 +89,6 @@ func main() {
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
-	log.Info("serving server")
-	log.Fatal("failed to serve gRPC", zap.Error(s.Serve(lis)))
+	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
+	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
 }
