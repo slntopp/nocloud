@@ -12,13 +12,20 @@ import (
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/eventbus"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
 var (
-	log  *zap.Logger
+	log *zap.Logger
+
+	arangodbHost string
+	arangodbCred string
+
+	SIGNING_KEY []byte
+
 	port string
 	rbmq string
 )
@@ -29,10 +36,18 @@ func init() {
 	log = nocloud.NewLogger()
 
 	viper.SetDefault("PORT", "8000")
+
+	viper.SetDefault("DB_HOST", "db:8529")
+	viper.SetDefault("DB_CRED", "root:openSesame")
+	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 
+	arangodbHost = viper.GetString("DB_HOST")
+	arangodbCred = viper.GetString("DB_CRED")
+
+	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 	rbmq = viper.GetString("RABBITMQ_CONN")
-	port = viper.GetString("PORT")
+
 }
 
 func main() {
@@ -43,12 +58,6 @@ func main() {
 
 	log.Info("setting up eventbus server")
 
-	s := grpc.NewServer(
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			grpc_zap.UnaryServerInterceptor(log),
-		)),
-	)
-
 	log.Info("dialing rbmq")
 	conn, err := amqp.Dial(rbmq)
 	if err != nil {
@@ -56,15 +65,25 @@ func main() {
 	}
 	defer conn.Close()
 
-	server := eventbus.NewServer(log, conn)
-	pb.RegisterEventsServiceServer(s, server)
-
-	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
-
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
 		log.Fatal("failed to listen", zap.String("address", port), zap.Error(err))
 	}
+	auth.SetContext(log, SIGNING_KEY)
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_zap.UnaryServerInterceptor(log),
+			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
+		)),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			grpc.StreamServerInterceptor(auth.JWT_STREAM_INTERCEPTOR),
+		)),
+	)
+
+	server := eventbus.NewServer(log, conn)
+	pb.RegisterEventsServiceServer(s, server)
+
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
 	log.Info("serving server")
 	log.Fatal("failed to serve gRPC", zap.Error(s.Serve(lis)))
