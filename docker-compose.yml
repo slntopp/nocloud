@@ -28,7 +28,7 @@ services:
       LOG_LEVEL: -1
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
-      PROBABLES: registry:8000,billing:8000,services-registry:8000,sp-registry:8000,settings:8000,dns-mgmt:8000,edge:8000
+      PROBABLES: registry:8000,billing:8000,services-registry:8000,sp-registry:8000,settings:8000,dns-mgmt:8000,edge:8000,eventbus:8000
     networks:
       - proxy
       - grpc-internal
@@ -235,19 +235,24 @@ services:
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     links:
       - db
+
   eventbus:
     image: ghcr.io/slntopp/nocloud/eventbus:latest
     restart: always
     labels:
-      - traefik.http.routers.services_providers.rule=PathPrefix("/nocloud.eventbus.")
-      - traefik.http.routers.services_providers.entrypoints=grpc
-      - traefik.http.services.services_providers.loadbalancer.server.port=8000
-      - traefik.http.services.services_providers.loadbalancer.server.scheme=h2c
+      - traefik.http.routers.eventbus.rule=PathPrefix("/nocloud.events.")
+      - traefik.http.routers.eventbus.entrypoints=grpc
+      - traefik.http.services.eventbus.loadbalancer.server.port=8000
+      - traefik.http.services.eventbus.loadbalancer.server.scheme=h2c
     environment:
+      SIGNING_KEY: "${SIGNING_KEY}"
+      DB_HOST: db:8529
+      DB_CRED: "${DB_USER}:${DB_PASS}"
       PORT: 8000
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
     networks:
       - proxy
+      - arangodb
       - mq
 
   db:

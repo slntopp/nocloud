@@ -186,9 +186,10 @@ GRAPH @permissions SORT path.edges[0].level
 func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id driver.DocumentID) (T, error) {
 	var o T
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestor_id := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 
 	vars := map[string]interface{}{
-		"account":     driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		"account":     requestor_id,
 		"node":        id,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	}
@@ -198,9 +199,13 @@ func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id dri
 	}
 	defer c.Close()
 
-	_, err = c.ReadDocument(ctx, &o)
+	meta, err := c.ReadDocument(ctx, &o)
 	if err != nil {
 		return o, err
+	}
+
+	if requestor_id.String() == meta.ID.String() {
+		o.GetAccess().Level = access.Level_ROOT
 	}
 
 	return o, nil

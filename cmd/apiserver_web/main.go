@@ -24,6 +24,7 @@ import (
 	"github.com/rs/cors"
 	billingpb "github.com/slntopp/nocloud-proto/billing"
 	dnspb "github.com/slntopp/nocloud-proto/dns"
+	eventspb "github.com/slntopp/nocloud-proto/events"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	instancespb "github.com/slntopp/nocloud-proto/instances"
 	registrypb "github.com/slntopp/nocloud-proto/registry"
@@ -215,6 +216,16 @@ func main() {
 	}
 	log.Info("Registering CurrencyService Gateway")
 	err = billingpb.RegisterCurrencyServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
+	if err != nil {
+		log.Fatal("Failed to register CurrencyService gateway", zap.Error(err))
+	}
+	log.Info("Registering EventsBus Gateway")
+	err = eventspb.RegisterEventsServiceHandlerFromEndpoint(
 		context.Background(),
 		gwmux,
 		apiserver,
