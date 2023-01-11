@@ -13,6 +13,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/eventbus"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
+	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -56,14 +57,17 @@ func main() {
 		_ = log.Sync()
 	}()
 
-	log.Info("setting up eventbus server")
+	log.Info("Setting up DB Connection")
+	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	log.Info("DB connection established")
 
-	log.Info("dialing rbmq")
+	log.Info("Setting up RabbitMQ Connection")
 	conn, err := amqp.Dial(rbmq)
 	if err != nil {
 		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
 	}
 	defer conn.Close()
+	log.Info("RabbitMQ connection established")
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
@@ -80,7 +84,7 @@ func main() {
 		)),
 	)
 
-	server := eventbus.NewServer(log, conn)
+	server := eventbus.NewServer(log, conn, db)
 	pb.RegisterEventsServiceServer(s, server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
