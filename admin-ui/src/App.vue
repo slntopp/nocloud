@@ -348,11 +348,13 @@ export default {
     }
   },
   mounted() {
-    if (process.env.NODE_ENV === 'production') {
-      window.addEventListener("message", ({ data }) => {
-        this.$store.commit("auth/setToken", data);
-      });
-    }
+    window.addEventListener("message", ({ data, origin }) => {
+      const baseUrl = 'api.nocloud.ione-cloud.net';
+      const url = `https://app.${baseUrl.split('.').slice(1).join('.')}`;
+
+      if (origin !== url) return;
+      this.$store.commit("auth/setToken", data);
+    });
 
     this.onResize();
     window.addEventListener("resize", this.onResize, { passive: true });
