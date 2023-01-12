@@ -22,7 +22,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const SERVICE = "Eventbus service"
+const SERVICE = "EventBus Service"
 
 type HealthServer struct {
 	pb.UnimplementedInternalProbeServiceServer

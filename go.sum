@@ -207,12 +207,6 @@ github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6Mwd
 github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
-github.com/slntopp/nocloud-proto v0.0.0-20221229100830-3f3661737a4d h1:ToqDRSpMZHCxpBew9LXt4JcKie5mCIZcW1vyj97+Ov4=
-github.com/slntopp/nocloud-proto v0.0.0-20221229100830-3f3661737a4d/go.mod h1:F22cB+K8C7ym1+Ldg+ji0azXm8GP4En1NUq8Nzvkgxw=
-github.com/slntopp/nocloud-proto v0.0.0-20230110154522-f32fcd082748 h1:6pTgXSBswyHJYbje+C3udv+Pcna2eY1u60hug0zi3cQ=
-github.com/slntopp/nocloud-proto v0.0.0-20230110154522-f32fcd082748/go.mod h1:F22cB+K8C7ym1+Ldg+ji0azXm8GP4En1NUq8Nzvkgxw=
-github.com/slntopp/nocloud-proto v0.0.0-20230110154957-b2d20d9b2f9d h1:y3LtVTZxPSGjrexRx8GG+LMcIiQe6Ppjko1OBZrbg8Q=
-github.com/slntopp/nocloud-proto v0.0.0-20230110154957-b2d20d9b2f9d/go.mod h1:F22cB+K8C7ym1+Ldg+ji0azXm8GP4En1NUq8Nzvkgxw=
 github.com/slntopp/nocloud-proto v0.0.0-20230110160023-a953531a6b05 h1:z2wpITaY1HYs7b1/VyUoBIi815aZZLlh++L6vP+VITM=
 github.com/slntopp/nocloud-proto v0.0.0-20230110160023-a953531a6b05/go.mod h1:F22cB+K8C7ym1+Ldg+ji0azXm8GP4En1NUq8Nzvkgxw=
 github.com/spf13/afero v1.9.3 h1:41FoI0fD7OR7mGcKE/aOiLkGreyf8ifIOQmJANWogMk=
@@ -560,8 +554,8 @@ google.golang.org/grpc v1.31.1/go.mod h1:N36X2cJ7JwdamYAgDz+s+rVMFjt3numwzf/HckM
 google.golang.org/grpc v1.33.2/go.mod h1:JMHMWHQWaTccqQQlmk3MJZS+GWXOdAesneDmEnv2fbc=
 google.golang.org/grpc v1.34.0/go.mod h1:WotjhfgOW/POjDeRt8vscBtXq+2VjORFy659qA51WJ8=
 google.golang.org/grpc v1.35.0/go.mod h1:qjiiYl8FncCW8feJPdyg3v6XW24KsRHe+dy9BAGRRjU=
-google.golang.org/grpc v1.51.0 h1:E1eGv1FTqoLIdnBCZufiSHgKjlqG6fKFf6pPWtMTh8U=
-google.golang.org/grpc v1.51.0/go.mod h1:wgNDFcnuBGmxLKI/qn4T+m5BtEBYXJPvibbUPsAIPww=
+google.golang.org/grpc v1.52.0 h1:kd48UiU7EHsV4rnLyOJRuP/Il/UHE7gdDAQ+SZI7nZk=
+google.golang.org/grpc v1.52.0/go.mod h1:pu6fVzoFb+NBYNAvQL08ic+lvB2IojljRYuun5vorUY=
 google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
 google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
 google.golang.org/protobuf v0.0.0-20200228230310-ab0ca4ff8a60/go.mod h1:cfTl7dwQJ+fmap5saPgwCLgHXTUD7jkjRqWcaiX5VyM=
