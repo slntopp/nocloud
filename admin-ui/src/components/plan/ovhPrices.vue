@@ -140,7 +140,7 @@
             {{ getMargin(item, false) }}
           </template>
           <template v-slot:[`item.duration`]="{ value }">
-            {{ getPayment(value)  }}
+            {{ getPayment(value) }}
           </template>
           <template v-slot:[`item.price.value`]="{ item, value }">
             {{ value }} {{ 'NCU' || item.price.currencyCode }}
@@ -619,9 +619,10 @@ export default {
   },
   created() {
     this.isPlansLoading = true;
-    api.get(`/billing/currencies/rates/PLN/NCU`)
+    api.get(`/billing/currencies/rates/NCU/PLN`)
+      .then((res) => { this.rate = res.rate })
       .catch(() => api.get(`/billing/currencies/rates/NCU/PLN`))
-      .then((res) => this.rate = res.rate)
+      .then((res) => { if (res) this.rate = 1 / res.rate })
       .catch((err) => console.error(err));
 
     this.$store.dispatch('servicesProviders/fetch')
@@ -668,6 +669,9 @@ export default {
       this.fee = Object.assign({}, this.fee);
     },
     addons() {
+      this.fee = this.template.fee;
+      this.setFee();
+
       this.template.resources.forEach(({ key, price }) => {
         const addon = this.addons.find((el) => el.id === key);
 
@@ -700,9 +704,6 @@ export default {
         this.filters['0'].Sell = ['true'];
         this.selected['0'].Sell = ['true'];
       }
-
-      this.fee = this.template.fee;
-      this.setFee();
     }
   }
 }

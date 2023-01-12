@@ -125,6 +125,11 @@ export default {
             this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
           }
         });
+
+      this.$store.commit("reloadBtn/setCallback", {
+        type: "transactions/fetch",
+        params: { accounts, service: this.serviceId },
+      });
     },
     setTransactions(dates, labels, values) {
       const min = Math.min(...dates);

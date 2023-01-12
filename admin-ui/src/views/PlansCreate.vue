@@ -89,7 +89,7 @@
       </v-row>
 
       <v-row>
-        <v-col>
+        <v-col cols="6">
           <v-btn
             class="mr-2"
             color="background-light"
@@ -107,6 +107,25 @@
           >
             Create
           </v-btn>
+        </v-col>
+        <v-col cols="6" v-if="!isEdit">
+          <div class="d-flex align-start justify-center">
+            <v-switch
+              class="mr-2"
+              style="margin-top: 5px; padding-top: 5px"
+              v-model="isJson"
+              :label="!isJson ? 'YAML' : 'JSON'"
+            />
+            <v-btn color="background-light" class="mr-2" @click="downloadFile">
+              Download {{ isJson ? "JSON" : "YAML" }}
+            </v-btn>
+            <v-file-input
+              class="mr-2 file-input"
+              :label="`upload ${isJson ? 'json' : 'yaml'} price model...`"
+              :accept="isJson ? '.json' : '.yaml'"
+              @change="onJsonInputChange"
+            />
+          </div>
         </v-col>
         <v-col>
           <v-dialog :max-width="600" v-model="isDialogVisible">
@@ -157,6 +176,13 @@ import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 
+import {
+  downloadJSONFile,
+  readJSONFile,
+  readYAMLFile,
+  downloadYAMLFile,
+} from "@/functions.js";
+
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
@@ -182,6 +208,7 @@ export default {
     isValid: false,
     isFeeValid: true,
     isLoading: false,
+    isJson: true,
   }),
   methods: {
     changeConfig({ key, value, id }, type) {
@@ -318,16 +345,16 @@ export default {
 
       return seconds;
     },
-    getItem() {
-      if (Object.keys(this.item).length > 0) {
-        this.plan = this.item;
+    getItem(item = this.item) {
+      if (Object.keys(item).length > 0) {
+        this.plan = item;
         this.isVisible = false;
-        this.selectedKind = this.item.kind;
+        this.selectedKind = item.kind;
 
-        this.item.resources.forEach((_, i) => {
+        item.resources.forEach((_, i) => {
           this.plan.resources[i].id = Math.random().toString(16).slice(2);
         });
-        Object.entries(this.item.products).forEach(([key]) => {
+        Object.entries(item.products).forEach(([key]) => {
           this.plan.products[key].id = Math.random().toString(16).slice(2);
         });
       }
@@ -344,6 +371,50 @@ export default {
         "https://github.com/slntopp/nocloud/wiki/Billing-Plans",
         "_blank"
       );
+    },
+    setPlan(res) {
+      const requiredKeys = ["resources", "products", "title", "public", "type", "kind"];
+
+      for (const key of requiredKeys) {
+        if (res[key] === undefined) {
+          throw new Error("JSON need keys:" + requiredKeys.join(", "));
+        }
+      }
+
+      if (!this.types.includes(res.type)) {
+        throw new Error(`Type ${res.type} not exists!`);
+      }
+
+      if (!this.kinds.includes(res.kind)) {
+        throw new Error(`Kind ${res.kind} not exists!`);
+      }
+
+      this.getItem(res);
+    },
+    onJsonInputChange(file) {
+      if (this.isJson) {
+        readJSONFile(file)
+          .then((res) => this.setPlan(res))
+          .catch(({ message }) => {
+            this.showSnackbarError({ message });
+          });
+      } else {
+        readYAMLFile(file)
+          .then((res) => this.setPlan(res))
+          .catch(({ message }) => {
+            this.showSnackbarError({ message });
+          });
+      }
+    },
+    downloadFile() {
+      const name = this.plan.title
+        ? this.plan.title.replaceAll(" ", "_")
+        : "unknown_price_model";
+      if (this.isJson) {
+        downloadJSONFile(this.plan, name);
+      } else {
+        downloadYAMLFile(this.plan, name);
+      }
     },
   },
   created() {
