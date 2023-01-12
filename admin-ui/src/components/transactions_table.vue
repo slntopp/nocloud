@@ -170,14 +170,10 @@ export default {
             this.copyed = index;
           })
           .catch((err) => {
-            this.showSnackbarError({
-              message: err,
-            });
+            console.error(err);
           });
       } else {
-        this.showSnackbarError({
-          message: "Clipboard is not supported!",
-        });
+        alert("Clipboard is not supported!");
       }
     },
     getRecords(uuid) {
@@ -190,9 +186,7 @@ export default {
           this.records[uuid] = pool;
         })
         .catch((err) => {
-          this.showSnackbarError({
-            message: err,
-          });
+          console.error(err);
         })
         .finally(() => {
           this.isRecordsLoading = false;

@@ -205,6 +205,9 @@
                 </v-list-item-content>
               </v-list-item>
               <v-divider></v-divider>
+              <v-list-item @click="loginHandler">
+                <v-list-item-title>Login to app</v-list-item-title>
+              </v-list-item>
               <v-list-item @click="logoutHandler">
                 <v-list-item-title>Logout</v-list-item-title>
               </v-list-item>
@@ -239,6 +242,16 @@ export default {
     navTitles: config.navTitles ?? {},
   }),
   methods: {
+    loginHandler() {
+      const baseUrl = 'api.nocloud.ione-cloud.net';
+      const url = `https://app.${baseUrl.split('.').slice(1).join('.')}`;
+      const win = window.open(url);
+      const token = this.$store.state.auth.token;
+
+      win.postMessage(token, url);
+      // this.$store.dispatch('login', { uuid: this.userdata.uuid })
+      //   .then((res) => console.log(res))
+    },
     logoutHandler() {
       this.$store.dispatch("auth/logout");
     },
@@ -335,6 +348,12 @@ export default {
     }
   },
   mounted() {
+    if (process.env.NODE_ENV === 'production') {
+      window.addEventListener("message", ({ data }) => {
+        this.$store.commit("auth/setToken", data);
+      });
+    }
+
     this.onResize();
     window.addEventListener("resize", this.onResize, { passive: true });
   },

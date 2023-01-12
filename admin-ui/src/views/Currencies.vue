@@ -25,7 +25,13 @@
             />
           </v-col>
           <v-col cols="12">
-            <v-text-field dense label="Rate" v-model="currency.rate" />
+            <v-text-field
+              dense
+              type="number"
+              label="Rate"
+              v-model="currency.rate"
+              :rules="rules.number"
+            />
           </v-col>
           <v-col>
             <v-btn :loading="isCreateLoading" @click="addCurrency">Save</v-btn>
@@ -50,10 +56,18 @@
       :footer-error="fetchError"
     >
       <template v-slot:[`item.rate`]="{ item }">
-        <v-text-field dense style="width: 200px" v-model="item.rate" />
+        <v-text-field
+          dense
+          type="number"
+          style="width: 200px"
+          v-model="item.rate"
+          :rules="rules.number"
+        />
       </template>
       <template v-slot:[`item.actions`]="{ item }">
-        <v-icon @click="editCurrency(item)">mdi-content-save-edit-outline</v-icon>
+        <v-icon title="Save edit" @click="editCurrency(item)">
+          mdi-content-save-edit-outline
+        </v-icon>
       </template>
     </nocloud-table>
 
@@ -102,7 +116,11 @@ export default {
     currencies: [],
     selected: [],
 
-    currency: { from: "", to: "", rate: 1 },
+    rules: {
+      number: [(value) => /^[-+]?[0-9]*[.,]?[0-9]+(?:[eE][-+]?[0-9]+)?$/.test(value) || 'Invalid!']
+    },
+
+    currency: { from: "", to: "", rate: "1" },
     isLoading: false,
     isCreateLoading: false,
     fetchError: "",
@@ -110,8 +128,9 @@ export default {
   methods: {
     addCurrency() {
       if (this.currency.from === "" || this.currency.to === "") return;
+      if (typeof this.rules.number[0](this.currency.rate) === 'string') return;
       const newCurrency = {
-        rate: +this.currency.rate,
+        rate: +this.currency.rate.replace(',', '.'),
         from: this.currenciesList.indexOf(this.currency.from),
         to: this.currenciesList.indexOf(this.currency.to)
       };
@@ -123,7 +142,7 @@ export default {
             ...this.currency,
             id: `${this.currency.from} ${this.currency.to}`
           });
-          this.currency = { from: "", to: "", rate: 1 };
+          this.currency = { from: "", to: "", rate: "1" };
         })
         .catch((err) => {
           const message = err.response?.data?.message ?? err.message ?? err;
@@ -134,8 +153,9 @@ export default {
         .finally(() => this.isCreateLoading = false);
     },
     editCurrency(currency) {
+      if (typeof this.rules.number[0](currency.rate) === 'string') return;
       const newCurrency = {
-        rate: +currency.rate,
+        rate: +currency.rate.replace(',', '.'),
         from: this.currenciesList.indexOf(currency.from),
         to: this.currenciesList.indexOf(currency.to)
       };
