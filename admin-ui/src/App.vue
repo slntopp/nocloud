@@ -297,7 +297,7 @@ export default {
 
       if (origin !== url) return;
       this.$store.commit("auth/setToken", data);
-      this.$router.push({ name: "Home" });
+      location.assign("/admin");
     });
 
     this.$store.dispatch("auth/load");
