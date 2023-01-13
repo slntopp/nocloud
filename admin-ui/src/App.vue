@@ -243,12 +243,11 @@ export default {
   }),
   methods: {
     loginHandler() {
-      const baseUrl = 'api.nocloud.ione-cloud.net';
-      const url = `https://app.${baseUrl.split('.').slice(1).join('.')}`;
+      const url = `https://app.${location.host.split('.').slice(1).join('.')}`;
       const win = window.open(url);
       const token = this.$store.state.auth.token;
 
-      win.postMessage(token, url);
+      setTimeout(() => { win.postMessage(token, url) }, 100);
       // this.$store.dispatch('login', { uuid: this.userdata.uuid })
       //   .then((res) => console.log(res))
     },
@@ -349,11 +348,11 @@ export default {
   },
   mounted() {
     window.addEventListener("message", ({ data, origin }) => {
-      const baseUrl = 'api.nocloud.ione-cloud.net';
-      const url = `https://app.${baseUrl.split('.').slice(1).join('.')}`;
+      const url = `https://app.${location.host.split('.').slice(1).join('.')}`;
 
       if (origin !== url) return;
       this.$store.commit("auth/setToken", data);
+      this.$router.push({ name: "Home" });
     });
 
     this.onResize();
