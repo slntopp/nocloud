@@ -166,7 +166,7 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 }
 
 func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
-	log := s.log.Named("Routine")
+	log := s.log.Named("GenerateTransactionsRoutine")
 
 	routineConf := MakeRoutineConf(ctx, log)
 	roundingConf := MakeRoundingConf(ctx, log)
@@ -176,8 +176,10 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
 	tick := time.Now()
 	for {
+		log.Info("Entering new Iteration", zap.Time("ts", tick))
 		s.GenTransactions(ctx, log, tick, currencyConf, roundingConf)
 		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
+
 		tick = <-ticker.C
 	}
 }
