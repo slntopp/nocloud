@@ -172,10 +172,10 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 	log.Info("Got Configuration", zap.Any("routine", routineConf))
 
 	roundingConf := MakeRoundingConf(ctx, log)
-	log.Info("Got Configuration", zap.Any("routine", routineConf))
+	log.Info("Got Configuration", zap.Any("rounding", roundingConf))
 
 	currencyConf := MakeCurrencyConf(ctx, log)
-	log.Info("Got Configuration", zap.Any("routine", currencyConf))
+	log.Info("Got Configuration", zap.Any("currency", currencyConf))
 
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
 	tick := time.Now()
