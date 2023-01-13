@@ -17,6 +17,7 @@ package instances
 
 import (
 	"context"
+	"github.com/slntopp/nocloud-proto/states"
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -100,7 +101,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	if instance.GetStatus() == pb.InstanceStatus_SUS {
+	if instance.GetState().GetState() == states.NoCloudState_SUSPENDED {
 		log.Error("Machine is suspended. Functionality is limited", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.Unavailable, "Machine is suspended. Functionality is limited")
 	}
