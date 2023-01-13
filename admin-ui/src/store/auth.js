@@ -34,6 +34,17 @@ export default {
           });
       });
     },
+    loginToApp(_, { type, uuid }) {
+      return new Promise((resolve, reject) => {
+				api.authorizeCustom({ auth: { type, data: [] }, uuid })
+					.then(response => {
+						resolve(response);
+					})
+					.catch(error => {
+						reject(error)
+					})
+			})
+    },
     logout({ commit }) {
       commit("setToken", "");
       Cookies.remove(COOKIES_NAME);
