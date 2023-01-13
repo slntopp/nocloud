@@ -114,10 +114,8 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 	log := s.log.Named("AccountSuspendRoutine")
 	suspConf := MakeSuspendConf(ctx, log)
-	log.Info("Got Configuration", zap.Any("suspend", suspConf))
-
 	routineConf := MakeRoutineConf(ctx, log)
-	log.Info("Got Configuration", zap.Any("routine", routineConf))
+	log.Info("Got Configuration", zap.Any("suspend", suspConf), zap.Any("routine", routineConf))
 
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
 	for {
