@@ -142,14 +142,8 @@
               </div>
             </div>
             <v-progress-linear
-              :value="
-                Math.round(
-                  (template.state.meta.networking.public_vnet.used /
-                    template.state.meta.networking.public_vnet.total) *
-                    100
-                )
-              "
-              color="green"
+              :value="percentUsePublic"
+              :color="colorUsePublic"
               height="20"
               class="mb-10"
             >
@@ -186,14 +180,8 @@
               </div>
             </div>
             <v-progress-linear
-              :value="
-                Math.round(
-                  (template.state.meta.networking.private_vnet.used /
-                    template.state.meta.networking.private_vnet.total) *
-                    100
-                )
-              "
-              color="green"
+              :value="percentUsePrivate"
+              :color="colorUsePrivate"
               height="20"
               class="mb-10"
             >
@@ -373,6 +361,26 @@ export default {
       return Object.values(this.template.publicData.templates).filter(
         (t) => t.is_public
       );
+    },
+    percentUsePublic() {
+      const { public_vnet } = this.template.state.meta.networking;
+
+      return Math.round((public_vnet.used / public_vnet.total) * 100);
+    },
+    percentUsePrivate() {
+      const { private_vnet } = this.template.state.meta.networking;
+
+      return Math.round((private_vnet.used / private_vnet.total) * 100);
+    },
+    colorUsePublic() {
+      if (this.percentUsePublic >= 95) return 'red';
+      if (this.percentUsePublic > 80) return 'orange';
+      return 'green';
+    },
+    colorUsePrivate() {
+      if (this.percentUsePrivate >= 95) return 'red';
+      if (this.percentUsePrivate > 80) return 'orange';
+      return 'green';
     },
   },
   watch: {

@@ -13,6 +13,7 @@ export default {
   mutations: {
     setToken(state, token) {
       state.token = token;
+      Cookies.set(COOKIES_NAME, token);
     },
     setUserdata(state, data) {
       state.userdata = data;
@@ -25,7 +26,6 @@ export default {
           .authorizeWithType(login, password, type, true)
           .then((response) => {
             api.applyToken(response.token);
-            Cookies.set(COOKIES_NAME, response.token);
             commit("setToken", response.token);
             resolve(response);
           })

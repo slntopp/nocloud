@@ -17,6 +17,7 @@ package instances
 
 import (
 	"context"
+	"github.com/slntopp/nocloud-proto/states"
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -100,7 +101,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	if instance.GetStatus() == pb.InstanceStatus_SUS {
+	if instance.GetState().GetState() == states.NoCloudState_SUSPENDED {
 		log.Error("Machine is suspended. Functionality is limited", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.Unavailable, "Machine is suspended. Functionality is limited")
 	}
@@ -122,4 +123,44 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		Method:           req.Method,
 		Params:           req.Params,
 	})
+}
+
+func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+	log := s.log.Named("delete")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
+	var instance graph.Instance
+	instance, err := graph.GetWithAccess[graph.Instance](
+		ctx, s.db,
+		instance_id,
+	)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if instance.GetAccess().GetLevel() < accesspb.Level_MGMT {
+		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	r, err := s.ctrl.GetGroup(ctx, instance_id.String())
+	if err != nil {
+		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
+		return nil, err
+	}
+
+	err = s.ctrl.Delete(ctx, r.Group.GetUuid(), instance.Instance)
+
+	if err != nil {
+		return &pb.DeleteResponse{
+			Result: false,
+		}, err
+	}
+
+	return &pb.DeleteResponse{
+		Result: true,
+	}, nil
 }
