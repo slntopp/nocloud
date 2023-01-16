@@ -104,6 +104,7 @@ init:
 	}
 
 	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
+	currencyConf := MakeCurrencyConf(ctx, log)
 
 	for msg := range records {
 		log.Debug("Received a message")
@@ -151,6 +152,9 @@ init:
 				"permissions":   schema.PERMISSIONS_GRAPH.Name,
 				"priority":      pb.Priority_URGENT,
 				"now":           tick.Unix(),
+				"graph":         schema.BILLING_GRAPH.Name,
+				"currencies":    schema.CUR_COL,
+				"currency":      currencyConf.Currency,
 			})
 			if err != nil {
 				log.Error("Error Generating Transactions", zap.Error(err))
@@ -161,6 +165,9 @@ init:
 				"accounts":      schema.ACCOUNTS_COL,
 				"priority":      pb.Priority_URGENT,
 				"now":           tick.Unix(),
+				"graph":         schema.BILLING_GRAPH.Name,
+				"currencies":    schema.CUR_COL,
+				"currency":      currencyConf.Currency,
 			})
 			if err != nil {
 				log.Error("Error Process Transactions", zap.Error(err))
@@ -269,19 +276,34 @@ FOR service IN @@services // Iterate over Services
     FILTER IS_SAME_COLLECTION(node, @@accounts)
         RETURN node
     )
+
+	LET currency = account.currency != null ? account.currency : @currency
     
     LET records = ( // Collect all unprocessed records
         FOR record IN @@records
         FILTER record.priority == @priority
         FILTER !record.processed
         FILTER record.instance IN instances
-            UPDATE record._key WITH { processed: true } IN @@records RETURN NEW
+		LET rate = PRODUCT(
+			FOR vertex, edge IN OUTBOUND SHORTEST_PATH
+			// Cast to NCU if currency is not specified
+			DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency))) TO
+			DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+				RETURN edge.rate
+		)
+        LET total = record.total * rate
+            UPDATE record._key WITH { 
+				processed: true, 
+				total: total,
+				currency: currency
+			} IN @@records RETURN NEW
     )
     
     FILTER LENGTH(records) > 0 // Skip if no Records (no empty Transaction)
     INSERT {
         exec: @now, // Timestamp in seconds
         processed: false,
+		currency: currency,
         account: account._key,
 		priority: @priority,
         service: service._key,
@@ -295,8 +317,24 @@ FOR t IN @@transactions // Iterate over Transactions
 FILTER !t.processed
 FILTER t.priority == @priority
     LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
-    UPDATE account WITH { balance: account.balance - t.total } IN @@accounts
-    UPDATE t WITH { processed: true, proc: @now } IN @@transactions
+
+	LET currency = account.currency != null ? account.currency : @currency
+	LET rate = PRODUCT(
+		FOR vertex, edge IN OUTBOUND SHORTEST_PATH
+		DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency))) TO
+		DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+			RETURN edge.rate
+	)
+	LET total = t.total * rate
+
+
+    UPDATE account WITH { balance: account.balance - t.total * rate} IN @@accounts
+    UPDATE t WITH { 
+		processed: true, 
+		proc: @now,
+		total: total,
+		currency: currency
+	} IN @@transactions
 `
 
 func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transaction) (*pb.Records, error) {
