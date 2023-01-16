@@ -76,11 +76,7 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 		"now":           tick.Unix(),
 		"graph":         schema.BILLING_GRAPH.Name,
 		"currencies":    schema.CUR_COL,
-
-		// Default currency for platform
-		"currency": currencyConf.Currency,
-		// May be CEIL, FLOOR, ROUND
-		"round": roundingConf.Rounding,
+		"currency":      currencyConf.Currency,
 	})
 	if err != nil {
 		log.Error("Error Generating Transactions", zap.Error(err))
@@ -101,7 +97,6 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 		"graph":         schema.BILLING_GRAPH.Name,
 		"currencies":    schema.CUR_COL,
 		"currency":      currencyConf.Currency,
-		"round":         roundingConf.Rounding,
 	})
 	if err != nil {
 		log.Error("Error Processing Transactions", zap.Error(err))
@@ -290,7 +285,7 @@ FOR service IN @@services // Iterate over Services
         LET total = record.total * rate
             UPDATE record._key WITH { 
 				processed: true, 
-				total: @round == "CEIL" ? CEIL(total) : @round == "FLOOR" ? FLOOR(total) : ROUND(total),
+				total: total,
 				currency: currency
 			} IN @@records RETURN NEW
     )
@@ -326,7 +321,7 @@ FILTER !t.processed
     UPDATE t WITH { 
 		processed: true, 
 		proc: @now,
-		total: @round == "CEIL" ? CEIL(total) : @round == "FLOOR" ? FLOOR(total) : ROUND(total),
+		total: total,
 		currency: currency
 	} IN @@transactions
 `
