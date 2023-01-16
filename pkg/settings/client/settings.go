@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"time"
 
 	pb "github.com/slntopp/nocloud-proto/settings"
 	"go.uber.org/zap"
@@ -70,4 +71,31 @@ set_default:
 
 	*_conf = (*_default).Value
 	return nil
+}
+
+func Subscribe[T any](key string, _conf *T, _default *Setting[T], upd chan bool) {
+	c := *client
+
+init_stream:
+	stream, err := c.Sub(ctx, &pb.GetRequest{Keys: []string{key}})
+	if err != nil {
+		log.Warn("Couldn't subscribe", zap.String("key", key), zap.Error(err))
+		time.Sleep(time.Second)
+		goto init_stream
+	}
+
+	for {
+		msg, err := stream.Recv()
+		if err != nil {
+			log.Warn("Error receiving message", zap.Error(err))
+			goto init_stream
+		}
+
+		if msg.GetEvent() == "hset" {
+			log.Debug("Setting updated")
+			upd <- true
+			return
+		}
+	}
+
 }
