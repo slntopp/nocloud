@@ -65,13 +65,15 @@ func init() {
 	settingsClient = settingspb.NewSettingsServiceClient(conn)
 }
 
-func MakeConf(ctx context.Context, log *zap.Logger) (conf MonitoringRoutineConf) {
+func MakeConf(ctx context.Context, log *zap.Logger, upd chan bool) (conf MonitoringRoutineConf) {
 	sc.Setup(log, ctx, &settingsClient)
 
 	err := sc.Fetch(monFreqKey, &conf, defaultSetting)
 	if err != nil {
 		return defaultSetting.Value
 	}
+
+	go sc.Subscribe(monFreqKey, &conf, defaultSetting, upd)
 
 	return conf
 }
@@ -83,8 +85,14 @@ func (s *ServicesProviderServer) MonitoringRoutineState() Routine {
 func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 	log := s.log.Named("MonitoringRoutine")
 
-	conf := MakeConf(ctx, log)
+	log.Info("Fetching Monitoring Configuration")
+
+start:
+	upd := make(chan bool, 1)
+	conf := MakeConf(ctx, log, upd)
+
 	log.Info("Got Monitoring Configuration", zap.Any("conf", conf))
+
 	ticker := time.NewTicker(time.Second * time.Duration(conf.Frequency))
 	tick := time.Now()
 	for {
@@ -140,6 +148,12 @@ func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 		}
 
 		s.monitoring.LastExec = tick.Format("2006-01-02T15:04:05Z07:00")
-		tick = <-ticker.C
+		select {
+		case tick = <-ticker.C:
+			continue
+		case <-upd:
+			log.Info("New Configuration Received, restarting Routine")
+			goto start
+		}
 	}
 }
