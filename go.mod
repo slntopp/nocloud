@@ -17,7 +17,7 @@ require (
 	github.com/rs/cors v1.8.3
 	github.com/slntopp/nocloud-proto v0.0.0-20230110163109-ac50ce8dd5b7
 	github.com/spf13/viper v1.14.0
-	github.com/stoewer/go-strcase v1.2.0
+	github.com/stoewer/go-strcase v1.2.1
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.5.0
