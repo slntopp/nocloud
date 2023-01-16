@@ -205,9 +205,6 @@
                 </v-list-item-content>
               </v-list-item>
               <v-divider></v-divider>
-              <v-list-item @click="loginHandler">
-                <v-list-item-title>Login to app</v-list-item-title>
-              </v-list-item>
               <v-list-item @click="logoutHandler">
                 <v-list-item-title>Logout</v-list-item-title>
               </v-list-item>
@@ -242,15 +239,6 @@ export default {
     navTitles: config.navTitles ?? {},
   }),
   methods: {
-    loginHandler() {
-      const url = `https://app.${location.host.split('.').slice(1).join('.')}`;
-      const win = window.open(url);
-      const token = this.$store.state.auth.token;
-
-      setTimeout(() => { win.postMessage(token, url) }, 100);
-      // this.$store.dispatch('login', { uuid: this.userdata.uuid })
-      //   .then((res) => console.log(res))
-    },
     logoutHandler() {
       this.$store.dispatch("auth/logout");
     },
@@ -304,6 +292,14 @@ export default {
     },
   },
   created() {
+    window.addEventListener("message", ({ data, origin }) => {
+      const url = `https://app.${location.host.split('.').slice(1).join('.')}`;
+
+      if (origin !== url) return;
+      this.$store.commit("auth/setToken", data);
+      location.assign("/admin");
+    });
+
     this.$store.dispatch("auth/load");
 
     this.$router.onReady(() => {
@@ -347,14 +343,6 @@ export default {
     }
   },
   mounted() {
-    window.addEventListener("message", ({ data, origin }) => {
-      const url = `https://app.${location.host.split('.').slice(1).join('.')}`;
-
-      if (origin !== url) return;
-      this.$store.commit("auth/setToken", data);
-      this.$router.push({ name: "Home" });
-    });
-
     this.onResize();
     window.addEventListener("resize", this.onResize, { passive: true });
   },

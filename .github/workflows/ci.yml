@@ -68,7 +68,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v4.2.0
+        uses: docker/metadata-action@v4.3.0
         with:
           tags: type=raw,value=${{env.IMAGE_TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/base
@@ -81,7 +81,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v3.2.0
+        uses: docker/build-push-action@v3.3.0
         with:
           context: .
           file: Dockerfile
@@ -105,7 +105,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v4.2.0
+        uses: docker/metadata-action@v4.3.0
         with:
           tags: type=raw,value=${{env.IMAGE_TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}
@@ -118,7 +118,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v3.2.0
+        uses: docker/build-push-action@v3.3.0
         id: build
         with:
           context: .
