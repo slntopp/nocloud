@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"time"
 
+	sc "github.com/slntopp/nocloud/pkg/settings/client"
+
 	hpb "github.com/slntopp/nocloud-proto/health"
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
@@ -188,9 +190,14 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 	log := s.log.Named("GenerateTransactionsRoutine")
 
+start:
+	upd := make(chan bool, 1)
+	go sc.Subscribe([]string{monFreqKey, currencyKey}, upd)
+
 	routineConf := MakeRoutineConf(ctx, log)
 	roundingConf := MakeRoundingConf(ctx, log)
 	currencyConf := MakeCurrencyConf(ctx, log)
+
 	log.Info("Got Configuration", zap.Any("currency", currencyConf), zap.Any("routine", routineConf), zap.Any("rounding", roundingConf))
 
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
@@ -198,9 +205,15 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 	for {
 		log.Info("Entering new Iteration", zap.Time("ts", tick))
 		s.GenTransactions(ctx, log, tick, currencyConf, roundingConf)
-		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 
-		tick = <-ticker.C
+		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
+		select {
+		case tick = <-ticker.C:
+			continue
+		case <-upd:
+			log.Info("New Configuration Received, restarting Routine")
+			goto start
+		}
 	}
 }
 
