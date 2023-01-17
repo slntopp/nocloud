@@ -73,7 +73,7 @@ func MakeConf(ctx context.Context, log *zap.Logger, upd chan bool) (conf Monitor
 		return defaultSetting.Value
 	}
 
-	go sc.Subscribe(monFreqKey, &conf, defaultSetting, upd)
+	go sc.Subscribe([]string{monFreqKey}, upd)
 
 	return conf
 }

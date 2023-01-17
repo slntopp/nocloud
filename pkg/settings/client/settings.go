@@ -73,13 +73,13 @@ set_default:
 	return nil
 }
 
-func Subscribe[T any](key string, _conf *T, _default *Setting[T], upd chan bool) {
+func Subscribe(keys []string, upd chan bool) {
 	c := *client
 
 init_stream:
-	stream, err := c.Sub(ctx, &pb.GetRequest{Keys: []string{key}})
+	stream, err := c.Sub(ctx, &pb.GetRequest{Keys: keys})
 	if err != nil {
-		log.Warn("Couldn't subscribe", zap.String("key", key), zap.Error(err))
+		log.Warn("Couldn't subscribe", zap.Strings("keys", keys), zap.Error(err))
 		time.Sleep(time.Second)
 		goto init_stream
 	}
