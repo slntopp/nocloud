@@ -117,8 +117,14 @@ func (s *BillingServiceServer) SuspendAccountsRoutineState() *hpb.RoutineStatus 
 
 func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 	log := s.log.Named("AccountSuspendRoutine")
+
+start:
 	suspConf := MakeSuspendConf(ctx, log)
 	routineConf := MakeRoutineConf(ctx, log)
+
+	upd := make(chan bool, 1)
+	go sc.Subscribe([]string{monFreqKey}, upd)
+
 	log.Info("Got Configuration", zap.Any("suspend", suspConf), zap.Any("routine", routineConf))
 
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
@@ -182,7 +188,13 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 			}
 		}
 
-		tick = <-ticker.C
+		select {
+		case tick = <-ticker.C:
+			continue
+		case <-upd:
+			log.Info("New Configuration Received, restarting Routine")
+			goto start
+		}
 	}
 
 }
@@ -191,12 +203,13 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 	log := s.log.Named("GenerateTransactionsRoutine")
 
 start:
-	upd := make(chan bool, 1)
-	go sc.Subscribe([]string{monFreqKey, currencyKey}, upd)
 
 	routineConf := MakeRoutineConf(ctx, log)
 	roundingConf := MakeRoundingConf(ctx, log)
 	currencyConf := MakeCurrencyConf(ctx, log)
+
+	upd := make(chan bool, 1)
+	go sc.Subscribe([]string{monFreqKey, currencyKey}, upd)
 
 	log.Info("Got Configuration", zap.Any("currency", currencyConf), zap.Any("routine", routineConf), zap.Any("rounding", roundingConf))
 
