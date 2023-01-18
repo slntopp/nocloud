@@ -17,6 +17,11 @@ package billing
 
 import (
 	"context"
+	epb "github.com/slntopp/nocloud-proto/events"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/types/known/structpb"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -29,6 +34,22 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+var (
+	eventsClient epb.EventsServiceClient
+)
+
+func init() {
+	viper.AutomaticEnv()
+	viper.SetDefault("EVENTS_HOST", "eventbus:8000")
+	eventsHost := viper.GetString("EVENTS_HOST")
+
+	eventsConn, err := grpc.Dial(eventsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	eventsClient = epb.NewEventsServiceClient(eventsConn)
+}
 
 func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetTransactionsRequest) (*pb.Transactions, error) {
 	log := s.log.Named("GetTransactions")
@@ -103,6 +124,16 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		log.Error("Failed to create transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
 	}
+
+	eventsClient.Publish(ctx, &epb.Event{
+		Type: "email",
+		Uuid: r.Transaction.GetUuid(),
+		Data: map[string]*structpb.Value{
+			"offset": structpb.NewStringValue("total"),
+			"data":   structpb.NewNumberValue(r.Transaction.Total),
+			"test":   structpb.NewStringValue("string_value"),
+		},
+	})
 
 	if r.Transaction.Priority == pb.Priority_URGENT {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
