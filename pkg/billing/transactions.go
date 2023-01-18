@@ -127,7 +127,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 
 	eventsClient.Publish(ctx, &epb.Event{
 		Type: "email",
-		Uuid: r.Transaction.GetUuid(),
+		Uuid: r.Transaction.GetAccount(),
 		Data: map[string]*structpb.Value{
 			"offset": structpb.NewStringValue("total"),
 			"data":   structpb.NewNumberValue(r.Transaction.Total),
