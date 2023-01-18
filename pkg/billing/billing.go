@@ -51,6 +51,7 @@ type BillingServiceServer struct {
 
 	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
+	sus  *healthpb.RoutineStatus
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingServiceServer {
@@ -70,6 +71,13 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 			},
 		}, proc: &healthpb.RoutineStatus{
 			Routine: "Process Transactions",
+			Status: &healthpb.ServingStatus{
+				Service: "Billing Machine",
+				Status:  healthpb.Status_STOPPED,
+			},
+		},
+		sus: &healthpb.RoutineStatus{
+			Routine: "Suspend Monitoring",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
 				Status:  healthpb.Status_STOPPED,

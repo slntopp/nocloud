@@ -47,7 +47,7 @@ func (s *HealthServer) Service(_ context.Context, _ *pb.ProbeRequest) (*pb.Servi
 }
 
 func (s *HealthServer) Routine(_ context.Context, _ *pb.ProbeRequest) (*pb.RoutinesStatus, error) {
-	routines := append(s.srv.GenTransactionsRoutineState(), s.rec.ConsumerStatus)
+	routines := append(s.srv.GenTransactionsRoutineState(), s.rec.ConsumerStatus, s.srv.SuspendAccountsRoutineState())
 	return &pb.RoutinesStatus{
 		Routines: routines,
 	}, nil

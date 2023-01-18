@@ -17,7 +17,10 @@ package billing
 
 import (
 	"context"
+	"fmt"
 	"time"
+
+	sc "github.com/slntopp/nocloud/pkg/settings/client"
 
 	hpb "github.com/slntopp/nocloud-proto/health"
 	regpb "github.com/slntopp/nocloud-proto/registry"
@@ -66,6 +69,7 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 	log.Info("Starting Generating Transactions Sub-Routine", zap.Time("tick", tick))
 	s.gen.Status.Status = hpb.Status_RUNNING
 	s.gen.Status.Error = nil
+
 	_, err := s.db.Query(ctx, generateTransactions, map[string]interface{}{
 		"@transactions": schema.TRANSACTIONS_COL,
 		"@instances":    schema.INSTANCES_COL,
@@ -89,6 +93,7 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 	log.Info("Starting Processing Transactions Sub-Routine", zap.Time("tick", tick))
 	s.proc.Status.Status = hpb.Status_RUNNING
 	s.gen.Status.Error = nil
+
 	_, err = s.db.Query(ctx, processTransactions, map[string]interface{}{
 		"@transactions": schema.TRANSACTIONS_COL,
 		"@accounts":     schema.ACCOUNTS_COL,
@@ -106,19 +111,42 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 	}
 }
 
+func (s *BillingServiceServer) SuspendAccountsRoutineState() *hpb.RoutineStatus {
+	return s.sus
+}
+
 func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 	log := s.log.Named("AccountSuspendRoutine")
+
+start:
 	suspConf := MakeSuspendConf(ctx, log)
 	routineConf := MakeRoutineConf(ctx, log)
+
+	upd := make(chan bool, 1)
+	go sc.Subscribe([]string{monFreqKey}, upd)
+
 	log.Info("Got Configuration", zap.Any("suspend", suspConf), zap.Any("routine", routineConf))
 
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
+	tick := time.Now()
+
 	for {
+		s.sus.Status.Status = hpb.Status_RUNNING
+		s.sus.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
+		s.sus.Status.Error = nil
+
 		cursor, err := s.db.Query(ctx, accToSuspend, map[string]interface{}{
 			"conf": suspConf,
 		})
+
 		if err != nil {
 			log.Error("Error Quering Accounts to Suspend", zap.Error(err))
+			s.sus.Status.Status = hpb.Status_HASERRS
+			err_str := fmt.Sprintf("Error Quering Accounts to Suspend: %s", err.Error())
+			s.sus.Status.Error = &err_str
+
+			time.Sleep(time.Second)
+			continue
 		}
 
 		for cursor.HasMore() {
@@ -139,6 +167,12 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 		})
 		if err != nil {
 			log.Error("Error Quering Accounts to Unsuspend", zap.Error(err))
+			s.sus.Status.Status = hpb.Status_HASERRS
+			err_str := fmt.Sprintf("Error Quering Accounts to Unsuspend: %s", err.Error())
+			s.sus.Status.Error = &err_str
+
+			time.Sleep(time.Second)
+			continue
 		}
 
 		for cursor2.HasMore() {
@@ -153,7 +187,14 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 				log.Error("Error Unsuspending Account", zap.Error(err))
 			}
 		}
-		<-ticker.C
+
+		select {
+		case tick = <-ticker.C:
+			continue
+		case <-upd:
+			log.Info("New Configuration Received, restarting Routine")
+			goto start
+		}
 	}
 
 }
@@ -161,9 +202,15 @@ func (s *BillingServiceServer) SuspendAccountsRoutine(ctx context.Context) {
 func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 	log := s.log.Named("GenerateTransactionsRoutine")
 
+start:
+
 	routineConf := MakeRoutineConf(ctx, log)
 	roundingConf := MakeRoundingConf(ctx, log)
 	currencyConf := MakeCurrencyConf(ctx, log)
+
+	upd := make(chan bool, 1)
+	go sc.Subscribe([]string{monFreqKey, currencyKey}, upd)
+
 	log.Info("Got Configuration", zap.Any("currency", currencyConf), zap.Any("routine", routineConf), zap.Any("rounding", roundingConf))
 
 	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
@@ -171,9 +218,15 @@ func (s *BillingServiceServer) GenTransactionsRoutine(ctx context.Context) {
 	for {
 		log.Info("Entering new Iteration", zap.Time("ts", tick))
 		s.GenTransactions(ctx, log, tick, currencyConf, roundingConf)
-		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
 
-		tick = <-ticker.C
+		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
+		select {
+		case tick = <-ticker.C:
+			continue
+		case <-upd:
+			log.Info("New Configuration Received, restarting Routine")
+			goto start
+		}
 	}
 }
 

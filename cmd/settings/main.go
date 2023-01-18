@@ -16,6 +16,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 
@@ -39,6 +40,8 @@ var (
 
 	redisHost   string
 	SIGNING_KEY []byte
+
+	rdbNotifyConf string
 )
 
 func init() {
@@ -49,9 +52,13 @@ func init() {
 	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
+	viper.SetDefault("REDIS_NOTIFY_KEYSPACE_EVENTS", "Kshg")
+
 	port = viper.GetString("PORT")
 	redisHost = viper.GetString("REDIS_HOST")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
+
+	rdbNotifyConf = viper.GetString("REDIS_NOTIFY_KEYSPACE_EVENTS")
 }
 
 func main() {
@@ -65,6 +72,9 @@ func main() {
 		DB:   0, // use default DB
 	})
 	log.Info("RedisDB connection established")
+
+	log.Info("Configuring RedisDB", zap.String("notify-keyspace-events", rdbNotifyConf))
+	rdb.ConfigSet(context.Background(), "notify-keyspace-events", rdbNotifyConf)
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {

@@ -50,19 +50,22 @@ func NewSettingsServer(log *zap.Logger, rdb *redis.Client) *SettingsServiceServe
 }
 
 func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (res *structpb.Struct, err error) {
+	log := s.log.Named("Get")
+	log.Debug("Request received", zap.Strings("keys", req.GetKeys()))
+
 	result := make(map[string]interface{})
 
 	for _, key := range req.GetKeys() {
 		dbKey := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(key))
-		s.log.Debug("Reading hash", zap.String("key", dbKey))
+		log.Debug("Reading hash", zap.String("key", dbKey))
 		r := s.rdb.HGet(ctx, dbKey, "value")
 		result[key], err = r.Result()
-		s.log.Debug("Result", zap.Any("value", result[key]), zap.Error(err))
+		log.Debug("Result", zap.Any("value", result[key]), zap.Error(err))
 	}
 
 	res, err = structpb.NewStruct(result)
 	if err != nil {
-		s.log.Error("Error serializing map to Struct", zap.Error(err))
+		log.Error("Error serializing map to Struct", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error serializing map to Struct")
 	}
 	return res, nil
@@ -126,4 +129,47 @@ func (s *SettingsServiceServer) Delete(ctx context.Context, req *pb.DeleteReques
 	}
 
 	return &pb.DeleteResponse{Key: req.GetKey()}, nil
+}
+
+func (s *SettingsServiceServer) Sub(req *pb.GetRequest, srv pb.SettingsService_SubServer) error {
+	log := s.log.Named("Sub")
+	log.Debug("Request received", zap.Strings("keys", req.GetKeys()))
+
+	keys := make([]string, len(req.GetKeys()))
+
+	tmpl := fmt.Sprintf("__keyspace@%d__:%s:", s.rdb.Options().DB, KEYS_PREFIX) + "%s"
+
+	for i, key := range req.GetKeys() {
+		keys[i] = fmt.Sprintf(tmpl, strcase.LowerCamelCase(key))
+	}
+
+	log.Debug("Subscribing to", zap.Strings("keys", keys))
+	r := s.rdb.Subscribe(srv.Context(), keys...)
+	defer r.Close()
+
+	ch := r.Channel()
+
+	for msg := range ch {
+		log.Info("Message Received", zap.String("channel", msg.Channel), zap.String("payload", msg.Payload))
+
+		var key string
+		_, err := fmt.Sscanf(msg.Channel, tmpl, &key)
+		if err != nil {
+			log.Warn("Couldn't Sscanf setting Key", zap.Error(err))
+			continue
+		}
+
+		key = strcase.KebabCase(key)
+
+		err = srv.Send(&pb.KeyEvent{
+			Key: key, Event: msg.Payload,
+		})
+		if err != nil {
+			log.Warn("Couldn't send Event, closing stream", zap.Error(err))
+			return nil
+		}
+	}
+
+	log.Debug("Stream closed")
+	return nil
 }
