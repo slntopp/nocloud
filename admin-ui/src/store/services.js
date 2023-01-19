@@ -5,6 +5,7 @@ export default {
   state: {
     services: [],
     service: [],
+    instances: [],
     loading: false,
     loadingItem: false,
   },
@@ -14,6 +15,9 @@ export default {
     },
     one(state) {
       return state.service;
+    },
+    getInstances(state) {
+      return state.instances;
     },
     isLoading(state) {
       return state.loading;
@@ -47,6 +51,16 @@ export default {
         state.service.push(service);
       }
     },
+    setInstances(state, services) {
+      state.instances = [];
+      services.forEach(({ instancesGroups, uuid }) => {
+        instancesGroups.forEach(({ instances, sp }) => {
+          instances.forEach((inst) => {
+            state.instances.push({ ...inst, service: uuid, sp });
+          })
+        })
+      })
+    },
     updateService(state, service) {
       if (!state.services.length) state.services.push(service);
       state.services = state.services.map((serv) =>
@@ -73,13 +87,13 @@ export default {
     fetch({ commit }) {
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
-        api.services
-          .list()
+        api.services.list()
           .then((response) => {
             const servicesWithoutDel = response.pool.filter(
               (s) => s.status !== "DEL"
             );
             commit("setServices", servicesWithoutDel);
+            commit("setInstances", servicesWithoutDel);
             resolve(response);
           })
           .catch((error) => {
