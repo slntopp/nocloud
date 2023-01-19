@@ -9,7 +9,7 @@
 
     <v-form v-model="isValid" ref="form">
       <v-row>
-        <v-col lg="6" cols="12">
+        <v-col :cols="(viewport > 1600) ? 6 : 12">
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Price model type</v-subheader>
@@ -74,9 +74,12 @@
               <v-switch style="width: fit-content" v-model="plan.public" />
             </v-col>
           </v-row>
+        </v-col>
 
-          <v-divider />
+        <v-col />
+        <v-divider />
 
+        <v-col :cols="(viewport > 2200) ? 6 : 12">
           <component
             v-if="!['ovh', 'goget'].includes(plan.type)"
             :is="template"
@@ -108,19 +111,20 @@
             Create
           </v-btn>
         </v-col>
-        <v-col cols="6" v-if="!isEdit">
+        <v-col cols="6">
           <div class="d-flex align-start justify-center">
-            <v-switch
-              class="mr-2"
-              style="margin-top: 5px; padding-top: 5px"
-              v-model="isJson"
-              :label="!isJson ? 'YAML' : 'JSON'"
-            />
             <v-btn color="background-light" class="mr-2" @click="downloadFile">
               Download {{ isJson ? "JSON" : "YAML" }}
             </v-btn>
+            <v-switch
+              class="mr-2"
+              style="margin-top: 5px; padding-top: 0"
+              v-model="isJson"
+              :label="!isJson ? 'YAML' : 'JSON'"
+            />
             <v-file-input
-              class="mr-2 file-input"
+              class="file-input"
+              v-if="!isEdit"
               :label="`upload ${isJson ? 'json' : 'yaml'} price model...`"
               :accept="isJson ? '.json' : '.yaml'"
               @change="onJsonInputChange"
@@ -422,7 +426,7 @@ export default {
       .catch((err) => {
         const message = err.response?.data?.message ?? err.message ?? err;
 
-        this.showSnackbarError({ message })
+        this.showSnackbarError({ message });
         console.error(err);
       });
 
@@ -454,6 +458,9 @@ export default {
     },
     plans() {
       return this.$store.getters['plans/all'];
+    },
+    viewport() {
+      return document.documentElement.clientWidth;
     }
   },
   watch: {
@@ -486,5 +493,12 @@ export default {
 
 .mw-20 {
   max-width: 150px;
+}
+
+.file-input {
+  max-width: 200px;
+  min-width: 200px;
+  margin-top: 0;
+  padding-top: 0;
 }
 </style>

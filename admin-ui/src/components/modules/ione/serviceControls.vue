@@ -1,21 +1,17 @@
 <template>
   <div>
-    <v-row>
-      <v-col>
-        <v-btn
-          class="mr-2"
-          v-for="btn in vmControlBtns"
-          :key="btn.action"
-          :disabled="actionLoading && actualAction != btn.action"
-          :loading="actionLoading && actualAction == btn.action"
-          @click="sendVmAction(btn.action)"
-        >
-          {{ btn.title || btn.action }}
-        </v-btn>
-        <v-btn @click="openVnc" class="mr-2"> console </v-btn>
-        <v-btn :loading="actionLoading" @click="deleteInstance"> Delete </v-btn>
-      </v-col>
-    </v-row>
+    <v-btn
+      class="mr-2"
+      v-for="btn in actions"
+      :key="btn.action"
+      :disabled="btn.disabled"
+      :loading="isLoading"
+      @click="sendVmAction(btn.action)"
+    >
+      {{ btn.title || btn.action }}
+    </v-btn>
+    <v-btn :loading="isLoading" @click="deleteInstance"> Delete </v-btn>
+
     <v-snackbar
       v-model="snackbar.visibility"
       :timeout="snackbar.timeout"
@@ -44,40 +40,28 @@ import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 
 export default {
-  name: "service-state",
+  name: "instance-actions",
   mixins: [snackbar],
   props: {
-    service: { type: Object, required: true },
-    instance_uuid: { type: String, required: true },
-    "chip-color": { type: String, required: true },
+    uuid: { type: String, required: true },
+    actions: { type: Array, default: () => [] }
   },
-  data: () => ({
-    actualAction: "",
-    actionLoading: false,
-    vmControlBtns: [
-      {
-        action: "poweroff",
-        title: "poweroff", //not reqired, use 'action' for a name if not found
-      },
-      {
-        action: "resume",
-      },
-      {
-        action: "suspend",
-      },
-      {
-        action: "reboot",
-      },
-    ],
-  }),
+  data: () => ({ isLoading: false }),
   methods: {
     sendVmAction(action) {
-      this.actualAction = action;
-      this.actionLoading = true;
-      api.instances
-        .action({ uuid: this.instance_uuid, action })
+      if (action === "vnc") {
+        this.openVnc();
+        return;
+      }
+      if (action === "dns") {
+        this.openDns();
+        return;
+      }
+
+      this.isLoading = true;
+      api.instances.action({ uuid: this.uuid, action })
         .then(() => {
-          this.showSnackbarSuccess({ message: `Done!` });
+          this.showSnackbarSuccess({ message: 'Done!' });
         })
         .catch((err) => {
           const opts = {
@@ -85,45 +69,22 @@ export default {
           };
           this.showSnackbarError(opts);
         })
-        .finally(() => {
-          this.actualAction = "";
-          this.actionLoading = false;
-        });
+        .finally(() => { this.isLoading = false });
     },
     openVnc() {
-      this.$router.push({
-        name: "Vnc",
-        params: { instanceId: this.instance_uuid },
-      });
+      this.$router.push({ name: "Vnc", params: { instanceId: this.uuid } });
+    },
+    openDns() {
+      this.$router.push({ name: "InstanceDns", params: { instanceId: this.instance_uuid } });
     },
     deleteInstance() {
-      const newService = JSON.parse(JSON.stringify(this.service));
-
-      newService.instancesGroups.forEach((group, i, groups) => {
-        group.instances.forEach(({ uuid }, j) => {
-          if (uuid === this.instance_uuid) {
-            groups[i].instances.splice(j, 1);
-          }
-        });
-      });
-
-      this.actualAction = "delete";
-      this.actionLoading = true;
-      api.services
-        ._update(newService)
+      this.isLoading = true;
+      api.delete(`/instances/${this.uuid}`)
         .then(() => {
-          this.$emit("closePanel");
-          this.service.instancesGroups.forEach((group, i, groups) => {
-            group.instances.forEach(({ uuid }, j) => {
-              if (uuid === this.instance_uuid) {
-                groups[i].instances.splice(j, 1);
-              }
-            });
-            groups[i].resources.ips_public = groups[i].instances.length;
-          });
+          this.showSnackbarSuccess({ message: 'Done!' })
 
           setTimeout(() => {
-            this.showSnackbarSuccess({ message: `Done!` });
+            this.$router.push({ name: "Instances" });
           }, 100);
         })
         .catch((err) => {
@@ -131,10 +92,7 @@ export default {
             message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
           });
         })
-        .finally(() => {
-          this.actualAction = "";
-          this.actionLoading = false;
-        });
+        .finally(() => { this.isLoading = false });
     },
   },
 };

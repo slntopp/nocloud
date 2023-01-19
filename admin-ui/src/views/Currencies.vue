@@ -41,10 +41,19 @@
     </v-dialog>
 
     <confirm-dialog @confirm="deleteSelectedCurrencies">
-      <v-btn color="background-light" :disabled="selected.length < 1">
+      <v-btn class="mr-2" color="background-light" :disabled="selected.length < 1">
         Delete
       </v-btn>
     </confirm-dialog>
+
+    <v-select
+      dense
+      label="Default currency"
+      class="d-inline-block"
+      style="width: 200px"
+      v-model="defaultCurrency"
+      :items="defaultCurrenciesList"
+    />
 
     <nocloud-table
       class="mt-4"
@@ -121,6 +130,7 @@ export default {
     },
 
     currency: { from: "", to: "", rate: "1" },
+    defaultCurrency: "",
     isLoading: false,
     isCreateLoading: false,
     fetchError: "",
@@ -239,6 +249,9 @@ export default {
       return this.currenciesList.filter((el) =>
         el !== this.currency.from && !currencies.includes(el)
       );
+    },
+    defaultCurrenciesList() {
+      return this.currenciesList.filter((el) => el !== 'NCU');
     }
   }
 }

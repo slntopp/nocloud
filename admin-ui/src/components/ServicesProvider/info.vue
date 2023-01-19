@@ -167,6 +167,18 @@
       </component>
     </template>
 
+    <div class="d-flex align-start">
+      <v-btn color="background-light" @click="downloadFile">
+        Download {{ isJson ? "JSON" : "YAML" }}
+      </v-btn>
+      <v-switch
+        class="mr-2"
+        style="margin-top: 5px; padding-top: 0"
+        v-model="isJson"
+        :label="!isJson ? 'YAML' : 'JSON'"
+      />
+    </div>
+
     <v-snackbar
       v-model="snackbar.visibility"
       :timeout="snackbar.timeout"
@@ -199,6 +211,7 @@ import extentionsMap from "@/components/extentions/map.js";
 import nocloudTable from "@/components/table.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import { format } from "date-fns";
+import { downloadJSONFile, downloadYAMLFile } from "@/functions.js";
 
 export default {
   name: "services-provider-info",
@@ -213,6 +226,7 @@ export default {
 
     provider: {},
     editing: false,
+    isJson: true,
     isLoading: false,
     isTestLoading: false,
     isTestSuccess: false,
@@ -357,6 +371,16 @@ export default {
         .finally(() => {
           this.isDeleteLoading = false;
         });
+    },
+    downloadFile() {
+      const name = this.template.title
+        ? this.template.title.replaceAll(" ", "_")
+        : "unknown_sp";
+      if (this.isJson) {
+        downloadJSONFile(this.template, name);
+      } else {
+        downloadYAMLFile(this.template, name);
+      }
     },
   },
   mounted() {

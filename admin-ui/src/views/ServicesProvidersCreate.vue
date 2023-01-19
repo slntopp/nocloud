@@ -149,17 +149,17 @@
         </v-col>
         <v-col cols="6">
           <div class="d-flex align-start justify-center">
+            <v-btn color="background-light" class="mr-2" @click="downloadFile">
+              Download {{ isJson ? "JSON" : "YAML" }}
+            </v-btn>
             <v-switch
               class="mr-2"
               style="margin-top: 5px; padding-top: 5px"
               v-model="isJson"
               :label="!isJson ? 'YAML' : 'JSON'"
             />
-            <v-btn color="background-light" class="mr-2" @click="downloadFile">
-              Download {{ isJson ? "JSON" : "YAML" }}
-            </v-btn>
             <v-file-input
-              class="mr-2 file-input"
+              class="file-input"
               :label="`upload ${isJson ? 'json' : 'yaml'} sp...`"
               :accept="isJson ? '.json' : '.yaml'"
               @change="onJsonInputChange"

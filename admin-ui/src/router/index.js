@@ -122,6 +122,30 @@ const routes = [
     },
   },
   {
+    path: "/instances",
+    name: "Instances",
+    component: () => import("../views/Instances.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/instances/create",
+    name: "Instance create",
+    component: () => import("../views/InstanceCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/instances/:instanceId",
+    name: "Instance",
+    component: () => import("../views/InstancePage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/instances/:instanceId/vnc",
     component: () => import("../views/Vnc.vue"),
     name: "Vnc",

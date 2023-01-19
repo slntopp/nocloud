@@ -1,8 +1,8 @@
 <template>
   <v-textarea
-    label="JSON"
     v-model="tree"
     :rows="rows"
+    :label="label"
     :readonly="readonly"
     :disabled="disabled"
     :rules="typeRule"
@@ -15,6 +15,7 @@
 export default {
   props: {
     json: { type: Object, required: true },
+    label: { type: String, default: "JSON" },
     disabled: { type: Boolean },
     readonly: { type: Boolean }
   },
@@ -67,7 +68,7 @@ export default {
             quotes++
           }
         })
-      
+
       return quotes
     },
     formatting ({ target, key }) {

@@ -1,25 +1,36 @@
 <template>
-  <instance-card
-    :chipColor="chipColor"
-    :type="group.type"
-    :editing="editing"
-    :instance="instance"
-    :service="service"
-  ></instance-card>
+  <div>
+    <v-row align="center">
+      <v-col v-for="(item, key) in template.resources" :key="key">
+        <v-text-field
+          readonly
+          style="display: inline-block; width: 200px"
+          :label="dictionary[key] ?? key.replace('_', ' ')"
+          :value="item"
+        />
+      </v-col>
+    </v-row>
+    <v-row align="center">
+      <v-col v-for="(item, key) in template.config" :key="key">
+        <v-text-field
+          readonly
+          style="display: inline-block; width: 200px"
+          :label="dictionary[key] ?? key.replace('_', ' ')"
+          :value="item"
+        />
+      </v-col>
+    </v-row>
+  </div>
 </template>
 
 <script>
-import instanceCard from "@/components/modules/ione/instanceCard.vue";
-
 export default {
   name: "instance-card",
-  components: { instanceCard },
   props: {
-    instance: { type: Object },
-    service: { type: Object },
-    editing: { type: Boolean },
-    type: { type: String },
-    chipColor: { type: String },
+    template: { type: Object, required: true },
   },
-};
+  data: () => ({
+    dictionary: {}
+  }),
+}
 </script>

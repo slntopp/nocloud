@@ -92,15 +92,23 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Instances' }">
+          <v-list-item-icon>
+            <v-icon>mdi-server</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Instances") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-list-item v-bind="listItemBind" :to="{ name: 'ServicesProviders' }">
           <v-list-item-icon>
             <v-icon>mdi-database-marker</v-icon>
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{
-              navTitle("Services Providers")
-            }}</v-list-item-title>
+            <v-list-item-title>{{ navTitle("Services Providers") }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
