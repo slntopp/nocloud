@@ -75,13 +75,20 @@ set_default:
 
 func Subscribe(keys []string, upd chan bool) {
 	c := *client
+	have_failed := false
 
 init_stream:
 	stream, err := c.Sub(ctx, &pb.GetRequest{Keys: keys})
 	if err != nil {
 		log.Warn("Couldn't subscribe", zap.Strings("keys", keys), zap.Error(err))
+		have_failed = true
 		time.Sleep(time.Second)
 		goto init_stream
+	}
+
+	if have_failed {
+		upd <- true
+		return
 	}
 
 	for {
