@@ -73,11 +73,13 @@ func (ctrl *RecordsController) CheckOverlapping(ctx context.Context, r *pb.Recor
 }
 
 func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) driver.DocumentID {
-	ok := ctrl.CheckOverlapping(ctx, r)
-	ctrl.log.Debug("Pre-flight checks", zap.Bool("overlapping", ok))
-	if !ok {
-		ctrl.log.Warn("Skipping creating transactions: overlapping", zap.Any("record", r))
-		return ""
+	if r.Priority != pb.Priority_ADDITIONAL {
+		ok := ctrl.CheckOverlapping(ctx, r)
+		ctrl.log.Debug("Pre-flight checks", zap.Bool("overlapping", ok))
+		if !ok {
+			ctrl.log.Warn("Skipping creating transactions: overlapping", zap.Any("record", r))
+			return ""
+		}
 	}
 
 	meta, err := ctrl.col.CreateDocument(ctx, r)
