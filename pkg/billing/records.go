@@ -141,7 +141,7 @@ init:
 		if err = msg.Ack(false); err != nil {
 			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
 		}
-		if record.Priority == pb.Priority_URGENT {
+		if record.Priority != pb.Priority_NORMAL {
 			tick := time.Now()
 			_, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
 				"@transactions": schema.TRANSACTIONS_COL,
@@ -150,7 +150,7 @@ init:
 				"@records":      schema.RECORDS_COL,
 				"@accounts":     schema.ACCOUNTS_COL,
 				"permissions":   schema.PERMISSIONS_GRAPH.Name,
-				"priority":      pb.Priority_URGENT,
+				"priority":      record.Priority,
 				"now":           tick.Unix(),
 				"graph":         schema.BILLING_GRAPH.Name,
 				"currencies":    schema.CUR_COL,
@@ -163,7 +163,7 @@ init:
 				"@transactions": schema.TRANSACTIONS_COL,
 				"@accounts":     schema.ACCOUNTS_COL,
 				"accounts":      schema.ACCOUNTS_COL,
-				"priority":      pb.Priority_URGENT,
+				"priority":      record.Priority,
 				"now":           tick.Unix(),
 				"graph":         schema.BILLING_GRAPH.Name,
 				"currencies":    schema.CUR_COL,
