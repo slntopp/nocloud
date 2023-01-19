@@ -141,7 +141,7 @@ init:
 		if err = msg.Ack(false); err != nil {
 			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
 		}
-		if record.Priority == pb.Priority_URGENT {
+		if record.Priority != pb.Priority_NORMAL {
 			tick := time.Now()
 			_, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
 				"@transactions": schema.TRANSACTIONS_COL,
