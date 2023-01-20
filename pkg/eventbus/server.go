@@ -2,10 +2,13 @@ package eventbus
 
 import (
 	"context"
+	"github.com/spf13/viper"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	"github.com/google/uuid"
 	"github.com/rabbitmq/amqp091-go"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -16,11 +19,22 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var (
+	RabbitMQConn string
+)
+
+func init() {
+	viper.AutomaticEnv()
+	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
+	RabbitMQConn = viper.GetString("RABBITMQ_CONN")
+}
+
 type EventBusServer struct {
 	pb.UnimplementedEventsServiceServer
-	log *zap.Logger
-	bus *EventBus
-	db  driver.Database
+	log  *zap.Logger
+	bus  *EventBus
+	db   driver.Database
+	rbmq *amqp.Connection
 
 	ctrl    graph.AccountsController
 	ns_ctrl graph.NamespacesController
@@ -38,15 +52,43 @@ func NewServer(logger *zap.Logger, conn *amqp091.Connection, db driver.Database)
 	}
 
 	return &EventBusServer{
-		log: log,
-		bus: bus,
-		db:  db,
+		log:  log,
+		bus:  bus,
+		db:   db,
+		rbmq: conn,
 		ctrl: graph.NewAccountsController(
 			log.Named("AccountsController"), db,
 		),
 		ns_ctrl: graph.NewNamespacesController(
 			log.Named("NamespacesController"), db,
 		),
+	}
+}
+
+func (s *EventBusServer) ListenBusQueue(ctx context.Context) {
+	log := s.log.Named("Bus queue listener")
+init:
+	ch, err := s.rbmq.Channel()
+	if err != nil {
+		log.Error("Failed to open a channel", zap.Error(err))
+		time.Sleep(time.Second)
+		goto init
+	}
+
+	queue, _ := ch.QueueDeclare(
+		"events",
+		true, false, false, true, nil,
+	)
+
+	events, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	if err != nil {
+		log.Error("Failed to register a consumer", zap.Error(err))
+		time.Sleep(time.Second)
+		goto init
+	}
+
+	for _ = range events {
+
 	}
 }
 
