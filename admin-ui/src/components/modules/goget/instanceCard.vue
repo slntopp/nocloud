@@ -1,5 +1,7 @@
 <template>
   <div>
+    <h3 v-if="dense">Resources:</h3>
+    <v-card-title v-else class="px-0">Resources:</v-card-title>
     <v-row align="center">
       <v-col v-for="(item, key) in resources" :key="key">
         <v-text-field
@@ -11,14 +13,16 @@
       </v-col>
     </v-row>
 
-    <v-card-title class="px-0 pb-0">CSR:</v-card-title>
+    <h3 v-if="dense">CSR:</h3>
+    <v-card-title v-else class="px-0 pb-0">CSR:</v-card-title>
     <v-row align="center">
       <v-col lg="6" cols="12">
         <v-textarea readonly :value="template.resources.csr" />
       </v-col>
     </v-row>
 
-    <v-card-title class="px-0">User:</v-card-title>
+    <h3 v-if="dense">User:</h3>
+    <v-card-title v-else class="px-0">User:</v-card-title>
     <v-row align="center">
       <v-col v-for="(item, key) in user" :key="key">
         <v-text-field
@@ -37,6 +41,7 @@ export default {
   name: "instance-card",
   props: {
     template: { type: Object, required: true },
+    dense: { type: Boolean },
   },
   data: () => ({
     dictionary: {

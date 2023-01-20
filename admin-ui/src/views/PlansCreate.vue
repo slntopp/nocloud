@@ -21,6 +21,12 @@
                 :items="types"
                 :rules="generalRule"
               />
+              <v-text-field
+                label="Type name"
+                v-if="plan.type === 'custom'"
+                v-model="customTitle"
+                :rules="generalRule"
+              />
             </v-col>
           </v-row>
           <v-row align="center">
@@ -95,7 +101,6 @@
         <v-col cols="6">
           <v-btn
             class="mr-2"
-            color="background-light"
             v-if="isEdit"
             @click="isDialogVisible = true"
           >
@@ -104,7 +109,6 @@
           <v-btn
             v-else
             class="mr-2"
-            color="background-light"
             :loading="isLoading"
             @click="tryToSend('create')"
           >
@@ -113,7 +117,7 @@
         </v-col>
         <v-col cols="6">
           <div class="d-flex align-start justify-center">
-            <v-btn color="background-light" class="mr-2" @click="downloadFile">
+            <v-btn class="mr-2" @click="downloadFile">
               Download {{ isJson ? "JSON" : "YAML" }}
             </v-btn>
             <v-switch
@@ -131,24 +135,23 @@
             />
           </div>
         </v-col>
-        <v-col>
-          <v-dialog :max-width="600" v-model="isDialogVisible">
-            <v-card color="background-light">
-              <v-card-title>Do you really want to change your current price model?</v-card-title>
-              <v-card-subtitle>You can also create a new price model based on the current one.</v-card-subtitle>
-              <v-card-actions>
-                <v-btn class="mr-2" :loading="isLoading" @click="tryToSend('create')">
-                  Create
-                </v-btn>
-                <v-btn v-if="item" :loading="isLoading" @click="tryToSend('edit')">
-                  Edit
-                </v-btn>
-              </v-card-actions>
-            </v-card>
-          </v-dialog>
-        </v-col>
       </v-row>
     </v-form>
+
+    <v-dialog :max-width="600" v-model="isDialogVisible">
+      <v-card color="background-light">
+        <v-card-title>Do you really want to change your current price model?</v-card-title>
+        <v-card-subtitle>You can also create a new price model based on the current one.</v-card-subtitle>
+        <v-card-actions>
+          <v-btn class="mr-2" :loading="isLoading" @click="tryToSend('create')">
+            Create
+          </v-btn>
+          <v-btn v-if="item" :loading="isLoading" @click="tryToSend('edit')">
+            Edit
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -196,6 +199,7 @@ export default {
     types: [],
     kinds: ["DYNAMIC", "STATIC"],
     selectedKind: "",
+    customTitle: "",
     plan: {
       title: "",
       type: "custom",
@@ -219,7 +223,9 @@ export default {
       try { value = JSON.parse(value) }
       catch { value }
 
-      const configs = (type === "resource") ? this.plan.resources : Object.values(this.plan.products);
+      const configs = (type === "resource")
+        ? this.plan.resources
+        : Object.values(this.plan.products);
       const product = configs.find((el) => el.id === id);
 
       switch (key) {
@@ -261,12 +267,17 @@ export default {
         return;
       }
       if (action === 'create') delete this.plan.uuid;
+      if (this.plan.type === 'custom') {
+        this.plan.type = this.customTitle;
+      }
 
       function checkName({ title, uuid }, obj, num = 2) {
         const value = obj.find((el) => el.title === title && el.uuid !== uuid);
         const oldTitle = title.split(' ');
 
-        if (oldTitle.length > 1) oldTitle[oldTitle.length - 1] = num;
+        if (oldTitle.length > 1 && num !== 2) {
+          oldTitle[oldTitle.length - 1] = num;
+        }
         else oldTitle.push(num);
 
         const plan = { title: oldTitle.join(' '), uuid }
@@ -351,6 +362,11 @@ export default {
     },
     getItem(item = this.item) {
       if (Object.keys(item).length > 0) {
+        if (!this.types.includes(item.type)) {
+          this.customTitle = item.type;
+          item.type = 'custom';
+        }
+
         this.plan = item;
         this.isVisible = false;
         this.selectedKind = item.kind;

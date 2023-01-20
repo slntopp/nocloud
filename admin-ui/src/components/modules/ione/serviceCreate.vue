@@ -27,6 +27,7 @@
             @change="(newVal) => changeOS(index, newVal)"
             label="template"
             :items="getOsNames"
+            :value="getOsTemplates[instance.config.template_id]?.name"
           >
           </v-select>
         </v-col>
@@ -117,7 +118,7 @@
           <v-select
             label="product"
             v-model="instance.productTitle"
-            v-if="getPlanProducts(index)?.length > 0"
+            v-if="getPlanProducts(index).length > 0"
             :items="getPlanProducts(index)"
             @change="(newVal) => setValue(index + '.product', newVal)"
           />
@@ -231,8 +232,8 @@ export default {
       this.setValue(index + ".config.template_id", +osId);
     },
     getPlanProducts(index){
-      if(!this.instances[index].billing_plan.products){
-        return
+      if(!this.instances[index].billing_plan?.products){
+        return []
       }
       return Object.values(this.instances[index].billing_plan.products).map(p=>p.title)
     }
@@ -250,17 +251,13 @@ export default {
         (el) => el.uuid === data.sp
       )[0];
 
-      if (!sp) {
-        return null;
-      }
+      if (!sp) return {};
 
       return sp.publicData.templates;
     },
 
     getOsNames() {
-      if (!this.getOsTemplates) {
-        return null;
-      }
+      if (!this.getOsTemplates) return [];
 
       return Object.values(this.getOsTemplates).map((os) => os.name);
     },
@@ -270,6 +267,15 @@ export default {
 
     if (!data.body.instances) {
       data.body.instances = [];
+    } else {
+      data.body.instances.forEach((inst, i, arr) => {
+        if (inst.billingPlan) {
+          arr[i].billing_plan = inst.billingPlan;
+          delete arr[i].billingPlan;
+        }
+        if (inst.product) arr[i].productTitle = inst.product;
+        arr[i].plan = inst.billing_plan.uuid;
+      });
     }
 
     this.change(data);

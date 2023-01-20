@@ -1,7 +1,7 @@
 <template>
 	<div class="service-create-view pa-4">
 		<div class="page__title">
-			Create service
+			{{ ($route.params.serviceId) ? 'Edit' : 'Create' }} service
 		</div>
 		<service-create/>
 	</div>

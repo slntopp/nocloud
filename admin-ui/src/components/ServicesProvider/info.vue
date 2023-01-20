@@ -6,19 +6,12 @@
           readonly
           label="template uuid"
           style="display: inline-block; width: 330px"
-          v-if="!editing"
           :value="provider.uuid"
           :append-icon="copyed == 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
           @click:append="addToClipboard(provider.uuid, 'rootUUID')"
         />
-        <v-text-field
-          v-else
-          label="title"
-          style="display: inline-block; width: 330px"
-          v-model="provider.title"
-        />
       </v-col>
-      <v-col v-if="!editing">
+      <v-col>
         <v-text-field
           readonly
           label="template type"
@@ -28,62 +21,22 @@
       </v-col>
       <v-col>
         <v-text-field
-          v-if="!editing"
           readonly
           label="proxy"
           style="display: inline-block; width: 250px"
           :value="provider.proxy?.socket"
         />
-        <v-text-field
-          v-else
-          label="proxy"
-          style="display: inline-block; width: 250px"
-          v-model="provider.proxy.socket"
-        />
       </v-col>
       <v-col>
         <v-switch
+          readonly
           label="public"
           v-model="provider.public"
-          :readonly="!editing"
         />
       </v-col>
     </v-row>
 
     <component :is="spTypes" :template="provider">
-      <!-- Edit -->
-      <v-row justify="end">
-        <v-col col="6" v-if="editing">
-          <v-tooltip bottom :disabled="isTestSuccess">
-            <template v-slot:activator="{ on, attrs }">
-              <div v-bind="attrs" v-on="on" class="d-inline-block">
-                <v-btn
-                  color="background-light"
-                  class="mr-2"
-                  :loading="isLoading"
-                  :disabled="!isTestSuccess"
-                  @click="editServiceProvider"
-                >
-                  Edit
-                </v-btn>
-              </div>
-            </template>
-            <span>Test must be passed before creation.</span>
-          </v-tooltip>
-
-          <v-btn
-            color="background-light"
-            class="mr-2"
-            :loading="isTestLoading"
-            @click="testConfig"
-          >
-            Test
-          </v-btn>
-        </v-col>
-        <v-col>
-          <v-switch v-model="editing" label="editing" />
-        </v-col>
-      </v-row>
       <!-- Date -->
       <v-row>
         <v-col cols="12" lg="6" class="mt-5 mb-5">
@@ -167,17 +120,26 @@
       </component>
     </template>
 
-    <div class="d-flex align-start">
-      <v-btn color="background-light" @click="downloadFile">
-        Download {{ isJson ? "JSON" : "YAML" }}
-      </v-btn>
-      <v-switch
-        class="mr-2"
-        style="margin-top: 5px; padding-top: 0"
-        v-model="isJson"
-        :label="!isJson ? 'YAML' : 'JSON'"
-      />
-    </div>
+    <v-row>
+      <v-col>
+        <v-btn :to="{ name: 'ServicesProvider edit', params: { uuid: provider.uuid } }">
+          Edit
+        </v-btn>
+      </v-col>
+      <v-col>
+        <div class="d-flex align-start">
+          <v-btn class="mr-2" @click="downloadFile">
+            Download {{ isJson ? "JSON" : "YAML" }}
+          </v-btn>
+          <v-switch
+            class="mr-2"
+            style="margin-top: 5px; padding-top: 0"
+            v-model="isJson"
+            :label="!isJson ? 'YAML' : 'JSON'"
+          />
+        </div>
+      </v-col>
+    </v-row>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -225,7 +187,6 @@ export default {
     extentionsMap,
 
     provider: {},
-    editing: false,
     isJson: true,
     isLoading: false,
     isTestLoading: false,

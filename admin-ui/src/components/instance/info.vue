@@ -2,7 +2,7 @@
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-row>
       <v-col>
-        <instance-actions :uuid="template.uuid" :actions="vmControlBtns" />
+        <instance-actions :template="template" />
       </v-col>
     </v-row>
     <v-row align="center">
@@ -42,7 +42,7 @@
       </v-col>
     </v-row>
 
-    <component :is="templates[template.billingPlan?.type]" :template="template" />
+    <component :is="templates[template.type] ?? templates.custom" :template="template" />
 
     <v-row class="flex-column mb-5" v-if="template.state">
       <v-col>
@@ -105,6 +105,10 @@
       </v-col>
     </v-row>
 
+    <v-btn :to="{ name: 'Service edit', params: { serviceId: template.service } }">
+      Edit
+    </v-btn>
+
     <v-snackbar
       v-model="snackbar.visibility"
       :timeout="snackbar.timeout"
@@ -133,7 +137,7 @@
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
-import instanceActions from "@/components/modules/ione/serviceControls.vue";
+import instanceActions from "@/components/instance/controls.vue";
 import JsonTextarea from "@/components/JsonTextarea.vue";
 
 export default {
@@ -263,76 +267,5 @@ export default {
       }
     });
   },
-  computed: {
-    vmControlBtns() {
-      const types = {
-        ione: [
-          { action: "poweroff", disabled: this.ioneActions?.poweroff },
-          { action: "resume", disabled: this.ioneActions?.resume },
-          { action: "suspend", disabled: this.ioneActions?.suspend },
-          { action: "reboot", disabled: this.ioneActions?.reboot },
-          {
-            action: "vnc",
-            title: "Console", //not reqired, use 'action' for a name if not found
-            disabled: this.ioneActions?.vnc
-          },
-        ],
-        ovh: [
-          { action: "poweroff", disabled: this.ovhActions?.poweroff },
-          { action: "resume", disabled: this.ovhActions?.resume },
-          { action: "suspend", disabled: this.ovhActions?.suspend },
-          { action: "reboot", disabled: this.ovhActions?.reboot },
-        ],
-        opensrs: [
-          { action: "dns" }
-        ]
-      }
-
-      return types[this.template.billingPlan?.type];
-    },
-    ioneActions() {
-      if (!this.template?.state) return;
-      if (this.template.state.meta.state === 1) return {
-        resume: true, poweroff: true, reboot: true, suspend: true
-      }
-      return {
-        poweroff:
-          this.template.state.meta.state === 5 ||
-          this.template.state.meta.state === 3 &&
-          (this.template.state.meta.lcm_state === 18 ||
-            this.template.state.meta.lcm_state === 20),
-        reboot:
-          this.template.state.meta.state === 5 ||
-          this.template.state.meta.state === 3 &&
-          (this.template.state.meta.lcm_state === 18 ||
-            this.template.state.meta.lcm_state === 20) ||
-          (this.template.state.meta.lcm_state === 0 &&
-            this.template.state.meta.state === 8),
-        resume:
-          this.template.state.meta.state === 5 ||
-          (this.template.state.meta.lcm_state == 18 &&
-            this.template.state.meta.state == 3) ||
-          (this.template.state.meta.lcm_state == 20 &&
-            this.template.state.meta.state == 3),
-        suspend: this.template.state.meta.state === 5,
-        vnc: this.template.state.meta.state === 5
-      };
-    },
-    ovhActions() {
-      if (!this.template?.state) return;
-      if (this.template.state.state === 'PENDING') return {
-        poweroff: true, reboot: true, resume: true, suspend: true
-      }
-      return {
-        poweroff: this.template.state.state !== 'RUNNING' &&
-          this.template.state.state !== 'STOPPED',
-        reboot: this.template.state.meta.state === 'BUILD' ||
-          this.template.state.state === 'STOPPED',
-        resume: this.template.state.state !== 'RUNNING' &&
-          this.template.state.state !== 'STOPPED',
-        suspend: this.template.state.state !== 'SUSPENDED'
-      };
-    }
-  }
 }
 </script>

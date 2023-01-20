@@ -54,9 +54,9 @@ export default {
     setInstances(state, services) {
       state.instances = [];
       services.forEach(({ instancesGroups, uuid }) => {
-        instancesGroups.forEach(({ instances, sp }) => {
+        instancesGroups.forEach(({ instances, sp, type }) => {
           instances.forEach((inst) => {
-            state.instances.push({ ...inst, service: uuid, sp });
+            state.instances.push({ ...inst, service: uuid, sp, type });
           })
         })
       })

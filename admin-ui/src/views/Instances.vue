@@ -49,17 +49,25 @@
 
       <template v-slot:[`item.state.meta`]="{ item }">
         <template v-if="!item.state?.meta.networking?.public">-</template>
-        <v-tooltip bottom v-else color="secondary" nudge-top="35">
+        <v-menu bottom
+          open-on-hover
+          v-else
+          nudge-top="20"
+          nudge-left="15"
+          transition="slide-y-transition"
+        >
           <template v-slot:activator="{ on, attrs }">
             <span v-bind="attrs" v-on="on">
               {{ item.state.meta.networking.public[0] }}
             </span>
           </template>
 
-          <div v-for="net of item.state.meta.networking.public" :key="net">
-            {{ net }}
-          </div>
-        </v-tooltip>
+          <v-list dense>
+            <v-list-item v-for="net of item.state.meta.networking.public" :key="net">
+              <v-list-item-title>{{ net }}</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
       </template>
     </nocloud-table>
 
@@ -100,6 +108,7 @@ export default {
   data: () => ({
     headers: [
       { text: "Title", value: "title" },
+      { text: "Type", value: "type" },
       { text: "Status", value: "state" },
       { text: "UUID", value: "uuid" },
       { text: "Service", value: "service" },

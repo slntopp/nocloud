@@ -1,6 +1,6 @@
 <template>
   <div class="servicesProviders-create pa-4">
-    <div class="page__title">Create service provider</div>
+    <div class="page__title">{{ ($route.params.uuid) ? 'Edit' : 'Create' }} service provider</div>
     <v-container>
       <v-row>
         <v-col lg="6" cols="12">
@@ -14,7 +14,12 @@
                 v-model="provider.type"
                 :items="types"
                 label="Type"
-              ></v-select>
+              />
+              <v-text-field
+                label="Type name"
+                v-if="provider.type === 'custom'"
+                v-model="customTitle"
+              />
             </v-col>
           </v-row>
           <v-row align="center" v-if="provider.type === 'custom'">
@@ -138,18 +143,13 @@
 
       <v-row class="justify-end">
         <v-col cols="6">
-          <v-btn
-            class="mr-2"
-            color="background-light"
-            :loading="isLoading"
-            @click="tryToSend"
-          >
-            create
+          <v-btn class="mr-2" :loading="isLoading" @click="tryToSend">
+            Save
           </v-btn>
         </v-col>
         <v-col cols="6">
           <div class="d-flex align-start justify-center">
-            <v-btn color="background-light" class="mr-2" @click="downloadFile">
+            <v-btn class="mr-2" @click="downloadFile">
               Download {{ isJson ? "JSON" : "YAML" }}
             </v-btn>
             <v-switch
@@ -194,7 +194,6 @@
 
 <script>
 import api from "@/api.js";
-import Vue from "vue";
 import extentionsMap from "@/components/extentions/map.js";
 import snackbar from "@/mixins/snackbar.js";
 
@@ -213,6 +212,7 @@ export default {
     types: [],
     templates: {},
     key: "",
+    customTitle: "",
     provider: {
       type: "custom",
       title: "",
@@ -239,6 +239,7 @@ export default {
     isJson: true,
   }),
   created() {
+    const id = this.$route.params.uuid;
     const types = require.context(
       "@/components/modules/",
       true,
@@ -259,6 +260,14 @@ export default {
     this.providerKey=this.generateComponentId()
 
     this.fetchExtentions();
+    this.$store.dispatch('servicesProviders/fetchById', id)
+      .then((res) => {
+        if (!this.types.includes(res.type)) {
+          this.customTitle = res.type;
+          res.type = 'custom';
+        }
+        this.provider = res;
+      });
   },
   computed: {
     template() {
@@ -314,6 +323,8 @@ export default {
         });
     },
     tryToSend() {
+      const action = (this.$route.params.uuid) ? 'edit' : 'create';
+
       if (!this.isPassed) {
         const opts = {
           message: `Error: Test must be passed before creation.`,
@@ -341,13 +352,28 @@ export default {
         }
       }
 
+      if (action === 'create') delete this.provider.uuid;
+      if (this.provider.type === 'custom') {
+        this.provider.type = this.customTitle;
+      }
+
       this.isLoading = true;
       api.servicesProviders.testConfig(this.serviceProviderBody)
         .then((res) => {
-          if (res.result) return api.servicesProviders.create(this.serviceProviderBody);
+          if (res.result) {
+            const id = this.$route.params.uuid;
+
+            return (action === 'create')
+              ? api.servicesProviders.create(this.serviceProviderBody)
+              : api.servicesProviders.update(id, this.serviceProviderBody);
+          }
           else throw res;
         })
         .then(() => {
+          this.showSnackbarSuccess({ message: (action === 'create')
+            ? "Service provider created successfully"
+            : "Service provider updated successfully"
+          });
           this.$router.push({ name: "ServicesProviders" });
         })
         .catch((err) => {
@@ -384,7 +410,7 @@ export default {
       this.extentions.selected = "";
     },
     removeExtention(extention) {
-      Vue.delete(this.extentions.data, extention);
+      this.$delete(this.extentions.data, extention);
     },
     mergeDeep(target, ...sources) {
       return mergeDeep(target, ...sources);

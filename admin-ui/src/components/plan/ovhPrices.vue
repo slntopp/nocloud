@@ -81,7 +81,7 @@
 
             <template v-if="mode === 'none'">
               <v-select
-                dense 
+                dense
                 class="d-inline-block"
                 style="width: 200px"
                 v-model="item.group"
@@ -154,7 +154,22 @@
         </nocloud-table>
       </v-tab-item>
     </v-tabs-items>
-    <v-btn class="mt-4" color="secondary" @click="editPlan">Save</v-btn>
+
+    <v-btn class="mt-4" @click="isDialogVisible = true">Save</v-btn>
+    <v-dialog :max-width="600" v-model="isDialogVisible">
+      <v-card color="background-light">
+        <v-card-title>Do you really want to change your current price model?</v-card-title>
+        <v-card-subtitle>You can also create a new price model based on the current one.</v-card-subtitle>
+        <v-card-actions>
+          <v-btn class="mr-2" :loading="isLoading" @click="tryToSend('create')">
+            Create
+          </v-btn>
+          <v-btn :loading="isLoading" @click="tryToSend('edit')">
+            Edit
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -237,7 +252,9 @@ export default {
     planId: -1,
     tabsIndex: 0,
 
+    isDialogVisible: false,
     isPlansLoading: false,
+    isLoading: false,
     isValid: true
   }),
   methods: {
@@ -429,7 +446,7 @@ export default {
         });
       });
     },
-    editPlan() {
+    tryToSend(action) {
       if (!this.testConfig()) return;
       const newPlan = { ...this.template, fee: this.fee, resources: [], products: {} };
 
@@ -464,20 +481,28 @@ export default {
         }
       });
 
-      this.isLoading = true;
-      api.plans.update(newPlan.uuid, newPlan)
-        .then(() => {
-          this.showSnackbarSuccess({ message: 'Price model edited successfully' });
-        })
-        .catch((err) => {
-          const message = err.response?.data?.message ?? err.message ?? err;
+      if (action === 'create') delete newPlan.uuid;
+      const request = (action === 'edit')
+        ? api.plans.update(newPlan.uuid, newPlan)
+        : api.plans.create(newPlan);
 
-          this.showSnackbarError({ message });
-          console.error(err);
-        })
-        .finally(() => {
-          this.isLoading = false;
+      this.isLoading = true;
+      request.then(() => {
+        this.showSnackbarSuccess({
+          message: (action === 'edit')
+            ? "Price model edited successfully"
+            : "Price model created successfully",
         });
+      })
+      .catch((err) => {
+        const message = err.response?.data?.message ?? err.message ?? err;
+
+        this.showSnackbarError({ message });
+        console.error(err);
+      })
+      .finally(() => {
+        this.isLoading = false;
+      });
     },
     testConfig() {
       let message = '';
@@ -619,10 +644,18 @@ export default {
   },
   created() {
     this.isPlansLoading = true;
-    api.get(`/billing/currencies/rates/NCU/PLN`)
-      .then((res) => { this.rate = res.rate })
-      .catch(() => api.get(`/billing/currencies/rates/NCU/PLN`))
-      .then((res) => { if (res) this.rate = 1 / res.rate })
+    api.get('/billing/currencies/rates')
+      .then(({ rates }) => {
+        const currency = rates.find((el) =>
+          el.rate === 1 && [el.from, el.to].includes('NCU')
+        );
+        const code = (currency.from === 'NCU') ? currency.to : currency.from;
+
+        api.get(`/billing/currencies/rates/PLN/${code}`)
+          .then((res) => { this.rate = res.rate })
+          .catch(() => api.get(`/billing/currencies/rates/${code}/PLN`))
+          .then((res) => { if (res) this.rate = 1 / res.rate });
+      })
       .catch((err) => console.error(err));
 
     this.$store.dispatch('servicesProviders/fetch')

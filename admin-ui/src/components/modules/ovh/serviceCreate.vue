@@ -146,7 +146,7 @@ export default {
     regions: [],
     images: []
 	}),
-	methods: { 
+	methods: {
     addProducts(instance) {
       const { plan, billing_plan } = instance;
       const products = this.plans.list.find((el) => el.uuid === plan.uuid)
@@ -251,6 +251,15 @@ export default {
 		const data = JSON.parse(this.instancesGroup);
 
 		if (!data.body.instances) data.body.instances = [];
+    else {
+      data.body.instances.forEach((inst, i, arr) => {
+        if (inst.billingPlan) {
+          arr[i].billing_plan = inst.billingPlan;
+          delete arr[i].billingPlan;
+        }
+        arr[i].plan = inst.billing_plan.uuid;
+      });
+    }
 
 		this.change(data);
 	},
@@ -283,7 +292,7 @@ function setToValue(obj, value, path) {
 	path = path.split('.');
 	let i;
 	for (i = 0; i < path.length - 1; i++){
-		if(path[i] === "__proto__" || path[i] === "constructor") 
+		if(path[i] === "__proto__" || path[i] === "constructor")
 			throw new Error("Can't use that path because of: " + path[i]);
 		obj = obj[path[i]];
 	}

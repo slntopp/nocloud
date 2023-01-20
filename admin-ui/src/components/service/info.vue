@@ -68,8 +68,6 @@
     </v-row>
 
     groups:
-    <v-switch label="editing" class="ml-2 d-inline-block" v-model="editing" />
-
     <v-row justify="center" class="px-2 pb-2">
       <v-expansion-panels inset v-model="opened" multiple>
         <v-expansion-panel
@@ -85,67 +83,47 @@
           </v-expansion-panel-header>
           <v-expansion-panel-content>
             <v-row>
-              <template v-if="!editing">
-                <v-col>
-                  <v-text-field
-                    readonly
-                    :value="location(group)"
-                    label="location"
-                    style="display: inline-block; width: 330px"
-                  >
-                  </v-text-field>
-                </v-col>
-                <v-col>
-                  <v-text-field
-                    readonly
-                    :value="group.uuid"
-                    label="group uuid"
-                    style="display: inline-block; width: 330px"
-                    :append-icon="
-                      copyed == `${group}-UUID`
-                        ? 'mdi-check'
-                        : 'mdi-content-copy'
-                    "
-                    @click:append="addToClipboard(group.uuid, `${group}-UUID`)"
-                  >
-                  </v-text-field>
-                </v-col>
-                <v-col>
-                  <v-text-field
-                    readonly
-                    :value="hashpart(group.hash)"
-                    label="group hash"
-                    style="display: inline-block; width: 150px"
-                    :append-icon="
-                      copyed == `${group}-hash`
-                        ? 'mdi-check'
-                        : 'mdi-content-copy'
-                    "
-                    @click:append="addToClipboard(group.hash, `${group}-hash`)"
-                  >
-                  </v-text-field>
-                </v-col>
-              </template>
-              <template v-else>
-                <v-col>
-                  <v-text-field
-                    label="title"
-                    style="display: inline-block; width: 330px"
-                    v-model="group.title"
-                  />
-                </v-col>
-                <v-col v-if="!group.type">
-                  <v-select
-                    label="type"
-                    style="display: inline-block; width: 330px"
-                    v-model="instancesGroup.type"
-                    :items="types"
-                    @change="instancesGroup.uuid = group.uuid"
-                  />
-                </v-col>
-              </template>
+              <v-col>
+                <v-text-field
+                  readonly
+                  :value="location(group)"
+                  label="location"
+                  style="display: inline-block; width: 330px"
+                >
+                </v-text-field>
+              </v-col>
+              <v-col>
+                <v-text-field
+                  readonly
+                  :value="group.uuid"
+                  label="group uuid"
+                  style="display: inline-block; width: 330px"
+                  :append-icon="
+                    copyed == `${group}-UUID`
+                      ? 'mdi-check'
+                      : 'mdi-content-copy'
+                  "
+                  @click:append="addToClipboard(group.uuid, `${group}-UUID`)"
+                >
+                </v-text-field>
+              </v-col>
+              <v-col>
+                <v-text-field
+                  readonly
+                  :value="hashpart(group.hash)"
+                  label="group hash"
+                  style="display: inline-block; width: 150px"
+                  :append-icon="
+                    copyed == `${group}-hash`
+                      ? 'mdi-check'
+                      : 'mdi-content-copy'
+                  "
+                  @click:append="addToClipboard(group.hash, `${group}-hash`)"
+                >
+                </v-text-field>
+              </v-col>
             </v-row>
-            Instances:
+            <template v-if="group.instances.length > 0">Instances:</template>
             <v-row>
               <v-col>
                 <v-expansion-panels inset v-model="openedInstances[i]" multiple>
@@ -160,22 +138,20 @@
                         x-small
                         class="ml-2"
                         style="max-width: 10px; max-height: 10px; padding: 0"
-                        :color="
-                          stateColor(
-                            instance.state && instance.state.meta.state_str
-                          )
-                        "
+                        :color="stateColor(instance.state?.meta.state_str)"
                       />
                     </v-expansion-panel-header>
                     <v-expansion-panel-content>
+                      <span class="mb-2 mr-2">Instance uuid:</span>
+                      <router-link :to="{ name: 'Instance', params: { instanceId: instance.uuid } }">
+                        <v-chip class="mb-2" style="cursor: pointer">{{ instance.uuid }}</v-chip>
+                      </router-link>
+
                       <component
+                        dense
                         :is="getInstanceCardComponent(group.type)"
-                        :chipColor="chipColor"
-                        :type="group.type"
-                        :editing="editing"
-                        :instance="instance"
-                        :service="service"
-                      ></component>
+                        :template="instance"
+                      />
                     </v-expansion-panel-content>
                   </v-expansion-panel>
                 </v-expansion-panels>
@@ -185,9 +161,12 @@
         </v-expansion-panel>
       </v-expansion-panels>
     </v-row>
-    <v-row v-if="editing">
+
+    <v-row>
       <v-col>
-        <v-btn :loading="isLoading" @click="editService">Edit</v-btn>
+        <v-btn :to="{ name: 'Service edit', params: { serviceId: service.uuid } }">
+          Edit
+        </v-btn>
       </v-col>
     </v-row>
 
@@ -240,7 +219,6 @@ export default {
     copyed: null,
     opened: [],
     openedInstances: {},
-    editing: false,
     isLoading: false,
 
     instancesGroup: { uuid: "", type: "" },
@@ -317,7 +295,7 @@ export default {
         });
     },
     getInstanceCardComponent(type) {
-      return this.templates[type];
+      return this.templates[type] ?? this.templates.custom;
     },
   },
   created() {
