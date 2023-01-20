@@ -46,13 +46,13 @@
       </v-btn>
     </confirm-dialog>
 
-    <v-select
+    <v-text-field
       dense
+      readonly
       label="Default currency"
       class="d-inline-block"
       style="width: 200px"
-      v-model="defaultCurrency"
-      :items="defaultCurrenciesList"
+      :value="defaultCurrency"
     />
 
     <nocloud-table
@@ -130,7 +130,6 @@ export default {
     },
 
     currency: { from: "", to: "", rate: "1" },
-    defaultCurrency: "",
     isLoading: false,
     isCreateLoading: false,
     fetchError: "",
@@ -139,6 +138,7 @@ export default {
     addCurrency() {
       if (this.currency.from === "" || this.currency.to === "") return;
       if (typeof this.rules.number[0](this.currency.rate) === 'string') return;
+
       const newCurrency = {
         rate: +this.currency.rate.replace(',', '.'),
         from: this.currenciesList.indexOf(this.currency.from),
@@ -250,8 +250,13 @@ export default {
         el !== this.currency.from && !currencies.includes(el)
       );
     },
-    defaultCurrenciesList() {
-      return this.currenciesList.filter((el) => el !== 'NCU');
+    defaultCurrency() {
+      const currency = this.currencies.find((el) =>
+        el.rate === 1 && [el.from, el.to].includes('NCU')
+      );
+
+      if (!currency) return '';
+      return (currency.from === 'NCU') ? currency.to : currency.from;
     }
   }
 }

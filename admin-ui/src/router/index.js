@@ -66,6 +66,14 @@ const routes = [
     },
   },
   {
+    path: "/sp/:uuid/edit",
+    name: "ServicesProvider edit",
+    component: () => import("../views/ServicesProvidersCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/dns",
     name: "DNS manager",
     component: () => import("../views/dnsManager.vue"),
@@ -117,6 +125,14 @@ const routes = [
     path: "/services/:serviceId",
     name: "Service",
     component: () => import("../views/ServicePage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/services/:serviceId/edit",
+    name: "Service edit",
+    component: () => import("../views/ServiceCreate.vue"),
     meta: {
       requireLogin: true,
     },

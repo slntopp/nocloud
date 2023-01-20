@@ -72,7 +72,7 @@
             :loading="isLoading"
             @click="createService"
           >
-            create
+            Save
           </v-btn>
         </div>
       </v-col>
@@ -139,6 +139,12 @@
             v-model="currentInstancesGroups.body.type"
             :items="types"
           />
+          <v-text-field
+            label="Type name"
+            v-if="currentInstancesGroups.body.type === 'custom'"
+            v-model="customTitles[currentInstancesGroupsIndex]"
+            :rules="rules.req"
+          />
 
           <v-select
             label="service provider"
@@ -150,7 +156,7 @@
           />
 
           <component
-            :is="templates[currentInstancesGroups.body.type]"
+            :is="templates[currentInstancesGroups.body.type] ?? templates.custom"
             :instances-group="JSON.stringify(currentInstancesGroups)"
             :planRules="planRules"
             :plans="{ list: filteredPlans, products: plans.products }"
@@ -215,8 +221,10 @@ export default {
     },
     namespace: "",
     instances: [],
+    customTitles: {},
     currentInstancesGroups: {},
     currentInstancesGroupsIndex: -1,
+    prevInstancesGroupsIndex: -1,
     types: ["ione", "custom"],
     templates: {},
     plans: {
@@ -257,6 +265,9 @@ export default {
       };
     },
     selectInstance(index = -1) {
+      this.prevInstancesGroupsIndex = this.currentInstancesGroupsIndex;
+      this.currentInstancesGroupsIndex = index;
+
       if (this.instances.length > 0) {
         this.currentInstancesGroups = JSON.parse(
           JSON.stringify(this.instances[index])
@@ -264,7 +275,6 @@ export default {
       } else {
         this.currentInstancesGroups = {};
       }
-      this.currentInstancesGroupsIndex = index;
     },
     receiveObject(newVal) {
       this.instances[this.currentInstancesGroupsIndex] = JSON.parse(newVal);
@@ -297,13 +307,13 @@ export default {
       const data = JSON.parse(JSON.stringify(this.service));
       const instances = JSON.parse(JSON.stringify(this.instances));
 
-      instances.forEach((inst) => {
+      instances.forEach((inst, i) => {
+        if (inst.type === 'custom') {
+          inst.body.type = this.customTitles[i];
+        }
+
         inst.body.resources.ips_public = inst.body.instances?.length || 0;
-        data.instances_groups.push({
-          ...inst.body,
-          title: inst.title,
-          sp: inst.sp,
-        });
+        data.instances_groups.push({ ...inst.body, title: inst.title, sp: inst.sp });
         // console.log(data.instances_groups[inst.title])
         // console.log(data.instances_groups)
         // let ips = 0;
@@ -316,6 +326,7 @@ export default {
       return { namespace: this.namespace, service: data };
     },
     createService() {
+      const action = (this.$route.params.serviceId) ? 'edit' : 'create';
       const data = this.getService();
 
       if (!this.formValid) {
@@ -326,11 +337,16 @@ export default {
       this.isLoading = true;
       api.services.testConfig(data)
         .then((res) => {
-          if (res.result) return api.services._create(data);
+          if (res.result) return (action === 'create')
+            ? api.services._create(data)
+            : api.services._update(data.service);
           else throw res;
         })
         .then(() => {
-          this.showSnackbar({ message: `Service created successfully` });
+          this.showSnackbarSuccess({ message: (action === 'create')
+            ? "Service created successfully"
+            : "Service updated successfully"
+          });
           this.$router.push({ name: "Services" });
         })
         .catch((err) => {
@@ -367,7 +383,12 @@ export default {
   },
   computed: {
     currentType() {
-      return this.currentInstancesGroups.body.type;
+      const { type } = this.currentInstancesGroups.body;
+
+      if (type === 'custom') {
+        return this.customTitles[this.currentInstancesGroupsIndex];
+      }
+      return type;
     },
     namespaces() {
       return this.$store.getters["namespaces/all"];
@@ -388,8 +409,25 @@ export default {
     },
   },
   created() {
+    this.$store.dispatch("services/fetch")
+      .then(({ pool }) => {
+        const service = pool.find((el) => el.uuid === this.$route.params.serviceId);
+
+        if (service) {
+          this.service = service;
+          this.namespace = service.access.namespace;
+
+          this.instances = service.instancesGroups.map((group, i) => {
+            if (!this.types.includes(group.type)) {
+              this.customTitles[i] = group.type;
+              group.type = 'custom';
+            }
+            return { title: group.title, sp: group.sp, body: group };
+          });
+        }
+      });
     this.$store.dispatch("namespaces/fetch");
-    this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("servicesProviders/fetch", false);
     const types = require.context(
       "@/components/modules/",
       true,
@@ -431,6 +469,13 @@ export default {
       deep: true,
     },
     "currentInstancesGroups.body.type"() {
+      const i = this.currentInstancesGroupsIndex;
+      const j = this.prevInstancesGroupsIndex;
+      if (i !== j) {
+        this.prevInstancesGroupsIndex = this.currentInstancesGroupsIndex;
+        return;
+      }
+
       this.currentInstancesGroups.body.instances = [];
       this.currentInstancesGroups.sp = "";
     },

@@ -1,5 +1,7 @@
 <template>
   <div>
+    <h3 v-if="dense">Data:</h3>
+    <v-card-title v-else class="px-0">Data:</v-card-title>
     <v-row align="center">
       <v-col v-for="key in dataKeys" :key="key">
         <v-text-field
@@ -29,6 +31,9 @@
         />
       </v-col>
     </v-row>
+
+    <h3 v-if="dense">Resources:</h3>
+    <v-card-title v-else class="px-0">Resources:</v-card-title>
     <v-row align="center">
       <v-col v-for="(item, key) in resources" :key="key">
         <v-text-field
@@ -55,6 +60,7 @@ export default {
   name: "instance-card",
   props: {
     template: { type: Object, required: true },
+    dense: { type: Boolean },
   },
   data: () => ({
     isVisible: false,
