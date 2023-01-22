@@ -22,6 +22,7 @@ import (
 
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 
+	epb "github.com/slntopp/nocloud-proto/events"
 	hpb "github.com/slntopp/nocloud-proto/health"
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
@@ -36,14 +37,17 @@ import (
 var (
 	settingsClient settingspb.SettingsServiceClient
 	accClient      regpb.AccountsServiceClient
+	eventsClient   epb.EventsServiceClient
 )
 
 func init() {
 	viper.AutomaticEnv()
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
 	viper.SetDefault("REGISTRY_HOST", "registry:8000")
+	viper.SetDefault("EVENTS_HOST", "eventbus:8000")
 	settingsHost := viper.GetString("SETTINGS_HOST")
 	registryHost := viper.GetString("REGISTRY_HOST")
+	eventsHost := viper.GetString("EVENTS_HOST")
 
 	settingsConn, err := grpc.Dial(settingsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -56,6 +60,12 @@ func init() {
 		panic(err)
 	}
 	accClient = regpb.NewAccountsServiceClient(accConn)
+
+	eventsConn, err := grpc.Dial(eventsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		panic(err)
+	}
+	eventsClient = epb.NewEventsServiceClient(eventsConn)
 }
 
 func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatus {

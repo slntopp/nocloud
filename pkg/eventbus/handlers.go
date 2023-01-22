@@ -62,5 +62,6 @@ func SuspendInstanceHandler(ctx context.Context, event *pb.Event, db driver.Data
 	}
 
 	event.Uuid = accountUuid
+	event.Type = "email"
 	return event, nil
 }
