@@ -8,7 +8,6 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/google/uuid"
-	"github.com/rabbitmq/amqp091-go"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/events"
@@ -41,7 +40,7 @@ type EventBusServer struct {
 	ns_ctrl graph.NamespacesController
 }
 
-func NewServer(logger *zap.Logger, conn *amqp091.Connection, db driver.Database) *EventBusServer {
+func NewServer(logger *zap.Logger, conn *amqp.Connection, db driver.Database) *EventBusServer {
 
 	log := logger.Named("EventBusServer")
 
