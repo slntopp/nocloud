@@ -3,6 +3,7 @@ package eventbus
 import (
 	"context"
 	"github.com/spf13/viper"
+	"google.golang.org/protobuf/proto"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -87,8 +88,48 @@ init:
 		goto init
 	}
 
-	for _ = range events {
+	for msg := range events {
+		log.Debug("Received a message")
+		var event pb.Event
+		err = proto.Unmarshal(msg.Body, &event)
+		if err != nil {
+			log.Error("Failed to unmarshal event", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			}
+			continue
+		}
 
+		handler, ok := handlers[event.Key]
+		if !ok {
+			log.Warn("Handler not fount", zap.String("handler", event.Key))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			}
+			continue
+		}
+
+		updEvent, err := handler(ctx, &event, s.db)
+		if err != nil {
+			log.Error("Fail to call handler", zap.Any("handler type", event.Key), zap.String("err", err.Error()))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			}
+			continue
+		}
+
+		_, err = s.Publish(ctx, updEvent)
+		if err != nil {
+			log.Error("Failed to publish upd event", zap.String("err", err.Error()))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			}
+			continue
+		}
+
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+		}
 	}
 }
 
