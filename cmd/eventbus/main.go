@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"google.golang.org/grpc/metadata"
 	"net"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -89,11 +88,7 @@ func main() {
 		)),
 	)
 
-	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
-	if err != nil {
-		log.Fatal("Can't generate token", zap.Error(err))
-	}
-	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+	ctx := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 
 	server := eventbus.NewServer(log, conn, db)
 	go server.ListenBusQueue(ctx)
