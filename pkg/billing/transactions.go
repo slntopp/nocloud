@@ -17,6 +17,7 @@ package billing
 
 import (
 	"context"
+	epb "github.com/slntopp/nocloud-proto/events"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -103,6 +104,12 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		log.Error("Failed to create transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
 	}
+
+	eventsClient.Publish(ctx, &epb.Event{
+		Type: "email",
+		Uuid: t.GetAccount(),
+		Key:  "transaction_created",
+	})
 
 	if r.Transaction.Priority == pb.Priority_URGENT {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
