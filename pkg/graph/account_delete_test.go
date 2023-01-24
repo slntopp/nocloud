@@ -2,12 +2,14 @@ package graph
 
 import (
 	"context"
-	"github.com/slntopp/nocloud/pkg/credentials"
 	"testing"
+
+	"github.com/slntopp/nocloud/pkg/credentials"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	proto "github.com/slntopp/nocloud-proto/instances"
+	"github.com/slntopp/nocloud-proto/registry/accounts"
 	pb "github.com/slntopp/nocloud-proto/services"
 	spb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -47,7 +49,7 @@ func TestDeleteAccount(t *testing.T) {
 	spc := NewServicesProvidersController(log, db)
 	srvc := NewServicesController(log, db)
 
-	acc, err := ac.Create(ctx, "test_user")
+	acc, err := ac.Create(ctx, accounts.Account{Title: "test_user"})
 	if err != nil {
 		t.Error("Can't create account")
 	}
@@ -114,7 +116,7 @@ func TestDeleteAccountCredentials(t *testing.T) {
 	spc := NewServicesProvidersController(log, db)
 	srvc := NewServicesController(log, db)
 
-	acc, err := ac.Create(ctx, "test_user")
+	acc, err := ac.Create(ctx, accounts.Account{Title: "test_user"})
 	if err != nil {
 		t.Error("Can't create account")
 	}

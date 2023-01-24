@@ -374,7 +374,10 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
 	}
 
-	acc, err := s.ctrl.Create(ctx, request.Title)
+	acc, err := s.ctrl.Create(ctx, accountspb.Account{
+		Title:    request.Title,
+		Currency: &request.Currency,
+	})
 	if err != nil {
 		log.Debug("Error creating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating account")
