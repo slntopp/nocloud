@@ -17,8 +17,9 @@ package billing
 
 import (
 	"context"
-	epb "github.com/slntopp/nocloud-proto/events"
 	"time"
+
+	epb "github.com/slntopp/nocloud-proto/events"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -149,9 +150,11 @@ FOR t IN @@transactions // Iterate over Transactions
 FILTER t.exec <= @now
 FILTER t.account == account._key
 	LET rate = PRODUCT(
-		FOR vertex, edge IN OUTBOUND SHORTEST_PATH
-		DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency))) TO
-		DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+		FOR vertex, edge IN OUTBOUND
+		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency)))
+		TO DOCUMENT(CONCAT(@currencies, "/", currency))
+		GRAPH @graph
+		FILTER edge
 			RETURN edge.rate
 	)
     UPDATE t WITH { processed: true, proc: @now, total: t.total * rate, currency: currency } IN @@transactions RETURN NEW )
