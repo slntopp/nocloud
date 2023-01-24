@@ -56,7 +56,7 @@ func TestConvert(t *testing.T) {
 		t.Error("Didn't fetch all exchange rates")
 	}
 
-	rate, err := c.GetExchangeRate(ctx, pb.Currency_USD, pb.Currency_BYN)
+	rate, err := c.GetExchangeRateDirect(ctx, pb.Currency_USD, pb.Currency_BYN)
 	if err != nil {
 		t.Error(err)
 	}

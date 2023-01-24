@@ -105,8 +105,7 @@ func (ctrl *AccountsController) Exists(ctx context.Context, id string) (bool, er
 	return ctrl.col.DocumentExists(context.TODO(), id)
 }
 
-func (ctrl *AccountsController) Create(ctx context.Context, title string) (Account, error) {
-	acc := pb.Account{Title: title}
+func (ctrl *AccountsController) Create(ctx context.Context, acc pb.Account) (Account, error) {
 	meta, err := ctrl.col.CreateDocument(ctx, &acc)
 	acc.Uuid = meta.ID.Key()
 	return Account{&acc, meta}, err
