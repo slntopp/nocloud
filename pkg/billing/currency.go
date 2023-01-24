@@ -43,16 +43,16 @@ func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, req *pb.
 
 	_, err = s.ctrl.GetExchangeRateDirect(ctx, req.To, req.From)
 	if err == nil {
-		return &pb.CreateExchangeRateResponse{}, err
+		return &pb.CreateExchangeRateResponse{}, nil
 	}
 
 	s.log.Info("Reverse rate is not set yet, setting automatically", zap.String("from", req.From.String()), zap.String("to", req.To.String()))
-	err = s.ctrl.CreateExchangeRate(ctx, req.From, req.To, 1/req.Rate)
+	err = s.ctrl.CreateExchangeRate(ctx, req.To, req.From, 1/req.Rate)
 	if err != nil {
 		s.log.Warn("Couldn't automatically create reverse Exchange rate", zap.Error(err))
 	}
 
-	return &pb.CreateExchangeRateResponse{}, err
+	return &pb.CreateExchangeRateResponse{}, nil
 }
 
 func (s *CurrencyServiceServer) UpdateExchangeRate(ctx context.Context, req *pb.UpdateExchangeRateRequest) (*pb.UpdateExchangeRateResponse, error) {
