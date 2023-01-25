@@ -106,7 +106,7 @@
     </v-row>
 
     <v-btn :to="{ name: 'Service edit', params: {
-      serviceId: template.service, sp: template.sp
+      serviceId: template.service, sp: template.sp, instance: template.uuid
     }}">
       Edit
     </v-btn>

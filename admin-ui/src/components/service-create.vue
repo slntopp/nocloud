@@ -413,6 +413,7 @@ export default {
         const service = pool.find((el) => el.uuid === this.$route.params.serviceId);
         const group = this.$route.params.sp;
         const i = service?.instancesGroups.findIndex(({ sp }) => sp === group);
+        const { instance } = this.$route.params;
 
         if (service) {
           this.service = service;
@@ -427,7 +428,23 @@ export default {
           });
         }
 
-        if (group) this.selectInstance(i);
+        if (instance) {
+          this.selectInstance(i);
+          setTimeout(() => {
+            const top = -document.getElementsByTagName('header')[0].offsetHeight;
+
+            document.getElementById(instance).scrollIntoView();
+            window.scrollBy({ top });
+          }, 300);
+        } else if (group) {
+          this.selectInstance(i);
+          setTimeout(() => {
+            const button = document.getElementById('button');
+
+            button.click();
+            button.scrollIntoView(true);
+          }, 300);
+        }
       });
 
     this.$store.dispatch("namespaces/fetch");

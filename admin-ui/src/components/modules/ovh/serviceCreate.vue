@@ -6,6 +6,7 @@
 			elevation="0"
 			v-for="(instance, index) of instances"
       :key="index"
+      :id="instance.uuid"
 		>
 			<v-row>
 				<v-col cols="6">
@@ -106,6 +107,7 @@
 			<v-col class="d-flex justify-center">
 				<v-btn
           small
+          id="button"
           class="mx-2"
           color="background"
           :disabled="isDisabled"
