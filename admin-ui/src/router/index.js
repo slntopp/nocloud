@@ -146,14 +146,6 @@ const routes = [
     },
   },
   {
-    path: "/instances/create",
-    name: "Instance create",
-    component: () => import("../views/InstanceCreate.vue"),
-    meta: {
-      requireLogin: true,
-    },
-  },
-  {
     path: "/instances/:instanceId",
     name: "Instance",
     component: () => import("../views/InstancePage.vue"),

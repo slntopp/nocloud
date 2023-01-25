@@ -24,53 +24,6 @@
 			<v-row>
 				<v-col cols="6">
 					<v-select
-						label="model"
-						v-model="config[index].flavor"
-            :items="flavors"
-            :rules="rules.req"
-            :loading="isFlavorsLoading"
-						@change="(value) => setValue(index + '.config.flavorId', value)"
-					/>
-				</v-col>
-				<v-col cols="6">
-					<v-select
-						label="region"
-						v-model="instance.config.region"
-						:items="regions"
-            :rules="rules.req"
-            :disabled="!config[index].flavor"
-            @change="(value) => setValue(index + '.config.region', value)"
-					/>
-				</v-col>
-				<v-col cols="6">
-					<v-select
-						label="OS type"
-						v-model="config[index].os"
-            :items="['baremetal-linux', 'bsd', 'linux', 'windows']"
-					/>
-				</v-col>
-				<v-col cols="6">
-					<v-select
-						label="OS"
-            item-text="name"
-            item-value="id"
-						v-model="instance.config.imageId"
-						:items="images"
-            :rules="rules.req"
-            :loading="isOSLoading"
-            :disabled="!instance.config.flavorId"
-            @change="(value) => setValue(index + '.config.imageId', value)"
-					/>
-				</v-col>
-				<v-col cols="6">
-					<v-text-field
-						label="post-installation script"
-						v-model="instance.config.userData"
-						@change="(value) => setValue(index + '.config.userData', value)"
-					/>
-				</v-col>
-				<v-col cols="6">
-					<v-select
 						label="price model"
             item-text="title"
             item-value="uuid"
@@ -80,22 +33,71 @@
 						@change="(value) => setValue(index + '.billing_plan', value)"
 					/>
 				</v-col>
-				<v-col cols="6">
+				<v-col cols="6" v-if="instance.products?.length > 0">
 					<v-select
 						label="product"
             v-model="instance.productTitle"
-            v-if="instance.products?.length > 0"
             :items="instance.products"
 						@change="(value) => setValue(index + '.product', value)"
+					/>
+				</v-col>
+				<v-col cols="6">
+					<v-select
+						label="tariff"
+            item-text="title"
+            item-value="code"
+						v-model="instance.config.planCode"
+            :items="flavors"
+            :rules="rules.req"
+            :loading="isFlavorsLoading"
+						@change="(value) => setValue(index + '.config.planCode', value)"
+					/>
+				</v-col>
+				<v-col cols="6">
+					<v-select
+						label="region"
+						v-model="instance.config.datacenter"
+						:items="regions"
+            :rules="rules.req"
+            :disabled="!instance.config.planCode"
+            @change="(value) => setValue(index + '.config.datacenter', value)"
+					/>
+				</v-col>
+				<v-col cols="6">
+					<v-select
+						label="OS"
+						v-model="instance.config.os"
+						:items="images"
+            :rules="rules.req"
+            :disabled="!instance.config.planCode"
+            @change="(value) => setValue(index + '.config.os', value)"
 					/>
 				</v-col>
 				<v-col cols="6" class="d-flex align-center">
           Payment:
 					<v-switch
             class="d-inline-block ml-2"
-						v-model="instance.config.monthlyBilling"
-						:label="(instance.config.monthlyBilling) ? 'monthly' : 'hourly'"
-						@change="(value) => setValue(index + '.config.monthlyBilling', value)"
+            true-value="P1Y"
+            false-value="P1M"
+						v-model="instance.config.duration"
+						:label="(instance.config.duration === 'P1Y') ? 'yearly' : 'monthly'"
+						@change="(value) => setValue(index + '.config.duration', value)"
+					/>
+				</v-col>
+				<v-col cols="6" class="d-flex align-center">
+          Existing:
+					<v-switch
+            class="d-inline-block ml-2"
+						v-model="instance.data.existing"
+						@change="(value) => setValue(index + '.data.existing', value)"
+					/>
+				</v-col>
+				<v-col cols="6" class="d-flex align-center" v-if="instance.data.existing">
+					<v-text-field
+            label="VPS name"
+						v-model="instance.config.vpsName"
+            :rules="rules.req"
+						@change="(value) => setValue(index + '.data.vpsName', value)"
 					/>
 				</v-col>
 			</v-row>
@@ -125,26 +127,27 @@ export default {
 	props: ['instances-group', 'plans', 'planRules'],
 	data: () => ({
 		defaultItem: {
-			"title": "instance",
-			"config": {
-				"type": "vm",
-        "flavorId": null,
-        "region": null,
-        "imageId": null
+			title: "instance",
+			config: {
+				type: "vps",
+        planCode: null,
+        datacenter: null,
+        os: null,
+        duration: 'P1M',
+        pricingMode: 'default'
 			},
-      "billing_plan": {}
+      data: { existing: false },
+      billing_plan: {}
 		},
     rules: {
       req: [(v) => !!v || "required field"]
     },
-    config: {},
 
     isFlavorsLoading: false,
-    isOSLoading: false,
-    allFlavors: [],
     flavors: [],
     regions: [],
-    images: []
+    images: [],
+    meta: {}
 	}),
 	methods: {
     addProducts(instance) {
@@ -168,42 +171,45 @@ export default {
       const i = data.body.instances.length;
 
 			item.title += "#" + (i + 1);
-      this.config[i] = { flavor: null, os: null };
 			data.body.instances.push(item);
 			this.change(data);
 		},
-    getOS({ region, flavor, os }){
-      const data = JSON.parse(this.instancesGroup);
-
-      this.isOSLoading = true;
-      api.post(`/sp/${data.sp}/invoke`, {
-        method: 'images',
-        params: { flavor, region, os }
-      })
-        .then(({ meta }) => {
-          this.images = meta.result;
-        })
-        .finally(() => {
-          this.isOSLoading = false;
-        });
-    },
 		remove(index){
 			const data = JSON.parse(this.instancesGroup);
 
 			data.body.instances.splice(index, 1);
 			this.change(data);
 		},
+    fetchPlans() {
+      const data = JSON.parse(this.instancesGroup);
+
+      if (data.body.type !== 'ovh') return;
+      if (this.regions.length > 0) return;
+      if (this.instances.length > 0) return;
+
+      this.isFlavorsLoading = true;
+      api.post(`/sp/${data.sp}/invoke`, { method: 'get_plans' })
+        .then(({ meta }) => { this.meta = meta })
+        .finally(() => { this.isFlavorsLoading = false });
+    },
 		setValue(path, val){
 			const data = JSON.parse(this.instancesGroup)
       const i = path.split('.')[0]
 
-      if (path.includes('plan')) {
+      if (path.includes('billing_plan')) {
         const plan = this.plans.list.find(({ uuid }) => val === uuid)
-        const j = plan.title.length - 14
+        const title = plan.title.split(' ')
+
+        title.pop()
+        this.flavors = Object.keys(plan.products).map((el) => ({
+          code: el.split(' ')[1],
+          title: plan.products[el].title
+        }))
 
         data.body.instances[i].plan = val
-        val = { ...plan, title: plan.title.slice(0, j) }
+        val = { ...plan, title: title.join(' ') }
       }
+
       if (path.includes('product')) {
         const plan = data.body.instances[i].billing_plan
         const [product] = Object.entries(plan.products)
@@ -212,24 +218,24 @@ export default {
         data.body.instances[i].productTitle = val
         val = product
       }
-      if (path.includes('flavor')) {
-        this.allFlavors.forEach((el) => {
-          if (el.name === val) this.regions.push(el.region)
-        })
-        val = null
-      }
-      if (path.includes('region')) {
-        const { config } = data.body.instances[i];
 
-        config.flavorId = this.allFlavors.find((el) =>
-          (el.region === val) && (el.name === this.config[i].flavor)
-        )?.id;
-        this.config[i].region = val;
-        this.getOS(this.config[i]);
+      if (path.includes('planCode')) {
+        const plan = this.meta.catalog.plans
+          .find(({ planCode }) => planCode === val)
+
+        plan.configurations.forEach((el) => {
+          el.values.sort()
+          if (el.name.includes('os')) this.images = el.values
+          if (el.name.includes('datacenter')) this.regions = el.values
+        })
+      }
+
+      if (path.includes('duration')) {
+        this.setValue(`${i}.config.pricingMode`, (val) ? 'default' : 'upfront12')
       }
 
 			setToValue(data.body.instances, val, path)
-      if (path.includes('plan')) this.addProducts(data.body.instances[i])
+      if (path.includes('billing_plan')) this.addProducts(data.body.instances[i])
 			this.change(data)
 		},
 		change(data){
@@ -241,10 +247,9 @@ export default {
 			return JSON.parse(this.instancesGroup).body.instances;
 		},
     isDisabled() {
-      const isOVH = JSON.parse(this.instancesGroup).body.type === 'ovh';
-      const isSpEmpty = JSON.parse(this.instancesGroup).sp;
+      const group = JSON.parse(this.instancesGroup);
 
-      return isOVH && !isSpEmpty;
+      return group.body.type === 'ovh' && !group.sp;
     }
 	},
 	created() {
@@ -264,27 +269,7 @@ export default {
 		this.change(data);
 	},
   watch: {
-    instances() {
-      const data = JSON.parse(this.instancesGroup);
-
-      if (data.body.type !== 'ovh') return;
-      if (this.flavors.length > 0) return;
-      if (this.regions.length > 0) return;
-      if (data.body.instances.length < 1) return;
-
-      this.isFlavorsLoading = true;
-      api.post(`/sp/${data.sp}/invoke`, { method: 'flavors' })
-        .then(({ meta }) => {
-          this.allFlavors = meta.result;
-          meta.result.forEach((el) => {
-            if (this.flavors.includes(el.name)) return;
-            this.flavors.push(el.name);
-          });
-        })
-        .finally(() => {
-          this.isFlavorsLoading = false;
-        });
-    }
+    instances() { this.fetchPlans() }
   }
 }
 

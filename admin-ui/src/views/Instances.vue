@@ -1,8 +1,47 @@
 <template>
   <div class="pa-4">
-    <v-btn class="mr-2" color="background-light" :to="{ name: 'Instance create' }">
-      Create
-    </v-btn>
+    <v-menu offset-y :close-on-content-click="false">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn class="mr-2" color="background-light" v-bind="attrs" v-on="on">
+          Create
+        </v-btn>
+      </template>
+
+      <v-card class="pa-4">
+        <v-form ref="form" v-model="newInstance.isValid">
+          <v-select
+            dense
+            item-text="title"
+            item-value="uuid"
+            label="service"
+            style="width: 300px"
+            v-model="newInstance.service"
+            :items="services"
+            :rules="rules.req"
+          />
+
+          <v-select
+            dense
+            item-text="title"
+            item-value="sp"
+            label="group"
+            style="width: 300px"
+            v-model="newInstance.sp"
+            :items="service?.instancesGroups"
+            :rules="rules.req"
+          />
+
+          <v-btn
+            :to="{ name: 'Service edit', params: {
+              serviceId: newInstance.service, sp: newInstance.sp
+            }}"
+            :disabled="!newInstance.isValid"
+          >
+            OK
+          </v-btn>
+        </v-form>
+      </v-card>
+    </v-menu>
 
     <confirm-dialog @confirm="deleteSelectedInstances">
       <v-btn
@@ -14,6 +53,13 @@
         Delete
       </v-btn>
     </confirm-dialog>
+
+    <v-select
+      label="Filter by type"
+      class="d-inline-block"
+      v-model="type"
+      :items="types"
+    />
 
     <nocloud-table
       class="mt-4"
@@ -35,9 +81,9 @@
         </v-chip>
       </template>
 
-      <template v-slot:[`item.service`]="{ value }">
+      <template v-slot:[`item.service`]="{ item, value }">
         <router-link :to="{ name: 'Service', params: { serviceId: value } }">
-          {{ getService(value) }}
+          {{ getService(item) }}
         </router-link>
       </template>
 
@@ -47,7 +93,12 @@
         </router-link>
       </template>
 
-      <template v-slot:[`item.state.meta`]="{ item }">
+      <template v-slot:[`item.resources.period`]="{ value }">
+        {{ value }} {{ (value > 1) ? 'months' : 'month' }}
+        <!--  {{ (item.type === 'goget') ? 'years' : 'months' }} -->
+      </template>
+
+      <template v-slot:[`item.state.meta.networking`]="{ item }">
         <template v-if="!item.state?.meta.networking?.public">-</template>
         <v-menu bottom
           open-on-hover
@@ -100,21 +151,19 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
+import { filterArrayIncludes } from "@/functions.js";
 
 export default {
   name: "instances-view",
   components: { nocloudTable, confirmDialog },
   mixins: [snackbar],
   data: () => ({
-    headers: [
-      { text: "Title", value: "title" },
-      { text: "Type", value: "type" },
-      { text: "Status", value: "state" },
-      { text: "UUID", value: "uuid" },
-      { text: "Service", value: "service" },
-      { text: "Price model", value: "billingPlan" },
-      { text: "IP", value: "state.meta" },
-    ],
+    type: "all",
+    types: ['all', 'ione', 'ovh', 'goget'],
+    newInstance: { isValid: false, service: '', sp: '' },
+    rules: {
+      req: [(v) => !!v || 'This field is required!']
+    },
 
     isDeleteLoading: false,
     selected: [],
@@ -209,10 +258,8 @@ export default {
           return state.replaceAll('_', ' ');
       }
     },
-    getService(service) {
-      const services = this.$store.getters['services/all'];
-
-      return services.find(({ uuid }) => service === uuid)?.title ?? '';
+    getService({ service }) {
+      return this.services.find(({ uuid }) => service === uuid)?.title ?? '';
     },
   },
   created() { this.fetchServices() },
@@ -222,11 +269,63 @@ export default {
     });
   },
   computed: {
+    services() {
+      return this.$store.getters["services/all"];
+    },
     instances() {
-      return this.$store.getters['services/getInstances'];
+      const instances = this.$store.getters["services/getInstances"];
+      const filtered = filterArrayIncludes(instances, {
+        keys: ["uuid", "service", "title", "billingPlan", "state"],
+        value: this.searchParam,
+        params: {
+          billingPlan: "title",
+          service: this.getService,
+          state: this.getState
+        }
+      });
+
+      if (this.type === 'all') return filtered;
+      return filtered.filter(({ type }) => type === this.type);
+    },
+    service() {
+      return this.services.find(({ uuid }) => uuid === this.newInstance.service);
+    },
+    headers() {
+      const headers = [
+        { text: "Title", value: "title" },
+        { text: "Type", value: "type" },
+        { text: "Status", value: "state" },
+        { text: "UUID", value: "uuid" },
+        { text: "Service", value: "service" },
+        { text: "Price model", value: "billingPlan" },
+      ];
+
+      switch (this.type) {
+        case 'ione':
+          headers.push({ text: "IP", value: "state.meta.networking" });
+          break;
+        case 'ovh':
+          headers.push(
+            { text: "IP", value: "state.meta.networking" },
+            { text: "Creation", value: "data.creation" },
+            { text: "Expiration", value: "data.expiration" },
+          );
+          break;
+        case 'goget':
+        case 'opensrs':
+          headers.push(
+            { text: "Domain", value: "resources.domain" },
+            { text: "Period", value: "resources.period" },
+          );
+      }
+
+      return headers;
     },
     isLoading() {
-      return this.$store.getters['services/isLoading'];
+      return this.$store.getters["services/isLoading"];
+    },
+    searchParam() {
+      return this.$store.getters["appSearch/param"];
     }
   },
   watch: {
