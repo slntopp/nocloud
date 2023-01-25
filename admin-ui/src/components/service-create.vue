@@ -31,7 +31,7 @@
 
     <v-row>
       <v-col cols="4" md="4" lg="4">
-        <v-list dence color="background-light">
+        <v-list color="background-light">
           <v-subheader>instances groups</v-subheader>
 
           <v-list-item
@@ -161,8 +161,7 @@
             :planRules="planRules"
             :plans="{ list: filteredPlans, products: plans.products }"
             @update:instances-group="receiveObject"
-          >
-          </component>
+          />
         </v-card>
 
         <v-card v-else color="background-light" elevation="0" class="pa-4">
@@ -412,6 +411,9 @@ export default {
     this.$store.dispatch("services/fetch")
       .then(({ pool }) => {
         const service = pool.find((el) => el.uuid === this.$route.params.serviceId);
+        const group = this.$route.params.sp;
+        const i = service?.instancesGroups.findIndex(({ sp }) => sp === group);
+        const { instance } = this.$route.params;
 
         if (service) {
           this.service = service;
@@ -425,9 +427,29 @@ export default {
             return { title: group.title, sp: group.sp, body: group };
           });
         }
+
+        if (instance) {
+          this.selectInstance(i);
+          setTimeout(() => {
+            const top = -document.getElementsByTagName('header')[0].offsetHeight;
+
+            document.getElementById(instance).scrollIntoView();
+            window.scrollBy({ top });
+          }, 300);
+        } else if (group) {
+          this.selectInstance(i);
+          setTimeout(() => {
+            const button = document.getElementById('button');
+
+            button.click();
+            button.scrollIntoView(true);
+          }, 300);
+        }
       });
+
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("servicesProviders/fetch", false);
+
     const types = require.context(
       "@/components/modules/",
       true,
@@ -445,7 +467,8 @@ export default {
 
     api.plans.list().then((res) =>
       res.pool.forEach((plan) => {
-        const title = `${plan.title} (${plan.uuid.slice(0, 8)}...)`;
+        const end = (plan.uuid.length > 8) ? '...' : '';
+        const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
 
         this.plans.list.push({ ...plan, title });
       })

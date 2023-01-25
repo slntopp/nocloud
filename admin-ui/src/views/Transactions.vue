@@ -241,18 +241,14 @@ export default {
     filtredTransactions() {
       if (this.searchParam) {
         const byUuid = filterArrayIncludes(this.transactions, {
-          key: "uuid",
-          value: this.searchParam,
-        });
-        const byServiceUuid = filterArrayIncludes(this.transactions, {
-          key: "service",
+          keys: ["uuid", "service"],
           value: this.searchParam,
         });
         const byTotal = filterArrayBy(this.transactions, {
           key: "total",
           value: +this.searchParam,
         });
-        return [...new Set([...byUuid, ...byServiceUuid, ...byTotal])];
+        return [...new Set([...byUuid, ...byTotal])];
       }
       return this.transactions;
     },

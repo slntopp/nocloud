@@ -3,6 +3,7 @@
     <v-card
       v-for="(instance, index) in instances"
       :key="index"
+      :id="instance.uuid"
       class="mb-4 pa-2"
       elevation="0"
       color="background"
@@ -57,7 +58,13 @@
     </v-card>
     <v-row>
       <v-col class="d-flex justify-center">
-        <v-btn class="mx-2" small color="background" @click="addInstance">
+        <v-btn
+          small
+          id="button"
+          class="mx-2"
+          color="background"
+          @click="addInstance"
+        >
           <v-icon dark> mdi-plus-circle-outline </v-icon>
           add instance
         </v-btn>

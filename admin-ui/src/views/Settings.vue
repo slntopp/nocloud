@@ -230,7 +230,7 @@ export default {
     filtredSettings() {
       if (this.searchParam) {
         return filterArrayIncludes(this.settings, {
-          key: "key",
+          keys: ["key"],
           value: this.searchParam,
         });
       }
