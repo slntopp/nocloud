@@ -31,6 +31,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type Service struct {
+	driver.DocumentMeta
+	*pb.Service
+}
+
 type Provision struct {
 	From  driver.DocumentID `json:"_from"`
 	To    driver.DocumentID `json:"_to"`
