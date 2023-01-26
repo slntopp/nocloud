@@ -370,6 +370,7 @@ FILTER t.exec <= @now
 FILTER !t.processed
     LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
 	// Prefer user currency to default if present
+	FILTER account != null
 	LET currency = account.currency != null ? account.currency : @currency
 	LET rate = PRODUCT(
 		FOR vertex, edge IN OUTBOUND
