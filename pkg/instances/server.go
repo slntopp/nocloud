@@ -181,6 +181,11 @@ func (s *InstancesServer) Transfer(ctx context.Context, req *pb.TransferRequest)
 
 	srv, err := graph.GetWithAccess[graph.Service](ctx, s.db, newSrvId)
 
+	if err != nil {
+		log.Error("Failed to get service", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
