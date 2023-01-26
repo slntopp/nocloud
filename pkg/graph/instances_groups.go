@@ -16,9 +16,10 @@ limitations under the License.
 package graph
 
 import (
+	"context"
+
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
-	"golang.org/x/net/context"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/slntopp/nocloud-proto/hasher"
@@ -31,6 +32,11 @@ const (
 	INSTANCES_GROUPS_COL = "InstancesGroups"
 )
 
+type InstancesGroup struct {
+	driver.DocumentMeta
+	*pb.InstancesGroup
+}
+
 type InstancesGroupsController struct {
 	col   driver.Collection // Instances Groups Collection
 	graph driver.Graph
@@ -38,6 +44,8 @@ type InstancesGroupsController struct {
 	inst_ctrl *InstancesController
 
 	log *zap.Logger
+
+	db driver.Database
 
 	serv2ig driver.Collection
 	ig2sp   driver.Collection
@@ -61,7 +69,7 @@ func NewInstancesGroupsController(log *zap.Logger, db driver.Database) *Instance
 
 	return &InstancesGroupsController{
 		log: log.Named("InstancesGroupsController"), inst_ctrl: NewInstancesController(log, db),
-		col: col, graph: graph,
+		col: col, graph: graph, db: db,
 		serv2ig: serv2ig,
 		ig2sp:   ig2sp,
 	}
@@ -218,6 +226,26 @@ func (ctrl *InstancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 
 	return nil
 }
+
+func (ctrl *InstancesGroupsController) Transfer(ctx context.Context, oldSrvEdge string, newSrv driver.DocumentID, ig driver.DocumentID) error {
+	log := ctrl.log.Named("Transfer")
+	log.Debug("Transfer InstancesGroup", zap.String("group", ig.String()), zap.String("srvEdge", oldSrvEdge), zap.String("to", newSrv.String()))
+
+	_, err := ctrl.serv2ig.RemoveDocument(ctx, oldSrvEdge)
+	if err != nil {
+		log.Error("Failed to remove old Edge", zap.Error(err))
+		return err
+	}
+
+	_, err = ctrl.serv2ig.CreateDocument(ctx, Access{From: newSrv, To: ig, Role: roles.OWNER})
+	if err != nil {
+		log.Error("Failed to create Edge", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
 func (ctrl *InstancesGroupsController) Provide(ctx context.Context, group, sp string) error {
 	_, err := ctrl.ig2sp.CreateDocument(ctx, Access{
 		From: driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group),
@@ -232,4 +260,41 @@ func (ctrl *InstancesGroupsController) SetStatus(ctx context.Context, ig *pb.Ins
 	}
 	_, err = ctrl.col.UpdateDocument(ctx, ig.Uuid, mask)
 	return err
+}
+
+var getService = `
+LET ig = DOCUMENT(@ig)
+
+LET srv_edge = (
+	FOR s, edge IN 1 INBOUND ig
+	GRAPH @permissions
+	FILTER IS_SAME_COLLECTION(@services, s)
+	RETURN edge
+)[0]
+
+return srv_edge._key
+`
+
+func (ctrl *InstancesGroupsController) GetServiceEdge(ctx context.Context, ig string) (string, error) {
+	log := ctrl.log.Named("GetService")
+	log.Debug("Getting service", zap.String("ig", ig))
+	c, err := ctrl.db.Query(ctx, getService, map[string]interface{}{
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"ig":          ig,
+		"services":    schema.SERVICES_COL,
+	})
+
+	if err != nil {
+		log.Error("Error while querying", zap.Error(err))
+		return "", err
+	}
+	defer c.Close()
+	var edgeId string
+	_, err = c.ReadDocument(ctx, &edgeId)
+	if err != nil {
+		log.Error("Error while reading document", zap.Error(err))
+		return "", err
+	}
+
+	return edgeId, nil
 }
