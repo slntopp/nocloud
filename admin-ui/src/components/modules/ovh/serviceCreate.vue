@@ -48,7 +48,7 @@
             item-text="title"
             item-value="code"
 						v-model="instance.config.planCode"
-            :items="flavors"
+            :items="flavors[instance.billing_plan.uuid]"
             :rules="rules.req"
             :loading="isFlavorsLoading"
 						@change="(value) => setValue(index + '.config.planCode', value)"
@@ -58,7 +58,7 @@
 					<v-select
 						label="region"
 						v-model="instance.config.datacenter"
-						:items="regions"
+						:items="regions[instance.config.planCode]"
             :rules="rules.req"
             :disabled="!instance.config.planCode"
             @change="(value) => setValue(index + '.config.datacenter', value)"
@@ -68,7 +68,7 @@
 					<v-select
 						label="OS"
 						v-model="instance.config.os"
-						:items="images"
+						:items="images[instance.config.planCode]"
             :rules="rules.req"
             :disabled="!instance.config.planCode"
             @change="(value) => setValue(index + '.config.os', value)"
@@ -96,12 +96,33 @@
 				<v-col cols="6" class="d-flex align-center" v-if="instance.data.existing">
 					<v-text-field
             label="VPS name"
-						v-model="instance.config.vpsName"
+						v-model="instance.data.vpsName"
             :rules="rules.req"
 						@change="(value) => setValue(index + '.data.vpsName', value)"
 					/>
 				</v-col>
+				<v-col cols="6" class="d-flex align-center" v-if="instance.data.existing">
+					<v-text-field
+            label="VPS ID"
+						v-model="instance.data.vpsId"
+            :rules="rules.req"
+						@change="(value) => setValue(index + '.data.vpsId', value)"
+					/>
+				</v-col>
 			</v-row>
+
+      <template v-if="Object.values(addons[instance.config.planCode] || {}).length > 0">
+        <v-card-title class="px-0 pb-0">Addons:</v-card-title>
+        <v-row>
+          <v-col cols="6" v-for="(addon, key) in addons[instance.config.planCode]" :key="key">
+            <v-select
+              :label="key"
+              :items="addon"
+              @change="(value) => setValue(index + 'config.addons', value)"
+            />
+          </v-col>
+        </v-row>
+      </template>
 		</v-card>
 		<v-row>
 			<v-col class="d-flex justify-center">
@@ -126,7 +147,7 @@ import api from '@/api.js';
 
 export default {
 	name: 'ovh-create-service-module',
-	props: ['instances-group', 'plans', 'planRules'],
+	props: ['instances-group', 'plans', 'planRules', 'meta'],
 	data: () => ({
 		defaultItem: {
 			title: "instance",
@@ -146,16 +167,16 @@ export default {
     },
 
     isFlavorsLoading: false,
-    flavors: [],
-    regions: [],
-    images: [],
-    meta: {}
+    flavors: {},
+
+    regions: {},
+    images: {},
+    addons: {}
 	}),
 	methods: {
     addProducts(instance) {
       const { plan, billing_plan } = instance;
-      const products = this.plans.list.find((el) => el.uuid === plan.uuid)
-        ?.products;
+      const { products } = this.plans.list.find((el) => el.uuid === plan.uuid) || {};
 
       if (billing_plan.kind === 'STATIC') {
         instance.products = [];
@@ -187,12 +208,57 @@ export default {
 
       if (data.body.type !== 'ovh') return;
       if (this.regions.length > 0) return;
-      if (this.instances.length > 0) return;
+      if ('catalog' in this.meta) return;
 
       this.isFlavorsLoading = true;
       api.post(`/sp/${data.sp}/invoke`, { method: 'get_plans' })
-        .then(({ meta }) => { this.meta = meta })
+        .then(({ meta }) => {
+          this.$emit('changeMeta', meta);
+          this.setAddons(meta);
+        })
         .finally(() => { this.isFlavorsLoading = false });
+    },
+    setAddons(meta) {
+      this.plans.list.forEach(({ products, resources }) => {
+        for (let key in products) {
+          key = key.split(' ')[1];
+          if (key in this.addons) continue;
+
+          const plans = (meta) ? meta : this.meta;
+          const plan = plans.catalog.plans.find(({ planCode }) => planCode === key);
+
+          plan.configurations.forEach((el) => {
+            el.values.sort();
+            if (el.name.includes('os')) {
+              this.$set(this.images, key, el.values);
+            }
+            if (el.name.includes('datacenter')) {
+              this.$set(this.regions, key, el.values);
+            }
+          });
+
+          plan.addonFamilies.forEach((el) => {
+            if (!this.addons[key]) {
+              this.addons[key] = {};
+            }
+            if (el.name === 'snapshot') {
+              this.addons[key].snapshot = el.addons.filter((addon) =>
+                resources.find(({ key }) => key.includes(addon))
+              );
+            }
+            if (el.name === 'additionalDisk') {
+              this.addons[key].disk = el.addons.filter((addon) =>
+                resources.find(({ key }) => key.includes(addon))
+              );
+            }
+            if (el.name === 'automatedBackup') {
+              this.addons[key].backup = el.addons.filter((addon) =>
+                resources.find(({ key }) => key.includes(addon))
+              );
+            }
+          });
+        }
+      });
     },
 		setValue(path, val){
 			const data = JSON.parse(this.instancesGroup)
@@ -203,7 +269,7 @@ export default {
         const title = plan.title.split(' ')
 
         title.pop()
-        this.flavors = Object.keys(plan.products).map((el) => ({
+        this.flavors[val] = Object.keys(plan.products).map((el) => ({
           code: el.split(' ')[1],
           title: plan.products[el].title
         }))
@@ -222,13 +288,26 @@ export default {
       }
 
       if (path.includes('planCode')) {
-        const plan = this.meta.catalog.plans
-          .find(({ planCode }) => planCode === val)
+        const plan = this.meta.catalog.plans.find(({ planCode }) => planCode === val)
+        const resources = val.split('-')
 
         plan.configurations.forEach((el) => {
           el.values.sort()
-          if (el.name.includes('os')) this.images = el.values
-          if (el.name.includes('datacenter')) this.regions = el.values
+          if (el.name.includes('os')) {
+            this.$set(this.images, val, el.values)
+          }
+          if (el.name.includes('datacenter')) {
+            this.$set(this.regions, val, el.values)
+          }
+        })
+
+        this.setValue(`${i}.resources`, {
+          cpu: resources.at(-3),
+          ram: resources.at(-2),
+          drive_size: resources.at(-1),
+          drive_type: "SSD",
+          ips_private: 0,
+          ips_public: 1
         })
       }
 
@@ -263,11 +342,14 @@ export default {
         if (inst.billingPlan) {
           arr[i].billing_plan = inst.billingPlan;
           delete arr[i].billingPlan;
+
         }
+        this.setValue(`${i}.billing_plan`, inst.billing_plan.uuid);
         arr[i].plan = inst.billing_plan.uuid;
       });
     }
 
+    if ('catalog' in this.meta) this.setAddons();
 		this.change(data);
 	},
   watch: {

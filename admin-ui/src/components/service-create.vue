@@ -158,9 +158,11 @@
           <component
             :is="templates[currentInstancesGroups.body.type] ?? templates.custom"
             :instances-group="JSON.stringify(currentInstancesGroups)"
-            :planRules="planRules"
             :plans="{ list: filteredPlans, products: plans.products }"
+            :planRules="planRules"
+            :meta="meta"
             @update:instances-group="receiveObject"
+            @changeMeta="(value) => meta = value"
           />
         </v-card>
 
@@ -230,6 +232,7 @@ export default {
       list: [],
       products: [],
     },
+    meta: {},
 
     isVisible: false,
     isLoading: false,
