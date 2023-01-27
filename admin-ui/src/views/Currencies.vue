@@ -121,8 +121,6 @@ export default {
       { text: "Rate ", value: "rate" },
       { text: "Actions", value: "actions", sortable: false },
     ],
-    currenciesList: ['NCU', 'USD', 'EUR', 'BYN', 'PLN'],
-    currencies: [],
     selected: [],
 
     rules: {
@@ -130,7 +128,6 @@ export default {
     },
 
     currency: { from: "", to: "", rate: "1" },
-    isLoading: false,
     isCreateLoading: false,
     fetchError: "",
   }),
@@ -148,10 +145,7 @@ export default {
       this.isCreateLoading = true;
       api.post('/billing/currencies/rates', newCurrency)
         .then(() => {
-          this.currencies.push({
-            ...this.currency,
-            id: `${this.currency.from} ${this.currency.to}`
-          });
+          this.$store.dispatch('currencies/fetch');
           this.currency = { from: "", to: "", rate: "1" };
         })
         .catch((err) => {
@@ -170,7 +164,7 @@ export default {
         to: this.currenciesList.indexOf(currency.to)
       };
 
-      this.isLoading = true;
+      this.$store.commit('currencies/setLoading', true);
       api.put('/billing/currencies/rates', newCurrency)
         .then(() => {
           this.showSnackbarSuccess({ message: 'Done' });
@@ -181,10 +175,11 @@ export default {
           this.showSnackbarError({ message });
           console.error(err);
         })
-        .finally(() => this.isLoading = false);
+        .finally(() => {
+          this.$store.commit('currencies/setLoading', false);
+        });
     },
     deleteSelectedCurrencies() {
-      this.isLoading = true;
       const promises = this.selected.filter(({ id }) =>
         this.currencies.find((el) => el.id === id)
       ).map(({ from, to }) =>
@@ -192,42 +187,40 @@ export default {
       );
 
       Promise.all(promises).then(() => {
-        this.currencies = this.currencies.filter(({ id }) =>
-          !this.selected.find((el) => el.id === id)
-        );
-        this.selected = [];
+        this.$store.dispatch('currencies/fetch');
       })
       .catch((err) => {
         const message = err.response?.data?.message ?? err.message ?? err;
 
         this.showSnackbarError({ message });
         console.error(err);
-      })
-      .finally(() => this.isLoading = false);
+      });
     }
   },
   created() {
-    this.isLoading = true;
-    api.get('/billing/currencies')
-      .then((res) => {
-        this.currenciesList = res.currencies;
-
-        return api.get('/billing/currencies/rates');
-      })
-      .then((res) => {
-        this.currencies = res.rates.map((el) => ({
-          ...el, id: `${el.from} ${el.to}`
-        }));
-      })
+    this.$store.dispatch('currencies/fetch')
       .catch((err) => {
         const message = err.response?.data?.message ?? err.message ?? err;
 
         this.showSnackbarError({ message });
         console.error(err);
-      })
-      .finally(() => this.isLoading = false);
+      });
+  },
+  mounted() {
+    this.$store.commit("reloadBtn/setCallback", {
+      type: "currencies/fetch",
+    });
   },
   computed: {
+    isLoading() {
+      return this.$store.getters['currencies/isLoading'];
+    },
+    currencies() {
+      return this.$store.getters['currencies/rates'];
+    },
+    currenciesList() {
+      return this.$store.getters['currencies/all'];
+    },
     currenciesFrom() {
       const currencies = [];
 
