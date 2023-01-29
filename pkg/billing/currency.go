@@ -13,7 +13,7 @@ type CurrencyServiceServer struct {
 	pb.UnimplementedCurrencyServiceServer
 	log *zap.Logger
 
-	ctrl *graph.CurrencyController
+	ctrl graph.CurrencyController
 
 	db driver.Database
 }

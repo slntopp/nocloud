@@ -29,7 +29,7 @@ type CurrencyController struct {
 	db    driver.Database
 }
 
-func NewCurrencyController(log *zap.Logger, db driver.Database) *CurrencyController {
+func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyController {
 	ctx := context.TODO()
 	graph := GraphGetEnsure(log, ctx, db, schema.BILLING_GRAPH.Name)
 	col := GetEnsureCollection(log, ctx, db, schema.CUR_COL)
@@ -46,7 +46,7 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) *CurrencyControl
 		}
 	}
 
-	return &CurrencyController{
+	return CurrencyController{
 		log:   log,
 		col:   col,
 		graph: graph,
