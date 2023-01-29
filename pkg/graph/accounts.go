@@ -74,6 +74,7 @@ func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, er
 	}
 	account, err := GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
 	if err != nil {
+		ctrl.log.Error("Error getting account", zap.Error(err))
 		return Account{}, err
 	}
 	ctrl.log.Debug("Got document", zap.Any("account", account))
