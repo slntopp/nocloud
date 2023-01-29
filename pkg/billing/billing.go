@@ -238,10 +238,16 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 
 	cur := acc.Account.GetCurrency()
 
-	rate, err := s.currencies.GetExchangeRateDirect(ctx, pb.Currency_NCU, cur)
-	if err != nil {
-		log.Error("Error getting rate", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error getting rate")
+	var rate float64
+
+	if cur == pb.Currency_NCU {
+		rate = 1
+	} else {
+		rate, err = s.currencies.GetExchangeRateDirect(ctx, pb.Currency_NCU, cur)
+		if err != nil {
+			log.Error("Error getting rate", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Error getting rate")
+		}
 	}
 
 	for planIndex := range result {
