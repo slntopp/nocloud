@@ -230,42 +230,44 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 		result = append(result, plan.Plan)
 	}
 
-	acc, err := s.accounts.Get(ctx, requestor)
-	if err != nil {
-		log.Error("Error getting account", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error getting account")
-	}
-
-	cur := acc.Account.GetCurrency()
-
-	var rate float64
-
-	if cur == pb.Currency_NCU {
-		rate = 1
-	} else {
-		rate, err = s.currencies.GetExchangeRateDirect(ctx, pb.Currency_NCU, cur)
+	if !req.Anonymously {
+		acc, err := s.accounts.Get(ctx, requestor)
 		if err != nil {
-			log.Error("Error getting rate", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Error getting rate")
+			log.Error("Error getting account", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Error getting account")
 		}
-	}
 
-	for planIndex := range result {
-		plan := result[planIndex]
+		cur := acc.Account.GetCurrency()
 
-		products := plan.GetProducts()
-		for key := range products {
-			products[key].Price *= rate
+		var rate float64
+
+		if cur == pb.Currency_NCU {
+			rate = 1
+		} else {
+			rate, err = s.currencies.GetExchangeRateDirect(ctx, pb.Currency_NCU, cur)
+			if err != nil {
+				log.Error("Error getting rate", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Error getting rate")
+			}
 		}
-		plan.Products = products
 
-		resources := plan.GetResources()
-		for index := range resources {
-			resources[index].Price *= rate
+		for planIndex := range result {
+			plan := result[planIndex]
+
+			products := plan.GetProducts()
+			for key := range products {
+				products[key].Price *= rate
+			}
+			plan.Products = products
+
+			resources := plan.GetResources()
+			for index := range resources {
+				resources[index].Price *= rate
+			}
+			plan.Resources = resources
+
+			result[planIndex] = plan
 		}
-		plan.Resources = resources
-
-		result[planIndex] = plan
 	}
 
 	return &pb.ListResponse{Pool: result}, nil
