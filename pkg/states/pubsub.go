@@ -149,18 +149,18 @@ func (s *StatesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	}
 }
 
-type Pub func(msg *pb.ObjectState) error
+type Pub func(msg *pb.ObjectState) (int, error)
 
 func (s *StatesPubSub) Publisher(ch *amqp.Channel, exchange, subtopic string) Pub {
 	topic := exchange + "." + subtopic
-	return func(msg *pb.ObjectState) error {
+	return func(msg *pb.ObjectState) (int, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		body, err := proto.Marshal(msg)
 		if err != nil {
-			return err
+			return 0, err
 		}
-		return ch.PublishWithContext(ctx, exchange, topic, false, false, amqp.Publishing{
+		return len(body), ch.PublishWithContext(ctx, exchange, topic, false, false, amqp.Publishing{
 			ContentType:  "text/plain",
 			DeliveryMode: amqp.Persistent,
 			Body:         body,

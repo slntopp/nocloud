@@ -74,6 +74,7 @@ func (ctrl *AccountsController) Get(ctx context.Context, id string) (Account, er
 	}
 	account, err := GetWithAccess[Account](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.ACCOUNTS_COL, id))
 	if err != nil {
+		ctrl.log.Error("Error getting account", zap.Error(err))
 		return Account{}, err
 	}
 	ctrl.log.Debug("Got document", zap.Any("account", account))
@@ -105,8 +106,7 @@ func (ctrl *AccountsController) Exists(ctx context.Context, id string) (bool, er
 	return ctrl.col.DocumentExists(context.TODO(), id)
 }
 
-func (ctrl *AccountsController) Create(ctx context.Context, title string) (Account, error) {
-	acc := pb.Account{Title: title}
+func (ctrl *AccountsController) Create(ctx context.Context, acc pb.Account) (Account, error) {
 	meta, err := ctrl.col.CreateDocument(ctx, &acc)
 	acc.Uuid = meta.ID.Key()
 	return Account{&acc, meta}, err

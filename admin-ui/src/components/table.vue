@@ -12,7 +12,7 @@
     @input="handleSelect"
     :single-select="singleSelect"
     :headers="headers"
-    :sort-by.sync="sortByTable"
+    :sort-by="sortByTable"
     :sort-desc="sortDesc"
     :expanded="expanded"
     @update:expanded="(nw) => $emit('update:expanded', nw)"
@@ -21,6 +21,7 @@
     :items-per-page.sync="itemsPerPage"
     :show-group-by="showGroupBy"
     :group-by="groupBy"
+    :custom-sort="customSort"
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
@@ -98,6 +99,7 @@ export default {
   props: {
     sortBy: { type: String },
     sortDesc: { type: Boolean },
+    customSort: { type: Function },
     loading: Boolean,
     items: {
       type: Array,
@@ -245,3 +247,10 @@ export default {
   },
 };
 </script>
+
+<style>
+.v-data-table > .v-data-table__wrapper > table > tbody > tr > td,
+.theme--dark.v-data-table > .v-data-table__wrapper > table > thead > tr:last-child > th {
+  white-space: nowrap;
+}
+</style>

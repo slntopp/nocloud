@@ -3,6 +3,7 @@
     <v-card
       v-for="(instance, index) in instances"
       :key="index"
+      :id="instance.uuid"
       class="mb-4 pa-2"
       elevation="0"
       color="background"
@@ -229,6 +230,7 @@
       <v-col class="d-flex justify-center">
         <v-btn
           :disabled="isOpenSRS"
+          id="button"
           class="mx-2"
           small
           color="background"

@@ -60,7 +60,9 @@ export default {
     },
     filtredZones() {
       if (this.searchParam) {
-        return filterArrayIncludes(this.tableData, {key:"titleLink", value:this.searchParam});
+        return filterArrayIncludes(this.tableData, {
+          keys: ["titleLink"], value: this.searchParam
+        });
       }
       return this.tableData;
     },

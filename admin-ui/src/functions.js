@@ -106,17 +106,26 @@ export function sha256(ascii) {
   return result;
 }
 
-export function filterArrayIncludes(array, { key, value }) {
+export function filterArrayIncludes(array, { keys, value, params }) {
   if (!array || !Array.isArray(array) || !array.length) {
     return [];
   }
 
-  return array.filter(
-    (item) =>
-      (typeof item[key] === "string" &&
-        item[key].toLowerCase().startsWith(value)) ||
-      false
-  );
+  return array.filter((item) => keys.some((key) => {
+    const newKey = (params[key]) ? params[key] : key;
+    let newValue = item[newKey];
+
+    switch (typeof params[key]) {
+      case "function":
+        newValue = newKey(item);
+        break;
+      case "string":
+        newValue = item[key][newKey];
+    }
+
+    return typeof newValue === "string" &&
+      newValue.toLowerCase().includes(value.toLowerCase())
+  }));
 }
 
 export function filterArrayBy(array, { key, value }) {
@@ -134,12 +143,12 @@ export function filterArrayByTitleAndUuid(
   titleKey = "title"
 ) {
   const byUuid = filterArrayIncludes(array, {
-    key: "uuid",
+    keys: ["uuid"],
     value: value.toLowerCase(),
   });
 
   const byTitle = filterArrayIncludes(array, {
-    key: titleKey,
+    keys: [titleKey],
     value: value.toLowerCase(),
   });
 

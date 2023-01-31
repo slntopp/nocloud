@@ -164,3 +164,52 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 		Result: true,
 	}, nil
 }
+
+func (s *InstancesServer) Transfer(ctx context.Context, req *pb.TransferRequest) (*pb.TransferResponse, error) {
+	log := s.log.Named("transfer")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	igId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.Uuid)
+	newSrvId := driver.NewDocumentID(schema.SERVICES_COL, req.Service)
+	ig, err := graph.GetWithAccess[graph.InstancesGroup](ctx, s.db, igId)
+
+	if err != nil {
+		log.Error("Failed to get instances group", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	srv, err := graph.GetWithAccess[graph.Service](ctx, s.db, newSrvId)
+
+	if err != nil {
+		log.Error("Failed to get service", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
+		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	if srv.GetAccess().GetLevel() < accesspb.Level_ROOT {
+		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	srvEdge, err := s.ig_ctrl.GetServiceEdge(ctx, igId.String())
+
+	if err != nil {
+		log.Error("Failed to get Service", zap.Error(err))
+		return nil, err
+	}
+
+	err = s.ig_ctrl.Transfer(ctx, srvEdge, newSrvId, igId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.TransferResponse{
+		Result: true,
+		Meta:   nil,
+	}, nil
+}

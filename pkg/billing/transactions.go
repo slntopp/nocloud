@@ -17,8 +17,9 @@ package billing
 
 import (
 	"context"
-	epb "github.com/slntopp/nocloud-proto/events"
 	"time"
+
+	epb "github.com/slntopp/nocloud-proto/events"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -114,13 +115,17 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	if r.Transaction.Priority == pb.Priority_URGENT {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
+		currencyConf := MakeCurrencyConf(ctx, log)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
 			"@transactions":  schema.TRANSACTIONS_COL,
 			"accountKey":     acc.String(),
 			"transactionKey": transaction.String(),
+			"currency":       currencyConf.Currency,
+			"currencies":     schema.CUR_COL,
 			"now":            time.Now().Unix(),
+			"graph":          schema.BILLING_GRAPH.Name,
 		})
 		if err != nil {
 			log.Error("Failed to process transaction", zap.String("err", err.Error()))
@@ -135,8 +140,18 @@ const processUrgentTransaction = `
 LET account = DOCUMENT(@accountKey)
 LET transaction = DOCUMENT(@transactionKey)
 
+LET currency = account.currency != null ? account.currency : @currency
+LET rate = PRODUCT(
+	FOR vertex, edge IN OUTBOUND
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency)))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	GRAPH @graph
+	FILTER edge
+		RETURN edge.rate
+)
+
 UPDATE transaction WITH {processed: true, proc: @now} IN @@transactions
-UPDATE account WITH { balance: account.balance - transaction.total } IN @@accounts
+UPDATE account WITH { balance: account.balance - transaction.total * rate } IN @@accounts
 
 return account
 `
@@ -149,9 +164,11 @@ FOR t IN @@transactions // Iterate over Transactions
 FILTER t.exec <= @now
 FILTER t.account == account._key
 	LET rate = PRODUCT(
-		FOR vertex, edge IN OUTBOUND SHORTEST_PATH
-		DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency))) TO
-		DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+		FOR vertex, edge IN OUTBOUND
+		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency)))
+		TO DOCUMENT(CONCAT(@currencies, "/", currency))
+		GRAPH @graph
+		FILTER edge
 			RETURN edge.rate
 	)
     UPDATE t WITH { processed: true, proc: @now, total: t.total * rate, currency: currency } IN @@transactions RETURN NEW )

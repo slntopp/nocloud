@@ -9,6 +9,8 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 var currencies []pb.Currency = []pb.Currency{
@@ -27,7 +29,7 @@ type CurrencyController struct {
 	db    driver.Database
 }
 
-func NewCurrencyController(log *zap.Logger, db driver.Database) *CurrencyController {
+func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyController {
 	ctx := context.TODO()
 	graph := GraphGetEnsure(log, ctx, db, schema.BILLING_GRAPH.Name)
 	col := GetEnsureCollection(log, ctx, db, schema.CUR_COL)
@@ -44,7 +46,7 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) *CurrencyControl
 		}
 	}
 
-	return &CurrencyController{
+	return CurrencyController{
 		log:   log,
 		col:   col,
 		graph: graph,
@@ -58,7 +60,7 @@ FOR CURRENCY in @@currencies
 	return CURRENCY
 `
 
-func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) (float64, error) {
+func (c *CurrencyController) GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, error) {
 	edge := map[string]interface{}{}
 	_, err := c.edges.ReadDocument(ctx, fmt.Sprintf("%d-%d", from, to), &edge)
 	if err != nil {
@@ -66,6 +68,46 @@ func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Curren
 	}
 	rate := edge["rate"].(float64)
 	return rate, err
+}
+
+const getExchangeRateQuery = `
+LET rates = (
+ FOR vertex, edge IN OUTBOUND
+ SHORTEST_PATH @from TO @to
+ GRAPH @billing
+ FILTER edge
+    RETURN edge.rate
+)
+
+RETURN { len: LENGTH(rates), rate: PRODUCT(rates) }
+`
+
+func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) (float64, error) {
+	cursor, err := c.db.Query(ctx, getExchangeRateQuery, map[string]interface{}{
+		"from":    fmt.Sprintf("%s/%d", schema.CUR_COL, from),
+		"to":      fmt.Sprintf("%s/%d", schema.CUR_COL, to),
+		"billing": schema.BILLING_GRAPH.Name,
+	})
+	if err != nil {
+		return 0, err
+	}
+	defer cursor.Close()
+
+	var res struct {
+		Len  int     `json:"len"`
+		Rate float64 `json:"rate"`
+	}
+
+	_, err = cursor.ReadDocument(ctx, &res)
+	if err != nil {
+		return 0, err
+	}
+
+	if res.Len == 0 {
+		return 0, fmt.Errorf("no path or direct connection between %s and %s", from.String(), to.String())
+	}
+
+	return res.Rate, nil
 }
 
 func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate float64) error {
@@ -109,7 +151,7 @@ func (c *CurrencyController) Convert(ctx context.Context, from pb.Currency, to p
 
 	rate, err := c.GetExchangeRate(ctx, from, to)
 	if err != nil {
-		return 0, err
+		return 0, status.Error(codes.NotFound, err.Error())
 	}
 
 	return amount * rate, nil

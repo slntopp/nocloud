@@ -13,7 +13,7 @@ type CurrencyServiceServer struct {
 	pb.UnimplementedCurrencyServiceServer
 	log *zap.Logger
 
-	ctrl *graph.CurrencyController
+	ctrl graph.CurrencyController
 
 	db driver.Database
 }
@@ -37,7 +37,22 @@ func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, req *pb.Get
 
 func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, req *pb.CreateExchangeRateRequest) (*pb.CreateExchangeRateResponse, error) {
 	err := s.ctrl.CreateExchangeRate(ctx, req.From, req.To, req.Rate)
-	return &pb.CreateExchangeRateResponse{}, err
+	if err != nil {
+		return &pb.CreateExchangeRateResponse{}, err
+	}
+
+	_, err = s.ctrl.GetExchangeRateDirect(ctx, req.To, req.From)
+	if err == nil {
+		return &pb.CreateExchangeRateResponse{}, nil
+	}
+
+	s.log.Info("Reverse rate is not set yet, setting automatically", zap.String("from", req.To.String()), zap.String("to", req.From.String()))
+	err = s.ctrl.CreateExchangeRate(ctx, req.To, req.From, 1/req.Rate)
+	if err != nil {
+		s.log.Warn("Couldn't automatically create reverse Exchange rate", zap.Error(err))
+	}
+
+	return &pb.CreateExchangeRateResponse{}, nil
 }
 
 func (s *CurrencyServiceServer) UpdateExchangeRate(ctx context.Context, req *pb.UpdateExchangeRateRequest) (*pb.UpdateExchangeRateResponse, error) {

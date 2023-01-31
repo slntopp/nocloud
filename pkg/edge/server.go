@@ -62,5 +62,6 @@ func (s *EdgeServiceServer) PostState(ctx context.Context, req *stpb.ObjectState
 	}
 
 	s.log.Debug("Publishing state", zap.String("instance", inst), zap.String("state", req.GetState().String()))
-	return &pb.Empty{}, s.pub(req)
+	_, err := s.pub(req)
+	return &pb.Empty{}, err
 }

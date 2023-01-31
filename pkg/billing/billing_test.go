@@ -138,7 +138,7 @@ func TestGenerateTransactions(t *testing.T) {
 	currencyController.CreateExchangeRate(ctx, pb.Currency_USD, pb.Currency_NCU, 2.0)
 	currencyController.CreateExchangeRate(ctx, pb.Currency_EUR, pb.Currency_USD, 2.0)
 
-	acc, err := accountController.Create(ctx, "test_account")
+	acc, err := accountController.Create(ctx, accpb.Account{Title: "test_user"})
 	if err != nil {
 		t.Error(err)
 	}

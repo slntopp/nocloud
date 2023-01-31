@@ -337,10 +337,11 @@ FOR service IN @@services // Iterate over Services
         FILTER !record.processed
         FILTER record.instance IN instances
 		LET rate = PRODUCT(
-			FOR vertex, edge IN OUTBOUND SHORTEST_PATH
-			// Cast to NCU if currency is not specified
-			DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency))) TO
-			DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+			FOR vertex, edge IN OUTBOUND
+			SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency)))
+			TO DOCUMENT(CONCAT(@currencies, "/", currency))
+			GRAPH @graph
+			FILTER edge
 				RETURN edge.rate
 		)
         LET total = record.total * rate
@@ -369,11 +370,14 @@ FILTER t.exec <= @now
 FILTER !t.processed
     LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
 	// Prefer user currency to default if present
+	FILTER account != null
 	LET currency = account.currency != null ? account.currency : @currency
 	LET rate = PRODUCT(
-		FOR vertex, edge IN OUTBOUND SHORTEST_PATH
-		DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency))) TO
-		DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+		FOR vertex, edge IN OUTBOUND
+		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency)))
+		TO DOCUMENT(CONCAT(@currencies, "/", currency))
+		GRAPH @graph
+		FILTER edge
 			RETURN edge.rate
 	)
 	LET total = t.total * rate
