@@ -502,6 +502,7 @@ export default {
       })
       .finally(() => {
         this.isLoading = false;
+        this.isDialogVisible = false;
       });
     },
     testConfig() {

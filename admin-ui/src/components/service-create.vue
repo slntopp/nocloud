@@ -240,9 +240,9 @@ export default {
   }),
   mixins: [snackbar],
   methods: {
-    addInstancesGroup(title = "") {
+    addInstancesGroup(title = "", type) {
       if (this.instances.some((inst) => inst.title == "")) return;
-      this.instances = [...this.instances, this.defaultInstance(title)];
+      this.instances = [...this.instances, this.defaultInstance(title, type)];
       if (this.instances.length == 1) this.selectInstance(0);
     },
     removeInstance(index) {
@@ -254,11 +254,11 @@ export default {
         this.selectInstance(-1);
       }
     },
-    defaultInstance(title = "") {
+    defaultInstance(title = "", type = "ione") {
       return {
         title,
         body: {
-          type: "ione",
+          type,
           resources: {
             ips_public: 0,
           },
@@ -414,8 +414,8 @@ export default {
     this.$store.dispatch("services/fetch")
       .then(({ pool }) => {
         const service = pool.find((el) => el.uuid === this.$route.params.serviceId);
-        const group = this.$route.params.sp;
-        const i = service?.instancesGroups.findIndex(({ sp }) => sp === group);
+        const group = this.$route.params.type;
+        const i = service?.instancesGroups.findIndex(({ type }) => type === group);
         const { instance } = this.$route.params;
 
         if (service) {
@@ -440,7 +440,18 @@ export default {
             window.scrollBy({ top });
           }, 300);
         } else if (group) {
-          this.selectInstance(i);
+          if (i !== -1) this.selectInstance(i);
+          else {
+            const type = (this.types.includes(group)) ? group : "custom";
+
+            this.addInstancesGroup("", type);
+            this.selectInstance(this.instances.length - 1);
+
+            if (!this.types.includes(group)) {
+              this.customTitles[this.currentInstancesGroupsIndex] = group;
+            }
+          }
+
           setTimeout(() => {
             const button = document.getElementById('button');
 

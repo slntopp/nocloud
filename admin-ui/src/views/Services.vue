@@ -99,8 +99,8 @@
                   {{ group.title }} | Type: {{ group.type }} -
                   {{ titleSP(group) }}
                   <v-chip
-                    class="instance-group-status"
                     small
+                    class="instance-group-status"
                     :color="instanceCountColor(group)"
                   >
                     {{ group.instances.length }}
@@ -109,22 +109,7 @@
                 <v-expansion-panel-content
                   style="background: var(--v-background-base)"
                 >
-                  <v-row>
-                    <serveces-instances-item
-                      v-for="(instance, index) in group.instances"
-                      :key="index"
-                      :title="instance.title"
-                      :state="instance.state ? instance.state.state : 'UNKNOWN'"
-                      :cpu="instance.resources.cpu"
-                      :drive_type="instance.resources.drive_type"
-                      :drive_size="instance.resources.drive_size"
-                      :ram="instance.resources.ram"
-                      :hash="instance.hash"
-                      :index="index"
-                      :chipColor="chipColor"
-                      :hashTrim="hashTrim"
-                    />
-                  </v-row>
+                  <service-instances-item :instances="group.instances" :spId="group.sp" :type="group.type" />
                 </v-expansion-panel-content>
               </v-expansion-panel>
             </v-expansion-panels>
@@ -141,8 +126,8 @@
 <script>
 import api from "@/api";
 import nocloudTable from "@/components/table.vue";
-import servecesInstancesItem from "@/components/serveces_instances_item.vue";
-import ConfirmDialog from "../components/confirmDialog.vue";
+import serviceInstancesItem from "@/components/service_instances_item.vue";
+import confirmDialog from "@/components/confirmDialog.vue";
 import search from "@/mixins/search.js";
 import snackbar from "@/mixins/snackbar.js";
 import { filterArrayByTitleAndUuid } from "@/functions";
@@ -151,8 +136,8 @@ export default {
   name: "Services-view",
   components: {
     nocloudTable,
-    servecesInstancesItem,
-    ConfirmDialog,
+    serviceInstancesItem,
+    confirmDialog,
   },
   mixins: [snackbar, search],
   data: () => ({
