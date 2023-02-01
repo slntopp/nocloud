@@ -40,18 +40,23 @@
 
           <v-select
             dense
-            item-text="title"
-            item-value="sp"
-            label="group"
+            label="type"
             style="width: 300px"
-            v-model="newInstance.sp"
-            :items="service?.instancesGroups"
+            v-model="newInstance.type"
+            :items="allTypes"
+            :rules="rules.req"
+          />
+          <v-text-field
+            label="type name"
+            v-if="newInstance.type === 'custom'"
+            v-model="newInstance.customTitle"
             :rules="rules.req"
           />
 
           <v-btn
             :to="{ name: 'Service edit', params: {
-              serviceId: newInstance.service, sp: newInstance.sp
+              serviceId: newInstance.service,
+              type: (newInstance.type === 'custom') ? newInstance.customTitle : newInstance.type
             }}"
             :disabled="!newInstance.isValid"
           >
@@ -133,6 +138,10 @@
         {{ getOSName(value, item.sp) }}
       </template>
 
+      <template v-slot:[`item.config.planCode`]="{ item }">
+        {{ getTariff(item) }}
+      </template>
+
       <template v-slot:[`item.state.meta.networking`]="{ item }">
         <template v-if="!item.state?.meta.networking?.public">-</template>
         <v-menu bottom
@@ -195,10 +204,11 @@ export default {
   data: () => ({
     type: "all",
     types: ["all"],
+    allTypes: [],
     column: "",
     filters: {},
     selectedFilters: {},
-    newInstance: { isValid: false, service: '', sp: '' },
+    newInstance: { isValid: false, service: '', type: '', customTitle: '' },
     rules: {
       req: [(v) => !!v || 'This field is required!']
     },
@@ -419,10 +429,25 @@ export default {
       if (!id) return;
       return this.sp.find(({ uuid }) => uuid === sp).publicData.templates[id].name;
     },
+    getTariff(item) {
+      const { billingPlan, config: { planCode, duration } } = item;
+      const key = `${duration} ${planCode}`;
+
+      return billingPlan.products[key].title;
+    },
   },
   created() {
     this.fetchServices();
     this.$store.dispatch("servicesProviders/fetch", false);
+
+    const types = require.context("@/components/modules/", true, /serviceCreate\.vue$/);
+
+    types.keys().forEach((key) => {
+      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i);
+      if (matched && matched.length > 1) {
+        this.allTypes.push(matched[1]);
+      }
+    });
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
@@ -530,7 +555,7 @@ export default {
           if (this.type === 'opensrs') break;
           else headers.push(
             { text: "DCV", value: "resources.dcv", class: "groupable" },
-            { text: "Email", value: "resources.email", class: "groupable" }
+            { text: "Email", value: "resources.approver_email", class: "groupable" }
           );
       }
 
