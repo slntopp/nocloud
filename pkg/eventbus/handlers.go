@@ -10,8 +10,10 @@ import (
 type EventHandler func(context.Context, *pb.Event, driver.Database) (*pb.Event, error)
 
 var handlers = map[string]EventHandler{
-	"instance_suspended":   SuspendInstanceHandler,
-	"instance_unsuspended": SuspendInstanceHandler,
+	"instance_suspended":   GetInstAccountHandler,
+	"instance_unsuspended": GetInstAccountHandler,
+	"instance_created":     GetInstAccountHandler,
+	"instance_deleted":     GetInstAccountHandler,
 }
 
 var getInstanceAccount = `
@@ -38,7 +40,7 @@ LET account = LAST(
 RETURN account._key
 `
 
-func SuspendInstanceHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
+func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
 	inst := driver.NewDocumentID(schema.INSTANCES_COL, event.GetUuid())
 
 	cursor, err := db.Query(ctx, getInstanceAccount, map[string]interface{}{
