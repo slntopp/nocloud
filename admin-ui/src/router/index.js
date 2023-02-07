@@ -90,7 +90,7 @@ const routes = [
     },
   },
   {
-    path: "/settigns",
+    path: "/settings",
     name: "Settings",
     component: () => import("../views/Settings.vue"),
     meta: {
@@ -98,9 +98,17 @@ const routes = [
     },
   },
   {
-    path: "/settigns/app",
+    path: "/settings/app",
     name: "AppSetting",
     component: () => import("../views/AppSettings.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/plugin/:title",
+    name: "Plugin",
+    component: () => import("../views/PluginPage.vue"),
     meta: {
       requireLogin: true,
     },

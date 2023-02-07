@@ -7,6 +7,7 @@ version: 2
 updates:
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/" # Location of package manifests
+    target-branch: dev
     schedule:
       interval: daily
       time: "06:00"
@@ -16,6 +17,7 @@ updates:
       - slntopp
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "tools/buf" # Location of package manifests
+    target-branch: dev
     schedule:
       interval: daily
       time: "06:00"
@@ -25,6 +27,7 @@ updates:
       - slntopp
   - package-ecosystem: "npm"
     directory: "admin-ui"
+    target-branch: dev
     schedule:
       interval: daily
       time: "06:00"
@@ -36,6 +39,7 @@ updates:
       - "639852"
   - package-ecosystem: github-actions
     directory: "/"
+    target-branch: dev
     schedule:
       interval: daily
       time: "06:00"
