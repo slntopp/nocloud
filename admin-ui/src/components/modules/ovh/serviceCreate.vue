@@ -301,18 +301,18 @@ export default {
           }
         })
 
-        this.setValue(`${i}.resources`, {
-          cpu: resources.at(-3),
-          ram: resources.at(-2),
-          drive_size: resources.at(-1),
+        data.body.instances[i].resources = {
+          cpu: +resources.at(-3),
+          ram: resources.at(-2) * 1024,
+          drive_size: resources.at(-1) * 1024,
           drive_type: "SSD",
           ips_private: 0,
           ips_public: 1
-        })
+        }
       }
 
       if (path.includes('duration')) {
-        this.setValue(`${i}.config.pricingMode`, (val) ? 'default' : 'upfront12')
+        data.body.instances[i].config.pricingMode = (val === 'P1M') ? 'default' : 'upfront12'
       }
 
 			setToValue(data.body.instances, val, path)

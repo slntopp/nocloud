@@ -103,7 +103,7 @@ init:
 		if !ok {
 			log.Warn("Handler not fount", zap.String("handler", event.Key))
 			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+				log.Warn("Failed to Acknowledge the delivery while getting handler", zap.Error(err))
 			}
 			continue
 		}
@@ -112,7 +112,7 @@ init:
 		if err != nil {
 			log.Error("Fail to call handler", zap.Any("handler type", event.Key), zap.String("err", err.Error()))
 			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+				log.Warn("Failed to Acknowledge the delivery while executing handler", zap.Error(err))
 			}
 			continue
 		}
@@ -121,13 +121,13 @@ init:
 		if err != nil {
 			log.Error("Failed to publish upd event", zap.String("err", err.Error()))
 			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+				log.Warn("Failed to Acknowledge the delivery while publishing event", zap.Error(err))
 			}
 			continue
 		}
 
 		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
 		}
 	}
 }

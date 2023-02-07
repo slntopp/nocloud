@@ -301,7 +301,7 @@ export default {
         });
       }, 100);
     },
-    changePlans({ plans, windows }) {
+    changePlans({ plans, windows, catalog }) {
       const result = [];
 
       plans.forEach(({ prices, planCode, productName }) => {
@@ -313,7 +313,16 @@ export default {
             const code = planCode.split('-').slice(1).join('-');
             const option = windows.find((el) => el.planCode.includes(code));
             const newPrice = parseFloat((price.value * this.rate).toFixed(2));
-            const plan = { windows: null };
+
+            const { configurations, addonFamilies } = catalog.plans.find(
+              ({ planCode }) => planCode.includes(code)
+            );
+            const os = configurations[1].values;
+            const datacenter = configurations[0].values;
+            const addons = addonFamilies.reduce(
+              (res, { addons }) => [...res, ...addons], []
+            );
+            const plan = { windows: null, addons, os, datacenter };
 
             if (option) {
               const { price: { value } } = option.prices.find((el) =>
@@ -453,9 +462,13 @@ export default {
       this.plans.forEach((el) => {
         if (el.sell) {
           const [,, cpu, ram, disk] = el.planCode.split('-');
-          const meta = {};
+          const meta = {
+            addons: el.addons,
+            datacenter: el.datacenter,
+            os: el.os
+          };
 
-          if (el.windows) meta[el.windows.code] = el.windows.value;
+          if (el.windows) meta.windows = el.windows.value;
           newPlan.products[el.id] = {
             kind: 'PREPAID',
             title: el.name,
@@ -502,6 +515,7 @@ export default {
       })
       .finally(() => {
         this.isLoading = false;
+        this.isDialogVisible = false;
       });
     },
     testConfig() {
