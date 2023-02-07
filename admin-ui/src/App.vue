@@ -144,6 +144,23 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-subheader v-if="plugins.length > 0">PLUGINS</v-subheader>
+
+        <v-list-item
+          v-bind="listItemBind"
+          v-for="plugin of plugins"
+          :key="plugin.api"
+          :to="{ name: 'Plugin', params: plugin }"
+        >
+          <v-list-item-icon>
+            <v-icon>mdi-{{ plugin.icon }}</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle(plugin.title) }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-subheader>SYSTEM</v-subheader>
 
         <v-list-item v-bind="listItemBind" :to="{ name: 'DNS manager' }">
@@ -231,7 +248,8 @@
 </template>
 
 <script>
-import config from "@/config";
+import api from "@/api.js";
+import config from "@/config.js";
 import balance from "@/components/balance.vue";
 import languages from "@/components/languages.vue";
 import appSearch from "@/components/search/search.vue";
@@ -245,6 +263,7 @@ export default {
     easterEgg: false,
     config,
     navTitles: config.navTitles ?? {},
+    plugins: [],
   }),
   methods: {
     logoutHandler() {
@@ -348,6 +367,12 @@ export default {
 
     if (this.isLoggedIn) {
       this.$store.dispatch("auth/fetchUserData");
+
+      api.settings.get(["plugins"]).then((res) => {
+        const key = res["plugins"];
+
+        if (key) this.plugins = JSON.parse(key);
+      });
     }
   },
   mounted() {
