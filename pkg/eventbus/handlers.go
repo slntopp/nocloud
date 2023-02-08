@@ -22,7 +22,6 @@ var handlers = map[string]EventHandler{
 var getInstanceAccount = `
 LET doc = DOCUMENT(@inst)
 
-
 LET srv = LAST(
 FOR node, edge, path IN 2
     INBOUND doc
@@ -41,7 +40,7 @@ LET account = LAST(
         RETURN node
     )
     
-RETURN {account: account._key, service: srv._key}
+RETURN {account: account._key, service: srv.title}
 `
 
 type AccountWithService struct {
@@ -104,7 +103,6 @@ func ExpiryHandler(ctx context.Context, event *pb.Event, db driver.Database) (*p
 		}
 	}
 
-	event.Data["instance"] = structpb.NewStringValue(event.GetUuid())
 	event.Data["service"] = structpb.NewStringValue(accountWithService.Service)
 	event.Uuid = accountWithService.Account
 	event.Type = "email"
