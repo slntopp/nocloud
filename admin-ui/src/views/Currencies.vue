@@ -221,6 +221,9 @@ export default {
     currenciesList() {
       return this.$store.getters['currencies/all'];
     },
+    defaultCurrency() {
+      return this.$store.getters['currencies/default'];
+    },
     currenciesFrom() {
       const currencies = [];
 
@@ -242,14 +245,6 @@ export default {
       return this.currenciesList.filter((el) =>
         el !== this.currency.from && !currencies.includes(el)
       );
-    },
-    defaultCurrency() {
-      const currency = this.currencies.find((el) =>
-        el.rate === 1 && [el.from, el.to].includes('NCU')
-      );
-
-      if (!currency) return '';
-      return (currency.from === 'NCU') ? currency.to : currency.from;
     }
   }
 }

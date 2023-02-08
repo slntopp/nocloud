@@ -18,8 +18,8 @@
                       <template v-slot:default>
                         <v-list-item-content>
                           <v-list-item-title>
-                            Price from: {{ item.from }} NCU,
-                            Price to: {{ item.to }} NCU,
+                            Price from: {{ item.from }} {{ defaultCurrency }},
+                            Price to: {{ item.to }} {{ defaultCurrency }},
                             Margin: {{ item.factor }}%
                           </v-list-item-title>
                         </v-list-item-content>
@@ -225,6 +225,11 @@ export default {
     generateKey(id) {
       return id + Math.random().toString(16).slice(2);
     },
+  },
+  computed: {
+    defaultCurrency() {
+      return this.$store.getters['currencies/default'];
+    }
   },
   watch: {
     "currentFee.ranges"() {

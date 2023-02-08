@@ -101,8 +101,8 @@
           <template v-slot:[`item.duration`]="{ value }">
             {{ getPayment(value) }}
           </template>
-          <template v-slot:[`item.price.value`]="{ item, value }">
-            {{ value }} {{ 'NCU' || item.price.currencyCode }}
+          <template v-slot:[`item.price.value`]="{ value }">
+            {{ value }} {{ defaultCurrency }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field dense style="width: 150px" v-model="item.value" />
@@ -116,7 +116,7 @@
               <td :colspan="headers.length - 4">{{ item.windows.name }}</td>
               <td>
                 {{ item.windows.price.value }}
-                {{ 'NCU' || item.price.currencyCode }}
+                {{ defaultCurrency }}
               </td>
               <td><v-text-field dense style="width: 150px" v-model="item.windows.value" /></td>
               <td></td>
@@ -142,8 +142,8 @@
           <template v-slot:[`item.duration`]="{ value }">
             {{ getPayment(value) }}
           </template>
-          <template v-slot:[`item.price.value`]="{ item, value }">
-            {{ value }} {{ 'NCU' || item.price.currencyCode }}
+          <template v-slot:[`item.price.value`]="{ value }">
+            {{ value }} {{ defaultCurrency }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field dense style="width: 150px" v-model="item.value" />
@@ -644,18 +644,10 @@ export default {
   },
   created() {
     this.isPlansLoading = true;
-    api.get('/billing/currencies/rates')
-      .then(({ rates }) => {
-        const currency = rates.find((el) =>
-          el.rate === 1 && [el.from, el.to].includes('NCU')
-        );
-        const code = (currency.from === 'NCU') ? currency.to : currency.from;
-
-        api.get(`/billing/currencies/rates/PLN/${code}`)
-          .then((res) => { this.rate = res.rate })
-          .catch(() => api.get(`/billing/currencies/rates/${code}/PLN`))
-          .then((res) => { if (res) this.rate = 1 / res.rate });
-      })
+    api.get(`/billing/currencies/rates/PLN/${this.defaultCurrency}`)
+      .then((res) => { this.rate = res.rate })
+      .catch(() => api.get(`/billing/currencies/rates/${this.defaultCurrency}/PLN`))
+      .then((res) => { if (res) this.rate = 1 / res.rate })
       .catch((err) => console.error(err));
 
     this.$store.dispatch('servicesProviders/fetch')
@@ -690,6 +682,9 @@ export default {
     },
     filteredAddons() {
       return this.applyFilter(this.addons, 1);
+    },
+    defaultCurrency() {
+      return this.$store.getters['currencies/default'];
     }
   },
   watch: {
