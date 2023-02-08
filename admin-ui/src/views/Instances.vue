@@ -419,7 +419,7 @@ export default {
         case "LCM_INIT":
           return "POWEROFF";
         default:
-          return state.replaceAll('_', ' ');
+          return state?.replaceAll('_', ' ') ?? '';
       }
     },
     getService({ service }) {

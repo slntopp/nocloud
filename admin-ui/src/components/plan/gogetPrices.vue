@@ -47,7 +47,7 @@
               {{ value }} months
             </template>
             <template v-slot:[`item.price`]="{ value }">
-              {{ value }} {{ 'NCU' }}
+              {{ value }} {{ defaultCurrency }}
             </template>
             <template v-slot:[`item.value`]="{ item }">
               <v-text-field dense style="width: 150px" v-model="item.value" />
@@ -266,6 +266,11 @@ export default {
       .finally(() => {
         this.isPlansLoading = false;
       });
+  },
+  computed: {
+    defaultCurrency() {
+      return this.$store.getters['currencies/default'];
+    }
   },
   watch: {
     plans() {

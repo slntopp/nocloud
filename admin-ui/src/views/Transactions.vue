@@ -270,7 +270,7 @@ export default {
     },
     balance() {
       const dates = [];
-      let labels = ["0 NCU"];
+      let labels = [`0 ${this.defaultCurrency}`];
       let values = [0];
       let balance = 0;
 
@@ -280,7 +280,7 @@ export default {
 
       this.transactions?.forEach((el, i, arr) => {
         values.push((balance -= el.total));
-        labels.push(`${balance.toFixed(2)} NCU`);
+        labels.push(`${balance.toFixed(2)} ${this.defaultCurrency}`);
         dates.push(
           el.proc - arr[i - 1]?.proc || arr[i + 1]?.proc - el.proc || el.proc
         );
@@ -293,6 +293,9 @@ export default {
         labels: amount > 0 ? labels.slice(amount) : labels,
         values: amount > 0 ? values.slice(amount) : values,
       };
+    },
+    defaultCurrency() {
+      return this.$store.getters['currencies/default'];
     },
     searchParam() {
       return this.$store.getters["appSearch/param"];
