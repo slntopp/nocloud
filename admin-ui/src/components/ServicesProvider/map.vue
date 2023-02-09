@@ -1,5 +1,52 @@
 <template>
   <div ref="map" class="map" id="mapMain">
+    <div style="position: absolute; left: 25px; top: 13px">
+      <v-icon
+        style="margin-left: -5px"
+        @click="formatText('b')"
+        @mousedown.prevent
+      >
+        mdi-format-bold
+      </v-icon>
+
+      <v-icon @click="formatText('i')" @mousedown.prevent>
+        mdi-format-italic
+      </v-icon>
+
+      <v-icon @click="formatText('u')" @mousedown.prevent>
+        mdi-format-underline
+      </v-icon>
+
+      <v-icon @click="formatText('s')" @mousedown.prevent>
+        mdi-format-strikethrough
+      </v-icon>
+
+      <v-icon class="mx-1" @click="formatText('a')" @mousedown.prevent>
+        mdi-link
+      </v-icon>
+
+      <v-icon @click="formatText('color')" @mousedown.prevent>
+        mdi-palette
+      </v-icon>
+
+      <v-textarea
+        ref="description"
+        label="Description"
+        rows="1"
+        style="
+          width: 100px;
+          color: #fff;
+          background: var(--v-background-light-base);
+          transition: 0.3s;
+        "
+        :value="currentDescription"
+        @change="changeDescription"
+        @focus="(e) => addStyle(e, true)"
+        @blur="(e) => removeStyle(e, true)"
+        @mouseover="addStyle"
+        @mouseleave="removeStyle"
+      />
+    </div>
     <div style="position: absolute; right: 25px; top: 13px">
       <v-btn
         style="margin-right: 5px; font-size: 20px"
@@ -329,6 +376,51 @@ export default {
     y: "",
   }),
   methods: {
+    formatText(tag) {
+      const textarea = this.$refs.description.$el.querySelector('textarea');
+      const { selectionStart, selectionEnd } = textarea;
+      const text = textarea.value.slice(selectionStart, selectionEnd);
+
+      if (tag === 'a') {
+        const pos = selectionStart + 17;
+
+        textarea.setRangeText(`<a href="https://">${text}</a>`);
+        textarea.setSelectionRange(pos, pos);
+      } if (tag === 'color') {
+        const pos = selectionStart + 20;
+
+        textarea.setRangeText(`<span style="color: ">${text}</span>`);
+        textarea.setSelectionRange(pos, pos);
+      } else {
+        textarea.setRangeText(`<${tag}>${text}</${tag}>`);
+      }
+      this.changeDescription(textarea.value);
+    },
+    addStyle({ target }, addFocus) {
+      if (addFocus) target.dataset.isFocused = true;
+      this.$refs.description.$el.style.width = '500px';
+      setTimeout(() => {
+        target.style.transition = '0.3s';
+        target.style.height = '150px';
+      }, 300);
+    },
+    removeStyle({ target }, removeFocus) {
+      if (removeFocus) target.dataset.isFocused = false;
+      if (JSON.parse(target.dataset.isFocused ?? 'false')) return;
+      this.$refs.description.$el.style.width = '150px';
+      setTimeout(() => {
+        target.style.transition = '0.3s';
+        target.style.height = '32px';
+      }, 300);
+    },
+    changeDescription(value) {
+      const marker = (this.multiSelect) ? this.markers.find(
+        (el) => el.extra.region === this.region
+      ) : this.markers[0];
+
+      if (!marker) return;
+      marker.extra.description = value;
+    },
     onEnterHandler(id, e) {
       e.stopPropagation();
       const ref = this.$refs["textFiel_" + id][0];
@@ -604,6 +696,13 @@ export default {
         return 0;
       });
     },
+    currentDescription() {
+      const marker = (this.multiSelect) ? this.markers.find(
+        (el) => el.extra.region === this.region
+      ) : this.markers[0];
+
+      return marker?.extra?.description ?? '';
+    }
   },
 
   mounted() {
@@ -729,8 +828,7 @@ export default {
   background: #ffffff;
   color: #000;
 }
-#mapMain .theme--dark.v-input input,
-#mapMain .theme--dark.v-input textarea {
+#mapMain .theme--dark.v-input input {
   color: #000;
 }
 #mapMain .v-application--is-ltr .v-messages {
