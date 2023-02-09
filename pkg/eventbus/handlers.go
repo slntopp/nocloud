@@ -104,6 +104,7 @@ func ExpiryHandler(ctx context.Context, event *pb.Event, db driver.Database) (*p
 	}
 
 	event.Data["service"] = structpb.NewStringValue(accountWithService.Service)
+	event.Data["instance_uuid"] = structpb.NewStringValue(event.GetUuid())
 	event.Uuid = accountWithService.Account
 	event.Type = "email"
 
