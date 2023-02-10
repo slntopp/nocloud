@@ -207,6 +207,7 @@ export default {
       public: true,
       resources: [],
       products: {},
+      meta: {},
       fee: null,
     },
     generalRule: [(v) => !!v || "This field is required!"],
