@@ -165,7 +165,7 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 	}, nil
 }
 
-func (s *InstancesServer) Transfer(ctx context.Context, req *pb.TransferRequest) (*pb.TransferResponse, error) {
+func (s *InstancesServer) TransferIG(ctx context.Context, req *pb.TransferIGRequest) (*pb.TransferIGResponse, error) {
 	log := s.log.Named("transfer")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -208,7 +208,7 @@ func (s *InstancesServer) Transfer(ctx context.Context, req *pb.TransferRequest)
 		return nil, err
 	}
 
-	return &pb.TransferResponse{
+	return &pb.TransferIGResponse{
 		Result: true,
 		Meta:   nil,
 	}, nil
