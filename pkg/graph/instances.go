@@ -260,3 +260,46 @@ func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instanc
 	_, err = ctrl.col.UpdateDocument(ctx, inst.Uuid, mask)
 	return err
 }
+
+func (ctrl *InstancesController) TransferInst(ctx context.Context, oldIGEdge string, newIG driver.DocumentID, inst driver.DocumentID) error {
+	log := ctrl.log.Named("Transfer")
+	log.Debug("Transfer InstancesGroup", zap.String("group", inst.String()), zap.String("srvEdge", oldIGEdge), zap.String("to", newIG.String()))
+
+	_, err := ctrl.ig2inst.RemoveDocument(ctx, oldIGEdge)
+	if err != nil {
+		log.Error("Failed to remove old Edge", zap.Error(err))
+		return err
+	}
+
+	_, err = ctrl.ig2inst.CreateDocument(ctx, Access{From: newIG, To: inst, Role: roles.OWNER})
+	if err != nil {
+		log.Error("Failed to create Edge", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func (ctrl *InstancesController) GetEdge(ctx context.Context, inboundNode string, collection string) (string, error) {
+	log := ctrl.log.Named("GetEdge")
+	log.Debug("Getting edge", zap.String("nodeId", inboundNode))
+	c, err := ctrl.db.Query(ctx, getEdge, map[string]interface{}{
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"inboundNode": inboundNode,
+		"collection":  collection,
+	})
+
+	if err != nil {
+		log.Error("Error while querying", zap.Error(err))
+		return "", err
+	}
+	defer c.Close()
+	var edgeId string
+	_, err = c.ReadDocument(ctx, &edgeId)
+	if err != nil {
+		log.Error("Error while reading document", zap.Error(err))
+		return "", err
+	}
+
+	return edgeId, nil
+}
