@@ -146,18 +146,9 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	r, err := s.ctrl.GetGroup(ctx, instance_id.String())
+	err = s.ctrl.SetStatus(ctx, instance.Instance, pb.InstanceStatus_DEL)
 	if err != nil {
-		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
 		return nil, err
-	}
-
-	err = s.ctrl.Delete(ctx, r.Group.GetUuid(), instance.Instance)
-
-	if err != nil {
-		return &pb.DeleteResponse{
-			Result: false,
-		}, err
 	}
 
 	return &pb.DeleteResponse{
