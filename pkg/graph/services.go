@@ -22,7 +22,8 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	hasher "github.com/slntopp/nocloud-proto/hasher"
-	pb "github.com/slntopp/nocloud-proto/services"
+	ipb "github.com/slntopp/nocloud-proto/instances"
+	spb "github.com/slntopp/nocloud-proto/services"
 	nocloud "github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
@@ -33,7 +34,7 @@ import (
 
 type Service struct {
 	driver.DocumentMeta
-	*pb.Service
+	*spb.Service
 }
 
 type Provision struct {
@@ -73,18 +74,18 @@ func (ctrl *ServicesController) IGController() *InstancesGroupsController {
 }
 
 // Create Service and underlaying entities and store in DB
-func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service) (*pb.Service, error) {
+func (ctrl *ServicesController) Create(ctx context.Context, service *spb.Service) (*spb.Service, error) {
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating Service", zap.Any("service", service))
 
-	service.Status = pb.ServiceStatus_INIT
+	service.Status = spb.ServiceStatus_INIT
 
 	err := hasher.SetHash(service.ProtoReflect())
 	if err != nil {
 		return nil, err
 	}
 
-	obj := proto.Clone(service).(*pb.Service)
+	obj := proto.Clone(service).(*spb.Service)
 	obj.InstancesGroups = nil
 
 	meta, err := ctrl.col.CreateDocument(ctx, obj)
@@ -107,7 +108,7 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *pb.Service)
 }
 
 // Update Service and underlaying entities and store in DB
-func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service, hash bool) error {
+func (ctrl *ServicesController) Update(ctx context.Context, service *spb.Service, hash bool) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Service", zap.Any("service", service))
 
@@ -172,7 +173,7 @@ func (ctrl *ServicesController) Update(ctx context.Context, service *pb.Service,
 		return err
 	}
 
-	mask := &pb.Service{
+	mask := &spb.Service{
 		Uuid:    service.GetUuid(),
 		Context: service.GetContext(),
 	}
@@ -223,7 +224,7 @@ LET instances_groups = (
 RETURN MERGE(service, { uuid: service._key, instances_groups })
 `
 
-func (ctrl *ServicesController) Get(ctx context.Context, acc, key string) (*pb.Service, error) {
+func (ctrl *ServicesController) Get(ctx context.Context, acc, key string) (*spb.Service, error) {
 	ctrl.log.Debug("Getting Service", zap.String("key", key))
 
 	requestor := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
@@ -240,7 +241,7 @@ func (ctrl *ServicesController) Get(ctx context.Context, acc, key string) (*pb.S
 	}
 	defer c.Close()
 
-	var service pb.Service
+	var service spb.Service
 
 	_, err = c.ReadDocument(ctx, &service)
 	if err != nil {
@@ -305,6 +306,7 @@ FOR service, e, path IN 0..@depth OUTBOUND @account
     			FOR i IN 1 OUTBOUND group
     			GRAPH @permissions_graph
     			FILTER IS_SAME_COLLECTION(@instances, i)
+				%s
     				RETURN MERGE(i, { uuid: i._key }) )
     		RETURN MERGE(group, { uuid: group._key, instances })
         )
@@ -312,7 +314,7 @@ RETURN MERGE(service, {uuid:service._key, instances_groups, access: { level: per
 `
 
 // List Services in DB
-func (ctrl *ServicesController) List(ctx context.Context, requestor string, request *pb.ListRequest) ([]*pb.Service, error) {
+func (ctrl *ServicesController) List(ctx context.Context, requestor string, request *spb.ListRequest) ([]*spb.Service, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
 
 	depth := request.GetDepth()
@@ -323,9 +325,10 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 
 	var query string
 	if showDeleted {
-		query = fmt.Sprintf(getServiceList, "")
+		query = fmt.Sprintf(getServiceList, "", "")
 	} else {
-		query = fmt.Sprintf(getServiceList, `FILTER service.status != "del"`)
+		query = fmt.Sprintf(getServiceList, fmt.Sprintf(`FILTER service.status != %d`, spb.ServiceStatus_DEL),
+			fmt.Sprintf(`FILTER i.status != %d`, ipb.InstanceStatus_DEL))
 	}
 	bindVars := map[string]interface{}{
 		"depth":             depth,
@@ -341,9 +344,9 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		return nil, err
 	}
 	defer c.Close()
-	var r []*pb.Service
+	var r []*spb.Service
 	for {
-		var s pb.Service
+		var s spb.Service
 		meta, err := c.ReadDocument(ctx, &s)
 		if driver.IsNoMoreDocuments(err) {
 			break
@@ -359,7 +362,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 }
 
 // Join Service into Namespace
-func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, ns *Namespace, access access.Level, role string) error {
+func (ctrl *ServicesController) Join(ctx context.Context, service *spb.Service, ns *Namespace, access access.Level, role string) error {
 	ctrl.log.Debug("Joining service to namespace")
 	edge, _ := ctrl.db.Collection(ctx, schema.NS2SERV)
 	_, err := edge.CreateDocument(ctx, Access{
@@ -371,18 +374,18 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *pb.Service, n
 	return err
 }
 
-func (ctrl *ServicesController) Delete(ctx context.Context, s *pb.Service) (err error) {
+func (ctrl *ServicesController) Delete(ctx context.Context, s *spb.Service) (err error) {
 	log := ctrl.log.Named("Service.Delete")
 	log.Debug("Deleting Service", zap.String("status", s.GetStatus().String()))
-	if s.GetStatus() != pb.ServiceStatus_INIT && s.GetStatus() != pb.ServiceStatus_DOWN {
+	if s.GetStatus() != spb.ServiceStatus_INIT && s.GetStatus() != spb.ServiceStatus_DOWN {
 		return fmt.Errorf("cannot delete Service, status: %s", s.GetStatus())
 	}
 
-	return ctrl.SetStatus(ctx, s, pb.ServiceStatus_DEL)
+	return ctrl.SetStatus(ctx, s, spb.ServiceStatus_DEL)
 }
 
-func (ctrl *ServicesController) SetStatus(ctx context.Context, s *pb.Service, status pb.ServiceStatus) (err error) {
-	mask := &pb.Service{
+func (ctrl *ServicesController) SetStatus(ctx context.Context, s *spb.Service, status spb.ServiceStatus) (err error) {
+	mask := &spb.Service{
 		Status: status,
 	}
 	_, err = ctrl.col.UpdateDocument(ctx, s.Uuid, mask)
