@@ -34,6 +34,22 @@
           v-model="provider.public"
         />
       </v-col>
+      <v-col cols="12">
+        <div class="d-flex align-start">
+          <v-btn :to="{ name: 'ServicesProvider edit', params: { uuid: provider.uuid } }">
+            Edit
+          </v-btn>
+          <v-btn class="mx-2" @click="downloadFile">
+            Download {{ isJson ? "JSON" : "YAML" }}
+          </v-btn>
+          <v-switch
+            class="mr-2"
+            style="margin-top: 5px; padding-top: 0"
+            v-model="isJson"
+            :label="!isJson ? 'YAML' : 'JSON'"
+          />
+        </div>
+      </v-col>
     </v-row>
 
     <component :is="spTypes" :template="provider">
@@ -121,24 +137,6 @@
     </template>
 
     <v-row>
-      <v-col>
-        <v-btn :to="{ name: 'ServicesProvider edit', params: { uuid: provider.uuid } }">
-          Edit
-        </v-btn>
-      </v-col>
-      <v-col>
-        <div class="d-flex align-start">
-          <v-btn class="mr-2" @click="downloadFile">
-            Download {{ isJson ? "JSON" : "YAML" }}
-          </v-btn>
-          <v-switch
-            class="mr-2"
-            style="margin-top: 5px; padding-top: 0"
-            v-model="isJson"
-            :label="!isJson ? 'YAML' : 'JSON'"
-          />
-        </div>
-      </v-col>
     </v-row>
 
     <v-snackbar

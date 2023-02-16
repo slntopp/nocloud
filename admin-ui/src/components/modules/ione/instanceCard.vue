@@ -60,6 +60,7 @@ export default {
   name: "instance-card",
   props: {
     template: { type: Object, required: true },
+    provider: { type: String, required: true },
     dense: { type: Boolean }
   },
   data: () => ({
@@ -77,7 +78,7 @@ export default {
   computed: {
     sp() {
       return this.$store.getters['servicesProviders/all']
-        .find(({ uuid }) => uuid === this.template.sp);
+        .find(({ uuid }) => uuid === this.provider);
     },
     osName() {
       const id = this.template.config.template_id;

@@ -87,7 +87,7 @@
 
         <v-col :cols="(viewport > 2200) ? 6 : 12">
           <component
-            v-if="!['ovh', 'goget'].includes(plan.type)"
+            v-if="!['ovh vps', 'ovh dedicated', 'goget'].includes(plan.type)"
             :is="template"
             :resources="plan.resources"
             :products="plan.products"
@@ -98,7 +98,7 @@
       </v-row>
 
       <v-row>
-        <v-col cols="6">
+        <v-col>
           <v-btn
             class="mr-2"
             v-if="isEdit"
@@ -114,14 +114,11 @@
           >
             Create
           </v-btn>
-        </v-col>
-        <v-col cols="6">
-          <div class="d-flex align-start justify-center">
             <v-btn class="mr-2" @click="downloadFile">
               Download {{ isJson ? "JSON" : "YAML" }}
             </v-btn>
             <v-switch
-              class="mr-2"
+              class="d-inline-block mr-2"
               style="margin-top: 5px; padding-top: 0"
               v-model="isJson"
               :label="!isJson ? 'YAML' : 'JSON'"
@@ -133,7 +130,6 @@
               :accept="isJson ? '.json' : '.yaml'"
               @change="onJsonInputChange"
             />
-          </div>
         </v-col>
       </v-row>
     </v-form>
@@ -250,12 +246,6 @@ export default {
       if (!this.isValid || !this.isFeeValid) {
         this.$refs.form.validate();
         message = "Validation failed!";
-      }
-
-      if (!message && (this.plan.fee?.ranges?.length === 0)) {
-        if (this.plan.type === 'ovh' || this.plan.type === 'opensrs') {
-          message = "Ranges cant be empty!";
-        }
       }
 
       if (!message) {
@@ -459,8 +449,11 @@ export default {
         /\.\/([A-Za-z0-9-_,\s]*)\/serviceProviders\.vue/i
       );
       if (matched && matched.length > 1) {
-        const type = matched[1];
-        this.types.push(type);
+        if (matched[1] === 'ovh') {
+          this.types.push('ovh vps', 'ovh dedicated');
+        } else {
+          this.types.push(matched[1]);
+        }
       }
     });
 

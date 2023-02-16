@@ -86,8 +86,8 @@
               <v-col>
                 <v-text-field
                   readonly
-                  :value="location(group)"
-                  label="location"
+                  :value="provider(group)"
+                  label="service provider"
                   style="display: inline-block; width: 330px"
                 >
                 </v-text-field>
@@ -142,15 +142,19 @@
                       />
                     </v-expansion-panel-header>
                     <v-expansion-panel-content>
-                      <span class="mb-2 mr-2">Instance uuid:</span>
-                      <router-link :to="{ name: 'Instance', params: { instanceId: instance.uuid } }">
-                        <v-chip class="mb-2" style="cursor: pointer">{{ instance.uuid }}</v-chip>
-                      </router-link>
+                      <div class="mb-4">
+                        <span class="mr-2">Instance uuid:</span>
+                        <router-link :to="{ name: 'Instance', params: { instanceId: instance.uuid } }">
+                          <v-chip class="mr-2" style="cursor: pointer">{{ instance.uuid }}</v-chip>
+                        </router-link>
+                        <span class="mr-2">Location: {{ location(instance, group.sp) }}</span>
+                      </div>
 
                       <component
                         dense
                         :is="getInstanceCardComponent(group.type)"
                         :template="instance"
+                        :provider="group.sp"
                       />
                     </v-expansion-panel-content>
                   </v-expansion-panel>
@@ -251,10 +255,16 @@ export default {
       if (hash) return hash.slice(0, 8);
       return "WWWWWWWW";
     },
-    location(group) {
-      const lc = this.servicesProviders.find((el) => el.uuid === group?.sp);
+    provider(group) {
+      return this.servicesProviders.find((el) => el.uuid === group?.sp)?.title ?? "not found";
+    },
+    location(inst, uuid) {
+      const sp = this.servicesProviders.find((el) => el.uuid === uuid);
+      const locationItem = sp?.locations.find(({ extra }) =>
+        extra.region === inst.config.datacenter
+      );
 
-      return lc?.title || "not found";
+      return locationItem?.title || sp?.locations[0]?.title || "not found";
     },
     stateColor(state) {
       const dict = {
