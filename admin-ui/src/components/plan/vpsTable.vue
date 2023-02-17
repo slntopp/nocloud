@@ -600,7 +600,7 @@ export default {
       this.$emit('changeFee', Object.assign({}, this.fee));
     },
     addons() {
-      this.$emit('changeFee', this.template.fee);
+      this.$emit('changeFee', this.template.fee ?? {});
       setTimeout(() => {
         this.setFee();
 

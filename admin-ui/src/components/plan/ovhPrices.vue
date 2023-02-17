@@ -123,11 +123,13 @@ export default {
       });
     },
     testConfig() {
+      const { testConfig } = this.$refs.table;
       let message = '';
+
       if (!this.isValid) {
         message = 'Margin rules is not valid';
       }
-      message = this.$refs.table.testConfig() ?? '';
+      if (testConfig) message = testConfig() ?? '';
 
       if (message) {
         this.showSnackbarError({ message });
