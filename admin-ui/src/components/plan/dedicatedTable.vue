@@ -226,10 +226,6 @@ export default {
               if (menu.className.includes('menuable__content__active')) return;
 
               this.column = firstElementChild.innerText;
-              if (this.column === 'Group') {
-                this.filters.Group = this.groups;
-                this.selected.Group = this.groups;
-              }
 
               element.dispatchEvent(new Event('click'));
 
@@ -301,7 +297,7 @@ export default {
           this.setFee(el);
         });
       }
-      values.forEach((plan, i, arr) => {
+      values?.forEach((plan, i, arr) => {
         const n = Math.pow(10, this.fee.precision ?? 0);
         let percent = (this.fee?.default ?? 0) / 100 + 1;
         let round;
@@ -456,7 +452,7 @@ export default {
   },
   watch: {
     plans() {
-      this.$emit('changeFee', this.template.fee);
+      this.$emit('changeFee', this.template.fee ?? {});
       setTimeout(() => {
         this.setFee(this.plans);
 
