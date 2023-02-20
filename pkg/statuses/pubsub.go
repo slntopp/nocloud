@@ -17,6 +17,7 @@ package statuses
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"log"
 	"time"
 
@@ -29,8 +30,7 @@ import (
 )
 
 var (
-	RabibtMQConn string
-	ps           *pubsub.PubSub
+	ps *pubsub.PubSub
 )
 
 type StatusesPubSub struct {
@@ -94,8 +94,61 @@ func (s *StatusesPubSub) StatusesConsumerInit(ch *amqp.Channel, exchange, subtop
 	go s.Consumer(col, msgs)
 }
 
-func (s *StatusesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
+const updateStatusQuery = `
+UPDATE DOCUMENT (@@collection, @key) WITH { status: @status } IN @@collection OPTIONS {mergeObjects: false}
+`
 
+func (s *StatusesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
+	log := s.log.Named(col)
+	for msg := range msgs {
+		log.Debug("Status upd message", zap.Any("msg", msg))
+		var req spb.ObjectStatus
+		err := proto.Unmarshal(msg.Body, &req)
+		if err != nil {
+			log.Error("Failed to unmarshal request", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Ack while unmarshal", zap.Error(err))
+			}
+			continue
+		}
+		log.Debug("Status req", zap.Any("status", req.GetStatus()))
+
+		if req.Status == nil {
+			log.Warn("Status is nil", zap.String("obj", col))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery when Status is nil", zap.Error(err))
+			}
+			continue
+		}
+
+		if col == schema.INSTANCES_COL {
+			topic := "instance/" + req.GetUuid()
+			ps.Pub(&req, topic)
+		}
+
+		c, err := (*s.db).Query(context.TODO(), updateStatusQuery, map[string]interface{}{
+			"@collection": col,
+			"key":         req.Uuid,
+			"status":      req.Status,
+		})
+
+		if err != nil {
+			log.Error("Failed to update status", zap.Error(err))
+			if err = msg.Nack(false, false); err != nil {
+				log.Warn("Failed to Negatively Acknowledge the delivery while Update db", zap.Error(err))
+			}
+			continue
+		}
+
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		}
+
+		log.Debug("Updated state", zap.String("type", col), zap.String("uuid", req.Uuid))
+		if err = c.Close(); err != nil {
+			log.Warn("Failed to close database cursor connection", zap.Error(err))
+		}
+	}
 }
 
 type Pub func(msg *spb.ObjectStatus) (int, error)
