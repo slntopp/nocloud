@@ -22,8 +22,8 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	hasher "github.com/slntopp/nocloud-proto/hasher"
-	ipb "github.com/slntopp/nocloud-proto/instances"
 	spb "github.com/slntopp/nocloud-proto/services"
+	stpb "github.com/slntopp/nocloud-proto/statuses"
 	nocloud "github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
@@ -78,7 +78,7 @@ func (ctrl *ServicesController) Create(ctx context.Context, service *spb.Service
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating Service", zap.Any("service", service))
 
-	service.Status = spb.ServiceStatus_INIT
+	service.Status = stpb.NoCloudStatus_INIT
 
 	err := hasher.SetHash(service.ProtoReflect())
 	if err != nil {
@@ -327,8 +327,8 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	if showDeleted {
 		query = fmt.Sprintf(getServiceList, "", "")
 	} else {
-		query = fmt.Sprintf(getServiceList, fmt.Sprintf(`FILTER service.status != %d`, spb.ServiceStatus_DEL),
-			fmt.Sprintf(`FILTER i.status != %d`, ipb.InstanceStatus_DEL))
+		query = fmt.Sprintf(getServiceList, fmt.Sprintf(`FILTER service.status != %d`, stpb.NoCloudStatus_DEL),
+			fmt.Sprintf(`FILTER i.status != %d`, stpb.NoCloudStatus_DEL))
 	}
 	bindVars := map[string]interface{}{
 		"depth":             depth,
@@ -377,14 +377,14 @@ func (ctrl *ServicesController) Join(ctx context.Context, service *spb.Service, 
 func (ctrl *ServicesController) Delete(ctx context.Context, s *spb.Service) (err error) {
 	log := ctrl.log.Named("Service.Delete")
 	log.Debug("Deleting Service", zap.String("status", s.GetStatus().String()))
-	if s.GetStatus() != spb.ServiceStatus_INIT && s.GetStatus() != spb.ServiceStatus_DOWN {
+	if s.GetStatus() != stpb.NoCloudStatus_INIT && s.GetStatus() != stpb.NoCloudStatus_DOWN {
 		return fmt.Errorf("cannot delete Service, status: %s", s.GetStatus())
 	}
 
-	return ctrl.SetStatus(ctx, s, spb.ServiceStatus_DEL)
+	return ctrl.SetStatus(ctx, s, stpb.NoCloudStatus_DEL)
 }
 
-func (ctrl *ServicesController) SetStatus(ctx context.Context, s *spb.Service, status spb.ServiceStatus) (err error) {
+func (ctrl *ServicesController) SetStatus(ctx context.Context, s *spb.Service, status stpb.NoCloudStatus) (err error) {
 	mask := &spb.Service{
 		Status: status,
 	}
