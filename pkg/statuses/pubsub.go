@@ -39,7 +39,7 @@ type StatusesPubSub struct {
 	rbmq *amqp.Connection
 }
 
-func NewStatesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *StatusesPubSub {
+func NewStatusesPubSub(log *zap.Logger, db *driver.Database, rbmq *amqp.Connection) *StatusesPubSub {
 	sps := &StatusesPubSub{
 		log: log.Named("StatusesPubSub"), rbmq: rbmq,
 	}

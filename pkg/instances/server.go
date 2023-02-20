@@ -71,7 +71,7 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amq
 	d.ConsumerInit(ch, "datas", "instances-groups", schema.INSTANCES_GROUPS_COL) // init Consumer queue of topic "datas.instances-groups"
 
 	log.Debug("Setting up StatusesPubSub")
-	st := st.NewStatesPubSub(log, &db, rbmq)
+	st := st.NewStatusesPubSub(log, &db, rbmq)
 	ch = st.Channel()
 	log.Debug("initializing Exchange with name \"statuses\" of type \"topic\"")
 	st.TopicExchange(ch, "statuses")
