@@ -24,6 +24,7 @@ import (
 	accesspb "github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	pb "github.com/slntopp/nocloud-proto/instances"
+	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -146,7 +147,7 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	err = s.ctrl.SetStatus(ctx, instance.Instance, pb.InstanceStatus_DEL)
+	err = s.ctrl.SetStatus(ctx, instance.Instance, spb.NoCloudStatus_DEL)
 	if err != nil {
 		return nil, err
 	}

@@ -24,6 +24,7 @@ import (
 
 	"github.com/slntopp/nocloud-proto/hasher"
 	pb "github.com/slntopp/nocloud-proto/instances"
+	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
@@ -83,7 +84,7 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating InstancesGroup", zap.Any("group", g))
 
-	g.Status = pb.InstanceStatus_INIT
+	g.Status = spb.NoCloudStatus_INIT
 
 	err := hasher.SetHash(g.ProtoReflect())
 	if err != nil {
@@ -254,7 +255,7 @@ func (ctrl *InstancesGroupsController) Provide(ctx context.Context, group, sp st
 	return err
 }
 
-func (ctrl *InstancesGroupsController) SetStatus(ctx context.Context, ig *pb.InstancesGroup, status pb.InstanceStatus) (err error) {
+func (ctrl *InstancesGroupsController) SetStatus(ctx context.Context, ig *pb.InstancesGroup, status spb.NoCloudStatus) (err error) {
 	mask := &pb.InstancesGroup{
 		Status: status,
 	}

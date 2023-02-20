@@ -27,6 +27,7 @@ import (
 	"github.com/slntopp/nocloud-proto/hasher"
 	pb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
+	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
@@ -67,7 +68,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 
 	// ensure status is INIT
 	i.Uuid = ""
-	i.Status = pb.InstanceStatus_INIT
+	i.Status = spb.NoCloudStatus_INIT
 
 	err := hasher.SetHash(i.ProtoReflect())
 	if err != nil {
@@ -106,7 +107,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
 	inst.Uuid = ""
-	inst.Status = pb.InstanceStatus_INIT
+	inst.Status = spb.NoCloudStatus_INIT
 	inst.Data = nil
 	inst.State = nil
 
@@ -253,7 +254,7 @@ func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid
 	return nil
 }
 
-func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instance, status pb.InstanceStatus) (err error) {
+func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instance, status spb.NoCloudStatus) (err error) {
 	mask := &pb.Instance{
 		Status: status,
 	}
