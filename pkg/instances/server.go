@@ -29,6 +29,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	s "github.com/slntopp/nocloud/pkg/states"
+	st "github.com/slntopp/nocloud/pkg/statuses"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -68,6 +69,14 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amq
 	d.ConsumerInit(ch, "datas", "instances", schema.INSTANCES_COL) // init Consumer queue of topic "datas.instances"
 	log.Debug("initializing Consumer queue of topic \"datas.instances-groups\"")
 	d.ConsumerInit(ch, "datas", "instances-groups", schema.INSTANCES_GROUPS_COL) // init Consumer queue of topic "datas.instances-groups"
+
+	log.Debug("Setting up StatusesPubSub")
+	st := st.NewStatesPubSub(log, &db, rbmq)
+	ch = st.Channel()
+	log.Debug("initializing Exchange with name \"statuses\" of type \"topic\"")
+	st.TopicExchange(ch, "statuses")
+	log.Debug("initializing Consumer queue of topic \"statuses.instances\"")
+	st.StatusesConsumerInit(ch, "statuses", "instances", schema.INSTANCES_COL)
 
 	return &InstancesServer{
 		db: db, log: log,
