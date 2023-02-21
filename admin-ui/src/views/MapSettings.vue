@@ -4,20 +4,18 @@
             <v-card-title>Map settings</v-card-title>
         </v-row>
         <v-card-title>Rewards:</v-card-title>
-        <v-row align="center">
-            <v-col cols="2" v-for="reward in rewards" :key="reward.id">
-                <v-card class="pa-auto my-5" color="background-light">
-                    <v-img height="200" cover :src="reward.img" />
-                    <div v-if="reward.description">
-                        <v-divider />
-                        <v-card-title><span>{{ reward.description }}</span></v-card-title>
-                    </div>
-                    <div class="d-flex pa-5 flex-row-reverse">
+        <v-row>
+            <v-col heigh="100%" xs="4" md="3" lg="2" xl="2" v-for="reward in rewards" :key="reward.id">
+                <v-card height="100%" color="background-light">
+                    <v-img cover :src="reward.img" />
+                    <v-divider />
+                    <v-card-title><span>{{ reward.description }}</span></v-card-title>
+                    <div class="d-flex pa-5 align-end flex-row-reverse">
                         <v-btn color="primary" @click="deleteReward(reward.id)">Delete</v-btn>
                     </div>
                 </v-card>
             </v-col>
-            <v-col cols="1">
+            <v-col class="d-flex justify-center align-center" cols="1">
                 <v-dialog v-model="addRewardDialog" persistent>
                     <template v-slot:activator="{ on, attrs }">
                         <v-btn v-on="on" v-bind="attrs" block width="75" height="75" color="background-light">
@@ -60,7 +58,7 @@ export default {
             { id: '5', img: "https://cdn.vuetifyjs.com/images/cards/cooking.png", description: "some description5" },
             { id: '6', img: "https://cdn.vuetifyjs.com/images/cards/cooking.png", description: "some description6" },
             { id: '7', img: "https://cdn.vuetifyjs.com/images/cards/cooking.png", description: "some description7" },
-            { id: '8', img: "https://cdn.vuetifyjs.com/images/cards/cooking.png",  },
+            { id: '8', img: "https://cdn.vuetifyjs.com/images/cards/cooking.png", },
             { id: '912', img: "https://cdn.vuetifyjs.com/images/cards/cooking.png", description: "some description9" },
             { id: '212', img: "https://cdn.vuetifyjs.com/images/cards/cooking.png", description: "some description10" },
         ]
