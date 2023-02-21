@@ -3,6 +3,8 @@
         <v-row justify="center">
             <v-card-title>Map settings</v-card-title>
         </v-row>
+        <v-card-title>Map widget script:</v-card-title>
+        <v-text-field filled color="background-light" :value="script" readonly append-icon="mdi-content-copy"  @click:append="copyScript"/>
         <v-card-title>Rewards:</v-card-title>
         <v-row>
             <v-col heigh="100%" xs="4" md="3" lg="2" xl="2" v-for="reward in rewards" :key="reward.id">
@@ -61,8 +63,12 @@ export default {
             { id: '8', img: "https://cdn.vuetifyjs.com/images/cards/cooking.png", },
             { id: '912', img: "https://cdn.vuetifyjs.com/images/cards/cooking.png", description: "some description9" },
             { id: '212', img: "https://cdn.vuetifyjs.com/images/cards/cooking.png", description: "some description10" },
-        ]
+        ],
+        script: null
     }),
+    mounted() {
+        this.script = "<script src=./my-lib.umd.js><script>"
+    },
     methods: {
         deleteReward(id) {
             console.log(id);
@@ -73,6 +79,9 @@ export default {
         closeAddReward() {
             this.newReward = { file: null, description: '' }
             this.addRewardDialog = false
+        },
+        copyScript(){
+            navigator.clipboard.writeText(this.script);
         }
     }
 }
