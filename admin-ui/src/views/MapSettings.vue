@@ -10,7 +10,7 @@
                     <v-img cover :src="reward.img" />
                     <v-divider />
                     <v-card-title><span>{{ reward.description }}</span></v-card-title>
-                    <div class="d-flex pa-5 align-end flex-row-reverse">
+                    <div class="d-flex pa-5  flex-row-reverse">
                         <v-btn color="primary" @click="deleteReward(reward.id)">Delete</v-btn>
                     </div>
                 </v-card>
