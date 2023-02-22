@@ -89,7 +89,8 @@ export default {
   props: {
     fee: { type: Object, required: true },
     template: { type: Object, required: true },
-    isPlansLoading: { type: Boolean, required: true }
+    isPlansLoading: { type: Boolean, required: true },
+    getPeriod: { type: Function, required: true }
   },
   data: () => ({
     plans: [],
@@ -156,11 +157,11 @@ export default {
         .catch((err) => { console.error(err) })
         .finally(() => { this.isAddonsLoading = false })
     },
-    changePlan(plan) {
+    async changePlan(plan) {
       const sp = this.$store.getters['servicesProviders/all'];
       const { uuid } = sp.find((el) => el.type === 'ovh');
 
-      this.plans.forEach(async (el) => {
+      for await (const el of this.plans) {
         if (el.sell) {
           const { meta: { requiredConfiguration } } = await api.post(`/sp/${uuid}/invoke`, {
             method: 'get_required_configuration',
@@ -171,7 +172,7 @@ export default {
             }
           });
 
-          const addons = this.addons[el.planCode].map((el) => el.planCode);
+          const addons = this.addons[el.planCode]?.map((el) => el.planCode);
 
           const datacenter = requiredConfiguration.find(
             (el) => el.label.includes('datacenter')
@@ -190,10 +191,10 @@ export default {
             meta: { addons, datacenter, os }
           }
         }
-      });
+      }
 
-      Object.values(this.addons).forEach((plan) => {
-        plan.forEach((el) => {
+      Object.values(this.addons).forEach((addon) => {
+        addon.forEach((el) => {
           if (el.sell && !plan.resources.find((res) => res.key === el.id)) {
             plan.resources.push({
               key: el.id,
@@ -316,7 +317,7 @@ export default {
             round = 'round';
         }
         if (this.fee.round === 'NONE') round = 'round';
-        if (typeof this.fee.round === 'string') {
+        else if (typeof this.fee.round === 'string') {
           round = this.fee.round.toLowerCase();
         }
 
@@ -363,7 +364,7 @@ export default {
           round = 'ceil';
       }
       if (this.fee.round === 'NONE') round = 'round';
-      if (typeof this.fee.round === 'string') {
+      else if (typeof this.fee.round === 'string') {
         round = this.fee.round.toLowerCase();
       }
 

@@ -96,9 +96,9 @@
               />
               <v-card-actions style="background: var(--v-background-base)">
                 <v-btn :loading="isLoading" @click="bindPlans">Add</v-btn>
-                <v-btn class="ml-2" @click="isDialogVisible = false"
-                  >Cancel</v-btn
-                >
+                <v-btn class="ml-2" @click="isDialogVisible = false">
+                  Cancel
+                </v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
@@ -106,9 +106,9 @@
             :disabled="selected.length < 1"
             @confirm="unbindPlans"
           >
-            <v-btn :disabled="selected.length < 1" :loading="isDeleteLoading"
-              >Remove</v-btn
-            >
+            <v-btn :disabled="selected.length < 1" :loading="isDeleteLoading">
+              Remove
+            </v-btn>
           </confirm-dialog>
         </v-col>
         <v-col>
@@ -374,7 +374,7 @@ export default {
       const plans = this.relatedPlans.map(({ uuid }) => uuid);
 
       return this.$store.getters["plans/all"].filter((plan) =>
-        plan.type === this.provider.type && !plans.includes(plan.uuid)
+        plan.type.includes(this.provider.type) && !plans.includes(plan.uuid)
       );
     },
     isPlanLoading() {
