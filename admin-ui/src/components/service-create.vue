@@ -218,7 +218,7 @@ export default {
       version: "1",
       title: "",
       context: {},
-      instances_groups: [],
+      instancesGroups: [],
     },
     namespace: "",
     instances: [],
@@ -315,7 +315,7 @@ export default {
         }
 
         inst.body.resources.ips_public = inst.body.instances?.length || 0;
-        data.instances_groups.push({ ...inst.body, title: inst.title, sp: inst.sp });
+        data.instancesGroups.push({ ...inst.body, title: inst.title, sp: inst.sp });
         // console.log(data.instances_groups[inst.title])
         // console.log(data.instances_groups)
         // let ips = 0;
