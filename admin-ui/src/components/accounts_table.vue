@@ -12,6 +12,7 @@
       <router-link :to="{ name: 'Account', params: { accountId: item.uuid } }">
         {{ item.title }}
       </router-link>
+        <v-icon @click="$router.push({ name: 'Account', params: { accountId: item.uuid},query:{tab:2} })" class="ml-5">mdi-calendar-multiple</v-icon>
     </template>
     <template v-slot:[`item.balance`]="{ item }">
       <balance v-if="item.balance" :value="item.balance" />
