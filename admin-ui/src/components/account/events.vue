@@ -4,13 +4,11 @@
     <v-col cols="3">
       <v-select v-model="selectedEventType" :items="eventsTypes"/>
     </v-col>
-    <v-col cols="1">
+    <v-col cols="3">
       <v-btn @click="deleteEvents" class="mt-3" color="primary">delete</v-btn>
-    </v-col>
-    <v-col cols="1">
      <v-dialog v-model="addEventDialog" width="50%">
        <template v-slot:activator="{on,attrs}">
-         <v-btn class="mt-3" color="primary" v-on="on" v-bind="attrs">add</v-btn>
+         <v-btn class="ml-7 mt-3" color="primary" v-on="on" v-bind="attrs">add</v-btn>
        </template>
        <v-card class="pa-5">
          <v-card-title class="text-center">New event:</v-card-title>
@@ -29,7 +27,7 @@
   </v-row>
   <nocloud-table item-key="id" v-model="selectedEvents" :headers="headers" :items="events">
     <template v-slot:item.data="{item}">
-      <p>{{JSON.stringify(item.data)}}</p>
+      <p>{{JSON.stringify(item.data).slice(0,40)+'...'}}</p>
     </template>
   </nocloud-table>
 </v-container>
