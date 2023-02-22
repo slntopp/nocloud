@@ -6,6 +6,7 @@ export default {
     currenciesList: ['NCU', 'USD', 'EUR', 'BYN', 'PLN'],
     currencies: [],
     currency: {},
+    defaultCurrency: '',
     loading: false,
   },
   getters: {
@@ -17,6 +18,9 @@ export default {
     },
     rates(state) {
       return state.currencies;
+    },
+    default(state) {
+      return state.defaultCurrency;
     },
     isLoading(state) {
       return state.loading;
@@ -31,6 +35,14 @@ export default {
     },
     setRates(state, rates) {
       state.currencies = rates.map((el) => ({ ...el, id: `${el.from} ${el.to}` }));
+    },
+    setDefault(state, currencies) {
+      const currency = currencies.find((el) =>
+        el.rate === 1 && [el.from, el.to].includes('NCU')
+      );
+
+      if (!currency) return;
+      state.defaultCurrency = (currency.from === 'NCU') ? currency.to : currency.from;
     },
     setLoading(state, data) {
       state.loading = data;
@@ -53,6 +65,7 @@ export default {
           })
           .then((response) => {
             commit("setRates", response.rates);
+            commit("setDefault", response.rates);
             resolve(response);
           })
           .catch((error) => {

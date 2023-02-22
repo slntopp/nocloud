@@ -13,13 +13,13 @@
     <!-- byn  .ant-btn-primary -->
     <div v-if="selectedC || multiSelect" style="position: absolute; right: 25px; bottom: 13px">
       <v-btn
-        @click="saveCountry"
-        style="margin-right: 5px; background-color: #4caf50"
         class="ant-btn-primary"
+        style="margin-right: 5px; background-color: #4caf50"
+        @click="saveCountry"
       >
         Save
       </v-btn>
-      <v-btn @click="CancelSelectedCountry" style="background-color: #272727">
+      <v-btn style="background-color: #272727" @click="CancelSelectedCountry">
         Cancel
       </v-btn>
     </div>
@@ -66,192 +66,121 @@
             :id="country.id"
             :title="country.title"
             :d="country.d"
-            @click="(e) => selectedCountry(country.id, country.title)"
+            @click="selectedCountry(country.id, country.title)"
           />
         </g>
 
-        <g
-          @click.stop
-          class="map_ui"
-          ref="notscale"
-          transform="matrix(1 0 0 1 0 0)"
-        >
-          <g
-            v-for="marker in markerOrder"
-            :key="marker.id + '_' + marker.x + '_' + marker.y + '_1'"
-          >
+        <g class="map_ui" ref="notscale" transform="matrix(1 0 0 1 0 0)" @click.stop>
+          <g v-for="marker in markerOrder" :key="`${marker.id}_${marker.x}_${marker.y}_1`">
             <use
+              x="0"
+              y="0"
+              transform-origin="14 36"
               :href="`#${marker.svgId || 'marker'}`"
+              :data-id="`${marker.id}_${marker.x}_${marker.y}`"
               :class="{
                 map__marker: true,
                 active: activePinTitle && activePinTitle === marker.title,
               }"
-              :data-id="marker.id + '_' + marker.x + '_' + marker.y"
-              x="0"
-              y="0"
-              :transform="`matrix(${0.8 / scale} 0 0 ${0.8 / scale} ${
-                marker.x
-              } ${marker.y})`"
-              transform-origin="14 36"
-              @mouseenter="
-                (e) =>
-                  mouseEnterHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-              @mouseleave="
-                (e) =>
-                  mouseLeaveHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
+              :transform="`matrix(${0.8 / scale} 0 0 ${0.8 / scale} ${marker.x} ${marker.y})`"
+              @mouseenter="(e) => mouseEnterHandler(`${marker.id}_${marker.x}_${marker.y}`, e)"
+              @mouseleave="(e) => mouseLeaveHandler(`${marker.id}_${marker.x}_${marker.y}`, e)"
             />
           </g>
           <g
-            v-for="marker in markerOrder"
-            :key="marker.id + '_' + marker.x + '_' + marker.y + '_2'"
             class="map__popup"
+            v-for="marker in markerOrder"
+            :key="`${marker.id}_${marker.x}_${marker.y}_2`"
             :class="{
-              'map__popup--active':
-                selected == marker.id + '_' + marker.x + '_' + marker.y,
-              'map__popup--hovered':
-                hovered == marker.id + '_' + marker.x + '_' + marker.y,
+              'map__popup--active': selected === `${marker.id}_${marker.x}_${marker.y}`,
+              'map__popup--hovered': hovered === `${marker.id}_${marker.x}_${marker.y}`,
             }"
           >
-            <!-- popup -->
-            <rect
-              x="0"
-              y="0"
-              :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(
-                marker.x + 14 - popupWidth / 2,
-                1
-              )} ${marker.y - 45})`"
-              :transform-origin="`${popupWidth / 2} 80`"
-              :width="popupWidth"
-              height="40"
-              fill="#fff"
-              stroke-width="1"
-              stroke="#000"
-              rx="8"
-              @mouseenter="
-                (e) =>
-                  mouseEnterHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-              @mouseleave="
-                (e) =>
-                  mouseLeaveHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-            ></rect>
             <!-- text -->
             <foreignObject
-              v-if="marker.title"
-              x="0"
-              y="0"
-              :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(
-                marker.x + 14 - popupWidth / 2,
-                1
-              )} ${marker.y - 45})`"
-              :transform-origin="`${popupWidth / 2} 80`"
-              :width="popupWidth"
+              x="65"
+              y="55"
+              width="40"
               height="40"
-              @mouseenter="
-                (e) =>
-                  mouseEnterHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-              @mouseleave="
-                (e) =>
-                  mouseLeaveHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
+              v-if="marker.title"
+              :transform-origin="`${popupWidth / 2} 80`"
+              :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(marker.x + 14 - popupWidth / 2, 1)} ${marker.y - 45})`"
+              @mouseenter="(e) => mouseEnterHandler(`${marker.id}_${marker.x}_${marker.y}`, e)"
+              @mouseleave="(e) => mouseLeaveHandler(`${marker.id}_${marker.x}_${marker.y}`, e)"
             >
               <div class="map__popup-content">
                 <slot name="popup" :marker="marker">
                   <div class="map__popup-content--default">
                     <!-- {{ marker.title }} -->
-                    <v-form>
-                      <v-text-field
-                        :ref="
-                          'textFiel_' +
-                          marker.id +
-                          '_' +
-                          marker.x +
-                          '_' +
-                          marker.y
-                        "
-                        @keyup.enter="
-                          (e) =>
-                            onEnterHandler(
-                              marker.id + '_' + marker.x + '_' + marker.y,
-                              e
-                            )
-                        "
-                        @input="
-                          (e) =>
-                            inputHandler(
-                              marker.id + '_' + marker.x + '_' + marker.y,
-                              e,
-                              marker
-                            )
-                        "
-                        v-model="marker.title"
-                        label=""
-                        solo
-                        dense
-                      >
-                      </v-text-field>
-                    </v-form>
+                    <v-dialog width="800">
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-icon v-on="on" v-bind="attrs" color="secondary">mdi-cog</v-icon>
+                      </template>
+                      <v-card class="pa-4" color="background-light">
+                        <v-icon @click="formatText('b', `${marker.id}_${marker.x}_${marker.y}`)" @mousedown.prevent>
+                          mdi-format-bold
+                        </v-icon>
+
+                        <v-icon @click="formatText('i', `${marker.id}_${marker.x}_${marker.y}`)" @mousedown.prevent>
+                          mdi-format-italic
+                        </v-icon>
+
+                        <v-icon @click="formatText('u', `${marker.id}_${marker.x}_${marker.y}`)" @mousedown.prevent>
+                          mdi-format-underline
+                        </v-icon>
+
+                        <v-icon @click="formatText('s', `${marker.id}_${marker.x}_${marker.y}`)" @mousedown.prevent>
+                          mdi-format-strikethrough
+                        </v-icon>
+
+                        <v-icon class="mx-1" @click="formatText('a', `${marker.id}_${marker.x}_${marker.y}`)" @mousedown.prevent>
+                          mdi-link
+                        </v-icon>
+
+                        <v-icon @click="formatText('color', `${marker.id}_${marker.x}_${marker.y}`)" @mousedown.prevent>
+                          mdi-palette
+                        </v-icon>
+
+                        <v-textarea
+                          label="Description"
+                          style="
+                            color: #fff;
+                            background: var(--v-background-light-base);
+                            transition: 0.3s;
+                          "
+                          :ref="`textarea_${marker.id}_${marker.x}_${marker.y}`"
+                          v-model="marker.extra.description"
+                        />
+
+                        <v-text-field
+                          dense
+                          label="Title"
+                          v-model="marker.title"
+                          :ref="`textField_${marker.id}_${marker.x}_${marker.y}`"
+                          @keyup.enter="(e) => onEnterHandler(`${marker.id}_${marker.x}_${marker.y}`, e)"
+                          @input="(e) => inputHandler(e, marker)"
+                        />
+                      </v-card>
+                    </v-dialog>
                   </div>
                 </slot>
               </div>
             </foreignObject>
 
             <foreignObject
-              v-if="marker.title"
               x="65"
-              y="40"
-              :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(
-                marker.x + 14 - popupWidth / 2,
-                1
-              )} ${marker.y - 45})`"
-              :transform-origin="`${popupWidth / 2} 80`"
+              y="30"
               width="40"
               height="40"
-              @mouseenter="
-                (e) =>
-                  mouseEnterHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
-              @mouseleave="
-                (e) =>
-                  mouseLeaveHandler(
-                    marker.id + '_' + marker.x + '_' + marker.y,
-                    e
-                  )
-              "
+              v-if="marker.title"
+              :transform-origin="`${popupWidth / 2} 80`"
+              :transform="`matrix(${1 / scale} 0 0 ${1 / scale} ${Math.max(marker.x + 14 - popupWidth / 2, 1)} ${marker.y - 45})`"
+              @mouseenter="(e) => mouseEnterHandler(`${marker.id}_${marker.x}_${marker.y}`, e)"
+              @mouseleave="(e) => mouseLeaveHandler(`${marker.id}_${marker.x}_${marker.y}`, e)"
             >
               <div class="map__popup-content">
                 <slot name="popup" :marker="marker">
-                  <div
-                    @click="(e) => delMarker(e, marker.id, marker.x, marker.y)"
-                    class="map__popup-content--default del"
-                  >
-                    X
-                  </div>
+                  <div class="map__popup-content--default del" @click="(e) => delMarker(e, marker.id, marker.x, marker.y)">X</div>
                 </slot>
               </div>
             </foreignObject>
@@ -329,13 +258,32 @@ export default {
     y: "",
   }),
   methods: {
+    formatText(tag, id) {
+      const textarea = this.$refs[`textarea_${id}`][0].$el.querySelector('textarea');
+      const { selectionStart, selectionEnd } = textarea;
+      const text = textarea.value.slice(selectionStart, selectionEnd);
+
+      if (tag === 'a') {
+        const pos = selectionStart + 17;
+
+        textarea.setRangeText(`<a href="https://">${text}</a>`);
+        textarea.setSelectionRange(pos, pos);
+      } else if (tag === 'color') {
+        const pos = selectionStart + 20;
+
+        textarea.setRangeText(`<span style="color: ">${text}</span>`);
+        textarea.setSelectionRange(pos, pos);
+      } else {
+        textarea.setRangeText(`<${tag}>${text}</${tag}>`);
+      }
+    },
     onEnterHandler(id, e) {
       e.stopPropagation();
-      const ref = this.$refs["textFiel_" + id][0];
+      const ref = this.$refs["textField_" + id][0];
       this.mouseLeaveHandler(id);
       ref.blur();
     },
-    inputHandler(id, e, marker) {
+    inputHandler(e, marker) {
       this.selectedC = "inputHandler";
       if (!e) {
         marker.title = " ";
@@ -370,7 +318,7 @@ export default {
       this.markers.forEach((el) => {
         if (el.title && !el.title.trim()) {
           const ref =
-            this.$refs["textFiel_" + el.id + "_" + el.x + "_" + el.y][0];
+            this.$refs["textField_" + el.id + "_" + el.x + "_" + el.y][0];
           this.mouseEnterHandler(el.id + "_" + el.x + "_" + el.y);
           setTimeout(() => {
             ref.focus();
@@ -484,7 +432,7 @@ export default {
 
         setTimeout(() => {
           const ref =
-            this.$refs["textFiel_" + obg.id + "_" + obg.x + "_" + obg.y][0];
+            this.$refs["textField_" + obg.id + "_" + obg.x + "_" + obg.y][0];
           ref.focus();
         }, 200);
       }, 10);
@@ -603,7 +551,7 @@ export default {
         }
         return 0;
       });
-    },
+    }
   },
 
   mounted() {
@@ -729,8 +677,7 @@ export default {
   background: #ffffff;
   color: #000;
 }
-#mapMain .theme--dark.v-input input,
-#mapMain .theme--dark.v-input textarea {
+#mapMain .theme--dark.v-input input {
   color: #000;
 }
 #mapMain .v-application--is-ltr .v-messages {

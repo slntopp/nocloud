@@ -75,7 +75,11 @@ export default {
 			this.$emit(`change:${input}`, data)
 			this.$emit(`passed`, Object.values(this.errors).every(el => el.length == 0))
 		}
-	}
+	},
+  mounted() {
+    this.changeHandler('secrets', this.secrets);
+    this.changeHandler('vars', this.vars);
+  }
 }
 </script>
 

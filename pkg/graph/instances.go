@@ -27,6 +27,7 @@ import (
 	"github.com/slntopp/nocloud-proto/hasher"
 	pb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
+	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
@@ -67,7 +68,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 
 	// ensure status is INIT
 	i.Uuid = ""
-	i.Status = pb.InstanceStatus_INIT
+	i.Status = spb.NoCloudStatus_INIT
 
 	err := hasher.SetHash(i.ProtoReflect())
 	if err != nil {
@@ -106,7 +107,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
 	inst.Uuid = ""
-	inst.Status = pb.InstanceStatus_INIT
+	inst.Status = spb.NoCloudStatus_INIT
 	inst.Data = nil
 	inst.State = nil
 
@@ -253,10 +254,53 @@ func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid
 	return nil
 }
 
-func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instance, status pb.InstanceStatus) (err error) {
+func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instance, status spb.NoCloudStatus) (err error) {
 	mask := &pb.Instance{
 		Status: status,
 	}
 	_, err = ctrl.col.UpdateDocument(ctx, inst.Uuid, mask)
 	return err
+}
+
+func (ctrl *InstancesController) TransferInst(ctx context.Context, oldIGEdge string, newIG driver.DocumentID, inst driver.DocumentID) error {
+	log := ctrl.log.Named("Transfer")
+	log.Debug("Transfer InstancesGroup", zap.String("group", inst.String()), zap.String("srvEdge", oldIGEdge), zap.String("to", newIG.String()))
+
+	_, err := ctrl.ig2inst.RemoveDocument(ctx, oldIGEdge)
+	if err != nil {
+		log.Error("Failed to remove old Edge", zap.Error(err))
+		return err
+	}
+
+	_, err = ctrl.ig2inst.CreateDocument(ctx, Access{From: newIG, To: inst, Role: roles.OWNER})
+	if err != nil {
+		log.Error("Failed to create Edge", zap.Error(err))
+		return err
+	}
+
+	return nil
+}
+
+func (ctrl *InstancesController) GetEdge(ctx context.Context, inboundNode string, collection string) (string, error) {
+	log := ctrl.log.Named("GetEdge")
+	log.Debug("Getting edge", zap.String("nodeId", inboundNode))
+	c, err := ctrl.db.Query(ctx, getEdge, map[string]interface{}{
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"inboundNode": inboundNode,
+		"collection":  collection,
+	})
+
+	if err != nil {
+		log.Error("Error while querying", zap.Error(err))
+		return "", err
+	}
+	defer c.Close()
+	var edgeId string
+	_, err = c.ReadDocument(ctx, &edgeId)
+	if err != nil {
+		log.Error("Error while reading document", zap.Error(err))
+		return "", err
+	}
+
+	return edgeId, nil
 }

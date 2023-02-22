@@ -1,6 +1,6 @@
 <template>
   <v-chip v-if="balance !== undefined" :color="colorChip">
-    {{ title }}{{ balance }} NCU
+    {{ title }}{{ balance }} {{ defaultCurrency }}
   </v-chip>
 </template>
 
@@ -13,6 +13,10 @@ export default {
       this.$store.dispatch('accounts/fetch')
         .catch(err => console.error(err.toJSON()));
     }
+    if (this.defaultCurrency === '') {
+      this.$store.dispatch('currencies/fetch')
+        .catch(err => console.error(err.toJSON()));
+    }
   },
   computed: {
     balance() {
@@ -21,6 +25,9 @@ export default {
       const { balance = 0 } = this.$store.getters['auth/userdata'];
 
       return parseFloat(balance).toFixed(2);
+    },
+    defaultCurrency() {
+      return this.$store.getters['currencies/default'];
     },
     colorChip() {
       if (this.balance > 0) {

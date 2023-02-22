@@ -2,9 +2,11 @@ package eventbus
 
 import (
 	"context"
+	"errors"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type EventHandler func(context.Context, *pb.Event, driver.Database) (*pb.Event, error)
@@ -14,6 +16,7 @@ var handlers = map[string]EventHandler{
 	"instance_unsuspended": GetInstAccountHandler,
 	"instance_created":     GetInstAccountHandler,
 	"instance_deleted":     GetInstAccountHandler,
+	"expiry_notification":  ExpiryHandler,
 }
 
 var getInstanceAccount = `
@@ -37,8 +40,13 @@ LET account = LAST(
         RETURN node
     )
     
-RETURN account._key
+RETURN {account: account._key, service: srv.title}
 `
+
+type AccountWithService struct {
+	Account string `json:"account"`
+	Service string `json:"service"`
+}
 
 func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
 	inst := driver.NewDocumentID(schema.INSTANCES_COL, event.GetUuid())
@@ -55,15 +63,50 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 
 	defer cursor.Close()
 
-	var accountUuid string
+	var accountWithService AccountWithService
 	for cursor.HasMore() {
-		_, err := cursor.ReadDocument(ctx, &accountUuid)
+		_, err := cursor.ReadDocument(ctx, &accountWithService)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	event.Uuid = accountUuid
+	event.Uuid = accountWithService.Account
 	event.Type = "email"
+	return event, nil
+}
+
+func ExpiryHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
+	if event.GetData() == nil {
+		return nil, errors.New("event don't have data")
+	}
+
+	inst := driver.NewDocumentID(schema.INSTANCES_COL, event.GetUuid())
+
+	cursor, err := db.Query(ctx, getInstanceAccount, map[string]interface{}{
+		"inst":        inst,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"@services":   schema.SERVICES_COL,
+		"@accounts":   schema.ACCOUNTS_COL,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	defer cursor.Close()
+
+	var accountWithService AccountWithService
+	for cursor.HasMore() {
+		_, err := cursor.ReadDocument(ctx, &accountWithService)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	event.Data["service"] = structpb.NewStringValue(accountWithService.Service)
+	event.Data["instance_uuid"] = structpb.NewStringValue(event.GetUuid())
+	event.Uuid = accountWithService.Account
+	event.Type = "email"
+
 	return event, nil
 }

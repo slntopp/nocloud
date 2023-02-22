@@ -24,6 +24,7 @@ import (
 
 	"github.com/slntopp/nocloud-proto/hasher"
 	pb "github.com/slntopp/nocloud-proto/instances"
+	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
@@ -83,7 +84,7 @@ func (ctrl *InstancesGroupsController) Create(ctx context.Context, service drive
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating InstancesGroup", zap.Any("group", g))
 
-	g.Status = pb.InstanceStatus_INIT
+	g.Status = spb.NoCloudStatus_INIT
 
 	err := hasher.SetHash(g.ProtoReflect())
 	if err != nil {
@@ -227,7 +228,7 @@ func (ctrl *InstancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 	return nil
 }
 
-func (ctrl *InstancesGroupsController) Transfer(ctx context.Context, oldSrvEdge string, newSrv driver.DocumentID, ig driver.DocumentID) error {
+func (ctrl *InstancesGroupsController) TransferIG(ctx context.Context, oldSrvEdge string, newSrv driver.DocumentID, ig driver.DocumentID) error {
 	log := ctrl.log.Named("Transfer")
 	log.Debug("Transfer InstancesGroup", zap.String("group", ig.String()), zap.String("srvEdge", oldSrvEdge), zap.String("to", newSrv.String()))
 
@@ -254,7 +255,7 @@ func (ctrl *InstancesGroupsController) Provide(ctx context.Context, group, sp st
 	return err
 }
 
-func (ctrl *InstancesGroupsController) SetStatus(ctx context.Context, ig *pb.InstancesGroup, status pb.InstanceStatus) (err error) {
+func (ctrl *InstancesGroupsController) SetStatus(ctx context.Context, ig *pb.InstancesGroup, status spb.NoCloudStatus) (err error) {
 	mask := &pb.InstancesGroup{
 		Status: status,
 	}
@@ -262,26 +263,13 @@ func (ctrl *InstancesGroupsController) SetStatus(ctx context.Context, ig *pb.Ins
 	return err
 }
 
-var getService = `
-LET ig = DOCUMENT(@ig)
-
-LET srv_edge = (
-	FOR s, edge IN 1 INBOUND ig
-	GRAPH @permissions
-	FILTER IS_SAME_COLLECTION(@services, s)
-	RETURN edge
-)[0]
-
-return srv_edge._key
-`
-
-func (ctrl *InstancesGroupsController) GetServiceEdge(ctx context.Context, ig string) (string, error) {
-	log := ctrl.log.Named("GetService")
-	log.Debug("Getting service", zap.String("ig", ig))
-	c, err := ctrl.db.Query(ctx, getService, map[string]interface{}{
+func (ctrl *InstancesGroupsController) GetEdge(ctx context.Context, inboundNode string, collection string) (string, error) {
+	log := ctrl.log.Named("GetEdge")
+	log.Debug("Getting edge", zap.String("nodeId", inboundNode))
+	c, err := ctrl.db.Query(ctx, getEdge, map[string]interface{}{
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
-		"ig":          ig,
-		"services":    schema.SERVICES_COL,
+		"inboundNode": inboundNode,
+		"collection":  collection,
 	})
 
 	if err != nil {

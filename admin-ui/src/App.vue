@@ -149,7 +149,7 @@
         <v-list-item
           v-bind="listItemBind"
           v-for="plugin of plugins"
-          :key="plugin.api"
+          :key="plugin.url"
           :to="{ name: 'Plugin', params: plugin }"
         >
           <v-list-item-icon>
@@ -205,7 +205,7 @@
         </v-col>
         <v-col class="d-flex justify-end align-center">
           <balance title="Balance: " />
-          <languages />
+          <languages v-if="false" />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
               <v-btn

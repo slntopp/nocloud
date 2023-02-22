@@ -59,6 +59,15 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 		query += ` && t.service == @service`
 		vars["service"] = service
 	}
+
+	if req.Page != nil && req.Limit != nil {
+		limit, page := req.GetLimit(), req.GetPage()
+		offset := (page - 1) * limit
+
+		query += ` LIMIT @offset, @count`
+		vars["offset"] = offset
+		vars["count"] = limit
+	}
 	query += ` RETURN t`
 
 	log.Debug("Ready to retrieve transactions", zap.String("query", query), zap.Any("vars", vars))

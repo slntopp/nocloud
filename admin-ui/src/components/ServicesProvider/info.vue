@@ -34,6 +34,22 @@
           v-model="provider.public"
         />
       </v-col>
+      <v-col cols="12">
+        <div class="d-flex align-start">
+          <v-btn :to="{ name: 'ServicesProvider edit', params: { uuid: provider.uuid } }">
+            Edit
+          </v-btn>
+          <v-btn class="mx-2" @click="downloadFile">
+            Download {{ isJson ? "JSON" : "YAML" }}
+          </v-btn>
+          <v-switch
+            class="mr-2"
+            style="margin-top: 5px; padding-top: 0"
+            v-model="isJson"
+            :label="!isJson ? 'YAML' : 'JSON'"
+          />
+        </div>
+      </v-col>
     </v-row>
 
     <component :is="spTypes" :template="provider">
@@ -80,9 +96,9 @@
               />
               <v-card-actions style="background: var(--v-background-base)">
                 <v-btn :loading="isLoading" @click="bindPlans">Add</v-btn>
-                <v-btn class="ml-2" @click="isDialogVisible = false"
-                  >Cancel</v-btn
-                >
+                <v-btn class="ml-2" @click="isDialogVisible = false">
+                  Cancel
+                </v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
@@ -90,9 +106,9 @@
             :disabled="selected.length < 1"
             @confirm="unbindPlans"
           >
-            <v-btn :disabled="selected.length < 1" :loading="isDeleteLoading"
-              >Remove</v-btn
-            >
+            <v-btn :disabled="selected.length < 1" :loading="isDeleteLoading">
+              Remove
+            </v-btn>
           </confirm-dialog>
         </v-col>
         <v-col>
@@ -121,24 +137,6 @@
     </template>
 
     <v-row>
-      <v-col>
-        <v-btn :to="{ name: 'ServicesProvider edit', params: { uuid: provider.uuid } }">
-          Edit
-        </v-btn>
-      </v-col>
-      <v-col>
-        <div class="d-flex align-start">
-          <v-btn class="mr-2" @click="downloadFile">
-            Download {{ isJson ? "JSON" : "YAML" }}
-          </v-btn>
-          <v-switch
-            class="mr-2"
-            style="margin-top: 5px; padding-top: 0"
-            v-model="isJson"
-            :label="!isJson ? 'YAML' : 'JSON'"
-          />
-        </div>
-      </v-col>
     </v-row>
 
     <v-snackbar
@@ -376,7 +374,7 @@ export default {
       const plans = this.relatedPlans.map(({ uuid }) => uuid);
 
       return this.$store.getters["plans/all"].filter((plan) =>
-        plan.type === this.provider.type && !plans.includes(plan.uuid)
+        plan.type.includes(this.provider.type) && !plans.includes(plan.uuid)
       );
     },
     isPlanLoading() {

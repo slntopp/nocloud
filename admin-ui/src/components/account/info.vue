@@ -178,16 +178,18 @@ export default {
     loginHandler() {
       this.$store.dispatch('auth/loginToApp', { uuid: this.account.uuid, type: 'whmcs' })
         .then(({ token }) => {
-          const url = `https://app.${location.host.split('.').slice(1).join('.')}`;
-          const win = window.open(url);
+          api.settings.get(['app']).then((res) => {
+            const url = JSON.parse(res['app']).url;
+            const win = window.open(url);
 
-          setTimeout(() => { win.postMessage(token, url) }, 100);
+            setTimeout(() => { win.postMessage(token, url) }, 100);
+          })
         })
     }
   },
   mounted() {
     this.title = this.account.title;
-    this.uuid=this.account.uuid
+    this.uuid = this.account.uuid
     this.keys = this.account.data?.ssh_keys || [];
   }
 }

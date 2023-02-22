@@ -83,12 +83,13 @@ export default {
   },
   watch: {
     plan() {
-      if (!['ovh', 'goget'].includes(this.plan.type)) return;
+      if (!['ovh vps', 'ovh dedicated', 'goget'].includes(this.plan.type)) return;
       if (this.tabs.find(({ title }) => title === 'Prices')) return;
+      const type = this.plan.type.split(' ')[0];
 
       this.tabs.splice(this.tabs.length - 1, 0, {
         title: 'Prices',
-        component: () => import(`@/components/plan/${this.plan.type}Prices.vue`)
+        component: () => import(`@/components/plan/${type}Prices.vue`)
       });
     }
   }

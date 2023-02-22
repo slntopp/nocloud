@@ -24,10 +24,12 @@ import (
 	accesspb "github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	pb "github.com/slntopp/nocloud-proto/instances"
+	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	s "github.com/slntopp/nocloud/pkg/states"
+	st "github.com/slntopp/nocloud/pkg/statuses"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -67,6 +69,14 @@ func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amq
 	d.ConsumerInit(ch, "datas", "instances", schema.INSTANCES_COL) // init Consumer queue of topic "datas.instances"
 	log.Debug("initializing Consumer queue of topic \"datas.instances-groups\"")
 	d.ConsumerInit(ch, "datas", "instances-groups", schema.INSTANCES_GROUPS_COL) // init Consumer queue of topic "datas.instances-groups"
+
+	log.Debug("Setting up StatusesPubSub")
+	st := st.NewStatusesPubSub(log, &db, rbmq)
+	ch = st.Channel()
+	log.Debug("initializing Exchange with name \"statuses\" of type \"topic\"")
+	st.TopicExchange(ch, "statuses")
+	log.Debug("initializing Consumer queue of topic \"statuses.instances\"")
+	st.StatusesConsumerInit(ch, "statuses", "instances", schema.INSTANCES_COL)
 
 	return &InstancesServer{
 		db: db, log: log,
@@ -146,18 +156,9 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	r, err := s.ctrl.GetGroup(ctx, instance_id.String())
+	err = s.ctrl.SetStatus(ctx, instance.Instance, spb.NoCloudStatus_DEL)
 	if err != nil {
-		log.Error("Failed to get Group and ServicesProvider", zap.Error(err))
 		return nil, err
-	}
-
-	err = s.ctrl.Delete(ctx, r.Group.GetUuid(), instance.Instance)
-
-	if err != nil {
-		return &pb.DeleteResponse{
-			Result: false,
-		}, err
 	}
 
 	return &pb.DeleteResponse{
@@ -165,13 +166,13 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 	}, nil
 }
 
-func (s *InstancesServer) Transfer(ctx context.Context, req *pb.TransferRequest) (*pb.TransferResponse, error) {
+func (s *InstancesServer) TransferIG(ctx context.Context, req *pb.TransferIGRequest) (*pb.TransferIGResponse, error) {
 	log := s.log.Named("transfer")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	igId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.Uuid)
-	newSrvId := driver.NewDocumentID(schema.SERVICES_COL, req.Service)
+	igId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.GetUuid())
+	newSrvId := driver.NewDocumentID(schema.SERVICES_COL, req.GetService())
 	ig, err := graph.GetWithAccess[graph.InstancesGroup](ctx, s.db, igId)
 
 	if err != nil {
@@ -196,19 +197,68 @@ func (s *InstancesServer) Transfer(ctx context.Context, req *pb.TransferRequest)
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	srvEdge, err := s.ig_ctrl.GetServiceEdge(ctx, igId.String())
+	srvEdge, err := s.ig_ctrl.GetEdge(ctx, igId.String(), schema.SERVICES_COL)
 
 	if err != nil {
 		log.Error("Failed to get Service", zap.Error(err))
 		return nil, err
 	}
 
-	err = s.ig_ctrl.Transfer(ctx, srvEdge, newSrvId, igId)
+	err = s.ig_ctrl.TransferIG(ctx, srvEdge, newSrvId, igId)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.TransferResponse{
+	return &pb.TransferIGResponse{
+		Result: true,
+		Meta:   nil,
+	}, nil
+}
+
+func (s *InstancesServer) TransferInstance(ctx context.Context, req *pb.TransferInstanceRequest) (*pb.TransferInstanceResponse, error) {
+	log := s.log.Named("transfer")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	instanceId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.Uuid)
+	newIGId := driver.NewDocumentID(schema.SERVICES_COL, req.GetIg())
+	ig, err := graph.GetWithAccess[graph.InstancesGroup](ctx, s.db, instanceId)
+
+	if err != nil {
+		log.Error("Failed to get instances group", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	srv, err := graph.GetWithAccess[graph.Service](ctx, s.db, newIGId)
+
+	if err != nil {
+		log.Error("Failed to get service", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
+		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	if srv.GetAccess().GetLevel() < accesspb.Level_ROOT {
+		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	igEdge, err := s.ctrl.GetEdge(ctx, instanceId.String(), schema.INSTANCES_GROUPS_COL)
+
+	if err != nil {
+		log.Error("Failed to get Service", zap.Error(err))
+		return nil, err
+	}
+
+	err = s.ctrl.TransferInst(ctx, igEdge, newIGId, instanceId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.TransferInstanceResponse{
 		Result: true,
 		Meta:   nil,
 	}, nil

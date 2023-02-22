@@ -16,19 +16,12 @@
                 label="Type"
               />
               <v-text-field
+                ref="type"
                 label="Type name"
                 v-if="provider.type === 'custom'"
                 v-model="customTitle"
+                :rules="[(v) => !!v || 'This field is required!']"
               />
-            </v-col>
-          </v-row>
-          <v-row align="center" v-if="provider.type === 'custom'">
-            <v-col cols="3">
-              <v-subheader> Key </v-subheader>
-            </v-col>
-
-            <v-col cols="9">
-              <v-text-field v-model="key" label="Key"></v-text-field>
             </v-col>
           </v-row>
 
@@ -211,7 +204,6 @@ export default {
   data: () => ({
     types: [],
     templates: {},
-    key: "",
     customTitle: "",
     provider: {
       type: "custom",
@@ -279,18 +271,7 @@ export default {
     },
     serviceProviderBody() {
       if (Object.keys(this.extentions.data).length > 0) {
-        if (this.provider.type === "custom") {
-          return {
-            ...this.provider,
-            type: this.key,
-            extentions: this.extentions.data,
-          };
-        } else {
-          return {
-            ...this.provider,
-            extentions: this.extentions.data,
-          };
-        }
+        return { ...this.provider, extentions: this.extentions.data };
       } else {
         return this.provider;
       }
@@ -325,11 +306,12 @@ export default {
     tryToSend() {
       const action = (this.$route.params.uuid) ? 'edit' : 'create';
 
-      if (!this.isPassed) {
+      if (!this.isPassed || this.customTitle === '') {
         const opts = {
           message: `Error: Test must be passed before creation.`,
         };
         this.showSnackbarError(opts);
+        this.$refs.type.focus();
         return;
       }
       if (

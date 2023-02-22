@@ -13,10 +13,10 @@ export default {
     src() {
       const { title } = this.$store.getters["auth/userdata"];
       const { token } = this.$store.state.auth;
-      const { api } = this.$route.params;
-      const params = JSON.stringify({ title, token, api });
+      const { url } = this.$route.params;
+      const params = JSON.stringify({ title, token, api: location.host });
 
-      return `https://${location.host}?a=${Buffer.from(params).toString("base64")}`;
+      return `${url}?a=${Buffer.from(params).toString("base64")}`;
     }
   }
 }
