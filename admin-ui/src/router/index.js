@@ -106,14 +106,6 @@ const routes = [
     },
   },
   {
-    path: "/settings/map",
-    name: "MapSetting",
-    component: () => import("../views/MapSettings.vue"),
-    meta: {
-      requireLogin: true,
-    },
-  },
-  {
     path: "/plugin/:title",
     name: "Plugin",
     component: () => import("../views/PluginPage.vue"),

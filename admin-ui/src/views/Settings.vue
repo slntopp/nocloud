@@ -4,9 +4,6 @@
       <v-btn color="background-light" class="mr-2" to="/settings/app">
         app settings
       </v-btn>
-      <v-btn color="background-light" class="mr-2" to="/settings/map">
-        map settings
-      </v-btn>
       <v-menu offset-y transition="slide-y-transition" bottom :close-on-content-click="false"
         v-model="newSetting.visible">
         <template v-slot:activator="{ on, attrs }">
