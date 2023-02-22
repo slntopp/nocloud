@@ -92,11 +92,11 @@ export default {
     isValid: true
   }),
   methods: {
-    tryToSend(action) {
+    async tryToSend(action) {
       if (!this.testConfig()) return;
       const newPlan = { ...this.template, fee: this.fee, resources: [], products: {} };
 
-      this.$refs.table.changePlan(newPlan);
+      await this.$refs.table.changePlan(newPlan);
 
       if (action === 'create') delete newPlan.uuid;
       const request = (action === 'edit')

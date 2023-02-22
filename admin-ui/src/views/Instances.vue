@@ -305,8 +305,13 @@ export default {
     });
 
     const icon = document.querySelector('.group-icon');
+    const filters = localStorage.getItem('filters');
 
     icon.dispatchEvent(new Event('click'));
+    if (filters) this.columnFilters = JSON.parse(filters);
+  },
+  beforeDestroy() {
+    localStorage.setItem('filters', JSON.stringify(this.columnFilters));
   },
   computed: {
     services() {
