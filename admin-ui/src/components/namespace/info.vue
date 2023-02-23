@@ -9,7 +9,7 @@
 
         <div class="pt-4">
             <v-btn class="mt-4 mr-2" :loading="isEditLoading" @click="editNamespace">
-                Submit
+                Save
             </v-btn>
         </div>
     </v-card>

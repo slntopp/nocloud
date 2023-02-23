@@ -76,7 +76,7 @@
       :loading="isEditLoading"
       @click="editAccount"
     >
-      Submit
+      Save
     </v-btn>
 
     <v-snackbar
