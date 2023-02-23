@@ -204,7 +204,7 @@ func (s *NamespacesServiceServer) Patch(ctx context.Context, request *namespaces
 	ns, err := s.ctrl.Get(ctx, request.Uuid)
 	if err != nil {
 		s.log.Debug("Error getting namespace", zap.Any("error", err))
-		return nil, status.Error(codes.NotFound, "Account not found")
+		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 
 	if !graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN) {
