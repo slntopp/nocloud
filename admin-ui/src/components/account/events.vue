@@ -65,13 +65,13 @@ export default {
         if(check && this.eventsStorage[this.selectedEventType].isLoaded){
           return
         }
-        const res=await api.events.list(this.selectedEventType,this.account.uuid,)
+        const res=await api.events.list(this.selectedEventType,this.uuid,)
         this.eventsStorage[this.selectedEventType].items=res.events
         this.eventsStorage[this.selectedEventType].isLoaded=true
       },
     async addNewEvent(){
         try{
-          await api.events.publish({...this.newEvent,uuid:this.account.uuid})
+          await api.events.publish({...this.newEvent,uuid:this.uuid})
 
           if(!this.eventsStorage[this.newEvent.type]){
             this.eventsStorage[this.newEvent.type]={isLoaded:false,items:[]}
@@ -112,6 +112,9 @@ export default {
       }
 
       return this.eventsTypes.concat([this.userType])
+    },
+    uuid(){
+      return this.account.uuid
     }
   },
   watch:{
