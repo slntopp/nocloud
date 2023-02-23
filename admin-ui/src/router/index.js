@@ -232,7 +232,7 @@ const routes = [
     component: () => import("../views/Currencies.vue"),
     meta: {
       requireLogin: true,
-    }
+    },
   },
 ];
 
