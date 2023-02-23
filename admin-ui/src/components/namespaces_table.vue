@@ -1,17 +1,13 @@
 <template>
-  <nocloud-table
-    :loading="loading"
-    :items="filtredNamespaces"
-    :headers="headers"
-    :value="selected"
-    @input="handleSelect"
-    :single-select="singleSelect"
-    :footer-error="fetchError"
-  >
+  <nocloud-table :loading="loading" :items="filtredNamespaces" :headers="headers" :value="selected" @input="handleSelect"
+    :single-select="singleSelect" :footer-error="fetchError">
     <template v-slot:[`item.access`]="{ item }">
       <v-chip color="info">
         {{ getName(item.access.namespace) }} ({{ item.access.level }})
       </v-chip>
+    </template>
+    <template v-slot:[`item.title`]="{ item }">
+      {{ "NS_" + item.title }}
     </template>
   </nocloud-table>
 </template>
