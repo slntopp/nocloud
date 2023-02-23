@@ -6,28 +6,28 @@
       }}</router-link>
       / {{ 'NS_' + (namespaceTitle) }}
     </h1>
-    <v-card :loading="isFetchLoading" elevation="0" color="background-light" class="pa-4">
-      <v-card-title>Access</v-card-title>
-      <v-text-field readonly :value="namespace.access?.level" label="level" style="width: 330px" />
-      <v-text-field readonly :value="namespace.access?.role" label="role" style="width: 330px" />
-      <v-text-field readonly :value="namespace.access?.namespace" label="namespace" style="width: 330px" />
-      <v-text-field class="mt-5" v-model="namespace.title" label="title" style="width: 330px" />
-      <div class="pt-4">
-        <v-btn class="mt-4 mr-2" :loading="isEditLoading" @click="editNamespace">
-          Submit
-        </v-btn>
-      </div>
-    </v-card>
+    <v-tabs class="rounded-t-lg" background-color="background-light" v-model="tabs">
+      <v-tab>Info</v-tab>
+    </v-tabs>
+    <v-tabs-items class="rounded-b-lg" style="background: var(--v-background-light-base)" v-model="tabs">
+      <v-tab-item>
+        <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
+        <namespace-info v-if="namespace && namespaceTitle" :namespace="namespace"
+          @input:title="namespace.title = $event" />
+      </v-tab-item>
+    </v-tabs-items>
   </div>
 </template>
 
 <script>
 import api from '@/api.js'
 import config from "@/config.js";
+import namespaceInfo from '../components/namespace/info.vue';
 
 export default {
   name: "account-view",
-  data: () => ({ navTitles: config.navTitles ?? {}, namespace: {}, namespaceTitle: '...', isFetchLoading: false, isEditLoading: false }),
+  data: () => ({ navTitles: config.navTitles ?? {}, namespaceTitle: '...', isFetchLoading: false, tabs: 0, namespace: {} }),
+  components: { namespaceInfo },
   methods: {
     navTitle(title) {
       if (title && this.navTitles[title]) {
@@ -39,9 +39,7 @@ export default {
     editNamespace() {
       this.isEditLoading = true
 
-      api.namespaces.edit(this.editableNamespace).then(() => {
-        this.namespace = this.editableNamespace
-      }).finally(() => {
+      api.namespaces.edit(this.namespace).finally(() => {
         this.isEditLoading = false
       })
     }
