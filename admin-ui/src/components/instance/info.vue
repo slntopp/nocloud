@@ -7,38 +7,21 @@
     </v-row>
     <v-row align="center">
       <v-col>
-        <v-text-field
-          readonly
-          label="instance uuid"
-          style="display: inline-block; width: 330px"
-          :value="template.uuid"
+        <v-text-field readonly label="instance uuid" style="display: inline-block; width: 330px" :value="template.uuid"
           :append-icon="copyed === 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
-          @click:append="addToClipboard(template.uuid, 'rootUUID')"
-        />
+          @click:append="addToClipboard(template.uuid, 'rootUUID')" />
       </v-col>
       <v-col v-if="template.state">
-        <v-text-field
-          readonly
-          label="state"
-          style="display: inline-block; width: 150px"
-          :value="template.state.meta?.state_str || template.state.state"
-        />
+        <v-text-field readonly label="state" style="display: inline-block; width: 150px"
+          :value="template.state.meta?.state_str || template.state.state" />
       </v-col>
       <v-col v-if="template.state?.meta.lcm_state_str">
-        <v-text-field
-          readonly
-          label="lcm state"
-          style="display: inline-block; width: 150px"
-          :value="template.state?.meta.lcm_state_str"
-        />
+        <v-text-field readonly label="lcm state" style="display: inline-block; width: 150px"
+          :value="template.state?.meta.lcm_state_str" />
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          label="price model"
-          style="display: inline-block; width: 150px"
-          :value="template.billingPlan.title"
-        />
+        <v-text-field readonly label="price model" style="display: inline-block; width: 150px"
+          :value="template.billingPlan.title" />
       </v-col>
     </v-row>
 
@@ -47,57 +30,31 @@
     <v-row class="flex-column mb-5" v-if="template.state">
       <v-col>
         <v-card-title class="mb-2 px-0">Snapshots:</v-card-title>
-        <v-menu
-          bottom
-          offset-y
-          transition="slide-y-transition"
-          v-model="isVisible"
-          :close-on-content-click="false"
-        >
+        <v-menu bottom offset-y transition="slide-y-transition" v-model="isVisible" :close-on-content-click="false">
           <template v-slot:activator="{ on, attrs }">
             <v-btn class="mr-2" v-bind="attrs" v-on="on"> Create </v-btn>
           </template>
           <v-card class="pa-4">
             <v-row>
               <v-col>
-                <v-text-field
-                  dense
-                  label="name"
-                  v-model="snapshotName"
-                  :rules="[(v) => !!v || 'Required!']"
-                />
-                <v-btn
-                  :loading="isLoading"
-                  @click="createSnapshot(template.uuid)"
-                >
+                <v-text-field dense label="name" v-model="snapshotName" :rules="[(v) => !!v || 'Required!']" />
+                <v-btn :loading="isLoading" @click="createSnapshot(template.uuid)">
                   Send
                 </v-btn>
               </v-col>
             </v-row>
           </v-card>
         </v-menu>
-        <v-btn
-          class="mr-2"
-          :loading="isDeleteLoading"
-          @click="deleteSnapshot(template)"
-        >
+        <v-btn class="mr-2" :loading="isDeleteLoading" @click="deleteSnapshot(template)">
           Delete
         </v-btn>
-        <v-btn
-          :loading="isRevertLoading"
-          @click="revertToSnapshot(template)"
-        >
+        <v-btn :loading="isRevertLoading" @click="revertToSnapshot(template)">
           Revert
         </v-btn>
       </v-col>
       <v-col>
-        <nocloud-table
-          single-select
-          item-key="ts"
-          v-model="selected"
-          :items="Object.values(template.state?.meta?.snapshots || {})"
-          :headers="headers"
-        >
+        <nocloud-table single-select item-key="ts" v-model="selected"
+          :items="Object.values(template.state?.meta?.snapshots || {})" :headers="headers">
           <template v-slot:[`item.ts`]="{ item }">
             {{ date(item.ts) }}
           </template>
@@ -105,29 +62,22 @@
       </v-col>
     </v-row>
 
-    <v-btn :to="{ name: 'Service edit', params: {
-      serviceId: template.service, sp: template.sp, instance: template.uuid
-    }}">
+    <v-btn :to="{
+      name: 'Service edit', params: {
+        serviceId: template.service, sp: template.sp, instance: template.uuid
+      }, query: { instance: template.uuid }
+    }">
       Edit
     </v-btn>
 
-    <v-snackbar
-      v-model="snackbar.visibility"
-      :timeout="snackbar.timeout"
-      :color="snackbar.color"
-    >
+    <v-snackbar v-model="snackbar.visibility" :timeout="snackbar.timeout" :color="snackbar.color">
       {{ snackbar.message }}
       <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
         <router-link :to="snackbar.route"> Look up. </router-link>
       </template>
 
       <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
-        >
+        <v-btn :color="snackbar.buttonColor" text v-bind="attrs" @click="snackbar.visibility = false">
           Close
         </v-btn>
       </template>
