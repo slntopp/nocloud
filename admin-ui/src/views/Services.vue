@@ -65,7 +65,7 @@
         <router-link
           :to="{ name: 'Service', params: { serviceId: item.uuid } }"
         >
-          {{ item.title }}
+          {{ 'SRV_'+item.title }}
         </router-link>
       </template>
 

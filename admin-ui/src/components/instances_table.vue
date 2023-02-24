@@ -49,7 +49,7 @@
 
     <template v-slot:[`item.service`]="{ item, value }">
       <router-link :to="{ name: 'Service', params: { serviceId: value } }">
-        {{ getService(item) }}
+        {{ "SRV_" + getService(item) }}
       </router-link>
     </template>
 
@@ -320,8 +320,8 @@ export default {
 
       return billingPlan.products[key]?.title;
     },
-    getNamespace(id){
-      return "NS_"+this.namespaces.find((n)=>n.uuid===id).title
+    getNamespace(id) {
+      return "NS_" + this.namespaces.find((n) => n.uuid === id).title
     }
   },
   created() { this.fetchServices() },
