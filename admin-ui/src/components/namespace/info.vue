@@ -1,7 +1,6 @@
 <template>
-    <v-card :loading="isFetchLoading" elevation="0" color="background-light" class="pa-4">
-        <v-text-field class="mt-5" :value="namespace?.title" @input="$emit('input:title', $event)" label="title"
-            style="width: 330px" />
+    <v-card :loading="loading" elevation="0" color="background-light" class="pa-4">
+        <v-text-field class="mt-5" v-model="newTitle" label="title" style="width: 330px" />
         <v-card-title>Access</v-card-title>
         <v-text-field readonly :value="namespace?.access?.level" label="level" style="width: 330px" />
         <v-text-field readonly :value="namespace?.access?.role" label="role" style="width: 330px" />
@@ -20,13 +19,15 @@ import api from '@/api.js'
 
 export default {
     name: "namespace-info",
-    data: () => ({ namespaceTitle: '...', isFetchLoading: false, isEditLoading: false }),
-    props: ['namespace'],
+    data: () => ({ isEditLoading: false, newTitle: '' }),
+    props: ['namespace', 'loading'],
     methods: {
         editNamespace() {
             this.isEditLoading = true
 
-            api.namespaces.edit(this.namespace).finally(() => {
+            api.namespaces.edit({ ...this.namespace, title: this.newTitle }).then(() => {
+                this.$emit('input:title', this.newTitle)
+            }).catch(e => console.log(e)).finally(() => {
                 this.isEditLoading = false
             })
         }
@@ -36,6 +37,11 @@ export default {
             return this.$store.getters['namespaces/all']
         },
     },
+    watch: {
+        'namespace.title'(newVal) {
+            this.newTitle = newVal
+        }
+    }
 };
 </script>
   
