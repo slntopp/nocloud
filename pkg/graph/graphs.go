@@ -61,7 +61,7 @@ LET inboundNode_edge = (
 	RETURN edge
 )[0]
 
-return inboundNode._key
+return inboundNode_edge._key
 `
 
 const listOwnedQuery = `

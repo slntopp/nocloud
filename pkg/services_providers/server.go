@@ -312,6 +312,8 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 		return req, status.Error(codes.Internal, testRes.Error)
 	}
 
+	log.Info("meta", zap.Any("meta", sp.ServicesProvider.GetMeta()))
+
 	err = s.ctrl.Update(ctx, sp.ServicesProvider)
 	if err != nil {
 		s.log.Debug("Error updating in DataBase", zap.Any("sp", sp), zap.Error(err))

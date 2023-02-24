@@ -193,3 +193,30 @@ func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespace
 
 	return &namespacespb.DeleteResponse{Result: true}, nil
 }
+
+func (s *NamespacesServiceServer) Patch(ctx context.Context, request *namespacespb.PatchRequest) (*namespacespb.PatchResponse, error) {
+	log := s.log.Named("Patch")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ctrl.Get(ctx, request.Uuid)
+	if err != nil {
+		s.log.Debug("Error getting namespace", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Namespace not found")
+	}
+
+	if !graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "NoAccess")
+	}
+
+	err = s.ctrl.Patch(ctx, request.GetUuid(), request.GetTitle())
+
+	if err != nil {
+		s.log.Debug("Error updating namespace", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error updating namespace")
+	}
+
+	return &namespacespb.PatchResponse{Result: true}, nil
+}

@@ -2,9 +2,12 @@
   <nocloud-table :headers="headers" :items="filtredAccounts" :value="selected" :loading="loading"
     :single-select="singleSelect" :footer-error="fetchError" @input="handleSelect">
     <template v-slot:[`item.title`]="{ item }">
-      <router-link :to="{ name: 'Account', params: { accountId: item.uuid } }">
-        {{ item.title }}
-      </router-link>
+     <div class="d-flex justify-space-between">
+       <router-link :to="{ name: 'Account', params: { accountId: item.uuid } }">
+         {{ item.title }}
+       </router-link>
+       <v-icon @click="$router.push({ name: 'Account', params: { accountId: item.uuid},query:{tab:2} })" class="ml-5">mdi-calendar-multiple</v-icon>
+     </div>
     </template>
     <template v-slot:[`item.balance`]="{ item }">
       <balance v-if="item.balance" :value="item.balance" />

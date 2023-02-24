@@ -81,6 +81,19 @@ func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Nam
 	return ns, ctrl.Link(ctx, acc, ns, access.Level_ADMIN, roles.OWNER)
 }
 
+func (ctrl *NamespacesController) Patch(ctx context.Context, uuid, title string) error {
+	ns := Namespace{
+		Namespace: &namespaces.Namespace{Title: title},
+	}
+
+	_, err := ctrl.col.UpdateDocument(ctx, uuid, ns)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (ctrl *NamespacesController) Link(ctx context.Context, acc Account, ns Namespace, access access.Level, role string) error {
 	edge, _ := ctrl.col.Database().Collection(ctx, schema.ACC2NS)
 	return acc.LinkNamespace(ctx, edge, ns, access, role)
