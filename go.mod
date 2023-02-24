@@ -12,7 +12,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.1
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.0
 	github.com/rabbitmq/amqp091-go v1.7.0
 	github.com/rs/cors v1.8.3
 	github.com/slntopp/nocloud-proto v0.0.0-20230223134824-05a77e7ddd2b
@@ -26,7 +26,6 @@ require (
 )
 
 require (
-	github.com/golang/glog v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	google.golang.org/genproto v0.0.0-20230221151758-ace64dc21148 // indirect
