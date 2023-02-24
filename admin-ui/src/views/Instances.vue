@@ -7,13 +7,8 @@
 
       <v-list dense>
         <v-list-item dense v-for="item of filters[column]" :key="item">
-          <v-checkbox
-            dense
-            v-model="selectedFilters[column]"
-            :value="item"
-            :label="item"
-            @change="selectedFilters = Object.assign({}, selectedFilters)"
-          />
+          <v-checkbox dense v-model="selectedFilters[column]" :value="item" :label="item"
+            @change="selectedFilters = Object.assign({}, selectedFilters)" />
         </v-list-item>
       </v-list>
     </v-menu>
@@ -27,39 +22,20 @@
 
       <v-card class="pa-4">
         <v-form ref="form" v-model="newInstance.isValid">
-          <v-select
-            dense
-            item-text="title"
-            item-value="uuid"
-            label="service"
-            style="width: 300px"
-            v-model="newInstance.service"
-            :items="services"
-            :rules="rules.req"
-          />
+          <v-select dense item-text="title" item-value="uuid" label="service" style="width: 300px"
+            v-model="newInstance.service" :items="services" :rules="rules.req" />
 
-          <v-select
-            dense
-            label="type"
-            style="width: 300px"
-            v-model="newInstance.type"
-            :items="allTypes"
-            :rules="rules.req"
-          />
-          <v-text-field
-            label="type name"
-            v-if="newInstance.type === 'custom'"
-            v-model="newInstance.customTitle"
-            :rules="rules.req"
-          />
+          <v-select dense label="type" style="width: 300px" v-model="newInstance.type" :items="allTypes"
+            :rules="rules.req" />
+          <v-text-field label="type name" v-if="newInstance.type === 'custom'" v-model="newInstance.customTitle"
+            :rules="rules.req" />
 
-          <v-btn
-            :to="{ name: 'Service edit', params: {
+          <v-btn :to="{
+            name: 'Service edit', params: {
               serviceId: newInstance.service,
               type: (newInstance.type === 'custom') ? newInstance.customTitle : newInstance.type
-            }}"
-            :disabled="!newInstance.isValid"
-          >
+            }
+          }" :disabled="!newInstance.isValid">
             OK
           </v-btn>
         </v-form>
@@ -67,30 +43,14 @@
     </v-menu>
 
     <confirm-dialog @confirm="deleteSelectedInstances">
-      <v-btn
-        class="mr-2"
-        color="background-light"
-        :disabled="selected.length < 1"
-        :loading="isDeleteLoading"
-      >
+      <v-btn class="mr-2" color="background-light" :disabled="selected.length < 1" :loading="isDeleteLoading">
         Delete
       </v-btn>
     </confirm-dialog>
 
-    <v-select
-      label="Filter by type"
-      class="d-inline-block mr-2"
-      v-model="type"
-      :items="types"
-    />
-    <v-select
-      multiple
-      label="Filters"
-      class="d-inline-block"
-      style="width: 250px"
-      v-model="columnFilters"
-      :items="allColumnFilters"
-    >
+    <v-select label="Filter by type" class="d-inline-block mr-2" v-model="type" :items="types" />
+    <v-select multiple label="Filters" class="d-inline-block" style="width: 250px" v-model="columnFilters"
+      :items="allColumnFilters">
       <template v-slot:selection="{ item, index }">
         <v-chip small v-if="index === 0">{{ item }}</v-chip>
         <span v-if="index === 1" class="grey--text text-caption">
@@ -99,35 +59,18 @@
       </template>
     </v-select>
 
-    <instances-table
-      v-model="selected"
-      :type="type"
-      :column="column"
-      :selected="selectedFilters"
-      :filters="columnFilters"
-      :get-state="getState"
-      :change-filters="changeFilters"
-      @getHeaders="(value) => headers = value"
-      @changeColumn="(value) => column = value"
-    />
+    <instances-table v-model="selected" :type="type" :column="column" :selected="selectedFilters" :filters="columnFilters"
+      :get-state="getState" :change-filters="changeFilters" @getHeaders="(value) => headers = value"
+      @changeColumn="(value) => column = value" />
 
-    <v-snackbar
-      v-model="snackbar.visibility"
-      :timeout="snackbar.timeout"
-      :color="snackbar.color"
-    >
+    <v-snackbar v-model="snackbar.visibility" :timeout="snackbar.timeout" :color="snackbar.color">
       {{ snackbar.message }}
       <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
         <router-link :to="snackbar.route"> Look up. </router-link>
       </template>
 
       <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
-        >
+        <v-btn :color="snackbar.buttonColor" text v-bind="attrs" @click="snackbar.visibility = false">
           Close
         </v-btn>
       </template>
@@ -161,14 +104,11 @@ export default {
     selected: [],
     headers: [],
     columnFilters: [
-      "Title", "Type", "Status",
-      "UUID", "Service", "Price model",
+      "ID", "Title", "Service", "Group (NameSpace)", "Account", "Due date", "Status","Tariff", "Name", "Service provider", "Type", "Price", "Period", "Date"
     ],
     allColumnFilters: [
-      "Title", "Type", "Status",
-      "UUID", "Service", "Price model",
-      "Account", "Email", "Tariff", "Price",
-      "Period", "Date", "Due date", "Service provider"
+      "ID", "Title", "Service", "Group (NameSpace)",
+      "Status", "UUID", "Price model", "Account", "Email", "Tariff", "Price", "Period", "Date", "Due date", "Service provider", "Type"
     ]
   }),
   methods: {
@@ -196,9 +136,8 @@ export default {
           .catch((err) => {
             if (err.response.status >= 500 || err.response.status < 600) {
               const opts = {
-                message: `Service Unavailable: ${
-                  err.response?.data?.message ?? err.message ?? "Unknown"
-                }.`,
+                message: `Service Unavailable: ${err.response?.data?.message ?? err.message ?? "Unknown"
+                  }.`,
                 timeout: 0,
               };
               this.showSnackbarError(opts);

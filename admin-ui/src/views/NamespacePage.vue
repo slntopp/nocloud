@@ -12,7 +12,7 @@
     <v-tabs-items class="rounded-b-lg" style="background: var(--v-background-light-base)" v-model="tabs">
       <v-tab-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
-        <namespace-info v-if="namespace && namespaceTitle" :namespace="namespace"
+        <namespace-info :loading="isFetchLoading" v-if="namespace && namespaceTitle" :namespace="namespace"
           @input:title="namespace.title = $event" />
       </v-tab-item>
     </v-tabs-items>
@@ -26,7 +26,7 @@ import namespaceInfo from '../components/namespace/info.vue';
 
 export default {
   name: "account-view",
-  data: () => ({ navTitles: config.navTitles ?? {}, namespaceTitle: '...', isFetchLoading: false, tabs: 0, namespace: {} }),
+  data: () => ({ navTitles: config.navTitles ?? {}, isFetchLoading: false, tabs: 0, namespace: {} }),
   components: { namespaceInfo },
   methods: {
     navTitle(title) {
@@ -50,6 +50,13 @@ export default {
     },
     namespaceId() {
       return this.$route.params.namespaceId
+    },
+    namespaceTitle() {
+      if (!this.namespace || !this.namespace.title) {
+        return '...'
+      }
+
+      return this.namespace.title
     }
   },
   async mounted() {
@@ -60,7 +67,6 @@ export default {
     }
 
     this.namespace = this.all.find(n => n.uuid == this.namespaceId)
-    this.namespaceTitle = this.namespace.title
   },
 };
 </script>
