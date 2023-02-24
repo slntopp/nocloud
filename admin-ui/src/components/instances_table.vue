@@ -1,14 +1,6 @@
 <template>
-  <nocloud-table
-    class="mt-4"
-    :value="value"
-    :custom-sort="sortInstances"
-    :items="instances"
-    :headers="headers"
-    :loading="isLoading"
-    :footer-error="fetchError"
-    @input="(value) => $emit('input', value)"
-  >
+  <nocloud-table class="mt-4" :value="value" :custom-sort="sortInstances" :items="instances" :headers="headers"
+    :loading="isLoading" :footer-error="fetchError" @input="(value) => $emit('input', value)">
     <template v-slot:[`item.id`]="{ index }">
       {{ index + 1 }}
     </template>
@@ -57,13 +49,19 @@
 
     <template v-slot:[`item.service`]="{ item, value }">
       <router-link :to="{ name: 'Service', params: { serviceId: value } }">
-        {{ getService(item) }}
+        {{ "SRV_" + getService(item) }}
       </router-link>
     </template>
 
     <template v-slot:[`item.sp`]="{ item, value }">
       <router-link :to="{ name: 'ServicesProvider', params: { uuid: value } }">
         {{ getServiceProvider(item) }}
+      </router-link>
+    </template>
+
+    <template v-slot:[`item.access.namespace`]="{ item }">
+      <router-link :to="{ name: 'NamespacePage', params: { namespaceId: item.access.namespace } }">
+        {{ getNamespace(item.access.namespace) }}
       </router-link>
     </template>
 
@@ -91,13 +89,7 @@
 
     <template v-slot:[`item.state.meta.networking`]="{ item }">
       <template v-if="!item.state?.meta.networking?.public">-</template>
-      <v-menu bottom
-        open-on-hover
-        v-else
-        nudge-top="20"
-        nudge-left="15"
-        transition="slide-y-transition"
-      >
+      <v-menu bottom open-on-hover v-else nudge-top="20" nudge-left="15" transition="slide-y-transition">
         <template v-slot:activator="{ on, attrs }">
           <span v-bind="attrs" v-on="on">
             {{ item.state.meta.networking.public[0] }}
@@ -328,6 +320,9 @@ export default {
 
       return billingPlan.products[key]?.title;
     },
+    getNamespace(id) {
+      return "NS_" + this.namespaces.find((n) => n.uuid === id).title
+    }
   },
   created() { this.fetchServices() },
   computed: {
@@ -396,18 +391,19 @@ export default {
       const headers = [
         { text: "ID", value: "id" },
         { text: "Title", value: "title" },
-        { text: "Type", value: "type" },
+        { text: "Service", value: "service", class: "groupable" },
         { text: "Account", value: "access" },
-        { text: "Email", value: "email" },
+        { text: 'Group (NameSpace)', value: 'access.namespace' },
+        { text: "Due date", value: "dueDate" },
         { text: "Status", value: "state", class: "groupable" },
         { text: "Tariff", value: "product" },
+        { text: "Service provider", value: "sp" },
+        { text: "Type", value: "type" },
         { text: "Price", value: "price" },
         { text: "Period", value: "period" },
+        { text: "Email", value: "email" },
         { text: "Date", value: "date" },
-        { text: "Due date", value: "dueDate" },
         { text: "UUID", value: "uuid" },
-        { text: "Service provider", value: "sp" },
-        { text: "Service", value: "service", class: "groupable" },
         { text: "Price model", value: "billingPlan.title", class: "groupable" },
       ]
         .filter(({ text }) => this.filters.includes(text));

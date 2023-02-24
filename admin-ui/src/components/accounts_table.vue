@@ -1,17 +1,13 @@
 <template>
-  <nocloud-table
-    :headers="headers"
-    :items="filtredAccounts"
-    :value="selected"
-    :loading="loading"
-    :single-select="singleSelect"
-    :footer-error="fetchError"
-    @input="handleSelect"
-  >
+  <nocloud-table :headers="headers" :items="filtredAccounts" :value="selected" :loading="loading"
+    :single-select="singleSelect" :footer-error="fetchError" @input="handleSelect">
     <template v-slot:[`item.title`]="{ item }">
-      <router-link :to="{ name: 'Account', params: { accountId: item.uuid } }">
-        {{ item.title }}
-      </router-link>
+     <div class="d-flex justify-space-between">
+       <router-link :to="{ name: 'Account', params: { accountId: item.uuid } }">
+         {{ item.title }}
+       </router-link>
+       <v-icon @click="$router.push({ name: 'Account', params: { accountId: item.uuid},query:{tab:2} })" class="ml-5">mdi-calendar-multiple</v-icon>
+     </div>
     </template>
     <template v-slot:[`item.balance`]="{ item }">
       <balance v-if="item.balance" :value="item.balance" />
@@ -19,8 +15,11 @@
     </template>
     <template v-slot:[`item.access`]="{ item }">
       <v-chip :color="colorChip(item.access.level)">
-        {{ getName(item.uuid) }} ({{ item.access.level }})
+        {{ item.access.level }}
       </v-chip>
+    </template>
+    <template v-slot:[`item.namespace`]="{ item }">
+      {{ "NS_"+getName(item.uuid) }}
     </template>
   </nocloud-table>
 </template>
@@ -28,7 +27,7 @@
 <script>
 import noCloudTable from "@/components/table.vue";
 import Balance from "./balance.vue";
-import {filterArrayByTitleAndUuid} from "@/functions"
+import { filterArrayByTitleAndUuid } from "@/functions"
 
 export default {
   name: "accounts-table",
@@ -59,7 +58,8 @@ export default {
         { text: "Title", value: "title" },
         { text: "UUID", value: "uuid" },
         { text: "Balance", value: "balance" },
-        { text: "Access", value: "access" }
+        { text: "Access level", value: "access" },
+        { text: "Group(NameSpace)", value: 'namespace' }
       ],
     };
   },
@@ -91,7 +91,7 @@ export default {
     },
     filtredAccounts() {
       if (this.searchParam) {
-        return filterArrayByTitleAndUuid(this.tableData,this.searchParam)
+        return filterArrayByTitleAndUuid(this.tableData, this.searchParam)
       }
       return this.tableData;
     },

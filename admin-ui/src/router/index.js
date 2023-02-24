@@ -25,6 +25,14 @@ const routes = [
       requireLogin: true,
     },
   },
+   {
+    path: "/namespaces/:namespaceId",
+    name: "NamespacePage",
+    component: () => import("../views/NamespacePage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
   {
     path: "/accounts",
     name: "Accounts",
@@ -232,7 +240,7 @@ const routes = [
     component: () => import("../views/Currencies.vue"),
     meta: {
       requireLogin: true,
-    }
+    },
   },
 ];
 
