@@ -199,6 +199,7 @@ export default {
       copyed: -1,
       VDataTable,
       page: 1,
+      anIncreasingNumber:0,
       itemsPerPage: 10,
     };
   },
