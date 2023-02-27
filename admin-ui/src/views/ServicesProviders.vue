@@ -1,6 +1,6 @@
 <template>
   <div class="servicesProviders pa-4 flex-wrap">
-    <div class="buttons__inline pb-4">
+    <div class="buttons__inline pb-8 pt-4">
       <v-btn
         color="background-light"
         class="mr-2"
