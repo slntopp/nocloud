@@ -1,6 +1,7 @@
 <template>
   <components
     :is="VDataTable"
+    v-sortable-table="{onEnd:sortTheHeadersAndUpdateTheKey}"
     :item-key="itemKey"
     class="elevation-0 background-light rounded-lg"
     :loading="loading"
@@ -22,6 +23,7 @@
     :show-group-by="showGroupBy"
     :group-by="groupBy"
     :custom-sort="customSort"
+    :key="anIncreasingNumber"
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
@@ -83,6 +85,26 @@
 
 <script>
 import { VDataTable } from "vuetify/lib";
+import Sortable from "sortablejs";
+
+function watchClass(targetNode, classToWatch) {
+  let lastClassState = targetNode.classList.contains(classToWatch);
+  const observer = new MutationObserver((mutationsList) => {
+    for (let i = 0; i < mutationsList.length; i++) {
+      const mutation = mutationsList[i];
+      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+        const currentClassState = mutation.target.classList.contains(classToWatch);
+        if (lastClassState !== currentClassState) {
+          lastClassState = currentClassState;
+          if (!currentClassState) {
+            mutation.target.classList.add('sortHandle');
+          }
+        }
+      }
+    }
+  });
+  observer.observe(targetNode, { attributes: true });
+}
 
 const defaultHeaders = [
   { text: "title", value: "title" },
@@ -213,6 +235,14 @@ export default {
       }
       return id.slice(0, 8) + "...";
     },
+    sortTheHeadersAndUpdateTheKey(evt) {
+      const headersTmp = this.headers;
+      const oldIndex = evt.oldIndex - 1;
+      const newIndex = evt.newIndex - 1;
+      headersTmp.splice(newIndex, 0, headersTmp.splice(oldIndex, 1)[0]);
+      this.table = headersTmp;
+      this.anIncreasingNumber += 1;
+    },
   },
   computed: {
     sortByTable() {
@@ -245,6 +275,18 @@ export default {
     localStorage.removeItem("page");
     localStorage.removeItem("itemsPerPage");
   },
+  directives: {
+    'sortable-table': {
+      inserted: (el, binding) => {
+        el.querySelectorAll('th').forEach((draggableEl) => {
+          // Need a class watcher because sorting v-data-table rows asc/desc removes the sortHandle class
+          watchClass(draggableEl, 'sortHandle');
+          draggableEl.classList.add('sortHandle');
+        });
+        Sortable.create(el.querySelector('tr'), binding.value ? {...binding.value, handle: '.sortHandle'} : {});
+      },
+    }
+  }
 };
 </script>
 
@@ -252,5 +294,10 @@ export default {
 .v-data-table > .v-data-table__wrapper > table > tbody > tr > td,
 .theme--dark.v-data-table > .v-data-table__wrapper > table > thead > tr:last-child > th {
   white-space: nowrap;
+}
+
+.sortable-drag{
+  color: salmon;
+  background-color:rgb(13,16,60);
 }
 </style>
