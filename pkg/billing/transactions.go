@@ -145,6 +145,10 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	return r.Transaction, nil
 }
 
+func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb.GetTransactionsCountRequest) (*pb.GetTransactionsCountResponse, error) {
+	return nil, nil
+}
+
 const processUrgentTransaction = `
 LET account = DOCUMENT(@accountKey)
 LET transaction = DOCUMENT(@transactionKey)
