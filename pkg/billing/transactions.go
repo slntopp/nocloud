@@ -185,6 +185,10 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 		}
 		query += ` FILTER t.account == @acc`
 		vars["acc"] = acc
+	} else {
+		if acc != schema.ROOT_ACCOUNT_KEY {
+			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+		}
 	}
 
 	if req.Service != nil {
