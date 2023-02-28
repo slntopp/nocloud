@@ -10,14 +10,14 @@
           <v-list-item-title>
             {{ item.service || item.routine }}
           </v-list-item-title>
-          <v-list-item-subtitle v-if="item.status.error">
-            Error: {{ item.status.error }}
+          <v-list-item-subtitle v-if="item.status.error || item.error">
+            Error: {{ item.status.error || item.error }}
           </v-list-item-subtitle>
         </v-list-item-content>
 
         <v-list-item-icon>
           <v-chip small :color="item.status == 'SERVING' ? 'success' : 'error'">
-            {{ item.status.status || item.status}}
+            {{ item.status.status || item.status }}
           </v-chip>
         </v-list-item-icon>
       </v-list-item>
