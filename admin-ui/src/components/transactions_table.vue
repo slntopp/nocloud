@@ -10,6 +10,7 @@
     :expanded.sync="expanded"
     :footer-error="fetchError"
     @input="selectTransaction"
+    @update:options="options = $event"
   >
     <template v-slot:[`item.account`]="{ item }">
       {{ account(item.account) }}
@@ -133,6 +134,8 @@ export default {
     expanded: [],
     copyed: -1,
     fetchError: "",
+
+    options: {},
   }),
   methods: {
     account(uuid) {

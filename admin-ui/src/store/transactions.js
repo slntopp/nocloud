@@ -6,6 +6,7 @@ export default {
     transactions: [],
     transaction: [],
     loading: false,
+    count: 0,
   },
   getters: {
     all(state) {
@@ -31,28 +32,22 @@ export default {
     setLoading(state, data) {
       state.loading = data;
     },
+    setCount(state, count) {
+      state.count = count;
+    },
   },
   actions: {
-    fetch({ commit }, { accounts, service }) {
+    fetch({ commit }) {
       commit("setLoading", true);
 
-      return new Promise((resolve, reject) => {
-        const promises = accounts.map((account) =>
-          api.transactions.get({ account, service })
-        );
-
-        Promise.all(promises)
-          .then((response) => {
-            commit("setTransactions", response);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+      return api.transactions
+        .count()
+        .then((data) => {
+          commit("setTransactions", data.pool);
+        })
+        .finally(() => {
+          commit("setLoading", false);
+        });
     },
     fetchById({ commit }, params) {
       commit("setLoading", true);
