@@ -126,22 +126,23 @@
           >
             Create
           </v-btn>
-            <v-btn class="mr-2" @click="downloadFile">
-              Download {{ isJson ? "JSON" : "YAML" }}
-            </v-btn>
-            <v-switch
-              class="d-inline-block mr-2"
-              style="margin-top: 5px; padding-top: 0"
-              v-model="isJson"
-              :label="!isJson ? 'YAML' : 'JSON'"
-            />
-            <v-file-input
-              class="file-input"
-              v-if="!isEdit"
-              :label="`upload ${isJson ? 'json' : 'yaml'} price model...`"
-              :accept="isJson ? '.json' : '.yaml'"
-              @change="onJsonInputChange"
-            />
+
+          <v-btn class="mr-2" @click="downloadFile">
+            Download {{ isJson ? "JSON" : "YAML" }}
+          </v-btn>
+          <v-switch
+            class="d-inline-block mr-2"
+            style="margin-top: 5px; padding-top: 0"
+            v-model="isJson"
+            :label="!isJson ? 'YAML' : 'JSON'"
+          />
+          <v-file-input
+            class="file-input"
+            v-if="!isEdit"
+            :label="`upload ${isJson ? 'json' : 'yaml'} price model...`"
+            :accept="isJson ? '.json' : '.yaml'"
+            @change="onJsonInputChange"
+          />
         </v-col>
       </v-row>
     </v-form>
@@ -233,15 +234,13 @@ export default {
       try { value = JSON.parse(value) }
       catch { value }
 
-      const configs = (type === "resource")
-        ? this.plan.resources
-        : Object.values(this.plan.products);
+      const configs = (type === "resource") ? this.plan.resources : Object.values(this.plan.products);
       const product = configs.find((el) => el.id === id);
 
       switch (key) {
         case "key":
           if (type === "product") {
-            const [oldKey = ''] = Object.entries(this.plan.products).find((el) => el.id === id) ?? [];
+            const [oldKey = ''] = Object.entries(this.plan.products).find(([, el]) => el.id === id) ?? [];
 
             delete this.plan.products[oldKey];
             this.plan.products[value] = product;
@@ -351,12 +350,9 @@ export default {
       const resource = this.plan.resources.find((el) => el.id === id);
       const product = Object.values(this.plan.products).find((el) => el.id === id);
 
-      if (this.plan.kind === "DYNAMIC") {
-        resource.period = period;
-        this.plan.products = {};
-      } else if (product) {
-        product.period = period;
-      }
+      if (this.plan.kind === "DYNAMIC") this.plan.products = {};
+      if (resource) resource.period = period;
+      else if (product) product.period = period;
     },
     getTimestamp({ day, month, year, quarter, week, time }) {
       year = +year + 1970;
