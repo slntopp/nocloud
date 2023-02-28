@@ -239,6 +239,15 @@ export default {
       const product = configs.find((el) => el.id === id);
 
       switch (key) {
+        case "key":
+          if (type === "product") {
+            const [oldKey = ''] = Object.entries(this.plan.products).find((el) => el.id === id) ?? [];
+
+            delete this.plan.products[oldKey];
+            this.plan.products[value] = product;
+            return;
+          }
+          break;
         case "date":
           this.setPeriod(value, id);
           return;
