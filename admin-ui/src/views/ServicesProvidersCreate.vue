@@ -51,6 +51,33 @@
             </v-col>
           </v-row>
 
+          <v-row>
+            <v-col cols="3">
+              <v-subheader>Meta</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <json-editor
+                :json="provider.meta"
+                @changeValue="(data) => provider.meta = data"
+              />
+            </v-col>
+          </v-row>
+
+          <v-row>
+            <v-col cols="3">
+              <v-subheader>Service</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-text-field label="Title" v-model="provider.meta.service.title" />
+              <v-text-field label="Type" v-model="provider.meta.service.type" />
+              <v-select label="Icon" v-model="provider.meta.service.icon" :items="icons">
+                <!-- <template v-slot:item="{ item }">
+                  <component :is="getIcon(item)" />
+                </template> -->
+              </v-select>
+            </v-col>
+          </v-row>
+
           <v-row align="center">
             <v-col cols="3">
               <v-subheader> Public </v-subheader>
@@ -189,6 +216,7 @@
 import api from "@/api.js";
 import extentionsMap from "@/components/extentions/map.js";
 import snackbar from "@/mixins/snackbar.js";
+import JsonEditor from "@/components/JsonEditor.vue";
 
 import {
   mergeDeep,
@@ -200,6 +228,7 @@ import {
 
 export default {
   name: "servicesProviders-create",
+  components: { JsonEditor },
   mixins: [snackbar],
   data: () => ({
     types: [],
@@ -212,6 +241,7 @@ export default {
       proxy: { socket: '' },
       secrets: {},
       vars: {},
+      meta: { service: {} },
     },
     providerKey:'',
 
@@ -225,6 +255,7 @@ export default {
       data: {},
       selected: "",
     },
+    icons: ['database', 'cloud', 'lock', 'solution', 'global'],
 
     tooltipVisible: false,
 
@@ -303,10 +334,15 @@ export default {
           this.extentions.loading = false;
         });
     },
+    getIcon(icon) {
+      const capitalized = `${icon[0].toUpperCase()}${icon.slice(1)}`
+
+      return () => import(`@ant-design/icons-svg/lib/asn/${capitalized}Outlined`)
+    },
     tryToSend() {
       const action = (this.$route.params.uuid) ? 'edit' : 'create';
 
-      if (!this.isPassed || this.customTitle === '') {
+      if (!this.isPassed || (this.customTitle === '' && this.provider.type === 'custom')) {
         const opts = {
           message: `Error: Test must be passed before creation.`,
         };

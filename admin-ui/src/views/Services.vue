@@ -6,7 +6,7 @@
       service provider
       <v-btn small :to="{ name: 'Services' }"> clear </v-btn>
     </div>
-    <div class="pb-4 buttons__inline">
+    <div class="pb-8 pt-4 buttons__inline">
       <v-btn
         color="background-light"
         class="mr-2"
@@ -65,7 +65,7 @@
         <router-link
           :to="{ name: 'Service', params: { serviceId: item.uuid } }"
         >
-          {{ 'SRV_'+item.title }}
+          {{ "SRV_" + item.title }}
         </router-link>
       </template>
 
@@ -76,7 +76,9 @@
       </template>
       <template v-slot:[`item.access`]="{ item }">
         <v-chip :color="accessColor(item.access?.level)">
-          {{ getName(item.access?.namespace) }} ({{ item.access?.level ?? "NONE" }})
+          {{ getName(item.access?.namespace) }} ({{
+            item.access?.level ?? "NONE"
+          }})
         </v-chip>
       </template>
 
@@ -109,7 +111,11 @@
                 <v-expansion-panel-content
                   style="background: var(--v-background-base)"
                 >
-                  <service-instances-item :instances="group.instances" :spId="group.sp" :type="group.type" />
+                  <service-instances-item
+                    :instances="group.instances"
+                    :spId="group.sp"
+                    :type="group.type"
+                  />
                 </v-expansion-panel-content>
               </v-expansion-panel>
             </v-expansion-panels>
@@ -207,7 +213,9 @@ export default {
       return data?.title || "not found";
     },
     getName(namespace) {
-      return this.namespaces.find(({ uuid }) => namespace === uuid)?.title ?? '';
+      return (
+        this.namespaces.find(({ uuid }) => namespace === uuid)?.title ?? ""
+      );
     },
     fetchServices() {
       this.$store
@@ -305,16 +313,16 @@ export default {
     },
     accessColor(level) {
       switch (level) {
-        case 'ROOT':
-          return 'info';
-        case 'ADMIN':
-          return 'success';
-        case 'MGMT':
-          return 'warning';
-        case 'READ':
-          return 'gray';
-        case 'NONE':
-          return 'error';
+        case "ROOT":
+          return "info";
+        case "ADMIN":
+          return "success";
+        case "MGMT":
+          return "warning";
+        case "READ":
+          return "gray";
+        case "NONE":
+          return "error";
       }
     },
 
