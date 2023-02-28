@@ -2,7 +2,7 @@ import api from "@/api.js";
 export default {
   namespaced: true,
   state: {
-    plugins: {},
+    plugins: [],
     loading: false,
   },
   getters: {
