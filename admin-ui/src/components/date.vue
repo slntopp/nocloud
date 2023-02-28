@@ -69,7 +69,7 @@ const emits = defineEmits(["changeDate"]);
 const { period } = toRefs(props);
 
 const date = ref("");
-const amountDate = ref("1");
+const amountDate = ref("0");
 const menuVisible = ref(false);
 
 let fullDate = ref({
@@ -140,7 +140,6 @@ watch(date, (value) => {
 
   resetDate(fullDate.value);
 
-  fullDate.value[key] = value;
   amountDate.value = amount;
 });
 
