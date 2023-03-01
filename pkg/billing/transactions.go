@@ -218,6 +218,8 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 	}
 	defer cursor.Close()
 
+	log.Info("transactions count", zap.Int64("count", cursor.Count()))
+
 	return &pb.GetTransactionsCountResponse{
 		Total: uint64(cursor.Count()),
 	}, nil
