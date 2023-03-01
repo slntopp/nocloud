@@ -85,7 +85,7 @@
 
           <component :is="templates[currentInstancesGroups.body.type] ?? templates.custom"
             :instances-group="JSON.stringify(currentInstancesGroups)"
-            :plans="{ list: filteredPlans, products: plans.products }" :planRules="planRules" :meta="meta"
+            :plans="{ list: plans.list, products: plans.products }" :planRules="planRules" :meta="meta"
             @update:instances-group="receiveObject" @changeMeta="(value) => meta = value" />
         </v-card>
 
@@ -373,15 +373,6 @@ export default {
       }
     });
 
-    api.plans.list().then((res) =>
-      res.pool.forEach((plan) => {
-        const end = (plan.uuid.length > 8) ? '...' : '';
-        const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
-
-        this.plans.list.push({ ...plan, title });
-      })
-    );
-
     api.settings.get(["instance-billing-plan-settings"]).then((res) => {
       const key = res["instance-billing-plan-settings"];
 
@@ -410,6 +401,19 @@ export default {
       this.currentInstancesGroups.body.instances = [];
       this.currentInstancesGroups.sp = "";
     },
+    "currentInstancesGroups.sp"(sp_uuid) {
+      if (!sp_uuid) return;
+      api.plans.list({ sp_uuid, anonymously: false, })
+        .then((res) => {
+          res.pool.forEach((plan) => {
+            const end = (plan.uuid.length > 8) ? '...' : '';
+            const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
+
+            this.plans.list = [];
+            this.plans.list.push({ ...plan, title });
+          });
+        });
+    }
   },
 };
 </script>
