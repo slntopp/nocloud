@@ -403,7 +403,7 @@ export default {
 
       [this.plans, this.addons, windows].forEach((el) => {
         el.forEach((plan, i, arr) => {
-          const n = Math.pow(10, this.fee.precision);
+          const n = Math.pow(10, this.fee.precision ?? 0);
           let percent = (this.fee?.default ?? 0) / 100 + 1;
           let round;
 
@@ -417,12 +417,12 @@ export default {
             case 3:
               round = 'ceil';
           }
-          if (this.fee.round  === 'NONE') round = 'round';
-          if (typeof this.fee.round === 'string') {
+          if (!this.fee.round || this.fee.round  === 'NONE') round = 'round';
+          else if (typeof this.fee.round === 'string') {
             round = this.fee.round.toLowerCase();
           }
 
-          for (let range of this.fee.ranges) {
+          for (let range of this.fee.ranges ?? []) {
             if (plan.price.value <= range.from) continue;
             if (plan.price.value > range.to) continue;
             percent = range.factor / 100 + 1;
@@ -451,10 +451,10 @@ export default {
         if (filter) this.changeFilters({ margin: 'none' }, ['Margin']);
         return 'none';
       }
-      const range = this.fee.ranges.find(({ from, to }) =>
+      const range = this.fee.ranges?.find(({ from, to }) =>
         from <= price.value && to >= price.value
       );
-      const n = Math.pow(10, this.fee.precision);
+      const n = Math.pow(10, this.fee.precision ?? 0);
       let percent = range?.factor / 100 + 1;
       let round;
 
@@ -468,8 +468,8 @@ export default {
         case 3:
           round = 'ceil';
       }
-      if (this.fee.round === 'NONE') round = 'round';
-      if (typeof this.fee.round === 'string') {
+      if (!this.fee.round || this.fee.round === 'NONE') round = 'round';
+      else if (typeof this.fee.round === 'string') {
         round = this.fee.round.toLowerCase();
       }
 
@@ -477,7 +477,7 @@ export default {
         if (filter) this.changeFilters({ margin: 'ranged' }, ['Margin']);
         return 'ranged';
       }
-      else percent = this.fee.default / 100 + 1;
+      else percent = (this.fee.default ?? 0) / 100 + 1;
 
       switch (value) {
         case price.value:
