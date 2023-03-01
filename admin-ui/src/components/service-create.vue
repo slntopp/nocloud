@@ -319,7 +319,7 @@ export default {
       );
     },
     filteredPlans() {
-      return this.plans.list.filter((plan) => plan.type === this.currentType);
+      return this.plans.list.filter((plan) => plan.type.includes(this.currentType));
     },
     planRules() {
       return this.plansVisible ? this.rules.req : [];
