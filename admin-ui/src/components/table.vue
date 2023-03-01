@@ -1,7 +1,7 @@
 <template>
   <components
     :is="VDataTable"
-    v-sortable-table="{onEnd:sortTheHeadersAndUpdateTheKey}"
+    v-sortable-table="{ onEnd: sortTheHeadersAndUpdateTheKey }"
     :item-key="itemKey"
     class="elevation-0 background-light rounded-lg"
     :loading="loading"
@@ -46,7 +46,11 @@
             {{ makeIdShort(props.value) }}
           </template>
         </template>
-        <v-btn v-if="!isIdShort(props.value) || isKeyOnlyAfterClick" icon @click="showID(props.index)">
+        <v-btn
+          v-if="!isIdShort(props.value) || isKeyOnlyAfterClick"
+          icon
+          @click="showID(props.index)"
+        >
           <v-icon>mdi-eye-outline</v-icon>
         </v-btn>
       </template>
@@ -92,12 +96,16 @@ function watchClass(targetNode, classToWatch) {
   const observer = new MutationObserver((mutationsList) => {
     for (let i = 0; i < mutationsList.length; i++) {
       const mutation = mutationsList[i];
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        const currentClassState = mutation.target.classList.contains(classToWatch);
+      if (
+        mutation.type === "attributes" &&
+        mutation.attributeName === "class"
+      ) {
+        const currentClassState =
+          mutation.target.classList.contains(classToWatch);
         if (lastClassState !== currentClassState) {
           lastClassState = currentClassState;
           if (!currentClassState) {
-            mutation.target.classList.add('sortHandle');
+            mutation.target.classList.add("sortHandle");
           }
         }
       }
@@ -199,7 +207,7 @@ export default {
       copyed: -1,
       VDataTable,
       page: 1,
-      anIncreasingNumber:0,
+      anIncreasingNumber: 0,
       itemsPerPage: 10,
     };
   },
@@ -225,14 +233,14 @@ export default {
       this.showed.push(index);
     },
     hideID(index) {
-      this.showed = this.showed.filter((i) => i !== index);
+      this.showed = this.showed?.filter((i) => i !== index);
     },
-    isIdShort(id){
-      return id.length<=8
+    isIdShort(id) {
+      return id.length <= 8;
     },
     makeIdShort(id) {
-      if(this.isIdShort(id)){
-        return id
+      if (this.isIdShort(id)) {
+        return id;
       }
       return id.slice(0, 8) + "...";
     },
@@ -241,6 +249,7 @@ export default {
       const oldIndex = evt.oldIndex - 1;
       const newIndex = evt.newIndex - 1;
       headersTmp.splice(newIndex, 0, headersTmp.splice(oldIndex, 1)[0]);
+      console.log(newIndex, oldIndex);
       this.table = headersTmp;
       this.anIncreasingNumber += 1;
     },
@@ -277,28 +286,36 @@ export default {
     localStorage.removeItem("itemsPerPage");
   },
   directives: {
-    'sortable-table': {
+    "sortable-table": {
       inserted: (el, binding) => {
-        el.querySelectorAll('th').forEach((draggableEl) => {
+        el.querySelectorAll("th").forEach((draggableEl) => {
           // Need a class watcher because sorting v-data-table rows asc/desc removes the sortHandle class
-          watchClass(draggableEl, 'sortHandle');
-          draggableEl.classList.add('sortHandle');
+          watchClass(draggableEl, "sortHandle");
+          draggableEl.classList.add("sortHandle");
         });
-        Sortable.create(el.querySelector('tr'), binding.value ? {...binding.value, handle: '.sortHandle'} : {});
+        Sortable.create(
+          el.querySelector("tr"),
+          binding.value ? { ...binding.value, handle: ".sortHandle" } : {}
+        );
       },
-    }
-  }
+    },
+  },
 };
 </script>
 
 <style>
 .v-data-table > .v-data-table__wrapper > table > tbody > tr > td,
-.theme--dark.v-data-table > .v-data-table__wrapper > table > thead > tr:last-child > th {
+.theme--dark.v-data-table
+  > .v-data-table__wrapper
+  > table
+  > thead
+  > tr:last-child
+  > th {
   white-space: nowrap;
 }
 
-.sortable-drag{
+.sortable-drag {
   color: salmon;
-  background-color:rgb(13,16,60);
+  background-color: rgb(13, 16, 60);
 }
 </style>
