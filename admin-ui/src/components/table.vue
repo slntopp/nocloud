@@ -246,10 +246,13 @@ export default {
     },
     sortTheHeadersAndUpdateTheKey(evt) {
       const headersTmp = this.headers;
-      const oldIndex = evt.oldIndex - 1;
-      const newIndex = evt.newIndex - 1;
+      let oldIndex = evt.oldIndex - 1;
+      let newIndex = evt.newIndex - 1;
+      if (this.showExpand) {
+        oldIndex--;
+        newIndex--;
+      }
       headersTmp.splice(newIndex, 0, headersTmp.splice(oldIndex, 1)[0]);
-      console.log(newIndex, oldIndex);
       this.table = headersTmp;
       this.anIncreasingNumber += 1;
     },
