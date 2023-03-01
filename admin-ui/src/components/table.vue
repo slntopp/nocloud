@@ -12,7 +12,7 @@
     :value="selected"
     @input="handleSelect"
     :single-select="singleSelect"
-    :headers="headers"
+    :headers="filtredHeaders"
     :sort-by="sortByTable"
     :sort-desc="sortDesc"
     :expanded="expanded"
@@ -203,6 +203,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    filter: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     return {
@@ -250,14 +254,24 @@ export default {
       return id.slice(0, 8) + "...";
     },
     saveColumnPosition(headers) {
+      if (!headers) {
+        return;
+      }
+
       headers.forEach(({ value }, index) => {
-        this.columns[this.tableName][value] = index;
+        this.columns[value] = index;
       });
 
-      localStorage.setItem("columns", JSON.stringify(this.columns));
+      const columnJson = localStorage.getItem("columns");
+      const allColumnsSetting = columnJson
+        ? JSON.parse(columnJson)
+        : { [this.tableName]: {} };
+      allColumnsSetting[this.tableName] = this.columns;
+
+      localStorage.setItem("columns", JSON.stringify(allColumnsSetting));
     },
     sortTheHeadersAndUpdateTheKey(evt) {
-      const headersTmp = this.headers;
+      const headersTmp = this.filtredHeaders;
       let oldIndex = evt.oldIndex - 1;
       let newIndex = evt.newIndex - 1;
       if (this.showExpand) {
@@ -267,32 +281,57 @@ export default {
       headersTmp.splice(newIndex, 0, headersTmp.splice(oldIndex, 1)[0]);
       this.table = headersTmp;
       this.anIncreasingNumber += 1;
-      this.saveColumnPosition(headersTmp);
     },
     setHeadersBy(columns) {
       //break reactivity (mutate props)
-      const tempHeaders = this.headers;
-      const originalHeaders = JSON.parse(JSON.stringify(this.headers));
+      let tempHeaders = this.filtredHeaders;
+      const originalHeaders = JSON.parse(JSON.stringify(this.filtredHeaders));
+
+      this.filtredHeaders.findIndex((_, i) => {
+        this.$delete(this.filtredHeaders, i);
+      });
+
       for (const [key, value] of Object.entries(columns)) {
-        tempHeaders[value] = originalHeaders.find((h) => h.value === key);
+        if (originalHeaders.find((h) => h.value === key)) {
+          tempHeaders[value] = originalHeaders.find((h) => h.value === key);
+        } else {
+          this.$delete(tempHeaders, value);
+        }
       }
+      tempHeaders = tempHeaders.filter((t) => t);
+
+      if (tempHeaders.length < originalHeaders.length) {
+        for (let i = tempHeaders.length + 1; i <= originalHeaders.length; i++) {
+          tempHeaders.push(
+            originalHeaders.find(
+              (h) => tempHeaders.findIndex((th) => th.value === h.value) === -1
+            )
+          );
+        }
+      }
+
+      for (let i = 0; i < tempHeaders.length; i++) {
+        this.$set(this.filtredHeaders, i, tempHeaders[i]);
+      }
+
       this.table = tempHeaders;
       this.anIncreasingNumber += 1;
+    },
+    setDefaultheaders() {
+      this.filtredHeaders.forEach(({ value }, index) => {
+        this.columns[value] = index;
+      });
     },
   },
   computed: {
     sortByTable() {
       return this.sortBy || "title";
     },
-  },
-  watch: {
-    page(value) {
-      localStorage.setItem("page", value);
-      localStorage.setItem("url", this.$route.path);
-    },
-    itemsPerPage(value) {
-      localStorage.setItem("itemsPerPage", value);
-      localStorage.setItem("url", this.$route.path);
+    filtredHeaders() {
+      if (!!this.filter && !this.filter.length) {
+        return this.headers;
+      }
+      return this.headers?.filter(({ text }) => this.filter.includes(text));
     },
   },
   mounted() {
@@ -307,21 +346,43 @@ export default {
     if (this.tableName) {
       const columnsString = localStorage.getItem("columns");
 
-      if (!columnsString) {
-        this.columns = { [this.tableName]: {} };
-      } else {
-        this.columns = JSON.parse(columnsString);
+      if (columnsString) {
+        this.columns = JSON.parse(columnsString)?.[this.tableName];
       }
 
-      this.setHeadersBy(this.columns[this.tableName]);
+      if (!this.columns) {
+        this.columns = {};
+        this.setDefaultheaders();
+      } else {
+        this.setHeadersBy(this.columns);
+      }
     }
   },
   destroyed() {
+    this.saveColumnPosition(this.table);
+
     const url = localStorage.getItem("url");
 
     if (this.$route.path.includes(url)) return;
     localStorage.removeItem("page");
     localStorage.removeItem("itemsPerPage");
+  },
+  watch: {
+    filter: {
+      handler() {
+        this.setHeadersBy(this.columns);
+        this.saveColumnPosition([]);
+      },
+      deep: true,
+    },
+    page(value) {
+      localStorage.setItem("page", value);
+      localStorage.setItem("url", this.$route.path);
+    },
+    itemsPerPage(value) {
+      localStorage.setItem("itemsPerPage", value);
+      localStorage.setItem("url", this.$route.path);
+    },
   },
   directives: {
     "sortable-table": {
