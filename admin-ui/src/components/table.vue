@@ -135,6 +135,10 @@ export default {
       type: Array,
       default: () => [],
     },
+    "table-name": {
+      type: String,
+      default: "",
+    },
     value: {
       type: Array,
       default: () => [],
@@ -209,6 +213,7 @@ export default {
       page: 1,
       anIncreasingNumber: 0,
       itemsPerPage: 10,
+      columns: {},
     };
   },
   methods: {
@@ -244,6 +249,13 @@ export default {
       }
       return id.slice(0, 8) + "...";
     },
+    saveColumnPosition(headers) {
+      headers.forEach(({ value }, index) => {
+        this.columns[this.tableName][value] = index;
+      });
+
+      localStorage.setItem("columns", JSON.stringify(this.columns));
+    },
     sortTheHeadersAndUpdateTheKey(evt) {
       const headersTmp = this.headers;
       let oldIndex = evt.oldIndex - 1;
@@ -254,6 +266,17 @@ export default {
       }
       headersTmp.splice(newIndex, 0, headersTmp.splice(oldIndex, 1)[0]);
       this.table = headersTmp;
+      this.anIncreasingNumber += 1;
+      this.saveColumnPosition(headersTmp);
+    },
+    setHeadersBy(columns) {
+      //break reactivity (mutate props)
+      const tempHeaders = this.headers;
+      const originalHeaders = JSON.parse(JSON.stringify(this.headers));
+      for (const [key, value] of Object.entries(columns)) {
+        tempHeaders[value] = originalHeaders.find((h) => h.value === key);
+      }
+      this.table = tempHeaders;
       this.anIncreasingNumber += 1;
     },
   },
@@ -280,6 +303,18 @@ export default {
       setTimeout(() => {
         this.page = +page;
       }, 100);
+
+    if (this.tableName) {
+      const columnsString = localStorage.getItem("columns");
+
+      if (!columnsString) {
+        this.columns = { [this.tableName]: {} };
+      } else {
+        this.columns = JSON.parse(columnsString);
+      }
+
+      this.setHeadersBy(this.columns[this.tableName]);
+    }
   },
   destroyed() {
     const url = localStorage.getItem("url");
