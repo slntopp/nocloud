@@ -32,9 +32,15 @@
         Delete
       </v-btn>
       <template #actions>
-        <nocloud-table :show-select="false" :items="linked" :headers="linkedHeaders">
+        <nocloud-table
+          :show-select="false"
+          :items="linked"
+          :headers="linkedHeaders"
+        >
           <template v-slot:[`item.title`]="{ item }">
-            <router-link :to="{ name: 'Service', params: { serviceId: item.service } }">
+            <router-link
+              :to="{ name: 'Service', params: { serviceId: item.service } }"
+            >
               {{ item.title }}
             </router-link>
           </template>
@@ -63,6 +69,7 @@
     />
 
     <nocloud-table
+      table-name="plans"
       single-select
       class="mt-4"
       :items="filtredPlans"
@@ -141,17 +148,19 @@ export default {
     changePlan() {
       this.linked = [];
       this.services.forEach((service) => {
-        service.instancesGroups.forEach((({ instances, sp }) => {
+        service.instancesGroups.forEach(({ instances, sp }) => {
           instances.forEach(({ uuid, title, billingPlan }) => {
             if (billingPlan.uuid === this.selected[0]?.uuid) {
               this.linked.push({
-                uuid, title, sp,
+                uuid,
+                title,
+                sp,
                 service: service.uuid,
-                plan: billingPlan.uuid
+                plan: billingPlan.uuid,
               });
             }
           });
-        }));
+        });
       });
     },
     deleteSelectedPlan() {
@@ -180,7 +189,7 @@ export default {
         .then(() => {
           this.$store.dispatch("plans/fetch");
           this.showSnackbar({
-            message: "Price model deleted successfully."
+            message: "Price model deleted successfully.",
           });
         })
         .catch((err) => {
@@ -203,10 +212,12 @@ export default {
     },
     getPlans() {
       this.$store
-        .dispatch("plans/fetch", { params: {
-          sp_uuid: this.serviceProvider,
-          anonymously: false,
-        }})
+        .dispatch("plans/fetch", {
+          params: {
+            sp_uuid: this.serviceProvider,
+            anonymously: false,
+          },
+        })
         .then(() => {
           this.fetchError = "";
         })
@@ -250,8 +261,8 @@ export default {
       const plan = this.selected[0];
 
       if (!plan) return [];
-      return this.plans.filter(({ uuid, type }) =>
-        uuid !== plan.uuid && type === plan.type
+      return this.plans.filter(
+        ({ uuid, type }) => uuid !== plan.uuid && type === plan.type
       );
     },
     filtredPlans() {
@@ -283,7 +294,9 @@ export default {
         },
       });
     },
-    selected() { this.changePlan() }
+    selected() {
+      this.changePlan();
+    },
   },
 };
 </script>

@@ -74,6 +74,7 @@
     </div>
 
     <nocloud-table
+      table-name="settingsTable"
       isKeyOnlyAfterClick
       :isKeyInCircle="false"
       item-key="key"
