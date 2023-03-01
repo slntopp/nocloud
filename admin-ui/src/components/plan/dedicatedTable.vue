@@ -316,7 +316,7 @@ export default {
           default:
             round = 'round';
         }
-        if (this.fee.round === 'NONE') round = 'round';
+        if (this.fee.round === 'NONE' || !this.fee.round) round = 'round';
         else if (typeof this.fee.round === 'string') {
           round = this.fee.round.toLowerCase();
         }

@@ -421,6 +421,7 @@ export default {
           title: " ",
           x: JSON.parse(JSON.stringify(this.x)),
           y: JSON.parse(JSON.stringify(this.y)),
+          extra: {}
         };
         if (this.multiSelect) {
           this.markers.push({ ...obg, extra: { region: this.region } });
