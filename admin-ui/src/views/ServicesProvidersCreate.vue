@@ -69,7 +69,7 @@
             </v-col>
             <v-col cols="9">
               <v-text-field label="Title" v-model="provider.meta.service.title" />
-              <v-text-field label="Type" v-model="provider.meta.service.type" />
+              <v-select label="Tab" v-model="provider.meta.service.type" :items="services" />
               <v-select label="Icon" v-model="provider.meta.service.icon" :items="Object.keys(icons)">
                 <template v-slot:item="{ item }">
                   <component class="mr-1" :is="icons[item]" /> - {{ item }}
@@ -256,6 +256,10 @@ export default {
       selected: "",
     },
     icons: ['database', 'cloud', 'lock', 'solution', 'global'],
+    services: [
+      { text: 'Cloud', value: 'cloud' },
+      { text: 'Services', value: 'products' }
+    ],
 
     tooltipVisible: false,
 
