@@ -83,7 +83,6 @@ export default {
       type: "accounts/fetchById",
       params: this.accountId,
     });
-    console.log(this.$route.query.tab)
     this.tabs=this.$route.query.tab || 0
   },
 };

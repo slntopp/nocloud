@@ -101,14 +101,6 @@
 						@change="(value) => setValue(index + '.data.vpsName', value)"
 					/>
 				</v-col>
-				<v-col cols="6" class="d-flex align-center" v-if="instance.data.existing">
-					<v-text-field
-            label="VPS ID"
-						v-model="instance.data.vpsId"
-            :rules="rules.req"
-						@change="(value) => setValue(index + '.data.vpsId', value)"
-					/>
-				</v-col>
 			</v-row>
 
       <template v-if="Object.values(addons[instance.config.planCode] || {}).length > 0">
@@ -227,7 +219,7 @@ export default {
           const plans = (meta) ? meta : this.meta;
           const plan = plans.catalog.plans.find(({ planCode }) => planCode === key);
 
-          plan.configurations.forEach((el) => {
+          plan?.configurations.forEach((el) => {
             el.values.sort();
             if (el.name.includes('os')) {
               this.$set(this.images, key, el.values);
@@ -237,7 +229,7 @@ export default {
             }
           });
 
-          plan.addonFamilies.forEach((el) => {
+          plan?.addonFamilies.forEach((el) => {
             if (!this.addons[key]) {
               this.addons[key] = {};
             }

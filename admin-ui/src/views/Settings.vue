@@ -1,11 +1,16 @@
 <template>
   <div class="settings pa-4">
-    <div class="buttons__inline pb-4">
+    <div class="buttons__inline pb-8 pt-4">
       <v-btn color="background-light" class="mr-2" to="/settings/app">
         app settings
       </v-btn>
-      <v-menu offset-y transition="slide-y-transition" bottom :close-on-content-click="false"
-        v-model="newSetting.visible">
+      <v-menu
+        offset-y
+        transition="slide-y-transition"
+        bottom
+        :close-on-content-click="false"
+        v-model="newSetting.visible"
+      >
         <template v-slot:activator="{ on, attrs }">
           <v-btn color="background-light" class="mr-2" v-bind="attrs" v-on="on">
             create
@@ -14,20 +19,34 @@
         <v-card class="pa-4">
           <v-row>
             <v-col>
-              <v-text-field dense v-model="newSetting.data.key" label="key" :rules="newSetting.rules">
+              <v-text-field
+                dense
+                v-model="newSetting.data.key"
+                label="key"
+                :rules="newSetting.rules"
+              >
               </v-text-field>
             </v-col>
           </v-row>
           <v-row>
             <v-col>
-              <v-text-field dense v-model="newSetting.data.data.description" label="description"
-                :rules="newSetting.rules">
+              <v-text-field
+                dense
+                v-model="newSetting.data.data.description"
+                label="description"
+                :rules="newSetting.rules"
+              >
               </v-text-field>
             </v-col>
           </v-row>
           <v-row>
             <v-col>
-              <v-text-field dense v-model="newSetting.data.data.value" label="value" :rules="newSetting.rules">
+              <v-text-field
+                dense
+                v-model="newSetting.data.data.value"
+                label="value"
+                :rules="newSetting.rules"
+              >
               </v-text-field>
             </v-col>
           </v-row>
@@ -40,17 +59,37 @@
           </v-row>
         </v-card>
       </v-menu>
-      <confirm-dialog :disabled="selected.length < 1" @confirm="deleteSelectedKeys">
-        <v-btn :disabled="selected.length < 1" color="background-light" class="mr-8">
+      <confirm-dialog
+        :disabled="selected.length < 1"
+        @confirm="deleteSelectedKeys"
+      >
+        <v-btn
+          :disabled="selected.length < 1"
+          color="background-light"
+          class="mr-8"
+        >
           delete
         </v-btn>
       </confirm-dialog>
     </div>
 
-    <nocloud-table isKeyOnlyAfterClick :isKeyInCircle="false" item-key="key" :loading="loading" :headers="headers"
-      :items="filtredSettings" sortBy="description" show-select v-model="selected" :footer-error="fetchError">
+    <nocloud-table
+      isKeyOnlyAfterClick
+      :isKeyInCircle="false"
+      item-key="key"
+      :loading="loading"
+      :headers="headers"
+      :items="filtredSettings"
+      sortBy="description"
+      show-select
+      v-model="selected"
+      :footer-error="fetchError"
+    >
       <template v-slot:[`item.description`]="{ item }">
-        <div class="d-flex align-center" v-if="edit.key == 'description' && edit.data == item">
+        <div
+          class="d-flex align-center"
+          v-if="edit.key == 'description' && edit.data == item"
+        >
           <div class="control">
             <v-icon @click="saveEdit()" class="edit-btn mr-2">
               mdi-content-save-outline
@@ -70,7 +109,10 @@
       </template>
 
       <template v-slot:[`item.value`]="{ item }">
-        <div class="d-flex align-center" v-if="edit.key == 'value' && edit.data == item">
+        <div
+          class="d-flex align-center"
+          v-if="edit.key == 'value' && edit.data == item"
+        >
           <div class="control">
             <v-icon @click="saveEdit()" class="edit-btn mr-2">
               mdi-content-save-outline
@@ -90,14 +132,23 @@
       </template>
     </nocloud-table>
 
-    <v-snackbar v-model="snackbar.visibility" :timeout="snackbar.timeout" :color="snackbar.color">
+    <v-snackbar
+      v-model="snackbar.visibility"
+      :timeout="snackbar.timeout"
+      :color="snackbar.color"
+    >
       {{ snackbar.message }}
       <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
         <router-link :to="snackbar.route"> Look up. </router-link>
       </template>
 
       <template v-slot:action="{ attrs }">
-        <v-btn :color="snackbar.buttonColor" text v-bind="attrs" @click="snackbar.visibility = false">
+        <v-btn
+          :color="snackbar.buttonColor"
+          text
+          v-bind="attrs"
+          @click="snackbar.visibility = false"
+        >
           Close
         </v-btn>
       </template>

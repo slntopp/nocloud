@@ -103,7 +103,7 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 		query = `FOR sp IN @@sps RETURN MERGE(UNSET(sp, ['secrets', 'vars']), {uuid: sp._key})`
 	} else {
 		// anonymous query
-		query = `FOR sp IN @@sps RETURN {uuid: sp._key, type: sp.type, title: sp.title, public_data: sp.public_data, locations: sp.locations}`
+		query = `FOR sp IN @@sps RETURN {uuid: sp._key, type: sp.type, title: sp.title, public_data: sp.public_data, locations: sp.locations, meta: sp.meta}`
 	}
 	bindVars := map[string]interface{}{
 		"@sps": schema.SERVICES_PROVIDERS_COL,

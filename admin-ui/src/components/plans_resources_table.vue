@@ -36,7 +36,7 @@
           type="number"
           :value="item.price"
           :rules="generalRule"
-          @change="(value) => changeResource('price', value, item.id)"
+          @input="(value) => changeResource('price', value, item.id)"
         />
       </template>
       <template v-slot:[`item.period`]="{ item }">
@@ -126,6 +126,7 @@ function changeDate({ value }, id) {
 }
 
 function changeResource(key, value, id) {
+  console.log(value);
   emits('change:resource', { key, value, id });
 }
 
