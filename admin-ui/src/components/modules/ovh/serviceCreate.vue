@@ -101,14 +101,6 @@
 						@change="(value) => setValue(index + '.data.vpsName', value)"
 					/>
 				</v-col>
-				<v-col cols="6" class="d-flex align-center" v-if="instance.data.existing">
-					<v-text-field
-            label="VPS ID"
-						v-model="instance.data.vpsId"
-            :rules="rules.req"
-						@change="(value) => setValue(index + '.data.vpsId', value)"
-					/>
-				</v-col>
 			</v-row>
 
       <template v-if="Object.values(addons[instance.config.planCode] || {}).length > 0">
