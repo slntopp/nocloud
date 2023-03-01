@@ -219,7 +219,7 @@ export default {
           const plans = (meta) ? meta : this.meta;
           const plan = plans.catalog.plans.find(({ planCode }) => planCode === key);
 
-          plan.configurations.forEach((el) => {
+          plan?.configurations.forEach((el) => {
             el.values.sort();
             if (el.name.includes('os')) {
               this.$set(this.images, key, el.values);
@@ -229,7 +229,7 @@ export default {
             }
           });
 
-          plan.addonFamilies.forEach((el) => {
+          plan?.addonFamilies.forEach((el) => {
             if (!this.addons[key]) {
               this.addons[key] = {};
             }
