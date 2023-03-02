@@ -223,6 +223,7 @@ export default {
       const data = JSON.parse(JSON.stringify(this.service));
       const instances = JSON.parse(JSON.stringify(this.instances));
 
+      data.instancesGroups = [];
       instances.forEach((inst, i) => {
         if (inst.type === 'custom') {
           inst.body.type = this.customTitles[i];
@@ -329,6 +330,9 @@ export default {
     this.$store.dispatch("services/fetch")
       .then(({ pool }) => {
         const service = pool.find((el) => el.uuid === this.$route.params.serviceId);
+        const group = this.$route.params.type;
+        const i = service?.instancesGroups.findIndex(({ type }) => type === group);
+        const { instance } = this.$route.params;
 
         if (service) {
           this.service = service;
@@ -343,15 +347,31 @@ export default {
           });
         }
 
-        const instanceId = this.$route.query.instance
+        if (instance) {
+          this.selectInstance(i);
+          setTimeout(() => {
+            const top = -document.getElementsByTagName('header')[0].offsetHeight;
 
-        if (instanceId) {
-          const groupId = this.instances.findIndex(instancesGroup => {
-            return instancesGroup.body.instances.find((instance) => {
-              return instance.uuid === instanceId
-            })
-          })
-          this.selectInstance(groupId)
+            document.getElementById(instance).scrollIntoView();
+            window.scrollBy({ top });
+          }, 300);
+        } else if (group) {
+          if (i !== -1) this.selectInstance(i);
+          else {
+            const type = (this.types.includes(group)) ? group : "custom";
+
+            this.addInstancesGroup("", type);
+            this.selectInstance(this.instances.length - 1);
+            if (!this.types.includes(group)) {
+              this.customTitles[this.currentInstancesGroupsIndex] = group;
+            }
+          }
+          setTimeout(() => {
+            const button = document.getElementById('button');
+
+            button.click();
+            button.scrollIntoView(true);
+          }, 300);
         }
       });
 

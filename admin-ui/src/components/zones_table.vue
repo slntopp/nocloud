@@ -8,6 +8,7 @@
     :headers="Headers"
     item-key="original"
     :footer-error="fetchError"
+    table-name="zonesTable"
   >
   </nocloud-table>
 </template>
@@ -61,7 +62,8 @@ export default {
     filtredZones() {
       if (this.searchParam) {
         return filterArrayIncludes(this.tableData, {
-          keys: ["titleLink"], value: this.searchParam
+          keys: ["titleLink"],
+          value: this.searchParam,
         });
       }
       return this.tableData;

@@ -63,6 +63,7 @@
     </div>
 
     <nocloud-table
+      table-name="currencys"
       class="mt-4"
       item-key="id"
       v-model="selected"

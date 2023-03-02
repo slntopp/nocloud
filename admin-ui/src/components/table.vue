@@ -1,7 +1,7 @@
 <template>
   <components
     :is="VDataTable"
-    v-sortable-table="{onEnd:sortTheHeadersAndUpdateTheKey}"
+    v-sortable-table="{ onEnd: sortTheHeadersAndUpdateTheKey }"
     :item-key="itemKey"
     class="elevation-0 background-light rounded-lg"
     :loading="loading"
@@ -12,7 +12,7 @@
     :value="selected"
     @input="handleSelect"
     :single-select="singleSelect"
-    :headers="headers"
+    :headers="filtredHeaders"
     :sort-by="sortByTable"
     :sort-desc="sortDesc"
     :expanded="expanded"
@@ -46,7 +46,11 @@
             {{ makeIdShort(props.value) }}
           </template>
         </template>
-        <v-btn v-if="!isIdShort(props.value) || isKeyOnlyAfterClick" icon @click="showID(props.index)">
+        <v-btn
+          v-if="!isIdShort(props.value) || isKeyOnlyAfterClick"
+          icon
+          @click="showID(props.index)"
+        >
           <v-icon>mdi-eye-outline</v-icon>
         </v-btn>
       </template>
@@ -92,12 +96,16 @@ function watchClass(targetNode, classToWatch) {
   const observer = new MutationObserver((mutationsList) => {
     for (let i = 0; i < mutationsList.length; i++) {
       const mutation = mutationsList[i];
-      if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-        const currentClassState = mutation.target.classList.contains(classToWatch);
+      if (
+        mutation.type === "attributes" &&
+        mutation.attributeName === "class"
+      ) {
+        const currentClassState =
+          mutation.target.classList.contains(classToWatch);
         if (lastClassState !== currentClassState) {
           lastClassState = currentClassState;
           if (!currentClassState) {
-            mutation.target.classList.add('sortHandle');
+            mutation.target.classList.add("sortHandle");
           }
         }
       }
@@ -126,6 +134,10 @@ export default {
     items: {
       type: Array,
       default: () => [],
+    },
+    "table-name": {
+      type: String,
+      default: "",
     },
     value: {
       type: Array,
@@ -191,6 +203,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    filter: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     return {
@@ -199,8 +215,9 @@ export default {
       copyed: -1,
       VDataTable,
       page: 1,
-      anIncreasingNumber:0,
+      anIncreasingNumber: 0,
       itemsPerPage: 10,
+      columns: {},
     };
   },
   methods: {
@@ -225,39 +242,96 @@ export default {
       this.showed.push(index);
     },
     hideID(index) {
-      this.showed = this.showed.filter((i) => i !== index);
+      this.showed = this.showed?.filter((i) => i !== index);
     },
-    isIdShort(id){
-      return id.length<=8
+    isIdShort(id) {
+      return id.length <= 8;
     },
     makeIdShort(id) {
-      if(this.isIdShort(id)){
-        return id
+      if (this.isIdShort(id)) {
+        return id;
       }
       return id.slice(0, 8) + "...";
     },
+    saveColumnPosition(headers) {
+      if (!headers) {
+        return;
+      }
+
+      headers.forEach(({ value }, index) => {
+        this.columns[value] = index;
+      });
+
+      const columnJson = localStorage.getItem("columns");
+      const allColumnsSetting = columnJson
+        ? JSON.parse(columnJson)
+        : { [this.tableName]: {} };
+      allColumnsSetting[this.tableName] = this.columns;
+
+      localStorage.setItem("columns", JSON.stringify(allColumnsSetting));
+    },
     sortTheHeadersAndUpdateTheKey(evt) {
-      const headersTmp = this.headers;
-      const oldIndex = evt.oldIndex - 1;
-      const newIndex = evt.newIndex - 1;
+      const headersTmp = this.filtredHeaders;
+      let oldIndex = evt.oldIndex - 1;
+      let newIndex = evt.newIndex - 1;
+      if (this.showExpand) {
+        oldIndex--;
+        newIndex--;
+      }
       headersTmp.splice(newIndex, 0, headersTmp.splice(oldIndex, 1)[0]);
       this.table = headersTmp;
       this.anIncreasingNumber += 1;
+    },
+    setHeadersBy(columns) {
+      //break reactivity (mutate props)
+      let tempHeaders = this.filtredHeaders;
+      const originalHeaders = JSON.parse(JSON.stringify(this.filtredHeaders));
+
+      this.filtredHeaders.findIndex((_, i) => {
+        this.$delete(this.filtredHeaders, i);
+      });
+
+      for (const [key, value] of Object.entries(columns)) {
+        if (originalHeaders.find((h) => h.value === key)) {
+          tempHeaders[value] = originalHeaders.find((h) => h.value === key);
+        } else {
+          this.$delete(tempHeaders, value);
+        }
+      }
+      tempHeaders = tempHeaders.filter((t) => t);
+
+      if (tempHeaders.length < originalHeaders.length) {
+        for (let i = tempHeaders.length + 1; i <= originalHeaders.length; i++) {
+          tempHeaders.push(
+            originalHeaders.find(
+              (h) => tempHeaders.findIndex((th) => th.value === h.value) === -1
+            )
+          );
+        }
+      }
+
+      for (let i = 0; i < tempHeaders.length; i++) {
+        this.$set(this.filtredHeaders, i, tempHeaders[i]);
+      }
+
+      this.table = tempHeaders;
+      this.anIncreasingNumber += 1;
+    },
+    setDefaultheaders() {
+      this.filtredHeaders.forEach(({ value }, index) => {
+        this.columns[value] = index;
+      });
     },
   },
   computed: {
     sortByTable() {
       return this.sortBy || "title";
     },
-  },
-  watch: {
-    page(value) {
-      localStorage.setItem("page", value);
-      localStorage.setItem("url", this.$route.path);
-    },
-    itemsPerPage(value) {
-      localStorage.setItem("itemsPerPage", value);
-      localStorage.setItem("url", this.$route.path);
+    filtredHeaders() {
+      if (!!this.filter && !this.filter.length) {
+        return this.headers;
+      }
+      return this.headers?.filter(({ text }) => this.filter.includes(text));
     },
   },
   mounted() {
@@ -268,37 +342,79 @@ export default {
       setTimeout(() => {
         this.page = +page;
       }, 100);
+
+    if (this.tableName) {
+      const columnsString = localStorage.getItem("columns");
+
+      if (columnsString) {
+        this.columns = JSON.parse(columnsString)?.[this.tableName];
+      }
+
+      if (!this.columns) {
+        this.columns = {};
+        this.setDefaultheaders();
+      } else {
+        this.setHeadersBy(this.columns);
+      }
+    }
   },
   destroyed() {
+    this.saveColumnPosition(this.table);
+
     const url = localStorage.getItem("url");
 
     if (this.$route.path.includes(url)) return;
     localStorage.removeItem("page");
     localStorage.removeItem("itemsPerPage");
   },
-  directives: {
-    'sortable-table': {
-      inserted: (el, binding) => {
-        el.querySelectorAll('th').forEach((draggableEl) => {
-          // Need a class watcher because sorting v-data-table rows asc/desc removes the sortHandle class
-          watchClass(draggableEl, 'sortHandle');
-          draggableEl.classList.add('sortHandle');
-        });
-        Sortable.create(el.querySelector('tr'), binding.value ? {...binding.value, handle: '.sortHandle'} : {});
+  watch: {
+    filter: {
+      handler() {
+        this.setHeadersBy(this.columns);
+        this.saveColumnPosition([]);
       },
-    }
-  }
+      deep: true,
+    },
+    page(value) {
+      localStorage.setItem("page", value);
+      localStorage.setItem("url", this.$route.path);
+    },
+    itemsPerPage(value) {
+      localStorage.setItem("itemsPerPage", value);
+      localStorage.setItem("url", this.$route.path);
+    },
+  },
+  directives: {
+    "sortable-table": {
+      inserted: (el, binding) => {
+        el.querySelectorAll("th").forEach((draggableEl) => {
+          // Need a class watcher because sorting v-data-table rows asc/desc removes the sortHandle class
+          watchClass(draggableEl, "sortHandle");
+          draggableEl.classList.add("sortHandle");
+        });
+        Sortable.create(
+          el.querySelector("tr"),
+          binding.value ? { ...binding.value, handle: ".sortHandle" } : {}
+        );
+      },
+    },
+  },
 };
 </script>
 
 <style>
 .v-data-table > .v-data-table__wrapper > table > tbody > tr > td,
-.theme--dark.v-data-table > .v-data-table__wrapper > table > thead > tr:last-child > th {
+.theme--dark.v-data-table
+  > .v-data-table__wrapper
+  > table
+  > thead
+  > tr:last-child
+  > th {
   white-space: nowrap;
 }
 
-.sortable-drag{
+.sortable-drag {
   color: salmon;
-  background-color:rgb(13,16,60);
+  background-color: rgb(13, 16, 60);
 }
 </style>
