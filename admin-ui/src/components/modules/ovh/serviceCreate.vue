@@ -57,21 +57,21 @@
 				<v-col cols="6">
 					<v-select
 						label="region"
-						v-model="instance.config.datacenter"
+						v-model="instance.config.configuration.vps_datacenter"
 						:items="regions[instance.config.planCode]"
             :rules="rules.req"
             :disabled="!instance.config.planCode"
-            @change="(value) => setValue(index + '.config.datacenter', value)"
+            @change="(value) => setValue(index + '.config.configuration.vps_datacenter', value)"
 					/>
 				</v-col>
 				<v-col cols="6">
 					<v-select
 						label="OS"
-						v-model="instance.config.os"
+						v-model="instance.config.configuration.vps_os"
 						:items="images[instance.config.planCode]"
             :rules="rules.req"
             :disabled="!instance.config.planCode"
-            @change="(value) => setValue(index + '.config.os', value)"
+            @change="(value) => setValue(index + '.config.configuration.vps_os', value)"
 					/>
 				</v-col>
 				<v-col cols="6" class="d-flex align-center">
@@ -110,7 +110,7 @@
             <v-select
               :label="key"
               :items="addon"
-              @change="(value) => setValue(index + 'config.addons', value)"
+              @change="(value) => setValue(index + '.config.addons', value)"
             />
           </v-col>
         </v-row>
@@ -146,10 +146,13 @@ export default {
 			config: {
 				type: "vps",
         planCode: null,
-        datacenter: null,
-        os: null,
+        configuration: {
+          vps_datacenter: null,
+          vps_os: null
+        },
         duration: 'P1M',
-        pricingMode: 'default'
+        pricingMode: 'default',
+        addons: []
 			},
       data: { existing: false },
       billing_plan: {}
@@ -219,7 +222,7 @@ export default {
           const plans = (meta) ? meta : this.meta;
           const plan = plans.catalog.plans.find(({ planCode }) => planCode === key);
 
-          plan.configurations.forEach((el) => {
+          plan?.configurations.forEach((el) => {
             el.values.sort();
             if (el.name.includes('os')) {
               this.$set(this.images, key, el.values);
@@ -229,7 +232,7 @@ export default {
             }
           });
 
-          plan.addonFamilies.forEach((el) => {
+          plan?.addonFamilies.forEach((el) => {
             if (!this.addons[key]) {
               this.addons[key] = {};
             }
@@ -307,6 +310,12 @@ export default {
         data.body.instances[i].config.pricingMode = (val === 'P1M') ? 'default' : 'upfront12'
       }
 
+      if (path.includes('addons')) {
+        const { addons } = data.body.instances[i].config
+
+        val = [...addons, val]
+      }
+
 			setToValue(data.body.instances, val, path)
       if (path.includes('billing_plan')) this.addProducts(data.body.instances[i])
 			this.change(data)
@@ -334,7 +343,6 @@ export default {
         if (inst.billingPlan) {
           arr[i].billing_plan = inst.billingPlan;
           delete arr[i].billingPlan;
-
         }
         this.setValue(`${i}.billing_plan`, inst.billing_plan.uuid);
         arr[i].plan = inst.billing_plan.uuid;

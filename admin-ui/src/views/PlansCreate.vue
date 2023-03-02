@@ -72,14 +72,15 @@
             </v-col>
           </v-row>
 
-          <v-row>
+          <v-row v-if="plan.kind === 'DYNAMIC'">
             <v-col cols="3">
-              <v-subheader>Meta</v-subheader>
+              <v-subheader>Linked price model</v-subheader>
             </v-col>
             <v-col cols="9">
-              <json-editor
-                :json="plan.meta"
-                @changeValue="(data) => plan.meta = data"
+              <v-select
+                label="Price model"
+                v-model="plan.meta.linkedPlan"
+                :items="filteredPlans"
               />
             </v-col>
           </v-row>
@@ -486,6 +487,13 @@ export default {
     },
     plans() {
       return this.$store.getters['plans/all'];
+    },
+    filteredPlans() {
+      const items = this.plans.filter((plan) =>
+        plan.type === this.plan.type && plan.uuid !== this.plan.uuid
+      );
+
+      return items.map((item) => ({ text: item.title, value: item.uuid }));
     },
     viewport() {
       return document.documentElement.clientWidth;

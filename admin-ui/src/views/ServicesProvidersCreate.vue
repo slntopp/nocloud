@@ -51,7 +51,7 @@
             </v-col>
           </v-row>
 
-          <v-row>
+          <v-row v-if="false">
             <v-col cols="3">
               <v-subheader>Meta</v-subheader>
             </v-col>
