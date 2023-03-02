@@ -18,7 +18,8 @@
     :expanded="expanded"
     @update:expanded="(nw) => $emit('update:expanded', nw)"
     :show-expand="showExpand"
-    :page.sync="page"
+    :page="serverSidePage"
+    @update:page="serverSidePage ? _ : (page = $event)"
     :items-per-page.sync="itemsPerPage"
     :show-group-by="showGroupBy"
     :group-by="groupBy"
@@ -204,6 +205,7 @@ export default {
       type: Boolean,
       default: false,
     },
+    serverSidePage: Number,
   },
   data() {
     return {
