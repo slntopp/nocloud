@@ -15,6 +15,7 @@ import transactions from "./transactions";
 import appSearch from "./appSearch";
 import vnc from "./vnc";
 import currencies from "./currencies";
+import plugins from "./plugins";
 
 Vue.use(Vuex);
 
@@ -36,5 +37,6 @@ export default new Vuex.Store({
     appSearch,
     vnc,
     currencies,
+    plugins,
   },
 });

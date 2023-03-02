@@ -25,7 +25,7 @@ const routes = [
       requireLogin: true,
     },
   },
-   {
+  {
     path: "/namespaces/:namespaceId",
     name: "NamespacePage",
     component: () => import("../views/NamespacePage.vue"),
@@ -109,6 +109,14 @@ const routes = [
     path: "/settings/app",
     name: "AppSetting",
     component: () => import("../views/AppSettings.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/settings/plugins",
+    name: "PluginsSetting",
+    component: () => import("../views/PluginsSettings.vue"),
     meta: {
       requireLogin: true,
     },

@@ -4,6 +4,9 @@
       <v-btn color="background-light" class="mr-2" to="/settings/app">
         app settings
       </v-btn>
+      <v-btn color="background-light" class="mr-2" to="/settings/plugins">
+        plugins settings
+      </v-btn>
       <v-menu
         offset-y
         transition="slide-y-transition"
