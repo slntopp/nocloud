@@ -64,8 +64,8 @@
 
     <v-btn :to="{
       name: 'Service edit', params: {
-        serviceId: template.service, sp: template.sp, instance: template.uuid
-      }, query: { instance: template.uuid }
+        serviceId: template.service, type: template.type, instance: template.uuid
+      }
     }">
       Edit
     </v-btn>
