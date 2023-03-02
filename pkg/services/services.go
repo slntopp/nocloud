@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
 	accesspb "github.com/slntopp/nocloud-proto/access"
@@ -39,6 +38,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"reflect"
 )
 
 type ServicesServer struct {
@@ -180,7 +180,29 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				}
 				instance.BillingPlan = plan
 
-				err := s.ctrl.IGController().Instances().ValidateBillingPlan(ctx, group.GetSp(), instance)
+				inst_ctrl := s.ctrl.IGController().Instances()
+
+				old_instance := inst_ctrl.Get(ctx, instance.GetUuid())
+
+				equal := reflect.DeepEqual(instance.GetConfig(), old_instance.GetConfig())
+
+				if !equal {
+					err := inst_ctrl.CheckEdgeExist(ctx, group.GetSp(), instance)
+
+					if err != nil {
+						response.Result = false
+						log.Error("IGCONTROLLER err", zap.String("err", err.Error()))
+						terr := pb.TestConfigError{
+							Error:         err.Error(),
+							Instance:      instance.Title,
+							InstanceGroup: group.Title,
+						}
+						response.Errors = append(response.Errors, &terr)
+						continue
+					}
+				}
+
+				err = inst_ctrl.ValidateBillingPlan(ctx, group.GetSp(), instance)
 				if err != nil {
 					response.Result = false
 					log.Error("IGCONTROLLER err", zap.String("err", err.Error()))

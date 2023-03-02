@@ -1,6 +1,7 @@
 <template>
   <nocloud-table
     show-expand
+    table-name="transactionsTable"
     class="mt-4"
     sort-by="proc"
     sort-desc
