@@ -6,13 +6,13 @@
       </v-col>
       <v-col cols="3">
         <v-btn @click="deleteEvents" class="mt-3" color="primary">delete</v-btn>
-        <v-dialog v-model="addEventDialog" width="50%">
+        <v-dialog v-model="addEventDialog" max-width="50%">
           <template v-slot:activator="{ on, attrs }">
             <v-btn class="ml-7 mt-3" color="primary" v-on="on" v-bind="attrs"
               >add</v-btn
             >
           </template>
-          <v-card class="pa-5">
+          <v-card class="pa-5 ma-auto">
             <v-card-title class="text-center">New event:</v-card-title>
             <v-autocomplete
               @input.native="userKey = $event.target.value"
