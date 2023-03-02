@@ -279,7 +279,7 @@ export default {
       }
     },
     getPeriod(inst) {
-      if (inst.billingPlan.kind === 'STATIC') return 'monthly';
+      if (inst.billingPlan.kind === 'STATIC' && inst.type === 'ione') return 'monthly';
       else if (inst.type === 'ione') return 'PayG';
       else if (inst.resources.period) {
         const text = (inst.resources.period > 1) ? 'months' : 'month';
@@ -287,7 +287,7 @@ export default {
         return `${inst.resources.period} ${text}`;
       }
 
-      switch (inst.duration) {
+      switch (inst.config.duration) {
         case 'P1M':
           return 'monthly';
         case 'P1Y':
