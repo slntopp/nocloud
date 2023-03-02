@@ -12,8 +12,8 @@
     </template>
 
     <template v-slot:[`item.access`]="{ item }">
-      <router-link :to="{ name: 'Account', params: { accountId: getAccount(item).uuid } }">
-        {{ getAccount(item).title }}
+      <router-link :to="{ name: 'Account', params: { accountId: getAccount(item)?.uuid } }">
+        {{ getAccount(item)?.title }}
       </router-link>
     </template>
 
@@ -239,9 +239,11 @@ export default {
       }
     },
     getAccount({ access }) {
-      const { access: { namespace } } = this.namespaces.find(({ uuid }) => uuid === access.namespace);
+      const { access: { namespace } } = this.namespaces.find(({ uuid }) =>
+        uuid === access.namespace) ??
+        { access: {} };
 
-      return this.accounts.find(({ uuid }) => uuid === namespace);
+      return this.accounts.find(({ uuid }) => uuid === namespace) ?? {};
     },
     getEmail(inst) {
       const { email } = this.getAccount(inst);

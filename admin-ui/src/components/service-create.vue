@@ -223,6 +223,7 @@ export default {
       const data = JSON.parse(JSON.stringify(this.service));
       const instances = JSON.parse(JSON.stringify(this.instances));
 
+      data.instancesGroups = [];
       instances.forEach((inst, i) => {
         if (inst.type === 'custom') {
           inst.body.type = this.customTitles[i];
