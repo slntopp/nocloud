@@ -214,6 +214,7 @@
       </v-row>
       <v-row class="flex-column pa-md-5">
         <nocloud-table
+          table-name="openSrsServiceCreate"
           @input="(item) => changeDomain(item, index)"
           :footer-error="tableError"
           item-key="domain"
@@ -335,7 +336,7 @@ export default {
         })
         .then((data) => {
           this.domains = this.sortDomainsLSM(
-            data.meta.domains.filter(d=>d.status!=='undetermined'),
+            data.meta.domains.filter((d) => d.status !== "undetermined"),
             this.searchDomainString.toLowerCase()
           );
         })

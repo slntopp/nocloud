@@ -1,18 +1,32 @@
 <template>
-  <nocloud-table class="mt-4" :value="value" :custom-sort="sortInstances" :items="instances" :headers="headers"
-    :loading="isLoading" :footer-error="fetchError" @input="(value) => $emit('input', value)">
+  <nocloud-table
+    table-name="instances"
+    class="mt-4"
+    :value="value"
+    :custom-sort="sortInstances"
+    :items="instances"
+    :headers="headers"
+    :loading="isLoading"
+    :footer-error="fetchError"
+    @input="(value) => $emit('input', value)"
+    :filter="filters"
+  >
     <template v-slot:[`item.id`]="{ index }">
       {{ index + 1 }}
     </template>
 
     <template v-slot:[`item.title`]="{ item }">
-      <router-link :to="{ name: 'Instance', params: { instanceId: item.uuid } }">
+      <router-link
+        :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
+      >
         {{ item.title }}
       </router-link>
     </template>
 
     <template v-slot:[`item.access`]="{ item }">
-      <router-link :to="{ name: 'Account', params: { accountId: getAccount(item).uuid } }">
+      <router-link
+        :to="{ name: 'Account', params: { accountId: getAccount(item).uuid } }"
+      >
         {{ getAccount(item).title }}
       </router-link>
     </template>
@@ -28,7 +42,7 @@
     </template>
 
     <template v-slot:[`item.product`]="{ item, value }">
-      {{ value ?? getTariff(item) ?? 'custom' }}
+      {{ value ?? getTariff(item) ?? "custom" }}
     </template>
 
     <template v-slot:[`item.price`]="{ item }">
@@ -60,19 +74,26 @@
     </template>
 
     <template v-slot:[`item.access.namespace`]="{ item }">
-      <router-link :to="{ name: 'NamespacePage', params: { namespaceId: item.access.namespace } }">
+      <router-link
+        :to="{
+          name: 'NamespacePage',
+          params: { namespaceId: item.access.namespace },
+        }"
+      >
         {{ getNamespace(item.access.namespace) }}
       </router-link>
     </template>
 
     <template v-slot:[`item.billingPlan.title`]="{ item, value }">
-      <router-link :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }">
+      <router-link
+        :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
+      >
         {{ value }}
       </router-link>
     </template>
 
     <template v-slot:[`item.resources.cpu`]="{ value }">
-      {{ value }} {{ (value > 1) ? 'cores' : 'core' }}
+      {{ value }} {{ value > 1 ? "cores" : "core" }}
     </template>
 
     <template v-slot:[`item.resources.ram`]="{ value }">
@@ -89,7 +110,14 @@
 
     <template v-slot:[`item.state.meta.networking`]="{ item }">
       <template v-if="!item.state?.meta.networking?.public">-</template>
-      <v-menu bottom open-on-hover v-else nudge-top="20" nudge-left="15" transition="slide-y-transition">
+      <v-menu
+        bottom
+        open-on-hover
+        v-else
+        nudge-top="20"
+        nudge-left="15"
+        transition="slide-y-transition"
+      >
         <template v-slot:activator="{ on, attrs }">
           <span v-bind="attrs" v-on="on">
             {{ item.state.meta.networking.public[0] }}
@@ -97,7 +125,10 @@
         </template>
 
         <v-list dense>
-          <v-list-item v-for="net of item.state.meta.networking.public" :key="net">
+          <v-list-item
+            v-for="net of item.state.meta.networking.public"
+            :key="net"
+          >
             <v-list-item-title>{{ net }}</v-list-item-title>
           </v-list-item>
         </v-list>
@@ -111,7 +142,7 @@ import nocloudTable from "@/components/table.vue";
 import { filterArrayIncludes } from "@/functions.js";
 
 export default {
-  name: 'instances-table',
+  name: "instances-table",
   components: { nocloudTable },
   props: {
     value: { type: Array, required: true },
@@ -126,24 +157,24 @@ export default {
   methods: {
     changeIcon() {
       setTimeout(() => {
-        const headers = document.querySelectorAll('.groupable');
+        const headers = document.querySelectorAll(".groupable");
 
         headers.forEach(({ firstElementChild, children }) => {
-          if (!children[1]?.className.includes('group-icon')) {
-            const element = document.querySelector('.group-icon');
+          if (!children[1]?.className.includes("group-icon")) {
+            const element = document.querySelector(".group-icon");
             const icon = element.cloneNode(true);
 
             firstElementChild.after(icon);
-            icon.style = 'display: inline-flex';
+            icon.style = "display: inline-flex";
 
-            icon.addEventListener('click', (e) => {
-              const menu = document.querySelector('.v-menu__content');
+            icon.addEventListener("click", (e) => {
+              const menu = document.querySelector(".v-menu__content");
               const { x, y } = icon.getBoundingClientRect();
 
-              if (menu.className.includes('menuable__content__active')) return;
+              if (menu.className.includes("menuable__content__active")) return;
 
-              this.$emit('changeColumn', firstElementChild.innerText);
-              element.dispatchEvent(new Event('click'));
+              this.$emit("changeColumn", firstElementChild.innerText);
+              element.dispatchEvent(new Event("click"));
               e.stopPropagation();
 
               setTimeout(() => {
@@ -151,8 +182,9 @@ export default {
                 const menuWidth = menu.offsetWidth;
                 let marginLeft = 20;
 
-                if (width < menuWidth + x) marginLeft = width - (menuWidth + x) - 35;
-                const marginTop = (marginLeft < 20) ? 20 : 0
+                if (width < menuWidth + x)
+                  marginLeft = width - (menuWidth + x) - 35;
+                const marginTop = marginLeft < 20 ? 20 : 0;
 
                 menu.style.left = `${x + marginLeft + window.scrollX}px`;
                 menu.style.top = `${y + marginTop + window.scrollY}px`;
@@ -163,10 +195,11 @@ export default {
       }, 100);
     },
     fetchServices() {
-      this.$store.dispatch("services/fetch")
+      this.$store
+        .dispatch("services/fetch")
         .then(() => {
           this.fetchError = "";
-          this.$emit('getHeaders', this.headers);
+          this.$emit("getHeaders", this.headers);
 
           this.changeFilters();
           this.changeIcon();
@@ -189,7 +222,7 @@ export default {
           let valueA = a;
           let valueB = b;
 
-          sortBy[i].split('.').forEach((key) => {
+          sortBy[i].split(".").forEach((key) => {
             valueA = valueA[key];
             valueB = valueB[key];
           });
@@ -209,7 +242,7 @@ export default {
       });
     },
     date(timestamp) {
-      if (!timestamp) return 'PayG';
+      if (!timestamp) return "PayG";
       const date = new Date(timestamp * 1000);
 
       const year = date.toUTCString().split(" ")[3];
@@ -223,123 +256,152 @@ export default {
     },
     chipColor(item) {
       if (!item.state) return "error";
-      const state = (item.config?.os) ? item.state.state : item.state.meta?.lcm_state_str;
+      const state = item.config?.os
+        ? item.state.state
+        : item.state.meta?.lcm_state_str;
 
       switch (state) {
         case "RUNNING":
-          return "success"
+          return "success";
         case "LCM_INIT":
         case "STOPPED":
-          return "warning"
+          return "warning";
         case "SUSPENDED":
         case "UNKNOWN":
-          return "error"
+          return "error";
         default:
-          return "blue-grey darken-2"
+          return "blue-grey darken-2";
       }
     },
     getAccount({ access }) {
-      const { access: { namespace } } = this.namespaces.find(({ uuid }) => uuid === access.namespace);
+      const {
+        access: { namespace },
+      } = this.namespaces.find(({ uuid }) => uuid === access.namespace);
 
       return this.accounts.find(({ uuid }) => uuid === namespace);
     },
     getEmail(inst) {
       const { email } = this.getAccount(inst);
 
-      return email ?? '-';
+      return email ?? "-";
     },
     getPrice(inst) {
       switch (inst.type) {
-        case 'goget': {
+        case "goget": {
           const key = `${inst.resources.period} ${inst.resources.id}`;
 
           return inst.billingPlan.products[key]?.price ?? 0;
         }
-        case 'ovh': {
+        case "ovh": {
           const key = `${inst.config.duration} ${inst.config.planCode}`;
 
           return inst.billingPlan.products[key]?.price ?? 0;
         }
-        case 'ione': {
+        case "ione": {
           if (inst.billingPlan.kind === "DYNAMIC") {
             return inst.billingPlan.resources.reduce((prev, curr) => {
-              if (curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`) {
-                return prev + curr.price / curr.period * 3600 * inst.resources.drive_size / 1024;
+              if (
+                curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
+              ) {
+                return (
+                  prev +
+                  ((curr.price / curr.period) *
+                    3600 *
+                    inst.resources.drive_size) /
+                    1024
+                );
               } else if (curr.key === "ram") {
-                return prev + curr.price / curr.period * 3600 * inst.resources.ram / 1024;
+                return (
+                  prev +
+                  ((curr.price / curr.period) * 3600 * inst.resources.ram) /
+                    1024
+                );
               } else if (inst.resources[curr.key]) {
-                return prev + curr.price / curr.period * 3600 * inst.resources[curr.key];
+                return (
+                  prev +
+                  (curr.price / curr.period) * 3600 * inst.resources[curr.key]
+                );
               }
               return prev;
             }, 0);
           } else {
-            return inst.billingPlan.products[inst.product]?.price ?? 0
+            return inst.billingPlan.products[inst.product]?.price ?? 0;
           }
         }
       }
     },
     getPeriod(inst) {
-      if (inst.billingPlan.kind === 'STATIC' && inst.type === 'ione') return 'monthly';
-      else if (inst.type === 'ione') return 'PayG';
+
+      if (inst.billingPlan.kind === "STATIC") return "monthly";
+      else if (inst.type === "ione") return "PayG";
+
       else if (inst.resources.period) {
-        const text = (inst.resources.period > 1) ? 'months' : 'month';
+        const text = inst.resources.period > 1 ? "months" : "month";
 
         return `${inst.resources.period} ${text}`;
       }
 
-      switch (inst.config.duration) {
-        case 'P1M':
-          return 'monthly';
-        case 'P1Y':
-          return 'yearly';
+      switch (inst.duration) {
+        case "P1M":
+          return "monthly";
+        case "P1Y":
+          return "yearly";
+
         default:
-          return 'unknown';
+          return "unknown";
       }
     },
     getCreationDate(inst) {
-      return inst.data.creation ?? 'unknown';
+      return inst.data.creation ?? "unknown";
     },
     getExpirationDate(inst) {
-      if (inst.type === 'ovh') return inst.data.expiration;
-      if (inst.type === 'ione') return this.date(inst.data.last_monitoring);
-      return 'unknown';
+      if (inst.type === "ovh") return inst.data.expiration;
+      if (inst.type === "ione") return this.date(inst.data.last_monitoring);
+      return "unknown";
     },
     getService({ service }) {
-      return this.services.find(({ uuid }) => service === uuid)?.title ?? '';
+      return this.services.find(({ uuid }) => service === uuid)?.title ?? "";
     },
     getServiceProvider({ sp }) {
       return this.sp.find(({ uuid }) => uuid === sp).title;
     },
     getOSName(id, sp) {
       if (!id) return;
-      return this.sp.find(({ uuid }) => uuid === sp).publicData.templates[id].name;
+      return this.sp.find(({ uuid }) => uuid === sp).publicData.templates[id]
+        .name;
     },
     getTariff(item) {
-      const { billingPlan, config: { planCode, duration } } = item;
+      const {
+        billingPlan,
+        config: { planCode, duration },
+      } = item;
       const key = `${duration} ${planCode}`;
 
       return billingPlan.products[key]?.title;
     },
     getNamespace(id) {
-      return "NS_" + this.namespaces.find((n) => n.uuid === id).title
-    }
+      return "NS_" + this.namespaces.find((n) => n.uuid === id)?.title;
+    },
   },
-  created() { this.fetchServices() },
+  created() {
+    this.fetchServices();
+  },
   computed: {
     services() {
       return this.$store.getters["services/all"];
     },
     instances() {
-      const instances = this.$store.getters["services/getInstances"]
-        .filter((inst) => {
+      const instances = this.$store.getters["services/getInstances"]?.filter(
+        (inst) => {
           const result = [];
 
           Object.entries(this.selected).forEach(([key, filters]) => {
-            const { value, text } = this.headers.find(({ text }) => text === key) || {};
+            const { value, text } =
+              this.headers.find(({ text }) => text === key) || {};
             let filter = inst;
 
             if (!value) return [];
-            value.split('.').forEach((key) => {
+            value.split(".").forEach((key) => {
               filter = filter[key];
             });
 
@@ -363,7 +425,8 @@ export default {
           });
 
           return result.every((el) => el);
-        });
+        }
+      );
 
       const filtered = filterArrayIncludes(instances, {
         keys: ["uuid", "service", "title", "billingPlan", "state"],
@@ -371,21 +434,21 @@ export default {
         params: {
           billingPlan: "title",
           service: this.getService,
-          state: this.getState
-        }
+          state: this.getState,
+        },
       });
 
-      if (this.type === 'all') return filtered;
-      return filtered.filter(({ type }) => type === this.type);
+      if (this.type === "all") return filtered;
+      return filtered?.filter(({ type }) => type === this.type);
     },
     sp() {
-      return this.$store.getters['servicesProviders/all'];
+      return this.$store.getters["servicesProviders/all"];
     },
     namespaces() {
-      return this.$store.getters['namespaces/all'];
+      return this.$store.getters["namespaces/all"];
     },
     accounts() {
-      return this.$store.getters['accounts/all'];
+      return this.$store.getters["accounts/all"];
     },
     headers() {
       const headers = [
@@ -393,7 +456,7 @@ export default {
         { text: "Title", value: "title" },
         { text: "Service", value: "service", class: "groupable" },
         { text: "Account", value: "access" },
-        { text: 'Group (NameSpace)', value: 'access.namespace' },
+        { text: "Group (NameSpace)", value: "access.namespace" },
         { text: "Due date", value: "dueDate" },
         { text: "Status", value: "state", class: "groupable" },
         { text: "Tariff", value: "product" },
@@ -405,12 +468,11 @@ export default {
         { text: "Date", value: "date" },
         { text: "UUID", value: "uuid" },
         { text: "Price model", value: "billingPlan.title", class: "groupable" },
-      ]
-        .filter(({ text }) => this.filters.includes(text));
+      ];
 
       if (this.type !== "all") headers.splice(1, 1);
       switch (this.type) {
-        case 'ione':
+        case "ione":
           headers.push(
             { text: "IP", value: "state.meta.networking" },
             { text: "CPU", value: "resources.cpu", class: "groupable" },
@@ -419,18 +481,27 @@ export default {
             { text: "OS", value: "config.template_id", class: "groupable" }
           );
           break;
-        case 'ovh':
+        case "ovh":
           headers.push({ text: "IP", value: "state.meta.networking" });
           break;
-        case 'goget':
-        case 'opensrs':
-          headers.push({ text: "Domain", value: "resources.domain", class: "groupable" });
+        case "goget":
+        case "opensrs":
+          headers.push({
+            text: "Domain",
+            value: "resources.domain",
+            class: "groupable",
+          });
 
-          if (this.type === 'opensrs') break;
-          else headers.push(
-            { text: "DCV", value: "resources.dcv", class: "groupable" },
-            { text: "Approver email", value: "resources.approver_email", class: "groupable" }
-          );
+          if (this.type === "opensrs") break;
+          else
+            headers.push(
+              { text: "DCV", value: "resources.dcv", class: "groupable" },
+              {
+                text: "Approver email",
+                value: "resources.approver_email",
+                class: "groupable",
+              }
+            );
       }
 
       return headers;
@@ -442,15 +513,15 @@ export default {
       return this.$store.getters["appSearch/param"];
     },
     currency() {
-      return this.$store.getters['currencies/default'];
-    }
+      return this.$store.getters["currencies/default"];
+    },
   },
   watch: {
     instances() {
       this.fetchError = "";
     },
     headers() {
-      const headers = document.querySelectorAll('.groupable');
+      const headers = document.querySelectorAll(".groupable");
 
       headers.forEach(({ children }) => {
         children[1].remove();
@@ -458,7 +529,7 @@ export default {
 
       this.changeIcon();
       this.changeFilters();
-    }
-  }
-}
+    },
+  },
+};
 </script>

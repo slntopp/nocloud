@@ -1,13 +1,33 @@
 <template>
-  <nocloud-table :headers="headers" :items="filtredAccounts" :value="selected" :loading="loading"
-    :single-select="singleSelect" :footer-error="fetchError" @input="handleSelect">
+  <nocloud-table
+    table-name="accounts"
+    :headers="headers"
+    :items="filtredAccounts"
+    :value="selected"
+    :loading="loading"
+    :single-select="singleSelect"
+    :footer-error="fetchError"
+    @input="handleSelect"
+  >
     <template v-slot:[`item.title`]="{ item }">
-     <div class="d-flex justify-space-between">
-       <router-link :to="{ name: 'Account', params: { accountId: item.uuid } }">
-         {{ item.title }}
-       </router-link>
-       <v-icon @click="$router.push({ name: 'Account', params: { accountId: item.uuid},query:{tab:2} })" class="ml-5">mdi-calendar-multiple</v-icon>
-     </div>
+      <div class="d-flex justify-space-between">
+        <router-link
+          :to="{ name: 'Account', params: { accountId: item.uuid } }"
+        >
+          {{ item.title }}
+        </router-link>
+        <v-icon
+          @click="
+            $router.push({
+              name: 'Account',
+              params: { accountId: item.uuid },
+              query: { tab: 2 },
+            })
+          "
+          class="ml-5"
+          >mdi-calendar-multiple</v-icon
+        >
+      </div>
     </template>
     <template v-slot:[`item.balance`]="{ item }">
       <balance v-if="item.balance" :value="item.balance" />
@@ -19,7 +39,7 @@
       </v-chip>
     </template>
     <template v-slot:[`item.namespace`]="{ item }">
-      {{ "NS_"+getName(item.uuid) }}
+      {{ "NS_" + getName(item.uuid) }}
     </template>
   </nocloud-table>
 </template>
@@ -27,7 +47,7 @@
 <script>
 import noCloudTable from "@/components/table.vue";
 import Balance from "./balance.vue";
-import { filterArrayByTitleAndUuid } from "@/functions"
+import { filterArrayByTitleAndUuid } from "@/functions";
 
 export default {
   name: "accounts-table",
@@ -59,7 +79,7 @@ export default {
         { text: "UUID", value: "uuid" },
         { text: "Balance", value: "balance" },
         { text: "Access level", value: "access" },
-        { text: "Group(NameSpace)", value: 'namespace' }
+        { text: "Group(NameSpace)", value: "namespace" },
       ],
     };
   },
@@ -68,20 +88,23 @@ export default {
       this.$emit("input", item);
     },
     getName(uuid) {
-      return this.namespaces.find(({ access }) => access.namespace === uuid)?.title ?? '';
+      return (
+        this.namespaces.find(({ access }) => access.namespace === uuid)
+          ?.title ?? ""
+      );
     },
     colorChip(level) {
       switch (level) {
-        case 'ROOT':
-          return 'info';
-        case 'ADMIN':
-          return 'success';
-        case 'MGMT':
-          return 'warning';
-        case 'READ':
-          return 'gray';
-        case 'NONE':
-          return 'error';
+        case "ROOT":
+          return "info";
+        case "ADMIN":
+          return "success";
+        case "MGMT":
+          return "warning";
+        case "READ":
+          return "gray";
+        case "NONE":
+          return "error";
       }
     },
   },
@@ -91,7 +114,7 @@ export default {
     },
     filtredAccounts() {
       if (this.searchParam) {
-        return filterArrayByTitleAndUuid(this.tableData, this.searchParam)
+        return filterArrayByTitleAndUuid(this.tableData, this.searchParam);
       }
       return this.tableData;
     },
@@ -102,7 +125,8 @@ export default {
   created() {
     this.loading = true;
     this.$store.dispatch("namespaces/fetch");
-    this.$store.dispatch("accounts/fetch")
+    this.$store
+      .dispatch("accounts/fetch")
       .then(() => {
         this.fetchError = "";
       })
