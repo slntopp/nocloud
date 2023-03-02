@@ -51,7 +51,7 @@
             </v-col>
           </v-row>
 
-          <v-row>
+          <v-row v-if="false">
             <v-col cols="3">
               <v-subheader>Meta</v-subheader>
             </v-col>
@@ -69,11 +69,11 @@
             </v-col>
             <v-col cols="9">
               <v-text-field label="Title" v-model="provider.meta.service.title" />
-              <v-text-field label="Type" v-model="provider.meta.service.type" />
-              <v-select label="Icon" v-model="provider.meta.service.icon" :items="icons">
-                <!-- <template v-slot:item="{ item }">
-                  <component :is="getIcon(item)" />
-                </template> -->
+              <v-select label="Tab" v-model="provider.meta.service.type" :items="services" />
+              <v-select label="Icon" v-model="provider.meta.service.icon" :items="Object.keys(icons)">
+                <template v-slot:item="{ item }">
+                  <component class="mr-1" :is="icons[item]" /> - {{ item }}
+                </template>
               </v-select>
             </v-col>
           </v-row>
@@ -256,6 +256,10 @@ export default {
       selected: "",
     },
     icons: ['database', 'cloud', 'lock', 'solution', 'global'],
+    services: [
+      { text: 'Cloud', value: 'cloud' },
+      { text: 'Services', value: 'products' }
+    ],
 
     tooltipVisible: false,
 
@@ -291,6 +295,15 @@ export default {
         }
         this.provider = res;
       });
+
+    this.icons = this.icons.reduce((icons, icon) => {
+      const capitalized = `${icon[0].toUpperCase()}${icon.slice(1)}`;
+
+      return {
+        ...icons,
+        [icon]: () => import(`@ant-design/icons-vue/${capitalized}Outlined`)
+      };
+    }, {});
   },
   computed: {
     template() {
@@ -333,11 +346,6 @@ export default {
         .finally(() => {
           this.extentions.loading = false;
         });
-    },
-    getIcon(icon) {
-      const capitalized = `${icon[0].toUpperCase()}${icon.slice(1)}`
-
-      return () => import(`@ant-design/icons-svg/lib/asn/${capitalized}Outlined`)
     },
     tryToSend() {
       const action = (this.$route.params.uuid) ? 'edit' : 'create';

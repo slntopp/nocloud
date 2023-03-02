@@ -28,15 +28,16 @@
         />
       </v-col>
       <v-col>
-        <v-switch
-          readonly
-          label="public"
-          v-model="provider.public"
-        />
+        <v-switch readonly label="public" v-model="provider.public" />
       </v-col>
       <v-col cols="12">
         <div class="d-flex align-start">
-          <v-btn :to="{ name: 'ServicesProvider edit', params: { uuid: provider.uuid } }">
+          <v-btn
+            :to="{
+              name: 'ServicesProvider edit',
+              params: { uuid: provider.uuid },
+            }"
+          >
             Edit
           </v-btn>
           <v-btn class="mx-2" @click="downloadFile">
@@ -113,6 +114,7 @@
         </v-col>
         <v-col>
           <nocloud-table
+            table-name="service-providers"
             :items="relatedPlans"
             :headers="headers"
             :loading="isPlanLoading"
@@ -136,8 +138,7 @@
       </component>
     </template>
 
-    <v-row>
-    </v-row>
+    <v-row> </v-row>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -253,7 +254,10 @@ export default {
 
         const vlanStart = this.template.secrets.vlans[vlansKeys[0]].start;
         const vlanSize = this.template.secrets.vlans[vlansKeys[0]].size;
-        if (!errorMessage && vlanStart===undefined || vlanSize===undefined) {
+        if (
+          (!errorMessage && vlanStart === undefined) ||
+          vlanSize === undefined
+        ) {
           errorMessage = `Vlans need size and start keys!`;
         }
 
@@ -350,10 +354,12 @@ export default {
   },
   created() {
     this.$store
-      .dispatch("plans/fetch", { params: {
-        sp_uuid: this.template.uuid,
-        anonymously: false,
-      } })
+      .dispatch("plans/fetch", {
+        params: {
+          sp_uuid: this.template.uuid,
+          anonymously: false,
+        },
+      })
       .then(() => {
         this.relatedPlans = this.$store.getters["plans/all"];
         this.fetchError = "";
@@ -373,8 +379,9 @@ export default {
     plans() {
       const plans = this.relatedPlans.map(({ uuid }) => uuid);
 
-      return this.$store.getters["plans/all"].filter((plan) =>
-        plan.type.includes(this.provider.type) && !plans.includes(plan.uuid)
+      return this.$store.getters["plans/all"].filter(
+        (plan) =>
+          plan.type.includes(this.provider.type) && !plans.includes(plan.uuid)
       );
     },
     isPlanLoading() {

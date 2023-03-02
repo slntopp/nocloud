@@ -24,6 +24,7 @@
     </v-expansion-panels>
 
     <nocloud-table
+      table-name="gogetPrices"
       item-key="id"
       :show-select="false"
       :show-group-by="true"
@@ -86,14 +87,14 @@
 </template>
 
 <script>
-import planOpensrs from '@/components/plan/opensrs/planOpensrs.vue';
+import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import nocloudTable from "@/components/table.vue";
-import confirmDialog from '@/components/confirmDialog.vue';
+import confirmDialog from "@/components/confirmDialog.vue";
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
 
 export default {
-  name: 'plan-prices',
+  name: "plan-prices",
   components: { nocloudTable, planOpensrs, confirmDialog },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
@@ -101,36 +102,41 @@ export default {
     plans: [],
     expanded: [],
     headers: [
-      { text: '', value: 'data-table-expand', groupable: false },
-      { text: 'Brand', value: 'brand', sortable: false, class: 'groupable' },
-      { text: 'Product', value: 'product', groupable: false },
-      { text: 'Type', value: 'product_type', sortable: false, class: 'groupable' }
+      { text: "", value: "data-table-expand", groupable: false },
+      { text: "Brand", value: "brand", sortable: false, class: "groupable" },
+      { text: "Product", value: "product", groupable: false },
+      {
+        text: "Type",
+        value: "product_type",
+        sortable: false,
+        class: "groupable",
+      },
     ],
     pricesHeaders: [
-      { text: 'Period', value: 'period' },
-      { text: 'Income price', value: 'price' },
-      { text: 'Sale price', value: 'value' },
-      { text: 'Sell', value: 'sell', width: 100 }
+      { text: "Period", value: "period" },
+      { text: "Income price", value: "price" },
+      { text: "Sale price", value: "value" },
+      { text: "Sell", value: "sell", width: 100 },
     ],
 
     fee: {},
     isValid: true,
     isPlansLoading: false,
-    fetchError: ''
+    fetchError: "",
   }),
   methods: {
     changeIcon() {
       setTimeout(() => {
-        const headers = document.querySelectorAll('.groupable');
+        const headers = document.querySelectorAll(".groupable");
 
         headers.forEach(({ lastElementChild }) => {
-          const icon = document.querySelector('.group-icon').cloneNode(true);
+          const icon = document.querySelector(".group-icon").cloneNode(true);
 
-          lastElementChild.innerHTML = '';
+          lastElementChild.innerHTML = "";
           lastElementChild.append(icon);
 
-          icon.style = 'display: inline-flex';
-          icon.addEventListener('click', () => {
+          icon.style = "display: inline-flex";
+          icon.addEventListener("click", () => {
             this.changeClose();
             this.changeIcon();
           });
@@ -139,10 +145,12 @@ export default {
     },
     changeClose() {
       setTimeout(() => {
-        const close = document.querySelectorAll('.v-row-group__header .v-btn__content');
+        const close = document.querySelectorAll(
+          ".v-row-group__header .v-btn__content"
+        );
 
         close.forEach((element) => {
-          element.addEventListener('click', this.changeIcon);
+          element.addEventListener("click", this.changeIcon);
         });
       }, 100);
     },
@@ -155,16 +163,16 @@ export default {
 
           switch (this.fee.round) {
             case 1:
-              round = 'floor';
+              round = "floor";
               break;
             case 2:
-              round = 'round';
+              round = "round";
               break;
             case 3:
-              round = 'ceil';
+              round = "ceil";
           }
-          if (this.fee.round === 'NONE') round = 'round';
-          if (typeof this.fee.round === 'string') {
+          if (this.fee.round === "NONE") round = "round";
+          if (typeof this.fee.round === "string") {
             round = this.fee.round.toLowerCase();
           }
 
@@ -179,7 +187,12 @@ export default {
     },
     editPlan() {
       if (!this.testConfig()) return;
-      const newPlan = { ...this.template, fee: this.fee, resources: [], products: {} };
+      const newPlan = {
+        ...this.template,
+        fee: this.fee,
+        resources: [],
+        products: {},
+      };
 
       this.plans.forEach((plan) => {
         plan.prices.forEach((el) => {
@@ -187,35 +200,39 @@ export default {
             const id = `${el.period} ${plan.id}`;
 
             newPlan.products[id] = {
-              kind: 'PREPAID',
+              kind: "PREPAID",
               title: plan.product,
               price: el.value,
               period: el.period * 30 * 24 * 3600,
-              sorter: Object.keys(newPlan.products).length
-            }
+              sorter: Object.keys(newPlan.products).length,
+            };
           }
         });
       });
 
       this.isLoading = true;
-      api.plans.update(newPlan.uuid, newPlan).then(() => {
-        this.showSnackbarSuccess({ message: 'Price model edited successfully' });
-      })
-      .catch((err) => {
-        const message = err.response?.data?.message ?? err.message ?? err;
+      api.plans
+        .update(newPlan.uuid, newPlan)
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: "Price model edited successfully",
+          });
+        })
+        .catch((err) => {
+          const message = err.response?.data?.message ?? err.message ?? err;
 
-        this.showSnackbarError({ message });
-        console.error(err);
-      })
-      .finally(() => {
-        this.isLoading = false;
-      });
+          this.showSnackbarError({ message });
+          console.error(err);
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
     },
     testConfig() {
-      let message = '';
+      let message = "";
 
       if (!this.isValid) {
-        message = 'Margin rules is not valid';
+        message = "Margin rules is not valid";
       }
 
       if (message) {
@@ -232,15 +249,16 @@ export default {
         if (isFinite(+period)) result.push({ period, value, price: value });
       });
       return result;
-    }
+    },
   },
   created() {
     this.isPlansLoading = true;
-    this.$store.dispatch('servicesProviders/fetch')
+    this.$store
+      .dispatch("servicesProviders/fetch")
       .then(({ pool }) => {
-        const sp = pool.find(({ type }) => type === 'goget');
+        const sp = pool.find(({ type }) => type === "goget");
 
-        return api.post(`/sp/${sp.uuid}/invoke`, { method: 'get_certificate' });
+        return api.post(`/sp/${sp.uuid}/invoke`, { method: "get_certificate" });
       })
       .then(({ meta: { cert } }) => {
         this.plans = cert.products;
@@ -249,13 +267,15 @@ export default {
           this.plans[i].prices = this.getPrices(prices);
         });
 
-        const footerButtons = document.querySelectorAll('.v-data-footer .v-btn__content');
+        const footerButtons = document.querySelectorAll(
+          ".v-data-footer .v-btn__content"
+        );
 
         footerButtons.forEach((element) => {
-          element.addEventListener('click', this.changeClose);
+          element.addEventListener("click", this.changeClose);
         });
 
-        this.fetchError = '';
+        this.fetchError = "";
         this.changeIcon();
         this.changeClose();
       })
@@ -269,13 +289,13 @@ export default {
   },
   computed: {
     defaultCurrency() {
-      return this.$store.getters['currencies/default'];
-    }
+      return this.$store.getters["currencies/default"];
+    },
   },
   watch: {
     plans() {
       Object.entries(this.template.products).forEach(([key, value]) => {
-        const [period, id] = key.split(' ');
+        const [period, id] = key.split(" ");
         const product = this.plans.find((el) => el.id === id);
         const price = product.prices.find((el) => el.period === period);
 
@@ -285,9 +305,9 @@ export default {
 
       this.fee = this.template.fee;
       this.setFee();
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style>

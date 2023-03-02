@@ -85,7 +85,7 @@
 
           <component :is="templates[currentInstancesGroups.body.type] ?? templates.custom"
             :instances-group="JSON.stringify(currentInstancesGroups)"
-            :plans="{ list: filteredPlans, products: plans.products }" :planRules="planRules" :meta="meta"
+            :plans="{ list: plans.list, products: plans.products }" :planRules="planRules" :meta="meta"
             @update:instances-group="receiveObject" @changeMeta="(value) => meta = value" />
         </v-card>
 
@@ -223,6 +223,7 @@ export default {
       const data = JSON.parse(JSON.stringify(this.service));
       const instances = JSON.parse(JSON.stringify(this.instances));
 
+      data.instancesGroups = [];
       instances.forEach((inst, i) => {
         if (inst.type === 'custom') {
           inst.body.type = this.customTitles[i];
@@ -319,7 +320,7 @@ export default {
       );
     },
     filteredPlans() {
-      return this.plans.list.filter((plan) => plan.type === this.currentType);
+      return this.plans.list.filter((plan) => plan.type.includes(this.currentType));
     },
     planRules() {
       return this.plansVisible ? this.rules.req : [];
@@ -329,6 +330,9 @@ export default {
     this.$store.dispatch("services/fetch")
       .then(({ pool }) => {
         const service = pool.find((el) => el.uuid === this.$route.params.serviceId);
+        const group = this.$route.params.type;
+        const i = service?.instancesGroups.findIndex(({ type }) => type === group);
+        const { instance } = this.$route.params;
 
         if (service) {
           this.service = service;
@@ -343,15 +347,31 @@ export default {
           });
         }
 
-        const instanceId = this.$route.query.instance
+        if (instance) {
+          this.selectInstance(i);
+          setTimeout(() => {
+            const top = -document.getElementsByTagName('header')[0].offsetHeight;
 
-        if (instanceId) {
-          const groupId = this.instances.findIndex(instancesGroup => {
-            return instancesGroup.body.instances.find((instance) => {
-              return instance.uuid === instanceId
-            })
-          })
-          this.selectInstance(groupId)
+            document.getElementById(instance).scrollIntoView();
+            window.scrollBy({ top });
+          }, 300);
+        } else if (group) {
+          if (i !== -1) this.selectInstance(i);
+          else {
+            const type = (this.types.includes(group)) ? group : "custom";
+
+            this.addInstancesGroup("", type);
+            this.selectInstance(this.instances.length - 1);
+            if (!this.types.includes(group)) {
+              this.customTitles[this.currentInstancesGroupsIndex] = group;
+            }
+          }
+          setTimeout(() => {
+            const button = document.getElementById('button');
+
+            button.click();
+            button.scrollIntoView(true);
+          }, 300);
         }
       });
 
@@ -372,15 +392,6 @@ export default {
           import(`@/components/modules/${type}/serviceCreate.vue`);
       }
     });
-
-    api.plans.list().then((res) =>
-      res.pool.forEach((plan) => {
-        const end = (plan.uuid.length > 8) ? '...' : '';
-        const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
-
-        this.plans.list.push({ ...plan, title });
-      })
-    );
 
     api.settings.get(["instance-billing-plan-settings"]).then((res) => {
       const key = res["instance-billing-plan-settings"];
@@ -410,6 +421,19 @@ export default {
       this.currentInstancesGroups.body.instances = [];
       this.currentInstancesGroups.sp = "";
     },
+    "currentInstancesGroups.sp"(sp_uuid) {
+      if (!sp_uuid) return;
+      api.plans.list({ sp_uuid, anonymously: false, })
+        .then((res) => {
+          res.pool.forEach((plan) => {
+            const end = (plan.uuid.length > 8) ? '...' : '';
+            const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
+
+            this.plans.list = [];
+            this.plans.list.push({ ...plan, title });
+          });
+        });
+    }
   },
 };
 </script>

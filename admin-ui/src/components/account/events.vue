@@ -8,14 +8,26 @@
         <v-btn @click="deleteEvents" class="mt-3" color="primary">delete</v-btn>
         <v-dialog v-model="addEventDialog" width="50%">
           <template v-slot:activator="{ on, attrs }">
-            <v-btn class="ml-7 mt-3" color="primary" v-on="on" v-bind="attrs">add</v-btn>
+            <v-btn class="ml-7 mt-3" color="primary" v-on="on" v-bind="attrs"
+              >add</v-btn
+            >
           </template>
           <v-card class="pa-5">
             <v-card-title class="text-center">New event:</v-card-title>
-            <v-autocomplete @input.native="userKey = $event.target.value" :items="keysWithNew" v-model="newEvent.key" />
-            <v-autocomplete @input.native="userType = $event.target.value" :items="eventsTypesWithNew"
-              v-model="newEvent.type" />
-            <json-editor :json="newEvent.data" @changeValue="newEvent.data = $event" />
+            <v-autocomplete
+              @input.native="userKey = $event.target.value"
+              :items="keysWithNew"
+              v-model="newEvent.key"
+            />
+            <v-autocomplete
+              @input.native="userType = $event.target.value"
+              :items="eventsTypesWithNew"
+              v-model="newEvent.type"
+            />
+            <json-editor
+              :json="newEvent.data"
+              @changeValue="newEvent.data = $event"
+            />
             <v-card-actions>
               <v-btn color="primary" @click="addNewEvent">Add</v-btn>
             </v-card-actions>
@@ -23,7 +35,13 @@
         </v-dialog>
       </v-col>
     </v-row>
-    <nocloud-table item-key="id" v-model="selectedEvents" :headers="headers" :items="events">
+    <nocloud-table
+      table-name="events"
+      item-key="id"
+      v-model="selectedEvents"
+      :headers="headers"
+      :items="events"
+    >
       <template v-slot:item.data="{ item }">
         <p>{{ JSON.stringify(item.data).slice(0, 40) + "..." }}</p>
       </template>

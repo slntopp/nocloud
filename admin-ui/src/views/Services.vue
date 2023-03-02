@@ -45,6 +45,7 @@
     </div>
 
     <nocloud-table
+      table-name="services"
       show-expand
       v-model="selected"
       :items="filteredServices"
