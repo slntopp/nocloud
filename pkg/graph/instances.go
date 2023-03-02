@@ -158,6 +158,20 @@ func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb
 	return nil
 }
 
+func (ctrl *InstancesController) Get(ctx context.Context, uuid string) *pb.Instance {
+	log := ctrl.log.Named("Get")
+	log.Debug("Get instance", zap.String("uuid", uuid))
+
+	var instance pb.Instance
+	_, err := ctrl.col.ReadDocument(ctx, uuid, &instance)
+	if err != nil {
+		log.Error("Failed to read Instance", zap.Error(err))
+		return nil
+	}
+
+	return &instance
+}
+
 const getGroupWithSPQuery = `
 LET instance = DOCUMENT(@instance)
 LET group = (
@@ -205,7 +219,7 @@ func (ctrl *InstancesController) GetGroup(ctx context.Context, i string) (*Group
 	return &r, nil
 }
 
-func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error {
+func (ctrl *InstancesController) CheckEdgeExist(ctx context.Context, spUuid string, i *pb.Instance) error {
 	log := ctrl.log.Named("ValidateBillingPlan").Named(i.Title)
 	if i.BillingPlan == nil {
 		log.Debug("Billing plan is not provided, skipping")
@@ -219,6 +233,16 @@ func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid
 	if !ok {
 		ctrl.log.Error("SP and Billing Plan are not binded", zap.Any("sp", spUuid), zap.Any("plan", i.BillingPlan.Uuid))
 		return errors.New("SP and Billing Plan are not binded")
+	}
+
+	return nil
+}
+
+func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error {
+	log := ctrl.log.Named("ValidateBillingPlan").Named(i.Title)
+	if i.BillingPlan == nil {
+		log.Debug("Billing plan is not provided, skipping")
+		return nil
 	}
 
 	if i.BillingPlan.Kind < 2 { // If Kind is Dynamic or Unknown
