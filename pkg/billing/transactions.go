@@ -166,7 +166,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 }
 
 func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb.GetTransactionsCountRequest) (*pb.GetTransactionsCountResponse, error) {
-	log := s.log.Named("GetTransactions")
+	log := s.log.Named("GetTransactionsCount")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
@@ -217,6 +217,8 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 		return nil, status.Error(codes.Internal, "Failed to retrieve transactions")
 	}
 	defer cursor.Close()
+
+	log.Info("transactions count", zap.Int64("count", cursor.Count()))
 
 	return &pb.GetTransactionsCountResponse{
 		Total: uint64(cursor.Count()),

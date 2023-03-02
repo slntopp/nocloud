@@ -1,5 +1,6 @@
 <template>
   <nocloud-table
+    table-name="serviceProvidersTable"
     :loading="loading"
     :items="filteredSp"
     :value="selected"
