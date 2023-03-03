@@ -287,6 +287,7 @@ export default {
       }
       headersTmp.splice(newIndex, 0, headersTmp.splice(oldIndex, 1)[0]);
       this.table = headersTmp;
+      this.saveColumnPosition(headersTmp);
       this.anIncreasingNumber += 1;
     },
     setHeadersBy(columns) {
@@ -329,6 +330,13 @@ export default {
         this.columns[value] = index;
       });
     },
+    saveTableData() {
+      const url = localStorage.getItem("url");
+
+      if (this.$route.path.includes(url)) return;
+      localStorage.removeItem("page");
+      localStorage.removeItem("itemsPerPage");
+    },
   },
   computed: {
     sortByTable() {
@@ -364,15 +372,6 @@ export default {
         this.setHeadersBy(this.columns);
       }
     }
-  },
-  destroyed() {
-    this.saveColumnPosition(this.table);
-
-    const url = localStorage.getItem("url");
-
-    if (this.$route.path.includes(url)) return;
-    localStorage.removeItem("page");
-    localStorage.removeItem("itemsPerPage");
   },
   watch: {
     filter: {
