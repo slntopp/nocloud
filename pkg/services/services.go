@@ -183,7 +183,13 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				inst_ctrl := s.ctrl.IGController().Instances()
 				old_instance := inst_ctrl.Get(ctx, instance.GetUuid())
 
-				equal := reflect.DeepEqual(instance.GetResources(), old_instance.GetResources())
+				oldRes := old_instance.GetResources()
+				newRes := instance.GetResources()
+
+				log.Debug("res", zap.Any("oldRes", oldRes))
+				log.Debug("res", zap.Any("newRes", newRes))
+
+				equal := reflect.DeepEqual(oldRes, newRes)
 				log.Debug("equal", zap.Bool("equal", equal))
 
 				if !equal {
