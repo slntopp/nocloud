@@ -18,12 +18,16 @@
     :expanded="expanded"
     @update:expanded="(nw) => $emit('update:expanded', nw)"
     :show-expand="showExpand"
-    :page.sync="page"
+    :page="serverSidePage"
+    @update:page="serverSidePage ? _ : (page = $event)"
     :items-per-page.sync="itemsPerPage"
     :show-group-by="showGroupBy"
     :group-by="groupBy"
     :custom-sort="customSort"
     :key="anIncreasingNumber"
+    :server-items-length="serverItemsLength"
+    :options="options"
+    @update:options="$emit('update:options', $event)"
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
@@ -159,6 +163,8 @@ export default {
       type: Boolean,
       default: false,
     },
+    "server-items-length": Number,
+    options: Object,
     expanded: {
       type: Array,
       default: () => [],
@@ -203,6 +209,7 @@ export default {
       type: Boolean,
       default: false,
     },
+    serverSidePage: Number,
     filter: {
       type: Array,
       default: () => [],
