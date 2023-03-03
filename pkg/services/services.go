@@ -181,10 +181,16 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				instance.BillingPlan = plan
 
 				inst_ctrl := s.ctrl.IGController().Instances()
-
 				old_instance := inst_ctrl.Get(ctx, instance.GetUuid())
 
+				oldConfig := old_instance.GetConfig()
+				newConfig := instance.GetConfig()
+
+				log.Debug("old_config", zap.Any("conf", oldConfig))
+				log.Debug("old_config", zap.Any("conf", newConfig))
+
 				equal := reflect.DeepEqual(instance.GetConfig(), old_instance.GetConfig())
+				log.Debug("equal", zap.Bool("equal", equal))
 
 				if !equal {
 					err := inst_ctrl.CheckEdgeExist(ctx, group.GetSp(), instance)
