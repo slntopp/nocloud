@@ -36,14 +36,17 @@
       </v-col>
     </v-row>
     <nocloud-table
+      show-expand
       table-name="events"
       item-key="id"
       v-model="selectedEvents"
       :headers="headers"
       :items="events"
     >
-      <template v-slot:item.data="{ item }">
-        <p>{{ JSON.stringify(item.data).slice(0, 40) + "..." }}</p>
+      <template v-slot:expanded-item="{ headers, item }">
+        <td :colspan="headers.length">
+          <json-textarea readonly :json="item.data" />
+        </td>
       </template>
     </nocloud-table>
   </v-container>
@@ -54,6 +57,7 @@ import api from "@/api";
 import nocloudTable from "@/components/table.vue";
 import jsonEditor from "@/components/JsonEditor.vue";
 import snackbar from "@/mixins/snackbar";
+import JsonTextarea from "@/components/JsonTextarea.vue";
 export default {
   name: "accounts-events",
   data: () => ({
@@ -73,7 +77,6 @@ export default {
     },
     headers: [
       { text: "ID", value: "id" },
-      { text: "Data", value: "data" },
       { text: "Key", value: "key" },
     ],
     newEvent: { type: "email", key: "", data: {} },
@@ -83,7 +86,7 @@ export default {
     selectedEvents: [],
   }),
   mixins: [snackbar],
-  components: { nocloudTable, jsonEditor },
+  components: { JsonTextarea, nocloudTable, jsonEditor },
   props: ["account"],
   mounted() {
     this.fetchEvents();
