@@ -56,7 +56,7 @@ func NewInstancesController(log *zap.Logger, db driver.Database) *InstancesContr
 	ctx := context.TODO()
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
-	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.INSTANCES_COL)
+	col := GetEnsureCollection(log, ctx, db, schema.INSTANCES_COL)
 	ig2inst := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2INST, schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL)
 
 	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst}
@@ -162,7 +162,7 @@ func (ctrl *InstancesController) Get(ctx context.Context, uuid string) *pb.Insta
 	log := ctrl.log.Named("Get")
 	log.Debug("Get instance", zap.String("uuid", uuid))
 
-	var instance = pb.Instance{}
+	var instance pb.Instance
 	_, err := ctrl.col.ReadDocument(ctx, uuid, &instance)
 	if err != nil {
 		log.Error("Failed to read Instance", zap.Error(err))
