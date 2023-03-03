@@ -120,7 +120,7 @@ export default {
 
         Promise.all(deletePromises)
           .then((res) => {
-            if (res.result) {
+            if (res.every(({ result }) => result)) {
               const ending = deletePromises.length === 1 ? "" : "s";
 
               this.$store.dispatch("services/fetch");
@@ -199,7 +199,9 @@ export default {
     },
     getState(item) {
       if (!item.state) return "UNKNOWN";
-      const state = (item.config?.os) ? item.state.state : item.state.meta?.lcm_state_str;
+      const state = (item.billingPlan.type === 'ione')
+        ? item.state.meta?.lcm_state_str
+        : item.state.state;
 
       switch (item.state.meta.state) {
         case 1:

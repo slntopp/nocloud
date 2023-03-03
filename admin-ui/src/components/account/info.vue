@@ -19,9 +19,7 @@
         :close-on-content-click="false"
       >
         <template v-slot:activator="{ on, attrs }">
-          <v-btn class="mr-2" v-bind="attrs" v-on="on">
-            Create
-          </v-btn>
+          <v-btn class="mr-2" v-bind="attrs" v-on="on"> Create </v-btn>
         </template>
         <v-card class="pa-4">
           <v-row>
@@ -46,24 +44,19 @@
           </v-row>
           <v-row>
             <v-col>
-              <v-btn @click="addKey">
-                Send
-              </v-btn>
+              <v-btn @click="addKey"> Send </v-btn>
             </v-col>
           </v-row>
         </v-card>
       </v-menu>
 
-      <v-btn
-        class="mr-8"
-        :disabled="selected.length < 1"
-        @click="deleteKeys"
-      >
+      <v-btn class="mr-8" :disabled="selected.length < 1" @click="deleteKeys">
         Delete
       </v-btn>
     </div>
 
     <nocloud-table
+      table-name="accountInfo"
       class="mt-4"
       item-key="value"
       v-model="selected"
@@ -71,11 +64,7 @@
       :headers="headers"
     />
 
-    <v-btn
-      class="mt-4 mr-2"
-      :loading="isEditLoading"
-      @click="editAccount"
-    >
+    <v-btn class="mt-4 mr-2" :loading="isEditLoading" @click="editAccount">
       Save
     </v-btn>
 
@@ -104,30 +93,30 @@
 </template>
 
 <script>
-import config from '@/config.js';
+import config from "@/config.js";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 
 export default {
-  name: 'account-info',
+  name: "account-info",
   components: { nocloudTable },
   mixins: [snackbar],
-  props: ['account'],
+  props: ["account"],
   data: () => ({
-    newKey: { title: '', value: '' },
+    newKey: { title: "", value: "" },
     headers: [
-      { text: 'Title', value: 'title' },
-      { text: 'Key', value: 'value' }
+      { text: "Title", value: "title" },
+      { text: "Key", value: "value" },
     ],
-    generalRule: [v => !!v || 'Required field'],
+    generalRule: [(v) => !!v || "Required field"],
     navTitles: config.navTitles ?? {},
-    uuid:'',
-    title: '',
+    uuid: "",
+    title: "",
     keys: [],
     selected: [],
     isVisible: false,
-    isEditLoading: false
+    isEditLoading: false,
   }),
   methods: {
     navTitle(title) {
@@ -140,17 +129,13 @@ export default {
     addKey() {
       this.keys.push(this.newKey);
       this.isVisible = false;
-      this.newKey = { title: '', value: '' };
+      this.newKey = { title: "", value: "" };
     },
     deleteKeys() {
       if (this.selected.length < 1) return;
-      const arr = this.selected.map(
-        (el) => el.value
-      );
+      const arr = this.selected.map((el) => el.value);
 
-      this.keys = this.keys.filter((el) =>
-        !arr.includes(el.value)
-      );
+      this.keys = this.keys.filter((el) => !arr.includes(el.value));
       this.selected = [];
     },
     editAccount() {
@@ -158,14 +143,15 @@ export default {
       newAccount.data.ssh_keys = this.keys;
 
       this.isEditLoading = true;
-      api.accounts.update(this.account.uuid, newAccount)
+      api.accounts
+        .update(this.account.uuid, newAccount)
         .then(() => {
           this.showSnackbarSuccess({
-            message: 'Account edited successfully'
+            message: "Account edited successfully",
           });
 
           setTimeout(() => {
-            this.$router.push({ name: 'Accounts' });
+            this.$router.push({ name: "Accounts" });
           }, 1500);
         })
         .catch((err) => {
@@ -176,23 +162,26 @@ export default {
         });
     },
     loginHandler() {
-      this.$store.dispatch('auth/loginToApp', { uuid: this.account.uuid, type: 'whmcs' })
+      this.$store
+        .dispatch("auth/loginToApp", { uuid: this.account.uuid, type: "whmcs" })
         .then(({ token }) => {
-          api.settings.get(['app']).then((res) => {
-            const url = JSON.parse(res['app']).url;
+          api.settings.get(["app"]).then((res) => {
+            const url = JSON.parse(res["app"]).url;
             const win = window.open(url);
 
-            setTimeout(() => { win.postMessage(token, url) }, 100);
-          })
-        })
-    }
+            setTimeout(() => {
+              win.postMessage(token, url);
+            }, 100);
+          });
+        });
+    },
   },
   mounted() {
     this.title = this.account.title;
-    this.uuid = this.account.uuid
+    this.uuid = this.account.uuid;
     this.keys = this.account.data?.ssh_keys || [];
-  }
-}
+  },
+};
 </script>
 
 <style scoped lang="scss">

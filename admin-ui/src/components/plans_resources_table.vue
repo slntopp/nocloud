@@ -1,6 +1,7 @@
 <template>
   <div class="pa-4">
     <nocloud-table
+      table-name="plansResources"
       item-key="id"
       v-model="selected"
       :show-expand="true"
@@ -18,7 +19,9 @@
             Create
           </v-btn>
           <confirm-dialog @confirm="removeConfig">
-            <v-btn color="background-light" :disabled="selected.length < 1">Delete</v-btn>
+            <v-btn color="background-light" :disabled="selected.length < 1"
+              >Delete</v-btn
+            >
           </confirm-dialog>
         </v-toolbar>
       </template>
@@ -36,7 +39,7 @@
           type="number"
           :value="item.price"
           :rules="generalRule"
-          @change="(value) => changeResource('price', value, item.id)"
+          @input="(value) => changeResource('price', value, item.id)"
         />
       </template>
       <template v-slot:[`item.period`]="{ item }">
@@ -47,13 +50,14 @@
       </template>
       <template v-slot:[`item.kind`]="{ item }">
         <v-radio-group
-          row mandatory
+          row
+          mandatory
           :value="item.kind"
           @change="(value) => changeResource('kind', value, item.id)"
         >
           <v-radio
             v-for="(kind, i) of kinds"
-            :style="{ marginRight: (i === kinds.length - 1) ? 0 : 16 }"
+            :style="{ marginRight: i === kinds.length - 1 ? 0 : 16 }"
             :key="kind"
             :value="kind"
             :label="kind.toLowerCase()"
@@ -86,82 +90,83 @@
 </template>
 
 <script setup>
-import { ref, toRefs } from 'vue';
-import nocloudTable from '@/components/table.vue';
-import dateField from '@/components/date.vue';
-import confirmDialog from '@/components/confirmDialog.vue';
+import { ref, toRefs } from "vue";
+import nocloudTable from "@/components/table.vue";
+import dateField from "@/components/date.vue";
+import confirmDialog from "@/components/confirmDialog.vue";
 
 const props = defineProps({
-  resources: { type: Array, required: true }
+  resources: { type: Array, required: true },
 });
-const emits = defineEmits(['change:resource']);
+const emits = defineEmits(["change:resource"]);
 const { resources } = toRefs(props);
 
 const fullDate = ref({});
 const selected = ref([]);
 const expanded = ref([]);
-const generalRule = [v => !!v || 'This field is required!'];
-const kinds = ['POSTPAID', 'PREPAID'];
+const generalRule = [(v) => !!v || "This field is required!"];
+const kinds = ["POSTPAID", "PREPAID"];
 
 const states = [
-  'INIT',
-  'UNKNOWN',
-  'STOPPED',
-  'RUNNING',
-  'FAILURE' ,
-  'DELETED',
-  'SUSPENDED',
-  'OPERATION'
+  "INIT",
+  "UNKNOWN",
+  "STOPPED",
+  "RUNNING",
+  "FAILURE",
+  "DELETED",
+  "SUSPENDED",
+  "OPERATION",
 ];
 const headers = [
-  { text: 'Key', value: 'key' },
-  { text: 'Price', value: 'price' },
-  { text: 'Period', value: 'period' },
-  { text: 'Kind', value: 'kind', width: 228 }
+  { text: "Key", value: "key" },
+  { text: "Price", value: "price" },
+  { text: "Period", value: "period" },
+  { text: "Kind", value: "kind", width: 228 },
 ];
 
 function changeDate({ value }, id) {
   fullDate.value[id] = value;
-  emits("change:resource", { key: 'date', value, id });
+  emits("change:resource", { key: "date", value, id });
 }
 
 function changeResource(key, value, id) {
-  emits('change:resource', { key, value, id });
+  console.log(value);
+  emits("change:resource", { key, value, id });
 }
 
 function addConfig() {
   const value = [...resources.value];
 
   value.push({
-    key: '',
-    kind: 'POSTPAID',
+    key: "",
+    kind: "POSTPAID",
     price: 0,
     period: 0,
     except: false,
     on: [],
-    id: Math.random().toString(16).slice(2)
+    id: Math.random().toString(16).slice(2),
   });
-  changeResource('resources', value);
+  changeResource("resources", value);
 }
 
 function removeConfig() {
-  const value = resources.value.filter(({ id }) =>
-    !selected.value.find((el) => el.id === id)
+  const value = resources.value.filter(
+    ({ id }) => !selected.value.find((el) => el.id === id)
   );
-  changeResource('resources', value);
+  changeResource("resources", value);
 }
 
 resources.value.forEach(({ period, id }) => {
   const date = new Date(period * 1000);
-  const time = date.toUTCString().split(' ');
+  const time = date.toUTCString().split(" ");
 
   fullDate.value[id] = {
     day: `${date.getUTCDate() - 1}`,
     month: `${date.getUTCMonth()}`,
     year: `${date.getUTCFullYear() - 1970}`,
-    quarter: '0',
-    week: '0',
-    time: time.at(-2)
+    quarter: "0",
+    week: "0",
+    time: time.at(-2),
   };
 });
 </script>

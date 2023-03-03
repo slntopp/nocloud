@@ -115,17 +115,15 @@
       </v-expansion-panels>
     </v-row>
 
-    <v-dialog v-model="changeIGDialog">
-      <v-card class="pa-10 ma-auto" color="background-light" width="50%">
-        <v-form ref="addServiceCard">
-          <v-card-title>Move service</v-card-title>
-          <v-select :rules="requiredRule" v-model="selectedService" item-text="title" item-value="uuid" label="service"
-            :items="allAvailableServices" />
-          <v-card-actions class="d-flex justify-center">
-            <v-btn @click="changeIGDialog = false">Close</v-btn>
-            <v-btn class="ml-5" @click="moveInstanceGroup">Accert</v-btn>
-          </v-card-actions>
-        </v-form>
+    <v-dialog style="box-shadow:none" v-model="changeIGDialog">
+      <v-card class="ma-auto pa-5" width="40%">
+        <v-card-title>Move service</v-card-title>
+        <v-select :rules="requiredRule" v-model="selectedService" item-text="title" item-value="uuid" label="service"
+          :items="allAvailableServices" />
+        <v-card-actions class="d-flex justify-center">
+          <v-btn @click="changeIGDialog = false">Close</v-btn>
+          <v-btn class="ml-5" @click="moveInstanceGroup">Accert</v-btn>
+        </v-card-actions>
       </v-card>
     </v-dialog>
 
@@ -186,8 +184,8 @@ export default {
     changeIGDialog: false,
     selectedService: null,
     igUUID: null,
-    
-    requiredRule:[(val)=>!!val]
+
+    requiredRule: [(val) => !!val]
   }),
   computed: {
     servicesProviders() {
@@ -279,8 +277,8 @@ export default {
       return this.templates[type] ?? this.templates.custom;
     },
     moveInstanceGroup() {
-      if(!this.$refs.addServiceCard.validate()){
-        return 
+      if (!this.$refs.addServiceCard.validate()) {
+        return
       }
 
       api.instanceGroupService.move(this.igUUID, this.selectedService).then(() => {
