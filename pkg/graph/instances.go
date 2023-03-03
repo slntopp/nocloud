@@ -162,14 +162,14 @@ func (ctrl *InstancesController) Get(ctx context.Context, uuid string) *pb.Insta
 	log := ctrl.log.Named("Get")
 	log.Debug("Get instance", zap.String("uuid", uuid))
 
-	var instance Instance
+	var instance = pb.Instance{}
 	_, err := ctrl.col.ReadDocument(ctx, uuid, &instance)
 	if err != nil {
 		log.Error("Failed to read Instance", zap.Error(err))
 		return nil
 	}
 
-	return instance.Instance
+	return &instance
 }
 
 const getGroupWithSPQuery = `
