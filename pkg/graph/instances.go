@@ -37,8 +37,8 @@ const (
 )
 
 type Instance struct {
-	driver.DocumentMeta
 	*pb.Instance
+	driver.DocumentMeta
 }
 
 type InstancesController struct {
@@ -158,18 +158,22 @@ func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb
 	return nil
 }
 
-func (ctrl *InstancesController) Get(ctx context.Context, uuid string) *pb.Instance {
-	log := ctrl.log.Named("Get")
-	log.Debug("Get instance", zap.String("uuid", uuid))
-
-	var instance pb.Instance
-	_, err := ctrl.col.ReadDocument(ctx, uuid, &instance)
+func (ctrl *InstancesController) Get(ctx context.Context, uuid string) (*Instance, error) {
+	ctrl.log.Debug("Getting Instance", zap.Any("sp", uuid))
+	var inst pb.Instance
+	query := `RETURN DOCUMENT(@inst)`
+	c, err := ctrl.col.Database().Query(ctx, query, map[string]interface{}{
+		"inst": driver.NewDocumentID(schema.INSTANCES_COL, uuid),
+	})
 	if err != nil {
-		log.Error("Failed to read Instance", zap.Error(err))
-		return nil
+		ctrl.log.Debug("Error reading document(Instance)", zap.Error(err))
+		return nil, err
 	}
+	defer c.Close()
 
-	return &instance
+	meta, err := c.ReadDocument(ctx, &inst)
+	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("isnt", &inst))
+	return &Instance{&inst, meta}, err
 }
 
 const getGroupWithSPQuery = `

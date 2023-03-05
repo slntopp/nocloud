@@ -181,7 +181,19 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				instance.BillingPlan = plan
 
 				inst_ctrl := s.ctrl.IGController().Instances()
-				old_instance := inst_ctrl.Get(ctx, instance.GetUuid())
+				old_instance, err := inst_ctrl.Get(ctx, instance.GetUuid())
+
+				if err != nil {
+					response.Result = false
+					log.Error("Inst controller err", zap.String("err", err.Error()))
+					terr := pb.TestConfigError{
+						Error:         err.Error(),
+						Instance:      instance.Title,
+						InstanceGroup: group.Title,
+					}
+					response.Errors = append(response.Errors, &terr)
+					continue
+				}
 
 				oldRes := old_instance.GetResources()
 				newRes := instance.GetResources()
