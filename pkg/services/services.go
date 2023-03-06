@@ -195,14 +195,18 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 					continue
 				}
 
-				oldRes := old_instance.GetResources()
-				newRes := instance.GetResources()
+				var equal = false
 
-				log.Debug("res", zap.Any("oldRes", oldRes))
-				log.Debug("res", zap.Any("newRes", newRes))
+				if old_instance != nil {
+					oldRes := old_instance.GetResources()
+					newRes := instance.GetResources()
 
-				equal := reflect.DeepEqual(oldRes, newRes)
-				log.Debug("equal", zap.Bool("equal", equal))
+					log.Debug("res", zap.Any("oldRes", oldRes))
+					log.Debug("res", zap.Any("newRes", newRes))
+
+					equal = reflect.DeepEqual(oldRes, newRes)
+					log.Debug("equal", zap.Bool("equal", equal))
+				}
 
 				if !equal {
 					err := inst_ctrl.CheckEdgeExist(ctx, group.GetSp(), instance)

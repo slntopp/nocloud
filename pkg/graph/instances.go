@@ -160,7 +160,7 @@ func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb
 
 func (ctrl *InstancesController) Get(ctx context.Context, uuid string) (*Instance, error) {
 	ctrl.log.Debug("Getting Instance", zap.Any("sp", uuid))
-	var inst pb.Instance
+	var inst *pb.Instance
 	query := `RETURN DOCUMENT(@inst)`
 	c, err := ctrl.col.Database().Query(ctx, query, map[string]interface{}{
 		"inst": driver.NewDocumentID(schema.INSTANCES_COL, uuid),
@@ -173,7 +173,12 @@ func (ctrl *InstancesController) Get(ctx context.Context, uuid string) (*Instanc
 
 	meta, err := c.ReadDocument(ctx, &inst)
 	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("isnt", &inst))
-	return &Instance{&inst, meta}, err
+
+	if inst == nil {
+		return nil, err
+	}
+
+	return &Instance{inst, meta}, err
 }
 
 const getGroupWithSPQuery = `
