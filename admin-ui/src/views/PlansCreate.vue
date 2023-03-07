@@ -9,7 +9,7 @@
 
     <v-form v-model="isValid" ref="form">
       <v-row>
-        <v-col :cols="(viewport > 1600) ? 6 : 12">
+        <v-col :cols="viewport > 1600 ? 6 : 12">
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Price model type</v-subheader>
@@ -98,7 +98,7 @@
         <v-col />
         <v-divider />
 
-        <v-col :cols="(viewport > 2200) ? 6 : 12">
+        <v-col :cols="viewport > 2200 ? 6 : 12">
           <component
             v-if="!['ovh vps', 'ovh dedicated', 'goget'].includes(plan.type)"
             :is="template"
@@ -112,11 +112,7 @@
 
       <v-row>
         <v-col>
-          <v-btn
-            class="mr-2"
-            v-if="isEdit"
-            @click="isDialogVisible = true"
-          >
+          <v-btn class="mr-2" v-if="isEdit" @click="isDialogVisible = true">
             Save
           </v-btn>
           <v-btn
@@ -150,8 +146,13 @@
 
     <v-dialog :max-width="600" v-model="isDialogVisible">
       <v-card color="background-light">
-        <v-card-title>Do you really want to change your current price model?</v-card-title>
-        <v-card-subtitle>You can also create a new price model based on the current one.</v-card-subtitle>
+        <v-card-title
+          >Do you really want to change your current price model?</v-card-title
+        >
+        <v-card-subtitle
+          >You can also create a new price model based on the current
+          one.</v-card-subtitle
+        >
         <v-card-actions>
           <v-btn class="mr-2" :loading="isLoading" @click="tryToSend('create')">
             Create
@@ -199,6 +200,7 @@ import {
   readJSONFile,
   readYAMLFile,
   downloadYAMLFile,
+  getSecondsByDays,
 } from "@/functions.js";
 
 export default {
@@ -232,16 +234,25 @@ export default {
   }),
   methods: {
     changeConfig({ key, value, id }, type) {
-      try { value = JSON.parse(value) }
-      catch { value }
+      try {
+        value = JSON.parse(value);
+      } catch {
+        value;
+      }
 
-      const configs = (type === "resource") ? this.plan.resources : Object.values(this.plan.products);
+      const configs =
+        type === "resource"
+          ? this.plan.resources
+          : Object.values(this.plan.products);
       const product = configs.find((el) => el.id === id);
 
       switch (key) {
         case "key":
           if (type === "product") {
-            const [oldKey = ''] = Object.entries(this.plan.products).find(([, el]) => el.id === id) ?? [];
+            const [oldKey = ""] =
+              Object.entries(this.plan.products).find(
+                ([, el]) => el.id === id
+              ) ?? [];
 
             delete this.plan.products[oldKey];
             this.plan.products[value] = product;
@@ -279,21 +290,20 @@ export default {
         this.showSnackbarError({ message });
         return;
       }
-      if (action === 'create') delete this.plan.uuid;
-      if (this.plan.type === 'custom') {
+      if (action === "create") delete this.plan.uuid;
+      if (this.plan.type === "custom") {
         this.plan.type = this.customTitle;
       }
 
       function checkName({ title, uuid }, obj, num = 2) {
         const value = obj.find((el) => el.title === title && el.uuid !== uuid);
-        const oldTitle = title.split(' ');
+        const oldTitle = title.split(" ");
 
         if (oldTitle.length > 1 && num !== 2) {
           oldTitle[oldTitle.length - 1] = num;
-        }
-        else oldTitle.push(num);
+        } else oldTitle.push(num);
 
-        const plan = { title: oldTitle.join(' '), uuid }
+        const plan = { title: oldTitle.join(" "), uuid };
 
         if (value) return checkName(plan, obj, num + 1);
         else return title;
@@ -303,26 +313,29 @@ export default {
       this.plan.title = checkName(this.plan, this.plans);
 
       const id = this.$route.params?.planId;
-      const request = (action === 'edit')
-        ? api.plans.update(id, this.plan)
-        : api.plans.create(this.plan);
+      const request =
+        action === "edit"
+          ? api.plans.update(id, this.plan)
+          : api.plans.create(this.plan);
 
-      request.then(() => {
-        this.showSnackbarSuccess({
-          message: (action === 'edit')
-            ? "Price model edited successfully"
-            : "Price model created successfully",
+      request
+        .then(() => {
+          this.showSnackbarSuccess({
+            message:
+              action === "edit"
+                ? "Price model edited successfully"
+                : "Price model created successfully",
+          });
+          setTimeout(() => {
+            this.$router.push({ name: "Plans" });
+          }, 100);
+        })
+        .catch((err) => {
+          this.showSnackbarError({ message: err });
+        })
+        .finally(() => {
+          this.isLoading = false;
         });
-        setTimeout(() => {
-          this.$router.push({ name: "Plans" });
-        }, 100);
-      })
-      .catch((err) => {
-        this.showSnackbarError({ message: err });
-      })
-      .finally(() => {
-        this.isLoading = false;
-      });
     },
     checkPeriods(periods) {
       const wrongPeriod = periods.find((p) => p.period === 0);
@@ -347,26 +360,27 @@ export default {
       }
     },
     setPeriod(date, id) {
+      console.log("set period", date, id);
       const period = this.getTimestamp(date);
       const resource = this.plan.resources.find((el) => el.id === id);
-      const product = Object.values(this.plan.products).find((el) => el.id === id);
+      const product = Object.values(this.plan.products).find(
+        (el) => el.id === id
+      );
 
       if (this.plan.kind === "DYNAMIC") this.plan.products = {};
       if (resource) resource.period = period;
       else if (product) product.period = period;
     },
     getTimestamp({ day, month, year, quarter, week, time }) {
-      year = +year + 1970;
-      month = +month + quarter * 3 + 1;
-      day = +day + week * 7 + 1;
+      let seconds = 0;
 
-      if (`${day}`.length < 2) day = "0" + day;
-      if (`${month}`.length < 2) month = "0" + month;
-      let seconds = Date.parse(`${year}-${month}-${day}T${time}Z`) / 1000;
-
-      if (month > 1) {
-        seconds -= 60 * 60 * 24 * (month - 1);
-      }
+      seconds += getSecondsByDays(30 * month);
+      seconds += getSecondsByDays(30 * 3 * quarter);
+      seconds += getSecondsByDays(7 * week);
+      seconds += getSecondsByDays(365 * year);
+      seconds += getSecondsByDays(day);
+      seconds += new Date("1970-01-01T" + time + "Z").getTime() / 1000;
+      console.log(seconds);
 
       return seconds;
     },
@@ -374,7 +388,7 @@ export default {
       if (Object.keys(item).length > 0) {
         if (!this.types.includes(item.type)) {
           this.customTitle = item.type;
-          item.type = 'custom';
+          item.type = "custom";
         }
 
         this.plan = item;
@@ -403,7 +417,14 @@ export default {
       );
     },
     setPlan(res) {
-      const requiredKeys = ["resources", "products", "title", "public", "type", "kind"];
+      const requiredKeys = [
+        "resources",
+        "products",
+        "title",
+        "public",
+        "type",
+        "kind",
+      ];
 
       for (const key of requiredKeys) {
         if (res[key] === undefined) {
@@ -448,13 +469,12 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch('plans/fetch', { silent: true })
-      .catch((err) => {
-        const message = err.response?.data?.message ?? err.message ?? err;
+    this.$store.dispatch("plans/fetch", { silent: true }).catch((err) => {
+      const message = err.response?.data?.message ?? err.message ?? err;
 
-        this.showSnackbarError({ message });
-        console.error(err);
-      });
+      this.showSnackbarError({ message });
+      console.error(err);
+    });
 
     if (this.isEdit) {
       this.plan.resources = this.item.resources;
@@ -469,8 +489,8 @@ export default {
         /\.\/([A-Za-z0-9-_,\s]*)\/serviceProviders\.vue/i
       );
       if (matched && matched.length > 1) {
-        if (matched[1] === 'ovh') {
-          this.types.push('ovh vps', 'ovh dedicated');
+        if (matched[1] === "ovh") {
+          this.types.push("ovh vps", "ovh dedicated");
         } else {
           this.types.push(matched[1]);
         }
@@ -481,23 +501,23 @@ export default {
   },
   computed: {
     template() {
-      const type = (this.plan.kind === "DYNAMIC") ? "resources" : "products";
+      const type = this.plan.kind === "DYNAMIC" ? "resources" : "products";
 
       return () => import(`@/components/plans_${type}_table.vue`);
     },
     plans() {
-      return this.$store.getters['plans/all'];
+      return this.$store.getters["plans/all"];
     },
     filteredPlans() {
-      const items = this.plans.filter((plan) =>
-        plan.type === this.plan.type && plan.uuid !== this.plan.uuid
+      const items = this.plans.filter(
+        (plan) => plan.type === this.plan.type && plan.uuid !== this.plan.uuid
       );
 
       return items.map((item) => ({ text: item.title, value: item.uuid }));
     },
     viewport() {
       return document.documentElement.clientWidth;
-    }
+    },
   },
   watch: {
     "plan.kind"() {
@@ -508,7 +528,7 @@ export default {
           this.plan.resources = [];
         }
       }
-    }
+    },
   },
 };
 </script>
