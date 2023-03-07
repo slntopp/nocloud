@@ -2,14 +2,30 @@
   <v-form v-model="formValid" ref="form">
     <v-row justify="start">
       <v-col cols="6" md="4" lg="3">
-        <v-text-field label="service title" :rules="rules.req" v-model="service.title" />
+        <v-text-field
+          label="service title"
+          :rules="rules.req"
+          v-model="service.title"
+        />
       </v-col>
       <v-col cols="6" md="4" lg="3">
-        <v-select label="namespace" :rules="rules.req" :items="namespaces" :loading="namespacesLoading" item-text="title"
-          item-value="uuid" v-model="namespace" />
+        <v-select
+          label="namespace"
+          :rules="rules.req"
+          :items="namespaces"
+          :loading="namespacesLoading"
+          item-text="title"
+          item-value="uuid"
+          v-model="namespace"
+        />
       </v-col>
       <v-col cols="6" md="4" lg="3">
-        <v-text-field label="version" :rules="rules.req" v-model="service.version" readonly />
+        <v-text-field
+          label="version"
+          :rules="rules.req"
+          v-model="service.version"
+          readonly
+        />
       </v-col>
     </v-row>
 
@@ -18,9 +34,14 @@
         <v-list color="background-light">
           <v-subheader>instances groups</v-subheader>
 
-          <v-list-item v-for="(instance, index) in instances" :key="index" @click="() => selectInstance(index)" :class="{
-            'v-list-item--active': index == currentInstancesGroupsIndex,
-          }">
+          <v-list-item
+            v-for="(instance, index) in instances"
+            :key="index"
+            @click="() => selectInstance(index)"
+            :class="{
+              'v-list-item--active': index == currentInstancesGroupsIndex,
+            }"
+          >
             <v-list-item-icon>
               <v-icon>mdi-playlist-star</v-icon>
             </v-list-item-icon>
@@ -40,22 +61,49 @@
             </v-list-item-content>
           </v-list-item>
         </v-list>
-
+        <div class="btns__wrapper d-flex justify-space-around mt-4">
+          <v-select
+            class="mr-5"
+            dense
+            :items="fileTypes"
+            v-model="selectedFileType"
+          />
+          <v-btn class="mr-3" @click="downloadFile">Download</v-btn>
+          <upload-file-button
+            @file="uploadFile"
+            :accept="selectedFileType.toLowerCase()"
+            >Upload</upload-file-button
+          >
+        </div>
         <div class="btns__wrapper d-flex justify-end mt-4">
           <router-link :to="{ name: 'Services' }" style="text-decoration: none">
             <v-btn>cancel</v-btn>
           </router-link>
-          <v-btn class="ml-2" @click="downloadJSON"> download </v-btn>
           <v-btn class="ml-2" :loading="isLoading" @click="createService">
             Save
           </v-btn>
         </div>
       </v-col>
       <v-col cols="8" md="8" lg="8">
-        <v-card  v-if="currentInstancesGroupsIndex != -1" color="background-light" elevation="0" class="pa-4"
-          :key="currentInstancesGroups.title">
-          <v-btn class="mb-4" @click="() => removeInstance(currentInstancesGroupsIndex)">Remove</v-btn>
-          <v-menu bottom offset-y transition="slide-y-transition" v-model="isVisible" :close-on-content-click="false">
+        <v-card
+          v-if="currentInstancesGroupsIndex != -1"
+          color="background-light"
+          elevation="0"
+          class="pa-4"
+          :key="currentInstancesGroups.title"
+        >
+          <v-btn
+            class="mb-4"
+            @click="() => removeInstance(currentInstancesGroupsIndex)"
+            >Remove</v-btn
+          >
+          <v-menu
+            bottom
+            offset-y
+            transition="slide-y-transition"
+            v-model="isVisible"
+            :close-on-content-click="false"
+          >
             <template v-slot:activator="{ on, attrs }">
               <v-btn class="mx-4 mb-4" v-on="on" v-bind="attrs">
                 apply price model
@@ -64,29 +112,68 @@
             <v-card>
               <v-card-title>Apply price model to group</v-card-title>
               <v-card-actions class="d-flex flex-column align-end">
-                <v-select dense label="price model" style="width: 200px" item-text="title" item-value="uuid"
-                  v-model="currentInstancesGroups.plan" :items="filteredPlans" @change="setProducts" />
-                <v-select dense label="product" style="width: 200px" v-model="currentInstancesGroups.product"
-                  v-if="plans.products.length > 0" :items="plans.products" />
+                <v-select
+                  dense
+                  label="price model"
+                  style="width: 200px"
+                  item-text="title"
+                  item-value="uuid"
+                  v-model="currentInstancesGroups.plan"
+                  :items="filteredPlans"
+                  @change="setProducts"
+                />
+                <v-select
+                  dense
+                  label="product"
+                  style="width: 200px"
+                  v-model="currentInstancesGroups.product"
+                  v-if="plans.products.length > 0"
+                  :items="plans.products"
+                />
                 <v-btn @click="applyGroup">apply</v-btn>
               </v-card-actions>
             </v-card>
           </v-menu>
 
-          <v-text-field label="instances group title" v-model="instances[currentInstancesGroupsIndex].title"
-            :rules="rules.req" @change="(value) => (currentInstancesGroups.title = value)" />
+          <v-text-field
+            label="instances group title"
+            v-model="instances[currentInstancesGroupsIndex].title"
+            :rules="rules.req"
+            @change="(value) => (currentInstancesGroups.title = value)"
+          />
 
-          <v-select label="type" v-model="currentInstancesGroups.body.type" :items="types" />
-          <v-text-field label="Type name" v-if="currentInstancesGroups.body.type === 'custom'"
-            v-model="customTitles[currentInstancesGroupsIndex]" :rules="rules.req" />
+          <v-select
+            label="type"
+            v-model="currentInstancesGroups.body.type"
+            :items="types"
+          />
+          <v-text-field
+            label="Type name"
+            v-if="currentInstancesGroups.body.type === 'custom'"
+            v-model="customTitles[currentInstancesGroupsIndex]"
+            :rules="rules.req"
+          />
 
-          <v-select label="service provider" item-value="uuid" item-text="title" v-model="currentInstancesGroups.sp"
-            :items="servicesProviders" :rules="rules.req" />
+          <v-select
+            label="service provider"
+            item-value="uuid"
+            item-text="title"
+            v-model="currentInstancesGroups.sp"
+            :items="servicesProviders"
+            :rules="rules.req"
+          />
 
-          <component :is="templates[currentInstancesGroups.body.type] ?? templates.custom"
+          <component
+            :is="
+              templates[currentInstancesGroups.body.type] ?? templates.custom
+            "
             :instances-group="JSON.stringify(currentInstancesGroups)"
-            :plans="{ list: plans.list, products: plans.products }" :planRules="planRules" :meta="meta"
-            @update:instances-group="receiveObject" @changeMeta="(value) => meta = value" />
+            :plans="{ list: plans.list, products: plans.products }"
+            :planRules="planRules"
+            :meta="meta"
+            @update:instances-group="receiveObject"
+            @changeMeta="(value) => (meta = value)"
+          />
         </v-card>
 
         <v-card v-else color="background-light" elevation="0" class="pa-4">
@@ -95,14 +182,23 @@
       </v-col>
     </v-row>
 
-    <v-snackbar v-model="snackbar.visibility" :timeout="snackbar.timeout" :color="snackbar.color">
+    <v-snackbar
+      v-model="snackbar.visibility"
+      :timeout="snackbar.timeout"
+      :color="snackbar.color"
+    >
       {{ snackbar.message }}
       <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
         <router-link :to="snackbar.route"> Look up. </router-link>
       </template>
 
       <template v-slot:action="{ attrs }">
-        <v-btn :color="snackbar.buttonColor" text v-bind="attrs" @click="snackbar.visibility = false">
+        <v-btn
+          :color="snackbar.buttonColor"
+          text
+          v-bind="attrs"
+          @click="snackbar.visibility = false"
+        >
           Close
         </v-btn>
       </template>
@@ -114,10 +210,17 @@
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 
-import { downloadJSONFile } from "@/functions.js";
+import {
+  downloadJSONFile,
+  downloadYAMLFile,
+  readJSONFile,
+  readYAMLFile,
+} from "@/functions.js";
+import UploadFileButton from "@/components/uploadFileButton.vue";
 
 export default {
   name: "service-create",
+  components: { UploadFileButton },
   data: () => ({
     formValid: false,
     rules: {
@@ -151,6 +254,9 @@ export default {
     isVisible: false,
     isLoading: false,
     plansVisible: false,
+
+    fileTypes: ["JSON", "YAML"],
+    selectedFileType: "JSON",
   }),
   mixins: [snackbar],
   methods: {
@@ -225,25 +331,37 @@ export default {
 
       data.instancesGroups = [];
       instances.forEach((inst, i) => {
-        if (inst.type === 'custom') {
+        if (inst.type === "custom") {
           inst.body.type = this.customTitles[i];
         }
 
         inst.body.resources.ips_public = inst.body.instances?.length || 0;
-        data.instancesGroups.push({ ...inst.body, title: inst.title, sp: inst.sp });
-        // console.log(data.instances_groups[inst.title])
-        // console.log(data.instances_groups)
-        // let ips = 0;
-        // Object.keys(data.instances_groups[inst.title].instances).forEach(key => {
-        // 	const item = data.instances_groups[inst.title].instances[key];
-        // 	ips += item.resources.ips_public;
-        // })
-        // data.instances_groups[inst.title].resources.ips_public = ips;
+        data.instancesGroups.push({
+          ...inst.body,
+          title: inst.title,
+          sp: inst.sp,
+        });
       });
       return { namespace: this.namespace, service: data };
     },
+    setService(data) {
+      this.instances = [];
+      data.service.instancesGroups.forEach((inst, i) => {
+        if (inst.type === "custom") {
+          this.customTitles[i] = inst.body.type;
+        }
+
+        this.instances.push({
+          body: { ...inst },
+          title: inst.title,
+          sp: inst.sp,
+        });
+      });
+      this.namespace = data.namespace;
+      this.service = data.service;
+    },
     createService() {
-      const action = (this.$route.params.serviceId) ? 'edit' : 'create';
+      const action = this.$route.params.serviceId ? "edit" : "create";
       const data = this.getService();
 
       if (!this.formValid) {
@@ -252,18 +370,21 @@ export default {
       }
 
       this.isLoading = true;
-      api.services.testConfig(data)
+      api.services
+        .testConfig(data)
         .then((res) => {
-          if (res.result) return (action === 'create')
-            ? api.services._create(data)
-            : api.services._update(data.service);
+          if (res.result)
+            return action === "create"
+              ? api.services._create(data)
+              : api.services._update(data.service);
           else throw res;
         })
         .then(() => {
           this.showSnackbarSuccess({
-            message: (action === 'create')
-              ? "Service created successfully"
-              : "Service updated successfully"
+            message:
+              action === "create"
+                ? "Service created successfully"
+                : "Service updated successfully",
           });
           this.$router.push({ name: "Services" });
         })
@@ -290,20 +411,35 @@ export default {
         this.plans.products.push(title);
       });
     },
-    downloadJSON() {
+    downloadFile() {
       const data = this.getService();
       const name = data.service.title
         ? (data.service.title + " service").replaceAll(" ", "_")
         : "unknown_service";
 
-      downloadJSONFile(data, name);
+      if (this.selectedFileType === "JSON") {
+        downloadJSONFile(data, name);
+      } else if (this.selectedFileType === "YAML") {
+        downloadYAMLFile(data, name);
+      }
+    },
+    async uploadFile(file) {
+      let data = {};
+      if (this.selectedFileType === "JSON") {
+        data = await readJSONFile(file);
+      } else if (this.selectedFileType === "YAML") {
+        data = await readYAMLFile(file);
+      }
+      console.log(data)
+
+      this.setService(data);
     },
   },
   computed: {
     currentType() {
       const { type } = this.currentInstancesGroups.body;
 
-      if (type === 'custom') {
+      if (type === "custom") {
         return this.customTitles[this.currentInstancesGroupsIndex];
       }
       return type;
@@ -320,60 +456,65 @@ export default {
       );
     },
     filteredPlans() {
-      return this.plans.list.filter((plan) => plan.type.includes(this.currentType));
+      return this.plans.list.filter((plan) =>
+        plan.type.includes(this.currentType)
+      );
     },
     planRules() {
       return this.plansVisible ? this.rules.req : [];
     },
   },
   created() {
-    this.$store.dispatch("services/fetch")
-      .then(({ pool }) => {
-        const service = pool.find((el) => el.uuid === this.$route.params.serviceId);
-        const group = this.$route.params.type;
-        const i = service?.instancesGroups.findIndex(({ type }) => type === group);
-        const { instance } = this.$route.params;
+    this.$store.dispatch("services/fetch").then(({ pool }) => {
+      const service = pool.find(
+        (el) => el.uuid === this.$route.params.serviceId
+      );
+      const group = this.$route.params.type;
+      const i = service?.instancesGroups.findIndex(
+        ({ type }) => type === group
+      );
+      const { instance } = this.$route.params;
 
-        if (service) {
-          this.service = service;
-          this.namespace = service.access.namespace;
+      if (service) {
+        this.service = service;
+        this.namespace = service.access.namespace;
 
-          this.instances = service.instancesGroups.map((group, i) => {
-            if (!this.types.includes(group.type)) {
-              this.customTitles[i] = group.type;
-              group.type = 'custom';
-            }
-            return { title: group.title, sp: group.sp, body: group };
-          });
-        }
-
-        if (instance) {
-          this.selectInstance(i);
-          setTimeout(() => {
-            const top = -document.getElementsByTagName('header')[0].offsetHeight;
-
-            document.getElementById(instance).scrollIntoView();
-            window.scrollBy({ top });
-          }, 300);
-        } else if (group) {
-          if (i !== -1) this.selectInstance(i);
-          else {
-            const type = (this.types.includes(group)) ? group : "custom";
-
-            this.addInstancesGroup("", type);
-            this.selectInstance(this.instances.length - 1);
-            if (!this.types.includes(group)) {
-              this.customTitles[this.currentInstancesGroupsIndex] = group;
-            }
+        this.instances = service.instancesGroups.map((group, i) => {
+          if (!this.types.includes(group.type)) {
+            this.customTitles[i] = group.type;
+            group.type = "custom";
           }
-          setTimeout(() => {
-            const button = document.getElementById('button');
+          return { title: group.title, sp: group.sp, body: group };
+        });
+      }
 
-            button.click();
-            button.scrollIntoView(true);
-          }, 300);
+      if (instance) {
+        this.selectInstance(i);
+        setTimeout(() => {
+          const top = -document.getElementsByTagName("header")[0].offsetHeight;
+
+          document.getElementById(instance).scrollIntoView();
+          window.scrollBy({ top });
+        }, 300);
+      } else if (group) {
+        if (i !== -1) this.selectInstance(i);
+        else {
+          const type = this.types.includes(group) ? group : "custom";
+
+          this.addInstancesGroup("", type);
+          this.selectInstance(this.instances.length - 1);
+          if (!this.types.includes(group)) {
+            this.customTitles[this.currentInstancesGroupsIndex] = group;
+          }
         }
-      });
+        setTimeout(() => {
+          const button = document.getElementById("button");
+
+          button.click();
+          button.scrollIntoView(true);
+        }, 300);
+      }
+    });
 
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("servicesProviders/fetch", false);
@@ -423,17 +564,16 @@ export default {
     },
     "currentInstancesGroups.sp"(sp_uuid) {
       if (!sp_uuid) return;
-      api.plans.list({ sp_uuid, anonymously: false, })
-        .then((res) => {
-          res.pool.forEach((plan) => {
-            const end = (plan.uuid.length > 8) ? '...' : '';
-            const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
+      api.plans.list({ sp_uuid, anonymously: false }).then((res) => {
+        res.pool.forEach((plan) => {
+          const end = plan.uuid.length > 8 ? "..." : "";
+          const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
 
-            this.plans.list = [];
-            this.plans.list.push({ ...plan, title });
-          });
+          this.plans.list = [];
+          this.plans.list.push({ ...plan, title });
         });
-    }
+      });
+    },
   },
 };
 </script>
