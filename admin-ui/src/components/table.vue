@@ -88,23 +88,36 @@
         </v-toolbar-title>
       </v-toolbar>
     </template>
-    <template v-slot:[`footer.prepend`]>
-      <div style="width: 250px">
-        <v-select
-          multiple
-          label="Filters"
-          class="d-inline-block"
-          v-model="filter"
-          :items="headers"
-          @change="changeFiltres"
+    <template
+      v-slot:[`footer.page-text`]="{ pageStart, pageStop, itemsLength }"
+    >
+      <div class="d-flex align-center">
+        <v-dialog
+          @click:outside="changeFiltres"
+          max-width="60%"
+          v-model="settingsDialog"
+          width="500"
         >
-          <template v-slot:selection="{ item, index }">
-            <v-chip small v-if="index === 0">{{ item.text }}</v-chip>
-            <span v-if="index === 1" class="grey--text text-caption">
-              (+{{ filter.length - 1 }} others)
-            </span>
+          <template v-slot:activator="{ on, attrs }">
+            <v-icon v-bind="attrs" v-on="on" size="23" class="mr-3"
+              >mdi-cog-outline</v-icon
+            >
           </template>
-        </v-select>
+          <v-card  style="overflow: hidden" max-width="100%">
+            <v-card-title>Table settings</v-card-title>
+            <v-row class="pa-5 ">
+              <v-col v-for="header in headers" :key="header.value" cols="4">
+                <v-checkbox
+                  @click.stop
+                  :label="header.text"
+                  v-model="filter"
+                  :value="header.value"
+                />
+              </v-col>
+            </v-row>
+          </v-card>
+        </v-dialog>
+        <span>{{ `${pageStart}-${pageStop} of ${itemsLength}` }}</span>
       </div>
     </template>
   </components>
@@ -246,6 +259,7 @@ export default {
       columns: {},
       filter: [],
       filtredHeaders: [],
+      settingsDialog: false,
     };
   },
   methods: {
@@ -282,7 +296,6 @@ export default {
       return id.slice(0, 8) + "...";
     },
     saveColumnPosition(headers) {
-      console.log(headers);
       if (!headers) {
         return;
       }
@@ -309,7 +322,7 @@ export default {
         newIndex--;
       }
       for (const header of originalHeaders) {
-        if(header){
+        if (header) {
           this.filtredHeaders.push(header);
         }
       }
@@ -362,6 +375,8 @@ export default {
       this.setHeadersBy(newColumns);
       this.columns = newColumns;
       this.saveColumnPosition(this.filtredHeaders);
+
+      this.settingsDialog = false;
     },
     setDefaultHeaders() {
       this.filtredHeaders.forEach(({ value }, index) => {
