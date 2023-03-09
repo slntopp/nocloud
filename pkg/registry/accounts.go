@@ -419,12 +419,6 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return res, err
 	}
 
-	eventsClient.Publish(ctx, &epb.Event{
-		Type: "email",
-		Uuid: acc.Key,
-		Key:  "account_created",
-	})
-
 	return res, nil
 }
 
