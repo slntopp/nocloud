@@ -10,7 +10,9 @@
     >
       {{ btn.title || btn.action }}
     </v-btn>
-    <v-btn :loading="isLoading" @click="deleteInstance"> Delete </v-btn>
+    <confirm-dialog @confirm="deleteInstance">
+      <v-btn :loading="isLoading"> Delete </v-btn>
+    </confirm-dialog>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -38,9 +40,11 @@
 <script>
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
+import ConfirmDialog from "@/components/confirmDialog.vue";
 
 export default {
   name: "instance-actions",
+  components: { ConfirmDialog },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
   data: () => ({ isLoading: false }),
@@ -56,9 +60,10 @@ export default {
       }
 
       this.isLoading = true;
-      api.instances.action({ uuid: this.template.uuid, action })
+      api.instances
+        .action({ uuid: this.template.uuid, action })
         .then(() => {
-          this.showSnackbarSuccess({ message: 'Done!' });
+          this.showSnackbarSuccess({ message: "Done!" });
         })
         .catch((err) => {
           const opts = {
@@ -66,19 +71,28 @@ export default {
           };
           this.showSnackbarError(opts);
         })
-        .finally(() => { this.isLoading = false });
+        .finally(() => {
+          this.isLoading = false;
+        });
     },
     openVnc() {
-      this.$router.push({ name: "Vnc", params: { instanceId: this.template.uuid } });
+      this.$router.push({
+        name: "Vnc",
+        params: { instanceId: this.template.uuid },
+      });
     },
     openDns() {
-      this.$router.push({ name: "InstanceDns", params: { instanceId: this.template.uuid } });
+      this.$router.push({
+        name: "InstanceDns",
+        params: { instanceId: this.template.uuid },
+      });
     },
     deleteInstance() {
       this.isLoading = true;
-      api.delete(`/instances/${this.template.uuid}`)
+      api
+        .delete(`/instances/${this.template.uuid}`)
         .then(() => {
-          this.showSnackbarSuccess({ message: 'Done!' })
+          this.showSnackbarSuccess({ message: "Done!" });
 
           setTimeout(() => {
             this.$router.push({ name: "Instances" });
@@ -89,7 +103,9 @@ export default {
             message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
           });
         })
-        .finally(() => { this.isLoading = false });
+        .finally(() => {
+          this.isLoading = false;
+        });
     },
   },
   computed: {
@@ -103,7 +119,7 @@ export default {
           {
             action: "vnc",
             title: "Console", //not reqired, use 'action' for a name if not found
-            disabled: this.ioneActions?.vnc
+            disabled: this.ioneActions?.vnc,
           },
         ],
         ovh: [
@@ -112,62 +128,65 @@ export default {
           { action: "suspend", disabled: this.ovhActions?.suspend },
           { action: "reboot", disabled: this.ovhActions?.reboot },
         ],
-        opensrs: [
-          { action: "dns" }
-        ]
-      }
+        opensrs: [{ action: "dns" }],
+      };
 
       return types[this.template.billingPlan?.type];
     },
     ioneActions() {
       if (!this.template?.state) return;
-      if (this.template.state.meta.state === 1) return {
-        resume: true, poweroff: true, reboot: true, suspend: true
-      }
+      if (this.template.state.meta.state === 1)
+        return {
+          resume: true,
+          poweroff: true,
+          reboot: true,
+          suspend: true,
+        };
       return {
         poweroff:
           this.template.state.meta.state === 5 ||
-          this.template.state.meta.state !== 3 &&
-          [0, 18, 20].includes(this.template.state.meta.lcm_state),
+          (this.template.state.meta.state !== 3 &&
+            [0, 18, 20].includes(this.template.state.meta.lcm_state)),
         reboot:
           this.template.state.meta.state === 5 ||
-          this.template.state.meta.state !== 3 &&
-          (this.template.state.meta.lcm_state === 18 ||
-            this.template.state.meta.lcm_state === 20) ||
+          (this.template.state.meta.state !== 3 &&
+            (this.template.state.meta.lcm_state === 18 ||
+              this.template.state.meta.lcm_state === 20)) ||
           (this.template.state.meta.lcm_state === 0 &&
             this.template.state.meta.state === 8),
         resume:
           this.template.state.meta.state === 5 ||
-          this.template.state.meta.state === 3 &&
-          ![18, 20].includes(this.template.state.meta.lcm_state),
-        suspend:
-          this.template.state.meta.state === 5,
-        vnc:
-          this.template.state.meta.state === 5
+          (this.template.state.meta.state === 3 &&
+            ![18, 20].includes(this.template.state.meta.lcm_state)),
+        suspend: this.template.state.meta.state === 5,
+        vnc: this.template.state.meta.state === 5,
       };
     },
     ovhActions() {
       if (!this.template?.state) return;
-      if (this.template.state.state === 'PENDING') return {
-        poweroff: true, reboot: true, resume: true, suspend: true
-      }
+      if (this.template.state.state === "PENDING")
+        return {
+          poweroff: true,
+          reboot: true,
+          resume: true,
+          suspend: true,
+        };
       return {
         poweroff:
-          this.template.state.state === 'SUSPENDED' ||
-          this.template.state.state !== 'RUNNING' &&
-          this.template.state.state === 'STOPPED',
+          this.template.state.state === "SUSPENDED" ||
+          (this.template.state.state !== "RUNNING" &&
+            this.template.state.state === "STOPPED"),
         reboot:
-          this.template.state.state === 'SUSPENDED' ||
-          this.template.state.meta.state === 'BUILD' ||
-          this.template.state.state === 'STOPPED',
+          this.template.state.state === "SUSPENDED" ||
+          this.template.state.meta.state === "BUILD" ||
+          this.template.state.state === "STOPPED",
         resume:
-          this.template.state.state === 'SUSPENDED' ||
-          this.template.state.state === 'RUNNING' &&
-          this.template.state.state !== 'STOPPED',
-        suspend:
-          this.template.state.state === 'SUSPENDED'
+          this.template.state.state === "SUSPENDED" ||
+          (this.template.state.state === "RUNNING" &&
+            this.template.state.state !== "STOPPED"),
+        suspend: this.template.state.state === "SUSPENDED",
       };
-    }
-  }
-}
+    },
+  },
+};
 </script>

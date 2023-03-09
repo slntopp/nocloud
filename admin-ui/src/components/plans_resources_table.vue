@@ -44,7 +44,7 @@
       </template>
       <template v-slot:[`item.period`]="{ item }">
         <date-field
-          :period="fullDate[item.id]"
+          :period="fullDates[item.id]"
           @changeDate="(value) => changeDate(value, item.id)"
         />
       </template>
@@ -94,6 +94,15 @@ import { ref, toRefs } from "vue";
 import nocloudTable from "@/components/table.vue";
 import dateField from "@/components/date.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
+import {
+  getDaysBySeconds,
+  getMonthsByDays,
+  getQuartersByDays,
+  getSecondsByDays,
+  getTimeBySeconds,
+  getWeekByDays,
+  getYearsByDays,
+} from "@/functions";
 
 const props = defineProps({
   resources: { type: Array, required: true },
@@ -101,7 +110,7 @@ const props = defineProps({
 const emits = defineEmits(["change:resource"]);
 const { resources } = toRefs(props);
 
-const fullDate = ref({});
+const fullDates = ref({});
 const selected = ref([]);
 const expanded = ref([]);
 const generalRule = [(v) => !!v || "This field is required!"];
@@ -125,12 +134,11 @@ const headers = [
 ];
 
 function changeDate({ value }, id) {
-  fullDate.value[id] = value;
+  fullDates.value[id] = value;
   emits("change:resource", { key: "date", value, id });
 }
 
 function changeResource(key, value, id) {
-  console.log(value);
   emits("change:resource", { key, value, id });
 }
 
@@ -157,16 +165,28 @@ function removeConfig() {
 }
 
 resources.value.forEach(({ period, id }) => {
-  const date = new Date(period * 1000);
-  const time = date.toUTCString().split(" ");
-
-  fullDate.value[id] = {
-    day: `${date.getUTCDate() - 1}`,
-    month: `${date.getUTCMonth()}`,
-    year: `${date.getUTCFullYear() - 1970}`,
+  console.log(period, id);
+  const fullDate = {
+    day: "0",
+    month: "0",
+    year: "0",
     quarter: "0",
     week: "0",
-    time: time.at(-2),
+    time: "00:00:00",
   };
+
+  fullDate.day = getDaysBySeconds(period);
+  period -= getSecondsByDays(fullDate.day);
+  fullDate.year = getYearsByDays(fullDate.day);
+  fullDate.day -= fullDate.year * 365;
+  fullDate.quarter = getQuartersByDays(fullDate.day);
+  fullDate.day -= fullDate.quarter * 90;
+  fullDate.month = getMonthsByDays(fullDate.day);
+  fullDate.day -= fullDate.month * 30;
+  fullDate.week = getWeekByDays(fullDate.day);
+  fullDate.day -= fullDate.week * 7;
+  fullDate.time = getTimeBySeconds(period);
+
+  fullDates.value[id] = fullDate;
 });
 </script>

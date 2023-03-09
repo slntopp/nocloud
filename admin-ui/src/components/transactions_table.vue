@@ -11,6 +11,8 @@
     :expanded.sync="expanded"
     :footer-error="fetchError"
     @input="selectTransaction"
+    :server-items-length="count"
+    @update:options="$emit('update:options', $event)"
   >
     <template v-slot:[`item.account`]="{ item }">
       {{ account(item.account) }}
@@ -112,6 +114,8 @@ export default {
   props: {
     selectTransaction: { type: Function, required: true },
     transactions: { type: Array, required: true },
+    count: { type: Number, required: true },
+    page: { type: Number, required: true },
   },
   data: () => ({
     headers: [

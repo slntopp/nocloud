@@ -76,8 +76,16 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	if req.Field != nil && req.Sort != nil {
 		subQuery := ` SORT t.%s %s`
 		field, sort := req.GetField(), req.GetSort()
-		query += fmt.Sprintf(subQuery, field, sort)
 
+		if field == "total" {
+			if sort == "asc" {
+				sort = "desc"
+			} else {
+				sort = "asc"
+			}
+		}
+
+		query += fmt.Sprintf(subQuery, field, sort)
 	}
 
 	if req.Page != nil && req.Limit != nil {

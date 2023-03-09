@@ -37,8 +37,8 @@ const (
 )
 
 type Instance struct {
-	driver.DocumentMeta
 	*pb.Instance
+	driver.DocumentMeta
 }
 
 type InstancesController struct {
@@ -56,7 +56,7 @@ func NewInstancesController(log *zap.Logger, db driver.Database) *InstancesContr
 	ctx := context.TODO()
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
-	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.INSTANCES_COL)
+	col := GetEnsureCollection(log, ctx, db, schema.INSTANCES_COL)
 	ig2inst := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2INST, schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL)
 
 	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst}
@@ -158,6 +158,29 @@ func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb
 	return nil
 }
 
+func (ctrl *InstancesController) Get(ctx context.Context, uuid string) (*Instance, error) {
+	ctrl.log.Debug("Getting Instance", zap.Any("sp", uuid))
+	var inst *pb.Instance
+	query := `RETURN DOCUMENT(@inst)`
+	c, err := ctrl.col.Database().Query(ctx, query, map[string]interface{}{
+		"inst": driver.NewDocumentID(schema.INSTANCES_COL, uuid),
+	})
+	if err != nil {
+		ctrl.log.Debug("Error reading document(Instance)", zap.Error(err))
+		return nil, err
+	}
+	defer c.Close()
+
+	meta, err := c.ReadDocument(ctx, &inst)
+	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("isnt", &inst))
+
+	if inst == nil {
+		return nil, err
+	}
+
+	return &Instance{inst, meta}, nil
+}
+
 const getGroupWithSPQuery = `
 LET instance = DOCUMENT(@instance)
 LET group = (
@@ -205,7 +228,7 @@ func (ctrl *InstancesController) GetGroup(ctx context.Context, i string) (*Group
 	return &r, nil
 }
 
-func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error {
+func (ctrl *InstancesController) CheckEdgeExist(ctx context.Context, spUuid string, i *pb.Instance) error {
 	log := ctrl.log.Named("ValidateBillingPlan").Named(i.Title)
 	if i.BillingPlan == nil {
 		log.Debug("Billing plan is not provided, skipping")
@@ -219,6 +242,16 @@ func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid
 	if !ok {
 		ctrl.log.Error("SP and Billing Plan are not binded", zap.Any("sp", spUuid), zap.Any("plan", i.BillingPlan.Uuid))
 		return errors.New("SP and Billing Plan are not binded")
+	}
+
+	return nil
+}
+
+func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error {
+	log := ctrl.log.Named("ValidateBillingPlan").Named(i.Title)
+	if i.BillingPlan == nil {
+		log.Debug("Billing plan is not provided, skipping")
+		return nil
 	}
 
 	if i.BillingPlan.Kind < 2 { // If Kind is Dynamic or Unknown
