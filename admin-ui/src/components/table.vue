@@ -104,7 +104,7 @@
               >mdi-cog-outline</v-icon
             >
           </template>
-          <v-card style="overflow: hidden" max-width="100%">
+          <v-card color="background-light" style="overflow: hidden" max-width="100%">
             <v-card-title>Table settings</v-card-title>
             <v-row class="pa-5">
               <v-col v-for="header in headers" :key="header.value" cols="4">
