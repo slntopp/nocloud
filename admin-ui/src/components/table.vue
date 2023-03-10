@@ -28,6 +28,7 @@
     :server-items-length="serverItemsLength"
     :options="options"
     @update:options="$emit('update:options', $event)"
+    @update:items-per-page="saveItemsPerPage"
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
@@ -103,9 +104,9 @@
               >mdi-cog-outline</v-icon
             >
           </template>
-          <v-card  style="overflow: hidden" max-width="100%">
+          <v-card style="overflow: hidden" max-width="100%">
             <v-card-title>Table settings</v-card-title>
-            <v-row class="pa-5 ">
+            <v-row class="pa-5">
               <v-col v-for="header in headers" :key="header.value" cols="4">
                 <v-checkbox
                   @click.stop
@@ -397,7 +398,47 @@ export default {
 
       if (this.$route.path.includes(url)) return;
       localStorage.removeItem("page");
-      localStorage.removeItem("itemsPerPage");
+    },
+    saveItemsPerPage(val) {
+      let itemsPerPageSettings = JSON.parse(
+        localStorage.getItem("itemsPerPage")
+      );
+
+      if (!itemsPerPageSettings) {
+        itemsPerPageSettings = { [this.tableName]: val };
+      } else {
+        itemsPerPageSettings[this.tableName] = val;
+      }
+
+      localStorage.setItem(
+        "itemsPerPage",
+        JSON.stringify(itemsPerPageSettings)
+      );
+    },
+    configureColumns() {
+      if (this.tableName) {
+        const columnsString = localStorage.getItem("columns");
+
+        if (columnsString) {
+          this.columns = JSON.parse(columnsString)?.[this.tableName];
+        }
+        if (Object.keys(this.columns || {}).length === 0) {
+          this.columns = {};
+          this.setDefaultHeaders();
+          this.setDefaultFiltres();
+          this.saveColumnPosition(this.filtredHeaders);
+        } else {
+          this.setHeadersBy(this.columns);
+          this.setFilterBy(this.columns);
+        }
+      }
+    },
+    configureItemsPerPage() {
+      const storageData=localStorage.getItem("itemsPerPage")
+      if (storageData) {
+        const itemsPerPage = JSON.parse(storageData);
+        this.itemsPerPage = +itemsPerPage[this.tableName] || 15;
+      }
     },
   },
   computed: {
@@ -411,37 +452,17 @@ export default {
   mounted() {
     this.filtredHeaders = this.headers;
     const page = localStorage.getItem("page");
-    const items = localStorage.getItem("itemsPerPage");
-    if (items) this.itemsPerPage = +items;
     if (page)
       setTimeout(() => {
         this.page = +page;
       }, 100);
 
-    if (this.tableName) {
-      const columnsString = localStorage.getItem("columns");
-
-      if (columnsString) {
-        this.columns = JSON.parse(columnsString)?.[this.tableName];
-      }
-      if (Object.keys(this.columns || {}).length === 0) {
-        this.columns = {};
-        this.setDefaultHeaders();
-        this.setDefaultFiltres();
-        this.saveColumnPosition(this.filtredHeaders);
-      } else {
-        this.setHeadersBy(this.columns);
-        this.setFilterBy(this.columns);
-      }
-    }
+    this.configureItemsPerPage()
+    this.configureColumns();
   },
   watch: {
     page(value) {
       localStorage.setItem("page", value);
-      localStorage.setItem("url", this.$route.path);
-    },
-    itemsPerPage(value) {
-      localStorage.setItem("itemsPerPage", value);
       localStorage.setItem("url", this.$route.path);
     },
   },
