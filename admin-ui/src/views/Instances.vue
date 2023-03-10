@@ -89,28 +89,12 @@
       v-model="type"
       :items="types"
     />
-    <v-select
-      multiple
-      label="Filters"
-      class="d-inline-block"
-      style="width: 250px"
-      v-model="columnFilters"
-      :items="allColumnFilters"
-    >
-      <template v-slot:selection="{ item, index }">
-        <v-chip small v-if="index === 0">{{ item }}</v-chip>
-        <span v-if="index === 1" class="grey--text text-caption">
-          (+{{ columnFilters.length - 1 }} others)
-        </span>
-      </template>
-    </v-select>
 
     <instances-table
       v-model="selected"
       :type="type"
       :column="column"
       :selected="selectedFilters"
-      :filters="columnFilters"
       :get-state="getState"
       :change-filters="changeFilters"
       @getHeaders="(value) => (headers = value)"
@@ -162,44 +146,9 @@ export default {
     rules: {
       req: [(v) => !!v || "This field is required!"],
     },
-
     isDeleteLoading: false,
     selected: [],
-    headers: [],
-    columnFilters: [
-      "ID",
-      "Title",
-      "Service",
-      "Group (NameSpace)",
-      "Account",
-      "Due date",
-      "Status",
-      "Tariff",
-      "Name",
-      "Service provider",
-      "Type",
-      "Price",
-      "Period",
-      "Date",
-    ],
-    allColumnFilters: [
-      "ID",
-      "Title",
-      "Service",
-      "Group (NameSpace)",
-      "Status",
-      "UUID",
-      "Price model",
-      "Account",
-      "Email",
-      "Tariff",
-      "Price",
-      "Period",
-      "Date",
-      "Due date",
-      "Service provider",
-      "Type",
-    ],
+    headers: []
   }),
   methods: {
     deleteSelectedInstances() {
@@ -345,13 +294,7 @@ export default {
     });
 
     const icon = document.querySelector(".group-icon");
-    const filters = localStorage.getItem("filters");
-
     icon.dispatchEvent(new Event("click"));
-    if (filters) this.columnFilters = JSON.parse(filters);
-  },
-  beforeDestroy() {
-    localStorage.setItem("filters", JSON.stringify(this.columnFilters));
   },
   computed: {
     services() {

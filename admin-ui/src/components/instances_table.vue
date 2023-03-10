@@ -9,7 +9,7 @@
     :loading="isLoading"
     :footer-error="fetchError"
     @input="(value) => $emit('input', value)"
-    :filter="filters"
+    :default-filtres="defaultFiltres"
   >
     <template v-slot:[`item.id`]="{ index }">
       {{ index + 1 }}
@@ -24,7 +24,9 @@
     </template>
 
     <template v-slot:[`item.access`]="{ item }">
-      <router-link :to="{ name: 'Account', params: { accountId: getAccount(item)?.uuid } }">
+      <router-link
+        :to="{ name: 'Account', params: { accountId: getAccount(item)?.uuid } }"
+      >
         {{ getAccount(item)?.title }}
       </router-link>
     </template>
@@ -146,12 +148,27 @@ export default {
     value: { type: Array, required: true },
     type: { type: String, required: true },
     column: { type: String, required: true },
-    filters: { type: Array, required: true },
     selected: { type: Object, required: true },
     getState: { type: Function, required: true },
-    changeFilters: { type: Function, required: true },
   },
-  data: () => ({ fetchError: "" }),
+  data: () => ({
+    fetchError: "",
+    defaultFiltres: [
+      "id",
+      "title",
+      "service",
+      "access.namespace",
+      "access",
+      "dueDate",
+      "state",
+      "product",
+      "sp",
+      "type",
+      "price",
+      "period",
+      "date",
+    ],
+  }),
   methods: {
     changeIcon() {
       setTimeout(() => {
@@ -199,7 +216,6 @@ export default {
           this.fetchError = "";
           this.$emit("getHeaders", this.headers);
 
-          this.changeFilters();
           this.changeIcon();
         })
         .catch((err) => {
@@ -272,9 +288,11 @@ export default {
       }
     },
     getAccount({ access }) {
-      const { access: { namespace } } = this.namespaces.find(({ uuid }) =>
-        uuid === access.namespace) ??
-        { access: {} };
+      const {
+        access: { namespace },
+      } = this.namespaces.find(({ uuid }) => uuid === access.namespace) ?? {
+        access: {},
+      };
 
       return this.accounts.find(({ uuid }) => uuid === namespace) ?? {};
     },
@@ -312,10 +330,8 @@ export default {
       }
     },
     getPeriod(inst) {
-
       if (inst.billingPlan.kind === "STATIC") return "monthly";
       else if (inst.type === "ione") return "PayG";
-
       else if (inst.resources.period) {
         const text = inst.resources.period > 1 ? "months" : "month";
 
@@ -509,7 +525,6 @@ export default {
       });
 
       this.changeIcon();
-      this.changeFilters();
     },
   },
 };
