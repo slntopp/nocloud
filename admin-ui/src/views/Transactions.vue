@@ -109,7 +109,8 @@ export default {
       this.accounts.forEach((acc) => {
         if (acc.uuid) accounts.push(acc.uuid);
       });
-      this.$store.dispatch("services/fetch");
+
+      this.fetchTransactions();
     },
     setTransactions(dates, labels, values) {
       const min = Math.min(...dates);
@@ -172,7 +173,10 @@ export default {
     },
     updateOptions(options) {
       this.$store
-        .dispatch("transactions/changeFiltres", options)
+        .dispatch("transactions/changeFiltres", {
+          options,
+          data: this.transactionData,
+        })
         .then(() => {
           this.fetchError = "";
         })
@@ -186,39 +190,39 @@ export default {
           }
         });
     },
+    initTransactions() {
+      this.$store.dispatch("transactions/init", this.transactionData);
+    },
+    fetchTransactions() {
+      this.$store.dispatch("transactions/fetch", this.transactionData);
+    },
+    changeTransactionData() {
+      this.$store.commit("transactions/setPage", 1);
+      this.$store.commit("transactions/setFilter", { field: "", sort: "" });
+      this.initTransactions();
+      this.fetchTransactions();
+    },
   },
   mounted() {
     const accounts = [];
     if (this.accounts.length < 2) {
       this.$store.dispatch("accounts/fetch");
     }
-    if (!this.all.length) {
-      this.getTransactions();
-    }
+
     this.accountId = this.user.uuid || null;
     this.accounts.forEach((acc) => {
       if (acc.uuid) accounts.push(acc.uuid);
     });
-    this.$store.dispatch("transactions/init");
+
     this.$store.commit("reloadBtn/setCallback", {
       type: "transactions/init",
-      params: { accounts, service: this.serviceId },
+      params: this.transactionData,
     });
   },
   computed: {
     ...mapGetters("transactions", ["count", "page", "isLoading", "all"]),
     transactions() {
-      const transactions = this.all;
-      if (!this.accountId && !this.serviceId) {
-        return transactions;
-      }
-      return transactions.filter((item) => {
-        const equalAccounts = item.account === this.accountId;
-        const equalServices = item.service === this.serviceId;
-        if (!this.accountId) return equalServices;
-        else if (!this.serviceId) return equalAccounts;
-        else return equalAccounts && equalServices;
-      });
+      return this.all;
     },
     filtredTransactions() {
       if (this.searchParam) {
@@ -276,6 +280,16 @@ export default {
     searchParam() {
       return this.$store.getters["appSearch/param"];
     },
+    transactionData() {
+      const data = {};
+      if (this.accountId) {
+        data.account = this.accountId;
+      }
+      if (this.accountId) {
+        data.service = this.serviceId;
+      }
+      return data;
+    },
   },
   watch: {
     chartLoading() {
@@ -283,6 +297,12 @@ export default {
     },
     user() {
       this.accountId = this.user.uuid;
+    },
+    accountId() {
+      this.changeTransactionData();
+    },
+    serviceId() {
+      this.changeTransactionData();
     },
     accounts() {
       if (!this.all.length && !this.isLoading) {

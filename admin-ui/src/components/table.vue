@@ -19,7 +19,7 @@
     @update:expanded="(nw) => $emit('update:expanded', nw)"
     :show-expand="showExpand"
     :page="serverSidePage"
-    @update:page="serverSidePage ? _ : (page = $event)"
+    @update:page="serverSidePage ? ()=>1: (page = $event)"
     :items-per-page.sync="itemsPerPage"
     :show-group-by="showGroupBy"
     :group-by="groupBy"
