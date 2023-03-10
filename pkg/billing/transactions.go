@@ -66,9 +66,9 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		if req.Account == nil {
-			query += ` FILTER t.account == @acc`
+			query += ` FILTER t.service == @service`
 		} else {
-			query += ` && t.account == @acc`
+			query += ` && t.service == @service`
 		}
 		vars["service"] = service
 	}
