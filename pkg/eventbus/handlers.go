@@ -12,11 +12,13 @@ import (
 type EventHandler func(context.Context, *pb.Event, driver.Database) (*pb.Event, error)
 
 var handlers = map[string]EventHandler{
-	"instance_suspended":   GetInstAccountHandler,
-	"instance_unsuspended": GetInstAccountHandler,
-	"instance_created":     GetInstAccountHandler,
-	"instance_deleted":     GetInstAccountHandler,
-	"expiry_notification":  ExpiryHandler,
+	"instance_suspended":          GetInstAccountHandler,
+	"instance_unsuspended":        GetInstAccountHandler,
+	"instance_created":            GetInstAccountHandler,
+	"instance_deleted":            GetInstAccountHandler,
+	"expiry_notification":         GetInstAccountHandler,
+	"suspend_expiry_notification": GetInstAccountHandler,
+	"suspend_delete_instance":     GetInstAccountHandler,
 }
 
 var getInstanceAccount = `
@@ -49,34 +51,6 @@ type AccountWithService struct {
 }
 
 func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
-	inst := driver.NewDocumentID(schema.INSTANCES_COL, event.GetUuid())
-
-	cursor, err := db.Query(ctx, getInstanceAccount, map[string]interface{}{
-		"inst":        inst,
-		"permissions": schema.PERMISSIONS_GRAPH.Name,
-		"@services":   schema.SERVICES_COL,
-		"@accounts":   schema.ACCOUNTS_COL,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	defer cursor.Close()
-
-	var accountWithService AccountWithService
-	for cursor.HasMore() {
-		_, err := cursor.ReadDocument(ctx, &accountWithService)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	event.Uuid = accountWithService.Account
-	event.Type = "email"
-	return event, nil
-}
-
-func ExpiryHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
 	if event.GetData() == nil {
 		return nil, errors.New("event don't have data")
 	}

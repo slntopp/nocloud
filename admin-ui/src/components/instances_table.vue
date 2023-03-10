@@ -270,9 +270,9 @@ export default {
     },
     chipColor(item) {
       if (!item.state) return "error";
-      const state = item.config?.os
-        ? item.state.state
-        : item.state.meta?.lcm_state_str;
+      const state = (item.billingPlan.type === 'ione')
+        ? item.state.meta?.lcm_state_str
+        : item.state.state;
 
       switch (state) {
         case "RUNNING":
@@ -313,36 +313,19 @@ export default {
 
           return inst.billingPlan.products[key]?.price ?? 0;
         }
-        case "ione": {
-          if (inst.billingPlan.kind === "DYNAMIC") {
-            return inst.billingPlan.resources.reduce((prev, curr) => {
-              if (
-                curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
-              ) {
-                return (
-                  prev +
-                  ((curr.price / curr.period) *
-                    3600 *
-                    inst.resources.drive_size) /
-                    1024
-                );
-              } else if (curr.key === "ram") {
-                return (
-                  prev +
-                  ((curr.price / curr.period) * 3600 * inst.resources.ram) /
-                    1024
-                );
-              } else if (inst.resources[curr.key]) {
-                return (
-                  prev +
-                  (curr.price / curr.period) * 3600 * inst.resources[curr.key]
-                );
-              }
-              return prev;
-            }, 0);
-          } else {
-            return inst.billingPlan.products[inst.product]?.price ?? 0;
-          }
+        case 'ione': {
+          const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0
+
+          return +inst.billingPlan.resources.reduce((prev, curr) => {
+            if (curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`) {
+              return prev + curr.price / curr.period * 3600 * 24 * 30 * inst.resources.drive_size / 1024;
+            } else if (curr.key === "ram") {
+              return prev + curr.price / curr.period * 3600 * 24 * 30 * inst.resources.ram / 1024;
+            } else if (inst.resources[curr.key]) {
+              return prev + curr.price / curr.period * 3600 * 24 * 30 * inst.resources[curr.key];
+            }
+            return prev;
+          }, initialPrice)?.toFixed(2);
         }
       }
     },

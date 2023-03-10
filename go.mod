@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/arangodb/go-driver v1.5.0
-	github.com/gabriel-vasile/mimetype v1.4.1
+	github.com/gabriel-vasile/mimetype v1.4.2
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/uuid v1.3.0
@@ -22,7 +22,7 @@ require (
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.7.0
 	google.golang.org/grpc v1.53.0
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/protobuf v1.29.0
 )
 
 require (

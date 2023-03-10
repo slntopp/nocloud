@@ -178,7 +178,7 @@ func (ctrl *InstancesController) Get(ctx context.Context, uuid string) (*Instanc
 		return nil, err
 	}
 
-	return &Instance{inst, meta}, err
+	return &Instance{inst, meta}, nil
 }
 
 const getGroupWithSPQuery = `
