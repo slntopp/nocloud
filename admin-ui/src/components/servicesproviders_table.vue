@@ -1,5 +1,8 @@
 <template>
   <nocloud-table
+    :filters-items="filterItems"
+    :filters-values="selectedFiltres"
+    @input:filter="selectedFiltres[$event.key] = $event.value"
     table-name="serviceProvidersTable"
     :loading="loading"
     :items="filteredSp"
@@ -24,7 +27,7 @@ import { filterArrayByTitleAndUuid } from "@/functions";
 
 const Headers = [
   { text: "title", value: "titleLink" },
-  { text: "type", value: "type" },
+  { text: "type", value: "type", customFilter: true },
   { text: "state", value: "state" },
   {
     text: "UUID",
@@ -59,6 +62,8 @@ export default {
       loading: false,
       Headers,
       fetchError: "",
+      allTypes: [],
+      selectedFiltres: { type: [] },
     };
   },
   methods: {
@@ -101,13 +106,13 @@ export default {
       }));
     },
     filteredSp() {
-      const isAdvanced = this.searchParams.advanced?.types?.length > 0;
+      const isAdvanced = this.selectedFiltres.type?.length > 0;
       if (this.searchParams.param || isAdvanced) {
         const filtred =
           !this.searchParams.advanced?.types?.includes("all") && isAdvanced > 0
             ? this.filterSpByTypes(
                 this.tableData,
-                this.searchParams.advanced.types
+                this.selectedFiltres.type
               )
             : this.tableData;
 
@@ -121,6 +126,11 @@ export default {
           : filtred;
       }
       return this.tableData;
+    },
+    filterItems() {
+      return {
+        type: this.allTypes,
+      };
     },
   },
   created() {
@@ -154,6 +164,19 @@ export default {
           this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
         }
       });
+
+    const types = require.context(
+      "@/components/modules/",
+      true,
+      /serviceCreate\.vue$/
+    );
+
+    types.keys().forEach((key) => {
+      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i);
+      if (matched && matched.length > 1) {
+        this.allTypes.push(matched[1]);
+      }
+    });
   },
   watch: {
     tableData() {

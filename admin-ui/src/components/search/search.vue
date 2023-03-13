@@ -73,6 +73,9 @@ export default {
       return this.$store.getters["appSearch/searchMenuName"];
     },
     searchMenuComponent() {
+      if(!this.searchMenuName){
+        return  null
+      }
       return () =>
         import(`@/components/search/menus/${this.searchMenuName}.vue`);
     },
