@@ -109,7 +109,7 @@ export default {
       const isAdvanced = this.selectedFiltres.type?.length > 0;
       if (this.searchParams.param || isAdvanced) {
         const filtred =
-          !this.searchParams.advanced?.types?.includes("all") && isAdvanced > 0
+          !this.selectedFiltres?.type?.includes("all") && isAdvanced > 0
             ? this.filterSpByTypes(
                 this.tableData,
                 this.selectedFiltres.type
@@ -177,6 +177,8 @@ export default {
         this.allTypes.push(matched[1]);
       }
     });
+
+    this.allTypes.push('all')
   },
   watch: {
     tableData() {
