@@ -80,7 +80,6 @@ func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) e
 	_, err := ctrl.col.RemoveDocument(ctx, plan.Uuid)
 
 	if err != nil {
-		ctrl.log.Named("remove error").Error("Cannot remove doc")
 		return err
 	}
 
@@ -94,11 +93,6 @@ func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) e
 		"@sp_to_bp":           schema.SP2BP,
 	})
 
-	if err != nil {
-		ctrl.log.Named("remove from edge error").Error("Can't delete from edge", zap.String("err", err.Error()))
-		ctrl.log.Named("PlanId").Info("id", zap.String("bpId", bpId.String()))
-	}
-
 	return err
 }
 
@@ -108,9 +102,6 @@ LET sp2bp = (
         FILTER IS_SAME_COLLECTION(node, @@services_providers)
         RETURN edge
 )
-
-LET plan = Document(@plan)
-REMOVE plan in @@billing_plans
 
 FOR item IN sp2bp
     REMOVE item IN @@sp_to_bp
