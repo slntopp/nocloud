@@ -1,84 +1,29 @@
 <template>
   <div class="module">
-    <v-card
-      v-for="(instance, index) in instances"
+    <instance-create-card
+      v-for="(instance, index) of instances"
       :key="index"
-      :id="instance.uuid"
-      class="mb-4 pa-2"
-      elevation="0"
-      color="background"
-    >
-      <v-row>
-        <v-col cols="6">
-          <v-text-field
-            @change="(newVal) => setValue(index + '.title', newVal)"
-            label="title"
-            v-model="instance.title"
-          >
-          </v-text-field>
-        </v-col>
-        <v-col class="d-flex justify-end">
-          <v-btn @click="() => remove(index)"> remove </v-btn>
-        </v-col>
-      </v-row>
-
-      <v-row>
-        <v-col><h3>Config:</h3></v-col>
-        <v-col cols="12">
-          <json-editor
-            label="config"
-            :json="instance.config"
-            @changeValue="(newVal) => setValue(index + '.config', newVal)"
-          />
-        </v-col>
-
-        <v-col><h3>Resources:</h3></v-col>
-        <v-col cols="12">
-          <json-editor
-            label="resources"
-            :json="instance.resources"
-            @changeValue="(newVal) => setValue(index + '.resources', newVal)"
-          />
-        </v-col>
-      </v-row>
-
-      <v-row>
-        <v-col lg="6" cols="12">
-          <v-select
-            label="price model"
-            item-text="title"
-            item-value="uuid"
-            v-model="instance.plan"
-            :items="plans.list"
-            :rules="planRules"
-            @change="(newVal) => setValue(index + '.billing_plan', newVal)"
-          />
-        </v-col>
-      </v-row>
-    </v-card>
+      :instance="instance"
+      :plans="plans"
+      :plan-rules="planRules"
+      @remove="remove(index)"
+      @set-value="setValue(`${index}.${$event.key}`, $event.value)"
+    />
     <v-row>
       <v-col class="d-flex justify-center">
-        <v-btn
-          small
-          id="button"
-          class="mx-2"
-          color="background"
-          @click="addInstance"
-        >
-          <v-icon dark> mdi-plus-circle-outline </v-icon>
-          add instance
-        </v-btn>
+       <add-instance @add="addInstance"/>
       </v-col>
     </v-row>
   </div>
 </template>
 
 <script>
-import JsonEditor from "@/components/JsonEditor.vue";
+import InstanceCreateCard from "@/components/modules/custom/instanceCreateCard.vue";
+import AddInstance from "@/components/ui/addInstance.vue";
 
 export default {
   name: "custom-create-service-module",
-  components: { JsonEditor },
+  components: {AddInstance, InstanceCreateCard },
   props: ["instances-group", "plans", "planRules"],
   data: () => ({
     defaultItem: {
@@ -98,7 +43,6 @@ export default {
       billing_plan: {},
     },
     types: ["SSD", "HDD"],
-    // instances: []
   }),
   methods: {
     addProducts(instance) {
@@ -171,12 +115,14 @@ export default {
 
       this.setValue(index + ".config.template_id", +osId);
     },
-    getPlanProducts(index){
-      if(!this.instances[index].billing_plan?.products){
-        return []
+    getPlanProducts(index) {
+      if (!this.instances[index].billing_plan?.products) {
+        return [];
       }
-      return Object.values(this.instances[index].billing_plan.products).map(p=>p.title)
-    }
+      return Object.values(this.instances[index].billing_plan.products).map(
+        (p) => p.title
+      );
+    },
   },
   computed: {
     instances() {
