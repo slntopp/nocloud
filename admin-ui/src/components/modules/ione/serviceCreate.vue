@@ -1,152 +1,38 @@
 <template>
   <div class="module">
-    <v-card
+    <instance-create-card
       v-for="(instance, index) in instances"
       :key="index"
-      :id="instance.uuid"
-      class="mb-4 pa-2"
-      elevation="0"
-      color="background"
-    >
-      <v-row>
-        <v-col cols="6">
-          <v-text-field
-            @change="(newVal) => setValue(index + '.title', newVal)"
-            label="title"
-            v-model="instance.title"
-          >
-          </v-text-field>
-        </v-col>
-        <v-col class="d-flex justify-end">
-          <v-btn @click="() => remove(index)"> remove </v-btn>
-        </v-col>
-      </v-row>
-
-      <v-row>
-        <v-col cols="6">
-          <v-select
-            @change="(newVal) => changeOS(index, newVal)"
-            label="template"
-            :items="getOsNames"
-            :value="getOsTemplates[instance.config.template_id]?.name"
-          >
-          </v-select>
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="(newVal) => setValue(index + '.config.password', newVal)"
-            label="password"
-            v-model="instance.config.password"
-          >
-          </v-text-field>
-        </v-col>
-      </v-row>
-
-      <v-row>
-        <v-col cols="6">
-          <v-text-field
-            @change="(newVal) => setValue(index + '.resources.cpu', +newVal)"
-            label="cpu"
-            v-model="instance.resources.cpu"
-            type="number"
-          >
-          </v-text-field>
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="(newVal) => setValue(index + '.resources.ram', +newVal)"
-            label="ram"
-            v-model="instance.resources.ram"
-            type="number"
-          >
-          </v-text-field>
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.drive_type', newVal)
-            "
-            label="drive type"
-            v-model="instance.resources.drive_type"
-          >
-          </v-text-field>
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.drive_size', +newVal)
-            "
-            label="drive size"
-            v-model="instance.resources.drive_size"
-            type="number"
-          >
-          </v-text-field>
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.ips_public', +newVal)
-            "
-            label="ips public"
-            v-model="instance.resources.ips_public"
-            type="number"
-          >
-          </v-text-field>
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.ips_private', +newVal)
-            "
-            label="ips private"
-            v-model="instance.resources.ips_private"
-            type="number"
-          >
-          </v-text-field>
-        </v-col>
-        <v-col cols="6">
-          <v-select
-            label="price model"
-            item-text="title"
-            item-value="uuid"
-            v-model="instance.plan"
-            :items="plans.list"
-            :rules="planRules"
-            @change="(newVal) => setValue(index + '.billing_plan', newVal)"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-select
-            label="product"
-            v-model="instance.productTitle"
-            v-if="getPlanProducts(index).length > 0"
-            :items="getPlanProducts(index)"
-            @change="(newVal) => setValue(index + '.product', newVal)"
-          />
-        </v-col>
-      </v-row>
-    </v-card>
+      @set-value="setValue(`${index}.${$event.key}`, $event.value)"
+      @change-os="changeOS(index, $event)"
+      @remove="remove(index)"
+      :instance="instance"
+      :plan-rules="planRules"
+      :os-name="getOsTemplates[instance.config.template_id]?.name"
+      :os-names="getOsNames"
+      :plans="plans"
+      :plans-products="getPlanProducts(index)"
+    />
     <v-row>
       <v-col class="d-flex justify-center">
-        <v-btn
-          small
-          id="button"
-          class="mx-2"
-          color="background"
-          @click="addInstance"
-        >
-          <v-icon dark> mdi-plus-circle-outline </v-icon>
-          add instance
-        </v-btn>
+        <add-instance @add="addInstance" />
       </v-col>
     </v-row>
   </div>
 </template>
 
 <script>
+import InstanceCreateCard from "@/components/modules/ione/instanceCreateCard.vue";
+import AddInstance from "@/components/ui/addInstance.vue";
+
 export default {
   name: "ione-create-service-module",
-  props: ["instances-group", "plans", "planRules"],
+  components: {AddInstance, InstanceCreateCard },
+  props: {
+    "instances-group": {},
+    plans: {},
+    planRules: {},
+  },
   data: () => ({
     defaultItem: {
       title: "instance",
@@ -238,12 +124,14 @@ export default {
 
       this.setValue(index + ".config.template_id", +osId);
     },
-    getPlanProducts(index){
-      if(!this.instances[index].billing_plan?.products){
-        return []
+    getPlanProducts(index) {
+      if (!this.instances[index].billing_plan?.products) {
+        return [];
       }
-      return Object.values(this.instances[index].billing_plan.products).map(p=>p.title)
-    }
+      return Object.values(this.instances[index].billing_plan.products).map(
+        (p) => p.title
+      );
+    },
   },
   computed: {
     instances() {
