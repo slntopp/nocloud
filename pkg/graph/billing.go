@@ -96,7 +96,7 @@ func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) e
 
 	if err != nil {
 		ctrl.log.Named("remove from edge error").Error("Can't delete from edge", zap.String("err", err.Error()))
-		ctrl.log.Named("PlanId").Info("id", zap.String("bpId", bpId))
+		ctrl.log.Named("PlanId").Info("id", zap.String("bpId", bpId.String()))
 	}
 
 	return err
