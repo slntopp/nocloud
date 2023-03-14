@@ -1,274 +1,35 @@
 <template>
   <div class="module">
-    <v-card
+    <instance-create-card
       v-for="(instance, index) in instances"
       :key="index"
-      :id="instance.uuid"
       class="mb-4 pa-2"
       elevation="0"
       color="background"
-    >
-      <v-row>
-        <v-col cols="6">
-          <v-text-field
-            @change="(newVal) => setValue(index + '.title', newVal)"
-            label="title"
-            v-model="instance.title"
-          />
-        </v-col>
-        <v-col class="d-flex justify-end">
-          <v-btn @click="() => remove(index)"> remove </v-btn>
-        </v-col>
-      </v-row>
-
-      <v-row>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.first_name', newVal)
-            "
-            label="first name"
-            v-model="instance.resources.user.first_name"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.last_name', newVal)
-            "
-            label="last name"
-            v-model="instance.resources.user.last_name"
-          />
-        </v-col>
-      </v-row>
-
-      <v-row>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.org_name', newVal)
-            "
-            label="organization name"
-            v-model="instance.resources.user.org_name"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.address1', newVal)
-            "
-            label="address1"
-            v-model="instance.resources.user.address1"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.address2', newVal)
-            "
-            label="address2"
-            v-model="instance.resources.user.address2"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.city', newVal)
-            "
-            label="city"
-            v-model="instance.resources.user.city"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.country', newVal)
-            "
-            label="country"
-            v-model="instance.resources.user.country"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.state', newVal)
-            "
-            label="state"
-            v-model="instance.resources.user.state"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) =>
-                setValue(index + '.resources.user.postal_code', newVal)
-            "
-            label="postal_code"
-            v-model="instance.resources.user.postal_code"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.phone', newVal)
-            "
-            label="phone"
-            v-model="instance.resources.user.phone"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.user.email', newVal)
-            "
-            label="email"
-            v-model="instance.resources.user.email"
-          />
-        </v-col>
-      </v-row>
-      <v-row>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.reg_username', newVal)
-            "
-            label="reg_username"
-            v-model="instance.resources.reg_username"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="
-              (newVal) => setValue(index + '.resources.reg_password', newVal)
-            "
-            label="reg_password"
-            v-model="instance.resources.reg_password"
-          />
-        </v-col>
-      </v-row>
-      <v-row>
-        <v-col cols="4">
-          <v-switch
-            @change="
-              (newVal) => setValue(index + '.resources.auto_renew', newVal)
-            "
-            v-model="instance.resources.auto_renew"
-            label="auto_renew"
-          />
-        </v-col>
-        <v-col cols="4">
-          <v-switch
-            @change="
-              (newVal) => setValue(index + '.resources.who_is_privacy', newVal)
-            "
-            v-model="instance.resources.who_is_privacy"
-            label="who_is_privacy"
-          />
-        </v-col>
-        <v-col cols="4">
-          <v-switch
-            @change="
-              (newVal) => setValue(index + '.resources.lock_domain', newVal)
-            "
-            v-model="instance.resources.lock_domain"
-            label="lock_domain"
-          />
-        </v-col>
-      </v-row>
-      <v-row class="align-center">
-        <v-col cols="4">
-          <v-text-field label="domain" v-model="searchDomainString" />
-        </v-col>
-        <v-col cols="2">
-          <v-btn
-            @click="searchDomains"
-            :disabled="!searchDomainString"
-            small
-            dark
-            :loading="isDomainsLoading"
-          >
-            <v-icon dark> mdi-magnify </v-icon>
-            Search
-          </v-btn>
-        </v-col>
-        <v-col cols="2" class="d-flex justify-center align-center">
-          <p v-if="!isPriceLoading">
-            Price: {{ domainPrice || "select domain and period" }}
-          </p>
-          <v-progress-circular v-else indeterminate color="primary" />
-        </v-col>
-        <v-col cols="2">
-          <v-select
-            @change="(newVal) => setValue(index + '.resources.period', +newVal)"
-            v-model="selectedPeriodIndex"
-            :items="domainPeriods"
-          >
-            <template v-slot:selection="{ item }">
-              {{ item + " years" }}
-            </template>
-            <template v-slot:item="{ item }">
-              {{ item + " years" }}
-            </template>
-          </v-select>
-        </v-col>
-      </v-row>
-      <v-row class="flex-column pa-md-5">
-        <nocloud-table
-          table-name="openSrsServiceCreate"
-          @input="(item) => changeDomain(item, index)"
-          :footer-error="tableError"
-          item-key="domain"
-          single-select
-          no-hide-uuid
-          v-model="selectedDomain"
-          :items="domains"
-          :headers="headers"
-          :loading="isDomainsLoading"
-        />
-      </v-row>
-    </v-card>
+      :instance="instance"
+      @remove="remove(index)"
+      @set-value="setValue(`${index}.${$event.key}`, $event.value)"
+      :sp-uuid="spUuid"
+    />
     <v-row>
       <v-col class="d-flex justify-center">
-        <v-btn
-          :disabled="isOpenSRS"
-          id="button"
-          class="mx-2"
-          small
-          color="background"
-          @click="addInstance"
-        >
-          <v-icon dark> mdi-plus-circle-outline </v-icon>
-          add instance
-        </v-btn>
+        <add-instance :disabled="isOpenSRS" @add="addInstance" />
       </v-col>
     </v-row>
   </div>
 </template>
 
 <script>
-import api from "@/api";
-import nocloudTable from "@/components/table.vue";
 import snackbar from "@/mixins/snackbar.js";
-import { levenshtein } from "@/functions";
+import InstanceCreateCard from "@/components/modules/opensrs/instanceCreateCard.vue";
+import AddInstance from "@/components/ui/addInstance.vue";
 
 export default {
   name: "ione-create-service-module",
   props: ["instances-group", "plans", "planRules"],
-  components: { nocloudTable },
+  components: {AddInstance, InstanceCreateCard },
   mixins: [snackbar],
   data: () => ({
-    headers: [
-      { text: "domain", value: "domain" },
-      { text: "status", value: "status" },
-    ],
-    tableError: "",
-    prices: {},
-    selectedPeriodIndex: 0,
-    domains: [],
-    searchDomainString: "",
-    selectedDomain: [],
-    isDomainsLoading: false,
-    isPriceLoading: false,
     defaultItem: {
       title: "instance",
       resources: {
@@ -321,71 +82,6 @@ export default {
     change(data) {
       this.$emit("update:instances-group", JSON.stringify(data));
     },
-    searchDomains() {
-      this.isDomainsLoading = true;
-      api.servicesProviders
-        .action({
-          uuid: this.spUuid,
-          action: "get_domains",
-          params: {
-            searchString: this.searchDomainString,
-            gTLD: true,
-            p_ccTLD: false,
-            m_ccTLD: false,
-          },
-        })
-        .then((data) => {
-          this.domains = this.sortDomainsLSM(
-            data.meta.domains.filter((d) => d.status !== "undetermined"),
-            this.searchDomainString.toLowerCase()
-          );
-        })
-        .finally(() => {
-          this.isDomainsLoading = false;
-        });
-    },
-    changeDomain(newVal, index) {
-      const currentDomain = newVal[0];
-
-      if (!currentDomain) {
-        this.tableError = "";
-        return this.resetDomain(index);
-      } else if (currentDomain.status === "taken") {
-        this.tableError = "This domain already taken!";
-        return this.resetDomain(index);
-      }
-
-      this.isPriceLoading = true;
-
-      this.setValue(index + ".resources.domain", currentDomain.domain);
-      this.tableError = "";
-
-      api.servicesProviders
-        .action({
-          uuid: this.spUuid,
-          action: "get_domain_price",
-          params: {
-            domain: currentDomain.domain,
-          },
-        })
-        .then((data) => {
-          this.prices = data.meta.prices;
-        })
-        .finally(() => {
-          this.isPriceLoading = false;
-        });
-    },
-    resetDomain(index) {
-      this.setValue(index + ".resources.domain", "");
-      this.prices = [];
-    },
-    sortDomainsLSM(domains, searchkey) {
-      return domains.sort(function (a, b) {
-        return (
-          levenshtein(a.domain, searchkey) - levenshtein(b.domain, searchkey)
-        );
-      });
-    },
   },
   computed: {
     instances() {
@@ -400,19 +96,6 @@ export default {
     },
     spUuid() {
       return JSON.parse(this.instancesGroup).sp;
-    },
-    domainPaginationLength() {
-      return Math.ceil(this.domains.length / 10) - 1;
-    },
-    domainPeriods() {
-      if (Object.keys(this.prices).length === 0) {
-        return null;
-      }
-
-      return Object.keys(this.prices);
-    },
-    domainPrice() {
-      return this.prices[this.selectedPeriodIndex];
     },
   },
   created() {
