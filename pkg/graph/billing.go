@@ -89,7 +89,6 @@ func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) e
 		"plan":                bpId,
 		"permissions":         schema.PERMISSIONS_GRAPH.Name,
 		"@services_providers": schema.SERVICES_PROVIDERS_COL,
-		"@billing_plans":      schema.BILLING_PLANS_COL,
 		"@sp_to_bp":           schema.SP2BP,
 	})
 
