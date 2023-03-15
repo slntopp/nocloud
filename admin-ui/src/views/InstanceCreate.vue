@@ -96,6 +96,8 @@ import api from "@/api";
 export default {
   name: "service-create",
   data: () => ({
+    isEdit: false,
+
     typeItems: [],
     templates: [],
     type: "ione",
@@ -116,11 +118,6 @@ export default {
     formValid: false,
     rules: {
       req: [(v) => !!v || "required field"],
-      password: [
-        (v) => !!v || "password required",
-        (v) => v.length > 6 || "password must be at least 6 characters length",
-      ],
-      nubmer: [(v) => Number(v) == v || "must be a correct number"],
     },
   }),
   mixins: [snackbar],
@@ -163,7 +160,15 @@ export default {
         );
       }
 
-      this.service.instancesGroups[igIndex].instances.push(this.instance);
+      if (this.isEdit) {
+        const instanceIndex = this.service.instancesGroups[
+          igIndex
+        ].instances.findIndex((i) => i.uuid === this.instance.uuid);
+        this.service.instancesGroups[igIndex].instances[instanceIndex] =
+          this.instance;
+      } else {
+        this.service.instancesGroups[igIndex].instances.push(this.instance);
+      }
 
       const data = {
         namespace: this.service.access.namespace,
@@ -174,14 +179,14 @@ export default {
       api.services
         .testConfig(data)
         .then((res) => {
-          console.log("good 12");
           if (res.result) api.services._update(data.service);
           else throw res;
         })
         .then(() => {
-          console.log("good");
           this.showSnackbarSuccess({
-            message: "instance created successfully",
+            message: this.isEdit
+              ? "instance updated successfully"
+              : "instance created successfully",
           });
           this.$router.push({ name: "Instances" });
         })
@@ -232,6 +237,23 @@ export default {
   },
   created() {
     this.$store.dispatch("services/fetch").then(() => {
+      const instanceId = this.$route.params.instanceId;
+      if (instanceId) {
+        this.services.forEach((s) => {
+          s.instancesGroups.forEach((ig) => {
+            this.isEdit = true;
+            const instance = ig.instances.find((i) => i.uuid === instanceId);
+            if (instance) {
+              this.service = s;
+              this.type = ig.type;
+              this.serviceProviderId = ig.sp;
+              this.instanceGroup = ig.title;
+              this.instance = instance;
+            }
+          });
+        });
+        return;
+      }
       let type = this.$route.params.type;
 
       if (type && this.$route.params.serviceId) {
@@ -281,6 +303,13 @@ export default {
       this.customInstanceGroup = null;
       if (this.type !== "custom") {
         this.customTypeName = null;
+      }
+      this.isEdit = false;
+    },
+    ["plans.list"](newVal) {
+      if (newVal) {
+        this.instance.billing_plan = this.instance?.billingPlan?.uuid;
+        delete this.instance.billingPlan;
       }
     },
   },
