@@ -1,6 +1,6 @@
 <template>
   <div class="module">
-    <v-card class="mb-4 pa-2" elevation="0" color="background">
+    <v-card v-if="Object.keys(instance).length>1" class="mb-4 pa-2" elevation="0" color="background">
       <v-row>
         <v-col cols="6">
           <v-text-field
@@ -26,7 +26,7 @@
           <v-text-field
             @change="(newVal) => setValue('config.password', newVal)"
             label="password"
-            :value="instance.config.password"
+            :value="instance.config?.password"
           >
           </v-text-field>
         </v-col>
@@ -91,7 +91,7 @@
             label="price model"
             item-text="title"
             item-value="uuid"
-            :value="instance.plan"
+            :value="instance.billing_plan"
             :items="plans.list"
             :rules="planRules"
             @change="(newVal) => setValue('billing_plan', newVal)"

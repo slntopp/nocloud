@@ -1,6 +1,11 @@
 <template>
   <div class="module">
-    <v-card class="mb-4 pa-2" elevation="0" color="background">
+    <v-card
+      v-if="Object.keys(instance).length > 0"
+      class="mb-4 pa-2"
+      elevation="0"
+      color="background"
+    >
       <v-row>
         <v-col cols="6">
           <v-text-field
