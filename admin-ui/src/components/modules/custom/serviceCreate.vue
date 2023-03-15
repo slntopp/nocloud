@@ -58,16 +58,7 @@
     </v-card>
     <v-row>
       <v-col class="d-flex justify-center">
-        <v-btn
-          small
-          id="button"
-          class="mx-2"
-          color="background"
-          @click="addInstance"
-        >
-          <v-icon dark> mdi-plus-circle-outline </v-icon>
-          add instance
-        </v-btn>
+        <add-instance-btn @click="addInstance" />
       </v-col>
     </v-row>
   </div>
@@ -75,10 +66,11 @@
 
 <script>
 import JsonEditor from "@/components/JsonEditor.vue";
+import AddInstanceBtn from "@/components/ui/addInstanceBtn.vue";
 
 export default {
   name: "custom-create-service-module",
-  components: { JsonEditor },
+  components: { AddInstanceBtn, JsonEditor },
   props: ["instances-group", "plans", "planRules"],
   data: () => ({
     defaultItem: {
@@ -171,12 +163,14 @@ export default {
 
       this.setValue(index + ".config.template_id", +osId);
     },
-    getPlanProducts(index){
-      if(!this.instances[index].billing_plan?.products){
-        return []
+    getPlanProducts(index) {
+      if (!this.instances[index].billing_plan?.products) {
+        return [];
       }
-      return Object.values(this.instances[index].billing_plan.products).map(p=>p.title)
-    }
+      return Object.values(this.instances[index].billing_plan.products).map(
+        (p) => p.title
+      );
+    },
   },
   computed: {
     instances() {

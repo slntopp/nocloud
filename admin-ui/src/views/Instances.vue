@@ -30,11 +30,11 @@
           <v-select
             dense
             item-text="title"
-            item-value="uuid"
+            item-value="title"
             label="account"
             style="width: 300px"
-            v-model="newInstance.service"
-            :items="services"
+            v-model="newInstance.account"
+            :items="accounts"
             :rules="rules.req"
           />
 
@@ -46,6 +46,15 @@
             :items="allTypes"
             :rules="rules.req"
           />
+          <v-select
+            label="service"
+            item-text="title"
+            item-value="uuid"
+            v-if="selectedAccountServices.length > 1"
+            v-model="newInstance.service"
+            :items="selectedAccountServices"
+            :rules="rules.req"
+          />
           <v-text-field
             label="type name"
             v-if="newInstance.type === 'custom'"
@@ -55,9 +64,9 @@
 
           <v-btn
             :to="{
-              name: 'Service edit',
+              name: 'Instance create',
               params: {
-                serviceId: newInstance.service,
+                serviceId,
                 type:
                   newInstance.type === 'custom'
                     ? newInstance.customTitle
@@ -142,13 +151,19 @@ export default {
     column: "",
     filters: {},
     selectedFilters: {},
-    newInstance: { isValid: false, service: "", type: "", customTitle: "" },
+    newInstance: {
+      isValid: false,
+      service: [],
+      type: "",
+      customTitle: "",
+      account: "",
+    },
     rules: {
       req: [(v) => !!v || "This field is required!"],
     },
     isDeleteLoading: false,
     selected: [],
-    headers: []
+    headers: [],
   }),
   methods: {
     deleteSelectedInstances() {
@@ -300,6 +315,9 @@ export default {
     services() {
       return this.$store.getters["services/all"];
     },
+    accounts() {
+      return this.$store.getters["accounts/all"];
+    },
     sp() {
       return this.$store.getters["servicesProviders/all"];
     },
@@ -307,6 +325,24 @@ export default {
       return this.services.find(
         ({ uuid }) => uuid === this.newInstance.service
       );
+    },
+    selectedAccountServices() {
+      if (!this.newInstance.account) {
+        return [];
+      }
+
+      return this.services.filter((s) => s.title === this.newInstance.account);
+    },
+    serviceId() {
+      if (this.newInstance.service) {
+        return this.newInstance.service;
+      }
+      return this.selectedAccountServices[0]?.uuid;
+    },
+  },
+  watch: {
+    "newInstance.account"() {
+      this.newInstance.service = null;
     },
   },
 };
