@@ -70,13 +70,13 @@ func (q *Queue) List(ctx context.Context) ([]*pb.Event, error) {
 			return nil, err
 		}
 
+		if !ok {
+			break
+		}
+
 		event := &pb.Event{}
 		if err := proto.Unmarshal(del.Body, event); err == nil {
 			events = append(events, event)
-		}
-
-		if !ok {
-			break
 		}
 
 	}
