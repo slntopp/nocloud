@@ -178,6 +178,14 @@ const routes = [
     },
   },
   {
+    path: "/instances/:instanceId/edit/",
+    name: "Instance edit",
+    component: () => import("../views/InstanceCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/instances/:instanceId",
     name: "Instance",
     component: () => import("../views/InstancePage.vue"),
@@ -205,7 +213,7 @@ const routes = [
     path: "/login",
     name: "Login",
     component: () =>
-        import(/* webpackChunkName: "about" */ "../views/login.vue"),
+      import(/* webpackChunkName: "about" */ "../views/login.vue"),
     meta: {
       requireUnlogin: true,
     },
