@@ -1,24 +1,14 @@
 <template>
   <div class="module">
-    <v-card
-      class="mb-4 pa-2"
-      color="background"
-      elevation="0"
-      v-for="(instance, index) of instances"
-      :key="index"
-      :id="instance.uuid"
-    >
+    <v-card class="mb-4 pa-2" color="background" elevation="0">
       <v-row>
         <v-col cols="6">
           <v-text-field
             label="title"
-            v-model="instance.title"
+            :value="instance.title"
             :rules="rules.req"
-            @change="(value) => setValue(index + '.title', value)"
+            @change="(value) => setValue('title', value)"
           />
-        </v-col>
-        <v-col class="d-flex justify-end">
-          <v-btn @click="() => remove(index)">Remove</v-btn>
         </v-col>
       </v-row>
 
@@ -28,18 +18,18 @@
             label="price model"
             item-text="title"
             item-value="uuid"
-            v-model="instance.plan"
+            :value="instance.plan"
             :items="plans.list"
             :rules="planRules"
-            @change="(value) => setValue(index + '.billing_plan', value)"
+            @change="(value) => setValue('billing_plan', value)"
           />
         </v-col>
         <v-col cols="6" v-if="instance.products?.length > 0">
           <v-select
             label="product"
-            v-model="instance.productTitle"
+            :value="instance.productTitle"
             :items="instance.products"
-            @change="(value) => setValue(index + '.product', value)"
+            @change="(value) => setValue('product', value)"
           />
         </v-col>
         <v-col cols="6">
@@ -47,36 +37,33 @@
             label="tariff"
             item-text="title"
             item-value="code"
-            v-model="instance.config.planCode"
-            :items="flavors[instance.billing_plan.uuid]"
+            :value="instance.config.planCode"
+            :items="flavors[instance?.billing_plan?.uuid]"
             :rules="rules.req"
             :loading="isFlavorsLoading"
-            @change="(value) => setValue(index + '.config.planCode', value)"
+            @change="(value) => setValue('config.planCode', value)"
           />
         </v-col>
         <v-col cols="6">
           <v-select
             label="region"
-            v-model="instance.config.configuration.vps_datacenter"
+            :value="instance.config.configuration.vps_datacenter"
             :items="regions[instance.config.planCode]"
             :rules="rules.req"
             :disabled="!instance.config.planCode"
             @change="
-              (value) =>
-                setValue(index + '.config.configuration.vps_datacenter', value)
+              (value) => setValue('config.configuration.vps_datacenter', value)
             "
           />
         </v-col>
         <v-col cols="6">
           <v-select
             label="OS"
-            v-model="instance.config.configuration.vps_os"
+            :value="instance.config.configuration.vps_os"
             :items="images[instance.config.planCode]"
             :rules="rules.req"
             :disabled="!instance.config.planCode"
-            @change="
-              (value) => setValue(index + '.config.configuration.vps_os', value)
-            "
+            @change="(value) => setValue('config.configuration.vps_os', value)"
           />
         </v-col>
         <v-col cols="6" class="d-flex align-center">
@@ -85,17 +72,17 @@
             class="d-inline-block ml-2"
             true-value="P1Y"
             false-value="P1M"
-            v-model="instance.config.duration"
+            :value="instance.config.duration"
             :label="instance.config.duration === 'P1Y' ? 'yearly' : 'monthly'"
-            @change="(value) => setValue(index + '.config.duration', value)"
+            @change="(value) => setValue('config.duration', value)"
           />
         </v-col>
         <v-col cols="6" class="d-flex align-center">
           Existing:
           <v-switch
             class="d-inline-block ml-2"
-            v-model="instance.data.existing"
-            @change="(value) => setValue(index + '.data.existing', value)"
+            :value="instance.data.existing"
+            @change="(value) => setValue('data.existing', value)"
           />
         </v-col>
         <v-col
@@ -105,9 +92,9 @@
         >
           <v-text-field
             label="VPS name"
-            v-model="instance.data.vpsName"
+            :value="instance.data.vpsName"
             :rules="rules.req"
-            @change="(value) => setValue(index + '.data.vpsName', value)"
+            @change="(value) => setValue('data.vpsName', value)"
           />
         </v-col>
       </v-row>
@@ -125,52 +112,44 @@
             <v-select
               :label="key"
               :items="addon"
-              @change="(value) => setValue(index + '.config.addons', value)"
+              @change="(value) => setValue('config.addons', value)"
             />
           </v-col>
         </v-row>
       </template>
     </v-card>
-    <v-row>
-      <v-col class="d-flex justify-center">
-        <add-instance-btn @click="addInstance" :disabled="isDisabled" />
-      </v-col>
-    </v-row>
   </div>
 </template>
 
 <script>
-import api from "@/api.js";
-import AddInstanceBtn from "@/components/ui/addInstanceBtn.vue";
+import api from "@/api";
 
-export default {
-  name: "ovh-create-service-module",
-  components: { AddInstanceBtn },
-  props: ["instances-group", "plans", "planRules", "meta"],
-  data: () => ({
-    defaultItem: {
-      title: "instance",
-      config: {
-        type: "vps",
-        planCode: null,
-        configuration: {
-          vps_datacenter: null,
-          vps_os: null,
-        },
-        duration: "P1M",
-        pricingMode: "default",
-        addons: [],
-      },
-      data: { existing: false },
-      billing_plan: {},
+const getDefaultInstance = () => ({
+  title: "instance",
+  config: {
+    type: "vps",
+    planCode: null,
+    configuration: {
+      vps_datacenter: null,
+      vps_os: null,
     },
+    duration: "P1M",
+    pricingMode: "default",
+    addons: [],
+  },
+  data: { existing: false },
+  billing_plan: {},
+});
+export default {
+  name: "instance-ovh-create",
+  props: ["plans", "instance", "planRules", "sp-uuid", "meta"],
+  data: () => ({
     rules: {
       req: [(v) => !!v || "required field"],
     },
 
     isFlavorsLoading: false,
     flavors: {},
-
     regions: {},
     images: {},
     addons: {},
@@ -191,33 +170,15 @@ export default {
         delete instance.product;
       }
     },
-    addInstance() {
-      const item = JSON.parse(JSON.stringify(this.defaultItem));
-      const data = JSON.parse(this.instancesGroup);
-      const i = data.body.instances.length;
-
-      item.title += "#" + (i + 1);
-      data.body.instances.push(item);
-      this.change(data);
-    },
-    remove(index) {
-      const data = JSON.parse(this.instancesGroup);
-
-      data.body.instances.splice(index, 1);
-      this.change(data);
-    },
     fetchPlans() {
-      const data = JSON.parse(this.instancesGroup);
-
-      if (data.body.type !== "ovh") return;
       if (this.regions.length > 0) return;
-      if ("catalog" in this.meta) return;
+      if (this.meta && "catalog" in this.meta) return;
 
       this.isFlavorsLoading = true;
       api
-        .post(`/sp/${data.sp}/invoke`, { method: "get_plans" })
+        .post(`/sp/${this.spUuid}/invoke`, { method: "get_plans" })
         .then(({ meta }) => {
-          this.$emit("changeMeta", meta);
+          this.$emit("set-meta", meta);
           this.setAddons(meta);
         })
         .finally(() => {
@@ -231,7 +192,7 @@ export default {
           if (key in this.addons) continue;
 
           const plans = meta ? meta : this.meta;
-          const plan = plans.catalog.plans.find(
+          const plan = plans?.catalog.plans.find(
             ({ planCode }) => planCode === key
           );
 
@@ -269,8 +230,7 @@ export default {
       });
     },
     setValue(path, val) {
-      const data = JSON.parse(this.instancesGroup);
-      const i = path.split(".")[0];
+      const data = JSON.parse(JSON.stringify(this.instance));
 
       if (path.includes("billing_plan")) {
         const plan = this.plans.list.find(({ uuid }) => val === uuid);
@@ -282,27 +242,27 @@ export default {
           title: plan.products[el].title,
         }));
 
-        data.body.instances[i].plan = val;
+        data.plan = val;
         val = { ...plan, title: title.join(" ") };
       }
 
       if (path.includes("product")) {
-        const plan = data.body.instances[i].billing_plan;
+        const plan = data.billing_plan;
         const [product] = Object.entries(plan.products).find(
           ([, prod]) => prod.title === val
         );
 
-        data.body.instances[i].productTitle = val;
+        data.productTitle = val;
         val = product;
       }
 
       if (path.includes("planCode")) {
-        const plan = this.meta.catalog.plans.find(
+        const plan = this.meta?.catalog.plans.find(
           ({ planCode }) => planCode === val
         );
         const resources = val.split("-");
 
-        plan.configurations.forEach((el) => {
+        plan?.configurations.forEach((el) => {
           el.values.sort();
           if (el.name.includes("os")) {
             this.$set(this.images, val, el.values);
@@ -312,7 +272,7 @@ export default {
           }
         });
 
-        data.body.instances[i].resources = {
+        data.resources = {
           cpu: +resources.at(-3),
           ram: resources.at(-2) * 1024,
           drive_size: resources.at(-1) * 1024,
@@ -323,69 +283,45 @@ export default {
       }
 
       if (path.includes("duration")) {
-        data.body.instances[i].config.pricingMode =
-          val === "P1M" ? "default" : "upfront12";
+        data.config.pricingMode = val === "P1M" ? "default" : "upfront12";
       }
 
       if (path.includes("addons")) {
-        const { addons } = data.body.instances[i].config;
+        const { addons } = data.config;
 
         val = [...addons, val];
       }
 
-      setToValue(data.body.instances, val, path);
-      if (path.includes("billing_plan"))
-        this.addProducts(data.body.instances[i]);
+      console.log(val, path);
+      this.$emit("set-value", { value: val, key: path });
+      if (path.includes("billing_plan")) this.addProducts(data);
       this.change(data);
     },
     change(data) {
-      this.$emit("update:instances-group", JSON.stringify(data));
-    },
-  },
-  computed: {
-    instances() {
-      return JSON.parse(this.instancesGroup).body.instances;
-    },
-    isDisabled() {
-      const group = JSON.parse(this.instancesGroup);
-
-      return group.body.type === "ovh" && !group.sp;
+      console.log(data);
+      this.$emit("update:instances-group", data);
     },
   },
   created() {
-    const data = JSON.parse(this.instancesGroup);
+    this.$emit("set-instance", getDefaultInstance());
+    const data = JSON.parse(JSON.stringify(getDefaultInstance()));
 
-    if (!data.body.instances) data.body.instances = [];
-    else {
-      data.body.instances.forEach((inst, i, arr) => {
-        if (inst.billingPlan) {
-          arr[i].billing_plan = inst.billingPlan;
-          delete arr[i].billingPlan;
-        }
-        this.setValue(`${i}.billing_plan`, inst.billing_plan.uuid);
-        arr[i].plan = inst.billing_plan.uuid;
-      });
+    if (data.billingPlan) {
+      data.billing_plan = data.billingPlan;
+      delete data.billingPlan;
     }
+    this.setValue(`billing_plan`, data.billing_plan.uuid);
+    data.plan = data.billing_plan.uuid;
 
-    if ("catalog" in this.meta) this.setAddons();
+    if (this.meta && "catalog" in this.meta) this.setAddons();
     this.change(data);
   },
   watch: {
-    instances() {
+    instance() {
       this.fetchPlans();
     },
   },
 };
-
-function setToValue(obj, value, path) {
-  path = path.split(".");
-  let i;
-  for (i = 0; i < path.length - 1; i++) {
-    if (path[i] === "__proto__" || path[i] === "constructor")
-      throw new Error("Can't use that path because of: " + path[i]);
-    obj = obj[path[i]];
-  }
-
-  obj[path[i]] = value;
-}
 </script>
+
+<style scoped></style>
