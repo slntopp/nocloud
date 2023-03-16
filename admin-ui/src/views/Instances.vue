@@ -64,7 +64,7 @@
 
           <v-btn
             :to="{
-              name: 'Service edit',
+              name: 'Instance create',
               params: {
                 serviceId,
                 type:
