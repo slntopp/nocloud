@@ -87,7 +87,7 @@ export default {
   }),
   mixins: [snackbar],
   components: { JsonTextarea, nocloudTable, jsonEditor },
-  props: ["account"],
+  props: ["account", "is-loading"],
   mounted() {
     this.fetchEvents();
   },
@@ -164,6 +164,11 @@ export default {
     selectedEventType() {
       this.selectedEvents = [];
       this.fetchEvents();
+    },
+    isLoading() {
+      if (!this.isLoading) {
+        this.fetchEvents();
+      }
     },
   },
 };

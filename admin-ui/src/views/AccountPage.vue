@@ -30,7 +30,7 @@
       </v-tab-item>
       <v-tab-item>
         <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
-        <accounts-events v-if="account" :account="account" />
+        <accounts-events :is-loading="accountLoading" v-if="account" :account="account" />
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -67,7 +67,7 @@ export default {
       return this?.account?.title ?? "not found";
     },
     accountLoading() {
-      return this.$store.getters["accounts/loading"];
+      return this.$store.getters["accounts/isLoading"];
     },
     accountId() {
       return this.$route.params.accountId;
