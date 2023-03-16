@@ -43,12 +43,14 @@ LET account = LAST(
         RETURN node
     )
     
-RETURN {account: account._key, service: srv.title}
+RETURN {account: account._key, service: srv.title, instance: doc.title, product: doc.product}
 `
 
-type AccountWithService struct {
-	Account string `json:"account"`
-	Service string `json:"service"`
+type EventInfo struct {
+	Account  string `json:"account"`
+	Service  string `json:"service"`
+	Instance string `json:"instance"`
+	Product  string `json:"product,omitempty"`
 }
 
 func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
@@ -70,18 +72,22 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 
 	defer cursor.Close()
 
-	var accountWithService AccountWithService
+	var eventInfo EventInfo
 	for cursor.HasMore() {
-		_, err := cursor.ReadDocument(ctx, &accountWithService)
+		_, err := cursor.ReadDocument(ctx, &eventInfo)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	event.Data["service"] = structpb.NewStringValue(accountWithService.Service)
+	event.Data["service"] = structpb.NewStringValue(eventInfo.Service)
+	event.Data["instance"] = structpb.NewStringValue(eventInfo.Instance)
+	if eventInfo.Product != "" {
+		event.Data["product"] = structpb.NewStringValue(eventInfo.Product)
+	}
 	event.Data["instance_uuid"] = structpb.NewStringValue(event.GetUuid())
 	event.Data["ts"] = structpb.NewNumberValue(float64(time.Now().Unix()))
-	event.Uuid = accountWithService.Account
+	event.Uuid = eventInfo.Account
 	event.Type = "email"
 
 	return event, nil
