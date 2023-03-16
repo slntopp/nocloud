@@ -2,12 +2,6 @@
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-text-field v-model="uuid" readonly label="UUID" style="width: 330px" />
     <v-text-field v-model="title" label="name" style="width: 330px" />
-    <v-btn
-      v-if="['ROOT', 'ADMIN'].includes(account.access.level)"
-      @click="loginHandler"
-    >
-      Login
-    </v-btn>
     <v-card-title class="px-0">SSH keys:</v-card-title>
 
     <div class="pt-4">
@@ -159,20 +153,6 @@ export default {
         })
         .finally(() => {
           this.isEditLoading = false;
-        });
-    },
-    loginHandler() {
-      this.$store
-        .dispatch("auth/loginToApp", { uuid: this.account.uuid, type: "whmcs" })
-        .then(({ token }) => {
-          api.settings.get(["app"]).then((res) => {
-            const url = JSON.parse(res["app"]).url;
-            const win = window.open(url);
-
-            setTimeout(() => {
-              win.postMessage(token, url);
-            }, 100);
-          });
         });
     },
   },
