@@ -7,7 +7,6 @@ import (
 	pb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"google.golang.org/protobuf/types/known/structpb"
-	"time"
 )
 
 type EventHandler func(context.Context, *pb.Event, driver.Database) (*pb.Event, error)
@@ -86,7 +85,6 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 		event.Data["product"] = structpb.NewStringValue(eventInfo.Product)
 	}
 	event.Data["instance_uuid"] = structpb.NewStringValue(event.GetUuid())
-	event.Data["ts"] = structpb.NewNumberValue(float64(time.Now().Unix()))
 	event.Uuid = eventInfo.Account
 	event.Type = "email"
 
