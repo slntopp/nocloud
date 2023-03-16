@@ -23,7 +23,7 @@
             label="price model"
             item-text="title"
             item-value="uuid"
-            :value="instance.plan"
+            :value="instance.billing_plan"
             :items="plans.list"
             :rules="planRules"
             @change="(value) => setValue('billing_plan', value)"
@@ -86,7 +86,7 @@
           Existing:
           <v-switch
             class="d-inline-block ml-2"
-            :value="instance.data.existing"
+            :input-value="instance.data.existing"
             @change="(value) => setValue('data.existing', value)"
           />
         </v-col>
@@ -117,6 +117,7 @@
             <v-select
               :label="key"
               :items="addon"
+              :value="getAddonValue(addon)"
               @change="(value) => setValue('config.addons', value)"
             />
           </v-col>
@@ -147,7 +148,7 @@ const getDefaultInstance = () => ({
 });
 export default {
   name: "instance-ovh-create",
-  props: ["plans", "instance", "planRules", "sp-uuid", "meta"],
+  props: ["plans", "instance", "planRules", "sp-uuid", "meta", "is-edit"],
   data: () => ({
     rules: {
       req: [(v) => !!v || "required field"],
@@ -235,6 +236,10 @@ export default {
       });
     },
     setValue(path, val) {
+      if (!val) {
+        return;
+      }
+
       const data = JSON.parse(JSON.stringify(this.instance));
 
       if (path.includes("billing_plan")) {
@@ -297,18 +302,34 @@ export default {
         val = [...addons, val];
       }
 
-      console.log(val, path);
       this.$emit("set-value", { value: val, key: path });
       if (path.includes("billing_plan")) this.addProducts(data);
       this.change(data);
     },
     change(data) {
-      console.log(data);
       this.$emit("update:instances-group", data);
     },
+    getAddonValue(addon){
+      return this.instance.config.addons.find(a=>addon.includes(a))
+    }
   },
-  created() {
-    this.$emit("set-instance", getDefaultInstance());
+  async created() {
+    if (!this.isEdit) {
+      this.$emit("set-instance", getDefaultInstance());
+    } else if (!this.instance.billing_plan?.uuid) {
+      await this.fetchPlans()
+      this.setValue("billing_plan", this.instance.billing_plan);
+      this.setValue("config.planCode", this.instance.config.planCode);
+      this.setValue(
+        "config.configuration.vps_datacenter",
+        this.instance.config.configuration.vps_datacenter
+      );
+      this.setValue(
+        "config.configuration.vps_os",
+        this.instance.config.configuration.vps_os
+      );
+      this.setAddons()
+    }
     const data = JSON.parse(JSON.stringify(getDefaultInstance()));
 
     if (data.billingPlan) {

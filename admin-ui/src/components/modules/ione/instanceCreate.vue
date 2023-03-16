@@ -130,9 +130,11 @@ const getDefaultInstance = () => ({
 });
 export default {
   name: "instance-ione-create",
-  props: ["plans", "instance", "planRules", "sp-uuid"],
+  props: ["plans", "instance", "planRules", "sp-uuid",'is-edit'],
   mounted() {
-    this.$emit("set-instance", getDefaultInstance());
+    if (!this.isEdit) {
+      this.$emit("set-instance", getDefaultInstance());
+    }
   },
   methods: {
     getPlanProducts() {
