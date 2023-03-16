@@ -430,7 +430,7 @@ export default {
       } else if (this.selectedFileType === "YAML") {
         data = await readYAMLFile(file);
       }
-      console.log(data)
+      console.log(data);
 
       this.setService(data);
     },
@@ -564,12 +564,12 @@ export default {
     },
     "currentInstancesGroups.sp"(sp_uuid) {
       if (!sp_uuid) return;
+      this.plans.list = [];
       api.plans.list({ sp_uuid, anonymously: false }).then((res) => {
         res.pool.forEach((plan) => {
           const end = plan.uuid.length > 8 ? "..." : "";
           const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
 
-          this.plans.list = [];
           this.plans.list.push({ ...plan, title });
         });
       });
