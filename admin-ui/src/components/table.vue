@@ -19,7 +19,7 @@
     @update:expanded="(nw) => $emit('update:expanded', nw)"
     :show-expand="showExpand"
     :page="serverSidePage"
-    @update:page="serverSidePage ? ()=>1: (page = $event)"
+    @update:page="serverSidePage ? () => 1 : (page = $event)"
     :items-per-page.sync="itemsPerPage"
     :show-group-by="showGroupBy"
     :group-by="groupBy"
@@ -82,6 +82,41 @@
       <slot :name="slotName" />
     </template>
 
+    <template
+      v-for="header in filtredHeaders"
+      v-slot:[`header.${header?.value}`]
+    >
+      {{ header.text }}
+      <v-menu
+        v-if="header?.customFilter"
+        :key="header?.value"
+        :close-on-content-click="false"
+      >
+        <template v-slot:activator="{ on, attrs }">
+          <v-icon v-bind="attrs" v-on="on" class="mx-2" @click.stop small
+            >mdi-filter</v-icon
+          >
+        </template>
+        <v-list dense>
+          <v-list-item
+            dense
+            v-for="item of filtersItems[header.value]"
+            :key="item"
+          >
+            <v-checkbox
+              dense
+              :value="item"
+              :label="item"
+              :input-value="filtersValues[header.value]"
+              @change="
+                $emit('input:filter', { key: header.value, value: $event })
+              "
+            />
+          </v-list-item>
+        </v-list>
+      </v-menu>
+    </template>
+
     <template v-if="footerError.length > 0" v-slot:footer>
       <v-toolbar class="mt-2" color="error" dark flat>
         <v-toolbar-title class="subheading">
@@ -104,7 +139,11 @@
               >mdi-cog-outline</v-icon
             >
           </template>
-          <v-card color="background-light" style="overflow: hidden" max-width="100%">
+          <v-card
+            color="background-light"
+            style="overflow: hidden"
+            max-width="100%"
+          >
             <v-card-title>Table settings</v-card-title>
             <v-row class="pa-5">
               <v-col v-for="header in headers" :key="header.value" cols="4">
@@ -247,6 +286,8 @@ export default {
       type: Array,
       defaullt: () => [],
     },
+    filtersItems: { type: Object },
+    filtersValues: { type: Object },
   },
   data() {
     return {
@@ -434,7 +475,7 @@ export default {
       }
     },
     configureItemsPerPage() {
-      const storageData=localStorage.getItem("itemsPerPage")
+      const storageData = localStorage.getItem("itemsPerPage");
       if (storageData) {
         const itemsPerPage = JSON.parse(storageData);
         this.itemsPerPage = +itemsPerPage[this.tableName] || 15;
@@ -457,7 +498,7 @@ export default {
         this.page = +page;
       }, 100);
 
-    this.configureItemsPerPage()
+    this.configureItemsPerPage();
     this.configureColumns();
   },
   watch: {

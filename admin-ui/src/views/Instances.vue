@@ -37,7 +37,17 @@
             :items="accounts"
             :rules="rules.req"
           />
-
+          <v-select
+            dense
+            label="service"
+            item-text="title"
+            item-value="uuid"
+            style="width: 300px"
+            v-if="selectedAccountServices.length > 1"
+            v-model="newInstance.service"
+            :items="selectedAccountServices"
+            :rules="rules.req"
+          />
           <v-select
             dense
             label="type"
@@ -46,18 +56,11 @@
             :items="allTypes"
             :rules="rules.req"
           />
-          <v-select
-            label="service"
-            item-text="title"
-            item-value="uuid"
-            v-if="selectedAccountServices.length > 1"
-            v-model="newInstance.service"
-            :items="selectedAccountServices"
-            :rules="rules.req"
-          />
           <v-text-field
+            dense
             label="type name"
             v-if="newInstance.type === 'custom'"
+            style="width: 300px"
             v-model="newInstance.customTitle"
             :rules="rules.req"
           />
@@ -92,16 +95,8 @@
       </v-btn>
     </confirm-dialog>
 
-    <v-select
-      label="Filter by type"
-      class="d-inline-block mr-2"
-      v-model="type"
-      :items="types"
-    />
-
     <instances-table
       v-model="selected"
-      :type="type"
       :column="column"
       :selected="selectedFilters"
       :get-state="getState"
@@ -145,8 +140,6 @@ export default {
   components: { confirmDialog, instancesTable },
   mixins: [snackbar],
   data: () => ({
-    type: "all",
-    types: ["all"],
     allTypes: [],
     column: "",
     filters: {},
@@ -288,6 +281,7 @@ export default {
   created() {
     this.$store.dispatch("accounts/fetch", false);
     this.$store.dispatch("namespaces/fetch", false);
+    this.$store.dispatch("services/fetch", false);
     this.$store.dispatch("servicesProviders/fetch", false);
 
     const types = require.context(

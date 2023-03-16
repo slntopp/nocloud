@@ -1,12 +1,15 @@
 const searchMixin = {
-  mounted(){
+  mounted() {
     this.$store.commit("appSearch/resetSearchParams");
   },
-  methods:{
-    setAdvancedSearch(name){
-      this.$store.commit('appSearch/setAdvancedSearch',name)
-    }
-  }
+  beforeDestroy() {
+    this.$store.commit("appSearch/setAdvancedSearch", null);
+  },
+  methods: {
+    setAdvancedSearch(name) {
+      this.$store.commit("appSearch/setAdvancedSearch", name);
+    },
+  },
 };
 
 export default searchMixin;
