@@ -49,7 +49,8 @@
       </v-row>
       <v-row>
         <component
-          v-if="type"
+          :is-edit="isEdit || this.$route.params.instanceId"
+          v-if="type && serviceProviderId && plans.list.length"
           @set-value="setValue"
           @set-instance="instance = $event"
           @set-meta="meta = $event"
@@ -244,11 +245,12 @@ export default {
             this.isEdit = true;
             const instance = ig.instances.find((i) => i.uuid === instanceId);
             if (instance) {
-              this.service = s;
               this.type = ig.type;
+              this.service = s;
               this.serviceProviderId = ig.sp;
               this.instanceGroup = ig.title;
               this.instance = instance;
+              console.log(this.instance);
             }
           });
         });
@@ -298,6 +300,10 @@ export default {
       });
     },
     type() {
+      if (this.isEdit) {
+        this.isEdit = false;
+        return;
+      }
       this.instanceGroup = null;
       this.serviceProviderId = null;
       this.customInstanceGroup = null;
