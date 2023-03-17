@@ -205,10 +205,6 @@ github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6Mwd
 github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
-github.com/slntopp/nocloud-proto v0.0.0-20230301144028-e454fb26f7ff h1:LY7a1nwN2ibB/CONJw5uF8yS6xApQ4diZjW4n1HI+SM=
-github.com/slntopp/nocloud-proto v0.0.0-20230301144028-e454fb26f7ff/go.mod h1:158bxRQ/MqRFZYIdH2PjTVCd/5ZzSDKOc9HYejlHd8w=
-github.com/slntopp/nocloud-proto v0.0.0-20230315133829-de4d6112b50d h1:jrl7n2LS61slWA8hV7wJTQmcWMmG3WGCSOHZDQZLvnc=
-github.com/slntopp/nocloud-proto v0.0.0-20230315133829-de4d6112b50d/go.mod h1:zartPwOm5Yfl01nW3mDaJ5dXJ9Jj80zJxKULgyvz2Ew=
 github.com/slntopp/nocloud-proto v0.0.0-20230316170005-b7fdb6ffa816 h1:Y1zm2+on8KVPp3p4FpOVWNQuh0Na/MqRGy/nIbZxv/Q=
 github.com/slntopp/nocloud-proto v0.0.0-20230316170005-b7fdb6ffa816/go.mod h1:zartPwOm5Yfl01nW3mDaJ5dXJ9Jj80zJxKULgyvz2Ew=
 github.com/spf13/afero v1.9.4 h1:Sd43wM1IWz/s1aVXdOBkjJvuP8UdyqioeE4AmM0QsBs=
@@ -570,8 +566,8 @@ google.golang.org/protobuf v1.24.0/go.mod h1:r/3tXBNzIEhYS9I1OUVjXDlt8tc493IdKGj
 google.golang.org/protobuf v1.25.0/go.mod h1:9JNX74DMeImyA3h4bdi1ymwjUzf21/xIlbajtzgsN7c=
 google.golang.org/protobuf v1.26.0-rc.1/go.mod h1:jlhhOSvTdKEhbULTjvd4ARK9grFBp09yW+WbY/TyQbw=
 google.golang.org/protobuf v1.26.0/go.mod h1:9q0QmTI4eRPtz6boOQmLYwt+qCgq0jsYwAQnmE0givc=
-google.golang.org/protobuf v1.29.1 h1:7QBf+IK2gx70Ap/hDsOmam3GE0v9HicjfEdAxE62UoM=
-google.golang.org/protobuf v1.29.1/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
+google.golang.org/protobuf v1.30.0 h1:kPPoIgf3TsEvrm0PFe15JQ+570QVxYzEvvHqChK+cng=
+google.golang.org/protobuf v1.30.0/go.mod h1:HV8QOd/L58Z+nl8r43ehVNZIU/HEI6OcFqwMG9pJV4I=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
