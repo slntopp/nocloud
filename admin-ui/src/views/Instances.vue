@@ -43,7 +43,7 @@
             item-text="title"
             item-value="uuid"
             style="width: 300px"
-            v-if="selectedAccountServices.length > 1"
+            v-if="selectedAccountServices?.length > 1"
             v-model="newInstance.service"
             :items="selectedAccountServices"
             :rules="rules.req"
@@ -64,12 +64,23 @@
             v-model="newInstance.customTitle"
             :rules="rules.req"
           />
+          <v-select
+            dense
+            label="service provider"
+            style="width: 300px"
+            item-text="title"
+            item-value="uuid"
+            :items="typedServiceProviders"
+            v-model="newInstance.serviceProviderId"
+            :rules="rules.req"
+          />
 
           <v-btn
             :to="{
               name: 'Instance create',
               params: {
                 serviceId,
+                serviceProviderId: newInstance.serviceProviderId,
                 type:
                   newInstance.type === 'custom'
                     ? newInstance.customTitle
@@ -149,6 +160,7 @@ export default {
       service: [],
       type: "",
       customTitle: "",
+      serviceProviderId: "",
       account: "",
     },
     rules: {
@@ -332,6 +344,9 @@ export default {
         return this.newInstance.service;
       }
       return this.selectedAccountServices[0]?.uuid;
+    },
+    typedServiceProviders() {
+      return this.sp.filter((sp) => sp.type === this.newInstance.type);
     },
   },
   watch: {

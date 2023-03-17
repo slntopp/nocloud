@@ -250,7 +250,6 @@ export default {
               this.serviceProviderId = ig.sp;
               this.instanceGroup = ig.title;
               this.instance = instance;
-              console.log(this.instance);
             }
           });
         });
@@ -267,9 +266,9 @@ export default {
           type = "custom";
         }
         this.type = type;
+        this.serviceProviderId = this.$route.params.serviceProviderId;
       }
     });
-    this.$store.dispatch("servicesProviders/fetch", false);
 
     const types = require.context(
       "@/components/modules/",
@@ -289,24 +288,30 @@ export default {
   watch: {
     serviceProviderId(sp_uuid) {
       if (!sp_uuid) return;
+      this.plans.list = [];
       api.plans.list({ sp_uuid, anonymously: false }).then((res) => {
         res.pool.forEach((plan) => {
           const end = plan.uuid.length > 8 ? "..." : "";
           const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
-
-          this.plans.list = [];
           this.plans.list.push({ ...plan, title });
         });
       });
+      console.log(
+        this.service.instancesGroups.find((ig) => ig.type === this.type)
+      );
+      console.log(this.service.instancesGroups);
+      console.log(this.service.instancesGroups.find(
+          (ig) => ig.sp === sp_uuid
+      ))
+      this.instanceGroup = this.service.instancesGroups.find(
+        (ig) => ig.sp === sp_uuid
+      )?.title;
     },
     type() {
       if (this.isEdit) {
         this.isEdit = false;
         return;
       }
-      this.instanceGroup = null;
-      this.serviceProviderId = null;
-      this.customInstanceGroup = null;
       if (this.type !== "custom") {
         this.customTypeName = null;
       }
