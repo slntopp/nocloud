@@ -55,10 +55,10 @@ export default {
     },
   },
   actions: {
-    init({ commit }) {
+    init({ commit }, data) {
       commit("setLoading", true);
       return api.transactions
-        .count()
+        .count(data)
         .then((data) => {
           commit("setCount", data.total);
         })
@@ -66,7 +66,7 @@ export default {
           commit("setLoading", false);
         });
     },
-    fetch({ commit, state }) {
+    fetch({ commit, state }, data) {
       commit("setLoading", true);
       return api.transactions
         .get({
@@ -74,6 +74,7 @@ export default {
           page: state.page,
           field: state.filter.field || "proc",
           sort: state.filter.sort || "desc",
+          ...data,
         })
         .then((data) => {
           commit("setTransactions", data.pool);
@@ -82,14 +83,14 @@ export default {
           commit("setLoading", false);
         });
     },
-    changeFiltres({ commit, dispatch }, options) {
+    changeFiltres({ commit, dispatch }, { options, data }) {
       commit("setPage", options.page);
       commit("setFilter", {
         field: options.sortBy[0],
         sort: options.sortDesc[0] ? "desc" : "asc",
       });
       commit("setItemPerPage", options.itemsPerPage);
-      return dispatch("fetch");
+      return dispatch("fetch", data);
     },
     fetchById({ commit }, params) {
       commit("setLoading", true);

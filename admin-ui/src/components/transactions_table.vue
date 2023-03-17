@@ -12,6 +12,7 @@
     :footer-error="fetchError"
     @input="selectTransaction"
     :server-items-length="count"
+    :server-side-page="page"
     @update:options="$emit('update:options', $event)"
   >
     <template v-slot:[`item.account`]="{ item }">

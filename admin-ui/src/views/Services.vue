@@ -53,6 +53,9 @@
       :loading="isLoading"
       :expanded.sync="expanded"
       :footer-error="fetchError"
+      :filters-values="selectedFilters"
+      :filters-items="filterItems"
+      @input:filter="selectedFilters[$event.key] = $event.value"
     >
       <template v-slot:[`item.hash`]="{ item, index }">
         <v-btn icon @click="addToClipboard(item.hash, index)">
@@ -150,16 +153,22 @@ export default {
   data: () => ({
     headers: [
       { text: "title", value: "title" },
-      { text: "status", value: "status" },
+      { text: "status", value: "status", customFilter: true },
       { text: "UUID", value: "uuid", align: "start" },
       { text: "hash", value: "hash" },
-      { text: "Access", value: "access" },
+      { text: "Access", value: "access", customFilter: true },
     ],
     copyed: -1,
     opened: {},
     expanded: [],
     selected: [],
     fetchError: "",
+
+    filterItems: {
+      status: ["INIT", "UP", "DEL", "UNKNOWN", "STOPPED", "ALL"],
+      access: ["ROOT", "ADMIN", "MGMT", "READ", "NONE", "ALL"],
+    },
+    selectedFilters: { status: [], access: [] },
   }),
   computed: {
     services() {
@@ -173,19 +182,27 @@ export default {
       return items;
     },
     filteredServices() {
+      let services = this.filterByStatus(
+        this.services,
+        this.selectedFilters.status
+      );
+      services = this.filterByAccessLevels(
+        services,
+        this.selectedFilters.access
+      );
       if (this.searchParam) {
-        const byIps = this.filtredByPublicIps();
-        const byDomains = this.filtredByDomains();
+        const byIps = this.filterByPublicIps(services);
+        const byDomains = this.filterByDomains(services);
 
         const byTitleAndUuid = filterArrayByTitleAndUuid(
-          this.services,
+          services,
           this.searchParam,
           { unique: false }
         );
 
         return [...new Set([...byIps, ...byTitleAndUuid, ...byDomains])];
       }
-      return this.services;
+      return services;
     },
     isFiltered() {
       return this.$route.query.filter == "uuid" && this.$route.query["items[]"];
@@ -254,8 +271,8 @@ export default {
       }
       return result;
     },
-    filtredByPublicIps() {
-      return this.services.filter((service) => {
+    filterByPublicIps(services) {
+      return services.filter((service) => {
         const ips = this.getPublicIpsFromService(service);
         const isItIpExists = ips.find((ip) => ip.includes(this.searchParam));
         const isTitleIncludes = service.title
@@ -264,8 +281,8 @@ export default {
         return isTitleIncludes || isItIpExists;
       });
     },
-    filtredByDomains() {
-      return this.services.filter((service) => {
+    filterByDomains(services) {
+      return services.filter((service) => {
         const domains = [];
 
         service.instancesGroups.forEach((serviceInstance) => {
@@ -281,6 +298,24 @@ export default {
         return domains.find((d) =>
           d.toLowerCase().startsWith(this.searchParam.toLowerCase())
         );
+      });
+    },
+    filterByStatus(services, status) {
+      if (status.includes("ALL") || !status || !status.length) {
+        return services;
+      }
+
+      return this.services.filter((service) => {
+        return status.includes(service.status);
+      });
+    },
+    filterByAccessLevels(services, access) {
+      if (access.includes("ALL") || !access || !access.length) {
+        return services;
+      }
+
+      return this.services.filter((service) => {
+        return access.includes(service.access.level);
       });
     },
     hashTrim(hash) {

@@ -165,7 +165,7 @@ func (ctrl *InstancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 				break
 			}
 		}
-		if !oldInstFound {
+		if !oldInstFound && oldInst.GetStatus() != spb.NoCloudStatus_DEL {
 			err := ctrl.inst_ctrl.Delete(ctx, ig.GetUuid(), oldInst)
 			if err != nil {
 				log.Error("Error while deleting instance", zap.Error(err))

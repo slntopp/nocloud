@@ -30,14 +30,24 @@
           <v-select
             dense
             item-text="title"
-            item-value="uuid"
+            item-value="title"
             label="account"
             style="width: 300px"
-            v-model="newInstance.service"
-            :items="services"
+            v-model="newInstance.account"
+            :items="accounts"
             :rules="rules.req"
           />
-
+          <v-select
+            dense
+            label="service"
+            item-text="title"
+            item-value="uuid"
+            style="width: 300px"
+            v-if="selectedAccountServices?.length > 1"
+            v-model="newInstance.service"
+            :items="selectedAccountServices"
+            :rules="rules.req"
+          />
           <v-select
             dense
             label="type"
@@ -47,17 +57,30 @@
             :rules="rules.req"
           />
           <v-text-field
+            dense
             label="type name"
             v-if="newInstance.type === 'custom'"
+            style="width: 300px"
             v-model="newInstance.customTitle"
+            :rules="rules.req"
+          />
+          <v-select
+            dense
+            label="service provider"
+            style="width: 300px"
+            item-text="title"
+            item-value="uuid"
+            :items="typedServiceProviders"
+            v-model="newInstance.serviceProviderId"
             :rules="rules.req"
           />
 
           <v-btn
             :to="{
-              name: 'Service edit',
+              name: 'Instance create',
               params: {
-                serviceId: newInstance.service,
+                serviceId,
+                serviceProviderId: newInstance.serviceProviderId,
                 type:
                   newInstance.type === 'custom'
                     ? newInstance.customTitle
@@ -83,34 +106,10 @@
       </v-btn>
     </confirm-dialog>
 
-    <v-select
-      label="Filter by type"
-      class="d-inline-block mr-2"
-      v-model="type"
-      :items="types"
-    />
-    <v-select
-      multiple
-      label="Filters"
-      class="d-inline-block"
-      style="width: 250px"
-      v-model="columnFilters"
-      :items="allColumnFilters"
-    >
-      <template v-slot:selection="{ item, index }">
-        <v-chip small v-if="index === 0">{{ item }}</v-chip>
-        <span v-if="index === 1" class="grey--text text-caption">
-          (+{{ columnFilters.length - 1 }} others)
-        </span>
-      </template>
-    </v-select>
-
     <instances-table
       v-model="selected"
-      :type="type"
       :column="column"
       :selected="selectedFilters"
-      :filters="columnFilters"
       :get-state="getState"
       :change-filters="changeFilters"
       @getHeaders="(value) => (headers = value)"
@@ -152,54 +151,24 @@ export default {
   components: { confirmDialog, instancesTable },
   mixins: [snackbar],
   data: () => ({
-    type: "all",
-    types: ["all"],
     allTypes: [],
     column: "",
     filters: {},
     selectedFilters: {},
-    newInstance: { isValid: false, service: "", type: "", customTitle: "" },
+    newInstance: {
+      isValid: false,
+      service: [],
+      type: "",
+      customTitle: "",
+      serviceProviderId: "",
+      account: "",
+    },
     rules: {
       req: [(v) => !!v || "This field is required!"],
     },
-
     isDeleteLoading: false,
     selected: [],
     headers: [],
-    columnFilters: [
-      "ID",
-      "Title",
-      "Service",
-      "Group (NameSpace)",
-      "Account",
-      "Due date",
-      "Status",
-      "Tariff",
-      "Name",
-      "Service provider",
-      "Type",
-      "Price",
-      "Period",
-      "Date",
-    ],
-    allColumnFilters: [
-      "ID",
-      "Title",
-      "Service",
-      "Group (NameSpace)",
-      "Status",
-      "UUID",
-      "Price model",
-      "Account",
-      "Email",
-      "Tariff",
-      "Price",
-      "Period",
-      "Date",
-      "Due date",
-      "Service provider",
-      "Type",
-    ],
   }),
   methods: {
     deleteSelectedInstances() {
@@ -324,6 +293,7 @@ export default {
   created() {
     this.$store.dispatch("accounts/fetch", false);
     this.$store.dispatch("namespaces/fetch", false);
+    this.$store.dispatch("services/fetch", false);
     this.$store.dispatch("servicesProviders/fetch", false);
 
     const types = require.context(
@@ -345,17 +315,14 @@ export default {
     });
 
     const icon = document.querySelector(".group-icon");
-    const filters = localStorage.getItem("filters");
-
     icon.dispatchEvent(new Event("click"));
-    if (filters) this.columnFilters = JSON.parse(filters);
-  },
-  beforeDestroy() {
-    localStorage.setItem("filters", JSON.stringify(this.columnFilters));
   },
   computed: {
     services() {
       return this.$store.getters["services/all"];
+    },
+    accounts() {
+      return this.$store.getters["accounts/all"];
     },
     sp() {
       return this.$store.getters["servicesProviders/all"];
@@ -364,6 +331,27 @@ export default {
       return this.services.find(
         ({ uuid }) => uuid === this.newInstance.service
       );
+    },
+    selectedAccountServices() {
+      if (!this.newInstance.account) {
+        return [];
+      }
+
+      return this.services.filter((s) => s.title === this.newInstance.account);
+    },
+    serviceId() {
+      if (this.newInstance.service) {
+        return this.newInstance.service;
+      }
+      return this.selectedAccountServices[0]?.uuid;
+    },
+    typedServiceProviders() {
+      return this.sp.filter((sp) => sp.type === this.newInstance.type);
+    },
+  },
+  watch: {
+    "newInstance.account"() {
+      this.newInstance.service = null;
     },
   },
 };

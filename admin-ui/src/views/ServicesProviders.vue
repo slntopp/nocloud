@@ -68,6 +68,7 @@ export default {
   data() {
     return {
       selected: [],
+      allTypes: [],
     };
   },
   computed: {
@@ -138,7 +139,6 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "servicesProviders/fetch",
     });
-    this.setAdvancedSearch("serviceProvidersMenu");
   },
 };
 </script>

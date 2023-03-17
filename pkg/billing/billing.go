@@ -280,9 +280,19 @@ LET igs = (
     RETURN node._id
 )
 
-FOR ig in igs
-    FOR node, edge IN 1 OUTBOUND ig GRAPH @permissions
-    FILTER IS_SAME_COLLECTION(node, @@instances)
-    FILTER edge.role == "owner"
-    RETURN node
+
+LET instances = (
+	FOR ig in igs
+    	FOR node, edge IN 1 OUTBOUND ig GRAPH @permissions
+    	FILTER IS_SAME_COLLECTION(node, @@instances)
+    	FILTER edge.role == "owner"
+    	RETURN node
+)
+
+LET plan = DOCUMENT(@plan)
+
+FOR inst in instances
+	FILTER inst.billing_plan.uuid == plan._key
+	RETURN inst
+
 `
