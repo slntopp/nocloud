@@ -28,7 +28,7 @@ import { filterArrayByTitleAndUuid } from "@/functions";
 const Headers = [
   { text: "title", value: "titleLink" },
   { text: "type", value: "type", customFilter: true },
-  { text: "state", value: "state" },
+  { text: "state", value: "state", customFilter: true },
   {
     text: "UUID",
     align: "start",
@@ -51,10 +51,6 @@ export default {
       type: Boolean,
       default: false,
     },
-    searchParams: {
-      type: Object,
-      default: null,
-    },
   },
   data() {
     return {
@@ -63,7 +59,14 @@ export default {
       Headers,
       fetchError: "",
       allTypes: [],
-      selectedFiltres: { type: [] },
+      selectedFiltres: { type: [], state: [] },
+      stateColorMap: {
+        running: "success",
+        operation: "success",
+        unknown: "error",
+        deleted: "error",
+        failure: "error",
+      },
     };
   },
   methods: {
@@ -74,27 +77,14 @@ export default {
       if (!state) {
         return "gray";
       }
-      switch (state.toLowerCase()) {
-        case "running":
-        case "operation":
-          return "success";
-        case "unknown":
-        case "deleted":
-        case "failure":
-          return "error";
-
-        default:
-          return "gray";
-      }
-    },
-    filterSpByTypes(spArray, types) {
-      return spArray.filter((sp) => types.includes(sp.type));
+      return this.stateColorMap[state.toLowerCase()] || "";
     },
   },
   computed: {
     tableData() {
       return this.$store.getters["servicesProviders/all"].map((el) => ({
         titleLink: el.title,
+        title: el.title,
         type: el.type,
         uuid: el.uuid,
         route: {
@@ -105,31 +95,29 @@ export default {
         region: el.secrets?.endpoint?.split("-")[1] ?? "-",
       }));
     },
+    searchParam() {
+      return this.$store.getters["appSearch/param"];
+    },
     filteredSp() {
-      const isAdvanced = this.selectedFiltres.type?.length > 0;
-      if (this.searchParams.param || isAdvanced) {
-        const filtred =
-          !this.selectedFiltres?.type?.includes("all") && isAdvanced > 0
-            ? this.filterSpByTypes(
-                this.tableData,
-                this.selectedFiltres.type
-              )
-            : this.tableData;
-
-        return this.searchParams.param
-          ? filterArrayByTitleAndUuid(
-              filtred,
-              this.searchParams.param,
-              true,
-              "titleLink"
-            )
-          : filtred;
+      const sp = this.tableData.filter((sp) => {
+        return Object.keys(this.selectedFiltres).every(
+          (key) =>
+            this.selectedFiltres[key].length === 0 ||
+            this.selectedFiltres[key].includes("all") ||
+            this.selectedFiltres[key].includes(sp[key])
+        );
+      });
+      if (this.searchParam) {
+        return filterArrayByTitleAndUuid(sp, this.searchParam);
       }
-      return this.tableData;
+      return sp;
     },
     filterItems() {
       return {
         type: this.allTypes,
+        state: Object.keys(this.stateColorMap)
+          .map((k) => k.toUpperCase())
+          .concat("all"),
       };
     },
   },
@@ -178,7 +166,7 @@ export default {
       }
     });
 
-    this.allTypes.push('all')
+    this.allTypes.push("all");
   },
   watch: {
     tableData() {
