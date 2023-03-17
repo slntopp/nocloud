@@ -78,6 +78,9 @@
       :loading="isLoading"
       :footer-error="fetchError"
       @input="(v) => (selected = v)"
+      :filters-values="selectedFilters"
+      :filters-items="filterItems"
+      @input:filter="selectedFilters[$event.key] = $event.value"
     >
       <template v-slot:[`item.title`]="{ item }">
         <router-link :to="{ name: 'Plan', params: { planId: item.uuid } }">
@@ -129,8 +132,8 @@ export default {
     headers: [
       { text: "Title ", value: "title" },
       { text: "UUID ", value: "uuid" },
-      { text: "Kind ", value: "kind" },
-      { text: "Type ", value: "type" },
+      { text: "Kind ", value: "kind", customFilter: true },
+      { text: "Type ", value: "type", customFilter: true },
     ],
     linkedHeaders: [
       { text: "Instance", value: "title" },
@@ -143,6 +146,7 @@ export default {
     copyed: -1,
     fetchError: "",
     serviceProvider: null,
+    selectedFilters: { type: [], kind: [] },
   }),
   methods: {
     changePlan() {
@@ -266,10 +270,19 @@ export default {
       );
     },
     filtredPlans() {
+      const plans = this.plans.filter((plan) => {
+        return Object.keys(this.selectedFilters).every(
+          (key) =>
+            this.selectedFilters[key].length === 0 ||
+            this.selectedFilters[key].includes("all") ||
+            this.selectedFilters[key].includes(plan[key]?.toLowerCase())
+        );
+      });
+
       if (this.searchParam) {
-        return filterArrayByTitleAndUuid(this.plans, this.searchParam);
+        return filterArrayByTitleAndUuid(plans, this.searchParam);
       }
-      return this.plans;
+      return plans;
     },
     isLoading() {
       return this.$store.getters["plans/isLoading"];
@@ -278,6 +291,15 @@ export default {
       const sp = this.$store.getters["servicesProviders/all"];
 
       return [...sp, { title: "all", uuid: null }];
+    },
+    filterItems() {
+      return {
+        kind: ["static", "dynamic", "all"],
+        type: this.typeItems.concat("all"),
+      };
+    },
+    typeItems() {
+      return [...new Set(this.plans.map((p) => p.type.toLowerCase()))];
     },
   },
   watch: {
