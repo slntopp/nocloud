@@ -296,13 +296,6 @@ export default {
           this.plans.list.push({ ...plan, title });
         });
       });
-      console.log(
-        this.service.instancesGroups.find((ig) => ig.type === this.type)
-      );
-      console.log(this.service.instancesGroups);
-      console.log(this.service.instancesGroups.find(
-          (ig) => ig.sp === sp_uuid
-      ))
       this.instanceGroup = this.service.instancesGroups.find(
         (ig) => ig.sp === sp_uuid
       )?.title;
