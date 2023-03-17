@@ -368,6 +368,13 @@ export default {
       return this.$store.getters["services/all"];
     },
     instances() {
+      const searchKeys = [
+        "title",
+        "uuid",
+        "billingPlan.title",
+        "price",
+        "state.meta.networking.public.0",
+      ];
       const instances = this.$store.getters["services/getInstances"].filter(
         (i) => {
           for (const key of Object.keys(this.selectedFilters)) {
@@ -396,8 +403,21 @@ export default {
           return true;
         }
       );
+      if (!this.searchParam) {
+        return instances;
+      }
 
-      return instances;
+      return instances.filter((item) => {
+        return searchKeys.some((key) => {
+          let tempItem = item;
+          if (this.headersGetters[key]) {
+            tempItem = this.getValue(key, tempItem);
+          } else {
+            key.split(".").forEach((subkey) => (tempItem = tempItem?.[subkey]));
+          }
+          return tempItem?.toString()?.startsWith(this.searchParam);
+        });
+      });
     },
     sp() {
       return this.$store.getters["servicesProviders/all"];
