@@ -30,7 +30,7 @@
           <v-select
             dense
             item-text="title"
-            item-value="title"
+            item-value="uuid"
             label="account"
             style="width: 300px"
             v-model="newInstance.account"
@@ -324,6 +324,9 @@ export default {
     accounts() {
       return this.$store.getters["accounts/all"];
     },
+    namespaces() {
+      return this.$store.getters["namespaces/all"];
+    },
     sp() {
       return this.$store.getters["servicesProviders/all"];
     },
@@ -332,12 +335,18 @@ export default {
         ({ uuid }) => uuid === this.newInstance.service
       );
     },
+    selectedNamespace() {
+      return this.namespaces.find(
+        (n) => n.access.namespace === this.newInstance.account
+      );
+    },
     selectedAccountServices() {
       if (!this.newInstance.account) {
         return [];
       }
-
-      return this.services.filter((s) => s.title === this.newInstance.account);
+      return this.services.filter(
+        (s) => s.access.namespace === this.selectedNamespace.uuid
+      );
     },
     serviceId() {
       if (this.newInstance.service) {

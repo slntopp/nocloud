@@ -107,7 +107,6 @@ export function sha256(ascii) {
 }
 
 export function filterArrayIncludes(array, { keys, value, params }) {
-  console.log(array, keys, value, params);
 
   if (!array || !Array.isArray(array) || !array.length) {
     return [];
@@ -115,7 +114,6 @@ export function filterArrayIncludes(array, { keys, value, params }) {
 
   return array.filter((item) =>
     keys.some((key) => {
-      console.log(item, key);
       const newKey = params?.[key] ? params?.[key] : key;
       let newValue = item[newKey];
 
