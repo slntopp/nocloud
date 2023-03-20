@@ -266,67 +266,73 @@ export default {
           return inst.billingPlan.products[key]?.price ?? 0;
         }
         case "ione": {
-          const initialPrice =
-            inst.billingPlan.products[inst.product]?.price ?? 0;
+          const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
 
           return +inst.billingPlan.resources
             .reduce((prev, curr) => {
-              if (
-                curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
-              ) {
+              if (curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`) {
                 return (
-                  prev +
-                  ((curr.price / curr.period) *
-                    3600 *
-                    24 *
-                    30 *
-                    inst.resources.drive_size) /
-                    1024
+                  prev + (curr.price * inst.resources.drive_size) / 1024
                 );
               } else if (curr.key === "ram") {
                 return (
-                  prev +
-                  ((curr.price / curr.period) *
-                    3600 *
-                    24 *
-                    30 *
-                    inst.resources.ram) /
-                    1024
+                  prev + (curr.price * inst.resources.ram) / 1024
                 );
               } else if (inst.resources[curr.key]) {
                 return (
-                  prev +
-                  (curr.price / curr.period) *
-                    3600 *
-                    24 *
-                    30 *
-                    inst.resources[curr.key]
+                  prev + curr.price * inst.resources[curr.key]
                 );
               }
               return prev;
-            }, initialPrice)
-            ?.toFixed(2);
+            }, initialPrice)?.toFixed(2);
         }
       }
     },
     getPeriod(inst) {
-      if (inst.billingPlan.kind === "STATIC") return "monthly";
-      else if (inst.type === "ione") return "PayG";
-      else if (inst.resources.period) {
+      if (inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC") {
+        return "PayG";
+      } else if (inst.resources.period) {
         const text = inst.resources.period > 1 ? "months" : "month";
 
         return `${inst.resources.period} ${text}`;
       }
 
-      switch (inst.duration) {
+      const period = (inst.type === "ovh") ? inst.config.duration : this.getIonePeriod(inst);
+
+      switch (period) {
+        case "P1H":
+          return "hourly";
+        case "P1D":
+          return "daily";
         case "P1M":
           return "monthly";
         case "P1Y":
           return "yearly";
-
+        case "P2Y":
+          return "2-yearly";
+        case "PH":
+          return "hybrid";
         default:
           return "unknown";
       }
+    },
+    getIonePeriod(inst) {
+      const value = new Set();
+      const day = 3600 * 24
+      const month = day * 30;
+      const year = day * 365;
+
+      Object.values(inst.billingPlan.products ?? {}).forEach(({ period }) => {
+        if (inst.billingPlan.kind === 'DYNAMIC') value.add("P1H");
+        if (inst.billingPlan.kind !== 'STATIC') return;
+
+        if (+period === day) value.add("P1D");
+        if (+period === month) value.add("P1M");
+        if (+period === year) value.add("P1Y");
+        if (+period === year * 2) value.add("P2Y");
+      });
+
+      return (value.size > 1) ? "PH" : value.keys().next().value;
     },
     getCreationDate(inst) {
       return inst.data.creation ?? "unknown";
@@ -340,7 +346,7 @@ export default {
       return this.services.find(({ uuid }) => service === uuid)?.title ?? "";
     },
     getServiceProvider({ sp }) {
-      return this.sp.find(({ uuid }) => uuid === sp).title;
+      return this.sp.find(({ uuid }) => uuid === sp)?.title;
     },
     getOSName(id, sp) {
       if (!id) return;

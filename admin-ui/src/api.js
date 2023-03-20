@@ -3,13 +3,10 @@ import vuex from "@/store/index.js";
 const api = new Api();
 
 api.axios.interceptors.response.use(
-  function (response) {
-    return response;
-  },
-  function (error) {
+  (response) => response,
+  (error) => {
     if (
-      error.response &&
-      error.response?.data?.code === 7 &&
+      (error.response && error.response?.data?.code === 7) &&
       !error.response?.config?.url?.includes("transactions") &&
       !error.response?.config?.url?.includes("services")
     ) {
