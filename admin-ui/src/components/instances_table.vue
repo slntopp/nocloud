@@ -12,6 +12,7 @@
     :default-filtres="defaultFiltres"
     :filters-items="filterItems"
     :filters-values="selectedFilters"
+    :show-select="showSelect"
     @input:filter="selectedFilters[$event.key] = $event.value"
   >
     <template v-slot:[`item.id`]="{ index }">
@@ -146,15 +147,15 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import api from "@/api";
+import { getState } from "@/functions";
 
 export default {
   name: "instances-table",
   components: { nocloudTable },
   props: {
     value: { type: Array, required: true },
-    column: { type: String, required: true },
-    selected: { type: Object, required: true },
-    getState: { type: Function, required: true },
+    selected: { type: Object, default: null },
+    showSelect: { type: Boolean, default: true },
   },
   data: () => ({
     fetchError: "",
@@ -468,7 +469,7 @@ export default {
         service: this.getService,
         access: (item) => this.getAccount(item)?.title,
         email: this.getEmail,
-        state: this.getState,
+        state: getState,
         product: this.getTariff,
         price: this.getPrice,
         period: this.getPeriod,
