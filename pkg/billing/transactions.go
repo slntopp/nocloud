@@ -89,7 +89,7 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	}
 
 	if req.Page != nil && req.Limit != nil {
-		if *req.Limit != 0 {
+		if req.GetLimit() != 0 {
 			limit, page := req.GetLimit(), req.GetPage()
 			offset := (page - 1) * limit
 
