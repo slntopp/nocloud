@@ -173,6 +173,7 @@ export default {
     },
     stateColorMap: {
       INIT: "orange darken-2",
+      SUS: "orange darken-2",
       UP: "green darken-2",
       DEL: "gray darken-2",
       RUNNING: "green darken-2",
