@@ -48,8 +48,8 @@
       </v-chip>
     </template>
 
-    <template v-slot:[`item.product`]="{ item, value }">
-      {{ value ?? getValue("product", item) ?? "custom" }}
+    <template v-slot:[`item.product`]="{ item }">
+      {{ getValue("product", item) }}
     </template>
 
     <template v-slot:[`item.price`]="{ item }">
@@ -70,7 +70,7 @@
 
     <template v-slot:[`item.service`]="{ item, value }">
       <router-link :to="{ name: 'Service', params: { serviceId: value } }">
-        {{ "SRV_" + getValue("service", item) }}
+        {{ getValue("service", item) }}
       </router-link>
     </template>
 
@@ -180,6 +180,11 @@ export default {
       "billingPlan.title": [],
       service: [],
       type: [],
+      sp: [],
+      access: [],
+      "access.namespace": [],
+      period: [],
+      product: [],
     },
   }),
   methods: {
@@ -343,7 +348,9 @@ export default {
       return "unknown";
     },
     getService({ service }) {
-      return this.services.find(({ uuid }) => service === uuid)?.title ?? "";
+      return (
+        "SRV_" + this.services.find(({ uuid }) => service === uuid)?.title ?? ""
+      );
     },
     getServiceProvider({ sp }) {
       return this.sp.find(({ uuid }) => uuid === sp).title;
@@ -439,15 +446,19 @@ export default {
         { text: "ID", value: "id" },
         { text: "Title", value: "title" },
         { text: "Service", value: "service", customFilter: true },
-        { text: "Account", value: "access" },
-        { text: "Group (NameSpace)", value: "access.namespace" },
+        { text: "Account", value: "access", customFilter: true },
+        {
+          text: "Group (NameSpace)",
+          value: "access.namespace",
+          customFilter: true,
+        },
         { text: "Due date", value: "dueDate" },
         { text: "Status", value: "state", customFilter: true },
-        { text: "Tariff", value: "product" },
-        { text: "Service provider", value: "sp" },
+        { text: "Tariff", value: "product", customFilter: true },
+        { text: "Service provider", value: "sp", customFilter: true },
         { text: "Type", value: "type", customFilter: true },
         { text: "Price", value: "price" },
-        { text: "Period", value: "period" },
+        { text: "Period", value: "period", customFilter: true },
         { text: "Email", value: "email" },
         { text: "Date", value: "date" },
         { text: "UUID", value: "uuid" },
@@ -469,7 +480,7 @@ export default {
         access: (item) => this.getAccount(item)?.title,
         email: this.getEmail,
         state: getState,
-        product: this.getTariff,
+        product: (item) => item.product ?? this.getTariff(item) ?? "custom",
         price: this.getPrice,
         period: this.getPeriod,
         date: this.getCreationDate,
@@ -497,15 +508,49 @@ export default {
         type: ["ione", "ovh", "custom", "opensrs", "goget"],
         "billingPlan.title": this.priceModelItems,
         service: this.serviceItems,
+        sp: this.spItems,
+        period: this.periodItems,
+        access: this.accountsItems,
+        "access.namespace": this.namespacesItems,
+        product: this.productItems,
       };
     },
     priceModelItems() {
-      return new Set([...this.items.map((i) => i.billingPlan?.title)]);
+      return new Set(this.items.map((i) => i.billingPlan?.title));
     },
     serviceItems() {
       return new Set([
-        ...this.$store.getters["services/all"].map((i) => i.title),
+        ...this.$store.getters["services/all"].map((i) => "SRV_" + i.title),
       ]);
+    },
+    spItems() {
+      const instancesSP = this.items.map((i) => i.sp);
+
+      return new Set(
+        this.sp
+          .filter((sp) => instancesSP.includes(sp.uuid))
+          .map((sp) => sp.title)
+      );
+    },
+    periodItems() {
+      const periods = this.items.map((i) => this.getValue("period", i));
+
+      return new Set(periods);
+    },
+    productItems() {
+      const products = this.items.map((i) => this.getValue("product", i));
+
+      return new Set(products);
+    },
+    accountsItems() {
+      const accounts = this.accounts.map((a) => a.title);
+
+      return new Set(accounts);
+    },
+    namespacesItems() {
+      const namespaces = this.namespaces.map((n) => "NS_" + n.title);
+
+      return new Set(namespaces);
     },
   },
   watch: {
