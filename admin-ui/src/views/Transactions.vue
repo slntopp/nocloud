@@ -22,7 +22,7 @@
       item-value="uuid"
       class="d-inline-block"
       v-model="serviceId"
-      :items="services"
+      :items="servicesByAccount"
     />
 
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
@@ -214,6 +214,12 @@ export default {
     if (this.accounts.length < 2) {
       this.$store.dispatch("accounts/fetch");
     }
+    if (this.services.length < 2) {
+      this.$store.dispatch("services/fetch");
+    }
+    if (this.namespaces.length < 2) {
+      this.$store.dispatch("namespaces/fetch");
+    }
 
     this.accounts.forEach((acc) => {
       if (acc.uuid) accounts.push(acc.uuid);
@@ -246,16 +252,35 @@ export default {
     user() {
       return this.$store.getters["auth/userdata"];
     },
+    namespaces() {
+      return this.$store.getters["namespaces/all"];
+    },
     accounts() {
       const accounts = this.$store.getters["accounts/all"];
-      return [...accounts, { title: "all", uuid: null }];
+      return [{ title: "all", uuid: null }].concat(accounts);
     },
     services() {
-      const services = this.$store.getters["services/all"].map((el) => ({
-        title: `${el.title} (${el.uuid.slice(0, 8)})`,
-        uuid: el.uuid,
-      }));
-      return [...services, { title: "all", uuid: null }];
+      return this.$store.getters["services/all"];
+    },
+    servicesByAccount() {
+      let filtredServices = null;
+      if (this.accountId) {
+        const namespaceId = this.namespaces.find(
+          (n) => this.accountId === n.access.namespace
+        )?.uuid;
+        filtredServices = this.services.filter((s) => {
+          return s.access.namespace === namespaceId;
+        });
+      } else {
+        filtredServices = this.services;
+      }
+
+      return [{ title: "all", uuid: null }].concat(
+        filtredServices.map((el) => ({
+          title: `${el.title} (${el.uuid.slice(0, 8)})`,
+          uuid: el.uuid,
+        }))
+      );
     },
     balance() {
       const dates = [];
@@ -304,7 +329,12 @@ export default {
       this.accountId = this.user.uuid;
     },
     accountId() {
-      this.changeTransactionData();
+      if (this.serviceId === null) {
+        this.serviceId = null;
+        this.changeTransactionData();
+      } else {
+        this.serviceId = null;
+      }
     },
     serviceId() {
       this.changeTransactionData();
