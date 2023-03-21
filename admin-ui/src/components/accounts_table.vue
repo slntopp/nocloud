@@ -147,7 +147,6 @@ export default {
       const accounts = this.tableData.filter(
         (a) =>
           this.selectedFilter["access.level"].length === 0 ||
-          this.selectedFilter["access.level"].includes("ALL") ||
           this.selectedFilter["access.level"].includes(a.access.level)
       );
 
@@ -160,7 +159,7 @@ export default {
       return this.$store.getters["namespaces/all"];
     },
     filterItems() {
-      return { "access.level": Object.keys(this.levelColorMap).concat("ALL") };
+      return { "access.level": Object.keys(this.levelColorMap) };
     },
   },
   created() {

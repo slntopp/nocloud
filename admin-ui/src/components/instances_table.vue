@@ -388,11 +388,7 @@ export default {
       const instances = this.$store.getters["services/getInstances"].filter(
         (i) => {
           for (const key of Object.keys(this.selectedFilters)) {
-            if (
-              this.selectedFilters[key].length === 0 ||
-              this.selectedFilters[key].includes("all".toLowerCase()) ||
-              this.selectedFilters[key].includes("all".toUpperCase())
-            ) {
+            if (this.selectedFilters[key].length === 0) {
               continue;
             }
 
@@ -497,15 +493,8 @@ export default {
     },
     filterItems() {
       return {
-        state: [
-          "RUNNING",
-          "LCM_INIT",
-          "STOPPED",
-          "SUSPENDED",
-          "UNKNOWN",
-          "ALL",
-        ],
-        type: ["ione", "ovh", "custom", "opensrs", "goget", "all"],
+        state: ["RUNNING", "LCM_INIT", "STOPPED", "SUSPENDED", "UNKNOWN"],
+        type: ["ione", "ovh", "custom", "opensrs", "goget"],
         "billingPlan.title": this.priceModelItems,
         service: this.serviceItems,
       };
@@ -515,13 +504,11 @@ export default {
         ...this.$store.getters["services/getInstances"].map(
           (i) => i.billingPlan?.title
         ),
-        "all",
       ]);
     },
     serviceItems() {
       return new Set([
         ...this.$store.getters["services/all"].map((i) => i.title),
-        "all",
       ]);
     },
   },

@@ -165,8 +165,8 @@ export default {
     fetchError: "",
 
     filterItems: {
-      status: ["INIT", "UP", "DEL", "UNKNOWN", "STOPPED", "ALL"],
-      access: ["ROOT", "ADMIN", "MGMT", "READ", "NONE", "ALL"],
+      status: ["INIT", "UP", "DEL", "UNKNOWN", "STOPPED"],
+      access: ["ROOT", "ADMIN", "MGMT", "READ", "NONE"],
     },
     selectedFilters: { status: [], access: [] },
   }),
@@ -301,7 +301,7 @@ export default {
       });
     },
     filterByStatus(services, status) {
-      if (status.includes("ALL") || !status || !status.length) {
+      if (!status || !status.length) {
         return services;
       }
 
@@ -310,7 +310,7 @@ export default {
       });
     },
     filterByAccessLevels(services, access) {
-      if (access.includes("ALL") || !access || !access.length) {
+      if (!access || !access.length) {
         return services;
       }
 
