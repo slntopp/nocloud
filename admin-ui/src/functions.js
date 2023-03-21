@@ -107,7 +107,6 @@ export function sha256(ascii) {
 }
 
 export function filterArrayIncludes(array, { keys, value, params }) {
-
   if (!array || !Array.isArray(array) || !array.length) {
     return [];
   }
@@ -304,4 +303,27 @@ export function getYearsByDays(days) {
 
 export function getWeekByDays(days) {
   return Math.floor(+days / 7);
+}
+
+export function getState(item) {
+  if (!item.state) return "UNKNOWN";
+  const state =
+    item.billingPlan.type === "ione"
+      ? item.state.meta?.lcm_state_str
+      : item.state.state;
+
+  switch (item.state.meta.state) {
+    case 1:
+      return "PENDING";
+    case 5:
+      return "SUSPENDED";
+    case "BUILD":
+      return "BUILD";
+  }
+  switch (state) {
+    case "LCM_INIT":
+      return "POWEROFF";
+    default:
+      return state?.replaceAll("_", " ") ?? "";
+  }
 }

@@ -42,7 +42,11 @@
       </div>
     </template>
     <template v-slot:[`item.balance`]="{ item }">
-      <balance v-if="item.balance" :value="item.balance" />
+      <balance
+        @click="goToBalance(item.uuid)"
+        v-if="item.balance"
+        :value="item.balance"
+      />
       <template v-else>-</template>
     </template>
     <template v-slot:[`item.access.level`]="{ value }">
@@ -131,6 +135,9 @@ export default {
           });
         });
     },
+    goToBalance(uuid) {
+      this.$router.push({ name: "Transactions", query: { account: uuid } });
+    },
   },
   computed: {
     tableData() {
@@ -140,7 +147,6 @@ export default {
       const accounts = this.tableData.filter(
         (a) =>
           this.selectedFilter["access.level"].length === 0 ||
-          this.selectedFilter["access.level"].includes("ALL") ||
           this.selectedFilter["access.level"].includes(a.access.level)
       );
 
@@ -153,7 +159,7 @@ export default {
       return this.$store.getters["namespaces/all"];
     },
     filterItems() {
-      return { "access.level": Object.keys(this.levelColorMap).concat("ALL") };
+      return { "access.level": Object.keys(this.levelColorMap) };
     },
   },
   created() {

@@ -311,7 +311,7 @@ export default {
       this.isEdit = false;
     },
     ["plans.list"](newVal) {
-      if (newVal) {
+      if (newVal && this.instance?.billingPlan?.uuid) {
         this.instance.billing_plan = this.instance?.billingPlan?.uuid;
         delete this.instance.billingPlan;
       }

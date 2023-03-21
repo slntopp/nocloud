@@ -63,20 +63,25 @@
           :headers="recordHeaders"
         >
           <template v-slot:[`item.instance`]="{ item, index }">
-            <v-icon
-              class="ml-2"
-              v-if="!visibleRecords.includes(`${index}.${item.uuid}`)"
-              @click="visibleRecords.push(`${index}.${item.uuid}`)"
-            >
-              mdi-eye-outline
-            </v-icon>
-            <template v-else>
-              {{ hashTrim(item.instance) }}
-            </template>
-            <v-btn icon @click="addToClipboard(item.instance, index)">
-              <v-icon v-if="copyed === index"> mdi-check </v-icon>
-              <v-icon v-else> mdi-content-copy </v-icon>
-            </v-btn>
+            <div class="d-flex justify-space-between">
+              <div>
+                <v-icon
+                  class="ml-2"
+                  v-if="!visibleRecords.includes(`${index}.${item.uuid}`)"
+                  @click="visibleRecords.push(`${index}.${item.uuid}`)"
+                >
+                  mdi-eye-outline
+                </v-icon>
+                <template v-else>
+                  {{ hashTrim(item.instance) }}
+                </template>
+                <v-btn icon @click="addToClipboard(item.instance, index)">
+                  <v-icon v-if="copyed === index"> mdi-check </v-icon>
+                  <v-icon v-else> mdi-content-copy </v-icon>
+                </v-btn>
+              </div>
+              <v-icon @click="goToInstance(item)">mdi-login</v-icon>
+            </div>
           </template>
           <template v-slot:[`header.product`]="{ header }">
             {{
@@ -197,6 +202,12 @@ export default {
         .finally(() => {
           this.isRecordsLoading = false;
         });
+    },
+    goToInstance(item) {
+      this.$router.push({
+        name: "Instance",
+        params: { instanceId: item.instance },
+      });
     },
   },
   computed: {

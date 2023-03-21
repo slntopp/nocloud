@@ -103,7 +103,6 @@ export default {
         return Object.keys(this.selectedFiltres).every(
           (key) =>
             this.selectedFiltres[key].length === 0 ||
-            this.selectedFiltres[key].includes("all") ||
             this.selectedFiltres[key].includes(sp[key])
         );
       });
@@ -115,9 +114,7 @@ export default {
     filterItems() {
       return {
         type: this.allTypes,
-        state: Object.keys(this.stateColorMap)
-          .map((k) => k.toUpperCase())
-          .concat("all"),
+        state: Object.keys(this.stateColorMap).map((k) => k.toUpperCase()),
       };
     },
   },
@@ -165,8 +162,6 @@ export default {
         this.allTypes.push(matched[1]);
       }
     });
-
-    this.allTypes.push("all");
   },
   watch: {
     tableData() {

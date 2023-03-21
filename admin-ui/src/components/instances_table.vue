@@ -12,6 +12,7 @@
     :default-filtres="defaultFiltres"
     :filters-items="filterItems"
     :filters-values="selectedFilters"
+    :show-select="showSelect"
     @input:filter="selectedFilters[$event.key] = $event.value"
   >
     <template v-slot:[`item.id`]="{ index }">
@@ -47,8 +48,8 @@
       </v-chip>
     </template>
 
-    <template v-slot:[`item.product`]="{ item, value }">
-      {{ value ?? getValue("product", item) ?? "custom" }}
+    <template v-slot:[`item.product`]="{ item }">
+      {{ getValue("product", item) }}
     </template>
 
     <template v-slot:[`item.price`]="{ item }">
@@ -69,7 +70,7 @@
 
     <template v-slot:[`item.service`]="{ item, value }">
       <router-link :to="{ name: 'Service', params: { serviceId: value } }">
-        {{ "SRV_" + getValue("service", item) }}
+        {{ getValue("service", item) }}
       </router-link>
     </template>
 
@@ -146,15 +147,16 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import api from "@/api";
+import { getState } from "@/functions";
 
 export default {
   name: "instances-table",
   components: { nocloudTable },
   props: {
     value: { type: Array, required: true },
-    column: { type: String, required: true },
-    selected: { type: Object, required: true },
-    getState: { type: Function, required: true },
+    selected: { type: Object, default: null },
+    showSelect: { type: Boolean, default: true },
+    items: { type: Array, default: () => [] },
   },
   data: () => ({
     fetchError: "",
@@ -178,6 +180,11 @@ export default {
       "billingPlan.title": [],
       service: [],
       type: [],
+      sp: [],
+      access: [],
+      "access.namespace": [],
+      period: [],
+      product: [],
     },
   }),
   methods: {
@@ -347,7 +354,9 @@ export default {
       return "unknown";
     },
     getService({ service }) {
-      return this.services.find(({ uuid }) => service === uuid)?.title ?? "";
+      return (
+        "SRV_" + this.services.find(({ uuid }) => service === uuid)?.title ?? ""
+      );
     },
     getServiceProvider({ sp }) {
       return this.sp.find(({ uuid }) => uuid === sp)?.title;
@@ -391,34 +400,28 @@ export default {
         "price",
         "state.meta.networking.public.0",
       ];
-      const instances = this.$store.getters["services/getInstances"].filter(
-        (i) => {
-          for (const key of Object.keys(this.selectedFilters)) {
-            if (
-              this.selectedFilters[key].length === 0 ||
-              this.selectedFilters[key].includes("all".toLowerCase()) ||
-              this.selectedFilters[key].includes("all".toUpperCase())
-            ) {
-              continue;
-            }
+      const instances = this.items.filter((i) => {
+        for (const key of Object.keys(this.selectedFilters)) {
+          if (this.selectedFilters[key].length === 0) {
+            continue;
+          }
 
-            if (!this.headersGetters[key]) {
-              let val = i;
-              key.split(".").forEach((subkey) => {
-                val = val[subkey];
-              });
-              if (!this.selectedFilters[key].includes(val)) {
-                return false;
-              }
-            } else if (
-              !this.selectedFilters[key].includes(this.getValue(key, i))
-            ) {
+          if (!this.headersGetters[key]) {
+            let val = i;
+            key.split(".").forEach((subkey) => {
+              val = val[subkey];
+            });
+            if (!this.selectedFilters[key].includes(val)) {
               return false;
             }
+          } else if (
+            !this.selectedFilters[key].includes(this.getValue(key, i))
+          ) {
+            return false;
           }
-          return true;
         }
-      );
+        return true;
+      });
       if (!this.searchParam) {
         return instances;
       }
@@ -449,15 +452,19 @@ export default {
         { text: "ID", value: "id" },
         { text: "Title", value: "title" },
         { text: "Service", value: "service", customFilter: true },
-        { text: "Account", value: "access" },
-        { text: "Group (NameSpace)", value: "access.namespace" },
+        { text: "Account", value: "access", customFilter: true },
+        {
+          text: "Group (NameSpace)",
+          value: "access.namespace",
+          customFilter: true,
+        },
         { text: "Due date", value: "dueDate" },
         { text: "Status", value: "state", customFilter: true },
-        { text: "Tariff", value: "product" },
-        { text: "Service provider", value: "sp" },
+        { text: "Tariff", value: "product", customFilter: true },
+        { text: "Service provider", value: "sp", customFilter: true },
         { text: "Type", value: "type", customFilter: true },
         { text: "Price", value: "price" },
-        { text: "Period", value: "period" },
+        { text: "Period", value: "period", customFilter: true },
         { text: "Email", value: "email" },
         { text: "Date", value: "date" },
         { text: "UUID", value: "uuid" },
@@ -478,8 +485,8 @@ export default {
         service: this.getService,
         access: (item) => this.getAccount(item)?.title,
         email: this.getEmail,
-        state: this.getState,
-        product: this.getTariff,
+        state: getState,
+        product: (item) => item.product ?? this.getTariff(item) ?? "custom",
         price: this.getPrice,
         period: this.getPeriod,
         date: this.getCreationDate,
@@ -503,32 +510,53 @@ export default {
     },
     filterItems() {
       return {
-        state: [
-          "RUNNING",
-          "LCM_INIT",
-          "STOPPED",
-          "SUSPENDED",
-          "UNKNOWN",
-          "ALL",
-        ],
-        type: ["ione", "ovh", "custom", "opensrs", "goget", "all"],
+        state: ["RUNNING", "LCM_INIT", "STOPPED", "SUSPENDED", "UNKNOWN"],
+        type: ["ione", "ovh", "custom", "opensrs", "goget"],
         "billingPlan.title": this.priceModelItems,
         service: this.serviceItems,
+        sp: this.spItems,
+        period: this.periodItems,
+        access: this.accountsItems,
+        "access.namespace": this.namespacesItems,
+        product: this.productItems,
       };
     },
     priceModelItems() {
-      return new Set([
-        ...this.$store.getters["services/getInstances"].map(
-          (i) => i.billingPlan?.title
-        ),
-        "all",
-      ]);
+      return new Set(this.items.map((i) => i.billingPlan?.title));
     },
     serviceItems() {
       return new Set([
-        ...this.$store.getters["services/all"].map((i) => i.title),
-        "all",
+        ...this.$store.getters["services/all"].map((i) => "SRV_" + i.title),
       ]);
+    },
+    spItems() {
+      const instancesSP = this.items.map((i) => i.sp);
+
+      return new Set(
+        this.sp
+          .filter((sp) => instancesSP.includes(sp.uuid))
+          .map((sp) => sp.title)
+      );
+    },
+    periodItems() {
+      const periods = this.items.map((i) => this.getValue("period", i));
+
+      return new Set(periods);
+    },
+    productItems() {
+      const products = this.items.map((i) => this.getValue("product", i));
+
+      return new Set(products);
+    },
+    accountsItems() {
+      const accounts = this.accounts.map((a) => a.title);
+
+      return new Set(accounts);
+    },
+    namespacesItems() {
+      const namespaces = this.namespaces.map((n) => "NS_" + n.title);
+
+      return new Set(namespaces);
     },
   },
   watch: {
