@@ -109,6 +109,7 @@
     <instances-table
       v-model="selected"
       :column="column"
+      :items="instances"
       :selected="selectedFilters"
       :change-filters="changeFilters"
       @getHeaders="(value) => (headers = value)"
@@ -304,6 +305,9 @@ export default {
     },
     namespaces() {
       return this.$store.getters["namespaces/all"];
+    },
+    instances() {
+      return this.$store.getters["services/getInstances"];
     },
     sp() {
       return this.$store.getters["servicesProviders/all"];

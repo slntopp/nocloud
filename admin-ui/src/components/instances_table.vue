@@ -156,6 +156,7 @@ export default {
     value: { type: Array, required: true },
     selected: { type: Object, default: null },
     showSelect: { type: Boolean, default: true },
+    items: { type: Array, default: () => [] },
   },
   data: () => ({
     fetchError: "",
@@ -386,30 +387,28 @@ export default {
         "price",
         "state.meta.networking.public.0",
       ];
-      const instances = this.$store.getters["services/getInstances"].filter(
-        (i) => {
-          for (const key of Object.keys(this.selectedFilters)) {
-            if (this.selectedFilters[key].length === 0) {
-              continue;
-            }
+      const instances = this.items.filter((i) => {
+        for (const key of Object.keys(this.selectedFilters)) {
+          if (this.selectedFilters[key].length === 0) {
+            continue;
+          }
 
-            if (!this.headersGetters[key]) {
-              let val = i;
-              key.split(".").forEach((subkey) => {
-                val = val[subkey];
-              });
-              if (!this.selectedFilters[key].includes(val)) {
-                return false;
-              }
-            } else if (
-              !this.selectedFilters[key].includes(this.getValue(key, i))
-            ) {
+          if (!this.headersGetters[key]) {
+            let val = i;
+            key.split(".").forEach((subkey) => {
+              val = val[subkey];
+            });
+            if (!this.selectedFilters[key].includes(val)) {
               return false;
             }
+          } else if (
+            !this.selectedFilters[key].includes(this.getValue(key, i))
+          ) {
+            return false;
           }
-          return true;
         }
-      );
+        return true;
+      });
       if (!this.searchParam) {
         return instances;
       }
@@ -501,11 +500,7 @@ export default {
       };
     },
     priceModelItems() {
-      return new Set([
-        ...this.$store.getters["services/getInstances"].map(
-          (i) => i.billingPlan?.title
-        ),
-      ]);
+      return new Set([...this.items.map((i) => i.billingPlan?.title)]);
     },
     serviceItems() {
       return new Set([
