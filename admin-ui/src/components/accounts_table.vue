@@ -42,7 +42,11 @@
       </div>
     </template>
     <template v-slot:[`item.balance`]="{ item }">
-      <balance v-if="item.balance" :value="item.balance" />
+      <balance
+        @click="goToBalance(item.uuid)"
+        v-if="item.balance"
+        :value="item.balance"
+      />
       <template v-else>-</template>
     </template>
     <template v-slot:[`item.access.level`]="{ value }">
@@ -130,6 +134,9 @@ export default {
             }, 100);
           });
         });
+    },
+    goToBalance(uuid) {
+      this.$router.push({ name: "Transactions", query: { account: uuid } });
     },
   },
   computed: {
