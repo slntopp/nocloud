@@ -172,6 +172,8 @@ export default {
       });
     },
     updateOptions(options) {
+      options.itemsPerPage =
+        options.itemsPerPage === -1 ? 0 : options.itemsPerPage;
       this.$store
         .dispatch("transactions/changeFiltres", {
           options,
