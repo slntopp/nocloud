@@ -19,11 +19,14 @@
     </template>
 
     <template v-slot:[`item.title`]="{ item }">
-      <router-link
-        :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
-      >
-        {{ item.title }}
-      </router-link>
+      <div class="d-flex justify-space-between">
+        <router-link
+          :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
+        >
+          {{ item.title }}
+        </router-link>
+        <v-icon @click="goToInstance(item.uuid)">mdi-login</v-icon>
+      </div>
     </template>
 
     <template v-slot:[`item.access`]="{ item }">
@@ -142,6 +145,7 @@
 
 <script>
 import nocloudTable from "@/components/table.vue";
+import api from "@/api";
 
 export default {
   name: "instances-table",
@@ -367,6 +371,12 @@ export default {
     },
     getValue(key, item) {
       return this.headersGetters[key](item);
+    },
+    goToInstance(uuid) {
+      api.settings.get(["app"]).then((res) => {
+        const url = JSON.parse(res["app"]).url;
+        window.open(`${url}/#/cloud/${uuid}`, "_blanc");
+      });
     },
   },
   computed: {
