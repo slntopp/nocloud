@@ -204,12 +204,17 @@ export default {
     },
   },
   mounted() {
+    if (this.$route.query.account) {
+      this.accountId = this.$route.query.account;
+    } else {
+      this.accountId = this.user.uuid || null;
+    }
+
     const accounts = [];
     if (this.accounts.length < 2) {
       this.$store.dispatch("accounts/fetch");
     }
 
-    this.accountId = this.user.uuid || null;
     this.accounts.forEach((acc) => {
       if (acc.uuid) accounts.push(acc.uuid);
     });
