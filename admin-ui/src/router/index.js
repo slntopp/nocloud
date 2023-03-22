@@ -106,9 +106,9 @@ const routes = [
     },
   },
   {
-    path: "/settings/map",
-    name: "MapSetting",
-    component: () => import("../views/MapSettings.vue"),
+    path: "/settings/widget",
+    name: "WidgetSetting",
+    component: () => import("../views/WidgetSettings.vue"),
     meta: {
       requireLogin: true,
     },
