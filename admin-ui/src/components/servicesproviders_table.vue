@@ -34,10 +34,10 @@ import { filterArrayByTitleAndUuid } from "@/functions";
 import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 
 const Headers = [
-  { text: "title", value: "titleLink" },
-  { text: "type", value: "type", customFilter: true },
-  { text: "state", value: "state", customFilter: true },
-  { text: "preview", value: "meta" },
+  { text: "Title", value: "titleLink" },
+  { text: "Type", value: "type", customFilter: true },
+  { text: "State", value: "state", customFilter: true },
+  { text: "Preview", value: "meta" },
   {
     text: "UUID",
     align: "start",
@@ -141,7 +141,7 @@ export default {
             );
 
             if (!isRegionIncludes) {
-              Headers.push({ text: "region", value: "region" });
+              Headers.push({ text: "Region", value: "region" });
             }
             this.$store.dispatch("servicesProviders/fetchById", el.uuid);
           }
