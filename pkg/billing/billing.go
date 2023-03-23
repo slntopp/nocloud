@@ -199,6 +199,16 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 	return p.Plan, nil
 }
 
+var getDefaultCurrencyQuery = `
+LET cur = LAST(
+    FOR i IN Currencies2Currencies
+    FILTER i.to == 0 || i.from == 0
+        RETURN i
+)
+
+RETURN cur.to == 0 ? cur.from : cur.to
+`
+
 func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
 	log := s.log.Named("ListPlans")
 
@@ -239,12 +249,27 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 
 		cur := acc.Account.GetCurrency()
 
+		defaultCur := pb.Currency_NCU
+
+		queryContext := driver.WithQueryCount(ctx)
+		res, err := s.db.Query(queryContext, getDefaultCurrencyQuery, map[string]interface{}{})
+		if err != nil {
+			return nil, err
+		}
+		if res.Count() != 0 {
+			_, err = res.ReadDocument(ctx, &defaultCur)
+			if err != nil {
+				log.Error("Failed to get default cur", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Failed to get default cur")
+			}
+		}
+
 		var rate float64
 
-		if cur == pb.Currency_NCU {
+		if cur == defaultCur {
 			rate = 1
 		} else {
-			rate, err = s.currencies.GetExchangeRateDirect(ctx, pb.Currency_NCU, cur)
+			rate, err = s.currencies.GetExchangeRateDirect(ctx, defaultCur, cur)
 			if err != nil {
 				log.Error("Error getting rate", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting rate")
