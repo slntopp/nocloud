@@ -127,7 +127,14 @@
       >
         <template v-slot:activator="{ on, attrs }">
           <span v-bind="attrs" v-on="on">
-            {{ item.state.meta.networking.public[0] }}
+            {{
+              item.state.meta.networking.public.find(
+                (ip) =>
+                  /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/gm.exec(
+                    ip
+                  ) || /\/32$/.exec(ip)
+              ) || item.state.meta.networking.public[0]
+            }}
           </span>
         </template>
 
@@ -277,25 +284,23 @@ export default {
           return inst.billingPlan.products[key]?.price ?? 0;
         }
         case "ione": {
-          const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
+          const initialPrice =
+            inst.billingPlan.products[inst.product]?.price ?? 0;
 
           return +inst.billingPlan.resources
             .reduce((prev, curr) => {
-              if (curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`) {
-                return (
-                  prev + (curr.price * inst.resources.drive_size) / 1024
-                );
+              if (
+                curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
+              ) {
+                return prev + (curr.price * inst.resources.drive_size) / 1024;
               } else if (curr.key === "ram") {
-                return (
-                  prev + (curr.price * inst.resources.ram) / 1024
-                );
+                return prev + (curr.price * inst.resources.ram) / 1024;
               } else if (inst.resources[curr.key]) {
-                return (
-                  prev + curr.price * inst.resources[curr.key]
-                );
+                return prev + curr.price * inst.resources[curr.key];
               }
               return prev;
-            }, initialPrice)?.toFixed(2);
+            }, initialPrice)
+            ?.toFixed(2);
         }
       }
     },
@@ -308,7 +313,8 @@ export default {
         return `${inst.resources.period} ${text}`;
       }
 
-      const period = (inst.type === "ovh") ? inst.config.duration : this.getIonePeriod(inst);
+      const period =
+        inst.type === "ovh" ? inst.config.duration : this.getIonePeriod(inst);
 
       switch (period) {
         case "P1H":
@@ -329,13 +335,13 @@ export default {
     },
     getIonePeriod(inst) {
       const value = new Set();
-      const day = 3600 * 24
+      const day = 3600 * 24;
       const month = day * 30;
       const year = day * 365;
 
       Object.values(inst.billingPlan.products ?? {}).forEach(({ period }) => {
-        if (inst.billingPlan.kind === 'DYNAMIC') value.add("P1H");
-        if (inst.billingPlan.kind !== 'STATIC') return;
+        if (inst.billingPlan.kind === "DYNAMIC") value.add("P1H");
+        if (inst.billingPlan.kind !== "STATIC") return;
 
         if (+period === day) value.add("P1D");
         if (+period === month) value.add("P1M");
@@ -343,7 +349,7 @@ export default {
         if (+period === year * 2) value.add("P2Y");
       });
 
-      return (value.size > 1) ? "PH" : value.keys().next().value;
+      return value.size > 1 ? "PH" : value.keys().next().value;
     },
     getCreationDate(inst) {
       return inst.data.creation ?? "unknown";
@@ -398,7 +404,7 @@ export default {
         "uuid",
         "billingPlan.title",
         "price",
-        "state.meta.networking.public.0",
+        "state.meta.networking.public",
       ];
       const instances = this.items.filter((i) => {
         for (const key of Object.keys(this.selectedFilters)) {
@@ -434,6 +440,10 @@ export default {
           } else {
             key.split(".").forEach((subkey) => (tempItem = tempItem?.[subkey]));
           }
+          if (Array.isArray(tempItem)) {
+            return tempItem.some((i) => i.startsWith(this.searchParam));
+          }
+
           return tempItem?.toString()?.startsWith(this.searchParam);
         });
       });
