@@ -20,10 +20,7 @@
             <v-icon class="ml-3">{{ `mdi-${item.icon}` }}</v-icon>
           </template>
           <template v-slot:item="{ item }">
-            <div class="d-flex justify-space-between" style="width: 100%">
-              <span>{{ item }}</span>
-              <v-icon class="ml-3">{{ `mdi-${item}` }}</v-icon>
-            </div>
+            <icon-title-preview :icon="item" :title="item" is-mdi />
           </template>
         </v-autocomplete>
       </template>
@@ -53,10 +50,11 @@ import NocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { mapGetters } from "vuex";
 import snackbar from "@/mixins/snackbar";
+import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 
 export default {
   name: "PluginsSettings",
-  components: { NocloudTable },
+  components: { IconTitlePreview, NocloudTable },
   mixins: [snackbar],
   data: () => ({
     headers: [

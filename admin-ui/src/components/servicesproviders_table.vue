@@ -18,17 +18,26 @@
         {{ value }}
       </v-chip>
     </template>
+    <template v-slot:[`item.meta`]="{ item }">
+      <icon-title-preview
+        :is-mdi="false"
+        :title="item.meta.service.title"
+        :icon="item.meta.service.icon"
+      />
+    </template>
   </nocloud-table>
 </template>
 
 <script>
 import noCloudTable from "@/components/table.vue";
 import { filterArrayByTitleAndUuid } from "@/functions";
+import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 
 const Headers = [
   { text: "title", value: "titleLink" },
   { text: "type", value: "type", customFilter: true },
   { text: "state", value: "state", customFilter: true },
+  { text: "preview", value: "meta" },
   {
     text: "UUID",
     align: "start",
@@ -40,6 +49,7 @@ const Headers = [
 export default {
   name: "servicesProviders-table",
   components: {
+    IconTitlePreview,
     "nocloud-table": noCloudTable,
   },
   props: {
@@ -91,6 +101,7 @@ export default {
           name: "ServicesProvider",
           params: { uuid: el.uuid },
         },
+        meta: el.meta,
         state: el?.state?.state ?? "UNKNOWN",
         region: el.secrets?.endpoint?.split("-")[1] ?? "-",
       }));
