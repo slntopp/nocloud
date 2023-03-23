@@ -18,10 +18,10 @@
 import noCloudTable from "@/components/table.vue";
 
 const Headers = [
-  { text: "location", value: "location" },
-  { text: "value", value: "value" },
-  { text: "type", value: "type" },
-  { text: "ttl", value: "ttl" },
+  { text: "Location", value: "location" },
+  { text: "Value", value: "value" },
+  { text: "Type", value: "type" },
+  { text: "Ttl", value: "ttl" },
 ];
 
 export default {

@@ -1,7 +1,18 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <v-text-field v-model="uuid" readonly label="UUID" style="width: 330px" />
-    <v-text-field v-model="title" label="name" style="width: 330px" />
+    <v-row>
+      <v-col cols="6">
+        <v-text-field
+          v-model="uuid"
+          readonly
+          label="UUID"
+          style="width: 330px"
+        />
+      </v-col>
+      <v-col cols="6">
+        <v-text-field v-model="title" label="name" style="width: 330px" />
+      </v-col>
+    </v-row>
     <v-card-title class="px-0">Instances:</v-card-title>
 
     <instances-table

@@ -77,7 +77,8 @@
           dense
           type="number"
           style="width: 200px"
-          v-model="item.rate"
+          :value="Math.round(item.rate * 100) / 100"
+          @input="item.rate = $event"
           :rules="rules.number"
         />
       </template>

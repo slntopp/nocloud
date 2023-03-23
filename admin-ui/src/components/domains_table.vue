@@ -66,8 +66,8 @@ export default {
   props: ["sp-uuid"],
   data: () => ({
     headers: [
-      { text: "domain", value: "domain" },
-      { text: "status", value: "status" },
+      { text: "Domain", value: "domain" },
+      { text: "Status", value: "status" },
     ],
     tableError: "",
     prices: {},

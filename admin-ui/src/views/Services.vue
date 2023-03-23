@@ -152,10 +152,10 @@ export default {
   mixins: [snackbar, search],
   data: () => ({
     headers: [
-      { text: "title", value: "title" },
-      { text: "status", value: "status", customFilter: true },
+      { text: "Title", value: "title" },
+      { text: "Status", value: "status", customFilter: true },
       { text: "UUID", value: "uuid", align: "start" },
-      { text: "hash", value: "hash" },
+      { text: "Hash", value: "hash" },
       { text: "Access", value: "access", customFilter: true },
     ],
     copyed: -1,
