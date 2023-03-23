@@ -77,7 +77,8 @@
               />
               <v-select
                 label="Icon"
-                v-model="provider.meta.service.icon"
+                :value="provider.meta.service.icon"
+                @change="setIconToKebabCase"
                 :items="icons"
               >
                 <template v-slot:item="{ item }">
@@ -237,6 +238,7 @@ import {
   readJSONFile,
   readYAMLFile,
   downloadYAMLFile,
+  toKebabCase,
 } from "@/functions.js";
 import AntIcon from "@/components/ui/antIcon.vue";
 import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
@@ -518,6 +520,9 @@ export default {
       } else {
         downloadYAMLFile(this.serviceProviderBody, name);
       }
+    },
+    setIconToKebabCase(icon) {
+      this.provider.meta.service.icon = toKebabCase(icon);
     },
   },
 };
