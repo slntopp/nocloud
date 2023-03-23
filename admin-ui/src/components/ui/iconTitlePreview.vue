@@ -1,5 +1,5 @@
 <template>
-  <div class="d-flex justify-lg-space-between">
+  <div class="d-flex justify-lg-space-between" style="width: 100%">
     <span>{{ title }}</span>
     <v-icon v-if="isMdi">{{ `mdi-${icon}` }}</v-icon>
     <ant-icon v-else :name="icon" />
