@@ -202,7 +202,7 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 var getDefaultCurrencyQuery = `
 LET cur = LAST(
     FOR i IN Currencies2Currencies
-    FILTER i.to == 0 || i.from == 0
+    FILTER (i.to == 0 || i.from == 0) && i.rate == 1
         RETURN i
 )
 
