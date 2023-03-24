@@ -77,7 +77,7 @@
               />
               <v-select
                 label="Icon"
-                :value="provider.meta.service.icon"
+                :value="toPascalCase(provider.meta.service.icon)"
                 @change="setIconToKebabCase"
                 :items="icons"
               >
@@ -239,6 +239,7 @@ import {
   readYAMLFile,
   downloadYAMLFile,
   toKebabCase,
+  toPascalCase,
 } from "@/functions.js";
 import AntIcon from "@/components/ui/antIcon.vue";
 import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
@@ -524,6 +525,7 @@ export default {
     setIconToKebabCase(icon) {
       this.provider.meta.service.icon = toKebabCase(icon);
     },
+    toPascalCase,
   },
 };
 </script>
