@@ -50,7 +50,9 @@
       <v-row>
         <component
           :is-edit="isEdit || this.$route.params.instanceId"
-          v-if="type && serviceProviderId && plans.list.length"
+          v-if="
+            type && serviceProviderId && (type !== 'ovh' || plans.list.length)
+          "
           @set-value="setValue"
           @set-instance="instance = $event"
           @set-meta="meta = $event"
@@ -255,6 +257,7 @@ export default {
         });
         return;
       }
+      console.log(this.$route.params);
       let type = this.$route.params.type;
 
       if (type && this.$route.params.serviceId) {
