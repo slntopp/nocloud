@@ -12,6 +12,7 @@
     :default-filtres="defaultFiltres"
     :filters-items="filterItems"
     :filters-values="selectedFilters"
+    :show-select="showSelect"
     @input:filter="selectedFilters[$event.key] = $event.value"
   >
     <template v-slot:[`item.id`]="{ index }">
@@ -19,11 +20,14 @@
     </template>
 
     <template v-slot:[`item.title`]="{ item }">
-      <router-link
-        :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
-      >
-        {{ item.title }}
-      </router-link>
+      <div class="d-flex justify-space-between">
+        <router-link
+          :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
+        >
+          {{ item.title }}
+        </router-link>
+        <v-icon @click="goToInstance(item.uuid)">mdi-login</v-icon>
+      </div>
     </template>
 
     <template v-slot:[`item.access`]="{ item }">
@@ -44,8 +48,8 @@
       </v-chip>
     </template>
 
-    <template v-slot:[`item.product`]="{ item, value }">
-      {{ value ?? getValue("product", item) ?? "custom" }}
+    <template v-slot:[`item.product`]="{ item }">
+      {{ getValue("product", item) }}
     </template>
 
     <template v-slot:[`item.price`]="{ item }">
@@ -66,7 +70,7 @@
 
     <template v-slot:[`item.service`]="{ item, value }">
       <router-link :to="{ name: 'Service', params: { serviceId: value } }">
-        {{ "SRV_" + getValue("service", item) }}
+        {{ getValue("service", item) }}
       </router-link>
     </template>
 
@@ -123,7 +127,14 @@
       >
         <template v-slot:activator="{ on, attrs }">
           <span v-bind="attrs" v-on="on">
-            {{ item.state.meta.networking.public[0] }}
+            {{
+              item.state.meta.networking.public.find(
+                (ip) =>
+                  /^(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)(?:\.(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]\d|\d)){3}$/gm.exec(
+                    ip
+                  ) || /\/32$/.exec(ip)
+              ) || item.state.meta.networking.public[0]
+            }}
           </span>
         </template>
 
@@ -142,15 +153,17 @@
 
 <script>
 import nocloudTable from "@/components/table.vue";
+import api from "@/api";
+import { getState } from "@/functions";
 
 export default {
   name: "instances-table",
   components: { nocloudTable },
   props: {
     value: { type: Array, required: true },
-    column: { type: String, required: true },
-    selected: { type: Object, required: true },
-    getState: { type: Function, required: true },
+    selected: { type: Object, default: null },
+    showSelect: { type: Boolean, default: true },
+    items: { type: Array, default: () => [] },
   },
   data: () => ({
     fetchError: "",
@@ -174,6 +187,11 @@ export default {
       "billingPlan.title": [],
       service: [],
       type: [],
+      sp: [],
+      access: [],
+      "access.namespace": [],
+      period: [],
+      product: [],
     },
   }),
   methods: {
@@ -266,25 +284,23 @@ export default {
           return inst.billingPlan.products[key]?.price ?? 0;
         }
         case "ione": {
-          const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
+          const initialPrice =
+            inst.billingPlan.products[inst.product]?.price ?? 0;
 
           return +inst.billingPlan.resources
             .reduce((prev, curr) => {
-              if (curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`) {
-                return (
-                  prev + (curr.price * inst.resources.drive_size) / 1024
-                );
+              if (
+                curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
+              ) {
+                return prev + (curr.price * inst.resources.drive_size) / 1024;
               } else if (curr.key === "ram") {
-                return (
-                  prev + (curr.price * inst.resources.ram) / 1024
-                );
+                return prev + (curr.price * inst.resources.ram) / 1024;
               } else if (inst.resources[curr.key]) {
-                return (
-                  prev + curr.price * inst.resources[curr.key]
-                );
+                return prev + curr.price * inst.resources[curr.key];
               }
               return prev;
-            }, initialPrice)?.toFixed(2);
+            }, initialPrice)
+            ?.toFixed(2);
         }
       }
     },
@@ -297,7 +313,8 @@ export default {
         return `${inst.resources.period} ${text}`;
       }
 
-      const period = (inst.type === "ovh") ? inst.config.duration : this.getIonePeriod(inst);
+      const period =
+        inst.type === "ovh" ? inst.config.duration : this.getIonePeriod(inst);
 
       switch (period) {
         case "P1H":
@@ -318,13 +335,13 @@ export default {
     },
     getIonePeriod(inst) {
       const value = new Set();
-      const day = 3600 * 24
+      const day = 3600 * 24;
       const month = day * 30;
       const year = day * 365;
 
       Object.values(inst.billingPlan.products ?? {}).forEach(({ period }) => {
-        if (inst.billingPlan.kind === 'DYNAMIC') value.add("P1H");
-        if (inst.billingPlan.kind !== 'STATIC') return;
+        if (inst.billingPlan.kind === "DYNAMIC") value.add("P1H");
+        if (inst.billingPlan.kind !== "STATIC") return;
 
         if (+period === day) value.add("P1D");
         if (+period === month) value.add("P1M");
@@ -332,7 +349,7 @@ export default {
         if (+period === year * 2) value.add("P2Y");
       });
 
-      return (value.size > 1) ? "PH" : value.keys().next().value;
+      return value.size > 1 ? "PH" : value.keys().next().value;
     },
     getCreationDate(inst) {
       return inst.data.creation ?? "unknown";
@@ -343,7 +360,9 @@ export default {
       return "unknown";
     },
     getService({ service }) {
-      return this.services.find(({ uuid }) => service === uuid)?.title ?? "";
+      return (
+        "SRV_" + this.services.find(({ uuid }) => service === uuid)?.title ?? ""
+      );
     },
     getServiceProvider({ sp }) {
       return this.sp.find(({ uuid }) => uuid === sp)?.title;
@@ -368,6 +387,12 @@ export default {
     getValue(key, item) {
       return this.headersGetters[key](item);
     },
+    goToInstance(uuid) {
+      api.settings.get(["app"]).then((res) => {
+        const url = JSON.parse(res["app"]).url;
+        window.open(`${url}/#/cloud/${uuid}`, "_blanc");
+      });
+    },
   },
   computed: {
     services() {
@@ -379,36 +404,30 @@ export default {
         "uuid",
         "billingPlan.title",
         "price",
-        "state.meta.networking.public.0",
+        "state.meta.networking.public",
       ];
-      const instances = this.$store.getters["services/getInstances"].filter(
-        (i) => {
-          for (const key of Object.keys(this.selectedFilters)) {
-            if (
-              this.selectedFilters[key].length === 0 ||
-              this.selectedFilters[key].includes("all".toLowerCase()) ||
-              this.selectedFilters[key].includes("all".toUpperCase())
-            ) {
-              continue;
-            }
+      const instances = this.items.filter((i) => {
+        for (const key of Object.keys(this.selectedFilters)) {
+          if (this.selectedFilters[key].length === 0) {
+            continue;
+          }
 
-            if (!this.headersGetters[key]) {
-              let val = i;
-              key.split(".").forEach((subkey) => {
-                val = val[subkey];
-              });
-              if (!this.selectedFilters[key].includes(val)) {
-                return false;
-              }
-            } else if (
-              !this.selectedFilters[key].includes(this.getValue(key, i))
-            ) {
+          if (!this.headersGetters[key]) {
+            let val = i;
+            key.split(".").forEach((subkey) => {
+              val = val[subkey];
+            });
+            if (!this.selectedFilters[key].includes(val)) {
               return false;
             }
+          } else if (
+            !this.selectedFilters[key].includes(this.getValue(key, i))
+          ) {
+            return false;
           }
-          return true;
         }
-      );
+        return true;
+      });
       if (!this.searchParam) {
         return instances;
       }
@@ -421,6 +440,10 @@ export default {
           } else {
             key.split(".").forEach((subkey) => (tempItem = tempItem?.[subkey]));
           }
+          if (Array.isArray(tempItem)) {
+            return tempItem.some((i) => i.startsWith(this.searchParam));
+          }
+
           return tempItem?.toString()?.startsWith(this.searchParam);
         });
       });
@@ -439,15 +462,19 @@ export default {
         { text: "ID", value: "id" },
         { text: "Title", value: "title" },
         { text: "Service", value: "service", customFilter: true },
-        { text: "Account", value: "access" },
-        { text: "Group (NameSpace)", value: "access.namespace" },
+        { text: "Account", value: "access", customFilter: true },
+        {
+          text: "Group (NameSpace)",
+          value: "access.namespace",
+          customFilter: true,
+        },
         { text: "Due date", value: "dueDate" },
         { text: "Status", value: "state", customFilter: true },
-        { text: "Tariff", value: "product" },
-        { text: "Service provider", value: "sp" },
+        { text: "Tariff", value: "product", customFilter: true },
+        { text: "Service provider", value: "sp", customFilter: true },
         { text: "Type", value: "type", customFilter: true },
         { text: "Price", value: "price" },
-        { text: "Period", value: "period" },
+        { text: "Period", value: "period", customFilter: true },
         { text: "Email", value: "email" },
         { text: "Date", value: "date" },
         { text: "UUID", value: "uuid" },
@@ -468,8 +495,8 @@ export default {
         service: this.getService,
         access: (item) => this.getAccount(item)?.title,
         email: this.getEmail,
-        state: this.getState,
-        product: this.getTariff,
+        state: getState,
+        product: (item) => item.product ?? this.getTariff(item) ?? "custom",
         price: this.getPrice,
         period: this.getPeriod,
         date: this.getCreationDate,
@@ -493,32 +520,53 @@ export default {
     },
     filterItems() {
       return {
-        state: [
-          "RUNNING",
-          "LCM_INIT",
-          "STOPPED",
-          "SUSPENDED",
-          "UNKNOWN",
-          "ALL",
-        ],
-        type: ["ione", "ovh", "custom", "opensrs", "goget", "all"],
+        state: ["RUNNING", "LCM_INIT", "STOPPED", "SUSPENDED", "UNKNOWN"],
+        type: ["ione", "ovh", "custom", "opensrs", "goget"],
         "billingPlan.title": this.priceModelItems,
         service: this.serviceItems,
+        sp: this.spItems,
+        period: this.periodItems,
+        access: this.accountsItems,
+        "access.namespace": this.namespacesItems,
+        product: this.productItems,
       };
     },
     priceModelItems() {
-      return new Set([
-        ...this.$store.getters["services/getInstances"].map(
-          (i) => i.billingPlan?.title
-        ),
-        "all",
-      ]);
+      return new Set(this.items.map((i) => i.billingPlan?.title));
     },
     serviceItems() {
       return new Set([
-        ...this.$store.getters["services/all"].map((i) => i.title),
-        "all",
+        ...this.$store.getters["services/all"].map((i) => "SRV_" + i.title),
       ]);
+    },
+    spItems() {
+      const instancesSP = this.items.map((i) => i.sp);
+
+      return new Set(
+        this.sp
+          .filter((sp) => instancesSP.includes(sp.uuid))
+          .map((sp) => sp.title)
+      );
+    },
+    periodItems() {
+      const periods = this.items.map((i) => this.getValue("period", i));
+
+      return new Set(periods);
+    },
+    productItems() {
+      const products = this.items.map((i) => this.getValue("product", i));
+
+      return new Set(products);
+    },
+    accountsItems() {
+      const accounts = this.accounts.map((a) => a.title);
+
+      return new Set(accounts);
+    },
+    namespacesItems() {
+      const namespaces = this.namespaces.map((n) => "NS_" + n.title);
+
+      return new Set(namespaces);
     },
   },
   watch: {

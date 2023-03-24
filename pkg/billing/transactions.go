@@ -89,12 +89,14 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	}
 
 	if req.Page != nil && req.Limit != nil {
-		limit, page := req.GetLimit(), req.GetPage()
-		offset := (page - 1) * limit
+		if req.GetLimit() != 0 {
+			limit, page := req.GetLimit(), req.GetPage()
+			offset := (page - 1) * limit
 
-		query += ` LIMIT @offset, @count`
-		vars["offset"] = offset
-		vars["count"] = limit
+			query += ` LIMIT @offset, @count`
+			vars["offset"] = offset
+			vars["count"] = limit
+		}
 	}
 	query += ` RETURN t`
 
@@ -231,6 +233,42 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 	return &pb.GetTransactionsCountResponse{
 		Total: uint64(cursor.Count()),
 	}, nil
+}
+
+func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.UpdateTransactionRequest) (*pb.UpdateTransactionResponse, error) {
+	log := s.log.Named("UpdateTransaction")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	t, err := s.transactions.Get(ctx, req.GetUuid())
+	if err != nil {
+		return nil, err
+	}
+
+	if err != nil {
+		log.Error("Failed to get transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get transaction")
+	}
+
+	exec := t.GetExec()
+	if exec != 0 {
+		log.Error("Transaction has exec timestamp")
+		return nil, status.Error(codes.Internal, "Transaction has exec timestamp")
+	}
+	t.Exec = req.GetExec()
+
+	_, err = s.transactions.Update(ctx, t)
+	if err != nil {
+		log.Error("Failed to update transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to update transaction")
+	}
+	return &pb.UpdateTransactionResponse{Result: true}, nil
 }
 
 const processUrgentTransaction = `

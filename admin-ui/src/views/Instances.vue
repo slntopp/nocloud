@@ -109,8 +109,8 @@
     <instances-table
       v-model="selected"
       :column="column"
+      :items="instances"
       :selected="selectedFilters"
-      :get-state="getState"
       :change-filters="changeFilters"
       @getHeaders="(value) => (headers = value)"
       @changeColumn="(value) => (column = value)"
@@ -145,6 +145,7 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import instancesTable from "../components/instances_table.vue";
+import { getState } from "@/functions";
 
 export default {
   name: "instances-view",
@@ -237,7 +238,7 @@ export default {
               filter = this.getService(inst);
               break;
             case "Status":
-              filter = this.getState(inst).toLowerCase();
+              filter = getState(inst).toLowerCase();
               break;
             case "OS":
               filter = this.getOSName(inst.config.template_id, inst.sp);
@@ -258,28 +259,6 @@ export default {
           }
         }
       });
-    },
-    getState(item) {
-      if (!item.state) return "UNKNOWN";
-      const state =
-        item.billingPlan.type === "ione"
-          ? item.state.meta?.lcm_state_str
-          : item.state.state;
-
-      switch (item.state.meta.state) {
-        case 1:
-          return "PENDING";
-        case 5:
-          return "SUSPENDED";
-        case "BUILD":
-          return "BUILD";
-      }
-      switch (state) {
-        case "LCM_INIT":
-          return "POWEROFF";
-        default:
-          return state?.replaceAll("_", " ") ?? "";
-      }
     },
     getService({ service }) {
       return this.services.find(({ uuid }) => service === uuid)?.title ?? "";
@@ -322,10 +301,20 @@ export default {
       return this.$store.getters["services/all"];
     },
     accounts() {
-      return this.$store.getters["accounts/all"];
+      return this.$store.getters["accounts/all"].filter((acc) => {
+        const namespace = this.namespaces.find(
+          (n) => n.access.namespace === acc.uuid
+        );
+        return this.services.find(
+          (s) => s.access.namespace === namespace?.uuid
+        );
+      });
     },
     namespaces() {
       return this.$store.getters["namespaces/all"];
+    },
+    instances() {
+      return this.$store.getters["services/getInstances"];
     },
     sp() {
       return this.$store.getters["servicesProviders/all"];

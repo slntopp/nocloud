@@ -134,6 +134,7 @@ export default {
       { text: "UUID ", value: "uuid" },
       { text: "Kind ", value: "kind", customFilter: true },
       { text: "Type ", value: "type", customFilter: true },
+      { text: "Public ", value: "public", customFilter: true },
     ],
     linkedHeaders: [
       { text: "Instance", value: "title" },
@@ -146,7 +147,7 @@ export default {
     copyed: -1,
     fetchError: "",
     serviceProvider: null,
-    selectedFilters: { type: [], kind: [] },
+    selectedFilters: { type: [], kind: [], public: [] },
   }),
   methods: {
     changePlan() {
@@ -274,8 +275,9 @@ export default {
         return Object.keys(this.selectedFilters).every(
           (key) =>
             this.selectedFilters[key].length === 0 ||
-            this.selectedFilters[key].includes("all") ||
-            this.selectedFilters[key].includes(plan[key]?.toLowerCase())
+            this.selectedFilters[key].includes(
+              plan[key]?.toString()?.toLowerCase()
+            )
         );
       });
 
@@ -290,12 +292,13 @@ export default {
     servicesProviders() {
       const sp = this.$store.getters["servicesProviders/all"];
 
-      return [...sp, { title: "all", uuid: null }];
+      return [...sp];
     },
     filterItems() {
       return {
-        kind: ["static", "dynamic", "all"],
-        type: this.typeItems.concat("all"),
+        kind: ["static", "dynamic"],
+        type: this.typeItems,
+        public: ["true", "false"],
       };
     },
     typeItems() {

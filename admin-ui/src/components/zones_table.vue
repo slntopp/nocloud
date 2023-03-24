@@ -17,7 +17,7 @@
 import noCloudTable from "@/components/table.vue";
 import { filterArrayIncludes } from "@/functions";
 
-const Headers = [{ text: "title", value: "titleLink" }];
+const Headers = [{ text: "Title", value: "titleLink" }];
 
 export default {
   name: "zones-table",

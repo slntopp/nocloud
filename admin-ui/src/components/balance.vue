@@ -1,5 +1,5 @@
 <template>
-  <v-chip v-if="balance !== undefined" :color="colorChip">
+  <v-chip @click="$emit('click')" style="cursor: pointer" v-if="balance !== undefined" :color="colorChip">
     {{ title }}{{ balance }} {{ defaultCurrency }}
   </v-chip>
 </template>

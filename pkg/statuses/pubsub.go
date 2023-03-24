@@ -17,20 +17,14 @@ package statuses
 
 import (
 	"context"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"log"
 	"time"
 
 	"github.com/arangodb/go-driver"
-	"github.com/cskr/pubsub"
 	amqp "github.com/rabbitmq/amqp091-go"
 	spb "github.com/slntopp/nocloud-proto/statuses"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
-)
-
-var (
-	ps *pubsub.PubSub
 )
 
 type StatusesPubSub struct {
@@ -119,11 +113,6 @@ func (s *StatusesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 				log.Warn("Failed to Acknowledge the delivery when Status is nil", zap.Error(err))
 			}
 			continue
-		}
-
-		if col == schema.INSTANCES_COL {
-			topic := "instance/" + req.GetUuid()
-			ps.Pub(&req, topic)
 		}
 
 		c, err := (*s.db).Query(context.TODO(), updateStatusQuery, map[string]interface{}{

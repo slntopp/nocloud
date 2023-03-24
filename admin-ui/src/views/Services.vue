@@ -152,10 +152,10 @@ export default {
   mixins: [snackbar, search],
   data: () => ({
     headers: [
-      { text: "title", value: "title" },
-      { text: "status", value: "status", customFilter: true },
+      { text: "Title", value: "title" },
+      { text: "Status", value: "status", customFilter: true },
       { text: "UUID", value: "uuid", align: "start" },
-      { text: "hash", value: "hash" },
+      { text: "Hash", value: "hash" },
       { text: "Access", value: "access", customFilter: true },
     ],
     copyed: -1,
@@ -164,9 +164,21 @@ export default {
     selected: [],
     fetchError: "",
 
-    filterItems: {
-      status: ["INIT", "UP", "DEL", "UNKNOWN", "STOPPED", "ALL"],
-      access: ["ROOT", "ADMIN", "MGMT", "READ", "NONE", "ALL"],
+    accessColorsMap: {
+      ROOT: "info",
+      ADMIN: "success",
+      MGMT: "warning",
+      READ: "gray",
+      NONE: "error",
+    },
+    stateColorMap: {
+      INIT: "orange darken-2",
+      SUS: "orange darken-2",
+      UP: "green darken-2",
+      DEL: "gray darken-2",
+      RUNNING: "green darken-2",
+      UNKNOWN: "red darken-2",
+      STOPPED: "orange darken-2",
     },
     selectedFilters: { status: [], access: [] },
   }),
@@ -218,6 +230,12 @@ export default {
     },
     searchParam() {
       return this.$store.getters["appSearch/param"];
+    },
+    filterItems() {
+      return {
+        status: Object.keys(this.stateColorMap),
+        access: Object.keys(this.accessColorsMap),
+      };
     },
   },
   created() {
@@ -301,20 +319,20 @@ export default {
       });
     },
     filterByStatus(services, status) {
-      if (status.includes("ALL") || !status || !status.length) {
+      if (!status || !status.length) {
         return services;
       }
 
-      return this.services.filter((service) => {
+      return services.filter((service) => {
         return status.includes(service.status);
       });
     },
     filterByAccessLevels(services, access) {
-      if (access.includes("ALL") || !access || !access.length) {
+      if (!access || !access.length) {
         return services;
       }
 
-      return this.services.filter((service) => {
+      return services.filter((service) => {
         return access.includes(service.access.level);
       });
     },
@@ -337,29 +355,10 @@ export default {
       }
     },
     chipColor(state) {
-      const dict = {
-        INIT: "orange darken-2",
-        UP: "green darken-2",
-        DEL: "gray darken-2",
-        RUNNING: "green darken-2",
-        UNKNOWN: "red darken-2",
-        STOPPED: "orange darken-2",
-      };
-      return dict[state] ?? "blue-grey darken-2";
+      return this.stateColorMap[state] ?? "blue-grey darken-2";
     },
     accessColor(level) {
-      switch (level) {
-        case "ROOT":
-          return "info";
-        case "ADMIN":
-          return "success";
-        case "MGMT":
-          return "warning";
-        case "READ":
-          return "gray";
-        case "NONE":
-          return "error";
-      }
+      return this.accessColorsMap[level];
     },
 
     instanceCountColor(group) {

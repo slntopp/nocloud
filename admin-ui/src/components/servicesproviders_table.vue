@@ -18,17 +18,26 @@
         {{ value }}
       </v-chip>
     </template>
+    <template v-slot:[`item.meta`]="{ item }">
+      <icon-title-preview
+        :is-mdi="false"
+        :title="item.meta.service.title"
+        :icon="item.meta.service.icon"
+      />
+    </template>
   </nocloud-table>
 </template>
 
 <script>
 import noCloudTable from "@/components/table.vue";
 import { filterArrayByTitleAndUuid } from "@/functions";
+import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 
 const Headers = [
-  { text: "title", value: "titleLink" },
-  { text: "type", value: "type", customFilter: true },
-  { text: "state", value: "state", customFilter: true },
+  { text: "Title", value: "titleLink" },
+  { text: "Type", value: "type", customFilter: true },
+  { text: "State", value: "state", customFilter: true },
+  { text: "Preview", value: "meta" },
   {
     text: "UUID",
     align: "start",
@@ -40,6 +49,7 @@ const Headers = [
 export default {
   name: "servicesProviders-table",
   components: {
+    IconTitlePreview,
     "nocloud-table": noCloudTable,
   },
   props: {
@@ -91,6 +101,7 @@ export default {
           name: "ServicesProvider",
           params: { uuid: el.uuid },
         },
+        meta: el.meta,
         state: el?.state?.state ?? "UNKNOWN",
         region: el.secrets?.endpoint?.split("-")[1] ?? "-",
       }));
@@ -103,7 +114,6 @@ export default {
         return Object.keys(this.selectedFiltres).every(
           (key) =>
             this.selectedFiltres[key].length === 0 ||
-            this.selectedFiltres[key].includes("all") ||
             this.selectedFiltres[key].includes(sp[key])
         );
       });
@@ -115,9 +125,7 @@ export default {
     filterItems() {
       return {
         type: this.allTypes,
-        state: Object.keys(this.stateColorMap)
-          .map((k) => k.toUpperCase())
-          .concat("all"),
+        state: Object.keys(this.stateColorMap).map((k) => k.toUpperCase()),
       };
     },
   },
@@ -133,7 +141,7 @@ export default {
             );
 
             if (!isRegionIncludes) {
-              Headers.push({ text: "region", value: "region" });
+              Headers.push({ text: "Region", value: "region" });
             }
             this.$store.dispatch("servicesProviders/fetchById", el.uuid);
           }
@@ -165,8 +173,6 @@ export default {
         this.allTypes.push(matched[1]);
       }
     });
-
-    this.allTypes.push("all");
   },
   watch: {
     tableData() {
