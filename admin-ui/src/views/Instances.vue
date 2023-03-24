@@ -301,7 +301,14 @@ export default {
       return this.$store.getters["services/all"];
     },
     accounts() {
-      return this.$store.getters["accounts/all"];
+      return this.$store.getters["accounts/all"].filter((acc) => {
+        const namespace = this.namespaces.find(
+          (n) => n.access.namespace === acc.uuid
+        );
+        return this.services.find(
+          (s) => s.access.namespace === namespace?.uuid
+        );
+      });
     },
     namespaces() {
       return this.$store.getters["namespaces/all"];
