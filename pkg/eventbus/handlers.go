@@ -2,7 +2,6 @@ package eventbus
 
 import (
 	"context"
-	"errors"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -54,7 +53,7 @@ type EventInfo struct {
 
 func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
 	if event.GetData() == nil {
-		return nil, errors.New("event don't have data")
+		event.Data = make(map[string]*structpb.Value)
 	}
 
 	inst := driver.NewDocumentID(schema.INSTANCES_COL, event.GetUuid())
