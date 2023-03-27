@@ -331,3 +331,12 @@ export function getState(item) {
 export function toKebabCase(str) {
   return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
 }
+
+export function toPascalCase(text) {
+  if (!text) {
+    return;
+  }
+  return text.replace(/(^\w|-\w)/g, (text) =>
+    text.replace(/-/, "").toUpperCase()
+  );
+}
