@@ -521,7 +521,7 @@ export default {
     filterItems() {
       return {
         state: ["RUNNING", "LCM_INIT", "STOPPED", "SUSPENDED", "UNKNOWN"],
-        type: ["ione", "ovh", "custom", "opensrs", "goget"],
+        type: ["ione", "ovh", "custom", "opensrs", "goget","cpanel"],
         "billingPlan.title": this.priceModelItems,
         service: this.serviceItems,
         sp: this.spItems,
