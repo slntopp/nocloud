@@ -129,6 +129,7 @@ export default {
           { action: "reboot", disabled: this.ovhActions?.reboot },
         ],
         opensrs: [{ action: "dns" }],
+        cpanel: [{ action: "session" }],
       };
 
       return types[this.template.billingPlan?.type];
