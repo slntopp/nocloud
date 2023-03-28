@@ -34,6 +34,12 @@
           :value="template.state?.meta.lcm_state_str"
         />
       </v-col>
+      <v-col v-if="template.state?.meta.networking?.public">
+        <div>
+          <span class="mr-4">ips</span>
+          <instance-ip-menu :item="template" />
+        </div>
+      </v-col>
       <v-col>
         <v-text-field
           readonly
@@ -149,10 +155,11 @@ import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import instanceActions from "@/components/instance/controls.vue";
 import JsonTextarea from "@/components/JsonTextarea.vue";
+import instanceIpMenu from "../ui/instanceIpMenu.vue";
 
 export default {
   name: "instance-info",
-  components: { nocloudTable, instanceActions, JsonTextarea },
+  components: { nocloudTable, instanceActions, JsonTextarea, instanceIpMenu },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
   data: () => ({
