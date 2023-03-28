@@ -241,7 +241,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
 	}
 
-	services, err := s.ctrl.ListDeployments(ctx, sp, false)
+	services, err := s.ctrl.GetServices(ctx, sp)
 	if err != nil {
 		log.Error("Error getting provisioned Services from DB", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Couldn't get Provisioned Services")
@@ -253,6 +253,12 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 			res.Services[i] = service.GetUuid()
 		}
 		return res, nil
+	}
+
+	err = s.ctrl.DeleteEdges(ctx, sp.DocumentMeta.ID.String())
+	if err != nil {
+		log.Error("Error deleting edges", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error deleting edges")
 	}
 
 	err = s.ctrl.Delete(ctx, sp.GetUuid())
