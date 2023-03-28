@@ -98,7 +98,7 @@ start:
 	for {
 		s.monitoring.Running = true
 
-		sp_pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY)
+		sp_pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY, true)
 		if err != nil {
 			log.Error("Failed to get ServicesProviders", zap.Error(err))
 			continue
