@@ -1,7 +1,7 @@
 <template>
   <div class="pa-10">
-    <v-card-title class="text-center">{{ sp.title }}</v-card-title>
-    <v-textarea outlined label="Description:" />
+    <v-card-title class="text-center">{{ template.title }}</v-card-title>
+    <v-textarea v-model="promo.description" outlined label="Description:" />
     <v-card-title>Icons:</v-card-title>
     <v-row>
       <v-col
@@ -10,11 +10,11 @@
         md="3"
         lg="2"
         xl="2"
-        v-for="icon in icons"
+        v-for="icon in promo.icons"
         :key="icon.id"
       >
         <v-card height="100%" color="background-light">
-          <v-img cover :src="icon.img" />
+          <v-img height="100%" width="100%" cover :src="icon.src" />
           <v-divider />
           <div class="d-flex flex-row-reverse">
             <v-btn color="primary" @click="deleteIcon(icon.id)" icon>
@@ -24,7 +24,7 @@
         </v-card>
       </v-col>
       <v-col class="d-flex justify-center align-center" cols="1">
-        <v-dialog v-model="addIconDialog" persistent>
+        <v-dialog max-width="600" v-model="addIconDialog" persistent>
           <template v-slot:activator="{ on, attrs }">
             <v-btn
               v-on="on"
@@ -39,13 +39,14 @@
           </template>
           <v-card color="background-light" class="pa-5 ma-auto" max-width="600">
             <v-card-title class="text-h5"> Add new icon: </v-card-title>
-            <v-file-input
+            <!-- <v-file-input
               accept="image/*"
               v-model="newIcon.file"
               clearable
               label="File input"
               underlined
-            />
+            /> -->
+            <v-text-field label="icon link" v-model="newIcon.file" />
             <v-card-actions class="flex-row-reverse">
               <v-btn class="mx-5" color="red" @click="closeAddIcon">
                 close
@@ -57,75 +58,65 @@
       </v-col>
     </v-row>
     <v-row class="mt-3 justify-end">
-      <v-btn color="primary">Save</v-btn>
+      <v-btn :loading="isSaveLoading" @click="save" color="primary">Save</v-btn>
     </v-row>
   </div>
 </template>
 
 <script>
+import api from "@/api";
+import snackbar from "@/mixins/snackbar.js";
+
 export default {
   name: "promo-tab",
   props: { template: { type: Object, required: true } },
+  mixins: [snackbar],
   data: () => ({
-    sp: null,
     addIconDialog: false,
     newIcon: { file: null },
-
-    icons: [
-      {
-        id: "1",
-        img: "https://cdn.vuetifyjs.com/images/cards/cooking.png",
-      },
-      {
-        id: "2",
-        img: "https://cdn.vuetifyjs.com/images/cards/cooking.png",
-      },
-      {
-        id: "3",
-        img: "https://cdn.vuetifyjs.com/images/cards/cooking.png",
-      },
-      {
-        id: "4",
-        img: "https://cdn.vuetifyjs.com/images/cards/cooking.png",
-      },
-      {
-        id: "5",
-        img: "https://cdn.vuetifyjs.com/images/cards/cooking.png",
-      },
-      {
-        id: "6",
-        img: "https://cdn.vuetifyjs.com/images/cards/cooking.png",
-      },
-      {
-        id: "7",
-        img: "https://cdn.vuetifyjs.com/images/cards/cooking.png",
-      },
-      { id: "8", img: "https://cdn.vuetifyjs.com/images/cards/cooking.png" },
-      {
-        id: "912",
-        img: "https://cdn.vuetifyjs.com/images/cards/cooking.png",
-      },
-      {
-        id: "212",
-        img: "https://cdn.vuetifyjs.com/images/cards/cooking.png",
-      },
-    ],
+    promo: { description: "", icons: [] },
+    isSaveLoading: false,
   }),
+  mounted() {
+    if (this.template.meta.promo) {
+      this.promo = this.template.meta.promo;
+    }
+  },
   methods: {
     deleteIcon(id) {
-      console.log(id);
+      this.promo.icons = this.promo.icons.filter((i) => i.id !== id);
     },
     addIcon() {
-      console.log(this.newIcon);
+      this.promo.icons.push({
+        id: this.promo.icons.length,
+        src: this.newIcon.file,
+      });
+      this.closeAddIcon();
     },
     closeAddIcon() {
       this.newIcon = { file: null };
       this.addIconDialog = false;
     },
-  },
-  mounted() {
-    console.log(this.template);
-    this.sp = this.template;
+    save() {
+      this.isSaveLoading = true;
+
+      const data = JSON.parse(JSON.stringify(this.template));
+      data.meta.promo = this.promo;
+
+      api.servicesProviders
+        .update(this.template.uuid, data)
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: "Promo edited successfully",
+          });
+        })
+        .catch((err) => {
+          this.showSnackbarError({ message: err });
+        })
+        .finally(() => {
+          this.isSaveLoading = false;
+        });
+    },
   },
 };
 </script>
