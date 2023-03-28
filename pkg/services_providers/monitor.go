@@ -113,7 +113,7 @@ start:
 			}
 
 			go func(sp *graph.ServicesProvider) {
-				igroups, err := s.ctrl.ListDeployments(ctx, sp, true)
+				igroups, err := s.ctrl.GetGroups(ctx, sp)
 				if err != nil {
 					log.Error("Failed to get Services deployed to ServiceProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 					return
