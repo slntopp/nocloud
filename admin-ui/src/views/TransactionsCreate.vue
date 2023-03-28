@@ -260,10 +260,12 @@ export default {
         )?.uuid || "";
 
       this.transaction.exec = this.exec;
+      if (!this.transaction.exec) {
+        this.transaction.priority = "NORMAL";
+      }
       this.transaction.total *= 1;
     },
     resetDate() {
-      console.log(1);
       this.date.value = null;
       this.time.value = null;
     },
