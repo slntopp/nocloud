@@ -226,11 +226,14 @@ export default {
       });
     },
     getInstance(uuid, serviceUuid) {
+      if (!serviceUuid) {
+        return;
+      }
       const service = this.services.find((s) => s.uuid === serviceUuid);
-      const ig = service.instancesGroups.find((ig) =>
+      const ig = service?.instancesGroups?.find((ig) =>
         ig.instances.find((i) => i.uuid === uuid)
       );
-      return ig.instances.find((i) => i.uuid === uuid);
+      return ig?.instances?.find((i) => i.uuid === uuid);
     },
   },
   computed: {
