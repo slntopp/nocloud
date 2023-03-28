@@ -99,6 +99,11 @@
                 />
               </v-menu>
             </v-col>
+            <v-col cols="1">
+              <v-btn icon @click="resetDate"
+                ><v-icon>mdi-close-thick</v-icon></v-btn
+              >
+            </v-col>
           </v-row>
 
           <v-row>
@@ -232,6 +237,11 @@ export default {
 
       this.transaction.exec = this.exec;
       this.transaction.total *= 1;
+    },
+    resetDate() {
+      console.log(1);
+      this.date.value = null;
+      this.time.value = null;
     },
   },
   created() {
