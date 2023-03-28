@@ -104,6 +104,22 @@
             {{ date(item.exec) }}
           </template>
         </nocloud-table>
+
+        <v-container v-if="item.meta.message">
+          <v-card-title>Message:</v-card-title>
+          <v-card-text>{{ item.meta.message }}</v-card-text>
+        </v-container>
+        <v-container class="mb-3" v-if="item.meta.instances?.length">
+          <v-card-title>Instances:</v-card-title>
+          <v-row v-for="uuid in item.meta.instances" :key="uuid">
+            <router-link
+              class="mx-8"
+              :to="{ name: 'Instance', params: { instanceId: uuid } }"
+            >
+              {{ getInstance(uuid, item.service)?.title }}
+            </router-link>
+          </v-row>
+        </v-container>
       </td>
     </template>
   </nocloud-table>
@@ -209,10 +225,20 @@ export default {
         params: { instanceId: item.instance },
       });
     },
+    getInstance(uuid, serviceUuid) {
+      const service = this.services.find((s) => s.uuid === serviceUuid);
+      const ig = service.instancesGroups.find((ig) =>
+        ig.instances.find((i) => i.uuid === uuid)
+      );
+      return ig.instances.find((i) => i.uuid === uuid);
+    },
   },
   computed: {
     accounts() {
       return this.$store.getters["accounts/all"];
+    },
+    services() {
+      return this.$store.getters["services/all"];
     },
     isLoading() {
       return this.$store.getters["transactions/isLoading"];
