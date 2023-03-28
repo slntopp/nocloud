@@ -1,102 +1,102 @@
 <template>
   <div class="namespaces pa-4 flex-wrap">
-      <div class="buttons__inline pb4">
-        <v-menu
-          offset-y
-          transition="slide-y-transition"
-          bottom
-          :close-on-content-click="false"
-          v-model="createMenuVisible"
-        >
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn
-              color="background-light"
-              class="mr-2"
-              v-bind="attrs"
-              v-on="on"
-              @click="openCreateAccountMenuHandler"
-            >
-              create
-            </v-btn>
-          </template>
-          <v-card class="pa-4">
-            <v-form ref="form" v-model="newAccount.formValid">
-              <v-row>
-                <v-col>
-                  <v-text-field
-                    dense
-                    v-model="newAccount.data.title"
-                    placeholder="title"
-                    :rules="newAccount.rules.title"
-                  >
-                  </v-text-field>
-                </v-col>
-              </v-row>
-              <v-row>
-                <v-col>
-                  <v-text-field
-                    dense
-                    hide-details
-                    v-model="newAccount.data.auth.data[0]"
-                    placeholder="username"
-                  >
-                  </v-text-field>
-                </v-col>
-              </v-row>
-              <v-row>
-                <v-col>
-                  <v-text-field
-                    dense
-                    hide-details
-                    v-model="newAccount.data.auth.data[1]"
-                    placeholder="password"
-                    type="password"
-                  >
-                  </v-text-field>
-                </v-col>
-              </v-row>
-              <v-row>
-                <v-col>
-                  <v-select
-                    :items="namespacesForSelect"
-                    v-model="newAccount.data.namespace"
-                    label="namespace"
-                    :rules="newAccount.rules.selector"
-                  ></v-select>
-                </v-col>
-              </v-row>
-              <v-row>
-                <v-col>
-                  <v-select
-                    :items="accessLevels"
-                    v-model="newAccount.data.access"
-                    label="access"
-                  ></v-select>
-                </v-col>
-              </v-row>
-              <v-row justify="end">
-                <v-col md="5">
-                  <v-btn :loading="newAccount.loading" @click="createAccount">
-                    send
-                  </v-btn>
-                </v-col>
-              </v-row>
-            </v-form>
-          </v-card>
-        </v-menu>
-        <confirm-dialog
-          :disabled="selected.length < 1"
-          @confirm="deleteSelectedAccount"
-        >
+    <div class="buttons__inline pb-8 pt-4">
+      <v-menu
+        offset-y
+        transition="slide-y-transition"
+        bottom
+        :close-on-content-click="false"
+        v-model="createMenuVisible"
+      >
+        <template v-slot:activator="{ on, attrs }">
           <v-btn
             color="background-light"
-            class="mr-8"
-            :disabled="selected.length < 1"
-            :loading="deletingLoading"
+            class="mr-2"
+            v-bind="attrs"
+            v-on="on"
+            @click="openCreateAccountMenuHandler"
           >
-            delete
+            create
           </v-btn>
-        </confirm-dialog>
+        </template>
+        <v-card class="pa-4">
+          <v-form ref="form" v-model="newAccount.formValid">
+            <v-row>
+              <v-col>
+                <v-text-field
+                  dense
+                  v-model="newAccount.data.title"
+                  placeholder="title"
+                  :rules="newAccount.rules.title"
+                >
+                </v-text-field>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                <v-text-field
+                  dense
+                  hide-details
+                  v-model="newAccount.data.auth.data[0]"
+                  placeholder="username"
+                >
+                </v-text-field>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                <v-text-field
+                  dense
+                  hide-details
+                  v-model="newAccount.data.auth.data[1]"
+                  placeholder="password"
+                  type="password"
+                >
+                </v-text-field>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                <v-select
+                  :items="namespacesForSelect"
+                  v-model="newAccount.data.namespace"
+                  label="namespace"
+                  :rules="newAccount.rules.selector"
+                ></v-select>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                <v-select
+                  :items="accessLevels"
+                  v-model="newAccount.data.access"
+                  label="access"
+                ></v-select>
+              </v-col>
+            </v-row>
+            <v-row justify="end">
+              <v-col md="5">
+                <v-btn :loading="newAccount.loading" @click="createAccount">
+                  send
+                </v-btn>
+              </v-col>
+            </v-row>
+          </v-form>
+        </v-card>
+      </v-menu>
+      <confirm-dialog
+        :disabled="selected.length < 1"
+        @confirm="deleteSelectedAccount"
+      >
+        <v-btn
+          color="background-light"
+          class="mr-8"
+          :disabled="selected.length < 1"
+          :loading="deletingLoading"
+        >
+          delete
+        </v-btn>
+      </confirm-dialog>
     </div>
 
     <accounts-table :searchParam="searchParam" v-model="selected">
@@ -141,7 +141,7 @@ export default {
     "accounts-table": accountsTable,
     ConfirmDialog,
   },
-  mixins: [snackbar,search],
+  mixins: [snackbar, search],
   data() {
     return {
       createMenuVisible: false,
@@ -251,6 +251,4 @@ export default {
 };
 </script>
 
-<style>
-
-</style>
+<style></style>

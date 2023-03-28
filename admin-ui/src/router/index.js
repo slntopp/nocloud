@@ -26,6 +26,14 @@ const routes = [
     },
   },
   {
+    path: "/namespaces/:namespaceId",
+    name: "NamespacePage",
+    component: () => import("../views/NamespacePage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/accounts",
     name: "Accounts",
     component: () => import("../views/Accounts.vue"),
@@ -105,10 +113,17 @@ const routes = [
       requireLogin: true,
     },
   },
-  {
     path: "/settings/widget",
     name: "WidgetSetting",
     component: () => import("../views/WidgetSettings.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/settings/plugins",
+    name: "PluginsSetting",
+    component: () => import("../views/PluginsSettings.vue"),
     meta: {
       requireLogin: true,
     },
@@ -157,6 +172,22 @@ const routes = [
     path: "/instances",
     name: "Instances",
     component: () => import("../views/Instances.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/instances/create",
+    name: "Instance create",
+    component: () => import("../views/InstanceCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/instances/:instanceId/edit/",
+    name: "Instance edit",
+    component: () => import("../views/InstanceCreate.vue"),
     meta: {
       requireLogin: true,
     },

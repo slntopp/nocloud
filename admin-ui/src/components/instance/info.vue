@@ -12,7 +12,9 @@
           label="instance uuid"
           style="display: inline-block; width: 330px"
           :value="template.uuid"
-          :append-icon="copyed === 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
+          :append-icon="
+            copyed === 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'
+          "
           @click:append="addToClipboard(template.uuid, 'rootUUID')"
         />
       </v-col>
@@ -42,7 +44,10 @@
       </v-col>
     </v-row>
 
-    <component :is="templates[template.type] ?? templates.custom" :template="template" />
+    <component
+      :is="templates[template.type] ?? templates.custom"
+      :template="template"
+    />
 
     <v-row class="flex-column mb-5" v-if="template.state">
       <v-col>
@@ -83,15 +88,13 @@
         >
           Delete
         </v-btn>
-        <v-btn
-          :loading="isRevertLoading"
-          @click="revertToSnapshot(template)"
-        >
+        <v-btn :loading="isRevertLoading" @click="revertToSnapshot(template)">
           Revert
         </v-btn>
       </v-col>
       <v-col>
         <nocloud-table
+          table-name="instanceInfo"
           single-select
           item-key="ts"
           v-model="selected"
@@ -105,9 +108,14 @@
       </v-col>
     </v-row>
 
-    <v-btn :to="{ name: 'Service edit', params: {
-      serviceId: template.service, sp: template.sp, instance: template.uuid
-    }}">
+    <v-btn
+      :to="{
+        name: 'Instance edit',
+        params: {
+          instanceId: template.uuid,
+        },
+      }"
+    >
       Edit
     </v-btn>
 
@@ -166,11 +174,12 @@ export default {
     createSnapshot(uuid) {
       this.isLoading = true;
 
-      api.instances.action({
-        uuid,
-        action: "snapcreate",
-        params: { snap_name: this.snapshotName },
-      })
+      api.instances
+        .action({
+          uuid,
+          action: "snapcreate",
+          params: { snap_name: this.snapshotName },
+        })
         .then(() => {
           this.showSnackbarSuccess({
             message: "Snapshot created successfully",
@@ -193,11 +202,12 @@ export default {
       );
 
       this.isDeleteLoading = true;
-      api.instances.action({
-        uuid,
-        action: "snapdelete",
-        params: { snap_id: +id },
-      })
+      api.instances
+        .action({
+          uuid,
+          action: "snapdelete",
+          params: { snap_id: +id },
+        })
         .then(() => {
           this.showSnackbarSuccess({
             message: "Snapshot deleted successfully",
@@ -208,7 +218,9 @@ export default {
             message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
           });
         })
-        .finally(() => { this.isDeleteLoading = false });
+        .finally(() => {
+          this.isDeleteLoading = false;
+        });
     },
     revertToSnapshot({ uuid, state }) {
       const { snapshots } = state.meta;
@@ -217,11 +229,12 @@ export default {
       );
 
       this.isRevertLoading = true;
-      api.instances.action({
-        uuid,
-        action: "snaprevert",
-        params: { snap_id: +id },
-      })
+      api.instances
+        .action({
+          uuid,
+          action: "snaprevert",
+          params: { snap_id: +id },
+        })
         .then(() => {
           this.showSnackbarSuccess({
             message: "Snapshot reverted successfully",
@@ -232,7 +245,9 @@ export default {
             message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
           });
         })
-        .finally(() => { this.isRevertLoading = false });
+        .finally(() => {
+          this.isRevertLoading = false;
+        });
     },
     date(timestamp) {
       const date = new Date(timestamp * 1000);
@@ -248,8 +263,12 @@ export default {
       if (navigator?.clipboard) {
         navigator.clipboard
           .writeText(text)
-          .then(() => { this.copyed = index })
-          .catch((res) => { console.error(res) });
+          .then(() => {
+            this.copyed = index;
+          })
+          .catch((res) => {
+            console.error(res);
+          });
       } else {
         this.showSnackbarError({
           message: "Clipboard is not supported!",
@@ -258,7 +277,11 @@ export default {
     },
   },
   created() {
-    const types = require.context("@/components/modules/", true, /instanceCard\.vue$/);
+    const types = require.context(
+      "@/components/modules/",
+      true,
+      /instanceCard\.vue$/
+    );
 
     types.keys().forEach((key) => {
       const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCard\.vue/i);
@@ -269,5 +292,5 @@ export default {
       }
     });
   },
-}
+};
 </script>

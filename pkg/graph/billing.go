@@ -72,12 +72,12 @@ func (ctrl *BillingPlansController) Update(ctx context.Context, plan *pb.Plan) (
 	}, nil
 }
 
-func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) (err error) {
+func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) error {
 	if plan.Uuid == "" {
 		return errors.New("uuid is empty")
 	}
 
-	_, err = ctrl.col.RemoveDocument(ctx, plan.Uuid)
+	_, err := ctrl.col.RemoveDocument(ctx, plan.Uuid)
 
 	if err != nil {
 		return err
@@ -89,7 +89,6 @@ func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) (
 		"plan":                bpId,
 		"permissions":         schema.PERMISSIONS_GRAPH.Name,
 		"@services_providers": schema.SERVICES_PROVIDERS_COL,
-		"@billing_plans":      schema.BILLING_PLANS_COL,
 		"@sp_to_bp":           schema.SP2BP,
 	})
 
@@ -102,9 +101,6 @@ LET sp2bp = (
         FILTER IS_SAME_COLLECTION(node, @@services_providers)
         RETURN edge
 )
-
-LET plan = Document(@plan)
-REMOVE plan in @@billing_plans
 
 FOR item IN sp2bp
     REMOVE item IN @@sp_to_bp

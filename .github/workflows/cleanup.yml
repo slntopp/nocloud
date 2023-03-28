@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Untagged Images (> 1 day)
         id: untagged-base
-        uses: snok/container-retention-policy@v1
+        uses: snok/container-retention-policy@v2
         with:
           image-names: nocloud/base
           cut-off: A day ago UTC
@@ -52,7 +52,7 @@ jobs:
 
       - name: Dev Images (> 2 weeks)
         id: dev-base
-        uses: snok/container-retention-policy@v1
+        uses: snok/container-retention-policy@v2
         with:
           image-names: nocloud/base
           cut-off: 2 weeks ago UTC
@@ -81,7 +81,7 @@ jobs:
     steps:
       - name: Untagged Images (> 1 day)
         id: untagged
-        uses: snok/container-retention-policy@v1
+        uses: snok/container-retention-policy@v2
         with:
           image-names: nocloud/${{matrix.tag}}
           cut-off: A day ago UTC
@@ -102,7 +102,7 @@ jobs:
 
       - name: Dev Images (> 2 weeks)
         id: dev
-        uses: snok/container-retention-policy@v1
+        uses: snok/container-retention-policy@v2
         with:
           image-names: nocloud/${{matrix.tag}}
           cut-off: 2 weeks ago UTC

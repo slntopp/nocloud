@@ -17,6 +17,7 @@ package billing
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	epb "github.com/slntopp/nocloud-proto/events"
@@ -38,26 +39,64 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
 	acc := requestor
+
+	query := `FOR t IN @@transactions`
+	vars := map[string]interface{}{
+		"@transactions": schema.TRANSACTIONS_COL,
+	}
+
 	if req.Account != nil {
 		acc = *req.Account
 		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
 		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
+		query += ` FILTER t.account == @acc`
+		vars["acc"] = acc
+	} else {
+		if acc != schema.ROOT_ACCOUNT_KEY {
+			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+		}
 	}
-	query := `FOR t IN @@transactions FILTER t.account == @acc`
-	vars := map[string]interface{}{
-		"@transactions": schema.TRANSACTIONS_COL,
-		"acc":           acc,
-	}
+
 	if req.Service != nil {
 		service := *req.Service
 		node := driver.NewDocumentID(schema.SERVICES_COL, service)
 		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
-		query += ` && t.service == @service`
+		if req.Account == nil {
+			query += ` FILTER t.service == @service`
+		} else {
+			query += ` && t.service == @service`
+		}
 		vars["service"] = service
+	}
+
+	if req.Field != nil && req.Sort != nil {
+		subQuery := ` SORT t.%s %s`
+		field, sort := req.GetField(), req.GetSort()
+
+		if field == "total" {
+			if sort == "asc" {
+				sort = "desc"
+			} else {
+				sort = "asc"
+			}
+		}
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	if req.Page != nil && req.Limit != nil {
+		if req.GetLimit() != 0 {
+			limit, page := req.GetLimit(), req.GetPage()
+			offset := (page - 1) * limit
+
+			query += ` LIMIT @offset, @count`
+			vars["offset"] = offset
+			vars["count"] = limit
+		}
 	}
 	query += ` RETURN t`
 
@@ -134,6 +173,102 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	}
 
 	return r.Transaction, nil
+}
+
+func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb.GetTransactionsCountRequest) (*pb.GetTransactionsCountResponse, error) {
+	log := s.log.Named("GetTransactionsCount")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+
+	acc := requestor
+
+	query := `FOR t IN @@transactions`
+	vars := map[string]interface{}{
+		"@transactions": schema.TRANSACTIONS_COL,
+	}
+
+	if req.Account != nil {
+		acc = *req.Account
+		node := driver.NewDocumentID(schema.ACCOUNTS_COL, acc)
+		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+		}
+		query += ` FILTER t.account == @acc`
+		vars["acc"] = acc
+	} else {
+		if acc != schema.ROOT_ACCOUNT_KEY {
+			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+		}
+	}
+
+	if req.Service != nil {
+		service := *req.Service
+		node := driver.NewDocumentID(schema.SERVICES_COL, service)
+		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
+			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+		}
+		if req.Account == nil {
+			query += ` FILTER t.service == @service`
+		} else {
+			query += ` && t.service == @service`
+		}
+		vars["service"] = service
+	}
+
+	query += ` RETURN t`
+
+	log.Debug("Ready to retrieve transactions", zap.String("query", query), zap.Any("vars", vars))
+
+	queryContext := driver.WithQueryCount(ctx)
+
+	cursor, err := s.db.Query(queryContext, query, vars)
+	if err != nil {
+		log.Error("Failed to retrieve transactions", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to retrieve transactions")
+	}
+	defer cursor.Close()
+
+	log.Info("transactions count", zap.Int64("count", cursor.Count()))
+
+	return &pb.GetTransactionsCountResponse{
+		Total: uint64(cursor.Count()),
+	}, nil
+}
+
+func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.UpdateTransactionRequest) (*pb.UpdateTransactionResponse, error) {
+	log := s.log.Named("UpdateTransaction")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	t, err := s.transactions.Get(ctx, req.GetUuid())
+	if err != nil {
+		return nil, err
+	}
+
+	if err != nil {
+		log.Error("Failed to get transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get transaction")
+	}
+
+	exec := t.GetExec()
+	if exec != 0 {
+		log.Error("Transaction has exec timestamp")
+		return nil, status.Error(codes.Internal, "Transaction has exec timestamp")
+	}
+	t.Exec = req.GetExec()
+
+	_, err = s.transactions.Update(ctx, t)
+	if err != nil {
+		log.Error("Failed to update transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to update transaction")
+	}
+	return &pb.UpdateTransactionResponse{Result: true}, nil
 }
 
 const processUrgentTransaction = `

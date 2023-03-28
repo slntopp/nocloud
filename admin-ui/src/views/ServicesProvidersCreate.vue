@@ -1,6 +1,8 @@
 <template>
   <div class="servicesProviders-create pa-4">
-    <div class="page__title">{{ ($route.params.uuid) ? 'Edit' : 'Create' }} service provider</div>
+    <div class="page__title">
+      {{ $route.params.uuid ? "Edit" : "Create" }} service provider
+    </div>
     <v-container>
       <v-row>
         <v-col lg="6" cols="12">
@@ -10,25 +12,14 @@
             </v-col>
 
             <v-col cols="9">
-              <v-select
-                v-model="provider.type"
-                :items="types"
-                label="Type"
-              />
+              <v-select v-model="provider.type" :items="types" label="Type" />
               <v-text-field
+                ref="type"
                 label="Type name"
                 v-if="provider.type === 'custom'"
                 v-model="customTitle"
+                :rules="[(v) => !!v || 'This field is required!']"
               />
-            </v-col>
-          </v-row>
-          <v-row align="center" v-if="provider.type === 'custom'">
-            <v-col cols="3">
-              <v-subheader> Key </v-subheader>
-            </v-col>
-
-            <v-col cols="9">
-              <v-text-field v-model="key" label="Key"></v-text-field>
             </v-col>
           </v-row>
 
@@ -55,6 +46,49 @@
                 v-model="provider.proxy.socket"
                 label="Socket"
               ></v-text-field>
+            </v-col>
+          </v-row>
+
+          <v-row v-if="false">
+            <v-col cols="3">
+              <v-subheader>Meta</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <json-editor
+                :json="provider.meta"
+                @changeValue="(data) => (provider.meta = data)"
+              />
+            </v-col>
+          </v-row>
+
+          <v-row>
+            <v-col cols="3">
+              <v-subheader>Service</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-text-field
+                label="Title"
+                v-model="provider.meta.service.title"
+              />
+              <v-select
+                label="Tab"
+                v-model="provider.meta.service.type"
+                :items="services"
+              />
+              <v-select
+                label="Icon"
+                :value="toPascalCase(provider.meta.service.icon)"
+                @change="setIconToKebabCase"
+                :items="icons"
+              >
+                <template v-slot:item="{ item }">
+                  <icon-title-preview
+                    :is-mdi="false"
+                    :title="item"
+                    :icon="item"
+                  />
+                </template>
+              </v-select>
             </v-col>
           </v-row>
 
@@ -196,6 +230,7 @@
 import api from "@/api.js";
 import extentionsMap from "@/components/extentions/map.js";
 import snackbar from "@/mixins/snackbar.js";
+import JsonEditor from "@/components/JsonEditor.vue";
 
 import {
   mergeDeep,
@@ -203,25 +238,30 @@ import {
   readJSONFile,
   readYAMLFile,
   downloadYAMLFile,
+  toKebabCase,
+  toPascalCase,
 } from "@/functions.js";
+import AntIcon from "@/components/ui/antIcon.vue";
+import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 
 export default {
   name: "servicesProviders-create",
+  components: { IconTitlePreview, AntIcon, JsonEditor },
   mixins: [snackbar],
   data: () => ({
     types: [],
     templates: {},
-    key: "",
     customTitle: "",
     provider: {
       type: "custom",
       title: "",
       public: true,
-      proxy: { socket: '' },
+      proxy: { socket: "" },
       secrets: {},
       vars: {},
+      meta: { service: {} },
     },
-    providerKey:'',
+    providerKey: "",
 
     isPassed: false,
     isLoading: false,
@@ -233,6 +273,10 @@ export default {
       data: {},
       selected: "",
     },
+    services: [
+      { text: "Cloud", value: "cloud" },
+      { text: "Services", value: "products" },
+    ],
 
     tooltipVisible: false,
 
@@ -257,54 +301,69 @@ export default {
       }
     });
 
-    this.providerKey=this.generateComponentId()
+    this.providerKey = this.generateComponentId();
 
     this.fetchExtentions();
-    this.$store.dispatch('servicesProviders/fetchById', id)
-      .then((res) => {
-        if (!this.types.includes(res.type)) {
-          this.customTitle = res.type;
-          res.type = 'custom';
-        }
-        this.provider = res;
-      });
+    this.$store.dispatch("servicesProviders/fetchById", id).then((res) => {
+      if (!this.types.includes(res.type)) {
+        this.customTitle = res.type;
+        res.type = "custom";
+      }
+      this.provider = res;
+    });
   },
   computed: {
     template() {
       return () =>
         import(`@/components/modules/${this.type}/serviceProviders.vue`);
     },
+    icons() {
+      const illustrations = require.context(
+        "@ant-design/icons-vue/",
+        true,
+        /^.*\.js$/
+      );
+      const removedKeys = ["./", ".js", "Outlined"];
+
+      return illustrations
+        .keys()
+        .map((icon) => {
+          if (icon.includes("Filled") || icon.includes("TwoTone")) {
+            return undefined;
+          }
+
+          removedKeys.forEach((key) => {
+            icon = icon.replace(key, "");
+          });
+
+          if (icon.includes("/")) {
+            return undefined;
+          }
+
+          return icon;
+        })
+        .filter((icon) => !!icon);
+    },
     extentionsMap() {
       return extentionsMap;
     },
     serviceProviderBody() {
       if (Object.keys(this.extentions.data).length > 0) {
-        if (this.provider.type === "custom") {
-          return {
-            ...this.provider,
-            type: this.key,
-            extentions: this.extentions.data,
-          };
-        } else {
-          return {
-            ...this.provider,
-            extentions: this.extentions.data,
-          };
-        }
+        return { ...this.provider, extentions: this.extentions.data };
       } else {
         return this.provider;
       }
     },
   },
   methods: {
-    generateComponentId(){
-      return "id" + Math.random().toString(16).slice(2)
+    generateComponentId() {
+      return "id" + Math.random().toString(16).slice(2);
     },
     handleFieldsChange(type, data) {
-      if (type == "secrets" ) {
+      if (type == "secrets") {
         this.provider.secrets = data;
       }
-      if (type == "vars" ) {
+      if (type == "vars") {
         this.provider.vars = data;
       }
 
@@ -323,13 +382,17 @@ export default {
         });
     },
     tryToSend() {
-      const action = (this.$route.params.uuid) ? 'edit' : 'create';
+      const action = this.$route.params.uuid ? "edit" : "create";
 
-      if (!this.isPassed) {
+      if (
+        !this.isPassed ||
+        (this.customTitle === "" && this.provider.type === "custom")
+      ) {
         const opts = {
           message: `Error: Test must be passed before creation.`,
         };
         this.showSnackbarError(opts);
+        this.$refs.type.focus();
         return;
       }
       if (
@@ -352,27 +415,29 @@ export default {
         }
       }
 
-      if (action === 'create') delete this.provider.uuid;
-      if (this.provider.type === 'custom') {
+      if (action === "create") delete this.provider.uuid;
+      if (this.provider.type === "custom") {
         this.provider.type = this.customTitle;
       }
 
       this.isLoading = true;
-      api.servicesProviders.testConfig(this.serviceProviderBody)
+      api.servicesProviders
+        .testConfig(this.serviceProviderBody)
         .then((res) => {
           if (res.result) {
             const id = this.$route.params.uuid;
 
-            return (action === 'create')
+            return action === "create"
               ? api.servicesProviders.create(this.serviceProviderBody)
               : api.servicesProviders.update(id, this.serviceProviderBody);
-          }
-          else throw res;
+          } else throw res;
         })
         .then(() => {
-          this.showSnackbarSuccess({ message: (action === 'create')
-            ? "Service provider created successfully"
-            : "Service provider updated successfully"
+          this.showSnackbarSuccess({
+            message:
+              action === "create"
+                ? "Service provider created successfully"
+                : "Service provider updated successfully",
           });
           this.$router.push({ name: "ServicesProviders" });
         })
@@ -428,7 +493,7 @@ export default {
         throw new Error(`Type ${res.type} not exists!`);
       }
 
-      this.providerKey=this.generateComponentId()
+      this.providerKey = this.generateComponentId();
 
       this.provider = res;
     },
@@ -457,6 +522,10 @@ export default {
         downloadYAMLFile(this.serviceProviderBody, name);
       }
     },
+    setIconToKebabCase(icon) {
+      this.provider.meta.service.icon = toKebabCase(icon);
+    },
+    toPascalCase,
   },
 };
 </script>

@@ -28,11 +28,28 @@
         />
       </v-col>
       <v-col>
-        <v-switch
-          readonly
-          label="public"
-          v-model="provider.public"
-        />
+        <v-switch readonly label="public" v-model="provider.public" />
+      </v-col>
+      <v-col cols="12">
+        <div class="d-flex align-start">
+          <v-btn
+            :to="{
+              name: 'ServicesProvider edit',
+              params: { uuid: provider.uuid },
+            }"
+          >
+            Edit
+          </v-btn>
+          <v-btn class="mx-2" @click="downloadFile">
+            Download {{ isJson ? "JSON" : "YAML" }}
+          </v-btn>
+          <v-switch
+            class="mr-2"
+            style="margin-top: 5px; padding-top: 0"
+            v-model="isJson"
+            :label="!isJson ? 'YAML' : 'JSON'"
+          />
+        </div>
       </v-col>
     </v-row>
 
@@ -59,7 +76,7 @@
       <v-card-title class="px-0 mb-3">Plans:</v-card-title>
       <v-row class="flex-column">
         <v-col>
-          <v-dialog v-model="isDialogVisible">
+          <v-dialog max-width="60%" v-model="isDialogVisible">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
                 class="mr-2"
@@ -70,19 +87,23 @@
                 Add
               </v-btn>
             </template>
-            <v-card>
+            <v-card
+              max-width="100%"
+              class="ma-auto pa-5"
+              color="background-light"
+            >
               <nocloud-table
                 :items="plans"
                 :headers="headers"
                 :loading="isPlanLoading"
                 :footer-error="fetchError"
-                v-model="selected"
+                v-model="selectedNewPlans"
               />
-              <v-card-actions style="background: var(--v-background-base)">
+              <v-card-actions class="d-flex justify-end">
+                <v-btn class="mr-5" @click="isDialogVisible = false">
+                  Cancel
+                </v-btn>
                 <v-btn :loading="isLoading" @click="bindPlans">Add</v-btn>
-                <v-btn class="ml-2" @click="isDialogVisible = false"
-                  >Cancel</v-btn
-                >
               </v-card-actions>
             </v-card>
           </v-dialog>
@@ -90,13 +111,14 @@
             :disabled="selected.length < 1"
             @confirm="unbindPlans"
           >
-            <v-btn :disabled="selected.length < 1" :loading="isDeleteLoading"
-              >Remove</v-btn
-            >
+            <v-btn :disabled="selected.length < 1" :loading="isDeleteLoading">
+              Remove
+            </v-btn>
           </confirm-dialog>
         </v-col>
         <v-col>
           <nocloud-table
+            table-name="service-providers"
             :items="relatedPlans"
             :headers="headers"
             :loading="isPlanLoading"
@@ -120,26 +142,7 @@
       </component>
     </template>
 
-    <v-row>
-      <v-col>
-        <v-btn :to="{ name: 'ServicesProvider edit', params: { uuid: provider.uuid } }">
-          Edit
-        </v-btn>
-      </v-col>
-      <v-col>
-        <div class="d-flex align-start">
-          <v-btn class="mr-2" @click="downloadFile">
-            Download {{ isJson ? "JSON" : "YAML" }}
-          </v-btn>
-          <v-switch
-            class="mr-2"
-            style="margin-top: 5px; padding-top: 0"
-            v-model="isJson"
-            :label="!isJson ? 'YAML' : 'JSON'"
-          />
-        </div>
-      </v-col>
-    </v-row>
+    <v-row> </v-row>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -202,6 +205,7 @@ export default {
     isDialogVisible: false,
     relatedPlans: [],
     selected: [],
+    selectedNewPlans: [],
     fetchError: "",
   }),
   methods: {
@@ -255,7 +259,10 @@ export default {
 
         const vlanStart = this.template.secrets.vlans[vlansKeys[0]].start;
         const vlanSize = this.template.secrets.vlans[vlansKeys[0]].size;
-        if (!errorMessage && vlanStart===undefined || vlanSize===undefined) {
+        if (
+          (!errorMessage && vlanStart === undefined) ||
+          vlanSize === undefined
+        ) {
           errorMessage = `Vlans need size and start keys!`;
         }
 
@@ -289,17 +296,19 @@ export default {
         });
     },
     bindPlans() {
-      if (this.selected.length < 1) return;
+      if (this.selectedNewPlans.length < 1) return;
       this.isLoading = true;
 
-      const bindPromises = this.selected.map((el) =>
+      const bindPromises = this.selectedNewPlans.map((el) =>
         api.servicesProviders.bindPlan(this.template.uuid, el.uuid)
       );
 
       Promise.all(bindPromises)
         .then(() => {
           const ending = bindPromises.length === 1 ? "" : "s";
-
+          this.relatedPlans.push(...this.selectedNewPlans);
+          this.selectedNewPlans = [];
+          this.isDialogVisible = false;
           this.showSnackbarSuccess({
             message: `Price model${ending} added successfully.`,
           });
@@ -321,7 +330,9 @@ export default {
       Promise.all(unbindPromises)
         .then(() => {
           const ending = unbindPromises.length === 1 ? "" : "s";
-
+          this.relatedPlans = this.relatedPlans.filter(
+            (rp) => this.selected.findIndex((s) => s.uuid === rp.uuid) === -1
+          );
           this.showSnackbarSuccess({
             message: `Price model${ending} deleted successfully.`,
           });
@@ -352,10 +363,12 @@ export default {
   },
   created() {
     this.$store
-      .dispatch("plans/fetch", { params: {
-        sp_uuid: this.template.uuid,
-        anonymously: false,
-      } })
+      .dispatch("plans/fetch", {
+        params: {
+          sp_uuid: this.template.uuid,
+          anonymously: false,
+        },
+      })
       .then(() => {
         this.relatedPlans = this.$store.getters["plans/all"];
         this.fetchError = "";
@@ -375,8 +388,9 @@ export default {
     plans() {
       const plans = this.relatedPlans.map(({ uuid }) => uuid);
 
-      return this.$store.getters["plans/all"].filter((plan) =>
-        plan.type === this.provider.type && !plans.includes(plan.uuid)
+      return this.$store.getters["plans/all"].filter(
+        (plan) =>
+          plan.type.includes(this.provider.type) && !plans.includes(plan.uuid)
       );
     },
     isPlanLoading() {

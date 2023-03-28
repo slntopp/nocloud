@@ -72,7 +72,9 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Namespaces") }}</v-list-item-title>
+            <v-list-item-title>{{
+              navTitle("Groups (NameSpaces)")
+            }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -108,7 +110,9 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Services Providers") }}</v-list-item-title>
+            <v-list-item-title>{{
+              navTitle("Services Providers")
+            }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -120,7 +124,9 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Price Models") }}</v-list-item-title>
+            <v-list-item-title>{{
+              navTitle("Price Models")
+            }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -130,7 +136,9 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Transactions") }}</v-list-item-title>
+            <v-list-item-title>{{
+              navTitle("Transactions")
+            }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -144,12 +152,12 @@
           </v-list-item-content>
         </v-list-item>
 
-        <v-subheader v-if="plugins.length > 0">PLUGINS</v-subheader>
+        <v-subheader v-if="plugins?.length > 0">PLUGINS</v-subheader>
 
         <v-list-item
           v-bind="listItemBind"
           v-for="plugin of plugins"
-          :key="plugin.api"
+          :key="plugin.url"
           :to="{ name: 'Plugin', params: plugin }"
         >
           <v-list-item-icon>
@@ -205,7 +213,7 @@
         </v-col>
         <v-col class="d-flex justify-end align-center">
           <balance title="Balance: " />
-          <languages />
+          <languages v-if="false" />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
@@ -248,7 +256,6 @@
 </template>
 
 <script>
-import api from "@/api.js";
 import config from "@/config.js";
 import balance from "@/components/balance.vue";
 import languages from "@/components/languages.vue";
@@ -263,7 +270,6 @@ export default {
     easterEgg: false,
     config,
     navTitles: config.navTitles ?? {},
-    plugins: [],
   }),
   methods: {
     logoutHandler() {
@@ -317,10 +323,13 @@ export default {
     isVNC() {
       return this.$route.path.includes("vnc");
     },
+    plugins() {
+      return this.$store.getters["plugins/all"];
+    },
   },
   created() {
     window.addEventListener("message", ({ data, origin }) => {
-      const url = `https://app.${location.host.split('.').slice(1).join('.')}`;
+      const url = `https://app.${location.host.split(".").slice(1).join(".")}`;
 
       if (origin !== url) return;
       this.$store.commit("auth/setToken", data);
@@ -367,12 +376,7 @@ export default {
 
     if (this.isLoggedIn) {
       this.$store.dispatch("auth/fetchUserData");
-
-      api.settings.get(["plugins"]).then((res) => {
-        const key = res["plugins"];
-
-        if (key) this.plugins = JSON.parse(key);
-      });
+      this.$store.dispatch("plugins/fetch");
     }
   },
   mounted() {

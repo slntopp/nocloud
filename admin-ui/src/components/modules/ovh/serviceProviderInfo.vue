@@ -5,7 +5,12 @@
     <v-card-title class="px-0 mb-3">Projects:</v-card-title>
     <v-row class="flex-column">
       <v-col>
-        <nocloud-table :items="projects" :headers="headers" :show-select="false">
+        <nocloud-table
+          table-name="ovhServiceProviderInfo"
+          :items="projects"
+          :headers="headers"
+          :show-select="false"
+        >
           <template v-slot:[`item.balance`]="{ value }">
             <balance :value="value.toFixed()" />
           </template>
@@ -16,19 +21,19 @@
 </template>
 
 <script>
-import nocloudTable from '@/components/table.vue';
-import balance from '@/components/balance.vue';
+import nocloudTable from "@/components/table.vue";
+import balance from "@/components/balance.vue";
 
 export default {
-  name: 'service-provider-ovh',
+  name: "service-provider-ovh",
   components: { nocloudTable, balance },
   props: { template: { type: Object, required: true } },
   data: () => ({
     headers: [
-      { text: 'Title', value: 'desc' },
-      { text: 'UUID', value: 'uuid' },
-      { text: 'Balance', value: 'balance' }
-    ]
+      { text: "Title", value: "desc" },
+      { text: "UUID", value: "uuid" },
+      { text: "Balance", value: "balance" },
+    ],
   }),
   computed: {
     projects() {
@@ -36,9 +41,10 @@ export default {
 
       if (!wilds) return [];
       return Object.entries(wilds).map(([key, value]) => ({
-        ...value, uuid: key
+        ...value,
+        uuid: key,
       }));
-    }
-  }
-}
+    },
+  },
+};
 </script>

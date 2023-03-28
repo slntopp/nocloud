@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
 	accesspb "github.com/slntopp/nocloud-proto/access"
@@ -29,6 +28,7 @@ import (
 	pb "github.com/slntopp/nocloud-proto/services"
 	stpb "github.com/slntopp/nocloud-proto/settings"
 	spb "github.com/slntopp/nocloud-proto/states"
+	statuspb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
@@ -38,6 +38,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"reflect"
 )
 
 type ServicesServer struct {
@@ -179,7 +180,39 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				}
 				instance.BillingPlan = plan
 
-				err := s.ctrl.IGController().Instances().ValidateBillingPlan(ctx, group.GetSp(), instance)
+				inst_ctrl := s.ctrl.IGController().Instances()
+				old_instance, _ := inst_ctrl.Get(ctx, instance.GetUuid())
+
+				var equal = false
+
+				if old_instance != nil {
+					oldRes := old_instance.GetResources()
+					newRes := instance.GetResources()
+
+					log.Debug("res", zap.Any("oldRes", oldRes))
+					log.Debug("res", zap.Any("newRes", newRes))
+
+					equal = reflect.DeepEqual(oldRes, newRes)
+					log.Debug("equal", zap.Bool("equal", equal))
+				}
+
+				if !equal {
+					err := inst_ctrl.CheckEdgeExist(ctx, group.GetSp(), instance)
+
+					if err != nil {
+						response.Result = false
+						log.Error("IGCONTROLLER err", zap.String("err", err.Error()))
+						terr := pb.TestConfigError{
+							Error:         err.Error(),
+							Instance:      instance.Title,
+							InstanceGroup: group.Title,
+						}
+						response.Errors = append(response.Errors, &terr)
+						continue
+					}
+				}
+
+				err = inst_ctrl.ValidateBillingPlan(ctx, group.GetSp(), instance)
 				if err != nil {
 					response.Result = false
 					log.Error("IGCONTROLLER err", zap.String("err", err.Error()))
@@ -386,7 +419,7 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
 
-	if service.GetStatus() == pb.ServiceStatus_SUS {
+	if service.GetStatus() == statuspb.NoCloudStatus_SUS {
 		return nil, status.Error(codes.PermissionDenied, "Can't update suspended service")
 	}
 
@@ -420,7 +453,7 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
-	if service.GetStatus() == pb.ServiceStatus_SUS {
+	if service.GetStatus() == statuspb.NoCloudStatus_SUS {
 		return nil, status.Error(codes.PermissionDenied, "Can't deploy suspended service")
 	}
 
@@ -442,7 +475,7 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
 
-	err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_PROC)
+	err = s.ctrl.SetStatus(ctx, service, statuspb.NoCloudStatus_PROC)
 	if err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -458,7 +491,7 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 		client := *c.client
 		sp := c.sp
 
-		group.Status = proto.InstanceStatus_UP
+		group.Status = statuspb.NoCloudStatus_UP
 
 		response, err := client.Up(ctx, &driverpb.UpRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
@@ -472,7 +505,7 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 			continue
 		}
 
-		err = s.ctrl.IGController().SetStatus(ctx, group, proto.InstanceStatus_UP)
+		err = s.ctrl.IGController().SetStatus(ctx, group, statuspb.NoCloudStatus_UP)
 		if err != nil {
 			log.Error("Error updating InstancesGroup", zap.Error(err), zap.Any("IG", group))
 		}
@@ -493,9 +526,9 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 		log.Debug("Updated Group", zap.Any("group", group))
 	}
 
-	service.Status = pb.ServiceStatus_UP
+	service.Status = statuspb.NoCloudStatus_UP
 	log.Debug("Updated Service", zap.Any("service", service))
-	err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_UP)
+	err = s.ctrl.SetStatus(ctx, service, statuspb.NoCloudStatus_UP)
 	if err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -524,17 +557,17 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 		groupController := s.ctrl.IGController()
 		instancesController := groupController.Instances()
 
-		if err := groupController.SetStatus(ctx, group, proto.InstanceStatus_SUS); err != nil {
+		if err := groupController.SetStatus(ctx, group, statuspb.NoCloudStatus_SUS); err != nil {
 			return nil, err
 		}
 		for _, inst := range group.GetInstances() {
-			if err := instancesController.SetStatus(ctx, inst, proto.InstanceStatus_SUS); err != nil {
+			if err := instancesController.SetStatus(ctx, inst, statuspb.NoCloudStatus_SUS); err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	if err := s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_SUS); err != nil {
+	if err := s.ctrl.SetStatus(ctx, service, statuspb.NoCloudStatus_SUS); err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
@@ -561,17 +594,17 @@ func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendReq
 	for _, group := range service.GetInstancesGroups() {
 		groupController := s.ctrl.IGController()
 		instancesController := groupController.Instances()
-		if err := groupController.SetStatus(ctx, group, proto.InstanceStatus_UP); err != nil {
+		if err := groupController.SetStatus(ctx, group, statuspb.NoCloudStatus_UP); err != nil {
 			return nil, err
 		}
 		for _, inst := range group.GetInstances() {
-			if err := instancesController.SetStatus(ctx, inst, proto.InstanceStatus_UP); err != nil {
+			if err := instancesController.SetStatus(ctx, inst, statuspb.NoCloudStatus_UP); err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	if err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_UP); err != nil {
+	if err = s.ctrl.SetStatus(ctx, service, statuspb.NoCloudStatus_UP); err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
@@ -595,7 +628,7 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
-	if service.GetStatus() == pb.ServiceStatus_SUS {
+	if service.GetStatus() == statuspb.NoCloudStatus_SUS {
 		return nil, status.Error(codes.PermissionDenied, "Can't undeploy suspended service")
 	}
 
@@ -622,7 +655,7 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 		contexts[group.GetUuid()] = &InstancesGroupDriverContext{sp, &client}
 	}
 
-	err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_PROC)
+	err = s.ctrl.SetStatus(ctx, service, statuspb.NoCloudStatus_PROC)
 	if err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")
@@ -637,7 +670,7 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 		client := *c.client
 		sp := c.sp
 
-		group.Status = proto.InstanceStatus_INIT
+		group.Status = statuspb.NoCloudStatus_INIT
 
 		res, err := client.Down(ctx, &driverpb.DownRequest{Group: group, ServicesProvider: sp.ServicesProvider})
 		if err != nil {
@@ -645,7 +678,7 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 			continue
 		}
 
-		err = s.ctrl.IGController().SetStatus(ctx, group, proto.InstanceStatus_INIT)
+		err = s.ctrl.IGController().SetStatus(ctx, group, statuspb.NoCloudStatus_INIT)
 		if err != nil {
 			log.Error("Error updating InstancesGroup", zap.Error(err), zap.Any("IG", group))
 		}
@@ -659,7 +692,7 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 		service.InstancesGroups[i] = group
 	}
 
-	err = s.ctrl.SetStatus(ctx, service, pb.ServiceStatus_INIT)
+	err = s.ctrl.SetStatus(ctx, service, statuspb.NoCloudStatus_INIT)
 	if err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
 		return nil, status.Error(codes.Internal, "Error storing updates")

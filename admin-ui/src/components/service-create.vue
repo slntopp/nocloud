@@ -61,17 +61,25 @@
             </v-list-item-content>
           </v-list-item>
         </v-list>
-
+        <div class="btns__wrapper d-flex justify-space-around mt-4">
+          <v-select
+            class="mr-5"
+            dense
+            :items="fileTypes"
+            v-model="selectedFileType"
+          />
+          <v-btn class="mr-3" @click="downloadFile">Download</v-btn>
+          <upload-file-button
+            @file="uploadFile"
+            :accept="selectedFileType.toLowerCase()"
+            >Upload</upload-file-button
+          >
+        </div>
         <div class="btns__wrapper d-flex justify-end mt-4">
           <router-link :to="{ name: 'Services' }" style="text-decoration: none">
             <v-btn>cancel</v-btn>
           </router-link>
-          <v-btn class="ml-2" @click="downloadJSON"> download </v-btn>
-          <v-btn
-            class="ml-2"
-            :loading="isLoading"
-            @click="createService"
-          >
+          <v-btn class="ml-2" :loading="isLoading" @click="createService">
             Save
           </v-btn>
         </div>
@@ -156,13 +164,15 @@
           />
 
           <component
-            :is="templates[currentInstancesGroups.body.type] ?? templates.custom"
+            :is="
+              templates[currentInstancesGroups.body.type] ?? templates.custom
+            "
             :instances-group="JSON.stringify(currentInstancesGroups)"
-            :plans="{ list: filteredPlans, products: plans.products }"
+            :plans="{ list: plans.list, products: plans.products }"
             :planRules="planRules"
             :meta="meta"
             @update:instances-group="receiveObject"
-            @changeMeta="(value) => meta = value"
+            @changeMeta="(value) => (meta = value)"
           />
         </v-card>
 
@@ -200,10 +210,17 @@
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 
-import { downloadJSONFile } from "@/functions.js";
+import {
+  downloadJSONFile,
+  downloadYAMLFile,
+  readJSONFile,
+  readYAMLFile,
+} from "@/functions.js";
+import UploadFileButton from "@/components/uploadFileButton.vue";
 
 export default {
   name: "service-create",
+  components: { UploadFileButton },
   data: () => ({
     formValid: false,
     rules: {
@@ -218,7 +235,7 @@ export default {
       version: "1",
       title: "",
       context: {},
-      instances_groups: [],
+      instancesGroups: [],
     },
     namespace: "",
     instances: [],
@@ -237,6 +254,9 @@ export default {
     isVisible: false,
     isLoading: false,
     plansVisible: false,
+
+    fileTypes: ["JSON", "YAML"],
+    selectedFileType: "JSON",
   }),
   mixins: [snackbar],
   methods: {
@@ -309,26 +329,39 @@ export default {
       const data = JSON.parse(JSON.stringify(this.service));
       const instances = JSON.parse(JSON.stringify(this.instances));
 
+      data.instancesGroups = [];
       instances.forEach((inst, i) => {
-        if (inst.type === 'custom') {
+        if (inst.type === "custom") {
           inst.body.type = this.customTitles[i];
         }
 
         inst.body.resources.ips_public = inst.body.instances?.length || 0;
-        data.instances_groups.push({ ...inst.body, title: inst.title, sp: inst.sp });
-        // console.log(data.instances_groups[inst.title])
-        // console.log(data.instances_groups)
-        // let ips = 0;
-        // Object.keys(data.instances_groups[inst.title].instances).forEach(key => {
-        // 	const item = data.instances_groups[inst.title].instances[key];
-        // 	ips += item.resources.ips_public;
-        // })
-        // data.instances_groups[inst.title].resources.ips_public = ips;
+        data.instancesGroups.push({
+          ...inst.body,
+          title: inst.title,
+          sp: inst.sp,
+        });
       });
       return { namespace: this.namespace, service: data };
     },
+    setService(data) {
+      this.instances = [];
+      data.service.instancesGroups.forEach((inst, i) => {
+        if (inst.type === "custom") {
+          this.customTitles[i] = inst.body.type;
+        }
+
+        this.instances.push({
+          body: { ...inst },
+          title: inst.title,
+          sp: inst.sp,
+        });
+      });
+      this.namespace = data.namespace;
+      this.service = data.service;
+    },
     createService() {
-      const action = (this.$route.params.serviceId) ? 'edit' : 'create';
+      const action = this.$route.params.serviceId ? "edit" : "create";
       const data = this.getService();
 
       if (!this.formValid) {
@@ -337,17 +370,21 @@ export default {
       }
 
       this.isLoading = true;
-      api.services.testConfig(data)
+      api.services
+        .testConfig(data)
         .then((res) => {
-          if (res.result) return (action === 'create')
-            ? api.services._create(data)
-            : api.services._update(data.service);
+          if (res.result)
+            return action === "create"
+              ? api.services._create(data)
+              : api.services._update(data.service);
           else throw res;
         })
         .then(() => {
-          this.showSnackbarSuccess({ message: (action === 'create')
-            ? "Service created successfully"
-            : "Service updated successfully"
+          this.showSnackbarSuccess({
+            message:
+              action === "create"
+                ? "Service created successfully"
+                : "Service updated successfully",
           });
           this.$router.push({ name: "Services" });
         })
@@ -374,20 +411,35 @@ export default {
         this.plans.products.push(title);
       });
     },
-    downloadJSON() {
+    downloadFile() {
       const data = this.getService();
       const name = data.service.title
         ? (data.service.title + " service").replaceAll(" ", "_")
         : "unknown_service";
 
-      downloadJSONFile(data, name);
+      if (this.selectedFileType === "JSON") {
+        downloadJSONFile(data, name);
+      } else if (this.selectedFileType === "YAML") {
+        downloadYAMLFile(data, name);
+      }
+    },
+    async uploadFile(file) {
+      let data = {};
+      if (this.selectedFileType === "JSON") {
+        data = await readJSONFile(file);
+      } else if (this.selectedFileType === "YAML") {
+        data = await readYAMLFile(file);
+      }
+      console.log(data);
+
+      this.setService(data);
     },
   },
   computed: {
     currentType() {
       const { type } = this.currentInstancesGroups.body;
 
-      if (type === 'custom') {
+      if (type === "custom") {
         return this.customTitles[this.currentInstancesGroupsIndex];
       }
       return type;
@@ -404,62 +456,65 @@ export default {
       );
     },
     filteredPlans() {
-      return this.plans.list.filter((plan) => plan.type === this.currentType);
+      return this.plans.list.filter((plan) =>
+        plan.type.includes(this.currentType)
+      );
     },
     planRules() {
       return this.plansVisible ? this.rules.req : [];
     },
   },
   created() {
-    this.$store.dispatch("services/fetch")
-      .then(({ pool }) => {
-        const service = pool.find((el) => el.uuid === this.$route.params.serviceId);
-        const group = this.$route.params.type;
-        const i = service?.instancesGroups.findIndex(({ type }) => type === group);
-        const { instance } = this.$route.params;
+    this.$store.dispatch("services/fetch").then(({ pool }) => {
+      const service = pool.find(
+        (el) => el.uuid === this.$route.params.serviceId
+      );
+      const group = this.$route.params.type;
+      const i = service?.instancesGroups.findIndex(
+        ({ type }) => type === group
+      );
+      const { instance } = this.$route.params;
 
-        if (service) {
-          this.service = service;
-          this.namespace = service.access.namespace;
+      if (service) {
+        this.service = service;
+        this.namespace = service.access.namespace;
 
-          this.instances = service.instancesGroups.map((group, i) => {
-            if (!this.types.includes(group.type)) {
-              this.customTitles[i] = group.type;
-              group.type = 'custom';
-            }
-            return { title: group.title, sp: group.sp, body: group };
-          });
-        }
-
-        if (instance) {
-          this.selectInstance(i);
-          setTimeout(() => {
-            const top = -document.getElementsByTagName('header')[0].offsetHeight;
-
-            document.getElementById(instance).scrollIntoView();
-            window.scrollBy({ top });
-          }, 300);
-        } else if (group) {
-          if (i !== -1) this.selectInstance(i);
-          else {
-            const type = (this.types.includes(group)) ? group : "custom";
-
-            this.addInstancesGroup("", type);
-            this.selectInstance(this.instances.length - 1);
-
-            if (!this.types.includes(group)) {
-              this.customTitles[this.currentInstancesGroupsIndex] = group;
-            }
+        this.instances = service.instancesGroups.map((group, i) => {
+          if (!this.types.includes(group.type)) {
+            this.customTitles[i] = group.type;
+            group.type = "custom";
           }
+          return { title: group.title, sp: group.sp, body: group };
+        });
+      }
 
-          setTimeout(() => {
-            const button = document.getElementById('button');
+      if (instance) {
+        this.selectInstance(i);
+        setTimeout(() => {
+          const top = -document.getElementsByTagName("header")[0].offsetHeight;
 
-            button.click();
-            button.scrollIntoView(true);
-          }, 300);
+          document.getElementById(instance).scrollIntoView();
+          window.scrollBy({ top });
+        }, 300);
+      } else if (group) {
+        if (i !== -1) this.selectInstance(i);
+        else {
+          const type = this.types.includes(group) ? group : "custom";
+
+          this.addInstancesGroup("", type);
+          this.selectInstance(this.instances.length - 1);
+          if (!this.types.includes(group)) {
+            this.customTitles[this.currentInstancesGroupsIndex] = group;
+          }
         }
-      });
+        setTimeout(() => {
+          const button = document.getElementById("button");
+
+          button.click();
+          button.scrollIntoView(true);
+        }, 300);
+      }
+    });
 
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("servicesProviders/fetch", false);
@@ -478,15 +533,6 @@ export default {
           import(`@/components/modules/${type}/serviceCreate.vue`);
       }
     });
-
-    api.plans.list().then((res) =>
-      res.pool.forEach((plan) => {
-        const end = (plan.uuid.length > 8) ? '...' : '';
-        const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
-
-        this.plans.list.push({ ...plan, title });
-      })
-    );
 
     api.settings.get(["instance-billing-plan-settings"]).then((res) => {
       const key = res["instance-billing-plan-settings"];
@@ -516,9 +562,20 @@ export default {
       this.currentInstancesGroups.body.instances = [];
       this.currentInstancesGroups.sp = "";
     },
+    "currentInstancesGroups.sp"(sp_uuid) {
+      if (!sp_uuid) return;
+      this.plans.list = [];
+      api.plans.list({ sp_uuid, anonymously: false }).then((res) => {
+        res.pool.forEach((plan) => {
+          const end = plan.uuid.length > 8 ? "..." : "";
+          const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
+
+          this.plans.list.push({ ...plan, title });
+        });
+      });
+    },
   },
 };
 </script>
 
-<style>
-</style>
+<style></style>

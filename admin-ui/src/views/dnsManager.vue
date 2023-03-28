@@ -1,6 +1,6 @@
 <template>
   <div class="dns-manager pa-4 flex-wrap">
-    <div class="buttons__inline pb-4">
+    <div class="buttons__inline pb-8 pt-4">
       <v-menu
         offset-y
         transition="slide-y-transition"
@@ -39,7 +39,8 @@
       </confirm-dialog>
     </div>
 
-    <zones-table :searchParam="searchParam" v-model="selected" single-select> </zones-table>
+    <zones-table :searchParam="searchParam" v-model="selected" single-select>
+    </zones-table>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -79,7 +80,7 @@ export default {
     "zones-table": zones,
     ConfirmDialog,
   },
-  mixins: [snackbar,search],
+  mixins: [snackbar, search],
   data() {
     return {
       createMenuVisible: false,
@@ -91,10 +92,10 @@ export default {
       },
     };
   },
-  computed:{
-    searchParam(){
-      return this.$store.getters['appSearch/param']
-    }
+  computed: {
+    searchParam() {
+      return this.$store.getters["appSearch/param"];
+    },
   },
   methods: {
     createZone() {

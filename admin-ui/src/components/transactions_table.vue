@@ -1,6 +1,7 @@
 <template>
   <nocloud-table
     show-expand
+    table-name="transactionsTable"
     class="mt-4"
     sort-by="proc"
     sort-desc
@@ -10,6 +11,9 @@
     :expanded.sync="expanded"
     :footer-error="fetchError"
     @input="selectTransaction"
+    :server-items-length="count"
+    :server-side-page="page"
+    @update:options="$emit('update:options', $event)"
   >
     <template v-slot:[`item.account`]="{ item }">
       {{ account(item.account) }}
@@ -59,20 +63,25 @@
           :headers="recordHeaders"
         >
           <template v-slot:[`item.instance`]="{ item, index }">
-            <v-icon
-              class="ml-2"
-              v-if="!visibleRecords.includes(`${index}.${item.uuid}`)"
-              @click="visibleRecords.push(`${index}.${item.uuid}`)"
-            >
-              mdi-eye-outline
-            </v-icon>
-            <template v-else>
-              {{ hashTrim(item.instance) }}
-            </template>
-            <v-btn icon @click="addToClipboard(item.instance, index)">
-              <v-icon v-if="copyed === index"> mdi-check </v-icon>
-              <v-icon v-else> mdi-content-copy </v-icon>
-            </v-btn>
+            <div class="d-flex justify-space-between">
+              <div>
+                <v-icon
+                  class="ml-2"
+                  v-if="!visibleRecords.includes(`${index}.${item.uuid}`)"
+                  @click="visibleRecords.push(`${index}.${item.uuid}`)"
+                >
+                  mdi-eye-outline
+                </v-icon>
+                <template v-else>
+                  {{ hashTrim(item.instance) }}
+                </template>
+                <v-btn icon @click="addToClipboard(item.instance, index)">
+                  <v-icon v-if="copyed === index"> mdi-check </v-icon>
+                  <v-icon v-else> mdi-content-copy </v-icon>
+                </v-btn>
+              </div>
+              <v-icon @click="goToInstance(item)">mdi-login</v-icon>
+            </div>
           </template>
           <template v-slot:[`header.product`]="{ header }">
             {{
@@ -111,6 +120,8 @@ export default {
   props: {
     selectTransaction: { type: Function, required: true },
     transactions: { type: Array, required: true },
+    count: { type: Number, required: true },
+    page: { type: Number, required: true },
   },
   data: () => ({
     headers: [
@@ -191,6 +202,12 @@ export default {
         .finally(() => {
           this.isRecordsLoading = false;
         });
+    },
+    goToInstance(item) {
+      this.$router.push({
+        name: "Instance",
+        params: { instanceId: item.instance },
+      });
     },
   },
   computed: {

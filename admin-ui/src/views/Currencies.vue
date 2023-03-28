@@ -1,61 +1,69 @@
 <template>
   <div class="pa-4">
-    <v-dialog max-width="400">
-      <template v-slot:activator="{ on, attrs }">
-        <v-btn class="mr-2" color="background-light" v-bind="attrs" v-on="on">
-          Add
+    <div class="buttons__inline pb-2 mt-4">
+      <v-dialog max-width="400">
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn class="mr-2" color="background-light" v-bind="attrs" v-on="on">
+            Add
+          </v-btn>
+        </template>
+        <v-card class="pa-4">
+          <v-row dense>
+            <v-col cols="12">
+              <v-select
+                dense
+                label="Currency 1"
+                v-model="currency.from"
+                :items="currenciesFrom"
+              />
+            </v-col>
+            <v-col cols="12">
+              <v-select
+                dense
+                label="Currency 2"
+                v-model="currency.to"
+                :items="currenciesTo"
+              />
+            </v-col>
+            <v-col cols="12">
+              <v-text-field
+                dense
+                type="number"
+                label="Rate"
+                v-model="currency.rate"
+                :rules="rules.number"
+              />
+            </v-col>
+            <v-col>
+              <v-btn :loading="isCreateLoading" @click="addCurrency"
+                >Save</v-btn
+              >
+            </v-col>
+          </v-row>
+        </v-card>
+      </v-dialog>
+      <confirm-dialog @confirm="deleteSelectedCurrencies">
+        <v-btn
+          class="mr-2"
+          color="background-light"
+          :disabled="selected.length < 1"
+        >
+          Delete
         </v-btn>
-      </template>
-      <v-card class="pa-4">
-        <v-row dense>
-          <v-col cols="12">
-            <v-select
-              dense
-              label="Currency 1"
-              v-model="currency.from"
-              :items="currenciesFrom"
-            />
-          </v-col>
-          <v-col cols="12">
-            <v-select
-              dense
-              label="Currency 2"
-              v-model="currency.to"
-              :items="currenciesTo"
-            />
-          </v-col>
-          <v-col cols="12">
-            <v-text-field
-              dense
-              type="number"
-              label="Rate"
-              v-model="currency.rate"
-              :rules="rules.number"
-            />
-          </v-col>
-          <v-col>
-            <v-btn :loading="isCreateLoading" @click="addCurrency">Save</v-btn>
-          </v-col>
-        </v-row>
-      </v-card>
-    </v-dialog>
+      </confirm-dialog>
 
-    <confirm-dialog @confirm="deleteSelectedCurrencies">
-      <v-btn class="mr-2" color="background-light" :disabled="selected.length < 1">
-        Delete
-      </v-btn>
-    </confirm-dialog>
-
-    <v-text-field
-      dense
-      readonly
-      label="Default currency"
-      class="d-inline-block"
-      style="width: 200px"
-      :value="defaultCurrency"
-    />
+      <v-text-field
+        dense
+        readonly
+        label="Default currency"
+        class="d-inline-block"
+        style="width: 200px"
+        :value="defaultCurrency"
+      />
+    </div>
 
     <nocloud-table
+      table-name="currencys"
       class="mt-4"
       item-key="id"
       v-model="selected"
@@ -69,7 +77,8 @@
           dense
           type="number"
           style="width: 200px"
-          v-model="item.rate"
+          :value="Math.round(item.rate * 100) / 100"
+          @input="item.rate = $event"
           :rules="rules.number"
         />
       </template>
@@ -124,7 +133,11 @@ export default {
     selected: [],
 
     rules: {
-      number: [(value) => /^[-+]?[0-9]*[.,]?[0-9]+(?:[eE][-+]?[0-9]+)?$/.test(value) || 'Invalid!']
+      number: [
+        (value) =>
+          /^[-+]?[0-9]*[.,]?[0-9]+(?:[eE][-+]?[0-9]+)?$/.test(value) ||
+          "Invalid!",
+      ],
     },
 
     currency: { from: "", to: "", rate: "1" },
@@ -134,18 +147,19 @@ export default {
   methods: {
     addCurrency() {
       if (this.currency.from === "" || this.currency.to === "") return;
-      if (typeof this.rules.number[0](this.currency.rate) === 'string') return;
+      if (typeof this.rules.number[0](this.currency.rate) === "string") return;
 
       const newCurrency = {
-        rate: +this.currency.rate.replace(',', '.'),
+        rate: +this.currency.rate.replace(",", "."),
         from: this.currenciesList.indexOf(this.currency.from),
-        to: this.currenciesList.indexOf(this.currency.to)
+        to: this.currenciesList.indexOf(this.currency.to),
       };
 
       this.isCreateLoading = true;
-      api.post('/billing/currencies/rates', newCurrency)
+      api
+        .post("/billing/currencies/rates", newCurrency)
         .then(() => {
-          this.$store.dispatch('currencies/fetch');
+          this.$store.dispatch("currencies/fetch");
           this.currency = { from: "", to: "", rate: "1" };
         })
         .catch((err) => {
@@ -154,20 +168,21 @@ export default {
           this.showSnackbarError({ message });
           console.error(err);
         })
-        .finally(() => this.isCreateLoading = false);
+        .finally(() => (this.isCreateLoading = false));
     },
     editCurrency(currency) {
-      if (typeof this.rules.number[0](currency.rate) === 'string') return;
+      if (typeof this.rules.number[0](currency.rate) === "string") return;
       const newCurrency = {
-        rate: +currency.rate.replace(',', '.'),
+        rate: +currency.rate.replace(",", "."),
         from: this.currenciesList.indexOf(currency.from),
-        to: this.currenciesList.indexOf(currency.to)
+        to: this.currenciesList.indexOf(currency.to),
       };
 
-      this.$store.commit('currencies/setLoading', true);
-      api.put('/billing/currencies/rates', newCurrency)
+      this.$store.commit("currencies/setLoading", true);
+      api
+        .put("/billing/currencies/rates", newCurrency)
         .then(() => {
-          this.showSnackbarSuccess({ message: 'Done' });
+          this.showSnackbarSuccess({ message: "Done" });
         })
         .catch((err) => {
           const message = err.response?.data?.message ?? err.message ?? err;
@@ -176,35 +191,35 @@ export default {
           console.error(err);
         })
         .finally(() => {
-          this.$store.commit('currencies/setLoading', false);
+          this.$store.commit("currencies/setLoading", false);
         });
     },
     deleteSelectedCurrencies() {
-      const promises = this.selected.filter(({ id }) =>
-        this.currencies.find((el) => el.id === id)
-      ).map(({ from, to }) =>
-        api.delete(`/billing/currencies/rates/${from}/${to}`)
-      );
+      const promises = this.selected
+        .filter(({ id }) => this.currencies.find((el) => el.id === id))
+        .map(({ from, to }) =>
+          api.delete(`/billing/currencies/rates/${from}/${to}`)
+        );
 
-      Promise.all(promises).then(() => {
-        this.$store.dispatch('currencies/fetch');
-      })
-      .catch((err) => {
-        const message = err.response?.data?.message ?? err.message ?? err;
+      Promise.all(promises)
+        .then(() => {
+          this.$store.dispatch("currencies/fetch");
+        })
+        .catch((err) => {
+          const message = err.response?.data?.message ?? err.message ?? err;
 
-        this.showSnackbarError({ message });
-        console.error(err);
-      });
-    }
+          this.showSnackbarError({ message });
+          console.error(err);
+        });
+    },
   },
   created() {
-    this.$store.dispatch('currencies/fetch')
-      .catch((err) => {
-        const message = err.response?.data?.message ?? err.message ?? err;
+    this.$store.dispatch("currencies/fetch").catch((err) => {
+      const message = err.response?.data?.message ?? err.message ?? err;
 
-        this.showSnackbarError({ message });
-        console.error(err);
-      });
+      this.showSnackbarError({ message });
+      console.error(err);
+    });
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
@@ -213,13 +228,16 @@ export default {
   },
   computed: {
     isLoading() {
-      return this.$store.getters['currencies/isLoading'];
+      return this.$store.getters["currencies/isLoading"];
     },
     currencies() {
-      return this.$store.getters['currencies/rates'];
+      return this.$store.getters["currencies/rates"];
     },
     currenciesList() {
-      return this.$store.getters['currencies/all'];
+      return this.$store.getters["currencies/all"];
+    },
+    defaultCurrency() {
+      return this.$store.getters["currencies/default"];
     },
     currenciesFrom() {
       const currencies = [];
@@ -228,8 +246,8 @@ export default {
         if (to === this.currency.to) currencies.push(from);
       });
 
-      return this.currenciesList.filter((el) =>
-        el !== this.currency.to && !currencies.includes(el)
+      return this.currenciesList.filter(
+        (el) => el !== this.currency.to && !currencies.includes(el)
       );
     },
     currenciesTo() {
@@ -239,18 +257,10 @@ export default {
         if (from === this.currency.from) currencies.push(to);
       });
 
-      return this.currenciesList.filter((el) =>
-        el !== this.currency.from && !currencies.includes(el)
+      return this.currenciesList.filter(
+        (el) => el !== this.currency.from && !currencies.includes(el)
       );
     },
-    defaultCurrency() {
-      const currency = this.currencies.find((el) =>
-        el.rate === 1 && [el.from, el.to].includes('NCU')
-      );
-
-      if (!currency) return '';
-      return (currency.from === 'NCU') ? currency.to : currency.from;
-    }
-  }
-}
+  },
+};
 </script>

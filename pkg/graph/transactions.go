@@ -18,7 +18,6 @@ package graph
 import (
 	"context"
 	"errors"
-
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -69,4 +68,13 @@ func (ctrl *TransactionsController) Get(ctx context.Context, uuid string) (*pb.T
 		return nil, err
 	}
 	return &tx, nil
+}
+
+func (ctrl *TransactionsController) Update(ctx context.Context, tx *pb.Transaction) (*pb.Transaction, error) {
+	_, err := ctrl.col.UpdateDocument(ctx, tx.GetUuid(), tx)
+	if err != nil {
+		ctrl.log.Error("Failed to update transaction", zap.Error(err))
+		return nil, err
+	}
+	return tx, nil
 }

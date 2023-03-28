@@ -13,6 +13,7 @@
     >
       <v-tab>Info</v-tab>
       <v-tab>Template</v-tab>
+      <v-tab>Events</v-tab>
     </v-tabs>
     <v-tabs-items
       class="rounded-b-lg"
@@ -27,6 +28,10 @@
         <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
         <accounts-template v-if="account" :template="account" />
       </v-tab-item>
+      <v-tab-item>
+        <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
+        <accounts-events :is-loading="accountLoading" v-if="account" :account="account" />
+      </v-tab-item>
     </v-tabs-items>
   </div>
 </template>
@@ -35,10 +40,11 @@
 import config from "@/config.js";
 import AccountsInfo from "@/components/account/info.vue";
 import AccountsTemplate from "@/components/account/template.vue";
+import AccountsEvents from "@/components/account/events.vue";
 
 export default {
   name: "account-view",
-  components: { AccountsInfo, AccountsTemplate },
+  components: { AccountsInfo, AccountsTemplate ,AccountsEvents},
   data: () => ({ tabs: 0, navTitles: config.navTitles ?? {} }),
   methods: {
     navTitle(title) {
@@ -61,7 +67,7 @@ export default {
       return this?.account?.title ?? "not found";
     },
     accountLoading() {
-      return this.$store.getters["accounts/loading"];
+      return this.$store.getters["accounts/isLoading"];
     },
     accountId() {
       return this.$route.params.accountId;
@@ -77,6 +83,7 @@ export default {
       type: "accounts/fetchById",
       params: this.accountId,
     });
+    this.tabs=this.$route.query.tab || 0
   },
 };
 </script>

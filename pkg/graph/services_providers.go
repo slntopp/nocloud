@@ -17,9 +17,11 @@ package graph
 
 import (
 	"context"
+	stpb "github.com/slntopp/nocloud-proto/statuses"
 
 	"github.com/arangodb/go-driver"
 	ipb "github.com/slntopp/nocloud-proto/instances"
+	spb "github.com/slntopp/nocloud-proto/services"
 	pb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
@@ -31,7 +33,9 @@ type ServicesProvider struct {
 }
 
 type ServicesProvidersController struct {
-	col driver.Collection // Services Providers Collection
+	col   driver.Collection // Services Providers Collection
+	ig2sp driver.Collection
+	sp2bp driver.Collection
 
 	log *zap.Logger
 
@@ -46,10 +50,10 @@ func NewServicesProvidersController(logger *zap.Logger, db driver.Database) Serv
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.SERVICES_PROVIDERS_COL)
 
-	GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
-	GraphGetEdgeEnsure(log, ctx, graph, schema.SP2BP, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL)
+	ig2sp := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
+	sp2pb := GraphGetEdgeEnsure(log, ctx, graph, schema.SP2BP, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL)
 
-	return ServicesProvidersController{log: log, col: col, graph: graph}
+	return ServicesProvidersController{log: log, col: col, graph: graph, ig2sp: ig2sp, sp2bp: sp2pb}
 }
 
 func (ctrl *ServicesProvidersController) Create(ctx context.Context, sp *ServicesProvider) (err error) {
@@ -72,6 +76,33 @@ func (ctrl *ServicesProvidersController) Delete(ctx context.Context, id string) 
 	ctrl.log.Debug("Deleting ServicesProvider Document", zap.Any("uuid", id))
 	_, err = ctrl.col.RemoveDocument(ctx, id)
 	return err
+}
+
+const deleteEdgesQuery = `
+FOR edge IN @@collection
+    FILTER edge._from == @id || edge._to == @id
+    REMOVE edge._key IN @@collection
+`
+
+func (ctrl *ServicesProvidersController) DeleteEdges(ctx context.Context, id string) error {
+	bindVars := map[string]interface{}{
+		"@collection": schema.SP2BP,
+		"id":          id,
+	}
+	c, err := ctrl.col.Database().Query(ctx, deleteEdgesQuery, bindVars)
+	if err != nil {
+		return err
+	}
+	c.Close()
+
+	bindVars["@collection"] = schema.IG2SP
+	c, err = ctrl.col.Database().Query(ctx, deleteEdgesQuery, bindVars)
+	if err != nil {
+		return err
+	}
+	c.Close()
+
+	return nil
 }
 
 func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r *ServicesProvider, err error) {
@@ -103,7 +134,7 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 		query = `FOR sp IN @@sps RETURN MERGE(UNSET(sp, ['secrets', 'vars']), {uuid: sp._key})`
 	} else {
 		// anonymous query
-		query = `FOR sp IN @@sps RETURN {uuid: sp._key, type: sp.type, title: sp.title, public_data: sp.public_data, locations: sp.locations}`
+		query = `FOR sp IN @@sps RETURN {uuid: sp._key, type: sp.type, title: sp.title, public_data: sp.public_data, locations: sp.locations, meta: sp.meta}`
 	}
 	bindVars := map[string]interface{}{
 		"@sps": schema.SERVICES_PROVIDERS_COL,
@@ -166,12 +197,15 @@ func (ctrl *ServicesProvidersController) BindPlan(ctx context.Context, uuid, pla
 	return nil
 }
 
-const listDeployedGroupsQuery = `
-FOR group, edge, path IN 1 INBOUND @sp
+const listDeployedServicesQuery = `
+FOR srv IN 2 INBOUND @sp
 GRAPH @permissions
 OPTIONS { order: "bfs", uniqueVertices: "global" }
-FILTER IS_SAME_COLLECTION(@groups, group)
-    RETURN MERGE(group, { uuid: group._key })`
+FILTER IS_SAME_COLLECTION(@services, srv)
+FILTER srv.status != @status_init && srv.status != @status_del
+    RETURN MERGE(srv, { uuid: srv._key })
+`
+
 const listDeployedGroupsQueryWithInstances = `
 FOR group IN 1 INBOUND @sp
 GRAPH @permissions
@@ -184,19 +218,17 @@ FILTER IS_SAME_COLLECTION(@groups, group)
             RETURN MERGE(instance, { uuid: instance._key }) )
     RETURN MERGE(group, { uuid: group._key, instances })`
 
-func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp *ServicesProvider, includeInstances bool) ([]*ipb.InstancesGroup, error) {
+func (ctrl *ServicesProvidersController) GetGroups(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error) {
 	bindVars := map[string]interface{}{
 		"groups":      schema.INSTANCES_GROUPS_COL,
 		"sp":          sp.DocumentMeta.ID,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"instances":   schema.INSTANCES_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
-	query := listDeployedGroupsQuery
-	if includeInstances {
-		query = listDeployedGroupsQueryWithInstances
-		bindVars["instances"] = schema.INSTANCES_COL
-	}
+	query := listDeployedGroupsQueryWithInstances
+
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
 		return nil, err
@@ -213,6 +245,40 @@ func (ctrl *ServicesProvidersController) ListDeployments(ctx context.Context, sp
 		}
 		ctrl.log.Debug("Got document", zap.Any("group", &ig))
 		r = append(r, &ig)
+	}
+
+	return r, nil
+}
+
+func (ctrl *ServicesProvidersController) GetServices(ctx context.Context, sp *ServicesProvider) ([]*spb.Service, error) {
+	bindVars := map[string]interface{}{
+		"services":    schema.SERVICES_COL,
+		"sp":          sp.DocumentMeta.ID,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"status_init": stpb.NoCloudStatus_INIT,
+		"status_del":  stpb.NoCloudStatus_DEL,
+	}
+	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	query := listDeployedServicesQuery
+
+	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+
+	var r []*spb.Service
+	for {
+		var s spb.Service
+		_, err := c.ReadDocument(ctx, &s)
+		if driver.IsNoMoreDocuments(err) {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		ctrl.log.Debug("Got document", zap.Any("group", &s))
+		r = append(r, &s)
 	}
 
 	return r, nil

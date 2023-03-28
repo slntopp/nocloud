@@ -1,5 +1,6 @@
 <template>
   <nocloud-table
+    table-name="namespaces"
     :loading="loading"
     :items="filtredNamespaces"
     :headers="headers"
@@ -12,6 +13,13 @@
       <v-chip color="info">
         {{ getName(item.access.namespace) }} ({{ item.access.level }})
       </v-chip>
+    </template>
+    <template v-slot:[`item.title`]="{ item }">
+      <router-link
+        :to="{ name: 'NamespacePage', params: { namespaceId: item.uuid } }"
+      >
+        {{ "NS_" + item.title }}
+      </router-link>
     </template>
   </nocloud-table>
 </template>
@@ -44,7 +52,7 @@ export default {
       headers: [
         { text: "Title", value: "title" },
         { text: "UUID", value: "uuid" },
-        { text: "Access", value: "access" }
+        { text: "Access", value: "access" },
       ],
       selected: this.value,
       loading: false,
@@ -56,7 +64,7 @@ export default {
       this.$emit("input", item);
     },
     getName(account) {
-      return this.accounts.find(({ uuid }) => account === uuid)?.title ?? '';
+      return this.accounts.find(({ uuid }) => account === uuid)?.title ?? "";
     },
   },
   computed: {
@@ -76,7 +84,8 @@ export default {
   created() {
     this.loading = true;
     this.$store.dispatch("accounts/fetch");
-    this.$store.dispatch("namespaces/fetch")
+    this.$store
+      .dispatch("namespaces/fetch")
       .then(() => {
         this.fetchError = "";
       })

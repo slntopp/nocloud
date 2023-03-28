@@ -38,7 +38,9 @@
                   dense
                   v-model="fullDate[item.model]"
                   :type="item.model === 'time' ? 'text' : 'number'"
-                  :rules="item.model === 'time' ? rules.time : rules.customNumber"
+                  :rules="
+                    item.model === 'time' ? rules.time : rules.customNumber
+                  "
                 />
               </v-list-item-action>
             </v-list-item>
@@ -58,18 +60,18 @@
 </template>
 
 <script>
-export default { name: "date-field" }
+export default { name: "date-field" };
 </script>
 
 <script setup>
-import { onMounted, ref, toRefs, watch } from 'vue';
+import { onMounted, ref, toRefs, watch } from "vue";
 
 const props = defineProps({ period: Object });
 const emits = defineEmits(["changeDate"]);
 const { period } = toRefs(props);
 
 const date = ref("");
-const amountDate = ref("1");
+const amountDate = ref("0");
 const menuVisible = ref(false);
 
 let fullDate = ref({
@@ -114,8 +116,7 @@ const rules = {
   time: [
     (value) => !!value || "Is required!",
     (value) =>
-      /^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/.test(value) ||
-      "Invalid!",
+      /^([0-1][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/.test(value) || "Invalid!",
   ],
 };
 
@@ -126,6 +127,8 @@ function resetDate(date) {
 }
 
 onMounted(() => {
+  console.log(period);
+
   if (period.value) {
     date.value = "Custom";
     fullDate.value = period.value;
@@ -140,7 +143,6 @@ watch(date, (value) => {
 
   resetDate(fullDate.value);
 
-  fullDate.value[key] = value;
   amountDate.value = amount;
 });
 
@@ -167,7 +169,9 @@ watch(amountDate, (value) => {
 
 watch(
   () => fullDate,
-  (value) => { emits("changeDate", value) },
+  (value) => {
+    emits("changeDate", value);
+  },
   { deep: true }
 );
 

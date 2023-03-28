@@ -1,11 +1,14 @@
 <template>
   <div class="settings pa-4">
-    <div class="buttons__inline pb-4">
+    <div class="buttons__inline pb-8 pt-4">
       <v-btn color="background-light" class="mr-2" to="/settings/app">
         app settings
       </v-btn>
-      <v-btn color="background-light" class="mr-2" to="/settings/widget">
-        widget settings
+   <v-btn color="background-light" class="mr-2" to="/settings/widget">
+        widget settings</v-btn
+      >
+      <v-btn color="background-light" class="mr-2" to="/settings/plugins">
+        plugins settings
       </v-btn>
       <v-menu
         offset-y
@@ -77,6 +80,7 @@
     </div>
 
     <nocloud-table
+      table-name="settingsTable"
       isKeyOnlyAfterClick
       :isKeyInCircle="false"
       item-key="key"
@@ -169,9 +173,9 @@ import ConfirmDialog from "../components/confirmDialog.vue";
 import { filterArrayIncludes } from "@/functions";
 
 const headers = [
-  { text: "key", value: "key" },
-  { text: "description", value: "description" },
-  { text: "value", value: "value" },
+  { text: "Key", value: "key" },
+  { text: "Description", value: "description" },
+  { text: "Value", value: "value" },
 ];
 
 const defaultData = {

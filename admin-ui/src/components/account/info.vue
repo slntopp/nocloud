@@ -1,13 +1,26 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <v-text-field v-model="uuid" readonly label="UUID" style="width: 330px" />
-    <v-text-field v-model="title" label="name" style="width: 330px" />
-    <v-btn
-      v-if="['ROOT', 'ADMIN'].includes(account.access.level)"
-      @click="loginHandler"
-    >
-      Login
-    </v-btn>
+    <v-row>
+      <v-col cols="6">
+        <v-text-field
+          v-model="uuid"
+          readonly
+          label="UUID"
+          style="width: 330px"
+        />
+      </v-col>
+      <v-col cols="6">
+        <v-text-field v-model="title" label="name" style="width: 330px" />
+      </v-col>
+    </v-row>
+    <v-card-title class="px-0">Instances:</v-card-title>
+
+    <instances-table
+      :value="null"
+      :items="accountInstances"
+      :show-select="false"
+    />
+
     <v-card-title class="px-0">SSH keys:</v-card-title>
 
     <div class="pt-4">
@@ -19,9 +32,7 @@
         :close-on-content-click="false"
       >
         <template v-slot:activator="{ on, attrs }">
-          <v-btn class="mr-2" v-bind="attrs" v-on="on">
-            Create
-          </v-btn>
+          <v-btn class="mr-2" v-bind="attrs" v-on="on"> Create </v-btn>
         </template>
         <v-card class="pa-4">
           <v-row>
@@ -46,24 +57,19 @@
           </v-row>
           <v-row>
             <v-col>
-              <v-btn @click="addKey">
-                Send
-              </v-btn>
+              <v-btn @click="addKey"> Send </v-btn>
             </v-col>
           </v-row>
         </v-card>
       </v-menu>
 
-      <v-btn
-        class="mr-8"
-        :disabled="selected.length < 1"
-        @click="deleteKeys"
-      >
+      <v-btn class="mr-8" :disabled="selected.length < 1" @click="deleteKeys">
         Delete
       </v-btn>
     </div>
 
     <nocloud-table
+      table-name="accountInfo"
       class="mt-4"
       item-key="value"
       v-model="selected"
@@ -71,12 +77,8 @@
       :headers="headers"
     />
 
-    <v-btn
-      class="mt-4 mr-2"
-      :loading="isEditLoading"
-      @click="editAccount"
-    >
-      Submit
+    <v-btn class="mt-4 mr-2" :loading="isEditLoading" @click="editAccount">
+      Save
     </v-btn>
 
     <v-snackbar
@@ -104,30 +106,31 @@
 </template>
 
 <script>
-import config from '@/config.js';
+import config from "@/config.js";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
+import InstancesTable from "@/components/instances_table.vue";
 
 export default {
-  name: 'account-info',
-  components: { nocloudTable },
+  name: "account-info",
+  components: { InstancesTable, nocloudTable },
   mixins: [snackbar],
-  props: ['account'],
+  props: ["account"],
   data: () => ({
-    newKey: { title: '', value: '' },
+    newKey: { title: "", value: "" },
     headers: [
-      { text: 'Title', value: 'title' },
-      { text: 'Key', value: 'value' }
+      { text: "Title", value: "title" },
+      { text: "Key", value: "value" },
     ],
-    generalRule: [v => !!v || 'Required field'],
+    generalRule: [(v) => !!v || "Required field"],
     navTitles: config.navTitles ?? {},
-    uuid:'',
-    title: '',
+    uuid: "",
+    title: "",
     keys: [],
     selected: [],
     isVisible: false,
-    isEditLoading: false
+    isEditLoading: false,
   }),
   methods: {
     navTitle(title) {
@@ -140,17 +143,13 @@ export default {
     addKey() {
       this.keys.push(this.newKey);
       this.isVisible = false;
-      this.newKey = { title: '', value: '' };
+      this.newKey = { title: "", value: "" };
     },
     deleteKeys() {
       if (this.selected.length < 1) return;
-      const arr = this.selected.map(
-        (el) => el.value
-      );
+      const arr = this.selected.map((el) => el.value);
 
-      this.keys = this.keys.filter((el) =>
-        !arr.includes(el.value)
-      );
+      this.keys = this.keys.filter((el) => !arr.includes(el.value));
       this.selected = [];
     },
     editAccount() {
@@ -158,14 +157,15 @@ export default {
       newAccount.data.ssh_keys = this.keys;
 
       this.isEditLoading = true;
-      api.accounts.update(this.account.uuid, newAccount)
+      api.accounts
+        .update(this.account.uuid, newAccount)
         .then(() => {
           this.showSnackbarSuccess({
-            message: 'Account edited successfully'
+            message: "Account edited successfully",
           });
 
           setTimeout(() => {
-            this.$router.push({ name: 'Accounts' });
+            this.$router.push({ name: "Accounts" });
           }, 1500);
         })
         .catch((err) => {
@@ -175,22 +175,44 @@ export default {
           this.isEditLoading = false;
         });
     },
-    loginHandler() {
-      this.$store.dispatch('auth/loginToApp', { uuid: this.account.uuid, type: 'whmcs' })
-        .then(({ token }) => {
-          const url = `https://app.${location.host.split('.').slice(1).join('.')}`;
-          const win = window.open(url);
-
-          setTimeout(() => { win.postMessage(token, url) }, 100);
-        })
-    }
   },
   mounted() {
     this.title = this.account.title;
-    this.uuid=this.account.uuid
+    this.uuid = this.account.uuid;
     this.keys = this.account.data?.ssh_keys || [];
-  }
-}
+    if (this.namespaces.length < 2) {
+      this.$store.dispatch("namespaces/fetch");
+    }
+    if (this.services.length < 2) {
+      this.$store.dispatch("services/fetch");
+    }
+    if (this.servicesProviders.length < 2) {
+      this.$store.dispatch("servicesProviders/fetch");
+    }
+  },
+  computed: {
+    namespaces() {
+      return this.$store.getters["namespaces/all"];
+    },
+    services() {
+      return this.$store.getters["services/all"];
+    },
+    servicesProviders() {
+      return this.$store.getters["servicesProviders/all"];
+    },
+    instances() {
+      return this.$store.getters["services/getInstances"];
+    },
+    accountInstances() {
+      const accountNamespace = this.namespaces.find(
+        (n) => n.access.namespace === this.account.uuid
+      );
+      return this.instances.filter(
+        (i) => i.access.namespace === accountNamespace.uuid
+      );
+    },
+  },
+};
 </script>
 
 <style scoped lang="scss">

@@ -12,52 +12,30 @@
     </v-row> -->
     <v-row align="center">
       <v-col>
-        <v-text-field
-          readonly
-          :value="service.uuid"
-          label="service uuid"
-          style="display: inline-block; width: 330px"
+        <v-text-field readonly :value="service.uuid" label="service uuid" style="display: inline-block; width: 330px"
           :append-icon="copyed == 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'"
-          @click:append="addToClipboard(service.uuid, 'rootUUID')"
-        >
+          @click:append="addToClipboard(service.uuid, 'rootUUID')">
         </v-text-field>
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          :value="service && service.status"
-          label="state"
-          style="display: inline-block; width: 150px"
-        >
+        <v-text-field readonly :value="service && service.status" label="state"
+          style="display: inline-block; width: 150px">
         </v-text-field>
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          :value="hashpart(service.hash)"
-          label="service hash"
+        <v-text-field readonly :value="hashpart(service.hash)" label="service hash"
           style="display: inline-block; width: 150px"
           :append-icon="copyed == 'rootHash' ? 'mdi-check' : 'mdi-content-copy'"
-          @click:append="addToClipboard(service.hash, 'rootHash')"
-        >
+          @click:append="addToClipboard(service.hash, 'rootHash')">
         </v-text-field>
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          :value="service.access?.namespace"
-          label="namespace"
-          style="display: inline-block; width: 150px"
-        >
+        <v-text-field readonly :value="service.access?.namespace" label="namespace"
+          style="display: inline-block; width: 150px">
         </v-text-field>
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          :value="service.access?.level"
-          label="level"
-          style="display: inline-block; width: 150px"
-        >
+        <v-text-field readonly :value="service.access?.level" label="level" style="display: inline-block; width: 150px">
         </v-text-field>
       </v-col>
     </v-row>
@@ -70,56 +48,38 @@
     groups:
     <v-row justify="center" class="px-2 pb-2">
       <v-expansion-panels inset v-model="opened" multiple>
-        <v-expansion-panel
-          v-for="(group, i) in service.instancesGroups"
-          :key="i"
-          style="background: var(--v-background-base)"
-        >
+        <v-expansion-panel v-for="(group, i) in service.instancesGroups" :key="i"
+          style="background: var(--v-background-base)">
           <v-expansion-panel-header>
             {{ group.title }} | Type: {{ group.type }} |
             <v-chip class="instance-group-status" small color="grey">
               {{ group.instances.length }}
             </v-chip>
+            <v-icon class="instance-group-button" @click.stop="openMove(group.uuid)">mdi-arrow-up-bold</v-icon>
           </v-expansion-panel-header>
           <v-expansion-panel-content>
             <v-row>
               <v-col>
-                <v-text-field
-                  readonly
-                  :value="location(group)"
-                  label="location"
-                  style="display: inline-block; width: 330px"
-                >
+                <v-text-field readonly :value="provider(group)" label="service provider"
+                  style="display: inline-block; width: 330px">
                 </v-text-field>
               </v-col>
               <v-col>
-                <v-text-field
-                  readonly
-                  :value="group.uuid"
-                  label="group uuid"
-                  style="display: inline-block; width: 330px"
+                <v-text-field readonly :value="group.uuid" label="group uuid" style="display: inline-block; width: 330px"
                   :append-icon="
                     copyed == `${group}-UUID`
                       ? 'mdi-check'
                       : 'mdi-content-copy'
-                  "
-                  @click:append="addToClipboard(group.uuid, `${group}-UUID`)"
-                >
+                  " @click:append="addToClipboard(group.uuid, `${group}-UUID`)">
                 </v-text-field>
               </v-col>
               <v-col>
-                <v-text-field
-                  readonly
-                  :value="hashpart(group.hash)"
-                  label="group hash"
-                  style="display: inline-block; width: 150px"
-                  :append-icon="
+                <v-text-field readonly :value="hashpart(group.hash)" label="group hash"
+                  style="display: inline-block; width: 150px" :append-icon="
                     copyed == `${group}-hash`
                       ? 'mdi-check'
                       : 'mdi-content-copy'
-                  "
-                  @click:append="addToClipboard(group.hash, `${group}-hash`)"
-                >
+                  " @click:append="addToClipboard(group.hash, `${group}-hash`)">
                 </v-text-field>
               </v-col>
             </v-row>
@@ -127,31 +87,24 @@
             <v-row>
               <v-col>
                 <v-expansion-panels inset v-model="openedInstances[i]" multiple>
-                  <v-expansion-panel
-                    v-for="(instance, index) in group.instances"
-                    :key="index"
-                    style="background: var(--v-background-light-base)"
-                  >
+                  <v-expansion-panel v-for="(instance, index) in group.instances" :key="index"
+                    style="background: var(--v-background-light-base)">
                     <v-expansion-panel-header>
                       {{ instance.title }}
-                      <v-chip
-                        x-small
-                        class="ml-2"
-                        style="max-width: 10px; max-height: 10px; padding: 0"
-                        :color="stateColor(instance.state?.meta.state_str)"
-                      />
+                      <v-chip x-small class="ml-2" style="max-width: 10px; max-height: 10px; padding: 0"
+                        :color="stateColor(instance.state?.meta.state_str)" />
                     </v-expansion-panel-header>
                     <v-expansion-panel-content>
-                      <span class="mb-2 mr-2">Instance uuid:</span>
-                      <router-link :to="{ name: 'Instance', params: { instanceId: instance.uuid } }">
-                        <v-chip class="mb-2" style="cursor: pointer">{{ instance.uuid }}</v-chip>
-                      </router-link>
+                      <div class="mb-4">
+                        <span class="mr-2">Instance uuid:</span>
+                        <router-link :to="{ name: 'Instance', params: { instanceId: instance.uuid } }">
+                          <v-chip class="mr-2" style="cursor: pointer">{{ instance.uuid }}</v-chip>
+                        </router-link>
+                        <span class="mr-2">Location: {{ location(instance, group.sp) }}</span>
+                      </div>
 
-                      <component
-                        dense
-                        :is="getInstanceCardComponent(group.type)"
-                        :template="instance"
-                      />
+                      <component dense :is="getInstanceCardComponent(group.type)" :template="instance"
+                        :provider="group.sp" />
                     </v-expansion-panel-content>
                   </v-expansion-panel>
                 </v-expansion-panels>
@@ -162,6 +115,18 @@
       </v-expansion-panels>
     </v-row>
 
+    <v-dialog style="box-shadow:none" v-model="changeIGDialog">
+      <v-card class="ma-auto pa-5" width="40%">
+        <v-card-title>Move service</v-card-title>
+        <v-select :rules="requiredRule" v-model="selectedService" item-text="title" item-value="uuid" label="service"
+          :items="allAvailableServices" />
+        <v-card-actions class="d-flex justify-center">
+          <v-btn @click="changeIGDialog = false">Close</v-btn>
+          <v-btn class="ml-5" @click="moveInstanceGroup">Accert</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-row>
       <v-col>
         <v-btn :to="{ name: 'Service edit', params: { serviceId: service.uuid } }">
@@ -170,23 +135,14 @@
       </v-col>
     </v-row>
 
-    <v-snackbar
-      v-model="snackbar.visibility"
-      :timeout="snackbar.timeout"
-      :color="snackbar.color"
-    >
+    <v-snackbar v-model="snackbar.visibility" :timeout="snackbar.timeout" :color="snackbar.color">
       {{ snackbar.message }}
       <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
         <router-link :to="snackbar.route"> Look up. </router-link>
       </template>
 
       <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
-        >
+        <v-btn :color="snackbar.buttonColor" text v-bind="attrs" @click="snackbar.visibility = false">
           Close
         </v-btn>
       </template>
@@ -224,11 +180,28 @@ export default {
     instancesGroup: { uuid: "", type: "" },
     types: [],
     templates: {},
+
+    changeIGDialog: false,
+    selectedService: null,
+    igUUID: null,
+
+    requiredRule: [(val) => !!val]
   }),
   computed: {
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];
     },
+    allServices() {
+      return this.$store.getters['services/all']
+    },
+    allAvailableServices() {
+      if (this.allServices.length === 1) {
+        this.$store.dispatch("services/fetch")
+        return []
+      }
+
+      return this.allServices.filter((s) => s.uuid !== this.service.uuid)
+    }
   },
   methods: {
     addToClipboard(text, index) {
@@ -251,10 +224,16 @@ export default {
       if (hash) return hash.slice(0, 8);
       return "WWWWWWWW";
     },
-    location(group) {
-      const lc = this.servicesProviders.find((el) => el.uuid === group?.sp);
+    provider(group) {
+      return this.servicesProviders.find((el) => el.uuid === group?.sp)?.title ?? "not found";
+    },
+    location(inst, uuid) {
+      const sp = this.servicesProviders.find((el) => el.uuid === uuid);
+      const locationItem = sp?.locations.find(({ extra }) =>
+        extra.region === inst.config.datacenter
+      );
 
-      return lc?.title || "not found";
+      return locationItem?.title || sp?.locations[0]?.title || "not found";
     },
     stateColor(state) {
       const dict = {
@@ -297,6 +276,19 @@ export default {
     getInstanceCardComponent(type) {
       return this.templates[type] ?? this.templates.custom;
     },
+    moveInstanceGroup() {
+      if (!this.$refs.addServiceCard.validate()) {
+        return
+      }
+
+      api.instanceGroupService.move(this.igUUID, this.selectedService).then(() => {
+        this.changeIGDialog = false
+      })
+    },
+    openMove(uuid) {
+      this.changeIGDialog = true
+      this.igUUID = uuid
+    }
   },
   created() {
     const types = require.context(
@@ -347,6 +339,11 @@ export default {
 .instance-group-status {
   max-width: 30px;
   align-items: center;
+  margin-left: 25px;
+}
+
+.instance-group-button {
+  max-width: 30px;
   margin-left: 25px;
 }
 </style>

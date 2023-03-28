@@ -51,6 +51,19 @@ func DeleteByDocID(ctx context.Context, db driver.Database, id driver.DocumentID
 	return nil
 }
 
+var getEdge = `
+LET inboundNode = DOCUMENT(@inboundNode)
+
+LET inboundNode_edge = (
+	FOR s, edge IN 1 INBOUND inboundNode
+	GRAPH @permissions
+	FILTER IS_SAME_COLLECTION(@collection, s)
+	RETURN edge
+)[0]
+
+return inboundNode_edge._key
+`
+
 const listOwnedQuery = `
 FOR node, edge IN 0..100
 OUTBOUND @from

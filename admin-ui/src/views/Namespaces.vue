@@ -1,6 +1,6 @@
 <template>
   <div class="namespaces pa-4 flex-wrap">
-    <div class="buttons__inline pb-4">
+    <div class="buttons__inline pb-8 pt-4">
       <v-menu
         offset-y
         transition="slide-y-transition"
@@ -33,7 +33,7 @@
       >
         <v-btn
           color="background-light"
-          class="mr-8"
+          class="mr-2"
           :disabled="selected.length < 1"
         >
           delete
@@ -94,6 +94,7 @@
         <template v-slot:activator="{ on, attrs }">
           <v-btn
             color="background-light"
+            class="mr-2"
             :disabled="selected.length < 1"
             v-bind="attrs"
             v-on="on"
@@ -126,7 +127,12 @@
       </v-dialog>
     </div>
 
-    <namespaces-table :searchParam="searchParam" v-model="selected" single-select> </namespaces-table>
+    <namespaces-table
+      :searchParam="searchParam"
+      v-model="selected"
+      single-select
+    >
+    </namespaces-table>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -169,7 +175,7 @@ export default {
     "accounts-table": accountsTable,
     ConfirmDialog,
   },
-  mixins: [snackbar,search],
+  mixins: [snackbar, search],
   data() {
     return {
       createMenuVisible: false,

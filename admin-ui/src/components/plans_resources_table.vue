@@ -1,6 +1,7 @@
 <template>
   <div class="pa-4">
     <nocloud-table
+      table-name="plansResources"
       item-key="id"
       v-model="selected"
       :show-expand="true"
@@ -18,7 +19,9 @@
             Create
           </v-btn>
           <confirm-dialog @confirm="removeConfig">
-            <v-btn color="background-light" :disabled="selected.length < 1">Delete</v-btn>
+            <v-btn color="background-light" :disabled="selected.length < 1"
+              >Delete</v-btn
+            >
           </confirm-dialog>
         </v-toolbar>
       </template>
@@ -36,24 +39,25 @@
           type="number"
           :value="item.price"
           :rules="generalRule"
-          @change="(value) => changeResource('price', value, item.id)"
+          @input="(value) => changeResource('price', value, item.id)"
         />
       </template>
       <template v-slot:[`item.period`]="{ item }">
         <date-field
-          :period="fullDate[item.id]"
+          :period="fullDates[item.id]"
           @changeDate="(value) => changeDate(value, item.id)"
         />
       </template>
       <template v-slot:[`item.kind`]="{ item }">
         <v-radio-group
-          row mandatory
+          row
+          mandatory
           :value="item.kind"
           @change="(value) => changeResource('kind', value, item.id)"
         >
           <v-radio
             v-for="(kind, i) of kinds"
-            :style="{ marginRight: (i === kinds.length - 1) ? 0 : 16 }"
+            :style="{ marginRight: i === kinds.length - 1 ? 0 : 16 }"
             :key="kind"
             :value="kind"
             :label="kind.toLowerCase()"
@@ -86,82 +90,103 @@
 </template>
 
 <script setup>
-import { ref, toRefs } from 'vue';
-import nocloudTable from '@/components/table.vue';
-import dateField from '@/components/date.vue';
-import confirmDialog from '@/components/confirmDialog.vue';
+import { ref, toRefs } from "vue";
+import nocloudTable from "@/components/table.vue";
+import dateField from "@/components/date.vue";
+import confirmDialog from "@/components/confirmDialog.vue";
+import {
+  getDaysBySeconds,
+  getMonthsByDays,
+  getQuartersByDays,
+  getSecondsByDays,
+  getTimeBySeconds,
+  getWeekByDays,
+  getYearsByDays,
+} from "@/functions";
 
 const props = defineProps({
-  resources: { type: Array, required: true }
+  resources: { type: Array, required: true },
 });
-const emits = defineEmits(['change:resource']);
+const emits = defineEmits(["change:resource"]);
 const { resources } = toRefs(props);
 
-const fullDate = ref({});
+const fullDates = ref({});
 const selected = ref([]);
 const expanded = ref([]);
-const generalRule = [v => !!v || 'This field is required!'];
-const kinds = ['POSTPAID', 'PREPAID'];
+const generalRule = [(v) => !!v || "This field is required!"];
+const kinds = ["POSTPAID", "PREPAID"];
 
 const states = [
-  'INIT',
-  'UNKNOWN',
-  'STOPPED',
-  'RUNNING',
-  'FAILURE' ,
-  'DELETED',
-  'SUSPENDED',
-  'OPERATION'
+  "INIT",
+  "UNKNOWN",
+  "STOPPED",
+  "RUNNING",
+  "FAILURE",
+  "DELETED",
+  "SUSPENDED",
+  "OPERATION",
 ];
 const headers = [
-  { text: 'Key', value: 'key' },
-  { text: 'Price', value: 'price' },
-  { text: 'Period', value: 'period' },
-  { text: 'Kind', value: 'kind', width: 228 }
+  { text: "Key", value: "key" },
+  { text: "Price", value: "price" },
+  { text: "Period", value: "period" },
+  { text: "Kind", value: "kind", width: 228 },
 ];
 
 function changeDate({ value }, id) {
-  fullDate.value[id] = value;
-  emits("change:resource", { key: 'date', value, id });
+  fullDates.value[id] = value;
+  emits("change:resource", { key: "date", value, id });
 }
 
 function changeResource(key, value, id) {
-  emits('change:resource', { key, value, id });
+  emits("change:resource", { key, value, id });
 }
 
 function addConfig() {
   const value = [...resources.value];
 
   value.push({
-    key: '',
-    kind: 'POSTPAID',
+    key: "",
+    kind: "POSTPAID",
     price: 0,
     period: 0,
     except: false,
     on: [],
-    id: Math.random().toString(16).slice(2)
+    id: Math.random().toString(16).slice(2),
   });
-  changeResource('resources', value);
+  changeResource("resources", value);
 }
 
 function removeConfig() {
-  const value = resources.value.filter(({ id }) =>
-    !selected.value.find((el) => el.id === id)
+  const value = resources.value.filter(
+    ({ id }) => !selected.value.find((el) => el.id === id)
   );
-  changeResource('resources', value);
+  changeResource("resources", value);
 }
 
 resources.value.forEach(({ period, id }) => {
-  const date = new Date(period * 1000);
-  const time = date.toUTCString().split(' ');
-
-  fullDate.value[id] = {
-    day: `${date.getUTCDate() - 1}`,
-    month: `${date.getUTCMonth()}`,
-    year: `${date.getUTCFullYear() - 1970}`,
-    quarter: '0',
-    week: '0',
-    time: time.at(-2)
+  console.log(period, id);
+  const fullDate = {
+    day: "0",
+    month: "0",
+    year: "0",
+    quarter: "0",
+    week: "0",
+    time: "00:00:00",
   };
+
+  fullDate.day = getDaysBySeconds(period);
+  period -= getSecondsByDays(fullDate.day);
+  fullDate.year = getYearsByDays(fullDate.day);
+  fullDate.day -= fullDate.year * 365;
+  fullDate.quarter = getQuartersByDays(fullDate.day);
+  fullDate.day -= fullDate.quarter * 90;
+  fullDate.month = getMonthsByDays(fullDate.day);
+  fullDate.day -= fullDate.month * 30;
+  fullDate.week = getWeekByDays(fullDate.day);
+  fullDate.day -= fullDate.week * 7;
+  fullDate.time = getTimeBySeconds(period);
+
+  fullDates.value[id] = fullDate;
 });
 </script>

@@ -111,21 +111,25 @@ export function filterArrayIncludes(array, { keys, value, params }) {
     return [];
   }
 
-  return array.filter((item) => keys.some((key) => {
-    const newKey = (params[key]) ? params[key] : key;
-    let newValue = item[newKey];
+  return array.filter((item) =>
+    keys.some((key) => {
+      const newKey = params?.[key] ? params?.[key] : key;
+      let newValue = item[newKey];
 
-    switch (typeof params[key]) {
-      case "function":
-        newValue = newKey(item);
-        break;
-      case "string":
-        newValue = item[key][newKey];
-    }
+      switch (typeof params?.[key]) {
+        case "function":
+          newValue = newKey(item);
+          break;
+        case "string":
+          newValue = item[key][newKey];
+      }
 
-    return typeof newValue === "string" &&
-      newValue.toLowerCase().includes(value.toLowerCase())
-  }));
+      return (
+        typeof newValue === "string" &&
+        newValue.toLowerCase().includes(value.toLowerCase())
+      );
+    })
+  );
 }
 
 export function filterArrayBy(array, { key, value }) {
@@ -257,4 +261,82 @@ export function readYAMLFile(file) {
     };
     reader.readAsText(file);
   });
+}
+
+export function getTimeBySeconds(secs) {
+  let sec_num = parseInt(secs, 10);
+  let hours = Math.floor(sec_num / 3600);
+  let minutes = Math.floor((sec_num - hours * 3600) / 60);
+  let seconds = sec_num - hours * 3600 - minutes * 60;
+
+  if (hours < 10) {
+    hours = "0" + hours;
+  }
+  if (minutes < 10) {
+    minutes = "0" + minutes;
+  }
+  if (seconds < 10) {
+    seconds = "0" + seconds;
+  }
+  return hours + ":" + minutes + ":" + seconds;
+}
+
+export function getDaysBySeconds(seconds) {
+  return Math.floor(+seconds / (60 * 60 * 24));
+}
+
+export function getSecondsByDays(days) {
+  return +days * 60 * 60 * 24;
+}
+
+export function getMonthsByDays(days) {
+  return Math.floor(+days / 30);
+}
+
+export function getQuartersByDays(days) {
+  return Math.floor(+days / 90);
+}
+
+export function getYearsByDays(days) {
+  return Math.floor(+days / 365);
+}
+
+export function getWeekByDays(days) {
+  return Math.floor(+days / 7);
+}
+
+export function getState(item) {
+  if (!item.state) return "UNKNOWN";
+  const state =
+    item.billingPlan.type === "ione"
+      ? item.state.meta?.lcm_state_str
+      : item.state.state;
+
+  switch (item.state.meta.state) {
+    case 1:
+      return "PENDING";
+    case 5:
+      return "SUSPENDED";
+    case "BUILD":
+      return "BUILD";
+  }
+  switch (state) {
+    case "LCM_INIT":
+      return "POWEROFF";
+    default:
+      return state?.replaceAll("_", " ") ?? "";
+  }
+}
+
+export function toKebabCase(str) {
+  return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+}
+
+export function toPascalCase(text) {
+  if (!text) {
+    return;
+  }
+  return text.replace(/(^\w|-\w)/g, (text) =>
+    text.replace(/-/, "").toUpperCase()
+  );
 }
