@@ -146,7 +146,7 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 	bindVars := map[string]interface{}{
 		"@sps": schema.SERVICES_PROVIDERS_COL,
 	}
-	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.String("query", query))
 
 	c, err := ctrl.col.Database().Query(ctx, query, bindVars)
 	if err != nil {
