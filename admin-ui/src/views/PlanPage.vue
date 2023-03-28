@@ -1,7 +1,9 @@
 <template>
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
-      <router-link :to="{ name: 'Plans' }">{{ navTitle("Price Models") }}</router-link>
+      <router-link :to="{ name: 'Plans' }">{{
+        navTitle("Price Models")
+      }}</router-link>
       / {{ planTitle }}
     </h1>
     <v-tabs
@@ -41,13 +43,13 @@ export default {
     tabs: [
       {
         title: "Info",
-        component: () => import("@/views/PlansCreate.vue")
+        component: () => import("@/views/PlansCreate.vue"),
       },
       {
         title: "Template",
-        component: () => import("@/components/plan/template.vue")
-      }
-    ]
+        component: () => import("@/components/plan/template.vue"),
+      },
+    ],
   }),
   methods: {
     navTitle(title) {
@@ -83,16 +85,21 @@ export default {
   },
   watch: {
     plan() {
-      if (!['ovh vps', 'ovh dedicated', 'goget'].includes(this.plan.type)) return;
-      if (this.tabs.find(({ title }) => title === 'Prices')) return;
-      const type = this.plan.type.split(' ')[0];
+      if (
+        !["ovh vps", "ovh dedicated", "goget", "cpanel"].includes(
+          this.plan.type
+        )
+      )
+        return;
+      if (this.tabs.find(({ title }) => title === "Prices")) return;
+      const type = this.plan.type.split(" ")[0];
 
       this.tabs.splice(this.tabs.length - 1, 0, {
-        title: 'Prices',
-        component: () => import(`@/components/plan/${type}Prices.vue`)
+        title: "Prices",
+        component: () => import(`@/components/plan/${type}Prices.vue`),
       });
-    }
-  }
+    },
+  },
 };
 </script>
 
