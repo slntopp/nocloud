@@ -77,6 +77,10 @@ export default {
           component: () => import("@/components/ServicesProvider/info.vue"),
         },
         {
+          title: "Promo",
+          component: () => import("@/components/ServicesProvider/promo.vue"),
+        },
+        {
           title: "Map",
           component: (this.item?.type === "ovh")
             ? () => import("@/components/ServicesProvider/ovhMap.vue")
