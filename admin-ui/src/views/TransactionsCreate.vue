@@ -35,6 +35,22 @@
             </v-col>
           </v-row>
 
+          <v-row v-if="transaction.service" align="center">
+            <v-col cols="3">
+              <v-subheader>Instances</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-select
+                multiple
+                label="Instances"
+                item-value="uuid"
+                item-text="title"
+                v-model="transaction.meta.instances"
+                :items="instances"
+              />
+            </v-col>
+          </v-row>
+
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Amount</v-subheader>
@@ -106,6 +122,14 @@
             </v-col>
           </v-row>
 
+          <v-row class="mx-5">
+            <v-textarea
+              no-resize
+              label="Message"
+              v-model="transaction.meta.message"
+            ></v-textarea>
+          </v-row>
+
           <v-row>
             <v-col cols="3">
               <v-subheader>Meta</v-subheader>
@@ -174,7 +198,7 @@ export default {
       service: "",
       total: "",
       exec: 0,
-      meta: {},
+      meta: { instances: [], message: "" },
     },
     date: {
       title: "Date",
@@ -299,8 +323,32 @@ export default {
       }
       return this.services;
     },
+    instances() {
+      if (!this.transaction.service) {
+        return;
+      }
+
+      const service = this.services.find(
+        (s) => s.title === this.transaction.service
+      );
+
+      const instances = [];
+
+      service?.instancesGroups.forEach((ig) => {
+        ig.instances.forEach((i) =>
+          instances.push({ uuid: i.uuid, title: i.title })
+        );
+      });
+
+      return instances;
+    },
     exec() {
       return new Date(`${this.date.value}T${this.time.value}`).getTime() / 1000;
+    },
+  },
+  watch: {
+    "transaction.service"() {
+      this.transaction.meta.instances = [];
     },
   },
 };
