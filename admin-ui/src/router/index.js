@@ -114,6 +114,14 @@ const routes = [
     },
   },
   {
+    path: "/settings/widget",
+    name: "WidgetSetting",
+    component: () => import("../views/WidgetSettings.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/settings/plugins",
     name: "PluginsSetting",
     component: () => import("../views/PluginsSettings.vue"),

@@ -17,6 +17,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	stpb "github.com/slntopp/nocloud-proto/statuses"
 
 	"github.com/arangodb/go-driver"
@@ -125,16 +126,22 @@ func (ctrl *ServicesProvidersController) Get(ctx context.Context, id string) (r 
 }
 
 // List Services Providers in DB
-func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor string) ([]*ServicesProvider, error) {
+func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor string, isRoot bool) ([]*ServicesProvider, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
 
 	var query string
 
 	if requestor != "" {
-		query = `FOR sp IN @@sps RETURN MERGE(UNSET(sp, ['secrets', 'vars']), {uuid: sp._key})`
+		query = `FOR sp IN @@sps %s RETURN MERGE(UNSET(sp, ['secrets', 'vars']), {uuid: sp._key})`
+
+		if !isRoot {
+			query = fmt.Sprint(query, "FILTER sp.public == true")
+		} else {
+			query = fmt.Sprint(query, "")
+		}
 	} else {
 		// anonymous query
-		query = `FOR sp IN @@sps RETURN {uuid: sp._key, type: sp.type, title: sp.title, public_data: sp.public_data, locations: sp.locations, meta: sp.meta}`
+		query = `FOR sp IN @@sps FILTER sp.public == true RETURN {uuid: sp._key, type: sp.type, title: sp.title, public_data: sp.public_data, locations: sp.locations, meta: sp.meta}`
 	}
 	bindVars := map[string]interface{}{
 		"@sps": schema.SERVICES_PROVIDERS_COL,

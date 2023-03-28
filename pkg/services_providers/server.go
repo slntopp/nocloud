@@ -375,7 +375,10 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 	}
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	r, err := s.ctrl.List(ctx, requestor)
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	isRoot := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+
+	r, err := s.ctrl.List(ctx, requestor, isRoot)
 	if err != nil {
 		log.Debug("Error reading ServicesProviders from DB", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error reading ServicesProviders from DB")
