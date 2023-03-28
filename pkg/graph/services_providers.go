@@ -135,9 +135,9 @@ func (ctrl *ServicesProvidersController) List(ctx context.Context, requestor str
 		query = `FOR sp IN @@sps %s RETURN MERGE(UNSET(sp, ['secrets', 'vars']), {uuid: sp._key})`
 
 		if !isRoot {
-			query = fmt.Sprint(query, "FILTER sp.public == true")
+			query = fmt.Sprintf(query, "FILTER sp.public == true")
 		} else {
-			query = fmt.Sprint(query, "")
+			query = fmt.Sprintf(query, "")
 		}
 	} else {
 		// anonymous query
