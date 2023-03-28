@@ -304,6 +304,7 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 		sp.Locations = newLocations
 	}
 	sp.Meta = req.GetMeta()
+	sp.Public = req.GetPublic()
 
 	testRes, err := s.Test(ctx, sp.ServicesProvider)
 	if err != nil {
