@@ -1,5 +1,13 @@
 <template>
   <div>
+    <v-row align="center">
+      <v-col cols="2">
+        <v-text-field readonly label="Tarrif" :value="tariff"></v-text-field>
+      </v-col>
+      <v-col cols="2">
+        <v-text-field readonly label="price" :value="getPrice()"></v-text-field>
+      </v-col>
+    </v-row>
     <h3 v-if="dense">Data:</h3>
     <v-card-title v-else class="px-0">Data:</v-card-title>
     <v-row align="center">
@@ -43,17 +51,6 @@
     <h3 v-if="dense">Resources:</h3>
     <v-card-title v-else class="px-0">Resources:</v-card-title>
     <v-row align="center">
-      <v-col>
-        <v-text-field
-          readonly
-          style="display: inline-block; width: 200px"
-          label="Tarrif"
-          :value="tariff"
-        ></v-text-field>
-      </v-col>
-      <v-col>
-        <v-text-field label="price" :value="getPrice()"></v-text-field>
-      </v-col>
       <v-col v-for="(item, key) in template.resources" :key="key">
         <v-text-field
           readonly
