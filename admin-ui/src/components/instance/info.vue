@@ -49,6 +49,44 @@
         />
       </v-col>
     </v-row>
+    <v-row>
+      <v-col>
+        <v-text-field
+          @click:append="goTo('NamespacePage', { namespaceId: namespace.uuid })"
+          readonly
+          append-icon="mdi-login"
+          label="namespace"
+          :value="!namespace ? '' : 'NS_' + namespace.title"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          @click:append="goTo('Account', { accountId: account.uuid })"
+          readonly
+          append-icon="mdi-login"
+          label="account"
+          :value="account?.title"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          @click:append="goTo('Service', { serviceId: service.uuid })"
+          readonly
+          append-icon="mdi-login"
+          label="service"
+          :value="!service ? '' : 'SRV_' + service.title"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          @click:append="goTo('ServicesProvider', { uuid: sp.uuid })"
+          readonly
+          append-icon="mdi-login"
+          label="service provider"
+          :value="sp?.title"
+        />
+      </v-col>
+    </v-row>
 
     <component
       :is="templates[template.type] ?? templates.custom"
@@ -156,6 +194,7 @@ import nocloudTable from "@/components/table.vue";
 import instanceActions from "@/components/instance/controls.vue";
 import JsonTextarea from "@/components/JsonTextarea.vue";
 import instanceIpMenu from "../ui/instanceIpMenu.vue";
+import { mapGetters } from "vuex";
 
 export default {
   name: "instance-info",
@@ -282,6 +321,48 @@ export default {
         });
       }
     },
+    goTo(name, params) {
+      this.$router.push({ name, params });
+    },
+  },
+  computed: {
+    ...mapGetters("namespaces", { namespaces: "all" }),
+    ...mapGetters("accounts", { accounts: "all" }),
+    ...mapGetters("services", { services: "all" }),
+    ...mapGetters("servicesProviders", { servicesProviders: "all" }),
+    namespace() {
+      return this.namespaces?.find(
+        (n) => n.uuid == this.template.access.namespace
+      );
+    },
+    account() {
+      if (!this.namespace) {
+        return;
+      }
+      return this.accounts?.find(
+        (a) => a.uuid == this.namespace.access.namespace
+      );
+    },
+    service() {
+      return this.services?.find((s) => s.uuid == this.template.service);
+    },
+    sp() {
+      return this.servicesProviders?.find((sp) => sp.uuid == this.template.sp);
+    },
+  },
+  mounted() {
+    if (this.namespaces.length < 2) {
+      this.$store.dispatch("namespaces/fetch");
+    }
+    if (this.accounts.length < 2) {
+      this.$store.dispatch("accounts/fetch");
+    }
+    if (this.services.length < 2) {
+      this.$store.dispatch("services/fetch");
+    }
+    if (this.servicesProviders.length < 2) {
+      this.$store.dispatch("servicesProviders/fetch");
+    }
   },
   created() {
     const types = require.context(
