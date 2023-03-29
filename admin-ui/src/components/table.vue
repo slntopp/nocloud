@@ -108,9 +108,7 @@
               :value="item"
               :label="item"
               :input-value="filtersValues[header.value]"
-              @change="
-                $emit('input:filter', { key: header.value, value: $event })
-              "
+              @change="setCustomFilter(header.value, $event)"
             />
           </v-list-item>
         </v-list>
@@ -354,6 +352,41 @@ export default {
 
       localStorage.setItem("columns", JSON.stringify(allColumnsSetting));
     },
+    setCustomFilter(key, val) {
+      this.$emit("input:filter", { key, value: val });
+    },
+    saveFilterValues(filters) {
+      const columnJson = localStorage.getItem("filters");
+      const tableFiltres = {};
+
+      Object.keys(filters).map((key) => {
+        if (filters[key].length) {
+          tableFiltres[key] = filters[key];
+        }
+      });
+
+      const allFiltres = columnJson
+        ? JSON.parse(columnJson)
+        : { [this.tableName]: {} };
+      allFiltres[this.tableName] = tableFiltres;
+
+      localStorage.setItem("filters", JSON.stringify(allFiltres));
+    },
+    synchronizeFilterValues() {
+      const allFilters = JSON.parse(localStorage.getItem("filters") || "{}");
+      if (allFilters[this.tableName]) {
+        const valuesMap = allFilters[this.tableName];
+
+        Object.keys(valuesMap).forEach((key) => {
+          if (
+            this.filtersValues[key] != undefined &&
+            valuesMap[key].length > 0
+          ) {
+            this.setCustomFilter(key, valuesMap[key], false);
+          }
+        });
+      }
+    },
     sortTheHeadersAndUpdateTheKey(evt) {
       const originalHeaders = JSON.parse(JSON.stringify(this.filtredHeaders));
       this.filtredHeaders = [];
@@ -375,7 +408,6 @@ export default {
       );
       this.table = this.filtredHeaders;
       this.anIncreasingNumber += 1;
-      this.saveColumnPosition(this.filtredHeaders);
     },
     setHeadersBy(columns) {
       const tempHeaders = [];
@@ -416,7 +448,6 @@ export default {
 
       this.setHeadersBy(newColumns);
       this.columns = newColumns;
-      this.saveColumnPosition(this.filtredHeaders);
 
       this.settingsDialog = false;
     },
@@ -435,6 +466,21 @@ export default {
       }
     },
     saveTableData() {
+      this.saveColumnPosition(this.filtredHeaders);
+
+      if (this.filtersValues) {
+        const filters = {};
+
+        //check is filterble column availble
+        for (const key of Object.keys(this.filtersValues)) {
+          if (this.columns[key]) {
+            filters[key] = this.filtersValues[key];
+          }
+        }
+
+        this.saveFilterValues(filters);
+      }
+
       const url = localStorage.getItem("url");
 
       if (this.$route.path.includes(url)) return;
@@ -467,7 +513,6 @@ export default {
           this.columns = {};
           this.setDefaultHeaders();
           this.setDefaultFiltres();
-          this.saveColumnPosition(this.filtredHeaders);
         } else {
           this.setHeadersBy(this.columns);
           this.setFilterBy(this.columns);
@@ -489,8 +534,10 @@ export default {
   },
   beforeDestroy() {
     this.saveTableData();
+    window.removeEventListener("beforeunload", this.saveTableData);
   },
   mounted() {
+    window.addEventListener("beforeunload", this.saveTableData);
     this.filtredHeaders = this.headers;
     const page = localStorage.getItem("page");
     if (page)
@@ -500,6 +547,7 @@ export default {
 
     this.configureItemsPerPage();
     this.configureColumns();
+    this.synchronizeFilterValues();
   },
   watch: {
     page(value) {
