@@ -155,9 +155,8 @@ export default {
           (this.template.state.meta.lcm_state === 0 &&
             this.template.state.meta.state === 8),
         resume:
-          this.template.state.meta.state === 5 ||
-          (this.template.state.meta.state === 3 &&
-            ![18, 20].includes(this.template.state.meta.lcm_state)),
+          this.template.state.meta.state === 3 &&
+          ![18, 20].includes(this.template.state.meta.lcm_state),
         suspend: this.template.state.meta.state === 5,
         vnc: this.template.state.meta.state === 5,
       };
@@ -181,9 +180,8 @@ export default {
           this.template.state.meta.state === "BUILD" ||
           this.template.state.state === "STOPPED",
         resume:
-          this.template.state.state === "SUSPENDED" ||
-          (this.template.state.state === "RUNNING" &&
-            this.template.state.state !== "STOPPED"),
+          this.template.state.state === "RUNNING" &&
+          this.template.state.state !== "STOPPED",
         suspend: this.template.state.state === "SUSPENDED",
       };
     },
