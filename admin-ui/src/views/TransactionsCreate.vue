@@ -35,7 +35,7 @@
             </v-col>
           </v-row>
 
-          <v-row v-if="transaction.service" align="center">
+          <v-row v-if="transaction.service && instances?.length" align="center">
             <v-col cols="3">
               <v-subheader>Instances</v-subheader>
             </v-col>
