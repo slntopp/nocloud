@@ -277,7 +277,9 @@ export default {
     const year = date.getFullYear();
     const time = date.toString().split(" ")[4];
 
-    this.date.value = `${year}-${month}-${day}`;
+    this.date.value = `${year}-${
+      month.toString().length < 2 ? "0" + month : month
+    }-${day}`;
     this.time.value = `${time}`;
 
     if (this.accounts.length < 2) {
