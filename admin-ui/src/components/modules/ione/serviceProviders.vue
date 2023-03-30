@@ -1,4 +1,3 @@
-v-col
 <template>
   <div class="sp-ione">
     <v-row
@@ -364,6 +363,11 @@ export default {
     jsonVarsKeys() {
       return ["sched_ds", "sched"];
     },
+  },
+  mounted() {
+    if (!this.vars.console?.value) {
+      this.$emit("change:vars", { ...this.vars, console: { value: "vnc" } });
+    }
   },
   computed: {
     fieldKeys() {

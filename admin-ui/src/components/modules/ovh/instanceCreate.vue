@@ -42,7 +42,7 @@
             label="tariff"
             item-text="title"
             item-value="code"
-            :value="instance.config.planCode"
+            :value="instance.config?.planCode"
             :items="flavors[instance?.billing_plan?.uuid]"
             :rules="rules.req"
             :loading="isFlavorsLoading"
@@ -52,10 +52,10 @@
         <v-col cols="6">
           <v-select
             label="region"
-            :value="instance.config.configuration.vps_datacenter"
-            :items="regions[instance.config.planCode]"
+            :value="instance.config?.configuration.vps_datacenter"
+            :items="regions[instance.config?.planCode]"
             :rules="rules.req"
-            :disabled="!instance.config.planCode"
+            :disabled="!instance.config?.planCode"
             @change="
               (value) => setValue('config.configuration.vps_datacenter', value)
             "
@@ -64,10 +64,10 @@
         <v-col cols="6">
           <v-select
             label="OS"
-            :value="instance.config.configuration.vps_os"
-            :items="images[instance.config.planCode]"
+            :value="instance.config?.configuration.vps_os"
+            :items="images[instance.config?.planCode]"
             :rules="rules.req"
-            :disabled="!instance.config.planCode"
+            :disabled="!instance.config?.planCode"
             @change="(value) => setValue('config.configuration.vps_os', value)"
           />
         </v-col>
@@ -77,8 +77,8 @@
             class="d-inline-block ml-2"
             true-value="P1Y"
             false-value="P1M"
-            :value="instance.config.duration"
-            :label="instance.config.duration === 'P1Y' ? 'yearly' : 'monthly'"
+            :value="instance.config?.duration"
+            :label="instance.config?.duration === 'P1Y' ? 'yearly' : 'monthly'"
             @change="(value) => setValue('config.duration', value)"
           />
         </v-col>
@@ -86,18 +86,18 @@
           Existing:
           <v-switch
             class="d-inline-block ml-2"
-            :input-value="instance.data.existing"
+            :input-value="instance.data?.existing"
             @change="(value) => setValue('data.existing', value)"
           />
         </v-col>
         <v-col
           cols="6"
           class="d-flex align-center"
-          v-if="instance.data.existing"
+          v-if="instance.data?.existing"
         >
           <v-text-field
             label="VPS name"
-            :value="instance.data.vpsName"
+            :value="instance.data?.vpsName"
             :rules="rules.req"
             @change="(value) => setValue('data.vpsName', value)"
           />
@@ -105,13 +105,13 @@
       </v-row>
 
       <template
-        v-if="Object.values(addons[instance.config.planCode] || {}).length > 0"
+        v-if="Object.values(addons[instance.config?.planCode] || {}).length > 0"
       >
         <v-card-title class="px-0 pb-0">Addons:</v-card-title>
         <v-row>
           <v-col
             cols="6"
-            v-for="(addon, key) in addons[instance.config.planCode]"
+            v-for="(addon, key) in addons[instance.config?.planCode]"
             :key="key"
           >
             <v-select
@@ -144,6 +144,7 @@ const getDefaultInstance = () => ({
     addons: [],
   },
   data: { existing: false },
+  resources: {},
   billing_plan: {},
 });
 export default {
@@ -282,14 +283,14 @@ export default {
           }
         });
 
-        data.resources = {
+        this.$emit("set-value", { key: "resources", value: {
           cpu: +resources.at(-3),
           ram: resources.at(-2) * 1024,
           drive_size: resources.at(-1) * 1024,
           drive_type: "SSD",
           ips_private: 0,
           ips_public: 1,
-        };
+        } });
       }
 
       if (path.includes("duration")) {

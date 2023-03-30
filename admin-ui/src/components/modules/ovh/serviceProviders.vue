@@ -40,6 +40,10 @@ export default {
       type: Object,
       default: () => ({}),
     },
+    vars: {
+      type: Object,
+      default: () => ({}),
+    },
     passed: {
       type: Boolean,
       default: false,
@@ -106,6 +110,11 @@ export default {
     getValue(fieldName) {
       return this.secrets[fieldName];
     },
+  },
+  mounted() {
+    if (!this.vars.console?.value) {
+      this.$emit("change:vars", { ...this.vars, console: { value: "vnc" } });
+    }
   },
 };
 </script>
