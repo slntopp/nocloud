@@ -34,12 +34,56 @@
           :value="template.state?.meta.lcm_state_str"
         />
       </v-col>
+      <v-col v-if="template.state?.meta.networking?.public">
+        <div>
+          <span class="mr-4">ips</span>
+          <instance-ip-menu :item="template" />
+        </div>
+      </v-col>
       <v-col>
         <v-text-field
           readonly
           label="price model"
           style="display: inline-block; width: 150px"
           :value="template.billingPlan.title"
+        />
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col>
+        <v-text-field
+          @click:append="goTo('NamespacePage', { namespaceId: namespace.uuid })"
+          readonly
+          append-icon="mdi-login"
+          label="namespace"
+          :value="!namespace ? '' : 'NS_' + namespace.title"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          @click:append="goTo('Account', { accountId: account.uuid })"
+          readonly
+          append-icon="mdi-login"
+          label="account"
+          :value="account?.title"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          @click:append="goTo('Service', { serviceId: service.uuid })"
+          readonly
+          append-icon="mdi-login"
+          label="service"
+          :value="!service ? '' : 'SRV_' + service.title"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          @click:append="goTo('ServicesProvider', { uuid: sp.uuid })"
+          readonly
+          append-icon="mdi-login"
+          label="service provider"
+          :value="sp?.title"
         />
       </v-col>
     </v-row>
@@ -149,10 +193,12 @@ import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import instanceActions from "@/components/instance/controls.vue";
 import JsonTextarea from "@/components/JsonTextarea.vue";
+import instanceIpMenu from "../ui/instanceIpMenu.vue";
+import { mapGetters } from "vuex";
 
 export default {
   name: "instance-info",
-  components: { nocloudTable, instanceActions, JsonTextarea },
+  components: { nocloudTable, instanceActions, JsonTextarea, instanceIpMenu },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
   data: () => ({
@@ -275,6 +321,48 @@ export default {
         });
       }
     },
+    goTo(name, params) {
+      this.$router.push({ name, params });
+    },
+  },
+  computed: {
+    ...mapGetters("namespaces", { namespaces: "all" }),
+    ...mapGetters("accounts", { accounts: "all" }),
+    ...mapGetters("services", { services: "all" }),
+    ...mapGetters("servicesProviders", { servicesProviders: "all" }),
+    namespace() {
+      return this.namespaces?.find(
+        (n) => n.uuid == this.template.access.namespace
+      );
+    },
+    account() {
+      if (!this.namespace) {
+        return;
+      }
+      return this.accounts?.find(
+        (a) => a.uuid == this.namespace.access.namespace
+      );
+    },
+    service() {
+      return this.services?.find((s) => s.uuid == this.template.service);
+    },
+    sp() {
+      return this.servicesProviders?.find((sp) => sp.uuid == this.template.sp);
+    },
+  },
+  mounted() {
+    if (this.namespaces.length < 2) {
+      this.$store.dispatch("namespaces/fetch");
+    }
+    if (this.accounts.length < 2) {
+      this.$store.dispatch("accounts/fetch");
+    }
+    if (this.services.length < 2) {
+      this.$store.dispatch("services/fetch");
+    }
+    if (this.servicesProviders.length < 2) {
+      this.$store.dispatch("servicesProviders/fetch");
+    }
   },
   created() {
     const types = require.context(

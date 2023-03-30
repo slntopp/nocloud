@@ -144,54 +144,34 @@
                     <!-- {{ marker.title }} -->
                     <v-dialog :ref="`edit-dialog.${marker.id}`" width="800">
                       <template v-slot:activator="{ on, attrs }">
-                        <v-icon v-on="on" v-bind="attrs" color="secondary"
-                          >mdi-cog</v-icon
-                        >
+                        <v-icon v-on="on" v-bind="attrs" color="secondary">
+                          mdi-cog
+                        </v-icon>
                       </template>
                       <v-card class="pa-4" color="background-light">
                         <v-icon
-                          @click="
-                            formatText(
-                              'b',
-                              `${marker.id}_${marker.x}_${marker.y}`
-                            )
-                          "
+                          @click="formatText('b', marker.id)"
                           @mousedown.prevent
                         >
                           mdi-format-bold
                         </v-icon>
 
                         <v-icon
-                          @click="
-                            formatText(
-                              'i',
-                              `${marker.id}_${marker.x}_${marker.y}`
-                            )
-                          "
+                          @click="formatText('i', marker.id)"
                           @mousedown.prevent
                         >
                           mdi-format-italic
                         </v-icon>
 
                         <v-icon
-                          @click="
-                            formatText(
-                              'u',
-                              `${marker.id}_${marker.x}_${marker.y}`
-                            )
-                          "
+                          @click="formatText('u', marker.id)"
                           @mousedown.prevent
                         >
                           mdi-format-underline
                         </v-icon>
 
                         <v-icon
-                          @click="
-                            formatText(
-                              's',
-                              `${marker.id}_${marker.x}_${marker.y}`
-                            )
-                          "
+                          @click="formatText('s', marker.id)"
                           @mousedown.prevent
                         >
                           mdi-format-strikethrough
@@ -199,28 +179,40 @@
 
                         <v-icon
                           class="mx-1"
-                          @click="
-                            formatText(
-                              'a',
-                              `${marker.id}_${marker.x}_${marker.y}`
-                            )
-                          "
+                          @click="formatText('a', marker.id)"
                           @mousedown.prevent
                         >
                           mdi-link
                         </v-icon>
 
                         <v-icon
-                          @click="
-                            formatText(
-                              'color',
-                              `${marker.id}_${marker.x}_${marker.y}`
-                            )
-                          "
+                          class="mx-1"
+                          @click="formatText('img', marker.id)"
                           @mousedown.prevent
                         >
-                          mdi-palette
+                          mdi-image-outline
                         </v-icon>
+
+                        <v-dialog width="400" :ref="`color-dialog.${marker.id}`">
+                          <template v-slot:activator="{ on, attrs }">
+                            <v-icon v-on="on" v-bind="attrs">mdi-palette</v-icon>
+                          </template>
+
+                          <v-card class="pa-2">
+                            <v-color-picker
+                              hide-mode-switch
+                              style="margin: 0 auto"
+                              mode="hexa"
+                              v-model="textColor"
+                            />
+
+                            <v-card-actions class="justify-end">
+                              <v-btn @click="formatText('color', marker.id)">
+                                Save
+                              </v-btn>
+                            </v-card-actions>
+                          </v-card>
+                        </v-dialog>
 
                         <v-textarea
                           label="Description"
@@ -229,7 +221,7 @@
                             background: var(--v-background-light-base);
                             transition: 0.3s;
                           "
-                          :ref="`textarea_${marker.id}_${marker.x}_${marker.y}`"
+                          :ref="`textarea_${marker.id}`"
                           v-model="marker.extra.description"
                         />
 
@@ -238,19 +230,14 @@
                           label="Title"
                           v-model="marker.title"
                           :ref="`textField_${marker.id}_${marker.x}_${marker.y}`"
-                          @keyup.enter="
-                            (e) =>
-                              onEnterHandler(
-                                `${marker.id}_${marker.x}_${marker.y}`,
-                                e
-                              )
-                          "
+                          @keyup.enter="(e) => onEnterHandler(`${marker.id}_${marker.x}_${marker.y}`, e)"
                           @input="(e) => inputHandler(e, marker)"
                         />
+
                         <v-card-actions class="justify-end">
-                          <v-btn @click.stop="saveAndClose(marker.id)"
-                            >Save</v-btn
-                          >
+                          <v-btn @click.stop="saveAndClose(marker.id)">
+                            Save
+                          </v-btn>
                         </v-card-actions>
                       </v-card>
                     </v-dialog>
@@ -339,6 +326,7 @@ export default {
   data: () => ({
     selected: "",
     hovered: "",
+    textColor: "#fff",
     popupWidth: 120,
     leaveDelay: 300,
     leaveDelayInterval: -1,
@@ -365,23 +353,43 @@ export default {
   }),
   methods: {
     formatText(tag, id) {
-      const textarea =
-        this.$refs[`textarea_${id}`][0].$el.querySelector("textarea");
+      const textarea = this.$refs[`textarea_${id}`][0].$el.querySelector("textarea");
       const { selectionStart, selectionEnd } = textarea;
       const text = textarea.value.slice(selectionStart, selectionEnd);
 
-      if (tag === "a") {
-        const pos = selectionStart + 17;
+      switch (tag) {
+        case "a": {
+          const pos = selectionStart + 17;
 
-        textarea.setRangeText(`<a href="https://">${text}</a>`);
-        textarea.setSelectionRange(pos, pos);
-      } else if (tag === "color") {
-        const pos = selectionStart + 20;
+          textarea.setRangeText(`<a href="https://">${text}</a>`);
+          textarea.setSelectionRange(pos, pos);
+          break;
+        }
 
-        textarea.setRangeText(`<span style="color: ">${text}</span>`);
-        textarea.setSelectionRange(pos, pos);
-      } else {
-        textarea.setRangeText(`<${tag}>${text}</${tag}>`);
+        case "img": {
+          const pos = selectionStart + 10;
+
+          textarea.setRangeText(`<img src="" alt="">${text}`);
+          textarea.setSelectionRange(pos, pos);
+          break;
+        }
+
+        case "color": {
+          const color = `color: ${this.textColor.toLowerCase()}`;
+          const pos = selectionStart + color.length + 13;
+
+          this.$refs[`color-dialog.${id}`][0].isActive = false;
+          setTimeout(() => { textarea.focus() });
+
+          setTimeout(() => {
+            textarea.setRangeText(`<span style="${color}">${text}</span>`);
+            textarea.setSelectionRange(pos - 8, pos);
+          }, 100);
+          break;
+        }
+
+        default:
+          textarea.setRangeText(`<${tag}>${text}</${tag}>`);
       }
     },
     onEnterHandler(id, e) {

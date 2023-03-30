@@ -7,19 +7,7 @@
         </v-subheader>
       </v-col>
 
-      <v-col cols="4" v-if="fields[field].items">
-        <v-select
-          item-text="text"
-          item-value="key"
-          :value="getValue(field)"
-          :items="fields[field].items"
-          :label="fields[field].label"
-          :rules="fields[field].rules"
-          :error-messages="errors[field]"
-          @change="(data) => changeHandler(field, data)"
-        />
-      </v-col>
-      <v-col :cols="fields[field].items ? 4 : 8">
+      <v-col cols="8">
         <v-text-field
           :value="getValue(field)"
           :label="fields[field].label"
@@ -34,13 +22,9 @@
 
 <script>
 export default {
-  name: "servicesProviders-create-ovh",
+  name: "servicesProviders-create-cpanel",
   props: {
     secrets: {
-      type: Object,
-      default: () => ({}),
-    },
-    vars: {
       type: Object,
       default: () => ({}),
     },
@@ -51,35 +35,18 @@ export default {
   },
   data: () => ({
     errors: {
-      appKey: [],
-      appSecret: [],
-      consumerKey: [],
-      endpoint: [],
+      domain: [],
+      token: [],
     },
     fields: {
-      app_key: {
-        label: "app key",
-        subheader: "App key",
+      domain: {
+        label: "domain",
+        subheader: "Domain",
         rules: [(value) => !!value || "Field is required"],
       },
-      app_secret: {
-        label: "app secret",
-        subheader: "App secret",
-        rules: [(value) => !!value || "Field is required"],
-      },
-      consumer_key: {
-        label: "consumer key",
-        subheader: "Consumer key",
-        rules: [(value) => !!value || "Field is required"],
-      },
-      endpoint: {
-        label: "endpoint",
-        subheader: "Endpoint",
-        items: [
-          { key: "ovh-eu", text: "Europe" },
-          { key: "ovh-us", text: "USA" },
-          { key: "ovh-ca", text: "Canada" },
-        ],
+      token: {
+        label: "token",
+        subheader: "Token",
         rules: [(value) => !!value || "Field is required"],
       },
     },
@@ -110,11 +77,6 @@ export default {
     getValue(fieldName) {
       return this.secrets[fieldName];
     },
-  },
-  mounted() {
-    if (!this.vars.console?.value) {
-      this.$emit("change:vars", { ...this.vars, console: { value: "vnc" } });
-    }
   },
 };
 </script>

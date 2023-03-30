@@ -35,6 +35,22 @@
             </v-col>
           </v-row>
 
+          <v-row v-if="transaction.service && instances?.length" align="center">
+            <v-col cols="3">
+              <v-subheader>Instances</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-select
+                multiple
+                label="Instances"
+                item-value="uuid"
+                item-text="title"
+                v-model="transaction.meta.instances"
+                :items="instances"
+              />
+            </v-col>
+          </v-row>
+
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Amount</v-subheader>
@@ -99,6 +115,19 @@
                 />
               </v-menu>
             </v-col>
+            <v-col cols="1">
+              <v-btn icon @click="resetDate"
+                ><v-icon>mdi-close-thick</v-icon></v-btn
+              >
+            </v-col>
+          </v-row>
+
+          <v-row class="mx-5">
+            <v-textarea
+              no-resize
+              label="Message"
+              v-model="transaction.meta.message"
+            ></v-textarea>
           </v-row>
 
           <v-row>
@@ -169,7 +198,7 @@ export default {
       service: "",
       total: "",
       exec: 0,
-      meta: {},
+      meta: { instances: [], message: "" },
     },
     date: {
       title: "Date",
@@ -231,7 +260,14 @@ export default {
         )?.uuid || "";
 
       this.transaction.exec = this.exec;
+      if (!this.transaction.exec) {
+        this.transaction.priority = "NORMAL";
+      }
       this.transaction.total *= 1;
+    },
+    resetDate() {
+      this.date.value = null;
+      this.time.value = null;
     },
   },
   created() {
@@ -241,7 +277,9 @@ export default {
     const year = date.getFullYear();
     const time = date.toString().split(" ")[4];
 
-    this.date.value = `${year}-${month}-${day}`;
+    this.date.value = `${year}-${
+      month.toString().length < 2 ? "0" + month : month
+    }-${day}`;
     this.time.value = `${time}`;
 
     if (this.accounts.length < 2) {
@@ -289,8 +327,32 @@ export default {
       }
       return this.services;
     },
+    instances() {
+      if (!this.transaction.service) {
+        return;
+      }
+
+      const service = this.services.find(
+        (s) => s.title === this.transaction.service
+      );
+
+      const instances = [];
+
+      service?.instancesGroups.forEach((ig) => {
+        ig.instances.forEach((i) =>
+          instances.push({ uuid: i.uuid, title: i.title })
+        );
+      });
+
+      return instances;
+    },
     exec() {
       return new Date(`${this.date.value}T${this.time.value}`).getTime() / 1000;
+    },
+  },
+  watch: {
+    "transaction.service"() {
+      this.transaction.meta.instances = [];
     },
   },
 };
