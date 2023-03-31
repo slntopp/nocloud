@@ -132,6 +132,10 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		mask.Product = inst.Product
 	}
 
+	if inst.GetBillingPlan() != oldInst.GetBillingPlan() {
+		mask.BillingPlan = inst.GetBillingPlan()
+	}
+
 	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
 	if err != nil {
 		log.Error("Failed to update Instance", zap.Error(err))
