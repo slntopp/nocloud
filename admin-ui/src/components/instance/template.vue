@@ -105,21 +105,28 @@ export default {
       }
     },
     editInstance() {
-      const instance = (this.ObjectDisplay === "JSON")
-        ? JSON.parse(this.tree)
-        : yaml.parse(this.tree);
+      const instance =
+        this.ObjectDisplay === "JSON"
+          ? JSON.parse(this.tree)
+          : yaml.parse(this.tree);
+          console.log(instance);
 
-      const request = this.$store.getters['services/all']
-        .find(({ uuid }) => uuid === this.template.service);
-      const i = request.instancesGroups.findIndex(
-        ({ sp }) => sp === instance.sp
+      const service = this.$store.getters["services/all"].find(
+        ({ uuid }) => uuid === this.template.service
       );
 
-      request.instancesGroups[i].instances = request.instancesGroups[i].instances
-        .map((inst) => (inst.uuid === instance.uuid) ? instance : inst);
+      const igIndex = service.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === this.template.uuid)
+      );
+      const instanceIndex = service.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === this.template.uuid);
+
+      service.instancesGroups[igIndex].instances[instanceIndex] = instance;
 
       this.isLoading = true;
-      api.services._update(this.template.service, request)
+      api.services
+        ._update(service)
         .then(() => {
           this.showSnackbarSuccess({
             message: "Instance edited successfully",
@@ -168,7 +175,7 @@ export default {
       );
     },
     templateObjectYAML() {
-      return objectToYAMLString(this.template)
+      return objectToYAMLString(this.template);
     },
   },
 };
