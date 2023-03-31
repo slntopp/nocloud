@@ -193,7 +193,6 @@ export default {
       this.change(data);
     },
     setValue(path, val) {
-      console.log(path, val);
       const data = JSON.parse(this.instancesGroup);
       const i = path.split(".")[0];
 
@@ -207,7 +206,6 @@ export default {
       if (path.includes("product")) {
         const plan = data.body.instances[i].billing_plan;
         const productBody = plan.products[val];
-        console.log(productBody);
 
         Object.keys(productBody.resources).forEach((key) => {
           data.body.instances[i].resources[key] = productBody.resources[key];
