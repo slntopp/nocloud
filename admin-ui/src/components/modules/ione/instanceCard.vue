@@ -136,7 +136,6 @@ export default {
       resources:
         this.template.billingPlan.products[this.template.product].resources,
     };
-    console.log(this.selectedTarrif);
   },
   methods: {
     getTariff() {
