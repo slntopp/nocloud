@@ -130,6 +130,7 @@ export default {
   }),
   created() {
     this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("plans/fetch");
 
     this.selectedTarrif = {
       title: this.template.product,
@@ -183,6 +184,16 @@ export default {
         service.instancesGroups[igIndex].instances[instanceIndex].resources[k] =
           this.selectedTarrif.resources[k];
       });
+      console.log(
+        service.instancesGroups[igIndex].instances[instanceIndex].billingPlan
+      );
+
+      service.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
+        this.billingPlan;
+
+      console.log(
+        service.instancesGroups[igIndex].instances[instanceIndex].billingPlan
+      );
 
       this.changeTarrifLoading = true;
 
@@ -203,6 +214,9 @@ export default {
         ({ uuid }) => uuid === this.template.sp
       );
     },
+    plans() {
+      return this.$store.getters["plans/all"];
+    },
     service() {
       return this.$store.getters["services/all"].find(
         (s) => s.uuid === this.template.service
@@ -216,10 +230,13 @@ export default {
     tariff() {
       return this.template.product ?? this.getTariff(this.template) ?? "custom";
     },
+    billingPlan() {
+      return this.plans.find((p) => p.uuid === this.template.billingPlan.uuid);
+    },
     availableTarrifs() {
-      return Object.keys(this.template.billingPlan.products).map((key) => ({
+      return Object.keys(this.billingPlan?.products || {}).map((key) => ({
         title: key,
-        resources: this.template.billingPlan.products[key].resources,
+        resources: this.billingPlan.products[key].resources,
       }));
     },
     date() {

@@ -1,6 +1,11 @@
 <template>
   <div class="module">
-    <v-card v-if="Object.keys(instance).length>1" class="mb-4 pa-2" elevation="0" color="background">
+    <v-card
+      v-if="Object.keys(instance).length > 1"
+      class="mb-4 pa-2"
+      elevation="0"
+      color="background"
+    >
       <v-row>
         <v-col cols="6">
           <v-text-field
@@ -100,10 +105,10 @@
         <v-col cols="6">
           <v-select
             label="product"
-            :value="instance.productTitle"
-            v-if="getPlanProducts().length > 0"
-            :items="getPlanProducts()"
-            @change="(newVal) => setValue('product', newVal)"
+            :value="instance.product"
+            v-if="products.length > 0"
+            :items="products"
+            @change="setProduct"
           />
         </v-col>
       </v-row>
@@ -130,21 +135,13 @@ const getDefaultInstance = () => ({
 });
 export default {
   name: "instance-ione-create",
-  props: ["plans", "instance", "planRules", "sp-uuid",'is-edit'],
+  props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
   mounted() {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
     }
   },
   methods: {
-    getPlanProducts() {
-      if (!this.instance.billing_plan?.products) {
-        return [];
-      }
-      return Object.values(this.instance.billing_plan.products).map(
-        (p) => p.title
-      );
-    },
     changeOS(newVal) {
       let osId = null;
 
@@ -156,6 +153,17 @@ export default {
       }
 
       this.setValue("config.template_id", +osId);
+    },
+    setProduct(newVal) {
+      const product = this.bilingPlan?.products[newVal].resources;
+
+      Object.keys(product).forEach((key) => {
+        this.$emit("set-value", {
+          key: "resources." + key,
+          value: product[key],
+        });
+      });
+      this.setValue("product", newVal);
     },
     setValue(key, value) {
       this.$emit("set-value", { key, value });
@@ -175,6 +183,15 @@ export default {
       if (!this.getOsTemplates) return [];
 
       return Object.values(this.getOsTemplates).map((os) => os.name);
+    },
+    bilingPlan() {
+      return this.plans.list.find((p) => p.uuid === this.instance.billing_plan);
+    },
+    products() {
+      if (!this.bilingPlan) {
+        return [];
+      }
+      return Object.keys(this.bilingPlan.products);
     },
   },
 };
