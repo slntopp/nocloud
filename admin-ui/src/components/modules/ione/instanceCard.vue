@@ -2,7 +2,13 @@
   <div>
     <v-row align="center">
       <v-col cols="2">
-        <v-text-field readonly label="Tarrif" :value="tariff"></v-text-field>
+        <v-text-field
+          @click:append="changeTarrifDialog = true"
+          append-icon="mdi-pencil"
+          readonly
+          label="Tarrif"
+          :value="tariff"
+        ></v-text-field>
       </v-col>
       <v-col cols="2">
         <v-text-field readonly label="price" :value="getPrice()"></v-text-field>
@@ -60,16 +66,55 @@
         />
       </v-col>
     </v-row>
+
+    <v-dialog v-model="changeTarrifDialog" max-width="60%">
+      <v-card class="pa-5">
+        <v-row>
+          <v-col cols="3">
+            <v-card-title>Tarrif:</v-card-title>
+            <v-select
+              v-model="selectedTarrif"
+              :items="availableTarrifs"
+              item-text="title"
+              return-object
+            ></v-select>
+          </v-col>
+          <v-col cols="9">
+            <v-card-title>Tarrif resources:</v-card-title>
+            <v-text-field
+              v-for="resource in Object.keys(selectedTarrif?.resources)"
+              :key="resource"
+              :value="selectedTarrif?.resources?.[resource]"
+              :label="resource"
+            ></v-text-field>
+          </v-col>
+        </v-row>
+        <v-row justify="end">
+          <v-btn class="mx-3" @click="changeTarrifDialog = false">Close</v-btn>
+          <v-btn
+            class="mx-3"
+            @click="changeTarrif"
+            :disabled="selectedTarrif.title === template.product"
+            :loading="changeTarrifLoading"
+            >Change tarrif</v-btn
+          >
+        </v-row>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script>
+import api from "@/api.js";
+import snackbar from "@/mixins/snackbar.js";
+
 export default {
   name: "instance-card",
   props: {
     template: { type: Object, required: true },
     dense: { type: Boolean },
   },
+  mixins: [snackbar],
   data: () => ({
     isVisible: false,
     dictionary: {
@@ -78,9 +123,20 @@ export default {
       ips_public: "IP's public",
       ips_private: "IP's private",
     },
+
+    selectedTarrif: {},
+    changeTarrifDialog: false,
+    changeTarrifLoading: false,
   }),
   created() {
     this.$store.dispatch("servicesProviders/fetch");
+
+    this.selectedTarrif = {
+      title: this.template.product,
+      resources:
+        this.template.billingPlan.products[this.template.product].resources,
+    };
+    console.log(this.selectedTarrif);
   },
   methods: {
     getTariff() {
@@ -114,11 +170,43 @@ export default {
         }, initialPrice)
         ?.toFixed(2);
     },
+    changeTarrif() {
+      const service = this.service;
+      const igIndex = service.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === this.template.uuid)
+      );
+      const instanceIndex = service.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === this.template.uuid);
+      service.instancesGroups[igIndex].instances[instanceIndex].product =
+        this.selectedTarrif.title;
+      Object.keys(this.selectedTarrif.resources).forEach((k) => {
+        service.instancesGroups[igIndex].instances[instanceIndex].resources[k] =
+          this.selectedTarrif.resources[k];
+      });
+
+      this.changeTarrifLoading = true;
+
+      api.services
+        ._update(this.service)
+        .then(() => {
+          this.showSnackbarSuccess("Instance tarrif changed successfully");
+        })
+        .finally(() => {
+          this.changeTarrifLoading = false;
+          this.changeTarrifDialog = false;
+        });
+    },
   },
   computed: {
     sp() {
       return this.$store.getters["servicesProviders/all"].find(
         ({ uuid }) => uuid === this.template.sp
+      );
+    },
+    service() {
+      return this.$store.getters["services/all"].find(
+        (s) => s.uuid === this.template.service
       );
     },
     osName() {
@@ -128,6 +216,12 @@ export default {
     },
     tariff() {
       return this.template.product ?? this.getTariff(this.template) ?? "custom";
+    },
+    availableTarrifs() {
+      return Object.keys(this.template.billingPlan.products).map((key) => ({
+        title: key,
+        resources: this.template.billingPlan.products[key].resources,
+      }));
     },
     date() {
       if (!this.template.data.last_monitoring) return "-";
