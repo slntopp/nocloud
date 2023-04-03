@@ -243,6 +243,7 @@ export default {
         ._update(service)
         .then(() => {
           this.showSnackbarSuccess("Instance tarrif changed successfully");
+          this.refreshInstance();
         })
         .finally(() => {
           this.changeTarrifLoading = false;
@@ -270,7 +271,9 @@ export default {
           monitorings[key] = {
             value: this.formatSecondsToDate(this.template.data[key]),
             firstValue: this.formatSecondsToDate(this.template.data[key]),
-            title: key.replace("last_monitoring", "") || "all",
+            title: key
+              .replace("_last_monitoring", "")
+              .replace("last_monitoring", "product"),
           };
         }
       });
@@ -290,10 +293,6 @@ export default {
       const changedDates = {};
 
       Object.keys(this.lastMonitorings).forEach((key) => {
-        console.log(
-          this.lastMonitorings[key].firstValue,
-          this.lastMonitorings[key].value
-        );
         if (
           this.lastMonitorings[key].firstValue !=
           this.lastMonitorings[key].value
@@ -312,12 +311,16 @@ export default {
       api.services
         ._update(service)
         .then(() => {
+          this.refreshInstance();
           this.showSnackbarSuccess("Instance dates changed successfully");
         })
         .finally(() => {
           this.changeDatesLoading = false;
           this.changeDatesDialog = false;
         });
+    },
+    refreshInstance() {
+      this.$store.dispatch("services/fetch", this.template.uuid);
     },
   },
   computed: {
