@@ -275,8 +275,8 @@ export default {
       selected: "",
     },
     consoleTypes: [
-      { text: "VNC", value: {default : "vnc"} },
-      { text: "VMRC", value: {default : "vmrc"} },
+      { text: "VNC", value: "vnc"},
+      { text: "VMRC", value: "vmrc"},
     ],
 
     tooltipVisible: false,
