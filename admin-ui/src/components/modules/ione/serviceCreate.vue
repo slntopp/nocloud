@@ -118,7 +118,7 @@
         <v-col cols="6">
           <v-select
             label="product"
-            v-model="instance.productTitle"
+            v-model="instance.product"
             v-if="getPlanProducts(index).length > 0"
             :items="getPlanProducts(index)"
             @change="(newVal) => setValue(index + '.product', newVal)"
@@ -205,12 +205,13 @@ export default {
       }
       if (path.includes("product")) {
         const plan = data.body.instances[i].billing_plan;
-        const [product] = Object.entries(plan.products).find(
-          ([, prod]) => prod.title === val
-        );
+        const productBody = plan.products[val];
+
+        Object.keys(productBody.resources).forEach((key) => {
+          data.body.instances[i].resources[key] = productBody.resources[key];
+        });
 
         data.body.instances[i].productTitle = val;
-        val = product;
       }
 
       setToValue(data.body.instances, val, path);
@@ -236,9 +237,7 @@ export default {
       if (!this.instances[index].billing_plan?.products) {
         return [];
       }
-      return Object.values(this.instances[index].billing_plan.products).map(
-        (p) => p.title
-      );
+      return Object.keys(this.instances[index].billing_plan.products);
     },
   },
   computed: {

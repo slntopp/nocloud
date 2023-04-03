@@ -311,7 +311,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	requestorDoc := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	isSuspended := s.CheckRequestorStatus(ctx, requestorDoc)
 
-	if isSuspended {
+	if isSuspended && requestor != schema.ROOT_ACCOUNT_KEY {
 		return nil, status.Error(codes.Unavailable, "Requestor account is suspended")
 	}
 
@@ -406,17 +406,19 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
+	docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
+	okAdmin := graph.HasAccess(ctx, s.db, requestor, docID, accesspb.Level_ADMIN)
+	okRoot := graph.HasAccess(ctx, s.db, requestor, docID, accesspb.Level_ROOT)
+
 	requestorDoc := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	isSuspended := s.CheckRequestorStatus(ctx, requestorDoc)
 
-	if isSuspended {
-		return nil, status.Error(codes.Unavailable, "Requestor account is suspended")
+	if !okAdmin {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Update")
 	}
 
-	docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
-	ok := graph.HasAccess(ctx, s.db, requestor, docID, accesspb.Level_ADMIN)
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
+	if isSuspended && !okRoot {
+		return nil, status.Error(codes.Unavailable, "Requestor account is suspended")
 	}
 
 	if service.GetStatus() == statuspb.NoCloudStatus_SUS {

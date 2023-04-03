@@ -257,7 +257,11 @@ export default {
         });
         return;
       }
-      console.log(this.$route.params);
+
+      if (this.$store.getters["servicesProviders/all"].length < 2) {
+        this.$store.dispatch("servicesProviders/fetch");
+      }
+
       let type = this.$route.params.type;
 
       if (type && this.$route.params.serviceId) {

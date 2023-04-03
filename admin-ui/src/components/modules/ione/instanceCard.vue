@@ -31,6 +31,8 @@
           label="next payment date"
           style="display: inline-block; width: 200px"
           :value="date"
+          append-icon="mdi-pencil"
+          @click:append="changeDatesDialog = true"
         />
       </v-col>
       <v-col>
@@ -67,6 +69,7 @@
       </v-col>
     </v-row>
 
+    <!-- change tarrif -->
     <v-dialog v-model="changeTarrifDialog" max-width="60%">
       <v-card class="pa-5">
         <v-row>
@@ -101,6 +104,46 @@
         </v-row>
       </v-card>
     </v-dialog>
+
+    <!-- change last monitoring dates -->
+    <v-dialog v-model="changeDatesDialog" max-width="60%">
+      <v-card class="pa-5">
+        <v-card-title class="text-center">Change monitoring dates</v-card-title>
+        <v-row v-for="key in Object.keys(lastMonitorings)" :key="key">
+          <v-col cols="4">
+            <v-card-title>{{ lastMonitorings[key].title }}</v-card-title>
+          </v-col>
+          <v-col cols="8">
+            <v-menu
+              :close-on-content-click="false"
+              transition="scale-transition"
+              min-width="auto"
+            >
+              <template v-slot:activator="{ on, attrs }">
+                <v-text-field
+                  v-bind="attrs"
+                  v-on="on"
+                  prepend-inner-icon="mdi-calendar"
+                  :value="lastMonitorings[key].value"
+                  readonly
+                />
+              </template>
+              <v-date-picker
+                scrollable
+                :min="lastMonitorings[key].firstValue"
+                v-model="lastMonitorings[key].value"
+              ></v-date-picker>
+            </v-menu>
+          </v-col>
+        </v-row>
+        <v-row justify="end">
+          <v-btn class="mx-3" @click="changeDatesDialog = false">Close</v-btn>
+          <v-btn class="mx-3" :loading="changeDatesLoading" @click="changeDates"
+            >Change dates</v-btn
+          >
+        </v-row>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -127,15 +170,22 @@ export default {
     selectedTarrif: {},
     changeTarrifDialog: false,
     changeTarrifLoading: false,
+
+    changeDatesDialog: false,
+    changeDatesLoading: false,
+    lastMonitorings: {},
   }),
   created() {
     this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("plans/fetch");
 
     this.selectedTarrif = {
       title: this.template.product,
       resources:
         this.template.billingPlan.products[this.template.product].resources,
     };
+
+    this.setLastMonitorings();
   },
   methods: {
     getTariff() {
@@ -184,17 +234,93 @@ export default {
           this.selectedTarrif.resources[k];
       });
 
+      service.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
+        this.billingPlan;
+
       this.changeTarrifLoading = true;
 
       api.services
-        ._update(this.service)
+        ._update(service)
         .then(() => {
           this.showSnackbarSuccess("Instance tarrif changed successfully");
+          this.refreshInstance();
         })
         .finally(() => {
           this.changeTarrifLoading = false;
           this.changeTarrifDialog = false;
         });
+    },
+    formatSecondsToDate(seconds) {
+      if (!seconds) return "-";
+      const date = new Date(seconds * 1000);
+
+      const year = date.toUTCString().split(" ")[3];
+      let month = date.getUTCMonth() + 1;
+      let day = date.getUTCDate();
+
+      if (`${month}`.length < 2) month = `0${month}`;
+      if (`${day}`.length < 2) day = `0${day}`;
+
+      return `${year}-${month}-${day}`;
+    },
+    setLastMonitorings() {
+      const monitorings = {};
+
+      Object.keys(this.template.data).forEach((key) => {
+        if (key.includes("last_monitoring") && this.template.data[key]) {
+          monitorings[key] = {
+            value: this.formatSecondsToDate(this.template.data[key]),
+            firstValue: this.formatSecondsToDate(this.template.data[key]),
+            title: key
+              .replace("_last_monitoring", "")
+              .replace("last_monitoring", "product"),
+          };
+        }
+      });
+
+      this.lastMonitorings = monitorings;
+    },
+    changeDates() {
+      const service = this.service;
+
+      const igIndex = service.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === this.template.uuid)
+      );
+      const instanceIndex = service.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === this.template.uuid);
+
+      const changedDates = {};
+
+      Object.keys(this.lastMonitorings).forEach((key) => {
+        if (
+          this.lastMonitorings[key].firstValue !=
+          this.lastMonitorings[key].value
+        ) {
+          changedDates[key] =
+            new Date(this.lastMonitorings[key].value).getTime() / 1000;
+        }
+      });
+
+      service.instancesGroups[igIndex].instances[instanceIndex].data = {
+        ...service.instancesGroups[igIndex].instances[instanceIndex].data,
+        ...changedDates,
+      };
+      this.changeDatesLoading = true;
+
+      api.services
+        ._update(service)
+        .then(() => {
+          this.refreshInstance();
+          this.showSnackbarSuccess("Instance dates changed successfully");
+        })
+        .finally(() => {
+          this.changeDatesLoading = false;
+          this.changeDatesDialog = false;
+        });
+    },
+    refreshInstance() {
+      this.$store.dispatch("services/fetch", this.template.uuid);
     },
   },
   computed: {
@@ -202,6 +328,9 @@ export default {
       return this.$store.getters["servicesProviders/all"].find(
         ({ uuid }) => uuid === this.template.sp
       );
+    },
+    plans() {
+      return this.$store.getters["plans/all"];
     },
     service() {
       return this.$store.getters["services/all"].find(
@@ -216,24 +345,17 @@ export default {
     tariff() {
       return this.template.product ?? this.getTariff(this.template) ?? "custom";
     },
+    billingPlan() {
+      return this.plans.find((p) => p.uuid === this.template.billingPlan.uuid);
+    },
     availableTarrifs() {
-      return Object.keys(this.template.billingPlan.products).map((key) => ({
+      return Object.keys(this.billingPlan?.products || {}).map((key) => ({
         title: key,
-        resources: this.template.billingPlan.products[key].resources,
+        resources: this.billingPlan.products[key].resources,
       }));
     },
     date() {
-      if (!this.template.data.last_monitoring) return "-";
-      const date = new Date(this.template.data.last_monitoring * 1000);
-
-      const year = date.toUTCString().split(" ")[3];
-      let month = date.getUTCMonth() + 1;
-      let day = date.getUTCDate();
-
-      if (`${month}`.length < 2) month = `0${month}`;
-      if (`${day}`.length < 2) day = `0${day}`;
-
-      return `${day}.${month}.${year}`;
+      return this.formatSecondsToDate(this.template?.data?.last_monitoring);
     },
   },
 };
