@@ -137,7 +137,13 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		mask.BillingPlan = inst.GetBillingPlan()
 	}
 
-	if !reflect.DeepEqual(inst.GetData(), oldInst.GetData()) {
+	log.Debug("datas", zap.Any("odl data", oldInst.GetData()), zap.Any("new data", inst.GetData()))
+
+	check := reflect.DeepEqual(inst.GetData(), oldInst.GetData())
+
+	log.Debug("deep equal", zap.Bool("check", check))
+
+	if !check {
 		mask.Data = inst.GetData()
 	}
 
