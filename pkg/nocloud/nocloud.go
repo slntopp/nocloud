@@ -27,6 +27,7 @@ const NOCLOUD_ACCOUNT_CLAIM = "account"
 const NOCLOUD_ROOT_CLAIM = "root"
 const NOCLOUD_SP_CLAIM = "sp"
 const NOCLOUD_INSTANCE_CLAIM = "instance"
+const NOCLOUD_LOG_LEVEL = zapcore.DebugLevel - 1
 
 type ContextKey string
 
@@ -38,7 +39,7 @@ const NoCloudToken = ContextKey("token")
 const TestFromCreate = ContextKey("test_from_create")
 
 func NewLogger() (log *zap.Logger) {
-	viper.SetDefault("LOG_LEVEL", 0)
+	viper.SetDefault("LOG_LEVEL", NOCLOUD_LOG_LEVEL)
 	level := viper.GetInt("LOG_LEVEL")
 
 	atom := zap.NewAtomicLevel()
