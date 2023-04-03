@@ -252,7 +252,7 @@ export default {
     refreshData() {
       this.transaction.account = this.accounts.find(
         (acc) => acc.title === this.transaction.account
-      ).uuid;
+      )?.uuid;
 
       this.transaction.service =
         this.services.find(
@@ -279,7 +279,7 @@ export default {
 
     this.date.value = `${year}-${
       month.toString().length < 2 ? "0" + month : month
-    }-${day}`;
+    }-${day.toString().length < 2 ? "0" + day : day}`;
     this.time.value = `${time}`;
 
     if (this.accounts.length < 2) {
@@ -319,10 +319,10 @@ export default {
           (a) => a.title === this.transaction.account
         );
         const namespace = this.namespaces.find(
-          (n) => n.access.namespace === account.uuid
+          (n) => n.access.namespace === account?.uuid
         );
         return this.services.filter(
-          (s) => s.access.namespace === namespace.uuid
+          (s) => s.access.namespace === namespace?.uuid
         );
       }
       return this.services;
