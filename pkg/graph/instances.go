@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
@@ -134,6 +135,10 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	if inst.GetBillingPlan() != oldInst.GetBillingPlan() {
 		mask.BillingPlan = inst.GetBillingPlan()
+	}
+
+	if !reflect.DeepEqual(inst.GetData(), oldInst.GetData()) {
+		mask.Data = inst.GetData()
 	}
 
 	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
