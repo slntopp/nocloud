@@ -109,7 +109,6 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	inst.Uuid = ""
 	inst.Status = spb.NoCloudStatus_INIT
-	inst.Data = nil
 	inst.State = nil
 
 	err := hasher.SetHash(inst.ProtoReflect())
