@@ -4,7 +4,11 @@
       <v-col cols="2">
         <v-text-field
           @click:append="changeTarrifDialog = true"
-          append-icon="mdi-pencil"
+          :append-icon="
+            template.billingPlan.title.toLowerCase() !== 'payg'
+              ? 'mdi-pencil'
+              : null
+          "
           readonly
           label="Tarrif"
           :value="tariff"
@@ -28,16 +32,6 @@
       <v-col>
         <v-text-field
           readonly
-          label="next payment date"
-          style="display: inline-block; width: 200px"
-          :value="date"
-          append-icon="mdi-pencil"
-          @click:append="changeDatesDialog = true"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
           label="OS"
           style="display: inline-block; width: 200px"
           :value="osName"
@@ -52,6 +46,16 @@
           :value="template.config.password"
           :append-icon="isVisible ? 'mdi-eye' : 'mdi-eye-off'"
           @click:append="isVisible = !isVisible"
+        />
+      </v-col>
+      <v-col v-if="template.billingPlan.title.toLowerCase() !== 'payg'">
+        <v-text-field
+          readonly
+          label="next payment date"
+          style="display: inline-block; width: 200px"
+          :value="date"
+          append-icon="mdi-pencil"
+          @click:append="changeDatesDialog = true"
         />
       </v-col>
     </v-row>
@@ -70,7 +74,11 @@
     </v-row>
 
     <!-- change tarrif -->
-    <v-dialog v-model="changeTarrifDialog" max-width="60%">
+    <v-dialog
+      v-if="availableTarrifs.length > 0"
+      v-model="changeTarrifDialog"
+      max-width="60%"
+    >
       <v-card class="pa-5">
         <v-row>
           <v-col cols="3">
@@ -85,7 +93,7 @@
           <v-col cols="9">
             <v-card-title>Tarrif resources:</v-card-title>
             <v-text-field
-              v-for="resource in Object.keys(selectedTarrif?.resources)"
+              v-for="resource in Object.keys(selectedTarrif?.resources || {})"
               :key="resource"
               :value="selectedTarrif?.resources?.[resource]"
               :label="resource"
@@ -106,7 +114,11 @@
     </v-dialog>
 
     <!-- change last monitoring dates -->
-    <v-dialog v-model="changeDatesDialog" max-width="60%">
+    <v-dialog
+      v-if="template.billingPlan.title.toLowerCase() !== 'payg'"
+      v-model="changeDatesDialog"
+      max-width="60%"
+    >
       <v-card class="pa-5">
         <v-card-title class="text-center">Change monitoring dates</v-card-title>
         <v-row v-for="key in Object.keys(lastMonitorings)" :key="key">
@@ -182,7 +194,7 @@ export default {
     this.selectedTarrif = {
       title: this.template.product,
       resources:
-        this.template.billingPlan.products[this.template.product].resources,
+        this.template.billingPlan.products[this.template.product]?.resources,
     };
 
     this.setLastMonitorings();
