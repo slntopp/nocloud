@@ -7,6 +7,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	pb "github.com/slntopp/nocloud-proto/events_logging"
+	healthpb "github.com/slntopp/nocloud-proto/health"
 	events "github.com/slntopp/nocloud/pkg/events_logging"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
@@ -85,6 +86,8 @@ func main() {
 
 	server := events.NewEventsLoggingServer(log, repository, db)
 	pb.RegisterEventsLoggingServiceServer(s, server)
+
+	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log))
 
 	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
 	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
