@@ -125,6 +125,7 @@ services:
       - arangodb
       - grpc-internal
       - mq
+      - gelf
     links:
       - db
       - billing
