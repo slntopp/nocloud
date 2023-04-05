@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
@@ -106,9 +107,13 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
+	if oldInst.GetStatus() == spb.NoCloudStatus_DEL {
+		log.Info("Inst cannot be updated. Status DEL", zap.String("uuid", oldInst.GetUuid()))
+		return nil
+	}
+
 	inst.Uuid = ""
 	inst.Status = spb.NoCloudStatus_INIT
-	inst.Data = nil
 	inst.State = nil
 
 	err := hasher.SetHash(inst.ProtoReflect())
@@ -126,6 +131,24 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	if inst.GetTitle() != oldInst.GetTitle() {
 		mask.Title = inst.GetTitle()
+	}
+
+	if inst.GetProduct() != oldInst.GetProduct() {
+		mask.Product = inst.Product
+	}
+
+	if inst.GetBillingPlan() != oldInst.GetBillingPlan() {
+		mask.BillingPlan = inst.GetBillingPlan()
+	}
+
+	log.Debug("datas", zap.Any("odl data", oldInst.GetData()), zap.Any("new data", inst.GetData()))
+
+	check := reflect.DeepEqual(inst.GetData(), oldInst.GetData())
+
+	log.Debug("deep equal", zap.Bool("check", check))
+
+	if !check {
+		mask.Data = inst.GetData()
 	}
 
 	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)

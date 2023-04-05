@@ -315,6 +315,7 @@ export default {
         ) || [];
 
       instances.forEach((inst) => {
+        delete inst.billingPlan;
         inst.billing_plan = plan;
         inst.plan = current.plan;
         inst.product = product;

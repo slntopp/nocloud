@@ -36,7 +36,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center">
+          <v-row :align="(provider.vars.console?.value) ? null : 'center'">
             <v-col cols="3">
               <v-subheader> Proxy </v-subheader>
             </v-col>
@@ -45,7 +45,13 @@
               <v-text-field
                 v-model="provider.proxy.socket"
                 label="Socket"
-              ></v-text-field>
+              />
+              <v-select
+                label="Console"
+                v-if="provider.vars.console?.value"
+                v-model="provider.vars.console.value"
+                :items="consoleTypes"
+              />
             </v-col>
           </v-row>
 
@@ -69,11 +75,6 @@
               <v-text-field
                 label="Title"
                 v-model="provider.meta.service.title"
-              />
-              <v-select
-                label="Tab"
-                v-model="provider.meta.service.type"
-                :items="services"
               />
               <v-select
                 label="Icon"
@@ -258,7 +259,7 @@ export default {
       public: true,
       proxy: { socket: "" },
       secrets: {},
-      vars: {},
+      vars: { console: {} },
       meta: { service: {} },
     },
     providerKey: "",
@@ -273,10 +274,7 @@ export default {
       data: {},
       selected: "",
     },
-    services: [
-      { text: "Cloud", value: "cloud" },
-      { text: "Services", value: "products" },
-    ],
+   consoleTypes: [{ text: "VNC", value: {default:"vnc"} },{ text: "VMRC", value: {default:"vmrc"}}],
 
     tooltipVisible: false,
 
