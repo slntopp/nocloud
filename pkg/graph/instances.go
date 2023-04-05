@@ -17,17 +17,23 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/wI2L/jsondiff"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
 
 	bpb "github.com/slntopp/nocloud-proto/billing"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/hasher"
 	pb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	spb "github.com/slntopp/nocloud-proto/statuses"
+	el "github.com/slntopp/nocloud/pkg/events_logging"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
@@ -86,6 +92,21 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	}
 	i.Uuid = meta.Key
 
+	var event = &elpb.Event{
+		Entity:    "instance",
+		Uuid:      i.GetUuid(),
+		Scope:     "database",
+		Action:    "create",
+		Rc:        0,
+		Requestor: ctx.Value(nocloud.NoCloudAccount).(string),
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
+	el.Log(log, event)
+
 	// Attempt create edge
 	_, err = ctrl.ig2inst.CreateDocument(ctx, Access{
 		From: group, To: meta.ID,
@@ -141,6 +162,29 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		log.Error("Failed to update Instance", zap.Error(err))
 		return err
 	}
+
+	instMarshal, _ := json.Marshal(inst)
+	oldInstMarshal, _ := json.Marshal(oldInst)
+	diff, err := jsondiff.CompareJSON(oldInstMarshal, instMarshal)
+	if err != nil {
+		log.Error("Failed to calculate diff", zap.Error(err))
+		return err
+	}
+
+	var event = &elpb.Event{
+		Entity:    "instance",
+		Uuid:      inst.GetUuid(),
+		Scope:     "database",
+		Action:    "update",
+		Rc:        0,
+		Requestor: ctx.Value(nocloud.NoCloudAccount).(string),
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: diff.String(),
+		},
+	}
+
+	el.Log(log, event)
 
 	return nil
 }
