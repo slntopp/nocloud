@@ -283,6 +283,8 @@ services:
       PORT: 8000
       GELF_HOST: :12201
       SQLITE_HOST: sqlite.db
+    volumes:
+      - sqlite-data:/sqlite.db
     networks:
       - proxy
       - arangodb
