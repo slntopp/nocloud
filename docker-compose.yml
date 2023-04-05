@@ -273,7 +273,7 @@ services:
     image: ghcr.io/slntopp/nocloud/events-logging:latest
     restart: always
     labels:
-      - traefik.http.routers.eventbus.rule=PathPrefix("/nocloud.events.")
+      - traefik.http.routers.eventbus.rule=PathPrefix("/nocloud.events_logging.")
       - traefik.http.routers.eventbus.entrypoints=grpc
       - traefik.http.services.eventbus.loadbalancer.server.port=8000
       - traefik.http.services.eventbus.loadbalancer.server.scheme=h2c
