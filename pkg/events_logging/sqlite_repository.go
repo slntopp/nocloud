@@ -19,7 +19,7 @@ func NewSqliteRepository(_log *zap.Logger, datasource string) *SqliteRepository 
 
 	db, err := sql.Open("sqlite", datasource)
 	if err != nil {
-		log.Error("Failed to open connection", zap.Error(err))
+		log.Fatal("Failed to open connection", zap.Error(err))
 		return nil
 	}
 
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS SNAPSHOTS (
 );
 `)
 	if err != nil {
-		log.Error("Failed to exec query", zap.Error(err))
+		log.Fatal("Failed to exec query", zap.Error(err))
 		return nil
 	}
 	return &SqliteRepository{DB: db, log: log}

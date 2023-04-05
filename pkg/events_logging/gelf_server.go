@@ -37,7 +37,7 @@ func NewGelfServer(_log *zap.Logger, host string, rep *SqliteRepository) *GelfSe
 
 	reader, err := gelf.NewReader(host)
 	if err != nil {
-		log.Error("Failed to create GelfServer")
+		log.Fatal("Failed to create GelfServer", zap.Error(err))
 		return nil
 	}
 	return &GelfServer{Reader: reader, rep: rep, log: log}
