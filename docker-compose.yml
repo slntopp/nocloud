@@ -284,6 +284,8 @@ services:
       PORT: 8000
       GELF_HOST: :12201
       SQLITE_HOST: sqlite.db
+    ports:
+      - "12201:12201/udp"
     volumes:
       - sqlite-data:/sqlite.db
     networks:
