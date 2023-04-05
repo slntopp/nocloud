@@ -3,6 +3,7 @@ package events_logging
 import (
 	"context"
 	"database/sql"
+	epb "github.com/slntopp/nocloud-proto/events_logging"
 	"go.uber.org/zap"
 )
 
@@ -82,4 +83,68 @@ func (r *SqliteRepository) CreateEvent(ctx context.Context, eventMessage *ShortL
 	}
 
 	return tx.Commit()
+}
+
+func (r *SqliteRepository) GetEvents(ctx context.Context) ([]*epb.Event, error) {
+	log := r.log.Named("GetEvents")
+
+	selectQuery := `SELECT E.ID, E.ENTITY, E.UUID, E.SCOPE, E.ACTION, E.RC, E.REQUESTOR, S.ID, S.DIFF FROM EVENTS E LEFT OUTER JOIN SNAPSHOTS S on E.ID = S.EVENT_ID`
+
+	var events []*epb.Event
+
+	rows, err := r.Query(selectQuery)
+	if err != nil {
+		log.Error("Error query events", zap.Error(err))
+		return nil, err
+	}
+
+	for rows.Next() {
+		var event = epb.Event{Snapshot: &epb.Snapshot{}}
+		rows.Scan(
+			&event.Id,
+			&event.Entity,
+			&event.Uuid,
+			&event.Scope,
+			&event.Action,
+			&event.Rc,
+			&event.Requestor,
+			&event.Snapshot.Id,
+			&event.Snapshot.Diff,
+		)
+		events = append(events, &event)
+	}
+
+	return events, nil
+}
+
+func (r *SqliteRepository) GetTrace(ctx context.Context, requestor string) ([]*epb.Event, error) {
+	log := r.log.Named("GetTrace")
+
+	selectQuery := `SELECT E.ID, E.ENTITY, E.UUID, E.SCOPE, E.ACTION, E.RC, E.REQUESTOR, S.ID, S.DIFF FROM EVENTS E LEFT OUTER JOIN SNAPSHOTS S on E.ID = S.EVENT_ID WHERE E.REQUESTOR=$1`
+
+	var events []*epb.Event
+
+	rows, err := r.Query(selectQuery, requestor)
+	if err != nil {
+		log.Error("Error query events", zap.Error(err))
+		return nil, err
+	}
+
+	for rows.Next() {
+		var event = epb.Event{Snapshot: &epb.Snapshot{}}
+		rows.Scan(
+			&event.Id,
+			&event.Entity,
+			&event.Uuid,
+			&event.Scope,
+			&event.Action,
+			&event.Rc,
+			&event.Requestor,
+			&event.Snapshot.Id,
+			&event.Snapshot.Diff,
+		)
+		events = append(events, &event)
+	}
+
+	return events, nil
 }
