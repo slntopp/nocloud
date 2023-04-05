@@ -54,7 +54,7 @@
           label="next payment date"
           style="display: inline-block; width: 200px"
           :value="date"
-          append-icon="mdi-pencil"
+          :append-icon="!isMonitoringsEmpty?mdi-pencil:null"
           @click:append="changeDatesDialog = true"
         />
       </v-col>
@@ -115,7 +115,7 @@
 
     <!-- change last monitoring dates -->
     <v-dialog
-      v-if="template.billingPlan.title.toLowerCase() !== 'payg'"
+      v-if="template.billingPlan.title.toLowerCase() !== 'payg' || isMonitoringsEmpty"
       v-model="changeDatesDialog"
       max-width="60%"
     >
@@ -369,6 +369,9 @@ export default {
     date() {
       return this.formatSecondsToDate(this.template?.data?.last_monitoring);
     },
+      isMonitoringsEmpty(){
+        return Object.keys(this.lastMonitorings).length===0;
+      }
   },
 };
 </script>
