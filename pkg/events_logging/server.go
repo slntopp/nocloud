@@ -24,6 +24,19 @@ func NewEventsLoggingServer(_log *zap.Logger, rep *SqliteRepository, db driver.D
 	return &EventsLoggingServer{log: log, rep: rep, db: db}
 }
 
+func Log(log *zap.Logger, event *pb.Event) {
+	log.Log(nocloud.NOCLOUD_LOG_LEVEL, "",
+		zap.String("entity", event.Entity),
+		zap.String("uuid", event.Uuid),
+		zap.String("scope", event.Scope),
+		zap.String("action", event.Action),
+		zap.Int32("rc", event.Rc),
+		zap.String("requestor", event.Requestor),
+		zap.Int64("ts", event.Ts),
+		zap.String("diff", event.Snapshot.Diff),
+	)
+}
+
 func (s *EventsLoggingServer) GetEvents(ctx context.Context, req *pb.GetEventsRequest) (*pb.Events, error) {
 	log := s.log.Named("GetEvents")
 
