@@ -1,5 +1,5 @@
 <template>
-  <v-row dense align="center">
+  <v-row class="ma-0 pa-0" dense align="center">
     <v-col cols="10">
       <v-select
         dense
