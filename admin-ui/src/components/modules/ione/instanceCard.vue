@@ -54,7 +54,7 @@
           label="next payment date"
           style="display: inline-block; width: 200px"
           :value="date"
-          :append-icon="!isMonitoringsEmpty?mdi-pencil:null"
+          :append-icon="!isMonitoringsEmpty?'mdi-pencil':null"
           @click:append="changeDatesDialog = true"
         />
       </v-col>
