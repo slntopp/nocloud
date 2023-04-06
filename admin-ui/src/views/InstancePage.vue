@@ -82,18 +82,16 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
     });
-    if (this.namespaces.length < 2) {
-      this.$store.dispatch("namespaces/fetch");
-    }
-    if (this.accounts.length < 2) {
-      this.$store.dispatch("accounts/fetch");
-    }
-    if (this.services.length < 2) {
-      this.$store.dispatch("services/fetch");
-    }
-    if (this.servicesProviders.length < 2) {
-      this.$store.dispatch("servicesProviders/fetch");
-    }
+    this.$store.dispatch("namespaces/fetch");
+    this.$store.dispatch("accounts/fetch");
+    this.$store.dispatch("servicesProviders/fetch");
+  },
+  watch: {
+    instance(newVal) {
+      if (newVal) {
+        this.$store.dispatch("plans/fetchItem", this.instance.billingPlan.uuid);
+      }
+    },
   },
 };
 </script>

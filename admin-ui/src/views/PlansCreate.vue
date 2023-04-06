@@ -200,7 +200,7 @@ import {
   readJSONFile,
   readYAMLFile,
   downloadYAMLFile,
-  getSecondsByDays,
+  getTimestamp,
 } from "@/functions.js";
 
 export default {
@@ -361,7 +361,7 @@ export default {
     },
     setPeriod(date, id) {
       console.log("set period", date, id);
-      const period = this.getTimestamp(date);
+      const period = getTimestamp(date);
       const resource = this.plan.resources.find((el) => el.id === id);
       const product = Object.values(this.plan.products).find(
         (el) => el.id === id
@@ -370,19 +370,6 @@ export default {
       if (this.plan.kind === "DYNAMIC") this.plan.products = {};
       if (resource) resource.period = period;
       else if (product) product.period = period;
-    },
-    getTimestamp({ day, month, year, quarter, week, time }) {
-      let seconds = 0;
-
-      seconds += getSecondsByDays(30 * month);
-      seconds += getSecondsByDays(30 * 3 * quarter);
-      seconds += getSecondsByDays(7 * week);
-      seconds += getSecondsByDays(365 * year);
-      seconds += getSecondsByDays(day);
-      seconds += new Date("1970-01-01T" + time + "Z").getTime() / 1000;
-      console.log(seconds);
-
-      return seconds;
     },
     getItem(item = this.item) {
       if (Object.keys(item).length > 0) {
