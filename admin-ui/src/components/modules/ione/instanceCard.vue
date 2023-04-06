@@ -48,7 +48,12 @@
           @click:append="isVisible = !isVisible"
         />
       </v-col>
-      <v-col v-if="template.billingPlan.title.toLowerCase() !== 'payg'">
+      <v-col
+        v-if="
+          template.billingPlan.title.toLowerCase() !== 'payg' ||
+          isMonitoringsEmpty
+        "
+      >
         <v-text-field
           readonly
           label="next payment date"
@@ -74,167 +79,37 @@
     </v-row>
 
     <!-- change tarrif -->
-    <v-dialog
-      v-if="availableTarrifs.length > 0"
-      v-model="changeTarrifDialog"
-      max-width="60%"
-    >
-      <v-card>
-        <v-tabs>
-          <v-tab>Base</v-tab>
-          <v-tab>Individual</v-tab>
-          <v-tab-item>
-            <v-card class="pa-5">
-              <v-row>
-                <v-col cols="3">
-                  <v-card-title>Tarrif:</v-card-title>
-                  <v-select
-                    v-model="selectedTarrif"
-                    :items="availableTarrifs"
-                    item-text="title"
-                    return-object
-                  ></v-select>
-                </v-col>
-                <v-col cols="9">
-                  <v-card-title>Tarrif resources:</v-card-title>
-                  <v-text-field
-                    readonly
-                    v-for="resource in Object.keys(
-                      selectedTarrif?.resources || {}
-                    )"
-                    :key="resource"
-                    :value="selectedTarrif?.resources?.[resource]"
-                    :label="resource"
-                  ></v-text-field>
-                </v-col>
-              </v-row>
-              <v-row justify="end">
-                <v-btn class="mx-3" @click="changeTarrifDialog = false"
-                  >Close</v-btn
-                >
-                <v-btn
-                  class="mx-3"
-                  @click="changeTarrif"
-                  :disabled="selectedTarrif.title === template.product"
-                  :loading="changeTarrifLoading"
-                  >Change tarrif</v-btn
-                >
-              </v-row>
-            </v-card>
-          </v-tab-item>
-          <v-tab-item>
-            <v-card class="pa-5">
-              <v-row>
-                <v-col cols="5">
-                  <v-text-field
-                    type="number"
-                    label="price"
-                    v-model="individualPlan.product.price"
-                  />
-                </v-col>
-                <v-col cols="5">
-                  <date-field
-                    class="mt-3"
-                    :period="individualPlan.product.period"
-                    @change-date="individualPlan.product.period = $event"
-                  ></date-field
-                ></v-col>
-              </v-row>
-              <v-card-title>Product resources</v-card-title>
-              <v-row>
-                <v-col
-                  v-for="key in Object.keys(individualPlan.product.resources)"
-                  :key="key"
-                >
-                  <v-text-field
-                    type="number"
-                    v-model="individualPlan.product.resources[key]"
-                    :label="key"
-                  /> </v-col
-              ></v-row>
-              <v-card-title>Plan resources</v-card-title>
-              <v-row>
-                <v-col
-                  v-for="resource in individualPlan.resources"
-                  :key="resource.key"
-                >
-                  <v-text-field
-                    :label="`${resource.key}(price)`"
-                    v-model="resource.price"
-                  ></v-text-field>
-                </v-col>
-              </v-row>
-              <v-row justify="end">
-                <v-btn class="mx-3" @click="changeTarrifDialog = false"
-                  >Close</v-btn
-                >
-                <v-btn
-                  class="mx-3"
-                  @click="changeTarrif"
-                  :disabled="selectedTarrif.title === template.product"
-                  :loading="changeTarrifLoading"
-                  >Change tarrif</v-btn
-                >
-              </v-row>
-            </v-card>
-          </v-tab-item>
-        </v-tabs>
-      </v-card>
-    </v-dialog>
+    <change-ione-tarrif
+      v-if="availableTarrifs?.length > 0"
+      :value="changeTarrifDialog"
+      @input="changeTarrifDialog = $event"
+      @refresh="refreshInstance"
+      :template="template"
+      :service="service"
+      :available-tarrifs="availableTarrifs"
+      :billing-plan="billingPlan"
+    />
 
     <!-- change last monitoring dates -->
-    <v-dialog
+    <change-ione-monitorings
+      :template="template"
+      :service="service"
+      :value="changeDatesDialog"
+      @input="changeDatesDialog = $event"
+      @refresh="refreshInstance"
       v-if="
         template.billingPlan.title.toLowerCase() !== 'payg' ||
         isMonitoringsEmpty
       "
-      v-model="changeDatesDialog"
-      max-width="60%"
-    >
-      <v-card class="pa-5">
-        <v-card-title class="text-center">Change monitoring dates</v-card-title>
-        <v-row v-for="key in Object.keys(lastMonitorings)" :key="key">
-          <v-col cols="4">
-            <v-card-title>{{ lastMonitorings[key].title }}</v-card-title>
-          </v-col>
-          <v-col cols="8">
-            <v-menu
-              :close-on-content-click="false"
-              transition="scale-transition"
-              min-width="auto"
-            >
-              <template v-slot:activator="{ on, attrs }">
-                <v-text-field
-                  v-bind="attrs"
-                  v-on="on"
-                  prepend-inner-icon="mdi-calendar"
-                  :value="lastMonitorings[key].value"
-                  readonly
-                />
-              </template>
-              <v-date-picker
-                scrollable
-                :min="lastMonitorings[key].firstValue"
-                v-model="lastMonitorings[key].value"
-              ></v-date-picker>
-            </v-menu>
-          </v-col>
-        </v-row>
-        <v-row justify="end">
-          <v-btn class="mx-3" @click="changeDatesDialog = false">Close</v-btn>
-          <v-btn class="mx-3" :loading="changeDatesLoading" @click="changeDates"
-            >Change dates</v-btn
-          >
-        </v-row>
-      </v-card>
-    </v-dialog>
+    />
   </div>
 </template>
 
 <script>
-import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
-import dateField from "@/components/date.vue";
+import { formatSecondsToDate } from "@/functions";
+import ChangeIoneMonitorings from "@/components/dialogs/changeIoneMonitorings.vue";
+import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 
 export default {
   name: "instance-card",
@@ -242,7 +117,7 @@ export default {
     template: { type: Object, required: true },
     dense: { type: Boolean },
   },
-  components: { dateField },
+  components: { ChangeIoneTarrif, ChangeIoneMonitorings },
   mixins: [snackbar],
   data: () => ({
     isVisible: false,
@@ -253,31 +128,12 @@ export default {
       ips_private: "IP's private",
     },
 
-    selectedTarrif: {},
     changeTarrifDialog: false,
-    changeTarrifLoading: false,
-    individualPlan: {
-      product: {},
-      resources: {},
-    },
 
     changeDatesDialog: false,
-    changeDatesLoading: false,
-    lastMonitorings: {},
   }),
   created() {
     this.$store.dispatch("servicesProviders/fetch");
-    this.$store.dispatch("plans/fetch");
-  },
-  mounted() {
-    this.selectedTarrif = {
-      title: this.template.product,
-      resources:
-        this.template.billingPlan.products[this.template.product]?.resources,
-    };
-
-    this.setLastMonitorings();
-    this.setIndividualPlan();
   },
   methods: {
     getTariff() {
@@ -311,128 +167,8 @@ export default {
         }, initialPrice)
         ?.toFixed(2);
     },
-    changeTarrif() {
-      const service = this.service;
-      const igIndex = service.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === this.template.uuid)
-      );
-      const instanceIndex = service.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === this.template.uuid);
-      service.instancesGroups[igIndex].instances[instanceIndex].product =
-        this.selectedTarrif.title;
-      Object.keys(this.selectedTarrif.resources).forEach((k) => {
-        service.instancesGroups[igIndex].instances[instanceIndex].resources[k] =
-          this.selectedTarrif.resources[k];
-      });
-
-      service.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
-        this.billingPlan;
-
-      this.changeTarrifLoading = true;
-
-      api.services
-        ._update(service)
-        .then(() => {
-          this.showSnackbarSuccess("Instance tarrif changed successfully");
-          this.refreshInstance();
-        })
-        .finally(() => {
-          this.changeTarrifLoading = false;
-          this.changeTarrifDialog = false;
-        });
-    },
-    formatSecondsToDate(seconds) {
-      if (!seconds) return "-";
-      const date = new Date(seconds * 1000);
-
-      const year = date.toUTCString().split(" ")[3];
-      let month = date.getUTCMonth() + 1;
-      let day = date.getUTCDate();
-
-      if (`${month}`.length < 2) month = `0${month}`;
-      if (`${day}`.length < 2) day = `0${day}`;
-
-      return `${year}-${month}-${day}`;
-    },
-    setLastMonitorings() {
-      const monitorings = {};
-
-      Object.keys(this.template.data).forEach((key) => {
-        if (key.includes("last_monitoring") && this.template.data[key]) {
-          monitorings[key] = {
-            value: this.formatSecondsToDate(this.template.data[key]),
-            firstValue: this.formatSecondsToDate(this.template.data[key]),
-            title: key
-              .replace("_last_monitoring", "")
-              .replace("last_monitoring", "product"),
-          };
-        }
-      });
-
-      this.lastMonitorings = monitorings;
-    },
-    changeDates() {
-      const service = this.service;
-
-      const igIndex = service.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === this.template.uuid)
-      );
-      const instanceIndex = service.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === this.template.uuid);
-
-      const changedDates = {};
-
-      Object.keys(this.lastMonitorings).forEach((key) => {
-        if (
-          this.lastMonitorings[key].firstValue !=
-          this.lastMonitorings[key].value
-        ) {
-          changedDates[key] =
-            new Date(this.lastMonitorings[key].value).getTime() / 1000;
-        }
-      });
-
-      service.instancesGroups[igIndex].instances[instanceIndex].data = {
-        ...service.instancesGroups[igIndex].instances[instanceIndex].data,
-        ...changedDates,
-      };
-      this.changeDatesLoading = true;
-
-      api.services
-        ._update(service)
-        .then(() => {
-          this.refreshInstance();
-          this.showSnackbarSuccess("Instance dates changed successfully");
-        })
-        .finally(() => {
-          this.changeDatesLoading = false;
-          this.changeDatesDialog = false;
-        });
-    },
     refreshInstance() {
       this.$store.dispatch("services/fetch", this.template.uuid);
-    },
-    setIndividualPlan() {
-      this.individualPlan.product = JSON.parse(
-        JSON.stringify(
-          this.template.billingPlan.products[this.template.product]
-        )
-      );
-      const date = new Date(this.individualPlan.period * 1000);
-      const time = date.toUTCString().split(" ");
-      this.individualPlan.product.period = {
-        day: `${date.getUTCDate() - 1}`,
-        month: `${date.getUTCMonth()}`,
-        year: `${date.getUTCFullYear() - 1970}`,
-        quarter: "0",
-        week: "0",
-        time: time.at(-2),
-      };
-      this.individualPlan.resources = JSON.parse(
-        JSON.stringify(this.template.billingPlan?.resources)
-      );
     },
   },
   computed: {
@@ -458,28 +194,19 @@ export default {
       return this.template.product ?? this.getTariff(this.template) ?? "custom";
     },
     billingPlan() {
-      return this.plans.find((p) => p.uuid === this.template.billingPlan.uuid);
+      return this.$store.getters["plans/one"];
+    },
+    date() {
+      return formatSecondsToDate(this.template?.data?.last_monitoring);
+    },
+    isMonitoringsEmpty() {
+      return this.date === "-";
     },
     availableTarrifs() {
       return Object.keys(this.billingPlan?.products || {}).map((key) => ({
         title: key,
         resources: this.billingPlan.products[key].resources,
       }));
-    },
-    date() {
-      return this.formatSecondsToDate(this.template?.data?.last_monitoring);
-    },
-    isMonitoringsEmpty() {
-      return Object.keys(this.lastMonitorings).length === 0;
-    },
-    planTemplate() {
-      if (!this.individualPlan) {
-        return null;
-      }
-      const type =
-        this.individualPlan.kind === "DYNAMIC" ? "resources" : "products";
-
-      return () => import(`@/components/plans_${type}_table.vue`);
     },
   },
 };
