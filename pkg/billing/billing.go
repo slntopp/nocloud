@@ -233,7 +233,9 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 		if req.Anonymously {
 			continue
 		}
-		ok := graph.HasAccess(ctx, s.db, requestor, plan.ID, access.Level_READ)
+		namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+
+		ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
 		if !ok {
 			continue
 		}
