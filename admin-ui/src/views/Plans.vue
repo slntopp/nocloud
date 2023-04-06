@@ -220,7 +220,7 @@ export default {
         .dispatch("plans/fetch", {
           params: {
             sp_uuid: this.serviceProvider,
-            anonymously: false,
+            anonymously: true,
           },
         })
         .then(() => {
