@@ -54,7 +54,7 @@
           label="next payment date"
           style="display: inline-block; width: 200px"
           :value="date"
-          :append-icon="!isMonitoringsEmpty?mdi-pencil:null"
+          :append-icon="!isMonitoringsEmpty ? 'mdi-pencil' : null"
           @click:append="changeDatesDialog = true"
         />
       </v-col>
@@ -79,43 +79,115 @@
       v-model="changeTarrifDialog"
       max-width="60%"
     >
-      <v-card class="pa-5">
-        <v-row>
-          <v-col cols="3">
-            <v-card-title>Tarrif:</v-card-title>
-            <v-select
-              v-model="selectedTarrif"
-              :items="availableTarrifs"
-              item-text="title"
-              return-object
-            ></v-select>
-          </v-col>
-          <v-col cols="9">
-            <v-card-title>Tarrif resources:</v-card-title>
-            <v-text-field
-              v-for="resource in Object.keys(selectedTarrif?.resources || {})"
-              :key="resource"
-              :value="selectedTarrif?.resources?.[resource]"
-              :label="resource"
-            ></v-text-field>
-          </v-col>
-        </v-row>
-        <v-row justify="end">
-          <v-btn class="mx-3" @click="changeTarrifDialog = false">Close</v-btn>
-          <v-btn
-            class="mx-3"
-            @click="changeTarrif"
-            :disabled="selectedTarrif.title === template.product"
-            :loading="changeTarrifLoading"
-            >Change tarrif</v-btn
-          >
-        </v-row>
+      <v-card>
+        <v-tabs>
+          <v-tab>Base</v-tab>
+          <v-tab>Individual</v-tab>
+          <v-tab-item>
+            <v-card class="pa-5">
+              <v-row>
+                <v-col cols="3">
+                  <v-card-title>Tarrif:</v-card-title>
+                  <v-select
+                    v-model="selectedTarrif"
+                    :items="availableTarrifs"
+                    item-text="title"
+                    return-object
+                  ></v-select>
+                </v-col>
+                <v-col cols="9">
+                  <v-card-title>Tarrif resources:</v-card-title>
+                  <v-text-field
+                    readonly
+                    v-for="resource in Object.keys(
+                      selectedTarrif?.resources || {}
+                    )"
+                    :key="resource"
+                    :value="selectedTarrif?.resources?.[resource]"
+                    :label="resource"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+              <v-row justify="end">
+                <v-btn class="mx-3" @click="changeTarrifDialog = false"
+                  >Close</v-btn
+                >
+                <v-btn
+                  class="mx-3"
+                  @click="changeTarrif"
+                  :disabled="selectedTarrif.title === template.product"
+                  :loading="changeTarrifLoading"
+                  >Change tarrif</v-btn
+                >
+              </v-row>
+            </v-card>
+          </v-tab-item>
+          <v-tab-item>
+            <v-card class="pa-5">
+              <v-row>
+                <v-col cols="5">
+                  <v-text-field
+                    type="number"
+                    label="price"
+                    v-model="individualPlan.product.price"
+                  />
+                </v-col>
+                <v-col cols="5">
+                  <date-field
+                    class="mt-3"
+                    :period="individualPlan.product.period"
+                    @change-date="individualPlan.product.period = $event"
+                  ></date-field
+                ></v-col>
+              </v-row>
+              <v-card-title>Product resources</v-card-title>
+              <v-row>
+                <v-col
+                  v-for="key in Object.keys(individualPlan.product.resources)"
+                  :key="key"
+                >
+                  <v-text-field
+                    type="number"
+                    v-model="individualPlan.product.resources[key]"
+                    :label="key"
+                  /> </v-col
+              ></v-row>
+              <v-card-title>Plan resources</v-card-title>
+              <v-row>
+                <v-col
+                  v-for="resource in individualPlan.resources"
+                  :key="resource.key"
+                >
+                  <v-text-field
+                    :label="`${resource.key}(price)`"
+                    v-model="resource.price"
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+              <v-row justify="end">
+                <v-btn class="mx-3" @click="changeTarrifDialog = false"
+                  >Close</v-btn
+                >
+                <v-btn
+                  class="mx-3"
+                  @click="changeTarrif"
+                  :disabled="selectedTarrif.title === template.product"
+                  :loading="changeTarrifLoading"
+                  >Change tarrif</v-btn
+                >
+              </v-row>
+            </v-card>
+          </v-tab-item>
+        </v-tabs>
       </v-card>
     </v-dialog>
 
     <!-- change last monitoring dates -->
     <v-dialog
-      v-if="template.billingPlan.title.toLowerCase() !== 'payg' || isMonitoringsEmpty"
+      v-if="
+        template.billingPlan.title.toLowerCase() !== 'payg' ||
+        isMonitoringsEmpty
+      "
       v-model="changeDatesDialog"
       max-width="60%"
     >
@@ -162,6 +234,7 @@
 <script>
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
+import dateField from "@/components/date.vue";
 
 export default {
   name: "instance-card",
@@ -169,6 +242,7 @@ export default {
     template: { type: Object, required: true },
     dense: { type: Boolean },
   },
+  components: { dateField },
   mixins: [snackbar],
   data: () => ({
     isVisible: false,
@@ -182,6 +256,10 @@ export default {
     selectedTarrif: {},
     changeTarrifDialog: false,
     changeTarrifLoading: false,
+    individualPlan: {
+      product: {},
+      resources: {},
+    },
 
     changeDatesDialog: false,
     changeDatesLoading: false,
@@ -190,7 +268,8 @@ export default {
   created() {
     this.$store.dispatch("servicesProviders/fetch");
     this.$store.dispatch("plans/fetch");
-
+  },
+  mounted() {
     this.selectedTarrif = {
       title: this.template.product,
       resources:
@@ -198,6 +277,7 @@ export default {
     };
 
     this.setLastMonitorings();
+    this.setIndividualPlan();
   },
   methods: {
     getTariff() {
@@ -334,6 +414,26 @@ export default {
     refreshInstance() {
       this.$store.dispatch("services/fetch", this.template.uuid);
     },
+    setIndividualPlan() {
+      this.individualPlan.product = JSON.parse(
+        JSON.stringify(
+          this.template.billingPlan.products[this.template.product]
+        )
+      );
+      const date = new Date(this.individualPlan.period * 1000);
+      const time = date.toUTCString().split(" ");
+      this.individualPlan.product.period = {
+        day: `${date.getUTCDate() - 1}`,
+        month: `${date.getUTCMonth()}`,
+        year: `${date.getUTCFullYear() - 1970}`,
+        quarter: "0",
+        week: "0",
+        time: time.at(-2),
+      };
+      this.individualPlan.resources = JSON.parse(
+        JSON.stringify(this.template.billingPlan?.resources)
+      );
+    },
   },
   computed: {
     sp() {
@@ -369,9 +469,18 @@ export default {
     date() {
       return this.formatSecondsToDate(this.template?.data?.last_monitoring);
     },
-      isMonitoringsEmpty(){
-        return Object.keys(this.lastMonitorings).length===0;
+    isMonitoringsEmpty() {
+      return Object.keys(this.lastMonitorings).length === 0;
+    },
+    planTemplate() {
+      if (!this.individualPlan) {
+        return null;
       }
+      const type =
+        this.individualPlan.kind === "DYNAMIC" ? "resources" : "products";
+
+      return () => import(`@/components/plans_${type}_table.vue`);
+    },
   },
 };
 </script>
