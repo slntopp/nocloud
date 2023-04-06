@@ -350,20 +350,6 @@ export default {
       return this.servicesProviders?.find((sp) => sp.uuid == this.template.sp);
     },
   },
-  mounted() {
-    if (this.namespaces.length < 2) {
-      this.$store.dispatch("namespaces/fetch");
-    }
-    if (this.accounts.length < 2) {
-      this.$store.dispatch("accounts/fetch");
-    }
-    if (this.services.length < 2) {
-      this.$store.dispatch("services/fetch");
-    }
-    if (this.servicesProviders.length < 2) {
-      this.$store.dispatch("servicesProviders/fetch");
-    }
-  },
   created() {
     const types = require.context(
       "@/components/modules/",

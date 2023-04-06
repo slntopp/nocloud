@@ -1,7 +1,9 @@
 <template>
   <div class="service pa-4 h-100">
     <div class="page__title mb-5">
-      <router-link :to="{ name: 'Services' }">{{ navTitle('Services') }}</router-link>
+      <router-link :to="{ name: 'Services' }">{{
+        navTitle("Services")
+      }}</router-link>
       /
       {{ serviceTitle }}
       <v-chip x-small :color="chipColor"> </v-chip>
@@ -24,7 +26,11 @@
     >
       <v-tab-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
-        <service-info v-if="service" :service="service" :chipColor="chipColor" />
+        <service-info
+          v-if="service"
+          :service="service"
+          :chipColor="chipColor"
+        />
       </v-tab-item>
 
       <!-- <v-tab-item>
@@ -45,22 +51,22 @@
 </template>
 
 <script>
-import config from '@/config.js';
+import config from "@/config.js";
 import serviceTemplate from "@/components/service/template.vue";
 import serviceInfo from "@/components/service/info.vue";
 import snackbar from "@/mixins/snackbar.js";
 
-const url = 'wss://api.nocloud.ione-cloud.net/services';
+const url = "wss://api.nocloud.ione-cloud.net/services";
 let socket;
 
 export default {
   name: "service-view",
-  components: { serviceTemplate, serviceInfo, },
-  mixins:[snackbar],
+  components: { serviceTemplate, serviceInfo },
+  mixins: [snackbar],
   data: () => ({
     found: false,
     tabs: 0,
-    navTitles: config.navTitles ?? {}
+    navTitles: config.navTitles ?? {},
   }),
   methods: {
     navTitle(title) {
@@ -69,7 +75,7 @@ export default {
       }
 
       return title;
-    }
+    },
   },
   computed: {
     service() {
@@ -104,6 +110,7 @@ export default {
       this.found = !!this.service;
       document.title = `${this.serviceTitle} | NoCloud`;
     });
+    this.$store.dispatch("services/fetch");
   },
   mounted() {
     document.title = `${this.serviceTitle} | NoCloud`;
@@ -117,21 +124,24 @@ export default {
       const response = JSON.parse(msg.data).result;
       if (!response) {
         this.showSnackbarError({
-          message: `Empty response, ${msg}`
+          message: `Empty response, ${msg}`,
         });
         return;
       }
 
       try {
-        this.$store.commit('services/updateInstance', {
-          value: response, uuid: this.serviceId
+        this.$store.commit("services/updateInstance", {
+          value: response,
+          uuid: this.serviceId,
         });
       } catch {
-        socket.close(1000, 'job is done');
+        socket.close(1000, "job is done");
       }
     };
   },
-  destroyed() { socket.close(1000, 'job is done') }
+  destroyed() {
+    socket.close(1000, "job is done");
+  },
 };
 </script>
 
