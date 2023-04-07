@@ -366,7 +366,6 @@ export default {
       .dispatch("plans/fetch", {
         params: {
           sp_uuid: this.template.uuid,
-          anonymously: false,
         },
       })
       .then(() => {
