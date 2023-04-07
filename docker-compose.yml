@@ -104,7 +104,7 @@ services:
     logging:
       driver: "gelf"
       options:
-        gelf-address: "udp://localhost:12201"
+        gelf-address: "udp://172.0.0.5:12201"
         tag: "services-registry"
     environment:
       LOG_LEVEL: -1
@@ -119,16 +119,19 @@ services:
     depends_on:
       - db
       - billing
+      - events-logging
       # - your drivers here
     networks:
-      - proxy
-      - arangodb
-      - grpc-internal
-      - mq
-      - gelf
+      gelf:
+        ipv4_address: 172.0.0.6
+      proxy:
+      arangodb:
+      grpc-internal:
+      mq:
     links:
       - db
       - billing
+      - events-logging
       # - your drivers here
 
   sp-registry:
@@ -284,14 +287,14 @@ services:
       PORT: 8000
       GELF_HOST: :12201
       SQLITE_HOST: sqlite.db
-    ports:
-      - "12201:12201/udp"
     volumes:
       - sqlite-data:/sqlite.db
     networks:
-      - proxy
-      - arangodb
-      - gelf
+      gelf:
+        ipv4_address: 172.20.0.5
+      proxy:
+      arangodb:
+
 
   db:
     image: arangodb/arangodb:latest
@@ -333,6 +336,10 @@ networks:
     driver: bridge
   gelf:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.4/24
+          gateway: 172.20.0.1
 
 volumes:
   sqlite-data:
