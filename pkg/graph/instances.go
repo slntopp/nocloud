@@ -107,6 +107,11 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
+	if oldInst.GetStatus() == spb.NoCloudStatus_DEL {
+		log.Info("Inst cannot be updated. Status DEL", zap.String("uuid", oldInst.GetUuid()))
+		return nil
+	}
+
 	inst.Uuid = ""
 	inst.Status = spb.NoCloudStatus_INIT
 	inst.State = nil

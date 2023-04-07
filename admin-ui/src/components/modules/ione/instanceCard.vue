@@ -4,7 +4,11 @@
       <v-col cols="2">
         <v-text-field
           @click:append="changeTarrifDialog = true"
-          append-icon="mdi-pencil"
+          :append-icon="
+            template.billingPlan.title.toLowerCase() !== 'payg'
+              ? 'mdi-pencil'
+              : null
+          "
           readonly
           label="Tarrif"
           :value="tariff"
@@ -28,16 +32,6 @@
       <v-col>
         <v-text-field
           readonly
-          label="next payment date"
-          style="display: inline-block; width: 200px"
-          :value="date"
-          append-icon="mdi-pencil"
-          @click:append="changeDatesDialog = true"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
           label="OS"
           style="display: inline-block; width: 200px"
           :value="osName"
@@ -52,6 +46,21 @@
           :value="template.config.password"
           :append-icon="isVisible ? 'mdi-eye' : 'mdi-eye-off'"
           @click:append="isVisible = !isVisible"
+        />
+      </v-col>
+      <v-col
+        v-if="
+          template.billingPlan.title.toLowerCase() !== 'payg' ||
+          isMonitoringsEmpty
+        "
+      >
+        <v-text-field
+          readonly
+          label="next payment date"
+          style="display: inline-block; width: 200px"
+          :value="date"
+          :append-icon="!isMonitoringsEmpty ? 'mdi-pencil' : null"
+          @click:append="changeDatesDialog = true"
         />
       </v-col>
     </v-row>
@@ -70,86 +79,37 @@
     </v-row>
 
     <!-- change tarrif -->
-    <v-dialog v-model="changeTarrifDialog" max-width="60%">
-      <v-card class="pa-5">
-        <v-row>
-          <v-col cols="3">
-            <v-card-title>Tarrif:</v-card-title>
-            <v-select
-              v-model="selectedTarrif"
-              :items="availableTarrifs"
-              item-text="title"
-              return-object
-            ></v-select>
-          </v-col>
-          <v-col cols="9">
-            <v-card-title>Tarrif resources:</v-card-title>
-            <v-text-field
-              v-for="resource in Object.keys(selectedTarrif?.resources)"
-              :key="resource"
-              :value="selectedTarrif?.resources?.[resource]"
-              :label="resource"
-            ></v-text-field>
-          </v-col>
-        </v-row>
-        <v-row justify="end">
-          <v-btn class="mx-3" @click="changeTarrifDialog = false">Close</v-btn>
-          <v-btn
-            class="mx-3"
-            @click="changeTarrif"
-            :disabled="selectedTarrif.title === template.product"
-            :loading="changeTarrifLoading"
-            >Change tarrif</v-btn
-          >
-        </v-row>
-      </v-card>
-    </v-dialog>
+    <change-ione-tarrif
+      v-if="availableTarrifs?.length > 0"
+      :value="changeTarrifDialog"
+      @input="changeTarrifDialog = $event"
+      @refresh="refreshInstance"
+      :template="template"
+      :service="service"
+      :available-tarrifs="availableTarrifs"
+      :billing-plan="billingPlan"
+    />
 
     <!-- change last monitoring dates -->
-    <v-dialog v-model="changeDatesDialog" max-width="60%">
-      <v-card class="pa-5">
-        <v-card-title class="text-center">Change monitoring dates</v-card-title>
-        <v-row v-for="key in Object.keys(lastMonitorings)" :key="key">
-          <v-col cols="4">
-            <v-card-title>{{ lastMonitorings[key].title }}</v-card-title>
-          </v-col>
-          <v-col cols="8">
-            <v-menu
-              :close-on-content-click="false"
-              transition="scale-transition"
-              min-width="auto"
-            >
-              <template v-slot:activator="{ on, attrs }">
-                <v-text-field
-                  v-bind="attrs"
-                  v-on="on"
-                  prepend-inner-icon="mdi-calendar"
-                  :value="lastMonitorings[key].value"
-                  readonly
-                />
-              </template>
-              <v-date-picker
-                scrollable
-                :min="lastMonitorings[key].firstValue"
-                v-model="lastMonitorings[key].value"
-              ></v-date-picker>
-            </v-menu>
-          </v-col>
-        </v-row>
-        <v-row justify="end">
-          <v-btn class="mx-3" @click="changeDatesDialog = false">Close</v-btn>
-          <v-btn class="mx-3" :loading="changeDatesLoading" @click="changeDates"
-            >Change dates</v-btn
-          >
-        </v-row>
-      </v-card>
-    </v-dialog>
+    <change-ione-monitorings
+      :template="template"
+      :service="service"
+      :value="changeDatesDialog"
+      @input="changeDatesDialog = $event"
+      @refresh="refreshInstance"
+      v-if="
+        template.billingPlan.title.toLowerCase() !== 'payg' ||
+        isMonitoringsEmpty
+      "
+    />
   </div>
 </template>
 
 <script>
-import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
+import { formatSecondsToDate } from "@/functions";
+import ChangeIoneMonitorings from "@/components/dialogs/changeIoneMonitorings.vue";
+import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 
 export default {
   name: "instance-card",
@@ -157,6 +117,7 @@ export default {
     template: { type: Object, required: true },
     dense: { type: Boolean },
   },
+  components: { ChangeIoneTarrif, ChangeIoneMonitorings },
   mixins: [snackbar],
   data: () => ({
     isVisible: false,
@@ -167,25 +128,12 @@ export default {
       ips_private: "IP's private",
     },
 
-    selectedTarrif: {},
     changeTarrifDialog: false,
-    changeTarrifLoading: false,
 
     changeDatesDialog: false,
-    changeDatesLoading: false,
-    lastMonitorings: {},
   }),
   created() {
     this.$store.dispatch("servicesProviders/fetch");
-    this.$store.dispatch("plans/fetch");
-
-    this.selectedTarrif = {
-      title: this.template.product,
-      resources:
-        this.template.billingPlan.products[this.template.product].resources,
-    };
-
-    this.setLastMonitorings();
   },
   methods: {
     getTariff() {
@@ -219,106 +167,6 @@ export default {
         }, initialPrice)
         ?.toFixed(2);
     },
-    changeTarrif() {
-      const service = this.service;
-      const igIndex = service.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === this.template.uuid)
-      );
-      const instanceIndex = service.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === this.template.uuid);
-      service.instancesGroups[igIndex].instances[instanceIndex].product =
-        this.selectedTarrif.title;
-      Object.keys(this.selectedTarrif.resources).forEach((k) => {
-        service.instancesGroups[igIndex].instances[instanceIndex].resources[k] =
-          this.selectedTarrif.resources[k];
-      });
-
-      service.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
-        this.billingPlan;
-
-      this.changeTarrifLoading = true;
-
-      api.services
-        ._update(service)
-        .then(() => {
-          this.showSnackbarSuccess("Instance tarrif changed successfully");
-          this.refreshInstance();
-        })
-        .finally(() => {
-          this.changeTarrifLoading = false;
-          this.changeTarrifDialog = false;
-        });
-    },
-    formatSecondsToDate(seconds) {
-      if (!seconds) return "-";
-      const date = new Date(seconds * 1000);
-
-      const year = date.toUTCString().split(" ")[3];
-      let month = date.getUTCMonth() + 1;
-      let day = date.getUTCDate();
-
-      if (`${month}`.length < 2) month = `0${month}`;
-      if (`${day}`.length < 2) day = `0${day}`;
-
-      return `${year}-${month}-${day}`;
-    },
-    setLastMonitorings() {
-      const monitorings = {};
-
-      Object.keys(this.template.data).forEach((key) => {
-        if (key.includes("last_monitoring") && this.template.data[key]) {
-          monitorings[key] = {
-            value: this.formatSecondsToDate(this.template.data[key]),
-            firstValue: this.formatSecondsToDate(this.template.data[key]),
-            title: key
-              .replace("_last_monitoring", "")
-              .replace("last_monitoring", "product"),
-          };
-        }
-      });
-
-      this.lastMonitorings = monitorings;
-    },
-    changeDates() {
-      const service = this.service;
-
-      const igIndex = service.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === this.template.uuid)
-      );
-      const instanceIndex = service.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === this.template.uuid);
-
-      const changedDates = {};
-
-      Object.keys(this.lastMonitorings).forEach((key) => {
-        if (
-          this.lastMonitorings[key].firstValue !=
-          this.lastMonitorings[key].value
-        ) {
-          changedDates[key] =
-            new Date(this.lastMonitorings[key].value).getTime() / 1000;
-        }
-      });
-
-      service.instancesGroups[igIndex].instances[instanceIndex].data = {
-        ...service.instancesGroups[igIndex].instances[instanceIndex].data,
-        ...changedDates,
-      };
-      this.changeDatesLoading = true;
-
-      api.services
-        ._update(service)
-        .then(() => {
-          this.refreshInstance();
-          this.showSnackbarSuccess("Instance dates changed successfully");
-        })
-        .finally(() => {
-          this.changeDatesLoading = false;
-          this.changeDatesDialog = false;
-        });
-    },
     refreshInstance() {
       this.$store.dispatch("services/fetch", this.template.uuid);
     },
@@ -346,16 +194,19 @@ export default {
       return this.template.product ?? this.getTariff(this.template) ?? "custom";
     },
     billingPlan() {
-      return this.plans.find((p) => p.uuid === this.template.billingPlan.uuid);
+      return this.$store.getters["plans/one"];
+    },
+    date() {
+      return formatSecondsToDate(this.template?.data?.last_monitoring);
+    },
+    isMonitoringsEmpty() {
+      return this.date === "-";
     },
     availableTarrifs() {
       return Object.keys(this.billingPlan?.products || {}).map((key) => ({
         title: key,
         resources: this.billingPlan.products[key].resources,
       }));
-    },
-    date() {
-      return this.formatSecondsToDate(this.template?.data?.last_monitoring);
     },
   },
 };

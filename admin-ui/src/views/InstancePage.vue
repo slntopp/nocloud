@@ -1,7 +1,9 @@
 <template>
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
-      <router-link :to="{ name: 'Instances' }">{{ navTitle("Instances") }}</router-link>
+      <router-link :to="{ name: 'Instances' }">{{
+        navTitle("Instances")
+      }}</router-link>
       / {{ instanceTitle }}
     </h1>
     <v-tabs
@@ -18,7 +20,11 @@
     >
       <v-tab-item v-for="tab of tabs" :key="tab.title">
         <v-progress-linear indeterminate class="pt-2" v-if="instanceLoading" />
-        <component v-else-if="instance" :is="tab.component" :template="instance" />
+        <component
+          v-else-if="instance"
+          :is="tab.component"
+          :template="instance"
+        />
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -35,13 +41,13 @@ export default {
     tabs: [
       {
         title: "Info",
-        component: () => import("@/components/instance/info.vue")
+        component: () => import("@/components/instance/info.vue"),
       },
       {
         title: "Template",
-        component: () => import("@/components/instance/template.vue")
-      }
-    ]
+        component: () => import("@/components/instance/template.vue"),
+      },
+    ],
   }),
   methods: {
     navTitle(title) {
@@ -56,8 +62,9 @@ export default {
     instance() {
       const id = this.$route.params?.instanceId;
 
-      return this.$store.getters["services/getInstances"]
-        .find(({ uuid }) => uuid === id);
+      return this.$store.getters["services/getInstances"].find(
+        ({ uuid }) => uuid === id
+      );
     },
     instanceTitle() {
       return this.instance?.title ?? "not found";
@@ -75,6 +82,16 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
     });
+    this.$store.dispatch("namespaces/fetch");
+    this.$store.dispatch("accounts/fetch");
+    this.$store.dispatch("servicesProviders/fetch");
+  },
+  watch: {
+    instance(newVal) {
+      if (newVal) {
+        this.$store.dispatch("plans/fetchItem", this.instance.billingPlan.uuid);
+      }
+    },
   },
 };
 </script>

@@ -421,10 +421,6 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 		return nil, status.Error(codes.Unavailable, "Requestor account is suspended")
 	}
 
-	if service.GetStatus() == statuspb.NoCloudStatus_SUS {
-		return nil, status.Error(codes.PermissionDenied, "Can't update suspended service")
-	}
-
 	err = s.ctrl.Update(ctx, service, true)
 	if err != nil {
 		log.Error("Error while updating service", zap.Error(err))
