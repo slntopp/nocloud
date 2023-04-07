@@ -340,3 +340,30 @@ export function toPascalCase(text) {
     text.replace(/-/, "").toUpperCase()
   );
 }
+
+export function formatSecondsToDate(seconds) {
+  if (!seconds) return "-";
+  const date = new Date(seconds * 1000);
+
+  const year = date.toUTCString().split(" ")[3];
+  let month = date.getUTCMonth() + 1;
+  let day = date.getUTCDate();
+
+  if (`${month}`.length < 2) month = `0${month}`;
+  if (`${day}`.length < 2) day = `0${day}`;
+
+  return `${year}-${month}-${day}`;
+}
+
+export function getTimestamp({ day, month, year, quarter, week, time }) {
+  let seconds = 0;
+
+  seconds += getSecondsByDays(30 * month);
+  seconds += getSecondsByDays(30 * 3 * quarter);
+  seconds += getSecondsByDays(7 * week);
+  seconds += getSecondsByDays(365 * year);
+  seconds += getSecondsByDays(day);
+  seconds += new Date("1970-01-01T" + time + "Z").getTime() / 1000;
+  console.log(seconds)
+  return seconds;
+}

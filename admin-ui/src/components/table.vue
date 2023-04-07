@@ -155,6 +155,9 @@
             </v-row>
           </v-card>
         </v-dialog>
+        <v-icon @click="resetFilter" size="23" class="mr-3"
+          >mdi-filter-remove</v-icon
+        >
         <span>{{ `${pageStart}-${pageStop} of ${itemsLength}` }}</span>
       </div>
     </template>
@@ -354,6 +357,11 @@ export default {
     },
     setCustomFilter(key, val) {
       this.$emit("input:filter", { key, value: val });
+    },
+    resetFilter() {
+      Object.keys(this.filtersValues).forEach((key) => {
+        this.setCustomFilter(key, []);
+      });
     },
     saveFilterValues(filters) {
       const columnJson = localStorage.getItem("filters");
