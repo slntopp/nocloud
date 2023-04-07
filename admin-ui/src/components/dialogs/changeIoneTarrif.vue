@@ -158,15 +158,18 @@ const changeTarrif = () => {
 const createIndividual = () => {
   const product = individualPlan.value.product;
   const resources = individualPlan.value.resources;
-
+  const title =
+    template.value.title +
+    " (Individual) " +
+    new Date().toISOString().slice(0, 10);
   product.period = getTimestamp(product.period);
   const plan = {
-    title: template.value.title + " (Individual)",
+    title,
     public: false,
     kind: billingPlan.value.kind,
   };
   plan.resources = resources;
-  plan.products = { [template.value.product]: product };
+  plan.products = { [title]: product };
   createIndividualLoading.value = true;
 
   api.plans.create(plan).then((data) => {
@@ -180,7 +183,7 @@ const createIndividual = () => {
       ].instances.findIndex((i) => i.uuid === template.value.uuid);
 
       tempService.instancesGroups[igIndex].instances[instanceIndex].product =
-        template.value.product;
+        title;
       tempService.instancesGroups[igIndex].instances[
         instanceIndex
       ].billingPlan = data;
@@ -191,8 +194,8 @@ const createIndividual = () => {
       });
 
       api.services._update(tempService).then(() => {
-          createIndividualLoading.value = false;
-          emit('refresh')
+        createIndividualLoading.value = false;
+        emit("refresh");
       });
     });
   });
