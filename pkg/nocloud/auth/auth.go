@@ -99,6 +99,16 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 		if probe.Anonymously {
 			return handler(ctx, req)
 		}
+	case "/nocloud.billing.CurrencyService/GetCurrencies":
+		probe := req.(*billpb.GetCurrenciesRequest)
+		if probe.Anonymously {
+			return handler(ctx, req)
+		}
+	case "/nocloud.billing.CurrencyService/GetExchangeRates":
+		probe := req.(*billpb.GetExchangeRatesRequest)
+		if probe.Anonymously {
+			return handler(ctx, req)
+		}
 	}
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
 	if info.FullMethod != "/nocloud.registry.AccountsService/Token" && err != nil {
