@@ -207,6 +207,8 @@ github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/slntopp/nocloud-proto v0.0.0-20230323144646-1a873d952f89 h1:oIbb3enZeKFaBXww/gKHvkUlulZP0li26sscMQtlRig=
 github.com/slntopp/nocloud-proto v0.0.0-20230323144646-1a873d952f89/go.mod h1:Ba1rehrlMO43g5YvfiOP/NBSvL2WZRuEjFN8WiDvJ8k=
+github.com/slntopp/nocloud-proto v0.0.0-20230407124024-8d6a9ed318bd h1:4QVr1SQl9xCnAv4EPwSerYeEBMHUIf15lxsqb2UOlNQ=
+github.com/slntopp/nocloud-proto v0.0.0-20230407124024-8d6a9ed318bd/go.mod h1:MXM4Ab6mSbsfWQr6RCxjQofVelYq/5jUVMNDCbAN24Q=
 github.com/spf13/afero v1.9.4 h1:Sd43wM1IWz/s1aVXdOBkjJvuP8UdyqioeE4AmM0QsBs=
 github.com/spf13/afero v1.9.4/go.mod h1:iUV7ddyEEZPO5gA3zD4fJt6iStLlL+Lg4m2cihcDf8Y=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
