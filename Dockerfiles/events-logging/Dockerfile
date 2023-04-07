@@ -18,6 +18,5 @@ USER nocloud
 EXPOSE 8000
 EXPOSE 12201
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
-LABEL nocloud.update "true"
 
 ENTRYPOINT ["/events_logging"]
