@@ -191,7 +191,9 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 		return p.Plan, nil
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, p.ID, access.Level_READ)
+	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
+
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
@@ -224,6 +226,9 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 		return nil, status.Error(codes.Internal, "Error listing plans")
 	}
 
+	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
+
 	result := make([]*pb.Plan, 0)
 	for _, plan := range plans {
 		if plan.Public {
@@ -233,10 +238,10 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 		if req.Anonymously {
 			continue
 		}
-		ok := graph.HasAccess(ctx, s.db, requestor, plan.ID, access.Level_READ)
 		if !ok {
 			continue
 		}
+
 		result = append(result, plan.Plan)
 	}
 
