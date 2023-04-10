@@ -20,12 +20,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-  "time"
 	"reflect"
-  
+	"time"
+
+	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/wI2L/jsondiff"
-	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
 
 	bpb "github.com/slntopp/nocloud-proto/billing"
