@@ -16,7 +16,7 @@ HEALTHCHECK --start-period=10s CMD ["/docker_health_check"]
 
 USER nocloud
 EXPOSE 8000
-EXPOSE 12201
 LABEL org.opencontainers.image.source https://github.com/slntopp/nocloud
+LABEL nocloud.update "true"
 
 ENTRYPOINT ["/events_logging"]
