@@ -3,6 +3,7 @@ package events_logging
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	epb "github.com/slntopp/nocloud-proto/events_logging"
 	"go.uber.org/zap"
 )
@@ -85,10 +86,23 @@ func (r *SqliteRepository) CreateEvent(ctx context.Context, eventMessage *ShortL
 	return tx.Commit()
 }
 
-func (r *SqliteRepository) GetEvents(ctx context.Context) ([]*epb.Event, error) {
+func (r *SqliteRepository) GetEvents(ctx context.Context, req *epb.GetEventsRequest) ([]*epb.Event, error) {
 	log := r.log.Named("GetEvents")
 
-	selectQuery := `SELECT E.ID, E.ENTITY, E.UUID, E.SCOPE, E.ACTION, E.RC, E.REQUESTOR, S.ID, S.DIFF FROM EVENTS E LEFT OUTER JOIN SNAPSHOTS S on E.ID = S.EVENT_ID`
+	selectQuery := fmt.Sprintf(`SELECT E.ID, E.ENTITY, E.UUID, E.SCOPE, E.ACTION, E.RC, E.REQUESTOR, S.ID, S.DIFF FROM EVENTS E LEFT OUTER JOIN SNAPSHOTS S on E.ID = S.EVENT_ID WHERE E.ENTITY = %s AND E.UUID = %s`, req.GetEntity(), req.GetUuid())
+
+	if req.Scope != nil {
+		selectQuery += fmt.Sprintf(`AND E.SCOPE = %s`, req.GetScope())
+	}
+
+	if req.Page != nil && req.Limit != nil {
+		limit, page := req.GetLimit(), req.GetPage()
+		offset := (page - 1) * limit
+
+		selectQuery += fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
+	}
+
+	log.Debug("Query", zap.String("q", selectQuery))
 
 	var events []*epb.Event
 
@@ -117,14 +131,23 @@ func (r *SqliteRepository) GetEvents(ctx context.Context) ([]*epb.Event, error) 
 	return events, nil
 }
 
-func (r *SqliteRepository) GetTrace(ctx context.Context, requestor string) ([]*epb.Event, error) {
+func (r *SqliteRepository) GetTrace(ctx context.Context, req *epb.GetTraceRequest) ([]*epb.Event, error) {
 	log := r.log.Named("GetTrace")
 
 	selectQuery := `SELECT E.ID, E.ENTITY, E.UUID, E.SCOPE, E.ACTION, E.RC, E.REQUESTOR, S.ID, S.DIFF FROM EVENTS E LEFT OUTER JOIN SNAPSHOTS S on E.ID = S.EVENT_ID WHERE E.REQUESTOR=$1`
 
+	if req.Page != nil && req.Limit != nil {
+		limit, page := req.GetLimit(), req.GetPage()
+		offset := (page - 1) * limit
+
+		selectQuery += fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset)
+	}
+
+	log.Debug("Query", zap.String("q", selectQuery))
+
 	var events []*epb.Event
 
-	rows, err := r.Query(selectQuery, requestor)
+	rows, err := r.Query(selectQuery, req.GetRequestor())
 	if err != nil {
 		log.Error("Error query events", zap.Error(err))
 		return nil, err

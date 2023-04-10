@@ -55,7 +55,7 @@ func (s *EventsLoggingServer) GetEvents(ctx context.Context, req *pb.GetEventsRe
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
 	}
 
-	events, err := s.rep.GetEvents(ctx)
+	events, err := s.rep.GetEvents(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (s *EventsLoggingServer) GetTrace(ctx context.Context, req *pb.GetTraceRequ
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
 	}
 
-	events, err := s.rep.GetTrace(ctx, req.GetRequestor())
+	events, err := s.rep.GetTrace(ctx, req)
 	if err != nil {
 		return nil, err
 	}
