@@ -3,9 +3,14 @@ package events_logging
 import (
 	"context"
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/events_logging"
+	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type EventsLoggingServer struct {
@@ -43,6 +48,13 @@ func (s *EventsLoggingServer) GetEvents(ctx context.Context, req *pb.GetEventsRe
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
+	node := driver.NewDocumentID(req.GetEntity(), req.GetUuid())
+	hasAccess := graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN)
+
+	if !hasAccess {
+		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
+	}
+
 	events, err := s.rep.GetEvents(ctx)
 	if err != nil {
 		return nil, err
@@ -56,6 +68,13 @@ func (s *EventsLoggingServer) GetTrace(ctx context.Context, req *pb.GetTraceRequ
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
+
+	node := driver.NewDocumentID(schema.ACCOUNTS_COL, req.GetRequestor())
+	hasAccess := graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN)
+
+	if !hasAccess {
+		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
+	}
 
 	events, err := s.rep.GetTrace(ctx, req.GetRequestor())
 	if err != nil {
