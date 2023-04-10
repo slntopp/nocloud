@@ -17,7 +17,10 @@ package instances
 
 import (
 	"context"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/states"
+	el "github.com/slntopp/nocloud/pkg/events_logging"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -160,6 +163,21 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 	if err != nil {
 		return nil, err
 	}
+
+	var event = &elpb.Event{
+		Entity:    "instance",
+		Uuid:      instance.GetUuid(),
+		Scope:     "database",
+		Action:    "delete",
+		Rc:        0,
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
+	el.Log(log, event)
 
 	return &pb.DeleteResponse{
 		Result: true,
