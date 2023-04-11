@@ -19,7 +19,6 @@ import (
 	"context"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/states"
-	el "github.com/slntopp/nocloud/pkg/events_logging"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -177,7 +176,7 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 		},
 	}
 
-	el.Log(log, event)
+	nocloud.Log(log, event)
 
 	return &pb.DeleteResponse{
 		Result: true,

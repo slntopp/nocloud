@@ -34,7 +34,6 @@ import (
 	pb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	spb "github.com/slntopp/nocloud-proto/statuses"
-	el "github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
@@ -106,7 +105,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		},
 	}
 
-	el.Log(log, event)
+	nocloud.Log(log, event)
 
 	// Attempt create edge
 	_, err = ctrl.ig2inst.CreateDocument(ctx, Access{
@@ -201,7 +200,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		},
 	}
 
-	el.Log(log, event)
+	nocloud.Log(log, event)
 
 	return nil
 }
