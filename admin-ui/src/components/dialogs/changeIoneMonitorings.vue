@@ -65,7 +65,7 @@
       </v-row>
 
       <v-row justify="end">
-        <v-switch class="mx-3 mt-0" v-model="isChangeAll" label="all" />
+        <v-switch class="mx-3 mt-0" v-model="isChangeAll" label="All at the same time" />
         <v-btn class="mx-3" @click="emit('input', false)">Close</v-btn>
         <v-btn class="mx-3" :loading="changeDatesLoading" @click="changeDates"
           >Change dates</v-btn
@@ -157,7 +157,8 @@ const changeDates = () => {
 
 onMounted(() => {
   setLastMonitorings();
-  min.value=new Date().toISOString().slice(0, 10)
+  //tommoraw
+  min.value=new Date(new Date().getTime() + (24 * 60 * 60 * 1000)).toISOString().slice(0, 10)
 });
 </script>
 
