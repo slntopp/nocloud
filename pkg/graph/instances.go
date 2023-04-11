@@ -172,6 +172,8 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		mask.Data = inst.GetData()
 	}
 
+	log.Debug("config", zap.Any("config", mask.GetConfig()))
+
 	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
 	if err != nil {
 		log.Error("Failed to update Instance", zap.Error(err))
