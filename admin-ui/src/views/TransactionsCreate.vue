@@ -138,8 +138,8 @@
           <v-row class="mx-5">
             <v-textarea
               no-resize
-              label="Message"
-              v-model="transaction.meta.message"
+              label="Description"
+              v-model="transaction.meta.description"
             ></v-textarea>
           </v-row>
 
@@ -211,7 +211,7 @@ export default {
       service: "",
       total: "",
       exec: 0,
-      meta: { instances: [], message: "" },
+      meta: { instances: [], description: "" },
     },
     date: {
       title: "Date",
@@ -302,6 +302,7 @@ export default {
     },
   },
   created() {
+      this.initDate()
     if (this.accounts.length < 2) {
       this.$store.dispatch("accounts/fetch");
     }
