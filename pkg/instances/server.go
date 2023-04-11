@@ -164,7 +164,7 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 	}
 
 	var event = &elpb.Event{
-		Entity:    "instance",
+		Entity:    schema.INSTANCES_COL,
 		Uuid:      instance.GetUuid(),
 		Scope:     "database",
 		Action:    "delete",

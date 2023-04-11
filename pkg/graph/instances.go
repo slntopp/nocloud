@@ -93,7 +93,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	i.Uuid = meta.Key
 
 	var event = &elpb.Event{
-		Entity:    "instance",
+		Entity:    INSTANCES_COL,
 		Uuid:      i.GetUuid(),
 		Scope:     "database",
 		Action:    "create",
@@ -188,7 +188,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	}
 
 	var event = &elpb.Event{
-		Entity:    "instance",
+		Entity:    INSTANCES_COL,
 		Uuid:      inst.GetUuid(),
 		Scope:     "database",
 		Action:    "update",
