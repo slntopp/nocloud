@@ -1,10 +1,44 @@
 <template>
-  <v-dialog :value="value" @input="emit('input', value)" max-width="60%">
+  <v-dialog
+    persistent
+    :value="value"
+    @input="emit('input', value)"
+    max-width="60%"
+  >
     <v-card class="pa-5">
       <v-card-title class="text-center">Change monitoring dates</v-card-title>
-      <v-row v-for="key in Object.keys(lastMonitorings || {})" :key="key">
+      <div v-if="!isChangeAll">
+        <v-row v-for="key in Object.keys(lastMonitorings || {})" :key="key">
+          <v-col cols="4">
+            <v-card-title>{{ lastMonitorings[key].title }}</v-card-title>
+          </v-col>
+          <v-col cols="8">
+            <v-menu
+              :close-on-content-click="false"
+              transition="scale-transition"
+              min-width="auto"
+            >
+              <template v-slot:activator="{ on, attrs }">
+                <v-text-field
+                  v-bind="attrs"
+                  v-on="on"
+                  prepend-inner-icon="mdi-calendar"
+                  :value="lastMonitorings[key].value"
+                  readonly
+                />
+              </template>
+              <v-date-picker
+                scrollable
+                :min="min"
+                v-model="lastMonitorings[key].value"
+              ></v-date-picker>
+            </v-menu>
+          </v-col>
+        </v-row>
+      </div>
+      <v-row v-else>
         <v-col cols="4">
-          <v-card-title>{{ lastMonitorings[key].title }}</v-card-title>
+          <v-card-title>product</v-card-title>
         </v-col>
         <v-col cols="8">
           <v-menu
@@ -17,19 +51,21 @@
                 v-bind="attrs"
                 v-on="on"
                 prepend-inner-icon="mdi-calendar"
-                :value="lastMonitorings[key].value"
+                :value="newAllDate"
                 readonly
               />
             </template>
             <v-date-picker
               scrollable
-              :min="lastMonitorings[key].firstValue"
-              v-model="lastMonitorings[key].value"
+              :min="min"
+              v-model="newAllDate"
             ></v-date-picker>
           </v-menu>
         </v-col>
       </v-row>
+
       <v-row justify="end">
+        <v-switch class="mx-3 mt-0" v-model="isChangeAll" label="All at the same time" />
         <v-btn class="mx-3" @click="emit('input', false)">Close</v-btn>
         <v-btn class="mx-3" :loading="changeDatesLoading" @click="changeDates"
           >Change dates</v-btn
@@ -49,7 +85,10 @@ const emit = defineEmits(["refresh", "input"]);
 
 const { template, service } = toRefs(props);
 const changeDatesLoading = ref(false);
+const isChangeAll = ref(true);
 const lastMonitorings = ref({});
+const newAllDate = ref();
+const min = ref();
 
 const setLastMonitorings = () => {
   const data = JSON.parse(JSON.stringify(template.value.data));
@@ -69,6 +108,8 @@ const setLastMonitorings = () => {
   });
 
   lastMonitorings.value = monitorings;
+
+  newAllDate.value = formatSecondsToDate(data.last_monitoring);
 };
 
 const changeDates = () => {
@@ -84,8 +125,16 @@ const changeDates = () => {
   const changedDates = {};
 
   Object.keys(lastMonitorings.value).forEach((key) => {
-    if (lastMonitorings.value[key].firstValue != lastMonitorings.value[key].value) {
-      changedDates[key] = new Date(lastMonitorings.value[key].value).getTime() / 1000;
+    if (
+      isChangeAll.value ||
+      lastMonitorings.value[key].firstValue != lastMonitorings.value[key].value
+    ) {
+      changedDates[key] =
+        new Date(
+          isChangeAll.value
+            ? newAllDate.value
+            : lastMonitorings.value[key].value
+        ).getTime() / 1000;
     }
   });
 
@@ -108,6 +157,8 @@ const changeDates = () => {
 
 onMounted(() => {
   setLastMonitorings();
+  //tommoraw
+  min.value=new Date(new Date().getTime() + (24 * 60 * 60 * 1000)).toISOString().slice(0, 10)
 });
 </script>
 

@@ -26,7 +26,7 @@ import api from "@/api";
 export default {
   data: () => ({
     script:
-      "https://cdn.jsdelivr.net/npm/nocloud-map-widget@1.0.1/dist/map-widget.js",
+      "https://cdn.jsdelivr.net/npm/nocloud-map-widget/dist/map-widget.js",
   }),
   mounted() {
     let script = document.createElement("script");

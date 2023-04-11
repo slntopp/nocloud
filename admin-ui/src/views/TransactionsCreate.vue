@@ -6,6 +6,24 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
+              <v-subheader>Type</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-select
+                label="Type"
+                v-model="type"
+                item-value="value"
+                item-text="title"
+                :items="types"
+              />
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col lg="6" cols="12">
+          <v-row align="center">
+            <v-col cols="3">
               <v-subheader>Account</v-subheader>
             </v-col>
             <v-col cols="9">
@@ -65,7 +83,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center">
+          <v-row align="center" v-if="isTransaction">
             <v-col cols="3">
               <v-subheader>Date</v-subheader>
             </v-col>
@@ -115,18 +133,13 @@
                 />
               </v-menu>
             </v-col>
-            <v-col cols="1">
-              <v-btn icon @click="resetDate"
-                ><v-icon>mdi-close-thick</v-icon></v-btn
-              >
-            </v-col>
           </v-row>
 
           <v-row class="mx-5">
             <v-textarea
               no-resize
-              label="Message"
-              v-model="transaction.meta.message"
+              label="Items descriptions"
+              v-model="transaction.meta.description"
             ></v-textarea>
           </v-row>
 
@@ -198,7 +211,7 @@ export default {
       service: "",
       total: "",
       exec: 0,
-      meta: { instances: [], message: "" },
+      meta: { instances: [], description: "" },
     },
     date: {
       title: "Date",
@@ -214,6 +227,12 @@ export default {
 
     isValid: false,
     isLoading: false,
+
+    types: [
+      { value: "invoice", title: "User confirm" },
+      { value: "transaction", title: "Automatic" },
+    ],
+    type: "transaction",
   }),
   methods: {
     tryToSend() {
@@ -269,19 +288,21 @@ export default {
       this.date.value = null;
       this.time.value = null;
     },
+    initDate() {
+      const date = new Date();
+      const day = date.getDate();
+      const month = date.getMonth() + 1;
+      const year = date.getFullYear();
+      const time = date.toString().split(" ")[4];
+
+      this.date.value = `${year}-${
+        month.toString().length < 2 ? "0" + month : month
+      }-${day.toString().length < 2 ? "0" + day : day}`;
+      this.time.value = `${time}`;
+    },
   },
   created() {
-    const date = new Date();
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-    const time = date.toString().split(" ")[4];
-
-    this.date.value = `${year}-${
-      month.toString().length < 2 ? "0" + month : month
-    }-${day.toString().length < 2 ? "0" + day : day}`;
-    this.time.value = `${time}`;
-
+      this.initDate()
     if (this.accounts.length < 2) {
       this.$store.dispatch("accounts/fetch");
     }
@@ -349,10 +370,23 @@ export default {
     exec() {
       return new Date(`${this.date.value}T${this.time.value}`).getTime() / 1000;
     },
+    isTransaction() {
+      return this.type === "transaction";
+    },
+    isInvoice() {
+      return this.type === "invoice";
+    },
   },
   watch: {
     "transaction.service"() {
       this.transaction.meta.instances = [];
+    },
+    type() {
+      if (this.isInvoice) {
+          this.resetDate()
+      } else if (this.isTransaction) {
+          this.initDate()
+      }
     },
   },
 };
