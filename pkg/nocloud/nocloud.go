@@ -47,7 +47,7 @@ func Log(log *zap.Logger, event *pb.Event) {
 		zap.String("action", event.Action),
 		zap.Int32("rc", event.Rc),
 		zap.String("requestor", event.Requestor),
-		zap.Int64("ts", event.Ts),
+		zap.Int64("timestamp", event.Ts),
 		zap.String("diff", event.Snapshot.Diff),
 	)
 }
