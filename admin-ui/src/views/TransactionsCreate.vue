@@ -138,7 +138,7 @@
           <v-row class="mx-5">
             <v-textarea
               no-resize
-              label="Description"
+              label="Items descriptions"
               v-model="transaction.meta.description"
             ></v-textarea>
           </v-row>
@@ -229,8 +229,8 @@ export default {
     isLoading: false,
 
     types: [
-      { value: "invoice", title: "Invoice individual" },
-      { value: "transaction", title: "Transaction" },
+      { value: "invoice", title: "User confirm" },
+      { value: "transaction", title: "Automatic" },
     ],
     type: "transaction",
   }),

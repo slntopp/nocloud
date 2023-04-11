@@ -106,7 +106,7 @@
         </nocloud-table>
 
         <v-container v-if="item.meta.description">
-          <v-card-title>Description:</v-card-title>
+          <v-card-title>Items descriptions:</v-card-title>
           <v-card-text>{{ item.meta.description }}</v-card-text>
         </v-container>
         <v-container class="mb-3" v-if="item.meta.instances?.length">
