@@ -34,7 +34,7 @@ import (
 	pb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	spb "github.com/slntopp/nocloud-proto/statuses"
-	el "github.com/slntopp/nocloud/pkg/events_logging"
+	el "github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 )
