@@ -167,6 +167,7 @@ const createIndividual = () => {
     title,
     public: false,
     kind: billingPlan.value.kind,
+    type: billingPlan.value.type,
   };
   plan.resources = resources;
   plan.products = { [title]: product };
