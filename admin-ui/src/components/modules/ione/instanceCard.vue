@@ -86,6 +86,7 @@
       @refresh="refreshInstance"
       :template="template"
       :service="service"
+      :sp="sp"
       :available-tarrifs="availableTarrifs"
       :billing-plan="billingPlan"
     />
