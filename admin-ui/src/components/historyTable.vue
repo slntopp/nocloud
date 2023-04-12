@@ -52,12 +52,10 @@ const onUpdateOptions = async (options) => {
   try {
     logs.value = (
       await api.logging.list({
-        params: {
-          requestor: accountId.value,
-          uuid: uuid.value,
-          page: options.page,
-          limit: options.itemsPerPage,
-        },
+        requestor: accountId.value,
+        uuid: uuid.value,
+        page: options.page,
+        limit: options.itemsPerPage,
       })
     ).events;
   } finally {
