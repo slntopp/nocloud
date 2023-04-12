@@ -285,6 +285,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Up
 		return nil, status.Error(codes.Internal, "Transaction has exec timestamp")
 	}
 	t.Exec = req.GetExec()
+	t.Uuid = req.GetUuid()
 
 	_, err = s.transactions.Update(ctx, t)
 	if err != nil {
