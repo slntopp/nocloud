@@ -35,7 +35,7 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }, options) {
+    fetch({ commit }, options={params:{anonymously:false}}) {
       if (!options?.silent) commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
