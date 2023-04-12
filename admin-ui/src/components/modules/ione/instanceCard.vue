@@ -168,7 +168,7 @@ export default {
         ?.toFixed(2);
     },
     refreshInstance() {
-      this.$store.dispatch("services/fetch", this.template.uuid);
+        this.$emit('refresh')
     },
   },
   computed: {

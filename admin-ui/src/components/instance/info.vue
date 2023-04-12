@@ -44,6 +44,8 @@
         <v-text-field
           readonly
           label="price model"
+          :append-icon="template.type === 'ione' ? 'mdi-pencil' : null"
+          @click:append="priceModelDialog = true"
           style="display: inline-block; width: 150px"
           :value="template.billingPlan.title"
         />
@@ -91,6 +93,7 @@
     <component
       :is="templates[template.type] ?? templates.custom"
       :template="template"
+      @refresh="refreshInstance"
     />
 
     <v-row class="flex-column mb-5" v-if="template.state">
@@ -184,6 +187,16 @@
         </v-btn>
       </template>
     </v-snackbar>
+    <template v-if="editPriceModelComponent">
+      <component
+        :is="editPriceModelComponent"
+        v-model="priceModelDialog"
+        :template="template"
+        :plans="filtredPlans"
+        @refresh="refreshInstance"
+        :service="service"
+      />
+    </template>
   </v-card>
 </template>
 
@@ -195,10 +208,17 @@ import instanceActions from "@/components/instance/controls.vue";
 import JsonTextarea from "@/components/JsonTextarea.vue";
 import instanceIpMenu from "../ui/instanceIpMenu.vue";
 import { mapGetters } from "vuex";
+import EditPriceModel from "@/components/modules/ione/editPriceModel.vue";
 
 export default {
   name: "instance-info",
-  components: { nocloudTable, instanceActions, JsonTextarea, instanceIpMenu },
+  components: {
+    EditPriceModel,
+    nocloudTable,
+    instanceActions,
+    JsonTextarea,
+    instanceIpMenu,
+  },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
   data: () => ({
@@ -215,6 +235,8 @@ export default {
     isLoading: false,
     isDeleteLoading: false,
     isRevertLoading: false,
+
+    priceModelDialog: false,
   }),
   methods: {
     createSnapshot(uuid) {
@@ -324,11 +346,15 @@ export default {
     goTo(name, params) {
       this.$router.push({ name, params });
     },
+    refreshInstance() {
+      this.$store.dispatch("services/fetch", this.template.uuid);
+    },
   },
   computed: {
     ...mapGetters("namespaces", { namespaces: "all" }),
     ...mapGetters("accounts", { accounts: "all" }),
     ...mapGetters("services", { services: "all" }),
+    ...mapGetters("plans", { plans: "all" }),
     ...mapGetters("servicesProviders", { servicesProviders: "all" }),
     namespace() {
       return this.namespaces?.find(
@@ -348,6 +374,24 @@ export default {
     },
     sp() {
       return this.servicesProviders?.find((sp) => sp.uuid == this.template.sp);
+    },
+    filtredPlans() {
+      return this.plans.filter((p) => p.type === this.template.type);
+    },
+    editPriceModelComponent() {
+      const types = require.context(
+        "@/components/modules/",
+        true,
+        /editPriceModel\.vue$/
+      );
+
+      if (types.keys().includes(`./${this.template.type}/editPriceModel.vue`)) {
+        return () =>
+          import(
+            `@/components/modules/${this.template.type}/editPriceModel.vue`
+          );
+      }
+      return null;
     },
   },
   created() {
