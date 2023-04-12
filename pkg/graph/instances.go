@@ -123,6 +123,14 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	return nil
 }
 
+const updateDataQuery = `
+UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
+`
+
+const updatePlanQuery = `
+UPDATE DOCUMENT(@@collection, @key) WITH { billingPlan: @billingPlan } IN @@collection
+`
+
 func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
@@ -158,7 +166,15 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	}
 
 	if inst.GetBillingPlan() != oldInst.GetBillingPlan() {
-		mask.BillingPlan = inst.GetBillingPlan()
+		_, err := ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         oldInst.Uuid,
+			"billingPlan": inst.BillingPlan,
+		})
+		if err != nil {
+			log.Error("Failed to update plan")
+			return err
+		}
 	}
 
 	log.Debug("datas", zap.Any("odl data", oldInst.GetData()), zap.Any("new data", inst.GetData()))
@@ -168,10 +184,16 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	log.Debug("deep equal", zap.Bool("check", check))
 
 	if !check {
-		mask.Data = inst.GetData()
+		_, err := ctrl.db.Query(ctx, updateDataQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         oldInst.Uuid,
+			"data":        inst.Data,
+		})
+		if err != nil {
+			log.Error("Failed to update plan")
+			return err
+		}
 	}
-
-	log.Debug("Resources", zap.Any("Resources", mask.GetResources()))
 
 	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
 	if err != nil {
