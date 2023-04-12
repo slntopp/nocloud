@@ -171,6 +171,16 @@
 
         <v-subheader>SYSTEM</v-subheader>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
+          <v-list-item-icon>
+            <v-icon>mdi-history</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("History") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-list-item v-bind="listItemBind" :to="{ name: 'DNS manager' }">
           <v-list-item-icon>
             <v-icon>mdi-dns</v-icon>
