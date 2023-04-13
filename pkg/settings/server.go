@@ -64,7 +64,7 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (re
 	level := _GetRootClaim(ctx)
 
 	log := s.log.Named("Get")
-	log.Debug("Request received", zap.Strings("keys", req.GetKeys()))
+	log.Debug("Request received", zap.Strings("keys", req.GetKeys()), zap.Int("level", level))
 
 	result := make(map[string]interface{})
 
@@ -200,6 +200,12 @@ func (s *SettingsServiceServer) Sub(req *pb.GetRequest, srv pb.SettingsService_S
 	for k := range res.AsMap() {
 		keys = append(keys, k)
 	}
+
+	if len(keys) == 0 {
+		return status.Error(codes.InvalidArgument, "No keys available")
+	}
+
+	log.Debug("Filtered keys", zap.Strings("keys", keys))
 
 	tmpl := fmt.Sprintf("__keyspace@%d__:%s:", s.rdb.Options().DB, KEYS_PREFIX) + "%s"
 
