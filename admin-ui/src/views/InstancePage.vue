@@ -44,6 +44,10 @@ export default {
         component: () => import("@/components/instance/info.vue"),
       },
       {
+        title: "History",
+        component: () => import("@/components/instance/history.vue"),
+      },
+      {
         title: "Template",
         component: () => import("@/components/instance/template.vue"),
       },
@@ -85,6 +89,7 @@ export default {
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("accounts/fetch");
     this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("plans/fetch");
   },
   watch: {
     instance(newVal) {

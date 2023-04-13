@@ -33,6 +33,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, acc, uuid string) (*pb.Transactions, error) {
+	tr, err := s.transactions.Get(ctx, uuid)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "Transaction doesn't exist")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
+
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
+	}
+
+	return &pb.Transactions{
+		Pool: []*pb.Transaction{
+			tr,
+		},
+	}, nil
+}
+
 func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetTransactionsRequest) (*pb.Transactions, error) {
 	log := s.log.Named("GetTransactions")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -43,6 +62,10 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	query := `FOR t IN @@transactions`
 	vars := map[string]interface{}{
 		"@transactions": schema.TRANSACTIONS_COL,
+	}
+
+	if req.GetUuid() != "" {
+		return s._HandleGetSingleTransaction(ctx, acc, req.GetUuid())
 	}
 
 	if req.Account != nil {
@@ -262,6 +285,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Up
 		return nil, status.Error(codes.Internal, "Transaction has exec timestamp")
 	}
 	t.Exec = req.GetExec()
+	t.Uuid = req.GetUuid()
 
 	_, err = s.transactions.Update(ctx, t)
 	if err != nil {

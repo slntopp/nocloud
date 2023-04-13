@@ -6,15 +6,17 @@ on:
       - master
       - dev-*
       - dev
+      - staging
 
     paths-ignore:
       - ".github/workflows/**"
-      - "!.github/workflows/ci.yml"
       - "examples/**"
       - "proto/**"
       - "tools/**/*.sh"
       - "README.md"
       - "traefik.yml"
+  
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io

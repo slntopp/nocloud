@@ -32,6 +32,7 @@ services:
     networks:
       - proxy
       - grpc-internal
+
   web:
     image: ghcr.io/slntopp/nocloud/apiserver-web:latest
     restart: always
@@ -47,6 +48,7 @@ services:
       APISERVER_HOST: "proxy:8000"
     networks:
       - proxy
+
   iproxy:
     image: ghcr.io/slntopp/nocloud/proxy:latest
     restart: always
@@ -65,6 +67,7 @@ services:
       - arangodb
     links:
       - db
+
   registry:
     image: ghcr.io/slntopp/nocloud/registry:latest
     restart: always
@@ -89,6 +92,7 @@ services:
       - grpc-internal
     links:
       - db
+
   services-registry:
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     restart: always
@@ -97,6 +101,11 @@ services:
       - traefik.http.routers.services.entrypoints=grpc
       - traefik.http.services.services.loadbalancer.server.port=8000
       - traefik.http.services.services.loadbalancer.server.scheme=h2c
+    logging:
+      driver: "gelf"
+      options:
+        gelf-address: "udp://172.0.0.5:12201"
+        tag: "services-registry"
     environment:
       LOG_LEVEL: -1
       PORT: 8000
@@ -110,16 +119,21 @@ services:
     depends_on:
       - db
       - billing
+      - events-logging
       # - your drivers here
     networks:
-      - proxy
-      - arangodb
-      - grpc-internal
-      - mq
+      gelf:
+        ipv4_address: 172.0.0.6
+      proxy:
+      arangodb:
+      grpc-internal:
+      mq:
     links:
       - db
       - billing
+      - events-logging
       # - your drivers here
+
   sp-registry:
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     restart: always
@@ -143,6 +157,7 @@ services:
       - mq
     links:
       - db
+
   edge:
     image: ghcr.io/slntopp/nocloud/edge:latest
     restart: always
@@ -179,6 +194,7 @@ services:
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
       REDIS_HOST: redis_settings:6379
+
   settings:
     image: ghcr.io/slntopp/nocloud/settings:latest
     restart: always
@@ -198,6 +214,7 @@ services:
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
       REDIS_HOST: redis_settings:6379
+
   redis_settings:
     image: redis
     restart: always
@@ -255,6 +272,30 @@ services:
       - arangodb
       - mq
 
+  events-logging:
+    image: ghcr.io/slntopp/nocloud/events-logging:latest
+    restart: always
+    labels:
+      - traefik.http.routers.eventbus.rule=PathPrefix("/nocloud.events_logging.")
+      - traefik.http.routers.eventbus.entrypoints=grpc
+      - traefik.http.services.eventbus.loadbalancer.server.port=8000
+      - traefik.http.services.eventbus.loadbalancer.server.scheme=h2c
+    environment:
+      SIGNING_KEY: "${SIGNING_KEY}"
+      DB_HOST: db:8529
+      DB_CRED: "${DB_USER}:${DB_PASS}"
+      PORT: 8000
+      GELF_HOST: ":12201"
+      SQLITE_HOST: sqlite.db
+    volumes:
+      - sqlite-data:/sqlite.db
+    networks:
+      gelf:
+        ipv4_address: 172.20.0.5
+      proxy:
+      arangodb:
+
+
   db:
     image: arangodb/arangodb:latest
     restart: always
@@ -293,7 +334,14 @@ networks:
     driver: bridge
   mq:
     driver: bridge
+  gelf:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.4/24
+          gateway: 172.20.0.1
 
 volumes:
+  sqlite-data:
   redis-settings-data:
   data:

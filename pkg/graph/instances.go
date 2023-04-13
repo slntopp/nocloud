@@ -17,14 +17,18 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"reflect"
+	"time"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/wI2L/jsondiff"
 	"go.uber.org/zap"
 
 	bpb "github.com/slntopp/nocloud-proto/billing"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/hasher"
 	pb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
@@ -87,6 +91,21 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	}
 	i.Uuid = meta.Key
 
+	var event = &elpb.Event{
+		Entity:    INSTANCES_COL,
+		Uuid:      i.GetUuid(),
+		Scope:     "database",
+		Action:    "create",
+		Rc:        0,
+		Requestor: ctx.Value(nocloud.NoCloudAccount).(string),
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
+	nocloud.Log(log, event)
+
 	// Attempt create edge
 	_, err = ctrl.ig2inst.CreateDocument(ctx, Access{
 		From: group, To: meta.ID,
@@ -103,6 +122,16 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	return nil
 }
 
+/*
+const updateDataQuery = `
+UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
+`
+
+const updatePlanQuery = `
+UPDATE DOCUMENT(@@collection, @key) WITH { billingPlan: @billingPlan } IN @@collection
+`
+*/
+
 func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
@@ -111,51 +140,90 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		log.Info("Inst cannot be updated. Status DEL", zap.String("uuid", oldInst.GetUuid()))
 		return nil
 	}
+	/*
+		inst.Uuid = ""
+		inst.Status = spb.NoCloudStatus_INIT
+		inst.State = nil
 
-	inst.Uuid = ""
-	inst.Status = spb.NoCloudStatus_INIT
-	inst.State = nil
+		err := hasher.SetHash(inst.ProtoReflect())
+		if err != nil {
+			return err
+		}
 
-	err := hasher.SetHash(inst.ProtoReflect())
-	if err != nil {
-		return err
-	}
+		ctrl.log.Debug("instance for hash calculating while Updating", zap.Any("inst", inst))
 
-	ctrl.log.Debug("instance for hash calculating while Updating", zap.Any("inst", inst))
+		mask := &pb.Instance{
+			Config:    inst.GetConfig(),
+			Resources: inst.GetResources(),
+			Hash:      inst.GetHash(),
+		}
 
-	mask := &pb.Instance{
-		Config:    inst.GetConfig(),
-		Resources: inst.GetResources(),
-		Hash:      inst.GetHash(),
-	}
+		if inst.GetTitle() != oldInst.GetTitle() {
+			mask.Title = inst.GetTitle()
+		}
 
-	if inst.GetTitle() != oldInst.GetTitle() {
-		mask.Title = inst.GetTitle()
-	}
+		if inst.GetProduct() != oldInst.GetProduct() {
+			mask.Product = inst.Product
+		}
 
-	if inst.GetProduct() != oldInst.GetProduct() {
-		mask.Product = inst.Product
-	}
+		if inst.GetBillingPlan() != oldInst.GetBillingPlan() {
+			_, err := ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
+				"@collection": schema.INSTANCES_COL,
+				"key":         oldInst.Uuid,
+				"billingPlan": inst.BillingPlan,
+			})
+			if err != nil {
+				log.Error("Failed to update plan")
+				return err
+			}
+		}
 
-	if inst.GetBillingPlan() != oldInst.GetBillingPlan() {
-		mask.BillingPlan = inst.GetBillingPlan()
-	}
+		log.Debug("datas", zap.Any("odl data", oldInst.GetData()), zap.Any("new data", inst.GetData()))
 
-	log.Debug("datas", zap.Any("odl data", oldInst.GetData()), zap.Any("new data", inst.GetData()))
+		check := reflect.DeepEqual(inst.GetData(), oldInst.GetData())
 
-	check := reflect.DeepEqual(inst.GetData(), oldInst.GetData())
+		log.Debug("deep equal", zap.Bool("check", check))
 
-	log.Debug("deep equal", zap.Bool("check", check))
-
-	if !check {
-		mask.Data = inst.GetData()
-	}
-
-	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
+		if !check {
+			_, err := ctrl.db.Query(ctx, updateDataQuery, map[string]interface{}{
+				"@collection": schema.INSTANCES_COL,
+				"key":         oldInst.Uuid,
+				"data":        inst.Data,
+			})
+			if err != nil {
+				log.Error("Failed to update plan")
+				return err
+			}
+		}
+	*/
+	_, err := ctrl.col.ReplaceDocument(ctx, oldInst.Uuid, inst)
 	if err != nil {
 		log.Error("Failed to update Instance", zap.Error(err))
 		return err
 	}
+
+	instMarshal, _ := json.Marshal(inst)
+	oldInstMarshal, _ := json.Marshal(oldInst)
+	diff, err := jsondiff.CompareJSON(oldInstMarshal, instMarshal)
+	if err != nil {
+		log.Error("Failed to calculate diff", zap.Error(err))
+		return err
+	}
+
+	var event = &elpb.Event{
+		Entity:    INSTANCES_COL,
+		Uuid:      inst.GetUuid(),
+		Scope:     "database",
+		Action:    "update",
+		Rc:        0,
+		Requestor: ctx.Value(nocloud.NoCloudAccount).(string),
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: diff.String(),
+		},
+	}
+
+	nocloud.Log(log, event)
 
 	return nil
 }

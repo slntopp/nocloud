@@ -113,10 +113,11 @@ const props = defineProps([
   "value",
   "billingPlan",
   "availableTarrifs",
+  "sp",
 ]);
 const emit = defineEmits(["refresh", "input"]);
 
-const { template, service, billingPlan, value, availableTarrifs } =
+const { template, service, billingPlan, value, availableTarrifs, sp } =
   toRefs(props);
 const selectedTarrif = ref({});
 const individualPlan = ref({ product: {}, resources: {} });
@@ -158,18 +159,22 @@ const changeTarrif = () => {
 const createIndividual = () => {
   const product = individualPlan.value.product;
   const resources = individualPlan.value.resources;
-  const title =
-    template.value.title +
-    " (Individual) " +
-    new Date().toISOString().slice(0, 10);
+
+  const planTitle = `IND_${sp.value.title}_${
+    billingPlan.value.title
+  }_${new Date().toISOString().slice(0, 10)}`;
+  const productTitle = `IND_${product.resources.cpu}_${product.resources.ram}`;
+
   product.period = getTimestamp(product.period);
   const plan = {
-    title,
+    title: planTitle,
     public: false,
     kind: billingPlan.value.kind,
+    type: billingPlan.value.type,
   };
   plan.resources = resources;
-  plan.products = { [title]: product };
+  product.title = productTitle;
+  plan.products = { [productTitle]: product };
   createIndividualLoading.value = true;
 
   api.plans.create(plan).then((data) => {
@@ -183,7 +188,7 @@ const createIndividual = () => {
       ].instances.findIndex((i) => i.uuid === template.value.uuid);
 
       tempService.instancesGroups[igIndex].instances[instanceIndex].product =
-        title;
+        productTitle;
       tempService.instancesGroups[igIndex].instances[
         instanceIndex
       ].billingPlan = data;

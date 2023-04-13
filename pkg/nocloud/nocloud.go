@@ -16,6 +16,7 @@ limitations under the License.
 package nocloud
 
 import (
+	pb "github.com/slntopp/nocloud-proto/events_logging"
 	"os"
 
 	"github.com/spf13/viper"
@@ -27,6 +28,7 @@ const NOCLOUD_ACCOUNT_CLAIM = "account"
 const NOCLOUD_ROOT_CLAIM = "root"
 const NOCLOUD_SP_CLAIM = "sp"
 const NOCLOUD_INSTANCE_CLAIM = "instance"
+const NOCLOUD_LOG_LEVEL = zapcore.DebugLevel - 1
 
 type ContextKey string
 
@@ -37,8 +39,21 @@ const NoCloudInstance = ContextKey("instance")
 const NoCloudToken = ContextKey("token")
 const TestFromCreate = ContextKey("test_from_create")
 
+func Log(log *zap.Logger, event *pb.Event) {
+	log.Log(NOCLOUD_LOG_LEVEL, "",
+		zap.String("entity", event.Entity),
+		zap.String("uuid", event.Uuid),
+		zap.String("scope", event.Scope),
+		zap.String("action", event.Action),
+		zap.Int32("rc", event.Rc),
+		zap.String("requestor", event.Requestor),
+		zap.Int64("timestamp", event.Ts),
+		zap.String("diff", event.Snapshot.Diff),
+	)
+}
+
 func NewLogger() (log *zap.Logger) {
-	viper.SetDefault("LOG_LEVEL", 0)
+	viper.SetDefault("LOG_LEVEL", NOCLOUD_LOG_LEVEL)
 	level := viper.GetInt("LOG_LEVEL")
 
 	atom := zap.NewAtomicLevel()

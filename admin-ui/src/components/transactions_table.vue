@@ -105,9 +105,9 @@
           </template>
         </nocloud-table>
 
-        <v-container v-if="item.meta.message">
-          <v-card-title>Message:</v-card-title>
-          <v-card-text>{{ item.meta.message }}</v-card-text>
+        <v-container v-if="item.meta.description">
+          <v-card-title>Items descriptions:</v-card-title>
+          <v-card-text>{{ item.meta.description }}</v-card-text>
         </v-container>
         <v-container class="mb-3" v-if="item.meta.instances?.length">
           <v-card-title>Instances:</v-card-title>
@@ -207,8 +207,7 @@ export default {
       if (this.records[uuid]) return;
 
       this.isRecordsLoading = true;
-      api
-        .get(`/billing/transactions/${uuid}`)
+      api.transactions.records(uuid)
         .then(({ pool }) => {
           this.records[uuid] = pool;
         })

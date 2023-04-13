@@ -26,7 +26,7 @@
         >
           {{ item.title }}
         </router-link>
-        <v-icon @click="goToInstance(item.uuid)">mdi-login</v-icon>
+        <v-icon @click="goToInstance(item)">mdi-login</v-icon>
       </div>
     </template>
 
@@ -359,11 +359,21 @@ export default {
     getValue(key, item) {
       return this.headersGetters[key](item);
     },
-    goToInstance(uuid) {
-      api.settings.get(["app"]).then((res) => {
-        const url = JSON.parse(res["app"]).url;
-        window.open(`${url}/#/cloud/${uuid}`, "_blanc");
-      });
+    goToInstance(item) {
+      const { uuid } = this.getAccount(item);
+
+      this.$store
+        .dispatch("auth/loginToApp", { uuid, type: "whmcs" })
+        .then(({ token }) => {
+          api.settings.get(["app"]).then((res) => {
+            const url = `${JSON.parse(res["app"]).url}/#/cloud/${item.uuid}`;
+            const win = window.open(url, "_blank");
+
+            setTimeout(() => {
+              win.postMessage(token, url);
+            }, 100);
+          });
+        });
     },
   },
   computed: {

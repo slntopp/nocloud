@@ -31,9 +31,9 @@
       </v-col>
       <v-col cols="3">
         <v-select
-          v-model="settings.services"
-          :items="existedServices"
-          label="Services"
+          v-model="settings.languages"
+          :items="existedLanguages"
+          label="Languages"
           item-color="dark"
           multiple
         ></v-select>
@@ -92,18 +92,6 @@
         </v-menu>
       </v-col>
     </v-row>
-    <v-card-title class="px-0 mb-3"> Currency:</v-card-title>
-    <v-row>
-      <v-col cols="2">
-        <v-text-field v-model="settings.currency.prefix" label="Prefix" />
-      </v-col>
-      <v-col cols="2">
-        <v-text-field v-model="settings.currency.suffix" label="Suffix" />
-      </v-col>
-      <v-col cols="2">
-        <v-text-field v-model="settings.currency.code" label="Code" />
-      </v-col>
-    </v-row>
     <v-row>
       <v-expansion-panels>
         <v-expansion-panel>
@@ -130,7 +118,7 @@ export default {
   mixins: [snackbar],
   data() {
     return {
-      existedServices: ["VM", "Domains", "Virtual", "SSL"],
+      existedLanguages: ["en", "pl", "ru", "fr", "vi"],
       positionTypes: ["top", "right", "bottom", "left", "relative"],
       settings: {
         whmcs: { site_url: "" },
@@ -149,8 +137,7 @@ export default {
             bright_bg: "#fff",
           },
         },
-        currency: { prefix: "", suffix: "USD", code: "USD" },
-        services: [],
+        languages: ["en"],
         dangerModeNoSSLCheck: false,
       },
     };
