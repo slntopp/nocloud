@@ -9,8 +9,19 @@
       :headers="headers"
       :loading="isPricesLoading"
     >
+      <template v-slot:[`item.isSell`]="{ item }">
+        <v-switch @change="changeSell(item, $event)" :input-value="item.isSell" />
+      </template>
+      <template v-slot:[`item.price`]="{ item }">
+        <v-text-field type="number" v-model.number="item.price" />
+      </template>
+      <template v-slot:[`item.period`]="{ item }">
+        <date-field :period="item.period" @changeDate="item.period = $event" />
+      </template>
     </nocloud-table>
-
+    <v-card-actions class="d-flex justify-end">
+      <v-btn :loading="isSaveLoading || isPricesLoading" @click="savePrices">save</v-btn>
+    </v-card-actions>
     <v-snackbar
       v-model="snackbar.visibility"
       :timeout="snackbar.timeout"
@@ -39,15 +50,19 @@
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
+import DateField from "@/components/date.vue";
+import { getTimestamp } from "@/functions";
 
 export default {
   name: "plan-prices",
-  components: { nocloudTable },
+  components: { DateField, nocloudTable },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
   data: () => ({
     prices: [],
+    products: [],
     isPricesLoading: false,
+    isSaveLoading: false,
     headers: [
       { text: "name", value: "name" },
       { text: "BWLIMIT", value: "BWLIMIT" },
@@ -77,21 +92,82 @@ export default {
       { text: "lve_nproc", value: "lve_nproc" },
       { text: "lve_cpu", value: "lve_cpu" },
       { text: "lve_pmem", value: "lve_pmem" },
-      { text: "_PACKAGE_EXTENSIONS", value: "_PACKAGE_EXTENSIONS" },
+      { text: "Period", value: "period" },
+      { text: "Price", value: "price" },
+      { text: "Sell", value: "isSell" },
     ],
   }),
-  methods: {},
-  async mounted() {
-    this.isPricesLoading = true;
-    await this.$store.dispatch("servicesProviders/fetch");
-    const sp = this.sps.find((sp) => sp.type === "cpanel");
+  methods: {
+    async fetchPrices() {
+      this.isPricesLoading = true;
+      await this.$store.dispatch("servicesProviders/fetch");
+      const sp = this.sps.find((sp) => sp.type === "cpanel");
 
-    const res = await api.servicesProviders.action({
-      action: "plans",
-      uuid: sp.uuid,
-    });
-    this.prices = res.meta.pkg;
-    this.isPricesLoading = false;
+      const res = await api.servicesProviders.action({
+        action: "plans",
+        uuid: sp.uuid,
+      });
+      this.prices = res.meta.pkg.map((el) => {
+        const price = { ...el };
+        const product = this.template.products[el.name];
+        price.price = product?.price || 0;
+        price.period = product?.period || 0;
+        price.isSell = !!product;
+        const date = new Date(price.period * 1000);
+        const time = date.toUTCString().split(" ");
+
+        price.period = {
+          day: `${date.getUTCDate() - 1}`,
+          month: `${date.getUTCMonth()}`,
+          year: `${date.getUTCFullYear() - 1970}`,
+          quarter: "0",
+          week: "0",
+          time: time.at(-2),
+        };
+
+        return price;
+      });
+      this.isPricesLoading = false;
+    },
+    changeSell(item, val) {
+      if (val) {
+        if (!getTimestamp(item.period) || !item.price) {
+          this.$set(item, "isSell", false);
+          return this.showSnackbarError({
+            message: "Price and period required",
+          });
+        }
+
+        return (this.products[item.name] = {
+          title: item.name,
+          kind: "PREPAID",
+          price: item.price,
+          period: getTimestamp(item.period),
+          resources: {
+            model: item.name,
+          },
+        });
+      }
+
+      this.products[item.name] = undefined;
+    },
+    savePrices() {
+      this.isSaveLoading = true;
+      try {
+        api.plans.update(this.template.uuid, {
+          ...this.template,
+          products: this.products,
+        });
+      } catch (e) {
+        this.showSnackbarError({ message: "Error on save plan" });
+      } finally {
+        this.isSaveLoading = false;
+      }
+    },
+  },
+  mounted() {
+    this.fetchPrices();
+    this.products = this.template.products;
   },
   computed: {
     sps() {
