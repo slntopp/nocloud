@@ -6,6 +6,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/settings"
 	"go.uber.org/zap"
 )
@@ -23,7 +24,7 @@ func Setup(logger *zap.Logger, _ctx context.Context, c *pb.SettingsServiceClient
 type Setting[T any] struct {
 	Value       T
 	Description string
-	Public      bool
+	Level       access.Level
 }
 
 func Fetch[T any](key string, _conf *T, _default *Setting[T]) error {
@@ -62,7 +63,7 @@ set_default:
 			Key:         key,
 			Value:       string(payload),
 			Description: &_default.Description,
-			Public:      &_default.Public,
+			Level:       _default.Level,
 		})
 		if err != nil {
 			log.Error("Error Putting Monitoring Configuration", zap.Error(err))
