@@ -60,6 +60,10 @@ const plan = ref({});
 const product = ref({});
 
 const changePM = () => {
+  if (products.value.length === 0) {
+    product.value = null;
+  }
+
   const tempService = JSON.parse(JSON.stringify(service.value));
 
   const igIndex = tempService.instancesGroups.findIndex((ig) =>
@@ -73,11 +77,14 @@ const changePM = () => {
     plan.value;
   tempService.instancesGroups[igIndex].instances[instanceIndex].product =
     product.value;
-  Object.keys(plan.value.products[product.value].resources).forEach((key) => {
-    tempService.instancesGroups[igIndex].instances[instanceIndex].resources[
-      key
-    ] = plan.value.products[product.value].resources[key];
-  });
+
+  if (product.value) {
+    Object.keys(plan.value.products[product.value].resources).forEach((key) => {
+      tempService.instancesGroups[igIndex].instances[instanceIndex].resources[
+        key
+      ] = plan.value.products[product.value].resources[key];
+    });
+  }
 
   isChangePMLoading.value = true;
   api.services
@@ -93,15 +100,12 @@ const changePM = () => {
 
 onMounted(() => {
   plan.value = template.value.billingPlan;
-  product.value = {
-    name: template.value.product,
-    ...template.value.billingPlan.products[template.value.product],
-  };
+  product.value = template.value.product;
 });
 
 const products = computed(() => {
   const products = [];
-  Object.keys(plan.value.products || {}).forEach((key) => {
+  Object.keys(plan.value?.products || {}).forEach((key) => {
     products.push(key);
   });
 
