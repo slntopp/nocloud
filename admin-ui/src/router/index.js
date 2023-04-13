@@ -274,6 +274,14 @@ const routes = [
       requireLogin: true,
     },
   },
+  {
+    path: "/history",
+    name: "History",
+    component: () => import("../views/History.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
 ];
 
 const router = new VueRouter({
