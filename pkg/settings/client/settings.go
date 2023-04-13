@@ -96,6 +96,7 @@ init_stream:
 		msg, err := stream.Recv()
 		if err != nil {
 			log.Warn("Error receiving message", zap.Error(err))
+			time.Sleep(time.Second)
 			goto init_stream
 		}
 
