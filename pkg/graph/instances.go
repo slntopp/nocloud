@@ -122,6 +122,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	return nil
 }
 
+/*
 const updateDataQuery = `
 UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
 `
@@ -129,6 +130,7 @@ UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
 const updatePlanQuery = `
 UPDATE DOCUMENT(@@collection, @key) WITH { billingPlan: @billingPlan } IN @@collection
 `
+*/
 
 func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
