@@ -239,6 +239,7 @@ export default {
     },
   },
   created() {
+      this.$store.dispatch("servicesProviders/fetch");
     this.$store.dispatch("services/fetch").then(() => {
       const instanceId = this.$route.params.instanceId;
       if (instanceId) {
@@ -256,10 +257,6 @@ export default {
           });
         });
         return;
-      }
-
-      if (this.$store.getters["servicesProviders/all"].length < 2) {
-        this.$store.dispatch("servicesProviders/fetch");
       }
 
       let type = this.$route.params.type;

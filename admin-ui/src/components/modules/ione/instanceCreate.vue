@@ -99,7 +99,7 @@
             :value="instance.billing_plan"
             :items="plans.list"
             :rules="planRules"
-            @change="(newVal) => setValue('billing_plan', newVal)"
+            @change="changeBilling"
           />
         </v-col>
         <v-col cols="6">
@@ -136,9 +136,13 @@ const getDefaultInstance = () => ({
 export default {
   name: "instance-ione-create",
   props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
+  data: () => ({ bilingPlan: null, products: [] }),
   mounted() {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
+    }else{
+        console.log(this.instance.billing_plan)
+        this.changeBilling(this.instance.billing_plan)
     }
   },
   methods: {
@@ -153,6 +157,13 @@ export default {
       }
 
       this.setValue("config.template_id", +osId);
+    },
+    changeBilling(val) {
+      this.bilingPlan = this.plans.list.find((p) => p.uuid === val);
+      if(this.bilingPlan){
+          this.products = Object.keys(this.bilingPlan.products);
+      }
+      this.setValue("billing_plan", val);
     },
     setProduct(newVal) {
       const product = this.bilingPlan?.products[newVal].resources;
@@ -184,16 +195,12 @@ export default {
 
       return Object.values(this.getOsTemplates).map((os) => os.name);
     },
-    bilingPlan() {
-      return this.plans.list.find((p) => p.uuid === this.instance.billing_plan);
-    },
-    products() {
-      if (!this.bilingPlan) {
-        return [];
-      }
-      return Object.keys(this.bilingPlan.products);
-    },
   },
+    watch:{
+      "plans.list"(){
+          this.changeBilling(this.instance.billing_plan)
+      }
+    }
 };
 </script>
 

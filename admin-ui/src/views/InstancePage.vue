@@ -85,6 +85,7 @@ export default {
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("accounts/fetch");
     this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("plans/fetch");
   },
   watch: {
     instance(newVal) {
