@@ -69,7 +69,7 @@ export default {
     fetch({ commit, state }, data) {
       commit("setLoading", true);
       return api.transactions
-        .get({
+        .list({
           limit: state.itemPerPage,
           page: state.page,
           field: state.filter.field || "proc",
@@ -97,7 +97,7 @@ export default {
 
       return new Promise((resolve, reject) => {
         api.transactions
-          .get(params)
+          .list(params)
           .then((response) => {
             commit("setTransaction", response.pool);
             resolve(response);
