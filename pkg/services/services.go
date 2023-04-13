@@ -19,8 +19,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
+	"github.com/slntopp/nocloud-proto/access"
 	accesspb "github.com/slntopp/nocloud-proto/access"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
@@ -38,7 +41,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"reflect"
 )
 
 type ServicesServer struct {
@@ -109,7 +111,7 @@ var (
 			Required: true,
 		},
 		Description: "Instances Billing Plans Settings",
-		Public:      false,
+		Level:       access.Level_ADMIN,
 	}
 )
 

@@ -19,6 +19,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
@@ -48,7 +49,7 @@ var (
 			Frequency: 60,
 		},
 		Description: "ServicesProviders Monitoring Routine Configuration",
-		Public:      false,
+		Level:       access.Level_ADMIN,
 	}
 )
 
