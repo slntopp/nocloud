@@ -17,7 +17,13 @@ jobs:
             from_branch: dev
             target_branch: staging
             github_token: ${{ secrets.GITHUB_TOKEN }}
-    
+        
+        - name: Invoke Checks Workflow
+          uses: benc-uk/workflow-dispatch@v1
+          with:
+            workflow: checks.yml
+            ref: staging
+
         - name: Invoke CI Workflow
           uses: benc-uk/workflow-dispatch@v1
           with:
