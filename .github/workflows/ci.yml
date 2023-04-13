@@ -6,7 +6,7 @@ on:
       - master
       - dev-*
       - dev
-      - stagging
+      - staging
 
     paths-ignore:
       - ".github/workflows/**"
