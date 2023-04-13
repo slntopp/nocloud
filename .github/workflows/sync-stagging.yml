@@ -1,4 +1,4 @@
-name: Sync Dev -> Stagging
+name: Sync Dev -> Staging
 on:
   schedule:
     - cron: "0 8 * * *" # every day at midnight
