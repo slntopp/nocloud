@@ -211,7 +211,7 @@ export default {
       service: "",
       total: "",
       exec: 0,
-      meta: { instances: [], description: "" },
+      meta: { instances: [], description: "", type: "" },
     },
     date: {
       title: "Date",
@@ -229,8 +229,8 @@ export default {
     isLoading: false,
 
     types: [
-      { value: "invoice", title: "User confirm" },
-      { value: "transaction", title: "Automatic" },
+      { value: "invoice", title: "Invoice" },
+      { value: "transaction", title: "Transaction" },
     ],
     type: "transaction",
   }),
@@ -302,7 +302,9 @@ export default {
     },
   },
   created() {
-      this.initDate()
+    this.initDate();
+    this.transaction.meta.type = this.type;
+
     if (this.accounts.length < 2) {
       this.$store.dispatch("accounts/fetch");
     }
@@ -382,10 +384,11 @@ export default {
       this.transaction.meta.instances = [];
     },
     type() {
+      this.transaction.meta.type = this.type;
       if (this.isInvoice) {
-          this.resetDate()
+        this.resetDate();
       } else if (this.isTransaction) {
-          this.initDate()
+        this.initDate();
       }
     },
   },
