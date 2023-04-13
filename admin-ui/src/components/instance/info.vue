@@ -348,6 +348,7 @@ export default {
     },
     refreshInstance() {
       this.$store.dispatch("services/fetch", this.template.uuid);
+      this.$store.dispatch("servicesProviders/fetch");
     },
   },
   computed: {

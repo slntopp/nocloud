@@ -173,6 +173,7 @@ const createIndividual = () => {
     type: billingPlan.value.type,
   };
   plan.resources = resources;
+  product.title = productTitle;
   plan.products = { [productTitle]: product };
   createIndividualLoading.value = true;
 
