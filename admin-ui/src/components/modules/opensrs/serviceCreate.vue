@@ -175,100 +175,31 @@
           />
         </v-col>
       </v-row>
-      <v-row class="align-center">
-        <v-col cols="4">
-          <v-text-field label="domain" v-model="searchDomainString" />
-        </v-col>
-        <v-col cols="2">
-          <v-btn
-            @click="searchDomains"
-            :disabled="!searchDomainString"
-            small
-            dark
-            :loading="isDomainsLoading"
-          >
-            <v-icon dark> mdi-magnify </v-icon>
-            Search
-          </v-btn>
-        </v-col>
-        <v-col cols="2" class="d-flex justify-center align-center">
-          <p v-if="!isPriceLoading">
-            Price: {{ domainPrice || "select domain and period" }}
-          </p>
-          <v-progress-circular v-else indeterminate color="primary" />
-        </v-col>
-        <v-col cols="2">
-          <v-select
-            @change="(newVal) => setValue(index + '.resources.period', +newVal)"
-            v-model="selectedPeriodIndex"
-            :items="domainPeriods"
-          >
-            <template v-slot:selection="{ item }">
-              {{ item + " years" }}
-            </template>
-            <template v-slot:item="{ item }">
-              {{ item + " years" }}
-            </template>
-          </v-select>
-        </v-col>
-      </v-row>
-      <v-row class="flex-column pa-md-5">
-        <nocloud-table
-          table-name="openSrsServiceCreate"
-          @input="(item) => changeDomain(item, index)"
-          :footer-error="tableError"
-          item-key="domain"
-          single-select
-          no-hide-uuid
-          v-model="selectedDomain"
-          :items="domains"
-          :headers="headers"
-          :loading="isDomainsLoading"
-        />
-      </v-row>
+      <domains-table
+        :sp-uuid="spUuid"
+        @input:period="setValue(index + '.resources.period', $event)"
+        @input:domain="setValue(index + '.resources.domain', $event)"
+      />
     </v-card>
     <v-row>
       <v-col class="d-flex justify-center">
-        <v-btn
-          :disabled="isOpenSRS"
-          id="button"
-          class="mx-2"
-          small
-          color="background"
-          @click="addInstance"
-        >
-          <v-icon dark> mdi-plus-circle-outline </v-icon>
-          add instance
-        </v-btn>
+        <add-instance-btn @click="addInstance" :disabled="isOpenSRS" />
       </v-col>
     </v-row>
   </div>
 </template>
 
 <script>
-import api from "@/api";
-import nocloudTable from "@/components/table.vue";
 import snackbar from "@/mixins/snackbar.js";
-import { levenshtein } from "@/functions";
+import domainsTable from "@/components/domains_table.vue";
+import AddInstanceBtn from "@/components/ui/addInstanceBtn.vue";
 
 export default {
   name: "ione-create-service-module",
   props: ["instances-group", "plans", "planRules"],
-  components: { nocloudTable },
+  components: { AddInstanceBtn, domainsTable },
   mixins: [snackbar],
   data: () => ({
-    headers: [
-      { text: "domain", value: "domain" },
-      { text: "status", value: "status" },
-    ],
-    tableError: "",
-    prices: {},
-    selectedPeriodIndex: 0,
-    domains: [],
-    searchDomainString: "",
-    selectedDomain: [],
-    isDomainsLoading: false,
-    isPriceLoading: false,
     defaultItem: {
       title: "instance",
       resources: {
@@ -321,71 +252,6 @@ export default {
     change(data) {
       this.$emit("update:instances-group", JSON.stringify(data));
     },
-    searchDomains() {
-      this.isDomainsLoading = true;
-      api.servicesProviders
-        .action({
-          uuid: this.spUuid,
-          action: "get_domains",
-          params: {
-            searchString: this.searchDomainString,
-            gTLD: true,
-            p_ccTLD: false,
-            m_ccTLD: false,
-          },
-        })
-        .then((data) => {
-          this.domains = this.sortDomainsLSM(
-            data.meta.domains.filter((d) => d.status !== "undetermined"),
-            this.searchDomainString.toLowerCase()
-          );
-        })
-        .finally(() => {
-          this.isDomainsLoading = false;
-        });
-    },
-    changeDomain(newVal, index) {
-      const currentDomain = newVal[0];
-
-      if (!currentDomain) {
-        this.tableError = "";
-        return this.resetDomain(index);
-      } else if (currentDomain.status === "taken") {
-        this.tableError = "This domain already taken!";
-        return this.resetDomain(index);
-      }
-
-      this.isPriceLoading = true;
-
-      this.setValue(index + ".resources.domain", currentDomain.domain);
-      this.tableError = "";
-
-      api.servicesProviders
-        .action({
-          uuid: this.spUuid,
-          action: "get_domain_price",
-          params: {
-            domain: currentDomain.domain,
-          },
-        })
-        .then((data) => {
-          this.prices = data.meta.prices;
-        })
-        .finally(() => {
-          this.isPriceLoading = false;
-        });
-    },
-    resetDomain(index) {
-      this.setValue(index + ".resources.domain", "");
-      this.prices = [];
-    },
-    sortDomainsLSM(domains, searchkey) {
-      return domains.sort(function (a, b) {
-        return (
-          levenshtein(a.domain, searchkey) - levenshtein(b.domain, searchkey)
-        );
-      });
-    },
   },
   computed: {
     instances() {
@@ -400,19 +266,6 @@ export default {
     },
     spUuid() {
       return JSON.parse(this.instancesGroup).sp;
-    },
-    domainPaginationLength() {
-      return Math.ceil(this.domains.length / 10) - 1;
-    },
-    domainPeriods() {
-      if (Object.keys(this.prices).length === 0) {
-        return null;
-      }
-
-      return Object.keys(this.prices);
-    },
-    domainPrice() {
-      return this.prices[this.selectedPeriodIndex];
     },
   },
   created() {

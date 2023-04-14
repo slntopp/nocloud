@@ -53,6 +53,9 @@
       :loading="isLoading"
       :expanded.sync="expanded"
       :footer-error="fetchError"
+      :filters-values="selectedFilters"
+      :filters-items="filterItems"
+      @input:filter="selectedFilters[$event.key] = $event.value"
     >
       <template v-slot:[`item.hash`]="{ item, index }">
         <v-btn icon @click="addToClipboard(item.hash, index)">
@@ -149,17 +152,35 @@ export default {
   mixins: [snackbar, search],
   data: () => ({
     headers: [
-      { text: "title", value: "title" },
-      { text: "status", value: "status" },
+      { text: "Title", value: "title" },
+      { text: "Status", value: "status", customFilter: true },
       { text: "UUID", value: "uuid", align: "start" },
-      { text: "hash", value: "hash" },
-      { text: "Access", value: "access" },
+      { text: "Hash", value: "hash" },
+      { text: "Access", value: "access", customFilter: true },
     ],
     copyed: -1,
     opened: {},
     expanded: [],
     selected: [],
     fetchError: "",
+
+    accessColorsMap: {
+      ROOT: "info",
+      ADMIN: "success",
+      MGMT: "warning",
+      READ: "gray",
+      NONE: "error",
+    },
+    stateColorMap: {
+      INIT: "orange darken-2",
+      SUS: "orange darken-2",
+      UP: "green darken-2",
+      DEL: "gray darken-2",
+      RUNNING: "green darken-2",
+      UNKNOWN: "red darken-2",
+      STOPPED: "orange darken-2",
+    },
+    selectedFilters: { status: [], access: [] },
   }),
   computed: {
     services() {
@@ -173,19 +194,27 @@ export default {
       return items;
     },
     filteredServices() {
+      let services = this.filterByStatus(
+        this.services,
+        this.selectedFilters.status
+      );
+      services = this.filterByAccessLevels(
+        services,
+        this.selectedFilters.access
+      );
       if (this.searchParam) {
-        const byIps = this.filtredByPublicIps();
-        const byDomains = this.filtredByDomains();
+        const byIps = this.filterByPublicIps(services);
+        const byDomains = this.filterByDomains(services);
 
         const byTitleAndUuid = filterArrayByTitleAndUuid(
-          this.services,
+          services,
           this.searchParam,
           { unique: false }
         );
 
         return [...new Set([...byIps, ...byTitleAndUuid, ...byDomains])];
       }
-      return this.services;
+      return services;
     },
     isFiltered() {
       return this.$route.query.filter == "uuid" && this.$route.query["items[]"];
@@ -201,6 +230,12 @@ export default {
     },
     searchParam() {
       return this.$store.getters["appSearch/param"];
+    },
+    filterItems() {
+      return {
+        status: Object.keys(this.stateColorMap),
+        access: Object.keys(this.accessColorsMap),
+      };
     },
   },
   created() {
@@ -254,8 +289,8 @@ export default {
       }
       return result;
     },
-    filtredByPublicIps() {
-      return this.services.filter((service) => {
+    filterByPublicIps(services) {
+      return services.filter((service) => {
         const ips = this.getPublicIpsFromService(service);
         const isItIpExists = ips.find((ip) => ip.includes(this.searchParam));
         const isTitleIncludes = service.title
@@ -264,8 +299,8 @@ export default {
         return isTitleIncludes || isItIpExists;
       });
     },
-    filtredByDomains() {
-      return this.services.filter((service) => {
+    filterByDomains(services) {
+      return services.filter((service) => {
         const domains = [];
 
         service.instancesGroups.forEach((serviceInstance) => {
@@ -281,6 +316,24 @@ export default {
         return domains.find((d) =>
           d.toLowerCase().startsWith(this.searchParam.toLowerCase())
         );
+      });
+    },
+    filterByStatus(services, status) {
+      if (!status || !status.length) {
+        return services;
+      }
+
+      return services.filter((service) => {
+        return status.includes(service.status);
+      });
+    },
+    filterByAccessLevels(services, access) {
+      if (!access || !access.length) {
+        return services;
+      }
+
+      return services.filter((service) => {
+        return access.includes(service.access.level);
       });
     },
     hashTrim(hash) {
@@ -302,29 +355,10 @@ export default {
       }
     },
     chipColor(state) {
-      const dict = {
-        INIT: "orange darken-2",
-        UP: "green darken-2",
-        DEL: "gray darken-2",
-        RUNNING: "green darken-2",
-        UNKNOWN: "red darken-2",
-        STOPPED: "orange darken-2",
-      };
-      return dict[state] ?? "blue-grey darken-2";
+      return this.stateColorMap[state] ?? "blue-grey darken-2";
     },
     accessColor(level) {
-      switch (level) {
-        case "ROOT":
-          return "info";
-        case "ADMIN":
-          return "success";
-        case "MGMT":
-          return "warning";
-        case "READ":
-          return "gray";
-        case "NONE":
-          return "error";
-      }
+      return this.accessColorsMap[level];
     },
 
     instanceCountColor(group) {

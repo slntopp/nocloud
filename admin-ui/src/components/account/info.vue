@@ -1,13 +1,26 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <v-text-field v-model="uuid" readonly label="UUID" style="width: 330px" />
-    <v-text-field v-model="title" label="name" style="width: 330px" />
-    <v-btn
-      v-if="['ROOT', 'ADMIN'].includes(account.access.level)"
-      @click="loginHandler"
-    >
-      Login
-    </v-btn>
+    <v-row>
+      <v-col cols="6">
+        <v-text-field
+          v-model="uuid"
+          readonly
+          label="UUID"
+          style="width: 330px"
+        />
+      </v-col>
+      <v-col cols="6">
+        <v-text-field v-model="title" label="name" style="width: 330px" />
+      </v-col>
+    </v-row>
+    <v-card-title class="px-0">Instances:</v-card-title>
+
+    <instances-table
+      :value="null"
+      :items="accountInstances"
+      :show-select="false"
+    />
+
     <v-card-title class="px-0">SSH keys:</v-card-title>
 
     <div class="pt-4">
@@ -97,10 +110,11 @@ import config from "@/config.js";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
+import InstancesTable from "@/components/instances_table.vue";
 
 export default {
   name: "account-info",
-  components: { nocloudTable },
+  components: { InstancesTable, nocloudTable },
   mixins: [snackbar],
   props: ["account"],
   data: () => ({
@@ -161,25 +175,42 @@ export default {
           this.isEditLoading = false;
         });
     },
-    loginHandler() {
-      this.$store
-        .dispatch("auth/loginToApp", { uuid: this.account.uuid, type: "whmcs" })
-        .then(({ token }) => {
-          api.settings.get(["app"]).then((res) => {
-            const url = JSON.parse(res["app"]).url;
-            const win = window.open(url);
-
-            setTimeout(() => {
-              win.postMessage(token, url);
-            }, 100);
-          });
-        });
-    },
   },
   mounted() {
     this.title = this.account.title;
     this.uuid = this.account.uuid;
     this.keys = this.account.data?.ssh_keys || [];
+    if (this.namespaces.length < 2) {
+      this.$store.dispatch("namespaces/fetch");
+    }
+    if (this.services.length < 2) {
+      this.$store.dispatch("services/fetch");
+    }
+    if (this.servicesProviders.length < 2) {
+      this.$store.dispatch("servicesProviders/fetch");
+    }
+  },
+  computed: {
+    namespaces() {
+      return this.$store.getters["namespaces/all"];
+    },
+    services() {
+      return this.$store.getters["services/all"];
+    },
+    servicesProviders() {
+      return this.$store.getters["servicesProviders/all"];
+    },
+    instances() {
+      return this.$store.getters["services/getInstances"];
+    },
+    accountInstances() {
+      const accountNamespace = this.namespaces.find(
+        (n) => n.access.namespace === this.account.uuid
+      );
+      return this.instances.filter(
+        (i) => i.access.namespace === accountNamespace.uuid
+      );
+    },
   },
 };
 </script>

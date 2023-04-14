@@ -11,6 +11,9 @@
     :expanded.sync="expanded"
     :footer-error="fetchError"
     @input="selectTransaction"
+    :server-items-length="count"
+    :server-side-page="page"
+    @update:options="$emit('update:options', $event)"
   >
     <template v-slot:[`item.account`]="{ item }">
       {{ account(item.account) }}
@@ -60,20 +63,25 @@
           :headers="recordHeaders"
         >
           <template v-slot:[`item.instance`]="{ item, index }">
-            <v-icon
-              class="ml-2"
-              v-if="!visibleRecords.includes(`${index}.${item.uuid}`)"
-              @click="visibleRecords.push(`${index}.${item.uuid}`)"
-            >
-              mdi-eye-outline
-            </v-icon>
-            <template v-else>
-              {{ hashTrim(item.instance) }}
-            </template>
-            <v-btn icon @click="addToClipboard(item.instance, index)">
-              <v-icon v-if="copyed === index"> mdi-check </v-icon>
-              <v-icon v-else> mdi-content-copy </v-icon>
-            </v-btn>
+            <div class="d-flex justify-space-between">
+              <div>
+                <v-icon
+                  class="ml-2"
+                  v-if="!visibleRecords.includes(`${index}.${item.uuid}`)"
+                  @click="visibleRecords.push(`${index}.${item.uuid}`)"
+                >
+                  mdi-eye-outline
+                </v-icon>
+                <template v-else>
+                  {{ hashTrim(item.instance) }}
+                </template>
+                <v-btn icon @click="addToClipboard(item.instance, index)">
+                  <v-icon v-if="copyed === index"> mdi-check </v-icon>
+                  <v-icon v-else> mdi-content-copy </v-icon>
+                </v-btn>
+              </div>
+              <v-icon @click="goToInstance(item)">mdi-login</v-icon>
+            </div>
           </template>
           <template v-slot:[`header.product`]="{ header }">
             {{
@@ -96,6 +104,22 @@
             {{ date(item.exec) }}
           </template>
         </nocloud-table>
+
+        <v-container v-if="item.meta.description">
+          <v-card-title>Items descriptions:</v-card-title>
+          <v-card-text>{{ item.meta.description }}</v-card-text>
+        </v-container>
+        <v-container class="mb-3" v-if="item.meta.instances?.length">
+          <v-card-title>Instances:</v-card-title>
+          <v-row v-for="uuid in item.meta.instances" :key="uuid">
+            <router-link
+              class="mx-8"
+              :to="{ name: 'Instance', params: { instanceId: uuid } }"
+            >
+              {{ getInstance(uuid, item.service)?.title }}
+            </router-link>
+          </v-row>
+        </v-container>
       </td>
     </template>
   </nocloud-table>
@@ -112,6 +136,8 @@ export default {
   props: {
     selectTransaction: { type: Function, required: true },
     transactions: { type: Array, required: true },
+    count: { type: Number, required: true },
+    page: { type: Number, required: true },
   },
   data: () => ({
     headers: [
@@ -181,8 +207,7 @@ export default {
       if (this.records[uuid]) return;
 
       this.isRecordsLoading = true;
-      api
-        .get(`/billing/transactions/${uuid}`)
+      api.transactions.records(uuid)
         .then(({ pool }) => {
           this.records[uuid] = pool;
         })
@@ -193,10 +218,29 @@ export default {
           this.isRecordsLoading = false;
         });
     },
+    goToInstance(item) {
+      this.$router.push({
+        name: "Instance",
+        params: { instanceId: item.instance },
+      });
+    },
+    getInstance(uuid, serviceUuid) {
+      if (!serviceUuid) {
+        return;
+      }
+      const service = this.services.find((s) => s.uuid === serviceUuid);
+      const ig = service?.instancesGroups?.find((ig) =>
+        ig.instances.find((i) => i.uuid === uuid)
+      );
+      return ig?.instances?.find((i) => i.uuid === uuid);
+    },
   },
   computed: {
     accounts() {
       return this.$store.getters["accounts/all"];
+    },
+    services() {
+      return this.$store.getters["services/all"];
     },
     isLoading() {
       return this.$store.getters["transactions/isLoading"];

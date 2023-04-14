@@ -30,7 +30,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 
-	epb "github.com/slntopp/nocloud-proto/events"
 	pb "github.com/slntopp/nocloud-proto/registry"
 	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
 	servicespb "github.com/slntopp/nocloud-proto/services"
@@ -47,7 +46,6 @@ import (
 
 var (
 	servicesClient servicespb.ServicesServiceClient
-	eventsClient   epb.EventsServiceClient
 )
 
 func init() {
@@ -55,20 +53,11 @@ func init() {
 	viper.SetDefault("SERVICES_HOST", "services-registry:8000")
 	servicesHost := viper.GetString("SERVICES_HOST")
 
-	viper.SetDefault("EVENTS_HOST", "eventbus:8000")
-	eventsHost := viper.GetString("EVENTS_HOST")
-
 	servicesConn, err := grpc.Dial(servicesHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		panic(err)
 	}
 	servicesClient = servicespb.NewServicesServiceClient(servicesConn)
-
-	eventsConn, err := grpc.Dial(eventsHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		panic(err)
-	}
-	eventsClient = epb.NewEventsServiceClient(eventsConn)
 }
 
 type AccountsServiceServer struct {
@@ -418,12 +407,6 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	if err != nil {
 		return res, err
 	}
-
-	eventsClient.Publish(ctx, &epb.Event{
-		Type: "email",
-		Uuid: acc.Key,
-		Key:  "account_created",
-	})
 
 	return res, nil
 }

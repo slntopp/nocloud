@@ -114,6 +114,14 @@ const routes = [
     },
   },
   {
+    path: "/settings/widget",
+    name: "WidgetSetting",
+    component: () => import("../views/WidgetSettings.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/settings/plugins",
     name: "PluginsSetting",
     component: () => import("../views/PluginsSettings.vue"),
@@ -165,6 +173,22 @@ const routes = [
     path: "/instances",
     name: "Instances",
     component: () => import("../views/Instances.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/instances/create",
+    name: "Instance create",
+    component: () => import("../views/InstanceCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/instances/:instanceId/edit/",
+    name: "Instance edit",
+    component: () => import("../views/InstanceCreate.vue"),
     meta: {
       requireLogin: true,
     },
@@ -246,6 +270,14 @@ const routes = [
     path: "/currencies",
     name: "Currencies",
     component: () => import("../views/Currencies.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/history",
+    name: "History",
+    component: () => import("../views/History.vue"),
     meta: {
       requireLogin: true,
     },

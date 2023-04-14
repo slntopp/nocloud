@@ -76,7 +76,7 @@
       <v-card-title class="px-0 mb-3">Plans:</v-card-title>
       <v-row class="flex-column">
         <v-col>
-          <v-dialog v-model="isDialogVisible">
+          <v-dialog max-width="60%" v-model="isDialogVisible">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
                 class="mr-2"
@@ -87,19 +87,23 @@
                 Add
               </v-btn>
             </template>
-            <v-card>
+            <v-card
+              max-width="100%"
+              class="ma-auto pa-5"
+              color="background-light"
+            >
               <nocloud-table
                 :items="plans"
                 :headers="headers"
                 :loading="isPlanLoading"
                 :footer-error="fetchError"
-                v-model="selected"
+                v-model="selectedNewPlans"
               />
-              <v-card-actions style="background: var(--v-background-base)">
-                <v-btn :loading="isLoading" @click="bindPlans">Add</v-btn>
-                <v-btn class="ml-2" @click="isDialogVisible = false">
+              <v-card-actions class="d-flex justify-end">
+                <v-btn class="mr-5" @click="isDialogVisible = false">
                   Cancel
                 </v-btn>
+                <v-btn :loading="isLoading" @click="bindPlans">Add</v-btn>
               </v-card-actions>
             </v-card>
           </v-dialog>
@@ -201,6 +205,7 @@ export default {
     isDialogVisible: false,
     relatedPlans: [],
     selected: [],
+    selectedNewPlans: [],
     fetchError: "",
   }),
   methods: {
@@ -291,17 +296,19 @@ export default {
         });
     },
     bindPlans() {
-      if (this.selected.length < 1) return;
+      if (this.selectedNewPlans.length < 1) return;
       this.isLoading = true;
 
-      const bindPromises = this.selected.map((el) =>
+      const bindPromises = this.selectedNewPlans.map((el) =>
         api.servicesProviders.bindPlan(this.template.uuid, el.uuid)
       );
 
       Promise.all(bindPromises)
         .then(() => {
           const ending = bindPromises.length === 1 ? "" : "s";
-
+          this.relatedPlans.push(...this.selectedNewPlans);
+          this.selectedNewPlans = [];
+          this.isDialogVisible = false;
           this.showSnackbarSuccess({
             message: `Price model${ending} added successfully.`,
           });
@@ -323,7 +330,9 @@ export default {
       Promise.all(unbindPromises)
         .then(() => {
           const ending = unbindPromises.length === 1 ? "" : "s";
-
+          this.relatedPlans = this.relatedPlans.filter(
+            (rp) => this.selected.findIndex((s) => s.uuid === rp.uuid) === -1
+          );
           this.showSnackbarSuccess({
             message: `Price model${ending} deleted successfully.`,
           });
@@ -357,7 +366,6 @@ export default {
       .dispatch("plans/fetch", {
         params: {
           sp_uuid: this.template.uuid,
-          anonymously: false,
         },
       })
       .then(() => {

@@ -6,13 +6,13 @@
       </v-col>
       <v-col cols="3">
         <v-btn @click="deleteEvents" class="mt-3" color="primary">delete</v-btn>
-        <v-dialog v-model="addEventDialog" width="50%">
+        <v-dialog v-model="addEventDialog" max-width="50%">
           <template v-slot:activator="{ on, attrs }">
             <v-btn class="ml-7 mt-3" color="primary" v-on="on" v-bind="attrs"
               >add</v-btn
             >
           </template>
-          <v-card class="pa-5">
+          <v-card class="pa-5 ma-auto">
             <v-card-title class="text-center">New event:</v-card-title>
             <v-autocomplete
               @input.native="userKey = $event.target.value"
@@ -36,14 +36,17 @@
       </v-col>
     </v-row>
     <nocloud-table
+      show-expand
       table-name="events"
       item-key="id"
       v-model="selectedEvents"
       :headers="headers"
       :items="events"
     >
-      <template v-slot:item.data="{ item }">
-        <p>{{ JSON.stringify(item.data).slice(0, 40) + "..." }}</p>
+      <template v-slot:expanded-item="{ headers, item }">
+        <td :colspan="headers.length">
+          <json-textarea readonly :json="item.data" />
+        </td>
       </template>
     </nocloud-table>
   </v-container>
@@ -54,6 +57,7 @@ import api from "@/api";
 import nocloudTable from "@/components/table.vue";
 import jsonEditor from "@/components/JsonEditor.vue";
 import snackbar from "@/mixins/snackbar";
+import JsonTextarea from "@/components/JsonTextarea.vue";
 export default {
   name: "accounts-events",
   data: () => ({
@@ -73,7 +77,6 @@ export default {
     },
     headers: [
       { text: "ID", value: "id" },
-      { text: "Data", value: "data" },
       { text: "Key", value: "key" },
     ],
     newEvent: { type: "email", key: "", data: {} },
@@ -83,8 +86,8 @@ export default {
     selectedEvents: [],
   }),
   mixins: [snackbar],
-  components: { nocloudTable, jsonEditor },
-  props: ["account"],
+  components: { JsonTextarea, nocloudTable, jsonEditor },
+  props: ["account", "is-loading"],
   mounted() {
     this.fetchEvents();
   },
@@ -161,6 +164,11 @@ export default {
     selectedEventType() {
       this.selectedEvents = [];
       this.fetchEvents();
+    },
+    isLoading() {
+      if (!this.isLoading) {
+        this.fetchEvents();
+      }
     },
   },
 };

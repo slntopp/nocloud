@@ -33,6 +33,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, acc, uuid string) (*pb.Transactions, error) {
+	tr, err := s.transactions.Get(ctx, uuid)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "Transaction doesn't exist")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
+
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
+	}
+
+	return &pb.Transactions{
+		Pool: []*pb.Transaction{
+			tr,
+		},
+	}, nil
+}
+
 func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetTransactionsRequest) (*pb.Transactions, error) {
 	log := s.log.Named("GetTransactions")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -43,6 +62,10 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	query := `FOR t IN @@transactions`
 	vars := map[string]interface{}{
 		"@transactions": schema.TRANSACTIONS_COL,
+	}
+
+	if req.GetUuid() != "" {
+		return s._HandleGetSingleTransaction(ctx, acc, req.GetUuid())
 	}
 
 	if req.Account != nil {
@@ -66,9 +89,9 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		if req.Account == nil {
-			query += ` FILTER t.account == @acc`
+			query += ` FILTER t.service == @service`
 		} else {
-			query += ` && t.account == @acc`
+			query += ` && t.service == @service`
 		}
 		vars["service"] = service
 	}
@@ -76,17 +99,27 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 	if req.Field != nil && req.Sort != nil {
 		subQuery := ` SORT t.%s %s`
 		field, sort := req.GetField(), req.GetSort()
-		query += fmt.Sprintf(subQuery, field, sort)
 
+		if field == "total" {
+			if sort == "asc" {
+				sort = "desc"
+			} else {
+				sort = "asc"
+			}
+		}
+
+		query += fmt.Sprintf(subQuery, field, sort)
 	}
 
 	if req.Page != nil && req.Limit != nil {
-		limit, page := req.GetLimit(), req.GetPage()
-		offset := (page - 1) * limit
+		if req.GetLimit() != 0 {
+			limit, page := req.GetLimit(), req.GetPage()
+			offset := (page - 1) * limit
 
-		query += ` LIMIT @offset, @count`
-		vars["offset"] = offset
-		vars["count"] = limit
+			query += ` LIMIT @offset, @count`
+			vars["offset"] = offset
+			vars["count"] = limit
+		}
 	}
 	query += ` RETURN t`
 
@@ -198,9 +231,9 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 		}
 		if req.Account == nil {
-			query += ` FILTER t.account == @acc`
+			query += ` FILTER t.service == @service`
 		} else {
-			query += ` && t.account == @acc`
+			query += ` && t.service == @service`
 		}
 		vars["service"] = service
 	}
@@ -223,6 +256,43 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 	return &pb.GetTransactionsCountResponse{
 		Total: uint64(cursor.Count()),
 	}, nil
+}
+
+func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.UpdateTransactionRequest) (*pb.UpdateTransactionResponse, error) {
+	log := s.log.Named("UpdateTransaction")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	t, err := s.transactions.Get(ctx, req.GetUuid())
+	if err != nil {
+		return nil, err
+	}
+
+	if err != nil {
+		log.Error("Failed to get transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get transaction")
+	}
+
+	exec := t.GetExec()
+	if exec != 0 {
+		log.Error("Transaction has exec timestamp")
+		return nil, status.Error(codes.Internal, "Transaction has exec timestamp")
+	}
+	t.Exec = req.GetExec()
+	t.Uuid = req.GetUuid()
+
+	_, err = s.transactions.Update(ctx, t)
+	if err != nil {
+		log.Error("Failed to update transaction", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to update transaction")
+	}
+	return &pb.UpdateTransactionResponse{Result: true}, nil
 }
 
 const processUrgentTransaction = `

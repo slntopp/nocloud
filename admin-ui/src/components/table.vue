@@ -18,12 +18,17 @@
     :expanded="expanded"
     @update:expanded="(nw) => $emit('update:expanded', nw)"
     :show-expand="showExpand"
-    :page.sync="page"
+    :page="serverSidePage"
+    @update:page="serverSidePage ? () => 1 : (page = $event)"
     :items-per-page.sync="itemsPerPage"
     :show-group-by="showGroupBy"
     :group-by="groupBy"
     :custom-sort="customSort"
     :key="anIncreasingNumber"
+    :server-items-length="serverItemsLength"
+    :options="options"
+    @update:options="$emit('update:options', $event)"
+    @update:items-per-page="saveItemsPerPage"
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
       <template v-if="showed.includes(props.index)">
@@ -76,6 +81,76 @@
     <template v-for="(_, slotName) in $slots" v-slot:[slotName]>
       <slot :name="slotName" />
     </template>
+
+    <template
+      v-for="header in filtredHeaders"
+      v-slot:[`header.${header?.value}`]
+    >
+      {{ header.text }}
+      <v-menu
+        v-if="header?.customFilter"
+        :key="header?.value"
+        :close-on-content-click="false"
+      >
+        <template v-slot:activator="{ on, attrs }">
+          <v-icon v-bind="attrs" v-on="on" class="mx-2" @click.stop small
+            >mdi-filter</v-icon
+          >
+        </template>
+        <v-list dense>
+          <v-list-item
+            dense
+            v-for="item of filtersItems[header.value]"
+            :key="item"
+          >
+            <v-checkbox
+              dense
+              :value="item"
+              :label="item"
+              :input-value="filtersValues[header.value]"
+              @change="setCustomFilter(header.value, $event)"
+            />
+          </v-list-item>
+        </v-list>
+      </v-menu>
+    </template>
+      <template v-slot:[`header.data-table-select`]="{props,on}">
+          <div class="d-flex">
+              <v-simple-checkbox v-bind="props" v-on="on"></v-simple-checkbox>
+                  <v-dialog
+                          @click:outside="changeFiltres"
+                          max-width="60%"
+                          v-model="settingsDialog"
+                          width="500"
+                  >
+                      <template v-slot:activator="{ on, attrs }">
+                          <v-icon v-bind="attrs" v-on="on" size="23" class="mr-1"
+                          >mdi-cog-outline</v-icon
+                          >
+                      </template>
+                      <v-card
+                              color="background-light"
+                              style="overflow: hidden"
+                              max-width="100%"
+                      >
+                          <v-card-title>Table settings</v-card-title>
+                          <v-row class="pa-5">
+                              <v-col v-for="header in headers" :key="header.value" cols="4">
+                                  <v-checkbox
+                                          @click.stop
+                                          :label="header.text"
+                                          v-model="filter"
+                                          :value="header.value"
+                                  />
+                              </v-col>
+                          </v-row>
+                      </v-card>
+                  </v-dialog>
+                  <v-icon @click="resetFilter" size="23" class="mr-1s"
+                  >mdi-filter-remove</v-icon
+                  >
+          </div>
+      </template>
 
     <template v-if="footerError.length > 0" v-slot:footer>
       <v-toolbar class="mt-2" color="error" dark flat>
@@ -159,6 +234,8 @@ export default {
       type: Boolean,
       default: false,
     },
+    "server-items-length": Number,
+    options: Object,
     expanded: {
       type: Array,
       default: () => [],
@@ -203,10 +280,13 @@ export default {
       type: Boolean,
       default: false,
     },
-    filter: {
+    serverSidePage: Number,
+    defaultFiltres: {
       type: Array,
-      default: () => [],
+      defaullt: () => [],
     },
+    filtersItems: { type: Object },
+    filtersValues: { type: Object },
   },
   data() {
     return {
@@ -218,6 +298,9 @@ export default {
       anIncreasingNumber: 0,
       itemsPerPage: 10,
       columns: {},
+      filter: [],
+      filtredHeaders: [],
+      settingsDialog: false,
     };
   },
   methods: {
@@ -270,117 +353,211 @@ export default {
 
       localStorage.setItem("columns", JSON.stringify(allColumnsSetting));
     },
+    setCustomFilter(key, val) {
+      this.$emit("input:filter", { key, value: val });
+    },
+    resetFilter() {
+      Object.keys(this.filtersValues).forEach((key) => {
+        this.setCustomFilter(key, []);
+      });
+    },
+    saveFilterValues(filters) {
+      const columnJson = localStorage.getItem("filters");
+      const tableFiltres = {};
+
+      Object.keys(filters).map((key) => {
+        if (filters[key].length) {
+          tableFiltres[key] = filters[key];
+        }
+      });
+
+      const allFiltres = columnJson
+        ? JSON.parse(columnJson)
+        : { [this.tableName]: {} };
+      allFiltres[this.tableName] = tableFiltres;
+
+      localStorage.setItem("filters", JSON.stringify(allFiltres));
+    },
+    synchronizeFilterValues() {
+      const allFilters = JSON.parse(localStorage.getItem("filters") || "{}");
+      if (allFilters[this.tableName]) {
+        const valuesMap = allFilters[this.tableName];
+
+        Object.keys(valuesMap).forEach((key) => {
+          if (
+            this.filtersValues[key] != undefined &&
+            valuesMap[key].length > 0
+          ) {
+            this.setCustomFilter(key, valuesMap[key], false);
+          }
+        });
+      }
+    },
     sortTheHeadersAndUpdateTheKey(evt) {
-      const headersTmp = this.filtredHeaders;
+      const originalHeaders = JSON.parse(JSON.stringify(this.filtredHeaders));
+      this.filtredHeaders = [];
       let oldIndex = evt.oldIndex - 1;
       let newIndex = evt.newIndex - 1;
       if (this.showExpand) {
         oldIndex--;
         newIndex--;
       }
-      headersTmp.splice(newIndex, 0, headersTmp.splice(oldIndex, 1)[0]);
-      this.table = headersTmp;
+      for (const header of originalHeaders) {
+        if (header) {
+          this.filtredHeaders.push(header);
+        }
+      }
+      this.filtredHeaders.splice(
+        newIndex,
+        0,
+        this.filtredHeaders.splice(oldIndex, 1)[0]
+      );
+      this.table = this.filtredHeaders;
       this.anIncreasingNumber += 1;
     },
     setHeadersBy(columns) {
-      //break reactivity (mutate props)
-      let tempHeaders = this.filtredHeaders;
-      const originalHeaders = JSON.parse(JSON.stringify(this.filtredHeaders));
-
-      this.filtredHeaders.findIndex((_, i) => {
-        this.$delete(this.filtredHeaders, i);
-      });
-
+      const tempHeaders = [];
+      const originalHeaders = JSON.parse(JSON.stringify(this.headers));
       for (const [key, value] of Object.entries(columns)) {
-        if (originalHeaders.find((h) => h.value === key)) {
-          tempHeaders[value] = originalHeaders.find((h) => h.value === key);
-        } else {
-          this.$delete(tempHeaders, value);
-        }
-      }
-      tempHeaders = tempHeaders.filter((t) => t);
-
-      if (tempHeaders.length < originalHeaders.length) {
-        for (let i = tempHeaders.length + 1; i <= originalHeaders.length; i++) {
-          tempHeaders.push(
-            originalHeaders.find(
-              (h) => tempHeaders.findIndex((th) => th.value === h.value) === -1
-            )
-          );
+        const el = originalHeaders.find((h) => h.value === key);
+        if (el) {
+          tempHeaders[value] = el;
         }
       }
 
-      for (let i = 0; i < tempHeaders.length; i++) {
-        this.$set(this.filtredHeaders, i, tempHeaders[i]);
-      }
+      this.filtredHeaders = tempHeaders;
 
       this.table = tempHeaders;
       this.anIncreasingNumber += 1;
     },
-    setDefaultheaders() {
+    setFilterBy(columns) {
+      Object.keys(columns).forEach((col) => {
+        this.filter.push(col);
+      });
+    },
+    changeFiltres() {
+      const newColumns = {};
+      for (const [key, value] of Object.entries(this.columns)) {
+        const col = this?.filter.find((f) => f === key);
+        if (col) {
+          newColumns[key] = value;
+        }
+      }
+
+      //add new columns
+      const newColumnsKeys = Object.keys(newColumns);
+      this.filter
+        ?.filter((f) => newColumnsKeys.findIndex((nc) => nc === f))
+        .forEach((key, index) => {
+          newColumns[key] = newColumnsKeys.length + index;
+        });
+
+      this.setHeadersBy(newColumns);
+      this.columns = newColumns;
+
+      this.settingsDialog = false;
+    },
+    setDefaultHeaders() {
       this.filtredHeaders.forEach(({ value }, index) => {
         this.columns[value] = index;
       });
+    },
+    setDefaultFiltres() {
+      if (this.defaultFiltres && this.defaultFiltres.length) {
+        this.defaultFiltres?.forEach((value) => this?.filter.push(value));
+      } else {
+        this.headers.forEach((h) => {
+          this.filter?.push(h.value);
+        });
+      }
+    },
+    saveTableData() {
+      this.saveColumnPosition(this.filtredHeaders);
+
+      if (this.filtersValues) {
+        const filters = {};
+
+        //check is filterble column availble
+        for (const key of Object.keys(this.filtersValues)) {
+          if (this.columns[key]) {
+            filters[key] = this.filtersValues[key];
+          }
+        }
+
+        this.saveFilterValues(filters);
+      }
+
+      const url = localStorage.getItem("url");
+
+      if (this.$route.path.includes(url)) return;
+      localStorage.removeItem("page");
+    },
+    saveItemsPerPage(val) {
+      let itemsPerPageSettings = JSON.parse(
+        localStorage.getItem("itemsPerPage")
+      );
+
+      if (!itemsPerPageSettings) {
+        itemsPerPageSettings = { [this.tableName]: val };
+      } else {
+        itemsPerPageSettings[this.tableName] = val;
+      }
+
+      localStorage.setItem(
+        "itemsPerPage",
+        JSON.stringify(itemsPerPageSettings)
+      );
+    },
+    configureColumns() {
+      if (this.tableName) {
+        const columnsString = localStorage.getItem("columns");
+
+        if (columnsString) {
+          this.columns = JSON.parse(columnsString)?.[this.tableName];
+        }
+        if (Object.keys(this.columns || {}).length === 0) {
+          this.columns = {};
+          this.setDefaultHeaders();
+          this.setDefaultFiltres();
+        } else {
+          this.setHeadersBy(this.columns);
+          this.setFilterBy(this.columns);
+        }
+      }
+    },
+    configureItemsPerPage() {
+      const storageData = localStorage.getItem("itemsPerPage");
+      if (storageData) {
+        const itemsPerPage = JSON.parse(storageData);
+        this.itemsPerPage = +itemsPerPage[this.tableName] || 15;
+      }
     },
   },
   computed: {
     sortByTable() {
       return this.sortBy || "title";
     },
-    filtredHeaders() {
-      if (!!this.filter && !this.filter.length) {
-        return this.headers;
-      }
-      return this.headers?.filter(({ text }) => this.filter.includes(text));
-    },
+  },
+  beforeDestroy() {
+    this.saveTableData();
+    window.removeEventListener("beforeunload", this.saveTableData);
   },
   mounted() {
+    window.addEventListener("beforeunload", this.saveTableData);
+    this.filtredHeaders = this.headers;
     const page = localStorage.getItem("page");
-    const items = localStorage.getItem("itemsPerPage");
-    if (items) this.itemsPerPage = +items;
     if (page)
       setTimeout(() => {
         this.page = +page;
       }, 100);
 
-    if (this.tableName) {
-      const columnsString = localStorage.getItem("columns");
-
-      if (columnsString) {
-        this.columns = JSON.parse(columnsString)?.[this.tableName];
-      }
-
-      if (!this.columns) {
-        this.columns = {};
-        this.setDefaultheaders();
-      } else {
-        this.setHeadersBy(this.columns);
-      }
-    }
-  },
-  destroyed() {
-    this.saveColumnPosition(this.table);
-
-    const url = localStorage.getItem("url");
-
-    if (this.$route.path.includes(url)) return;
-    localStorage.removeItem("page");
-    localStorage.removeItem("itemsPerPage");
+    this.configureItemsPerPage();
+    this.configureColumns();
+    this.synchronizeFilterValues();
   },
   watch: {
-    filter: {
-      handler() {
-        this.setHeadersBy(this.columns);
-        this.saveColumnPosition([]);
-      },
-      deep: true,
-    },
     page(value) {
       localStorage.setItem("page", value);
-      localStorage.setItem("url", this.$route.path);
-    },
-    itemsPerPage(value) {
-      localStorage.setItem("itemsPerPage", value);
       localStorage.setItem("url", this.$route.path);
     },
   },

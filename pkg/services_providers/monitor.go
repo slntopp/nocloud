@@ -19,6 +19,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
@@ -48,7 +49,7 @@ var (
 			Frequency: 60,
 		},
 		Description: "ServicesProviders Monitoring Routine Configuration",
-		Public:      false,
+		Level:       access.Level_ADMIN,
 	}
 )
 
@@ -98,7 +99,7 @@ start:
 	for {
 		s.monitoring.Running = true
 
-		sp_pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY)
+		sp_pool, err := s.ctrl.List(ctx, schema.ROOT_ACCOUNT_KEY, true)
 		if err != nil {
 			log.Error("Failed to get ServicesProviders", zap.Error(err))
 			continue
@@ -113,7 +114,7 @@ start:
 			}
 
 			go func(sp *graph.ServicesProvider) {
-				igroups, err := s.ctrl.ListDeployments(ctx, sp, true)
+				igroups, err := s.ctrl.GetGroups(ctx, sp)
 				if err != nil {
 					log.Error("Failed to get Services deployed to ServiceProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
 					return

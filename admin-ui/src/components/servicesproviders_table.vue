@@ -1,5 +1,8 @@
 <template>
   <nocloud-table
+    :filters-items="filterItems"
+    :filters-values="selectedFiltres"
+    @input:filter="selectedFiltres[$event.key] = $event.value"
     table-name="serviceProvidersTable"
     :loading="loading"
     :items="filteredSp"
@@ -15,17 +18,26 @@
         {{ value }}
       </v-chip>
     </template>
+    <template v-slot:[`item.meta`]="{ item }">
+      <icon-title-preview
+        :is-mdi="false"
+        :title="item.meta.service.title"
+        :icon="item.meta.service.icon"
+      />
+    </template>
   </nocloud-table>
 </template>
 
 <script>
 import noCloudTable from "@/components/table.vue";
 import { filterArrayByTitleAndUuid } from "@/functions";
+import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 
 const Headers = [
-  { text: "title", value: "titleLink" },
-  { text: "type", value: "type" },
-  { text: "state", value: "state" },
+  { text: "Title", value: "titleLink" },
+  { text: "Type", value: "type", customFilter: true },
+  { text: "State", value: "state", customFilter: true },
+  { text: "Preview", value: "meta" },
   {
     text: "UUID",
     align: "start",
@@ -37,6 +49,7 @@ const Headers = [
 export default {
   name: "servicesProviders-table",
   components: {
+    IconTitlePreview,
     "nocloud-table": noCloudTable,
   },
   props: {
@@ -48,10 +61,6 @@ export default {
       type: Boolean,
       default: false,
     },
-    searchParams: {
-      type: Object,
-      default: null,
-    },
   },
   data() {
     return {
@@ -59,6 +68,15 @@ export default {
       loading: false,
       Headers,
       fetchError: "",
+      allTypes: [],
+      selectedFiltres: { type: [], state: [] },
+      stateColorMap: {
+        running: "success",
+        operation: "success",
+        unknown: "error",
+        deleted: "error",
+        failure: "error",
+      },
     };
   },
   methods: {
@@ -69,58 +87,46 @@ export default {
       if (!state) {
         return "gray";
       }
-      switch (state.toLowerCase()) {
-        case "running":
-        case "operation":
-          return "success";
-        case "unknown":
-        case "deleted":
-        case "failure":
-          return "error";
-
-        default:
-          return "gray";
-      }
-    },
-    filterSpByTypes(spArray, types) {
-      return spArray.filter((sp) => types.includes(sp.type));
+      return this.stateColorMap[state.toLowerCase()] || "";
     },
   },
   computed: {
     tableData() {
       return this.$store.getters["servicesProviders/all"].map((el) => ({
         titleLink: el.title,
+        title: el.title,
         type: el.type,
         uuid: el.uuid,
         route: {
           name: "ServicesProvider",
           params: { uuid: el.uuid },
         },
+        meta: el.meta,
         state: el?.state?.state ?? "UNKNOWN",
         region: el.secrets?.endpoint?.split("-")[1] ?? "-",
       }));
     },
+    searchParam() {
+      return this.$store.getters["appSearch/param"];
+    },
     filteredSp() {
-      const isAdvanced = this.searchParams.advanced?.types?.length > 0;
-      if (this.searchParams.param || isAdvanced) {
-        const filtred =
-          !this.searchParams.advanced?.types?.includes("all") && isAdvanced > 0
-            ? this.filterSpByTypes(
-                this.tableData,
-                this.searchParams.advanced.types
-              )
-            : this.tableData;
-
-        return this.searchParams.param
-          ? filterArrayByTitleAndUuid(
-              filtred,
-              this.searchParams.param,
-              true,
-              "titleLink"
-            )
-          : filtred;
+      const sp = this.tableData.filter((sp) => {
+        return Object.keys(this.selectedFiltres).every(
+          (key) =>
+            this.selectedFiltres[key].length === 0 ||
+            this.selectedFiltres[key].includes(sp[key])
+        );
+      });
+      if (this.searchParam) {
+        return filterArrayByTitleAndUuid(sp, this.searchParam);
       }
-      return this.tableData;
+      return sp;
+    },
+    filterItems() {
+      return {
+        type: this.allTypes,
+        state: Object.keys(this.stateColorMap).map((k) => k.toUpperCase()),
+      };
     },
   },
   created() {
@@ -135,7 +141,7 @@ export default {
             );
 
             if (!isRegionIncludes) {
-              Headers.push({ text: "region", value: "region" });
+              Headers.push({ text: "Region", value: "region" });
             }
             this.$store.dispatch("servicesProviders/fetchById", el.uuid);
           }
@@ -154,6 +160,19 @@ export default {
           this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
         }
       });
+
+    const types = require.context(
+      "@/components/modules/",
+      true,
+      /serviceCreate\.vue$/
+    );
+
+    types.keys().forEach((key) => {
+      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i);
+      if (matched && matched.length > 1) {
+        this.allTypes.push(matched[1]);
+      }
+    });
   },
   watch: {
     tableData() {

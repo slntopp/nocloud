@@ -149,6 +149,7 @@ func (s *EventBusServer) Publish(ctx context.Context, event *pb.Event) (*pb.Resp
 	}
 
 	event.Id = uuid.New().String()
+	event.Ts = time.Now().Unix()
 	if err := s.bus.Pub(ctx, event); err != nil {
 		return nil, err
 	}

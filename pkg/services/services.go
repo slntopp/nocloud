@@ -19,10 +19,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
-	accesspb "github.com/slntopp/nocloud-proto/access"
+	"github.com/slntopp/nocloud-proto/access"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	proto "github.com/slntopp/nocloud-proto/instances"
@@ -109,7 +110,7 @@ var (
 			Required: true,
 		},
 		Description: "Instances Billing Plans Settings",
-		Public:      false,
+		Level:       access.Level_ADMIN,
 	}
 )
 
@@ -180,7 +181,39 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				}
 				instance.BillingPlan = plan
 
-				err := s.ctrl.IGController().Instances().ValidateBillingPlan(ctx, group.GetSp(), instance)
+				inst_ctrl := s.ctrl.IGController().Instances()
+				old_instance, _ := inst_ctrl.Get(ctx, instance.GetUuid())
+
+				var equal = false
+
+				if old_instance != nil {
+					oldRes := old_instance.GetResources()
+					newRes := instance.GetResources()
+
+					log.Debug("res", zap.Any("oldRes", oldRes))
+					log.Debug("res", zap.Any("newRes", newRes))
+
+					equal = reflect.DeepEqual(oldRes, newRes)
+					log.Debug("equal", zap.Bool("equal", equal))
+				}
+
+				if !equal {
+					err := inst_ctrl.CheckEdgeExist(ctx, group.GetSp(), instance)
+
+					if err != nil {
+						response.Result = false
+						log.Error("IGCONTROLLER err", zap.String("err", err.Error()))
+						terr := pb.TestConfigError{
+							Error:         err.Error(),
+							Instance:      instance.Title,
+							InstanceGroup: group.Title,
+						}
+						response.Errors = append(response.Errors, &terr)
+						continue
+					}
+				}
+
+				err = inst_ctrl.ValidateBillingPlan(ctx, group.GetSp(), instance)
 				if err != nil {
 					response.Result = false
 					log.Error("IGCONTROLLER err", zap.String("err", err.Error()))
@@ -261,7 +294,7 @@ func (s *ServicesServer) TestConfig(ctx context.Context, request *pb.CreateReque
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, accesspb.Level_ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -279,7 +312,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	requestorDoc := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	isSuspended := s.CheckRequestorStatus(ctx, requestorDoc)
 
-	if isSuspended {
+	if isSuspended && requestor != schema.ROOT_ACCOUNT_KEY {
 		return nil, status.Error(codes.Unavailable, "Requestor account is suspended")
 	}
 
@@ -289,7 +322,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.NotFound, "Namespace not found")
 	}
 	// Checking if requestor has access to Namespace Service going to be put in
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, accesspb.Level_ADMIN)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
@@ -310,7 +343,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		return nil, status.Error(codes.Internal, "Error while creating Service")
 	}
 
-	err = s.ctrl.Join(ctx, doc, &ns, accesspb.Level_ADMIN, roles.OWNER)
+	err = s.ctrl.Join(ctx, doc, &ns, access.Level_ADMIN, roles.OWNER)
 	if err != nil {
 		log.Error("Error while joining service to namespace", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while joining service to namespace")
@@ -374,21 +407,19 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
+	docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
+	okAdmin := graph.HasAccess(ctx, s.db, requestor, docID, access.Level_ADMIN)
+	okRoot := graph.HasAccess(ctx, s.db, requestor, docID, access.Level_ROOT)
+
 	requestorDoc := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
 	isSuspended := s.CheckRequestorStatus(ctx, requestorDoc)
 
-	if isSuspended {
+	if !okAdmin {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Update")
+	}
+
+	if isSuspended && !okRoot {
 		return nil, status.Error(codes.Unavailable, "Requestor account is suspended")
-	}
-
-	docID := driver.NewDocumentID(schema.SERVICES_COL, service.Uuid)
-	ok := graph.HasAccess(ctx, s.db, requestor, docID, accesspb.Level_ADMIN)
-	if !ok {
-		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
-	}
-
-	if service.GetStatus() == statuspb.NoCloudStatus_SUS {
-		return nil, status.Error(codes.PermissionDenied, "Can't update suspended service")
 	}
 
 	err = s.ctrl.Update(ctx, service, true)
@@ -417,7 +448,7 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.GetAccess().GetLevel() < accesspb.Level_ADMIN {
+	if service.GetAccess().GetLevel() < access.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -517,7 +548,7 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.GetAccess().GetLevel() < accesspb.Level_ROOT {
+	if service.GetAccess().GetLevel() < access.Level_ROOT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -529,6 +560,9 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 			return nil, err
 		}
 		for _, inst := range group.GetInstances() {
+			if inst.GetStatus() == statuspb.NoCloudStatus_DEL {
+				continue
+			}
 			if err := instancesController.SetStatus(ctx, inst, statuspb.NoCloudStatus_SUS); err != nil {
 				return nil, err
 			}
@@ -555,7 +589,7 @@ func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendReq
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.GetAccess().GetLevel() < accesspb.Level_ROOT {
+	if service.GetAccess().GetLevel() < access.Level_ROOT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -592,7 +626,7 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 	}
 	log.Debug("Found Service", zap.Any("service", service))
 
-	if service.GetAccess().GetLevel() < accesspb.Level_MGMT {
+	if service.GetAccess().GetLevel() < access.Level_MGMT {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Service")
 	}
 
@@ -682,7 +716,7 @@ func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
-	if service.GetAccess().GetLevel() < accesspb.Level_MGMT {
+	if service.GetAccess().GetLevel() < access.Level_MGMT {
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
@@ -716,7 +750,7 @@ func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) 
 		return nil, status.Error(codes.NotFound, "Service not Found in DB")
 	}
 
-	if service.GetAccess().GetLevel() < accesspb.Level_ADMIN {
+	if service.GetAccess().GetLevel() < access.Level_ADMIN {
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
@@ -736,7 +770,7 @@ func (s *ServicesServer) Stream(req *pb.StreamRequest, srv pb.ServicesService_St
 
 	messages := make(chan interface{}, 10)
 
-	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccess().GetLevel() < accesspb.Level_READ {
+	if service, err := s.ctrl.Get(srv.Context(), requestor, req.GetUuid()); err != nil || service.GetAccess().GetLevel() < access.Level_READ {
 		log.Warn("Failed access check", zap.String("uuid", req.GetUuid()))
 		return errors.New("failed access check")
 	}

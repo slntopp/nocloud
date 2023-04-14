@@ -17,136 +17,138 @@ export default {
     json: { type: Object, required: true },
     label: { type: String, default: "JSON" },
     disabled: { type: Boolean },
-    readonly: { type: Boolean }
+    readonly: { type: Boolean },
   },
   data: () => ({
-    tree: ''
+    tree: "",
   }),
   methods: {
-    changeTree () {
-      const tree = JSON.stringify(this.json)
-      let count = 0
+    changeTree() {
+      const tree = JSON.stringify(this.json);
+      let count = 0;
 
       this.tree = tree
-        .split('')
+        .split("")
         .map((simbol, i, arr) => {
           switch (simbol) {
-            case '{':
-              count++
-              if (arr[i + 1] === '}') return simbol
-              return `{\n${'\t'.repeat(count)}`
-            case '}':
-              count--
-              if (arr[i - 1] === '{') return simbol
-              return `\n${'\t'.repeat(count)}}`
-            case ':':
+            case "{":
+              count++;
+              if (arr[i + 1] === "}") return simbol;
+              return `{\n${"\t".repeat(count)}`;
+            case "}":
+              count--;
+              if (arr[i - 1] === "{") return simbol;
+              return `\n${"\t".repeat(count)}}`;
+            case ":":
               if (arr[i - 1] === '"') {
-                return ': '
+                return ": ";
               }
-              return simbol
-            case ',':
+              return simbol;
+            case ",":
               if (this.amountQuotes(i, tree)) {
-                return simbol
+                return simbol;
               }
-              return `,\n${'\t'.repeat(count)}`
+              return `,\n${"\t".repeat(count)}`;
             default:
-              return simbol
+              return simbol;
           }
         })
-        .join('')
+        .join("");
     },
     amountQuotes(num, tree) {
-      let quotes = 0
+      let quotes = 0;
 
       tree
         .slice(0, num)
-        .split('')
+        .split("")
         .forEach((simbol) => {
           if (simbol === '"' && quotes) {
-            quotes--
+            quotes--;
           } else if (simbol === '"') {
-            quotes++
+            quotes++;
           }
-        })
+        });
 
-      return quotes
+      return quotes;
     },
-    formatting ({ target, key }) {
-      const start = target.selectionStart
-      const endString = target.value
-        .slice(start)
-      const count = () => endString
-        .split('')
-        .filter((simbol) => simbol === '}')
-        .length
-      let string = ''
+    formatting({ target, key }) {
+      const start = target.selectionStart;
+      const endString = target.value.slice(start);
+      const count = () =>
+        endString.split("").filter((simbol) => simbol === "}").length;
+      let string = "";
 
       switch (key) {
-        case '{':
-          string = '}'
-          break
+        case "{":
+          string = "}";
+          break;
         case '"':
-          string = '"'
-          break
-        case ':':
-          string = ' '
-          break
-        case 'Enter':
-          if (endString[0] === '}') {
-            string = `${'\t'.repeat(count())}\n` +
-              '\t'.repeat(count() - 1)
+          string = '"';
+          break;
+        case ":":
+          string = " ";
+          break;
+        case "Enter":
+          if (endString[0] === "}") {
+            string = `${"\t".repeat(count())}\n` + "\t".repeat(count() - 1);
           } else {
-            string = '\t'.repeat(count())
+            string = "\t".repeat(count());
           }
-          break
+          break;
       }
 
-      this.tree = target.value
-        .slice(0, start)
-        .concat(string, endString)
+      this.tree = target.value.slice(0, start).concat(string, endString);
 
       setTimeout(() => {
-        const num = start + count()
+        const num = start + count();
 
         switch (key) {
-          case ':':
-            target.setSelectionRange(start + 1, start + 1)
-            break
-          case 'Enter':
-            target.setSelectionRange(num, num)
-            break
+          case ":":
+            target.setSelectionRange(start + 1, start + 1);
+            break;
+          case "Enter":
+            target.setSelectionRange(num, num);
+            break;
           default:
-            target.setSelectionRange(start, start)
+            target.setSelectionRange(start, start);
         }
-      })
-    }
+      });
+    },
   },
-  beforeMount () {
-    this.changeTree()
+  beforeMount() {
+    this.changeTree();
   },
   watch: {
-    disabled () {
-      setTimeout(this.changeTree)
-    }
+    disabled() {
+      setTimeout(this.changeTree);
+    },
+    json: {
+      handler() {
+        this.changeTree();
+      },
+      deep: true,
+    },
   },
   computed: {
-    typeRule () {
-      return [v => {
-        try {
-          return !!JSON.parse(v)
-        } catch (e) {
-          return e.message
-        }
-      }]
+    typeRule() {
+      return [
+        (v) => {
+          try {
+            return !!JSON.parse(v);
+          } catch (e) {
+            return e.message;
+          }
+        },
+      ];
     },
     rows() {
-      let rows = 1
+      let rows = 1;
 
       for (let i = 0; i < this.tree.length; i++) {
-        if (this.tree[i] === '\n') rows++
+        if (this.tree[i] === "\n") rows++;
       }
       return rows;
-    }
-  }
-}
+    },
+  },
+};
 </script>

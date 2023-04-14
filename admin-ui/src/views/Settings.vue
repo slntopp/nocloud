@@ -4,6 +4,9 @@
       <v-btn color="background-light" class="mr-2" to="/settings/app">
         app settings
       </v-btn>
+   <v-btn color="background-light" class="mr-2" to="/settings/widget">
+        widget settings</v-btn
+      >
       <v-btn color="background-light" class="mr-2" to="/settings/plugins">
         plugins settings
       </v-btn>
@@ -170,9 +173,9 @@ import ConfirmDialog from "../components/confirmDialog.vue";
 import { filterArrayIncludes } from "@/functions";
 
 const headers = [
-  { text: "key", value: "key" },
-  { text: "description", value: "description" },
-  { text: "value", value: "value" },
+  { text: "Key", value: "key" },
+  { text: "Description", value: "description" },
+  { text: "Value", value: "value" },
 ];
 
 const defaultData = {

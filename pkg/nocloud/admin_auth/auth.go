@@ -80,7 +80,7 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	if !ok {
 		return ctx, status.Error(codes.Unauthenticated, "Root Access Claim not provided")
 	}
-	lvl := int32(lvlF)
+	lvl := int(lvlF)
 	if lvl == 0 {
 		return ctx, status.Error(codes.PermissionDenied, "Account has no root access")
 	}

@@ -191,13 +191,25 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 		return p.Plan, nil
 	}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, p.ID, access.Level_READ)
+	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
+
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
 	return p.Plan, nil
 }
+
+var getDefaultCurrencyQuery = `
+LET cur = LAST(
+    FOR i IN Currencies2Currencies
+    FILTER (i.to == 0 || i.from == 0) && i.rate == 1
+        RETURN i
+)
+
+RETURN cur.to == 0 ? cur.from : cur.to
+`
 
 func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
 	log := s.log.Named("ListPlans")
@@ -214,6 +226,9 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 		return nil, status.Error(codes.Internal, "Error listing plans")
 	}
 
+	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
+
 	result := make([]*pb.Plan, 0)
 	for _, plan := range plans {
 		if plan.Public {
@@ -223,10 +238,10 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 		if req.Anonymously {
 			continue
 		}
-		ok := graph.HasAccess(ctx, s.db, requestor, plan.ID, access.Level_READ)
 		if !ok {
 			continue
 		}
+
 		result = append(result, plan.Plan)
 	}
 
@@ -239,12 +254,27 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 
 		cur := acc.Account.GetCurrency()
 
+		defaultCur := pb.Currency_NCU
+
+		queryContext := driver.WithQueryCount(ctx)
+		res, err := s.db.Query(queryContext, getDefaultCurrencyQuery, map[string]interface{}{})
+		if err != nil {
+			return nil, err
+		}
+		if res.Count() != 0 {
+			_, err = res.ReadDocument(ctx, &defaultCur)
+			if err != nil {
+				log.Error("Failed to get default cur", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Failed to get default cur")
+			}
+		}
+
 		var rate float64
 
-		if cur == pb.Currency_NCU {
+		if cur == defaultCur {
 			rate = 1
 		} else {
-			rate, err = s.currencies.GetExchangeRateDirect(ctx, pb.Currency_NCU, cur)
+			rate, err = s.currencies.GetExchangeRateDirect(ctx, defaultCur, cur)
 			if err != nil {
 				log.Error("Error getting rate", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting rate")
@@ -280,9 +310,19 @@ LET igs = (
     RETURN node._id
 )
 
-FOR ig in igs
-    FOR node, edge IN 1 OUTBOUND ig GRAPH @permissions
-    FILTER IS_SAME_COLLECTION(node, @@instances)
-    FILTER edge.role == "owner"
-    RETURN node
+
+LET instances = (
+	FOR ig in igs
+    	FOR node, edge IN 1 OUTBOUND ig GRAPH @permissions
+    	FILTER IS_SAME_COLLECTION(node, @@instances)
+    	FILTER edge.role == "owner"
+    	RETURN node
+)
+
+LET plan = DOCUMENT(@plan)
+
+FOR inst in instances
+	FILTER inst.billing_plan.uuid == plan._key
+	RETURN inst
+
 `

@@ -78,6 +78,9 @@
       :loading="isLoading"
       :footer-error="fetchError"
       @input="(v) => (selected = v)"
+      :filters-values="selectedFilters"
+      :filters-items="filterItems"
+      @input:filter="selectedFilters[$event.key] = $event.value"
     >
       <template v-slot:[`item.title`]="{ item }">
         <router-link :to="{ name: 'Plan', params: { planId: item.uuid } }">
@@ -129,8 +132,9 @@ export default {
     headers: [
       { text: "Title ", value: "title" },
       { text: "UUID ", value: "uuid" },
-      { text: "Kind ", value: "kind" },
-      { text: "Type ", value: "type" },
+      { text: "Kind ", value: "kind", customFilter: true },
+      { text: "Type ", value: "type", customFilter: true },
+      { text: "Public ", value: "public", customFilter: true },
     ],
     linkedHeaders: [
       { text: "Instance", value: "title" },
@@ -143,6 +147,7 @@ export default {
     copyed: -1,
     fetchError: "",
     serviceProvider: null,
+    selectedFilters: { type: [], kind: [], public: [] },
   }),
   methods: {
     changePlan() {
@@ -215,7 +220,6 @@ export default {
         .dispatch("plans/fetch", {
           params: {
             sp_uuid: this.serviceProvider,
-            anonymously: false,
           },
         })
         .then(() => {
@@ -266,10 +270,20 @@ export default {
       );
     },
     filtredPlans() {
+      const plans = this.plans.filter((plan) => {
+        return Object.keys(this.selectedFilters).every(
+          (key) =>
+            this.selectedFilters[key].length === 0 ||
+            this.selectedFilters[key].includes(
+              plan[key]?.toString()?.toLowerCase()
+            )
+        );
+      });
+
       if (this.searchParam) {
-        return filterArrayByTitleAndUuid(this.plans, this.searchParam);
+        return filterArrayByTitleAndUuid(plans, this.searchParam);
       }
-      return this.plans;
+      return plans;
     },
     isLoading() {
       return this.$store.getters["plans/isLoading"];
@@ -277,7 +291,17 @@ export default {
     servicesProviders() {
       const sp = this.$store.getters["servicesProviders/all"];
 
-      return [...sp, { title: "all", uuid: null }];
+      return [...sp];
+    },
+    filterItems() {
+      return {
+        kind: ["static", "dynamic"],
+        type: this.typeItems,
+        public: ["true", "false"],
+      };
+    },
+    typeItems() {
+      return [...new Set(this.plans.map((p) => p.type.toLowerCase()))];
     },
   },
   watch: {

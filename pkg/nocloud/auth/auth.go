@@ -99,6 +99,10 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 		if probe.Anonymously {
 			return handler(ctx, req)
 		}
+	case "/nocloud.billing.CurrencyService/GetCurrencies":
+		return handler(ctx, req)
+	case "/nocloud.billing.CurrencyService/GetExchangeRates":
+		return handler(ctx, req)
 	}
 	ctx, err := JWT_AUTH_MIDDLEWARE(ctx)
 	if info.FullMethod != "/nocloud.registry.AccountsService/Token" && err != nil {
@@ -168,6 +172,16 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return ctx, err
 	}
+
+	ctx = func(ctx context.Context) context.Context {
+		rootAccessClaim := token[nocloud.NOCLOUD_ROOT_CLAIM]
+		lvlF, ok := rootAccessClaim.(float64)
+		if !ok {
+			return ctx
+		}
+
+		return context.WithValue(ctx, nocloud.NoCloudRootAccess, int(lvlF))
+	}(ctx)
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudToken, tokenString)
 	ctx = metadata.AppendToOutgoingContext(ctx, "authorization", "bearer "+tokenString)

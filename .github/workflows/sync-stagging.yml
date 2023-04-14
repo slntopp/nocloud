@@ -1,17 +1,31 @@
-name: Sync multiple branches
+name: Sync Dev -> Staging
 on:
+  schedule:
+    - cron: "0 8 * * 1-5" # every day at midnight
   workflow_dispatch:
 
 jobs:
   sync-branch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
+        - uses: actions/checkout@master
 
-      - name: Merge development -> staging
-        uses: devmasx/merge-branch@master
-        with:
-          type: now
-          from_branch: dev
-          target_branch: staging
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+        - name: Merge development -> staging
+          uses: devmasx/merge-branch@master
+          with:
+            type: now
+            from_branch: dev
+            target_branch: staging
+            github_token: ${{ secrets.GITHUB_TOKEN }}
+        
+        - name: Invoke Checks Workflow
+          uses: benc-uk/workflow-dispatch@v1
+          with:
+            workflow: checks.yml
+            ref: staging
+
+        - name: Invoke CI Workflow
+          uses: benc-uk/workflow-dispatch@v1
+          with:
+            workflow: ci.yml
+            ref: staging

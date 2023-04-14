@@ -17,13 +17,18 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/wI2L/jsondiff"
 	"go.uber.org/zap"
 
 	bpb "github.com/slntopp/nocloud-proto/billing"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/hasher"
 	pb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
@@ -37,8 +42,8 @@ const (
 )
 
 type Instance struct {
-	driver.DocumentMeta
 	*pb.Instance
+	driver.DocumentMeta
 }
 
 type InstancesController struct {
@@ -56,7 +61,7 @@ func NewInstancesController(log *zap.Logger, db driver.Database) *InstancesContr
 	ctx := context.TODO()
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
-	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.INSTANCES_COL)
+	col := GetEnsureCollection(log, ctx, db, schema.INSTANCES_COL)
 	ig2inst := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2INST, schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL)
 
 	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst}
@@ -86,6 +91,21 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	}
 	i.Uuid = meta.Key
 
+	var event = &elpb.Event{
+		Entity:    INSTANCES_COL,
+		Uuid:      i.GetUuid(),
+		Scope:     "database",
+		Action:    "create",
+		Rc:        0,
+		Requestor: ctx.Value(nocloud.NoCloudAccount).(string),
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
+	nocloud.Log(log, event)
+
 	// Attempt create edge
 	_, err = ctrl.ig2inst.CreateDocument(ctx, Access{
 		From: group, To: meta.ID,
@@ -102,37 +122,108 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	return nil
 }
 
+/*
+const updateDataQuery = `
+UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
+`
+
+const updatePlanQuery = `
+UPDATE DOCUMENT(@@collection, @key) WITH { billingPlan: @billingPlan } IN @@collection
+`
+*/
+
 func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
-	inst.Uuid = ""
-	inst.Status = spb.NoCloudStatus_INIT
-	inst.Data = nil
-	inst.State = nil
-
-	err := hasher.SetHash(inst.ProtoReflect())
-	if err != nil {
-		return err
+	if oldInst.GetStatus() == spb.NoCloudStatus_DEL {
+		log.Info("Inst cannot be updated. Status DEL", zap.String("uuid", oldInst.GetUuid()))
+		return nil
 	}
+	/*
+		inst.Uuid = ""
+		inst.Status = spb.NoCloudStatus_INIT
+		inst.State = nil
 
-	ctrl.log.Debug("instance for hash calculating while Updating", zap.Any("inst", inst))
+		err := hasher.SetHash(inst.ProtoReflect())
+		if err != nil {
+			return err
+		}
 
-	mask := &pb.Instance{
-		Config:    inst.GetConfig(),
-		Resources: inst.GetResources(),
-		Hash:      inst.GetHash(),
-	}
+		ctrl.log.Debug("instance for hash calculating while Updating", zap.Any("inst", inst))
 
-	if inst.GetTitle() != oldInst.GetTitle() {
-		mask.Title = inst.GetTitle()
-	}
+		mask := &pb.Instance{
+			Config:    inst.GetConfig(),
+			Resources: inst.GetResources(),
+			Hash:      inst.GetHash(),
+		}
 
-	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
+		if inst.GetTitle() != oldInst.GetTitle() {
+			mask.Title = inst.GetTitle()
+		}
+
+		if inst.GetProduct() != oldInst.GetProduct() {
+			mask.Product = inst.Product
+		}
+
+		if inst.GetBillingPlan() != oldInst.GetBillingPlan() {
+			_, err := ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
+				"@collection": schema.INSTANCES_COL,
+				"key":         oldInst.Uuid,
+				"billingPlan": inst.BillingPlan,
+			})
+			if err != nil {
+				log.Error("Failed to update plan")
+				return err
+			}
+		}
+
+		log.Debug("datas", zap.Any("odl data", oldInst.GetData()), zap.Any("new data", inst.GetData()))
+
+		check := reflect.DeepEqual(inst.GetData(), oldInst.GetData())
+
+		log.Debug("deep equal", zap.Bool("check", check))
+
+		if !check {
+			_, err := ctrl.db.Query(ctx, updateDataQuery, map[string]interface{}{
+				"@collection": schema.INSTANCES_COL,
+				"key":         oldInst.Uuid,
+				"data":        inst.Data,
+			})
+			if err != nil {
+				log.Error("Failed to update plan")
+				return err
+			}
+		}
+	*/
+	_, err := ctrl.col.ReplaceDocument(ctx, oldInst.Uuid, inst)
 	if err != nil {
 		log.Error("Failed to update Instance", zap.Error(err))
 		return err
 	}
+
+	instMarshal, _ := json.Marshal(inst)
+	oldInstMarshal, _ := json.Marshal(oldInst)
+	diff, err := jsondiff.CompareJSON(oldInstMarshal, instMarshal)
+	if err != nil {
+		log.Error("Failed to calculate diff", zap.Error(err))
+		return err
+	}
+
+	var event = &elpb.Event{
+		Entity:    INSTANCES_COL,
+		Uuid:      inst.GetUuid(),
+		Scope:     "database",
+		Action:    "update",
+		Rc:        0,
+		Requestor: ctx.Value(nocloud.NoCloudAccount).(string),
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: diff.String(),
+		},
+	}
+
+	nocloud.Log(log, event)
 
 	return nil
 }
@@ -156,6 +247,29 @@ func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb
 	}
 
 	return nil
+}
+
+func (ctrl *InstancesController) Get(ctx context.Context, uuid string) (*Instance, error) {
+	ctrl.log.Debug("Getting Instance", zap.Any("sp", uuid))
+	var inst *pb.Instance
+	query := `RETURN DOCUMENT(@inst)`
+	c, err := ctrl.col.Database().Query(ctx, query, map[string]interface{}{
+		"inst": driver.NewDocumentID(schema.INSTANCES_COL, uuid),
+	})
+	if err != nil {
+		ctrl.log.Debug("Error reading document(Instance)", zap.Error(err))
+		return nil, err
+	}
+	defer c.Close()
+
+	meta, err := c.ReadDocument(ctx, &inst)
+	ctrl.log.Debug("ReadDocument.Result", zap.Any("meta", meta), zap.Error(err), zap.Any("isnt", &inst))
+
+	if inst == nil {
+		return nil, err
+	}
+
+	return &Instance{inst, meta}, nil
 }
 
 const getGroupWithSPQuery = `
@@ -205,7 +319,7 @@ func (ctrl *InstancesController) GetGroup(ctx context.Context, i string) (*Group
 	return &r, nil
 }
 
-func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error {
+func (ctrl *InstancesController) CheckEdgeExist(ctx context.Context, spUuid string, i *pb.Instance) error {
 	log := ctrl.log.Named("ValidateBillingPlan").Named(i.Title)
 	if i.BillingPlan == nil {
 		log.Debug("Billing plan is not provided, skipping")
@@ -219,6 +333,16 @@ func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid
 	if !ok {
 		ctrl.log.Error("SP and Billing Plan are not binded", zap.Any("sp", spUuid), zap.Any("plan", i.BillingPlan.Uuid))
 		return errors.New("SP and Billing Plan are not binded")
+	}
+
+	return nil
+}
+
+func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid string, i *pb.Instance) error {
+	log := ctrl.log.Named("ValidateBillingPlan").Named(i.Title)
+	if i.BillingPlan == nil {
+		log.Debug("Billing plan is not provided, skipping")
+		return nil
 	}
 
 	if i.BillingPlan.Kind < 2 { // If Kind is Dynamic or Unknown

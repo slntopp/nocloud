@@ -118,7 +118,7 @@
         <v-col cols="6">
           <v-select
             label="product"
-            v-model="instance.productTitle"
+            v-model="instance.product"
             v-if="getPlanProducts(index).length > 0"
             :items="getPlanProducts(index)"
             @change="(newVal) => setValue(index + '.product', newVal)"
@@ -128,24 +128,18 @@
     </v-card>
     <v-row>
       <v-col class="d-flex justify-center">
-        <v-btn
-          small
-          id="button"
-          class="mx-2"
-          color="background"
-          @click="addInstance"
-        >
-          <v-icon dark> mdi-plus-circle-outline </v-icon>
-          add instance
-        </v-btn>
+        <add-instance-btn @click="addInstance" />
       </v-col>
     </v-row>
   </div>
 </template>
 
 <script>
+import AddInstanceBtn from "@/components/ui/addInstanceBtn.vue";
+
 export default {
   name: "ione-create-service-module",
+  components: { AddInstanceBtn },
   props: ["instances-group", "plans", "planRules"],
   data: () => ({
     defaultItem: {
@@ -211,12 +205,13 @@ export default {
       }
       if (path.includes("product")) {
         const plan = data.body.instances[i].billing_plan;
-        const [product] = Object.entries(plan.products).find(
-          ([, prod]) => prod.title === val
-        );
+        const productBody = plan.products[val];
+
+        Object.keys(productBody.resources).forEach((key) => {
+          data.body.instances[i].resources[key] = productBody.resources[key];
+        });
 
         data.body.instances[i].productTitle = val;
-        val = product;
       }
 
       setToValue(data.body.instances, val, path);
@@ -238,12 +233,12 @@ export default {
 
       this.setValue(index + ".config.template_id", +osId);
     },
-    getPlanProducts(index){
-      if(!this.instances[index].billing_plan?.products){
-        return []
+    getPlanProducts(index) {
+      if (!this.instances[index].billing_plan?.products) {
+        return [];
       }
-      return Object.values(this.instances[index].billing_plan.products).map(p=>p.title)
-    }
+      return Object.keys(this.instances[index].billing_plan.products);
+    },
   },
   computed: {
     instances() {
