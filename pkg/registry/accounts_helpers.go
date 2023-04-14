@@ -18,6 +18,7 @@ package registry
 import (
 	"context"
 
+	"github.com/slntopp/nocloud-proto/access"
 	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -56,7 +57,7 @@ type AccountPostCreateSettings struct {
 var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
 	Value:       AccountPostCreateSettings{CreateNamespace: true},
 	Description: "Post Account Creation Actions",
-	Public:      false,
+	Level:       access.Level_ADMIN,
 }
 
 func (s *AccountsServiceServer) PostCreateActions(ctx context.Context, account graph.Account) {

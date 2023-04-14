@@ -3,6 +3,7 @@ package billing
 import (
 	"context"
 
+	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"go.uber.org/zap"
@@ -50,21 +51,21 @@ var (
 			Frequency: 60,
 		},
 		Description: "Transactions Generating and Processing Routine Configuration",
-		Public:      false,
+		Level:       access.Level_ADMIN,
 	}
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
 			Currency: int32(pb.Currency_NCU),
 		},
 		Description: "Default currency for platform",
-		Public:      false,
+		Level:       access.Level_ADMIN,
 	}
 	roundingSetting = &sc.Setting[RoundingConf]{
 		Value: RoundingConf{
 			Rounding: "CEIl",
 		},
 		Description: "Rounding used in records, transactions and other payments",
-		Public:      false,
+		Level:       access.Level_ADMIN,
 	}
 	suspendedSetting = &sc.Setting[SuspendConf]{
 		Value: SuspendConf{
