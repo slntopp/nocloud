@@ -10,7 +10,7 @@
           <v-list-item-title>
             {{ item.service || item.routine }}
           </v-list-item-title>
-          <v-list-item-subtitle v-if="item.status.error || item.error">
+          <v-list-item-subtitle class="text-truncate text-wrap" v-if="item.status.error || item.error">
             Error: {{ item.status.error || item.error }}
           </v-list-item-subtitle>
         </v-list-item-content>

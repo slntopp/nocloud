@@ -18,9 +18,11 @@ package settings
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	redis "github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"google.golang.org/grpc/codes"
@@ -49,18 +51,45 @@ func NewSettingsServer(log *zap.Logger, rdb *redis.Client) *SettingsServiceServe
 	}
 }
 
+func _GetRootClaim(ctx context.Context) int {
+	lvl, ok := ctx.Value(nocloud.NoCloudRootAccess).(int)
+	if !ok {
+		return 0
+	}
+
+	return lvl
+}
+
 func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (res *structpb.Struct, err error) {
+	level := _GetRootClaim(ctx)
+
 	log := s.log.Named("Get")
-	log.Debug("Request received", zap.Strings("keys", req.GetKeys()))
+	log.Debug("Request received", zap.Strings("keys", req.GetKeys()), zap.Int("level", level))
 
 	result := make(map[string]interface{})
 
 	for _, key := range req.GetKeys() {
 		dbKey := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(key))
 		log.Debug("Reading hash", zap.String("key", dbKey))
-		r := s.rdb.HGet(ctx, dbKey, "value")
-		result[key], err = r.Result()
-		log.Debug("Result", zap.Any("value", result[key]), zap.Error(err))
+		r := s.rdb.HGetAll(ctx, dbKey)
+		data, err := r.Result()
+		if err != nil {
+			log.Warn("Coudln't get Key", zap.Error(err))
+			continue
+		}
+
+		lvl, err := strconv.Atoi(data["lvl"])
+		if err != nil {
+			lvl = 4
+		}
+
+		if level < lvl {
+			continue
+		}
+
+		result[key] = data["value"]
+
+		log.Debug("Result", zap.Any("value", result[key]), zap.Int("lvl", lvl))
 	}
 
 	res, err = structpb.NewStruct(result)
@@ -72,17 +101,21 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (re
 }
 
 func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*pb.PutResponse, error) {
-	access := ctx.Value(nocloud.NoCloudRootAccess).(int32)
+	log := s.log.Named("Put")
+
+	access := _GetRootClaim(ctx)
 	if access < 3 {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
 	}
 
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(req.GetKey()))
+	log.Debug("Put request received", zap.String("key", key), zap.Int("lvl", int(req.GetLevel())))
+
 	r := s.rdb.HSet(ctx, key, "value", req.GetValue(),
-		"desc", req.GetDescription(), "pub", req.GetPublic())
+		"desc", req.GetDescription(), "lvl", int(req.GetLevel()))
 	_, err := r.Result()
 	if err != nil {
-		s.log.Error("Error allocating keys in Redis", zap.String("key", key), zap.Error(err))
+		log.Error("Error allocating keys in Redis", zap.String("key", key), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error allocating keys in Redis")
 	}
 
@@ -90,6 +123,8 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 }
 
 func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*pb.KeysResponse, error) {
+	level := _GetRootClaim(ctx)
+
 	r := s.rdb.Keys(ctx, KEY_NS_PATTERN)
 	keys, err := r.Result()
 	if err != nil {
@@ -97,8 +132,8 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 		return nil, status.Error(codes.Internal, "Error getting keys from Redis")
 	}
 
-	result := make([]*pb.KeysResponse_Key, len(keys))
-	for i, key := range keys {
+	var result []*pb.KeysResponse_Key
+	for _, key := range keys {
 		r := s.rdb.HGetAll(ctx, key)
 		data, err := r.Result()
 
@@ -106,20 +141,41 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 		key = strcase.KebabCase(key)
 
 		if err != nil {
-			result[i] = &pb.KeysResponse_Key{Key: key, Description: "Unresolved"}
+			result = append(result, &pb.KeysResponse_Key{
+				Key: key, Description: "Unresolved",
+			})
 			continue
 		}
-		result[i] = &pb.KeysResponse_Key{
+
+		lvl, err := strconv.Atoi(data["lvl"])
+		if err != nil {
+			s.log.Warn("Setting has no lvl or field is corrupted", zap.Error(err))
+			lvl = 4
+		}
+
+		if level < lvl {
+			result = append(result, &pb.KeysResponse_Key{
+				Key: key, Description: "Unresolved",
+			})
+			continue
+		}
+
+		result = append(result, &pb.KeysResponse_Key{
 			Key:         key,
 			Description: data["desc"],
-			Public:      data["pub"] == "1",
-		}
+			Level:       access.Level(lvl),
+		})
 	}
 
 	return &pb.KeysResponse{Pool: result}, nil
 }
 
 func (s *SettingsServiceServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+
+	if _GetRootClaim(ctx) < 3 {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights")
+	}
+
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(req.GetKey()))
 
 	_, err := s.rdb.Del(ctx, key).Result()
@@ -135,7 +191,21 @@ func (s *SettingsServiceServer) Sub(req *pb.GetRequest, srv pb.SettingsService_S
 	log := s.log.Named("Sub")
 	log.Debug("Request received", zap.Strings("keys", req.GetKeys()))
 
-	keys := make([]string, len(req.GetKeys()))
+	res, err := s.Get(srv.Context(), req)
+	if err != nil {
+		return err
+	}
+
+	keys := make([]string, 0, len(res.AsMap()))
+	for k := range res.AsMap() {
+		keys = append(keys, k)
+	}
+
+	if len(keys) == 0 {
+		return status.Error(codes.InvalidArgument, "No keys available")
+	}
+
+	log.Debug("Filtered keys", zap.Strings("keys", keys))
 
 	tmpl := fmt.Sprintf("__keyspace@%d__:%s:", s.rdb.Options().DB, KEYS_PREFIX) + "%s"
 

@@ -50,9 +50,7 @@
       <v-row>
         <component
           :is-edit="isEdit || this.$route.params.instanceId"
-          v-if="
-            type && serviceProviderId && (type !== 'ovh' || plans.list.length)
-          "
+          v-if="isDataLoading"
           @set-value="setValue"
           @set-instance="instance = $event"
           @set-meta="meta = $event"
@@ -237,9 +235,17 @@ export default {
     planRules() {
       return this.plansVisible ? this.rules.req : [];
     },
+    isDataLoading() {
+      return (
+        this.type &&
+        this.serviceProviderId &&
+        this.plans.list.length &&
+        (this.type === "ovh" || this.type === "cpanel")
+      );
+    },
   },
   created() {
-      this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("servicesProviders/fetch");
     this.$store.dispatch("services/fetch").then(() => {
       const instanceId = this.$route.params.instanceId;
       if (instanceId) {
