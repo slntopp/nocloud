@@ -1,8 +1,8 @@
 <template>
   <div class="d-flex justify-space-between" style="width: 100%">
     <span>{{ title }}</span>
-    <v-icon class="ma-auto ml-2" v-if="isMdi">{{ `mdi-${icon}` }}</v-icon>
-    <ant-icon class="ma-auto ml-2" v-else :name="icon" />
+    <v-icon class="ml-2" v-if="isMdi">{{ `mdi-${icon}` }}</v-icon>
+    <ant-icon class="ml-2" v-else :name="icon" />
   </div>
 </template>
 

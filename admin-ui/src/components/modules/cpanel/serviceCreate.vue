@@ -52,8 +52,8 @@
           <v-text-field
             label="plan"
             :rules="rules.req"
-            v-model="instance.config.plan"
-            @change="setValue(index + '.config.plan', $event)"
+            v-model="instance.resources.plan"
+            @change="setValue(index + '.resources.plan', $event)"
           />
         </v-col>
       </v-row>
@@ -79,8 +79,10 @@ export default {
       config: {
         domain: "",
         mail: "",
-        plan: "",
         password: "",
+      },
+      resources: {
+        plan: "",
       },
       billing_plan: {},
     },
@@ -107,11 +109,15 @@ export default {
     setValue(path, val) {
       const data = JSON.parse(this.instancesGroup);
       const index = +path.slice(0, path.indexOf("."));
-      if (path.includes("config")) {
+      const isConfig = path.includes("config");
+      const isResources = path.includes("resources");
+
+      if (isConfig || isResources) {
+        const mainKey = isConfig ? "config" : "resources";
         path.split(".").forEach((key) => {
           path = key;
         });
-        data.body.instances[index].config[path] = val;
+        data.body.instances[index][mainKey][path] = val;
       }
 
       this.change(data);
