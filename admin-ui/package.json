@@ -14,7 +14,7 @@
     "apexcharts": "^3.37.3",
     "babel-helper-vue-jsx-merge-props": "^2.0.3",
     "babel-preset-es2015": "^6.24.1",
-    "core-js": "^3.30.0",
+    "core-js": "^3.30.1",
     "date-fns": "^2.29.3",
     "glob-parent": "^6.0.2",
     "js-cookie": "^3.0.1",
