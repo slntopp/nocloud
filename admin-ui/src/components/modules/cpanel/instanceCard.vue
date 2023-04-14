@@ -20,7 +20,7 @@
       <v-col cols="6">
         <v-text-field
           readonly
-          :value="template.config.plan"
+          :value="template.resources.plan"
           label="plan"
         ></v-text-field>
       </v-col>
