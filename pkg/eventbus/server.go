@@ -198,6 +198,11 @@ func (s *EventBusServer) List(ctx context.Context, req *pb.ConsumeRequest) (*pb.
 		log.Warn("Error getting Account", zap.String("account", req.Uuid), zap.Error(err))
 		return nil, status.Error(codes.Internal, "Not enough Access rights")
 	}
+
+	if acc.Account == nil {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights")
+	}
+
 	if acc.Access == nil {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights")
 	}
