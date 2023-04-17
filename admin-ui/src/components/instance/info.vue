@@ -44,7 +44,7 @@
         <v-text-field
           readonly
           label="price model"
-          :append-icon="template.type === 'ione' ? 'mdi-pencil' : null"
+          :append-icon="editPriceModelComponent ? 'mdi-pencil' : null"
           @click:append="priceModelDialog = true"
           style="display: inline-block; width: 150px"
           :value="template.billingPlan.title"
@@ -377,7 +377,7 @@ export default {
       return this.servicesProviders?.find((sp) => sp.uuid == this.template.sp);
     },
     filtredPlans() {
-      return this.plans.filter((p) => p.type === this.template.type);
+      return this.plans.filter((p) => p.type === this.template.type || p.type.includes(this.template.type));
     },
     editPriceModelComponent() {
       const types = require.context(
