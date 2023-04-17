@@ -199,6 +199,8 @@ func (s *EventBusServer) List(ctx context.Context, req *pb.ConsumeRequest) (*pb.
 		return nil, status.Error(codes.Internal, "Not enough Access rights")
 	}
 
+	log.Debug("acc", zap.Any("acc", acc))
+
 	if acc.Account == nil {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights")
 	}
