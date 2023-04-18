@@ -272,7 +272,7 @@ export default {
             this.duration === p.duration &&
             this.template.config.pricingMode === p.pricingMode
         )?.price?.value * this.rate
-      );
+      ).toFixed(2);
     },
     setTotalNewPrice() {
       this.totalNewPrice = Object.keys(this.prices).reduce(
