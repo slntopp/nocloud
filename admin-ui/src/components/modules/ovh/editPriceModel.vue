@@ -15,7 +15,7 @@
             item-value="uuid"
             return-object
             v-model="plan"
-            :items="plans"
+            :items="avaliablePlans"
           />
         </v-col>
       </v-row>
@@ -104,10 +104,40 @@ onMounted(() => {
 const tarrifs = computed(() => {
   const tarrifs = [];
   Object.keys(plan.value?.products || {}).forEach((key) => {
-    tarrifs.push(key);
+    if (
+      plan.value.products[key].price > instanceTarrifPrice.value ||
+      (plan.value.uuid === template.value.billingPlan.uuid &&
+        instanceTarrifPrice.value === plan.value.products[key].price)
+    )
+      tarrifs.push(key);
   });
 
   return tarrifs;
+});
+
+const avaliablePlans = computed(() => {
+  const avaliablePlans = [];
+
+  const copyPlans = JSON.parse(JSON.stringify(plans.value));
+
+  copyPlans.forEach((p) => {
+    const keys = Object.keys(p.products).filter(
+      (key) => p.products[key].price > instanceTarrifPrice.value
+    );
+    if (keys.length > 0) {
+      avaliablePlans.push(p);
+    }
+  });
+
+  avaliablePlans.push(template.value.billingPlan);
+
+  return avaliablePlans;
+});
+
+const instanceTarrifPrice = computed(() => {
+  return template.value.billingPlan.products[
+    template.value.config.duration + " " + template.value.config.planCode
+  ].price;
 });
 
 const isChangeBtnDisabled = computed(() => {
