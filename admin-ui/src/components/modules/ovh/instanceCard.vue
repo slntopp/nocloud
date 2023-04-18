@@ -74,8 +74,21 @@
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field
           v-model.number="prices[item.key]"
+          @change="setTotalNewPrice"
           type="number"
         ></v-text-field>
+      </template>
+      <template v-slot:[`item.basePrice`]="{ item }">
+        <v-text-field
+          :loading="isBasePricesLoading"
+          readonly
+          :value="basePrices[item.key]"
+        ></v-text-field>
+      </template>
+      <template v-slot:[`footer`]>
+        <div class="d-flex justify-end ml-10 my-1">
+          <span>Base total {{ totalBasePrice || "loading..."}} Total {{ totalNewPrice }}</span>
+        </div>
       </template>
     </nocloud-table>
     <div class="d-flex justify-end align-center">
@@ -113,15 +126,22 @@ export default {
     dataKeys: ["vpsId", "creation", "expiration"],
     pricesItems: [],
     prices: {},
+    basePrices: {},
+    rate: 0,
     pricesHeaders: [
-      { text: "name", value: "title" },
-      { text: "price", value: "price" },
+      { text: "Name", value: "title" },
+      { text: "Base price", value: "basePrice" },
+      { text: "Price", value: "price" },
     ],
     isPlanChangeLoading: false,
+    totalNewPrice: 0,
+    totalBasePrice: 0,
+    isBasePricesLoading: false,
   }),
   mounted() {
     this.initPrices();
     this.initConfigsKeys();
+    this.getBasePrices();
   },
   methods: {
     initPrices() {
@@ -142,6 +162,7 @@ export default {
           index: ind + 1,
         });
       });
+      this.setTotalNewPrice();
     },
     saveNewPrices() {
       const instance = JSON.parse(JSON.stringify(this.template));
@@ -206,6 +227,59 @@ export default {
         this.template.config[path] || this.template.config.configuration[path]
       );
     },
+    getBasePrices() {
+      this.isBasePricesLoading = true;
+      api
+        .get(`/billing/currencies/rates/PLN/${this.defaultCurrency}`)
+        .then((res) => {
+          this.rate = res.rate;
+        })
+        .catch(() =>
+          api.get(`/billing/currencies/rates/${this.defaultCurrency}/PLN`)
+        )
+        .then((res) => {
+          if (res) this.rate = 1 / res.rate;
+        })
+        .catch((err) => console.error(err));
+      api
+        .post(`/sp/${this.template.sp}/invoke`, { method: "get_plans" })
+        .then(({ meta }) => {
+          const planCode = meta.plans.find((p) => this.planCode === p.planCode);
+          this.basePrices["tarrif"] = this.getPriceFromProduct(planCode);
+
+          this.addons.forEach((addon) => {
+            Object.keys(meta).forEach((metaKey) => {
+              const product =
+                meta[metaKey].find &&
+                meta[metaKey].find((p) => p?.planCode === addon);
+              if (product) {
+                this.basePrices[addon] = this.getPriceFromProduct(product);
+              }
+            });
+          });
+
+          this.totalBasePrice = Object.keys(this.basePrices).reduce(
+            (acc, key) => acc + +this.basePrices[key],
+            0
+          ).toFixed(2);
+          this.isBasePricesLoading = false;
+        });
+    },
+    getPriceFromProduct(product) {
+      return (
+        product.prices.find(
+          (p) =>
+            this.duration === p.duration &&
+            this.template.config.pricingMode === p.pricingMode
+        )?.price?.value * this.rate
+      );
+    },
+    setTotalNewPrice() {
+      this.totalNewPrice = Object.keys(this.prices).reduce(
+        (acc, key) => acc + +this.prices[key],
+        0
+      );
+    },
   },
   computed: {
     service() {
@@ -241,6 +315,9 @@ export default {
         );
       });
       return prices.reduce((acc, val) => acc + val, 0);
+    },
+    defaultCurrency() {
+      return this.$store.getters["currencies/default"];
     },
   },
 };
