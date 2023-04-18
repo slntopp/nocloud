@@ -53,12 +53,12 @@
           :value="item"
         />
       </v-col>
-      <v-col v-for="key in configKeys" :key="key">
+      <v-col v-for="k in configKeys" :key="k.key">
         <v-text-field
           readonly
           style="display: inline-block; width: 200px"
-          :label="dictionary[key] ?? key"
-          :value="template.config[key]"
+          :label="dictionary[k.key] ?? k.key"
+          :value="getConfigValue(k.path)"
         />
       </v-col>
     </v-row>
@@ -105,7 +105,11 @@ export default {
       os: "OS",
       vpsId: "id",
     },
-    configKeys: ["datacenter", "os", "type"],
+    configKeys: [
+      { key: "datacenter", path: null },
+      { key: "os", path: null },
+      { key: "type", path: "type" },
+    ],
     dataKeys: ["vpsId", "creation", "expiration"],
     pricesItems: [],
     prices: {},
@@ -117,6 +121,7 @@ export default {
   }),
   mounted() {
     this.initPrices();
+    this.initConfigsKeys();
   },
   methods: {
     initPrices() {
@@ -182,6 +187,24 @@ export default {
           });
         });
       });
+    },
+    initConfigsKeys() {
+      this.configKeys.forEach((k) => {
+        if (!k.path) {
+          k.path = this.getKeyFromConfiguration(k.key);
+        }
+      });
+    },
+    getKeyFromConfiguration(name) {
+      for (const key of Object.keys(this.template.config.configuration))
+        if (key.includes(name)) {
+          return key;
+        }
+    },
+    getConfigValue(path) {
+      return (
+        this.template.config[path] || this.template.config.configuration[path]
+      );
     },
   },
   computed: {
