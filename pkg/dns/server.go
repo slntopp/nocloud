@@ -79,7 +79,7 @@ func (s *DNSServer) List(ctx context.Context, req *pb.ListRequest) (*pb.ListResp
 }
 
 func (s *DNSServer) Put(ctx context.Context, req *pb.Zone) (*pb.Result, error) {
-	access := ctx.Value(nocloud.NoCloudRootAccess).(int32)
+	access := ctx.Value(nocloud.NoCloudRootAccess).(int)
 	if access < 3 {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
 	}
@@ -105,7 +105,7 @@ func (s *DNSServer) Put(ctx context.Context, req *pb.Zone) (*pb.Result, error) {
 }
 
 func (s *DNSServer) Delete(ctx context.Context, req *pb.Zone) (*pb.Result, error) {
-	access := ctx.Value(nocloud.NoCloudRootAccess).(int32)
+	access := ctx.Value(nocloud.NoCloudRootAccess).(int)
 	if access < 3 {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights")
 	}
