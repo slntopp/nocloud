@@ -1,5 +1,5 @@
 <template>
-  <history-table table-name="instance-history" :uuid="template.uuid" />
+  <history-table hide-uuid table-name="instance-history" :uuid="template.uuid" />
 </template>
 
 <script>
