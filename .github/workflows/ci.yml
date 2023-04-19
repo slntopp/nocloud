@@ -6,15 +6,17 @@ on:
       - master
       - dev-*
       - dev
+      - staging
 
     paths-ignore:
       - ".github/workflows/**"
-      - "!.github/workflows/ci.yml"
       - "examples/**"
       - "proto/**"
       - "tools/**/*.sh"
       - "README.md"
       - "traefik.yml"
+  
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -68,7 +70,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v4.3.0
+        uses: docker/metadata-action@v4.4.0
         with:
           tags: type=raw,value=${{env.IMAGE_TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/base
@@ -105,7 +107,7 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v4.3.0
+        uses: docker/metadata-action@v4.4.0
         with:
           tags: type=raw,value=${{env.IMAGE_TAG}}
           images: ${{ env.REGISTRY }}/slntopp/nocloud/${{matrix.tag}}

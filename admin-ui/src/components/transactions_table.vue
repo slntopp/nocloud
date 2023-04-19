@@ -207,8 +207,7 @@ export default {
       if (this.records[uuid]) return;
 
       this.isRecordsLoading = true;
-      api
-        .get(`/billing/transactions/${uuid}`)
+      api.transactions.records(uuid)
         .then(({ pool }) => {
           this.records[uuid] = pool;
         })

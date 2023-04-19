@@ -24,7 +24,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	auth "github.com/slntopp/nocloud/pkg/nocloud/admin_auth"
+	auth "github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -82,10 +82,15 @@ func main() {
 	}
 
 	auth.SetContext(log, SIGNING_KEY)
-	s := grpc.NewServer(grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-		grpc_zap.UnaryServerInterceptor(log),
-		grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
-	)))
+	s := grpc.NewServer(
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_zap.UnaryServerInterceptor(log),
+			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
+		)),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			grpc.StreamServerInterceptor(auth.JWT_STREAM_INTERCEPTOR),
+		)),
+	)
 
 	server := settings.NewSettingsServer(log, rdb)
 	pb.RegisterSettingsServiceServer(s, server)

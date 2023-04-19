@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 
@@ -157,6 +158,6 @@ func _GetWHMCSConfig(conf *WHMCSConfig) error {
 	return sc.Fetch("whmcs", conf, &sc.Setting[WHMCSConfig]{
 		Value:       *conf,
 		Description: "WHMCS Credentials Settings (API Endpoint, username, password)",
-		Public:      false,
+		Level:       access.Level_ADMIN,
 	})
 }
