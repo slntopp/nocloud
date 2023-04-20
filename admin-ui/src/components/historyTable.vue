@@ -23,26 +23,18 @@
       </router-link>
     </template>
     <template v-slot:[`item.uuid`]="{ item, value }">
-      <router-link
-        v-if="item.entity === 'Instances'"
-        :to="{ name: 'Instance', params: { instanceId: value } }"
-      >
-        {{ getInstance(value)?.title }}
-      </router-link>
-      <router-link
-        v-else
-        :to="{ name: 'Service', params: { serviceId: value } }"
-      >
-        {{ getService(value)?.title }}
+      {{ getInstance(value)?.title }}
+      <router-link :to="getEntityByUuid(item).route">
+        {{ getEntityByUuid(value).item?.title }}
       </router-link>
     </template>
-    <template v-slot:expanded-item="{ headers, item }">
+    <template v-if="services.length && instances.length" v-slot:expanded-item="{ headers, item }">
       <td :colspan="headers.length" style="padding: 0">
         <nocloud-table
           :server-items-length="-1"
           hide-default-footer
           :headers="operationHeaders"
-          :items="getDiffItems(item.snapshot.diff)"
+          :items="getDiffItems(item)"
         />
       </td>
     </template>
@@ -60,9 +52,9 @@ const props = defineProps({
   accountId: {},
   uuid: {},
   hideRequestor: { type: Boolean, default: false },
-    hideUuid: { type: Boolean, default: false },
+  hideUuid: { type: Boolean, default: false },
 });
-const { tableName, accountId, uuid, hideRequestor,hideUuid } = toRefs(props);
+const { tableName, accountId, uuid, hideRequestor, hideUuid } = toRefs(props);
 
 const count = ref(10);
 const logs = ref([]);
@@ -87,10 +79,11 @@ const headers = computed(() => [
 const operationHeaders = ref([
   { text: "Operation", value: "op" },
   { text: "Path", value: "path" },
-  { text: "Value", value: "value" },
+  { text: "Old value", value: "oldValue" },
+  { text: "New value", value: "newValue" },
 ]);
 
-const getDiffItems = (diff) => {
+const getDiffItems = (item) => {
   try {
     const replacedKeys = [
       { to: "}", from: "}," },
@@ -99,13 +92,49 @@ const getDiffItems = (diff) => {
       { to: "'", from: '"' },
     ];
 
-    let replaced = diff;
+    let replaced = item.snapshot.diff;
     replacedKeys.forEach(
       ({ to, from }) => (replaced = replaced.replaceAll(to, from))
     );
-    return JSON.parse(`[${replaced.slice(0, -1)}]`);
+    const operations = JSON.parse(`[${replaced.slice(0, -1)}]`);
+    return operations.map((op, index, arr) => {
+      op.oldValue = op.value;
+      if (op.value && index !== arr.length - 1) {
+        op.newValue = arr[index + 1]?.value;
+      } else if (op.value) {
+        op.newValue = getEntityByUuid(item).item;
+        op.path
+          .split("/").filter(k=>!!k)
+          .forEach((subKey) => {
+              op.newValue = op.newValue[subKey]
+          });
+      }
+      return op;
+    });
   } catch (e) {
     return [];
+  }
+};
+
+const getEntityByUuid = (item) => {
+  switch (item.entity) {
+    case "Instances": {
+      return {
+        route: { name: "Instance", params: { instanceId: item.uuid } },
+        item: getInstance(item.uuid),
+        type: "inst",
+      };
+    }
+    case "Services": {
+      return {
+        route: { name: "Service", params: { serviceId: item.uuid } },
+        item: getService(item.uuid),
+        type: "serv",
+      };
+    }
+    default: {
+      return { route: null, item: null };
+    }
   }
 };
 
