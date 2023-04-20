@@ -50,7 +50,7 @@
 </template>
 
 <script setup>
-import { toRefs, ref, onMounted, computed } from "vue";
+import { toRefs, ref, onMounted, computed, watch } from "vue";
 import nocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";

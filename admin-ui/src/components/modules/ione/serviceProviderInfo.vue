@@ -302,18 +302,7 @@ export default {
     getOSImgLink(name) {
       const os = name.replace(/[^a-zA-Z]+/g, "").toLowerCase();
 
-      try {
-        const context = require.context("@/../public/img/OS/", true);
-        let path = '';
-
-        context.keys().forEach((key) => {
-          if (key.includes(os)) path = key.slice(2);
-        });
-
-        return `/admin/img/OS/${path}`;
-      } catch {
-        return '/admin/img/OS/' + os + ".png";
-      }
+      return '/admin/img/' + os + ".png";
     },
   },
   mounted() {
