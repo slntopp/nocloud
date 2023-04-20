@@ -87,6 +87,10 @@ export default {
             : () => import("@/components/ServicesProvider/map.vue"),
         },
         {
+          title: "Showcase",
+          component: () => import("@/components/ServicesProvider/showcase.vue"),
+        },
+        {
           title: "Template",
           component: () => import("@/components/ServicesProvider/template.vue"),
         },
