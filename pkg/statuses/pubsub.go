@@ -95,7 +95,7 @@ UPDATE DOCUMENT (@@collection, @key) WITH { status: @status } IN @@collection OP
 func (s *StatusesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	log := s.log.Named(col)
 	for msg := range msgs {
-		log.Debug("Status upd message", zap.Any("msg", msg))
+		log.Debug("Status upd message", zap.Any("message", msg))
 		var req spb.ObjectStatus
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {
