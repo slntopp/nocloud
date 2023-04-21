@@ -31,6 +31,16 @@
           clearable
         />
       </v-col>
+      <v-col cols="2">
+        <v-select
+          label="Service provider"
+          :items="sps"
+          item-value="uuid"
+          item-text="title"
+          v-model="uuid"
+          clearable
+        />
+      </v-col>
     </v-row>
     <history-table :account-id="account" :uuid="uuid" table-name="all-logs" />
   </v-container>
@@ -50,11 +60,13 @@ export default {
   mounted() {
     this.$store.dispatch("accounts/fetch");
     this.$store.dispatch("services/fetch");
+    this.$store.dispatch("servicesProviders/fetch");
   },
   computed: {
     ...mapGetters("accounts", { accounts: "all" }),
     ...mapGetters("services", { services: "all" }),
     ...mapGetters("services", { instances: "getInstances" }),
+    ...mapGetters("servicesProviders", { sps: "all" }),
   },
 };
 </script>
