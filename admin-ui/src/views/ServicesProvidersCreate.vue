@@ -55,7 +55,7 @@
             </v-col>
           </v-row>
 
-          <v-row v-if="false">
+          <v-row>
             <v-col cols="3">
               <v-subheader>Meta</v-subheader>
             </v-col>
@@ -64,32 +64,6 @@
                 :json="provider.meta"
                 @changeValue="(data) => (provider.meta = data)"
               />
-            </v-col>
-          </v-row>
-
-          <v-row>
-            <v-col cols="3">
-              <v-subheader>Service</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                label="Title"
-                v-model="provider.meta.service.title"
-              />
-              <v-select
-                label="Icon"
-                :value="toPascalCase(provider.meta.service.icon)"
-                @change="setIconToKebabCase"
-                :items="icons"
-              >
-                <template v-slot:item="{ item }">
-                  <icon-title-preview
-                    :is-mdi="false"
-                    :title="item"
-                    :icon="item"
-                  />
-                </template>
-              </v-select>
             </v-col>
           </v-row>
 
@@ -239,15 +213,11 @@ import {
   readJSONFile,
   readYAMLFile,
   downloadYAMLFile,
-  toKebabCase,
-  toPascalCase,
 } from "@/functions.js";
-import AntIcon from "@/components/ui/antIcon.vue";
-import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 
 export default {
   name: "servicesProviders-create",
-  components: { IconTitlePreview, AntIcon, JsonEditor },
+  components: { JsonEditor },
   mixins: [snackbar],
   data: () => ({
     types: [],
@@ -260,7 +230,7 @@ export default {
       proxy: { socket: "" },
       secrets: {},
       vars: { console: {} },
-      meta: { service: {} },
+      meta: {},
     },
     providerKey: "",
 
@@ -314,33 +284,6 @@ export default {
     template() {
       return () =>
         import(`@/components/modules/${this.type}/serviceProviders.vue`);
-    },
-    icons() {
-      const illustrations = require.context(
-        "@ant-design/icons-vue/",
-        true,
-        /^.*\.js$/
-      );
-      const removedKeys = ["./", ".js", "Outlined"];
-
-      return illustrations
-        .keys()
-        .map((icon) => {
-          if (icon.includes("Filled") || icon.includes("TwoTone")) {
-            return undefined;
-          }
-
-          removedKeys.forEach((key) => {
-            icon = icon.replace(key, "");
-          });
-
-          if (icon.includes("/")) {
-            return undefined;
-          }
-
-          return icon;
-        })
-        .filter((icon) => !!icon);
     },
     extentionsMap() {
       return extentionsMap;
@@ -520,10 +463,6 @@ export default {
         downloadYAMLFile(this.serviceProviderBody, name);
       }
     },
-    setIconToKebabCase(icon) {
-      this.provider.meta.service.icon = toKebabCase(icon);
-    },
-    toPascalCase,
   },
 };
 </script>

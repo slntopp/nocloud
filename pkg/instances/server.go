@@ -129,12 +129,35 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		log.Error("Failed to get driver", zap.String("type", r.SP.Type))
 		return nil, status.Error(codes.NotFound, "Driver not found")
 	}
-	return client.Invoke(ctx, &driverpb.InvokeRequest{
+	invoke, err := client.Invoke(ctx, &driverpb.InvokeRequest{
 		Instance:         instance.Instance,
 		ServicesProvider: r.SP,
 		Method:           req.Method,
 		Params:           req.Params,
 	})
+
+	var event = &elpb.Event{
+		Entity:    schema.INSTANCES_COL,
+		Uuid:      instance.GetUuid(),
+		Scope:     "driver",
+		Action:    req.Method,
+		Rc:        0,
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
+	if err != nil {
+		event.Rc = 1
+		nocloud.Log(log, event)
+		return invoke, err
+	}
+
+	nocloud.Log(log, event)
+
+	return invoke, nil
 }
 
 func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {

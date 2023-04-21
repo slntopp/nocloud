@@ -18,6 +18,8 @@ package services_providers
 import (
 	"context"
 	"fmt"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -436,6 +438,9 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 
 func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeRequest) (*sppb.InvokeResponse, error) {
 	log := s.log.Named("Invoke")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())
 	if err != nil {
 		log.Error("Failed to get ServicesProvider", zap.Error(err))
@@ -448,11 +453,33 @@ func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeReq
 		return nil, status.Error(codes.NotFound, "Driver not found")
 	}
 
-	return client.SpInvoke(ctx, &driverpb.SpInvokeRequest{
+	invoke, err := client.SpInvoke(ctx, &driverpb.SpInvokeRequest{
 		ServicesProvider: sp.ServicesProvider,
 		Method:           req.Method,
 		Params:           req.Params,
 	})
+
+	var event = &elpb.Event{
+		Entity:    schema.SERVICES_PROVIDERS_COL,
+		Uuid:      sp.GetUuid(),
+		Scope:     "driver",
+		Action:    req.Method,
+		Rc:        0,
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
+	if err != nil {
+		event.Rc = 1
+		nocloud.Log(log, event)
+		return invoke, err
+	}
+
+	nocloud.Log(log, event)
+	return invoke, nil
 }
 
 func (s *ServicesProviderServer) Prep(ctx context.Context, req *sppb.PrepSP) (*sppb.PrepSP, error) {
