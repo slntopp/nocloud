@@ -132,7 +132,11 @@ export default {
         cpanel: [{ action: "session" }],
       };
 
-      return types[this.template.billingPlan?.type];
+      const type = this.template.billingPlan?.type.includes("ovh")
+        ? "ovh"
+        : this.template.billingPlan?.type;
+
+      return types[type];
     },
     ioneActions() {
       if (!this.template?.state) return;
