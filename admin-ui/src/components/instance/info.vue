@@ -5,96 +5,77 @@
         <instance-actions :template="template" />
       </v-col>
     </v-row>
-    <v-row align="center">
-      <v-col>
-        <v-text-field
-          readonly
-          label="instance uuid"
-          style="display: inline-block; width: 330px"
-          :value="template.uuid"
-          :append-icon="
-            copyed === 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'
-          "
-          @click:append="addToClipboard(template.uuid, 'rootUUID')"
-        />
-      </v-col>
-      <v-col v-if="template.state">
-        <v-text-field
-          readonly
-          label="state"
-          style="display: inline-block; width: 150px"
-          :value="template.state.meta?.state_str || template.state.state"
-        />
-      </v-col>
-      <v-col v-if="template.state?.meta.lcm_state_str">
-        <v-text-field
-          readonly
-          label="lcm state"
-          style="display: inline-block; width: 150px"
-          :value="template.state?.meta.lcm_state_str"
-        />
-      </v-col>
-      <v-col v-if="template.state?.meta.networking?.public">
-        <div>
-          <span class="mr-4">ips</span>
-          <instance-ip-menu :item="template" />
-        </div>
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          label="price model"
-          :append-icon="editPriceModelComponent ? 'mdi-pencil' : null"
-          @click:append="priceModelDialog = true"
-          style="display: inline-block; width: 150px"
-          :value="template.billingPlan.title"
-        />
-      </v-col>
-    </v-row>
+      <v-card-title class="primary--text">Client info</v-card-title>
     <v-row>
       <v-col>
-        <v-text-field
-          @click:append="goTo('NamespacePage', { namespaceId: namespace.uuid })"
-          readonly
-          append-icon="mdi-login"
-          label="namespace"
+        <route-text-field
+          :to="{
+            name: 'NamespacePage',
+            params: { namespaceId: namespace.uuid },
+          }"
+          label="Group(Namespace)"
           :value="!namespace ? '' : 'NS_' + namespace.title"
         />
       </v-col>
       <v-col>
-        <v-text-field
-          @click:append="goTo('Account', { accountId: account.uuid })"
-          readonly
-          append-icon="mdi-login"
-          label="account"
+        <route-text-field
+          :to="{ name: 'Account', params: { accountId: account.uuid } }"
+          label="Account"
           :value="account?.title"
         />
       </v-col>
       <v-col>
-        <v-text-field
-          @click:append="goTo('Service', { serviceId: service.uuid })"
-          readonly
-          append-icon="mdi-login"
-          label="service"
-          :value="!service ? '' : 'SRV_' + service.title"
-        />
+        <v-text-field readonly label="email" />
       </v-col>
       <v-col>
-        <v-text-field
-          @click:append="goTo('ServicesProvider', { uuid: sp.uuid })"
-          readonly
-          append-icon="mdi-login"
-          label="service provider"
-          :value="sp?.title"
-        />
+        <v-text-field readonly label="balance" />
       </v-col>
     </v-row>
-
     <component
+      v-if="!template.type.includes('ovh')"
       :is="templates[template.type] ?? templates.custom"
       :template="template"
       @refresh="refreshInstance"
     />
+    <template v-else>
+      <v-card-title class="primary--text">Instance info</v-card-title>
+      <v-row>
+        <v-col>
+          <v-text-field :value="template.title" readonly label="title" />
+        </v-col>
+        <v-col>
+          <v-text-field :value="template.id" readonly label="ID" />
+        </v-col>
+        <v-col>
+          <v-text-field :value="template.uuid" readonly label="UUID" />
+        </v-col>
+        <v-col>
+          <route-text-field
+            :to="{ name: 'Service', params: { serviceId: service.uuid } }"
+            :value="!service ? '' : 'SRV_' + service.title"
+            label="Service"
+          />
+        </v-col>
+        <v-col>
+          <route-text-field
+            :to="{ name: 'ServicesProvider', params: { uuid: sp.uuid } }"
+            :value="sp?.title"
+            label="Service provider"
+          />
+        </v-col>
+        <v-col>
+          <v-text-field readonly :value="template.type" label="Type" />
+        </v-col>
+      </v-row>
+      <component :is="additionalInstanceInfoComponent" :template="template" />
+      <v-card-title class="primary--text">Billing info</v-card-title>
+      <component
+        :is="billingInfoComponent"
+        :template="template"
+        :plans="plans"
+        @refresh="refreshInstance"
+      />
+    </template>
 
     <v-btn
       :to="{
@@ -149,10 +130,12 @@ import JsonTextarea from "@/components/JsonTextarea.vue";
 import instanceIpMenu from "../ui/instanceIpMenu.vue";
 import { mapGetters } from "vuex";
 import EditPriceModel from "@/components/modules/ione/editPriceModel.vue";
+import RouteTextField from "@/components/ui/routeTextField.vue";
 
 export default {
   name: "instance-info",
   components: {
+    RouteTextField,
     EditPriceModel,
     nocloudTable,
     instanceActions,
@@ -182,9 +165,6 @@ export default {
           message: "Clipboard is not supported!",
         });
       }
-    },
-    goTo(name, params) {
-      this.$router.push({ name, params });
     },
     refreshInstance() {
       this.$store.dispatch("services/fetch", this.template.uuid);
@@ -236,6 +216,16 @@ export default {
           );
       }
       return null;
+    },
+    additionalInstanceInfoComponent() {
+      return () =>
+        import(
+          `@/components/modules/${this.template.type}/additionalInstanceInfo.vue`
+        );
+    },
+    billingInfoComponent() {
+      return () =>
+        import(`@/components/modules/${this.template.type}/billingInfo.vue`);
     },
   },
   created() {
