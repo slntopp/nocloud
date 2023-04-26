@@ -29,7 +29,7 @@
     </template>
     <template v-slot:[`item.uuid`]="{ item }">
       <router-link :to="getEntityByUuid(item).route">
-        {{ getEntityByUuid(item).item?.title }}
+        {{ `${getEntityByUuid(item).item?.title} (${(getEntityByUuid(item).type)})` }}
       </router-link>
     </template>
     <template
@@ -81,12 +81,11 @@ const store = useStore();
 
 const headers = computed(() => [
   { text: "Id", value: "id" },
-  !hideRequestor.value && { text: "Requestor", value: "requestor" },
-  !hideUuid.value && { text: "Account or service", value: "uuid" },
-  { text: "Entity", value: "entity" },
+  !hideRequestor.value && { text: "Account (Requestor)", value: "requestor" },
+  !hideUuid.value && { text: "Entity", value: "uuid" },
   { text: "Scope", value: "scope", customFilter: true },
   { text: "Action", value: "action", customFilter: true },
-  { text: "TS", value: "ts" },
+  { text: "Timestamp", value: "ts" },
 ]);
 
 const operationHeaders = ref([
@@ -136,21 +135,21 @@ const getEntityByUuid = (item) => {
       return {
         route: { name: "Instance", params: { instanceId: item.uuid } },
         item: getInstance(item.uuid),
-        type: "inst",
+        type: "Instance",
       };
     }
     case "Services": {
       return {
         route: { name: "Service", params: { serviceId: item.uuid } },
         item: getService(item.uuid),
-        type: "serv",
+        type: "Service",
       };
     }
     case "ServicesProviders": {
       return {
         route: { name: "ServicesProvider", params: { uuid: item.uuid } },
         item: getServiceProvider(item.uuid),
-        type: "sp",
+        type: "Service provider",
       };
     }
     default: {
