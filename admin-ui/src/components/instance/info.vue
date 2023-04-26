@@ -48,9 +48,6 @@
           </v-text-field>
         </v-col>
         <v-col>
-          <v-text-field :value="template.id" readonly label="ID" />
-        </v-col>
-        <v-col>
           <v-text-field :value="template.uuid" readonly label="UUID" />
         </v-col>
         <v-col>
