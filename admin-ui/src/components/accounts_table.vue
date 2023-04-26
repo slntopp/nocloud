@@ -31,13 +31,11 @@
             class="ml-5"
             >mdi-calendar-multiple</v-icon
           >
-          <v-icon
+          <login-in-account-icon
             class="ml-5"
             v-if="['ROOT', 'ADMIN'].includes(item.access.level)"
-            @click="loginHandler(item)"
-          >
-            mdi-login
-          </v-icon>
+            :uuid="item.uuid"
+          />
         </div>
       </div>
     </template>
@@ -64,11 +62,12 @@
 import noCloudTable from "@/components/table.vue";
 import Balance from "./balance.vue";
 import { filterArrayByTitleAndUuid } from "@/functions";
-import api from "@/api";
+import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 
 export default {
   name: "accounts-table",
   components: {
+      LoginInAccountIcon,
     "nocloud-table": noCloudTable,
     Balance,
   },
@@ -120,20 +119,6 @@ export default {
     },
     colorChip(level) {
       return this.levelColorMap[level];
-    },
-    loginHandler(item) {
-      this.$store
-        .dispatch("auth/loginToApp", { uuid: item.uuid, type: "whmcs" })
-        .then(({ token }) => {
-          api.settings.get(["app"]).then((res) => {
-            const url = JSON.parse(res["app"]).url;
-            const win = window.open(url);
-
-            setTimeout(() => {
-              win.postMessage(token, url);
-            }, 100);
-          });
-        });
     },
     goToBalance(uuid) {
       this.$router.push({ name: "Transactions", query: { account: uuid } });
