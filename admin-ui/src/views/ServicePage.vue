@@ -15,6 +15,7 @@
       background-color="background-light"
     >
       <v-tab>Info</v-tab>
+      <v-tab>History</v-tab>
       <!-- <v-tab>Control</v-tab> -->
       <v-tab>Template</v-tab>
     </v-tabs>
@@ -44,6 +45,10 @@
 
       <v-tab-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
+        <service-history v-if="service" :template="service" />
+      </v-tab-item>
+      <v-tab-item>
+        <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
         <service-template v-if="service" :template="service" />
       </v-tab-item>
     </v-tabs-items>
@@ -55,13 +60,14 @@ import config from "@/config.js";
 import serviceTemplate from "@/components/service/template.vue";
 import serviceInfo from "@/components/service/info.vue";
 import snackbar from "@/mixins/snackbar.js";
+import ServiceHistory from "@/components/service/history.vue";
 
 const url = "wss://api.nocloud.ione-cloud.net/services";
 let socket;
 
 export default {
   name: "service-view",
-  components: { serviceTemplate, serviceInfo },
+  components: { ServiceHistory, serviceTemplate, serviceInfo },
   mixins: [snackbar],
   data: () => ({
     found: false,
@@ -118,6 +124,8 @@ export default {
       type: "services/fetchById",
       params: this.serviceId,
     });
+
+    this.$store.dispatch("accounts/fetch");
 
     socket = new WebSocket(`${url}/${this.serviceId}/stream`);
     socket.onmessage = (msg) => {
