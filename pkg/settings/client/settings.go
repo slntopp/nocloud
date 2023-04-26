@@ -63,7 +63,6 @@ set_default:
 			Key:         key,
 			Value:       string(payload),
 			Description: &_default.Description,
-			Level:       _default.Level,
 		})
 		if err != nil {
 			log.Error("Error Putting Monitoring Configuration", zap.Error(err))
