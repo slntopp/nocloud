@@ -5,7 +5,7 @@
         <instance-actions :template="template" />
       </v-col>
     </v-row>
-      <v-card-title class="primary--text">Client info</v-card-title>
+    <v-card-title class="primary--text">Client info</v-card-title>
     <v-row>
       <v-col>
         <route-text-field
@@ -41,7 +41,11 @@
       <v-card-title class="primary--text">Instance info</v-card-title>
       <v-row>
         <v-col>
-          <v-text-field :value="template.title" readonly label="title" />
+          <v-text-field :value="template.title" readonly label="title">
+            <template v-slot:append>
+              <login-in-account-icon :uuid="account.uuid" />
+            </template>
+          </v-text-field>
         </v-col>
         <v-col>
           <v-text-field :value="template.id" readonly label="ID" />
@@ -131,10 +135,12 @@ import instanceIpMenu from "../ui/instanceIpMenu.vue";
 import { mapGetters } from "vuex";
 import EditPriceModel from "@/components/modules/ione/editPriceModel.vue";
 import RouteTextField from "@/components/ui/routeTextField.vue";
+import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 
 export default {
   name: "instance-info",
   components: {
+    LoginInAccountIcon,
     RouteTextField,
     EditPriceModel,
     nocloudTable,
