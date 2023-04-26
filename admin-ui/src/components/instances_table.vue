@@ -117,7 +117,7 @@
 
     <template v-slot:[`item.state.meta.networking`]="{ item }">
       <template v-if="!item.state?.meta.networking?.public">-</template>
-      <instance-ip-menu v-else :item="item" />
+      <instance-ip-menu v-else :item="item" ui="span"/>
     </template>
   </nocloud-table>
 </template>
