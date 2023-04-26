@@ -26,7 +26,7 @@
         >
           {{ item.title }}
         </router-link>
-        <v-icon @click="goToInstance(item)">mdi-login</v-icon>
+        <login-in-account-icon :uuid="getAccount(item).uuid"/>
       </div>
     </template>
 
@@ -125,12 +125,12 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
-import api from "@/api";
 import { getState } from "@/functions";
+import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 
 export default {
   name: "instances-table",
-  components: { nocloudTable, instanceIpMenu },
+  components: {LoginInAccountIcon, nocloudTable, instanceIpMenu },
   props: {
     value: { type: Array, required: true },
     selected: { type: Object, default: null },
@@ -358,22 +358,6 @@ export default {
     },
     getValue(key, item) {
       return this.headersGetters[key](item);
-    },
-    goToInstance(item) {
-      const { uuid } = this.getAccount(item);
-
-      this.$store
-        .dispatch("auth/loginToApp", { uuid, type: "whmcs" })
-        .then(({ token }) => {
-          api.settings.get(["app"]).then((res) => {
-            const url = `${JSON.parse(res["app"]).url}/#/cloud/${item.uuid}`;
-            const win = window.open(url, "_blank");
-
-            setTimeout(() => {
-              win.postMessage(token, url);
-            }, 100);
-          });
-        });
     },
   },
   computed: {
