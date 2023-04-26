@@ -7,7 +7,7 @@
     transition="slide-y-transition"
   >
     <template v-slot:activator="{ on, attrs }">
-        <v-text-field v-if="props.ui!=='span'" v-bind="attrs" v-on="on" readonly :value="ip" />
+        <v-text-field label="ips_public" v-if="props.ui!=='span'" v-bind="attrs" v-on="on" readonly :value="ip" />
         <span v-else v-bind="attrs" v-on="on">{{ip}}</span>
     </template>
 
