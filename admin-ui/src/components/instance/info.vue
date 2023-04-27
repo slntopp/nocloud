@@ -18,17 +18,22 @@
         />
       </v-col>
       <v-col>
-        <route-text-field
-          :to="{ name: 'Account', params: { accountId: account.uuid } }"
-          label="Account"
-          :value="account?.title"
-        />
+        <div class="d-flex justify-center align-center">
+          <route-text-field
+            :to="{ name: 'Account', params: { accountId: account.uuid } }"
+            label="Account"
+            :value="account?.title"
+          />
+            <v-btn icon @click="moveDialog = true">
+                <v-icon  size="30">mdi-arrow-up-bold</v-icon>
+            </v-btn>
+        </div>
       </v-col>
       <v-col>
         <v-text-field readonly label="email" />
       </v-col>
       <v-col>
-        <v-text-field readonly label="balance" />
+        <v-text-field readonly label="balance" :value="account?.balance" />
       </v-col>
     </v-row>
     <component
@@ -120,6 +125,15 @@
         :service="service"
       />
     </template>
+    <move-instance
+            @refresh="refreshInstance"
+      :account="account"
+      :services="services"
+      :namespaces="namespaces"
+      :accounts="accounts"
+      :template="template"
+      v-model="moveDialog"
+    />
   </v-card>
 </template>
 
@@ -133,10 +147,12 @@ import { mapGetters } from "vuex";
 import EditPriceModel from "@/components/modules/ione/editPriceModel.vue";
 import RouteTextField from "@/components/ui/routeTextField.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
+import MoveInstance from "@/components/dialogs/moveInstance.vue";
 
 export default {
   name: "instance-info",
   components: {
+    MoveInstance,
     LoginInAccountIcon,
     RouteTextField,
     EditPriceModel,
@@ -151,6 +167,7 @@ export default {
     copyed: null,
     templates: {},
     priceModelDialog: false,
+    moveDialog: false,
   }),
   methods: {
     addToClipboard(text, index) {
