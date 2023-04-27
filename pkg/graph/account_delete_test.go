@@ -56,7 +56,7 @@ func TestDeleteAccount(t *testing.T) {
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.ID.Key())
 
-	namespace, err := nsc.Create(ctx, "test_namespace")
+	namespace, err := nsc.Create(ctx, "test_namespace", "")
 	if err != nil {
 		t.Error("Can't create namespace")
 	}
@@ -131,7 +131,7 @@ func TestDeleteAccountCredentials(t *testing.T) {
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.ID.Key())
 
-	namespace, err := nsc.Create(ctx, "test_namespace")
+	namespace, err := nsc.Create(ctx, "test_namespace", "")
 	if err != nil {
 		t.Error("Can't create namespace")
 	}
