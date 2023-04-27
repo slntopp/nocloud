@@ -41,6 +41,7 @@
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
+import {getOvhPrice} from "@/functions";
 
 export default {
   name: "instance-actions",
@@ -106,22 +107,6 @@ export default {
         .finally(() => {
           this.isLoading = false;
         });
-    },
-    getOvhPrice() {
-      const duration = this.template.config.duration;
-      const tarrifPrice =
-        this.template.billingPlan.products[
-          `${duration} ${this.template.config.planCode}`
-        ].price;
-      const addonsPrice = this.template.config.addons
-        .map(
-          (a) =>
-            this.template.billingPlan.resources.find(
-              (r) => r.key === `${duration} ${a}`
-            ).price
-        )
-        .reduce((acc, v) => acc + v, 0);
-      return tarrifPrice + addonsPrice;
     },
     getAccountBalance() {
       const namespace = this.$store.getters["namespaces/all"]?.find(
@@ -218,7 +203,7 @@ export default {
           this.template.state.state === "RUNNING" &&
           this.template.state.state !== "STOPPED",
         suspend: this.template.state.state === "SUSPENDED",
-        renew: this.getAccountBalance() < this.getOvhPrice(),
+        renew: this.getAccountBalance() < getOvhPrice(this.template),
       };
     },
   },
