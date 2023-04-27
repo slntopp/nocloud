@@ -130,6 +130,13 @@
       :template="template"
       v-model="moveDialog"
     />
+
+    <div
+      v-if="billingLabelComponent"
+      style="position: absolute; top: 0; right: 75px"
+    >
+      <component :is="billingLabelComponent" :template="instance" />
+    </div>
   </v-card>
 </template>
 
@@ -166,7 +173,7 @@ export default {
     priceModelDialog: false,
     moveDialog: false,
     instance: {},
-      isSaveLoading:false
+    isSaveLoading: false,
   }),
   methods: {
     addToClipboard(text, index) {
@@ -275,6 +282,10 @@ export default {
     billingInfoComponent() {
       return () =>
         import(`@/components/modules/${this.template.type}/billingInfo.vue`);
+    },
+    billingLabelComponent() {
+      return () =>
+        import(`@/components/modules/${this.instance.type}/billingLabel.vue`);
     },
   },
   created() {
