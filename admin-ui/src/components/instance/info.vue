@@ -33,7 +33,7 @@
         <v-text-field readonly label="email" />
       </v-col>
       <v-col>
-        <v-text-field readonly label="balance" :value="account?.balance" />
+        <v-text-field readonly label="balance" :value="account?.balance.toFixed(2)" />
       </v-col>
     </v-row>
     <component
