@@ -27,6 +27,12 @@
         />
       </v-tab-item>
     </v-tabs-items>
+    <div
+      v-if="!instanceLoading && billingLabelComponent"
+      style="position: absolute; top: 100px; right: 50px"
+    >
+      <component :is="billingLabelComponent" :template="instance"/>
+    </div>
   </div>
 </template>
 
@@ -80,7 +86,11 @@ export default {
           title: "Template",
           component: () => import("@/components/instance/template.vue"),
         },
-      ].filter(el=>!!el);
+      ].filter((el) => !!el);
+    },
+    billingLabelComponent() {
+      return () =>
+        import(`@/components/modules/${this.instance.type}/billingLabel.vue`);
     },
   },
   created() {
