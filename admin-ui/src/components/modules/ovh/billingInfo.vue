@@ -23,10 +23,10 @@
         <v-text-field readonly label="Price instance total" :value="getPrice" />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Date (create)" />
+        <v-text-field readonly label="Date (create)" :value="template.data.creation"/>
       </v-col>
       <v-col>
-        <v-text-field readonly label="Due to date/next payment" />
+        <v-text-field readonly label="Due to date/next payment"  :value="template.data.expiration" />
       </v-col>
       ></v-row
     >
@@ -62,7 +62,7 @@
             class="mx-5"
             :loading="isPlanChangeLoading"
             @click="saveNewPrices"
-            >Go to individual</v-btn
+            >Save prices</v-btn
           >
         </div>
       </template>

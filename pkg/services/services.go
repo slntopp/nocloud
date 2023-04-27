@@ -20,12 +20,14 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
 	"github.com/slntopp/nocloud-proto/access"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	proto "github.com/slntopp/nocloud-proto/instances"
 	pb "github.com/slntopp/nocloud-proto/services"
 	stpb "github.com/slntopp/nocloud-proto/settings"
@@ -527,11 +529,29 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 
 	service.Status = statuspb.NoCloudStatus_UP
 	log.Debug("Updated Service", zap.Any("service", service))
+
+	event := elpb.Event{
+		Entity:    schema.SERVICES_COL,
+		Uuid:      service.GetUuid(),
+		Scope:     "database",
+		Action:    "up",
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
 	err = s.ctrl.SetStatus(ctx, service, statuspb.NoCloudStatus_UP)
 	if err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		event.Rc = 1
+		nocloud.Log(log, &event)
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
+
+	event.Rc = 0
+	nocloud.Log(log, &event)
 
 	return &pb.UpResponse{}, nil
 }
@@ -569,10 +589,27 @@ func (s *ServicesServer) Suspend(ctx context.Context, request *pb.SuspendRequest
 		}
 	}
 
+	event := elpb.Event{
+		Entity:    schema.SERVICES_COL,
+		Uuid:      service.GetUuid(),
+		Scope:     "database",
+		Action:    "suspend",
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
 	if err := s.ctrl.SetStatus(ctx, service, statuspb.NoCloudStatus_SUS); err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		event.Rc = 1
+		nocloud.Log(log, &event)
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
+
+	event.Rc = 0
+	nocloud.Log(log, &event)
 
 	return &pb.SuspendResponse{}, nil
 }
@@ -606,10 +643,27 @@ func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendReq
 		}
 	}
 
+	event := elpb.Event{
+		Entity:    schema.SERVICES_COL,
+		Uuid:      service.GetUuid(),
+		Scope:     "database",
+		Action:    "unsuspend",
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
 	if err = s.ctrl.SetStatus(ctx, service, statuspb.NoCloudStatus_UP); err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		event.Rc = 1
+		nocloud.Log(log, &event)
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
+
+	event.Rc = 0
+	nocloud.Log(log, &event)
 
 	return &pb.UnsuspendResponse{}, nil
 }
@@ -694,11 +748,28 @@ func (s *ServicesServer) Down(ctx context.Context, request *pb.DownRequest) (*pb
 		service.InstancesGroups[i] = group
 	}
 
+	event := elpb.Event{
+		Entity:    schema.SERVICES_COL,
+		Uuid:      service.GetUuid(),
+		Scope:     "database",
+		Action:    "down",
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
 	err = s.ctrl.SetStatus(ctx, service, statuspb.NoCloudStatus_INIT)
 	if err != nil {
 		log.Error("Error updating Service", zap.Error(err), zap.Any("service", service))
+		event.Rc = 1
+		nocloud.Log(log, &event)
 		return nil, status.Error(codes.Internal, "Error storing updates")
 	}
+
+	event.Rc = 0
+	nocloud.Log(log, &event)
 
 	return &pb.DownResponse{}, nil
 }

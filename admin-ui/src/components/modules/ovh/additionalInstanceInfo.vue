@@ -16,7 +16,7 @@
         />
       </v-col>
       <v-col>
-          <instance-ip-menu :item="template" />
+        <instance-ip-menu :item="template"/>
       </v-col>
       <v-col>
         <v-text-field readonly :value="os" label="OS login" />

@@ -96,6 +96,17 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 		vars["service"] = service
 	}
 
+	if req.Type != nil {
+		transactionType := req.GetType()
+
+		if req.Account == nil && req.Service == nil {
+			query += ` FILTER t.meta.type == @type`
+		} else {
+			query += ` && t.meta.type == @type`
+		}
+		vars["type"] = transactionType
+	}
+
 	if req.Field != nil && req.Sort != nil {
 		subQuery := ` SORT t.%s %s`
 		field, sort := req.GetField(), req.GetSort()
@@ -236,6 +247,17 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 			query += ` && t.service == @service`
 		}
 		vars["service"] = service
+	}
+
+	if req.Type != nil {
+		transactionType := req.GetType()
+
+		if req.Account == nil && req.Service == nil {
+			query += ` FILTER t.meta.type == @type`
+		} else {
+			query += ` && t.meta.type == @type`
+		}
+		vars["type"] = transactionType
 	}
 
 	query += ` RETURN t`
