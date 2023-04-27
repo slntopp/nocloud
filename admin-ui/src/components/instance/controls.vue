@@ -107,6 +107,31 @@ export default {
           this.isLoading = false;
         });
     },
+    getOvhPrice() {
+      const duration = this.template.config.duration;
+      const tarrifPrice =
+        this.template.billingPlan.products[
+          `${duration} ${this.template.config.planCode}`
+        ].price;
+      const addonsPrice = this.template.config.addons
+        .map(
+          (a) =>
+            this.template.billingPlan.resources.find(
+              (r) => r.key === `${duration} ${a}`
+            ).price
+        )
+        .reduce((acc, v) => acc + v, 0);
+      return tarrifPrice + addonsPrice;
+    },
+    getAccountBalance() {
+      const namespace = this.$store.getters["namespaces/all"]?.find(
+        (n) => n.uuid === this.template.access.namespace
+      );
+      const account = this.$store.getters["accounts/all"].find(
+        (a) => a.uuid === namespace.access.namespace
+      );
+      return account.balance;
+    },
   },
   computed: {
     vmControlBtns() {
@@ -127,6 +152,11 @@ export default {
           { action: "resume", disabled: this.ovhActions?.resume },
           { action: "suspend", disabled: this.ovhActions?.suspend },
           { action: "reboot", disabled: this.ovhActions?.reboot },
+          {
+            title: "renew",
+            action: "manual_renew",
+            disabled: this.ovhActions?.renew,
+          },
         ],
         opensrs: [{ action: "dns" }],
         cpanel: [{ action: "session" }],
@@ -188,6 +218,7 @@ export default {
           this.template.state.state === "RUNNING" &&
           this.template.state.state !== "STOPPED",
         suspend: this.template.state.state === "SUSPENDED",
+        renew: this.getAccountBalance() < this.getOvhPrice(),
       };
     },
   },
