@@ -399,7 +399,21 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		access_lvl = access.Level(*request.Access)
 	}
 
-	s.PostCreateActions(ctx, acc)
+	var settings AccountPostCreateSettings
+	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
+		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	if settings.CreateNamespace {
+		personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, acc.GetUuid())
+
+		createdNs, err := s.ns_ctrl.Create(personal_ctx, acc.GetTitle())
+		if err != nil {
+			log.Warn("Cannot create a namespace for new Account", zap.String("account", acc.GetUuid()), zap.Error(err))
+		} else {
+			res.Namespace = createdNs.ID.Key()
+		}
+	}
 
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
 	err = acc.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
