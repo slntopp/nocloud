@@ -361,6 +361,7 @@ FOR service IN @@services // Iterate over Services
         service: service._key,
         records: records[*]._key,
         total: SUM(records[*].total) // Calculate Total
+		meta: {"type": "transaction"}
     } IN @@transactions RETURN NEW
 `
 
