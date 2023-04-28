@@ -41,6 +41,7 @@
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
+import {getOvhPrice} from "@/functions";
 
 export default {
   name: "instance-actions",
@@ -107,6 +108,15 @@ export default {
           this.isLoading = false;
         });
     },
+    getAccountBalance() {
+      const namespace = this.$store.getters["namespaces/all"]?.find(
+        (n) => n.uuid === this.template.access.namespace
+      );
+      const account = this.$store.getters["accounts/all"].find(
+        (a) => a.uuid === namespace.access.namespace
+      );
+      return account.balance;
+    },
   },
   computed: {
     vmControlBtns() {
@@ -127,6 +137,11 @@ export default {
           { action: "resume", disabled: this.ovhActions?.resume },
           { action: "suspend", disabled: this.ovhActions?.suspend },
           { action: "reboot", disabled: this.ovhActions?.reboot },
+          {
+            title: "renew",
+            action: "manual_renew",
+            disabled: this.ovhActions?.renew,
+          },
         ],
         opensrs: [{ action: "dns" }],
         cpanel: [{ action: "session" }],
@@ -188,6 +203,7 @@ export default {
           this.template.state.state === "RUNNING" &&
           this.template.state.state !== "STOPPED",
         suspend: this.template.state.state === "SUSPENDED",
+        renew: this.getAccountBalance() < getOvhPrice(this.template),
       };
     },
   },
