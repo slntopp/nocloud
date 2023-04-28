@@ -399,12 +399,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		access_lvl = access.Level(*request.Access)
 	}
 
-	nsType := ""
-	if request.Type != nil {
-		nsType = request.GetType()
-	}
-
-	s.PostCreateActions(ctx, acc, nsType)
+	s.PostCreateActions(ctx, acc)
 
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
 	err = acc.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
