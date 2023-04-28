@@ -42,6 +42,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var (
@@ -374,10 +375,20 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
 	}
 
-	acc, err := s.ctrl.Create(ctx, accountspb.Account{
+	creationAccount := accountspb.Account{
 		Title:    request.Title,
 		Currency: &request.Currency,
-	})
+	}
+
+	if request.Auth.Type == "whmcs" {
+		creationAccount.Data = &structpb.Struct{
+			Fields: map[string]*structpb.Value{
+				"email": structpb.NewStringValue(request.Auth.Data[0]),
+			},
+		}
+	}
+
+	acc, err := s.ctrl.Create(ctx, creationAccount)
 	if err != nil {
 		log.Debug("Error creating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating account")
@@ -388,7 +399,12 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		access_lvl = access.Level(*request.Access)
 	}
 
-	s.PostCreateActions(ctx, acc)
+	nsType := ""
+	if request.Type != nil {
+		nsType = request.GetType()
+	}
+
+	s.PostCreateActions(ctx, acc, nsType)
 
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
 	err = acc.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)

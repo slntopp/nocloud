@@ -145,7 +145,7 @@ func TestGenerateTransactions(t *testing.T) {
 
 	ctx = context.WithValue(context.Background(), nocloud.NoCloudAccount, acc.ID.Key())
 
-	ns, err := nsConroller.Create(ctx, "test_routine_ns")
+	ns, err := nsConroller.Create(ctx, "test_routine_ns", "")
 	if err != nil {
 		t.Error(err)
 	}

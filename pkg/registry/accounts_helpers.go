@@ -60,7 +60,7 @@ var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
 	Level:       access.Level_ADMIN,
 }
 
-func (s *AccountsServiceServer) PostCreateActions(ctx context.Context, account graph.Account) {
+func (s *AccountsServiceServer) PostCreateActions(ctx context.Context, account graph.Account, nsType string) {
 	log := s.log.Named("PostCreateActions")
 	var settings AccountPostCreateSettings
 	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
@@ -68,14 +68,14 @@ func (s *AccountsServiceServer) PostCreateActions(ctx context.Context, account g
 	}
 
 	if settings.CreateNamespace {
-		_CreatePersonalNamespace(ctx, log, s.ns_ctrl, account)
+		_CreatePersonalNamespace(ctx, log, s.ns_ctrl, account, nsType)
 	}
 }
 
-func _CreatePersonalNamespace(ctx context.Context, log *zap.Logger, ns_ctrl graph.NamespacesController, account graph.Account) {
+func _CreatePersonalNamespace(ctx context.Context, log *zap.Logger, ns_ctrl graph.NamespacesController, account graph.Account, nsType string) {
 	personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, account.GetUuid())
 
-	if _, err := ns_ctrl.Create(personal_ctx, account.GetTitle()); err != nil {
+	if _, err := ns_ctrl.Create(personal_ctx, account.GetTitle(), nsType); err != nil {
 		log.Warn("Cannot create a namespace for new Account", zap.String("account", account.GetUuid()), zap.Error(err))
 		return
 	}
