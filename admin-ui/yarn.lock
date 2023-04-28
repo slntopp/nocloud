@@ -4752,10 +4752,10 @@ no-case@^3.0.4:
     lower-case "^2.0.2"
     tslib "^2.0.3"
 
-nocloudjsrest@^1.5.5:
-  version "1.5.5"
-  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.5.5.tgz#8d68e1c073d2bbebcc98585101e2181cebf88b63"
-  integrity sha512-94Js8axz1FBiKTZcUgVZ5l6P8HC6qtHYUQUqh1zEOO3nrVjM1nIi3HHidIay9fhwNa0pJvXSMBZgCmjXXDDHNg==
+nocloudjsrest@^1.5.6:
+  version "1.5.6"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.5.6.tgz#f7c26db3022bec451a3c189ff2f5c4f7f9d07dcb"
+  integrity sha512-vkAr3HfkedFWSrbuaAOjmd3+uMwxMJ17Nc4KTIJPzXmOD6CLZgmlrHsjQeuI0k6kwhz7gcOfWvyn5rsESrfsKQ==
   dependencies:
     axios "^0.24.0"
 
