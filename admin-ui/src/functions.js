@@ -364,6 +364,21 @@ export function getTimestamp({ day, month, year, quarter, week, time }) {
   seconds += getSecondsByDays(365 * year);
   seconds += getSecondsByDays(day);
   seconds += new Date("1970-01-01T" + time + "Z").getTime() / 1000;
-  console.log(seconds)
+  console.log(seconds);
   return seconds;
+}
+
+export function getOvhPrice(instance) {
+  const duration = instance.config.duration;
+  const tarrifPrice =
+    instance.billingPlan.products[`${duration} ${instance.config.planCode}`]
+      .price;
+  const addonsPrice = instance.config.addons
+    .map(
+      (a) =>
+        instance.billingPlan.resources.find((r) => r.key === `${duration} ${a}`)
+          .price
+    )
+    .reduce((acc, v) => acc + v, 0);
+  return tarrifPrice + addonsPrice;
 }

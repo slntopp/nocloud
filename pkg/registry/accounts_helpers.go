@@ -16,14 +16,10 @@ limitations under the License.
 package registry
 
 import (
-	"context"
-
 	"github.com/slntopp/nocloud-proto/access"
 	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/graph"
-	"github.com/slntopp/nocloud/pkg/nocloud"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
-	"go.uber.org/zap"
 )
 
 func MakeAccountMessage(acc graph.Account) *accountspb.Account {
@@ -58,25 +54,4 @@ var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
 	Value:       AccountPostCreateSettings{CreateNamespace: true},
 	Description: "Post Account Creation Actions",
 	Level:       access.Level_ADMIN,
-}
-
-func (s *AccountsServiceServer) PostCreateActions(ctx context.Context, account graph.Account, nsType string) {
-	log := s.log.Named("PostCreateActions")
-	var settings AccountPostCreateSettings
-	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
-		log.Warn("Cannot fetch settings", zap.Error(scErr))
-	}
-
-	if settings.CreateNamespace {
-		_CreatePersonalNamespace(ctx, log, s.ns_ctrl, account, nsType)
-	}
-}
-
-func _CreatePersonalNamespace(ctx context.Context, log *zap.Logger, ns_ctrl graph.NamespacesController, account graph.Account, nsType string) {
-	personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, account.GetUuid())
-
-	if _, err := ns_ctrl.Create(personal_ctx, account.GetTitle(), nsType); err != nil {
-		log.Warn("Cannot create a namespace for new Account", zap.String("account", account.GetUuid()), zap.Error(err))
-		return
-	}
 }

@@ -18,6 +18,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"google.golang.org/protobuf/types/known/structpb"
 	"time"
 
 	epb "github.com/slntopp/nocloud-proto/events"
@@ -172,6 +173,12 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
+
+	if t.Meta == nil {
+		t.Meta = map[string]*structpb.Value{}
+	}
+
+	t.Meta["type"] = structpb.NewStringValue("transaction")
 
 	r, err := s.transactions.Create(ctx, t)
 	if err != nil {

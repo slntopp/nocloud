@@ -18,17 +18,26 @@
         />
       </v-col>
       <v-col>
-        <route-text-field
-          :to="{ name: 'Account', params: { accountId: account.uuid } }"
-          label="Account"
-          :value="account?.title"
-        />
+        <div class="d-flex justify-center align-center">
+          <route-text-field
+            :to="{ name: 'Account', params: { accountId: account.uuid } }"
+            label="Account"
+            :value="account?.title"
+          />
+          <v-btn icon @click="moveDialog = true">
+            <v-icon size="30">mdi-arrow-up-bold</v-icon>
+          </v-btn>
+        </div>
       </v-col>
       <v-col>
         <v-text-field readonly label="email" />
       </v-col>
       <v-col>
-        <v-text-field readonly label="balance" />
+        <v-text-field
+          readonly
+          label="balance"
+          :value="account?.balance.toFixed(2)"
+        />
       </v-col>
     </v-row>
     <component
@@ -41,8 +50,9 @@
       <v-card-title class="primary--text">Instance info</v-card-title>
       <v-row>
         <v-col>
-          <v-text-field :value="template.title" readonly label="title">
+          <v-text-field v-model="instance.title" label="Instance title">
             <template v-slot:append>
+              <v-icon class="mr-2">mdi-pencil</v-icon>
               <login-in-account-icon :uuid="account.uuid" />
             </template>
           </v-text-field>
@@ -78,16 +88,7 @@
       />
     </template>
 
-    <v-btn
-      :to="{
-        name: 'Instance edit',
-        params: {
-          instanceId: template.uuid,
-        },
-      }"
-    >
-      Edit
-    </v-btn>
+    <v-btn @click="save" :loading="isSaveLoading"> Save </v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -120,6 +121,22 @@
         :service="service"
       />
     </template>
+    <move-instance
+      @refresh="refreshInstance"
+      :account="account"
+      :services="services"
+      :namespaces="namespaces"
+      :accounts="accounts"
+      :template="template"
+      v-model="moveDialog"
+    />
+
+    <div
+      v-if="billingLabelComponent"
+      style="position: absolute; top: 0; right: 75px"
+    >
+      <component :is="billingLabelComponent" :template="instance" />
+    </div>
   </v-card>
 </template>
 
@@ -133,10 +150,13 @@ import { mapGetters } from "vuex";
 import EditPriceModel from "@/components/modules/ione/editPriceModel.vue";
 import RouteTextField from "@/components/ui/routeTextField.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
+import MoveInstance from "@/components/dialogs/moveInstance.vue";
+import api from "@/api";
 
 export default {
   name: "instance-info",
   components: {
+    MoveInstance,
     LoginInAccountIcon,
     RouteTextField,
     EditPriceModel,
@@ -151,6 +171,9 @@ export default {
     copyed: null,
     templates: {},
     priceModelDialog: false,
+    moveDialog: false,
+    instance: {},
+    isSaveLoading: false,
   }),
   methods: {
     addToClipboard(text, index) {
@@ -172,6 +195,36 @@ export default {
     refreshInstance() {
       this.$store.dispatch("services/fetch", this.template.uuid);
       this.$store.dispatch("servicesProviders/fetch");
+    },
+    save() {
+      const instance = this.instance;
+      const service = JSON.parse(JSON.stringify(this.service));
+
+      const igIndex = service.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === this.template.uuid)
+      );
+      const instanceIndex = service.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === this.template.uuid);
+
+      service.instancesGroups[igIndex].instances[instanceIndex] = instance;
+
+      this.isSaveLoading = true;
+      api.services
+        ._update(service)
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: "Instance saved successfully",
+          });
+
+          this.refreshInstance();
+        })
+        .catch((err) => {
+          this.showSnackbarError({ message: err });
+        })
+        .finally(() => {
+          this.isSaveLoading = false;
+        });
     },
   },
   computed: {
@@ -230,6 +283,10 @@ export default {
       return () =>
         import(`@/components/modules/${this.template.type}/billingInfo.vue`);
     },
+    billingLabelComponent() {
+      return () =>
+        import(`@/components/modules/${this.instance.type}/billingLabel.vue`);
+    },
   },
   created() {
     const types = require.context(
@@ -246,6 +303,16 @@ export default {
           import(`@/components/modules/${matched[1]}/instanceCard.vue`);
       }
     });
+
+    this.instance = JSON.parse(JSON.stringify(this.template));
+  },
+  watch: {
+    template: {
+      handler(newVal) {
+        this.instance = JSON.parse(JSON.stringify(newVal));
+      },
+      deep: true,
+    },
   },
 };
 </script>

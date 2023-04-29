@@ -80,7 +80,7 @@ export default {
           title: "Template",
           component: () => import("@/components/instance/template.vue"),
         },
-      ].filter(el=>!!el);
+      ].filter((el) => !!el);
     },
   },
   created() {

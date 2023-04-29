@@ -60,13 +60,11 @@ func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, r
 	return ListWithAccess[*namespaces.Namespace](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.NAMESPACES_COL, req_depth)
 }
 
-func (ctrl *NamespacesController) Create(ctx context.Context, title string, nsType string) (Namespace, error) {
+func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Namespace, error) {
 	ns := Namespace{
 		Namespace: &namespaces.Namespace{Title: title},
 	}
-	if nsType != "" {
-		ns.Type = &nsType
-	}
+
 	meta, err := ctrl.col.CreateDocument(ctx, ns)
 	if err != nil {
 		return Namespace{}, err

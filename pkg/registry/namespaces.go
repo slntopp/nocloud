@@ -56,7 +56,7 @@ func (s *NamespacesServiceServer) Create(ctx context.Context, request *namespace
 	log := s.log.Named("CreateNamespace")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	ns, err := s.ctrl.Create(ctx, request.Title, "")
+	ns, err := s.ctrl.Create(ctx, request.Title)
 	if err != nil {
 		s.log.Debug("Error creating namespace", zap.Error(err))
 		return &namespacespb.CreateResponse{}, status.Error(codes.Internal, "Can't create Namespace")
