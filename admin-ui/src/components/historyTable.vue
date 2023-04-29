@@ -29,7 +29,9 @@
     </template>
     <template v-slot:[`item.uuid`]="{ item }">
       <router-link :to="getEntityByUuid(item).route">
-        {{ `${getEntityByUuid(item).item?.title} (${(getEntityByUuid(item).type)})` }}
+        {{
+          `${getEntityByUuid(item).item?.title} (${getEntityByUuid(item).type})`
+        }}
       </router-link>
     </template>
     <template
@@ -58,10 +60,12 @@ const props = defineProps({
   tableName: {},
   accountId: {},
   uuid: {},
+  path: {},
   hideRequestor: { type: Boolean, default: false },
   hideUuid: { type: Boolean, default: false },
 });
-const { tableName, accountId, uuid, hideRequestor, hideUuid } = toRefs(props);
+const { tableName, accountId, uuid, hideRequestor, hideUuid, path } =
+  toRefs(props);
 
 const count = ref(10);
 const logs = ref([]);
@@ -172,8 +176,12 @@ const onUpdateOptions = async (newOptions) => {
 
 const updateProps = async () => {
   page.value = 1;
-  await init();
-  onUpdateOptions(options.value);
+  try {
+    await init();
+    await onUpdateOptions(options.value);
+  } catch (e) {
+    fetchError.value = e.message;
+  }
 };
 
 const init = async () => {
@@ -225,6 +233,7 @@ const requestOptions = computed(() => ({
     scope:
       (filterValues.value.scope.length && filterValues.value.scope) ||
       undefined,
+    path: path.value || undefined,
   },
 }));
 
@@ -240,4 +249,5 @@ onMounted(() => {
 watch(accountId, () => updateProps());
 watch(uuid, () => updateProps());
 watch(filterValues, () => updateProps(), { deep: true });
+watch(path, () => updateProps());
 </script>
