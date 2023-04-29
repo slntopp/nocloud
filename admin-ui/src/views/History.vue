@@ -1,48 +1,42 @@
 <template>
   <v-container>
     <v-row>
-      <v-col cols="2">
-        <v-select
-          label="Account"
+      <v-col>
+        <v-autocomplete
+          label="Account (Requestor)"
           :items="accounts"
           item-value="uuid"
           item-text="title"
-          clearable
           v-model="account"
         />
       </v-col>
-      <v-col cols="2">
-        <v-select
-          label="Service"
-          :items="services"
+      <v-col>
+        <v-autocomplete
+          label="Entity"
+          :items="entitys"
           item-value="uuid"
           item-text="title"
           v-model="uuid"
-          clearable
-        />
+        >
+          <template v-slot:item="{ item }">
+            <div class="d-flex justify-space-between" style="width: 100%">
+              <span class="text-start">{{ item.title }}</span>
+              <span class="ml-2 text-end">{{ item.entity }}</span>
+            </div>
+          </template>
+        </v-autocomplete>
       </v-col>
-      <v-col cols="2">
-        <v-select
-          label="Instance"
-          :items="instances"
-          item-value="uuid"
-          item-text="title"
-          v-model="uuid"
-          clearable
-        />
+      <v-col>
+        <v-text-field label="Path" :value="path" @change="path=$event"/>
       </v-col>
-      <v-col cols="2">
-        <v-select
-          label="Service provider"
-          :items="sps"
-          item-value="uuid"
-          item-text="title"
-          v-model="uuid"
-          clearable
-        />
-      </v-col>
+      <v-col cols="4"></v-col>
     </v-row>
-    <history-table :account-id="account" :uuid="uuid" table-name="all-logs" />
+    <history-table
+      :path="path"
+      :account-id="account"
+      :uuid="uuid"
+      table-name="all-logs"
+    />
   </v-container>
 </template>
 
@@ -56,6 +50,7 @@ export default {
   data: () => ({
     account: null,
     uuid: null,
+    path: null,
   }),
   mounted() {
     this.$store.dispatch("accounts/fetch");
@@ -64,9 +59,23 @@ export default {
   },
   computed: {
     ...mapGetters("accounts", { accounts: "all" }),
-    ...mapGetters("services", { services: "all" }),
-    ...mapGetters("services", { instances: "getInstances" }),
-    ...mapGetters("servicesProviders", { sps: "all" }),
+    entitys() {
+      const instances = this.$store.getters["services/getInstances"].map(
+        (s) => {
+          s.entity = "Instance";
+          return s;
+        }
+      );
+      const sps = this.$store.getters["servicesProviders/all"].map((s) => {
+        s.entity = "Service provider";
+        return s;
+      });
+      const services = this.$store.getters["services/all"].map((s) => {
+        s.entity = "Service";
+        return s;
+      });
+      return instances.concat(sps).concat(services);
+    },
   },
 };
 </script>
