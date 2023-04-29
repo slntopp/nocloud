@@ -16,13 +16,10 @@ limitations under the License.
 package registry
 
 import (
-	"context"
-
 	"github.com/slntopp/nocloud-proto/access"
 	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/graph"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
-	"go.uber.org/zap"
 )
 
 func MakeAccountMessage(acc graph.Account) *accountspb.Account {
@@ -57,8 +54,4 @@ var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
 	Value:       AccountPostCreateSettings{CreateNamespace: true},
 	Description: "Post Account Creation Actions",
 	Level:       access.Level_ADMIN,
-}
-
-func _CreatePersonalNamespace(ctx context.Context, log *zap.Logger, ns_ctrl graph.NamespacesController, account graph.Account) {
-
 }
