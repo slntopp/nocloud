@@ -5,8 +5,8 @@
       v-for="btn in vmControlBtns"
       :key="btn.action"
       :disabled="btn.disabled"
-      :loading="isLoading"
-      @click="sendVmAction(btn.action)"
+      :loading="isActionLoading"
+      @click="sendVmAction(btn.action, template.uuid)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -41,53 +41,15 @@
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
-import {getOvhPrice} from "@/functions";
+import sendVmAction from "@/mixins/sendVmAction";
 
 export default {
   name: "instance-actions",
   components: { ConfirmDialog },
-  mixins: [snackbar],
+  mixins: [snackbar, sendVmAction],
   props: { template: { type: Object, required: true } },
   data: () => ({ isLoading: false }),
   methods: {
-    sendVmAction(action) {
-      if (action === "vnc") {
-        this.openVnc();
-        return;
-      }
-      if (action === "dns") {
-        this.openDns();
-        return;
-      }
-
-      this.isLoading = true;
-      api.instances
-        .action({ uuid: this.template.uuid, action })
-        .then(() => {
-          this.showSnackbarSuccess({ message: "Done!" });
-        })
-        .catch((err) => {
-          const opts = {
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          };
-          this.showSnackbarError(opts);
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
-    },
-    openVnc() {
-      this.$router.push({
-        name: "Vnc",
-        params: { instanceId: this.template.uuid },
-      });
-    },
-    openDns() {
-      this.$router.push({
-        name: "InstanceDns",
-        params: { instanceId: this.template.uuid },
-      });
-    },
     deleteInstance() {
       this.isLoading = true;
       api
@@ -107,15 +69,6 @@ export default {
         .finally(() => {
           this.isLoading = false;
         });
-    },
-    getAccountBalance() {
-      const namespace = this.$store.getters["namespaces/all"]?.find(
-        (n) => n.uuid === this.template.access.namespace
-      );
-      const account = this.$store.getters["accounts/all"].find(
-        (a) => a.uuid === namespace.access.namespace
-      );
-      return account.balance;
     },
   },
   computed: {
@@ -137,11 +90,6 @@ export default {
           { action: "resume", disabled: this.ovhActions?.resume },
           { action: "suspend", disabled: this.ovhActions?.suspend },
           { action: "reboot", disabled: this.ovhActions?.reboot },
-          {
-            title: "renew",
-            action: "manual_renew",
-            disabled: this.ovhActions?.renew,
-          },
         ],
         opensrs: [{ action: "dns" }],
         cpanel: [{ action: "session" }],
@@ -203,7 +151,6 @@ export default {
           this.template.state.state === "RUNNING" &&
           this.template.state.state !== "STOPPED",
         suspend: this.template.state.state === "SUSPENDED",
-        renew: this.getAccountBalance() < getOvhPrice(this.template),
       };
     },
   },
