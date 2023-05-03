@@ -205,10 +205,10 @@
 
     <v-app-bar v-if="isLoggedIn" app color="background" elevation="0">
       <v-row style="width: 100%" justify="center" align="center">
-        <v-col>
+        <v-col cols="5">
           <app-search />
         </v-col>
-        <v-col class="d-flex justify-center">
+        <v-col class="d-flex justify-start">
           <v-btn
             v-if="btnStates.visible"
             :disabled="btnStates.disabled"
