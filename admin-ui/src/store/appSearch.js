@@ -3,30 +3,22 @@ export default {
   state: {
     searchParam: "",
     isAdvancedSearch: false,
-    advancedSearchParams: null,
-    searchMenuName: "",
-    tags: [],
+    variants: {},
   },
   mutations: {
     setSearchParam(state, newSearchParam) {
       state.searchParam = newSearchParam;
     },
-    setAdvancedSearch(state, searchMenuName) {
-      state.searchMenuName = searchMenuName;
-      state.isAdvancedSearch = true;
+    setAdvancedSearch(state, val) {
+      state.isAdvancedSearch = val;
     },
-    setAdvancedParams(state, params) {
-      state.advancedSearchParams = params;
-    },
-    setTags(state, tags) {
-      state.tags = [...tags];
+    setVariants(state, val) {
+      state.variants = val;
     },
     resetSearchParams(state) {
       state.isAdvancedSearch = false;
       state.searchParam = "";
-      state.advancedSearchParams = null;
-      state.searchMenuName = "";
-      state.tags = [];
+      state.variants = [];
     },
   },
   getters: {
@@ -34,16 +26,10 @@ export default {
       return state.searchParam;
     },
     isAdvancedSearch(state) {
-      return state.isAdvancedSearch && state.searchMenuName;
+      return state.isAdvancedSearch;
     },
-    advancedParams(state) {
-      return { advanced: state.advancedSearchParams, param: state.searchParam };
-    },
-    searchMenuName(state) {
-      return state.searchMenuName;
-    },
-    getTags(state) {
-      return state.tags;
+    variants(state) {
+      return state.variants;
     },
   },
 };
