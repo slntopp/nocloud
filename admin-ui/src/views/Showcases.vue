@@ -4,10 +4,58 @@
       <h1 class="page__title">Showcases</h1>
     </div>
 
-    <v-row>
+    <v-menu offset-y :close-on-content-click="false" @input="clearShowcase">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn class="mr-2" v-bind="attrs" v-on="on">Create</v-btn>
+      </template>
+
+      <v-card class="pa-2">
+        <v-select
+          label="Icon"
+          :items="icons"
+          :rules="generalRule"
+          :value="toPascalCase(newShowcase.icon)"
+          @change="(icon) => newShowcase.icon = toKebabCase(icon)"
+        >
+          <template v-slot:item="{ item }">
+            <icon-title-preview :is-mdi="false" :title="item" :icon="item" />
+          </template>
+        </v-select>
+
+        <v-select
+          dense
+          chips
+          multiple
+          return-object
+          item-text="title"
+          label="Services providers"
+          v-model="newShowcase.sp"
+          :items="sp"
+        >
+          <template v-slot:selection="{ item, index }">
+            <v-chip small v-if="index === 0">
+              <span>{{ item.title }}</span>
+            </v-chip>
+            <span v-if="index === 1" class="grey--text text-caption">
+              (+{{ newShowcase.sp.length - 1 }} others)
+            </span>
+          </template>
+        </v-select>
+
+        <v-btn :disabled="isDisabled" @click="addShowcase">Add</v-btn>
+      </v-card>
+    </v-menu>
+
+    <v-row v-if="Object.keys(showcases).length > 0">
       <v-col lg="6" cols="12" v-for="(showcase, key) in showcases" :key="key">
         <v-card color="background">
-          <v-card-title>{{ showcase.title }}:</v-card-title>
+          <v-card-title>
+            {{ showcase.title }}:
+            <confirm-dialog @confirm="updateShowcase(key, 'sp', [])">
+              <v-icon class="ml-2" color="error" style="cursor: pointer">mdi-close-circle</v-icon>
+            </confirm-dialog>
+          </v-card-title>
+
           <v-card-text>
             <v-text-field
               label="Title"
@@ -53,8 +101,10 @@
               chips
               multiple
               return-object
+              persistent-hint
               item-text="title"
               label="Services providers"
+              hint="If you clear the list of providers, the showcase will automatically be deleted."
               :items="sp"
               :value="showcase.sp"
               @change="(value) => updateShowcase(key, 'sp', value)"
@@ -64,7 +114,7 @@
                   <span>{{ item.title }}</span>
                 </v-chip>
                 <span v-if="index === 1" class="grey--text text-caption">
-                  (+{{ showcase.billing_plans.length - 1 }} others)
+                  (+{{ showcase.sp.length - 1 }} others)
                 </span>
               </template>
             </v-select>
@@ -73,7 +123,13 @@
       </v-col>
     </v-row>
 
-    <v-btn class="mt-4" :isLoading="isLoading" @click="tryToSend">Save</v-btn>
+    <v-btn
+      :class="(Object.keys(showcases).length > 0) ? 'mt-4' : null"
+      :isLoading="isLoading"
+      @click="tryToSend"
+    >
+      Save
+    </v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -101,37 +157,92 @@
 
 <script>
 import api from '@/api.js';
-import snackbar from "@/mixins/snackbar.js";
-import { toKebabCase, toPascalCase } from "@/functions.js";
-import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
+import snackbar from '@/mixins/snackbar.js';
+import { toKebabCase, toPascalCase } from '@/functions.js';
+import IconTitlePreview from '@/components/ui/iconTitlePreview.vue';
+import ConfirmDialog from '@/components/confirmDialog.vue';
 
 export default {
   name: 'showcases-view',
   mixins: [snackbar],
-  components: { IconTitlePreview },
+  components: { IconTitlePreview, ConfirmDialog },
   data: () => ({
+    newShowcase: {
+      title: 'Title',
+      icon: '',
+      billing_plans: [],
+      sp: []
+    },
     updated: [],
     isLoading: false,
     generalRule: [(v) => !!v || "This field is required!"]
   }),
   methods: {
-    updateShowcase(showcase, key, value) {
-      const sp = (key === 'sp') ? value : this.showcases[showcase].sp;
+    updateShowcase(id, key, value) {
+      if (key === 'sp') {
+        let provider = null;
 
-      sp.forEach((provider) => {
-        if (key === 'sp') {
-          const value = JSON.parse(JSON.stringify(this.showcases[showcase]));
+        if (value.length < this.showcases[id].sp.length) {
+          provider = JSON.parse(JSON.stringify(
+            this.showcases[id].sp.find(
+              ({ uuid }) => !value.find((el) => uuid === el.uuid)
+            )
+          ));
 
-          delete value.sp;
-          provider.meta.showcase[showcase] = value;
+          delete provider.meta.showcase[id];
         } else {
-          provider.meta.showcase[showcase][key] = value;
+          const showcase = JSON.parse(JSON.stringify(this.showcases[id]));
+
+          delete showcase.sp;
+          provider = JSON.parse(JSON.stringify(
+            value.find(({ uuid }) =>
+              !this.showcases[id].sp.find((el) => uuid === el.uuid)
+            )
+          ));
+
+          if (!provider.meta.showcase) provider.meta.showcase = {};
+          provider.meta.showcase[id] = showcase;
         }
+
         this.$store.commit('servicesProviders/updateService', provider);
 
-        if (this.updated.find(({ uuid }) => uuid === provider.uuid)) return;
-        this.updated.push(provider);
+        if (!this.updated.find(({ uuid }) => uuid === provider.uuid)) {
+          this.updated.push(provider);
+        }
+        return;
+      }
+
+      this.showcases[id].sp.forEach((el) => {
+        const provider = JSON.parse(JSON.stringify(el));
+
+        provider.meta.showcase[id][key] = value;
+        this.$store.commit('servicesProviders/updateService', provider);
+
+        if (!this.updated.find(({ uuid }) => uuid === provider.uuid)) {
+          this.updated.push(provider);
+        }
       });
+    },
+    addShowcase() {
+      this.newShowcase.sp.forEach((el) => {
+        const id = `${this.newShowcase.icon}-${Date.now()}`;
+        const provider = JSON.parse(JSON.stringify(el));
+
+        provider.meta.showcase[id] = {
+          title: this.newShowcase.title,
+          icon: this.newShowcase.icon,
+          billing_plans: []
+        };
+        this.$store.commit('servicesProviders/updateService', provider);
+
+        if (!this.updated.find(({ uuid }) => uuid === provider.uuid)) {
+          this.updated.push(provider);
+        }
+      });
+    },
+    clearShowcase(isVisible) {
+      if (isVisible) return;
+      this.newShowcase = { title: 'Title', icon: '', billing_plans: [], sp: [] };
     },
     tryToSend() {
       const promises = this.updated.map((provider) =>
@@ -156,11 +267,16 @@ export default {
     toPascalCase
   },
   created() {
-    if (this.sp.length > 0) return;
-    Promise.all([
-      this.$store.dispatch("servicesProviders/fetch"),
-      this.$store.dispatch("plans/fetch")
-    ])
+    const promises = [];
+
+    if (this.sp.length < 1) {
+      promises.push(this.$store.dispatch("servicesProviders/fetch"));
+    }
+    if (this.plans.length < 1) {
+      promises.push(this.$store.dispatch("plans/fetch"));
+    }
+
+    Promise.all(promises)
       .catch((err) => {
         this.showSnackbarError({ message: err });
         console.error(err);
@@ -218,6 +334,9 @@ export default {
           return icon;
         })
         .filter((icon) => !!icon);
+    },
+    isDisabled() {
+      return this.newShowcase.icon === '' || this.newShowcase.sp.length < 1;
     }
   }
 }
