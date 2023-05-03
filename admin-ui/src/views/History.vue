@@ -27,7 +27,7 @@
         </v-autocomplete>
       </v-col>
       <v-col>
-        <v-text-field label="Path" :value="path" @change="path=$event"/>
+        <v-text-field label="Path" :value="path" @change="path = $event" />
       </v-col>
       <v-col cols="4"></v-col>
     </v-row>
@@ -52,29 +52,34 @@ export default {
     uuid: null,
     path: null,
   }),
-  mounted() {
-    this.$store.dispatch("accounts/fetch");
-    this.$store.dispatch("services/fetch");
-    this.$store.dispatch("servicesProviders/fetch");
+  async mounted() {
+    await Promise.all([
+      this.$store.dispatch("accounts/fetch"),
+      this.$store.dispatch("services/fetch"),
+      this.$store.dispatch("servicesProviders/fetch"),
+    ]);
+
+    this.$store.commit("appSearch/setAdvancedSearch", true);
+    this.$store.commit("appSearch/setVariants", {
+      service: { items: this.services, title: "Service" },
+      sp: { items: this.sps, title: "Service providers" },
+      instance: { items: this.instances, title: "Instances" },
+      account: { items: this.accounts, title: "Accounts" },
+    });
   },
   computed: {
     ...mapGetters("accounts", { accounts: "all" }),
-    entitys() {
-      const instances = this.$store.getters["services/getInstances"].map(
-        (s) => {
-          s.entity = "Instance";
-          return s;
-        }
-      );
-      const sps = this.$store.getters["servicesProviders/all"].map((s) => {
-        s.entity = "Service provider";
-        return s;
-      });
-      const services = this.$store.getters["services/all"].map((s) => {
-        s.entity = "Service";
-        return s;
-      });
-      return instances.concat(sps).concat(services);
+    instances() {
+      return this.$store.getters["services/getInstances"];
+    },
+    sps() {
+      return this.$store.getters["servicesProviders/all"];
+    },
+    services() {
+      return this.$store.getters["services/all"];
+    },
+    accounts() {
+      return this.$store.getters["accounts/all"];
     },
   },
 };

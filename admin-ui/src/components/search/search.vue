@@ -10,45 +10,46 @@
     v-model="searchParam"
     rounded
   ></v-text-field>
-  <v-menu v-else :close-on-content-click="false">
-    <template v-slot:activator="{ on }">
-      <v-text-field
-        hide-details
-        prepend-inner-icon="mdi-magnify"
-        placeholder="Search..."
-        single-line
-        background-color="background-light"
-        dence
-        rounded
-        readonly
-        v-on="on"
-      >
-      <template v-slot:label>
-        <v-chip style="height:20px" class="mr-1" small color="gray" v-for="tag in getAllTags" :key="tag">
-          {{ tag }}
-        </v-chip>
-      </template>
-      </v-text-field>
+  <v-autocomplete
+    no-filter
+    @change="changeValue"
+    :search-input.sync="inputValue"
+    @update:search-input="changeSearchInput"
+    :items="searchItems"
+    item-text="title"
+    item-value="key"
+    v-else
+  >
+    <template v-slot:item="{ item }">
+      <span v-if="!selectedGroupKey">{{
+        `Search ${inputValue} in ${item.title}`
+      }}</span>
+      <span v-else>{{ item.title }}</span>
     </template>
-    <component :is="searchMenuComponent">
-      <v-text-field
-        hide-details
-        prepend-inner-icon="mdi-magnify"
-        placeholder="Search..."
-        single-line
-        dence
-        color="white"
-        background-color="background-light"
-        v-model="searchParam"
-      ></v-text-field>
-    </component>
-  </v-menu>
+  </v-autocomplete>
 </template>
 
 <script>
+import { mapGetters } from "vuex";
+
 export default {
   name: "app-search",
+  data: () => ({ inputValue: "", selectedGroupKey: "" }),
+  methods: {
+    changeValue(e) {
+      console.log(e, this.inputValue);
+      this.selectedGroupKey = e;
+    },
+    changeSearchInput(e) {
+      this.inputValue = e;
+      console.log(e);
+    },
+  },
   computed: {
+    ...mapGetters("appSearch", {
+      isAdvancedSearch: "isAdvancedSearch",
+      variants: "variants",
+    }),
     searchParam: {
       get() {
         return this.$store.getters["appSearch/param"];
@@ -57,28 +58,14 @@ export default {
         this.$store.commit("appSearch/setSearchParam", newValue);
       },
     },
-    getAllTags() {
-      if (!this.searchParam) {
-        return this.tags;
-      }
-      return [this.searchParam, ...this.tags];
-    },
-    isAdvancedSearch() {
-      return this.$store.getters["appSearch/isAdvancedSearch"];
-    },
-    tags() {
-      return this.$store.getters["appSearch/getTags"];
-    },
-    searchMenuName() {
-      return this.$store.getters["appSearch/searchMenuName"];
-    },
-    searchMenuComponent() {
-      // if(!this.searchMenuName){
-      //   return  null
-      // }
-        return  null
-      // return () =>
-      //   import(`@/components/search/menus/${this.searchMenuName}.vue`);
+    searchItems() {
+      return (
+        this.variants[this.selectedGroupKey]?.items ||
+        Object.keys(this.variants).map((key) => ({
+          key,
+          title: this.variants[key]?.title || key,
+        }))
+      );
     },
   },
 };
