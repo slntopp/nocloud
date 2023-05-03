@@ -25,11 +25,7 @@
     >
       <v-tab-item v-for="tab in tabs" :key="tab.title">
         <v-progress-linear v-if="loading" indeterminate class="pt-2" />
-        <component
-          v-if="!loading && item"
-          :is="tab.component"
-          :template="item"
-        >
+        <component v-if="!loading && item" :is="tab.component" :template="item">
           <v-row>
             <v-col :cols="12" :md="6">
               <json-editor
@@ -46,7 +42,7 @@
 
 <script>
 import config from "@/config.js";
-import JsonEditor from '../components/JsonEditor.vue';
+import JsonEditor from "../components/JsonEditor.vue";
 
 export default {
   components: { JsonEditor },
@@ -82,9 +78,18 @@ export default {
         },
         {
           title: "Map",
-          component: (this.item?.type === "ovh")
-            ? () => import("@/components/ServicesProvider/ovhMap.vue")
-            : () => import("@/components/ServicesProvider/map.vue"),
+          component:
+            this.item?.type === "ovh"
+              ? () => import("@/components/ServicesProvider/ovhMap.vue")
+              : () => import("@/components/ServicesProvider/map.vue"),
+        },
+        {
+          title: "Showcase",
+          component: () => import("@/components/ServicesProvider/showcase.vue"),
+        },
+        {
+          title: "History",
+          component: () => import("@/components/ServicesProvider/history.vue"),
         },
         {
           title: "Template",
@@ -92,15 +97,22 @@ export default {
         },
       ];
 
-      if (Object.keys(this.item?.secrets ?? {}).length > 0) tabs.splice(1, 0, {
-        title: "Secrets",
-        component: () => import(`@/components/modules/${this.item?.type}/serviceProviderSecrets.vue`)
-          .catch(() => import("@/components/modules/custom/serviceProviderSecrets.vue")),
-      });
-      if (Object.keys(this.item?.vars ?? {}).length > 0) tabs.splice(2, 0, {
-        title: "Vars",
-        component: () => import("@/components/modules/custom/serviceProviderVars.vue"),
-      });
+      if (Object.keys(this.item?.secrets ?? {}).length > 0)
+        tabs.splice(1, 0, {
+          title: "Secrets",
+          component: () =>
+            import(
+              `@/components/modules/${this.item?.type}/serviceProviderSecrets.vue`
+            ).catch(() =>
+              import("@/components/modules/custom/serviceProviderSecrets.vue")
+            ),
+        });
+      if (Object.keys(this.item?.vars ?? {}).length > 0)
+        tabs.splice(2, 0, {
+          title: "Vars",
+          component: () =>
+            import("@/components/modules/custom/serviceProviderVars.vue"),
+        });
 
       return tabs;
     },
@@ -112,6 +124,7 @@ export default {
     },
   },
   created() {
+    this.$store.dispatch("accounts/fetch");
     this.$store.dispatch("servicesProviders/fetchById", this.uuid).then(() => {
       const items = this.$store.getters["servicesProviders/all"];
       this.item = items.find((el) => el.uuid == this.uuid);

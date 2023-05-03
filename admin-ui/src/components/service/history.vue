@@ -1,5 +1,9 @@
 <template>
-  <history-table hide-uuid table-name="instance-history" :uuid="template.uuid" />
+  <history-table
+    hide-uuid
+    table-name="service-history"
+    :uuid="template.uuid"
+  />
 </template>
 
 <script>
@@ -7,7 +11,7 @@ import historyTable from "@/components/historyTable.vue";
 
 export default {
   props: ["template"],
-  name: "invoice-history",
+  name: "service-history",
   components: { historyTable },
 };
 </script>

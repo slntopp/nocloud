@@ -15,12 +15,19 @@
       >
         <v-btn
           color="background-light"
-          class="mr-8"
+          class="mr-2"
           :disabled="selected.length < 1"
         >
           delete
         </v-btn>
       </confirm-dialog>
+
+      <v-btn
+        color="background-light"
+        :to="{ name: 'ServicesProviders showcases' }"
+      >
+        showcases
+      </v-btn>
     </div>
 
     <services-providers :searchParams="searchParams" v-model="selected">
@@ -124,20 +131,10 @@ export default {
       }
     },
   },
-  created() {
-    this.$store.dispatch("servicesProviders/fetch").catch((err) => {
-      if (err.response.status == 501 || err.response.status == 502) {
-        const opts = {
-          message: `Service Unavailable: ${err.response.data.message}.`,
-          timeout: 0,
-        };
-        this.showSnackbarError(opts);
-      }
-    });
-  },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "servicesProviders/fetch",
+      params: false
     });
   },
 };

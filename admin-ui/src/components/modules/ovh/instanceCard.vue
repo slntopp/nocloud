@@ -1,5 +1,8 @@
 <template>
   <div>
+    <v-row align="center">
+
+    </v-row>
     <h3 v-if="dense">Data:</h3>
     <v-card-title v-else class="px-0">Data:</v-card-title>
     <v-row align="center">
@@ -24,9 +27,9 @@
           readonly
           label="password"
           style="display: inline-block; width: 200px"
-          :type="(isVisible) ? 'text' : 'password'"
+          :type="isVisible ? 'text' : 'password'"
           :value="template.state.meta.password"
-          :append-icon="(isVisible) ? 'mdi-eye' : 'mdi-eye-off'"
+          :append-icon="isVisible ? 'mdi-eye' : 'mdi-eye-off'"
           @click:append="isVisible = !isVisible"
         />
       </v-col>
@@ -43,12 +46,12 @@
           :value="item"
         />
       </v-col>
-      <v-col v-for="key in configKeys" :key="key">
+      <v-col v-for="k in configKeys" :key="k.key">
         <v-text-field
           readonly
           style="display: inline-block; width: 200px"
-          :label="dictionary[key] ?? key"
-          :value="template.config[key]"
+          :label="dictionary[k.key] ?? k.key"
+          :value="getConfigValue(k.path)"
         />
       </v-col>
     </v-row>
@@ -56,6 +59,7 @@
 </template>
 
 <script>
+
 export default {
   name: "instance-card",
   props: {
@@ -70,16 +74,48 @@ export default {
       os: "OS",
       vpsId: "id",
     },
-    configKeys: ["datacenter", "os", "type"],
+    configKeys: [
+      { key: "datacenter", path: null },
+      { key: "os", path: null },
+      { key: "type", path: "type" },
+    ],
     dataKeys: ["vpsId", "creation", "expiration"],
-  }),
-  computed: {
-    resources() {
-      const { duration, planCode } = this.template.config
-      const key = `${duration} ${planCode}`;
 
-      return this.template.billingPlan.products[key].resources;
-    }
-  }
-}
+  }),
+  mounted() {
+    this.initPrices();
+    this.initConfigsKeys();
+    this.getBasePrices();
+  },
+  methods: {
+
+    initConfigsKeys() {
+      this.configKeys.forEach((k) => {
+        if (!k.path) {
+          k.path = this.getKeyFromConfiguration(k.key);
+        }
+      });
+    },
+    getKeyFromConfiguration(name) {
+      for (const key of Object.keys(this.template.config.configuration))
+        if (key.includes(name)) {
+          return key;
+        }
+    },
+    getConfigValue(path) {
+      return (
+        this.template.config[path] || this.template.config.configuration[path]
+      );
+    },
+
+
+  },
+  computed: {
+
+    resources() {
+      return this.tarrif.resources;
+    },
+
+  },
+};
 </script>

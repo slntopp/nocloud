@@ -42,6 +42,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var (
@@ -374,10 +375,20 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
 	}
 
-	acc, err := s.ctrl.Create(ctx, accountspb.Account{
+	creationAccount := accountspb.Account{
 		Title:    request.Title,
 		Currency: &request.Currency,
-	})
+	}
+
+	if request.Auth.Type == "whmcs" {
+		creationAccount.Data = &structpb.Struct{
+			Fields: map[string]*structpb.Value{
+				"email": structpb.NewStringValue(request.Auth.Data[0]),
+			},
+		}
+	}
+
+	acc, err := s.ctrl.Create(ctx, creationAccount)
 	if err != nil {
 		log.Debug("Error creating account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while creating account")
@@ -388,7 +399,21 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		access_lvl = access.Level(*request.Access)
 	}
 
-	s.PostCreateActions(ctx, acc)
+	var settings AccountPostCreateSettings
+	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
+		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	if settings.CreateNamespace {
+		personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, acc.GetUuid())
+
+		createdNs, err := s.ns_ctrl.Create(personal_ctx, acc.GetTitle())
+		if err != nil {
+			log.Warn("Cannot create a namespace for new Account", zap.String("account", acc.GetUuid()), zap.Error(err))
+		} else {
+			res.Namespace = createdNs.ID.Key()
+		}
+	}
 
 	col, _ := s.db.Collection(ctx, schema.NS2ACC)
 	err = acc.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)

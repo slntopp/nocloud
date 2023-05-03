@@ -129,12 +129,35 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		log.Error("Failed to get driver", zap.String("type", r.SP.Type))
 		return nil, status.Error(codes.NotFound, "Driver not found")
 	}
-	return client.Invoke(ctx, &driverpb.InvokeRequest{
+	invoke, err := client.Invoke(ctx, &driverpb.InvokeRequest{
 		Instance:         instance.Instance,
 		ServicesProvider: r.SP,
 		Method:           req.Method,
 		Params:           req.Params,
 	})
+
+	var event = &elpb.Event{
+		Entity:    schema.INSTANCES_COL,
+		Uuid:      instance.GetUuid(),
+		Scope:     "driver",
+		Action:    req.Method,
+		Rc:        0,
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
+	if err != nil {
+		event.Rc = 1
+		nocloud.Log(log, event)
+		return invoke, err
+	}
+
+	nocloud.Log(log, event)
+
+	return invoke, nil
 }
 
 func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
@@ -237,28 +260,28 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, req *pb.Transfer
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instanceId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.Uuid)
-	newIGId := driver.NewDocumentID(schema.SERVICES_COL, req.GetIg())
-	ig, err := graph.GetWithAccess[graph.InstancesGroup](ctx, s.db, instanceId)
+	instanceId := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
+	newIGId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.GetIg())
+	inst, err := graph.GetWithAccess[graph.Instance](ctx, s.db, instanceId)
 
 	if err != nil {
 		log.Error("Failed to get instances group", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	srv, err := graph.GetWithAccess[graph.Service](ctx, s.db, newIGId)
+	ig, err := graph.GetWithAccess[graph.InstancesGroup](ctx, s.db, newIGId)
 
 	if err != nil {
 		log.Error("Failed to get service", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
+	if inst.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	if srv.GetAccess().GetLevel() < accesspb.Level_ROOT {
+	if ig.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}

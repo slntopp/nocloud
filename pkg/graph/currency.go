@@ -83,6 +83,10 @@ RETURN { len: LENGTH(rates), rate: PRODUCT(rates) }
 `
 
 func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) (float64, error) {
+	if from == to {
+		return 1, nil
+	}
+
 	cursor, err := c.db.Query(ctx, getExchangeRateQuery, map[string]interface{}{
 		"from":    fmt.Sprintf("%s/%d", schema.CUR_COL, from),
 		"to":      fmt.Sprintf("%s/%d", schema.CUR_COL, to),

@@ -360,7 +360,8 @@ FOR service IN @@services // Iterate over Services
         account: account._key,
         service: service._key,
         records: records[*]._key,
-        total: SUM(records[*].total) // Calculate Total
+        total: SUM(records[*].total), // Calculate Total
+		meta: {type: "transaction"},
     } IN @@transactions RETURN NEW
 `
 
