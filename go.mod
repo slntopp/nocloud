@@ -3,6 +3,7 @@ module github.com/slntopp/nocloud
 go 1.20
 
 require (
+	github.com/Graylog2/go-gelf v0.0.0-20170811154226-7ebf4f536d8f
 	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/arangodb/go-driver v1.5.2
 	github.com/gabriel-vasile/mimetype v1.4.2

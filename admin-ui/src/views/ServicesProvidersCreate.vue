@@ -213,11 +213,15 @@ import {
   readJSONFile,
   readYAMLFile,
   downloadYAMLFile,
+  toKebabCase,
+  toPascalCase,
 } from "@/functions.js";
+import AntIcon from "@/components/ui/antIcon.vue";
+import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 
 export default {
   name: "servicesProviders-create",
-  components: { JsonEditor },
+  components: { IconTitlePreview, AntIcon, JsonEditor },
   mixins: [snackbar],
   data: () => ({
     types: [],
@@ -284,6 +288,33 @@ export default {
     template() {
       return () =>
         import(`@/components/modules/${this.type}/serviceProviders.vue`);
+    },
+    icons() {
+      const illustrations = require.context(
+        "@ant-design/icons-vue/",
+        true,
+        /^.*\.js$/
+      );
+      const removedKeys = ["./", ".js", "Outlined"];
+
+      return illustrations
+        .keys()
+        .map((icon) => {
+          if (icon.includes("Filled") || icon.includes("TwoTone")) {
+            return undefined;
+          }
+
+          removedKeys.forEach((key) => {
+            icon = icon.replace(key, "");
+          });
+
+          if (icon.includes("/")) {
+            return undefined;
+          }
+
+          return icon;
+        })
+        .filter((icon) => !!icon);
     },
     extentionsMap() {
       return extentionsMap;
@@ -463,6 +494,10 @@ export default {
         downloadYAMLFile(this.serviceProviderBody, name);
       }
     },
+    setIconToKebabCase(icon) {
+      this.provider.meta.service.icon = toKebabCase(icon);
+    },
+    toPascalCase,
   },
 };
 </script>
