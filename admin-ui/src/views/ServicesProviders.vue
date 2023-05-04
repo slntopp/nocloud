@@ -131,20 +131,10 @@ export default {
       }
     },
   },
-  created() {
-    this.$store.dispatch("servicesProviders/fetch").catch((err) => {
-      if (err.response.status == 501 || err.response.status == 502) {
-        const opts = {
-          message: `Service Unavailable: ${err.response.data.message}.`,
-          timeout: 0,
-        };
-        this.showSnackbarError(opts);
-      }
-    });
-  },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "servicesProviders/fetch",
+      params: false
     });
   },
 };

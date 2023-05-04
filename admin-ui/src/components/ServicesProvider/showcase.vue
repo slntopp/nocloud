@@ -234,7 +234,7 @@ export default {
         .filter((icon) => !!icon);
     },
     isDisabled() {
-      return this.showcase.title === '' && this.showcase.icon === '';
+      return this.showcase.title === '' || this.showcase.icon === '';
     },
   }
 }
