@@ -18,6 +18,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"google.golang.org/protobuf/types/known/structpb"
 	"time"
 
 	epb "github.com/slntopp/nocloud-proto/events"
@@ -96,6 +97,17 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetT
 		vars["service"] = service
 	}
 
+	if req.Type != nil {
+		transactionType := req.GetType()
+
+		if req.Account == nil && req.Service == nil {
+			query += ` FILTER t.meta.type == @type`
+		} else {
+			query += ` && t.meta.type == @type`
+		}
+		vars["type"] = transactionType
+	}
+
 	if req.Field != nil && req.Sort != nil {
 		subQuery := ` SORT t.%s %s`
 		field, sort := req.GetField(), req.GetSort()
@@ -161,6 +173,12 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
+
+	if t.Meta == nil {
+		t.Meta = map[string]*structpb.Value{}
+	}
+
+	t.Meta["type"] = structpb.NewStringValue("transaction")
 
 	r, err := s.transactions.Create(ctx, t)
 	if err != nil {
@@ -236,6 +254,17 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 			query += ` && t.service == @service`
 		}
 		vars["service"] = service
+	}
+
+	if req.Type != nil {
+		transactionType := req.GetType()
+
+		if req.Account == nil && req.Service == nil {
+			query += ` FILTER t.meta.type == @type`
+		} else {
+			query += ` && t.meta.type == @type`
+		}
+		vars["type"] = transactionType
 	}
 
 	query += ` RETURN t`

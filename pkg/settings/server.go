@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	redis "github.com/go-redis/redis/v8"
-	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"google.golang.org/grpc/codes"
@@ -109,10 +108,10 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 	}
 
 	key := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(req.GetKey()))
-	log.Debug("Put request received", zap.String("key", key), zap.Int("lvl", int(req.GetLevel())))
+	log.Debug("Put request received", zap.String("key", key))
 
 	r := s.rdb.HSet(ctx, key, "value", req.GetValue(),
-		"desc", req.GetDescription(), "lvl", int(req.GetLevel()))
+		"desc", req.GetDescription())
 	_, err := r.Result()
 	if err != nil {
 		log.Error("Error allocating keys in Redis", zap.String("key", key), zap.Error(err))
@@ -163,7 +162,6 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 		result = append(result, &pb.KeysResponse_Key{
 			Key:         key,
 			Description: data["desc"],
-			Level:       access.Level(lvl),
 		})
 	}
 

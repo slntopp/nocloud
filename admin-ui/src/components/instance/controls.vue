@@ -5,8 +5,8 @@
       v-for="btn in vmControlBtns"
       :key="btn.action"
       :disabled="btn.disabled"
-      :loading="isLoading"
-      @click="sendVmAction(btn.action)"
+      :loading="isActionLoading"
+      @click="sendVmAction(btn.action, template)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -41,52 +41,15 @@
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
+import sendVmAction from "@/mixins/sendVmAction";
 
 export default {
   name: "instance-actions",
   components: { ConfirmDialog },
-  mixins: [snackbar],
+  mixins: [snackbar, sendVmAction],
   props: { template: { type: Object, required: true } },
   data: () => ({ isLoading: false }),
   methods: {
-    sendVmAction(action) {
-      if (action === "vnc") {
-        this.openVnc();
-        return;
-      }
-      if (action === "dns") {
-        this.openDns();
-        return;
-      }
-
-      this.isLoading = true;
-      api.instances
-        .action({ uuid: this.template.uuid, action })
-        .then(() => {
-          this.showSnackbarSuccess({ message: "Done!" });
-        })
-        .catch((err) => {
-          const opts = {
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          };
-          this.showSnackbarError(opts);
-        })
-        .finally(() => {
-          this.isLoading = false;
-        });
-    },
-    openVnc() {
-      this.$router.push({
-        name: "Vnc",
-        params: { instanceId: this.template.uuid },
-      });
-    },
-    openDns() {
-      this.$router.push({
-        name: "InstanceDns",
-        params: { instanceId: this.template.uuid },
-      });
-    },
     deleteInstance() {
       this.isLoading = true;
       api
@@ -127,12 +90,21 @@ export default {
           { action: "resume", disabled: this.ovhActions?.resume },
           { action: "suspend", disabled: this.ovhActions?.suspend },
           { action: "reboot", disabled: this.ovhActions?.reboot },
+          {
+            action: "vnc",
+            title: "Console",
+            disabled: this.ovhActions?.reboot,
+          },
         ],
         opensrs: [{ action: "dns" }],
         cpanel: [{ action: "session" }],
       };
 
-      return types[this.template.billingPlan?.type];
+      const type = this.template.billingPlan?.type.includes("ovh")
+        ? "ovh"
+        : this.template.billingPlan?.type;
+
+      return types[type];
     },
     ioneActions() {
       if (!this.template?.state) return;
@@ -170,6 +142,7 @@ export default {
           reboot: true,
           resume: true,
           suspend: true,
+          vnc: true,
         };
       return {
         poweroff:
@@ -184,6 +157,7 @@ export default {
           this.template.state.state === "RUNNING" &&
           this.template.state.state !== "STOPPED",
         suspend: this.template.state.state === "SUSPENDED",
+        vnc: this.template.state.state !== "RUNNING",
       };
     },
   },

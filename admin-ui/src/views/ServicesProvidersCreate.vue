@@ -55,7 +55,7 @@
             </v-col>
           </v-row>
 
-          <v-row v-if="false">
+          <v-row>
             <v-col cols="3">
               <v-subheader>Meta</v-subheader>
             </v-col>
@@ -64,32 +64,6 @@
                 :json="provider.meta"
                 @changeValue="(data) => (provider.meta = data)"
               />
-            </v-col>
-          </v-row>
-
-          <v-row>
-            <v-col cols="3">
-              <v-subheader>Service</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                label="Title"
-                v-model="provider.meta.service.title"
-              />
-              <v-select
-                label="Icon"
-                :value="toPascalCase(provider.meta.service.icon)"
-                @change="setIconToKebabCase"
-                :items="icons"
-              >
-                <template v-slot:item="{ item }">
-                  <icon-title-preview
-                    :is-mdi="false"
-                    :title="item"
-                    :icon="item"
-                  />
-                </template>
-              </v-select>
             </v-col>
           </v-row>
 
@@ -260,7 +234,7 @@ export default {
       proxy: { socket: "" },
       secrets: {},
       vars: { console: {} },
-      meta: { service: {} },
+      meta: {},
     },
     providerKey: "",
 

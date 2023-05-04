@@ -1,5 +1,5 @@
 <template>
-  <history-table table-name="accounts-history" :account-id="account.uuid" />
+  <history-table hide-requestor table-name="accounts-history" :account-id="account.uuid" />
 </template>
 
 <script>

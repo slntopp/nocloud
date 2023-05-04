@@ -11,6 +11,7 @@
     :show-select="showSelect"
     :value="selected"
     @input="handleSelect"
+    :hide-default-footer="hideDefaultFooter"
     :single-select="singleSelect"
     :headers="filtredHeaders"
     :sort-by="sortByTable"
@@ -248,7 +249,8 @@ export default {
     showExpand: Boolean,
     showGroupBy: Boolean,
     height: [Number, String],
-    hideDefaultHeader: Boolean,
+      hideDefaultHeader: Boolean,
+      hideDefaultFooter: Boolean,
     groupBy: String,
     caption: String,
     dense: Boolean,

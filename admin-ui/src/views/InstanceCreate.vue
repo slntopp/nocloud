@@ -239,8 +239,7 @@ export default {
       return (
         this.type &&
         this.serviceProviderId &&
-        this.plans.list.length &&
-        (this.type === "ovh" || this.type === "cpanel")
+        (!(this.isEdit ||  this.$route.params.instanceId) || ((this.isEdit || this.$route.params.instanceId) && this.plans.list.length))
       );
     },
   },

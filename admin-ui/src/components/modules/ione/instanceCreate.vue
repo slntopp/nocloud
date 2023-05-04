@@ -112,6 +112,27 @@
           />
         </v-col>
       </v-row>
+      <v-row>
+        <v-col cols="2">
+          <v-switch label="Existing" v-model="existing" />
+        </v-col>
+        <template v-if="existing">
+          <v-col>
+            <v-text-field
+              label="Vm name"
+              :value="instance.data?.vm_name"
+              @change="(newVal) => setValue('data.vm_name', newVal)"
+            />
+          </v-col>
+          <v-col>
+            <v-text-field
+              label="Vm id"
+              :value="instance.data?.vm_id"
+              @change="(newVal) => setValue('data.vm_id', newVal)"
+            />
+          </v-col>
+        </template>
+      </v-row>
     </v-card>
   </div>
 </template>
@@ -131,18 +152,21 @@ const getDefaultInstance = () => ({
     ips_public: 0,
     ips_private: 0,
   },
+  data: {},
   billing_plan: {},
 });
 export default {
   name: "instance-ione-create",
   props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
-  data: () => ({ bilingPlan: null, products: [] }),
+  data: () => ({ bilingPlan: null, products: [], existing: false }),
   mounted() {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
-    }else{
-        console.log(this.instance.billing_plan)
-        this.changeBilling(this.instance.billing_plan)
+      this.existing = !!(
+        this.instance.data?.vm_id || this.instance.data?.vm_name
+      );
+    } else {
+      this.changeBilling(this.instance.billing_plan);
     }
   },
   methods: {
@@ -160,8 +184,8 @@ export default {
     },
     changeBilling(val) {
       this.bilingPlan = this.plans.list.find((p) => p.uuid === val);
-      if(this.bilingPlan){
-          this.products = Object.keys(this.bilingPlan.products);
+      if (this.bilingPlan) {
+        this.products = Object.keys(this.bilingPlan.products);
       }
       this.setValue("billing_plan", val);
     },
@@ -196,11 +220,15 @@ export default {
       return Object.values(this.getOsTemplates).map((os) => os.name);
     },
   },
-    watch:{
-      "plans.list"(){
-          this.changeBilling(this.instance.billing_plan)
-      }
-    }
+  watch: {
+    "plans.list"() {
+      this.changeBilling(this.instance.billing_plan);
+    },
+    existing() {
+      this.setValue("data.vm_id", null);
+      this.setValue("data.vm_name", null);
+    },
+  },
 };
 </script>
 

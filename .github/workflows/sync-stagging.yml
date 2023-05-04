@@ -19,13 +19,13 @@ jobs:
             github_token: ${{ secrets.GITHUB_TOKEN }}
         
         - name: Invoke Checks Workflow
-          uses: benc-uk/workflow-dispatch@v1
+          uses: benc-uk/workflow-dispatch@v121
           with:
             workflow: checks.yml
             ref: staging
 
         - name: Invoke CI Workflow
-          uses: benc-uk/workflow-dispatch@v1
+          uses: benc-uk/workflow-dispatch@v121
           with:
             workflow: ci.yml
             ref: staging

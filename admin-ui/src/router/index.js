@@ -66,6 +66,14 @@ const routes = [
     },
   },
   {
+    path: "/sp/showcases",
+    name: "ServicesProviders showcases",
+    component: () => import("../views/Showcases.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/sp/:uuid",
     name: "ServicesProvider",
     component: () => import("../views/ServicesProvidersPage.vue"),

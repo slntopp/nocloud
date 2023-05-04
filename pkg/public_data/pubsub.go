@@ -98,7 +98,7 @@ func (s *PublicDataPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 	log := s.log.Named(col)
 	log.Debug("PublicData updating started")
 	for msg := range msgs {
-		log.Debug("pd upd msg", zap.Any("msg", msg))
+		log.Debug("pd upd msg", zap.Any("message", msg))
 		var req pb.ObjectPublicData
 		err := proto.Unmarshal(msg.Body, &req)
 		if err != nil {

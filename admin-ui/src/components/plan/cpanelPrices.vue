@@ -10,7 +10,11 @@
       :loading="isPricesLoading"
     >
       <template v-slot:[`item.isSell`]="{ item }">
-        <v-switch @change="changeSell(item, $event)" :input-value="item.isSell" />
+        <v-switch
+          @change="changeSell(item, $event)"
+          :input-value="item.isSell"
+          :value="item.isSell"
+        />
       </template>
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field type="number" v-model.number="item.price" />
@@ -20,7 +24,9 @@
       </template>
     </nocloud-table>
     <v-card-actions class="d-flex justify-end">
-      <v-btn :loading="isSaveLoading || isPricesLoading" @click="savePrices">save</v-btn>
+      <v-btn :loading="isSaveLoading || isPricesLoading" @click="savePrices"
+        >save</v-btn
+      >
     </v-card-actions>
     <v-snackbar
       v-model="snackbar.visibility"
@@ -145,6 +151,11 @@ export default {
           period: getTimestamp(item.period),
           resources: {
             model: item.name,
+            bandwidth: item.BWLIMIT,
+            ssd: item.QUOTA,
+            email: item.MAX_EMAILACCT_QUOTA,
+            mysql: item.MAXSQL,
+            websites: 1 + +item.MAXADDON,
           },
         });
       }

@@ -5,34 +5,32 @@
         <instance-actions :template="template" />
       </v-col>
     </v-row>
-    <v-row align="center">
+    <v-card-title class="primary--text">Client info</v-card-title>
+    <v-row>
       <v-col>
-        <v-text-field
-          readonly
-          label="instance uuid"
-          style="display: inline-block; width: 330px"
-          :value="template.uuid"
-          :append-icon="
-            copyed === 'rootUUID' ? 'mdi-check' : 'mdi-content-copy'
-          "
-          @click:append="addToClipboard(template.uuid, 'rootUUID')"
+        <route-text-field
+          :to="{
+            name: 'NamespacePage',
+            params: { namespaceId: namespace.uuid },
+          }"
+          label="Group(Namespace)"
+          :value="!namespace ? '' : 'NS_' + namespace.title"
         />
       </v-col>
-      <v-col v-if="template.state">
-        <v-text-field
-          readonly
-          label="state"
-          style="display: inline-block; width: 150px"
-          :value="template.state.meta?.state_str || template.state.state"
-        />
+      <v-col>
+        <div class="d-flex justify-center align-center">
+          <route-text-field
+            :to="{ name: 'Account', params: { accountId: account.uuid } }"
+            label="Account"
+            :value="account?.title"
+          />
+          <v-btn icon @click="moveDialog = true">
+            <v-icon size="30">mdi-arrow-up-bold</v-icon>
+          </v-btn>
+        </div>
       </v-col>
-      <v-col v-if="template.state?.meta.lcm_state_str">
-        <v-text-field
-          readonly
-          label="lcm state"
-          style="display: inline-block; width: 150px"
-          :value="template.state?.meta.lcm_state_str"
-        />
+      <v-col>
+        <v-text-field readonly label="email" />
       </v-col>
       <v-col v-if="template.state?.meta.networking?.public">
         <div>
@@ -43,128 +41,60 @@
       <v-col>
         <v-text-field
           readonly
-          label="price model"
-          :append-icon="template.type === 'ione' ? 'mdi-pencil' : null"
-          @click:append="priceModelDialog = true"
-          style="display: inline-block; width: 150px"
-          :value="template.billingPlan.title"
+          label="balance"
+          :value="account?.balance.toFixed(2)"
         />
       </v-col>
     </v-row>
-    <v-row>
-      <v-col>
-        <v-text-field
-          @click:append="goTo('NamespacePage', { namespaceId: namespace.uuid })"
-          readonly
-          append-icon="mdi-login"
-          label="namespace"
-          :value="!namespace ? '' : 'NS_' + namespace.title"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          @click:append="goTo('Account', { accountId: account.uuid })"
-          readonly
-          append-icon="mdi-login"
-          label="account"
-          :value="account?.title"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          @click:append="goTo('Service', { serviceId: service.uuid })"
-          readonly
-          append-icon="mdi-login"
-          label="service"
-          :value="!service ? '' : 'SRV_' + service.title"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          @click:append="goTo('ServicesProvider', { uuid: sp.uuid })"
-          readonly
-          append-icon="mdi-login"
-          label="service provider"
-          :value="sp?.title"
-        />
-      </v-col>
-    </v-row>
-
     <component
+      v-if="!template.type.includes('ovh')"
       :is="templates[template.type] ?? templates.custom"
       :template="template"
       @refresh="refreshInstance"
     />
+    <template v-else>
+      <v-card-title class="primary--text">Instance info</v-card-title>
+      <v-row>
+        <v-col>
+          <v-text-field v-model="instance.title" label="Instance title">
+            <template v-slot:append>
+              <v-icon class="mr-2">mdi-pencil</v-icon>
+              <login-in-account-icon :uuid="account.uuid" />
+            </template>
+          </v-text-field>
+        </v-col>
+        <v-col>
+          <v-text-field :value="template.uuid" readonly label="UUID" />
+        </v-col>
+        <v-col>
+          <route-text-field
+            :to="{ name: 'Service', params: { serviceId: service.uuid } }"
+            :value="!service ? '' : 'SRV_' + service.title"
+            label="Service"
+          />
+        </v-col>
+        <v-col>
+          <route-text-field
+            :to="{ name: 'ServicesProvider', params: { uuid: sp.uuid } }"
+            :value="sp?.title"
+            label="Service provider"
+          />
+        </v-col>
+        <v-col>
+          <v-text-field readonly :value="template.type" label="Type" />
+        </v-col>
+      </v-row>
+      <component :is="additionalInstanceInfoComponent" :template="template" />
+      <v-card-title class="primary--text">Billing info</v-card-title>
+      <component
+        :is="billingInfoComponent"
+        :template="template"
+        :plans="plans"
+        @refresh="refreshInstance"
+      />
+    </template>
 
-    <v-row class="flex-column mb-5" v-if="template.state">
-      <v-col>
-        <v-card-title class="mb-2 px-0">Snapshots:</v-card-title>
-        <v-menu
-          bottom
-          offset-y
-          transition="slide-y-transition"
-          v-model="isVisible"
-          :close-on-content-click="false"
-        >
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn class="mr-2" v-bind="attrs" v-on="on"> Create </v-btn>
-          </template>
-          <v-card class="pa-4">
-            <v-row>
-              <v-col>
-                <v-text-field
-                  dense
-                  label="name"
-                  v-model="snapshotName"
-                  :rules="[(v) => !!v || 'Required!']"
-                />
-                <v-btn
-                  :loading="isLoading"
-                  @click="createSnapshot(template.uuid)"
-                >
-                  Send
-                </v-btn>
-              </v-col>
-            </v-row>
-          </v-card>
-        </v-menu>
-        <v-btn
-          class="mr-2"
-          :loading="isDeleteLoading"
-          @click="deleteSnapshot(template)"
-        >
-          Delete
-        </v-btn>
-        <v-btn :loading="isRevertLoading" @click="revertToSnapshot(template)">
-          Revert
-        </v-btn>
-      </v-col>
-      <v-col>
-        <nocloud-table
-          table-name="instanceInfo"
-          single-select
-          item-key="ts"
-          v-model="selected"
-          :items="Object.values(template.state?.meta?.snapshots || {})"
-          :headers="headers"
-        >
-          <template v-slot:[`item.ts`]="{ item }">
-            {{ date(item.ts) }}
-          </template>
-        </nocloud-table>
-      </v-col>
-    </v-row>
-
-    <v-btn
-      :to="{
-        name: 'Instance edit',
-        params: {
-          instanceId: template.uuid,
-        },
-      }"
-    >
-      Edit
-    </v-btn>
+    <v-btn @click="save" :loading="isSaveLoading"> Save </v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -197,11 +127,26 @@
         :service="service"
       />
     </template>
+    <move-instance
+      @refresh="refreshInstance"
+      :account="account"
+      :services="services"
+      :namespaces="namespaces"
+      :accounts="accounts"
+      :template="template"
+      v-model="moveDialog"
+    />
+
+    <div
+      v-if="billingLabelComponent"
+      style="position: absolute; top: 0; right: 75px"
+    >
+      <component :is="billingLabelComponent" :template="instance" />
+    </div>
   </v-card>
 </template>
 
 <script>
-import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import instanceActions from "@/components/instance/controls.vue";
@@ -209,10 +154,17 @@ import JsonTextarea from "@/components/JsonTextarea.vue";
 import instanceIpMenu from "../ui/instanceIpMenu.vue";
 import { mapGetters } from "vuex";
 import EditPriceModel from "@/components/modules/ione/editPriceModel.vue";
+import RouteTextField from "@/components/ui/routeTextField.vue";
+import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
+import MoveInstance from "@/components/dialogs/moveInstance.vue";
+import api from "@/api";
 
 export default {
   name: "instance-info",
   components: {
+    MoveInstance,
+    LoginInAccountIcon,
+    RouteTextField,
     EditPriceModel,
     nocloudTable,
     instanceActions,
@@ -224,109 +176,12 @@ export default {
   data: () => ({
     copyed: null,
     templates: {},
-    selected: [],
-    headers: [
-      { text: "Name", value: "name" },
-      { text: "Time", value: "ts" },
-    ],
-    snapshotName: "Snapshot",
-
-    isVisible: false,
-    isLoading: false,
-    isDeleteLoading: false,
-    isRevertLoading: false,
-
     priceModelDialog: false,
+    moveDialog: false,
+    instance: {},
+    isSaveLoading: false,
   }),
   methods: {
-    createSnapshot(uuid) {
-      this.isLoading = true;
-
-      api.instances
-        .action({
-          uuid,
-          action: "snapcreate",
-          params: { snap_name: this.snapshotName },
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Snapshot created successfully",
-          });
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          });
-        })
-        .finally(() => {
-          this.isLoading = false;
-          this.isVisible = false;
-        });
-    },
-    deleteSnapshot({ uuid, state }) {
-      const { snapshots } = state.meta;
-      const [id] = Object.entries(snapshots).find(
-        ([, el]) => el.ts === this.selected[0].ts
-      );
-
-      this.isDeleteLoading = true;
-      api.instances
-        .action({
-          uuid,
-          action: "snapdelete",
-          params: { snap_id: +id },
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Snapshot deleted successfully",
-          });
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          });
-        })
-        .finally(() => {
-          this.isDeleteLoading = false;
-        });
-    },
-    revertToSnapshot({ uuid, state }) {
-      const { snapshots } = state.meta;
-      const [id] = Object.entries(snapshots).find(
-        ([, el]) => el.ts === this.selected[0].ts
-      );
-
-      this.isRevertLoading = true;
-      api.instances
-        .action({
-          uuid,
-          action: "snaprevert",
-          params: { snap_id: +id },
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Snapshot reverted successfully",
-          });
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          });
-        })
-        .finally(() => {
-          this.isRevertLoading = false;
-        });
-    },
-    date(timestamp) {
-      const date = new Date(timestamp * 1000);
-      const time = date.toUTCString().split(" ")[4];
-
-      const day = date.getUTCDate();
-      const month = date.getUTCMonth() + 1;
-      const year = date.toUTCString().split(" ")[3];
-
-      return `${day}.${month}.${year} ${time}`;
-    },
     addToClipboard(text, index) {
       if (navigator?.clipboard) {
         navigator.clipboard
@@ -343,12 +198,39 @@ export default {
         });
       }
     },
-    goTo(name, params) {
-      this.$router.push({ name, params });
-    },
     refreshInstance() {
       this.$store.dispatch("services/fetch", this.template.uuid);
       this.$store.dispatch("servicesProviders/fetch");
+    },
+    save() {
+      const instance = this.instance;
+      const service = JSON.parse(JSON.stringify(this.service));
+
+      const igIndex = service.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === this.template.uuid)
+      );
+      const instanceIndex = service.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === this.template.uuid);
+
+      service.instancesGroups[igIndex].instances[instanceIndex] = instance;
+
+      this.isSaveLoading = true;
+      api.services
+        ._update(service)
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: "Instance saved successfully",
+          });
+
+          this.refreshInstance();
+        })
+        .catch((err) => {
+          this.showSnackbarError({ message: err });
+        })
+        .finally(() => {
+          this.isSaveLoading = false;
+        });
     },
   },
   computed: {
@@ -377,7 +259,10 @@ export default {
       return this.servicesProviders?.find((sp) => sp.uuid == this.template.sp);
     },
     filtredPlans() {
-      return this.plans.filter((p) => p.type === this.template.type);
+      return this.plans.filter(
+        (p) =>
+          p.type === this.template.type || p.type.includes(this.template.type)
+      );
     },
     editPriceModelComponent() {
       const types = require.context(
@@ -393,6 +278,20 @@ export default {
           );
       }
       return null;
+    },
+    additionalInstanceInfoComponent() {
+      return () =>
+        import(
+          `@/components/modules/${this.template.type}/additionalInstanceInfo.vue`
+        );
+    },
+    billingInfoComponent() {
+      return () =>
+        import(`@/components/modules/${this.template.type}/billingInfo.vue`);
+    },
+    billingLabelComponent() {
+      return () =>
+        import(`@/components/modules/${this.instance.type}/billingLabel.vue`);
     },
   },
   created() {
@@ -410,6 +309,16 @@ export default {
           import(`@/components/modules/${matched[1]}/instanceCard.vue`);
       }
     });
+
+    this.instance = JSON.parse(JSON.stringify(this.template));
+  },
+  watch: {
+    template: {
+      handler(newVal) {
+        this.instance = JSON.parse(JSON.stringify(newVal));
+      },
+      deep: true,
+    },
   },
 };
 </script>

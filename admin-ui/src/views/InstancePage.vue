@@ -38,20 +38,6 @@ export default {
   data: () => ({
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
-    tabs: [
-      {
-        title: "Info",
-        component: () => import("@/components/instance/info.vue"),
-      },
-      {
-        title: "History",
-        component: () => import("@/components/instance/history.vue"),
-      },
-      {
-        title: "Template",
-        component: () => import("@/components/instance/template.vue"),
-      },
-    ],
   }),
   methods: {
     navTitle(title) {
@@ -75,6 +61,26 @@ export default {
     },
     instanceLoading() {
       return this.$store.getters["services/isLoading"];
+    },
+    tabs() {
+      return [
+        {
+          title: "Info",
+          component: () => import("@/components/instance/info.vue"),
+        },
+        this.instance?.state && {
+          title: "Snapshots",
+          component: () => import("@/components/instance/snapshots.vue"),
+        },
+        {
+          title: "History",
+          component: () => import("@/components/instance/history.vue"),
+        },
+        {
+          title: "Template",
+          component: () => import("@/components/instance/template.vue"),
+        },
+      ].filter((el) => !!el);
     },
   },
   created() {

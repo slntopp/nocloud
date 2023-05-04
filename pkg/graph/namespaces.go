@@ -64,6 +64,7 @@ func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Nam
 	ns := Namespace{
 		Namespace: &namespaces.Namespace{Title: title},
 	}
+
 	meta, err := ctrl.col.CreateDocument(ctx, ns)
 	if err != nil {
 		return Namespace{}, err
