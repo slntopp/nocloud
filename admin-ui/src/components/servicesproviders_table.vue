@@ -143,7 +143,6 @@ export default {
             if (!isRegionIncludes) {
               Headers.push({ text: "Region", value: "region" });
             }
-            this.$store.dispatch("servicesProviders/fetchById", el.uuid);
           }
         });
         this.fetchError = "";
