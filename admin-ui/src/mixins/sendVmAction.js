@@ -6,21 +6,20 @@ const sendVmAction = {
     isActionLoading: false,
   }),
   methods: {
-    sendVmAction(action, uuid) {
+    sendVmAction(action, { uuid, type }) {
       if (action === "vnc") {
-        this.openVnc(uuid);
-        return;
+        return this.openVnc(uuid, type);
       }
       if (action === "dns") {
-        this.openDns(uuid);
-        return;
+        return this.openDns(uuid);
       }
 
       this.isActionLoading = true;
-      api.instances
+      return api.instances
         .action({ uuid, action })
-        .then(() => {
+        .then((data) => {
           this.showSnackbarSuccess({ message: "Done!" });
+          return data;
         })
         .catch((err) => {
           const opts = {
@@ -32,11 +31,16 @@ const sendVmAction = {
           this.isActionLoading = false;
         });
     },
-    openVnc(uuid) {
-      this.$router.push({
-        name: "Vnc",
-        params: { instanceId: uuid },
-      });
+    async openVnc(uuid, type) {
+      if (type === "ione") {
+        this.$router.push({
+          name: "Vnc",
+          params: { instanceId: uuid },
+        });
+      } else {
+        const data = await this.sendVmAction("start_vnc", { uuid });
+        window.open(data.meta.url, "_blanc");
+      }
     },
     openDns(uuid) {
       this.$router.push({
