@@ -26,7 +26,7 @@
         >
           {{ item.title }}
         </router-link>
-        <login-in-account-icon :uuid="getAccount(item).uuid"/>
+        <login-in-account-icon :uuid="getAccount(item).uuid" :instanceId="item.uuid" />
       </div>
     </template>
 
