@@ -11,7 +11,7 @@
         ><v-btn
           color="primary"
           :disabled="isRenewDisabled"
-          @click="sendVmAction('manual_renew', template.uuid)"
+          @click="sendVmAction('manual_renew', template)"
           >Renew</v-btn
         ></v-col
       >
