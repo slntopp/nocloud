@@ -176,9 +176,9 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 
 	if t.Meta == nil {
 		t.Meta = map[string]*structpb.Value{}
-	}
+		t.Meta["type"] = structpb.NewStringValue("transaction")
 
-	t.Meta["type"] = structpb.NewStringValue("transaction")
+	}
 
 	r, err := s.transactions.Create(ctx, t)
 	if err != nil {
