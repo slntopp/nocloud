@@ -308,7 +308,8 @@ FOR service IN @@services // Iterate over Services
 		priority: @priority,
         service: service._key,
         records: records[*]._key,
-        total: SUM(records[*].total) // Calculate Total
+        total: SUM(records[*].total),
+		meta: {type: "transaction"},
     } IN @@transactions RETURN NEW
 `
 
