@@ -1,6 +1,8 @@
 <template>
   <div class="pa-10">
     <v-card-title class="text-center">{{ template.title }}</v-card-title>
+    <v-textarea label="Offer text" outlined v-model="promo.offerText"></v-textarea>
+    <v-text-field outlined label="Offer image" v-model="promo.offerImg"></v-text-field>
     <v-textarea v-model="promo.description" outlined label="Description:" />
     <v-card-title>Icons:</v-card-title>
     <v-row>
@@ -74,7 +76,7 @@ export default {
   data: () => ({
     addIconDialog: false,
     newIcon: { file: null },
-    promo: { description: "", icons: [] },
+    promo: { description: "", icons: [], offerText: "", offerImg: "" },
     isSaveLoading: false,
   }),
   mounted() {
