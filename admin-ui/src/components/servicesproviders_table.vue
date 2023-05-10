@@ -21,8 +21,8 @@
     <template v-slot:[`item.meta`]="{ item }">
       <icon-title-preview
         :is-mdi="false"
-        :title="item.meta.service.title"
-        :icon="item.meta.service.icon"
+        :title="item.meta.service?.title"
+        :icon="item.meta.service?.icon"
       />
     </template>
   </nocloud-table>

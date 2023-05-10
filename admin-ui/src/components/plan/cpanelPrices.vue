@@ -162,10 +162,10 @@ export default {
 
       this.products[item.name] = undefined;
     },
-    savePrices() {
+    async savePrices() {
       this.isSaveLoading = true;
       try {
-        api.plans.update(this.template.uuid, {
+        await api.plans.update(this.template.uuid, {
           ...this.template,
           products: this.products,
         });
