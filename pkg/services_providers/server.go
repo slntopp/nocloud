@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	"google.golang.org/protobuf/types/known/structpb"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -412,6 +413,32 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 
 	err = s.ctrl.BindPlan(ctx, req.Uuid, req.PlanUuid)
 
+	sp, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		return nil, status.Error(codes.Unknown, "Can't get sp")
+	}
+
+	if sp.GetMeta() == nil {
+		sp.Meta = make(map[string]*structpb.Value)
+	}
+
+	plans, ok := sp.GetMeta()["plans"]
+
+	if !ok {
+		var plansInterface interface{} = []interface{}{req.GetPlanUuid()}
+		plans, _ = structpb.NewValue(plansInterface)
+	} else {
+		newPlan, _ := structpb.NewValue(req.GetPlanUuid())
+		plans.GetListValue().Values = append(plans.GetListValue().Values, newPlan)
+	}
+
+	sp.Meta["plans"] = plans
+
+	err = s.ctrl.Update(ctx, sp.ServicesProvider)
+	if err != nil {
+		return nil, err
+	}
+
 	return &sppb.BindPlanResponse{}, err
 }
 
@@ -432,6 +459,41 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 	}
 
 	err = graph.DeleteEdge(ctx, s.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, req.Uuid, req.PlanUuid)
+
+	sp, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		return nil, status.Error(codes.Unknown, "Can't get sp")
+	}
+
+	if sp.GetMeta() == nil {
+		return &sppb.UnbindPlanResponse{}, err
+	}
+
+	plans, ok := sp.GetMeta()["plans"]
+
+	if !ok {
+		return &sppb.UnbindPlanResponse{}, err
+	}
+
+	plansValues := plans.GetListValue().GetValues()
+
+	var newPlansValues []*structpb.Value
+
+	for i := range plansValues {
+		if plansValues[i].GetStringValue() == req.GetPlanUuid() {
+			continue
+		}
+		newPlansValues = append(newPlansValues, plansValues[i])
+	}
+
+	plans.GetListValue().Values = newPlansValues
+
+	sp.Meta["plans"] = plans
+
+	err = s.ctrl.Update(ctx, sp.ServicesProvider)
+	if err != nil {
+		return nil, err
+	}
 
 	return &sppb.UnbindPlanResponse{}, err
 }
