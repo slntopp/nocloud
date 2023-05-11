@@ -86,7 +86,7 @@ export default {
   watch: {
     plan() {
       if (
-        !["ovh vps", "ovh dedicated", "goget", "cpanel"].includes(
+        !["ovh vps", "ovh dedicated", "goget", "cpanel",'acronis'].includes(
           this.plan.type
         )
       )
