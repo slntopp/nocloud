@@ -413,9 +413,13 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 
 	err = s.ctrl.BindPlan(ctx, req.Uuid, req.PlanUuid)
 
+	if err != nil {
+		return nil, err
+	}
+
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())
 	if err != nil {
-		return nil, status.Error(codes.Unknown, "Can't get sp")
+		return nil, err
 	}
 
 	if sp.GetMeta() == nil {
@@ -460,19 +464,23 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 
 	err = graph.DeleteEdge(ctx, s.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, req.Uuid, req.PlanUuid)
 
+	if err != nil {
+		return nil, err
+	}
+
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())
 	if err != nil {
-		return nil, status.Error(codes.Unknown, "Can't get sp")
+		return nil, err
 	}
 
 	if sp.GetMeta() == nil {
-		return &sppb.UnbindPlanResponse{}, err
+		return &sppb.UnbindPlanResponse{}, nil
 	}
 
 	plans, ok := sp.GetMeta()["plans"]
 
 	if !ok {
-		return &sppb.UnbindPlanResponse{}, err
+		return &sppb.UnbindPlanResponse{}, nil
 	}
 
 	plansValues := plans.GetListValue().GetValues()
@@ -495,7 +503,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 		return nil, err
 	}
 
-	return &sppb.UnbindPlanResponse{}, err
+	return &sppb.UnbindPlanResponse{}, nil
 }
 
 func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeRequest) (*sppb.InvokeResponse, error) {
