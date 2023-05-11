@@ -34,7 +34,7 @@
     "yaml": "^2.2.2"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "^7.21.3",
+    "@babel/eslint-parser": "^7.21.8",
     "@vue/cli-plugin-babel": "~5.0.7",
     "@vue/cli-plugin-eslint": "~5.0.7",
     "@vue/cli-plugin-router": "~5.0.7",
