@@ -1,8 +1,14 @@
 <template>
   <div>
-    <v-menu :close-on-click="true" :close-on-content-click="false" offset-y>
+    <v-menu
+      v-model="isOpen"
+      :close-on-click="true"
+      :close-on-content-click="false"
+      offset-y
+    >
       <template v-slot:activator="{ on, attrs }">
         <v-text-field
+          @input="isOpen = true"
           ref="search-input"
           hide-details
           prepend-inner-icon="mdi-magnify"
@@ -81,7 +87,7 @@ import { mapGetters } from "vuex";
 
 export default {
   name: "app-search",
-  data: () => ({ selectedGroupKey: "" }),
+  data: () => ({ selectedGroupKey: "", isOpen: false }),
   methods: {
     changeValue(e) {
       const searchItem = this.searchItems[e];
@@ -104,7 +110,7 @@ export default {
             title: this.searchParam,
           },
         });
-          this.selectedGroupKey = null;
+        this.selectedGroupKey = null;
         this.searchParam = "";
       } else {
         this.selectedGroupKey = searchItem.key;
@@ -133,7 +139,7 @@ export default {
         this.variants[this.selectedGroupKey]?.items.filter(
           (i) =>
             !this.searchParam ||
-            i.title.toLowerCase().startsWith(this.searchParam.toLowerCase())
+            i.title.toLowerCase().includes(this.searchParam.toLowerCase())
         ) ||
         Object.keys(this.variants).map((key) => ({
           key,

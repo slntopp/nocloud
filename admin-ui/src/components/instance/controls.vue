@@ -6,7 +6,7 @@
       :key="btn.action"
       :disabled="btn.disabled"
       :loading="isActionLoading"
-      @click="sendVmAction(btn.action, template.uuid)"
+      @click="sendVmAction(btn.action, template)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -90,6 +90,11 @@ export default {
           { action: "resume", disabled: this.ovhActions?.resume },
           { action: "suspend", disabled: this.ovhActions?.suspend },
           { action: "reboot", disabled: this.ovhActions?.reboot },
+          {
+            action: "vnc",
+            title: "Console",
+            disabled: this.ovhActions?.reboot,
+          },
         ],
         opensrs: [{ action: "dns" }],
         cpanel: [{ action: "session" }],
@@ -137,6 +142,7 @@ export default {
           reboot: true,
           resume: true,
           suspend: true,
+          vnc: true,
         };
       return {
         poweroff:
@@ -151,6 +157,7 @@ export default {
           this.template.state.state === "RUNNING" &&
           this.template.state.state !== "STOPPED",
         suspend: this.template.state.state === "SUSPENDED",
+        vnc: this.template.state.state !== "RUNNING",
       };
     },
   },

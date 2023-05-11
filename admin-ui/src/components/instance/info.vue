@@ -32,6 +32,12 @@
       <v-col>
         <v-text-field readonly label="email" />
       </v-col>
+      <v-col v-if="template.state?.meta.networking?.public">
+        <div>
+          <span class="mr-4">ips</span>
+          <instance-ip-menu :item="template" />
+        </div>
+      </v-col>
       <v-col>
         <v-text-field
           readonly
