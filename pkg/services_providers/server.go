@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	"google.golang.org/protobuf/types/known/structpb"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -410,7 +411,38 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
 
-	err = s.ctrl.BindPlan(ctx, req.Uuid, req.PlanUuid)
+	for _, plan := range req.GetPlans() {
+		err = s.ctrl.BindPlan(ctx, req.Uuid, plan)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	sp, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		return nil, err
+	}
+
+	if sp.GetMeta() == nil {
+		sp.Meta = make(map[string]*structpb.Value)
+	}
+
+	plans, ok := sp.GetMeta()["plans"]
+	var plansInterface interface{} = req.GetPlans()
+	newPlansPb, _ := structpb.NewValue(plansInterface)
+
+	if !ok {
+		plans, _ = structpb.NewValue(newPlansPb)
+	} else {
+		plans.GetListValue().Values = append(plans.GetListValue().GetValues(), newPlansPb.GetListValue().GetValues()...)
+	}
+
+	sp.Meta["plans"] = plans
+
+	err = s.ctrl.Update(ctx, sp.ServicesProvider)
+	if err != nil {
+		return nil, err
+	}
 
 	return &sppb.BindPlanResponse{}, err
 }
@@ -431,9 +463,56 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
 
-	err = graph.DeleteEdge(ctx, s.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, req.Uuid, req.PlanUuid)
+	for _, plan := range req.GetPlans() {
+		err = graph.DeleteEdge(ctx, s.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, req.Uuid, plan)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return &sppb.UnbindPlanResponse{}, err
+	sp, err := s.ctrl.Get(ctx, req.GetUuid())
+	if err != nil {
+		return nil, err
+	}
+
+	if sp.GetMeta() == nil {
+		return &sppb.UnbindPlanResponse{}, nil
+	}
+
+	plans, ok := sp.GetMeta()["plans"]
+
+	if !ok {
+		return &sppb.UnbindPlanResponse{}, nil
+	}
+
+	plansValues := plans.GetListValue().GetValues()
+
+	var newPlansValues []*structpb.Value
+
+	var newPlansMap = make(map[string]struct{})
+	reqPlans := req.GetPlans()
+
+	for i := range reqPlans {
+		newPlansMap[reqPlans[i]] = struct{}{}
+	}
+
+	for i := range plansValues {
+		if _, ok := newPlansMap[plansValues[i].GetStringValue()]; ok {
+			continue
+		}
+		newPlansValues = append(newPlansValues, plansValues[i])
+	}
+
+	plans.GetListValue().Values = newPlansValues
+
+	sp.Meta["plans"] = plans
+
+	err = s.ctrl.Update(ctx, sp.ServicesProvider)
+	if err != nil {
+		return nil, err
+	}
+
+	return &sppb.UnbindPlanResponse{}, nil
 }
 
 func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeRequest) (*sppb.InvokeResponse, error) {

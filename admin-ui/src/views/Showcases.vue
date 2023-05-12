@@ -4,7 +4,12 @@
       <h1 class="page__title">Showcases</h1>
     </div>
 
-    <v-menu offset-y :close-on-content-click="false" @input="clearShowcase">
+    <v-menu
+      offset-y
+      :close-on-content-click="false"
+      :close-on-click="!isOpen"
+      @input="clearShowcase"
+    >
       <template v-slot:activator="{ on, attrs }">
         <v-btn class="mr-2" v-bind="attrs" v-on="on">Create</v-btn>
       </template>
@@ -31,6 +36,8 @@
           label="Services providers"
           v-model="newShowcase.sp"
           :items="sp"
+          @focus="isOpen = true"
+          @blur="changeOpen"
         >
           <template v-slot:selection="{ item, index }">
             <v-chip small v-if="index === 0">
@@ -82,7 +89,7 @@
               item-text="title"
               item-value="uuid"
               label="Price models"
-              :items="plans"
+              :items="getPlans(showcase.sp)"
               :value="showcase.billing_plans"
               @change="(value) => updateShowcase(key, 'billing_plans', value)"
             >
@@ -174,6 +181,7 @@ export default {
       sp: []
     },
     updated: [],
+    isOpen: false,
     isLoading: false,
     generalRule: [(v) => !!v || "This field is required!"]
   }),
@@ -224,10 +232,12 @@ export default {
       });
     },
     addShowcase() {
+      const id = `${this.newShowcase.icon}-${Date.now()}`;
+
       this.newShowcase.sp.forEach((el) => {
-        const id = `${this.newShowcase.icon}-${Date.now()}`;
         const provider = JSON.parse(JSON.stringify(el));
 
+        if (!provider.meta.showcase) provider.meta.showcase = {};
         provider.meta.showcase[id] = {
           title: this.newShowcase.title,
           icon: this.newShowcase.icon,
@@ -243,6 +253,14 @@ export default {
     clearShowcase(isVisible) {
       if (isVisible) return;
       this.newShowcase = { title: 'Title', icon: '', billing_plans: [], sp: [] };
+    },
+    changeOpen() {
+      setTimeout(() => { this.isOpen = false }, 100);
+    },
+    getPlans(sp) {
+      return this.plans.filter(({ uuid }) =>
+        sp.find(({ meta }) => meta.plans?.includes(uuid))
+      );
     },
     tryToSend() {
       const promises = this.updated.map((provider) =>

@@ -1,9 +1,26 @@
 <template>
   <div class="pa-10">
-    <v-card-title class="text-center">{{ template.title }}</v-card-title>
-    <v-textarea label="Offer text" outlined v-model="promo.offerText"></v-textarea>
-    <v-text-field outlined label="Offer image" v-model="promo.offerImg"></v-text-field>
-    <v-textarea v-model="promo.description" outlined label="Description:" />
+    <v-card-title class="text-center">Service settings</v-card-title>
+    <v-textarea v-model.trim="promo.description" outlined label="Description" />
+    <v-card-title class="text-center">Offer settings</v-card-title>
+    <v-textarea
+      label="Text"
+      outlined
+      v-model.trim="promo.offer.text"
+    ></v-textarea>
+    <v-text-field
+      outlined
+      label="Media src"
+      v-model="promo.offer.src"
+    ></v-text-field>
+    <v-text-field outlined label="Media src link" v-model="promo.offer.link" />
+    <v-card-title class="text-center">Rewards settings</v-card-title>
+    <v-text-field label="Title" outlined v-model.trim="promo.rewards.title" />
+    <v-textarea
+      outlined
+      label="Description"
+      v-model="promo.rewards.description"
+    />
     <v-card-title>Icons:</v-card-title>
     <v-row>
       <v-col
@@ -15,8 +32,8 @@
         v-for="icon in promo.icons"
         :key="icon.id"
       >
-        <v-card height="100%" color="background-light">
-          <v-img height="100%" width="100%" cover :src="icon.src" />
+        <v-card color="background-light">
+          <v-img :src="icon.src" />
           <v-divider />
           <div class="d-flex flex-row-reverse">
             <v-btn color="primary" @click="deleteIcon(icon.id)" icon>
@@ -41,13 +58,6 @@
           </template>
           <v-card color="background-light" class="pa-5 ma-auto" max-width="600">
             <v-card-title class="text-h5"> Add new icon: </v-card-title>
-            <!-- <v-file-input
-              accept="image/*"
-              v-model="newIcon.file"
-              clearable
-              label="File input"
-              underlined
-            /> -->
             <v-text-field label="icon link" v-model="newIcon.file" />
             <v-card-actions class="flex-row-reverse">
               <v-btn class="mx-5" color="red" @click="closeAddIcon">
@@ -76,12 +86,17 @@ export default {
   data: () => ({
     addIconDialog: false,
     newIcon: { file: null },
-    promo: { description: "", icons: [], offerText: "", offerImg: "" },
+    promo: {
+      description: "",
+      icons: [],
+      offer: { text: "", src: "", link: "" },
+      rewards: { description: "", title: "" },
+    },
     isSaveLoading: false,
   }),
   mounted() {
     if (this.template.meta.promo) {
-      this.promo = this.template.meta.promo;
+      this.promo = { ...this.promo, ...this.template.meta.promo };
     }
   },
   methods: {

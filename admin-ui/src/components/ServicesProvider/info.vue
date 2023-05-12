@@ -299,13 +299,12 @@ export default {
       if (this.selectedNewPlans.length < 1) return;
       this.isLoading = true;
 
-      const bindPromises = this.selectedNewPlans.map((el) =>
-        api.servicesProviders.bindPlan(this.template.uuid, el.uuid)
-      );
+      const plans = this.selectedNewPlans.map((el) => el.uuid);
 
-      Promise.all(bindPromises)
+      api.servicesProviders
+        .bindPlan(this.template.uuid, plans)
         .then(() => {
-          const ending = bindPromises.length === 1 ? "" : "s";
+          const ending = plans.length === 1 ? "" : "s";
           this.relatedPlans.push(...this.selectedNewPlans);
           this.selectedNewPlans = [];
           this.isDialogVisible = false;
@@ -323,13 +322,12 @@ export default {
     unbindPlans() {
       this.isDeleteLoading = true;
 
-      const unbindPromises = this.selected.map((el) =>
-        api.servicesProviders.unbindPlan(this.template.uuid, el.uuid)
-      );
+      const plans = this.selected.map((el) => el.uuid);
 
-      Promise.all(unbindPromises)
+      api.servicesProviders
+        .unbindPlan(this.template.uuid, plans)
         .then(() => {
-          const ending = unbindPromises.length === 1 ? "" : "s";
+          const ending = plans.length === 1 ? "" : "s";
           this.relatedPlans = this.relatedPlans.filter(
             (rp) => this.selected.findIndex((s) => s.uuid === rp.uuid) === -1
           );

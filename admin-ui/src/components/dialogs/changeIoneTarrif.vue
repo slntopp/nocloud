@@ -178,7 +178,7 @@ const createIndividual = () => {
   createIndividualLoading.value = true;
 
   api.plans.create(plan).then((data) => {
-    api.servicesProviders.bindPlan(template.value.sp, data.uuid).then(() => {
+    api.servicesProviders.bindPlan(template.value.sp, [data.uuid]).then(() => {
       const tempService = JSON.parse(JSON.stringify(service.value));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
         ig.instances.find((i) => i.uuid === template.value.uuid)
