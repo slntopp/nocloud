@@ -38,9 +38,12 @@ const isLoading = ref(false);
 const isSaveLoading = ref(false);
 
 const headers = ref([
-  { text: "name", value: "key" },
-  { text: "sp price", value: "spPrice" },
-  { text: "plan price", value: "planPrice" },
+  { text: "Key", value: "name" },
+  { text: "Name", value: "usage_name" },
+  { text: "Edition", value: "edition" },
+  { text: "Required", value: "mandatory" },
+  { text: "Price", value: "price" },
+  { text: "Plan price", value: "planPrice" },
 ]);
 
 onMounted(async () => {
@@ -51,16 +54,13 @@ onMounted(async () => {
     await store.dispatch("servicesProviders/fetchById", spUuid);
     sp.value = sps.value.find((sp) => sp.uuid === spUuid);
     Object.keys(sp.value.secrets.offeringItems).forEach((key) => {
-      availableResources.value.push({
-        key,
-        spPrice: sp.value.secrets.offeringItems[key],
-      });
+      availableResources.value.push(sp.value.secrets.offeringItems[key]);
     });
-    props.template.resources.forEach((r) => {
-      const indexRealItem = availableResources.value.findIndex(
-        (res) => res.key === r.key
-      );
-      availableResources.value[indexRealItem].planPrice = r.price;
+    Object.keys(props.template.products).forEach((key) => {
+      const resource = availableResources.value.find((r) => r.name === key);
+      if (resource) {
+        resource.planPrice = props.template.products[key].price;
+      }
     });
   } finally {
     isLoading.value = false;
@@ -68,23 +68,29 @@ onMounted(async () => {
 });
 
 const save = async () => {
-  const resources = [];
+  const products = {};
   availableResources.value.forEach((res) => {
     if (res.planPrice) {
-      resources.push({
-        key: res.key,
+      products[res.name] = {
+        title: res.usage_name,
         price: res.planPrice,
         kind: "PREPAID",
         period: 1000 * 60 * 60 * 24 * 30,
-        except: false,
-      });
+        resources: {},
+        meta: {
+          edition: res.edition,
+          application_id: res.application_id,
+          infra_id: res.infra_id,
+          mandatory: res.mandatory,
+        },
+      };
     }
   });
   isSaveLoading.value = true;
   try {
     await api.plans.update(props.template.uuid, {
       ...props.template,
-      resources,
+      products,
     });
   } finally {
     isSaveLoading.value = false;
