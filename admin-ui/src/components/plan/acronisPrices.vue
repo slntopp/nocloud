@@ -75,13 +75,14 @@ const save = async () => {
         title: res.usage_name,
         price: res.planPrice,
         kind: "PREPAID",
-        period: 1000 * 60 * 60 * 24 * 30,
+        period: 60 * 60 * 24 * 30,
         resources: {},
         meta: {
           edition: res.edition,
           application_id: res.application_id,
           infra_id: res.infra_id,
           mandatory: res.mandatory,
+          measurement_unit: res.measurement_unit,
         },
       };
     }
