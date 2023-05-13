@@ -82,6 +82,7 @@ const save = async () => {
           application_id: res.application_id,
           infra_id: res.infra_id,
           mandatory: res.mandatory,
+          measurement_unit: res.measurement_unit,
         },
       };
     }
