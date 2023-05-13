@@ -75,7 +75,7 @@ const save = async () => {
         title: res.usage_name,
         price: res.planPrice,
         kind: "PREPAID",
-        period: 1000 * 60 * 60 * 24 * 30,
+        period: 60 * 60 * 24 * 30,
         resources: {},
         meta: {
           edition: res.edition,
