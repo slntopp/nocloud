@@ -1,7 +1,8 @@
 <template>
   <div class="pa-10">
     <v-card-title class="text-center">Service settings</v-card-title>
-    <v-textarea v-model.trim="promo.service.title" outlined label="Title" />
+    <v-text-field v-model.trim="promo.service.title" outlined label="Title" />
+    <v-text-field v-model.trim="promo.service.btn" outlined label="Btn title" />
     <v-textarea
       v-model.trim="promo.service.description"
       outlined
