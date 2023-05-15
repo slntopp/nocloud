@@ -169,7 +169,7 @@ export default {
         ?.toFixed(2);
     },
     refreshInstance() {
-        this.$emit('refresh')
+      this.$emit("refresh");
     },
   },
   computed: {
@@ -189,7 +189,7 @@ export default {
     osName() {
       const id = this.template.config.template_id;
 
-      return this.sp?.publicData.templates[id].name;
+      return this.sp?.publicData.templates[id]?.name;
     },
     tariff() {
       return this.template.product ?? this.getTariff(this.template) ?? "custom";
