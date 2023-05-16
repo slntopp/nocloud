@@ -23,10 +23,18 @@
         <v-text-field readonly label="Price instance total" :value="getPrice" />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Date (create)" :value="template.data.creation"/>
+        <v-text-field
+          readonly
+          label="Date (create)"
+          :value="template.data.creation"
+        />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Due to date/next payment"  :value="template.data.expiration" />
+        <v-text-field
+          readonly
+          label="Due to date/next payment"
+          :value="template.data.expiration"
+        />
       </v-col>
       ></v-row
     >
@@ -138,7 +146,7 @@ const saveNewPrices = () => {
 
   isPlanChangeLoading.value = true;
   api.plans.create(plan).then((data) => {
-    api.servicesProviders.bindPlan(template.value.sp, data.uuid).then(() => {
+    api.servicesProviders.bindPlan(template.value.sp, [data.uuid]).then(() => {
       const tempService = JSON.parse(JSON.stringify(service.value));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
         ig.instances.find((i) => i.uuid === template.value.uuid)

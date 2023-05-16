@@ -176,9 +176,9 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 
 	if t.Meta == nil {
 		t.Meta = map[string]*structpb.Value{}
-	}
+		t.Meta["type"] = structpb.NewStringValue("transaction")
 
-	t.Meta["type"] = structpb.NewStringValue("transaction")
+	}
 
 	r, err := s.transactions.Create(ctx, t)
 	if err != nil {
@@ -287,7 +287,7 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb
 	}, nil
 }
 
-func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.UpdateTransactionRequest) (*pb.UpdateTransactionResponse, error) {
+func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Transaction) (*pb.UpdateTransactionResponse, error) {
 	log := s.log.Named("UpdateTransaction")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
@@ -315,6 +315,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Up
 	}
 	t.Exec = req.GetExec()
 	t.Uuid = req.GetUuid()
+	t.Meta = req.GetMeta()
 
 	_, err = s.transactions.Update(ctx, t)
 	if err != nil {

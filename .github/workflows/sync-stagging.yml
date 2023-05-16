@@ -1,7 +1,7 @@
 name: Sync Dev -> Staging
 on:
   schedule:
-    - cron: "0 8 * * *" # every day at midnight
+    - cron: "0 8 * * 1-5" # every day at midnight
   workflow_dispatch:
 
 jobs:

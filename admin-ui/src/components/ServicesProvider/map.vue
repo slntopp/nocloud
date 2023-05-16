@@ -193,9 +193,14 @@
                           mdi-image-outline
                         </v-icon>
 
-                        <v-dialog width="400" :ref="`color-dialog.${marker.id}`">
+                        <v-dialog
+                          width="400"
+                          :ref="`color-dialog.${marker.id}`"
+                        >
                           <template v-slot:activator="{ on, attrs }">
-                            <v-icon v-on="on" v-bind="attrs">mdi-palette</v-icon>
+                            <v-icon v-on="on" v-bind="attrs"
+                              >mdi-palette</v-icon
+                            >
                           </template>
 
                           <v-card class="pa-2">
@@ -226,13 +231,42 @@
                         />
 
                         <v-text-field
+                          label="Widget title"
+                          style="
+                            color: #fff;
+                            background: var(--v-background-light-base);
+                            transition: 0.3s;
+                          "
+                          :ref="`textarea_${marker.id}`"
+                          v-model="marker.extra.title"
+                        />
+
+                        <v-text-field
                           dense
                           label="Title"
                           v-model="marker.title"
                           :ref="`textField_${marker.id}_${marker.x}_${marker.y}`"
-                          @keyup.enter="(e) => onEnterHandler(`${marker.id}_${marker.x}_${marker.y}`, e)"
+                          @keyup.enter="
+                            (e) =>
+                              onEnterHandler(
+                                `${marker.id}_${marker.x}_${marker.y}`,
+                                e
+                              )
+                          "
                           @input="(e) => inputHandler(e, marker)"
                         />
+
+                        <div class="d-flex justify-end">
+                          <v-switch
+                            label="Is primary"
+                            style="
+                              color: #fff;
+                              background: var(--v-background-light-base);
+                              transition: 0.3s;
+                            "
+                            v-model="marker.extra.primary"
+                          />
+                        </div>
 
                         <v-card-actions class="justify-end">
                           <v-btn @click.stop="saveAndClose(marker.id)">
@@ -353,7 +387,8 @@ export default {
   }),
   methods: {
     formatText(tag, id) {
-      const textarea = this.$refs[`textarea_${id}`][0].$el.querySelector("textarea");
+      const textarea =
+        this.$refs[`textarea_${id}`][0].$el.querySelector("textarea");
       const { selectionStart, selectionEnd } = textarea;
       const text = textarea.value.slice(selectionStart, selectionEnd);
 
@@ -379,7 +414,9 @@ export default {
           const pos = selectionStart + color.length + 13;
 
           this.$refs[`color-dialog.${id}`][0].isActive = false;
-          setTimeout(() => { textarea.focus() });
+          setTimeout(() => {
+            textarea.focus();
+          });
 
           setTimeout(() => {
             textarea.setRangeText(`<span style="${color}">${text}</span>`);

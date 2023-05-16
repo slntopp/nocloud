@@ -118,7 +118,7 @@ func (s *StatusesPubSub) Consumer(col string, msgs <-chan amqp.Delivery) {
 		c, err := (*s.db).Query(context.TODO(), updateStatusQuery, map[string]interface{}{
 			"@collection": col,
 			"key":         req.Uuid,
-			"status":      req.Status,
+			"status":      req.Status.GetStatus(),
 		})
 
 		if err != nil {
