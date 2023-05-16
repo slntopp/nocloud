@@ -256,6 +256,18 @@
                           @input="(e) => inputHandler(e, marker)"
                         />
 
+                        <div class="d-flex justify-end">
+                          <v-switch
+                            label="Is primary"
+                            style="
+                              color: #fff;
+                              background: var(--v-background-light-base);
+                              transition: 0.3s;
+                            "
+                            v-model="marker.extra.primary"
+                          />
+                        </div>
+
                         <v-card-actions class="justify-end">
                           <v-btn @click.stop="saveAndClose(marker.id)">
                             Save

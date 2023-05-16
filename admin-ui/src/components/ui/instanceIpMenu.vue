@@ -7,11 +7,18 @@
     transition="slide-y-transition"
   >
     <template v-slot:activator="{ on, attrs }">
-        <v-text-field label="ips_public" v-if="props.ui!=='span'" v-bind="attrs" v-on="on" readonly :value="ip" />
-        <span v-else v-bind="attrs" v-on="on">{{ip}}</span>
+      <v-text-field
+        label="ips_public"
+        v-if="props.ui !== 'span'"
+        v-bind="attrs"
+        v-on="on"
+        readonly
+        :value="ip"
+      />
+      <span v-else v-bind="attrs" v-on="on">{{ ip }}</span>
     </template>
 
-    <v-list dense>
+    <v-list v-if="item.state.meta.networking.public.length" dense>
       <v-list-item v-for="net of item.state.meta.networking.public" :key="net">
         <v-list-item-title>{{ net }}</v-list-item-title>
       </v-list-item>
@@ -21,7 +28,7 @@
 
 <script setup>
 import { computed, defineProps } from "vue";
-const props = defineProps(["item",'ui']);
+const props = defineProps(["item", "ui"]);
 
 const ip = computed(
   () =>
