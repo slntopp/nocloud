@@ -8,6 +8,13 @@
       outlined
       label="Description"
     />
+    <v-card-title class="text-center">Location settings</v-card-title>
+    <v-text-field label="Title" outlined v-model="promo.location.title" />
+    <v-textarea
+      v-model.trim="promo.location.description"
+      outlined
+      label="Description"
+    />
     <v-card-title class="text-center">Offer settings</v-card-title>
     <v-textarea
       label="Text"
@@ -93,9 +100,9 @@ export default {
     addIconDialog: false,
     newIcon: { file: null },
     promo: {
-      description: "",
       icons: [],
       service: {},
+        location:{},
       offer: { text: "", src: "", link: "" },
       rewards: { description: "", title: "" },
     },
