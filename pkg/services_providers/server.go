@@ -487,7 +487,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 
 	plansValues := plans.GetListValue().GetValues()
 
-	var newPlansValues []*structpb.Value
+	var newPlansValues = make([]*structpb.Value, 0)
 
 	var newPlansMap = make(map[string]struct{})
 	reqPlans := req.GetPlans()
