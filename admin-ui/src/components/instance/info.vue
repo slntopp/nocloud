@@ -30,10 +30,10 @@
         </div>
       </v-col>
       <v-col>
-        <v-text-field readonly label="email" />
+        <v-text-field readonly label="email" :value="account?.data?.email" />
       </v-col>
       <v-col v-if="template.state?.meta.networking?.public">
-          <instance-ip-menu :item="template" />
+        <instance-ip-menu :item="template" />
       </v-col>
       <v-col>
         <v-text-field
@@ -56,7 +56,10 @@
           <v-text-field v-model="instance.title" label="Instance title">
             <template v-slot:append>
               <v-icon class="mr-2">mdi-pencil</v-icon>
-              <login-in-account-icon :uuid="account.uuid" :instanceId="instance.uuid" />
+              <login-in-account-icon
+                :uuid="account.uuid"
+                :instanceId="instance.uuid"
+              />
             </template>
           </v-text-field>
         </v-col>
