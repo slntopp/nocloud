@@ -231,17 +231,6 @@
                         />
 
                         <v-text-field
-                          label="Widget title"
-                          style="
-                            color: #fff;
-                            background: var(--v-background-light-base);
-                            transition: 0.3s;
-                          "
-                          :ref="`textarea_${marker.id}`"
-                          v-model="marker.extra.title"
-                        />
-
-                        <v-text-field
                           dense
                           label="Title"
                           v-model="marker.title"
