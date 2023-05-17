@@ -19,11 +19,7 @@
       </v-chip>
     </template>
     <template v-slot:[`item.meta`]="{ item }">
-      <icon-title-preview
-        :is-mdi="false"
-        :title="item.meta.service.title"
-        :icon="item.meta.service.icon"
-      />
+      <icon-title-preview :is-mdi="false" :instance="getShowcase(item)" />
     </template>
   </nocloud-table>
 </template>
@@ -89,6 +85,9 @@ export default {
       }
       return this.stateColorMap[state.toLowerCase()] || "";
     },
+    getShowcase(item) {
+      return Object.values(item.meta?.showcase ?? {})[0];
+    }
   },
   computed: {
     tableData() {

@@ -33,10 +33,7 @@
         <v-text-field readonly label="email" />
       </v-col>
       <v-col v-if="template.state?.meta.networking?.public">
-        <div>
-          <span class="mr-4">ips</span>
           <instance-ip-menu :item="template" />
-        </div>
       </v-col>
       <v-col>
         <v-text-field
@@ -59,7 +56,7 @@
           <v-text-field v-model="instance.title" label="Instance title">
             <template v-slot:append>
               <v-icon class="mr-2">mdi-pencil</v-icon>
-              <login-in-account-icon :uuid="account.uuid" />
+              <login-in-account-icon :uuid="account.uuid" :instanceId="instance.uuid" />
             </template>
           </v-text-field>
         </v-col>
