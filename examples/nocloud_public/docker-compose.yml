@@ -57,11 +57,14 @@ services:
       - traefik.http.routers.web.service=web@docker
       - traefik.http.services.web.loadbalancer.server.port=8000
 
-      - "traefik.http.middlewares.web_cors.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,DELETE,PATCH,HEAD"
-      - "traefik.http.middlewares.web_cors.headers.accesscontrolalloworiginlist=origin-list-or-null"
-      - "traefik.http.middlewares.web_cors.headers.accesscontrolmaxage=100"
-      - "traefik.http.middlewares.web_cors.headers.accesscontrolallowcredentials=true"
-      - "traefik.http.middlewares.web_cors.headers.addvaryheader=false"
+      - traefik.http.routers.web_ui.rule=Host(`api.${BASE_DOMAIN}`)&&PathPrefix(`/admin`)
+      - traefik.http.routers.web_ui.entrypoints=https
+      - traefik.http.routers.web_ui.service=web_ui@docker
+      - traefik.http.routers.web_ui.middlewares=web_ui_stripprefix
+      - traefik.http.routers.web_ui.tls=true
+      - traefik.http.routers.web_ui.tls.certresolver=letsencrypt
+      - traefik.http.middlewares.web_ui_stripprefix.stripprefix.prefixes=/admin
+      - traefik.http.services.web_ui.loadbalancer.server.port=8080
     environment:
       LOG_LEVEL: -1
       WITH_BLOCK: "true"

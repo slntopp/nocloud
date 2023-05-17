@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/rs/cors"
@@ -40,14 +39,14 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-
-	"github.com/gabriel-vasile/mimetype"
 )
 
 var (
 	log *zap.Logger
 
-	gatewayHost      string
+	gatewayHost string
+	adminUiHost string
+
 	apiserver        string
 	corsAllowed      []string
 	insecure_enabled bool
@@ -61,51 +60,17 @@ func init() {
 	viper.SetDefault("CORS_ALLOWED", []string{"*"})
 	viper.SetDefault("APISERVER_HOST", "proxy:8000")
 	viper.SetDefault("GATEWAY_HOST", ":8000")
+	viper.SetDefault("ADMIN_UI_HOST", ":8080")
 	viper.SetDefault("INSECURE", true)
 	viper.SetDefault("WITH_BLOCK", false)
 
 	gatewayHost = viper.GetString("GATEWAY_HOST")
+	adminUiHost = viper.GetString("ADMIN_UI_HOST")
+
 	apiserver = viper.GetString("APISERVER_HOST")
 	corsAllowed = strings.Split(viper.GetString("CORS_ALLOWED"), ",")
 	insecure_enabled = viper.GetBool("INSECURE")
 	with_block = viper.GetBool("WITH_BLOCK")
-}
-
-func getContentType(path string) (mime string, ok bool) {
-	chunks := strings.Split(path, ".")
-	switch chunks[len(chunks)-1] {
-	case "css":
-		return "text/css; charset=utf-8", true
-	default:
-		return "", false
-	}
-}
-
-func staticHandler(w http.ResponseWriter, r *http.Request, pathParams map[string]string) {
-	log.Debug("Static request", zap.Any("path", pathParams))
-	file := "index.html"
-	if path, ok := pathParams["path"]; ok {
-		file = path
-	}
-	if path, ok := pathParams["file"]; ok {
-		file += "/" + path
-	}
-	index, err := os.ReadFile("/dist/" + file)
-	if err != nil {
-		log.Error("Error reading file", zap.Error(err))
-		w.WriteHeader(404)
-		return
-	}
-
-	mime, ok := getContentType(file)
-	if !ok {
-		mime = mimetype.Detect(index).String()
-	}
-	log.Debug("Content-Type", zap.String("mime", mime))
-	w.Header().Set("Content-Type", mime)
-	if _, err = w.Write(index); err != nil {
-		log.Warn("Coulnd't write index.html", zap.Error(err))
-	}
 }
 
 func main() {
@@ -129,6 +94,10 @@ func main() {
 	if with_block {
 		opts = append(opts, grpc.WithBlock())
 	}
+
+	// Registering gRPC services
+
+	// HealthService
 	log.Info("Registering HealthService Gateway")
 	err = healthpb.RegisterHealthServiceHandlerFromEndpoint(
 		context.Background(),
@@ -139,6 +108,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register HealthService gateway", zap.Error(err))
 	}
+
+	// AccountsService
 	log.Info("Registering AccountsService Gateway")
 	err = registrypb.RegisterAccountsServiceHandlerFromEndpoint(
 		context.Background(),
@@ -149,6 +120,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register AccountsService gateway", zap.Error(err))
 	}
+
+	// NamespacesService
 	log.Info("Registering NamespacesService Gateway")
 	err = registrypb.RegisterNamespacesServiceHandlerFromEndpoint(
 		context.Background(),
@@ -159,6 +132,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register NamespacesService gateway", zap.Error(err))
 	}
+
+	// ServicesProvidersService
 	log.Info("Registering ServicesProvidersService Gateway")
 	err = sppb.RegisterServicesProvidersServiceHandlerFromEndpoint(
 		context.Background(),
@@ -169,6 +144,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register ServicesProvidersService gateway", zap.Error(err))
 	}
+
+	// ServicesService
 	log.Info("Registering ServicesService Gateway")
 	err = servicespb.RegisterServicesServiceHandlerFromEndpoint(
 		context.Background(),
@@ -179,6 +156,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register ServicesService gateway", zap.Error(err))
 	}
+
+	// InstancesService
 	log.Info("Registering InstancesService Gateway")
 	err = instancespb.RegisterInstancesServiceHandlerFromEndpoint(
 		context.Background(),
@@ -189,11 +168,15 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register InstancesService gateway", zap.Error(err))
 	}
+
+	// DNS
 	log.Info("Registering DNS Gateway")
 	err = dnspb.RegisterDNSHandlerFromEndpoint(context.Background(), gwmux, apiserver, opts)
 	if err != nil {
 		log.Fatal("Failed to register DNS gateway", zap.Error(err))
 	}
+
+	// SettingsService
 	log.Info("Registering SettingsService Gateway")
 	err = settingspb.RegisterSettingsServiceHandlerFromEndpoint(
 		context.Background(),
@@ -204,6 +187,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register SettingsService gateway", zap.Error(err))
 	}
+
+	// BillingService
 	log.Info("Registering BillingService Gateway")
 	err = billingpb.RegisterBillingServiceHandlerFromEndpoint(
 		context.Background(),
@@ -214,6 +199,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
 	}
+
+	// CurrencyService
 	log.Info("Registering CurrencyService Gateway")
 	err = billingpb.RegisterCurrencyServiceHandlerFromEndpoint(
 		context.Background(),
@@ -224,6 +211,8 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to register CurrencyService gateway", zap.Error(err))
 	}
+
+	// EventsBus
 	log.Info("Registering EventsBus Gateway")
 	err = eventspb.RegisterEventsServiceHandlerFromEndpoint(
 		context.Background(),
@@ -235,17 +224,6 @@ func main() {
 		log.Fatal("Failed to register CurrencyService gateway", zap.Error(err))
 	}
 
-	for _, p := range []string{"/admin", "/admin/{path}", "/admin/{path}/{file}"} {
-		err = gwmux.HandlePath("GET", p, staticHandler)
-		if err != nil {
-			log.Fatal(
-				"Failed to register custom static handler",
-				zap.String("path", p),
-				zap.Error(err),
-			)
-		}
-	}
-
 	log.Info("Allowed Origins", zap.Strings("hosts", corsAllowed))
 	handler := cors.New(cors.Options{
 		AllowedOrigins:   corsAllowed,
@@ -253,6 +231,23 @@ func main() {
 		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
 		AllowCredentials: true,
 	}).Handler(gwmux)
+
+	// AdminUI Handler
+	ui_handler := cors.New(cors.Options{
+		AllowedOrigins:   corsAllowed,
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowedMethods:   []string{"GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS", "HEAD"},
+		AllowCredentials: true,
+	}).Handler(AdminUIHandler())
+
+	go func() {
+		log.Info("Serving Admin-UI on " + adminUiHost)
+		/* #nosec */
+		log.Fatal(
+			"Failed to Listen and Serve Admin-UI",
+			zap.Error(http.ListenAndServe(adminUiHost, ui_handler)),
+		)
+	}()
 
 	log.Info("Serving gRPC-Gateway on " + gatewayHost)
 	/* #nosec */

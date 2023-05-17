@@ -97,6 +97,12 @@
           delete
         </v-btn>
       </confirm-dialog>
+      <v-btn
+        color="background-light"
+        class="mr-8"
+        :to="{ name: 'NebulaAccounts' }"
+        >Nebula</v-btn
+      >
     </div>
 
     <accounts-table :searchParam="searchParam" v-model="selected">

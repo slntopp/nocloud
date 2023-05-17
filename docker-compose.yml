@@ -41,7 +41,14 @@ services:
     labels:
       - traefik.http.routers.web.rule=Host(`api.${BASE_DOMAIN}`)
       - traefik.http.routers.web.entrypoints=http
+      - traefik.http.routers.web.service=web@docker
       - traefik.http.services.web.loadbalancer.server.port=8000
+      - traefik.http.routers.web_ui.rule=Host(`api.${BASE_DOMAIN}`)&&PathPrefix(`/admin`)
+      - traefik.http.routers.web_ui.entrypoints=http
+      - traefik.http.routers.web_ui.service=web_ui@docker
+      - traefik.http.routers.web_ui.middlewares=web_ui_stripprefix
+      - traefik.http.middlewares.web_ui_stripprefix.stripprefix.prefixes=/admin
+      - traefik.http.services.web_ui.loadbalancer.server.port=8080
     environment:
       LOG_LEVEL: -1
       WITH_BLOCK: "false"
@@ -307,6 +314,8 @@ services:
       ARANGO_ROOT_PASSWORD: "${DB_PASS}"
     volumes:
       - data:/var/lib/arangodb3
+    ports:
+      - 8529:8529
     networks:
       - proxy
       - arangodb

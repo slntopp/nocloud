@@ -345,6 +345,19 @@ func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid
 		return nil
 	}
 
+	if i.BillingPlan.Software != nil {
+	check_software:
+		for _, s := range i.BillingPlan.Software {
+			for _, is := range i.Software {
+				if s.Playbook == is.Playbook {
+					log.Debug("Software is valid", zap.String("software", s.String()))
+					continue check_software
+				}
+			}
+			return fmt.Errorf("software %s is not defined in Instance", s.Playbook)
+		}
+	}
+
 	if i.BillingPlan.Kind < 2 { // If Kind is Dynamic or Unknown
 		log.Debug("Billing plan Dynamic, nothing else to validate")
 		i.BillingPlan.Kind = bpb.PlanKind_DYNAMIC // Ensuring Kind is set
