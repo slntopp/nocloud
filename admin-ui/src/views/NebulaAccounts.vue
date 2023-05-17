@@ -140,34 +140,38 @@ const ioneSps = computed(() =>
 );
 const services = computed(() => store.getters["services/all"]);
 const plans = computed(() =>
-  store.getters["plans/all"].filter((p) => p.type === "ione")
+  store.getters["plans/all"].filter(
+    (p) => p.type === "ione" && getPlanProducts(p)?.length
+  )
 );
-const products = computed(() => {
+const products = computed(() => getPlanProducts(selectedPlan.value));
+
+const getPlanProducts = (plan) => {
   const products = [];
-  if (!selectedPlan.value?.products || !selectedVM.value[0]) {
+  if (!plan?.products || !selectedVM.value[0]) {
     return;
   }
-  Object.keys(selectedPlan.value?.products || {}).forEach((productKey) => {
-    Object.keys(
-      selectedPlan.value?.products[productKey].resources || {}
-    ).forEach((resourceKey) => {
-      let stop = false;
-      selectedVM.value[0]?.vms.forEach((vm) => {
-        if (
-          !stop &&
-          vm.resources[resourceKey] !=
-            selectedPlan.value?.products[productKey].resources[resourceKey]
-        ) {
-          stop = true;
+  Object.keys(plan.products || {}).forEach((productKey) => {
+    Object.keys(plan.products[productKey].resources || {}).forEach(
+      (resourceKey) => {
+        let stop = false;
+        selectedVM.value[0]?.vms.forEach((vm) => {
+          if (
+            !stop &&
+            vm.resources[resourceKey] !=
+              plan.products[productKey].resources[resourceKey]
+          ) {
+            stop = true;
+          }
+        });
+        if (!stop) {
+          products.push(productKey);
         }
-      });
-      if (!stop) {
-        products.push(productKey);
       }
-    });
+    );
   });
   return products;
-});
+};
 
 const selectedService = computed(() =>
   services.value.find((s) => s.uuid === service.value)
