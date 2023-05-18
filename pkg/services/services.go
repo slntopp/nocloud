@@ -637,6 +637,9 @@ func (s *ServicesServer) Unsuspend(ctx context.Context, request *pb.UnsuspendReq
 			return nil, err
 		}
 		for _, inst := range group.GetInstances() {
+			if inst.GetStatus() == statuspb.NoCloudStatus_DEL {
+				continue
+			}
 			if err := instancesController.SetStatus(ctx, inst, statuspb.NoCloudStatus_UP); err != nil {
 				return nil, err
 			}
