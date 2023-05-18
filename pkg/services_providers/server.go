@@ -436,15 +436,11 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 
 	newPlansPb, _ := structpb.NewList(plansInterface)
 
-	log.Debug("new plans", zap.Any("reqPlans", plansInterface))
-
 	if !ok {
 		plans, _ = structpb.NewValue(newPlansPb)
 	} else {
 		plans.GetListValue().Values = append(plans.GetListValue().GetValues(), newPlansPb.GetValues()...)
 	}
-
-	log.Debug("plan insert", zap.Any("plans", plans))
 
 	sp.Meta["plans"] = plans
 
