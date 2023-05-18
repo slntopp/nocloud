@@ -44,7 +44,7 @@
       </v-col>
     </v-row>
     <component
-      v-if="!template.type.includes('ovh')"
+      v-if="!template.type.includes('ovh') && !template.type.includes('ione')"
       :is="templates[template.type] ?? templates.custom"
       :template="template"
       @refresh="refreshInstance"
@@ -84,12 +84,18 @@
           <v-text-field readonly :value="template.type" label="Type" />
         </v-col>
       </v-row>
-      <component :is="additionalInstanceInfoComponent" :template="template" />
+      <component
+        :is="additionalInstanceInfoComponent"
+        :sp="sp"
+        :template="template"
+      />
       <v-card-title class="primary--text">Billing info</v-card-title>
       <component
         :is="billingInfoComponent"
         :template="template"
+        :service="service"
         :plans="plans"
+        :sp="sp"
         @refresh="refreshInstance"
       />
     </template>
