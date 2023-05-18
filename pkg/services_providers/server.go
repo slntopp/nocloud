@@ -428,15 +428,20 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 	}
 
 	plans, ok := sp.GetMeta()["plans"]
-	var plansInterface interface{} = req.GetPlans()
-	newPlansPb, _ := structpb.NewValue(plansInterface)
+	var reqPlans = req.GetPlans()
+	var plansInterface = make([]interface{}, len(reqPlans))
+	for i, v := range reqPlans {
+		plansInterface[i] = v
+	}
+
+	newPlansPb, _ := structpb.NewList(plansInterface)
 
 	log.Debug("new plans", zap.Any("reqPlans", plansInterface))
 
 	if !ok {
 		plans, _ = structpb.NewValue(newPlansPb)
 	} else {
-		plans.GetListValue().Values = append(plans.GetListValue().GetValues(), newPlansPb.GetListValue().GetValues()...)
+		plans.GetListValue().Values = append(plans.GetListValue().GetValues(), newPlansPb.GetValues()...)
 	}
 
 	log.Debug("plan insert", zap.Any("plans", plans))
