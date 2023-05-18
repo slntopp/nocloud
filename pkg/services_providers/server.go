@@ -434,13 +434,10 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 		plansInterface[i] = v
 	}
 
-	log.Debug("ok", zap.Bool("ok", ok))
-	log.Debug("plans", zap.Any("ok", plans))
-
 	newPlansPb, _ := structpb.NewList(plansInterface)
 
 	if !ok {
-		plans, _ = structpb.NewValue(newPlansPb)
+		plans = structpb.NewListValue(newPlansPb)
 	} else {
 		plans.GetListValue().Values = append(plans.GetListValue().GetValues(), newPlansPb.GetValues()...)
 	}
