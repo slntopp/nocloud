@@ -199,14 +199,18 @@ const getBillingItems = () => {
   });
 
   const driveType = template.value.resources.drive_type?.toLowerCase();
+
   if (driveType) {
+    const drive = billingPlan.value.resources.find(
+      (r) => r.key === `drive_${driveType}`
+    );
     items.push({
       name: driveType,
-      price: billingPlan.value.resources[`drive_${driveType}`]?.price,
-      kind: billingPlan.value.resources[`drive_${driveType}`]?.kind,
+      price: drive?.price,
+      kind: drive?.kind,
       quantity: template.value.resources.drive_size / 1024,
       unit: "GB",
-      period: billingPlan.value.resources[`drive_${driveType}`]?.period,
+      period: drive?.period,
     });
   }
 
