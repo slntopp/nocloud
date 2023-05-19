@@ -53,9 +53,16 @@
       <v-card-title class="primary--text">Instance info</v-card-title>
       <v-row>
         <v-col>
-          <v-text-field v-model="instance.title" label="Instance title">
+          <v-text-field
+            :value="template.title"
+            @input="$emit('update', { key: 'title', value: $event })"
+            ref="instance-title"
+            label="Instance title"
+          >
             <template v-slot:append>
-              <v-icon class="mr-2">mdi-pencil</v-icon>
+              <v-icon class="mr-2" @click="$refs['instance-title'].focus()"
+                >mdi-pencil</v-icon
+              >
               <login-in-account-icon
                 :uuid="account.uuid"
                 :instanceId="instance.uuid"
@@ -99,8 +106,6 @@
         @refresh="refreshInstance"
       />
     </template>
-
-    <v-btn @click="save" :loading="isSaveLoading"> Save </v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -163,7 +168,6 @@ import EditPriceModel from "@/components/modules/ione/editPriceModel.vue";
 import RouteTextField from "@/components/ui/routeTextField.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import MoveInstance from "@/components/dialogs/moveInstance.vue";
-import api from "@/api";
 
 export default {
   name: "instance-info",
@@ -185,7 +189,6 @@ export default {
     priceModelDialog: false,
     moveDialog: false,
     instance: {},
-    isSaveLoading: false,
   }),
   methods: {
     addToClipboard(text, index) {
@@ -208,36 +211,6 @@ export default {
       this.$store.dispatch("services/fetch", this.template.uuid);
       this.$store.dispatch("servicesProviders/fetch");
     },
-    save() {
-      const instance = this.instance;
-      const service = JSON.parse(JSON.stringify(this.service));
-
-      const igIndex = service.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === this.template.uuid)
-      );
-      const instanceIndex = service.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === this.template.uuid);
-
-      service.instancesGroups[igIndex].instances[instanceIndex] = instance;
-
-      this.isSaveLoading = true;
-      api.services
-        ._update(service)
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Instance saved successfully",
-          });
-
-          this.refreshInstance();
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isSaveLoading = false;
-        });
-    },
   },
   computed: {
     ...mapGetters("namespaces", { namespaces: "all" }),
@@ -250,6 +223,9 @@ export default {
         (n) => n.uuid == this.template.access.namespace
       );
     },
+    service() {
+      return this.services?.find((s) => s.uuid == this.template.service);
+    },
     account() {
       if (!this.namespace) {
         return;
@@ -257,9 +233,6 @@ export default {
       return this.accounts?.find(
         (a) => a.uuid == this.namespace.access.namespace
       );
-    },
-    service() {
-      return this.services?.find((s) => s.uuid == this.template.service);
     },
     sp() {
       return this.servicesProviders?.find((sp) => sp.uuid == this.template.sp);
@@ -316,7 +289,7 @@ export default {
       }
     });
 
-    this.instance = JSON.parse(JSON.stringify(this.template));
+    this.instance = this.template;
   },
   watch: {
     template: {

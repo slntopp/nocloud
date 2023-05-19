@@ -105,7 +105,7 @@
 import dateField from "@/components/date.vue";
 import { onMounted, toRefs, ref } from "vue";
 import api from "@/api";
-import { getTimestamp } from "@/functions";
+import { getTimestamp, getTodayFullDate } from "@/functions";
 
 const props = defineProps([
   "template",
@@ -162,9 +162,8 @@ const createIndividual = () => {
 
   const planTitle = `IND_${sp.value.title}_${
     billingPlan.value.title
-  }_${new Date().toISOString().slice(0, 10)}`;
+  }_${getTodayFullDate()}`;
   const productTitle = `IND_${product.resources.cpu}_${product.resources.ram}`;
-
   product.period = getTimestamp(product.period);
   const plan = {
     title: planTitle,

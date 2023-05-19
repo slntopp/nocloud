@@ -150,10 +150,7 @@ const totalPrice = computed(() =>
 
 onMounted(() => {
   billingItems.value = getBillingItems();
-  price.value = billingItems.value.reduce(
-    (acc, bi) => acc + +(bi.price || 0),
-    0
-  );
+  price.value = totalPrice.value
 });
 
 const totalPrices = computed(() => {
