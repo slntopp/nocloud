@@ -53,9 +53,9 @@
       <v-card-title class="primary--text">Instance info</v-card-title>
       <v-row>
         <v-col>
-          <v-text-field v-model="instance.title" label="Instance title">
+          <v-text-field v-model="instance.title" ref="instance-title" label="Instance title">
             <template v-slot:append>
-              <v-icon class="mr-2">mdi-pencil</v-icon>
+              <v-icon class="mr-2" @click="$refs['instance-title'].focus()">mdi-pencil</v-icon>
               <login-in-account-icon
                 :uuid="account.uuid"
                 :instanceId="instance.uuid"
