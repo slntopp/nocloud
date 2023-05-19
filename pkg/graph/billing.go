@@ -139,12 +139,10 @@ func (ctrl *BillingPlansController) List(ctx context.Context, spUuid string) ([]
 	}
 	defer c.Close()
 	var r []*BillingPlan
-	for {
+	for c.HasMore() {
 		var s pb.Plan
 		meta, err := c.ReadDocument(ctx, &s)
-		if driver.IsNoMoreDocuments(err) {
-			break
-		} else if err != nil {
+		if err != nil {
 			return nil, err
 		}
 		ctrl.log.Debug("Got document", zap.Any("plan", &s))

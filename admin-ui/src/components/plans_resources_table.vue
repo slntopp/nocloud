@@ -95,13 +95,7 @@ import nocloudTable from "@/components/table.vue";
 import dateField from "@/components/date.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import {
-  getDaysBySeconds,
-  getMonthsByDays,
-  getQuartersByDays,
-  getSecondsByDays,
-  getTimeBySeconds,
-  getWeekByDays,
-  getYearsByDays,
+  getFullDate,
 } from "@/functions";
 
 const props = defineProps({
@@ -165,28 +159,6 @@ function removeConfig() {
 }
 
 resources.value.forEach(({ period, id }) => {
-  console.log(period, id);
-  const fullDate = {
-    day: "0",
-    month: "0",
-    year: "0",
-    quarter: "0",
-    week: "0",
-    time: "00:00:00",
-  };
-
-  fullDate.day = getDaysBySeconds(period);
-  period -= getSecondsByDays(fullDate.day);
-  fullDate.year = getYearsByDays(fullDate.day);
-  fullDate.day -= fullDate.year * 365;
-  fullDate.quarter = getQuartersByDays(fullDate.day);
-  fullDate.day -= fullDate.quarter * 90;
-  fullDate.month = getMonthsByDays(fullDate.day);
-  fullDate.day -= fullDate.month * 30;
-  fullDate.week = getWeekByDays(fullDate.day);
-  fullDate.day -= fullDate.week * 7;
-  fullDate.time = getTimeBySeconds(period);
-
-  fullDates.value[id] = fullDate;
+  fullDates.value[id] = getFullDate(period);
 });
 </script>
