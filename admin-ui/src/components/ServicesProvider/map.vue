@@ -141,6 +141,18 @@
                     @keyup.enter="(e) => onEnterHandler(marker.id, e)"
                     @input="(e) => inputHandler(e, marker)"
                   />
+                  
+                  <div class="d-flex justify-end">
+                    <v-switch
+                      label="Is primary"
+                      style="
+                        color: #fff;
+                        background: var(--v-background-light-base);
+                        transition: 0.3s;
+                      "
+                      v-model="marker.extra.primary"
+                    />
+                  </div>
 
                   <v-card-actions class="justify-end">
                     <v-btn @click.stop="saveAndClose(marker.id)">
@@ -233,7 +245,8 @@ export default {
   }),
   methods: {
     formatText(tag, id) {
-      const textarea = this.$refs[`textarea_${id}`][0].$el.querySelector("textarea");
+      const textarea =
+        this.$refs[`textarea_${id}`][0].$el.querySelector("textarea");
       const { selectionStart, selectionEnd } = textarea;
       const text = textarea.value.slice(selectionStart, selectionEnd);
 
@@ -259,7 +272,9 @@ export default {
           const pos = selectionStart + color.length + 13;
 
           this.$refs[`color-dialog.${id}`][0].isActive = false;
-          setTimeout(() => { textarea.focus() });
+          setTimeout(() => {
+            textarea.focus();
+          });
 
           setTimeout(() => {
             textarea.setRangeText(`<span style="${color}">${text}</span>`);

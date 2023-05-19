@@ -105,7 +105,7 @@
 import dateField from "@/components/date.vue";
 import { onMounted, toRefs, ref } from "vue";
 import api from "@/api";
-import { getTimestamp } from "@/functions";
+import { getTimestamp, getTodayFullDate } from "@/functions";
 
 const props = defineProps([
   "template",
@@ -162,9 +162,8 @@ const createIndividual = () => {
 
   const planTitle = `IND_${sp.value.title}_${
     billingPlan.value.title
-  }_${new Date().toISOString().slice(0, 10)}`;
+  }_${getTodayFullDate()}`;
   const productTitle = `IND_${product.resources.cpu}_${product.resources.ram}`;
-
   product.period = getTimestamp(product.period);
   const plan = {
     title: planTitle,
@@ -178,7 +177,7 @@ const createIndividual = () => {
   createIndividualLoading.value = true;
 
   api.plans.create(plan).then((data) => {
-    api.servicesProviders.bindPlan(template.value.sp, data.uuid).then(() => {
+    api.servicesProviders.bindPlan(template.value.sp, [data.uuid]).then(() => {
       const tempService = JSON.parse(JSON.stringify(service.value));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
         ig.instances.find((i) => i.uuid === template.value.uuid)

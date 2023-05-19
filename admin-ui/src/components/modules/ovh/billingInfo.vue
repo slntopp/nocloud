@@ -23,10 +23,18 @@
         <v-text-field readonly label="Price instance total" :value="getPrice" />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Date (create)" :value="template.data.creation"/>
+        <v-text-field
+          readonly
+          label="Date (create)"
+          :value="template.data.creation"
+        />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Due to date/next payment"  :value="template.data.expiration" />
+        <v-text-field
+          readonly
+          label="Due to date/next payment"
+          :value="template.data.expiration"
+        />
       </v-col>
       ></v-row
     >
@@ -90,6 +98,7 @@ import NocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";
 import EditPriceModel from "@/components/modules/ovh/editPriceModel.vue";
+import { getTodayFullDate } from "@/functions";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh"]);
@@ -114,8 +123,7 @@ const priceModelDialog = ref(false);
 
 const saveNewPrices = () => {
   const instance = JSON.parse(JSON.stringify(template.value));
-  const planCodeLocal =
-    "IND_" + instance.title + "_" + new Date().toISOString().slice(0, 10);
+  const planCodeLocal = "IND_" + instance.title + "_" + getTodayFullDate();
   const plan = {
     title: planCodeLocal,
     public: false,
@@ -138,7 +146,7 @@ const saveNewPrices = () => {
 
   isPlanChangeLoading.value = true;
   api.plans.create(plan).then((data) => {
-    api.servicesProviders.bindPlan(template.value.sp, data.uuid).then(() => {
+    api.servicesProviders.bindPlan(template.value.sp, [data.uuid]).then(() => {
       const tempService = JSON.parse(JSON.stringify(service.value));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
         ig.instances.find((i) => i.uuid === template.value.uuid)

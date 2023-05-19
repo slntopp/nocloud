@@ -30,13 +30,10 @@
         </div>
       </v-col>
       <v-col>
-        <v-text-field readonly label="email" />
+        <v-text-field readonly label="email" :value="account?.data?.email" />
       </v-col>
       <v-col v-if="template.state?.meta.networking?.public">
-        <div>
-          <span class="mr-4">ips</span>
-          <instance-ip-menu :item="template" />
-        </div>
+        <instance-ip-menu :item="template" />
       </v-col>
       <v-col>
         <v-text-field
@@ -47,7 +44,7 @@
       </v-col>
     </v-row>
     <component
-      v-if="!template.type.includes('ovh')"
+      v-if="!template.type.includes('ovh') && !template.type.includes('ione')"
       :is="templates[template.type] ?? templates.custom"
       :template="template"
       @refresh="refreshInstance"
@@ -56,10 +53,20 @@
       <v-card-title class="primary--text">Instance info</v-card-title>
       <v-row>
         <v-col>
-          <v-text-field v-model="instance.title" label="Instance title">
+          <v-text-field
+            :value="template.title"
+            @input="$emit('update', { key: 'title', value: $event })"
+            ref="instance-title"
+            label="Instance title"
+          >
             <template v-slot:append>
-              <v-icon class="mr-2">mdi-pencil</v-icon>
-              <login-in-account-icon :uuid="account.uuid" :instanceId="instance.uuid" />
+              <v-icon class="mr-2" @click="$refs['instance-title'].focus()"
+                >mdi-pencil</v-icon
+              >
+              <login-in-account-icon
+                :uuid="account.uuid"
+                :instanceId="instance.uuid"
+              />
             </template>
           </v-text-field>
         </v-col>
@@ -84,17 +91,21 @@
           <v-text-field readonly :value="template.type" label="Type" />
         </v-col>
       </v-row>
-      <component :is="additionalInstanceInfoComponent" :template="template" />
+      <component
+        :is="additionalInstanceInfoComponent"
+        :sp="sp"
+        :template="template"
+      />
       <v-card-title class="primary--text">Billing info</v-card-title>
       <component
         :is="billingInfoComponent"
         :template="template"
+        :service="service"
         :plans="plans"
+        :sp="sp"
         @refresh="refreshInstance"
       />
     </template>
-
-    <v-btn @click="save" :loading="isSaveLoading"> Save </v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -157,7 +168,6 @@ import EditPriceModel from "@/components/modules/ione/editPriceModel.vue";
 import RouteTextField from "@/components/ui/routeTextField.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import MoveInstance from "@/components/dialogs/moveInstance.vue";
-import api from "@/api";
 
 export default {
   name: "instance-info",
@@ -179,7 +189,6 @@ export default {
     priceModelDialog: false,
     moveDialog: false,
     instance: {},
-    isSaveLoading: false,
   }),
   methods: {
     addToClipboard(text, index) {
@@ -202,36 +211,6 @@ export default {
       this.$store.dispatch("services/fetch", this.template.uuid);
       this.$store.dispatch("servicesProviders/fetch");
     },
-    save() {
-      const instance = this.instance;
-      const service = JSON.parse(JSON.stringify(this.service));
-
-      const igIndex = service.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === this.template.uuid)
-      );
-      const instanceIndex = service.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === this.template.uuid);
-
-      service.instancesGroups[igIndex].instances[instanceIndex] = instance;
-
-      this.isSaveLoading = true;
-      api.services
-        ._update(service)
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Instance saved successfully",
-          });
-
-          this.refreshInstance();
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isSaveLoading = false;
-        });
-    },
   },
   computed: {
     ...mapGetters("namespaces", { namespaces: "all" }),
@@ -244,6 +223,9 @@ export default {
         (n) => n.uuid == this.template.access.namespace
       );
     },
+    service() {
+      return this.services?.find((s) => s.uuid == this.template.service);
+    },
     account() {
       if (!this.namespace) {
         return;
@@ -251,9 +233,6 @@ export default {
       return this.accounts?.find(
         (a) => a.uuid == this.namespace.access.namespace
       );
-    },
-    service() {
-      return this.services?.find((s) => s.uuid == this.template.service);
     },
     sp() {
       return this.servicesProviders?.find((sp) => sp.uuid == this.template.sp);
@@ -310,7 +289,7 @@ export default {
       }
     });
 
-    this.instance = JSON.parse(JSON.stringify(this.template));
+    this.instance = this.template;
   },
   watch: {
     template: {
