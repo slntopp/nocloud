@@ -11,8 +11,9 @@
       {{ btn.title || btn.action }}
     </v-btn>
     <confirm-dialog @confirm="deleteInstance">
-      <v-btn :loading="isLoading"> Delete </v-btn>
+      <v-btn class="mr-2" :loading="isLoading"> Delete </v-btn>
     </confirm-dialog>
+    <v-btn class="mr-2" :loading="isSaveLoading" @click="save"> Save </v-btn>
 
     <v-snackbar
       v-model="snackbar.visibility"
@@ -48,7 +49,7 @@ export default {
   components: { ConfirmDialog },
   mixins: [snackbar, sendVmAction],
   props: { template: { type: Object, required: true } },
-  data: () => ({ isLoading: false }),
+  data: () => ({ isLoading: false, isSaveLoading: false }),
   methods: {
     deleteInstance() {
       this.isLoading = true;
@@ -68,6 +69,37 @@ export default {
         })
         .finally(() => {
           this.isLoading = false;
+        });
+    },
+    save() {
+      const instance = this.template;
+      const service = JSON.parse(JSON.stringify(this.service));
+
+      const igIndex = service.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === this.template.uuid)
+      );
+      const instanceIndex = service.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === this.template.uuid);
+
+      service.instancesGroups[igIndex].instances[instanceIndex] = instance;
+
+      this.isSaveLoading = true;
+      api.services
+        ._update(service)
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: "Instance saved successfully",
+          });
+
+          this.$store.dispatch("services/fetch", this.template.uuid);
+          this.$store.dispatch("servicesProviders/fetch");
+        })
+        .catch((err) => {
+          this.showSnackbarError({ message: err });
+        })
+        .finally(() => {
+          this.isSaveLoading = false;
         });
     },
   },
@@ -159,6 +191,11 @@ export default {
         suspend: this.template.state.state === "SUSPENDED",
         vnc: this.template.state.state !== "RUNNING",
       };
+    },
+    service() {
+      return this.$store.getters["services/all"]?.find(
+        (s) => s.uuid == this.template.service
+      );
     },
   },
 };
