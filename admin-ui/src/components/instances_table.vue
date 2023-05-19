@@ -469,8 +469,8 @@ export default {
         dueDate: this.getExpirationDate,
         sp: this.getServiceProvider,
         "access.namespace": (item) => this.getNamespace(item.access.namespace),
-        "resources.ram": (item) => +item?.resources?.ram / 1024,
-        "resources.drive_size": (item) => +item?.resources?.drive_size / 1024,
+        "resources.ram": (item) => +(item?.resources?.ram / 1024).toFixed(2),
+        "resources.drive_size": (item) => +(item?.resources?.drive_size / 1024).toFixed(2),
         "config.template_id": (item) =>
           this.getOSName(item?.config?.template_id, item.sp),
       };
