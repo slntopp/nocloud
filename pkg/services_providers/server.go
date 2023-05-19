@@ -428,13 +428,18 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 	}
 
 	plans, ok := sp.GetMeta()["plans"]
-	var plansInterface interface{} = req.GetPlans()
-	newPlansPb, _ := structpb.NewValue(plansInterface)
+	var reqPlans = req.GetPlans()
+	var plansInterface = make([]interface{}, len(reqPlans))
+	for i, v := range reqPlans {
+		plansInterface[i] = v
+	}
+
+	newPlansPb, _ := structpb.NewList(plansInterface)
 
 	if !ok {
-		plans, _ = structpb.NewValue(newPlansPb)
+		plans = structpb.NewListValue(newPlansPb)
 	} else {
-		plans.GetListValue().Values = append(plans.GetListValue().GetValues(), newPlansPb.GetListValue().GetValues()...)
+		plans.GetListValue().Values = append(plans.GetListValue().GetValues(), newPlansPb.GetValues()...)
 	}
 
 	sp.Meta["plans"] = plans
@@ -487,7 +492,7 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 
 	plansValues := plans.GetListValue().GetValues()
 
-	var newPlansValues []*structpb.Value
+	var newPlansValues = make([]*structpb.Value, 0)
 
 	var newPlansMap = make(map[string]struct{})
 	reqPlans := req.GetPlans()

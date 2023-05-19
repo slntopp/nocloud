@@ -121,6 +121,7 @@ import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
 import plansResourcesTable from "@/components/plans_resources_table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
+import {getFullDate} from "@/functions";
 
 const props = defineProps({
   products: { type: Object, required: true },
@@ -202,17 +203,7 @@ function removeConfig() {
 }
 
 Object.values(products.value).forEach(({ period, id }) => {
-  const date = new Date(period * 1000);
-  const time = date.toUTCString().split(" ");
-
-  fullDate.value[id] = {
-    day: `${date.getUTCDate() - 1}`,
-    month: `${date.getUTCMonth()}`,
-    year: `${date.getUTCFullYear() - 1970}`,
-    quarter: "0",
-    week: "0",
-    time: time.at(-2),
-  };
+  fullDate.value[id] = getFullDate(period);
 });
 
 const productsArray = computed(() =>
