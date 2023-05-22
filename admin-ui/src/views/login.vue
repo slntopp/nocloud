@@ -48,27 +48,6 @@
         </v-flex>
       </v-layout>
     </v-container>
-    <v-snackbar
-      v-model="snackbar.visibility"
-      :timeout="snackbar.timeout"
-      :color="snackbar.color"
-    >
-      {{ snackbar.message }}
-      <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
-        <router-link :to="snackbar.route"> Look up. </router-link>
-      </template>
-
-      <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
   </div>
 </template>
 
@@ -105,7 +84,6 @@ export default {
           })
           .catch((error) => {
             this.showSnackbarError({ message: error.response.data.message });
-            console.log(error.response.data.message);
             if (error.response && error.response.status == 401) {
               this.isLoginFailed = true;
             }
