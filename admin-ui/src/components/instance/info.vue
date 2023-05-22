@@ -106,16 +106,6 @@
         @refresh="refreshInstance"
       />
     </template>
-    <template v-if="editPriceModelComponent">
-      <component
-        :is="editPriceModelComponent"
-        v-model="priceModelDialog"
-        :template="template"
-        :plans="filtredPlans"
-        @refresh="refreshInstance"
-        :service="service"
-      />
-    </template>
     <move-instance
       @refresh="refreshInstance"
       :account="account"
@@ -142,7 +132,6 @@ import instanceActions from "@/components/instance/controls.vue";
 import JsonTextarea from "@/components/JsonTextarea.vue";
 import instanceIpMenu from "../ui/instanceIpMenu.vue";
 import { mapGetters } from "vuex";
-import EditPriceModel from "@/components/modules/ione/editPriceModel.vue";
 import RouteTextField from "@/components/ui/routeTextField.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import MoveInstance from "@/components/dialogs/moveInstance.vue";
@@ -153,7 +142,6 @@ export default {
     MoveInstance,
     LoginInAccountIcon,
     RouteTextField,
-    EditPriceModel,
     nocloudTable,
     instanceActions,
     JsonTextarea,
@@ -164,7 +152,6 @@ export default {
   data: () => ({
     copyed: null,
     templates: {},
-    priceModelDialog: false,
     moveDialog: false,
     instance: {},
   }),
@@ -214,27 +201,6 @@ export default {
     },
     sp() {
       return this.servicesProviders?.find((sp) => sp.uuid == this.template.sp);
-    },
-    filtredPlans() {
-      return this.plans.filter(
-        (p) =>
-          p.type === this.template.type || p.type.includes(this.template.type)
-      );
-    },
-    editPriceModelComponent() {
-      const types = require.context(
-        "@/components/modules/",
-        true,
-        /editPriceModel\.vue$/
-      );
-
-      if (types.keys().includes(`./${this.template.type}/editPriceModel.vue`)) {
-        return () =>
-          import(
-            `@/components/modules/${this.template.type}/editPriceModel.vue`
-          );
-      }
-      return null;
     },
     additionalInstanceInfoComponent() {
       return () =>
