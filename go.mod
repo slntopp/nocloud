@@ -5,7 +5,6 @@ go 1.20
 require (
 	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/arangodb/go-driver v1.5.2
-	github.com/gabriel-vasile/mimetype v1.4.2
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/uuid v1.3.0
@@ -15,7 +14,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2
 	github.com/rabbitmq/amqp091-go v1.8.1
 	github.com/rs/cors v1.9.0
-	github.com/slntopp/nocloud-proto v0.0.0-20230505151608-4bb5d4abedd0
+	github.com/slntopp/nocloud-proto v0.0.0-20230517112020-e0298995b75c
 	github.com/spf13/viper v1.15.0
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75

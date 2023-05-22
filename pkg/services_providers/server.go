@@ -411,10 +411,11 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
 
-	err = s.ctrl.BindPlan(ctx, req.Uuid, req.PlanUuid)
-
-	if err != nil {
-		return nil, err
+	for _, plan := range req.GetPlans() {
+		err = s.ctrl.BindPlan(ctx, req.Uuid, plan)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())
@@ -427,13 +428,18 @@ func (s *ServicesProviderServer) BindPlan(ctx context.Context, req *sppb.BindPla
 	}
 
 	plans, ok := sp.GetMeta()["plans"]
+	var reqPlans = req.GetPlans()
+	var plansInterface = make([]interface{}, len(reqPlans))
+	for i, v := range reqPlans {
+		plansInterface[i] = v
+	}
+
+	newPlansPb, _ := structpb.NewList(plansInterface)
 
 	if !ok {
-		var plansInterface interface{} = []interface{}{req.GetPlanUuid()}
-		plans, _ = structpb.NewValue(plansInterface)
+		plans = structpb.NewListValue(newPlansPb)
 	} else {
-		newPlan, _ := structpb.NewValue(req.GetPlanUuid())
-		plans.GetListValue().Values = append(plans.GetListValue().Values, newPlan)
+		plans.GetListValue().Values = append(plans.GetListValue().GetValues(), newPlansPb.GetValues()...)
 	}
 
 	sp.Meta["plans"] = plans
@@ -462,10 +468,11 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
 
-	err = graph.DeleteEdge(ctx, s.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, req.Uuid, req.PlanUuid)
-
-	if err != nil {
-		return nil, err
+	for _, plan := range req.GetPlans() {
+		err = graph.DeleteEdge(ctx, s.db, schema.SERVICES_PROVIDERS_COL, schema.BILLING_PLANS_COL, req.Uuid, plan)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	sp, err := s.ctrl.Get(ctx, req.GetUuid())
@@ -485,10 +492,17 @@ func (s *ServicesProviderServer) UnbindPlan(ctx context.Context, req *sppb.Unbin
 
 	plansValues := plans.GetListValue().GetValues()
 
-	var newPlansValues []*structpb.Value
+	var newPlansValues = make([]*structpb.Value, 0)
+
+	var newPlansMap = make(map[string]struct{})
+	reqPlans := req.GetPlans()
+
+	for i := range reqPlans {
+		newPlansMap[reqPlans[i]] = struct{}{}
+	}
 
 	for i := range plansValues {
-		if plansValues[i].GetStringValue() == req.GetPlanUuid() {
+		if _, ok := newPlansMap[plansValues[i].GetStringValue()]; ok {
 			continue
 		}
 		newPlansValues = append(newPlansValues, plansValues[i])
