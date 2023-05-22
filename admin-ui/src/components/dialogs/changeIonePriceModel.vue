@@ -49,17 +49,20 @@
 <script setup>
 import { onMounted, toRefs, ref, computed } from "vue";
 import api from "@/api";
+import { useStore } from "@/store";
 
 const props = defineProps(["template", "service", "value", "plans"]);
 const emit = defineEmits(["refresh", "input"]);
 
 const { template, plans, service } = toRefs(props);
 
+const store = useStore();
+
 const isChangePMLoading = ref(false);
 const plan = ref({});
 const product = ref({});
 
-const changePM = () => {
+const changePM = async () => {
   if (products.value.length === 0) {
     product.value = null;
   }
@@ -87,15 +90,17 @@ const changePM = () => {
   }
 
   isChangePMLoading.value = true;
-  api.services
-    ._update(tempService)
-    .then(() => {
-      emit("refresh");
-    })
-    .finally(() => {
-      isChangePMLoading.value = false;
-      emit("input", false);
+  try {
+    await api.services._update(tempService);
+    emit("refresh");
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during move instance",
     });
+  } finally {
+    isChangePMLoading.value = false;
+    emit("input", false);
+  }
 };
 
 onMounted(() => {
