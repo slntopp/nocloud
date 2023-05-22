@@ -20,7 +20,7 @@
       title="You can't delete a price model while there are instances using it!"
       subtitle="To delete price model, select the price model that these instances will use."
       :width="625"
-      :disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
+      :success-disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
       @confirm="deleteSelectedPlan"
     >
       <v-btn
