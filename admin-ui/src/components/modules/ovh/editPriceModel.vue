@@ -118,7 +118,9 @@ const tarrifs = computed(() => {
 const avaliablePlans = computed(() => {
   const avaliablePlans = [];
 
-  const copyPlans = JSON.parse(JSON.stringify(plans.value));
+  const copyPlans = JSON.parse(JSON.stringify(plans.value)).filter(
+    (p) => p.type === "ovh"
+  );
 
   copyPlans.forEach((p) => {
     const keys = Object.keys(p.products).filter(

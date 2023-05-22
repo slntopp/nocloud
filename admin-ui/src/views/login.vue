@@ -83,7 +83,9 @@ export default {
             this.$store.dispatch("auth/fetchUserData");
           })
           .catch((error) => {
-            this.showSnackbarError({ message: error.response.data.message });
+            this.showSnackbarError({
+              message: error.response.data.message || "Error during login",
+            });
             if (error.response && error.response.status == 401) {
               this.isLoginFailed = true;
             }
