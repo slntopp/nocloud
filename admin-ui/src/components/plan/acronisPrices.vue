@@ -62,6 +62,10 @@ onMounted(async () => {
         resource.planPrice = props.template.products[key].price;
       }
     });
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during fetch acronis prices",
+    });
   } finally {
     isLoading.value = false;
   }
@@ -92,6 +96,10 @@ const save = async () => {
     await api.plans.update(props.template.uuid, {
       ...props.template,
       products,
+    });
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during save prices",
     });
   } finally {
     isSaveLoading.value = false;
