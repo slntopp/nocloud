@@ -24,7 +24,7 @@
 
       <v-row>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             label="price model"
             item-text="title"
             item-value="uuid"

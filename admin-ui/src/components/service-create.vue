@@ -112,7 +112,7 @@
             <v-card>
               <v-card-title>Apply price model to group</v-card-title>
               <v-card-actions class="d-flex flex-column align-end">
-                <v-select
+                <v-autocomplete
                   dense
                   label="price model"
                   style="width: 200px"

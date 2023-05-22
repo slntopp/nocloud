@@ -9,7 +9,7 @@
       <v-card-title class="text-center">Change price model</v-card-title>
       <v-row align="center">
         <v-col cols="9">
-          <v-select
+          <v-autocomplete
             label="price model"
             item-text="title"
             item-value="uuid"
