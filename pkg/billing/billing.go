@@ -17,15 +17,13 @@ package billing
 
 import (
 	"context"
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"google.golang.org/protobuf/types/known/structpb"
-
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -237,7 +235,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 
 	result := make([]*pb.Plan, 0)
 	for _, plan := range plans {
-		count, err := s.plans.InstancesCount(ctx, plan.Plan)
+		/*count, err := s.plans.InstancesCount(ctx, plan.Plan)
 		if err != nil {
 			log.Error("Error getting plan", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Error getting plan")
@@ -248,7 +246,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 		}
 
 		plan.Meta["instances_count"] = structpb.NewNumberValue(float64(count))
-
+		*/
 		if plan.Public {
 			result = append(result, plan.Plan)
 			continue
