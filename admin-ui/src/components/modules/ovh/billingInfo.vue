@@ -51,6 +51,7 @@
           v-model.number="prices[item.key]"
           @change="setTotalNewPrice"
           type="number"
+          append-icon="mdi-pencil"
         ></v-text-field>
       </template>
       <template v-slot:[`item.basePrice`]="{ item }">
@@ -66,7 +67,7 @@
           <td>{{ totalBasePrice || "Loading..." }}</td>
           <td>
             <div class="d-flex justify-space-between align-center">
-              <span>{{ totalNewPrice }} </span>
+              <span>{{ totalNewPrice.toFixed(2) }} </span>
               <v-btn
                 class="mx-5"
                 :disabled="isBasePricesLoading"
