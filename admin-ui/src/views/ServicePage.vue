@@ -127,12 +127,17 @@ export default {
 
     this.$store.dispatch("accounts/fetch");
 
-    socket = new WebSocket(`${url}/${this.serviceId}/stream`);
+    socket = new WebSocket(`${url}/${this.serviceId}/stream`, [
+      "Bearer",
+      this.$store.getters["auth/token"],
+    ]);
     socket.onmessage = (msg) => {
       const response = JSON.parse(msg.data).result;
       if (!response) {
         this.showSnackbarError({
-          message: `Empty response, ${msg}`,
+          message: `Empty response, message:${
+            JSON.parse(msg.data).error.message
+          }`,
         });
         return;
       }

@@ -50,6 +50,7 @@
 <script setup>
 import { ref, defineProps, defineEmits, computed, toRefs } from "vue";
 import api from "@/api";
+import { useStore } from "@/store";
 
 const props = defineProps([
   "value",
@@ -62,6 +63,8 @@ const props = defineProps([
 const { namespaces, account, services, value, accounts, template } =
   toRefs(props);
 const emit = defineEmits(["refresh", "input"]);
+
+const store = useStore();
 
 const selectedAccount = ref("");
 const selectedService = ref("");
@@ -116,7 +119,11 @@ const move = async () => {
   isMoveLoading.value = true;
   try {
     await api.instances.move(template.value.uuid, newInstanceGroup.value.uuid);
-    emit('refresh')
+    emit("refresh");
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during move instance",
+    });
   } finally {
     isMoveLoading.value = false;
   }

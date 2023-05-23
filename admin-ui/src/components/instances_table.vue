@@ -253,7 +253,12 @@ export default {
         case "ovh": {
           const key = `${inst.config.duration} ${inst.config.planCode}`;
 
-          return inst.billingPlan.products[key]?.price ?? 0;
+          return  inst.config?.addons.reduce(
+              (acc,addon) =>
+                  acc+inst.billingPlan.resources.find((res) => res.key === `${inst.config.duration} ${addon}`)
+                      .price,
+              0
+          ) + inst.billingPlan.products[key]?.price ?? 0;
         }
         case "ione": {
           const initialPrice =

@@ -239,6 +239,10 @@ const move = async () => {
       })),
     });
     await api.services._update(service);
+  }catch (e){
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during move nebula account",
+    });
   } finally {
     isMoveLoading.value = false;
   }
