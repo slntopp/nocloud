@@ -8,13 +8,31 @@
       outlined
       label="Description"
     />
-    <v-card-title class="text-center">Location settings</v-card-title>
+    <v-card-title class="text-center">Location default settings</v-card-title>
     <v-text-field label="Title" outlined v-model="promo.location.title" />
     <v-textarea
       v-model.trim="promo.location.description"
       outlined
       label="Description"
     />
+    <v-card-title>Individual location setting</v-card-title>
+    <v-expansion-panels>
+      <v-expansion-panel
+        v-for="location in template?.locations"
+        :key="getLocationKey(location)"
+      >
+        <v-expansion-panel-header color="background-light">{{
+          location.title
+        }}</v-expansion-panel-header>
+        <v-expansion-panel-content color="background-light">
+          <v-textarea
+            outlined
+            label="Description"
+            v-model="promo.locations[getLocationKey(location)].description"
+          ></v-textarea>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
     <v-card-title class="text-center">Offer settings</v-card-title>
     <v-textarea
       label="Text"
@@ -102,7 +120,8 @@ export default {
     promo: {
       icons: [],
       service: {},
-        location:{},
+      location: {},
+      locations: {},
       offer: { text: "", src: "", link: "" },
       rewards: { description: "", title: "" },
     },
@@ -112,6 +131,13 @@ export default {
     if (this.template.meta.promo) {
       this.promo = { ...this.promo, ...this.template.meta.promo };
     }
+    this.template?.locations.forEach((location) => {
+      if (!this.promo.locations[this.getLocationKey(location)]) {
+        this.promo.locations[this.getLocationKey(location)] = {
+          description: "",
+        };
+      }
+    });
   },
   methods: {
     deleteIcon(id) {
@@ -147,6 +173,9 @@ export default {
         .finally(() => {
           this.isSaveLoading = false;
         });
+    },
+    getLocationKey(location) {
+      return `${this.template.title} ${location.id}`;
     },
   },
 };
