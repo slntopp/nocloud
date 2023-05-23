@@ -17,6 +17,7 @@ package billing
 
 import (
 	"context"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 
@@ -186,6 +187,18 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 		log.Error("Error getting plan", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error getting plan")
 	}
+
+	count, err := s.plans.InstancesCount(ctx, plan)
+	if err != nil {
+		log.Error("Error getting plan", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting plan")
+	}
+
+	if plan.Meta == nil {
+		plan.Meta = make(map[string]*structpb.Value, 0)
+	}
+
+	plan.Meta["instances_count"] = structpb.NewNumberValue(float64(count))
 
 	if p.Public {
 		return p.Plan, nil
