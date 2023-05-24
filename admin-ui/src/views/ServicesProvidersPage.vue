@@ -29,8 +29,8 @@
           <v-row>
             <v-col :cols="12" :md="6">
               <json-editor
-                :json="item[tab.title.toLowerCase()]"
-                @changeValue="(data) => (item[tab.title.toLowerCase()] = data)"
+                :json="item[tab.title?.toLowerCase()]"
+                @changeValue="(data) => (item[tab.title?.toLowerCase()] = data)"
               />
             </v-col>
           </v-row>
@@ -72,7 +72,7 @@ export default {
           title: "Info",
           component: () => import("@/components/ServicesProvider/info.vue"),
         },
-        this.item.type === "ione" && {
+        this.item?.type === "ione" && {
           title: "Nebula",
           component: () => import("@/components/ServicesProvider/nebula.vue"),
         },
@@ -99,7 +99,7 @@ export default {
           title: "Template",
           component: () => import("@/components/ServicesProvider/template.vue"),
         },
-      ];
+      ].filter((el) => el?.title);
 
       if (Object.keys(this.item?.secrets ?? {}).length > 0)
         tabs.splice(1, 0, {
