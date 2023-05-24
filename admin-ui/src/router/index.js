@@ -42,14 +42,6 @@ const routes = [
     },
   },
   {
-    path: "/accounts/nebula",
-    name: "NebulaAccounts",
-    component: () => import("../views/NebulaAccounts.vue"),
-    meta: {
-      requireLogin: true,
-    },
-  },
-  {
     path: "/accounts/:accountId",
     name: "Account",
     component: () => import("../views/AccountPage.vue"),

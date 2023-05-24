@@ -56,10 +56,13 @@
       hide-default-footer
     >
       <template v-slot:[`item.price`]="{ item }">
-        <v-text-field v-model="item.price" />
+        <v-text-field v-model="item.price" append-icon="mdi-pencil" />
+      </template>
+      <template v-slot:[`item.quantity`]="{item}">
+        {{item.quantity?.toFixed(2)}}
       </template>
       <template v-slot:[`item.total`]="{ item }">
-        {{ totalPrices[item.name] }}
+        {{ totalPrices[item.name]?.toFixed(2) }}
       </template>
       <template v-slot:body.append>
         <tr>
@@ -71,7 +74,7 @@
           <td>
             {{ billingItems.find((i) => i.name == template.product)?.period }}
           </td>
-          <td>{{ totalPrice }}</td>
+          <td>{{ totalPrice.toFixed(2)}}</td>
         </tr>
       </template>
     </nocloud-table>

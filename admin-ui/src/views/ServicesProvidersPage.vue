@@ -72,6 +72,10 @@ export default {
           title: "Info",
           component: () => import("@/components/ServicesProvider/info.vue"),
         },
+        this.item.type === "ione" && {
+          title: "Nebula",
+          component: () => import("@/components/ServicesProvider/nebula.vue"),
+        },
         {
           title: "Promo",
           component: () => import("@/components/ServicesProvider/promo.vue"),

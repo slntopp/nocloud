@@ -41,6 +41,7 @@
     </template>
     <template v-slot:[`item.balance`]="{ item }">
       <balance
+        :currency="item.currency"
         @click="goToBalance(item.uuid)"
         v-if="item.balance"
         :value="item.balance"
@@ -67,7 +68,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 export default {
   name: "accounts-table",
   components: {
-      LoginInAccountIcon,
+    LoginInAccountIcon,
     "nocloud-table": noCloudTable,
     Balance,
   },
