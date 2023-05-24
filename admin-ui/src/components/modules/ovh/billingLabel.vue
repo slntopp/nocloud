@@ -7,20 +7,22 @@
       <v-col>
         <v-chip color="primary" outlined>Price: {{ price }}</v-chip>
       </v-col>
-      <v-col
-        ><v-btn
+      <v-col>
+        <v-btn
           color="primary"
           :disabled="isRenewDisabled"
-          @click="sendVmAction('manual_renew', template)"
-          >Renew</v-btn
-        ></v-col
-      >
+          :loading="isLoading"
+          @click="sendRenew"
+        >
+          Renew
+        </v-btn>
+      </v-col>
     </v-row>
   </v-container>
 </template>
 
 <script>
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import { getOvhPrice } from "@/functions";
 import { useStore } from "@/store";
 import sendVmAction from "@/mixins/sendVmAction";
@@ -30,6 +32,8 @@ export default {
   props: ["template"],
   setup(props) {
     const store = useStore();
+    const isDisabled = ref(false);
+    const isLoading = ref(false);
 
     const dueDate = computed(() => {
       return props.template.data.expiration;
@@ -40,7 +44,9 @@ export default {
     });
 
     const isRenewDisabled = computed(() => {
-      return getAccountBalance() < getOvhPrice(props.template);
+      return getAccountBalance() < getOvhPrice(props.template) ||
+        props.template.data.blocked ||
+        isDisabled.value;
     });
     const getAccountBalance = () => {
       const namespace = store.getters["namespaces/all"]?.find(
@@ -52,10 +58,19 @@ export default {
       return account.balance;
     };
 
+    function sendRenew() {
+      isLoading.value = true;
+      sendVmAction.methods.sendVmAction('manual_renew', props.template)
+        .then(() => { isDisabled.value = true })
+        .finally(() => { isLoading.value = false });
+    }
+
     return {
       isRenewDisabled,
+      isLoading,
       price,
       dueDate,
+      sendRenew
     };
   },
 };
