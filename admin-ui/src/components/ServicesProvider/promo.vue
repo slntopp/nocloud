@@ -3,11 +3,11 @@
     <v-card-title class="text-center">Service settings</v-card-title>
     <v-text-field v-model.trim="promo.service.title" outlined label="Title" />
     <v-text-field v-model.trim="promo.service.btn" outlined label="Btn title" />
-    <v-card-title>Description:</v-card-title>
+    <v-card-subtitle>Description:</v-card-subtitle>
     <vue-editor class="html-editor" v-model="promo.service.description" />
     <v-card-title class="text-center">Location default settings</v-card-title>
     <v-text-field label="Title" outlined v-model="promo.location.title" />
-    <v-card-title>Description:</v-card-title>
+    <v-card-subtitle>Description:</v-card-subtitle>
     <vue-editor class="html-editor" v-model="promo.location.description" />
     <v-card-title>Individual location setting</v-card-title>
     <v-expansion-panels>
@@ -19,7 +19,7 @@
           location.title
         }}</v-expansion-panel-header>
         <v-expansion-panel-content color="background-light">
-          <v-card-title>Description:</v-card-title>
+          <v-card-subtitle>Description:</v-card-subtitle>
           <vue-editor
             class="html-editor"
             v-model="promo.locations[getLocationKey(location)].description"
@@ -28,7 +28,7 @@
       </v-expansion-panel>
     </v-expansion-panels>
     <v-card-title class="text-center">Offer settings</v-card-title>
-    <v-card-title>Description:</v-card-title>
+    <v-card-subtitle class="mt-3">Description:</v-card-subtitle>
     <vue-editor class="html-editor" v-model="promo.offer.text" />
     <v-text-field class="mt-5"
       outlined
@@ -38,7 +38,7 @@
     <v-text-field outlined label="Media src link" v-model="promo.offer.link" />
     <v-card-title class="text-center">Rewards settings</v-card-title>
     <v-text-field label="Title" outlined v-model.trim="promo.rewards.title" />
-    <v-card-title>Description:</v-card-title>
+    <v-card-subtitle>Description:</v-card-subtitle>
     <vue-editor class="html-editor" v-model="promo.rewards.description" />
     <v-card-title>Icons:</v-card-title>
     <v-row>
