@@ -20,7 +20,7 @@
       title="You can't delete a price model while there are instances using it!"
       subtitle="To delete price model, select the price model that these instances will use."
       :width="625"
-      :disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
+      :success-disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
       @confirm="deleteSelectedPlan"
     >
       <v-btn
@@ -91,28 +91,6 @@
         {{ value.toLowerCase() }}
       </template>
     </nocloud-table>
-
-    <v-snackbar
-      v-model="snackbar.visibility"
-      :timeout="snackbar.timeout"
-      :color="snackbar.color"
-    >
-      {{ snackbar.message }}
-      <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
-        <router-link :to="snackbar.route"> Look up. </router-link>
-      </template>
-
-      <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
   </div>
 </template>
 

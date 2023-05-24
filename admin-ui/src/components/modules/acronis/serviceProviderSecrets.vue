@@ -53,8 +53,11 @@
 import { onMounted, ref, defineProps } from "vue";
 import api from "@/api";
 import NocloudTable from "@/components/table.vue";
+import { useStore } from "@/store";
 
 const props = defineProps(["template"]);
+
+const store = useStore();
 
 const offeringItems = ref([]);
 const isLoading = ref(false);
@@ -146,6 +149,10 @@ onMounted(async () => {
         );
       }
     }
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during fetch offering items",
+    });
   } finally {
     isLoading.value = false;
   }
@@ -164,6 +171,10 @@ const saveOffering = async () => {
   isSaveLoading.value = true;
   try {
     await api.servicesProviders.update(props.template.uuid, sp);
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during save offering items",
+    });
   } finally {
     isSaveLoading.value = false;
   }

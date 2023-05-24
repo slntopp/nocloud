@@ -51,6 +51,7 @@
           v-model.number="prices[item.key]"
           @change="setTotalNewPrice"
           type="number"
+          append-icon="mdi-pencil"
         ></v-text-field>
       </template>
       <template v-slot:[`item.basePrice`]="{ item }">
@@ -60,19 +61,23 @@
           :value="basePrices[item.key]"
         ></v-text-field>
       </template>
-      <template v-slot:[`footer`]>
-        <div class="d-flex justify-end ml-10 my-1 align-center">
-          <span class="text-center align-center"
-            >Base total {{ totalBasePrice || "loading..." }} Total
-            {{ totalNewPrice }}</span
-          >
-          <v-btn
-            class="mx-5"
-            :loading="isPlanChangeLoading"
-            @click="saveNewPrices"
-            >Save prices</v-btn
-          >
-        </div>
+      <template v-slot:body.append>
+        <tr>
+          <td>Total instance price</td>
+          <td>{{ totalBasePrice || "Loading..." }}</td>
+          <td>
+            <div class="d-flex justify-space-between align-center">
+              <span>{{ totalNewPrice.toFixed(2) }} </span>
+              <v-btn
+                class="mx-5"
+                :disabled="isBasePricesLoading"
+                :loading="isPlanChangeLoading"
+                @click="saveNewPrices"
+                >Save prices</v-btn
+              >
+            </div>
+          </td>
+        </tr>
       </template>
     </nocloud-table>
     <edit-price-model
@@ -121,7 +126,7 @@ const totalBasePrice = ref(0);
 const isBasePricesLoading = ref(false);
 const priceModelDialog = ref(false);
 
-const saveNewPrices = () => {
+const saveNewPrices = async () => {
   const instance = JSON.parse(JSON.stringify(template.value));
   const planCodeLocal = "IND_" + instance.title + "_" + getTodayFullDate();
   const plan = {
@@ -145,25 +150,29 @@ const saveNewPrices = () => {
   });
 
   isPlanChangeLoading.value = true;
-  api.plans.create(plan).then((data) => {
-    api.servicesProviders.bindPlan(template.value.sp, [data.uuid]).then(() => {
-      const tempService = JSON.parse(JSON.stringify(service.value));
-      const igIndex = tempService.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === template.value.uuid)
-      );
-      const instanceIndex = tempService.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === template.value.uuid);
+  try {
+    const data = await api.plans.create(plan);
+    await api.servicesProviders.bindPlan(template.value.sp, [data.uuid]);
+    const tempService = JSON.parse(JSON.stringify(service.value));
+    const igIndex = tempService.instancesGroups.findIndex((ig) =>
+      ig.instances.find((i) => i.uuid === template.value.uuid)
+    );
+    const instanceIndex = tempService.instancesGroups[
+      igIndex
+    ].instances.findIndex((i) => i.uuid === template.value.uuid);
 
-      tempService.instancesGroups[igIndex].instances[
-        instanceIndex
-      ].billingPlan = data;
-      api.services._update(tempService).then(() => {
-        isPlanChangeLoading.value = false;
-        emit("refresh");
-      });
+    tempService.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
+      data;
+    await api.services._update(tempService);
+    isPlanChangeLoading.value = false;
+    emit("refresh");
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during save prices",
     });
-  });
+  } finally {
+    isPlanChangeLoading.value = false;
+  }
 };
 
 const setTotalNewPrice = () => {
@@ -210,7 +219,12 @@ const getBasePrices = () => {
         .reduce((acc, key) => acc + +basePrices.value[key], 0)
         .toFixed(2);
       isBasePricesLoading.value = false;
-    });
+    })
+    .catch((e) =>
+      store.commit("snackbar/showSnackbarError", {
+        message: e.response?.data?.message || "Error during fetch base prices",
+      })
+    );
 };
 const getPriceFromProduct = (product) => {
   return (

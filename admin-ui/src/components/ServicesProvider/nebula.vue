@@ -4,15 +4,6 @@
     <v-row>
       <v-col cols="3">
         <v-select
-          v-model="sp"
-          item-value="uuid"
-          item-text="title"
-          :items="ioneSps"
-          label="Service provider"
-        ></v-select>
-      </v-col>
-      <v-col cols="3">
-        <v-select
           v-model="service"
           :items="services"
           label="Service"
@@ -94,17 +85,26 @@
   </v-card>
 </template>
 
+<script>
+export default {
+  name: "nebula-tab",
+};
+</script>
+
 <script setup>
-import { computed, onMounted, watch, ref } from "vue";
+import { computed, onMounted, ref, defineProps, toRefs } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
 import NocloudTable from "@/components/table.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
 
+const props = defineProps(["template"]);
+
+const { template } = toRefs(props);
+
 const store = useStore();
 
 const isFetchLoading = ref(false);
-const sp = ref(null);
 const plan = ref(null);
 const service = ref(null);
 const product = ref(null);
@@ -121,23 +121,37 @@ const isUsersLoading = ref(false);
 const isMoveLoading = ref(false);
 
 onMounted(async () => {
+  isUsersLoading.value = true;
+  fetchError.value = "";
   isFetchLoading.value = true;
   try {
     await Promise.all([
-      store.dispatch("servicesProviders/fetch"),
       store.dispatch("services/fetch"),
       store.dispatch("plans/fetch"),
     ]);
+
+    const res = await api.servicesProviders.action({
+      uuid: sp.value,
+      action: "get_users",
+    });
+    users.value = res.meta.users;
+    users.value.forEach((u) => {
+      u.vms = u.vms?.map((vm, ind) => ({
+        ...vm,
+        title: "instance " + (ind + 1),
+      }));
+    });
   } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response.data.message || "Error during fetch vms",
+    });
     fetchError.value = e.message;
   } finally {
+    isUsersLoading.value = false;
     isFetchLoading.value = false;
   }
 });
 
-const ioneSps = computed(() =>
-  store.getters["servicesProviders/all"].filter((sp) => sp.type === "ione")
-);
 const services = computed(() => store.getters["services/all"]);
 const plans = computed(() =>
   store.getters["plans/all"].filter(
@@ -145,6 +159,7 @@ const plans = computed(() =>
   )
 );
 const products = computed(() => getPlanProducts(selectedPlan.value));
+const sp = computed(() => template.value.uuid);
 
 const getPlanProducts = (plan) => {
   const products = [];
@@ -191,30 +206,6 @@ const isMoveAvailable = computed(
     product.value)
 );
 
-watch(sp, async () => {
-  fetchError.value = "";
-  isUsersLoading.value = true;
-  expanded.value = [];
-  selectedVM.value = [];
-  try {
-    const res = await api.servicesProviders.action({
-      uuid: sp.value,
-      action: "get_users",
-    });
-    users.value = res.meta.users;
-    users.value.forEach((u) => {
-      u.vms = u.vms?.map((vm, ind) => ({
-        ...vm,
-        title: "instance " + (ind + 1),
-      }));
-    });
-  } catch (e) {
-    fetchError.value = e.message;
-  } finally {
-    isUsersLoading.value = false;
-  }
-});
-
 const move = async () => {
   const { data, resources, vms } = JSON.parse(
     JSON.stringify(selectedVM.value[0])
@@ -239,6 +230,13 @@ const move = async () => {
       })),
     });
     await api.services._update(service);
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "Vm created successfully",
+    });
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during move nebula account",
+    });
   } finally {
     isMoveLoading.value = false;
   }

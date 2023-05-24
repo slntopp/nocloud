@@ -6,6 +6,8 @@
           readonly
           label="price model"
           :value="template.billingPlan.title"
+          @click:append="priceModelDialog = true"
+          append-icon="mdi-pencil"
         />
       </v-col>
       <v-col>
@@ -54,10 +56,13 @@
       hide-default-footer
     >
       <template v-slot:[`item.price`]="{ item }">
-        <v-text-field v-model="item.price" />
+        <v-text-field v-model="item.price" append-icon="mdi-pencil" />
+      </template>
+      <template v-slot:[`item.quantity`]="{item}">
+        {{item.quantity?.toFixed(2)}}
       </template>
       <template v-slot:[`item.total`]="{ item }">
-        {{ totalPrices[item.name] }}
+        {{ totalPrices[item.name]?.toFixed(2) }}
       </template>
       <template v-slot:body.append>
         <tr>
@@ -69,15 +74,14 @@
           <td>
             {{ billingItems.find((i) => i.name == template.product)?.period }}
           </td>
-          <td>{{ totalPrice }}</td>
+          <td>{{ totalPrice.toFixed(2)}}</td>
         </tr>
       </template>
     </nocloud-table>
     <change-ione-monitorings
       :template="template"
       :service="service"
-      :value="changeDatesDialog"
-      @input="changeDatesDialog = $event"
+      v-model="changeDatesDialog"
       @refresh="emit('refresh')"
       v-if="
         template.billingPlan.title.toLowerCase() !== 'payg' ||
@@ -86,14 +90,20 @@
     />
     <change-ione-tarrif
       v-if="availableTarrifs?.length > 0"
-      :value="changeTarrifDialog"
-      @input="changeTarrifDialog = $event"
+      v-model="changeTarrifDialog"
       @refresh="emit('refresh')"
       :template="template"
       :service="service"
       :sp="sp"
       :available-tarrifs="availableTarrifs"
       :billing-plan="billingPlan"
+    />
+    <change-ione-price-model
+      v-model="priceModelDialog"
+      :template="template"
+      :plans="filtredPlans"
+      @refresh="emit('refresh')"
+      :service="service"
     />
   </div>
 </template>
@@ -111,13 +121,15 @@ import { formatSecondsToDate, getFullDate } from "@/functions";
 import ChangeIoneMonitorings from "@/components/dialogs/changeIoneMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
+import ChangeIonePriceModel from "@/components/dialogs/changeIonePriceModel.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh"]);
 
-const { template, service, sp } = toRefs(props);
+const { template, service, sp, plans } = toRefs(props);
 const changeDatesDialog = ref(false);
 const changeTarrifDialog = ref(false);
+const priceModelDialog = ref(false);
 const price = ref(0);
 const billingItems = ref([]);
 const billingHeaders = ref([
@@ -140,6 +152,9 @@ const availableTarrifs = computed(() =>
     resources: billingPlan.value.products[key].resources,
   }))
 );
+const filtredPlans = computed(() =>
+  plans.value.filter((p) => p.type === "ione")
+);
 const billingPlan = computed(() => template.value.billingPlan);
 const totalPrice = computed(() =>
   Object.keys(totalPrices.value || {}).reduce(
@@ -150,7 +165,7 @@ const totalPrice = computed(() =>
 
 onMounted(() => {
   billingItems.value = getBillingItems();
-  price.value = totalPrice.value
+  price.value = totalPrice.value;
 });
 
 const totalPrices = computed(() => {
