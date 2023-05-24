@@ -367,7 +367,7 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, req *pb.L
 }
 
 const getInstancesBillingPlans = `
-FOR inst in instances
+FOR inst in Instances
 	RETURN inst.billing_plan.uuid
 `
 
