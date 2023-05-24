@@ -99,7 +99,7 @@ export default {
           title: "Template",
           component: () => import("@/components/ServicesProvider/template.vue"),
         },
-      ];
+      ].filter((el) => el?.title);
 
       if (Object.keys(this.item?.secrets ?? {}).length > 0)
         tabs.splice(1, 0, {
