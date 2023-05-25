@@ -21,7 +21,6 @@
       <v-tab-item v-for="tab of tabs" :key="tab.title">
         <v-progress-linear indeterminate class="pt-2" v-if="instanceLoading" />
         <component
-          @update="updateTemplate"
           v-else-if="instance"
           :is="tab.component"
           :template="instance"
@@ -47,9 +46,6 @@ export default {
       }
 
       return title;
-    },
-    updateTemplate({ key, value }) {
-      this.instance[key] = value;
     },
   },
   computed: {

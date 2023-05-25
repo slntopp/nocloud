@@ -21,50 +21,95 @@ import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import sendVmAction from "@/mixins/sendVmAction";
+import { getTodayFullDate } from "@/functions";
 
 export default {
   name: "instance-actions",
   components: { ConfirmDialog },
   mixins: [snackbar, sendVmAction],
-  props: { template: { type: Object, required: true } },
+  props: {
+    template: { type: Object, required: true },
+    copyTemplate: { type: Object },
+    sp: { type: Object },
+  },
   data: () => ({ isLoading: false, isSaveLoading: false }),
   methods: {
-    deleteInstance() {
+    async deleteInstance() {
       this.isLoading = true;
-      api
-        .delete(`/instances/${this.template.uuid}`)
-        .then(() => {
-          this.showSnackbarSuccess({ message: "Done!" });
+      try {
+        await api.delete(`/instances/${this.template.uuid}`);
+        if (this.template.type === "ione") {
+          const tempService = JSON.parse(JSON.stringify(this.service));
+          const instance = JSON.parse(JSON.stringify(this.template));
+          const igIndex = tempService.instancesGroups.findIndex((ig) =>
+            ig.instances.find((i) => i.uuid === this.template.uuid)
+          );
+          Object.keys(tempService.instancesGroups[igIndex].resources).forEach(
+            (key) => {
+              if (instance.resources[key]) {
+                tempService.instancesGroups[igIndex].resources[key] -=
+                  instance.resources[key];
+              }
+            }
+          );
 
-          setTimeout(() => {
-            this.$router.push({ name: "Instances" });
-          }, 100);
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          });
-        })
-        .finally(() => {
-          this.isLoading = false;
+          await api.services._update(tempService);
+        }
+
+        this.showSnackbarSuccess({ message: "Done!" });
+        setTimeout(() => {
+          this.$router.push({ name: "Instances" });
+        }, 100);
+      } catch (err) {
+        this.showSnackbarError({
+          message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
         });
+      } finally {
+        this.isLoading = false;
+      }
     },
-    save() {
-      const instance = this.template;
-      const service = JSON.parse(JSON.stringify(this.service));
-
-      const igIndex = service.instancesGroups.findIndex((ig) =>
+    async save() {
+      const tempService = JSON.parse(JSON.stringify(this.service));
+      const instance = JSON.parse(JSON.stringify(this.copyTemplate));
+      const igIndex = tempService.instancesGroups.findIndex((ig) =>
         ig.instances.find((i) => i.uuid === this.template.uuid)
       );
-      const instanceIndex = service.instancesGroups[
+      const instanceIndex = tempService.instancesGroups[
         igIndex
       ].instances.findIndex((i) => i.uuid === this.template.uuid);
 
-      service.instancesGroups[igIndex].instances[instanceIndex] = instance;
+      tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
+      if (
+        this.copyTemplate &&
+        JSON.stringify(this.copyTemplate) !== JSON.stringify(this.template)
+      ) {
+        const title = this.getPlanTitle(this.template);
+        const billingPlan = {
+          ...this.copyTemplate.billingPlan,
+          title,
+          public: false,
+        };
+        delete billingPlan.uuid;
+        this.isSaveLoading = true;
+
+        try {
+          const data = await api.plans.create(billingPlan);
+          await api.servicesProviders.bindPlan(this.sp.uuid, [data.uuid]);
+          tempService.instancesGroups[igIndex].instances[
+            instanceIndex
+          ].billingPlan = data;
+        } catch (e) {
+          this.$store.commit("snackbar/showSnackbarError", {
+            message:
+              e.response?.data?.message ||
+              "Error during create individual plan",
+          });
+        }
+      }
 
       this.isSaveLoading = true;
       api.services
-        ._update(service)
+        ._update(tempService)
         .then(() => {
           this.showSnackbarSuccess({
             message: "Instance saved successfully",
@@ -169,6 +214,26 @@ export default {
         suspend: this.template.state.state === "SUSPENDED",
         vnc: this.template.state.state !== "RUNNING",
       };
+    },
+    getPlanTitle() {
+      const type = this.template.type.includes("ovh")
+        ? "ovh"
+        : this.template.type;
+
+      switch (type) {
+        case "ione": {
+          return (item) =>
+            `IND_${this.sp.title}_${
+              item.billingPlan.title
+            }_${getTodayFullDate()}`;
+        }
+        case "ovh": {
+          return (item) => `"IND_${item.title}_${getTodayFullDate()}`;
+        }
+        default: {
+          return null;
+        }
+      }
     },
     service() {
       return this.$store.getters["services/all"]?.find(
