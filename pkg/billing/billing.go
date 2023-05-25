@@ -17,18 +17,17 @@ package billing
 
 import (
 	"context"
-
-	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Routine struct {
@@ -152,7 +151,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 
 	planId := driver.NewDocumentID(schema.BILLING_PLANS_COL, plan.GetUuid())
 
-	cursor, err := s.db.Query(ctx, getInstances, map[string]interface{}{
+	cursor, err := s.db.Query(ctx, getPlanInstances, map[string]interface{}{
 		"permissions":       schema.PERMISSIONS_GRAPH.Name,
 		"plan":              planId,
 		"@instances_groups": schema.INSTANCES_GROUPS_COL,
@@ -309,13 +308,75 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 	return &pb.ListResponse{Pool: result}, nil
 }
 
-const getInstances = `
+func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, req *pb.ListPlansInstancesRequest) (*pb.ListPlansInstancesResponse, error) {
+	log := s.log.Named("ListPlans")
+
+	var requestor string
+	if !req.Anonymously {
+		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
+	}
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	plans, err := s.plans.List(ctx, "")
+	if err != nil {
+		log.Error("Error listing plans", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error listing plans")
+	}
+
+	cursor, err := s.db.Query(ctx, getInstancesBillingPlans, map[string]interface{}{})
+	if err != nil {
+		return nil, err
+	}
+
+	var planInstancesCount = make(map[string]int)
+
+	for cursor.HasMore() {
+		planUuid := ""
+		_, err := cursor.ReadDocument(ctx, &planUuid)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := planInstancesCount[planUuid]; !ok {
+			planInstancesCount[planUuid] = 1
+		} else {
+			planInstancesCount[planUuid] += 1
+		}
+	}
+
+	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
+
+	result := make(map[string]*structpb.Value)
+
+	for _, plan := range plans {
+		if plan.Public {
+			result[plan.GetUuid()] = structpb.NewNumberValue(float64(planInstancesCount[plan.GetUuid()]))
+			continue
+		}
+		if req.Anonymously {
+			continue
+		}
+		if !ok {
+			continue
+		}
+
+		result[plan.GetUuid()] = structpb.NewNumberValue(float64(planInstancesCount[plan.GetUuid()]))
+	}
+
+	return &pb.ListPlansInstancesResponse{Plans: result}, nil
+}
+
+const getInstancesBillingPlans = `
+FOR inst in Instances
+	RETURN inst.billing_plan.uuid
+`
+
+const getPlanInstances = `
 LET igs = (
     FOR node IN 2 INBOUND @plan GRAPH @permissions
     FILTER IS_SAME_COLLECTION(node, @@instances_groups)
     RETURN node._id
 )
-
 
 LET instances = (
 	FOR ig in igs
@@ -330,5 +391,4 @@ LET plan = DOCUMENT(@plan)
 FOR inst in instances
 	FILTER inst.billing_plan.uuid == plan._key
 	RETURN inst
-
 `
