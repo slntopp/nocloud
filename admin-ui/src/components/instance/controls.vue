@@ -34,25 +34,39 @@ export default {
   },
   data: () => ({ isLoading: false, isSaveLoading: false }),
   methods: {
-    deleteInstance() {
+    async deleteInstance() {
       this.isLoading = true;
-      api
-        .delete(`/instances/${this.template.uuid}`)
-        .then(() => {
-          this.showSnackbarSuccess({ message: "Done!" });
+      try {
+        await api.delete(`/instances/${this.template.uuid}`);
+        if (this.template.type === "ione") {
+          const tempService = JSON.parse(JSON.stringify(this.service));
+          const instance = JSON.parse(JSON.stringify(this.template));
+          const igIndex = tempService.instancesGroups.findIndex((ig) =>
+            ig.instances.find((i) => i.uuid === this.template.uuid)
+          );
+          Object.keys(tempService.instancesGroups[igIndex].resources).forEach(
+            (key) => {
+              if (instance.resources[key]) {
+                tempService.instancesGroups[igIndex].resources[key] -=
+                  instance.resources[key];
+              }
+            }
+          );
 
-          setTimeout(() => {
-            this.$router.push({ name: "Instances" });
-          }, 100);
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-          });
-        })
-        .finally(() => {
-          this.isLoading = false;
+          await api.services._update(tempService);
+        }
+
+        this.showSnackbarSuccess({ message: "Done!" });
+        setTimeout(() => {
+          this.$router.push({ name: "Instances" });
+        }, 100);
+      } catch (err) {
+        this.showSnackbarError({
+          message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
         });
+      } finally {
+        this.isLoading = false;
+      }
     },
     async save() {
       const tempService = JSON.parse(JSON.stringify(this.service));
