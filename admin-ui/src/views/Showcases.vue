@@ -190,22 +190,28 @@ export default {
           provider.meta.showcase[id] = showcase;
         }
 
+        const index = this.updated.findIndex(({ uuid }) => uuid === provider.uuid);
         this.$store.commit('servicesProviders/updateService', provider);
 
-        if (!this.updated.find(({ uuid }) => uuid === provider.uuid)) {
+        if (index === -1) {
           this.updated.push(provider);
+        } else {
+          this.updated.splice(index, 1, provider);
         }
         return;
       }
 
       this.showcases[id].sp.forEach((el) => {
         const provider = JSON.parse(JSON.stringify(el));
+        const index = this.updated.findIndex(({ uuid }) => uuid === provider.uuid);
 
         provider.meta.showcase[id][key] = value;
         this.$store.commit('servicesProviders/updateService', provider);
 
-        if (!this.updated.find(({ uuid }) => uuid === provider.uuid)) {
+        if (index === -1) {
           this.updated.push(provider);
+        } else {
+          this.updated.splice(index, 1, provider);
         }
       });
     },
@@ -214,6 +220,7 @@ export default {
 
       this.newShowcase.sp.forEach((el) => {
         const provider = JSON.parse(JSON.stringify(el));
+        const index = this.updated.findIndex(({ uuid }) => uuid === provider.uuid);
 
         if (!provider.meta.showcase) provider.meta.showcase = {};
         provider.meta.showcase[id] = {
@@ -223,8 +230,10 @@ export default {
         };
         this.$store.commit('servicesProviders/updateService', provider);
 
-        if (!this.updated.find(({ uuid }) => uuid === provider.uuid)) {
+        if (index === -1) {
           this.updated.push(provider);
+        } else {
+          this.updated.splice(index, 1, provider);
         }
       });
     },
@@ -285,7 +294,9 @@ export default {
   },
   computed: {
     sp() {
-      return this.$store.getters['servicesProviders/all'];
+      return this.$store.getters['servicesProviders/all'].filter(
+        ({ locations, type }) => locations.length > 0 || !['ione', 'ovh'].includes(type)
+      );
     },
     plans() {
       return this.$store.getters['plans/all'];

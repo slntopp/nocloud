@@ -64,7 +64,7 @@
                 >mdi-pencil</v-icon
               >
               <login-in-account-icon
-                :uuid="account.uuid"
+                :uuid="account?.uuid"
                 :instanceId="instance.uuid"
               />
             </template>
@@ -82,7 +82,7 @@
         </v-col>
         <v-col>
           <route-text-field
-            :to="{ name: 'ServicesProvider', params: { uuid: sp.uuid } }"
+            :to="{ name: 'ServicesProvider', params: { uuid: sp?.uuid } }"
             :value="sp?.title"
             label="Service provider"
           />
