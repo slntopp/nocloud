@@ -56,10 +56,14 @@
       hide-default-footer
     >
       <template v-slot:[`item.price`]="{ item }">
-        <v-text-field v-model="item.price" append-icon="mdi-pencil" />
+        <v-text-field
+          :value="item.price"
+          @input="updatePrice(item, $event)"
+          append-icon="mdi-pencil"
+        />
       </template>
-      <template v-slot:[`item.quantity`]="{item}">
-        {{item.quantity?.toFixed(2)}}
+      <template v-slot:[`item.quantity`]="{ item }">
+        {{ item.quantity?.toFixed(2) }}
       </template>
       <template v-slot:[`item.total`]="{ item }">
         {{ totalPrices[item.name]?.toFixed(2) }}
@@ -74,7 +78,7 @@
           <td>
             {{ billingItems.find((i) => i.name == template.product)?.period }}
           </td>
-          <td>{{ totalPrice.toFixed(2)}}</td>
+          <td>{{ totalPrice.toFixed(2) }}</td>
         </tr>
       </template>
     </nocloud-table>
@@ -124,7 +128,7 @@ import NocloudTable from "@/components/table.vue";
 import ChangeIonePriceModel from "@/components/dialogs/changeIonePriceModel.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
-const emit = defineEmits(["refresh"]);
+const emit = defineEmits(["refresh", "update"]);
 
 const { template, service, sp, plans } = toRefs(props);
 const changeDatesDialog = ref(false);
@@ -184,6 +188,7 @@ const getBillingItems = () => {
   items.push({
     name: template.value.product,
     price: billingPlan.value.products[template.value.product]?.price,
+    key: `billingPlan.products.${template.value.product}.price`,
     quantity: 1,
     unit: "pcs",
     kind: billingPlan.value.products[template.value.product]?.kind,
@@ -195,9 +200,11 @@ const getBillingItems = () => {
     if (!quantity) {
       return;
     }
-    const addon = billingPlan.value.resources.find(
+
+    const addonIndex = billingPlan.value.resources.findIndex(
       (r) => r.key === resourceKey
     );
+    const addon = billingPlan.value.resources[addonIndex];
     if (addon) {
       items.push({
         name: resourceKey,
@@ -206,6 +213,7 @@ const getBillingItems = () => {
         period: addon.period,
         quantity,
         unit: "pcs",
+        key: `billingPlan.resources.${addonIndex}.price`,
       });
     }
   });
@@ -213,12 +221,14 @@ const getBillingItems = () => {
   const driveType = template.value.resources.drive_type?.toLowerCase();
 
   if (driveType) {
-    const drive = billingPlan.value.resources.find(
+    const driveIndex = billingPlan.value.resources.findIndex(
       (r) => r.key === `drive_${driveType}`
     );
+    const drive = billingPlan.value.resources[driveIndex];
     items.push({
       name: driveType,
       price: drive?.price,
+      key: `billingPlan.resources.${driveIndex}.price`,
       kind: drive?.kind,
       quantity: template.value.resources.drive_size / 1024,
       unit: "GB",
@@ -237,6 +247,11 @@ const getBillingItems = () => {
 
     return i;
   });
+};
+
+const updatePrice = (item, value) => {
+  item.price = +value;
+  emit("update", { key: item.key, value:+value });
 };
 </script>
 

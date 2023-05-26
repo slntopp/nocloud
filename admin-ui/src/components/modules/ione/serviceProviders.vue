@@ -220,7 +220,7 @@ export default {
       },
       private_vnet_ban: {
         type: "bool",
-        label: "Private networking feature",
+        subheader: "Private Net Functions",
         rules: [() => true],
       },
     },

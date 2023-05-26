@@ -6,6 +6,8 @@ export default {
     plans: [],
     plan: {},
     loading: false,
+    instanceCountLoading: false,
+    instanceCountMap: {},
   },
   getters: {
     all(state) {
@@ -17,6 +19,12 @@ export default {
     isLoading(state) {
       return state.loading;
     },
+    isInstanceCountLoading(state) {
+      return state.instanceCountLoading;
+    },
+    instanceCountMap(state) {
+      return state.instanceCountMap;
+    },
   },
   mutations: {
     setPlans(state, plans) {
@@ -24,6 +32,12 @@ export default {
     },
     setPlan(state, plan) {
       state.plan = plan;
+    },
+    setIsInstanceCountLoading(state, val) {
+      state.instanceCountLoading = val;
+    },
+    setIsInstanceCountMap(state, map) {
+      state.instanceCountMap = map;
     },
     setLoading(state, data) {
       state.loading = data;
@@ -35,8 +49,15 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }, options={params:{anonymously:false}}) {
+    fetch(
+      { commit, dispatch },
+      options = { params: { anonymously: false }, withCount: false }
+    ) {
       if (!options?.silent) commit("setLoading", true);
+
+      if (options.withCount) {
+        dispatch("fetchCount", options);
+      }
 
       return new Promise((resolve, reject) => {
         api.plans
@@ -52,6 +73,17 @@ export default {
             commit("setLoading", false);
           });
       });
+    },
+    fetchCount({ commit }, options) {
+      commit("setIsInstanceCountLoading", true);
+      return api.plans
+        .instancesCountMap(options?.params)
+        .then((response) => {
+          commit("setIsInstanceCountMap", response.plans);
+        })
+        .finally(() => {
+          commit("setIsInstanceCountLoading", false);
+        });
     },
     fetchById({ commit }, id) {
       commit("setLoading", true);
