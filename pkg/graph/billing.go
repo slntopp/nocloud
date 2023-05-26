@@ -18,6 +18,7 @@ package graph
 import (
 	"context"
 	"errors"
+	statuspb "github.com/slntopp/nocloud-proto/statuses"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -118,6 +119,35 @@ func (ctrl *BillingPlansController) Get(ctx context.Context, plan *pb.Plan) (*Bi
 	return &BillingPlan{
 		Plan: plan, DocumentMeta: meta,
 	}, nil
+}
+
+const getInstancesCount = `
+FOR i IN Instances
+    FILTER i.billing_plan.uuid == @plan
+    FILTER i.status != @status
+    RETURN i
+`
+
+func (ctrl *BillingPlansController) InstancesCount(ctx context.Context, plan *pb.Plan) (int, error) {
+	if plan.Uuid == "" {
+		return 0, errors.New("uuid is empty")
+	}
+
+	cur, err := ctrl.col.Database().Query(ctx, getInstancesCount, map[string]interface{}{
+		"plan":   plan.Uuid,
+		"status": statuspb.NoCloudStatus_DEL,
+	})
+
+	if err != nil {
+		return 0, err
+	}
+
+	result := 0
+	for cur.HasMore() {
+		result += 1
+	}
+
+	return result, nil
 }
 
 func (ctrl *BillingPlansController) List(ctx context.Context, spUuid string) ([]*BillingPlan, error) {
