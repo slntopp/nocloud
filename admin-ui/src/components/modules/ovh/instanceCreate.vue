@@ -43,7 +43,7 @@
             item-text="title"
             item-value="code"
             :value="instance.config?.planCode"
-            :items="flavors[instance?.billing_plan?.uuid]"
+            :items="tariffs"
             :rules="rules.req"
             :loading="isFlavorsLoading"
             @change="(value) => setValue('config.planCode', value)"
@@ -249,10 +249,15 @@ export default {
         const title = plan.title.split(" ");
 
         title.pop();
-        this.flavors[val] = Object.keys(plan.products).map((el) => ({
-          code: el.split(" ")[1],
-          title: plan.products[el].title,
-        }));
+        this.flavors[val] = Object.keys(plan.products).map((el) => {
+          const [duration, code] = el.split(" ");
+
+          return {
+            code,
+            duration,
+            title: plan.products[el].title,
+          };
+        });
 
         data.plan = val;
         val = { ...plan, title: title.join(" ") };
@@ -309,7 +314,7 @@ export default {
       this.$emit("set-value", { value: val, key: path });
       if (path.includes("billing_plan")) this.addProducts(data);
       this.change(data);
-      this.setProduct()
+      this.setProduct();
     },
     change(data) {
       this.$emit("update:instances-group", data);
@@ -317,12 +322,30 @@ export default {
     getAddonValue(addon) {
       return this.instance.config.addons.find((a) => addon.includes(a));
     },
-    setProduct(){
+    setProduct() {
       const data = JSON.parse(JSON.stringify(this.instance));
-      if(data.billing_plan?.kind?.toLowerCase()==='static'){
-        this.$emit("set-value", { value: `${data.config?.duration} ${data.config?.planCode}`, key: 'product' });
+      if (data.billing_plan?.kind?.toLowerCase() === "static") {
+        this.$emit("set-value", {
+          value: `${data.config?.duration} ${data.config?.planCode}`,
+          key: "product",
+        });
       }
-    }
+    },
+  },
+  computed: {
+    tariffs() {
+      const tariffs = this.flavors[this.instance?.billing_plan?.uuid];
+      if (
+        this.instance.billing_plan &&
+        this.instance.billing_plan.kind?.toLowerCase() === "static"
+      ) {
+        return tariffs.filter(
+          (t) => t?.duration === this.instance.config?.duration
+        );
+      }
+
+      return tariffs;
+    },
   },
   async created() {
     if (!this.isEdit) {
