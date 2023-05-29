@@ -273,7 +273,6 @@ export default {
           ({ planCode }) => planCode === val
         );
         const resources = val.split("-");
-
         plan?.configurations.forEach((el) => {
           el.values.sort();
           if (el.name.includes("os")) {
@@ -310,6 +309,7 @@ export default {
       this.$emit("set-value", { value: val, key: path });
       if (path.includes("billing_plan")) this.addProducts(data);
       this.change(data);
+      this.setProduct()
     },
     change(data) {
       this.$emit("update:instances-group", data);
@@ -317,6 +317,12 @@ export default {
     getAddonValue(addon) {
       return this.instance.config.addons.find((a) => addon.includes(a));
     },
+    setProduct(){
+      const data = JSON.parse(JSON.stringify(this.instance));
+      if(data.billing_plan?.kind?.toLowerCase()==='static'){
+        this.$emit("set-value", { value: `${data.config?.duration} ${data.config?.planCode}`, key: 'product' });
+      }
+    }
   },
   async created() {
     if (!this.isEdit) {
