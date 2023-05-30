@@ -23,10 +23,18 @@
         <v-text-field readonly label="Price instance total" :value="getPrice" />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Date (create)" :value="template.data.creation"/>
+        <v-text-field
+          readonly
+          label="Date (create)"
+          :value="template.data.creation"
+        />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Due to date/next payment"  :value="template.data.expiration" />
+        <v-text-field
+          readonly
+          label="Due to date/next payment"
+          :value="template.data.expiration"
+        />
       </v-col>
       ></v-row
     >
@@ -40,9 +48,10 @@
     >
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field
-          v-model.number="prices[item.key]"
-          @change="setTotalNewPrice"
+          v-model.number="item.price"
+          @change="onUpdatePrice(item)"
           type="number"
+          append-icon="mdi-pencil"
         ></v-text-field>
       </template>
       <template v-slot:[`item.basePrice`]="{ item }">
@@ -52,19 +61,16 @@
           :value="basePrices[item.key]"
         ></v-text-field>
       </template>
-      <template v-slot:[`footer`]>
-        <div class="d-flex justify-end ml-10 my-1 align-center">
-          <span class="text-center align-center"
-            >Base total {{ totalBasePrice || "loading..." }} Total
-            {{ totalNewPrice }}</span
-          >
-          <v-btn
-            class="mx-5"
-            :loading="isPlanChangeLoading"
-            @click="saveNewPrices"
-            >Save prices</v-btn
-          >
-        </div>
+      <template v-slot:body.append>
+        <tr>
+          <td>Total instance price</td>
+          <td>{{ totalBasePrice || "Loading..." }}</td>
+          <td>
+            <div class="d-flex justify-space-between align-center">
+              {{ totalNewPrice?.toFixed(2) }}
+            </div>
+          </td>
+        </tr>
       </template>
     </nocloud-table>
     <edit-price-model
@@ -92,13 +98,12 @@ import { useStore } from "@/store";
 import EditPriceModel from "@/components/modules/ovh/editPriceModel.vue";
 
 const props = defineProps(["template", "plans"]);
-const emit = defineEmits(["refresh"]);
+const emit = defineEmits(["refresh", "update"]);
 
 const store = useStore();
 
 const { template, plans } = toRefs(props);
 const pricesItems = ref([]);
-const prices = ref({});
 const basePrices = ref({});
 const rate = ref(0);
 const pricesHeaders = ref([
@@ -106,64 +111,19 @@ const pricesHeaders = ref([
   { text: "Base price", value: "basePrice" },
   { text: "Price", value: "price" },
 ]);
-const isPlanChangeLoading = ref(false);
 const totalNewPrice = ref(0);
 const totalBasePrice = ref(0);
 const isBasePricesLoading = ref(false);
 const priceModelDialog = ref(false);
 
-const saveNewPrices = () => {
-  const instance = JSON.parse(JSON.stringify(template.value));
-  const planCodeLocal =
-    "IND_" + instance.title + "_" + new Date().toISOString().slice(0, 10);
-  const plan = {
-    title: planCodeLocal,
-    public: false,
-    kind: instance.billingPlan.kind,
-    type: instance.billingPlan.type,
-    resources: [],
-  };
-  const product = { ...tarrif.value, price: prices.value.tarrif };
-  plan.products = {
-    [duration.value + " " + template.value.config.planCode]: product,
-  };
-  addons.value.forEach((key) => {
-    plan.resources.push({
-      ...template.value.billingPlan.resources.find(
-        (p) => p.key === [duration.value, key].join(" ")
-      ),
-      price: prices.value[key],
-    });
-  });
-
-  isPlanChangeLoading.value = true;
-  api.plans.create(plan).then((data) => {
-    api.servicesProviders.bindPlan(template.value.sp, data.uuid).then(() => {
-      const tempService = JSON.parse(JSON.stringify(service.value));
-      const igIndex = tempService.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === template.value.uuid)
-      );
-      const instanceIndex = tempService.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === template.value.uuid);
-
-      tempService.instancesGroups[igIndex].instances[
-        instanceIndex
-      ].billingPlan = data;
-      api.services._update(tempService).then(() => {
-        isPlanChangeLoading.value = false;
-        emit("refresh");
-      });
-    });
-  });
-};
-
 const setTotalNewPrice = () => {
-  totalNewPrice.value = Object.keys(prices.value).reduce(
-    (acc, key) => acc + +prices.value[key],
-    0
-  );
+  totalNewPrice.value = pricesItems.value.reduce((acc, i) => i.price + acc, 0);
 };
+
+const onUpdatePrice=(item)=>{
+  emit("update", { key: item.path, value: item.price });
+  setTotalNewPrice()
+}
 
 const getBasePrices = () => {
   isBasePricesLoading.value = true;
@@ -201,8 +161,13 @@ const getBasePrices = () => {
       totalBasePrice.value = Object.keys(basePrices.value)
         .reduce((acc, key) => acc + +basePrices.value[key], 0)
         .toFixed(2);
-      isBasePricesLoading.value = false;
-    });
+    })
+    .catch((e) =>
+      store.commit("snackbar/showSnackbarError", {
+        message: e.response?.data?.message || "Error during fetch base prices",
+      })
+    )
+    .finally(() => (isBasePricesLoading.value = false));
 };
 const getPriceFromProduct = (product) => {
   return (
@@ -219,14 +184,19 @@ const initPrices = () => {
     title: "tarrif",
     key: "tarrif",
     ind: 0,
+    path: `billingPlan.products.${[duration.value, planCode.value].join(
+      " "
+    )}.price`,
+    price: tarrif.value.price,
   });
-  prices.value["tarrif"] = tarrif.value.price;
 
   addons.value.forEach((key, ind) => {
-    prices.value[key] = template.value.billingPlan.resources.find(
+    const addonIndex = template.value.billingPlan.resources.findIndex(
       (p) => p.key === [duration.value, key].join(" ")
-    ).price;
+    );
     pricesItems.value.push({
+      price: template.value.billingPlan.resources[addonIndex].price,
+      path: `billingPlan.resources.${addonIndex}.price`,
       title: key,
       key: key,
       index: ind + 1,

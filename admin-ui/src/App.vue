@@ -261,6 +261,7 @@
     <v-main>
       <router-view />
     </v-main>
+    <app-snackbar />
   </v-app>
   <router-view v-else />
 </template>
@@ -270,11 +271,11 @@ import config from "@/config.js";
 import balance from "@/components/balance.vue";
 import languages from "@/components/languages.vue";
 import appSearch from "@/components/search/search.vue";
+import AppSnackbar from "@/components/snackbar.vue";
 
 export default {
-  components: { balance, appSearch, languages },
   name: "App",
-
+  components: { AppSnackbar, balance, appSearch, languages },
   data: () => ({
     miniNav: true,
     easterEgg: false,

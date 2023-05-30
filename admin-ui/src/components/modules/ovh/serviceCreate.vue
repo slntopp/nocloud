@@ -24,7 +24,7 @@
 
       <v-row>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             label="price model"
             item-text="title"
             item-value="uuid"
@@ -225,7 +225,7 @@ export default {
         });
     },
     setAddons(meta) {
-      this.plans.list.forEach(({ products, resources }) => {
+      this.plans.list.forEach(({ products }) => {
         for (let key in products) {
           key = key.split(" ")[1];
           if (key in this.addons) continue;
@@ -245,23 +245,25 @@ export default {
             }
           });
 
+          const addonsOptions = {
+            snapshot: { key: "snapshot" },
+            additionalDisk: { key: "disk", all: true },
+            automatedBackup: { key: "backup" },
+          };
+          const disk = key.split("-").pop();
+
           plan?.addonFamilies.forEach((el) => {
             if (!this.addons[key]) {
               this.addons[key] = {};
             }
-            if (el.name === "snapshot") {
-              this.addons[key].snapshot = el.addons.filter((addon) =>
-                resources.find(({ key }) => key.includes(addon))
-              );
-            }
-            if (el.name === "additionalDisk") {
-              this.addons[key].disk = el.addons.filter((addon) =>
-                resources.find(({ key }) => key.includes(addon))
-              );
-            }
-            if (el.name === "automatedBackup") {
-              this.addons[key].backup = el.addons.filter((addon) =>
-                resources.find(({ key }) => key.includes(addon))
+
+            const addonOption = addonsOptions[el.name];
+
+            if (addonOption?.all) {
+              this.addons[key][addonOption.key] = el.addons;
+            } else if (addonOption?.key) {
+              this.addons[key][addonOption.key] = el.addons.filter((addon) =>
+                addon.includes(disk)
               );
             }
           });
@@ -337,10 +339,19 @@ export default {
       if (path.includes("billing_plan"))
         this.addProducts(data.body.instances[i]);
       this.change(data);
+      this.setProduct(i)
     },
     change(data) {
       this.$emit("update:instances-group", JSON.stringify(data));
     },
+    setProduct(index){
+      const data = JSON.parse(this.instancesGroup);
+      const instance=data.body.instances[index]
+      if(instance.billing_plan?.kind?.toLowerCase()==='static'){
+        setToValue(data.body.instances, `${instance.config?.duration} ${instance.config?.planCode}`, index+'.product');
+        this.change(data);
+      }
+    }
   },
   computed: {
     instances() {

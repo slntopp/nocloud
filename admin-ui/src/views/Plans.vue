@@ -20,7 +20,7 @@
       title="You can't delete a price model while there are instances using it!"
       subtitle="To delete price model, select the price model that these instances will use."
       :width="625"
-      :disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
+      :success-disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
       @confirm="deleteSelectedPlan"
     >
       <v-btn
@@ -90,29 +90,13 @@
       <template v-slot:[`item.kind`]="{ value }">
         {{ value.toLowerCase() }}
       </template>
+      <template v-slot:[`item.instanceCount`]="{ item }">
+        <v-progress-circular v-if="isInstanceCountLoading" size="20" indeterminate/>
+        <template v-else>
+          {{ instanceCountMap[item.uuid] }}
+        </template>
+      </template>
     </nocloud-table>
-
-    <v-snackbar
-      v-model="snackbar.visibility"
-      :timeout="snackbar.timeout"
-      :color="snackbar.color"
-    >
-      {{ snackbar.message }}
-      <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
-        <router-link :to="snackbar.route"> Look up. </router-link>
-      </template>
-
-      <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
   </div>
 </template>
 
@@ -123,6 +107,7 @@ import search from "@/mixins/search.js";
 import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { filterArrayByTitleAndUuid } from "@/functions";
+import { mapGetters } from "vuex";
 
 export default {
   name: "plans-view",
@@ -135,6 +120,7 @@ export default {
       { text: "Kind ", value: "kind", customFilter: true },
       { text: "Type ", value: "type", customFilter: true },
       { text: "Public ", value: "public", customFilter: true },
+      { text: "Linked instances count ", value: "instanceCount" },
     ],
     linkedHeaders: [
       { text: "Instance", value: "title" },
@@ -192,7 +178,7 @@ export default {
       Promise.all(promises)
         .then(() => api.plans.delete(this.selected[0].uuid))
         .then(() => {
-          this.$store.dispatch("plans/fetch");
+          this.$store.dispatch("plans/fetch", { withCount: true });
           this.showSnackbar({
             message: "Price model deleted successfully.",
           });
@@ -221,6 +207,7 @@ export default {
           params: {
             sp_uuid: this.serviceProvider,
           },
+          withCount: true,
         })
         .then(() => {
           this.fetchError = "";
@@ -246,15 +233,21 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "plans/fetch",
       params: {
-        sp_uuid: this.serviceProvider,
-        anonymously: false,
+        params: {
+          sp_uuid: this.serviceProvider,
+          anonymously: false,
+        },
+        withCount: true,
       },
     });
   },
   computed: {
-    plans() {
-      return this.$store.getters["plans/all"];
-    },
+    ...mapGetters("plans", {
+      plans: "all",
+      isLoading: "isLoading",
+      isInstanceCountLoading: "isInstanceCountLoading",
+      instanceCountMap: "instanceCountMap",
+    }),
     services() {
       return this.$store.getters["services/all"];
     },
@@ -285,9 +278,6 @@ export default {
       }
       return plans;
     },
-    isLoading() {
-      return this.$store.getters["plans/isLoading"];
-    },
     servicesProviders() {
       const sp = this.$store.getters["servicesProviders/all"];
 
@@ -313,8 +303,11 @@ export default {
       this.$store.commit("reloadBtn/setCallback", {
         type: "plans/fetch",
         params: {
-          sp_uuid: this.serviceProvider,
-          anonymously: false,
+          params: {
+            sp_uuid: this.serviceProvider,
+            anonymously: false,
+          },
+          withCount: true,
         },
       });
     },

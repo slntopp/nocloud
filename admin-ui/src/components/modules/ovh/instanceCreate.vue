@@ -19,7 +19,7 @@
 
       <v-row>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             label="price model"
             item-text="title"
             item-value="uuid"
@@ -43,7 +43,7 @@
             item-text="title"
             item-value="code"
             :value="instance.config?.planCode"
-            :items="flavors[instance?.billing_plan?.uuid]"
+            :items="tariffs"
             :rules="rules.req"
             :loading="isFlavorsLoading"
             @change="(value) => setValue('config.planCode', value)"
@@ -193,7 +193,7 @@ export default {
         });
     },
     setAddons(meta) {
-      this.plans.list.forEach(({ products, resources }) => {
+      this.plans.list.forEach(({ products }) => {
         for (let key in products) {
           key = key.split(" ")[1];
           if (key in this.addons) continue;
@@ -202,7 +202,6 @@ export default {
           const plan = plans?.catalog.plans.find(
             ({ planCode }) => planCode === key
           );
-
           plan?.configurations.forEach((el) => {
             el.values.sort();
             if (el.name.includes("os")) {
@@ -213,23 +212,25 @@ export default {
             }
           });
 
+          const addonsOptions = {
+            snapshot: { key: "snapshot" },
+            additionalDisk: { key: "disk", all: true },
+            automatedBackup: { key: "backup" },
+          };
+          const disk = key.split("-").pop();
+
           plan?.addonFamilies.forEach((el) => {
             if (!this.addons[key]) {
               this.addons[key] = {};
             }
-            if (el.name === "snapshot") {
-              this.addons[key].snapshot = el.addons.filter((addon) =>
-                resources.find(({ key }) => key.includes(addon))
-              );
-            }
-            if (el.name === "additionalDisk") {
-              this.addons[key].disk = el.addons.filter((addon) =>
-                resources.find(({ key }) => key.includes(addon))
-              );
-            }
-            if (el.name === "automatedBackup") {
-              this.addons[key].backup = el.addons.filter((addon) =>
-                resources.find(({ key }) => key.includes(addon))
+
+            const addonOption = addonsOptions[el.name];
+
+            if (addonOption?.all) {
+              this.addons[key][addonOption.key] = el.addons;
+            } else if (addonOption?.key) {
+              this.addons[key][addonOption.key] = el.addons.filter((addon) =>
+                addon.includes(disk)
               );
             }
           });
@@ -248,10 +249,15 @@ export default {
         const title = plan.title.split(" ");
 
         title.pop();
-        this.flavors[val] = Object.keys(plan.products).map((el) => ({
-          code: el.split(" ")[1],
-          title: plan.products[el].title,
-        }));
+        this.flavors[val] = Object.keys(plan.products).map((el) => {
+          const [duration, code] = el.split(" ");
+
+          return {
+            code,
+            duration,
+            title: plan.products[el].title,
+          };
+        });
 
         data.plan = val;
         val = { ...plan, title: title.join(" ") };
@@ -272,7 +278,6 @@ export default {
           ({ planCode }) => planCode === val
         );
         const resources = val.split("-");
-
         plan?.configurations.forEach((el) => {
           el.values.sort();
           if (el.name.includes("os")) {
@@ -283,14 +288,17 @@ export default {
           }
         });
 
-        this.$emit("set-value", { key: "resources", value: {
-          cpu: +resources.at(-3),
-          ram: resources.at(-2) * 1024,
-          drive_size: resources.at(-1) * 1024,
-          drive_type: "SSD",
-          ips_private: 0,
-          ips_public: 1,
-        } });
+        this.$emit("set-value", {
+          key: "resources",
+          value: {
+            cpu: +resources.at(-3),
+            ram: resources.at(-2) * 1024,
+            drive_size: resources.at(-1) * 1024,
+            drive_type: "SSD",
+            ips_private: 0,
+            ips_public: 1,
+          },
+        });
       }
 
       if (path.includes("duration")) {
@@ -306,19 +314,44 @@ export default {
       this.$emit("set-value", { value: val, key: path });
       if (path.includes("billing_plan")) this.addProducts(data);
       this.change(data);
+      this.setProduct();
     },
     change(data) {
       this.$emit("update:instances-group", data);
     },
-    getAddonValue(addon){
-      return this.instance.config.addons.find(a=>addon.includes(a))
-    }
+    getAddonValue(addon) {
+      return this.instance.config.addons.find((a) => addon.includes(a));
+    },
+    setProduct() {
+      const data = JSON.parse(JSON.stringify(this.instance));
+      if (data.billing_plan?.kind?.toLowerCase() === "static") {
+        this.$emit("set-value", {
+          value: `${data.config?.duration} ${data.config?.planCode}`,
+          key: "product",
+        });
+      }
+    },
+  },
+  computed: {
+    tariffs() {
+      const tariffs = this.flavors[this.instance?.billing_plan?.uuid];
+      if (
+        this.instance.billing_plan &&
+        this.instance.billing_plan.kind?.toLowerCase() === "static"
+      ) {
+        return tariffs.filter(
+          (t) => t?.duration === this.instance.config?.duration
+        );
+      }
+
+      return tariffs;
+    },
   },
   async created() {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
     } else if (!this.instance.billing_plan?.uuid) {
-      await this.fetchPlans()
+      await this.fetchPlans();
       this.setValue("billing_plan", this.instance.billing_plan);
       this.setValue("config.planCode", this.instance.config.planCode);
       this.setValue(
@@ -329,7 +362,7 @@ export default {
         "config.configuration.vps_os",
         this.instance.config.configuration.vps_os
       );
-      this.setAddons()
+      this.setAddons();
     }
     const data = JSON.parse(JSON.stringify(getDefaultInstance()));
 

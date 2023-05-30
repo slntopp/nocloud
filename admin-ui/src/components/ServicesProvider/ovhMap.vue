@@ -47,6 +47,7 @@ export default {
       }
     },
     errorAddPin() {
+      this.mapError = "";
       if (this.selectedLocation) {
         this.mapError = "Error: This region alredy taken";
       } else {

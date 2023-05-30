@@ -9,7 +9,7 @@
       <v-card-title class="text-center">Change price model</v-card-title>
       <v-row align="center">
         <v-col cols="9">
-          <v-select
+          <v-autocomplete
             label="price model"
             item-text="title"
             item-value="uuid"
@@ -118,7 +118,9 @@ const tarrifs = computed(() => {
 const avaliablePlans = computed(() => {
   const avaliablePlans = [];
 
-  const copyPlans = JSON.parse(JSON.stringify(plans.value));
+  const copyPlans = JSON.parse(JSON.stringify(plans.value)).filter(
+    (p) => p.type === "ovh"
+  );
 
   copyPlans.forEach((p) => {
     const keys = Object.keys(p.products).filter(

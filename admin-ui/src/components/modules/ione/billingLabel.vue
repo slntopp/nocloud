@@ -7,20 +7,22 @@
       <v-col>
         <v-chip color="primary" outlined>Price: {{ price }}</v-chip>
       </v-col>
-      <v-col
-        ><v-btn
+      <v-col>
+        <v-btn
           color="primary"
           :disabled="isRenewDisabled"
-          @click="sendVmAction('manual_renew', template)"
-          >Renew</v-btn
-        ></v-col
-      >
+          :loading="isLoading"
+          @click="sendRenew"
+        >
+          Renew
+        </v-btn>
+      </v-col>
     </v-row>
   </v-container>
 </template>
 
 <script>
-import { computed, toRefs } from "vue";
+import { computed, ref, toRefs } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import { useStore } from "@/store";
 import sendVmAction from "@/mixins/sendVmAction";
@@ -32,6 +34,7 @@ export default {
     const store = useStore();
 
     const { template } = toRefs(props);
+    const isLoading = ref(false);
 
     const price = computed(() => {
       const initialPrice =
@@ -56,7 +59,7 @@ export default {
     });
 
     const isRenewDisabled = computed(() => {
-      return getAccountBalance() < price.value;
+      return getAccountBalance() < price.value || template.value.data.blocked;
     });
     const getAccountBalance = () => {
       const namespace = store.getters["namespaces/all"]?.find(
@@ -65,17 +68,29 @@ export default {
       const account = store.getters["accounts/all"].find(
         (a) => a.uuid === namespace.access.namespace
       );
-      return account.balance;
+      return account?.balance;
     };
 
     const dueDate = computed(() => {
       return formatSecondsToDate(template.value?.data?.last_monitoring);
     });
 
+    function sendRenew() {
+      isLoading.value = true;
+      sendVmAction.methods.sendVmAction('manual_renew', template.value)
+        .then(() => {
+          template.value.data.blocked = true;
+          template.value.data = Object.assign({}, template.value.data);
+        })
+        .finally(() => { isLoading.value = false });
+    }
+
     return {
       isRenewDisabled,
+      isLoading,
       price,
       dueDate,
+      sendRenew
     };
   },
 };

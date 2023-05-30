@@ -29,8 +29,8 @@
           <v-row>
             <v-col :cols="12" :md="6">
               <json-editor
-                :json="item[tab.title.toLowerCase()]"
-                @changeValue="(data) => (item[tab.title.toLowerCase()] = data)"
+                :json="item[tab.title?.toLowerCase()]"
+                @changeValue="(data) => (item[tab.title?.toLowerCase()] = data)"
               />
             </v-col>
           </v-row>
@@ -95,24 +95,28 @@ export default {
           title: "Template",
           component: () => import("@/components/ServicesProvider/template.vue"),
         },
-      ];
+      ].filter((el) => el?.title);
 
-      if (Object.keys(this.item?.secrets ?? {}).length > 0)
-        tabs.splice(1, 0, {
-          title: "Secrets",
-          component: () =>
-            import(
-              `@/components/modules/${this.item?.type}/serviceProviderSecrets.vue`
-            ).catch(() =>
-              import("@/components/modules/custom/serviceProviderSecrets.vue")
-            ),
-        });
-      if (Object.keys(this.item?.vars ?? {}).length > 0)
-        tabs.splice(2, 0, {
-          title: "Vars",
-          component: () =>
-            import("@/components/modules/custom/serviceProviderVars.vue"),
-        });
+      if (Object.keys(this.item?.secrets ?? {}).length > 0) tabs.splice(1, 0, {
+        title: "Secrets",
+        component: () =>
+          import(
+            `@/components/modules/${this.item?.type}/serviceProviderSecrets.vue`
+          ).catch(() =>
+            import("@/components/modules/custom/serviceProviderSecrets.vue")
+          ),
+      });
+
+      if (Object.keys(this.item?.vars ?? {}).length > 0) tabs.splice(2, 0, {
+        title: "Vars",
+        component: () =>
+          import("@/components/modules/custom/serviceProviderVars.vue"),
+      });
+
+      if (this.item?.type === "ione") tabs.splice(3, 0, {
+        title: "Nebula",
+        component: () => import("@/components/ServicesProvider/nebula.vue"),
+      });
 
       return tabs;
     },

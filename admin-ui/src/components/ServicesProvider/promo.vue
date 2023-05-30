@@ -1,7 +1,45 @@
 <template>
   <div class="pa-10">
-    <v-card-title class="text-center">{{ template.title }}</v-card-title>
-    <v-textarea v-model="promo.description" outlined label="Description:" />
+    <v-card-title class="text-center">Service settings</v-card-title>
+    <v-text-field v-model.trim="promo.service.title" outlined label="Title" />
+    <v-text-field v-model.trim="promo.service.btn" outlined label="Btn title" />
+    <v-card-subtitle>Description:</v-card-subtitle>
+    <vue-editor class="html-editor" v-model="promo.service.description" />
+    <v-card-title class="text-center">Location default settings</v-card-title>
+    <v-text-field label="Title" outlined v-model="promo.location.title" />
+    <v-card-subtitle>Description:</v-card-subtitle>
+    <vue-editor class="html-editor" v-model="promo.location.description" />
+    <v-card-title>Individual location setting</v-card-title>
+    <v-expansion-panels>
+      <v-expansion-panel
+        v-for="location in template?.locations"
+        :key="getLocationKey(location)"
+      >
+        <v-expansion-panel-header color="background-light">{{
+          location.title
+        }}</v-expansion-panel-header>
+        <v-expansion-panel-content color="background-light">
+          <v-card-subtitle>Description:</v-card-subtitle>
+          <vue-editor
+            class="html-editor"
+            v-model="promo.locations[getLocationKey(location)].description"
+          />
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
+    <v-card-title class="text-center">Offer settings</v-card-title>
+    <v-card-subtitle class="mt-3">Description:</v-card-subtitle>
+    <vue-editor class="html-editor" v-model="promo.offer.text" />
+    <v-text-field class="mt-5"
+      outlined
+      label="Media src"
+      v-model="promo.offer.src"
+    ></v-text-field>
+    <v-text-field outlined label="Media src link" v-model="promo.offer.link" />
+    <v-card-title class="text-center">Rewards settings</v-card-title>
+    <v-text-field label="Title" outlined v-model.trim="promo.rewards.title" />
+    <v-card-subtitle>Description:</v-card-subtitle>
+    <vue-editor class="html-editor" v-model="promo.rewards.description" />
     <v-card-title>Icons:</v-card-title>
     <v-row>
       <v-col
@@ -13,8 +51,8 @@
         v-for="icon in promo.icons"
         :key="icon.id"
       >
-        <v-card height="100%" color="background-light">
-          <v-img height="100%" width="100%" cover :src="icon.src" />
+        <v-card color="background-light">
+          <v-img :src="icon.src" />
           <v-divider />
           <div class="d-flex flex-row-reverse">
             <v-btn color="primary" @click="deleteIcon(icon.id)" icon>
@@ -39,13 +77,6 @@
           </template>
           <v-card color="background-light" class="pa-5 ma-auto" max-width="600">
             <v-card-title class="text-h5"> Add new icon: </v-card-title>
-            <!-- <v-file-input
-              accept="image/*"
-              v-model="newIcon.file"
-              clearable
-              label="File input"
-              underlined
-            /> -->
             <v-text-field label="icon link" v-model="newIcon.file" />
             <v-card-actions class="flex-row-reverse">
               <v-btn class="mx-5" color="red" @click="closeAddIcon">
@@ -66,21 +97,37 @@
 <script>
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
+import { VueEditor } from "vue2-editor";
 
 export default {
   name: "promo-tab",
+  components: { VueEditor },
   props: { template: { type: Object, required: true } },
   mixins: [snackbar],
   data: () => ({
     addIconDialog: false,
     newIcon: { file: null },
-    promo: { description: "", icons: [] },
+    promo: {
+      icons: [],
+      service: {},
+      location: {},
+      locations: {},
+      offer: { text: "", src: "", link: "" },
+      rewards: { description: "", title: "" },
+    },
     isSaveLoading: false,
   }),
   mounted() {
     if (this.template.meta.promo) {
-      this.promo = this.template.meta.promo;
+      this.promo = { ...this.promo, ...this.template.meta.promo };
     }
+    this.template?.locations.forEach((location) => {
+      if (!this.promo.locations[this.getLocationKey(location)]) {
+        this.promo.locations[this.getLocationKey(location)] = {
+          description: "",
+        };
+      }
+    });
   },
   methods: {
     deleteIcon(id) {
@@ -117,6 +164,40 @@ export default {
           this.isSaveLoading = false;
         });
     },
+    getLocationKey(location) {
+      return `${this.template.title} ${location.id}`;
+    },
   },
 };
 </script>
+
+<style lang="scss">
+.html-editor {
+  span.ql-picker-label {
+    color: white;
+  }
+}
+
+.quillWrapper .ql-snow .ql-stroke {
+  stroke: rgb(255 255 255 / 95%) !important;
+}
+.ql-snow .ql-fill {
+  fill: white;
+}
+
+.quillWrapper .ql-editor {
+  color: white;
+}
+.quillWrapper .ql-editor ul[data-checked="false"] > li::before {
+  color: white !important;
+}
+.quillWrapper .ql-editor ul[data-checked="true"] > li::before {
+  color: white !important;
+}
+
+.ql-active {
+  color: #e06ffe !important;
+  fill: #e06ffe !important;
+  stroke: #e06ffe !important;
+}
+</style>

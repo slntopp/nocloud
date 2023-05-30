@@ -65,7 +65,11 @@
       </v-row>
 
       <v-row justify="end">
-        <v-switch class="mx-3 mt-0" v-model="isChangeAll" label="All at the same time" />
+        <v-switch
+          class="mx-3 mt-0"
+          v-model="isChangeAll"
+          label="All at the same time"
+        />
         <v-btn class="mx-3" @click="emit('input', false)">Close</v-btn>
         <v-btn class="mx-3" :loading="changeDatesLoading" @click="changeDates"
           >Change dates</v-btn
@@ -79,9 +83,12 @@
 import { onMounted, toRefs, ref } from "vue";
 import api from "@/api";
 import { formatSecondsToDate } from "@/functions";
+import { useStore } from "@/store";
 
 const props = defineProps(["template", "service", "value"]);
 const emit = defineEmits(["refresh", "input"]);
+
+const store = useStore();
 
 const { template, service } = toRefs(props);
 const changeDatesLoading = ref(false);
@@ -112,7 +119,7 @@ const setLastMonitorings = () => {
   newAllDate.value = formatSecondsToDate(data.last_monitoring);
 };
 
-const changeDates = () => {
+const changeDates = async () => {
   const tempService = JSON.parse(JSON.stringify(service.value));
 
   const igIndex = tempService.instancesGroups.findIndex((ig) =>
@@ -144,21 +151,25 @@ const changeDates = () => {
   };
 
   changeDatesLoading.value = true;
-  api.services
-    ._update(tempService)
-    .then(() => {
-      emit("refresh");
-    })
-    .finally(() => {
-      changeDatesLoading.value = false;
-      emit("input", false);
+  try {
+    await api.services._update(tempService);
+    emit("refresh");
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during change ione monitoring",
     });
+  } finally {
+    changeDatesLoading.value = false;
+    emit("input", false);
+  }
 };
 
 onMounted(() => {
   setLastMonitorings();
   //tommoraw
-  min.value=new Date(new Date().getTime() + (24 * 60 * 60 * 1000)).toISOString().slice(0, 10)
+  min.value = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
 });
 </script>
 

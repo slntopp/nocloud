@@ -105,7 +105,8 @@
 import dateField from "@/components/date.vue";
 import { onMounted, toRefs, ref } from "vue";
 import api from "@/api";
-import { getTimestamp } from "@/functions";
+import { getTimestamp, getTodayFullDate } from "@/functions";
+import { useStore } from "@/store";
 
 const props = defineProps([
   "template",
@@ -117,6 +118,8 @@ const props = defineProps([
 ]);
 const emit = defineEmits(["refresh", "input"]);
 
+const store = useStore();
+
 const { template, service, billingPlan, value, availableTarrifs, sp } =
   toRefs(props);
 const selectedTarrif = ref({});
@@ -124,7 +127,7 @@ const individualPlan = ref({ product: {}, resources: {} });
 const changeTarrifLoading = ref(false);
 const createIndividualLoading = ref(false);
 
-const changeTarrif = () => {
+const changeTarrif = async () => {
   const tempService = JSON.parse(JSON.stringify(service.value));
   const igIndex = tempService.instancesGroups.findIndex((ig) =>
     ig.instances.find((i) => i.uuid === template.value.uuid)
@@ -141,30 +144,31 @@ const changeTarrif = () => {
   });
 
   tempService.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
-    billingPlan;
+    billingPlan.value;
 
   changeTarrifLoading.value = true;
 
-  api.services
-    ._update(tempService)
-    .then(() => {
-      emit("refresh");
-    })
-    .finally(() => {
-      changeTarrifLoading.value = false;
-      emit("input", false);
+  try {
+    await api.services._update(tempService);
+    emit("refresh");
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during change ione tarrif",
     });
+  } finally {
+    changeTarrifLoading.value = false;
+    emit("input", false);
+  }
 };
 
-const createIndividual = () => {
+const createIndividual = async () => {
   const product = individualPlan.value.product;
   const resources = individualPlan.value.resources;
 
   const planTitle = `IND_${sp.value.title}_${
     billingPlan.value.title
-  }_${new Date().toISOString().slice(0, 10)}`;
+  }_${getTodayFullDate()}`;
   const productTitle = `IND_${product.resources.cpu}_${product.resources.ram}`;
-
   product.period = getTimestamp(product.period);
   const plan = {
     title: planTitle,
@@ -176,34 +180,37 @@ const createIndividual = () => {
   product.title = productTitle;
   plan.products = { [productTitle]: product };
   createIndividualLoading.value = true;
+  try {
+    const data = await api.plans.create(plan);
+    await api.servicesProviders.bindPlan(template.value.sp, [data.uuid]);
+    const tempService = JSON.parse(JSON.stringify(service.value));
+    const igIndex = tempService.instancesGroups.findIndex((ig) =>
+      ig.instances.find((i) => i.uuid === template.value.uuid)
+    );
+    const instanceIndex = tempService.instancesGroups[
+      igIndex
+    ].instances.findIndex((i) => i.uuid === template.value.uuid);
 
-  api.plans.create(plan).then((data) => {
-    api.servicesProviders.bindPlan(template.value.sp, data.uuid).then(() => {
-      const tempService = JSON.parse(JSON.stringify(service.value));
-      const igIndex = tempService.instancesGroups.findIndex((ig) =>
-        ig.instances.find((i) => i.uuid === template.value.uuid)
-      );
-      const instanceIndex = tempService.instancesGroups[
-        igIndex
-      ].instances.findIndex((i) => i.uuid === template.value.uuid);
-
-      tempService.instancesGroups[igIndex].instances[instanceIndex].product =
-        productTitle;
-      tempService.instancesGroups[igIndex].instances[
-        instanceIndex
-      ].billingPlan = data;
-      Object.keys(individualPlan.value.product.resources).forEach((k) => {
-        tempService.instancesGroups[igIndex].instances[instanceIndex].resources[
-          k
-        ] = individualPlan.value.product.resources[k];
-      });
-
-      api.services._update(tempService).then(() => {
-        createIndividualLoading.value = false;
-        emit("refresh");
-      });
+    tempService.instancesGroups[igIndex].instances[instanceIndex].product =
+      productTitle;
+    tempService.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
+      data;
+    Object.keys(individualPlan.value.product.resources).forEach((k) => {
+      tempService.instancesGroups[igIndex].instances[instanceIndex].resources[
+        k
+      ] = individualPlan.value.product.resources[k];
     });
-  });
+    await api.services._update(tempService);
+    emit("refresh");
+    changeTarrifLoading.value = false;
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message:
+        e.response?.data?.message || "Error during create individual plan",
+    });
+  } finally {
+    createIndividualLoading.value = false;
+  }
 };
 
 const setIndividualPlan = () => {

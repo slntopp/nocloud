@@ -46,6 +46,10 @@ export default {
         component: () => import("@/views/PlansCreate.vue"),
       },
       {
+        title: "Instances",
+        component: () => import("@/components/plan/instances.vue"),
+      },
+      {
         title: "Template",
         component: () => import("@/components/plan/template.vue"),
       },
@@ -86,7 +90,7 @@ export default {
   watch: {
     plan() {
       if (
-        !["ovh vps", "ovh dedicated", "goget", "cpanel"].includes(
+        !["ovh vps", "ovh dedicated", "goget", "cpanel",'acronis'].includes(
           this.plan.type
         )
       )

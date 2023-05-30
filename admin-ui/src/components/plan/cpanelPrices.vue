@@ -28,27 +28,6 @@
         >save</v-btn
       >
     </v-card-actions>
-    <v-snackbar
-      v-model="snackbar.visibility"
-      :timeout="snackbar.timeout"
-      :color="snackbar.color"
-    >
-      {{ snackbar.message }}
-      <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
-        <router-link :to="snackbar.route"> Look up. </router-link>
-      </template>
-
-      <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
   </v-card>
 </template>
 
@@ -162,10 +141,10 @@ export default {
 
       this.products[item.name] = undefined;
     },
-    savePrices() {
+    async savePrices() {
       this.isSaveLoading = true;
       try {
-        api.plans.update(this.template.uuid, {
+        await api.plans.update(this.template.uuid, {
           ...this.template,
           products: this.products,
         });

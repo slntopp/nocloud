@@ -92,7 +92,7 @@
           </v-text-field>
         </v-col>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             label="price model"
             item-text="title"
             item-value="uuid"

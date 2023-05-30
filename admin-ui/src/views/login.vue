@@ -30,7 +30,12 @@
                   :error-messages="getErrorMessages"
                   @keypress.enter="tryLogin"
                 ></v-text-field>
-                <v-select v-model="type" class="type-select" :items="typesAccounts" label="Type"></v-select>
+                <v-select
+                  v-model="type"
+                  class="type-select"
+                  :items="typesAccounts"
+                  label="Type"
+                ></v-select>
               </v-form>
             </v-card-text>
             <v-card-actions>
@@ -47,8 +52,11 @@
 </template>
 
 <script>
+import snackbar from "@/mixins/snackbar";
+
 export default {
   name: "login-view",
+  mixins: [snackbar],
   data() {
     return {
       loginFormRules: [(v) => !!v || "Required"],
@@ -68,13 +76,16 @@ export default {
           .dispatch("auth/login", {
             login: this.username,
             password: this.password,
-			type:this.type.toLowerCase()
+            type: this.type.toLowerCase(),
           })
           .then(() => {
             this.$router.push({ name: "Home" });
             this.$store.dispatch("auth/fetchUserData");
           })
           .catch((error) => {
+            this.showSnackbarError({
+              message: error.response.data.message || "Error during login",
+            });
             if (error.response && error.response.status == 401) {
               this.isLoginFailed = true;
             }
@@ -97,7 +108,7 @@ export default {
   height: 100%;
 }
 
-.type-select{
-	margin-left: 30px;
+.type-select {
+  margin-left: 30px;
 }
 </style>

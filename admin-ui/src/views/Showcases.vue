@@ -4,7 +4,12 @@
       <h1 class="page__title">Showcases</h1>
     </div>
 
-    <v-menu offset-y :close-on-content-click="false" @input="clearShowcase">
+    <v-menu
+      offset-y
+      :close-on-content-click="false"
+      :close-on-click="!isOpen"
+      @input="clearShowcase"
+    >
       <template v-slot:activator="{ on, attrs }">
         <v-btn class="mr-2" v-bind="attrs" v-on="on">Create</v-btn>
       </template>
@@ -31,6 +36,8 @@
           label="Services providers"
           v-model="newShowcase.sp"
           :items="sp"
+          @focus="isOpen = true"
+          @blur="changeOpen"
         >
           <template v-slot:selection="{ item, index }">
             <v-chip small v-if="index === 0">
@@ -82,7 +89,7 @@
               item-text="title"
               item-value="uuid"
               label="Price models"
-              :items="plans"
+              :items="getPlans(showcase.sp)"
               :value="showcase.billing_plans"
               @change="(value) => updateShowcase(key, 'billing_plans', value)"
             >
@@ -130,28 +137,6 @@
     >
       Save
     </v-btn>
-
-    <v-snackbar
-      v-model="snackbar.visibility"
-      :timeout="snackbar.timeout"
-      :color="snackbar.color"
-    >
-      {{ snackbar.message }}
-      <template v-if="snackbar.route && Object.keys(snackbar.route).length > 0">
-        <router-link :to="snackbar.route"> Look up. </router-link>
-      </template>
-
-      <template v-slot:action="{ attrs }">
-        <v-btn
-          :color="snackbar.buttonColor"
-          text
-          v-bind="attrs"
-          @click="snackbar.visibility = false"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
   </div>
 </template>
 
@@ -174,6 +159,7 @@ export default {
       sp: []
     },
     updated: [],
+    isOpen: false,
     isLoading: false,
     generalRule: [(v) => !!v || "This field is required!"]
   }),
@@ -204,30 +190,39 @@ export default {
           provider.meta.showcase[id] = showcase;
         }
 
+        const index = this.updated.findIndex(({ uuid }) => uuid === provider.uuid);
         this.$store.commit('servicesProviders/updateService', provider);
 
-        if (!this.updated.find(({ uuid }) => uuid === provider.uuid)) {
+        if (index === -1) {
           this.updated.push(provider);
+        } else {
+          this.updated.splice(index, 1, provider);
         }
         return;
       }
 
       this.showcases[id].sp.forEach((el) => {
         const provider = JSON.parse(JSON.stringify(el));
+        const index = this.updated.findIndex(({ uuid }) => uuid === provider.uuid);
 
         provider.meta.showcase[id][key] = value;
         this.$store.commit('servicesProviders/updateService', provider);
 
-        if (!this.updated.find(({ uuid }) => uuid === provider.uuid)) {
+        if (index === -1) {
           this.updated.push(provider);
+        } else {
+          this.updated.splice(index, 1, provider);
         }
       });
     },
     addShowcase() {
-      this.newShowcase.sp.forEach((el) => {
-        const id = `${this.newShowcase.icon}-${Date.now()}`;
-        const provider = JSON.parse(JSON.stringify(el));
+      const id = `${this.newShowcase.icon}-${Date.now()}`;
 
+      this.newShowcase.sp.forEach((el) => {
+        const provider = JSON.parse(JSON.stringify(el));
+        const index = this.updated.findIndex(({ uuid }) => uuid === provider.uuid);
+
+        if (!provider.meta.showcase) provider.meta.showcase = {};
         provider.meta.showcase[id] = {
           title: this.newShowcase.title,
           icon: this.newShowcase.icon,
@@ -235,14 +230,24 @@ export default {
         };
         this.$store.commit('servicesProviders/updateService', provider);
 
-        if (!this.updated.find(({ uuid }) => uuid === provider.uuid)) {
+        if (index === -1) {
           this.updated.push(provider);
+        } else {
+          this.updated.splice(index, 1, provider);
         }
       });
     },
     clearShowcase(isVisible) {
       if (isVisible) return;
       this.newShowcase = { title: 'Title', icon: '', billing_plans: [], sp: [] };
+    },
+    changeOpen() {
+      setTimeout(() => { this.isOpen = false }, 100);
+    },
+    getPlans(sp) {
+      return this.plans.filter(({ uuid }) =>
+        sp.find(({ meta }) => meta.plans?.includes(uuid))
+      );
     },
     tryToSend() {
       const promises = this.updated.map((provider) =>
@@ -289,7 +294,9 @@ export default {
   },
   computed: {
     sp() {
-      return this.$store.getters['servicesProviders/all'];
+      return this.$store.getters['servicesProviders/all'].filter(
+        ({ locations, type }) => locations.length > 0 || !['ione', 'ovh'].includes(type)
+      );
     },
     plans() {
       return this.$store.getters['plans/all'];

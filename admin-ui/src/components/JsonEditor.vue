@@ -2,11 +2,7 @@
   <v-form v-model="isValid" ref="form">
     <v-row>
       <v-col cols="12">
-        <json-textarea
-          :json="json"
-          :disabled="disabled"
-          @getTree="getTree"
-        />
+        <json-textarea :json="json" :disabled="disabled" @getTree="getTree" />
       </v-col>
     </v-row>
     <json-actions
@@ -16,7 +12,7 @@
       :changeField="changeField"
       :deleteField="deleteField"
       :cancel="cancel"
-      @changeKey="(value) => fieldKey = value"
+      @changeKey="(value) => (fieldKey = value)"
       @changeDisable="changeFields"
     />
     <json-form
@@ -26,145 +22,149 @@
       :typeValue="typeValue"
       :add="add"
       @changeValue="changeValue"
-      @changeAdd="(value) => add = value"
+      @changeAdd="(value) => (add = value)"
     />
   </v-form>
 </template>
 
 <script>
-import JsonActions from '@/components/JsonActions'
-import JsonForm from '@/components/JsonForm'
-import JsonTextarea from '@/components/JsonTextarea'
+import JsonActions from "@/components/JsonActions";
+import JsonForm from "@/components/JsonForm";
+import JsonTextarea from "@/components/JsonTextarea";
 
 export default {
-  name: 'JsonEditor',
+  name: "JsonEditor",
   components: { JsonForm, JsonTextarea, JsonActions },
   props: {
-    json: { type: Object, required: true }
+    json: { type: Object, required: true },
   },
   data: () => ({
-    tree: '',
+    tree: "",
     isValid: false,
-    fieldKey: '',
-    newKey: '',
-    newValue: '',
-    typeValue: '',
+    fieldKey: "",
+    newKey: "",
+    newValue: "",
+    typeValue: "",
     disabled: false,
     disabledDelete: true,
-    add: false
+    add: false,
   }),
   methods: {
-    changeValue ({ key, value }) {
-      this[key] = value
+    changeValue({ key, value }) {
+      this[key] = value;
     },
-    getTree (tree) {
+    getTree(tree) {
       try {
-        JSON.parse(tree)
+        JSON.parse(tree);
 
-        this.tree = tree
-        this.isValid = true
+        this.tree = tree;
+        this.isValid = true;
+        this.changeField();
       } catch {
-        this.isValid = false
+        this.isValid = false;
       }
     },
-    deleteField () {
-      if (this.fieldKey !== '/') {
-        const tree = JSON.parse(JSON.stringify(this.json))
+    deleteField() {
+      if (this.fieldKey !== "/") {
+        const tree = JSON.parse(JSON.stringify(this.json));
 
-        const path = this.fieldKey.split('/')
-        const key = path.pop()
-        let node = tree
+        const path = this.fieldKey.split("/");
+        const key = path.pop();
+        let node = tree;
 
-        path.forEach((el) => { node = node[el] })
-        delete node[key]
+        path.forEach((el) => {
+          node = node[el];
+        });
+        delete node[key];
 
-        this.$emit('changeValue', tree)
+        this.$emit("changeValue", tree);
       }
 
-      this.cancel()
+      this.cancel();
     },
-    changeField () {
-      if (this.tree !== '') {
-        const tree = JSON.parse(this.tree)
+    changeField() {
+      if (this.tree !== "") {
+        const tree = JSON.parse(this.tree);
 
-        this.$emit('changeValue', tree)
-        this.disabled = true
-        this.isValid = false
-        this.tree = ''
+        this.$emit("changeValue", tree);
+        this.disabled = true;
+        this.isValid = false;
+        this.tree = "";
 
-        setTimeout(this.cancel)
-        return
+        setTimeout(this.cancel);
+        return;
       }
 
-      if (this.typeValue === 'object' && this.add) {
-        this.newValue = '{}'
+      if (this.typeValue === "object" && this.add) {
+        this.newValue = "{}";
       }
 
-      const value = (this.typeValue === 'string')
-        ? this.newValue
-        : JSON.parse(this.newValue)
-      const tree = JSON.parse(JSON.stringify(this.json))
+      const value =
+        this.typeValue === "string" ? this.newValue : JSON.parse(this.newValue);
+      const tree = JSON.parse(JSON.stringify(this.json));
 
-      this.findNode(tree, value)
-      this.$emit('changeValue', tree)
-      this.cancel()
+      this.findNode(tree, value);
+      this.$emit("changeValue", tree);
+      this.cancel();
     },
-    findNode (tree, newValue) {
-      if (this.fieldKey === '/') {
-        tree[this.newKey] = newValue
-        return
+    findNode(tree, newValue) {
+      if (this.fieldKey === "/") {
+        tree[this.newKey] = newValue;
+        return;
       }
-      const path = this.fieldKey.split('/')
-      const key = path.pop()
-      let node = tree
+      const path = this.fieldKey.split("/");
+      const key = path.pop();
+      let node = tree;
 
-      path.forEach((el) => { node = node[el] })
+      path.forEach((el) => {
+        node = node[el];
+      });
 
-      const isObject = typeof node[key] === 'object'
-      const isUndefined = newValue === undefined
+      const isObject = typeof node[key] === "object";
+      const isUndefined = newValue === undefined;
 
       if (isObject && !isUndefined && this.add) {
-        node[key][this.newKey] = newValue
+        node[key][this.newKey] = newValue;
       } else if (!isUndefined) {
-        delete node[key]
+        delete node[key];
 
-        node[this.newKey] = newValue
+        node[this.newKey] = newValue;
       } else {
-        return { key, value: node[key], type: typeof node[key] }
+        return { key, value: node[key], type: typeof node[key] };
       }
     },
-    changeFields () {
-      if (this.fieldKey === '/') {
-        this.newKey = ''
-        this.typeValue = ''
-        this.newValue = ''
-        this.disabledDelete = true
+    changeFields() {
+      if (this.fieldKey === "/") {
+        this.newKey = "";
+        this.typeValue = "";
+        this.newValue = "";
+        this.disabledDelete = true;
       } else {
-        const tree = JSON.parse(JSON.stringify(this.json))
-        const { key, value, type } = this.findNode(tree)
+        const tree = JSON.parse(JSON.stringify(this.json));
+        const { key, value, type } = this.findNode(tree);
 
-        this.newKey = key
-        this.typeValue = type
-        this.disabledDelete = false
+        this.newKey = key;
+        this.typeValue = type;
+        this.disabledDelete = false;
 
-        if (type === 'string') {
-          this.newValue = value
+        if (type === "string") {
+          this.newValue = value;
         } else {
-          this.newValue = JSON.stringify(value)
+          this.newValue = JSON.stringify(value);
         }
       }
 
-      this.disabled = true
+      this.disabled = true;
     },
-    cancel () {
-      this.newKey = ''
-      this.typeValue = ''
-      this.newValue = ''
+    cancel() {
+      this.newKey = "";
+      this.typeValue = "";
+      this.newValue = "";
 
       this.$refs.form.resetValidation();
-      this.disabledDelete = true
-      this.disabled = false
-    }
-  }
-}
+      this.disabledDelete = true;
+      this.disabled = false;
+    },
+  },
+};
 </script>
