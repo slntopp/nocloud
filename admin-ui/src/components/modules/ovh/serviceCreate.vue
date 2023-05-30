@@ -339,10 +339,19 @@ export default {
       if (path.includes("billing_plan"))
         this.addProducts(data.body.instances[i]);
       this.change(data);
+      this.setProduct(i)
     },
     change(data) {
       this.$emit("update:instances-group", JSON.stringify(data));
     },
+    setProduct(index){
+      const data = JSON.parse(this.instancesGroup);
+      const instance=data.body.instances[index]
+      if(instance.billing_plan?.kind?.toLowerCase()==='static'){
+        setToValue(data.body.instances, `${instance.config?.duration} ${instance.config?.planCode}`, index+'.product');
+        this.change(data);
+      }
+    }
   },
   computed: {
     instances() {

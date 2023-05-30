@@ -60,23 +60,26 @@
       <template v-slot:expanded-item="{ item, headers }">
         <td :colspan="headers.length" style="padding: 0">
           <template v-if="item.vms">
-            <v-card
-              class="px-5 ma-5"
-              color="background-light"
-              width="100%"
-              v-for="machine in item.vms"
-              :key="machine.vmid"
+            <nocloud-table
+              :show-select="false"
+              hide-default-footer
+              :headers="machinesHeaders"
+              :items="item.vms"
+              item-key="data.vmid"
+              no-hide-uuid
             >
-              <v-row>
-                <v-col cols="6">
-                  <v-text-field
-                    label="Instance title"
-                    v-model="machine.title"
-                  />
-                </v-col>
-              </v-row>
-              <json-editor :json="machine"></json-editor>
-            </v-card>
+              <template v-slot:[`item.title`]="{ item }">
+                <v-text-field v-model="item.title" />
+              </template>
+              <template v-slot:[`item.pass`]="{ item }">
+                <password-text-field :value="item.config.password" />
+              </template>
+              <template v-slot:[`item.os`]="{ item }">
+                {{
+                  template?.publicData?.templates[item.config.template_id]?.name
+                }}
+              </template>
+            </nocloud-table>
           </template>
           <v-card-title v-else class="text-center">No machines</v-card-title>
         </td>
@@ -96,7 +99,7 @@ import { computed, onMounted, ref, defineProps, toRefs } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
 import NocloudTable from "@/components/table.vue";
-import JsonEditor from "@/components/JsonEditor.vue";
+import PasswordTextField from "@/components/ui/passwordTextField.vue";
 
 const props = defineProps(["template"]);
 
@@ -113,6 +116,19 @@ const selectedVM = ref([]);
 const headers = ref([
   { text: "User id", value: "data.userid" },
   { text: "Public vn", value: "data.public_vn" },
+]);
+const machinesHeaders = ref([
+  { text: "Title", value: "title" },
+  { text: "Vm ID", value: "data.vmid" },
+  { text: "Vm name", value: "data.vm_name" },
+  { text: "CPU", value: "resources.cpu" },
+  { text: "RAM", value: "resources.ram" },
+  { text: "OS", value: "os" },
+  { text: "Drive size", value: "resources.drive_size" },
+  { text: "Drive type", value: "resources.drive_type" },
+  { text: "Ips private", value: "resources.ips_private" },
+  { text: "Ips public", value: "resources.ips_public" },
+  { text: "Password", value: "pass" },
 ]);
 const users = ref([]);
 const expanded = ref([]);
@@ -167,24 +183,27 @@ const getPlanProducts = (plan) => {
     return;
   }
   Object.keys(plan.products || {}).forEach((productKey) => {
-    Object.keys(plan.products[productKey].resources || {}).forEach(
-      (resourceKey) => {
-        let stop = false;
-        selectedVM.value[0]?.vms.forEach((vm) => {
-          if (
-            !stop &&
-            vm.resources[resourceKey] !=
-              plan.products[productKey].resources[resourceKey]
-          ) {
-            stop = true;
-          }
-        });
-        if (!stop) {
-          products.push(productKey);
+    const isValid = Object.keys(
+      plan.products[productKey].resources || {}
+    ).every((resourceKey) => {
+      const isResourceValid = selectedVM.value[0]?.vms.every((vm) => {
+        if (
+          vm.resources[resourceKey] !=
+          plan.products[productKey].resources[resourceKey]
+        ) {
+          return false;
         }
+        return true;
+      });
+      if (isResourceValid) {
+        return true;
       }
-    );
+    });
+    if (isValid) {
+      products.push(productKey);
+    }
   });
+
   return products;
 };
 

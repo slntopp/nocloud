@@ -228,7 +228,7 @@ export default {
             }_${getTodayFullDate()}`;
         }
         case "ovh": {
-          return (item) => `"IND_${item.title}_${getTodayFullDate()}`;
+          return (item) => `IND_${item.title}_${getTodayFullDate()}`;
         }
         default: {
           return null;
