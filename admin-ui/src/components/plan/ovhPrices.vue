@@ -158,9 +158,6 @@ export default {
   computed: {
     tableComponent() {
       switch (this.template.type) {
-        case "ovh cloud":
-          return () => import("@/components/plan/cloudPrices.vue");
-
         case "ovh vps":
           return () => import("@/components/plan/vpsTable.vue");
 
