@@ -91,7 +91,6 @@ export default {
   name: "dedicated-table",
   components: { nocloudTable },
   props: {
-    sp: { type: Object, required: true },
     fee: { type: Object, required: true },
     template: { type: Object, required: true },
     isPlansLoading: { type: Boolean, required: true },
@@ -163,7 +162,7 @@ export default {
 
       this.isAddonsLoading = true;
       api
-        .post(`/sp/${this.sp.uuid}/invoke`, {
+        .post(`/sp/${uuid}/invoke`, {
           method: "get_baremetal_options",
           params: { planCode },
         })
@@ -201,11 +200,14 @@ export default {
         });
     },
     async changePlan(plan) {
+      const sp = this.$store.getters["servicesProviders/all"];
+      const { uuid } = sp.find((el) => el.type === "ovh");
+
       for await (const el of this.plans) {
         if (el.sell) {
           const {
             meta: { requiredConfiguration },
-          } = await api.post(`/sp/${this.sp.uuid}/invoke`, {
+          } = await api.post(`/sp/${uuid}/invoke`, {
             method: "get_required_configuration",
             params: {
               planCode: el.planCode,
@@ -470,9 +472,14 @@ export default {
       })
       .catch((err) => console.error(err));
 
-    api
-      .post(`/sp/${this.sp.uuid}/invoke`, {
-        method: "get_baremetal_plans",
+    this.$store
+      .dispatch("servicesProviders/fetch")
+      .then(({ pool }) => {
+        const sp = pool.find(({ type }) => type === "ovh");
+
+        return api.post(`/sp/${sp.uuid}/invoke`, {
+          method: "get_baremetal_plans",
+        });
       })
       .then(({ meta }) => {
         this.plans = this.setPlans(meta);

@@ -102,6 +102,7 @@
           <component
             v-if="!['ovh vps', 'ovh dedicated', 'goget'].includes(plan.type)"
             :is="template"
+            :type="plan.type"
             :resources="plan.resources"
             :products="plan.products"
             @change:resource="(data) => changeConfig(data, 'resource')"
