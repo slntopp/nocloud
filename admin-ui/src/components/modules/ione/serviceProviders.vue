@@ -199,7 +199,7 @@ export default {
         subheader: "Public IPs Pool ID",
         rules: [
           (value) => !!value || value === 0 || "Field is required",
-          (value) => !!Number(value) || "Field must be number"
+          (value) => !!Number(value) || "Field must be number",
         ],
         label: "pip",
         bind: {
@@ -211,7 +211,7 @@ export default {
         subheader: "Private Networks Template ID",
         rules: [
           (value) => !!value || value === 0 || "Field is required",
-          (value) => !!Number(value) || "Field must be number"
+          (value) => !!Number(value) || "Field must be number",
         ],
         label: "pvp",
         bind: {
@@ -220,7 +220,7 @@ export default {
       },
       private_vnet_ban: {
         type: "bool",
-        label: "Private networking feature",
+        subheader: "Private Net Functions",
         rules: [() => true],
       },
     },
@@ -303,7 +303,9 @@ export default {
 
     setVarsValueDefault(vars, fieldName, isChange, data) {
       vars[fieldName] = {
-        value: { default: isChange ? JSON.parse(data) : this.getValue(fieldName) },
+        value: {
+          default: isChange ? JSON.parse(data) : this.getValue(fieldName),
+        },
       };
     },
 
@@ -366,7 +368,10 @@ export default {
   },
   mounted() {
     if (!this.vars.console?.value) {
-      this.$emit("change:vars", { ...this.vars, console: { value: "vnc" } });
+      this.$emit("change:vars", {
+        ...this.vars,
+        console: { value: { default: "vnc" } },
+      });
     }
   },
   computed: {

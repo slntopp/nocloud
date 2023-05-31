@@ -173,6 +173,7 @@ export default {
     template: { type: Object, required: true },
     isPlansLoading: { type: Boolean, required: true },
     getPeriod: { type: Function, required: true },
+    sp: { type: Object, required: true },
   },
   data: () => ({
     groups: [],
@@ -287,12 +288,12 @@ export default {
       setTimeout(() => {
         const headers = document.querySelectorAll(".groupable");
 
-        headers.forEach(({ firstElementChild, children }) => {
+        headers.forEach(({ firstChild, children }) => {
           if (!children[1]?.className.includes("group-icon")) {
             const element = document.querySelector(".group-icon");
             const icon = element.cloneNode(true);
 
-            firstElementChild.after(icon);
+            firstChild.after(icon);
             icon.style = "display: inline-flex";
 
             icon.addEventListener("click", () => {
@@ -301,7 +302,7 @@ export default {
 
               if (menu.className.includes("menuable__content__active")) return;
 
-              this.column = firstElementChild.innerText;
+              this.column = firstChild.textContent.trim();
               if (this.column === "Group") {
                 this.filters[this.tabsIndex].Group = this.groups;
                 this.selected[this.tabsIndex].Group = this.groups;
@@ -618,13 +619,8 @@ export default {
       })
       .catch((err) => console.error(err));
 
-    this.$store
-      .dispatch("servicesProviders/fetch")
-      .then(({ pool }) => {
-        const sp = pool.find(({ type }) => type === "ovh");
-
-        return api.post(`/sp/${sp.uuid}/invoke`, { method: "get_plans" });
-      })
+    api
+      .post(`/sp/${this.sp.uuid}/invoke`, { method: "get_plans" })
       .then(({ meta }) => {
         this.changePlans(meta);
         this.changeAddons(meta);
@@ -713,10 +709,11 @@ export default {
 <style>
 .v-card .v-icon.group-icon {
   display: none;
-  margin: 0 0 2px 4px;
+  margin: 0 0 1px 2px;
   font-size: 18px;
-  opacity: 0.5;
+  opacity: 1;
   cursor: pointer;
+  color: #fff;
 }
 
 .v-data-table__expanded__content {

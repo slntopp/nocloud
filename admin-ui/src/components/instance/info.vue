@@ -2,7 +2,11 @@
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-row>
       <v-col>
-        <instance-actions :template="template" />
+        <instance-actions
+          :sp="sp"
+          :copy-template="copyInstance"
+          :template="template"
+        />
       </v-col>
     </v-row>
     <v-card-title class="primary--text">Client info</v-card-title>
@@ -11,7 +15,7 @@
         <route-text-field
           :to="{
             name: 'NamespacePage',
-            params: { namespaceId: namespace.uuid },
+            params: { namespaceId: namespace?.uuid },
           }"
           label="Group(Namespace)"
           :value="!namespace ? '' : 'NS_' + namespace.title"
@@ -20,11 +24,11 @@
       <v-col>
         <div class="d-flex justify-center align-center">
           <route-text-field
-            :to="{ name: 'Account', params: { accountId: account.uuid } }"
+            :to="{ name: 'Account', params: { accountId: account?.uuid } }"
             label="Account"
             :value="account?.title"
           />
-          <v-btn icon @click="moveDialog = true">
+          <v-btn v-if="isMoveAvailable" icon @click="moveDialog = true">
             <v-icon size="30">mdi-arrow-up-bold</v-icon>
           </v-btn>
         </div>
@@ -43,19 +47,18 @@
         />
       </v-col>
     </v-row>
-    <component
-      v-if="!template.type.includes('ovh') && !template.type.includes('ione')"
-      :is="templates[template.type] ?? templates.custom"
-      :template="template"
-      @refresh="refreshInstance"
-    />
-    <template v-else>
+<!--    <component-->
+<!--      v-if="!type.includes('ovh') && !type.includes('ione')"-->
+<!--      :is="templates[type] ?? templates.custom"-->
+<!--      :template="template"-->
+<!--      @refresh="refreshInstance"-->
+<!--    />-->
+    <template>
       <v-card-title class="primary--text">Instance info</v-card-title>
       <v-row>
         <v-col>
           <v-text-field
-            :value="template.title"
-            @input="$emit('update', { key: 'title', value: $event })"
+            v-model="copyInstance.title"
             ref="instance-title"
             label="Instance title"
           >
@@ -65,7 +68,7 @@
               >
               <login-in-account-icon
                 :uuid="account?.uuid"
-                :instanceId="instance.uuid"
+                :instanceId="template.uuid"
               />
             </template>
           </v-text-field>
@@ -75,7 +78,7 @@
         </v-col>
         <v-col>
           <route-text-field
-            :to="{ name: 'Service', params: { serviceId: service.uuid } }"
+            :to="{ name: 'Service', params: { serviceId: service?.uuid } }"
             :value="!service ? '' : 'SRV_' + service.title"
             label="Service"
           />
@@ -88,7 +91,7 @@
           />
         </v-col>
         <v-col>
-          <v-text-field readonly :value="template.type" label="Type" />
+          <v-text-field readonly :value="type" label="Type" />
         </v-col>
       </v-row>
       <component
@@ -98,6 +101,7 @@
       />
       <v-card-title class="primary--text">Billing info</v-card-title>
       <component
+        @update="updateCopy"
         :is="billingInfoComponent"
         :template="template"
         :service="service"
@@ -120,7 +124,7 @@
       v-if="billingLabelComponent"
       style="position: absolute; top: 0; right: 75px"
     >
-      <component :is="billingLabelComponent" :template="instance" />
+      <component :is="billingLabelComponent" :template="copyInstance" />
     </div>
   </v-card>
 </template>
@@ -153,7 +157,7 @@ export default {
     copyed: null,
     templates: {},
     moveDialog: false,
-    instance: {},
+    copyInstance: {},
   }),
   methods: {
     addToClipboard(text, index) {
@@ -176,6 +180,17 @@ export default {
       this.$store.dispatch("services/fetch", this.template.uuid);
       this.$store.dispatch("servicesProviders/fetch");
     },
+    updateCopy({ key, value }) {
+      const keys = key.split(".");
+      if (keys.length) {
+        const lastKey = keys.pop();
+        let temp = this.copyInstance;
+        keys.forEach((key) => (temp = temp[key]));
+        temp[lastKey] = value;
+      } else {
+        this.copyInstance[key] = value;
+      }
+    },
   },
   computed: {
     ...mapGetters("namespaces", { namespaces: "all" }),
@@ -189,32 +204,35 @@ export default {
       );
     },
     service() {
-      return this.services?.find((s) => s.uuid == this.template.service);
+      return this.services?.find((s) => s?.uuid == this.template.service);
     },
     account() {
       if (!this.namespace) {
         return;
       }
       return this.accounts?.find(
-        (a) => a.uuid == this.namespace.access.namespace
+        (a) => a?.uuid == this.namespace.access.namespace
       );
     },
     sp() {
-      return this.servicesProviders?.find((sp) => sp.uuid == this.template.sp);
+      return this.servicesProviders?.find((sp) => sp?.uuid == this.template.sp);
     },
     additionalInstanceInfoComponent() {
       return () =>
-        import(
-          `@/components/modules/${this.template.type}/additionalInstanceInfo.vue`
-        );
+        import(`@/components/modules/${this.type}/additionalInstanceInfo.vue`);
     },
     billingInfoComponent() {
-      return () =>
-        import(`@/components/modules/${this.template.type}/billingInfo.vue`);
+      return () => import(`@/components/modules/${this.type}/billingInfo.vue`);
     },
     billingLabelComponent() {
-      return () =>
-        import(`@/components/modules/${this.instance.type}/billingLabel.vue`);
+      return () => import(`@/components/modules/${this.type}/billingLabel.vue`);
+    },
+    isMoveAvailable() {
+      const blockedTypes = ["ione"];
+      return !blockedTypes.includes(this.type);
+    },
+    type() {
+      return this.template.type;
     },
   },
   created() {
@@ -232,13 +250,14 @@ export default {
           import(`@/components/modules/${matched[1]}/instanceCard.vue`);
       }
     });
-
-    this.instance = this.template;
+  },
+  mounted() {
+    this.copyInstance = JSON.parse(JSON.stringify(this.template));
   },
   watch: {
     template: {
       handler(newVal) {
-        this.instance = JSON.parse(JSON.stringify(newVal));
+        this.copyInstance = JSON.parse(JSON.stringify(newVal));
       },
       deep: true,
     },

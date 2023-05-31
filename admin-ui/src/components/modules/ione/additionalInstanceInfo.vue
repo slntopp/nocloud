@@ -25,13 +25,8 @@
         <v-text-field readonly :value="os" label="OS login" />
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          label="Pass"
-          :type="isVisible ? 'text' : 'password'"
+        <password-text-field
           :value="template.config.password"
-          :append-icon="isVisible ? 'mdi-eye' : 'mdi-eye-off'"
-          @click:append="isVisible = !isVisible"
         />
       </v-col>
     </v-row>
@@ -68,14 +63,13 @@
 </template>
 
 <script setup>
-import { toRefs, defineProps, ref, computed } from "vue";
+import { toRefs, defineProps, computed } from "vue";
 import InstanceIpMenu from "@/components/ui/instanceIpMenu.vue";
+import PasswordTextField from "@/components/ui/passwordTextField.vue";
 
 const props = defineProps(["template", "sp"]);
 
 const { template } = toRefs(props);
-
-const isVisible = ref(false);
 
 const os = computed(() => {
   const id = props.template.config.template_id;
