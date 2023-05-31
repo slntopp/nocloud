@@ -455,7 +455,7 @@ export default {
       );
       if (matched && matched.length > 1) {
         if (matched[1] === "ovh") {
-          this.types.push("ovh vps", "ovh dedicated");
+          this.types.push("ovh vps", "ovh dedicated","ovh cloud");
         } else {
           this.types.push(matched[1]);
         }
