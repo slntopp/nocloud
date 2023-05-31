@@ -26,6 +26,9 @@
       :loading="isPlansLoading"
       :footer-error="fetchError"
     >
+      <template v-slot:[`item.name`]="{ item }">
+        <v-text-field dense style="width: 200px" v-model="item.name" />
+      </template>
       <template v-slot:[`item.margin`]="{ item }">
         {{ getMargin(item, false) }}
       </template>
@@ -74,7 +77,7 @@
         </v-dialog>
       </template>
       <template v-slot:[`item.sell`]="{ item }">
-        <v-switch v-model="item.sell" />
+        <v-switch v-model="item.sell" @change="fetchAddons(item)" />
       </template>
     </nocloud-table>
   </div>
@@ -145,8 +148,15 @@ export default {
     isAddonsLoading: false,
   }),
   methods: {
-    fetchAddons({ planCode }) {
-      if (this.addons[planCode]) return;
+    fetchAddons({ planCode, sell }) {
+      if (this.addons[planCode]) {
+        this.addons[planCode].forEach(({ price }, i) => {
+          if (price.value !== 0) return;
+          this.addons[planCode][i].sell = sell;
+        });
+        return;
+      }
+
       const sp = this.$store.getters["servicesProviders/all"];
       const { uuid } = sp.find((el) => el.type === "ovh");
 
@@ -174,6 +184,7 @@ export default {
               addon.value = resource.price;
               addon.sell = true;
             }
+            if (addon.price.value === 0 && sell) addon.sell = true;
 
             return addon;
           });
@@ -245,12 +256,12 @@ export default {
       setTimeout(() => {
         const headers = document.querySelectorAll(".groupable");
 
-        headers.forEach(({ firstElementChild, children }) => {
+        headers.forEach(({ firstChild, children }) => {
           if (!children[1]?.className.includes("group-icon")) {
             const element = document.querySelector(".group-icon");
             const icon = element.cloneNode(true);
 
-            firstElementChild.after(icon);
+            firstChild.after(icon);
             icon.style = "display: inline-flex";
 
             icon.addEventListener("click", () => {
@@ -259,7 +270,7 @@ export default {
 
               if (menu.className.includes("menuable__content__active")) return;
 
-              this.column = firstElementChild.innerText;
+              this.column = firstChild.textContent.trim();
 
               element.dispatchEvent(new Event("click"));
 
@@ -528,8 +539,9 @@ export default {
   display: none;
   margin: 0 0 2px 4px;
   font-size: 18px;
-  opacity: 0.5;
+  opacity: 1;
   cursor: pointer;
+  color: #fff;
 }
 
 .v-data-table__expanded__content {
