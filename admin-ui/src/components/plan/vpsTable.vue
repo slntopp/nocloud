@@ -173,6 +173,7 @@ export default {
     template: { type: Object, required: true },
     isPlansLoading: { type: Boolean, required: true },
     getPeriod: { type: Function, required: true },
+    sp: { type: Object, required: true },
   },
   data: () => ({
     groups: [],
@@ -618,13 +619,8 @@ export default {
       })
       .catch((err) => console.error(err));
 
-    this.$store
-      .dispatch("servicesProviders/fetch")
-      .then(({ pool }) => {
-        const sp = pool.find(({ type }) => type === "ovh");
-
-        return api.post(`/sp/${sp.uuid}/invoke`, { method: "get_plans" });
-      })
+    api
+      .post(`/sp/${this.sp.uuid}/invoke`, { method: "get_plans" })
       .then(({ meta }) => {
         this.changePlans(meta);
         this.changeAddons(meta);

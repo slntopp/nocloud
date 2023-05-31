@@ -68,7 +68,7 @@ export default {
       const account = store.getters["accounts/all"].find(
         (a) => a.uuid === namespace.access.namespace
       );
-      return account.balance;
+      return account?.balance;
     };
 
     const dueDate = computed(() => {

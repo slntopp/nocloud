@@ -111,10 +111,5 @@ export default {
       return this.secrets[fieldName];
     },
   },
-  mounted() {
-    if (!this.vars.console?.value) {
-      this.$emit("change:vars", { ...this.vars, console: { value: "vnc" } });
-    }
-  },
 };
 </script>

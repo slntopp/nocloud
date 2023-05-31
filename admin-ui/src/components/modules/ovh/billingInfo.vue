@@ -48,8 +48,8 @@
     >
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field
-          v-model.number="prices[item.key]"
-          @change="setTotalNewPrice"
+          v-model.number="item.price"
+          @change="onUpdatePrice(item)"
           type="number"
           append-icon="mdi-pencil"
         ></v-text-field>
@@ -67,14 +67,7 @@
           <td>{{ totalBasePrice || "Loading..." }}</td>
           <td>
             <div class="d-flex justify-space-between align-center">
-              <span>{{ totalNewPrice.toFixed(2) }} </span>
-              <v-btn
-                class="mx-5"
-                :disabled="isBasePricesLoading"
-                :loading="isPlanChangeLoading"
-                @click="saveNewPrices"
-                >Save prices</v-btn
-              >
+              {{ totalNewPrice?.toFixed(2) }}
             </div>
           </td>
         </tr>
@@ -103,16 +96,14 @@ import NocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";
 import EditPriceModel from "@/components/modules/ovh/editPriceModel.vue";
-import { getTodayFullDate } from "@/functions";
 
 const props = defineProps(["template", "plans"]);
-const emit = defineEmits(["refresh"]);
+const emit = defineEmits(["refresh", "update"]);
 
 const store = useStore();
 
 const { template, plans } = toRefs(props);
 const pricesItems = ref([]);
-const prices = ref({});
 const basePrices = ref({});
 const rate = ref(0);
 const pricesHeaders = ref([
@@ -120,67 +111,19 @@ const pricesHeaders = ref([
   { text: "Base price", value: "basePrice" },
   { text: "Price", value: "price" },
 ]);
-const isPlanChangeLoading = ref(false);
 const totalNewPrice = ref(0);
 const totalBasePrice = ref(0);
 const isBasePricesLoading = ref(false);
 const priceModelDialog = ref(false);
 
-const saveNewPrices = async () => {
-  const instance = JSON.parse(JSON.stringify(template.value));
-  const planCodeLocal = "IND_" + instance.title + "_" + getTodayFullDate();
-  const plan = {
-    title: planCodeLocal,
-    public: false,
-    kind: instance.billingPlan.kind,
-    type: instance.billingPlan.type,
-    resources: [],
-  };
-  const product = { ...tarrif.value, price: prices.value.tarrif };
-  plan.products = {
-    [duration.value + " " + template.value.config.planCode]: product,
-  };
-  addons.value.forEach((key) => {
-    plan.resources.push({
-      ...template.value.billingPlan.resources.find(
-        (p) => p.key === [duration.value, key].join(" ")
-      ),
-      price: prices.value[key],
-    });
-  });
-
-  isPlanChangeLoading.value = true;
-  try {
-    const data = await api.plans.create(plan);
-    await api.servicesProviders.bindPlan(template.value.sp, [data.uuid]);
-    const tempService = JSON.parse(JSON.stringify(service.value));
-    const igIndex = tempService.instancesGroups.findIndex((ig) =>
-      ig.instances.find((i) => i.uuid === template.value.uuid)
-    );
-    const instanceIndex = tempService.instancesGroups[
-      igIndex
-    ].instances.findIndex((i) => i.uuid === template.value.uuid);
-
-    tempService.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
-      data;
-    await api.services._update(tempService);
-    isPlanChangeLoading.value = false;
-    emit("refresh");
-  } catch (e) {
-    store.commit("snackbar/showSnackbarError", {
-      message: e.response?.data?.message || "Error during save prices",
-    });
-  } finally {
-    isPlanChangeLoading.value = false;
-  }
-};
-
 const setTotalNewPrice = () => {
-  totalNewPrice.value = Object.keys(prices.value).reduce(
-    (acc, key) => acc + +prices.value[key],
-    0
-  );
+  totalNewPrice.value = pricesItems.value.reduce((acc, i) => i.price + acc, 0);
 };
+
+const onUpdatePrice=(item)=>{
+  emit("update", { key: item.path, value: item.price });
+  setTotalNewPrice()
+}
 
 const getBasePrices = () => {
   isBasePricesLoading.value = true;
@@ -218,13 +161,13 @@ const getBasePrices = () => {
       totalBasePrice.value = Object.keys(basePrices.value)
         .reduce((acc, key) => acc + +basePrices.value[key], 0)
         .toFixed(2);
-      isBasePricesLoading.value = false;
     })
     .catch((e) =>
       store.commit("snackbar/showSnackbarError", {
         message: e.response?.data?.message || "Error during fetch base prices",
       })
-    );
+    )
+    .finally(() => (isBasePricesLoading.value = false));
 };
 const getPriceFromProduct = (product) => {
   return (
@@ -241,14 +184,19 @@ const initPrices = () => {
     title: "tarrif",
     key: "tarrif",
     ind: 0,
+    path: `billingPlan.products.${[duration.value, planCode.value].join(
+      " "
+    )}.price`,
+    price: tarrif.value.price,
   });
-  prices.value["tarrif"] = tarrif.value.price;
 
   addons.value.forEach((key, ind) => {
-    prices.value[key] = template.value.billingPlan.resources.find(
+    const addonIndex = template.value.billingPlan.resources.findIndex(
       (p) => p.key === [duration.value, key].join(" ")
-    ).price;
+    );
     pricesItems.value.push({
+      price: template.value.billingPlan.resources[addonIndex].price,
+      path: `billingPlan.resources.${addonIndex}.price`,
       title: key,
       key: key,
       index: ind + 1,

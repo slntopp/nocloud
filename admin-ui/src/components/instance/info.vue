@@ -2,7 +2,11 @@
   <v-card elevation="0" color="background-light" class="pa-4">
     <v-row>
       <v-col>
-        <instance-actions :sp="sp" :copy-template="copyInstance" :template="template" />
+        <instance-actions
+          :sp="sp"
+          :copy-template="copyInstance"
+          :template="template"
+        />
       </v-col>
     </v-row>
     <v-card-title class="primary--text">Client info</v-card-title>
@@ -24,7 +28,7 @@
             label="Account"
             :value="account?.title"
           />
-          <v-btn icon @click="moveDialog = true">
+          <v-btn v-if="isMoveAvailable" icon @click="moveDialog = true">
             <v-icon size="30">mdi-arrow-up-bold</v-icon>
           </v-btn>
         </div>
@@ -43,13 +47,13 @@
         />
       </v-col>
     </v-row>
-    <component
-      v-if="!template.type.includes('ovh') && !template.type.includes('ione')"
-      :is="templates[template.type] ?? templates.custom"
-      :template="template"
-      @refresh="refreshInstance"
-    />
-    <template v-else>
+<!--    <component-->
+<!--      v-if="!type.includes('ovh') && !type.includes('ione')"-->
+<!--      :is="templates[type] ?? templates.custom"-->
+<!--      :template="template"-->
+<!--      @refresh="refreshInstance"-->
+<!--    />-->
+    <template>
       <v-card-title class="primary--text">Instance info</v-card-title>
       <v-row>
         <v-col>
@@ -87,7 +91,7 @@
           />
         </v-col>
         <v-col>
-          <v-text-field readonly :value="template.type" label="Type" />
+          <v-text-field readonly :value="type" label="Type" />
         </v-col>
       </v-row>
       <component
@@ -215,17 +219,20 @@ export default {
     },
     additionalInstanceInfoComponent() {
       return () =>
-        import(
-          `@/components/modules/${this.template.type}/additionalInstanceInfo.vue`
-        );
+        import(`@/components/modules/${this.type}/additionalInstanceInfo.vue`);
     },
     billingInfoComponent() {
-      return () =>
-        import(`@/components/modules/${this.template.type}/billingInfo.vue`);
+      return () => import(`@/components/modules/${this.type}/billingInfo.vue`);
     },
     billingLabelComponent() {
-      return () =>
-        import(`@/components/modules/${this.template.type}/billingLabel.vue`);
+      return () => import(`@/components/modules/${this.type}/billingLabel.vue`);
+    },
+    isMoveAvailable() {
+      const blockedTypes = ["ione"];
+      return !blockedTypes.includes(this.type);
+    },
+    type() {
+      return this.template.type;
     },
   },
   created() {
