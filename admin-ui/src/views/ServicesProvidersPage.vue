@@ -113,7 +113,7 @@ export default {
           import("@/components/modules/custom/serviceProviderVars.vue"),
       });
 
-      if (this.item.type === "ione") tabs.splice(3, 0, {
+      if (this.item?.type === "ione") tabs.splice(3, 0, {
         title: "Nebula",
         component: () => import("@/components/ServicesProvider/nebula.vue"),
       });
