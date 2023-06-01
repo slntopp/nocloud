@@ -132,17 +132,16 @@ UPDATE DOCUMENT(@key) WITH { data: @data } IN @@collection
 `
 
 const removePlanQuery = `
-UPDATE DOCUMENT(@key) WITH { billingPlan: null } IN @@collection 
+UPDATE DOCUMENT(@key) WITH { billing_plan: null } IN @@collection 
 `
 
 const updatePlanQuery = `
-UPDATE DOCUMENT(@key) WITH { billingPlan: @billingPlan } IN @@collection
+UPDATE DOCUMENT(@key) WITH { billing_plan: @billingPlan } IN @@collection
 `
 
 func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
-	log.Debug("uuid plan", zap.String("uuid", inst.GetUuid()))
 
 	if oldInst.GetStatus() == spb.NoCloudStatus_DEL {
 		log.Info("Inst cannot be updated. Status DEL", zap.String("uuid", oldInst.GetUuid()))
@@ -185,9 +184,6 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 			log.Error("Failed to remove plan")
 			return err
 		}
-
-		log.Debug("old plan", zap.Any("plan", oldInst.GetBillingPlan()))
-		log.Debug("new plan", zap.Any("plan", inst.GetBillingPlan()))
 
 		_, err = ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
 			"@collection": schema.INSTANCES_COL,
