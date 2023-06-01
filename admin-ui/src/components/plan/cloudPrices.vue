@@ -13,7 +13,7 @@
       item-key="uniqueId"
       table-name="cloudPrices"
       :show-select="false"
-      :loading="isPlansLoading"
+      :loading="isFlavoursLoading"
       :headers="pricesHeaders"
       :items="flavours"
       show-expand
@@ -81,7 +81,7 @@ const flavours = ref([]);
 const selectedImages = ref({});
 const prices = ref([]);
 const selectedRegion = ref("");
-const isPlansLoading = ref(false);
+const isFlavoursLoading = ref(false);
 const isSaveLoading = ref(false);
 
 const pricesHeaders = ref([
@@ -145,7 +145,7 @@ const getKey = (item) => {
 };
 
 watch(selectedRegion, async () => {
-  isPlansLoading.value = true;
+  isFlavoursLoading.value = true;
   try {
     const { meta } = await api.servicesProviders.action({
       action: "get_cloud_flavors",
@@ -181,7 +181,7 @@ watch(selectedRegion, async () => {
       message: "Erorr during fetch plans",
     });
   } finally {
-    isPlansLoading.value = false;
+    isFlavoursLoading.value = false;
   }
 });
 
