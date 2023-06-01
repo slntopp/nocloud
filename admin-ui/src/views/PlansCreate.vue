@@ -102,6 +102,7 @@
           <component
             v-if="!['ovh vps', 'ovh dedicated', 'goget'].includes(plan.type)"
             :is="template"
+            :type="plan.type"
             :resources="plan.resources"
             :products="plan.products"
             @change:resource="(data) => changeConfig(data, 'resource')"
@@ -455,7 +456,7 @@ export default {
       );
       if (matched && matched.length > 1) {
         if (matched[1] === "ovh") {
-          this.types.push("ovh vps", "ovh dedicated");
+          this.types.push("ovh vps", "ovh dedicated","ovh cloud");
         } else {
           this.types.push(matched[1]);
         }

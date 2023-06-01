@@ -11,8 +11,8 @@
       <v-col>
         <v-text-field
           readonly
-          label="Lcm state"
-          :value="template.state?.meta.lcm_state_str"
+          label="Provider API vpsName"
+          :value="template.data.vpsName"
         />
       </v-col>
       <v-col>

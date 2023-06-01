@@ -28,6 +28,7 @@
       <v-tab-item>
         <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
         <service-info
+          @refresh="fetchService"
           v-if="service"
           :service="service"
           :chipColor="chipColor"
@@ -82,6 +83,14 @@ export default {
 
       return title;
     },
+    fetchService() {
+      this.$store.dispatch("servicesProviders/fetch");
+      this.$store.dispatch("services/fetchById", this.serviceId).then(() => {
+        this.found = !!this.service;
+        document.title = `${this.serviceTitle} | NoCloud`;
+      });
+      this.$store.dispatch("services/fetch");
+    },
   },
   computed: {
     service() {
@@ -111,12 +120,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("servicesProviders/fetch");
-    this.$store.dispatch("services/fetchById", this.serviceId).then(() => {
-      this.found = !!this.service;
-      document.title = `${this.serviceTitle} | NoCloud`;
-    });
-    this.$store.dispatch("services/fetch");
+    this.fetchService();
   },
   mounted() {
     document.title = `${this.serviceTitle} | NoCloud`;
