@@ -172,7 +172,9 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		mask.Product = inst.Product
 	}
 
-	if inst.GetBillingPlan() != oldInst.GetBillingPlan() {
+	equalPlans := reflect.DeepEqual(inst.GetBillingPlan(), oldInst.GetBillingPlan())
+
+	if !equalPlans {
 		_, err := ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
 			"@collection": schema.INSTANCES_COL,
 			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
@@ -193,13 +195,9 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		}
 	}
 
-	log.Debug("datas", zap.Any("odl data", oldInst.GetData()), zap.Any("new data", inst.GetData()))
+	equalDatas := reflect.DeepEqual(inst.GetData(), oldInst.GetData())
 
-	check := reflect.DeepEqual(inst.GetData(), oldInst.GetData())
-
-	log.Debug("deep equal", zap.Bool("check", check))
-
-	if !check {
+	if !equalDatas {
 		_, err := ctrl.db.Query(ctx, updateDataQuery, map[string]interface{}{
 			"@collection": schema.INSTANCES_COL,
 			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
