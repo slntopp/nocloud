@@ -13,7 +13,14 @@
     <confirm-dialog @confirm="deleteInstance">
       <v-btn class="mr-2" :loading="isLoading"> Delete </v-btn>
     </confirm-dialog>
-    <v-btn class="mr-2" :loading="isSaveLoading" @click="save"> Save </v-btn>
+    <v-btn
+      class="mr-2"
+      :loading="isSaveLoading"
+      @click="save"
+      :color="isChanged ? 'primary' : ''"
+    >
+      Save
+    </v-btn>
   </div>
 </template>
 <script>
@@ -81,7 +88,8 @@ export default {
       tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
       if (
         this.copyTemplate &&
-        JSON.stringify(this.copyTemplate) !== JSON.stringify(this.template)
+        JSON.stringify(this.copyTemplate.billingPlan) !==
+          JSON.stringify(this.template.billingPlan)
       ) {
         const title = this.getPlanTitle(this.template);
         const billingPlan = {
@@ -238,6 +246,11 @@ export default {
     service() {
       return this.$store.getters["services/all"]?.find(
         (s) => s.uuid == this.template.service
+      );
+    },
+    isChanged() {
+      return (
+        JSON.stringify(this.template) !== JSON.stringify(this.copyTemplate)
       );
     },
   },
