@@ -186,7 +186,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		}
 
 		log.Debug("old plan", zap.Any("plan", oldInst.GetBillingPlan()))
-		log.Debug("new plan", zap.Any("plan", oldInst.GetBillingPlan()))
+		log.Debug("new plan", zap.Any("plan", inst.GetBillingPlan()))
 
 		_, err = ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
 			"@collection": schema.INSTANCES_COL,
