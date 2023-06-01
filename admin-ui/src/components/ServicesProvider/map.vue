@@ -141,7 +141,7 @@
                     @keyup.enter="(e) => onEnterHandler(marker.id, e)"
                     @input="(e) => inputHandler(e, marker)"
                   />
-                  
+
                   <div class="d-flex justify-end">
                     <v-switch
                       label="Is primary"
@@ -155,9 +155,7 @@
                   </div>
 
                   <v-card-actions class="justify-end">
-                    <v-btn @click.stop="saveAndClose(marker.id)">
-                      Save
-                    </v-btn>
+                    <v-btn @click.stop="saveAndClose(marker.id)"> Save </v-btn>
                   </v-card-actions>
                 </v-card>
               </v-dialog>
@@ -211,6 +209,7 @@ export default {
     activePinTitle: { type: String, default: "" },
     canAddPin: { type: Boolean, default: true },
     error: { type: String, default: "" },
+    type: { type: String, default: "" },
   },
 
   data: () => ({
@@ -219,7 +218,7 @@ export default {
 
     markersSave: [],
     markers: [],
-    item: {}
+    item: {},
   }),
   methods: {
     formatText(tag, id) {
@@ -348,7 +347,7 @@ export default {
         return;
       }
       if (target.id) {
-        this.selected = (this.region) ? `${target.id}-${this.region}` : target.id;
+        this.selected = this.region ? `${target.id}-${this.region}` : target.id;
       } else {
         return false;
       }
@@ -356,8 +355,12 @@ export default {
 
       const kx = this.widthMap / (this.widthMap * this.scale);
       const ky = this.heightMap / (this.heightMap * this.scale);
-      const w = this.$refs.map.$refs.viewport.getAttribute("transform").split(" ")[4];
-      const h = this.$refs.map.$refs.viewport.getAttribute("transform").split(" ")[5];
+      const w = this.$refs.map.$refs.viewport
+        .getAttribute("transform")
+        .split(" ")[4];
+      const h = this.$refs.map.$refs.viewport
+        .getAttribute("transform")
+        .split(" ")[5];
       const x =
         parseInt(offsetX * kx - parseInt(w) / this.scale) -
         12 -
@@ -402,11 +405,19 @@ export default {
     },
     mouseLeaveHandler(id) {
       this.$refs.map.mouseLeaveHandler(id);
-    }
+    },
+    changeLocations() {
+      this.item = JSON.parse(JSON.stringify(this.template));
+      console.log(this.type,this.template.locations.filter(
+          (l) => !this.type || this.type === l.type
+      ))
+      this.markers = this.template.locations.filter(
+          (l) => !this.type || this.type === l.type
+      );
+    },
   },
   mounted() {
-    this.item = JSON.parse(JSON.stringify(this.template));
-    this.markers = this.template.locations;
+    this.changeLocations();
   },
   computed: {
     scale() {
@@ -417,7 +428,7 @@ export default {
     },
     heightMap() {
       return this.$refs.map?.heightMap ?? 666;
-    }
+    },
   },
   watch: {
     error(message) {
@@ -425,9 +436,16 @@ export default {
       this.showSnackbarError({ message });
     },
     activePinTitle(value) {
-      this.selected = this.markers?.find(({ title }) => title === value)?.id ?? "";
-    }
-  }
+      this.selected =
+        this.markers?.find(({ title }) => title === value)?.id ?? "";
+    },
+    template() {
+      this.changeLocations();
+    },
+    type() {
+      this.changeLocations();
+    },
+  },
 };
 </script>
 
