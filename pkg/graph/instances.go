@@ -193,13 +193,13 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 			return err
 		}
 	}
-	/*
-		_, err := ctrl.col.ReplaceDocument(ctx, oldInst.Uuid, inst)
-		if err != nil {
-			log.Error("Failed to update Instance", zap.Error(err))
-			return err
-		}
-	*/
+
+	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
+	if err != nil {
+		log.Error("Failed to update Instance", zap.Error(err))
+		return err
+	}
+
 	instMarshal, _ := json.Marshal(inst)
 	oldInstMarshal, _ := json.Marshal(oldInst)
 	diff, err := jsondiff.CompareJSON(oldInstMarshal, instMarshal)
