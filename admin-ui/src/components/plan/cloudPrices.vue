@@ -40,8 +40,8 @@
             <nocloud-table
               item-key="id"
               :loading="!item?.images"
-              :value="selectedImages[`${item.period} ${item.name}`]"
-              @input="selectedImages[`${item.period} ${item.name}`] = $event"
+              :value="selectedImages[getKey(item)]"
+              @input="selectedImages[getKey(item)] = $event"
               :headers="imagesHeaders"
               :items="item?.images"
             />
@@ -120,7 +120,7 @@ const projectId = computed(() => {
 
 onMounted(async () => {
   Object.keys(template.value.products).forEach((key) => {
-    selectedImages[key] = template.value.products[key]?.images;
+    selectedImages.value[key] = template.value.products[key].resources?.images;
   });
   await store.dispatch("servicesProviders/fetchById", sp.value.uuid);
   try {
@@ -139,6 +139,10 @@ onMounted(async () => {
     });
   }
 });
+
+const getKey = (item) => {
+  return `${item.period} ${item.name}`;
+};
 
 watch(selectedRegion, async () => {
   isPlansLoading.value = true;
