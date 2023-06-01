@@ -142,6 +142,7 @@ UPDATE DOCUMENT(@key) WITH { billingPlan: @billingPlan } IN @@collection
 func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
+	log.Debug("uuid plan", zap.String("uuid", inst.GetUuid()))
 
 	if oldInst.GetStatus() == spb.NoCloudStatus_DEL {
 		log.Info("Inst cannot be updated. Status DEL", zap.String("uuid", oldInst.GetUuid()))
