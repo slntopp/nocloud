@@ -175,6 +175,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	equalPlans := reflect.DeepEqual(inst.GetBillingPlan(), oldInst.GetBillingPlan())
 
 	if !equalPlans {
+		log.Debug("Update plan")
 		_, err := ctrl.db.Query(ctx, removePlanQuery, map[string]interface{}{
 			"@collection": schema.INSTANCES_COL,
 			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
@@ -184,10 +185,13 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 			return err
 		}
 
+		log.Debug("old plan", zap.Any("plan", oldInst.GetBillingPlan()))
+		log.Debug("new plan", zap.Any("plan", oldInst.GetBillingPlan()))
+
 		_, err = ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
 			"@collection": schema.INSTANCES_COL,
 			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
-			"billingPlan": inst.BillingPlan,
+			"billingPlan": inst.GetBillingPlan(),
 		})
 		if err != nil {
 			log.Error("Failed to update plan")
