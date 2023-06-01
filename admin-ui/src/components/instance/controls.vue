@@ -13,10 +13,25 @@
     <confirm-dialog @confirm="deleteInstance">
       <v-btn class="mr-2" :loading="isLoading"> Delete </v-btn>
     </confirm-dialog>
+
+    <confirm-dialog
+      v-if="isBillingChange"
+      text="Billing plan has changed, a new plan will be created"
+      @confirm="save"
+    >
+      <v-btn
+        class="mr-2"
+        :loading="isSaveLoading"
+        :color="isChanged ? 'primary' : ''"
+      >
+        Save
+      </v-btn>
+    </confirm-dialog>
     <v-btn
+      v-else
+      @click="save"
       class="mr-2"
       :loading="isSaveLoading"
-      @click="save"
       :color="isChanged ? 'primary' : ''"
     >
       Save
@@ -86,11 +101,7 @@ export default {
       ].instances.findIndex((i) => i.uuid === this.template.uuid);
 
       tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
-      if (
-        this.copyTemplate &&
-        JSON.stringify(this.copyTemplate.billingPlan) !==
-          JSON.stringify(this.template.billingPlan)
-      ) {
+      if (this.isBillingChange) {
         const title = this.getPlanTitle(this.template);
         const billingPlan = {
           ...this.copyTemplate.billingPlan,
@@ -251,6 +262,12 @@ export default {
     isChanged() {
       return (
         JSON.stringify(this.template) !== JSON.stringify(this.copyTemplate)
+      );
+    },
+    isBillingChange() {
+      return (
+        JSON.stringify(this.copyTemplate.billingPlan) !==
+        JSON.stringify(this.template.billingPlan)
       );
     },
   },
