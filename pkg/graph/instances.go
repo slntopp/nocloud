@@ -186,7 +186,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 		_, err = ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
 			"@collection": schema.INSTANCES_COL,
-			"key":         oldInst.Uuid,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
 			"billingPlan": inst.BillingPlan,
 		})
 		if err != nil {
@@ -209,7 +209,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 		_, err = ctrl.db.Query(ctx, updateDataQuery, map[string]interface{}{
 			"@collection": schema.INSTANCES_COL,
-			"key":         oldInst.Uuid,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
 			"data":        inst.Data,
 		})
 		if err != nil {
