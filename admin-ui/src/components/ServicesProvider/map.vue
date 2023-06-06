@@ -248,7 +248,9 @@ export default {
           const color = `color: ${this.textColor.toLowerCase()}`;
           const pos = selectionStart + color.length + 13;
 
-          this.$refs[`color-dialog.${id}`][0].isActive = false;
+          if (this.$refs[`color-dialog.${id}`]?.[0]) {
+            this.$refs[`color-dialog.${id}`][0].isActive = false;
+          }
           setTimeout(() => {
             textarea.focus();
           });
@@ -334,7 +336,9 @@ export default {
       this.markersSave = JSON.parse(JSON.stringify(this.markers));
     },
     saveAndClose(id) {
-      this.$refs["edit-dialog." + id][0].isActive = false;
+      if (this.$refs["edit-dialog." + id]?.[0]) {
+        this.$refs["edit-dialog." + id][0].isActive = false;
+      }
       this.saveCountry();
     },
     cancelSelectedCountry() {
@@ -381,10 +385,20 @@ export default {
       }
 
       setTimeout(() => {
-        const marker = { id: this.selected, title: " ", extra: {}, x, y };
+        const marker = {
+          id: this.selected,
+          type: this.type,
+          title: " ",
+          extra: {},
+          x,
+          y,
+        };
 
         if (this.multiSelect) {
-          this.markers.push({ ...marker, extra: { region: this.region } });
+          this.markers.push({
+            ...marker,
+            extra: { region: this.region },
+          });
         } else {
           this.markers = [marker];
         }
@@ -408,11 +422,8 @@ export default {
     },
     changeLocations() {
       this.item = JSON.parse(JSON.stringify(this.template));
-      console.log(this.type,this.template.locations.filter(
-          (l) => !this.type || this.type === l.type
-      ))
       this.markers = this.template.locations.filter(
-          (l) => !this.type || this.type === l.type
+        (l) => !this.type || this.type === l.type
       );
     },
   },
