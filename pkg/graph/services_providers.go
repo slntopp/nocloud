@@ -216,9 +216,9 @@ FILTER srv.status != @status_init && srv.status != @status_del
 
 const listDeployedGroupsQueryWithInstances = `
 FOR group IN 1 INBOUND @sp
-FILTER group.status == @status
 GRAPH @permissions
 OPTIONS { order: "bfs", uniqueVertices: "global" }
+FILTER group.status == @status
 FILTER IS_SAME_COLLECTION(@groups, group)
     LET instances = (
         FOR instance IN OUTBOUND group
