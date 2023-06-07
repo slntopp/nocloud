@@ -1,18 +1,13 @@
 <template>
   <div class="container">
     <div>
-      <v-list flat dark color="rgba(12, 12, 60, 0.9)">
-        <v-subheader>TYPE</v-subheader>
-        <v-list-item-group mandatory v-model="selectedType" color="primary">
-          <v-list-item
-            :disabled="isRegionLoading"
-            v-for="(item, i) in types"
-            :key="i"
-          >
-            {{ item }}
-          </v-list-item>
-        </v-list-item-group>
-      </v-list>
+      <v-select
+        label="type"
+        :disabled="isRegionLoading"
+        :loading="isRegionLoading"
+        :items="types"
+        v-model="selectedType"
+      ></v-select>
       <div v-if="isRegionLoading" class="spinner">
         <v-progress-circular size="40" color="primary" indeterminate />
       </div>
@@ -29,11 +24,11 @@
     <support-map
       @errorAddPin="errorAddPin"
       :activePinTitle="activePinTitle"
-      :canAddPin="canAddPin"
+      :canAddPin="true"
       :multiSelect="true"
       :error="mapError"
       :template="template"
-      :type="types[selectedType]"
+      :type="selectedType"
       :region="allRegions[selectedRegion]"
       @save="onSavePin"
       @pinHover="onPinHover"
@@ -52,15 +47,15 @@ const { template } = toRefs(props);
 const selectedRegion = ref("");
 const allRegions = ref([]);
 const types = ref(["ovh vps", "ovh cloud", "ovh dedicated"]);
-const mapError = ref("");
-const selectedType = ref();
+const mapError = ref();
+const selectedType = ref("ovh vps");
 const isRegionLoading = ref(false);
 
 const onPinHover = (id) => {
   if (allRegions.value) {
     const location = template.value.locations.find((el) => el.id === id);
 
-    selectedRegion.value = allRegions.value.indexOf(location.extra.region);
+    selectedRegion.value = allRegions.value.indexOf(location.extra?.region);
   }
 };
 const errorAddPin = () => {
@@ -84,17 +79,16 @@ const selectedLocation = computed(() =>
       l.extra?.region === allRegions.value[selectedRegion.value]
   )
 );
-const canAddPin = computed(
-  () =>
-    !selectedLocation.value &&
-    (!!selectedRegion.value || selectedRegion.value == 0)
-);
 
 onMounted(() => {
-  selectedType.value = 0;
+  fetchRegions();
 });
 
-watch(selectedType, async () => {
+watch(selectedType, () => {
+  fetchRegions();
+});
+
+const fetchRegions = async () => {
   try {
     isRegionLoading.value = true;
     const { meta } = await api.servicesProviders.action({
@@ -102,7 +96,7 @@ watch(selectedType, async () => {
       uuid: template.value.uuid,
       params: {
         projectId: template.value.vars?.projectId?.value?.default,
-        type: types.value[selectedType.value],
+        type: selectedType.value,
       },
     });
     allRegions.value = meta.datacenters;
@@ -111,7 +105,7 @@ watch(selectedType, async () => {
   } finally {
     isRegionLoading.value = false;
   }
-});
+};
 </script>
 
 <style scoped>
