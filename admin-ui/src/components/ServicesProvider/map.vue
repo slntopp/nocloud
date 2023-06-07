@@ -342,7 +342,10 @@ export default {
       this.saveCountry();
     },
     cancelSelectedCountry() {
-      this.markers = JSON.parse(JSON.stringify(this.markersSave));
+      this.changeLocations();
+      if (this.markers.length < 2) {
+        this.selected = this.markers[0]?.id;
+      }
     },
     // ---------------------------
     mapClickHandler({ target, offsetX, offsetY }) {
