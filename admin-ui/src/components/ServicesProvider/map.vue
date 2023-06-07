@@ -12,10 +12,7 @@
   >
     <template #actions>
       <!-- byn  .ant-btn-primary -->
-      <div
-        v-if="selected || multiSelect"
-        style="position: absolute; right: 25px; bottom: 13px"
-      >
+      <div style="position: absolute; right: 25px; bottom: 13px">
         <v-btn
           class="ant-btn-primary"
           style="margin-right: 5px; background-color: #4caf50"
@@ -248,7 +245,9 @@ export default {
           const color = `color: ${this.textColor.toLowerCase()}`;
           const pos = selectionStart + color.length + 13;
 
-          this.$refs[`color-dialog.${id}`][0].isActive = false;
+          if (this.$refs[`color-dialog.${id}`]?.[0]) {
+            this.$refs[`color-dialog.${id}`][0].isActive = false;
+          }
           setTimeout(() => {
             textarea.focus();
           });
@@ -334,11 +333,16 @@ export default {
       this.markersSave = JSON.parse(JSON.stringify(this.markers));
     },
     saveAndClose(id) {
-      this.$refs["edit-dialog." + id][0].isActive = false;
+      if (this.$refs["edit-dialog." + id]?.[0]) {
+        this.$refs["edit-dialog." + id][0].isActive = false;
+      }
       this.saveCountry();
     },
     cancelSelectedCountry() {
-      this.markers = JSON.parse(JSON.stringify(this.markersSave));
+      this.changeLocations();
+      if (this.markers.length < 2) {
+        this.selected = this.markers[0]?.id;
+      }
     },
     // ---------------------------
     mapClickHandler({ target, offsetX, offsetY }) {
@@ -381,10 +385,20 @@ export default {
       }
 
       setTimeout(() => {
-        const marker = { id: this.selected, title: " ", extra: {}, x, y };
+        const marker = {
+          id: this.selected,
+          type: this.type || undefined,
+          title: " ",
+          extra: {},
+          x,
+          y,
+        };
 
         if (this.multiSelect) {
-          this.markers.push({ ...marker, extra: { region: this.region } });
+          this.markers.push({
+            ...marker,
+            extra: { region: this.region },
+          });
         } else {
           this.markers = [marker];
         }
@@ -394,7 +408,7 @@ export default {
         setTimeout(() => {
           const ref = this.$refs["textField_" + marker.id][0];
 
-          ref.focus();
+          ref?.focus();
         }, 200);
       }, 10);
     },
@@ -408,11 +422,8 @@ export default {
     },
     changeLocations() {
       this.item = JSON.parse(JSON.stringify(this.template));
-      console.log(this.type,this.template.locations.filter(
-          (l) => !this.type || this.type === l.type
-      ))
       this.markers = this.template.locations.filter(
-          (l) => !this.type || this.type === l.type
+        (l) => !this.type || this.type === l.type
       );
     },
   },
