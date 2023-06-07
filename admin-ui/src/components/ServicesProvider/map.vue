@@ -13,7 +13,6 @@
     <template #actions>
       <!-- byn  .ant-btn-primary -->
       <div
-        v-if="selected || multiSelect"
         style="position: absolute; right: 25px; bottom: 13px"
       >
         <v-btn
