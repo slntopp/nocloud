@@ -12,9 +12,7 @@
   >
     <template #actions>
       <!-- byn  .ant-btn-primary -->
-      <div
-        style="position: absolute; right: 25px; bottom: 13px"
-      >
+      <div style="position: absolute; right: 25px; bottom: 13px">
         <v-btn
           class="ant-btn-primary"
           style="margin-right: 5px; background-color: #4caf50"
@@ -389,7 +387,7 @@ export default {
       setTimeout(() => {
         const marker = {
           id: this.selected,
-          type: this.type,
+          type: this.type || undefined,
           title: " ",
           extra: {},
           x,
@@ -410,7 +408,7 @@ export default {
         setTimeout(() => {
           const ref = this.$refs["textField_" + marker.id][0];
 
-          ref.focus();
+          ref?.focus();
         }, 200);
       }, 10);
     },
