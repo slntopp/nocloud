@@ -28,6 +28,7 @@
       :multiSelect="true"
       :error="mapError"
       :template="template"
+      @set-locations="setLocations"
       :type="selectedType"
       :region="allRegions[selectedRegion]"
       @save="onSavePin"
@@ -55,7 +56,7 @@ const onPinHover = (id) => {
   if (allRegions.value) {
     const location = template.value.locations.find((el) => el.id === id);
 
-    selectedRegion.value = allRegions.value.indexOf(location.extra?.region);
+    selectedRegion.value = allRegions.value.indexOf(location?.extra?.region);
   }
 };
 const errorAddPin = () => {
@@ -106,6 +107,11 @@ const fetchRegions = async () => {
     isRegionLoading.value = false;
   }
 };
+
+const setLocations=(locations)=>{
+  console.log(locations)
+  template.value.locations=locations
+}
 </script>
 
 <style scoped>
