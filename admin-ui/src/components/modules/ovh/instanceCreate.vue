@@ -208,7 +208,7 @@ export default {
         "softraid",
       ];
 
-      addons.forEach((addon) => {
+      addons?.forEach((addon) => {
         const key = alowwed.find((a) => addon.includes(a));
         if (key) {
           newAddons[key] = !newAddons[key]?.length
@@ -224,7 +224,7 @@ export default {
 
       if (path.includes("billing_plan")) {
         const plan = this.plans.list.find(({ uuid }) => val === uuid);
-        const title = plan.title.split(" ");
+        const title = plan?.title.split(" ");
 
         title.pop();
         this.flavors[val] = Object.keys(plan.products).map((el) => {
@@ -328,6 +328,7 @@ export default {
   async created() {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
+      return
     } else if (!this.instance.billing_plan?.uuid) {
       this.ovhType = this.instance.config.type;
       this.setValue("billing_plan", this.instance.billing_plan);
