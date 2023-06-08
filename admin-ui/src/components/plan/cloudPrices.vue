@@ -183,16 +183,18 @@ const fetchFlavours = async () => {
       if (!flavour.available) {
         return;
       }
-
       Object.keys(flavour.planCodes || {}).forEach((key) => {
+        const period = key === "monthly" ? "P1M" : "P1Y";
+        const planCode = `${period} ${flavour.name}-${selectedRegion.value}`;
         newFlavours.push({
           ...flavour,
-          period: key,
+          period,
+          name: planCode,
           price: prices.value[flavour.planCodes[key]],
-          endPrice:
-            template.value.products[`${key} ${flavour.name}`]?.price || 0,
-          enabled: !!template.value.products[`${key} ${flavour.name}`],
-          uniqueId: `${key}_${flavour.id}`,
+          endPrice: template.value.products[planCode]?.price || 0,
+          enabled: !!template.value.products[planCode],
+          uniqueId: `${period} ${flavour.id}`,
+          meta: { region: selectedRegion.value },
         });
       });
     });
@@ -221,8 +223,10 @@ const fetchImages = async () => {
     images.value = meta.images.map((i) => {
       return {
         ...i,
-        enabled: !!template.value.meta?.images?.[selectedRegion.value].find(
-          (real) => real.id === i.id
+        enabled: !!Object.keys(template.value.products).find(
+          (k) =>
+            template.value.products[k].meta?.region === selectedRegion.value &&
+            template.value.products[k].meta?.os?.includes(i.name)
         ),
       };
     });
@@ -238,15 +242,19 @@ const fetchImages = async () => {
 const changePlan = (plan) => {
   plan.products = template.value.products;
 
-  flavors.value.forEach((item) => {
-    const itemName = `${item.period} ${item.name}`;
-
+  const regionImages = [];
+  images.value.forEach((item) => {
     if (item.enabled) {
-      plan.products[itemName] = {
-        title: itemName,
+      regionImages.push(item.name);
+    }
+  });
+  flavors.value.forEach((item) => {
+    if (item.enabled) {
+      plan.products[item.name] = {
+        title: item.name,
         kind: "PREPAID",
         price: item.endPrice,
-        period: item.period === "hourly" ? 60 * 60 : 60 * 60 * 24 * 30,
+        period: item.period === "P1M" ? 60 * 60 : 60 * 60 * 24 * 30,
         resources: {
           osType: item.osType,
           disk: item.disk,
@@ -257,17 +265,12 @@ const changePlan = (plan) => {
           ram: item.ram,
           vcpus: item.vcpus,
         },
+        meta: {
+          ...item.meta,
+          datacenter: [selectedRegion.value],
+          os: regionImages,
+        },
       };
-    }
-  });
-
-  plan.meta = template.value.meta || { images: {} };
-  images.value.forEach((item) => {
-    if (item.enabled) {
-      if (!plan.meta.images?.[item.region]) {
-        plan.meta.images[item.region] = [];
-      }
-      plan.meta.images[item.region].push(item);
     }
   });
 };
