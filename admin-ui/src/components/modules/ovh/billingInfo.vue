@@ -64,7 +64,7 @@
       <template v-slot:body.append>
         <tr>
           <td>Total instance price</td>
-          <td>{{ totalBasePrice || "Loading..." }}</td>
+          <td>{{ isBasePricesLoading ? "Loading..." : totalBasePrice }}</td>
           <td>
             <div class="d-flex justify-space-between align-center">
               {{ totalNewPrice?.toFixed(2) }}
@@ -120,10 +120,10 @@ const setTotalNewPrice = () => {
   totalNewPrice.value = pricesItems.value.reduce((acc, i) => i.price + acc, 0);
 };
 
-const onUpdatePrice=(item)=>{
+const onUpdatePrice = (item) => {
   emit("update", { key: item.path, value: item.price });
-  setTotalNewPrice()
-}
+  setTotalNewPrice();
+};
 
 const getBasePrices = () => {
   isBasePricesLoading.value = true;
@@ -162,11 +162,11 @@ const getBasePrices = () => {
         .reduce((acc, key) => acc + +basePrices.value[key], 0)
         .toFixed(2);
     })
-    .catch((e) =>
+    .catch((e) => {
       store.commit("snackbar/showSnackbarError", {
         message: e.response?.data?.message || "Error during fetch base prices",
-      })
-    )
+      });
+    })
     .finally(() => (isBasePricesLoading.value = false));
 };
 const getPriceFromProduct = (product) => {
@@ -194,8 +194,8 @@ const initPrices = () => {
     const addonIndex = template.value.billingPlan.resources.findIndex(
       (p) => p.key === [duration.value, key].join(" ")
     );
-    if(addonIndex===-1){
-      return
+    if (addonIndex === -1) {
+      return;
     }
 
     pricesItems.value.push({
