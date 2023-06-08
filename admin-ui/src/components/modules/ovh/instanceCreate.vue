@@ -15,6 +15,16 @@
             @change="(value) => setValue('title', value)"
           />
         </v-col>
+        <v-col cols="6">
+          <v-select
+            label="type"
+            :items="ovhTypes"
+            :rules="rules.req"
+            v-model="ovhType"
+            item-value="value"
+            item-text="title"
+          />
+        </v-col>
       </v-row>
 
       <v-row>
@@ -24,7 +34,7 @@
             item-text="title"
             item-value="uuid"
             :value="instance.billing_plan"
-            :items="plans.list"
+            :items="filtredPlans"
             :rules="planRules"
             @change="(value) => setValue('billing_plan', value)"
           />
@@ -52,23 +62,26 @@
         <v-col cols="6">
           <v-select
             label="region"
-            :value="instance.config?.configuration.vps_datacenter"
+            :value="instance.config?.configuration[`${ovhType}_datacenter`]"
             :items="regions[instance.config?.planCode]"
             :rules="rules.req"
             :disabled="!instance.config?.planCode"
             @change="
-              (value) => setValue('config.configuration.vps_datacenter', value)
+              (value) =>
+                setValue(`config.configuration.${ovhType}_datacenter`, value)
             "
           />
         </v-col>
         <v-col cols="6">
           <v-select
             label="OS"
-            :value="instance.config?.configuration.vps_os"
+            :value="instance.config?.configuration[`${ovhType}_os`]"
             :items="images[instance.config?.planCode]"
             :rules="rules.req"
             :disabled="!instance.config?.planCode"
-            @change="(value) => setValue('config.configuration.vps_os', value)"
+            @change="
+              (value) => setValue(`config.configuration.${ovhType}_os`, value)
+            "
           />
         </v-col>
         <v-col cols="6" class="d-flex align-center">
@@ -96,10 +109,11 @@
           v-if="instance.data?.existing"
         >
           <v-text-field
-            label="VPS name"
-            :value="instance.data?.vpsName"
+            v-if="ovhType"
+            :label="`${ovhType} name`"
+            :value="instance.data?.[`${ovhType}Name`]"
             :rules="rules.req"
-            @change="(value) => setValue('data.vpsName', value)"
+            @change="(value) => setValue(`data.${ovhType}Name`, value)"
           />
         </v-col>
       </v-row>
@@ -128,8 +142,6 @@
 </template>
 
 <script>
-import api from "@/api";
-
 const getDefaultInstance = () => ({
   title: "instance",
   config: {
@@ -160,6 +172,13 @@ export default {
     regions: {},
     images: {},
     addons: {},
+
+    ovhTypes: [
+      { title: "ovh vps", value: "vps" },
+      { title: "ovh cloud", value: "cloud" },
+      { title: "ovh dedicated", value: "dedicated" },
+    ],
+    ovhType: "vps",
   }),
   methods: {
     addProducts(instance) {
@@ -177,71 +196,30 @@ export default {
         delete instance.product;
       }
     },
-    fetchPlans() {
-      if (this.regions.length > 0) return;
-      if (this.meta && "catalog" in this.meta) return;
+    setAddons(addons, planCode) {
+      const newAddons = {};
 
-      this.isFlavorsLoading = true;
-      api
-        .post(`/sp/${this.spUuid}/invoke`, { method: "get_plans" })
-        .then(({ meta }) => {
-          this.$emit("set-meta", meta);
-          this.setAddons(meta);
-        })
-        .finally(() => {
-          this.isFlavorsLoading = false;
-        });
-    },
-    setAddons(meta) {
-      this.plans.list.forEach(({ products }) => {
-        for (let key in products) {
-          key = key.split(" ")[1];
-          if (key in this.addons) continue;
+      const alowwed = [
+        "snapshot",
+        "disk",
+        "backup",
+        "traffic",
+        "ram",
+        "softraid",
+      ];
 
-          const plans = meta ? meta : this.meta;
-          const plan = plans?.catalog.plans.find(
-            ({ planCode }) => planCode === key
-          );
-          plan?.configurations.forEach((el) => {
-            el.values.sort();
-            if (el.name.includes("os")) {
-              this.$set(this.images, key, el.values);
-            }
-            if (el.name.includes("datacenter")) {
-              this.$set(this.regions, key, el.values);
-            }
-          });
-
-          const addonsOptions = {
-            snapshot: { key: "snapshot" },
-            additionalDisk: { key: "disk", all: true },
-            automatedBackup: { key: "backup" },
-          };
-          const disk = key.split("-").pop();
-
-          plan?.addonFamilies.forEach((el) => {
-            if (!this.addons[key]) {
-              this.addons[key] = {};
-            }
-
-            const addonOption = addonsOptions[el.name];
-
-            if (addonOption?.all) {
-              this.addons[key][addonOption.key] = el.addons;
-            } else if (addonOption?.key) {
-              this.addons[key][addonOption.key] = el.addons.filter((addon) =>
-                addon.includes(disk)
-              );
-            }
-          });
+      addons.forEach((addon) => {
+        const key = alowwed.find((a) => addon.includes(a));
+        if (key) {
+          newAddons[key] = !newAddons[key]?.length
+            ? [addon]
+            : [...newAddons[key], addon];
         }
       });
+
+      this.addons[planCode] = newAddons;
     },
     setValue(path, val) {
-      if (!val) {
-        return;
-      }
-
       const data = JSON.parse(JSON.stringify(this.instance));
 
       if (path.includes("billing_plan")) {
@@ -251,11 +229,11 @@ export default {
         title.pop();
         this.flavors[val] = Object.keys(plan.products).map((el) => {
           const [duration, code] = el.split(" ");
-
           return {
             code,
             duration,
             title: plan.products[el].title,
+            key: el,
           };
         });
 
@@ -274,30 +252,30 @@ export default {
       }
 
       if (path.includes("planCode")) {
-        const plan = this.meta?.catalog.plans.find(
-          ({ planCode }) => planCode === val
+        const flavor = this.flavors[this.instance.billing_plan.uuid].find(
+          (f) => f.code === val
         );
-        const resources = val.split("-");
-        plan?.configurations.forEach((el) => {
-          el.values.sort();
-          if (el.name.includes("os")) {
-            this.$set(this.images, val, el.values);
-          }
-          if (el.name.includes("datacenter")) {
-            this.$set(this.regions, val, el.values);
-          }
-        });
+        const product = this.instance.billing_plan.products[flavor.key];
+        const resources = product.resources;
+        this.images[val] = product.meta.os;
+        this.regions[val] = product.meta.datacenter;
+
+        this.setAddons(product.meta.addons, val);
+
+        const savedResources = {
+          ips_private: 0,
+          ips_public: 1,
+        };
+        if (this.ovhType === "vps") {
+          savedResources.cpu = +resources.cpu;
+          savedResources.ram = resources.ram;
+          savedResources.drive_size = resources.disk;
+          savedResources.drive_type = "SSD";
+        }
 
         this.$emit("set-value", {
           key: "resources",
-          value: {
-            cpu: +resources.at(-3),
-            ram: resources.at(-2) * 1024,
-            drive_size: resources.at(-1) * 1024,
-            drive_type: "SSD",
-            ips_private: 0,
-            ips_public: 1,
-          },
+          value: savedResources,
         });
       }
 
@@ -333,12 +311,12 @@ export default {
     },
   },
   computed: {
+    filtredPlans() {
+      return this.plans?.list?.filter((p) => p.type.includes(this.ovhType));
+    },
     tariffs() {
       const tariffs = this.flavors[this.instance?.billing_plan?.uuid];
-      if (
-        this.instance.billing_plan &&
-        this.instance.billing_plan.kind?.toLowerCase() === "static"
-      ) {
+      if (tariffs && this.instance.billing_plan) {
         return tariffs.filter(
           (t) => t?.duration === this.instance.config?.duration
         );
@@ -351,18 +329,23 @@ export default {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
     } else if (!this.instance.billing_plan?.uuid) {
-      await this.fetchPlans();
+      this.ovhType = this.instance.config.type;
       this.setValue("billing_plan", this.instance.billing_plan);
       this.setValue("config.planCode", this.instance.config.planCode);
       this.setValue(
-        "config.configuration.vps_datacenter",
+        `config.configuration.${this.ovhType}_datacenter`,
         this.instance.config.configuration.vps_datacenter
       );
       this.setValue(
-        "config.configuration.vps_os",
+        `config.configuration.${this.ovhType}_os`,
         this.instance.config.configuration.vps_os
       );
-      this.setAddons();
+      this.setAddons(
+        this.instance.billing_plan.products[
+          `${this.instance.config.duration} ${this.instance.config.planCode}`
+        ]?.meta?.addons,
+        this.instance.config.planCode
+      );
     }
     const data = JSON.parse(JSON.stringify(getDefaultInstance()));
 
@@ -373,12 +356,15 @@ export default {
     this.setValue(`billing_plan`, data.billing_plan.uuid);
     data.plan = data.billing_plan.uuid;
 
-    if (this.meta && "catalog" in this.meta) this.setAddons();
     this.change(data);
   },
   watch: {
-    instance() {
-      this.fetchPlans();
+    ovhType() {
+      for (const key of Object.keys(this.instance.config.configuration)) {
+        this.setValue("config.configuration." + key, undefined);
+      }
+      this.setValue("data", { existing: false });
+      this.setValue("config.type", this.ovhType);
     },
   },
 };

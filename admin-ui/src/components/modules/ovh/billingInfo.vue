@@ -194,6 +194,10 @@ const initPrices = () => {
     const addonIndex = template.value.billingPlan.resources.findIndex(
       (p) => p.key === [duration.value, key].join(" ")
     );
+    if(addonIndex===-1){
+      return
+    }
+
     pricesItems.value.push({
       price: template.value.billingPlan.resources[addonIndex].price,
       path: `billingPlan.resources.${addonIndex}.price`,
@@ -221,7 +225,7 @@ const getPrice = computed(() => {
     prices.push(
       template.value.billingPlan.resources.find(
         (p) => p.key === [duration.value, name].join(" ")
-      ).price
+      )?.price || 0
     );
   });
   return prices.reduce((acc, val) => acc + val, 0);

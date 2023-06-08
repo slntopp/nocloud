@@ -26,7 +26,10 @@
         >
           {{ item.title }}
         </router-link>
-        <login-in-account-icon :uuid="getAccount(item).uuid" :instanceId="item.uuid" />
+        <login-in-account-icon
+          :uuid="getAccount(item).uuid"
+          :instanceId="item.uuid"
+        />
       </div>
     </template>
 
@@ -100,15 +103,15 @@
     </template>
 
     <template v-slot:[`item.resources.cpu`]="{ value }">
-      {{ value }} {{ value > 1 ? "cores" : "core" }}
+      {{ value || 0 }} {{ value || 0 > 1 ? "cores" : "core" }}
     </template>
 
     <template v-slot:[`item.resources.ram`]="{ item }">
-      {{ getValue("resources.ram", item) }} GB
+      {{ getValue("resources.ram", item) || 0}} GB
     </template>
 
     <template v-slot:[`item.resources.drive_size`]="{ item }">
-      {{ getValue("resources.drive_size", item) }} GB
+      {{ getValue("resources.drive_size", item) || 0 }} GB
     </template>
 
     <template v-slot:[`item.config.template_id`]="{ item }">
@@ -117,7 +120,7 @@
 
     <template v-slot:[`item.state.meta.networking`]="{ item }">
       <template v-if="!item.state?.meta.networking?.public">-</template>
-      <instance-ip-menu v-else :item="item" ui="span"/>
+      <instance-ip-menu v-else :item="item" ui="span" />
     </template>
   </nocloud-table>
 </template>
@@ -130,7 +133,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 
 export default {
   name: "instances-table",
-  components: {LoginInAccountIcon, nocloudTable, instanceIpMenu },
+  components: { LoginInAccountIcon, nocloudTable, instanceIpMenu },
   props: {
     value: { type: Array, required: true },
     selected: { type: Object, default: null },
@@ -252,13 +255,16 @@ export default {
         }
         case "ovh": {
           const key = `${inst.config.duration} ${inst.config.planCode}`;
-
-          return  inst.config?.addons.reduce(
-              (acc,addon) =>
-                  acc+inst.billingPlan.resources.find((res) => res.key === `${inst.config.duration} ${addon}`)
-                      .price,
+          return (
+            inst.config?.addons.reduce(
+              (acc, addon) =>
+                acc +
+                  inst.billingPlan.resources.find(
+                    (res) => res.key === `${inst.config.duration} ${addon}`
+                  )?.price || 0,
               0
-          ) + inst.billingPlan.products[key]?.price ?? 0;
+            ) + inst.billingPlan.products[key]?.price ?? 0
+          );
         }
         case "ione": {
           const initialPrice =
@@ -475,7 +481,8 @@ export default {
         sp: this.getServiceProvider,
         "access.namespace": (item) => this.getNamespace(item.access.namespace),
         "resources.ram": (item) => +(item?.resources?.ram / 1024).toFixed(2),
-        "resources.drive_size": (item) => +(item?.resources?.drive_size / 1024).toFixed(2),
+        "resources.drive_size": (item) =>
+          +(item?.resources?.drive_size / 1024).toFixed(2),
         "config.template_id": (item) =>
           this.getOSName(item?.config?.template_id, item.sp),
       };
@@ -492,7 +499,7 @@ export default {
     filterItems() {
       return {
         state: ["RUNNING", "LCM_INIT", "STOPPED", "SUSPENDED", "UNKNOWN"],
-        type: ["ione", "ovh", "custom", "opensrs", "goget","cpanel"],
+        type: ["ione", "ovh", "custom", "opensrs", "goget", "cpanel"],
         "billingPlan.title": this.priceModelItems,
         service: this.serviceItems,
         sp: this.spItems,
