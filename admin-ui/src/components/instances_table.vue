@@ -128,7 +128,7 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
-import { getState } from "@/functions";
+import {getOvhPrice, getState} from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 
 export default {
@@ -254,17 +254,7 @@ export default {
           return inst.billingPlan.products[key]?.price ?? 0;
         }
         case "ovh": {
-          const key = `${inst.config.duration} ${inst.config.planCode}`;
-          return (
-            inst.config?.addons.reduce(
-              (acc, addon) =>
-                acc +
-                  inst.billingPlan.resources.find(
-                    (res) => res.key === `${inst.config.duration} ${addon}`
-                  )?.price || 0,
-              0
-            ) + inst.billingPlan.products[key]?.price ?? 0
-          );
+          return  getOvhPrice(inst)
         }
         case "ione": {
           const initialPrice =

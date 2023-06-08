@@ -6,6 +6,7 @@
           :items="regions"
           label="Region"
           v-model="selectedRegion"
+          :loading="isRegionsLoading"
         />
       </v-col>
     </v-row>
@@ -17,12 +18,14 @@
     <v-tabs-items v-model="tab">
       <v-tab-item key="flavors">
         <nocloud-table
+          sort-by="enabled"
+          sort-desc
           item-key="uniqueId"
-          table-name="cloudPrices"
+          table-name="cloudFlavors"
           :show-select="false"
           :loading="isFlavoursLoading"
           :headers="pricesHeaders"
-          :items="flavors"
+          :items="flavors[selectedRegion]"
           show-expand
           :expanded.sync="expanded"
         >
@@ -56,7 +59,10 @@
           item-key="id"
           :loading="isImagesLoading"
           :headers="imagesHeaders"
-          :items="images"
+          :items="images[selectedRegion]"
+          sort-by="enabled"
+          table-name="cloudImages"
+          sort-desc
         >
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
@@ -99,12 +105,13 @@ const store = useStore();
 const expanded = ref([]);
 const tab = ref("prices");
 const regions = ref([]);
-const flavors = ref([]);
-const prices = ref([]);
-const images = ref([]);
+const flavors = ref({});
+const prices = ref({});
+const images = ref({});
 const selectedRegion = ref("");
 const isFlavoursLoading = ref(false);
 const isImagesLoading = ref(false);
+const isRegionsLoading = ref(false);
 
 const pricesHeaders = ref([
   { text: "Name", value: "name" },
@@ -144,6 +151,7 @@ const projectId = computed(() => {
 
 onMounted(async () => {
   await store.dispatch("servicesProviders/fetchById", sp.value.uuid);
+  isRegionsLoading.value = true;
   try {
     const { meta } = await api.servicesProviders.action({
       action: "regions",
@@ -158,6 +166,8 @@ onMounted(async () => {
     store.commit("snackbar/showSnackbarError", {
       message: "Erorr during fetch regions",
     });
+  } finally {
+    isRegionsLoading.value = false;
   }
 });
 
@@ -167,6 +177,13 @@ watch(selectedRegion, () => {
 });
 
 const fetchFlavours = async () => {
+  if (
+    flavors.value[selectedRegion.value] &&
+    prices.value[selectedRegion.value]
+  ) {
+    return;
+  }
+
   isFlavoursLoading.value = true;
   try {
     const { meta } = await api.servicesProviders.action({
@@ -177,27 +194,30 @@ const fetchFlavours = async () => {
         projectId: projectId.value,
       },
     });
-    prices.value = meta.codes;
+    prices.value[selectedRegion.value] = meta.codes;
+
     const newFlavours = [];
     meta.flavours.forEach((flavour) => {
       if (!flavour.available) {
         return;
       }
-
       Object.keys(flavour.planCodes || {}).forEach((key) => {
+        const period = key === "monthly" ? "P1M" : "P1Y";
+        const planCode = `${period} ${flavour.name}-${selectedRegion.value}`;
         newFlavours.push({
           ...flavour,
-          period: key,
+          period,
+          name: planCode,
           price: prices.value[flavour.planCodes[key]],
-          endPrice:
-            template.value.products[`${key} ${flavour.name}`]?.price || 0,
-          enabled: !!template.value.products[`${key} ${flavour.name}`],
-          uniqueId: `${key}_${flavour.id}`,
+          endPrice: template.value.products[planCode]?.price || 0,
+          enabled: !!template.value.products[planCode],
+          uniqueId: `${period} ${flavour.id}`,
+          meta: { region: selectedRegion.value },
         });
       });
     });
 
-    flavors.value = newFlavours;
+    flavors.value[selectedRegion.value] = newFlavours;
   } catch {
     store.commit("snackbar/showSnackbarError", {
       message: "Erorr during fetch flavors",
@@ -208,6 +228,10 @@ const fetchFlavours = async () => {
 };
 
 const fetchImages = async () => {
+  if (images.value[selectedRegion.value]) {
+    return;
+  }
+
   try {
     isImagesLoading.value = true;
     const { meta } = await api.servicesProviders.action({
@@ -218,11 +242,13 @@ const fetchImages = async () => {
         region: selectedRegion.value,
       },
     });
-    images.value = meta.images.map((i) => {
+    images.value[selectedRegion.value] = meta.images.map((i) => {
       return {
         ...i,
-        enabled: !!template.value.meta?.images?.[selectedRegion.value].find(
-          (real) => real.id === i.id
+        enabled: !!Object.keys(template.value.products).find(
+          (k) =>
+            template.value.products[k].meta?.region === selectedRegion.value &&
+            template.value.products[k].meta?.os?.includes(i.name)
         ),
       };
     });
@@ -238,15 +264,19 @@ const fetchImages = async () => {
 const changePlan = (plan) => {
   plan.products = template.value.products;
 
-  flavors.value.forEach((item) => {
-    const itemName = `${item.period} ${item.name}`;
+  Object.keys(flavors.value).forEach((regionKey) => {
+    const regionFlavors = flavors.value[regionKey].filter((f) => f.enabled);
 
-    if (item.enabled) {
-      plan.products[itemName] = {
-        title: itemName,
+    const regionImages = images.value[regionKey]
+      .filter((item) => item.enabled)
+      .map((item) => item.name);
+
+    regionFlavors.forEach((item) => {
+      plan.products[item.name] = {
+        title: item.name,
         kind: "PREPAID",
         price: item.endPrice,
-        period: item.period === "hourly" ? 60 * 60 : 60 * 60 * 24 * 30,
+        period: item.period === "P1M" ? 60 * 60 : 60 * 60 * 24 * 30,
         resources: {
           osType: item.osType,
           disk: item.disk,
@@ -257,18 +287,13 @@ const changePlan = (plan) => {
           ram: item.ram,
           vcpus: item.vcpus,
         },
+        meta: {
+          ...item.meta,
+          datacenter: [regionKey],
+          os: regionImages,
+        },
       };
-    }
-  });
-
-  plan.meta = template.value.meta || { images: {} };
-  images.value.forEach((item) => {
-    if (item.enabled) {
-      if (!plan.meta.images?.[item.region]) {
-        plan.meta.images[item.region] = [];
-      }
-      plan.meta.images[item.region].push(item);
-    }
+    });
   });
 };
 
