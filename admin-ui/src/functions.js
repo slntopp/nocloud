@@ -337,7 +337,7 @@ export function getOvhPrice(instance) {
     .map(
       (a) =>
         instance.billingPlan.resources.find((r) => r.key === `${duration} ${a}`)
-          .price
+          ?.price || 0
     )
     .reduce((acc, v) => acc + v, 0);
   return tarrifPrice + addonsPrice;

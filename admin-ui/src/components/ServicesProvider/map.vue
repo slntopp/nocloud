@@ -310,15 +310,26 @@ export default {
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
 
+      if (this.type) {
+        this.item.locations.push(
+          ...this.template.locations.filter(
+            (location) => location.type !== this.type
+          )
+        );
+      }
+
+      console.log(this.item.locations, this.markers);
+
       if (this.item.locations.length < 1) {
         this.item.locations = [{ id: "_nocloud.remove" }];
       }
       api.servicesProviders
         .update(this.item.uuid, this.item)
-        .then(() => {
+        .then((data) => {
           this.showSnackbarSuccess({
             message: "Service edited successfully",
           });
+          this.$emit('set-locations',data.locations)
         })
         .catch((err) => {
           this.showSnackbarError({
@@ -406,7 +417,7 @@ export default {
         this.mouseEnterHandler(marker.id);
 
         setTimeout(() => {
-          const ref = this.$refs["textField_" + marker.id][0];
+          const ref = this.$refs["textField_" + marker.id]?.[0];
 
           ref?.focus();
         }, 200);

@@ -149,6 +149,8 @@ export default {
         this.service.instancesGroups[igIndex].instances.push(this.instance);
       }
 
+      const isExisted = this.instance?.data?.existing;
+
       const data = {
         namespace: this.service.access.namespace,
         service: this.service,
@@ -167,8 +169,11 @@ export default {
               ? "instance updated successfully"
               : "instance created successfully",
           });
-          this.$router.push({ name: "Instances" });
+          if (!this.isEdit && isExisted) {
+            api.services.up(data.service.uuid);
+          }
         })
+        .then(() => this.$router.push({ name: "Instances" }))
         .catch((err) => {
           const opts = {
             message: err.errors.map((error) => error),
@@ -217,7 +222,9 @@ export default {
       return (
         this.type &&
         this.serviceProviderId &&
-        (!(this.isEdit ||  this.$route.params.instanceId) || ((this.isEdit || this.$route.params.instanceId) && this.plans.list.length))
+        (!(this.isEdit || this.$route.params.instanceId) ||
+          ((this.isEdit || this.$route.params.instanceId) &&
+            this.plans.list.length))
       );
     },
   },
