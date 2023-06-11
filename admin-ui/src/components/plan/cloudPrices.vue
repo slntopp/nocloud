@@ -248,7 +248,7 @@ const fetchImages = async () => {
         enabled: !!Object.keys(template.value.products).find(
           (k) =>
             template.value.products[k].meta?.region === selectedRegion.value &&
-            template.value.products[k].meta?.os?.includes(i.name)
+            template.value.products[k].meta?.os?.find(o=>i.id===o.id)
         ),
       };
     });
@@ -269,7 +269,7 @@ const changePlan = (plan) => {
 
     const regionImages = images.value[regionKey]
       .filter((item) => item.enabled)
-      .map((item) => item.name);
+      .map((item) => ({name:item.name,id:item.id}));
 
     regionFlavors.forEach((item) => {
       plan.products[item.name] = {
