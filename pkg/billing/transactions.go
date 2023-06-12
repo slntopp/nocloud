@@ -18,8 +18,9 @@ package billing
 import (
 	"context"
 	"fmt"
-	"google.golang.org/protobuf/types/known/structpb"
 	"time"
+
+	"google.golang.org/protobuf/types/known/structpb"
 
 	epb "github.com/slntopp/nocloud-proto/events"
 
@@ -339,8 +340,10 @@ LET rate = PRODUCT(
 		RETURN edge.rate
 )
 
-UPDATE transaction WITH {processed: true, proc: @now, currency: currency} IN @@transactions
-UPDATE account WITH { balance: account.balance - transaction.total * rate } IN @@accounts
+LET total = transaction.total * rate
+
+UPDATE transaction WITH {processed: true, proc: @now, currency: currency, total: total} IN @@transactions
+UPDATE account WITH { balance: account.balance - total } IN @@accounts
 
 return account
 `
