@@ -339,7 +339,7 @@ LET rate = PRODUCT(
 		RETURN edge.rate
 )
 
-UPDATE transaction WITH {processed: true, proc: @now} IN @@transactions
+UPDATE transaction WITH {processed: true, proc: @now, currency: currency} IN @@transactions
 UPDATE account WITH { balance: account.balance - transaction.total * rate } IN @@accounts
 
 return account
