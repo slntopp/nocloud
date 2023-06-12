@@ -257,7 +257,7 @@ export default {
         );
         const product = this.instance.billing_plan.products[flavor.key];
         const resources = product.resources;
-        this.images[val] = product.meta.os;
+        this.images[val] = product.meta.os.map((os)=>os.name?os.name:os);
         this.regions[val] = product.meta.datacenter;
 
         this.setAddons(product.meta.addons, val);
