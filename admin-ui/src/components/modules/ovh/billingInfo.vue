@@ -125,49 +125,22 @@ const onUpdatePrice = (item) => {
   setTotalNewPrice();
 };
 
-const getBasePrices = () => {
-  isBasePricesLoading.value = true;
-  api
-    .get(`/billing/currencies/rates/PLN/${defaultCurrency.value}`)
-    .then((res) => {
-      rate.value = res.rate;
-    })
-    .catch(() =>
-      api.get(`/billing/currencies/rates/${defaultCurrency.value}/PLN`)
-    )
-    .then((res) => {
-      if (res) rate.value = 1 / res.rate;
-    })
-    .catch((err) => console.error(err));
-  api
-    .post(`/sp/${template.value.sp}/invoke`, { method: "get_plans" })
-    .then(({ meta }) => {
-      const planCodeCurr = meta.plans.find(
-        (p) => planCode.value === p.planCode
-      );
-      basePrices.value["tarrif"] = getPriceFromProduct(planCodeCurr);
+const getOvhPrices = async () => {
+  const { meta } = await api.servicesProviders.action({
+    uuid: template.value.sp,
+    action: "get_plans",
+  });
 
-      addons.value.forEach((addon) => {
-        Object.keys(meta).forEach((metaKey) => {
-          const product =
-            meta[metaKey].find &&
-            meta[metaKey].find((p) => p?.planCode === addon);
-          if (product) {
-            basePrices.value[addon] = getPriceFromProduct(product);
-          }
-        });
-      });
+  return meta;
+};
 
-      totalBasePrice.value = Object.keys(basePrices.value)
-        .reduce((acc, key) => acc + +basePrices.value[key], 0)
-        .toFixed(2);
-    })
-    .catch((e) => {
-      store.commit("snackbar/showSnackbarError", {
-        message: e.response?.data?.message || "Error during fetch base prices",
-      });
-    })
-    .finally(() => (isBasePricesLoading.value = false));
+const getDedicatedPrice = async () => {
+  const { meta } = await api.servicesProviders.action({
+    uuid: template.value.sp,
+    action: "get_baremetal_plans",
+  });
+
+  return meta;
 };
 const getPriceFromProduct = (product) => {
   return (
@@ -187,7 +160,7 @@ const initPrices = () => {
     path: `billingPlan.products.${[duration.value, planCode.value].join(
       " "
     )}.price`,
-    price: tarrif.value.price,
+    price: tarrif.value?.price,
   });
 
   addons.value.forEach((key, ind) => {
@@ -212,6 +185,7 @@ const initPrices = () => {
 const planCode = computed(() => template.value.config.planCode);
 const duration = computed(() => template.value.config.duration);
 const addons = computed(() => template.value.config.addons);
+const type = computed(() => template.value.config.type);
 const tarrif = computed(
   () =>
     template.value.billingPlan.products[
@@ -220,7 +194,7 @@ const tarrif = computed(
 );
 const getPrice = computed(() => {
   const prices = [];
-  prices.push(tarrif.value.price);
+  prices.push(tarrif.value?.price);
   addons.value.forEach((name) => {
     prices.push(
       template.value.billingPlan.resources.find(
@@ -237,6 +211,53 @@ const defaultCurrency = computed(() => {
 const service = computed(() =>
   store.getters["services/all"].find((s) => s.uuid === template.value.service)
 );
+
+const getBasePrices = async () => {
+  api
+    .get(`/billing/currencies/rates/PLN/${defaultCurrency.value}`)
+    .then((res) => {
+      rate.value = res.rate;
+    })
+    .catch(() =>
+      api.get(`/billing/currencies/rates/${defaultCurrency.value}/PLN`)
+    )
+    .then((res) => {
+      if (res) rate.value = 1 / res.rate;
+    })
+    .catch((err) => console.error(err));
+  isBasePricesLoading.value = true;
+  try {
+    let meta = null;
+    if (type.value === "vps") {
+      meta = await getOvhPrices();
+    } else if (type.value === "dedicated") {
+      meta = await getDedicatedPrice();
+    }
+
+    const planCodeCurr = meta.plans.find((p) => planCode.value === p.planCode);
+    basePrices.value["tarrif"] = getPriceFromProduct(planCodeCurr);
+
+    addons.value.forEach((addon) => {
+      Object.keys(meta).forEach((metaKey) => {
+        const product =
+          meta[metaKey].find &&
+          meta[metaKey].find((p) => p?.planCode === addon);
+        if (product) {
+          basePrices.value[addon] = getPriceFromProduct(product);
+        }
+      });
+    });
+    totalBasePrice.value = Object.keys(basePrices.value)
+      .reduce((acc, key) => acc + +basePrices.value[key], 0)
+      .toFixed(2);
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during fetch base prices",
+    });
+  } finally {
+    isBasePricesLoading.value = false;
+  }
+};
 
 onMounted(() => {
   initPrices();
