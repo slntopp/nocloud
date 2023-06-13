@@ -89,6 +89,7 @@ import {
 import api from "@/api";
 import { useStore } from "@/store";
 import NocloudTable from "@/components/table.vue";
+import useRate from "@/hooks/useRate";
 
 const props = defineProps({
   fee: { type: Object, required: true },
@@ -101,6 +102,7 @@ const props = defineProps({
 const { sp, template, fee } = toRefs(props);
 
 const store = useStore();
+const rate = useRate();
 
 const expanded = ref([]);
 const tab = ref("prices");
@@ -203,11 +205,13 @@ const fetchFlavours = async () => {
       Object.keys(flavour.planCodes || {}).forEach((key) => {
         const period = key === "monthly" ? "P1M" : "P1H";
         const planCode = `${period} ${flavour.name}-${selectedRegion.value}`;
+        const price =
+          prices.value[selectedRegion.value]?.[flavour.planCodes[key]];
         newFlavours.push({
           ...flavour,
           period,
           name: planCode,
-          price: prices.value[selectedRegion.value]?.[flavour.planCodes[key]],
+          price: parseFloat(price * rate.value).toFixed(2),
           endPrice: template.value.products[planCode]?.price || 0,
           enabled: !!template.value.products[planCode],
           uniqueId: `${period} ${flavour.id}`,
