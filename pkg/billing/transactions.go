@@ -212,6 +212,23 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 			log.Error("Failed to process transaction", zap.String("err", err.Error()))
 			return nil, status.Error(codes.Internal, "Failed to process transaction")
 		}
+	} else {
+		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
+		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
+		currencyConf := MakeCurrencyConf(ctx, log)
+
+		_, err := s.db.Query(ctx, updateTransactionWithCurrency, map[string]interface{}{
+			"@transactions":  schema.TRANSACTIONS_COL,
+			"accountKey":     acc.String(),
+			"transactionKey": transaction.String(),
+			"currency":       currencyConf.Currency,
+			"currencies":     schema.CUR_COL,
+			"graph":          schema.BILLING_GRAPH.Name,
+		})
+		if err != nil {
+			log.Error("Failed to process transaction", zap.String("err", err.Error()))
+			return nil, status.Error(codes.Internal, "Failed to process transaction")
+		}
 	}
 
 	return r.Transaction, nil
@@ -346,6 +363,26 @@ UPDATE transaction WITH {processed: true, proc: @now, currency: currency, total:
 UPDATE account WITH { balance: account.balance - total } IN @@accounts
 
 return account
+`
+
+const updateTransactionWithCurrency = `
+LET account = DOCUMENT(@accountKey)
+LET transaction = DOCUMENT(@transactionKey)
+
+LET currency = account.currency != null ? account.currency : @currency
+LET rate = PRODUCT(
+	FOR vertex, edge IN OUTBOUND
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency)))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	GRAPH @graph
+	FILTER edge
+		RETURN edge.rate
+)
+
+LET total = transaction.total * rate
+
+UPDATE transaction WITH {currency: currency, total: total} IN @@transactions
+RETURN transaction
 `
 
 const reprocessTransactions = `
