@@ -164,6 +164,7 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
+import currencyRate from "@/mixins/currencyRate";
 
 export default {
   name: "vps-table",
@@ -238,10 +239,10 @@ export default {
     newGroupName: "",
     mode: "none",
 
-    rate: 1,
     planId: -1,
     tabsIndex: 0,
   }),
+  mixins: [currencyRate],
   methods: {
     testConfig() {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
@@ -606,21 +607,11 @@ export default {
   },
   created() {
     this.$emit("changeLoading");
-    api
-      .get(`/billing/currencies/rates/PLN/${this.defaultCurrency}`)
-      .then((res) => {
-        this.rate = res.rate;
-      })
-      .catch(() =>
-        api.get(`/billing/currencies/rates/${this.defaultCurrency}/PLN`)
-      )
-      .then((res) => {
-        if (res) this.rate = 1 / res.rate;
-      })
-      .catch((err) => console.error(err));
 
-    api
-      .post(`/sp/${this.sp.uuid}/invoke`, { method: "get_plans" })
+    this.fetchRate();
+
+    api.servicesProviders
+      .action({ action: "get_plans", uuid: this.sp.uuid })
       .then(({ meta }) => {
         this.changePlans(meta);
         this.changeAddons(meta);

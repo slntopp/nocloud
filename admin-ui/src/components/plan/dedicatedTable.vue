@@ -83,6 +83,7 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
+import currencyRate from "@/mixins/currencyRate";
 
 export default {
   name: "dedicated-table",
@@ -142,9 +143,9 @@ export default {
 
     column: "",
     fetchError: "",
-    rate: 1,
     isAddonsLoading: false,
   }),
+  mixins: [currencyRate],
   methods: {
     fetchAddons({ planCode }) {
       if (this.addons[planCode]) return;
@@ -444,22 +445,12 @@ export default {
   },
   created() {
     this.$emit("changeLoading");
-    api
-      .get(`/billing/currencies/rates/PLN/${this.defaultCurrency}`)
-      .then((res) => {
-        this.rate = res.rate;
-      })
-      .catch(() =>
-        api.get(`/billing/currencies/rates/${this.defaultCurrency}/PLN`)
-      )
-      .then((res) => {
-        if (res) this.rate = 1 / res.rate;
-      })
-      .catch((err) => console.error(err));
 
-    api
-      .post(`/sp/${this.sp.uuid}/invoke`, {
-        method: "get_baremetal_plans",
+    this.fetchRate();
+    api.servicesProviders
+      .action({
+        action: "get_baremetal_plans",
+        uuid: this.sp.uuid,
       })
       .then(({ meta }) => {
         this.plans = this.setPlans(meta);
