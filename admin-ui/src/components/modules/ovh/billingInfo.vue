@@ -96,16 +96,17 @@ import NocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";
 import EditPriceModel from "@/components/modules/ovh/editPriceModel.vue";
+import useRate from "@/hooks/useRate";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);
 
 const store = useStore();
+const rate = useRate();
 
 const { template, plans } = toRefs(props);
 const pricesItems = ref([]);
 const basePrices = ref({});
-const rate = ref(0);
 const pricesHeaders = ref([
   { text: "Name", value: "title" },
   { text: "Base price", value: "basePrice" },
@@ -204,27 +205,12 @@ const getPrice = computed(() => {
   });
   return prices.reduce((acc, val) => acc + val, 0);
 });
-const defaultCurrency = computed(() => {
-  return store.getters["currencies/default"];
-});
 
 const service = computed(() =>
   store.getters["services/all"].find((s) => s.uuid === template.value.service)
 );
 
 const getBasePrices = async () => {
-  api
-    .get(`/billing/currencies/rates/PLN/${defaultCurrency.value}`)
-    .then((res) => {
-      rate.value = res.rate;
-    })
-    .catch(() =>
-      api.get(`/billing/currencies/rates/${defaultCurrency.value}/PLN`)
-    )
-    .then((res) => {
-      if (res) rate.value = 1 / res.rate;
-    })
-    .catch((err) => console.error(err));
   isBasePricesLoading.value = true;
   try {
     let meta = null;
