@@ -202,7 +202,7 @@ const fetchFlavours = async () => {
         return;
       }
       Object.keys(flavour.planCodes || {}).forEach((key) => {
-        const period = key === "monthly" ? "P1M" : "P1Y";
+        const period = key === "monthly" ? "P1M" : "P1H";
         const planCode = `${period} ${flavour.name}-${selectedRegion.value}`;
         newFlavours.push({
           ...flavour,
@@ -276,7 +276,7 @@ const changePlan = (plan) => {
         title: item.name,
         kind: "PREPAID",
         price: item.endPrice,
-        period: item.period === "P1M" ? 60 * 60 : 60 * 60 * 24 * 30,
+        period: item.period === "P1H" ? 60 * 60 : 60 * 60 * 24 * 30,
         resources: {
           osType: item.osType,
           disk: item.disk,
