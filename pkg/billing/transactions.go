@@ -390,6 +390,7 @@ LET account = UNSET(DOCUMENT(@account), "balance")
 LET currency = account.currency != null ? account.currency : @currency
 LET transactions = (
 FOR t IN @@transactions // Iterate over Transactions
+FILTER t.exec != null
 FILTER t.exec <= @now
 FILTER t.account == account._key
 	LET rate = PRODUCT(
