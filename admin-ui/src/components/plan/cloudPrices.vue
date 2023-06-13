@@ -140,7 +140,6 @@ const imagesHeaders = ref([
   { text: "Size", value: "size" },
   { text: "Сreation date", value: "creationDate" },
   { text: "Status", value: "status" },
-  { text: "OS type", value: "osType" },
   { text: "Visibility", value: "visibility" },
   { text: "Enabled", value: "enabled" },
 ]);
@@ -208,7 +207,7 @@ const fetchFlavours = async () => {
           ...flavour,
           period,
           name: planCode,
-          price: prices.value[flavour.planCodes[key]],
+          price: prices.value[selectedRegion.value]?.[flavour.planCodes[key]],
           endPrice: template.value.products[planCode]?.price || 0,
           enabled: !!template.value.products[planCode],
           uniqueId: `${period} ${flavour.id}`,
@@ -248,7 +247,7 @@ const fetchImages = async () => {
         enabled: !!Object.keys(template.value.products).find(
           (k) =>
             template.value.products[k].meta?.region === selectedRegion.value &&
-            template.value.products[k].meta?.os?.find(o=>i.id===o.id)
+            template.value.products[k].meta?.os?.find((o) => i.id === o.id)
         ),
       };
     });
@@ -269,7 +268,7 @@ const changePlan = (plan) => {
 
     const regionImages = images.value[regionKey]
       .filter((item) => item.enabled)
-      .map((item) => ({name:item.name,id:item.id}));
+      .map((item) => ({ name: item.name, id: item.id }));
 
     regionFlavors.forEach((item) => {
       plan.products[item.name] = {
