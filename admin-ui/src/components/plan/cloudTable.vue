@@ -89,6 +89,7 @@ import {
 import api from "@/api";
 import { useStore } from "@/store";
 import NocloudTable from "@/components/table.vue";
+import useRate from "@/hooks/useRate";
 
 const props = defineProps({
   fee: { type: Object, required: true },
@@ -101,6 +102,7 @@ const props = defineProps({
 const { sp, template, fee } = toRefs(props);
 
 const store = useStore();
+const rate = useRate();
 
 const expanded = ref([]);
 const tab = ref("prices");
@@ -140,7 +142,6 @@ const imagesHeaders = ref([
   { text: "Size", value: "size" },
   { text: "Сreation date", value: "creationDate" },
   { text: "Status", value: "status" },
-  { text: "OS type", value: "osType" },
   { text: "Visibility", value: "visibility" },
   { text: "Enabled", value: "enabled" },
 ]);
@@ -202,13 +203,15 @@ const fetchFlavours = async () => {
         return;
       }
       Object.keys(flavour.planCodes || {}).forEach((key) => {
-        const period = key === "monthly" ? "P1M" : "P1Y";
+        const period = key === "monthly" ? "P1M" : "P1H";
         const planCode = `${period} ${flavour.name}-${selectedRegion.value}`;
+        const price =
+          prices.value[selectedRegion.value]?.[flavour.planCodes[key]];
         newFlavours.push({
           ...flavour,
           period,
           name: planCode,
-          price: prices.value[flavour.planCodes[key]],
+          price: parseFloat(price * rate.value).toFixed(2),
           endPrice: template.value.products[planCode]?.price || 0,
           enabled: !!template.value.products[planCode],
           uniqueId: `${period} ${flavour.id}`,
@@ -248,7 +251,7 @@ const fetchImages = async () => {
         enabled: !!Object.keys(template.value.products).find(
           (k) =>
             template.value.products[k].meta?.region === selectedRegion.value &&
-            template.value.products[k].meta?.os?.find(o=>i.id===o.id)
+            template.value.products[k].meta?.os?.find((o) => i.id === o.id)
         ),
       };
     });
@@ -269,14 +272,14 @@ const changePlan = (plan) => {
 
     const regionImages = images.value[regionKey]
       .filter((item) => item.enabled)
-      .map((item) => ({name:item.name,id:item.id}));
+      .map((item) => ({ name: item.name, id: item.id }));
 
     regionFlavors.forEach((item) => {
       plan.products[item.name] = {
         title: item.name,
         kind: "PREPAID",
         price: item.endPrice,
-        period: item.period === "P1M" ? 60 * 60 : 60 * 60 * 24 * 30,
+        period: item.period === "P1H" ? 60 * 60 : 60 * 60 * 24 * 30,
         resources: {
           osType: item.osType,
           disk: item.disk,
