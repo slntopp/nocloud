@@ -204,7 +204,7 @@ const fetchFlavours = async () => {
       }
       Object.keys(flavour.planCodes || {}).forEach((key) => {
         const period = key === "monthly" ? "P1M" : "P1H";
-        const planCode = `${period} ${flavour.name}-${selectedRegion.value}`;
+        const planCode = `${period} ${flavour.id}-${selectedRegion.value}`;
         const price =
           prices.value[selectedRegion.value]?.[flavour.planCodes[key]];
         newFlavours.push({
@@ -294,7 +294,6 @@ const changePlan = (plan) => {
           ...item.meta,
           datacenter: [regionKey],
           os: regionImages,
-          productId:item.id
         },
       };
     });
