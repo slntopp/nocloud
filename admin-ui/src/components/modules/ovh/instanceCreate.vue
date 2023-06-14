@@ -85,13 +85,10 @@
           />
         </v-col>
         <v-col cols="6" class="d-flex align-center">
-          Payment:
-          <v-switch
-            class="d-inline-block ml-2"
-            true-value="P1Y"
-            false-value="P1M"
+          <v-select
+            :items="durationItems"
             :value="instance.config?.duration"
-            :label="instance.config?.duration === 'P1Y' ? 'yearly' : 'monthly'"
+            label="Payment:"
             @change="(value) => setValue('config.duration', value)"
           />
         </v-col>
@@ -172,6 +169,7 @@ export default {
     regions: {},
     images: {},
     addons: {},
+    durationItems: ["P1H", "P1M", "P1Y"],
 
     ovhTypes: [
       { title: "ovh vps", value: "vps" },
@@ -257,7 +255,9 @@ export default {
         );
         const product = this.instance.billing_plan.products[flavor.key];
         const resources = product.resources;
-        this.images[val] = product.meta.os.map((os)=>os.name?os.name:os);
+        this.images[val] = product.meta.os.map((os) =>
+          os.name ? os.name : os
+        );
         this.regions[val] = product.meta.datacenter;
 
         this.setAddons(product.meta.addons, val);
@@ -328,7 +328,7 @@ export default {
   async created() {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
-      return
+      return;
     } else if (!this.instance.billing_plan?.uuid) {
       this.ovhType = this.instance.config.type;
       this.setValue("billing_plan", this.instance.billing_plan);

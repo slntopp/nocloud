@@ -175,16 +175,10 @@ export default {
   },
   computed: {
     tableComponent() {
-      switch (this.template.type) {
-        case "ovh cloud":
-          return () => import("@/components/plan/cloudPrices.vue");
-
-        case "ovh vps":
-          return () => import("@/components/plan/vpsTable.vue");
-
-        default:
-          return () => import("@/components/plan/dedicatedTable.vue");
-      }
+      return () =>
+        import(
+          `@/components/plan/${this.template.type.split(" ")[1]}Table.vue`
+        );
     },
     sp() {
       return this.$store.getters["servicesProviders/all"].find(
