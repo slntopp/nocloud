@@ -113,7 +113,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	if instance.GetState().GetState() == states.NoCloudState_SUSPENDED {
+	if instance.GetState().GetState() == states.NoCloudState_SUSPENDED && instance.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		log.Error("Machine is suspended. Functionality is limited", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.Unavailable, "Machine is suspended. Functionality is limited")
 	}

@@ -93,8 +93,24 @@
           <template v-slot:expanded-item="{ headers, item }">
             <td />
             <td :colspan="headers.length - 1">
-              <v-subheader class="px-0">Amount of resources:</v-subheader>
+              <v-text-field
+                dense
+                class="pt-4"
+                label="Image link"
+                v-if="type === 'virtual'"
+                v-model="item.meta.image"
+              />
+              <v-subheader class="px-0">
+                {{ (type === 'virtual') ? 'Description' : 'Amount of resources' }}:
+              </v-subheader>
+
+              <vue-editor
+                class="html-editor"
+                v-if="type === 'virtual'"
+                v-model="item.meta.description"
+              />
               <json-editor
+                v-else
                 :json="item.resources"
                 @changeValue="
                   (value) => changeProduct('amount', value, item.id)
@@ -116,14 +132,16 @@
 
 <script setup>
 import { computed, ref, toRefs, watch } from "vue";
+import { VueEditor } from "vue2-editor";
 import dateField from "@/components/date.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
 import plansResourcesTable from "@/components/plans_resources_table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import {getFullDate} from "@/functions";
+import { getFullDate } from "@/functions";
 
 const props = defineProps({
+  type: { type: String, required: true },
   products: { type: Object, required: true },
   resources: { type: Array, required: true },
 });
@@ -172,6 +190,7 @@ function addConfig() {
     price: 0,
     period: 0,
     resources: {},
+    meta: {},
     sorter: value.length,
     id: Math.random().toString(16).slice(2),
   });
@@ -278,8 +297,36 @@ watch(table, (value) => {
 });
 </script>
 
-<style scoped>
+<style lang="scss">
 .mw-20 {
   max-width: 150px;
+}
+.html-editor {
+  span.ql-picker-label {
+    color: white;
+  }
+}
+
+.quillWrapper .ql-snow .ql-stroke {
+  stroke: rgb(255 255 255 / 95%) !important;
+}
+.ql-snow .ql-fill {
+  fill: white;
+}
+
+.quillWrapper .ql-editor {
+  color: white;
+}
+.quillWrapper .ql-editor ul[data-checked="false"] > li::before {
+  color: white !important;
+}
+.quillWrapper .ql-editor ul[data-checked="true"] > li::before {
+  color: white !important;
+}
+
+.ql-active {
+  color: #e06ffe !important;
+  fill: #e06ffe !important;
+  stroke: #e06ffe !important;
 }
 </style>

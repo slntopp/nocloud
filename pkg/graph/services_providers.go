@@ -18,6 +18,7 @@ package graph
 import (
 	"context"
 	"fmt"
+
 	stpb "github.com/slntopp/nocloud-proto/statuses"
 
 	"github.com/arangodb/go-driver"
@@ -217,6 +218,7 @@ const listDeployedGroupsQueryWithInstances = `
 FOR group IN 1 INBOUND @sp
 GRAPH @permissions
 OPTIONS { order: "bfs", uniqueVertices: "global" }
+FILTER group.status == @up_status || group.status == @suspend_status 
 FILTER IS_SAME_COLLECTION(@groups, group)
     LET instances = (
         FOR instance IN OUTBOUND group
@@ -227,10 +229,12 @@ FILTER IS_SAME_COLLECTION(@groups, group)
 
 func (ctrl *ServicesProvidersController) GetGroups(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error) {
 	bindVars := map[string]interface{}{
-		"groups":      schema.INSTANCES_GROUPS_COL,
-		"sp":          sp.DocumentMeta.ID,
-		"permissions": schema.PERMISSIONS_GRAPH.Name,
-		"instances":   schema.INSTANCES_COL,
+		"groups":         schema.INSTANCES_GROUPS_COL,
+		"sp":             sp.DocumentMeta.ID,
+		"permissions":    schema.PERMISSIONS_GRAPH.Name,
+		"instances":      schema.INSTANCES_COL,
+		"up_status":      stpb.NoCloudStatus_UP,
+		"suspend_status": stpb.NoCloudStatus_SUS,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
 
