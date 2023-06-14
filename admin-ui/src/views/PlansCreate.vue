@@ -100,7 +100,7 @@
 
         <v-col :cols="viewport > 2200 ? 6 : 12">
           <component
-            v-if="!['ovh vps', 'ovh dedicated', 'goget'].includes(plan.type)"
+            v-if="!productsHide"
             :is="template"
             :type="plan.type"
             :resources="plan.resources"
@@ -484,6 +484,10 @@ export default {
     viewport() {
       return document.documentElement.clientWidth;
     },
+    productsHide(){
+      const hidden=['ovh', 'goget','acronis']
+      return hidden.some((h)=>this.plan.type.includes(h))
+    }
   },
   watch: {
     "plan.kind"() {
