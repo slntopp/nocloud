@@ -294,6 +294,7 @@ const changePlan = (plan) => {
           ...item.meta,
           datacenter: [regionKey],
           os: regionImages,
+          productId:item.id
         },
       };
     });
