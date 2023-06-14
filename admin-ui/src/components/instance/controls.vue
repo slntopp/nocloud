@@ -6,7 +6,7 @@
       :key="btn.action"
       :disabled="btn.disabled"
       :loading="isActionLoading"
-      @click="sendVmAction(btn.action, template)"
+      @click="sendVmAction(btn.action, template, btn.data)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -170,6 +170,26 @@ export default {
             disabled: this.ovhActions?.reboot,
           },
         ],
+        virtual: [
+          {
+            action: "change_state",
+            data: { state: 3 },
+            title: "start",
+            disabled: this.virtualActions.start,
+          },
+          {
+            action: "change_state",
+            data: { state: 2 },
+            title: "stop",
+            disabled: this.virtualActions.stop,
+          },
+          {
+            action: "change_state",
+            data: { state: 6 },
+            title: "suspend",
+            disabled: this.virtualActions.suspend,
+          },
+        ],
         opensrs: [{ action: "dns" }],
         cpanel: [{ action: "session" }],
       };
@@ -232,6 +252,18 @@ export default {
           this.template.state.state !== "STOPPED",
         suspend: this.template.state.state === "SUSPENDED",
         vnc: this.template.state.state !== "RUNNING",
+      };
+    },
+    virtualActions() {
+      if (!this.template?.state || this.template.state.state === "PENDING")
+        return {
+          stop: true,
+          suspend: true,
+        };
+      return {
+        stop: this.template.state.state === "INIT",
+        suspend: this.template.state.state === "SUSPENDED",
+        start: this.template.state.state === "RUNNING",
       };
     },
     getPlanTitle() {

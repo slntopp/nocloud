@@ -6,7 +6,7 @@ const sendVmAction = {
     isActionLoading: false,
   }),
   methods: {
-    sendVmAction(action, { uuid, type }) {
+    sendVmAction(action, { uuid, type },data) {
       if (action === "vnc") {
         return this.openVnc(uuid, type);
       }
@@ -16,7 +16,7 @@ const sendVmAction = {
 
       this.isActionLoading = true;
       return api.instances
-        .action({ uuid, action })
+        .action({ uuid, action ,params:data})
         .then((data) => {
           this.showSnackbarSuccess({ message: "Done!" });
           return data;

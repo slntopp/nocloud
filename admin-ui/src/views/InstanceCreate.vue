@@ -47,7 +47,6 @@
           />
         </v-col>
       </v-row>
-      <v-row>
         <component
           :is-edit="isEdit || this.$route.params.instanceId"
           v-if="isDataLoading"
@@ -60,7 +59,6 @@
           :sp-uuid="serviceProviderId"
           :is="templates[type] ?? templates.custom"
         />
-      </v-row>
       <v-row class="mx-5" justify="end">
         <v-btn @click="save">Save</v-btn>
       </v-row>
@@ -131,12 +129,6 @@ export default {
           sp: this.serviceProviderId,
         });
         igIndex = this.service.instancesGroups.length - 1;
-      }
-
-      if (this.type === "ione") {
-        this.instance.billing_plan = this.plans.list.find(
-          (p) => p.uuid === this.instance.billing_plan
-        );
       }
 
       if (this.isEdit) {
@@ -229,7 +221,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("servicesProviders/fetch",false);
     this.$store.dispatch("services/fetch").then(() => {
       const instanceId = this.$route.params.instanceId;
       if (instanceId) {

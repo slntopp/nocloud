@@ -107,7 +107,7 @@
     </template>
 
     <template v-slot:[`item.resources.ram`]="{ item }">
-      {{ getValue("resources.ram", item) || 0}} GB
+      {{ getValue("resources.ram", item) || 0 }} GB
     </template>
 
     <template v-slot:[`item.resources.drive_size`]="{ item }">
@@ -128,7 +128,7 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
-import {getOvhPrice, getState} from "@/functions";
+import { getOvhPrice, getState } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 
 export default {
@@ -168,7 +168,22 @@ export default {
       period: [],
       product: [],
     },
+    instancesTypes: [],
   }),
+  mounted() {
+    const types = require.context(
+      "@/components/modules/",
+      true,
+      /serviceCreate\.vue$/
+    );
+    types.keys().forEach((key) => {
+      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i);
+      if (matched && matched.length > 1) {
+        const type = matched[1];
+        this.instancesTypes.push(type);
+      }
+    });
+  },
   methods: {
     sortInstances(items, sortBy, sortDesc) {
       return items.sort((a, b) => {
@@ -254,7 +269,7 @@ export default {
           return inst.billingPlan.products[key]?.price ?? 0;
         }
         case "ovh": {
-          return  getOvhPrice(inst)
+          return getOvhPrice(inst);
         }
         case "ione": {
           const initialPrice =
@@ -489,7 +504,7 @@ export default {
     filterItems() {
       return {
         state: ["RUNNING", "LCM_INIT", "STOPPED", "SUSPENDED", "UNKNOWN"],
-        type: ["ione", "ovh", "custom", "opensrs", "goget", "cpanel"],
+        type: this.instancesTypes,
         "billingPlan.title": this.priceModelItems,
         service: this.serviceItems,
         sp: this.spItems,

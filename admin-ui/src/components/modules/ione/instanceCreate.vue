@@ -187,7 +187,7 @@ export default {
       if (this.bilingPlan) {
         this.products = Object.keys(this.bilingPlan.products);
       }
-      this.setValue("billing_plan", val);
+      this.setValue("billing_plan", this.bilingPlan);
     },
     setProduct(newVal) {
       const product = this.bilingPlan?.products[newVal].resources;

@@ -1,11 +1,8 @@
 <template>
-  <div class="sp-virtual">
-  </div>
+  <div class="sp-virtual"></div>
 </template>
 
 <script>
-
-
 export default {
   name: "servicesProviders-create-virtual",
   props: {
@@ -22,10 +19,8 @@ export default {
       default: false,
     },
   },
-  data: () => ({
-  }),
-  methods: {
-  },
+  data: () => ({}),
+  methods: {},
 };
 </script>
 

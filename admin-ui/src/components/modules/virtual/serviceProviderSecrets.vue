@@ -48,6 +48,6 @@
 <script>
 export default {
   props: { template: { type: Object, required: true } },
-  data: () => ({ editing: false, showPassword: false })
-}
+  data: () => ({ editing: false, showPassword: false }),
+};
 </script>

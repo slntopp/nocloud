@@ -332,9 +332,8 @@ export function getOvhPrice(instance) {
   const duration = instance.config.duration;
   const tarrifPrice =
     instance.billingPlan.products[`${duration} ${instance.config.planCode}`]
-      .price;
-  const addonsPrice = instance.config.addons
-    .map(
+      ?.price;
+  const addonsPrice = instance.config.addons?.map(
       (a) =>
         instance.billingPlan.resources.find((r) => r.key === `${duration} ${a}`)
           ?.price || 0
