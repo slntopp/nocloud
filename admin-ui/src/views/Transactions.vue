@@ -150,6 +150,9 @@ export default {
       });
     },
     updateOptions(options) {
+      if(this.accountId){
+        return
+      }
       options.itemsPerPage =
         options.itemsPerPage === -1 ? 0 : options.itemsPerPage;
       this.$store
@@ -250,7 +253,7 @@ export default {
         filtredServices = this.services;
       }
 
-      return [{ title: "all", uuid: null }].concat(
+      return [{ title: "all", uuid: 'all' }].concat(
         filtredServices.map((el) => ({
           title: `${el.title} (${el.uuid.slice(0, 8)})`,
           uuid: el.uuid,
@@ -287,7 +290,7 @@ export default {
     },
     transactionData() {
       const data = {};
-      if (this.accountId) {
+      if (this.accountId || this.accountId==='all') {
         data.account = this.accountId;
       }
       if (this.accountId) {
