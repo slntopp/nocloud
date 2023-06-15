@@ -273,14 +273,22 @@ export default {
           ips_private: 0,
           ips_public: 1,
         };
-        if (this.ovhType === "vps") {
-          savedResources.cpu = +resources.cpu;
-          savedResources.ram = resources.ram;
-          savedResources.drive_size = resources.disk;
-          savedResources.drive_type = "SSD";
-        } else if (this.ovhType === "cloud") {
-          this.setValue('config.monthlyBilling',this.instance.config?.duration==='P1M')
-          savedResources = { ...savedResources, ...resources };
+        switch (this.ovhType) {
+          case "vps": {
+            savedResources.cpu = +resources.cpu;
+            savedResources.ram = resources.ram;
+            savedResources.drive_size = resources.disk;
+            savedResources.drive_type = "SSD";
+            break;
+          }
+          case "cloud": {
+            this.setValue(
+              "config.monthlyBilling",
+              this.instance.config?.duration === "P1M"
+            );
+            savedResources = { ...savedResources, ...resources };
+            break;
+          }
         }
 
         this.$emit("set-value", {
@@ -295,8 +303,30 @@ export default {
 
       if (path.includes("addons")) {
         const { addons } = data.config;
-
         val = [...addons, val];
+        const resources = {};
+        if (this.ovhType === "dedicated") {
+          for (let addonKey of val) {
+            if (addonKey.includes("ram")) {
+              resources.ram = parseInt(addonKey?.split("-")[1] ?? 0);
+            }
+            if (addonKey.includes("softraid")) {
+              const [count, size] = addonKey?.split("-")[1].split("x") ?? [
+                "0",
+                "0",
+              ];
+
+              resources.disk = count * parseInt(size) * 1024;
+              if (addonKey?.includes("hybrid")) resources.drive = "SSD + HDD";
+              else if (size.includes("sa")) resources.drive = false;
+              else resources.drive = "SSD";
+            }
+          }
+          this.setValue("resources", {
+            ...this.instance.resources,
+            ...resources,
+          });
+        }
       }
 
       this.$emit("set-value", { value: val, key: path });
