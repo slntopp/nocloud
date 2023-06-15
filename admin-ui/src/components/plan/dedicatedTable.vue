@@ -158,12 +158,9 @@ export default {
         return;
       }
 
-      const sp = this.$store.getters["servicesProviders/all"];
-      const { uuid } = sp.find((el) => el.type === "ovh");
-
       this.isAddonsLoading = true;
       api
-        .post(`/sp/${uuid}/invoke`, {
+        .post(`/sp/${this.sp.uuid}/invoke`, {
           method: "get_baremetal_options",
           params: { planCode },
         })
@@ -488,6 +485,9 @@ export default {
     icon.dispatchEvent(new Event("click"));
   },
   computed: {
+    sp(){
+      return this.$store.getters["servicesProviders/all"].find((sp)=>sp.type==='ovh');
+    },
     filteredPlans() {
       return this.applyFilter(this.plans);
     },
