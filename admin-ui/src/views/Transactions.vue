@@ -191,15 +191,10 @@ export default {
     }
 
     const accounts = [];
-    if (this.accounts.length < 2) {
-      this.$store.dispatch("accounts/fetch");
-    }
-    if (this.services.length < 2) {
-      this.$store.dispatch("services/fetch");
-    }
-    if (this.namespaces.length < 2) {
-      this.$store.dispatch("namespaces/fetch");
-    }
+    this.$store.dispatch("accounts/fetch");
+    this.$store.dispatch("services/fetch");
+    this.$store.dispatch("namespaces/fetch");
+    this.$store.dispatch("currencies/fetch");
 
     this.accounts.forEach((acc) => {
       if (acc.uuid) accounts.push(acc.uuid);
