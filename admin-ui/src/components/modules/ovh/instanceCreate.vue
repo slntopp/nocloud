@@ -84,6 +84,13 @@
             "
           />
         </v-col>
+        <v-col v-if="ovhType === 'cloud'" cols="6">
+          <v-text-field
+            label="SSH"
+            :value="instance.config?.ssh"
+            @change="(value) => setValue(`config.ssh`, value)"
+          />
+        </v-col>
         <v-col cols="6" class="d-flex align-center">
           <v-select
             :items="durationItems"
@@ -262,7 +269,7 @@ export default {
 
         this.setAddons(product.meta.addons, val);
 
-        const savedResources = {
+        let savedResources = {
           ips_private: 0,
           ips_public: 1,
         };
@@ -271,6 +278,9 @@ export default {
           savedResources.ram = resources.ram;
           savedResources.drive_size = resources.disk;
           savedResources.drive_type = "SSD";
+        } else if (this.ovhType === "cloud") {
+          this.setValue('config.monthlyBilling',this.instance.config?.duration==='P1M')
+          savedResources = { ...savedResources, ...resources };
         }
 
         this.$emit("set-value", {
