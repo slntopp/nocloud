@@ -209,6 +209,7 @@ const fetchFlavours = async () => {
           prices.value[selectedRegion.value]?.[flavour.planCodes[key]];
         newFlavours.push({
           ...flavour,
+          title:flavour.name,
           period,
           name: planCode,
           price: parseFloat(price * rate.value).toFixed(2),
@@ -275,9 +276,8 @@ const changePlan = (plan) => {
       .map((item) => ({ name: item.name, id: item.id }));
 
     regionFlavors.forEach((item) => {
-      console.log(item)
       plan.products[item.name] = {
-        title: item.name,
+        title: item.title,
         kind: "PREPAID",
         price: item.endPrice,
         period: item.period === "P1H" ? 60 * 60 : 60 * 60 * 24 * 30,
