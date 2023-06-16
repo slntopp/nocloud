@@ -185,7 +185,7 @@ const initPrices = () => {
 
 const planCode = computed(() => template.value.config.planCode);
 const duration = computed(() => template.value.config.duration);
-const addons = computed(() => template.value.config.addons);
+const addons = computed(() => template.value.config.addons || []);
 const type = computed(() => template.value.config.type);
 const tarrif = computed(
   () =>
@@ -222,7 +222,6 @@ const getBasePrices = async () => {
 
     const planCodeCurr = meta.plans.find((p) => planCode.value === p.planCode);
     basePrices.value["tarrif"] = getPriceFromProduct(planCodeCurr);
-
     addons.value.forEach((addon) => {
       Object.keys(meta).forEach((metaKey) => {
         const product =
