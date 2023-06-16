@@ -139,6 +139,7 @@
             <v-textarea
               no-resize
               label="Items descriptions"
+              :rules="isInvoice?generalRule:[]"
               v-model="transaction.meta.description"
             ></v-textarea>
           </v-row>

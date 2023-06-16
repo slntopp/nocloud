@@ -23,6 +23,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	epb "github.com/slntopp/nocloud-proto/events"
+	"github.com/slntopp/nocloud-proto/registry/accounts"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -197,6 +198,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
 		currencyConf := MakeCurrencyConf(ctx, log)
+		suspConf := MakeSuspendConf(ctx, log)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
@@ -212,6 +214,37 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 			log.Error("Failed to process transaction", zap.String("err", err.Error()))
 			return nil, status.Error(codes.Internal, "Failed to process transaction")
 		}
+
+		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
+
+		if err != nil {
+			log.Error("Failed to get account", zap.String("err", err.Error()))
+			return nil, status.Error(codes.Internal, "Failed to process transaction")
+		}
+
+		rate, err := s.currencies.GetExchangeRateDirect(ctx, *dbAcc.Currency, pb.Currency(currencyConf.Currency))
+
+		if err != nil {
+			log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
+			return nil, status.Error(codes.Internal, "Failed to process transaction")
+		}
+
+		balance := *dbAcc.Balance * rate
+
+		if !*dbAcc.Suspended && balance < suspConf.Limit {
+			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
+			if err != nil {
+				log.Error("Failed to suspend account", zap.String("err", err.Error()))
+				return nil, status.Error(codes.Internal, "Failed to process transaction")
+			}
+		} else if *dbAcc.Suspended && balance > suspConf.Limit {
+			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
+			if err != nil {
+				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
+				return nil, status.Error(codes.Internal, "Failed to process transaction")
+			}
+		}
+
 	} else {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)

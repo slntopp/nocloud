@@ -77,6 +77,8 @@
             label="OS"
             :value="instance.config?.configuration[`${ovhType}_os`]"
             :items="images[instance.config?.planCode]"
+            item-text="title"
+            item-value="id"
             :rules="rules.req"
             :disabled="!instance.config?.planCode"
             @change="
@@ -262,9 +264,10 @@ export default {
         );
         const product = this.instance.billing_plan.products[flavor.key];
         const resources = product.resources;
-        this.images[val] = product.meta.os.map((os) =>
-          os.name ? os.name : os
-        );
+        this.images[val] = product.meta.os.map((os) => ({
+          title: os.name ? os.name : os,
+          id: os.id ? os.id : os,
+        }));
         this.regions[val] = product.meta.datacenter;
 
         this.setAddons(product.meta.addons, val);

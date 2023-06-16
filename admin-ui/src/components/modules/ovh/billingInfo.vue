@@ -14,7 +14,9 @@
         <v-text-field
           readonly
           label="Tarif (product plan)"
-          :value="template.config.planCode"
+          :value="
+            template.billingPlan.products[duration + ' ' + planCode]?.title
+          "
           append-icon="mdi-pencil"
           @click:append="priceModelDialog = true"
         />
