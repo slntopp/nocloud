@@ -116,7 +116,7 @@ const isImagesLoading = ref(false);
 const isRegionsLoading = ref(false);
 
 const pricesHeaders = ref([
-  { text: "Name", value: "name" },
+  { text: "Name", value: "title" },
   { text: "Os type", value: "osType" },
   { text: "Disk", value: "disk" },
   { text: "In bound bandwidth", value: "inboundBandwidth" },
@@ -209,7 +209,7 @@ const fetchFlavours = async () => {
           prices.value[selectedRegion.value]?.[flavour.planCodes[key]];
         newFlavours.push({
           ...flavour,
-          title:flavour.name,
+          title: flavour.planCodes[key],
           period,
           name: planCode,
           price: parseFloat(price * rate.value).toFixed(2),

@@ -128,13 +128,27 @@ const onUpdatePrice = (item) => {
   setTotalNewPrice();
 };
 
-const getOvhPrices = async () => {
+const getVpsPrices = async () => {
   const { meta } = await api.servicesProviders.action({
     uuid: template.value.sp,
     action: "get_plans",
   });
 
-  return meta;
+  const prices = {};
+
+  const planCodeCurr = meta.plans.find((p) => planCode.value === p.planCode);
+  prices["tarrif"] = getPriceFromProduct(planCodeCurr);
+  addons.value.forEach((addon) => {
+    Object.keys(meta).forEach((metaKey) => {
+      const product =
+        meta[metaKey].find && meta[metaKey].find((p) => p?.planCode === addon);
+      if (product) {
+        prices[addon] = getPriceFromProduct(product);
+      }
+    });
+  });
+
+  return prices;
 };
 
 const getDedicatedPrice = async () => {
@@ -142,8 +156,48 @@ const getDedicatedPrice = async () => {
     uuid: template.value.sp,
     action: "get_baremetal_plans",
   });
+  const prices = {};
 
-  return meta;
+  const planCodeCurr = meta.plans.find((p) => planCode.value === p.planCode);
+  prices["tarrif"] = getPriceFromProduct(planCodeCurr);
+  const addonsPrice = await api.servicesProviders.action({
+    action: "get_baremetal_options",
+    uuid: template.value.sp,
+    params: { planCode: planCode.value },
+  });
+  const addonTypes = { softraid: "storage", ram: "memory" };
+  addons.value.forEach((addon) => {
+    const addonType = Object.keys(addonTypes).find((t) => addon.includes(t));
+    prices[addon] =
+      addonsPrice.meta.options[addonTypes[addonType]]
+        .find((m) => m.planCode === addon)
+        ?.prices.find(
+          (p) =>
+            p.duration === duration.value &&
+            p.pricingModel === template.value.config.pricingModel
+        ).price.value || 0;
+  });
+  return prices;
+};
+const getCloudPrices = async () => {
+  const fullSp = await api.servicesProviders.get(template.value.sp);
+  const prices = {};
+  const { meta } = await api.servicesProviders.action({
+    action: "get_cloud_flavors",
+    uuid: template.value.sp,
+    params: {
+      region: template.value.config.configuration.cloud_datacenter,
+      projectId: fullSp.vars?.projectId?.value?.default,
+    },
+  });
+
+  prices["tarrif"] =
+    meta.codes[
+      template.value.billingPlan.products[duration.value + " " + planCode.value]
+        ?.title
+    ] * rate.value;
+
+  return prices;
 };
 const getPriceFromProduct = (product) => {
   return (
@@ -217,27 +271,19 @@ const getBasePrices = async () => {
   try {
     let meta = null;
     if (type.value === "vps") {
-      meta = await getOvhPrices();
+      meta = await getVpsPrices();
     } else if (type.value === "dedicated") {
       meta = await getDedicatedPrice();
+    } else if (type.value === "cloud") {
+      meta = await getCloudPrices();
     }
 
-    const planCodeCurr = meta.plans.find((p) => planCode.value === p.planCode);
-    basePrices.value["tarrif"] = getPriceFromProduct(planCodeCurr);
-    addons.value.forEach((addon) => {
-      Object.keys(meta).forEach((metaKey) => {
-        const product =
-          meta[metaKey].find &&
-          meta[metaKey].find((p) => p?.planCode === addon);
-        if (product) {
-          basePrices.value[addon] = getPriceFromProduct(product);
-        }
-      });
-    });
+    basePrices.value = meta;
     totalBasePrice.value = Object.keys(basePrices.value)
       .reduce((acc, key) => acc + +basePrices.value[key], 0)
       .toFixed(2);
   } catch (e) {
+    console.log(e);
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during fetch base prices",
     });
