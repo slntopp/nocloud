@@ -209,7 +209,7 @@ const fetchFlavours = async () => {
           prices.value[selectedRegion.value]?.[flavour.planCodes[key]];
         newFlavours.push({
           ...flavour,
-          title:flavour.name,
+          title: flavour.planCodes[key],
           period,
           name: planCode,
           price: parseFloat(price * rate.value).toFixed(2),
