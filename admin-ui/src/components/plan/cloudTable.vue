@@ -116,7 +116,7 @@ const isImagesLoading = ref(false);
 const isRegionsLoading = ref(false);
 
 const pricesHeaders = ref([
-  { text: "Name", value: "name" },
+  { text: "Name", value: "title" },
   { text: "Os type", value: "osType" },
   { text: "Disk", value: "disk" },
   { text: "In bound bandwidth", value: "inboundBandwidth" },
