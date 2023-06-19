@@ -305,11 +305,15 @@ export default {
       }
 
       if (path.includes("addons")) {
-        const { addons } = data.config;
-        val = [...addons, val];
-        const resources = {};
+        let { addons } = data.config;
+
         if (this.ovhType === "dedicated") {
-          for (let addonKey of val) {
+          const dedicatedKeys = ["ram", "softraid"];
+          const newAddonKey = dedicatedKeys.find((key) => val.includes(key));
+          addons = addons.filter((a) => !a.includes(newAddonKey));
+
+          const resources = {};
+          for (let addonKey of [...addons, val]) {
             if (addonKey.includes("ram")) {
               resources.ram = parseInt(addonKey?.split("-")[1] ?? 0);
             }
@@ -330,6 +334,8 @@ export default {
             ...resources,
           });
         }
+
+        val = [...addons, val];
       }
 
       this.$emit("set-value", { value: val, key: path });
