@@ -89,8 +89,8 @@
         <v-col v-if="ovhType === 'cloud'" cols="6">
           <v-text-field
             label="SSH"
-            :value="instance.config?.ssh"
-            @change="(value) => setValue(`config.ssh`, value)"
+            :value="instanceGroup?.config?.ssh"
+            @change="setInstanceGroup('config', { ssh: $event })"
           />
         </v-col>
         <v-col cols="6" class="d-flex align-center">
@@ -167,7 +167,15 @@ const getDefaultInstance = () => ({
 });
 export default {
   name: "instance-ovh-create",
-  props: ["plans", "instance", "planRules", "sp-uuid", "meta", "is-edit"],
+  props: [
+    "plans",
+    "instance",
+    "planRules",
+    "sp-uuid",
+    "meta",
+    "is-edit",
+    "instance-group",
+  ],
   data: () => ({
     rules: {
       req: [(v) => !!v || "required field"],
@@ -357,6 +365,9 @@ export default {
           key: "product",
         });
       }
+    },
+    setInstanceGroup(key, value) {
+      this.$emit("set-instance-group", { ...this.instanceGroup, [key]: value });
     },
   },
   computed: {
