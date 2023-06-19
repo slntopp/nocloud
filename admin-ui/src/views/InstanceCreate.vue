@@ -40,25 +40,27 @@
         <v-col cols="4" md="3" lg="2">
           <v-autocomplete
             @input.native="customInstanceGroup = $event.target.value"
-            :items="serviceInstanceGroups"
-            v-model="instanceGroup"
+            :items="serviceInstanceGroupTitles"
+            v-model="instanceGroupTitle"
             label="instanceGroup"
             :rules="rules.req"
           />
         </v-col>
       </v-row>
-        <component
-          :is-edit="isEdit || this.$route.params.instanceId"
-          v-if="isDataLoading"
-          @set-value="setValue"
-          @set-instance="instance = $event"
-          @set-meta="meta = $event"
-          :instance="instance"
-          :plans="plans"
-          :plan-rules="planRules"
-          :sp-uuid="serviceProviderId"
-          :is="templates[type] ?? templates.custom"
-        />
+      <component
+        :is-edit="isEdit || this.$route.params.instanceId"
+        v-if="isDataLoading"
+        @set-value="setValue"
+        :instance-group="instanceGroup"
+        @set-instance-group="instanceGroup = $event"
+        @set-instance="instance = $event"
+        @set-meta="meta = $event"
+        :instance="instance"
+        :plans="plans"
+        :plan-rules="planRules"
+        :sp-uuid="serviceProviderId"
+        :is="templates[type] ?? templates.custom"
+      />
       <v-row class="mx-5" justify="end">
         <v-btn @click="save">Save</v-btn>
       </v-row>
@@ -81,7 +83,8 @@ export default {
     customTypeName: null,
     instance: {},
     service: {},
-    instanceGroup: "",
+    instanceGroup: {},
+    instanceGroupTitle: "",
     customInstanceGroup: "",
     serviceProviderId: null,
 
@@ -118,18 +121,23 @@ export default {
         return;
       }
       let igIndex = this.service.instancesGroups.findIndex(
-        (i) => i.title === this.instanceGroup
+        (i) => i.title === this.instanceGroupTitle
       );
 
       if (igIndex === -1) {
         this.service.instancesGroups.push({
-          title: this.instanceGroup,
+          title: this.instanceGroupTitle,
           type: this.customTypeName || this.type,
           instances: [],
           sp: this.serviceProviderId,
         });
         igIndex = this.service.instancesGroups.length - 1;
       }
+
+      this.service.instancesGroups[igIndex] = {
+        ...this.service.instancesGroups[igIndex],
+        ...this.instanceGroup,
+      };
 
       if (this.isEdit) {
         const instanceIndex = this.service.instancesGroups[
@@ -195,12 +203,12 @@ export default {
         return [];
       }
 
-      const igs = this.service.instancesGroups
-        .filter(
-          (ig) => ig.type === this.type && ig.sp === this.serviceProviderId
-        )
-        .map((ig) => ig.title);
-
+      return this.service.instancesGroups.filter(
+        (ig) => ig.type === this.type && ig.sp === this.serviceProviderId
+      );
+    },
+    serviceInstanceGroupTitles() {
+      const igs = this.serviceInstanceGroups.map((i) => i.title);
       if (this.customInstanceGroup) {
         igs.unshift(this.customInstanceGroup);
       }
@@ -221,7 +229,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("servicesProviders/fetch",false);
+    this.$store.dispatch("servicesProviders/fetch", false);
     this.$store.dispatch("services/fetch").then(() => {
       const instanceId = this.$route.params.instanceId;
       if (instanceId) {
@@ -233,7 +241,7 @@ export default {
               this.type = ig.type;
               this.service = s;
               this.serviceProviderId = ig.sp;
-              this.instanceGroup = ig.title;
+              this.instanceGroupTitle = ig.title;
               this.instance = instance;
             }
           });
@@ -282,9 +290,14 @@ export default {
           this.plans.list.push({ ...plan, title });
         });
       });
-      this.instanceGroup = this.service.instancesGroups.find(
+      this.instanceGroupTitle = this.service.instancesGroups.find(
         (ig) => ig.sp === sp_uuid
       )?.title;
+    },
+    instanceGroupTitle(newVal) {
+      this.instanceGroup = this.serviceInstanceGroups.find(
+        (ig) => ig.title === newVal
+      );
     },
     type() {
       if (this.isEdit) {
