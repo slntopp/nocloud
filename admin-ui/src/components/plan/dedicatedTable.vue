@@ -214,7 +214,10 @@ export default {
             },
           });
 
-          const addons = this.addons[el.planCode]?.map((el) => el.planCode);
+          const addons = this.addons[el.planCode]?.map((el) => ({
+            id: el.planCode,
+            title: el.name,
+          }));
 
           const datacenter =
             requiredConfiguration.find((el) => el.label.includes("datacenter"))
@@ -463,7 +466,6 @@ export default {
       .action({
         action: "get_baremetal_plans",
         uuid: this.sp.uuid,
-
       })
       .then(({ meta }) => {
         this.plans = this.setPlans(meta);
@@ -485,8 +487,10 @@ export default {
     icon.dispatchEvent(new Event("click"));
   },
   computed: {
-    sp(){
-      return this.$store.getters["servicesProviders/all"].find((sp)=>sp.type==='ovh');
+    sp() {
+      return this.$store.getters["servicesProviders/all"].find(
+        (sp) => sp.type === "ovh"
+      );
     },
     filteredPlans() {
       return this.applyFilter(this.plans);

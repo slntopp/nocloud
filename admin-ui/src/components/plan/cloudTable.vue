@@ -283,13 +283,13 @@ const changePlan = (plan) => {
         period: item.period === "P1H" ? 60 * 60 : 60 * 60 * 24 * 30,
         resources: {
           osType: item.osType,
-          disk: item.disk,
+          drive_size: item.disk,
           inboundBandwidth: item.inboundBandwidth,
           outboundBandwidth: item.outboundBandwidth,
           period: item.period,
           quota: item.quota,
           ram: item.ram,
-          vcpus: item.vcpus,
+          cpu: item.vcpus,
         },
         meta: {
           ...item.meta,
