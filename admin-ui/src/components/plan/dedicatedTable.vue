@@ -87,6 +87,7 @@
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
 import currencyRate from "@/mixins/currencyRate";
+import { getMarginedValue } from "@/functions";
 
 export default {
   name: "dedicated-table",
@@ -345,35 +346,7 @@ export default {
         });
       }
       values?.forEach((plan, i, arr) => {
-        const n = Math.pow(10, this.fee.precision ?? 0);
-        let percent = (this.fee?.default ?? 0) / 100 + 1;
-        let round;
-
-        switch (this.fee.round) {
-          case 1:
-            round = "floor";
-            break;
-          case 2:
-            round = "round";
-            break;
-          case 3:
-            round = "ceil";
-            break;
-          default:
-            round = "round";
-        }
-        if (this.fee.round === "NONE" || !this.fee.round) round = "round";
-        else if (typeof this.fee.round === "string") {
-          round = this.fee.round.toLowerCase();
-        }
-
-        for (let range of this.fee?.ranges ?? []) {
-          if (plan.price.value <= range.from) continue;
-          if (plan.price.value > range.to) continue;
-          percent = range.factor / 100 + 1;
-        }
-        arr[i].value = Math[round](plan.price.value * percent * n) / n;
-
+        arr[i].value = getMarginedValue(this.fee, plan.price.value);
         this.getMargin(arr[i]);
       });
     },

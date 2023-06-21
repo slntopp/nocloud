@@ -90,6 +90,7 @@ import api from "@/api";
 import { useStore } from "@/store";
 import NocloudTable from "@/components/table.vue";
 import useRate from "@/hooks/useRate";
+import { getMarginedValue } from "@/functions";
 
 const props = defineProps({
   fee: { type: Object, required: true },
@@ -302,11 +303,13 @@ const changePlan = (plan) => {
 };
 
 const setFee = () => {
-  flavors.value = flavors.value.map((i) => {
-    if (!i.enabled) {
-      i.endPrice = Math.round(i.price + (i.price / 100) * fee.value.default);
-    }
-    return i;
+  Object.keys(flavors.value).forEach((key) => {
+    flavors.value[key] = flavors.value[key].map((i) => {
+      if (!i.enabled) {
+        i.endPrice = getMarginedValue(fee.value, i.price);
+      }
+      return i;
+    });
   });
 };
 
