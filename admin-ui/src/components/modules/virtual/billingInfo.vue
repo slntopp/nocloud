@@ -32,19 +32,35 @@
           isMonitoringsEmpty
         "
       >
-        <v-text-field readonly label="Due to date/next payment" :value="date" />
+        <v-text-field
+          readonly
+          label="Due to date/next payment"
+          :value="date"
+          :append-icon="!isMonitoringsEmpty ? 'mdi-pencil' : null"
+          @click:append="changeDatesDialog = true"
+        />
       </v-col>
     </v-row>
+    <change-monitorings
+      :template="template"
+      :service="service"
+      v-model="changeDatesDialog"
+      @refresh="emit('refresh')"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, defineProps, toRefs } from "vue";
+import { computed, defineProps, toRefs, ref } from "vue";
 import { formatSecondsToDate } from "@/functions";
+import ChangeMonitorings from "@/components/dialogs/changeMonitorings.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
+const emit = defineEmits(["refresh"]);
 
 const { template } = toRefs(props);
+
+const changeDatesDialog = ref(false);
 
 const date = computed(() =>
   formatSecondsToDate(template.value?.data?.last_monitoring)
