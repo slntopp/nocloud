@@ -122,7 +122,7 @@ import {
   onMounted,
 } from "vue";
 import { formatSecondsToDate, getFullDate } from "@/functions";
-import ChangeIoneMonitorings from "@/components/dialogs/changeIoneMonitorings.vue";
+import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
 import ChangeIonePriceModel from "@/components/dialogs/changeIonePriceModel.vue";
