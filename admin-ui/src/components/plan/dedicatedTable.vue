@@ -87,6 +87,7 @@
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
 import currencyRate from "@/mixins/currencyRate";
+import { getMarginedValue } from "@/functions";
 
 export default {
   name: "dedicated-table",
@@ -214,7 +215,10 @@ export default {
             },
           });
 
-          const addons = this.addons[el.planCode]?.map((el) => el.planCode);
+          const addons = this.addons[el.planCode]?.map((el) => ({
+            id: el.planCode,
+            title: el.name,
+          }));
 
           const datacenter =
             requiredConfiguration.find((el) => el.label.includes("datacenter"))
@@ -342,35 +346,7 @@ export default {
         });
       }
       values?.forEach((plan, i, arr) => {
-        const n = Math.pow(10, this.fee.precision ?? 0);
-        let percent = (this.fee?.default ?? 0) / 100 + 1;
-        let round;
-
-        switch (this.fee.round) {
-          case 1:
-            round = "floor";
-            break;
-          case 2:
-            round = "round";
-            break;
-          case 3:
-            round = "ceil";
-            break;
-          default:
-            round = "round";
-        }
-        if (this.fee.round === "NONE" || !this.fee.round) round = "round";
-        else if (typeof this.fee.round === "string") {
-          round = this.fee.round.toLowerCase();
-        }
-
-        for (let range of this.fee?.ranges ?? []) {
-          if (plan.price.value <= range.from) continue;
-          if (plan.price.value > range.to) continue;
-          percent = range.factor / 100 + 1;
-        }
-        arr[i].value = Math[round](plan.price.value * percent * n) / n;
-
+        arr[i].value = getMarginedValue(this.fee, plan.price.value);
         this.getMargin(arr[i]);
       });
     },
@@ -463,7 +439,6 @@ export default {
       .action({
         action: "get_baremetal_plans",
         uuid: this.sp.uuid,
-
       })
       .then(({ meta }) => {
         this.plans = this.setPlans(meta);
@@ -485,8 +460,10 @@ export default {
     icon.dispatchEvent(new Event("click"));
   },
   computed: {
-    sp(){
-      return this.$store.getters["servicesProviders/all"].find((sp)=>sp.type==='ovh');
+    sp() {
+      return this.$store.getters["servicesProviders/all"].find(
+        (sp) => sp.type === "ovh"
+      );
     },
     filteredPlans() {
       return this.applyFilter(this.plans);

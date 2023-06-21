@@ -136,6 +136,8 @@
           >
             <v-select
               :label="key"
+              item-text="title"
+              item-value="id"
               :items="addon"
               :value="getAddonValue(addon)"
               @change="(value) => setValue('config.addons', value)"
@@ -224,11 +226,15 @@ export default {
       ];
 
       addons?.forEach((addon) => {
-        const key = alowwed.find((a) => addon.includes(a));
+        const addonId = addon.id || addon;
+        const key = alowwed.find((a) => addonId.includes(a));
         if (key) {
           newAddons[key] = !newAddons[key]?.length
-            ? [addon]
-            : [...newAddons[key], addon];
+            ? [{ title: addon?.title || addon, id: addonId }]
+            : [
+                ...newAddons[key],
+                { title: addon?.title || addon, id: addonId },
+              ];
         }
       });
 
@@ -331,10 +337,11 @@ export default {
                 "0",
               ];
 
-              resources.disk = count * parseInt(size) * 1024;
-              if (addonKey?.includes("hybrid")) resources.drive = "SSD + HDD";
-              else if (size.includes("sa")) resources.drive = false;
-              else resources.drive = "SSD";
+              resources.drive_size = count * parseInt(size) * 1024;
+              if (addonKey?.includes("hybrid"))
+                resources.drive_type = "SSD + HDD";
+              else if (size.includes("sa")) resources.drive_type = false;
+              else resources.drive_type = "SSD";
             }
           }
           this.setValue("resources", {
