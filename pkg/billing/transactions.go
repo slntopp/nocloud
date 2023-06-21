@@ -230,11 +230,15 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 			cur = *dbAcc.Currency
 		}
 
-		rate, err := s.currencies.GetExchangeRateDirect(ctx, cur, pb.Currency(currencyConf.Currency))
+		var rate float64 = 1
 
-		if err != nil {
-			log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, err.Error())
+		if cur != pb.Currency(currencyConf.Currency) {
+			rate, err = s.currencies.GetExchangeRateDirect(ctx, cur, pb.Currency(currencyConf.Currency))
+
+			if err != nil {
+				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
+				return nil, status.Error(codes.Internal, err.Error())
+			}
 		}
 
 		balance := *dbAcc.Balance * rate
