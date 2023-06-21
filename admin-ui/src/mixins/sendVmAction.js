@@ -1,12 +1,11 @@
 import api from "@/api";
-import snackbar from "@/mixins/snackbar";
 
 const sendVmAction = {
   data: () => ({
     isActionLoading: false,
   }),
   methods: {
-    sendVmAction(action, { uuid, type },data) {
+    sendVmAction(action, { uuid, type }, data) {
       if (action === "vnc") {
         return this.openVnc(uuid, type);
       }
@@ -16,7 +15,7 @@ const sendVmAction = {
 
       this.isActionLoading = true;
       return api.instances
-        .action({ uuid, action ,params:data})
+        .action({ uuid, action, params: data })
         .then((data) => {
           this.showSnackbarSuccess({ message: "Done!" });
           return data;
@@ -25,7 +24,7 @@ const sendVmAction = {
           const opts = {
             message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
           };
-          this.showSnackbarError(opts);
+          this.$store.commit("snackbar/showSnackbar", opts);
         })
         .finally(() => {
           this.isActionLoading = false;
@@ -49,7 +48,6 @@ const sendVmAction = {
       });
     },
   },
-  mixins: [snackbar],
 };
 
 export default sendVmAction;
