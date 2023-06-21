@@ -122,8 +122,8 @@
             lg="6"
           >
             <v-alert type="error">
-              {{ template.state.meta.networking.public_vnet.error }}</v-alert
-            >
+              {{ template.state.meta.networking.public_vnet.error }}
+            </v-alert>
           </v-col>
 
           <v-col v-else cols="12" lg="6">
@@ -161,8 +161,8 @@
             lg="6"
           >
             <v-alert type="error">
-              {{ template.state.meta.networking.private_vnet.error }}</v-alert
-            >
+              {{ template.state.meta.networking.private_vnet.error }}
+            </v-alert>
           </v-col>
           <v-col v-else cols="12" lg="6">
             <div class="title_progress">
@@ -199,8 +199,8 @@
     <v-row class="mb-7">
       <v-col v-if="template.state.meta.datastores.error" cols="12" lg="6">
         <v-alert type="error">
-          {{ template.state.meta.datastores.error }}</v-alert
-        >
+          {{ template.state.meta.datastores.error }}
+        </v-alert>
       </v-col>
       <v-col
         v-for="(datastor, idx) in template.state.meta.datastores"
@@ -302,7 +302,7 @@ export default {
     getOSImgLink(name) {
       const os = name.replace(/[^a-zA-Z]+/g, "").toLowerCase();
 
-      return '/admin/img/' + os + ".png";
+      return "/admin/img/" + os + ".png";
     },
   },
   mounted() {
@@ -362,14 +362,14 @@ export default {
       return Math.round((private_vnet.used / private_vnet.total) * 100);
     },
     colorUsePublic() {
-      if (this.percentUsePublic >= 95) return 'red';
-      if (this.percentUsePublic > 80) return 'orange';
-      return 'green';
+      if (this.percentUsePublic >= 95) return "red";
+      if (this.percentUsePublic > 80) return "orange";
+      return "green";
     },
     colorUsePrivate() {
-      if (this.percentUsePrivate >= 95) return 'red';
-      if (this.percentUsePrivate > 80) return 'orange';
-      return 'green';
+      if (this.percentUsePrivate >= 95) return "red";
+      if (this.percentUsePrivate > 80) return "orange";
+      return "green";
     },
   },
   watch: {
@@ -383,6 +383,7 @@ export default {
 .newCloud__template {
   display: flex;
   flex-wrap: wrap;
+
   &.one-line {
     flex-wrap: nowrap;
     justify-content: space-between;
@@ -404,12 +405,15 @@ export default {
   display: grid;
   grid-template-columns: 1fr;
   grid-template-rows: max-content auto;
+
   &:not(:last-child) {
     margin-right: 10px;
   }
+
   &:first-child {
     margin-left: 0px;
   }
+
   &:hover {
     box-shadow: 5px 8px 10px rgba(0, 0, 0, 0.08),
       0px 0px 12px rgba(0, 0, 0, 0.05);
@@ -419,6 +423,7 @@ export default {
 .newCloud__template-image {
   padding: 10px;
 }
+
 .newCloud__template-image img {
   margin: auto;
   width: 90%;

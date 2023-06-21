@@ -176,20 +176,27 @@
       </v-expansion-panels>
     </v-row>
 
-    <v-dialog style="box-shadow: none" v-model="changeIGDialog">
-      <v-card class="ma-auto pa-5" width="40%">
+    <v-dialog style="box-shadow: none" v-model="changeIGDialog" width="40%">
+      <v-card class="ma-auto pa-5">
         <v-card-title>Move service</v-card-title>
-        <v-select
-          :rules="requiredRule"
-          v-model="selectedService"
-          item-text="title"
-          item-value="uuid"
-          label="service"
-          :items="allAvailableServices"
-        />
+        <v-form ref="addServiceCard">
+          <v-select
+            :rules="requiredRule"
+            v-model="selectedService"
+            item-text="title"
+            item-value="uuid"
+            label="service"
+            :items="allAvailableServices"
+          />
+        </v-form>
         <v-card-actions class="d-flex justify-center">
           <v-btn @click="changeIGDialog = false">Close</v-btn>
-          <v-btn class="ml-5" @click="moveInstanceGroup">Accert</v-btn>
+          <v-btn
+            :loading="isMoveLoading"
+            class="ml-5"
+            @click="moveInstanceGroup"
+            >Accert</v-btn
+          >
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -232,6 +239,7 @@ export default {
     opened: [],
     openedInstances: {},
     isLoading: false,
+    isMoveLoading: false,
 
     instancesGroup: { uuid: "", type: "" },
     types: [],
@@ -241,7 +249,7 @@ export default {
     selectedService: null,
     igUUID: null,
 
-    requiredRule: [(val) => !!val],
+    requiredRule: [(val) => !!val || "Required field"],
   }),
   computed: {
     servicesProviders() {
@@ -338,11 +346,15 @@ export default {
       if (!this.$refs.addServiceCard.validate()) {
         return;
       }
-
+      this.isMoveLoading = true;
       api.instanceGroupService
         .move(this.igUUID, this.selectedService)
         .then(() => {
           this.changeIGDialog = false;
+          this.$emit("refresh");
+        })
+        .finally(() => {
+          this.isMoveLoading = false;
         });
     },
     openMove(uuid) {

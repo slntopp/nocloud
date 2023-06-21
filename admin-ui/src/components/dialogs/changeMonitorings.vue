@@ -156,7 +156,7 @@ const changeDates = async () => {
     emit("refresh");
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
-      message: e.response?.data?.message || "Error during change ione monitoring",
+      message: e.response?.data?.message || "Error during change monitoring",
     });
   } finally {
     changeDatesLoading.value = false;

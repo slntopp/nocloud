@@ -15,7 +15,27 @@ export default {
     },
   },
   getters: {
-    all(state) {
+    all(state, getters, rootState, rootGetters) {
+      if (
+        rootGetters["currencies/rates"]?.length &&
+        state.transactions.length
+      ) {
+        return state.transactions.map((t) => {
+          if (
+            t.currency === rootGetters["currencies/default"] ||
+            t.currency === "NCU"
+          ) {
+            return t;
+          }
+          const rate = rootGetters["currencies/rates"].find(
+            (r) =>
+              r.from === t.currency &&
+              r.to === rootGetters["currencies/default"]
+          )?.rate;
+          t.total = t.total * rate;
+          return t;
+        });
+      }
       return state.transactions;
     },
     one(state) {

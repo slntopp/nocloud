@@ -26,6 +26,9 @@
       :loading="isPlansLoading"
       :footer-error="fetchError"
     >
+      <template v-slot:[`item.name`]="{ item }">
+        <v-text-field dense style="width: 200px" v-model="item.name" />
+      </template>
       <template v-slot:[`item.margin`]="{ item }">
         {{ getMargin(item, false) }}
       </template>
@@ -74,7 +77,7 @@
         </v-dialog>
       </template>
       <template v-slot:[`item.sell`]="{ item }">
-        <v-switch v-model="item.sell" />
+        <v-switch v-model="item.sell" @change="fetchAddons(item)" />
       </template>
     </nocloud-table>
   </div>
@@ -83,12 +86,13 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
+import currencyRate from "@/mixins/currencyRate";
+import { getMarginedValue } from "@/functions";
 
 export default {
   name: "dedicated-table",
   components: { nocloudTable },
   props: {
-    sp: { type: Object, required: true },
     fee: { type: Object, required: true },
     template: { type: Object, required: true },
     isPlansLoading: { type: Boolean, required: true },
@@ -142,12 +146,18 @@ export default {
 
     column: "",
     fetchError: "",
-    rate: 1,
     isAddonsLoading: false,
   }),
+  mixins: [currencyRate],
   methods: {
-    fetchAddons({ planCode }) {
-      if (this.addons[planCode]) return;
+    fetchAddons({ planCode, sell }) {
+      if (this.addons[planCode]) {
+        this.addons[planCode].forEach(({ price }, i) => {
+          if (price.value !== 0) return;
+          this.addons[planCode][i].sell = sell;
+        });
+        return;
+      }
 
       this.isAddonsLoading = true;
       api
@@ -173,6 +183,7 @@ export default {
               addon.value = resource.price;
               addon.sell = true;
             }
+            if (addon.price.value === 0 && sell) addon.sell = true;
 
             return addon;
           });
@@ -188,11 +199,14 @@ export default {
         });
     },
     async changePlan(plan) {
+      const sp = this.$store.getters["servicesProviders/all"];
+      const { uuid } = sp.find((el) => el.type === "ovh");
+
       for await (const el of this.plans) {
         if (el.sell) {
           const {
             meta: { requiredConfiguration },
-          } = await api.post(`/sp/${this.sp.uuid}/invoke`, {
+          } = await api.post(`/sp/${uuid}/invoke`, {
             method: "get_required_configuration",
             params: {
               planCode: el.planCode,
@@ -201,7 +215,10 @@ export default {
             },
           });
 
-          const addons = this.addons[el.planCode]?.map((el) => el.planCode);
+          const addons = this.addons[el.planCode]?.map((el) => ({
+            id: el.planCode,
+            title: el.name,
+          }));
 
           const datacenter =
             requiredConfiguration.find((el) => el.label.includes("datacenter"))
@@ -241,12 +258,12 @@ export default {
       setTimeout(() => {
         const headers = document.querySelectorAll(".groupable");
 
-        headers.forEach(({ firstElementChild, children }) => {
+        headers.forEach(({ firstChild, children }) => {
           if (!children[1]?.className.includes("group-icon")) {
             const element = document.querySelector(".group-icon");
             const icon = element.cloneNode(true);
 
-            firstElementChild.after(icon);
+            firstChild.after(icon);
             icon.style = "display: inline-flex";
 
             icon.addEventListener("click", () => {
@@ -255,7 +272,7 @@ export default {
 
               if (menu.className.includes("menuable__content__active")) return;
 
-              this.column = firstElementChild.innerText;
+              this.column = firstChild.textContent.trim();
 
               element.dispatchEvent(new Event("click"));
 
@@ -329,35 +346,7 @@ export default {
         });
       }
       values?.forEach((plan, i, arr) => {
-        const n = Math.pow(10, this.fee.precision ?? 0);
-        let percent = (this.fee?.default ?? 0) / 100 + 1;
-        let round;
-
-        switch (this.fee.round) {
-          case 1:
-            round = "floor";
-            break;
-          case 2:
-            round = "round";
-            break;
-          case 3:
-            round = "ceil";
-            break;
-          default:
-            round = "round";
-        }
-        if (this.fee.round === "NONE" || !this.fee.round) round = "round";
-        else if (typeof this.fee.round === "string") {
-          round = this.fee.round.toLowerCase();
-        }
-
-        for (let range of this.fee?.ranges ?? []) {
-          if (plan.price.value <= range.from) continue;
-          if (plan.price.value > range.to) continue;
-          percent = range.factor / 100 + 1;
-        }
-        arr[i].value = Math[round](plan.price.value * percent * n) / n;
-
+        arr[i].value = getMarginedValue(this.fee, plan.price.value);
         this.getMargin(arr[i]);
       });
     },
@@ -444,22 +433,12 @@ export default {
   },
   created() {
     this.$emit("changeLoading");
-    api
-      .get(`/billing/currencies/rates/PLN/${this.defaultCurrency}`)
-      .then((res) => {
-        this.rate = res.rate;
-      })
-      .catch(() =>
-        api.get(`/billing/currencies/rates/${this.defaultCurrency}/PLN`)
-      )
-      .then((res) => {
-        if (res) this.rate = 1 / res.rate;
-      })
-      .catch((err) => console.error(err));
 
-    api
-      .post(`/sp/${this.sp.uuid}/invoke`, {
-        method: "get_baremetal_plans",
+    this.fetchRate();
+    api.servicesProviders
+      .action({
+        action: "get_baremetal_plans",
+        uuid: this.sp.uuid,
       })
       .then(({ meta }) => {
         this.plans = this.setPlans(meta);
@@ -481,6 +460,11 @@ export default {
     icon.dispatchEvent(new Event("click"));
   },
   computed: {
+    sp() {
+      return this.$store.getters["servicesProviders/all"].find(
+        (sp) => sp.type === "ovh"
+      );
+    },
     filteredPlans() {
       return this.applyFilter(this.plans);
     },
@@ -519,8 +503,9 @@ export default {
   display: none;
   margin: 0 0 2px 4px;
   font-size: 18px;
-  opacity: 0.5;
+  opacity: 1;
   cursor: pointer;
+  color: #fff;
 }
 
 .v-data-table__expanded__content {

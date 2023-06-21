@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -122,15 +123,21 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	return nil
 }
 
-/*
+const removeDataQuery = `
+UPDATE DOCUMENT(@key) WITH { data: null } IN @@collection 
+`
+
 const updateDataQuery = `
-UPDATE DOCUMENT(@@collection, @key) WITH { data: @data } IN @@collection
+UPDATE DOCUMENT(@key) WITH { data: @data } IN @@collection 
+`
+
+const removePlanQuery = `
+UPDATE DOCUMENT(@key) WITH { billing_plan: null } IN @@collection 
 `
 
 const updatePlanQuery = `
-UPDATE DOCUMENT(@@collection, @key) WITH { billingPlan: @billingPlan } IN @@collection
+UPDATE DOCUMENT(@key) WITH { billing_plan: @billingPlan } IN @@collection
 `
-*/
 
 func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, oldInst *pb.Instance) error {
 	log := ctrl.log.Named("Update")
@@ -140,63 +147,79 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		log.Info("Inst cannot be updated. Status DEL", zap.String("uuid", oldInst.GetUuid()))
 		return nil
 	}
-	/*
-		inst.Uuid = ""
-		inst.Status = spb.NoCloudStatus_INIT
-		inst.State = nil
+	inst.Uuid = ""
+	inst.Status = spb.NoCloudStatus_INIT
+	inst.State = nil
 
-		err := hasher.SetHash(inst.ProtoReflect())
+	err := hasher.SetHash(inst.ProtoReflect())
+	if err != nil {
+		return err
+	}
+
+	ctrl.log.Debug("instance for hash calculating while Updating", zap.Any("inst", inst))
+
+	mask := &pb.Instance{
+		Config:    inst.GetConfig(),
+		Resources: inst.GetResources(),
+		Hash:      inst.GetHash(),
+	}
+
+	if inst.GetTitle() != oldInst.GetTitle() {
+		mask.Title = inst.GetTitle()
+	}
+
+	if inst.GetProduct() != oldInst.GetProduct() {
+		mask.Product = inst.Product
+	}
+
+	equalPlans := reflect.DeepEqual(inst.GetBillingPlan(), oldInst.GetBillingPlan())
+
+	if !equalPlans {
+		log.Debug("Update plan")
+		_, err := ctrl.db.Query(ctx, removePlanQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
+		})
 		if err != nil {
+			log.Error("Failed to remove plan")
 			return err
 		}
 
-		ctrl.log.Debug("instance for hash calculating while Updating", zap.Any("inst", inst))
+		_, err = ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
+			"billingPlan": inst.GetBillingPlan(),
+		})
+		if err != nil {
+			log.Error("Failed to update plan")
+			return err
+		}
+	}
 
-		mask := &pb.Instance{
-			Config:    inst.GetConfig(),
-			Resources: inst.GetResources(),
-			Hash:      inst.GetHash(),
+	equalDatas := reflect.DeepEqual(inst.GetData(), oldInst.GetData())
+
+	if !equalDatas {
+		_, err := ctrl.db.Query(ctx, removeDataQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
+		})
+		if err != nil {
+			log.Error("Failed to remove data")
+			return err
 		}
 
-		if inst.GetTitle() != oldInst.GetTitle() {
-			mask.Title = inst.GetTitle()
+		_, err = ctrl.db.Query(ctx, updateDataQuery, map[string]interface{}{
+			"@collection": schema.INSTANCES_COL,
+			"key":         driver.NewDocumentID(schema.INSTANCES_COL, oldInst.Uuid),
+			"data":        inst.Data,
+		})
+		if err != nil {
+			log.Error("Failed to update data")
+			return err
 		}
+	}
 
-		if inst.GetProduct() != oldInst.GetProduct() {
-			mask.Product = inst.Product
-		}
-
-		if inst.GetBillingPlan() != oldInst.GetBillingPlan() {
-			_, err := ctrl.db.Query(ctx, updatePlanQuery, map[string]interface{}{
-				"@collection": schema.INSTANCES_COL,
-				"key":         oldInst.Uuid,
-				"billingPlan": inst.BillingPlan,
-			})
-			if err != nil {
-				log.Error("Failed to update plan")
-				return err
-			}
-		}
-
-		log.Debug("datas", zap.Any("odl data", oldInst.GetData()), zap.Any("new data", inst.GetData()))
-
-		check := reflect.DeepEqual(inst.GetData(), oldInst.GetData())
-
-		log.Debug("deep equal", zap.Bool("check", check))
-
-		if !check {
-			_, err := ctrl.db.Query(ctx, updateDataQuery, map[string]interface{}{
-				"@collection": schema.INSTANCES_COL,
-				"key":         oldInst.Uuid,
-				"data":        inst.Data,
-			})
-			if err != nil {
-				log.Error("Failed to update plan")
-				return err
-			}
-		}
-	*/
-	_, err := ctrl.col.ReplaceDocument(ctx, oldInst.Uuid, inst)
+	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
 	if err != nil {
 		log.Error("Failed to update Instance", zap.Error(err))
 		return err

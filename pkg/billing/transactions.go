@@ -18,10 +18,12 @@ package billing
 import (
 	"context"
 	"fmt"
-	"google.golang.org/protobuf/types/known/structpb"
 	"time"
 
+	"google.golang.org/protobuf/types/known/structpb"
+
 	epb "github.com/slntopp/nocloud-proto/events"
+	"github.com/slntopp/nocloud-proto/registry/accounts"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -196,6 +198,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
 		currencyConf := MakeCurrencyConf(ctx, log)
+		suspConf := MakeSuspendConf(ctx, log)
 
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
@@ -205,6 +208,54 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 			"currency":       currencyConf.Currency,
 			"currencies":     schema.CUR_COL,
 			"now":            time.Now().Unix(),
+			"graph":          schema.BILLING_GRAPH.Name,
+		})
+		if err != nil {
+			log.Error("Failed to process transaction", zap.String("err", err.Error()))
+			return nil, status.Error(codes.Internal, "Failed to process transaction")
+		}
+
+		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
+
+		if err != nil {
+			log.Error("Failed to get account", zap.String("err", err.Error()))
+			return nil, status.Error(codes.Internal, "Failed to process transaction")
+		}
+
+		rate, err := s.currencies.GetExchangeRateDirect(ctx, *dbAcc.Currency, pb.Currency(currencyConf.Currency))
+
+		if err != nil {
+			log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
+			return nil, status.Error(codes.Internal, "Failed to process transaction")
+		}
+
+		balance := *dbAcc.Balance * rate
+
+		if !*dbAcc.Suspended && balance < suspConf.Limit {
+			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
+			if err != nil {
+				log.Error("Failed to suspend account", zap.String("err", err.Error()))
+				return nil, status.Error(codes.Internal, "Failed to process transaction")
+			}
+		} else if *dbAcc.Suspended && balance > suspConf.Limit {
+			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
+			if err != nil {
+				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
+				return nil, status.Error(codes.Internal, "Failed to process transaction")
+			}
+		}
+
+	} else {
+		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
+		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
+		currencyConf := MakeCurrencyConf(ctx, log)
+
+		_, err := s.db.Query(ctx, updateTransactionWithCurrency, map[string]interface{}{
+			"@transactions":  schema.TRANSACTIONS_COL,
+			"accountKey":     acc.String(),
+			"transactionKey": transaction.String(),
+			"currency":       currencyConf.Currency,
+			"currencies":     schema.CUR_COL,
 			"graph":          schema.BILLING_GRAPH.Name,
 		})
 		if err != nil {
@@ -339,10 +390,32 @@ LET rate = PRODUCT(
 		RETURN edge.rate
 )
 
-UPDATE transaction WITH {processed: true, proc: @now} IN @@transactions
-UPDATE account WITH { balance: account.balance - transaction.total * rate } IN @@accounts
+LET total = transaction.total * rate
+
+UPDATE transaction WITH {processed: true, proc: @now, currency: currency, total: total} IN @@transactions
+UPDATE account WITH { balance: account.balance - total } IN @@accounts
 
 return account
+`
+
+const updateTransactionWithCurrency = `
+LET account = DOCUMENT(@accountKey)
+LET transaction = DOCUMENT(@transactionKey)
+
+LET currency = account.currency != null ? account.currency : @currency
+LET rate = PRODUCT(
+	FOR vertex, edge IN OUTBOUND
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency)))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	GRAPH @graph
+	FILTER edge
+		RETURN edge.rate
+)
+
+LET total = transaction.total * rate
+
+UPDATE transaction WITH {currency: currency, total: total} IN @@transactions
+RETURN transaction
 `
 
 const reprocessTransactions = `
@@ -350,6 +423,7 @@ LET account = UNSET(DOCUMENT(@account), "balance")
 LET currency = account.currency != null ? account.currency : @currency
 LET transactions = (
 FOR t IN @@transactions // Iterate over Transactions
+FILTER t.exec != null
 FILTER t.exec <= @now
 FILTER t.account == account._key
 	LET rate = PRODUCT(

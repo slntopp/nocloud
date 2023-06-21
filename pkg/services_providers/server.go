@@ -18,9 +18,10 @@ package services_providers
 import (
 	"context"
 	"fmt"
+	"time"
+
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"google.golang.org/protobuf/types/known/structpb"
-	"time"
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -311,6 +312,9 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 			newLocations = []*sppb.LocationConf{}
 		}
 		sp.Locations = newLocations
+	}
+	if newPublicData := req.GetPublicData(); newPublicData != nil {
+		sp.PublicData = newPublicData
 	}
 	sp.Meta = req.GetMeta()
 	sp.Public = req.GetPublic()

@@ -367,6 +367,7 @@ FOR service IN @@services // Iterate over Services
 
 const processTransactions = `
 FOR t IN @@transactions // Iterate over Transactions
+FILTER t.exec != null
 FILTER t.exec <= @now
 FILTER !t.processed
     LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))

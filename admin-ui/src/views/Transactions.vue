@@ -150,6 +150,9 @@ export default {
       });
     },
     updateOptions(options) {
+      if(this.accountId){
+        return
+      }
       options.itemsPerPage =
         options.itemsPerPage === -1 ? 0 : options.itemsPerPage;
       this.$store
@@ -191,15 +194,10 @@ export default {
     }
 
     const accounts = [];
-    if (this.accounts.length < 2) {
-      this.$store.dispatch("accounts/fetch");
-    }
-    if (this.services.length < 2) {
-      this.$store.dispatch("services/fetch");
-    }
-    if (this.namespaces.length < 2) {
-      this.$store.dispatch("namespaces/fetch");
-    }
+    this.$store.dispatch("accounts/fetch");
+    this.$store.dispatch("services/fetch");
+    this.$store.dispatch("namespaces/fetch");
+    this.$store.dispatch("currencies/fetch");
 
     this.accounts.forEach((acc) => {
       if (acc.uuid) accounts.push(acc.uuid);
@@ -255,7 +253,7 @@ export default {
         filtredServices = this.services;
       }
 
-      return [{ title: "all", uuid: null }].concat(
+      return [{ title: "all", uuid: 'all' }].concat(
         filtredServices.map((el) => ({
           title: `${el.title} (${el.uuid.slice(0, 8)})`,
           uuid: el.uuid,
@@ -292,7 +290,7 @@ export default {
     },
     transactionData() {
       const data = {};
-      if (this.accountId) {
+      if (this.accountId || this.accountId==='all') {
         data.account = this.accountId;
       }
       if (this.accountId) {

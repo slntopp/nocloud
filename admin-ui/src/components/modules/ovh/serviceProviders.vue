@@ -16,7 +16,7 @@
           :label="fields[field].label"
           :rules="fields[field].rules"
           :error-messages="errors[field]"
-          @change="(data) => changeHandler(field, data)"
+          @change="(data) => changeSecrets(field, data)"
         />
       </v-col>
       <v-col :cols="fields[field].items ? 4 : 8">
@@ -25,7 +25,11 @@
           :label="fields[field].label"
           :rules="fields[field].rules"
           :error-messages="errors[field]"
-          @change="(data) => changeHandler(field, data)"
+          @change="
+            fields[field].type === 'vars'
+              ? changeVars(field, $event)
+              : changeSecrets(field, $event)
+          "
         />
       </v-col>
     </v-row>
@@ -57,6 +61,12 @@ export default {
       endpoint: [],
     },
     fields: {
+      projectId: {
+        type: "vars",
+        label: "project id",
+        subheader: "Project id",
+        rules: [(value) => !!value || "Field is required"],
+      },
       app_key: {
         label: "app key",
         subheader: "App key",
@@ -85,8 +95,7 @@ export default {
     },
   }),
   methods: {
-    changeHandler(input, data) {
-      const errors = {};
+    changeSecrets(input, data) {
       const newSecrets = {};
 
       for (const key of Object.keys(this.secrets)) {
@@ -95,8 +104,10 @@ export default {
 
       newSecrets[input] = data;
       this.$emit(`change:secrets`, newSecrets);
-      this.$emit(`passed`, Object.keys(errors).length === 0);
-
+      this.validateFields(input, data);
+    },
+    validateFields(input, data) {
+      const errors = {};
       this.fields[input].rules.forEach((rule) => {
         const result = rule(data);
         if (typeof result == "string") {
@@ -106,8 +117,31 @@ export default {
           this.errors[input] = [];
         }
       });
+      this.$emit(`passed`, Object.keys(errors).length === 0);
+    },
+    changeVars(input, data) {
+      const errors = {};
+      const newVars = {};
+
+      for (const key of Object.keys(this.vars)) {
+        newVars[key] = this.vars[key];
+      }
+
+      if (newVars[input] && newVars[input].value?.default) {
+        newVars[input].value.default = data;
+      } else {
+        newVars[input] = { value: { default: data } };
+      }
+
+      this.$emit(`change:vars`, newVars);
+      this.$emit(`passed`, Object.keys(errors).length === 0);
+
+      this.validateFields(input, data);
     },
     getValue(fieldName) {
+      if (this.fields[fieldName].type === "vars") {
+        return this.vars[fieldName]?.value?.default;
+      }
       return this.secrets[fieldName];
     },
   },

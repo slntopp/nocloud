@@ -164,6 +164,8 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
+import currencyRate from "@/mixins/currencyRate";
+import { getMarginedValue } from "@/functions";
 
 export default {
   name: "vps-table",
@@ -238,10 +240,10 @@ export default {
     newGroupName: "",
     mode: "none",
 
-    rate: 1,
     planId: -1,
     tabsIndex: 0,
   }),
+  mixins: [currencyRate],
   methods: {
     testConfig() {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
@@ -288,12 +290,12 @@ export default {
       setTimeout(() => {
         const headers = document.querySelectorAll(".groupable");
 
-        headers.forEach(({ firstElementChild, children }) => {
+        headers.forEach(({ firstChild, children }) => {
           if (!children[1]?.className.includes("group-icon")) {
             const element = document.querySelector(".group-icon");
             const icon = element.cloneNode(true);
 
-            firstElementChild.after(icon);
+            firstChild.after(icon);
             icon.style = "display: inline-flex";
 
             icon.addEventListener("click", () => {
@@ -302,7 +304,7 @@ export default {
 
               if (menu.className.includes("menuable__content__active")) return;
 
-              this.column = firstElementChild.innerText;
+              this.column = firstChild.textContent.trim();
               if (this.column === "Group") {
                 this.filters[this.tabsIndex].Group = this.groups;
                 this.selected[this.tabsIndex].Group = this.groups;
@@ -461,31 +463,7 @@ export default {
 
       [this.plans, this.addons, windows].forEach((el) => {
         el.forEach((plan, i, arr) => {
-          const n = Math.pow(10, this.fee.precision ?? 0);
-          let percent = (this.fee?.default ?? 0) / 100 + 1;
-          let round;
-
-          switch (this.fee.round) {
-            case 1:
-              round = "floor";
-              break;
-            case 2:
-              round = "round";
-              break;
-            case 3:
-              round = "ceil";
-          }
-          if (!this.fee.round || this.fee.round === "NONE") round = "round";
-          else if (typeof this.fee.round === "string") {
-            round = this.fee.round.toLowerCase();
-          }
-
-          for (let range of this.fee.ranges ?? []) {
-            if (plan.price.value <= range.from) continue;
-            if (plan.price.value > range.to) continue;
-            percent = range.factor / 100 + 1;
-          }
-          arr[i].value = Math[round](plan.price.value * percent * n) / n;
+          arr[i].value = getMarginedValue(this.fee, plan.price.value);
 
           this.getMargin(arr[i]);
         });
@@ -606,21 +584,11 @@ export default {
   },
   created() {
     this.$emit("changeLoading");
-    api
-      .get(`/billing/currencies/rates/PLN/${this.defaultCurrency}`)
-      .then((res) => {
-        this.rate = res.rate;
-      })
-      .catch(() =>
-        api.get(`/billing/currencies/rates/${this.defaultCurrency}/PLN`)
-      )
-      .then((res) => {
-        if (res) this.rate = 1 / res.rate;
-      })
-      .catch((err) => console.error(err));
 
-    api
-      .post(`/sp/${this.sp.uuid}/invoke`, { method: "get_plans" })
+    this.fetchRate();
+
+    api.servicesProviders
+      .action({ action: "get_plans", uuid: this.sp.uuid })
       .then(({ meta }) => {
         this.changePlans(meta);
         this.changeAddons(meta);
@@ -709,10 +677,11 @@ export default {
 <style>
 .v-card .v-icon.group-icon {
   display: none;
-  margin: 0 0 2px 4px;
+  margin: 0 0 1px 2px;
   font-size: 18px;
-  opacity: 0.5;
+  opacity: 1;
   cursor: pointer;
+  color: #fff;
 }
 
 .v-data-table__expanded__content {

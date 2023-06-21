@@ -6,14 +6,36 @@
       :key="btn.action"
       :disabled="btn.disabled"
       :loading="isActionLoading"
-      @click="sendVmAction(btn.action, template)"
+      @click="sendVmAction(btn.action, template, btn.data)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
     <confirm-dialog @confirm="deleteInstance">
       <v-btn class="mr-2" :loading="isLoading"> Delete </v-btn>
     </confirm-dialog>
-    <v-btn class="mr-2" :loading="isSaveLoading" @click="save"> Save </v-btn>
+
+    <confirm-dialog
+      v-if="isBillingChange"
+      text="Billing plan has changed, a new plan will be created"
+      @confirm="save"
+    >
+      <v-btn
+        class="mr-2"
+        :loading="isSaveLoading"
+        :color="isChanged ? 'primary' : ''"
+      >
+        Save
+      </v-btn>
+    </confirm-dialog>
+    <v-btn
+      v-else
+      @click="save"
+      class="mr-2"
+      :loading="isSaveLoading"
+      :color="isChanged ? 'primary' : ''"
+    >
+      Save
+    </v-btn>
   </div>
 </template>
 <script>
@@ -79,10 +101,7 @@ export default {
       ].instances.findIndex((i) => i.uuid === this.template.uuid);
 
       tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
-      if (
-        this.copyTemplate &&
-        JSON.stringify(this.copyTemplate) !== JSON.stringify(this.template)
-      ) {
+      if (this.isBillingChange) {
         const title = this.getPlanTitle(this.template);
         const billingPlan = {
           ...this.copyTemplate.billingPlan,
@@ -151,6 +170,26 @@ export default {
             disabled: this.ovhActions?.reboot,
           },
         ],
+        virtual: [
+          {
+            action: "change_state",
+            data: { state: 3 },
+            title: "start",
+            disabled: this.virtualActions.start,
+          },
+          {
+            action: "change_state",
+            data: { state: 2 },
+            title: "stop",
+            disabled: this.virtualActions.stop,
+          },
+          {
+            action: "change_state",
+            data: { state: 6 },
+            title: "suspend",
+            disabled: this.virtualActions.suspend,
+          },
+        ],
         opensrs: [{ action: "dns" }],
         cpanel: [{ action: "session" }],
       };
@@ -215,6 +254,18 @@ export default {
         vnc: this.template.state.state !== "RUNNING",
       };
     },
+    virtualActions() {
+      if (!this.template?.state || this.template.state.state === "PENDING")
+        return {
+          stop: true,
+          suspend: true,
+        };
+      return {
+        stop: this.template.state.state === "INIT",
+        suspend: this.template.state.state === "SUSPENDED",
+        start: this.template.state.state === "RUNNING",
+      };
+    },
     getPlanTitle() {
       const type = this.template.type.includes("ovh")
         ? "ovh"
@@ -238,6 +289,17 @@ export default {
     service() {
       return this.$store.getters["services/all"]?.find(
         (s) => s.uuid == this.template.service
+      );
+    },
+    isChanged() {
+      return (
+        JSON.stringify(this.template) !== JSON.stringify(this.copyTemplate)
+      );
+    },
+    isBillingChange() {
+      return (
+        JSON.stringify(this.copyTemplate.billingPlan) !==
+        JSON.stringify(this.template.billingPlan)
       );
     },
   },

@@ -12,10 +12,7 @@
   >
     <template #actions>
       <!-- byn  .ant-btn-primary -->
-      <div
-        v-if="selected || multiSelect"
-        style="position: absolute; right: 25px; bottom: 13px"
-      >
+      <div style="position: absolute; right: 25px; bottom: 13px">
         <v-btn
           class="ant-btn-primary"
           style="margin-right: 5px; background-color: #4caf50"
@@ -141,7 +138,7 @@
                     @keyup.enter="(e) => onEnterHandler(marker.id, e)"
                     @input="(e) => inputHandler(e, marker)"
                   />
-                  
+
                   <div class="d-flex justify-end">
                     <v-switch
                       label="Is primary"
@@ -155,9 +152,7 @@
                   </div>
 
                   <v-card-actions class="justify-end">
-                    <v-btn @click.stop="saveAndClose(marker.id)">
-                      Save
-                    </v-btn>
+                    <v-btn @click.stop="saveAndClose(marker.id)"> Save </v-btn>
                   </v-card-actions>
                 </v-card>
               </v-dialog>
@@ -211,6 +206,7 @@ export default {
     activePinTitle: { type: String, default: "" },
     canAddPin: { type: Boolean, default: true },
     error: { type: String, default: "" },
+    type: { type: String, default: "" },
   },
 
   data: () => ({
@@ -219,7 +215,7 @@ export default {
 
     markersSave: [],
     markers: [],
-    item: {}
+    item: {},
   }),
   methods: {
     formatText(tag, id) {
@@ -249,7 +245,9 @@ export default {
           const color = `color: ${this.textColor.toLowerCase()}`;
           const pos = selectionStart + color.length + 13;
 
-          this.$refs[`color-dialog.${id}`][0].isActive = false;
+          if (this.$refs[`color-dialog.${id}`]?.[0]) {
+            this.$refs[`color-dialog.${id}`][0].isActive = false;
+          }
           setTimeout(() => {
             textarea.focus();
           });
@@ -312,15 +310,26 @@ export default {
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
 
+      if (this.type) {
+        this.item.locations.push(
+          ...this.template.locations.filter(
+            (location) => location.type !== this.type
+          )
+        );
+      }
+
+      console.log(this.item.locations, this.markers);
+
       if (this.item.locations.length < 1) {
         this.item.locations = [{ id: "_nocloud.remove" }];
       }
       api.servicesProviders
         .update(this.item.uuid, this.item)
-        .then(() => {
+        .then((data) => {
           this.showSnackbarSuccess({
             message: "Service edited successfully",
           });
+          this.$emit('set-locations',data.locations)
         })
         .catch((err) => {
           this.showSnackbarError({
@@ -335,11 +344,16 @@ export default {
       this.markersSave = JSON.parse(JSON.stringify(this.markers));
     },
     saveAndClose(id) {
-      this.$refs["edit-dialog." + id][0].isActive = false;
+      if (this.$refs["edit-dialog." + id]?.[0]) {
+        this.$refs["edit-dialog." + id][0].isActive = false;
+      }
       this.saveCountry();
     },
     cancelSelectedCountry() {
-      this.markers = JSON.parse(JSON.stringify(this.markersSave));
+      this.changeLocations();
+      if (this.markers.length < 2) {
+        this.selected = this.markers[0]?.id;
+      }
     },
     // ---------------------------
     mapClickHandler({ target, offsetX, offsetY }) {
@@ -348,7 +362,7 @@ export default {
         return;
       }
       if (target.id) {
-        this.selected = (this.region) ? `${target.id}-${this.region}` : target.id;
+        this.selected = this.region ? `${target.id}-${this.region}` : target.id;
       } else {
         return false;
       }
@@ -356,8 +370,12 @@ export default {
 
       const kx = this.widthMap / (this.widthMap * this.scale);
       const ky = this.heightMap / (this.heightMap * this.scale);
-      const w = this.$refs.map.$refs.viewport.getAttribute("transform").split(" ")[4];
-      const h = this.$refs.map.$refs.viewport.getAttribute("transform").split(" ")[5];
+      const w = this.$refs.map.$refs.viewport
+        .getAttribute("transform")
+        .split(" ")[4];
+      const h = this.$refs.map.$refs.viewport
+        .getAttribute("transform")
+        .split(" ")[5];
       const x =
         parseInt(offsetX * kx - parseInt(w) / this.scale) -
         12 -
@@ -378,10 +396,20 @@ export default {
       }
 
       setTimeout(() => {
-        const marker = { id: this.selected, title: " ", extra: {}, x, y };
+        const marker = {
+          id: this.selected,
+          type: this.type || undefined,
+          title: " ",
+          extra: {},
+          x,
+          y,
+        };
 
         if (this.multiSelect) {
-          this.markers.push({ ...marker, extra: { region: this.region } });
+          this.markers.push({
+            ...marker,
+            extra: { region: this.region },
+          });
         } else {
           this.markers = [marker];
         }
@@ -389,9 +417,9 @@ export default {
         this.mouseEnterHandler(marker.id);
 
         setTimeout(() => {
-          const ref = this.$refs["textField_" + marker.id][0];
+          const ref = this.$refs["textField_" + marker.id]?.[0];
 
-          ref.focus();
+          ref?.focus();
         }, 200);
       }, 10);
     },
@@ -402,11 +430,16 @@ export default {
     },
     mouseLeaveHandler(id) {
       this.$refs.map.mouseLeaveHandler(id);
-    }
+    },
+    changeLocations() {
+      this.item = JSON.parse(JSON.stringify(this.template));
+      this.markers = this.template.locations.filter(
+        (l) => !this.type || this.type === l.type
+      );
+    },
   },
   mounted() {
-    this.item = JSON.parse(JSON.stringify(this.template));
-    this.markers = this.template.locations;
+    this.changeLocations();
   },
   computed: {
     scale() {
@@ -417,7 +450,7 @@ export default {
     },
     heightMap() {
       return this.$refs.map?.heightMap ?? 666;
-    }
+    },
   },
   watch: {
     error(message) {
@@ -425,9 +458,16 @@ export default {
       this.showSnackbarError({ message });
     },
     activePinTitle(value) {
-      this.selected = this.markers?.find(({ title }) => title === value)?.id ?? "";
-    }
-  }
+      this.selected =
+        this.markers?.find(({ title }) => title === value)?.id ?? "";
+    },
+    template() {
+      this.changeLocations();
+    },
+    type() {
+      this.changeLocations();
+    },
+  },
 };
 </script>
 
