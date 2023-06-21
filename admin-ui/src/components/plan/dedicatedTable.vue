@@ -104,7 +104,8 @@ export default {
     plans: [],
     addons: {},
     headers: [
-      { text: "Tariff", value: "name" },
+      { text: "Name", value: "name" },
+      { text: "API name", value: "apiName" },
       { text: "Margin", value: "margin", sortable: false, class: "groupable" },
       {
         text: "Payment",
@@ -199,8 +200,8 @@ export default {
         });
     },
     async changePlan(plan) {
-      plan.resources=this.template.resources
-      plan.products=this.template.products
+      plan.resources = this.template.resources;
+      plan.products = this.template.products;
       const sp = this.$store.getters["servicesProviders/all"];
       const { uuid } = sp.find((el) => el.type === "ovh");
 
@@ -321,6 +322,7 @@ export default {
               price: { value: newPrice },
               duration,
               name: productName,
+              apiName: productName,
               value: price.value,
               sell: false,
               id: `${duration} ${planCode}`,
