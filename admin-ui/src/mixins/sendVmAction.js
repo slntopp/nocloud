@@ -17,7 +17,7 @@ const sendVmAction = {
       return api.instances
         .action({ uuid, action, params: data })
         .then((data) => {
-          this.showSnackbarSuccess({ message: "Done!" });
+          this.$store.commit("snackbar/showSnackbar", { message: "Done!" });
           return data;
         })
         .catch((err) => {
