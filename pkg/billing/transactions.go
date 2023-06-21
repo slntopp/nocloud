@@ -212,21 +212,21 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		})
 		if err != nil {
 			log.Error("Failed to process transaction", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, "Failed to process transaction")
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
 
 		if err != nil {
 			log.Error("Failed to get account", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, "Failed to process transaction")
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		rate, err := s.currencies.GetExchangeRateDirect(ctx, *dbAcc.Currency, pb.Currency(currencyConf.Currency))
 
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, "Failed to process transaction")
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 
 		balance := *dbAcc.Balance * rate
@@ -235,13 +235,13 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
 			if err != nil {
 				log.Error("Failed to suspend account", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, "Failed to process transaction")
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 		} else if *dbAcc.Suspended && balance > suspConf.Limit {
 			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
 			if err != nil {
 				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, "Failed to process transaction")
+				return nil, status.Error(codes.Internal, err.Error())
 			}
 		}
 
@@ -260,7 +260,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		})
 		if err != nil {
 			log.Error("Failed to process transaction", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, "Failed to process transaction")
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	}
 
