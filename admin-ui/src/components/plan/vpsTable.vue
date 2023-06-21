@@ -51,6 +51,9 @@
           :loading="isPlansLoading"
           :footer-error="fetchError"
         >
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field dense style="width: 200px" v-model="item.name" />
+          </template>
           <template v-slot:[`item.group`]="{ item }">
             <template v-if="mode === 'edit' && planId === item.id">
               <v-text-field
@@ -185,7 +188,8 @@ export default {
     plans: [],
     headers: [
       { text: "", value: "data-table-expand" },
-      { text: "Tariff", value: "name" },
+      { text: "Name", value: "name" },
+      { text: "API name", value: "apiName" },
       { text: "Group", value: "group", sortable: false, class: "groupable" },
       { text: "Margin", value: "margin", sortable: false, class: "groupable" },
       {
@@ -380,6 +384,7 @@ export default {
               price: { value: newPrice },
               duration,
               name: productName,
+              apiName: productName,
               group: productName.split(" ")[1],
               value: price.value,
               sell: false,
