@@ -43,16 +43,16 @@
         <v-text-field
           readonly
           label="balance"
-          :value="account?.balance.toFixed(2)"
+          :value="account?.balance?.toFixed(2)"
         />
       </v-col>
     </v-row>
-<!--    <component-->
-<!--      v-if="!type.includes('ovh') && !type.includes('ione')"-->
-<!--      :is="templates[type] ?? templates.custom"-->
-<!--      :template="template"-->
-<!--      @refresh="refreshInstance"-->
-<!--    />-->
+    <!--    <component-->
+    <!--      v-if="!type.includes('ovh') && !type.includes('ione')"-->
+    <!--      :is="templates[type] ?? templates.custom"-->
+    <!--      :template="template"-->
+    <!--      @refresh="refreshInstance"-->
+    <!--    />-->
     <template>
       <v-card-title class="primary--text">Instance info</v-card-title>
       <v-row>
