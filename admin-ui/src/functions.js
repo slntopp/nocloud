@@ -333,7 +333,8 @@ export function getOvhPrice(instance) {
   const tarrifPrice =
     instance.billingPlan.products[`${duration} ${instance.config.planCode}`]
       ?.price;
-  const addonsPrice = instance.config.addons?.map(
+  const addonsPrice = instance.config.addons
+    ?.map(
       (a) =>
         instance.billingPlan.resources.find((r) => r.key === `${duration} ${a}`)
           ?.price || 0
@@ -370,5 +371,37 @@ export function getTodayFullDate() {
     ("00" + date.getMinutes()).slice(-2) +
     ":" +
     ("00" + date.getSeconds()).slice(-2)
-  ).replace(' ','_');
+  ).replace(" ", "_");
+}
+
+export function getMarginedValue(fee, val) {
+  const n = Math.pow(10, fee.precision ?? 0);
+  let percent = (fee?.default ?? 0) / 100 + 1;
+  let round;
+
+  switch (fee.round) {
+    case 1:
+      round = "floor";
+      break;
+    case 2:
+      round = "round";
+      break;
+    case 3:
+      round = "ceil";
+      break;
+    default:
+      round = "round";
+  }
+  if (fee.round === "NONE" || !fee.round) round = "round";
+  else if (typeof fee.round === "string") {
+    round = fee.round.toLowerCase();
+  }
+
+  for (let range of fee?.ranges ?? []) {
+    if (val <= range.from) continue;
+    if (val > range.to) continue;
+    percent = range.factor / 100 + 1;
+  }
+
+  return Math[round](val * percent * n) / n;
 }
