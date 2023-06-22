@@ -6,6 +6,7 @@
           :items="regions"
           label="Region"
           v-model="selectedRegion"
+          :loading="isRegionsLoading"
         />
       </v-col>
     </v-row>
@@ -17,15 +18,20 @@
     <v-tabs-items v-model="tab">
       <v-tab-item key="flavors">
         <nocloud-table
+          sort-by="enabled"
+          sort-desc
           item-key="uniqueId"
-          table-name="cloudPrices"
+          table-name="cloud-flavors"
           :show-select="false"
           :loading="isFlavoursLoading"
           :headers="pricesHeaders"
-          :items="flavors"
+          :items="flavors[selectedRegion]"
           show-expand
           :expanded.sync="expanded"
         >
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field v-model="item.name" />
+          </template>
           <template v-slot:[`item.endPrice`]="{ item }">
             <v-text-field v-model.number="item.endPrice" type="number" />
           </template>
@@ -45,6 +51,7 @@
                   :items="item.capabilities"
                   :show-select="false"
                   no-hide-uuid
+                  table-name="cloud-capabilities"
                 />
               </v-card>
             </td>
@@ -56,7 +63,11 @@
           item-key="id"
           :loading="isImagesLoading"
           :headers="imagesHeaders"
-          :items="images"
+          :items="images[selectedRegion]"
+          sort-by="enabled"
+          :show-select="false"
+          table-name="cloud-images"
+          sort-desc
         >
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
@@ -83,6 +94,8 @@ import {
 import api from "@/api";
 import { useStore } from "@/store";
 import NocloudTable from "@/components/table.vue";
+import useRate from "@/hooks/useRate";
+import { getMarginedValue } from "@/functions";
 
 const props = defineProps({
   fee: { type: Object, required: true },
@@ -95,19 +108,22 @@ const props = defineProps({
 const { sp, template, fee } = toRefs(props);
 
 const store = useStore();
+const rate = useRate();
 
 const expanded = ref([]);
 const tab = ref("prices");
 const regions = ref([]);
-const flavors = ref([]);
-const prices = ref([]);
-const images = ref([]);
+const flavors = ref({});
+const prices = ref({});
+const images = ref({});
 const selectedRegion = ref("");
 const isFlavoursLoading = ref(false);
 const isImagesLoading = ref(false);
+const isRegionsLoading = ref(false);
 
 const pricesHeaders = ref([
   { text: "Name", value: "name" },
+  { text: "API Name", value: "apiName" },
   { text: "Os type", value: "osType" },
   { text: "Disk", value: "disk" },
   { text: "In bound bandwidth", value: "inboundBandwidth" },
@@ -133,7 +149,6 @@ const imagesHeaders = ref([
   { text: "Size", value: "size" },
   { text: "Сreation date", value: "creationDate" },
   { text: "Status", value: "status" },
-  { text: "OS type", value: "osType" },
   { text: "Visibility", value: "visibility" },
   { text: "Enabled", value: "enabled" },
 ]);
@@ -144,6 +159,7 @@ const projectId = computed(() => {
 
 onMounted(async () => {
   await store.dispatch("servicesProviders/fetchById", sp.value.uuid);
+  isRegionsLoading.value = true;
   try {
     const { meta } = await api.servicesProviders.action({
       action: "regions",
@@ -158,6 +174,8 @@ onMounted(async () => {
     store.commit("snackbar/showSnackbarError", {
       message: "Erorr during fetch regions",
     });
+  } finally {
+    isRegionsLoading.value = false;
   }
 });
 
@@ -167,6 +185,13 @@ watch(selectedRegion, () => {
 });
 
 const fetchFlavours = async () => {
+  if (
+    flavors.value[selectedRegion.value] &&
+    prices.value[selectedRegion.value]
+  ) {
+    return;
+  }
+
   isFlavoursLoading.value = true;
   try {
     const { meta } = await api.servicesProviders.action({
@@ -177,27 +202,35 @@ const fetchFlavours = async () => {
         projectId: projectId.value,
       },
     });
-    prices.value = meta.codes;
+    prices.value[selectedRegion.value] = meta.codes;
+
     const newFlavours = [];
     meta.flavours.forEach((flavour) => {
       if (!flavour.available) {
         return;
       }
-
       Object.keys(flavour.planCodes || {}).forEach((key) => {
+        const period = key === "monthly" ? "P1M" : "P1H";
+        const planCode = `${period} ${flavour.id}`;
+        const price =
+          prices.value[selectedRegion.value]?.[flavour.planCodes[key]];
         newFlavours.push({
           ...flavour,
-          period: key,
-          price: prices.value[flavour.planCodes[key]],
-          endPrice:
-            template.value.products[`${key} ${flavour.name}`]?.price || 0,
-          enabled: !!template.value.products[`${key} ${flavour.name}`],
-          uniqueId: `${key}_${flavour.id}`,
+          name: template.value.products[planCode]?.title || flavour.name,
+          apiName: flavour.name,
+          period,
+          key: planCode,
+          priceCode: flavour.planCodes[key],
+          price: parseFloat(price * rate.value).toFixed(2),
+          endPrice: template.value.products[planCode]?.price || 0,
+          enabled: !!template.value.products[planCode],
+          uniqueId: `${period} ${flavour.id}`,
+          meta: { region: selectedRegion.value },
         });
       });
     });
 
-    flavors.value = newFlavours;
+    flavors.value[selectedRegion.value] = newFlavours;
   } catch {
     store.commit("snackbar/showSnackbarError", {
       message: "Erorr during fetch flavors",
@@ -208,6 +241,10 @@ const fetchFlavours = async () => {
 };
 
 const fetchImages = async () => {
+  if (images.value[selectedRegion.value]) {
+    return;
+  }
+
   try {
     isImagesLoading.value = true;
     const { meta } = await api.servicesProviders.action({
@@ -218,11 +255,13 @@ const fetchImages = async () => {
         region: selectedRegion.value,
       },
     });
-    images.value = meta.images.map((i) => {
+    images.value[selectedRegion.value] = meta.images.map((i) => {
       return {
         ...i,
-        enabled: !!template.value.meta?.images?.[selectedRegion.value].find(
-          (real) => real.id === i.id
+        enabled: !!Object.keys(template.value.products).find(
+          (k) =>
+            template.value.products[k].meta?.region === selectedRegion.value &&
+            template.value.products[k].meta?.os?.find((o) => i.id === o.id)
         ),
       };
     });
@@ -238,46 +277,49 @@ const fetchImages = async () => {
 const changePlan = (plan) => {
   plan.products = template.value.products;
 
-  flavors.value.forEach((item) => {
-    const itemName = `${item.period} ${item.name}`;
+  Object.keys(flavors.value).forEach((regionKey) => {
+    const regionFlavors = flavors.value[regionKey].filter((f) => f.enabled);
 
-    if (item.enabled) {
-      plan.products[itemName] = {
-        title: itemName,
+    const regionImages = images.value[regionKey]
+      .filter((item) => item.enabled)
+      .map((item) => ({ name: item.name, id: item.id }));
+
+    regionFlavors.forEach((item) => {
+      plan.products[item.key] = {
+        title: item.name,
         kind: "PREPAID",
         price: item.endPrice,
-        period: item.period === "hourly" ? 60 * 60 : 60 * 60 * 24 * 30,
+        period: item.period === "P1H" ? 60 * 60 : 60 * 60 * 24 * 30,
         resources: {
           osType: item.osType,
-          disk: item.disk,
+          drive_size: item.disk && +item.disk ? +item.disk * 1024 : 0,
+          drive_type: "SSD",
           inboundBandwidth: item.inboundBandwidth,
           outboundBandwidth: item.outboundBandwidth,
           period: item.period,
           quota: item.quota,
           ram: item.ram,
-          vcpus: item.vcpus,
+          cpu: item.vcpus,
+        },
+        meta: {
+          priceCode: item.priceCode,
+          ...item.meta,
+          datacenter: [regionKey],
+          os: regionImages,
         },
       };
-    }
-  });
-
-  plan.meta = template.value.meta || { images: {} };
-  images.value.forEach((item) => {
-    if (item.enabled) {
-      if (!plan.meta.images?.[item.region]) {
-        plan.meta.images[item.region] = [];
-      }
-      plan.meta.images[item.region].push(item);
-    }
+    });
   });
 };
 
 const setFee = () => {
-  flavors.value = flavors.value.map((i) => {
-    if (!i.enabled) {
-      i.endPrice = Math.round(i.price + (i.price / 100) * fee.value.default);
-    }
-    return i;
+  Object.keys(flavors.value).forEach((key) => {
+    flavors.value[key] = flavors.value[key].map((i) => {
+      if (!i.enabled) {
+        i.endPrice = getMarginedValue(fee.value, i.price);
+      }
+      return i;
+    });
   });
 };
 

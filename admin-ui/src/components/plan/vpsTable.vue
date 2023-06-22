@@ -42,6 +42,7 @@
 
         <nocloud-table
           item-key="id"
+          table-name="vps-tarrifs"
           v-else-if="tab === 'Tariffs'"
           :show-expand="true"
           :show-select="false"
@@ -51,6 +52,9 @@
           :loading="isPlansLoading"
           :footer-error="fetchError"
         >
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field dense style="width: 200px" v-model="item.name" />
+          </template>
           <template v-slot:[`item.group`]="{ item }">
             <template v-if="mode === 'edit' && planId === item.id">
               <v-text-field
@@ -132,7 +136,7 @@
         </nocloud-table>
 
         <nocloud-table
-          table-name="vps"
+          table-name="vps-addons"
           v-else-if="tab === 'Addons'"
           :show-select="false"
           :items="filteredAddons"
@@ -164,6 +168,8 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
+import currencyRate from "@/mixins/currencyRate";
+import { getMarginedValue } from "@/functions";
 
 export default {
   name: "vps-table",
@@ -183,7 +189,8 @@ export default {
     plans: [],
     headers: [
       { text: "", value: "data-table-expand" },
-      { text: "Tariff", value: "name" },
+      { text: "Name", value: "name" },
+      { text: "API name", value: "apiName" },
       { text: "Group", value: "group", sortable: false, class: "groupable" },
       { text: "Margin", value: "margin", sortable: false, class: "groupable" },
       {
@@ -238,10 +245,10 @@ export default {
     newGroupName: "",
     mode: "none",
 
-    rate: 1,
     planId: -1,
     tabsIndex: 0,
   }),
+  mixins: [currencyRate],
   methods: {
     testConfig() {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
@@ -378,6 +385,7 @@ export default {
               price: { value: newPrice },
               duration,
               name: productName,
+              apiName: productName,
               group: productName.split(" ")[1],
               value: price.value,
               sell: false,
@@ -461,31 +469,7 @@ export default {
 
       [this.plans, this.addons, windows].forEach((el) => {
         el.forEach((plan, i, arr) => {
-          const n = Math.pow(10, this.fee.precision ?? 0);
-          let percent = (this.fee?.default ?? 0) / 100 + 1;
-          let round;
-
-          switch (this.fee.round) {
-            case 1:
-              round = "floor";
-              break;
-            case 2:
-              round = "round";
-              break;
-            case 3:
-              round = "ceil";
-          }
-          if (!this.fee.round || this.fee.round === "NONE") round = "round";
-          else if (typeof this.fee.round === "string") {
-            round = this.fee.round.toLowerCase();
-          }
-
-          for (let range of this.fee.ranges ?? []) {
-            if (plan.price.value <= range.from) continue;
-            if (plan.price.value > range.to) continue;
-            percent = range.factor / 100 + 1;
-          }
-          arr[i].value = Math[round](plan.price.value * percent * n) / n;
+          arr[i].value = getMarginedValue(this.fee, plan.price.value);
 
           this.getMargin(arr[i]);
         });
@@ -606,21 +590,11 @@ export default {
   },
   created() {
     this.$emit("changeLoading");
-    api
-      .get(`/billing/currencies/rates/PLN/${this.defaultCurrency}`)
-      .then((res) => {
-        this.rate = res.rate;
-      })
-      .catch(() =>
-        api.get(`/billing/currencies/rates/${this.defaultCurrency}/PLN`)
-      )
-      .then((res) => {
-        if (res) this.rate = 1 / res.rate;
-      })
-      .catch((err) => console.error(err));
 
-    api
-      .post(`/sp/${this.sp.uuid}/invoke`, { method: "get_plans" })
+    this.fetchRate();
+
+    api.servicesProviders
+      .action({ action: "get_plans", uuid: this.sp.uuid })
       .then(({ meta }) => {
         this.changePlans(meta);
         this.changeAddons(meta);

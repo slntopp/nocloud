@@ -40,6 +40,7 @@
     >
       <td :colspan="headers.length" style="padding: 0">
         <nocloud-table
+            table-name="log-operations"
           :server-items-length="-1"
           hide-default-footer
           :headers="operationHeaders"

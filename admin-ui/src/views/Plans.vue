@@ -33,6 +33,7 @@
       </v-btn>
       <template #actions>
         <nocloud-table
+            table-name="linked-plans"
           :show-select="false"
           :items="linked"
           :headers="linkedHeaders"
