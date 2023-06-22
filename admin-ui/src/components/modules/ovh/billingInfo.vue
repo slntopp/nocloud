@@ -115,7 +115,6 @@ const pricesHeaders = ref([
   { text: "Price", value: "price" },
 ]);
 const totalNewPrice = ref(0);
-const totalBasePrice = ref(0);
 const isBasePricesLoading = ref(false);
 const priceModelDialog = ref(false);
 
@@ -138,6 +137,12 @@ const convertedBasePrices = computed(() => {
   });
 
   return converted;
+});
+
+const totalBasePrice = computed(() => {
+  return Object.keys(convertedBasePrices.value)
+    .reduce((acc, key) => acc + +convertedBasePrices.value[key], 0)
+    .toFixed(2);
 });
 
 const getVpsPrices = async () => {
@@ -226,6 +231,16 @@ const getPriceFromProduct = (product) => {
     ?.price?.value.toFixed(2);
 };
 
+const getAddonKey = (key) => {
+  let keys = [];
+  if (template.value.config.type === "dedicated") {
+    keys = [duration.value, planCode.value, key];
+  } else {
+    keys = [duration.value, key];
+  }
+  return keys.join(" ");
+};
+
 const initPrices = () => {
   pricesItems.value.push({
     title: "tarrif",
@@ -239,7 +254,7 @@ const initPrices = () => {
 
   addons.value.forEach((key, ind) => {
     const addonIndex = template.value.billingPlan.resources.findIndex(
-      (p) => p.key === [duration.value, key].join(" ")
+      (p) => p.key === getAddonKey(key)
     );
 
     pricesItems.value.push({
@@ -296,9 +311,6 @@ const getBasePrices = async () => {
     }
 
     basePrices.value = meta;
-    totalBasePrice.value = Object.keys(basePrices.value)
-      .reduce((acc, key) => acc + +basePrices.value[key], 0)
-      .toFixed(2);
   } catch (e) {
     console.log(e);
     store.commit("snackbar/showSnackbarError", {
