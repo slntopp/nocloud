@@ -143,7 +143,7 @@
           >
             <v-card-title>Table settings</v-card-title>
             <v-row class="pa-5">
-              <v-col v-for="header in headers" :key="header.value" cols="4">
+              <v-col v-for="header in headers.filter(h=>h.text)" :key="header.value" cols="4">
                 <v-checkbox
                   @click.stop
                   :label="header.text"
