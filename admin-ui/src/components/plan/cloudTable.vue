@@ -21,7 +21,7 @@
           sort-by="enabled"
           sort-desc
           item-key="uniqueId"
-          table-name="cloudFlavors"
+          table-name="cloud-flavors"
           :show-select="false"
           :loading="isFlavoursLoading"
           :headers="pricesHeaders"
@@ -51,6 +51,7 @@
                   :items="item.capabilities"
                   :show-select="false"
                   no-hide-uuid
+                  table-name="cloud-capabilities"
                 />
               </v-card>
             </td>
@@ -64,7 +65,8 @@
           :headers="imagesHeaders"
           :items="images[selectedRegion]"
           sort-by="enabled"
-          table-name="cloudImages"
+          :show-select="false"
+          table-name="cloud-images"
           sort-desc
         >
           <template v-slot:[`item.enabled`]="{ item }">

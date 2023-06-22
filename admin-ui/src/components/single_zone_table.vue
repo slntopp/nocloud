@@ -1,6 +1,6 @@
 <template>
   <nocloud-table
-    table-name="singleZoneTable"
+    table-name="single-zone-table"
     :loading="loading"
     :items="tableData"
     :value="selected"

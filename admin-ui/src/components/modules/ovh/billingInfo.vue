@@ -41,6 +41,7 @@
       ></v-row
     >
     <nocloud-table
+        table-name="ovh-billing"
       hide-default-footer
       sort-by="index"
       item-key="key"
