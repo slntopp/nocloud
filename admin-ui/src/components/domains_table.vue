@@ -39,7 +39,7 @@
     </v-row>
     <v-row class="flex-column pa-md-5">
       <nocloud-table
-        table-name="openSrsServiceCreate"
+        table-name="open-srs-domains"
         @input="(item) => changeDomain(item)"
         :footer-error="tableError"
         item-key="domain"

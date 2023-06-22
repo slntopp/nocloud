@@ -28,7 +28,7 @@
     <v-row>
       <nocloud-table
         style="width: 100%"
-        table-name="acronisPrices"
+        table-name="acronis-prices"
         :no-hide-uuid="false"
         :show-select="false"
         :loading="isLoading"

@@ -15,7 +15,7 @@
     >
       <v-tab-item v-for="tab in tabs" :key="tab">
         <nocloud-table
-          table-name="plansProducts"
+          table-name="plans-products"
           item-key="id"
           sort-by="sorter"
           ref="table"

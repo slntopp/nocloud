@@ -6,7 +6,7 @@
     <v-row class="flex-column">
       <v-col>
         <nocloud-table
-          table-name="ovhServiceProviderInfo"
+          table-name="ovh-service-provider-info"
           :items="projects"
           :headers="headers"
           :show-select="false"

@@ -4,6 +4,7 @@
       :loading="isLoading"
       sort-by="id"
       item-key="id"
+      table-name="plugins-settings"
       :items="localPlugins"
       :headers="headers"
       v-model="selectedPlugins"

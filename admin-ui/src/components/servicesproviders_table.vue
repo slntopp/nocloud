@@ -3,7 +3,7 @@
     :filters-items="filterItems"
     :filters-values="selectedFiltres"
     @input:filter="selectedFiltres[$event.key] = $event.value"
-    table-name="serviceProvidersTable"
+    table-name="service-providers-table"
     :loading="loading"
     :items="filteredSp"
     :value="selected"

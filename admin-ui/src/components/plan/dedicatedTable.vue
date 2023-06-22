@@ -19,6 +19,7 @@
     </v-menu>
 
     <nocloud-table
+      table-name="dedicated-prices"
       sort-by="isBeenSell"
       sort-desc
       item-key="id"
@@ -52,7 +53,7 @@
           </template>
 
           <nocloud-table
-            table-name="dedicated"
+            table-name="dedicated-addons-prices"
             class="pa-4"
             item-key="id"
             :show-select="false"

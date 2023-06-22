@@ -1,6 +1,6 @@
 <template>
   <nocloud-table
-    table-name="servicesInstancesItem"
+    table-name="services-instances-item"
     :show-select="false"
     :items="instances"
     :headers="headers"

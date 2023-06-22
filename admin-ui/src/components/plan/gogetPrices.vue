@@ -24,7 +24,7 @@
     </v-expansion-panels>
 
     <nocloud-table
-      table-name="gogetPrices"
+      table-name="goget-prices"
       item-key="id"
       :show-select="false"
       :show-group-by="true"
@@ -42,6 +42,7 @@
             style="background: var(--v-background-base) !important"
             :show-select="false"
             :items="item.prices"
+            table-name="goget-prices"
             :headers="pricesHeaders"
           >
             <template v-slot:[`item.period`]="{ value }">

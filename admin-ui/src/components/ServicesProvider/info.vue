@@ -93,6 +93,7 @@
               color="background-light"
             >
               <nocloud-table
+                  table-name="sp-binded-plans"
                 :items="plans"
                 :headers="headers"
                 :loading="isPlanLoading"

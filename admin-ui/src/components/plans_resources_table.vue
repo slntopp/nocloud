@@ -1,7 +1,7 @@
 <template>
   <div class="pa-4">
     <nocloud-table
-      table-name="plansResources"
+      table-name="plans-resources"
       item-key="id"
       v-model="selected"
       :show-expand="true"
