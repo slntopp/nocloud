@@ -11,12 +11,12 @@
       <v-col>
         <v-text-field
           readonly
-          label="Provider API vpsName"
-          :value="template.data.vpsName"
+          :label="`Provider API ${ovhTyp}Name`"
+          :value="template.data[ovhType + 'Name']"
         />
       </v-col>
       <v-col>
-        <instance-ip-menu :item="template"/>
+        <instance-ip-menu :item="template" />
       </v-col>
       <v-col>
         <v-text-field readonly :value="os" label="OS login" />
@@ -80,6 +80,10 @@ const os = computed(() => {
       k.includes("os")
     )
   ];
+});
+
+const ovhType = computed(() => {
+  return template.value.config.type;
 });
 </script>
 

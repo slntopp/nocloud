@@ -168,6 +168,16 @@ const getDedicatedPrice = async () => {
   const addonTypes = { softraid: "storage", ram: "memory" };
   addons.value.forEach((addon) => {
     const addonType = Object.keys(addonTypes).find((t) => addon.includes(t));
+    const addonName = tarrif.value.meta.addons.find(
+      (a) => a.id === addon
+    ).title;
+    pricesItems.value = pricesItems.value.map((p) => {
+      if (p.title === addon) {
+        p.title = addonName;
+      }
+      return p;
+    });
+
     prices[addon] =
       addonsPrice.meta.options[addonTypes[addonType]]
         .find((m) => m.planCode === addon)
@@ -177,6 +187,7 @@ const getDedicatedPrice = async () => {
             p.pricingModel === template.value.config.pricingModel
         ).price.value || 0;
   });
+
   return prices;
 };
 const getCloudPrices = async () => {
@@ -191,11 +202,7 @@ const getCloudPrices = async () => {
     },
   });
 
-  prices["tarrif"] =
-    meta.codes[
-      template.value.billingPlan.products[duration.value + " " + planCode.value]
-        ?.title
-    ] * rate.value;
+  prices["tarrif"] = meta.codes[tarrif.value?.title] * rate.value;
 
   return prices;
 };
@@ -224,12 +231,9 @@ const initPrices = () => {
     const addonIndex = template.value.billingPlan.resources.findIndex(
       (p) => p.key === [duration.value, key].join(" ")
     );
-    if (addonIndex === -1) {
-      return;
-    }
 
     pricesItems.value.push({
-      price: template.value.billingPlan.resources[addonIndex].price,
+      price: template.value.billingPlan.resources[addonIndex]?.price || 0,
       path: `billingPlan.resources.${addonIndex}.price`,
       title: key,
       key: key,

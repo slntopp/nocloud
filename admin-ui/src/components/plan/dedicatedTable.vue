@@ -19,6 +19,8 @@
     </v-menu>
 
     <nocloud-table
+      sort-by="isBeenSell"
+      sort-desc
       item-key="id"
       :show-select="false"
       :items="filteredPlans"
@@ -54,7 +56,7 @@
             class="pa-4"
             item-key="id"
             :show-select="false"
-            :items="addons[item.planCode]"
+            :items="getAddons(item)"
             :headers="addonsHeaders"
             :loading="isAddonsLoading"
           >
@@ -102,7 +104,8 @@ export default {
     plans: [],
     addons: {},
     headers: [
-      { text: "Tariff", value: "name" },
+      { text: "Name", value: "name" },
+      { text: "API name", value: "apiName" },
       { text: "Margin", value: "margin", sortable: false, class: "groupable" },
       {
         text: "Payment",
@@ -150,12 +153,11 @@ export default {
   }),
   mixins: [currencyRate],
   methods: {
-    fetchAddons({ planCode, sell }) {
+    getAddons({ planCode, duration }) {
+      return this.addons[planCode]?.filter((a) => a.duration === duration);
+    },
+    fetchAddons({ planCode }) {
       if (this.addons[planCode]) {
-        this.addons[planCode].forEach(({ price }, i) => {
-          if (price.value !== 0) return;
-          this.addons[planCode][i].sell = sell;
-        });
         return;
       }
 
@@ -183,7 +185,6 @@ export default {
               addon.value = resource.price;
               addon.sell = true;
             }
-            if (addon.price.value === 0 && sell) addon.sell = true;
 
             return addon;
           });
@@ -199,6 +200,8 @@ export default {
         });
     },
     async changePlan(plan) {
+      plan.resources = this.template.resources;
+      plan.products = this.template.products;
       const sp = this.$store.getters["servicesProviders/all"];
       const { uuid } = sp.find((el) => el.type === "ovh");
 
@@ -215,11 +218,14 @@ export default {
             },
           });
 
-          const addons = this.addons[el.planCode]?.map((el) => ({
-            id: el.planCode,
-            title: el.name,
-          }));
-
+          const addons = this.getAddons(el)
+            ? this.getAddons(el)
+                .filter((addon) => addon.sell)
+                ?.map((el) => ({
+                  id: el.planCode,
+                  title: el.name,
+                }))
+            : plan.products[el.id]?.meta.addons;
           const datacenter =
             requiredConfiguration.find((el) => el.label.includes("datacenter"))
               ?.allowedValues ?? [];
@@ -238,18 +244,25 @@ export default {
           };
         }
       }
-
       Object.values(this.addons).forEach((addon) => {
         addon.forEach((el) => {
-          if (el.sell && !plan.resources.find((res) => res.key === el.id)) {
-            plan.resources.push({
+          if (el.sell) {
+            const resource = {
               key: el.id,
               kind: "PREPAID",
               price: el.value,
               period: this.getPeriod(el.duration),
               except: false,
               on: [],
-            });
+            };
+            const existedIndex = plan.resources.findIndex(
+              (res) => res.key === resource.key
+            );
+            if (existedIndex !== -1) {
+              plan.resources[existedIndex] = resource;
+            } else {
+              plan.resources.push(resource);
+            }
           }
         });
       });
@@ -309,6 +322,7 @@ export default {
               price: { value: newPrice },
               duration,
               name: productName,
+              apiName: productName,
               value: price.value,
               sell: false,
               id: `${duration} ${planCode}`,
@@ -485,6 +499,7 @@ export default {
             this.plans[i].name = product.title;
             this.plans[i].value = product.price;
             this.plans[i].sell = true;
+            this.plans[i].isBeenSell = true;
           }
         });
 

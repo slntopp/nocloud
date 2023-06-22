@@ -109,22 +109,20 @@ export default {
         resources: [],
         products: {},
       };
+      const isEdit = action === "edit";
+      if (isEdit) {
+        this.isEditLoading = true;
+      } else {
+        this.isCreateLoading = true;
+      }
 
       await this.$refs.table.changePlan(newPlan);
-
-      const isEdit = action === "edit";
 
       if (!isEdit) delete newPlan.uuid;
       const request = isEdit
         ? api.plans.update(newPlan.uuid, newPlan)
         : api.plans.create(newPlan);
 
-      this.isLoading = true;
-      if (isEdit) {
-        this.isEditLoading = true;
-      } else {
-        this.isCreateLoading = true;
-      }
       request
         .then(() => {
           this.showSnackbarSuccess({

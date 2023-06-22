@@ -29,6 +29,9 @@
           show-expand
           :expanded.sync="expanded"
         >
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field v-model="item.name" />
+          </template>
           <template v-slot:[`item.endPrice`]="{ item }">
             <v-text-field v-model.number="item.endPrice" type="number" />
           </template>
@@ -117,7 +120,8 @@ const isImagesLoading = ref(false);
 const isRegionsLoading = ref(false);
 
 const pricesHeaders = ref([
-  { text: "Name", value: "title" },
+  { text: "Name", value: "name" },
+  { text: "API Name", value: "apiName" },
   { text: "Os type", value: "osType" },
   { text: "Disk", value: "disk" },
   { text: "In bound bandwidth", value: "inboundBandwidth" },
@@ -210,9 +214,11 @@ const fetchFlavours = async () => {
           prices.value[selectedRegion.value]?.[flavour.planCodes[key]];
         newFlavours.push({
           ...flavour,
-          title: flavour.planCodes[key],
+          name: template.value.products[planCode]?.title || flavour.name,
+          apiName: flavour.name,
           period,
-          name: planCode,
+          key: planCode,
+          priceCode: flavour.planCodes[key],
           price: parseFloat(price * rate.value).toFixed(2),
           endPrice: template.value.products[planCode]?.price || 0,
           enabled: !!template.value.products[planCode],
@@ -277,8 +283,8 @@ const changePlan = (plan) => {
       .map((item) => ({ name: item.name, id: item.id }));
 
     regionFlavors.forEach((item) => {
-      plan.products[item.name] = {
-        title: item.title,
+      plan.products[item.key] = {
+        title: item.name,
         kind: "PREPAID",
         price: item.endPrice,
         period: item.period === "P1H" ? 60 * 60 : 60 * 60 * 24 * 30,
@@ -293,6 +299,7 @@ const changePlan = (plan) => {
           cpu: item.vcpus,
         },
         meta: {
+          priceCode: item.priceCode,
           ...item.meta,
           datacenter: [regionKey],
           os: regionImages,
