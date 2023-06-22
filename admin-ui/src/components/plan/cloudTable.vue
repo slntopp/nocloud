@@ -292,7 +292,8 @@ const changePlan = (plan) => {
         period: item.period === "P1H" ? 60 * 60 : 60 * 60 * 24 * 30,
         resources: {
           osType: item.osType,
-          drive_size: item.disk,
+          drive_size: item.disk && +item.disk ? +item.disk * 1024 : 0,
+          drive_type: "SSD",
           inboundBandwidth: item.inboundBandwidth,
           outboundBandwidth: item.outboundBandwidth,
           period: item.period,
