@@ -1,7 +1,7 @@
 <template>
   <nocloud-table
     show-expand
-    table-name="transactionsTable"
+    table-name="transactions"
     class="mt-4"
     sort-by="proc"
     sort-desc
@@ -56,6 +56,7 @@
       <td :colspan="headers.length" style="padding: 0">
         <nocloud-table
           class="mx-8"
+          table-name="transactions-info"
           style="background: var(--v-background-base) !important"
           :show-select="false"
           :loading="isRecordsLoading"
@@ -207,7 +208,8 @@ export default {
       if (this.records[uuid]) return;
 
       this.isRecordsLoading = true;
-      api.transactions.records(uuid)
+      api.transactions
+        .records(uuid)
         .then(({ pool }) => {
           this.records[uuid] = pool;
         })

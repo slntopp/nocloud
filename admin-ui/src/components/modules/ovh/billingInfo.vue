@@ -14,9 +14,7 @@
         <v-text-field
           readonly
           label="Tarif (product plan)"
-          :value="
-            template.billingPlan.products[duration + ' ' + planCode]?.title
-          "
+          :value="tarrif.title"
           append-icon="mdi-pencil"
           @click:append="priceModelDialog = true"
         />
@@ -41,6 +39,7 @@
       ></v-row
     >
     <nocloud-table
+      table-name="ovh-billing"
       hide-default-footer
       sort-by="index"
       item-key="key"
@@ -60,12 +59,13 @@
         <v-text-field
           :loading="isBasePricesLoading"
           readonly
-          :value="basePrices[item.key]"
+          :value="convertedBasePrices[item.key]"
         ></v-text-field>
       </template>
       <template v-slot:body.append>
         <tr>
           <td>Total instance price</td>
+          <td></td>
           <td>{{ isBasePricesLoading ? "Loading..." : totalBasePrice }}</td>
           <td>
             <div class="d-flex justify-space-between align-center">
@@ -115,7 +115,6 @@ const pricesHeaders = ref([
   { text: "Price", value: "price" },
 ]);
 const totalNewPrice = ref(0);
-const totalBasePrice = ref(0);
 const isBasePricesLoading = ref(false);
 const priceModelDialog = ref(false);
 
@@ -127,6 +126,24 @@ const onUpdatePrice = (item) => {
   emit("update", { key: item.path, value: item.price });
   setTotalNewPrice();
 };
+
+const convertedBasePrices = computed(() => {
+  if (!rate.value) {
+    return basePrices.value;
+  }
+  const converted = {};
+  Object.keys(basePrices.value).forEach((key) => {
+    converted[key] = basePrices.value[key] * rate.value;
+  });
+
+  return converted;
+});
+
+const totalBasePrice = computed(() => {
+  return Object.keys(convertedBasePrices.value)
+    .reduce((acc, key) => acc + +convertedBasePrices.value[key], 0)
+    .toFixed(2);
+});
 
 const getVpsPrices = async () => {
   const { meta } = await api.servicesProviders.action({
@@ -201,19 +218,27 @@ const getCloudPrices = async () => {
       projectId: fullSp.vars?.projectId?.value?.default,
     },
   });
-
-  prices["tarrif"] = meta.codes[tarrif.value?.title] * rate.value;
-
+  prices["tarrif"] = meta.codes[tarrif.value?.meta?.priceCode];
   return prices;
 };
 const getPriceFromProduct = (product) => {
-  return (
-    product.prices.find(
+  return product.prices
+    .find(
       (p) =>
         duration.value === p.duration &&
         template.value.config.pricingMode === p.pricingMode
-    )?.price?.value * rate.value
-  ).toFixed(2);
+    )
+    ?.price?.value.toFixed(2);
+};
+
+const getAddonKey = (key) => {
+  let keys = [];
+  if (template.value.config.type === "dedicated") {
+    keys = [duration.value, planCode.value, key];
+  } else {
+    keys = [duration.value, key];
+  }
+  return keys.join(" ");
 };
 
 const initPrices = () => {
@@ -229,7 +254,7 @@ const initPrices = () => {
 
   addons.value.forEach((key, ind) => {
     const addonIndex = template.value.billingPlan.resources.findIndex(
-      (p) => p.key === [duration.value, key].join(" ")
+      (p) => p.key === getAddonKey(key)
     );
 
     pricesItems.value.push({
@@ -247,12 +272,15 @@ const planCode = computed(() => template.value.config.planCode);
 const duration = computed(() => template.value.config.duration);
 const addons = computed(() => template.value.config.addons || []);
 const type = computed(() => template.value.config.type);
-const tarrif = computed(
-  () =>
-    template.value.billingPlan.products[
-      [duration.value, planCode.value].join(" ")
-    ]
-);
+const tarrif = computed(() => {
+  let key = "";
+  if (!duration.value) {
+    key = template.value.product;
+  } else {
+    key = [duration.value, planCode.value].join(" ");
+  }
+  return template.value.billingPlan.products[key];
+});
 const getPrice = computed(() => {
   const prices = [];
   prices.push(tarrif.value?.price);
@@ -283,9 +311,6 @@ const getBasePrices = async () => {
     }
 
     basePrices.value = meta;
-    totalBasePrice.value = Object.keys(basePrices.value)
-      .reduce((acc, key) => acc + +basePrices.value[key], 0)
-      .toFixed(2);
   } catch (e) {
     console.log(e);
     store.commit("snackbar/showSnackbarError", {

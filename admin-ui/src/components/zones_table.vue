@@ -8,7 +8,7 @@
     :headers="Headers"
     item-key="original"
     :footer-error="fetchError"
-    table-name="zonesTable"
+    table-name="zones-table"
   >
   </nocloud-table>
 </template>

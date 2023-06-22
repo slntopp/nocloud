@@ -80,7 +80,7 @@
     </div>
 
     <nocloud-table
-      table-name="settingsTable"
+      table-name="settings"
       isKeyOnlyAfterClick
       :isKeyInCircle="false"
       item-key="key"
