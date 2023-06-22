@@ -29,7 +29,7 @@
       :footer-error="fetchError"
     >
       <template v-slot:[`item.name`]="{ item }">
-        <v-text-field dense style="width: 200px" v-model="item.name" />
+        <v-text-field dense v-model="item.name" />
       </template>
       <template v-slot:[`item.margin`]="{ item }">
         {{ getMargin(item, false) }}
@@ -176,7 +176,7 @@ export default {
             ["system-storage"]: sys = [],
           } = options;
           const plans = [...bandwidth, ...memory, ...storage, ...vrack, ...sys];
-          const value = this.setPlans({ plans }).map((addon) => {
+          const value = this.setPlans({ plans }, planCode).map((addon) => {
             const resource = this.template.resources.find(
               (el) => addon.id === el.key
             );
@@ -244,8 +244,8 @@ export default {
           };
         }
       }
-      Object.values(this.addons).forEach((addon) => {
-        addon.forEach((el) => {
+      Object.values(this.addons).forEach((planCodeAddons) => {
+        planCodeAddons.forEach((el) => {
           if (el.sell) {
             const resource = {
               key: el.id,
@@ -306,7 +306,13 @@ export default {
         });
       }, 100);
     },
-    setPlans({ plans }) {
+    getTarrifId({ duration, planCode }) {
+      return `${duration} ${planCode}`;
+    },
+    getAddonId({ duration, planCode, tariff }) {
+      return `${duration} ${tariff} ${planCode}`;
+    },
+    setPlans({ plans }, tariff = null) {
       const result = [];
 
       plans.forEach(({ prices, planCode, productName }) => {
@@ -316,6 +322,9 @@ export default {
 
           if (isMonthly || isYearly) {
             const newPrice = parseFloat((price.value * this.rate).toFixed(2));
+            const id = tariff
+              ? this.getAddonId({ planCode, duration, tariff })
+              : this.getTarrifId({ planCode, duration });
 
             result.push({
               planCode,
@@ -325,7 +334,7 @@ export default {
               apiName: productName,
               value: price.value,
               sell: false,
-              id: `${duration} ${planCode}`,
+              id,
             });
           }
         });
