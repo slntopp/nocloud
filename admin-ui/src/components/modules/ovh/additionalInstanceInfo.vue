@@ -11,7 +11,7 @@
       <v-col>
         <v-text-field
           readonly
-          :label="`Provider API ${ovhTyp}Name`"
+          :label="`Provider API ${ovhType}Name`"
           :value="template.data[ovhType + 'Name']"
         />
       </v-col>
