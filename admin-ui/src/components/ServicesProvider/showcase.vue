@@ -119,6 +119,7 @@ export default {
 
       this.provider.meta.showcase[id] = JSON.parse(JSON.stringify(this.showcase));
       this.$emit('update:showcase', this.provider);
+      this.$refs['icon-plus'].$el.click();
       this.clearShowcase();
 
       if (this.beingEdited) {

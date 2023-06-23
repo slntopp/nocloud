@@ -1,11 +1,14 @@
 import api from "@/api";
+import { useStore } from "@/store";
+
+const store = useStore();
 
 const sendVmAction = {
   data: () => ({
     isActionLoading: false,
   }),
   methods: {
-    sendVmAction(action, { uuid, type }, data) {
+    sendVmAction(action, { uuid, type }, params) {
       if (action === "vnc") {
         return this.openVnc(uuid, type);
       }
@@ -18,16 +21,16 @@ const sendVmAction = {
 
       this.isActionLoading = true;
       return api.instances
-        .action({ uuid, action, params: data })
+        .action({ uuid, action, params })
         .then((data) => {
-          this.$store.commit("snackbar/showSnackbar", { message: "Done!" });
+          store.commit('snackbar/showSnackbarSuccess', { message: "Done!" });
           return data;
         })
         .catch((err) => {
           const opts = {
             message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
           };
-          this.$store.commit("snackbar/showSnackbar", opts);
+          store.commit('snackbar/showSnackbarError', opts);
         })
         .finally(() => {
           this.isActionLoading = false;
@@ -64,7 +67,7 @@ const sendVmAction = {
         params: { instanceId: uuid },
       });
     },
-  },
+  }
 };
 
 export default sendVmAction;
