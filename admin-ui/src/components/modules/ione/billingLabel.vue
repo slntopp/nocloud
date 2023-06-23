@@ -8,14 +8,21 @@
         <v-chip color="primary" outlined>Price: {{ price }}</v-chip>
       </v-col>
       <v-col>
-        <v-btn
-          color="primary"
-          :disabled="isRenewDisabled"
-          :loading="isLoading"
-          @click="sendRenew"
+        <confirm-dialog
+          title="Do you want to renew server?"
+          :text="renewTemplate"
+          :width="500"
+          :success-disabled="isRenewDisabled"
+          @confirm="sendRenew"
         >
-          Renew
-        </v-btn>
+          <v-btn
+            color="primary"
+            :disabled="isRenewDisabled"
+            :loading="isLoading"
+          >
+            Renew
+          </v-btn>
+        </confirm-dialog>
       </v-col>
     </v-row>
   </v-container>
@@ -26,8 +33,10 @@ import { computed, ref, toRefs } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import { useStore } from "@/store";
 import sendVmAction from "@/mixins/sendVmAction";
+import confirmDialog from "@/components/confirmDialog.vue";
 
 export default {
+  components: { confirmDialog },
   mixins: [sendVmAction],
   props: ["template"],
   setup(props) {
@@ -36,26 +45,43 @@ export default {
     const { template } = toRefs(props);
     const isLoading = ref(false);
 
+    const tariffPrice = ref(
+      template.value.billingPlan.products[template.value.product]?.price ?? 0
+    );
+    const addonsPrice = ref(template.value.billingPlan.resources
+      .reduce((prev, curr) => {
+        if (curr.key === `drive_${template.value.resources.drive_type.toLowerCase()}`) {
+          const key = 'drive';
+
+          return {
+            ...prev,
+            [key]: curr.price * template.value.resources.drive_size / 1024
+          };
+        } else if (curr.key === "ram") {
+          const key = 'ram';
+
+          return {
+            ...prev,
+            [key]: curr.price * template.value.resources.ram / 1024
+          };
+        } else if (template.value.resources[curr.key]) {
+          const key = curr.key.replace('_', ' ');
+
+          return {
+            ...prev,
+            [key]: curr.price * template.value.resources[curr.key]
+          };
+        }
+        return prev;
+      }, {}));
+
+    const currency = computed(() => ({
+      code: this.$store.getters["currencies/default"]
+    }));
     const price = computed(() => {
-      const initialPrice =
-        template.value.billingPlan.products[template.value.product]?.price ?? 0;
-      return +template.value.billingPlan.resources
-        .reduce((prev, curr) => {
-          if (
-            curr.key ===
-            `drive_${template.value.resources.drive_type.toLowerCase()}`
-          ) {
-            return (
-              prev + (curr.price * template.value.resources.drive_size) / 1024
-            );
-          } else if (curr.key === "ram") {
-            return prev + (curr.price * template.value.resources.ram) / 1024;
-          } else if (template.value.resources[curr.key]) {
-            return prev + curr.price * template.value.resources[curr.key];
-          }
-          return prev;
-        }, initialPrice)
-        ?.toFixed(2);
+      const addonsSum = Object.values(addonsPrice.value).reduce((a, b) => a + b);
+
+      return (tariffPrice.value + addonsSum)?.toFixed(2);
     });
 
     const isRenewDisabled = computed(() => {
@@ -85,12 +111,38 @@ export default {
         .finally(() => { isLoading.value = false });
     }
 
+    const addonsTemplate = Object.entries(addonsPrice.value).map(([key, value]) =>
+      `<li>${key}: ${value} ${currency.value.code}</li>`
+    );
+
+    const renewTemplate = `
+      <div style="font-size: 16px; white-space: initial">
+        <div>Manual renewal:</div>
+        <span style="font-weight: 700">Tariff price: </span>
+        ${tariffPrice.value} ${currency.value.code}
+        ${(addonsPrice.value) ? `
+          <div>
+            <span style="font-weight: 700">Addons prices:</span>
+            <ul style="list-style: '-  '; padding-left: 25px; margin-bottom: 5px">
+              ${ addonsTemplate.join('') }
+            </ul>
+          </div>
+        ` : ''}
+
+        <div>
+          <span style="font-weight: 700">Total: </span>
+          ${price.value} ${currency.value.code}
+        </div>
+      </div>
+    `.trim();
+
     return {
       isRenewDisabled,
       isLoading,
       price,
       dueDate,
-      sendRenew
+      sendRenew,
+      renewTemplate
     };
   },
 };

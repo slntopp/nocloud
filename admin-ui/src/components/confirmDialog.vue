@@ -8,7 +8,9 @@
         <div class="confirm-card">
           <v-card-title class="text-h6">{{ title }}</v-card-title>
           <v-card-subtitle v-if="subtitle">{{ subtitle }}</v-card-subtitle>
-          <v-card-text style="white-space: break-spaces" v-if="text">{{ text }}</v-card-text>
+          <v-card-text style="white-space: break-spaces" v-if="text">
+            <span v-html="text"></span>
+          </v-card-text>
           <slot name="actions" />
           <v-card-actions class="buttons">
             <v-btn color="red darken-1" @click="onCancel"> Cancel </v-btn>

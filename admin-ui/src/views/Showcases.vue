@@ -11,7 +11,7 @@
       @input="clearShowcase"
     >
       <template v-slot:activator="{ on, attrs }">
-        <v-btn class="mr-2" v-bind="attrs" v-on="on">Create</v-btn>
+        <v-btn class="mr-2" ref="create" v-bind="attrs" v-on="on">Create</v-btn>
       </template>
 
       <v-card class="pa-2">
@@ -229,6 +229,7 @@ export default {
           billing_plans: []
         };
         this.$store.commit('servicesProviders/updateService', provider);
+        this.$refs.create.$el.click();
 
         if (index === -1) {
           this.updated.push(provider);
