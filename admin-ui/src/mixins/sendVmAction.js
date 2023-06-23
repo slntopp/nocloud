@@ -1,4 +1,5 @@
 import api from "@/api";
+import { getClientIP } from "@/functions";
 
 const sendVmAction = {
   data: () => ({
@@ -49,7 +50,11 @@ const sendVmAction = {
       }
     },
     async openIPMI(uuid) {
-      const { result, meta } = await this.sendVmAction("ipmi", { uuid });
+      const { result, meta } = await this.sendVmAction(
+        "ipmi",
+        { uuid },
+        { ip: await getClientIP() }
+      );
       if (result) {
         window.open(meta.url, "_blanc");
       } else {
