@@ -6,7 +6,7 @@
       :key="btn.action + btn.title"
       :disabled="btn.disabled"
       :loading="isActionLoading"
-      @click="sendVmAction(btn.action, template, btn.data)"
+      @click="sendVmAction(btn.action, { ...template, type: type }, btn.data)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -146,6 +146,9 @@ export default {
     },
   },
   computed: {
+    type() {
+      return this.template.billingPlan.type;
+    },
     ovhButtons() {
       return [
         { action: "poweroff", disabled: this.ovhActions?.poweroff },
@@ -215,9 +218,7 @@ export default {
         cpanel: [{ action: "session" }],
       };
 
-      const type = this.template.billingPlan?.type;
-
-      return types[type];
+      return types[this.type];
     },
     ioneActions() {
       if (!this.template?.state) return;
