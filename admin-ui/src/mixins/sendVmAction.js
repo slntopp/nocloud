@@ -37,15 +37,18 @@ const sendVmAction = {
         });
     },
     async openVnc(uuid, type) {
+      let action = "start_vnc";
       if (type === "ione") {
         this.$router.push({
           name: "Vnc",
           params: { instanceId: uuid },
         });
       } else {
-        const data = await this.sendVmAction("start_vnc", { uuid });
-
-        window.open(data.meta.url, "_blank");
+        if (type === "ovh cloud") {
+          action = "start_vnc_vm";
+        }
+        const data = await this.sendVmAction(action, { uuid });
+        window.open(data.meta.url, "_blanc");
       }
     },
     async openIPMI(uuid) {
@@ -53,7 +56,9 @@ const sendVmAction = {
       if (result) {
         window.open(meta.url, "_blanc");
       } else {
-        this.$store.commit("snackbar/showSnackbarSuccess", {message:meta.message});
+        this.$store.commit("snackbar/showSnackbarSuccess", {
+          message: meta.message,
+        });
       }
     },
     openDns(uuid) {
