@@ -15,6 +15,9 @@ const sendVmAction = {
       if (action === "dns") {
         return this.openDns(uuid);
       }
+      if (action === "open_ipmi") {
+        return this.openIPMI(uuid);
+      }
 
       this.isActionLoading = true;
       return api.instances
@@ -43,6 +46,14 @@ const sendVmAction = {
         const data = await this.sendVmAction("start_vnc", { uuid });
 
         window.open(data.meta.url, "_blank");
+      }
+    },
+    async openIPMI(uuid) {
+      const { result, meta } = await this.sendVmAction("ipmi", { uuid });
+      if (result) {
+        window.open(meta.url, "_blanc");
+      } else {
+        this.$store.commit("snackbar/showSnackbarSuccess", {message:meta.message});
       }
     },
     openDns(uuid) {
