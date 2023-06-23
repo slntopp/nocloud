@@ -17,10 +17,12 @@ package billing
 
 import (
 	"context"
+
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	healthpb "github.com/slntopp/nocloud-proto/health"
+	statuspb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -156,6 +158,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 		"plan":              planId,
 		"@instances_groups": schema.INSTANCES_GROUPS_COL,
 		"@instances":        schema.INSTANCES_COL,
+		"status":            statuspb.NoCloudStatus_DEL,
 	})
 	if err != nil {
 		log.Error("Error getting instances", zap.Error(err))
@@ -323,7 +326,9 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, req *pb.L
 		return nil, status.Error(codes.Internal, "Error listing plans")
 	}
 
-	cursor, err := s.db.Query(ctx, getInstancesBillingPlans, map[string]interface{}{})
+	cursor, err := s.db.Query(ctx, getInstancesBillingPlans, map[string]interface{}{
+		"status": statuspb.NoCloudStatus_DEL,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -368,6 +373,7 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, req *pb.L
 
 const getInstancesBillingPlans = `
 FOR inst in Instances
+	FILTER inst.status != @status
 	RETURN inst.billing_plan.uuid
 `
 
@@ -390,5 +396,6 @@ LET plan = DOCUMENT(@plan)
 
 FOR inst in instances
 	FILTER inst.billing_plan.uuid == plan._key
+	FILTER inst.status != @status
 	RETURN inst
 `
