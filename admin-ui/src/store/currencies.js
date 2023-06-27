@@ -3,10 +3,10 @@ import api from "@/api.js";
 export default {
   namespaced: true,
   state: {
-    currenciesList: ['NCU', 'USD', 'EUR', 'BYN', 'PLN'],
+    currenciesList: ["NCU", "USD", "EUR", "BYN", "PLN"],
     currencies: [],
     currency: {},
-    defaultCurrency: '',
+    defaultCurrency: "",
     loading: false,
   },
   getters: {
@@ -34,15 +34,19 @@ export default {
       state.currency = currency;
     },
     setRates(state, rates) {
-      state.currencies = rates.map((el) => ({ ...el, id: `${el.from} ${el.to}` }));
+      state.currencies = rates.map((el) => ({
+        ...el,
+        id: `${el.from} ${el.to}`,
+      }));
     },
     setDefault(state, currencies) {
-      const currency = currencies.find((el) =>
-        el.rate === 1 && [el.from, el.to].includes('NCU')
+      const currency = currencies.find(
+        (el) => el.rate === 1 && [el.from, el.to].includes("NCU")
       );
 
       if (!currency) return;
-      state.defaultCurrency = (currency.from === 'NCU') ? currency.to : currency.from;
+      state.defaultCurrency =
+        currency.from === "NCU" ? currency.to : currency.from;
     },
     setLoading(state, data) {
       state.loading = data;
@@ -54,21 +58,25 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }, options) {
+    fetch({ commit, state }, options) {
       if (!options?.silent) commit("setLoading", true);
+      if (state.loading) return;
 
       return new Promise((resolve, reject) => {
-        api.get('/billing/currencies')
+        api
+          .get("/billing/currencies")
           .then((response) => {
-            commit("setCurrencies", response.currencies)
-            return api.get('/billing/currencies/rates');
+            commit("setCurrencies", response.currencies);
+            return api.get("/billing/currencies/rates");
           })
           .then((response) => {
             commit("setRates", response.rates);
             commit("setDefault", response.rates);
+            console.log("resolve", resolve);
             resolve(response);
           })
           .catch((error) => {
+            console.log("reject", error);
             reject(error);
           })
           .finally(() => {
@@ -80,7 +88,8 @@ export default {
       commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
-        api.get(`/billing/currencies/${from}/${to}`)
+        api
+          .get(`/billing/currencies/${from}/${to}`)
           .then((response) => {
             commit("updateCurrency", response);
             resolve(response);
@@ -97,7 +106,8 @@ export default {
       commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
-        api.get(`/billing/currencies/${from}/${to}`)
+        api
+          .get(`/billing/currencies/${from}/${to}`)
           .then((response) => {
             commit("setCurrency", response);
             resolve(response);
