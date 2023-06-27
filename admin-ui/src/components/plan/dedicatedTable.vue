@@ -177,21 +177,24 @@ export default {
             ["system-storage"]: sys = [],
           } = options;
           const plans = [...bandwidth, ...memory, ...storage, ...vrack, ...sys];
-          const value = this.setPlans({ plans }, planCode).map((addon) => {
-            const resource = this.template.resources.find(
-              (el) => addon.id === el.key
-            );
+          const value = this.setPlans({ plans }, planCode);
+          this.setFee(value);
+          this.$set(
+            this.addons,
+            planCode,
+            value.map((addon) => {
+              const resource = this.template.resources.find(
+                (el) => addon.id === el.key
+              );
 
-            if (resource) {
-              addon.value = resource.price;
-              addon.sell = true;
-            }
+              if (resource) {
+                addon.value = resource.price;
+                addon.sell = true;
+              }
 
-            return addon;
-          });
-
-          this.$set(this.addons, planCode, value);
-          this.setFee(this.addons[planCode]);
+              return addon;
+            })
+          );
         })
         .catch((err) => {
           console.error(err);

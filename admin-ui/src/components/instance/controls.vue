@@ -3,10 +3,10 @@
     <v-btn
       class="mr-2"
       v-for="btn in vmControlBtns"
-      :key="btn.action"
+      :key="btn.action + btn.title"
       :disabled="btn.disabled"
       :loading="isActionLoading"
-      @click="sendVmAction(btn.action, template, btn.data)"
+      @click="sendVmAction(btn.action, { ...template, type: type }, btn.data)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -146,6 +146,17 @@ export default {
     },
   },
   computed: {
+    type() {
+      return this.template.billingPlan.type;
+    },
+    ovhButtons() {
+      return [
+        { action: "poweroff", disabled: this.ovhActions?.poweroff },
+        { action: "resume", disabled: this.ovhActions?.resume },
+        { action: "suspend", disabled: this.ovhActions?.suspend },
+        { action: "reboot", disabled: this.ovhActions?.reboot },
+      ];
+    },
     vmControlBtns() {
       const types = {
         ione: [
@@ -159,11 +170,24 @@ export default {
             disabled: this.ioneActions?.vnc,
           },
         ],
-        ovh: [
-          { action: "poweroff", disabled: this.ovhActions?.poweroff },
-          { action: "resume", disabled: this.ovhActions?.resume },
-          { action: "suspend", disabled: this.ovhActions?.suspend },
-          { action: "reboot", disabled: this.ovhActions?.reboot },
+        "ovh dedicated": [
+          ...this.ovhButtons,
+          {
+            action: "open_ipmi",
+            title: "ipmi",
+            disabled: this.ovhActions?.reboot,
+          },
+        ],
+        "ovh cloud": [
+          ...this.ovhButtons,
+          {
+            action: "vnc",
+            title: "Console",
+            disabled: this.ovhActions?.reboot,
+          },
+        ],
+        "ovh vps": [
+          ...this.ovhButtons,
           {
             action: "vnc",
             title: "Console",
@@ -194,11 +218,7 @@ export default {
         cpanel: [{ action: "session" }],
       };
 
-      const type = this.template.billingPlan?.type.includes("ovh")
-        ? "ovh"
-        : this.template.billingPlan?.type;
-
-      return types[type];
+      return types[this.type];
     },
     ioneActions() {
       if (!this.template?.state) return;
