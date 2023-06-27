@@ -150,8 +150,9 @@ export default {
       });
     },
     updateOptions(options) {
-      if(this.accountId){
-        return
+      console.log("options", this.transactionData,Object.keys(this.transactionData));
+      if (Object.keys(this.transactionData).length < 1) {
+        return;
       }
       options.itemsPerPage =
         options.itemsPerPage === -1 ? 0 : options.itemsPerPage;
@@ -186,13 +187,14 @@ export default {
       this.fetchTransactions();
     },
   },
-  mounted() {
+  created() {
     if (this.$route.query.account) {
       this.accountId = this.$route.query.account;
     } else {
       this.accountId = this.user.uuid || null;
     }
-
+  },
+  mounted() {
     const accounts = [];
     this.$store.dispatch("accounts/fetch");
     this.$store.dispatch("services/fetch");
@@ -253,7 +255,7 @@ export default {
         filtredServices = this.services;
       }
 
-      return [{ title: "all", uuid: 'all' }].concat(
+      return [{ title: "all", uuid: "all" }].concat(
         filtredServices.map((el) => ({
           title: `${el.title} (${el.uuid.slice(0, 8)})`,
           uuid: el.uuid,
@@ -290,7 +292,7 @@ export default {
     },
     transactionData() {
       const data = {};
-      if (this.accountId || this.accountId==='all') {
+      if (this.accountId || this.accountId === "all") {
         data.account = this.accountId;
       }
       if (this.accountId) {
