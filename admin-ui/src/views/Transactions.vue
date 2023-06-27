@@ -8,7 +8,8 @@
       Create
     </v-btn>
 
-    <v-select
+    <v-autocomplete
+      :filter="defaultFilterObject"
       label="Account"
       item-text="title"
       item-value="uuid"
@@ -16,7 +17,8 @@
       v-model="accountId"
       :items="accounts"
     />
-    <v-select
+    <v-autocomplete
+      :filter="defaultFilterObject"
       label="Service"
       item-text="title"
       item-value="uuid"
@@ -60,7 +62,11 @@ import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
 import apexcharts from "vue-apexcharts";
 import transactionsTable from "@/components/transactions_table.vue";
-import { filterArrayIncludes, filterArrayBy } from "@/functions";
+import {
+  filterArrayIncludes,
+  filterArrayBy,
+  defaultFilterObject,
+} from "@/functions";
 import { mapGetters } from "vuex";
 export default {
   name: "transactions-view",
@@ -82,12 +88,8 @@ export default {
     },
   }),
   methods: {
+    defaultFilterObject,
     getTransactions() {
-      const accounts = [];
-      this.accounts.forEach((acc) => {
-        if (acc.uuid) accounts.push(acc.uuid);
-      });
-
       this.fetchTransactions();
     },
     setTransactions(dates, labels, values) {
@@ -150,7 +152,11 @@ export default {
       });
     },
     updateOptions(options) {
-      console.log("options", this.transactionData,Object.keys(this.transactionData));
+      console.log(
+        "options",
+        this.transactionData,
+        Object.keys(this.transactionData)
+      );
       if (Object.keys(this.transactionData).length < 1) {
         return;
       }
@@ -195,15 +201,10 @@ export default {
     }
   },
   mounted() {
-    const accounts = [];
     this.$store.dispatch("accounts/fetch");
     this.$store.dispatch("services/fetch");
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("currencies/fetch");
-
-    this.accounts.forEach((acc) => {
-      if (acc.uuid) accounts.push(acc.uuid);
-    });
 
     this.$store.commit("reloadBtn/setCallback", {
       type: "transactions/init",
@@ -255,7 +256,7 @@ export default {
         filtredServices = this.services;
       }
 
-      return [{ title: "all", uuid: "all" }].concat(
+      return [{ title: "all", uuid: null }].concat(
         filtredServices.map((el) => ({
           title: `${el.title} (${el.uuid.slice(0, 8)})`,
           uuid: el.uuid,
