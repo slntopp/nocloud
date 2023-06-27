@@ -59,8 +59,8 @@ export default {
   },
   actions: {
     fetch({ commit, state }, options) {
-      if (!options?.silent) commit("setLoading", true);
       if (state.loading) return;
+      if (!options?.silent) commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
         api
