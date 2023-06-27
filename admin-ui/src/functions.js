@@ -406,9 +406,17 @@ export function getMarginedValue(fee, val) {
   return Math[round](val * percent * n) / n;
 }
 
-export async function getClientIP(){
+export async function getClientIP() {
   const regexp = /[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}/;
-  const response = await fetch('https://www.cloudflare.com/cdn-cgi/trace');
+  const response = await fetch("https://www.cloudflare.com/cdn-cgi/trace");
   const text = await response.text();
   return text.match(regexp)[0];
+}
+
+export function defaultFilterObject(item, queryText) {
+  return (
+    item?.title?.toLocaleLowerCase().indexOf(queryText.toLocaleLowerCase()) !==
+      -1 ||
+    item?.uuid?.toLocaleLowerCase().startsWith(queryText.toLocaleLowerCase())
+  );
 }
