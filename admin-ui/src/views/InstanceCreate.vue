@@ -3,7 +3,8 @@
     <v-container>
       <v-row justify="start">
         <v-col cols="4" md="3" lg="2">
-          <v-select
+          <v-autocomplete
+            :filter="defaultFilterObject"
             label="service"
             item-text="title"
             :items="services"
@@ -13,7 +14,7 @@
           />
         </v-col>
         <v-col cols="4" md="3" lg="2">
-          <v-select
+          <v-autocomplete
             label="type"
             :items="typeItems"
             v-model="type"
@@ -21,7 +22,8 @@
           />
         </v-col>
         <v-col cols="4" md="3" lg="2">
-          <v-select
+          <v-autocomplete
+            :filter="defaultFilterObject"
             label="service provider"
             item-value="uuid"
             item-text="title"
@@ -71,6 +73,7 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api";
+import { defaultFilterObject } from "@/functions";
 
 export default {
   name: "service-create",
@@ -102,6 +105,7 @@ export default {
   }),
   mixins: [snackbar],
   methods: {
+    defaultFilterObject,
     setValue({ key, value }) {
       const keys = key.split(".");
       switch (keys.length) {

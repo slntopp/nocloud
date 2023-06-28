@@ -16,7 +16,8 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
+            :filter="defaultFilterObject"
             label="type"
             :items="ovhTypes"
             :rules="rules.req"
@@ -30,6 +31,7 @@
       <v-row>
         <v-col cols="6">
           <v-autocomplete
+            :filter="defaultFilterObject"
             label="price model"
             item-text="title"
             item-value="uuid"
@@ -40,7 +42,7 @@
           />
         </v-col>
         <v-col cols="6" v-if="instance.products?.length > 0">
-          <v-select
+          <v-autocomplete
             label="product"
             :value="instance.productTitle"
             :items="instance.products"
@@ -48,7 +50,7 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             label="tariff"
             item-text="title"
             item-value="code"
@@ -60,7 +62,7 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             label="region"
             :value="instance.config?.configuration[`${ovhType}_datacenter`]"
             :items="regions[instance.config?.planCode]"
@@ -73,7 +75,7 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             label="OS"
             :value="instance.config?.configuration[`${ovhType}_os`]"
             :items="images[instance.config?.planCode]"
@@ -134,7 +136,7 @@
             v-for="(addon, key) in addons[instance.config?.planCode]"
             :key="key"
           >
-            <v-select
+            <v-autocomplete
               :label="key"
               item-text="title"
               item-value="id"
@@ -150,9 +152,12 @@
 </template>
 
 <script>
+import { defaultFilterObject } from "@/functions";
+
 const getDefaultInstance = () => ({
   title: "instance",
   config: {
+    auto_renew: true,
     type: "vps",
     planCode: null,
     configuration: {
@@ -198,6 +203,7 @@ export default {
     ovhType: "vps",
   }),
   methods: {
+    defaultFilterObject,
     addProducts(instance) {
       const { plan, billing_plan } = instance;
       const { products } =
