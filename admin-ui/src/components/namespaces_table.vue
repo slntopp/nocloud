@@ -18,7 +18,7 @@
       <router-link
         :to="{ name: 'NamespacePage', params: { namespaceId: item.uuid } }"
       >
-        {{ "NS_" + item.title }}
+        {{item.title }}
       </router-link>
     </template>
   </nocloud-table>
