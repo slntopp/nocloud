@@ -27,7 +27,9 @@
     <template v-slot:[`item.uuid`]="{ item }">
       <router-link :to="getEntityByUuid(item).route">
         {{
-          `${getEntityByUuid(item).item?.title} (${getEntityByUuid(item).type})`
+          `${
+            getEntityByUuid(item).item?.title || getEntityByUuid(item).item
+          } (${getEntityByUuid(item).type})`
         }}
       </router-link>
     </template>
@@ -186,19 +188,19 @@ const init = async () => {
 };
 
 const getAccount = (uuid) => {
-  return accounts.value.find((acc) => acc.uuid === uuid);
+  return accounts.value.find((acc) => acc.uuid === uuid) || uuid;
 };
 
 const getInstance = (uuid) => {
-  return instances.value.find((i) => i.uuid === uuid);
+  return instances.value.find((i) => i.uuid === uuid) || uuid;
 };
 
 const getService = (uuid) => {
-  return services.value.find((s) => s.uuid === uuid);
+  return services.value.find((s) => s.uuid === uuid) || uuid;
 };
 
 const getServiceProvider = (uuid) => {
-  return sps.value.find((s) => s.uuid === uuid);
+  return sps.value.find((s) => s.uuid === uuid) || uuid;
 };
 
 const getFilterItems = async () => {
