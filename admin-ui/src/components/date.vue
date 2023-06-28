@@ -3,7 +3,8 @@
     <v-col cols="10">
       <v-select
         dense
-        v-model="date"
+        :value="date"
+        @change="changeDateValue"
         :items="typesDate"
         :rules="rules.general"
       />
@@ -11,15 +12,9 @@
     <v-col cols="2" v-if="date !== 'Custom'">
       <v-text-field
         dense
-        v-model="amountDate"
-        v-if="date === 'Time'"
-        :rules="rules.time"
-      />
-      <v-text-field
-        dense
-        v-else
         type="number"
-        v-model="amountDate"
+        :value="fullDate[dateKey]"
+        @change="changeAmountValue"
         :rules="rules.number"
       />
     </v-col>
@@ -64,14 +59,14 @@ export default { name: "date-field" };
 </script>
 
 <script setup>
-import { onMounted, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 
 const props = defineProps({ period: Object });
 const emits = defineEmits(["changeDate"]);
 const { period } = toRefs(props);
 
 const date = ref("");
-const amountDate = ref("0");
+// const amountDate = ref("0");
 const menuVisible = ref(false);
 
 let fullDate = ref({
@@ -82,17 +77,7 @@ let fullDate = ref({
   week: "0",
   time: "00:01:00",
 });
-const typesDate = [
-  "Day",
-  "Week",
-  "Month",
-  "Quarter",
-  "Year",
-  "Time",
-  "Hour",
-  "Minute",
-  "Custom",
-];
+const typesDate = ["Day", "Week", "Month", "Quarter", "Year", "Custom"];
 
 const items = [
   { title: "Day", model: "day" },
@@ -127,45 +112,34 @@ function resetDate(date) {
 }
 
 onMounted(() => {
-  console.log(period);
-
   if (period.value) {
-    date.value = "Custom";
     fullDate.value = period.value;
+    setDateAndAmount();
   }
 });
 
-watch(date, (value) => {
-  if (value === "Custom") return;
-
-  const key = value.toLowerCase();
-  const amount = key === "time" ? "00:00:00" : "1";
-
-  resetDate(fullDate.value);
-
-  amountDate.value = amount;
-});
-
-watch(amountDate, (value) => {
-  if (date.value === "") return;
-
-  let key = date.value.toLowerCase();
-  const newValue = value.length < 2 ? `0${value}` : value;
-
-  switch (key) {
-    case "hour":
-      key = "time";
-      value = `${newValue}:00:00`;
-      break;
-    case "minute":
-      key = "time";
-      value = `00:${newValue}:00`;
+const changeAmountValue = (value) => {
+  if (!dateKey.value) {
+    return;
   }
 
   resetDate(fullDate.value);
 
-  fullDate.value[key] = value;
-});
+  fullDate.value[dateKey.value] = value;
+};
+
+const changeDateValue = (value) => {
+  date.value = value;
+  
+  if (value === "Custom") {
+    return;
+  }
+
+
+  resetDate(fullDate.value);
+
+  fullDate.value[dateKey.value] = 1;
+};
 
 watch(
   () => fullDate,
@@ -175,11 +149,52 @@ watch(
   { deep: true }
 );
 
+const setDateAndAmount = () => {
+  let newDate = "";
+  let newAmount = 0;
+  for (const key of Object.keys(fullDate.value)) {
+    const numberValue = +fullDate.value[key];
+    if (numberValue && newDate) {
+      newDate = "";
+      newAmount = 0;
+      break;
+    } else if (numberValue && key === "day") {
+      if (numberValue % 30 === 0) {
+        newDate = "Month";
+        newAmount = numberValue / 30;
+      } else if (numberValue % 7 === 0) {
+        newDate = "Week";
+        newAmount = numberValue / 7;
+      } else {
+        newDate = "Day";
+        newAmount = numberValue;
+      }
+    } else if (numberValue) {
+      newDate = key.slice(0, 1).toUpperCase() + key.slice(1);
+      newAmount = numberValue;
+    }
+  }
+  if (newDate) {
+    date.value = newDate;
+    resetDate(fullDate.value);
+    fullDate.value[dateKey.value] = newAmount;
+  } else {
+    date.value = "Custom";
+  }
+};
+
 watch(period, (value) => {
   if (value) {
-    date.value = "Custom";
     fullDate.value = value;
+    setDateAndAmount();
   }
+});
+
+const dateKey = computed(() => {
+  if (date.value === "Custom") {
+    return;
+  }
+  return date.value.toLowerCase();
 });
 </script>
 

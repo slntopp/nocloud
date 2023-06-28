@@ -1,12 +1,12 @@
 <template>
-  <v-container>
+  <div class="pa-4">
     <history-table
       :path="path"
       :account-id="account"
       :uuid="uuid"
       table-name="all-logs"
     />
-  </v-container>
+  </div>
 </template>
 
 <script>

@@ -19,13 +19,13 @@
 
       <v-row>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             @change="(newVal) => changeOS(newVal)"
             label="template"
             :items="getOsNames"
             :value="getOsTemplates[instance.config.template_id]?.name"
           >
-          </v-select>
+          </v-autocomplete>
         </v-col>
         <v-col cols="6">
           <v-text-field
@@ -93,6 +93,7 @@
         </v-col>
         <v-col cols="6">
           <v-autocomplete
+            :filter="defaultFilterObject"
             label="price model"
             item-text="title"
             item-value="uuid"
@@ -103,7 +104,7 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             label="product"
             :value="instance.product"
             v-if="products.length > 0"
@@ -138,6 +139,8 @@
 </template>
 
 <script>
+import { defaultFilterObject } from "@/functions";
+
 const getDefaultInstance = () => ({
   title: "instance",
   config: {
@@ -170,6 +173,7 @@ export default {
     }
   },
   methods: {
+    defaultFilterObject,
     changeOS(newVal) {
       let osId = null;
 

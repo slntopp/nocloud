@@ -10,7 +10,7 @@
         <v-card class="pa-4">
           <v-row dense>
             <v-col cols="12">
-              <v-select
+              <v-autocomplete
                 dense
                 label="Currency 1"
                 v-model="currency.from"
@@ -18,7 +18,7 @@
               />
             </v-col>
             <v-col cols="12">
-              <v-select
+              <v-autocomplete
                 dense
                 label="Currency 2"
                 v-model="currency.to"

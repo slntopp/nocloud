@@ -1,6 +1,7 @@
 import api from "@/api";
-import { useStore } from "@/store";
+import { getClientIP } from "@/functions";
 
+import { useStore } from "@/store";
 const store = useStore();
 
 const sendVmAction = {
@@ -52,7 +53,11 @@ const sendVmAction = {
       }
     },
     async openIPMI(uuid) {
-      const { result, meta } = await this.sendVmAction("ipmi", { uuid });
+      const { result, meta } = await this.sendVmAction(
+        "ipmi",
+        { uuid },
+        { ip: await getClientIP() }
+      );
       if (result) {
         window.open(meta.url, "_blanc");
       } else {

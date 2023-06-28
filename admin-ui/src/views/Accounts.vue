@@ -57,12 +57,12 @@
             </v-row>
             <v-row>
               <v-col>
-                <v-select
+                <v-autocomplete
                   :items="namespacesForSelect"
                   v-model="newAccount.data.namespace"
                   label="namespace"
                   :rules="newAccount.rules.selector"
-                ></v-select>
+                ></v-autocomplete>
               </v-col>
             </v-row>
             <v-row>
