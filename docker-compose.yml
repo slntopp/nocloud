@@ -108,11 +108,11 @@ services:
       - traefik.http.routers.services.entrypoints=grpc
       - traefik.http.services.services.loadbalancer.server.port=8000
       - traefik.http.services.services.loadbalancer.server.scheme=h2c
-    logging:
-      driver: "gelf"
-      options:
-        gelf-address: "udp://172.0.0.5:12201"
-        tag: "services-registry"
+    # logging:
+    #   driver: "gelf"
+    #   options:
+    #     gelf-address: "udp://172.0.0.5:12201"
+    #     tag: "services-registry"
     environment:
       LOG_LEVEL: -1
       PORT: 8000
@@ -126,11 +126,10 @@ services:
     depends_on:
       - db
       - billing
-      - events-logging
       # - your drivers here
     networks:
-      gelf:
-        ipv4_address: 172.0.0.6
+      # gelf:
+      #   ipv4_address: 172.0.0.6
       proxy:
       arangodb:
       grpc-internal:
@@ -138,7 +137,6 @@ services:
     links:
       - db
       - billing
-      - events-logging
       # - your drivers here
 
   sp-registry:
@@ -279,28 +277,28 @@ services:
       - arangodb
       - mq
 
-  events-logging:
-    image: ghcr.io/slntopp/nocloud/events-logging:latest
-    restart: always
-    labels:
-      - traefik.http.routers.eventbus.rule=PathPrefix("/nocloud.events_logging.")
-      - traefik.http.routers.eventbus.entrypoints=grpc
-      - traefik.http.services.eventbus.loadbalancer.server.port=8000
-      - traefik.http.services.eventbus.loadbalancer.server.scheme=h2c
-    environment:
-      SIGNING_KEY: "${SIGNING_KEY}"
-      DB_HOST: db:8529
-      DB_CRED: "${DB_USER}:${DB_PASS}"
-      PORT: 8000
-      GELF_HOST: ":12201"
-      SQLITE_HOST: sqlite.db
-    volumes:
-      - sqlite-data:/sqlite.db
-    networks:
-      gelf:
-        ipv4_address: 172.20.0.5
-      proxy:
-      arangodb:
+  # events-logging:
+  #   image: ghcr.io/slntopp/nocloud/events-logging:latest
+  #   restart: always
+  #   labels:
+  #     - traefik.http.routers.eventbus.rule=PathPrefix("/nocloud.events_logging.")
+  #     - traefik.http.routers.eventbus.entrypoints=grpc
+  #     - traefik.http.services.eventbus.loadbalancer.server.port=8000
+  #     - traefik.http.services.eventbus.loadbalancer.server.scheme=h2c
+  #   environment:
+  #     SIGNING_KEY: "${SIGNING_KEY}"
+  #     DB_HOST: db:8529
+  #     DB_CRED: "${DB_USER}:${DB_PASS}"
+  #     PORT: 8000
+  #     GELF_HOST: ":12201"
+  #     SQLITE_HOST: sqlite.db
+  #   volumes:
+  #     - sqlite-data:/sqlite.db
+  #   networks:
+  #     # gelf:
+  #     #   ipv4_address: 172.20.0.5
+  #     proxy:
+  #     arangodb:
 
 
   db:
@@ -345,12 +343,12 @@ networks:
     driver: bridge
   mq:
     driver: bridge
-  gelf:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.4/24
-          gateway: 172.20.0.1
+  # gelf:
+  #   driver: bridge
+  #   ipam:
+  #     config:
+  #       - subnet: 172.20.0.4/24
+  #         gateway: 172.20.0.1
 
 volumes:
   sqlite-data:
