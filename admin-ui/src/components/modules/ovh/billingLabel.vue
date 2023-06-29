@@ -28,96 +28,102 @@
   </v-container>
 </template>
 
-<script>
+<script setup>
 import { computed, ref } from "vue";
 import { getOvhPrice } from "@/functions";
 import { useStore } from "@/store";
-import sendVmAction from "@/mixins/sendVmAction";
 import confirmDialog from "@/components/confirmDialog.vue";
 
-export default {
-  components: { confirmDialog },
-  mixins: [sendVmAction],
-  props: ["template"],
-  setup(props) {
-    const store = useStore();
-    const isDisabled = ref(false);
-    const isLoading = ref(false);
+const props = defineProps(["template"]);
 
-    const dueDate = computed(() => {
-      return props.template.data.expiration;
-    });
+const store = useStore();
+const isDisabled = ref(false);
 
-    const tariffPrice = computed(() => {
-      const { duration, planCode } = props.template.config;
-      const key = `${duration} ${planCode}`;
+const dueDate = computed(() => props.template?.data?.expiration);
 
-      return props.template.billingPlan.products[key]?.price ?? 0;
-    });
-    const addonsPrice = ref(props.template.config.addons?.reduce((res, addon) => {
-      const { price } = props.template.billingPlan.resources?.find(
+const isLoading = computed(() => store.getters["actions/isSendActionLoading"]);
+
+const tariffPrice = computed(() => {
+  const { duration, planCode } = props.template.config;
+  const key = `${duration} ${planCode}`;
+
+  return props.template.billingPlan.products[key]?.price ?? 0;
+});
+const addonsPrice = ref(
+  props.template.config.addons?.reduce((res, addon) => {
+    const { price } =
+      props.template.billingPlan.resources?.find(
         ({ key }) => key === `${props.template.config.duration} ${addon}`
       ) ?? {};
-      let key = '';
+    let key = "";
 
-      if (addon.includes('ram')) return res;
-      if (addon.includes('raid')) return res;
-      if (addon.includes('vrack')) key = 'Vrack';
-      if (addon.includes('bandwidth')) key = 'Traffic';
-      if (addon.includes('additional')) key = 'Additional drive';
-      if (addon.includes('snapshot')) key = 'Snapshot';
-      if (addon.includes('backup')) key = 'Backup';
-      if (addon.includes('windows')) key = 'Windows';
+    if (addon.includes("ram")) return res;
+    if (addon.includes("raid")) return res;
+    if (addon.includes("vrack")) key = "Vrack";
+    if (addon.includes("bandwidth")) key = "Traffic";
+    if (addon.includes("additional")) key = "Additional drive";
+    if (addon.includes("snapshot")) key = "Snapshot";
+    if (addon.includes("backup")) key = "Backup";
+    if (addon.includes("windows")) key = "Windows";
 
-      return { ...res, [key]: +price || 0 };
-    }, {}));
+    return { ...res, [key]: +price || 0 };
+  }, {})
+);
 
-    const currency = computed(() => ({
-      code: this.$store.getters["currencies/default"]
-    }))
-    const price = computed(() => {
-      return getOvhPrice(props.template);
+const currency = computed(() => ({
+  code: store.getters["currencies/default"],
+}));
+const price = computed(() => {
+  return getOvhPrice(props.template);
+});
+
+const isRenewDisabled = computed(() => {
+  return (
+    getAccountBalance() < getOvhPrice(props.template) ||
+    props.template.data.blocked ||
+    isDisabled.value
+  );
+});
+const getAccountBalance = () => {
+  const namespace = store.getters["namespaces/all"]?.find(
+    (n) => n.uuid === props.template.access.namespace
+  );
+  const account = store.getters["accounts/all"].find(
+    (a) => a.uuid === namespace.access.namespace
+  );
+  return account.balance;
+};
+
+function sendRenew() {
+  store
+    .dispatch("actions/sendVmAction", {
+      action: "manual_renew",
+      template: props.template,
+    })
+    .then(() => {
+      isDisabled.value = true;
     });
+}
 
-    const isRenewDisabled = computed(() => {
-      return getAccountBalance() < getOvhPrice(props.template) ||
-        props.template.data.blocked ||
-        isDisabled.value;
-    });
-    const getAccountBalance = () => {
-      const namespace = store.getters["namespaces/all"]?.find(
-        (n) => n.uuid === props.template.access.namespace
-      );
-      const account = store.getters["accounts/all"].find(
-        (a) => a.uuid === namespace.access.namespace
-      );
-      return account.balance;
-    };
+const addonsTemplate = Object.entries(addonsPrice.value).map(
+  ([key, value]) => `<li>${key}: ${value} ${currency.value.code}</li>`
+);
 
-    function sendRenew() {
-      isLoading.value = true;
-      sendVmAction.methods.sendVmAction('manual_renew', props.template)
-        .then(() => { isDisabled.value = true })
-        .finally(() => { isLoading.value = false });
-    }
-
-    const addonsTemplate = Object.entries(addonsPrice.value).map(([key, value]) =>
-      `<li>${key}: ${value} ${currency.value.code}</li>`
-    );
-
-    const renewTemplate = `
+const renewTemplate = `
       <div style="font-size: 16px; white-space: initial">
         <div>Manual renewal:</div>
         <span style="font-weight: 700">Tariff price: </span>
         ${tariffPrice.value} ${currency.value.code}
         <div>
           <span style="font-weight: 700">Addons prices:</span>
-          ${(addonsTemplate.value)
-            ? `<ul style="list-style: '-  '; padding-left: 25px; margin-bottom: 5px">
-                ${ addonsTemplate.join('') }
+          ${
+            addonsTemplate.value
+              ? `<ul style="list-style: '-  '; padding-left: 25px; margin-bottom: 5px">
+                ${addonsTemplate.join("")}
               </ul>`
-            : `0 ${currency.value.code}
-          `}
+              : `0 ${currency.value.code}
+          `
+          }
         </div>
 
         <div>
@@ -126,17 +132,6 @@ export default {
         </div>
       </div>
     `.trim();
-
-    return {
-      isRenewDisabled,
-      isLoading,
-      price,
-      dueDate,
-      sendRenew,
-      renewTemplate
-    };
-  },
-};
 </script>
 
 <style scoped></style>
