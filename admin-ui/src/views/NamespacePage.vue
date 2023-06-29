@@ -67,7 +67,7 @@ export default {
     }
 
     this.namespace = this.all.find(n => n.uuid == this.namespaceId)
-    document.title = `NS_${this.namespace.title} | NoCloud`
+    document.title = `${this.namespace.title} | NoCloud`
   },
 };
 </script>
