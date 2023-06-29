@@ -54,7 +54,7 @@
       </v-chip>
     </template>
     <template v-slot:[`item.namespace`]="{ item }">
-      {{ "NS_" + getName(item.uuid) }}
+      {{ getName(item.uuid) }}
     </template>
   </nocloud-table>
 </template>
