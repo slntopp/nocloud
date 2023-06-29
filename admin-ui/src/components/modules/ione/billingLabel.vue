@@ -28,106 +28,112 @@
   </v-container>
 </template>
 
-<script>
+<script setup>
 import { computed, ref, toRefs } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import { useStore } from "@/store";
-import sendVmAction from "@/mixins/sendVmAction";
 import confirmDialog from "@/components/confirmDialog.vue";
 
-export default {
-  components: { confirmDialog },
-  mixins: [sendVmAction],
-  props: ["template"],
-  setup(props) {
-    const store = useStore();
+const props = defineProps(["template"]);
 
-    const { template } = toRefs(props);
-    const isLoading = ref(false);
+const store = useStore();
 
-    const tariffPrice = ref(
-      template.value.billingPlan.products[template.value.product]?.price ?? 0
-    );
-    const addonsPrice = ref(template.value.billingPlan.resources
-      .reduce((prev, curr) => {
-        if (curr.key === `drive_${template.value.resources.drive_type.toLowerCase()}`) {
-          const key = 'drive';
+const { template } = toRefs(props);
 
-          return {
-            ...prev,
-            [key]: curr.price * template.value.resources.drive_size / 1024
-          };
-        } else if (curr.key === "ram") {
-          const key = 'ram';
+const tariffPrice = ref(
+  template.value.billingPlan.products[template.value.product]?.price ?? 0
+);
+const addonsPrice = ref(
+  template.value.billingPlan.resources.reduce((prev, curr) => {
+    if (
+      curr.key === `drive_${template.value.resources.drive_type.toLowerCase()}`
+    ) {
+      const key = "drive";
 
-          return {
-            ...prev,
-            [key]: curr.price * template.value.resources.ram / 1024
-          };
-        } else if (template.value.resources[curr.key]) {
-          const key = curr.key.replace('_', ' ');
+      return {
+        ...prev,
+        [key]: (curr.price * template.value.resources.drive_size) / 1024,
+      };
+    } else if (curr.key === "ram") {
+      const key = "ram";
 
-          return {
-            ...prev,
-            [key]: curr.price * template.value.resources[curr.key]
-          };
-        }
-        return prev;
-      }, {}));
+      return {
+        ...prev,
+        [key]: (curr.price * template.value.resources.ram) / 1024,
+      };
+    } else if (template.value.resources[curr.key]) {
+      const key = curr.key.replace("_", " ");
 
-    const currency = computed(() => ({
-      code: this.$store.getters["currencies/default"]
-    }));
-    const price = computed(() => {
-      const addonsSum = Object.values(addonsPrice.value).reduce((a, b) => a + b);
-
-      return (tariffPrice.value + addonsSum)?.toFixed(2);
-    });
-
-    const isRenewDisabled = computed(() => {
-      return getAccountBalance() < price.value || template.value.data.blocked;
-    });
-    const getAccountBalance = () => {
-      const namespace = store.getters["namespaces/all"]?.find(
-        (n) => n.uuid === template.value.access.namespace
-      );
-      const account = store.getters["accounts/all"].find(
-        (a) => a.uuid === namespace.access.namespace
-      );
-      return account?.balance;
-    };
-
-    const dueDate = computed(() => {
-      return formatSecondsToDate(template.value?.data?.last_monitoring);
-    });
-
-    function sendRenew() {
-      isLoading.value = true;
-      sendVmAction.methods.sendVmAction('manual_renew', template.value)
-        .then(() => {
-          template.value.data.blocked = true;
-          template.value.data = Object.assign({}, template.value.data);
-        })
-        .finally(() => { isLoading.value = false });
+      return {
+        ...prev,
+        [key]: curr.price * template.value.resources[curr.key],
+      };
     }
+    return prev;
+  }, {})
+);
 
-    const addonsTemplate = Object.entries(addonsPrice.value).map(([key, value]) =>
-      `<li>${key}: ${value} ${currency.value.code}</li>`
-    );
+const currency = computed(() => ({
+  code: store.getters["currencies/default"],
+}));
+const price = computed(() => {
+  const addonsSum = Object.values(addonsPrice.value).reduce((a, b) => a + b);
 
-    const renewTemplate = `
+  return (tariffPrice.value + addonsSum)?.toFixed(2);
+});
+
+const isRenewDisabled = computed(() => {
+  return getAccountBalance() < price.value || template.value.data.blocked;
+});
+const getAccountBalance = () => {
+  const namespace = store.getters["namespaces/all"]?.find(
+    (n) => n.uuid === template.value.access.namespace
+  );
+  const account = store.getters["accounts/all"].find(
+    (a) => a.uuid === namespace.access.namespace
+  );
+  return account?.balance;
+};
+
+const dueDate = computed(() => {
+  return formatSecondsToDate(template.value?.data?.last_monitoring);
+});
+
+function sendRenew() {
+  store
+    .dispatch("actions/sendVmAction", {
+      action: "manual_renew",
+      template: template.value,
+    })
+    .then(() => {
+      template.value.data.blocked = true;
+      template.value.data = Object.assign({}, template.value.data);
+    });
+}
+
+const addonsTemplate = Object.entries(addonsPrice.value).map(
+  ([key, value]) => `<li>${key}: ${value} ${currency.value.code}</li>`
+);
+
+const isLoading = computed(() => store.getters["actions/isSendActionLoading"]);
+
+const renewTemplate = `
       <div style="font-size: 16px; white-space: initial">
         <div>Manual renewal:</div>
         <span style="font-weight: 700">Tariff price: </span>
         ${tariffPrice.value} ${currency.value.code}
-        ${(addonsPrice.value) ? `
+        ${
+          addonsPrice.value
+            ? `
           <div>
             <span style="font-weight: 700">Addons prices:</span>
             <ul style="list-style: '-  '; padding-left: 25px; margin-bottom: 5px">
-              ${ addonsTemplate.join('') }
+              ${addonsTemplate.join("")}
             </ul>
           </div>
-        ` : ''}
+        `
+            : ""
+        }
 
         <div>
           <span style="font-weight: 700">Total: </span>
@@ -135,17 +141,6 @@ export default {
         </div>
       </div>
     `.trim();
-
-    return {
-      isRenewDisabled,
-      isLoading,
-      price,
-      dueDate,
-      sendRenew,
-      renewTemplate
-    };
-  },
-};
 </script>
 
 <style scoped></style>

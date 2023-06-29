@@ -5,8 +5,14 @@
       v-for="btn in vmControlBtns"
       :key="btn.action + btn.title"
       :disabled="btn.disabled"
-      :loading="isActionLoading"
-      @click="sendVmAction(btn.action, { ...template, type: type }, btn.data)"
+      :loading="isSendActionLoading"
+      @click="
+        sendVmAction({
+          action: btn.action,
+          template: { ...template, type: type },
+          params: btn.data,
+        })
+      "
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -42,13 +48,13 @@
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
-import sendVmAction from "@/mixins/sendVmAction";
 import { getTodayFullDate } from "@/functions";
+import {mapActions, mapGetters} from "vuex";
 
 export default {
   name: "instance-actions",
   components: { ConfirmDialog },
-  mixins: [snackbar, sendVmAction],
+  mixins: [snackbar],
   props: {
     template: { type: Object, required: true },
     copyTemplate: { type: Object },
@@ -56,6 +62,7 @@ export default {
   },
   data: () => ({ isLoading: false, isSaveLoading: false }),
   methods: {
+    ...mapActions("actions", ["sendVmAction"]),
     async deleteInstance() {
       this.isLoading = true;
       try {
@@ -146,6 +153,7 @@ export default {
     },
   },
   computed: {
+    ...mapGetters("actions", ["isSendActionLoading"]),
     type() {
       return this.template.billingPlan.type;
     },
