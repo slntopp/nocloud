@@ -224,6 +224,8 @@ services:
     image: redis
     restart: always
     command: redis-server --save 60 1
+    ports:
+      - 6379:6379
     labels:
       - traefik.enable=false
     networks:
