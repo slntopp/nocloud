@@ -4820,10 +4820,10 @@ no-case@^3.0.4:
     lower-case "^2.0.2"
     tslib "^2.0.3"
 
-nocloud-ui@^1.0.4:
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/nocloud-ui/-/nocloud-ui-1.0.4.tgz#742c69941e89352d1f8bbc6685ed318d05b2a443"
-  integrity sha512-U0ed9a4IfGmYudS3LAYxBaPHrwndP4qF1kvfjBkEF+2YcNlPNalxq+yuefTrXKozd0vRrdEkbNJ1ypQIgIR2UA==
+nocloud-ui@^1.0.5:
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/nocloud-ui/-/nocloud-ui-1.0.5.tgz#bd773d7a1113854520cdd579a1007f6c3624aed5"
+  integrity sha512-rL1hTTrFuPo3t0NKOtQbFhJDrYtqTrYSLUA/ybBLPeQq3eKCmWN9grn/Etb1j617BOqMU8g/pbS2HW788fvkhQ==
 
 nocloudjsrest@^1.5.8:
   version "1.5.8"
