@@ -232,6 +232,9 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 
 		var rate float64 = 1
 
+		log.Debug("Acc cur", zap.Any("cur", cur))
+		log.Debug("Default cur", zap.Any("cur", pb.Currency(currencyConf.Currency)))
+
 		if cur != pb.Currency(currencyConf.Currency) {
 			rate, err = s.currencies.GetExchangeRateDirect(ctx, cur, pb.Currency(currencyConf.Currency))
 
