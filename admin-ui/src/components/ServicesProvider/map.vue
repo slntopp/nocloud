@@ -139,6 +139,12 @@
                     @input="(e) => inputHandler(e, marker)"
                   />
 
+                  <color-picker
+                    label="Color"
+                    v-model="marker.extra.color"
+                    :ref="`textField_${marker.id}`"
+                  />
+
                   <div class="d-flex justify-end">
                     <v-switch
                       label="Is primary"
@@ -194,9 +200,10 @@
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
 import { NcMap } from "nocloud-ui";
+import ColorPicker from "@/components/ui/colorPicker.vue";
 
 export default {
-  components: { NcMap },
+  components: { ColorPicker, NcMap },
   mixins: [snackbar],
   name: "support-map",
   props: {
@@ -329,7 +336,7 @@ export default {
           this.showSnackbarSuccess({
             message: "Service edited successfully",
           });
-          this.$emit('set-locations',data.locations)
+          this.$emit("set-locations", data.locations);
         })
         .catch((err) => {
           this.showSnackbarError({

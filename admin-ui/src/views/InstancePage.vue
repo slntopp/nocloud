@@ -68,7 +68,7 @@ export default {
           title: "Info",
           component: () => import("@/components/instance/info.vue"),
         },
-        this.instance?.state && {
+        this.instance?.state && this.instance.billingPlan.type!=='ovh dedicated' && {
           title: "Snapshots",
           component: () => import("@/components/instance/snapshots.vue"),
         },

@@ -74,7 +74,7 @@ const newIg = ref({});
 
 const filtredAccounts = computed(() =>
   accounts.value.filter(
-    (a) => a.uuid !== account.value?.uuid && getServicesByAccount(a).length > 0
+    (a) => a?.uuid !== account.value?.uuid && getServicesByAccount(a).length > 0
   )
 );
 const namespace = computed(() => {
@@ -85,10 +85,10 @@ const namespace = computed(() => {
 
 const getServicesByAccount = (account) => {
   const namespace = namespaces.value?.find(
-    (n) => n.access.namespace == account.uuid
+    (n) => n.access.namespace == account?.uuid
   );
   return (
-    services.value?.filter((s) => s.access.namespace == namespace.uuid) || []
+    services.value?.filter((s) => s.access.namespace == namespace?.uuid) || []
   );
 };
 
@@ -98,7 +98,7 @@ const accountsServices = computed(() => {
   }
 
   return services.value?.filter(
-    (s) => s.access.namespace == namespace.value.uuid
+    (s) => s.access.namespace == namespace.value?.uuid
   );
 });
 

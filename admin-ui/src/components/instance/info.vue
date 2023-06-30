@@ -18,7 +18,7 @@
             params: { namespaceId: namespace?.uuid },
           }"
           label="Group(Namespace)"
-          :value="!namespace ? '' : 'NS_' + namespace.title"
+          :value="!namespace ? '' :  namespace.title"
         />
       </v-col>
       <v-col>
@@ -79,7 +79,7 @@
         <v-col>
           <route-text-field
             :to="{ name: 'Service', params: { serviceId: service?.uuid } }"
-            :value="!service ? '' : 'SRV_' + service.title"
+            :value="!service ? '' : service.title"
             label="Service"
           />
         </v-col>

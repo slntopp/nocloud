@@ -75,21 +75,7 @@
     <v-card-title class="px-0 mb-3"> Colors:</v-card-title>
     <v-row>
       <v-col cols="3" v-for="(value, key) in settings.app.colors" :key="key">
-        <v-menu>
-          <template v-slot:activator="{ on }">
-            <div class="d-flex justify-center align-center" :v-ripple="false">
-              <v-text-field v-model="settings.app.colors[key]" :label="key" />
-              <v-icon class="ml-3" style="height: 25px" v-on="on">
-                mdi-palette
-              </v-icon>
-            </div>
-          </template>
-          <v-color-picker
-            mode="hexa"
-            v-model="settings.app.colors[key]"
-            hide-mode-switch
-          ></v-color-picker>
-        </v-menu>
+        <color-picker v-model="settings.app.colors[key]" :label="key" />
       </v-col>
     </v-row>
     <v-row>
@@ -110,11 +96,12 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import JsonEditor from "@/components/JsonEditor.vue";
-import { downloadJSONFile,readJSONFile } from "@/functions.js";
+import { downloadJSONFile, readJSONFile } from "@/functions.js";
+import ColorPicker from "@/components/ui/colorPicker.vue";
 
 export default {
   key: "app-settings",
-  components: { JsonEditor },
+  components: { ColorPicker, JsonEditor },
   mixins: [snackbar],
   data() {
     return {
@@ -144,7 +131,7 @@ export default {
   },
   methods: {
     onFileChange(file) {
-      readJSONFile(file).then(res=>this.settings=res);
+      readJSONFile(file).then((res) => (this.settings = res));
     },
     downloadSettings() {
       downloadJSONFile(this.settings, "settings");

@@ -349,7 +349,7 @@ export default {
     },
     getService({ service }) {
       return (
-        "SRV_" + this.services.find(({ uuid }) => service === uuid)?.title ?? ""
+          this.services.find(({ uuid }) => service === uuid)?.title ?? service
       );
     },
     getServiceProvider({ sp }) {
@@ -370,7 +370,7 @@ export default {
       return billingPlan.products[key]?.title;
     },
     getNamespace(id) {
-      return "NS_" + this.namespaces.find((n) => n.uuid === id)?.title;
+      return this.namespaces.find((n) => n.uuid === id)?.title;
     },
     getValue(key, item) {
       return this.headersGetters[key](item);
@@ -519,7 +519,7 @@ export default {
     },
     serviceItems() {
       return new Set([
-        ...this.$store.getters["services/all"].map((i) => "SRV_" + i.title),
+        ...this.$store.getters["services/all"].map((i) => i.title),
       ]);
     },
     spItems() {
@@ -547,7 +547,7 @@ export default {
       return new Set(accounts);
     },
     namespacesItems() {
-      const namespaces = this.namespaces.map((n) => "NS_" + n.title);
+      const namespaces = this.namespaces.map((n) => n.title);
 
       return new Set(namespaces);
     },

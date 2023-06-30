@@ -20,7 +20,13 @@
         />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Price instance total" :value="getPrice" />
+        <v-text-field
+          readonly
+          label="Price instance total"
+          :value="
+            type === 'dedicated' ? totalNewPrice?.toFixed(2) : getPrice
+          "
+        />
       </v-col>
       <v-col>
         <v-text-field
@@ -287,7 +293,9 @@ const getPrice = computed(() => {
   addons.value.forEach((name) => {
     prices.push(
       template.value.billingPlan.resources.find(
-        (p) => p.key === [duration.value, name].join(" ")
+        (p) =>
+          p.key === [duration.value, planCode, name].join(" ") ||
+          p.key === [duration.value, name].join(" ")
       )?.price || 0
     );
   });

@@ -11,7 +11,7 @@ export default {
   },
   getters: {
     all(state) {
-      return state.services;
+      return state.services.map(s=>({...s,title:`SRV_${s.title}`}));
     },
     one(state) {
       return state.service;

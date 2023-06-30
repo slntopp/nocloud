@@ -35,7 +35,7 @@ export default {
   },
   getters: {
     all(state) {
-      return state.namespaces;
+      return state.namespaces.map((n) => ({ ...n, title: `NS_${n.title}` }));
     },
     isLoading(state) {
       return state.loading;
