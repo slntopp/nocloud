@@ -30,7 +30,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
-import { getOvhPrice } from "@/functions";
+import { formatSecondsToDate, getOvhPrice } from "@/functions";
 import { useStore } from "@/store";
 import confirmDialog from "@/components/confirmDialog.vue";
 
@@ -39,7 +39,18 @@ const props = defineProps(["template"]);
 const store = useStore();
 const isDisabled = ref(false);
 
-const dueDate = computed(() => props.template?.data?.expiration);
+const dueDate = computed(() => {
+  const { duration, planCode } = props.template.config;
+  const key = `${duration} ${planCode}`;
+  if (props.template.config.type === "cloud") {
+    return formatSecondsToDate(
+      +props.template?.data?.last_monitoring +
+        +props.template.billingPlan.products[key].period
+    );
+  }
+
+  return props.template.data.expiration;
+});
 
 const isLoading = computed(() => store.getters["actions/isSendActionLoading"]);
 

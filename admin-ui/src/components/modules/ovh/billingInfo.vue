@@ -23,9 +23,7 @@
         <v-text-field
           readonly
           label="Price instance total"
-          :value="
-            type === 'dedicated' ? totalNewPrice?.toFixed(2) : getPrice
-          "
+          :value="type === 'dedicated' ? totalNewPrice?.toFixed(2) : getPrice"
         />
       </v-col>
       <v-col>
@@ -36,11 +34,7 @@
         />
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          label="Due to date/next payment"
-          :value="template.data.expiration"
-        />
+        <v-text-field readonly label="Due to date/next payment" :value="date" />
       </v-col>
       ></v-row
     >
@@ -105,6 +99,7 @@ import api from "@/api";
 import { useStore } from "@/store";
 import EditPriceModel from "@/components/modules/ovh/editPriceModel.vue";
 import useRate from "@/hooks/useRate";
+import { formatSecondsToDate } from "@/functions";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -246,6 +241,16 @@ const getAddonKey = (key) => {
   }
   return keys.join(" ");
 };
+
+const date = computed(() => {
+  if (type.value === "cloud") {
+    return formatSecondsToDate(
+      +template.value?.data?.last_monitoring + +tarrif.value.period
+    );
+  }
+
+  return template.value.data.expiration;
+});
 
 const initPrices = () => {
   pricesItems.value.push({

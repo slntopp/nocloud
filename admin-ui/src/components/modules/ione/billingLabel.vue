@@ -96,7 +96,10 @@ const getAccountBalance = () => {
 };
 
 const dueDate = computed(() => {
-  return formatSecondsToDate(template.value?.data?.last_monitoring);
+  return formatSecondsToDate(
+    +template.value?.data?.last_monitoring +
+      +template.value.billingPlan.products[template.value.product].period
+  );
 });
 
 function sendRenew() {
