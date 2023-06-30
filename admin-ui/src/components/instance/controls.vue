@@ -179,10 +179,13 @@ export default {
           },
         ],
         "ovh dedicated": [
-          ...this.ovhButtons,
+          { action: "poweroff", disabled:true },
+          { action: "resume", disabled: true },
+          { action: "suspend", disabled: true},
+          { action: "reboot", disabled: true },
           {
             action: "open_ipmi",
-            title: "ipmi",
+            title: "console",
             disabled: this.ovhActions?.reboot,
           },
         ],
