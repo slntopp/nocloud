@@ -200,6 +200,8 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		currencyConf := MakeCurrencyConf(ctx, log)
 		suspConf := MakeSuspendConf(ctx, log)
 
+		log.Debug("conf", zap.Any("susp conf", suspConf))
+
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
 			"@transactions":  schema.TRANSACTIONS_COL,
@@ -245,6 +247,8 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		}
 
 		balance := *dbAcc.Balance * rate
+
+		log.Debug("acc", zap.Any("acc", dbAcc))
 
 		if !*dbAcc.Suspended && balance < suspConf.Limit {
 			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
