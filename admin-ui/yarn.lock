@@ -1924,10 +1924,10 @@ anymatch@~3.1.2:
     normalize-path "^3.0.0"
     picomatch "^2.0.4"
 
-apexcharts@^3.40.0:
-  version "3.40.0"
-  resolved "https://registry.yarnpkg.com/apexcharts/-/apexcharts-3.40.0.tgz#9eccb50e38f12ddaeb6803ec781fb26e161853e3"
-  integrity sha512-dSi3BUfCJkFd67uFp+xffrJVd3lDT7AAUUyRp0qPYiglJ76CeZLddVhM3FAk1P9GCzf8VewqGYUPCYQvXm+b9A==
+apexcharts@^3.41.0:
+  version "3.41.0"
+  resolved "https://registry.yarnpkg.com/apexcharts/-/apexcharts-3.41.0.tgz#7aef77275c19dfb925552d6fc8e027443a6d1337"
+  integrity sha512-FJXA7NVjxs1q+ptR3b1I+pN8K/gWuXn+qLZjFz8EHvJOokdgcuwa/HSe5aC465HW/LWnrjWLSTsOQejQbQ42hQ==
   dependencies:
     svg.draggable.js "^2.2.2"
     svg.easing.js "^2.0.0"
@@ -4820,10 +4820,10 @@ no-case@^3.0.4:
     lower-case "^2.0.2"
     tslib "^2.0.3"
 
-nocloud-ui@^1.0.4:
-  version "1.0.4"
-  resolved "https://registry.yarnpkg.com/nocloud-ui/-/nocloud-ui-1.0.4.tgz#742c69941e89352d1f8bbc6685ed318d05b2a443"
-  integrity sha512-U0ed9a4IfGmYudS3LAYxBaPHrwndP4qF1kvfjBkEF+2YcNlPNalxq+yuefTrXKozd0vRrdEkbNJ1ypQIgIR2UA==
+nocloud-ui@^1.0.5:
+  version "1.0.5"
+  resolved "https://registry.yarnpkg.com/nocloud-ui/-/nocloud-ui-1.0.5.tgz#bd773d7a1113854520cdd579a1007f6c3624aed5"
+  integrity sha512-rL1hTTrFuPo3t0NKOtQbFhJDrYtqTrYSLUA/ybBLPeQq3eKCmWN9grn/Etb1j617BOqMU8g/pbS2HW788fvkhQ==
 
 nocloudjsrest@^1.5.8:
   version "1.5.8"
