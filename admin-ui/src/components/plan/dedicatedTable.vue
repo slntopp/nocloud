@@ -19,6 +19,9 @@
     </v-menu>
 
     <nocloud-table
+      table-name="dedicated-prices"
+      sort-by="isBeenSell"
+      sort-desc
       item-key="id"
       :show-select="false"
       :items="filteredPlans"
@@ -27,7 +30,7 @@
       :footer-error="fetchError"
     >
       <template v-slot:[`item.name`]="{ item }">
-        <v-text-field dense style="width: 200px" v-model="item.name" />
+        <v-text-field dense v-model="item.name" />
       </template>
       <template v-slot:[`item.margin`]="{ item }">
         {{ getMargin(item, false) }}
@@ -50,11 +53,11 @@
           </template>
 
           <nocloud-table
-            table-name="dedicated"
+            table-name="dedicated-addons-prices"
             class="pa-4"
             item-key="id"
             :show-select="false"
-            :items="addons[item.planCode]"
+            :items="getAddons(item)"
             :headers="addonsHeaders"
             :loading="isAddonsLoading"
           >
@@ -86,6 +89,8 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
+import currencyRate from "@/mixins/currencyRate";
+import { getMarginedValue } from "@/functions";
 
 export default {
   name: "dedicated-table",
@@ -100,7 +105,8 @@ export default {
     plans: [],
     addons: {},
     headers: [
-      { text: "Tariff", value: "name" },
+      { text: "Name", value: "name" },
+      { text: "API name", value: "apiName" },
       { text: "Margin", value: "margin", sortable: false, class: "groupable" },
       {
         text: "Payment",
@@ -144,25 +150,21 @@ export default {
 
     column: "",
     fetchError: "",
-    rate: 1,
     isAddonsLoading: false,
   }),
+  mixins: [currencyRate],
   methods: {
-    fetchAddons({ planCode, sell }) {
+    getAddons({ planCode, duration }) {
+      return this.addons[planCode]?.filter((a) => a.duration === duration);
+    },
+    fetchAddons({ planCode }) {
       if (this.addons[planCode]) {
-        this.addons[planCode].forEach(({ price }, i) => {
-          if (price.value !== 0) return;
-          this.addons[planCode][i].sell = sell;
-        });
         return;
       }
 
-      const sp = this.$store.getters["servicesProviders/all"];
-      const { uuid } = sp.find((el) => el.type === "ovh");
-
       this.isAddonsLoading = true;
       api
-        .post(`/sp/${uuid}/invoke`, {
+        .post(`/sp/${this.sp.uuid}/invoke`, {
           method: "get_baremetal_options",
           params: { planCode },
         })
@@ -175,22 +177,24 @@ export default {
             ["system-storage"]: sys = [],
           } = options;
           const plans = [...bandwidth, ...memory, ...storage, ...vrack, ...sys];
-          const value = this.setPlans({ plans }).map((addon) => {
-            const resource = this.template.resources.find(
-              (el) => addon.id === el.key
-            );
+          const value = this.setPlans({ plans }, planCode);
+          this.setFee(value);
+          this.$set(
+            this.addons,
+            planCode,
+            value.map((addon) => {
+              const resource = this.template.resources.find(
+                (el) => addon.id === el.key
+              );
 
-            if (resource) {
-              addon.value = resource.price;
-              addon.sell = true;
-            }
-            if (addon.price.value === 0 && sell) addon.sell = true;
+              if (resource) {
+                addon.value = resource.price;
+                addon.sell = true;
+              }
 
-            return addon;
-          });
-
-          this.$set(this.addons, planCode, value);
-          this.setFee(this.addons[planCode]);
+              return addon;
+            })
+          );
         })
         .catch((err) => {
           console.error(err);
@@ -200,6 +204,8 @@ export default {
         });
     },
     async changePlan(plan) {
+      plan.resources = this.template.resources;
+      plan.products = this.template.products;
       const sp = this.$store.getters["servicesProviders/all"];
       const { uuid } = sp.find((el) => el.type === "ovh");
 
@@ -216,8 +222,14 @@ export default {
             },
           });
 
-          const addons = this.addons[el.planCode]?.map((el) => el.planCode);
-
+          const addons = this.getAddons(el)
+            ? this.getAddons(el)
+                .filter((addon) => addon.sell)
+                ?.map((el) => ({
+                  id: el.planCode,
+                  title: el.name,
+                }))
+            : plan.products[el.id]?.meta.addons;
           const datacenter =
             requiredConfiguration.find((el) => el.label.includes("datacenter"))
               ?.allowedValues ?? [];
@@ -236,18 +248,25 @@ export default {
           };
         }
       }
-
-      Object.values(this.addons).forEach((addon) => {
-        addon.forEach((el) => {
-          if (el.sell && !plan.resources.find((res) => res.key === el.id)) {
-            plan.resources.push({
+      Object.values(this.addons).forEach((planCodeAddons) => {
+        planCodeAddons.forEach((el) => {
+          if (el.sell) {
+            const resource = {
               key: el.id,
               kind: "PREPAID",
               price: el.value,
               period: this.getPeriod(el.duration),
               except: false,
               on: [],
-            });
+            };
+            const existedIndex = plan.resources.findIndex(
+              (res) => res.key === resource.key
+            );
+            if (existedIndex !== -1) {
+              plan.resources[existedIndex] = resource;
+            } else {
+              plan.resources.push(resource);
+            }
           }
         });
       });
@@ -291,7 +310,13 @@ export default {
         });
       }, 100);
     },
-    setPlans({ plans }) {
+    getTarrifId({ duration, planCode }) {
+      return `${duration} ${planCode}`;
+    },
+    getAddonId({ duration, planCode, tariff }) {
+      return `${duration} ${tariff} ${planCode}`;
+    },
+    setPlans({ plans }, tariff = null) {
       const result = [];
 
       plans.forEach(({ prices, planCode, productName }) => {
@@ -301,15 +326,19 @@ export default {
 
           if (isMonthly || isYearly) {
             const newPrice = parseFloat((price.value * this.rate).toFixed(2));
+            const id = tariff
+              ? this.getAddonId({ planCode, duration, tariff })
+              : this.getTarrifId({ planCode, duration });
 
             result.push({
               planCode,
               price: { value: newPrice },
               duration,
               name: productName,
+              apiName: productName,
               value: price.value,
               sell: false,
-              id: `${duration} ${planCode}`,
+              id,
             });
           }
         });
@@ -344,35 +373,7 @@ export default {
         });
       }
       values?.forEach((plan, i, arr) => {
-        const n = Math.pow(10, this.fee.precision ?? 0);
-        let percent = (this.fee?.default ?? 0) / 100 + 1;
-        let round;
-
-        switch (this.fee.round) {
-          case 1:
-            round = "floor";
-            break;
-          case 2:
-            round = "round";
-            break;
-          case 3:
-            round = "ceil";
-            break;
-          default:
-            round = "round";
-        }
-        if (this.fee.round === "NONE" || !this.fee.round) round = "round";
-        else if (typeof this.fee.round === "string") {
-          round = this.fee.round.toLowerCase();
-        }
-
-        for (let range of this.fee?.ranges ?? []) {
-          if (plan.price.value <= range.from) continue;
-          if (plan.price.value > range.to) continue;
-          percent = range.factor / 100 + 1;
-        }
-        arr[i].value = Math[round](plan.price.value * percent * n) / n;
-
+        arr[i].value = getMarginedValue(this.fee, plan.price.value);
         this.getMargin(arr[i]);
       });
     },
@@ -459,27 +460,12 @@ export default {
   },
   created() {
     this.$emit("changeLoading");
-    api
-      .get(`/billing/currencies/rates/PLN/${this.defaultCurrency}`)
-      .then((res) => {
-        this.rate = res.rate;
-      })
-      .catch(() =>
-        api.get(`/billing/currencies/rates/${this.defaultCurrency}/PLN`)
-      )
-      .then((res) => {
-        if (res) this.rate = 1 / res.rate;
-      })
-      .catch((err) => console.error(err));
 
-    this.$store
-      .dispatch("servicesProviders/fetch")
-      .then(({ pool }) => {
-        const sp = pool.find(({ type }) => type === "ovh");
-
-        return api.post(`/sp/${sp.uuid}/invoke`, {
-          method: "get_baremetal_plans",
-        });
+    this.fetchRate();
+    api.servicesProviders
+      .action({
+        action: "get_baremetal_plans",
+        uuid: this.sp.uuid,
       })
       .then(({ meta }) => {
         this.plans = this.setPlans(meta);
@@ -501,6 +487,11 @@ export default {
     icon.dispatchEvent(new Event("click"));
   },
   computed: {
+    sp() {
+      return this.$store.getters["servicesProviders/all"].find(
+        (sp) => sp.type === "ovh"
+      );
+    },
     filteredPlans() {
       return this.applyFilter(this.plans);
     },
@@ -521,6 +512,7 @@ export default {
             this.plans[i].name = product.title;
             this.plans[i].value = product.price;
             this.plans[i].sell = true;
+            this.plans[i].isBeenSell = true;
           }
         });
 

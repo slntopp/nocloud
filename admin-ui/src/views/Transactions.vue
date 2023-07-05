@@ -8,7 +8,8 @@
       Create
     </v-btn>
 
-    <v-select
+    <v-autocomplete
+      :filter="defaultFilterObject"
       label="Account"
       item-text="title"
       item-value="uuid"
@@ -16,7 +17,8 @@
       v-model="accountId"
       :items="accounts"
     />
-    <v-select
+    <v-autocomplete
+      :filter="defaultFilterObject"
       label="Service"
       item-text="title"
       item-value="uuid"
@@ -60,7 +62,11 @@ import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
 import apexcharts from "vue-apexcharts";
 import transactionsTable from "@/components/transactions_table.vue";
-import { filterArrayIncludes, filterArrayBy } from "@/functions";
+import {
+  filterArrayIncludes,
+  filterArrayBy,
+  defaultFilterObject,
+} from "@/functions";
 import { mapGetters } from "vuex";
 export default {
   name: "transactions-view",
@@ -82,12 +88,8 @@ export default {
     },
   }),
   methods: {
+    defaultFilterObject,
     getTransactions() {
-      const accounts = [];
-      this.accounts.forEach((acc) => {
-        if (acc.uuid) accounts.push(acc.uuid);
-      });
-
       this.fetchTransactions();
     },
     setTransactions(dates, labels, values) {
@@ -150,6 +152,14 @@ export default {
       });
     },
     updateOptions(options) {
+      console.log(
+        "options",
+        this.transactionData,
+        Object.keys(this.transactionData)
+      );
+      if (Object.keys(this.transactionData).length < 1) {
+        return;
+      }
       options.itemsPerPage =
         options.itemsPerPage === -1 ? 0 : options.itemsPerPage;
       this.$store
@@ -183,27 +193,18 @@ export default {
       this.fetchTransactions();
     },
   },
-  mounted() {
+  created() {
     if (this.$route.query.account) {
       this.accountId = this.$route.query.account;
     } else {
       this.accountId = this.user.uuid || null;
     }
-
-    const accounts = [];
-    if (this.accounts.length < 2) {
-      this.$store.dispatch("accounts/fetch");
-    }
-    if (this.services.length < 2) {
-      this.$store.dispatch("services/fetch");
-    }
-    if (this.namespaces.length < 2) {
-      this.$store.dispatch("namespaces/fetch");
-    }
-
-    this.accounts.forEach((acc) => {
-      if (acc.uuid) accounts.push(acc.uuid);
-    });
+  },
+  mounted() {
+    this.$store.dispatch("accounts/fetch");
+    this.$store.dispatch("services/fetch");
+    this.$store.dispatch("namespaces/fetch");
+    this.$store.dispatch("currencies/fetch");
 
     this.$store.commit("reloadBtn/setCallback", {
       type: "transactions/init",
@@ -292,7 +293,7 @@ export default {
     },
     transactionData() {
       const data = {};
-      if (this.accountId) {
+      if (this.accountId || this.accountId === "all") {
         data.account = this.accountId;
       }
       if (this.accountId) {

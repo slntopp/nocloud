@@ -12,10 +12,7 @@
   >
     <template #actions>
       <!-- byn  .ant-btn-primary -->
-      <div
-        v-if="selected || multiSelect"
-        style="position: absolute; right: 25px; bottom: 13px"
-      >
+      <div style="position: absolute; right: 25px; bottom: 13px">
         <v-btn
           class="ant-btn-primary"
           style="margin-right: 5px; background-color: #4caf50"
@@ -142,6 +139,12 @@
                     @input="(e) => inputHandler(e, marker)"
                   />
 
+                  <color-picker
+                    label="Color"
+                    v-model="marker.extra.color"
+                    :ref="`textField_${marker.id}`"
+                  />
+
                   <div class="d-flex justify-end">
                     <v-switch
                       label="Is primary"
@@ -197,9 +200,10 @@
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
 import { NcMap } from "nocloud-ui";
+import ColorPicker from "@/components/ui/colorPicker.vue";
 
 export default {
-  components: { NcMap },
+  components: { ColorPicker, NcMap },
   mixins: [snackbar],
   name: "support-map",
   props: {
@@ -248,7 +252,9 @@ export default {
           const color = `color: ${this.textColor.toLowerCase()}`;
           const pos = selectionStart + color.length + 13;
 
-          this.$refs[`color-dialog.${id}`][0].isActive = false;
+          if (this.$refs[`color-dialog.${id}`]?.[0]) {
+            this.$refs[`color-dialog.${id}`][0].isActive = false;
+          }
           setTimeout(() => {
             textarea.focus();
           });
@@ -311,15 +317,26 @@ export default {
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
 
+      if (this.type) {
+        this.item.locations.push(
+          ...this.template.locations.filter(
+            (location) => location.type !== this.type
+          )
+        );
+      }
+
+      console.log(this.item.locations, this.markers);
+
       if (this.item.locations.length < 1) {
         this.item.locations = [{ id: "_nocloud.remove" }];
       }
       api.servicesProviders
         .update(this.item.uuid, this.item)
-        .then(() => {
+        .then((data) => {
           this.showSnackbarSuccess({
             message: "Service edited successfully",
           });
+          this.$emit("set-locations", data.locations);
         })
         .catch((err) => {
           this.showSnackbarError({
@@ -334,11 +351,16 @@ export default {
       this.markersSave = JSON.parse(JSON.stringify(this.markers));
     },
     saveAndClose(id) {
-      this.$refs["edit-dialog." + id][0].isActive = false;
+      if (this.$refs["edit-dialog." + id]?.[0]) {
+        this.$refs["edit-dialog." + id][0].isActive = false;
+      }
       this.saveCountry();
     },
     cancelSelectedCountry() {
-      this.markers = JSON.parse(JSON.stringify(this.markersSave));
+      this.changeLocations();
+      if (this.markers.length < 2) {
+        this.selected = this.markers[0]?.id;
+      }
     },
     // ---------------------------
     mapClickHandler({ target, offsetX, offsetY }) {
@@ -381,10 +403,20 @@ export default {
       }
 
       setTimeout(() => {
-        const marker = { id: this.selected, title: " ", extra: {}, x, y };
+        const marker = {
+          id: this.selected,
+          type: this.type || undefined,
+          title: " ",
+          extra: {},
+          x,
+          y,
+        };
 
         if (this.multiSelect) {
-          this.markers.push({ ...marker, extra: { region: this.region } });
+          this.markers.push({
+            ...marker,
+            extra: { region: this.region },
+          });
         } else {
           this.markers = [marker];
         }
@@ -392,9 +424,9 @@ export default {
         this.mouseEnterHandler(marker.id);
 
         setTimeout(() => {
-          const ref = this.$refs["textField_" + marker.id][0];
+          const ref = this.$refs["textField_" + marker.id]?.[0];
 
-          ref.focus();
+          ref?.focus();
         }, 200);
       }, 10);
     },
@@ -408,11 +440,8 @@ export default {
     },
     changeLocations() {
       this.item = JSON.parse(JSON.stringify(this.template));
-      console.log(this.type,this.template.locations.filter(
-          (l) => !this.type || this.type === l.type
-      ))
       this.markers = this.template.locations.filter(
-          (l) => !this.type || this.type === l.type
+        (l) => !this.type || this.type === l.type
       );
     },
   },

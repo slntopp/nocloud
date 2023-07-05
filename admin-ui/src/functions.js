@@ -332,12 +332,12 @@ export function getOvhPrice(instance) {
   const duration = instance.config.duration;
   const tarrifPrice =
     instance.billingPlan.products[`${duration} ${instance.config.planCode}`]
-      .price;
+      ?.price;
   const addonsPrice = instance.config.addons
-    .map(
+    ?.map(
       (a) =>
         instance.billingPlan.resources.find((r) => r.key === `${duration} ${a}`)
-          .price
+          ?.price || 0
     )
     .reduce((acc, v) => acc + v, 0);
   return tarrifPrice + addonsPrice;
@@ -371,5 +371,52 @@ export function getTodayFullDate() {
     ("00" + date.getMinutes()).slice(-2) +
     ":" +
     ("00" + date.getSeconds()).slice(-2)
-  ).replace(' ','_');
+  ).replace(" ", "_");
+}
+
+export function getMarginedValue(fee, val) {
+  const n = Math.pow(10, fee.precision ?? 0);
+  let percent = (fee?.default ?? 0) / 100 + 1;
+  let round;
+
+  switch (fee.round) {
+    case 1:
+      round = "floor";
+      break;
+    case 2:
+      round = "round";
+      break;
+    case 3:
+      round = "ceil";
+      break;
+    default:
+      round = "round";
+  }
+  if (fee.round === "NONE" || !fee.round) round = "round";
+  else if (typeof fee.round === "string") {
+    round = fee.round.toLowerCase();
+  }
+
+  for (let range of fee?.ranges ?? []) {
+    if (val <= range.from) continue;
+    if (val > range.to) continue;
+    percent = range.factor / 100 + 1;
+  }
+
+  return Math[round](val * percent * n) / n;
+}
+
+export async function getClientIP() {
+  const regexp = /[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}/;
+  const response = await fetch("https://www.cloudflare.com/cdn-cgi/trace");
+  const text = await response.text();
+  return text.match(regexp)[0];
+}
+
+export function defaultFilterObject(item, queryText) {
+  return (
+    item?.title?.toLocaleLowerCase().indexOf(queryText.toLocaleLowerCase()) !==
+      -1 ||
+    item?.uuid?.toLocaleLowerCase().startsWith(queryText.toLocaleLowerCase())
+  );
 }

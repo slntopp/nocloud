@@ -10,7 +10,13 @@ export default {
       state.searchParam = newSearchParam;
     },
     setVariants(state, val) {
-      state.variants = val;
+      state.variants = {...state.variants,...val};
+      console.log(state.variants)
+    },
+    pushVariant(state, { key, value }) {
+      console.log(key,value)
+      state.variants[key] = value;
+      console.log(state.variants)
     },
     resetSearchParams(state) {
       state.searchParam = "";
@@ -19,11 +25,11 @@ export default {
     },
     setCustomParam(state, { key, value }) {
       // state.customParams[key] = value;
-      state.customParams={...state.customParams,[key]:value}
+      state.customParams = { ...state.customParams, [key]: value };
     },
     deleteCustomParam(state, key) {
       delete state.customParams[key];
-      state.customParams={...state.customParams}
+      state.customParams = { ...state.customParams };
     },
   },
   getters: {

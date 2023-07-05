@@ -33,6 +33,7 @@
       </v-btn>
       <template #actions>
         <nocloud-table
+          table-name="linked-plans"
           :show-select="false"
           :items="linked"
           :headers="linkedHeaders"
@@ -59,7 +60,8 @@
       </template>
     </confirm-dialog>
 
-    <v-select
+    <v-autocomplete
+      :filter="defaultFilterObject"
       label="Filter by SP"
       item-text="title"
       item-value="uuid"
@@ -91,7 +93,11 @@
         {{ value.toLowerCase() }}
       </template>
       <template v-slot:[`item.instanceCount`]="{ item }">
-        <v-progress-circular v-if="isInstanceCountLoading" size="20" indeterminate/>
+        <v-progress-circular
+          v-if="isInstanceCountLoading"
+          size="20"
+          indeterminate
+        />
         <template v-else>
           {{ instanceCountMap[item.uuid] }}
         </template>
@@ -106,7 +112,7 @@ import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
 import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import { filterArrayByTitleAndUuid } from "@/functions";
+import { defaultFilterObject, filterArrayByTitleAndUuid } from "@/functions";
 import { mapGetters } from "vuex";
 
 export default {
@@ -136,6 +142,7 @@ export default {
     selectedFilters: { type: [], kind: [], public: [] },
   }),
   methods: {
+    defaultFilterObject,
     changePlan() {
       this.linked = [];
       this.services.forEach((service) => {

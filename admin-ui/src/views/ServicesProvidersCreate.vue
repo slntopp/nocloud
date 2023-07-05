@@ -12,7 +12,11 @@
             </v-col>
 
             <v-col cols="9">
-              <v-select v-model="provider.type" :items="types" label="Type" />
+              <v-autocomplete
+                v-model="provider.type"
+                :items="types"
+                label="Type"
+              />
               <v-text-field
                 ref="type"
                 label="Type name"
@@ -36,16 +40,13 @@
             </v-col>
           </v-row>
 
-          <v-row :align="(provider.vars.console?.value) ? null : 'center'">
+          <v-row :align="provider.vars.console?.value ? null : 'center'">
             <v-col cols="3">
               <v-subheader> Proxy </v-subheader>
             </v-col>
 
             <v-col cols="9">
-              <v-text-field
-                v-model="provider.proxy.socket"
-                label="Socket"
-              />
+              <v-text-field v-model="provider.proxy.socket" label="Socket" />
               <v-select
                 label="Console"
                 v-if="provider.vars.console?.value"
@@ -227,7 +228,10 @@ export default {
       data: {},
       selected: "",
     },
-   consoleTypes: [{ text: "VNC", value: {default:"vnc"} },{ text: "VMRC", value: {default:"vmrc"}}],
+    consoleTypes: [
+      { text: "VNC", value: { default: "vnc" } },
+      { text: "VMRC", value: { default: "vmrc" } },
+    ],
 
     tooltipVisible: false,
 

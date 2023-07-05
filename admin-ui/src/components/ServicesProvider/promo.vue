@@ -4,11 +4,11 @@
     <v-text-field v-model.trim="promo.service.title" outlined label="Title" />
     <v-text-field v-model.trim="promo.service.btn" outlined label="Btn title" />
     <v-card-subtitle>Description:</v-card-subtitle>
-    <vue-editor class="html-editor" v-model="promo.service.description" />
+    <rich-editor v-model="promo.service.description" />
     <v-card-title class="text-center">Location default settings</v-card-title>
     <v-text-field label="Title" outlined v-model="promo.location.title" />
     <v-card-subtitle>Description:</v-card-subtitle>
-    <vue-editor class="html-editor" v-model="promo.location.description" />
+    <rich-editor v-model="promo.location.description" />
     <v-card-title>Individual location setting</v-card-title>
     <v-expansion-panels>
       <v-expansion-panel
@@ -20,8 +20,7 @@
         }}</v-expansion-panel-header>
         <v-expansion-panel-content color="background-light">
           <v-card-subtitle>Description:</v-card-subtitle>
-          <vue-editor
-            class="html-editor"
+          <rich-editor
             v-model="promo.locations[getLocationKey(location)].description"
           />
         </v-expansion-panel-content>
@@ -29,8 +28,9 @@
     </v-expansion-panels>
     <v-card-title class="text-center">Offer settings</v-card-title>
     <v-card-subtitle class="mt-3">Description:</v-card-subtitle>
-    <vue-editor class="html-editor" v-model="promo.offer.text" />
-    <v-text-field class="mt-5"
+    <rich-editor v-model="promo.offer.text" />
+    <v-text-field
+      class="mt-5"
       outlined
       label="Media src"
       v-model="promo.offer.src"
@@ -39,7 +39,7 @@
     <v-card-title class="text-center">Rewards settings</v-card-title>
     <v-text-field label="Title" outlined v-model.trim="promo.rewards.title" />
     <v-card-subtitle>Description:</v-card-subtitle>
-    <vue-editor class="html-editor" v-model="promo.rewards.description" />
+    <rich-editor v-model="promo.rewards.description" />
     <v-card-title>Icons:</v-card-title>
     <v-row>
       <v-col
@@ -97,11 +97,11 @@
 <script>
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
-import { VueEditor } from "vue2-editor";
+import RichEditor from "@/components/ui/richEditor.vue";
 
 export default {
   name: "promo-tab",
-  components: { VueEditor },
+  components: { RichEditor },
   props: { template: { type: Object, required: true } },
   mixins: [snackbar],
   data: () => ({
@@ -170,34 +170,3 @@ export default {
   },
 };
 </script>
-
-<style lang="scss">
-.html-editor {
-  span.ql-picker-label {
-    color: white;
-  }
-}
-
-.quillWrapper .ql-snow .ql-stroke {
-  stroke: rgb(255 255 255 / 95%) !important;
-}
-.ql-snow .ql-fill {
-  fill: white;
-}
-
-.quillWrapper .ql-editor {
-  color: white;
-}
-.quillWrapper .ql-editor ul[data-checked="false"] > li::before {
-  color: white !important;
-}
-.quillWrapper .ql-editor ul[data-checked="true"] > li::before {
-  color: white !important;
-}
-
-.ql-active {
-  color: #e06ffe !important;
-  fill: #e06ffe !important;
-  stroke: #e06ffe !important;
-}
-</style>

@@ -23,14 +23,14 @@
         return-object
         v-model="selectedService"
       />
-      <v-select
-        v-if="servicesInstanceGroups?.length > 1"
-        :items="servicesInstanceGroups"
+      <v-autocomplete
+        :items="instancesGroups"
         item-text="title"
         item-value="uuid"
         label="Instance group"
         return-object
         v-model="selectedIG"
+        @update:search-input="addNewIg"
       />
       <v-card-actions class="d-flex justify-end">
         <v-btn @click="emit('input', false)" :disabled="isMoveLoading"
@@ -70,10 +70,11 @@ const selectedAccount = ref("");
 const selectedService = ref("");
 const selectedIG = ref("");
 const isMoveLoading = ref(false);
+const newIg = ref({});
 
 const filtredAccounts = computed(() =>
   accounts.value.filter(
-    (a) => a.uuid !== account.value?.uuid && getServicesByAccount(a).length > 0
+    (a) => a?.uuid !== account.value?.uuid && getServicesByAccount(a).length > 0
   )
 );
 const namespace = computed(() => {
@@ -84,10 +85,10 @@ const namespace = computed(() => {
 
 const getServicesByAccount = (account) => {
   const namespace = namespaces.value?.find(
-    (n) => n.access.namespace == account.uuid
+    (n) => n.access.namespace == account?.uuid
   );
   return (
-    services.value?.filter((s) => s.access.namespace == namespace.uuid) || []
+    services.value?.filter((s) => s.access.namespace == namespace?.uuid) || []
   );
 };
 
@@ -97,27 +98,50 @@ const accountsServices = computed(() => {
   }
 
   return services.value?.filter(
-    (s) => s.access.namespace == namespace.value.uuid
+    (s) => s.access.namespace == namespace.value?.uuid
   );
 });
 
 const servicesInstanceGroups = computed(() => {
   return (
-    selectedService.value || accountsServices.value?.[0]
-  )?.instancesGroups.filter((ig) => ig.type === template.value.type);
+    service.value?.instancesGroups.filter(
+      (ig) => ig.type === template.value.type
+    ) || []
+  );
 });
 
-const newInstanceGroup = computed(() => {
-  if (servicesInstanceGroups.value?.length < 2) {
-    return servicesInstanceGroups.value[0];
-  } else {
-    return selectedIG.value;
+const instancesGroups = computed(() => {
+  if (newIg.value && service.value) {
+    return [...servicesInstanceGroups.value, newIg.value];
   }
+  return servicesInstanceGroups.value;
+});
+
+const service = computed(
+  () => selectedService.value || accountsServices.value?.[0]
+);
+
+const newInstanceGroup = computed(() => {
+  return selectedIG.value;
 });
 
 const move = async () => {
   isMoveLoading.value = true;
   try {
+    if (newInstanceGroup.value.isNew) {
+      const newService = JSON.parse(JSON.stringify(service.value));
+      newService.instancesGroups.push({
+        type: template.value.type,
+        sp: template.value.sp,
+        title: newInstanceGroup.value.title,
+      });
+      const data = await api.services._update(newService);
+
+      newInstanceGroup.value.uuid = data.instancesGroups.find(
+        (ig) => ig.title === newInstanceGroup.value.title
+      )?.uuid;
+    }
+
     await api.instances.move(template.value.uuid, newInstanceGroup.value.uuid);
     emit("refresh");
   } catch (e) {
@@ -126,6 +150,14 @@ const move = async () => {
     });
   } finally {
     isMoveLoading.value = false;
+  }
+};
+
+const addNewIg = (val) => {
+  if (val) {
+    newIg.value = { title: val, uuid: val, isNew: true };
+  } else {
+    newIg.value = null;
   }
 };
 </script>

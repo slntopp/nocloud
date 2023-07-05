@@ -11,12 +11,12 @@
       <v-col>
         <v-text-field
           readonly
-          label="Provider API vpsName"
-          :value="template.data.vpsName"
+          :label="`Provider API ${ovhType}Name`"
+          :value="template.data[ovhType + 'Name']"
         />
       </v-col>
       <v-col>
-        <instance-ip-menu :item="template"/>
+        <instance-ip-menu :item="template" />
       </v-col>
       <v-col>
         <v-text-field readonly :value="os" label="OS login" />
@@ -34,7 +34,7 @@
     </v-row>
     <v-row>
       <v-col>
-        <v-text-field readonly :value="template.resources.cpu" label="CPU" />
+        <v-text-field readonly :value="cpu" label="CPU" />
       </v-col>
       <v-col>
         <v-text-field readonly :value="template.resources.ram" label="RAM" />
@@ -65,8 +65,9 @@
 </template>
 
 <script setup>
-import { toRefs, defineProps, ref, computed } from "vue";
+import { toRefs, defineProps, ref, computed, onMounted } from "vue";
 import InstanceIpMenu from "@/components/ui/instanceIpMenu.vue";
+import api from "@/api";
 
 const props = defineProps(["template"]);
 
@@ -80,6 +81,32 @@ const os = computed(() => {
       k.includes("os")
     )
   ];
+});
+
+const ovhType = computed(() => {
+  return template.value.config.type;
+});
+
+const cpu=ref('')
+
+onMounted(async () => {
+  cpu.value=template.value.resources.cpu;
+  if (template.value.config.type === "dedicated") {
+    const { meta } = await api.servicesProviders.action({
+      uuid: template.value.sp,
+      action: "checkout_baremetal",
+      params: JSON.parse(JSON.stringify(template.value.config)),
+    });
+
+    meta.order.details.forEach((d) => {
+      if (
+        d.description.toLowerCase().includes("intel") ||
+        d.description.toLowerCase().includes("amd")
+      ) {
+        cpu.value = d.description;
+      }
+    });
+  }
 });
 </script>
 

@@ -9,7 +9,7 @@
               <v-subheader>Type</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-select
+              <v-autocomplete
                 label="Type"
                 v-model="type"
                 item-value="value"
@@ -27,7 +27,8 @@
               <v-subheader>Account</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-select
+              <v-autocomplete
+                :filter="defaultFilterObject"
                 label="Account"
                 v-model="transaction.account"
                 item-value="title"
@@ -43,7 +44,8 @@
               <v-subheader>Service</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-select
+              <v-autocomplete
+                :filter="defaultFilterObject"
                 label="Service"
                 item-value="title"
                 item-text="title"
@@ -58,7 +60,8 @@
               <v-subheader>Instances</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-select
+              <v-autocomplete
+                :filter="defaultFilterObject"
                 multiple
                 label="Instances"
                 item-value="uuid"
@@ -139,6 +142,7 @@
             <v-textarea
               no-resize
               label="Items descriptions"
+              :rules="isInvoice ? generalRule : []"
               v-model="transaction.meta.description"
             ></v-textarea>
           </v-row>
@@ -177,6 +181,7 @@
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import JsonEditor from "@/components/JsonEditor.vue";
+import { defaultFilterObject } from "@/functions";
 
 export default {
   components: { JsonEditor },
@@ -213,6 +218,7 @@ export default {
     type: "transaction",
   }),
   methods: {
+    defaultFilterObject,
     tryToSend() {
       if (!this.isValid) {
         this.$refs.form.validate();

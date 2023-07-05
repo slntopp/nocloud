@@ -51,18 +51,14 @@
             <v-row>
               <v-col cols="12">
                 <div class="title_progress">
-                  <span>CPU</span>
+                  <span>Allocated Memory</span>
                   <div>
-                    <span>{{ host.total_cpu - host.free_cpu }}</span> /
-                    <span>{{ host.total_cpu }}</span>
+                    <span>{{ host.ram_usage }}</span> /
+                    <span>{{ host.max_ram }}</span>
                   </div>
                 </div>
                 <v-progress-linear
-                  :value="
-                    Math.round(
-                      ((host.total_cpu - host.free_cpu) / host.total_cpu) * 100
-                    )
-                  "
+                  :value="Math.ceil((host.ram_usage / host.max_ram) * 100)"
                   color="green"
                   height="20"
                 >
@@ -71,26 +67,55 @@
                   </template>
                 </v-progress-linear>
               </v-col>
+
               <v-col cols="12">
                 <div class="title_progress">
-                  <span>Memory</span>
+                  <span>Allocated CPU</span>
                   <div>
-                    <span
-                      >{{
-                        ((host.total_ram - host.free_ram) / 1048576).toFixed(2)
-                      }}
-                      GiB</span
-                    >
-                    /
-                    <span>{{ (host.total_ram / 1048576).toFixed(2) }} GiB</span>
+                    <span>{{ host.cpu_usage }}</span> /
+                    <span>{{ host.max_cpu }}</span>
                   </div>
                 </div>
                 <v-progress-linear
-                  :value="
-                    Math.round(
-                      ((host.total_ram - host.free_ram) / host.total_ram) * 100
-                    )
-                  "
+                  :value="Math.ceil((host.cpu_usage / host.max_cpu) * 100)"
+                  color="green"
+                  height="20"
+                >
+                  <template v-slot:default="{ value }">
+                    <strong>{{ value }}%</strong>
+                  </template>
+                </v-progress-linear>
+              </v-col>
+
+              <v-col cols="12">
+                <div class="title_progress">
+                  <span>Real Memory</span>
+                  <div>
+                    <span>{{ host.used_ram }}</span> /
+                    <span>{{ host.total_ram }}</span>
+                  </div>
+                </div>
+                <v-progress-linear
+                  :value="Math.ceil((host.used_ram / host.total_ram) * 100)"
+                  color="green"
+                  height="20"
+                >
+                  <template v-slot:default="{ value }">
+                    <strong>{{ value }}%</strong>
+                  </template>
+                </v-progress-linear>
+              </v-col>
+
+              <v-col cols="12">
+                <div class="title_progress">
+                  <span>Real CPU</span>
+                  <div>
+                    <span>{{ host.used_cpu }}</span> /
+                    <span>{{ host.total_cpu }}</span>
+                  </div>
+                </div>
+                <v-progress-linear
+                  :value="Math.ceil((host.used_cpu / host.total_cpu) * 100)"
                   color="green"
                   height="20"
                 >
@@ -302,7 +327,7 @@ export default {
     getOSImgLink(name) {
       const os = name.replace(/[^a-zA-Z]+/g, "").toLowerCase();
 
-      return '/admin/img/' + os + ".png";
+      return "/admin/img/" + os + ".png";
     },
   },
   mounted() {
@@ -362,14 +387,14 @@ export default {
       return Math.round((private_vnet.used / private_vnet.total) * 100);
     },
     colorUsePublic() {
-      if (this.percentUsePublic >= 95) return 'red';
-      if (this.percentUsePublic > 80) return 'orange';
-      return 'green';
+      if (this.percentUsePublic >= 95) return "red";
+      if (this.percentUsePublic > 80) return "orange";
+      return "green";
     },
     colorUsePrivate() {
-      if (this.percentUsePrivate >= 95) return 'red';
-      if (this.percentUsePrivate > 80) return 'orange';
-      return 'green';
+      if (this.percentUsePrivate >= 95) return "red";
+      if (this.percentUsePrivate > 80) return "orange";
+      return "green";
     },
   },
   watch: {

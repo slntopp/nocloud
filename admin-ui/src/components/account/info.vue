@@ -69,7 +69,7 @@
     </div>
 
     <nocloud-table
-      table-name="accountInfo"
+      table-name="account-info"
       class="mt-4"
       item-key="value"
       v-model="selected"

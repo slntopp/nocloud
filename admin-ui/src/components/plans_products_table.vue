@@ -15,7 +15,7 @@
     >
       <v-tab-item v-for="tab in tabs" :key="tab">
         <nocloud-table
-          table-name="plansProducts"
+          table-name="plans-products"
           item-key="id"
           sort-by="sorter"
           ref="table"
@@ -138,7 +138,7 @@ import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
 import plansResourcesTable from "@/components/plans_resources_table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import {getFullDate} from "@/functions";
+import { getFullDate } from "@/functions";
 
 const props = defineProps({
   type: { type: String, required: true },
@@ -190,6 +190,7 @@ function addConfig() {
     price: 0,
     period: 0,
     resources: {},
+    meta: {},
     sorter: value.length,
     id: Math.random().toString(16).slice(2),
   });

@@ -51,10 +51,21 @@
           one.</v-card-subtitle
         >
         <v-card-actions>
-          <v-btn class="mr-2" :loading="isLoading" @click="tryToSend('create')">
+          <v-btn
+            class="mr-2"
+            :loading="isCreateLoading"
+            :disabled="isEditLoading"
+            @click="tryToSend('create')"
+          >
             Create
           </v-btn>
-          <v-btn :loading="isLoading" @click="tryToSend('edit')"> Edit </v-btn>
+          <v-btn
+            :loading="isEditLoading"
+            :disabled="isCreateLoading"
+            @click="tryToSend('edit')"
+          >
+            Edit
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -76,7 +87,8 @@ export default {
     fee: {},
     isDialogVisible: false,
     isPlansLoading: false,
-    isLoading: false,
+    isCreateLoading: false,
+    isEditLoading: false,
     isValid: true,
     isSpLoading: false,
   }),
@@ -97,23 +109,26 @@ export default {
         resources: [],
         products: {},
       };
+      const isEdit = action === "edit";
+      if (isEdit) {
+        this.isEditLoading = true;
+      } else {
+        this.isCreateLoading = true;
+      }
 
       await this.$refs.table.changePlan(newPlan);
 
-      if (action === "create") delete newPlan.uuid;
-      const request =
-        action === "edit"
-          ? api.plans.update(newPlan.uuid, newPlan)
-          : api.plans.create(newPlan);
+      if (!isEdit) delete newPlan.uuid;
+      const request = isEdit
+        ? api.plans.update(newPlan.uuid, newPlan)
+        : api.plans.create(newPlan);
 
-      this.isLoading = true;
       request
         .then(() => {
           this.showSnackbarSuccess({
-            message:
-              action === "edit"
-                ? "Price model edited successfully"
-                : "Price model created successfully",
+            message: isEdit
+              ? "Price model edited successfully"
+              : "Price model created successfully",
           });
         })
         .catch((err) => {
@@ -123,7 +138,8 @@ export default {
           console.error(err);
         })
         .finally(() => {
-          this.isLoading = false;
+          this.isCreateLoading = false;
+          this.isEditLoading = false;
           this.isDialogVisible = false;
         });
     },
@@ -157,16 +173,10 @@ export default {
   },
   computed: {
     tableComponent() {
-      switch (this.template.type) {
-        case "ovh cloud":
-          return () => import("@/components/plan/cloudPrices.vue");
-
-        case "ovh vps":
-          return () => import("@/components/plan/vpsTable.vue");
-
-        default:
-          return () => import("@/components/plan/dedicatedTable.vue");
-      }
+      return () =>
+        import(
+          `@/components/plan/${this.template.type.split(" ")[1]}Table.vue`
+        );
     },
     sp() {
       return this.$store.getters["servicesProviders/all"].find(

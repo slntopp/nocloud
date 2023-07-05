@@ -15,7 +15,7 @@
               <v-subheader>Price model type</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-select
+              <v-autocomplete
                 label="Type"
                 v-model="plan.type"
                 :items="types"
@@ -64,7 +64,7 @@
               <v-subheader>Default tariff</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-select
+              <v-autocomplete
                 label="Tariff"
                 v-model="plan.meta.product"
                 :items="Object.keys(plan.products)"
@@ -77,7 +77,7 @@
               <v-subheader>Linked price model</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-select
+              <v-autocomplete
                 label="Price model"
                 v-model="plan.meta.linkedPlan"
                 :items="filteredPlans"
@@ -100,7 +100,7 @@
 
         <v-col :cols="viewport > 2200 ? 6 : 12">
           <component
-            v-if="!['ovh vps', 'ovh dedicated', 'goget'].includes(plan.type)"
+            v-if="!productsHide"
             :is="template"
             :type="plan.type"
             :resources="plan.resources"
@@ -484,6 +484,10 @@ export default {
     viewport() {
       return document.documentElement.clientWidth;
     },
+    productsHide(){
+      const hidden=['ovh', 'goget','acronis']
+      return hidden.some((h)=>this.plan.type.includes(h))
+    }
   },
   watch: {
     "plan.kind"() {

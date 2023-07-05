@@ -68,7 +68,7 @@ export default {
           title: "Info",
           component: () => import("@/components/instance/info.vue"),
         },
-        this.instance?.state && {
+        this.instance?.state && this.instance.billingPlan.type!=='ovh dedicated' && {
           title: "Snapshots",
           component: () => import("@/components/instance/snapshots.vue"),
         },
@@ -94,7 +94,7 @@ export default {
     });
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("accounts/fetch");
-    this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("servicesProviders/fetch",false);
     this.$store.dispatch("plans/fetch");
   },
   watch: {

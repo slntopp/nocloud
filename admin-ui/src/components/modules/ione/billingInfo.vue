@@ -122,7 +122,7 @@ import {
   onMounted,
 } from "vue";
 import { formatSecondsToDate, getFullDate } from "@/functions";
-import ChangeIoneMonitorings from "@/components/dialogs/changeIoneMonitorings.vue";
+import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
 import ChangeIonePriceModel from "@/components/dialogs/changeIonePriceModel.vue";
@@ -147,7 +147,9 @@ const billingHeaders = ref([
 ]);
 
 const date = computed(() =>
-  formatSecondsToDate(template.value?.data?.last_monitoring)
+  formatSecondsToDate(
+    +template.value?.data?.last_monitoring + +template.value.billingPlan.products[template.value.product].period
+  )
 );
 const isMonitoringsEmpty = computed(() => date.value === "-");
 const availableTarrifs = computed(() =>
@@ -251,7 +253,7 @@ const getBillingItems = () => {
 
 const updatePrice = (item, value) => {
   item.price = +value;
-  emit("update", { key: item.key, value:+value });
+  emit("update", { key: item.key, value: +value });
 };
 </script>
 

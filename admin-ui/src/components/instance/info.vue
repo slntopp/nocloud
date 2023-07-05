@@ -18,7 +18,7 @@
             params: { namespaceId: namespace?.uuid },
           }"
           label="Group(Namespace)"
-          :value="!namespace ? '' : 'NS_' + namespace.title"
+          :value="!namespace ? '' :  namespace.title"
         />
       </v-col>
       <v-col>
@@ -43,16 +43,16 @@
         <v-text-field
           readonly
           label="balance"
-          :value="account?.balance.toFixed(2)"
+          :value="account?.balance?.toFixed(2)"
         />
       </v-col>
     </v-row>
-<!--    <component-->
-<!--      v-if="!type.includes('ovh') && !type.includes('ione')"-->
-<!--      :is="templates[type] ?? templates.custom"-->
-<!--      :template="template"-->
-<!--      @refresh="refreshInstance"-->
-<!--    />-->
+    <!--    <component-->
+    <!--      v-if="!type.includes('ovh') && !type.includes('ione')"-->
+    <!--      :is="templates[type] ?? templates.custom"-->
+    <!--      :template="template"-->
+    <!--      @refresh="refreshInstance"-->
+    <!--    />-->
     <template>
       <v-card-title class="primary--text">Instance info</v-card-title>
       <v-row>
@@ -79,7 +79,7 @@
         <v-col>
           <route-text-field
             :to="{ name: 'Service', params: { serviceId: service?.uuid } }"
-            :value="!service ? '' : 'SRV_' + service.title"
+            :value="!service ? '' : service.title"
             label="Service"
           />
         </v-col>
