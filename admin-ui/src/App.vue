@@ -171,6 +171,16 @@
 
         <v-subheader>SYSTEM</v-subheader>
 
+        <v-list-item v-bind="listItemBind"  :to="{ name: 'Chats'}">
+          <v-list-item-icon>
+            <v-icon>mdi-chat</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Chats") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
           <v-list-item-icon>
             <v-icon>mdi-history</v-icon>
