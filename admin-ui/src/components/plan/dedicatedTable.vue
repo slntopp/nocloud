@@ -157,8 +157,12 @@ export default {
     getAddons({ planCode, duration }) {
       return this.addons[planCode]?.filter((a) => a.duration === duration);
     },
-    fetchAddons({ planCode }) {
+    fetchAddons({ planCode, sell }) {
       if (this.addons[planCode]) {
+        this.addons[planCode].forEach(({ price }, i) => {
+          if (price.value !== 0) return;
+          this.addons[planCode][i].sell = sell;
+        });
         return;
       }
 
@@ -191,6 +195,7 @@ export default {
                 addon.value = resource.price;
                 addon.sell = true;
               }
+              if (addon.price.value === 0 && sell) addon.sell = true;
 
               return addon;
             })
