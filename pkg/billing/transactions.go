@@ -233,7 +233,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		var rate float64 = 1
 
 		if cur != pb.Currency(currencyConf.Currency) {
-			rate, err = s.currencies.GetExchangeRateDirect(ctx, cur, pb.Currency(currencyConf.Currency))
+			rate, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
 
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
@@ -241,15 +241,26 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 			}
 		}
 
-		balance := *dbAcc.Balance * rate
+		var balance = 0.0
+		if dbAcc.Balance != nil {
+			balance = *dbAcc.Balance
+		}
 
-		if !*dbAcc.Suspended && balance < suspConf.Limit {
+		balance = balance * rate
+
+		var isSuspended = false
+
+		if dbAcc.Suspended != nil {
+			isSuspended = *dbAcc.Suspended
+		}
+
+		if !isSuspended && balance < suspConf.Limit {
 			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
 			if err != nil {
 				log.Error("Failed to suspend account", zap.String("err", err.Error()))
 				return nil, status.Error(codes.Internal, err.Error())
 			}
-		} else if *dbAcc.Suspended && balance > suspConf.Limit {
+		} else if isSuspended && balance > suspConf.Limit {
 			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
 			if err != nil {
 				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
