@@ -106,6 +106,11 @@ const routes = [
     },
   },
   {
+    path:'/chats',
+    name:'Chats',
+    redirect: {name:'Plugin', params: {url:'/cc.ui/'}}
+  },
+  {
     path: "/settings",
     name: "Settings",
     component: () => import("../views/Settings.vue"),
