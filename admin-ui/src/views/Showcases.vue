@@ -276,7 +276,7 @@ export default {
     const promises = [];
 
     if (this.sp.length < 1) {
-      promises.push(this.$store.dispatch("servicesProviders/fetch"));
+      promises.push(this.$store.dispatch("servicesProviders/fetch", false));
     }
     if (this.plans.length < 1) {
       promises.push(this.$store.dispatch("plans/fetch"));
@@ -291,6 +291,7 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "servicesProviders/fetch",
+      params: false
     });
   },
   computed: {
