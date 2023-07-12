@@ -1,6 +1,6 @@
 <template>
   <div class="pa-4 h-100 w-100">
-    <iframe class="h-100 w-100" frameborder="0" :src="src"></iframe>
+    <iframe class="h-100 w-100" frameborder="0" v-if="$route.query.url" :src="src"></iframe>
   </div>
 </template>
 

@@ -158,7 +158,7 @@
           v-bind="listItemBind"
           v-for="plugin of plugins"
           :key="plugin.url"
-          :to="{ name: 'Plugin', params: plugin }"
+          :to="{ name: 'Plugin', params: plugin, query: { url: plugin.url } }"
         >
           <v-list-item-icon>
             <v-icon>mdi-{{ plugin.icon }}</v-icon>
