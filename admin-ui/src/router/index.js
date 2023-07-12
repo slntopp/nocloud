@@ -108,7 +108,7 @@ const routes = [
   {
     path:'/chats',
     name:'Chats',
-    redirect: {name:'Plugin', params: {url:'/cc.ui/'}}
+    redirect: {name:'Plugin', params: {url:'/cc.ui/',title:'Chats'}}
   },
   {
     path: "/settings",
