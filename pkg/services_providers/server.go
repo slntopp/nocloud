@@ -304,6 +304,9 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if newSecrets := req.GetSecrets(); newSecrets != nil {
 		sp.Secrets = newSecrets
 	}
+	if newProxy := req.GetProxy(); newProxy != nil {
+		sp.Proxy = newProxy
+	}
 	if newVars := req.GetVars(); newVars != nil {
 		sp.Vars = newVars
 	}
