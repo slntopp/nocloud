@@ -158,7 +158,7 @@
           v-bind="listItemBind"
           v-for="plugin of plugins"
           :key="plugin.url"
-          :to="{ name: 'Plugin', params: plugin }"
+          :to="{ name: 'Plugin', params: plugin, query: { url: plugin.url } }"
         >
           <v-list-item-icon>
             <v-icon>mdi-{{ plugin.icon }}</v-icon>
@@ -397,13 +397,19 @@ export default {
 
     if (this.isLoggedIn) {
       this.$store.dispatch("auth/fetchUserData");
-      this.$store.dispatch("plugins/fetch");
     }
   },
   mounted() {
     this.onResize();
     window.addEventListener("resize", this.onResize, { passive: true });
   },
+  watch:{
+    isLoggedIn(newVal){
+      if(newVal){
+        this.$store.dispatch("plugins/fetch");
+      }
+    }
+  }
 };
 </script>
 

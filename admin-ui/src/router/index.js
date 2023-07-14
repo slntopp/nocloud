@@ -106,9 +106,13 @@ const routes = [
     },
   },
   {
-    path:'/chats',
-    name:'Chats',
-    redirect: {name:'Plugin', params: {url:'/cc.ui/'}}
+    path: "/chats",
+    name: "Chats",
+    redirect: {
+      name: "Plugin",
+      params: { title: "Chats", url: "/cc.ui/"  },
+      query: { url: "/cc.ui/" },
+    },
   },
   {
     path: "/settings",
@@ -298,7 +302,7 @@ const routes = [
 ];
 
 const router = new VueRouter({
-  mode: 'history',
+  mode: "history",
   base: process.env.BASE_URL,
   routes,
 });
