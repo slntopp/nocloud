@@ -386,7 +386,7 @@ export default {
               duration,
               name: productName,
               apiName: productName,
-              group: productName.split(" ")[1],
+              group: productName.replace(/VPS[\W0-9]/, '').split(/[\W0-9]/)[0],
               value: price.value,
               sell: false,
               id: `${duration} ${planCode}`,
@@ -485,8 +485,12 @@ export default {
     },
     getName({ name, group }) {
       const newGroup = `${group[0].toUpperCase()}${group.slice(1)}`;
+      const slicedName = name.replace(/VPS[\W0-9]/, '');
+      const sep = /[\W0-9]/.exec(slicedName)[0];
+      const newName = slicedName.split(sep).splice(1).join(sep);
 
-      return `VPS ${newGroup} ${name.split(" ").at(-1)}`;
+      if (!name.startsWith('VPS')) return `${newGroup}${sep}${newName}`;
+      else return `VPS ${newGroup} ${name.split(" ").at(-1)}`;
     },
     getMargin({ value, price }, filter = true) {
       if (!this.fee.ranges) {
@@ -653,7 +657,8 @@ export default {
           const winKey = Object.keys(product?.meta || {}).find((el) =>
             el.includes("windows")
           );
-          const group = product?.title.split(" ")[1] || plan.name.split(" ")[1];
+          const title = (product?.title ?? plan.name).replace(/VPS[\W0-9]/, '');
+          const group = title.split(/[\W0-9]/)[0];
 
           if (product) {
             this.plans[i].name = product.title;
