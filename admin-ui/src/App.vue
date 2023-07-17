@@ -397,13 +397,19 @@ export default {
 
     if (this.isLoggedIn) {
       this.$store.dispatch("auth/fetchUserData");
-      this.$store.dispatch("plugins/fetch");
     }
   },
   mounted() {
     this.onResize();
     window.addEventListener("resize", this.onResize, { passive: true });
   },
+  watch:{
+    isLoggedIn(newVal){
+      if(newVal){
+        this.$store.dispatch("plugins/fetch");
+      }
+    }
+  }
 };
 </script>
 
