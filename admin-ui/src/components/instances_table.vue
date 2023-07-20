@@ -1,19 +1,19 @@
 <template>
   <nocloud-table
-    table-name="instances"
-    class="mt-4"
-    :value="value"
-    :items="instances"
-    :headers="headers"
-    :loading="isLoading"
-    :custom-sort="sortInstances"
-    :footer-error="fetchError"
-    @input="(value) => $emit('input', value)"
-    :default-filtres="defaultFiltres"
-    :filters-items="filterItems"
-    :filters-values="selectedFilters"
-    :show-select="showSelect"
-    @input:filter="selectedFilters[$event.key] = $event.value"
+      table-name="instances"
+      class="mt-4"
+      :value="value"
+      :items="instances"
+      :headers="headers"
+      :loading="isLoading"
+      :custom-sort="sortInstances"
+      :footer-error="fetchError"
+      @input="(value) => $emit('input', value)"
+      :default-filtres="defaultFiltres"
+      :filters-items="filterItems"
+      :filters-values="selectedFilters"
+      :show-select="showSelect"
+      @input:filter="selectedFilters[$event.key] = $event.value"
   >
     <template v-slot:[`item.id`]="{ index }">
       {{ index + 1 }}
@@ -22,20 +22,20 @@
     <template v-slot:[`item.title`]="{ item }">
       <div class="d-flex justify-space-between">
         <router-link
-          :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
+            :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
         >
           {{ item.title }}
         </router-link>
         <login-in-account-icon
-          :uuid="getAccount(item).uuid"
-          :instanceId="item.uuid"
+            :uuid="getAccount(item).uuid"
+            :instanceId="item.uuid"
         />
       </div>
     </template>
 
     <template v-slot:[`item.access`]="{ item }">
       <router-link
-        :to="{ name: 'Account', params: { accountId: getAccount(item)?.uuid } }"
+          :to="{ name: 'Account', params: { accountId: getAccount(item)?.uuid } }"
       >
         {{ getValue("access", item) }}
       </router-link>
@@ -85,7 +85,7 @@
 
     <template v-slot:[`item.access.namespace`]="{ item }">
       <router-link
-        :to="{
+          :to="{
           name: 'NamespacePage',
           params: { namespaceId: item.access.namespace },
         }"
@@ -96,7 +96,7 @@
 
     <template v-slot:[`item.billingPlan.title`]="{ item, value }">
       <router-link
-        :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
+          :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
       >
         {{ value }}
       </router-link>
@@ -120,7 +120,7 @@
 
     <template v-slot:[`item.state.meta.networking`]="{ item }">
       <template v-if="!item.state?.meta.networking?.public">-</template>
-      <instance-ip-menu v-else :item="item" ui="span" />
+      <instance-ip-menu v-else :item="item" ui="span"/>
     </template>
   </nocloud-table>
 </template>
@@ -128,17 +128,17 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
-import { getOvhPrice, getState } from "@/functions";
+import {getOvhPrice, getState} from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 
 export default {
   name: "instances-table",
-  components: { LoginInAccountIcon, nocloudTable, instanceIpMenu },
+  components: {LoginInAccountIcon, nocloudTable, instanceIpMenu},
   props: {
-    value: { type: Array, required: true },
-    selected: { type: Object, default: null },
-    showSelect: { type: Boolean, default: true },
-    items: { type: Array, default: () => [] },
+    value: {type: Array, required: true},
+    selected: {type: Object, default: null},
+    showSelect: {type: Boolean, default: true},
+    items: {type: Array, default: () => []},
   },
   data: () => ({
     fetchError: "",
@@ -172,9 +172,9 @@ export default {
   }),
   mounted() {
     const types = require.context(
-      "@/components/modules/",
-      true,
-      /serviceCreate\.vue$/
+        "@/components/modules/",
+        true,
+        /serviceCreate\.vue$/
     );
     types.keys().forEach((key) => {
       const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i);
@@ -230,9 +230,9 @@ export default {
     chipColor(item) {
       if (!item.state) return "error";
       const state =
-        item.billingPlan.type === "ione"
-          ? item.state.meta?.lcm_state_str
-          : item.state.state;
+          item.billingPlan.type === "ione"
+              ? item.state.meta?.lcm_state_str
+              : item.state.state;
 
       switch (state) {
         case "RUNNING":
@@ -247,17 +247,17 @@ export default {
           return "blue-grey darken-2";
       }
     },
-    getAccount({ access }) {
+    getAccount({access}) {
       const {
-        access: { namespace },
-      } = this.namespaces.find(({ uuid }) => uuid === access.namespace) ?? {
+        access: {namespace},
+      } = this.namespaces.find(({uuid}) => uuid === access.namespace) ?? {
         access: {},
       };
 
-      return this.accounts.find(({ uuid }) => uuid === namespace) ?? {};
+      return this.accounts.find(({uuid}) => uuid === namespace) ?? {};
     },
     getEmail(inst) {
-      const { email } = this.getAccount(inst);
+      const {email} = this.getAccount(inst);
 
       return email ?? "-";
     },
@@ -273,22 +273,22 @@ export default {
         }
         case "ione": {
           const initialPrice =
-            inst.billingPlan.products[inst.product]?.price ?? 0;
+              inst.billingPlan.products[inst.product]?.price ?? 0;
 
           return +inst.billingPlan.resources
-            .reduce((prev, curr) => {
-              if (
-                curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
-              ) {
-                return prev + (curr.price * inst.resources.drive_size) / 1024;
-              } else if (curr.key === "ram") {
-                return prev + (curr.price * inst.resources.ram) / 1024;
-              } else if (inst.resources[curr.key]) {
-                return prev + curr.price * inst.resources[curr.key];
-              }
-              return prev;
-            }, initialPrice)
-            ?.toFixed(2);
+              .reduce((prev, curr) => {
+                if (
+                    curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
+                ) {
+                  return prev + (curr.price * inst.resources.drive_size) / 1024;
+                } else if (curr.key === "ram") {
+                  return prev + (curr.price * inst.resources.ram) / 1024;
+                } else if (inst.resources[curr.key]) {
+                  return prev + curr.price * inst.resources[curr.key];
+                }
+                return prev;
+              }, initialPrice)
+              ?.toFixed(2);
         }
       }
     },
@@ -302,7 +302,7 @@ export default {
       }
 
       const period =
-        inst.type === "ovh" ? inst.config.duration : this.getIonePeriod(inst);
+          inst.type === "ovh" ? inst.config.duration : this.getIonePeriod(inst);
 
       switch (period) {
         case "P1H":
@@ -327,7 +327,7 @@ export default {
       const month = day * 30;
       const year = day * 365;
 
-      Object.values(inst.billingPlan.products ?? {}).forEach(({ period }) => {
+      Object.values(inst.billingPlan.products ?? {}).forEach(({period}) => {
         if (inst.billingPlan.kind === "DYNAMIC") value.add("P1H");
         if (inst.billingPlan.kind !== "STATIC") return;
 
@@ -347,23 +347,23 @@ export default {
       if (inst.type === "ione") return this.date(inst.data.last_monitoring);
       return "unknown";
     },
-    getService({ service }) {
+    getService({service}) {
       return (
-          this.services.find(({ uuid }) => service === uuid)?.title ?? service
+          this.services.find(({uuid}) => service === uuid)?.title ?? service
       );
     },
-    getServiceProvider({ sp }) {
-      return this.sp.find(({ uuid }) => uuid === sp)?.title;
+    getServiceProvider({sp}) {
+      return this.sp.find(({uuid}) => uuid === sp)?.title;
     },
     getOSName(id, sp) {
       if (!id) return;
-      return this.sp.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
-        .name;
+      return this.sp.find(({uuid}) => uuid === sp)?.publicData.templates[id]
+          .name;
     },
     getTariff(item) {
       const {
         billingPlan,
-        config: { planCode, duration },
+        config: {planCode, duration},
       } = item;
       const key = `${duration} ${planCode}`;
 
@@ -403,7 +403,7 @@ export default {
               return false;
             }
           } else if (
-            !this.selectedFilters[key].includes(this.getValue(key, i))
+              !this.selectedFilters[key].includes(this.getValue(key, i))
           ) {
             return false;
           }
@@ -415,7 +415,12 @@ export default {
       }
 
       return instances.filter((item) => {
-        return searchKeys.some((key) => {
+        const dynamicKeys = []
+        if (item.type === 'ovh') {
+          dynamicKeys.push(`data.${item.config.type}Name`, `data.${item.config.type}Id`)
+        }
+        const searchKeysFull = searchKeys.concat(dynamicKeys)
+        return searchKeysFull.some((key) => {
           let tempItem = item;
           if (this.headersGetters[key]) {
             tempItem = this.getValue(key, tempItem);
@@ -441,34 +446,34 @@ export default {
     },
     headers() {
       const headers = [
-        { text: "ID", value: "id" },
-        { text: "Title", value: "title" },
-        { text: "Service", value: "service", customFilter: true },
-        { text: "Account", value: "access", customFilter: true },
+        {text: "ID", value: "id"},
+        {text: "Title", value: "title"},
+        {text: "Service", value: "service", customFilter: true},
+        {text: "Account", value: "access", customFilter: true},
         {
           text: "Group (NameSpace)",
           value: "access.namespace",
           customFilter: true,
         },
-        { text: "Due date", value: "dueDate" },
-        { text: "Status", value: "state", customFilter: true },
-        { text: "Tariff", value: "product", customFilter: true },
-        { text: "Service provider", value: "sp", customFilter: true },
-        { text: "Type", value: "type", customFilter: true },
-        { text: "Price", value: "price" },
-        { text: "Period", value: "period", customFilter: true },
-        { text: "Email", value: "email" },
-        { text: "Date", value: "date" },
-        { text: "UUID", value: "uuid" },
-        { text: "Price model", value: "billingPlan.title", customFilter: true },
-        { text: "IP", value: "state.meta.networking" },
-        { text: "CPU", value: "resources.cpu" },
-        { text: "RAM", value: "resources.ram" },
-        { text: "Disk", value: "resources.drive_size" },
-        { text: "OS", value: "config.template_id" },
-        { text: "Domain", value: "resources.domain" },
-        { text: "DCV", value: "resources.dcv" },
-        { text: "Approver email", value: "resources.approver_email" },
+        {text: "Due date", value: "dueDate"},
+        {text: "Status", value: "state", customFilter: true},
+        {text: "Tariff", value: "product", customFilter: true},
+        {text: "Service provider", value: "sp", customFilter: true},
+        {text: "Type", value: "type", customFilter: true},
+        {text: "Price", value: "price"},
+        {text: "Period", value: "period", customFilter: true},
+        {text: "Email", value: "email"},
+        {text: "Date", value: "date"},
+        {text: "UUID", value: "uuid"},
+        {text: "Price model", value: "billingPlan.title", customFilter: true},
+        {text: "IP", value: "state.meta.networking"},
+        {text: "CPU", value: "resources.cpu"},
+        {text: "RAM", value: "resources.ram"},
+        {text: "Disk", value: "resources.drive_size"},
+        {text: "OS", value: "config.template_id"},
+        {text: "Domain", value: "resources.domain"},
+        {text: "DCV", value: "resources.dcv"},
+        {text: "Approver email", value: "resources.approver_email"},
       ];
       return headers;
     },
@@ -487,9 +492,9 @@ export default {
         "access.namespace": (item) => this.getNamespace(item.access.namespace),
         "resources.ram": (item) => +(item?.resources?.ram / 1024).toFixed(2),
         "resources.drive_size": (item) =>
-          +(item?.resources?.drive_size / 1024).toFixed(2),
+            +(item?.resources?.drive_size / 1024).toFixed(2),
         "config.template_id": (item) =>
-          this.getOSName(item?.config?.template_id, item.sp),
+            this.getOSName(item?.config?.template_id, item.sp),
       };
     },
     isLoading() {
@@ -526,9 +531,9 @@ export default {
       const instancesSP = this.items.map((i) => i.sp);
 
       return new Set(
-        this.sp
-          .filter((sp) => instancesSP.includes(sp.uuid))
-          .map((sp) => sp.title)
+          this.sp
+              .filter((sp) => instancesSP.includes(sp.uuid))
+              .map((sp) => sp.title)
       );
     },
     periodItems() {
