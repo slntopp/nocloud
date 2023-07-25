@@ -142,7 +142,12 @@
                   <color-picker
                     label="Color"
                     v-model="marker.extra.color"
-                    :ref="`textField_${marker.id}`"
+                  />
+
+                  <v-text-field
+                      dense
+                      label="Icon link"
+                      v-model="marker.extra.link"
                   />
 
                   <div class="d-flex justify-end">
