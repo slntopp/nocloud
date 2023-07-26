@@ -18,6 +18,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/showcases"
 	"net"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -104,6 +105,7 @@ func main() {
 	defer rbmq.Close()
 
 	server := sp.NewServicesProviderServer(log, db, rbmq)
+	s_server := showcases.NewShowcasesServer(log, db)
 
 	log.Debug("Got drivers", zap.Strings("drivers", drivers))
 	for _, driver := range drivers {
@@ -144,6 +146,7 @@ func main() {
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
 	go server.MonitoringRoutine(ctx)
 	sppb.RegisterServicesProvidersServiceServer(s, server)
+	sppb.RegisterShowcasesServiceServer(s, s_server)
 
 	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server))
 
