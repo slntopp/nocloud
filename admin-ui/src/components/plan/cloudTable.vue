@@ -9,6 +9,14 @@
           :loading="isRegionsLoading"
         />
       </v-col>
+      <template v-if="selectedRegion">
+        <v-col cols="2">
+          <v-btn @click="setEnabledToAll(true)">Enable all</v-btn>
+        </v-col>
+        <v-col cols="2">
+          <v-btn @click="setEnabledToAll(false)">Disable all</v-btn>
+        </v-col>
+      </template>
     </v-row>
     <v-tabs background-color="background-light" v-model="tab">
       <v-tab key="flavors"> Flavors </v-tab>
@@ -319,6 +327,19 @@ const changePlan = (plan) => {
     });
   });
 };
+
+const setEnabledToAll=(status=false)=>{
+  images.value[selectedRegion
+      .value]=images.value[selectedRegion.value].map((i)=>{
+    i.enabled=status
+    return i
+  })
+  flavors.value[selectedRegion
+      .value]=flavors.value[selectedRegion.value].map((i)=>{
+    i.enabled=status
+    return i
+  })
+}
 
 const setFee = () => {
   Object.keys(flavors.value).forEach((key) => {
