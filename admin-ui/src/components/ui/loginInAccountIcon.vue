@@ -21,7 +21,7 @@ const loginHandler = () => {
         console.log(props.instanceId, `${url}/#/cloud/${props.instanceId}`);
 
         setTimeout(() => {
-          win.postMessage(token, url);
+          win.postMessage(token, "*");
         }, 100);
       });
     })

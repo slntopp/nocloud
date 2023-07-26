@@ -5,7 +5,7 @@
         <v-icon class="group-icon" v-bind="attrs" v-on="on">mdi-filter</v-icon>
       </template>
 
-      <v-list dense>
+      <v-list dense v-if="tabsIndex < 2">
         <v-list-item
           dense
           v-for="item of filters[tabsIndex][column]"
@@ -160,6 +160,27 @@
             <v-switch v-model="item.sell" />
           </template>
         </nocloud-table>
+
+        <div class="os-tab__card" v-else-if="tab === 'OS'">
+          <v-card
+            outlined
+            class="pt-4 pl-4 d-flex"
+            style="gap: 10px"
+            color="background"
+            v-for="item of allImages"
+            :key="item"
+          >
+            <v-chip
+              close
+              outlined
+              :color="(images.includes(item)) ? 'info' : 'error'"
+              :close-icon="(images.includes(item) ? 'mdi-close-circle' : 'mdi-plus-circle')"
+              @click:close="changeImage(item)"
+            >
+              {{ item }}
+            </v-chip>
+          </v-card>
+        </div>
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -184,7 +205,9 @@ export default {
   data: () => ({
     groups: [],
     expanded: [],
-    tabs: ["Tariffs", "Addons"],
+    tabs: ["Tariffs", "Addons", "OS"],
+    allImages: [],
+    images: [],
 
     plans: [],
     headers: [
@@ -250,6 +273,12 @@ export default {
   }),
   mixins: [currencyRate],
   methods: {
+    changeImage(value) {
+      const i = this.images.indexOf(value);
+
+      if (i !== -1) this.images.splice(i, 1);
+      else this.images.push(value);
+    },
     testConfig() {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
         return "You must select a group for the tariff!";
@@ -262,7 +291,7 @@ export default {
           const meta = {
             addons: el.addons,
             datacenter: el.datacenter,
-            os: el.os,
+            os: el.os.filter((item) => this.images.includes(item)),
           };
 
           if (el.windows) meta.windows = el.windows.value;
@@ -394,8 +423,9 @@ export default {
           }
         });
       });
+      this.allImages = result[1].os;
+      
       this.plans = result;
-
       this.plans.sort((a, b) => {
         const resA = a.planCode.split("-");
         const resB = b.planCode.split("-");
@@ -632,6 +662,7 @@ export default {
   },
   watch: {
     tabsIndex(value) {
+      if (value > 1) return;
       this.changeIcon();
 
       const items = [this.plans, this.addons];
@@ -663,6 +694,7 @@ export default {
           if (product) {
             this.plans[i].name = product.title;
             this.plans[i].value = product.price;
+            this.plans[i].os = product.meta.os;
             this.plans[i].group = group;
             this.plans[i].sell = true;
 
@@ -670,6 +702,11 @@ export default {
           }
           if (!this.groups.includes(group)) this.groups.push(group);
         });
+
+        const sellingPlans = this.plans.filter(({ sell }) => sell);
+
+        if (sellingPlans.length < 1) this.images = this.plans[1].os;
+        else this.images = (sellingPlans[1] ?? sellingPlans[0]).os;
 
         if (this.template.resources.length === this.addons.length) {
           this.filters["1"].Sell = ["true"];
@@ -697,5 +734,32 @@ export default {
 
 .v-data-table__expanded__content {
   background: var(--v-background-base);
+}
+
+.os-tab__card {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: var(--v-background-base);
+  padding-bottom: 16px;
+}
+
+.os-tab__card .v-chip {
+  color: #fff !important;
+}
+
+.os-tab__card .v-chip .v-icon {
+  color: #fff;
+}
+
+@media (max-width: 1200px) {
+  .os-tab__card {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 1000px) {
+  .os-tab__card {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
