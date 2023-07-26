@@ -4,7 +4,7 @@
       <router-link :to="{ name: 'Namespaces' }">{{
         navTitle("Namespaces")
       }}</router-link>
-      / {{ 'NS_' + (namespaceTitle) }}
+      / {{ namespaceTitle }}
     </h1>
     <v-tabs class="rounded-t-lg" background-color="background-light" v-model="tabs">
       <v-tab>Info</v-tab>
