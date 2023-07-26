@@ -1,13 +1,13 @@
 <template>
   <div class="settings pa-10">
     <nocloud-table
-      :loading="isLoading"
-      sort-by="id"
-      item-key="id"
-      table-name="plugins-settings"
-      :items="localPlugins"
-      :headers="headers"
-      v-model="selectedPlugins"
+        :loading="isLoading"
+        sort-by="id"
+        item-key="id"
+        table-name="plugins-settings"
+        :items="localPlugins"
+        :headers="headers"
+        v-model="selectedPlugins"
     >
       <template v-slot:[`item.url`]="{ item }">
         <v-text-field v-model="item.url"></v-text-field>
@@ -16,14 +16,7 @@
         <v-text-field v-model="item.title"></v-text-field>
       </template>
       <template v-slot:[`item.icon`]="{ item }">
-        <v-autocomplete :items="icons" v-model="item.icon">
-          <template v-slot:prepend>
-            <v-icon class="ml-3">{{ `mdi-${item.icon}` }}</v-icon>
-          </template>
-          <template v-slot:item="{ item }">
-            <icon-title-preview :icon="item" :title="item" is-mdi />
-          </template>
-        </v-autocomplete>
+        <icons-autocomplete :value="item.icon" @input:value="item.icon=$event"/>
       </template>
       <template v-slot:[`item.preview`]="{ item }">
         <v-list-item>
@@ -39,7 +32,8 @@
         <v-btn @click="addPlugin" class="mx-2">Add</v-btn>
         <v-btn @click="deletePlugins" class="mx-2">Delete</v-btn>
         <v-btn :loading="saveLoading" @click="savePlugins" class="mx-2"
-          >Save</v-btn
+        >Save
+        </v-btn
         >
       </template>
     </nocloud-table>
@@ -49,20 +43,20 @@
 <script>
 import NocloudTable from "@/components/table.vue";
 import api from "@/api";
-import { mapGetters } from "vuex";
+import {mapGetters} from "vuex";
 import snackbar from "@/mixins/snackbar";
-import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
+import IconsAutocomplete from "@/components/ui/iconsAutocomplete.vue";
 
 export default {
   name: "PluginsSettings",
-  components: { IconTitlePreview, NocloudTable },
+  components: {IconsAutocomplete, NocloudTable},
   mixins: [snackbar],
   data: () => ({
     headers: [
-      { text: "URL", value: "url" },
-      { text: "Title", value: "title" },
-      { text: "Icon", value: "icon" },
-      { text: "Preview", value: "preview" },
+      {text: "URL", value: "url"},
+      {text: "Title", value: "title"},
+      {text: "Icon", value: "icon"},
+      {text: "Preview", value: "preview"},
     ],
     localPlugins: [],
     icons: [],
@@ -70,38 +64,27 @@ export default {
     saveLoading: false,
   }),
   computed: {
-    ...mapGetters("plugins", { plugins: "all", isLoading: "isLoading" }),
+    ...mapGetters("plugins", {plugins: "all", isLoading: "isLoading"}),
     settings() {
       return this.$store.getters["settings/all"];
     },
   },
   mounted() {
     this.setLocalPlugins();
-    this.fetchIcons();
 
     if (!this.settings.length) {
       this.$store.dispatch("settings/fetch");
     }
   },
   methods: {
-    fetchIcons() {
-      fetch(
-        "https://raw.githubusercontent.com/Templarian/MaterialDesign/master/meta.json",
-        { method: "get" }
-      )
-        .then((d) => d.json())
-        .then((data) => {
-          this.icons = data.map((icon) => icon.name);
-        });
-    },
     setLocalPlugins() {
       this.localPlugins = JSON.parse(
-        JSON.stringify(
-          this.plugins.map((p, index) => ({
-            id: index.toString() + Date.now(),
-            ...p,
-          }))
-        )
+          JSON.stringify(
+              this.plugins.map((p, index) => ({
+                id: index.toString() + Date.now(),
+                ...p,
+              }))
+          )
       );
     },
     addPlugin() {
@@ -114,7 +97,7 @@ export default {
     },
     deletePlugins() {
       this.localPlugins = this.localPlugins.filter(
-        (p) => this.selectedPlugins.findIndex((sp) => sp.id === p.id) === -1
+          (p) => this.selectedPlugins.findIndex((sp) => sp.id === p.id) === -1
       );
     },
     setGlobalPlugins() {
@@ -128,16 +111,16 @@ export default {
         value: JSON.stringify(this.localPlugins),
       };
       api.settings
-        .addKey(key, data)
-        .then(() => {
-          this.setGlobalPlugins();
-        })
-        .catch(() => {
-          this.showSnackbarError("Error on save plugins");
-        })
-        .finally(() => {
-          this.saveLoading = false;
-        });
+          .addKey(key, data)
+          .then(() => {
+            this.setGlobalPlugins();
+          })
+          .catch(() => {
+            this.showSnackbarError("Error on save plugins");
+          })
+          .finally(() => {
+            this.saveLoading = false;
+          });
     },
   },
   watch: {
