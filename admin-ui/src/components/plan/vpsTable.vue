@@ -23,7 +23,14 @@
         </v-list-item>
       </v-list>
     </v-menu>
-
+    <v-row class="mt-4" v-if="!isPlansLoading" align="center">
+      <v-col cols="2">
+        <v-btn @click="setEnableToAll(true)">Enable all</v-btn>
+      </v-col>
+      <v-col cols="2">
+        <v-btn @click="setEnableToAll(false)">Disable all</v-btn>
+      </v-col>
+    </v-row>
     <v-tabs
       class="rounded-t-lg"
       v-model="tabsIndex"
@@ -587,6 +594,15 @@ export default {
         return result.every((el) => el);
       });
     },
+    setEnableToAll(status){
+      this.plans=this.plans.map((p)=>{
+        p.sell=status
+        return p
+      })
+      this.addons.forEach((p,ind)=>{
+        this.$set(this.addons,ind,{...p,sell:status})
+      })
+    }
   },
   created() {
     this.$emit("changeLoading");
@@ -644,7 +660,7 @@ export default {
           const addon = this.addons.find((el) => el.id === key);
 
           addon.value = price;
-          addon.sell = true;
+          addon.sell = false;
         });
 
         this.groups = [];
