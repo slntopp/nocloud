@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-row>
+    <v-row align="center">
       <v-col cols="3">
         <v-autocomplete
           :items="regions"
@@ -146,6 +146,7 @@ const capabilitiesHeaders = ref([
 const imagesHeaders = ref([
   { text: "ID", value: "id" },
   { text: "Name", value: "name" },
+  { text: "Type", value: "type" },
   { text: "Size", value: "size" },
   { text: "Сreation date", value: "creationDate" },
   { text: "Status", value: "status" },
@@ -212,8 +213,7 @@ const fetchFlavours = async () => {
       Object.keys(flavour.planCodes || {}).forEach((key) => {
         const period = key === "monthly" ? "P1M" : "P1H";
         const planCode = `${period} ${flavour.id}`;
-        const price =
-          prices.value[selectedRegion.value]?.[flavour.planCodes[key]];
+        const price =parseFloat(prices.value[selectedRegion.value]?.[flavour.planCodes[key]] * rate.value).toFixed(2)
         newFlavours.push({
           ...flavour,
           name: template.value.products[planCode]?.title || flavour.name,
@@ -221,8 +221,8 @@ const fetchFlavours = async () => {
           period,
           key: planCode,
           priceCode: flavour.planCodes[key],
-          price: parseFloat(price * rate.value).toFixed(2),
-          endPrice: template.value.products[planCode]?.price || 0,
+          price,
+          endPrice: template.value.products[planCode]?.price || price,
           enabled: !!template.value.products[planCode],
           uniqueId: `${period} ${flavour.id}`,
           meta: { region: selectedRegion.value },
@@ -279,11 +279,19 @@ const changePlan = (plan) => {
 
   Object.keys(flavors.value).forEach((regionKey) => {
     const regionFlavors = flavors.value[regionKey].filter((f) => f.enabled);
+    const regionImages = {};
+    images.value[regionKey]
+        .filter((item) => item.enabled).forEach((item)=>{
+      regionImages[item.type]=regionImages[item.type]?[...regionImages[item.type],{name:item.name,id:item.id}]:[{name:item.name,id:item.id}];
+    })
 
-    const regionImages = images.value[regionKey]
-      .filter((item) => item.enabled)
-      .map((item) => ({ name: item.name, id: item.id }));
-
+    if(!regionFlavors.length){
+      Object.keys(plan.products).forEach((key)=>{
+        if(plan.products[key]?.meta?.region===regionKey){
+          plan.products[key]=undefined
+        }
+      })
+    }
     regionFlavors.forEach((item) => {
       plan.products[item.key] = {
         title: item.name,
@@ -305,7 +313,7 @@ const changePlan = (plan) => {
           priceCode: item.priceCode,
           ...item.meta,
           datacenter: [regionKey],
-          os: regionImages,
+          os: regionImages[item.osType],
         },
       };
     });
