@@ -7,15 +7,18 @@
           <v-text-field
             :rules="[requiredRule]"
             v-model="showcase.title"
-            label="title"
+            label="Title"
           />
         </v-col>
-        <v-col cols="6">
+        <v-col cols="4">
           <icons-autocomplete
-            label="preview icon"
+            label="Preview icon"
             :value="showcase.icon"
             @input:value="showcase.icon = $event"
           />
+        </v-col>
+        <v-col cols="2">
+          <v-switch label="Is primary" v-model="showcase.primary" />
         </v-col>
       </v-row>
       <v-row>
@@ -73,7 +76,10 @@ import { useStore } from "@/store";
 import api from "@/api";
 import { useRouter } from "vue-router/composables";
 
-const props = defineProps({"real-showcase":{}, isEdit:{type:Boolean,default:false}});
+const props = defineProps({
+  "real-showcase": {},
+  isEdit: { type: Boolean, default: false },
+});
 // const emits=defineEmits(['input'])
 
 const { realShowcase, isEdit } = toRefs(props);
@@ -82,6 +88,7 @@ const store = useStore();
 const router = useRouter();
 
 const showcase = ref({
+  primary: false,
   title: "",
   icon: "",
   servicesProviders: [],
