@@ -41,12 +41,11 @@
     </template>
     <template v-slot:[`item.balance`]="{ item }">
       <balance
+        :hide-currency="true"
         :currency="item.currency"
         @click="goToBalance(item.uuid)"
-        v-if="item.balance"
         :value="item.balance"
       />
-      <template v-else>-</template>
     </template>
     <template v-slot:[`item.access.level`]="{ value }">
       <v-chip :color="colorChip(value)">
@@ -55,6 +54,9 @@
     </template>
     <template v-slot:[`item.namespace`]="{ item }">
       {{ getName(item.uuid) }}
+    </template>
+    <template v-slot:[`item.currency`]="{ item }">
+      {{ item.currency || defaultCurrency }}
     </template>
   </nocloud-table>
 </template>
@@ -95,6 +97,7 @@ export default {
         { text: "Title", value: "title" },
         { text: "UUID", value: "uuid" },
         { text: "Balance", value: "balance" },
+        { text: "Client currency", value: "currency" },
         { text: "Access level", value: "access.level", customFilter: true },
         { text: "Group(NameSpace)", value: "namespace" },
       ],
@@ -146,6 +149,9 @@ export default {
     },
     filterItems() {
       return { "access.level": Object.keys(this.levelColorMap) };
+    },
+    defaultCurrency() {
+      return this.$store.getters["currencies/default"];
     },
   },
   created() {

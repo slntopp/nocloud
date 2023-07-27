@@ -1,422 +1,445 @@
 import yaml from "yaml";
 
 export function isObject(item) {
-  return item && typeof item === "object" && !Array.isArray(item);
+    return item && typeof item === "object" && !Array.isArray(item);
 }
 
 export function mergeDeep(target, ...sources) {
-  if (!sources.length) return target;
-  const source = sources.shift();
+    if (!sources.length) return target;
+    const source = sources.shift();
 
-  if (isObject(target) && isObject(source)) {
-    for (const key in source) {
-      if (isObject(source[key])) {
-        if (!target[key]) Object.assign(target, { [key]: {} });
-        mergeDeep(target[key], source[key]);
-      } else {
-        Object.assign(target, { [key]: source[key] });
-      }
+    if (isObject(target) && isObject(source)) {
+        for (const key in source) {
+            if (isObject(source[key])) {
+                if (!target[key]) Object.assign(target, {[key]: {}});
+                mergeDeep(target[key], source[key]);
+            } else {
+                Object.assign(target, {[key]: source[key]});
+            }
+        }
     }
-  }
 
-  return mergeDeep(target, ...sources);
+    return mergeDeep(target, ...sources);
 }
 
 export function sha256(ascii) {
-  function rightRotate(value, amount) {
-    return (value >>> amount) | (value << (32 - amount));
-  }
-
-  var mathPow = Math.pow;
-  var maxWord = mathPow(2, 32);
-  var lengthProperty = "length";
-  var i, j;
-  var result = "";
-
-  var words = [];
-  var asciiBitLength = ascii[lengthProperty] * 8;
-
-  var hash = (sha256.h = sha256.h || []);
-  var k = (sha256.k = sha256.k || []);
-  var primeCounter = k[lengthProperty];
-  var isComposite = {};
-  for (var candidate = 2; primeCounter < 64; candidate++) {
-    if (!isComposite[candidate]) {
-      for (i = 0; i < 313; i += candidate) {
-        isComposite[i] = candidate;
-      }
-      hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
-      k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+    function rightRotate(value, amount) {
+        return (value >>> amount) | (value << (32 - amount));
     }
-  }
 
-  ascii += "\x80";
-  while ((ascii[lengthProperty] % 64) - 56) ascii += "\x00";
-  for (i = 0; i < ascii[lengthProperty]; i++) {
-    j = ascii.charCodeAt(i);
-    if (j >> 8) return;
-    words[i >> 2] |= j << (((3 - i) % 4) * 8);
-  }
-  words[words[lengthProperty]] = (asciiBitLength / maxWord) | 0;
-  words[words[lengthProperty]] = asciiBitLength;
+    var mathPow = Math.pow;
+    var maxWord = mathPow(2, 32);
+    var lengthProperty = "length";
+    var i, j;
+    var result = "";
 
-  for (j = 0; j < words[lengthProperty]; ) {
-    var w = words.slice(j, (j += 16));
-    var oldHash = hash;
-    hash = hash.slice(0, 8);
+    var words = [];
+    var asciiBitLength = ascii[lengthProperty] * 8;
 
-    for (i = 0; i < 64; i++) {
-      var w15 = w[i - 15],
-        w2 = w[i - 2];
+    var hash = (sha256.h = sha256.h || []);
+    var k = (sha256.k = sha256.k || []);
+    var primeCounter = k[lengthProperty];
+    var isComposite = {};
+    for (var candidate = 2; primeCounter < 64; candidate++) {
+        if (!isComposite[candidate]) {
+            for (i = 0; i < 313; i += candidate) {
+                isComposite[i] = candidate;
+            }
+            hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+            k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+        }
+    }
 
-      var a = hash[0],
-        e = hash[4];
-      var temp1 =
-        hash[7] +
-        (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) +
-        ((e & hash[5]) ^ (~e & hash[6])) +
-        k[i] +
-        (w[i] =
-          i < 16
-            ? w[i]
-            : (w[i - 16] +
-                (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) +
-                w[i - 7] +
-                (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) |
-              0);
-      var temp2 =
-        (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) +
-        ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+    ascii += "\x80";
+    while ((ascii[lengthProperty] % 64) - 56) ascii += "\x00";
+    for (i = 0; i < ascii[lengthProperty]; i++) {
+        j = ascii.charCodeAt(i);
+        if (j >> 8) return;
+        words[i >> 2] |= j << (((3 - i) % 4) * 8);
+    }
+    words[words[lengthProperty]] = (asciiBitLength / maxWord) | 0;
+    words[words[lengthProperty]] = asciiBitLength;
 
-      hash = [(temp1 + temp2) | 0].concat(hash);
-      hash[4] = (hash[4] + temp1) | 0;
+    for (j = 0; j < words[lengthProperty];) {
+        var w = words.slice(j, (j += 16));
+        var oldHash = hash;
+        hash = hash.slice(0, 8);
+
+        for (i = 0; i < 64; i++) {
+            var w15 = w[i - 15],
+                w2 = w[i - 2];
+
+            var a = hash[0],
+                e = hash[4];
+            var temp1 =
+                hash[7] +
+                (rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25)) +
+                ((e & hash[5]) ^ (~e & hash[6])) +
+                k[i] +
+                (w[i] =
+                    i < 16
+                        ? w[i]
+                        : (w[i - 16] +
+                            (rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3)) +
+                            w[i - 7] +
+                            (rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10))) |
+                        0);
+            var temp2 =
+                (rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22)) +
+                ((a & hash[1]) ^ (a & hash[2]) ^ (hash[1] & hash[2]));
+
+            hash = [(temp1 + temp2) | 0].concat(hash);
+            hash[4] = (hash[4] + temp1) | 0;
+        }
+
+        for (i = 0; i < 8; i++) {
+            hash[i] = (hash[i] + oldHash[i]) | 0;
+        }
     }
 
     for (i = 0; i < 8; i++) {
-      hash[i] = (hash[i] + oldHash[i]) | 0;
+        for (j = 3; j + 1; j--) {
+            var b = (hash[i] >> (j * 8)) & 255;
+            result += (b < 16 ? 0 : "") + b.toString(16);
+        }
     }
-  }
-
-  for (i = 0; i < 8; i++) {
-    for (j = 3; j + 1; j--) {
-      var b = (hash[i] >> (j * 8)) & 255;
-      result += (b < 16 ? 0 : "") + b.toString(16);
-    }
-  }
-  return result;
+    return result;
 }
 
-export function filterArrayIncludes(array, { keys, value, params }) {
-  if (!array || !Array.isArray(array) || !array.length) {
-    return [];
-  }
+export function filterArrayIncludes(array, {keys, value, params}) {
+    if (!array || !Array.isArray(array) || !array.length) {
+        return [];
+    }
 
-  return array.filter((item) =>
-    keys.some((key) => {
-      const newKey = params?.[key] ? params?.[key] : key;
-      let newValue = item[newKey];
+    return array.filter((item) =>
+        keys.some((key) => {
+            const newKey = params?.[key] ? params?.[key] : key;
+            let newValue = item[newKey];
 
-      switch (typeof params?.[key]) {
-        case "function":
-          newValue = newKey(item);
-          break;
-        case "string":
-          newValue = item[key][newKey];
-      }
+            switch (typeof params?.[key]) {
+                case "function":
+                    newValue = newKey(item);
+                    break;
+                case "string":
+                    newValue = item[key][newKey];
+            }
 
-      return (
-        typeof newValue === "string" &&
-        newValue.toLowerCase().includes(value.toLowerCase())
-      );
-    })
-  );
+            return (
+                typeof newValue === "string" &&
+                newValue.toLowerCase().includes(value.toLowerCase())
+            );
+        })
+    );
 }
 
-export function filterArrayBy(array, { key, value }) {
-  if (!array || !Array.isArray(array) || !array.length) {
-    return [];
-  }
+export function filterArrayBy(array, {key, value}) {
+    if (!array || !Array.isArray(array) || !array.length) {
+        return [];
+    }
 
-  return array.filter((item) => item[key] === value);
+    return array.filter((item) => item[key] === value);
 }
 
 export function filterArrayByTitleAndUuid(
-  array,
-  value,
-  unique = true,
-  titleKey = "title"
+    array,
+    value,
+    unique = true,
+    titleKey = "title"
 ) {
-  const byUuid = filterArrayIncludes(array, {
-    keys: ["uuid"],
-    value: value.toLowerCase(),
-  });
+    const byUuid = filterArrayIncludes(array, {
+        keys: ["uuid"],
+        value: value.toLowerCase(),
+    });
 
-  const byTitle = filterArrayIncludes(array, {
-    keys: [titleKey],
-    value: value.toLowerCase(),
-  });
+    const byTitle = filterArrayIncludes(array, {
+        keys: [titleKey],
+        value: value.toLowerCase(),
+    });
 
-  if (!unique) {
-    return byTitle.concat(byUuid);
-  }
+    if (!unique) {
+        return byTitle.concat(byUuid);
+    }
 
-  return [...new Set([...byTitle, ...byUuid])];
+    return [...new Set([...byTitle, ...byUuid])];
 }
 
 export function levenshtein(s, t) {
-  const d = [];
+    const d = [];
 
-  const n = s.length,
-    m = t.length;
+    const n = s.length,
+        m = t.length;
 
-  if (n == 0) return m;
-  if (m == 0) return n;
+    if (n == 0) return m;
+    if (m == 0) return n;
 
-  for (let ik = n; ik >= 0; ik--) d[ik] = [];
+    for (let ik = n; ik >= 0; ik--) d[ik] = [];
 
-  for (let ix = n; ix >= 0; ix--) d[ix][0] = i;
-  for (let jf = m; jf >= 0; jf--) d[0][jf] = jf;
+    for (let ix = n; ix >= 0; ix--) d[ix][0] = i;
+    for (let jf = m; jf >= 0; jf--) d[0][jf] = jf;
 
-  for (var i = 1; i <= n; i++) {
-    const s_i = s.charAt(i - 1);
+    for (var i = 1; i <= n; i++) {
+        const s_i = s.charAt(i - 1);
 
-    for (let j = 1; j <= m; j++) {
-      if (i == j && d[i][j] > 4) return n;
+        for (let j = 1; j <= m; j++) {
+            if (i == j && d[i][j] > 4) return n;
 
-      const t_j = t.charAt(j - 1);
-      const cost = s_i == t_j ? 0 : 1;
+            const t_j = t.charAt(j - 1);
+            const cost = s_i == t_j ? 0 : 1;
 
-      let mi = d[i - 1][j] + 1;
-      const b = d[i][j - 1] + 1;
-      const c = d[i - 1][j - 1] + cost;
+            let mi = d[i - 1][j] + 1;
+            const b = d[i][j - 1] + 1;
+            const c = d[i - 1][j - 1] + cost;
 
-      if (b < mi) mi = b;
-      if (c < mi) mi = c;
+            if (b < mi) mi = b;
+            if (c < mi) mi = c;
 
-      d[i][j] = mi;
+            d[i][j] = mi;
 
-      if (i > 1 && j > 1 && s_i == t.charAt(j - 2) && s.charAt(i - 2) == t_j) {
-        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + cost);
-      }
+            if (i > 1 && j > 1 && s_i == t.charAt(j - 2) && s.charAt(i - 2) == t_j) {
+                d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + cost);
+            }
+        }
     }
-  }
 
-  return d[n][m];
+    return d[n][m];
 }
 
 export function downloadFile(blob, name, extension = "json") {
-  if (window.navigator.msSaveOrOpenBlob) {
-    window.navigator.msSaveBlob(blob, name);
-  } else {
-    const elem = window.document.createElement("a");
-    elem.href = window.URL.createObjectURL(blob);
-    elem.download = name + "." + extension;
-    document.body.appendChild(elem);
-    elem.click();
-    document.body.removeChild(elem);
-  }
+    if (window.navigator.msSaveOrOpenBlob) {
+        window.navigator.msSaveBlob(blob, name);
+    } else {
+        const elem = window.document.createElement("a");
+        elem.href = window.URL.createObjectURL(blob);
+        elem.download = name + "." + extension;
+        document.body.appendChild(elem);
+        elem.click();
+        document.body.removeChild(elem);
+    }
 }
 
 export function downloadJSONFile(obj, name) {
-  const blob = new Blob([JSON.stringify(obj)], {
-    type: "application/json",
-  });
-  downloadFile(blob, name);
+    const blob = new Blob([JSON.stringify(obj)], {
+        type: "application/json",
+    });
+    downloadFile(blob, name);
 }
 
 export function objectToYAMLString(obj) {
-  const doc = new yaml.Document();
-  doc.contents = obj;
+    const doc = new yaml.Document();
+    doc.contents = obj;
 
-  return doc.toString();
+    return doc.toString();
 }
 
 export function downloadYAMLFile(obj, name) {
-  const blob = new Blob([objectToYAMLString(obj)], {});
+    const blob = new Blob([objectToYAMLString(obj)], {});
 
-  downloadFile(blob, name, "yaml");
+    downloadFile(blob, name, "yaml");
 }
 
 export function readJSONFile(file) {
-  return new Promise((resolve) => {
-    if (!file) return;
+    return new Promise((resolve) => {
+        if (!file) return;
 
-    let reader = new FileReader();
-    reader.onload = (e) => {
-      const result = JSON.parse(e.target.result);
-      resolve(result);
-    };
-    reader.readAsText(file);
-  });
+        let reader = new FileReader();
+        reader.onload = (e) => {
+            const result = JSON.parse(e.target.result);
+            resolve(result);
+        };
+        reader.readAsText(file);
+    });
 }
 
 export function readYAMLFile(file) {
-  return new Promise((resolve) => {
-    if (!file) return;
+    return new Promise((resolve) => {
+        if (!file) return;
 
-    let reader = new FileReader();
-    reader.onload = (e) => {
-      const result = yaml.parse(e.target.result);
-      resolve(result);
-    };
-    reader.readAsText(file);
-  });
+        let reader = new FileReader();
+        reader.onload = (e) => {
+            const result = yaml.parse(e.target.result);
+            resolve(result);
+        };
+        reader.readAsText(file);
+    });
 }
+
 export function getSecondsByDays(days) {
-  return +days * 60 * 60 * 24;
+    return +days * 60 * 60 * 24;
 }
 
 export function getState(item) {
-  if (!item.state) return "UNKNOWN";
-  const state =
-    item.billingPlan.type === "ione"
-      ? item.state.meta?.lcm_state_str
-      : item.state.state;
+    if (!item.state) return "UNKNOWN";
+    const state =
+        item.billingPlan.type === "ione"
+            ? item.state.meta?.lcm_state_str
+            : item.state.state;
 
-  switch (item.state.meta.state) {
-    case 1:
-      return "PENDING";
-    case 5:
-      return "SUSPENDED";
-    case "BUILD":
-      return "BUILD";
-  }
-  switch (state) {
-    case "LCM_INIT":
-      return "POWEROFF";
-    default:
-      return state?.replaceAll("_", " ") ?? "";
-  }
+    switch (item.state.meta.state) {
+        case 1:
+            return "PENDING";
+        case 5:
+            return "SUSPENDED";
+        case "BUILD":
+            return "BUILD";
+    }
+    switch (state) {
+        case "LCM_INIT":
+            return "POWEROFF";
+        default:
+            return state?.replaceAll("_", " ") ?? "";
+    }
 }
 
 export function toKebabCase(str) {
-  return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+    return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
 }
 
 export function toPascalCase(text) {
-  if (!text) {
-    return;
-  }
-  return text.replace(/(^\w|-\w)/g, (text) =>
-    text.replace(/-/, "").toUpperCase()
-  );
+    if (!text) {
+        return;
+    }
+    return text.replace(/(^\w|-\w)/g, (text) =>
+        text.replace(/-/, "").toUpperCase()
+    );
 }
 
 export function formatSecondsToDate(seconds) {
-  if (!seconds) return "-";
-  const date = new Date(seconds * 1000);
+    if (!seconds) return "-";
+    const date = new Date(seconds * 1000);
 
-  const year = date.toUTCString().split(" ")[3];
-  let month = date.getUTCMonth() + 1;
-  let day = date.getUTCDate();
+    const year = date.toUTCString().split(" ")[3];
+    let month = date.getUTCMonth() + 1;
+    let day = date.getUTCDate();
 
-  if (`${month}`.length < 2) month = `0${month}`;
-  if (`${day}`.length < 2) day = `0${day}`;
+    if (`${month}`.length < 2) month = `0${month}`;
+    if (`${day}`.length < 2) day = `0${day}`;
 
-  return `${year}-${month}-${day}`;
+    return `${year}-${month}-${day}`;
 }
 
-export function getTimestamp({ day, month, year, quarter, week, time }) {
-  let seconds = 0;
+export function getTimestamp({day, month, year, quarter, week, time}) {
+    let seconds = 0;
 
-  seconds += getSecondsByDays(30 * month);
-  seconds += getSecondsByDays(30 * 3 * quarter);
-  seconds += getSecondsByDays(7 * week);
-  seconds += getSecondsByDays(365 * year);
-  seconds += getSecondsByDays(day);
-  seconds += new Date("1970-01-01T" + time + "Z").getTime() / 1000;
-  return seconds;
+    seconds += getSecondsByDays(30 * month);
+    seconds += getSecondsByDays(30 * 3 * quarter);
+    seconds += getSecondsByDays(7 * week);
+    seconds += getSecondsByDays(365 * year);
+    seconds += getSecondsByDays(day);
+    seconds += new Date("1970-01-01T" + time + "Z").getTime() / 1000;
+    return seconds;
 }
 
 export function getOvhPrice(instance) {
-  const duration = instance.config.duration;
-  const tarrifPrice =
-    instance.billingPlan.products[`${duration} ${instance.config.planCode}`]
-      ?.price;
-  const addonsPrice = instance.config.addons
-    ?.map(
-      (a) =>
-        instance.billingPlan.resources.find((r) => r.key === `${duration} ${a}`)
-          ?.price || 0
-    )
-    .reduce((acc, v) => acc + v, 0);
-  return tarrifPrice + addonsPrice;
+    const duration = instance.config.duration;
+    const tarrifPrice =
+        instance.billingPlan.products[`${duration} ${instance.config.planCode}`]
+            ?.price;
+    const addonsPrice = instance.config.addons
+        ?.map(
+            (a) =>
+                instance.billingPlan.resources.find((r) => r.key === `${duration} ${a}`)
+                    ?.price || 0
+        )
+        .reduce((acc, v) => acc + v, 0);
+    return tarrifPrice + addonsPrice;
 }
 
 export function getFullDate(period) {
-  const date = new Date(period * 1000);
-  const time = date.toUTCString().split(" ");
+    const date = new Date(period * 1000);
+    const time = date.toUTCString().split(" ");
 
-  return {
-    day: `${date.getUTCDate() - 1}`,
-    month: `${date.getUTCMonth()}`,
-    year: `${date.getUTCFullYear() - 1970}`,
-    quarter: "0",
-    week: "0",
-    time: time.at(-2),
-  };
+    return {
+        day: `${date.getUTCDate() - 1}`,
+        month: `${date.getUTCMonth()}`,
+        year: `${date.getUTCFullYear() - 1970}`,
+        quarter: "0",
+        week: "0",
+        time: time.at(-2),
+    };
 }
 
 export function getTodayFullDate() {
-  const date = new Date();
-  return (
-    ("00" + (date.getMonth() + 1)).slice(-2) +
-    "/" +
-    ("00" + date.getDate()).slice(-2) +
-    "/" +
-    date.getFullYear() +
-    " " +
-    ("00" + date.getHours()).slice(-2) +
-    ":" +
-    ("00" + date.getMinutes()).slice(-2) +
-    ":" +
-    ("00" + date.getSeconds()).slice(-2)
-  ).replace(" ", "_");
+    const date = new Date();
+    return (
+        ("00" + (date.getMonth() + 1)).slice(-2) +
+        "/" +
+        ("00" + date.getDate()).slice(-2) +
+        "/" +
+        date.getFullYear() +
+        " " +
+        ("00" + date.getHours()).slice(-2) +
+        ":" +
+        ("00" + date.getMinutes()).slice(-2) +
+        ":" +
+        ("00" + date.getSeconds()).slice(-2)
+    ).replace(" ", "_");
 }
 
 export function getMarginedValue(fee, val) {
-  const n = Math.pow(10, fee.precision ?? 0);
-  let percent = (fee?.default ?? 0) / 100 + 1;
-  let round;
+    const n = Math.pow(10, fee.precision ?? 0);
+    let percent = (fee?.default ?? 0) / 100 + 1;
+    let round;
 
-  switch (fee.round) {
-    case 1:
-      round = "floor";
-      break;
-    case 2:
-      round = "round";
-      break;
-    case 3:
-      round = "ceil";
-      break;
-    default:
-      round = "round";
-  }
-  if (fee.round === "NONE" || !fee.round) round = "round";
-  else if (typeof fee.round === "string") {
-    round = fee.round.toLowerCase();
-  }
+    switch (fee.round) {
+        case 1:
+            round = "floor";
+            break;
+        case 2:
+            round = "round";
+            break;
+        case 3:
+            round = "ceil";
+            break;
+        default:
+            round = "round";
+    }
+    if (fee.round === "NONE" || !fee.round) round = "round";
+    else if (typeof fee.round === "string") {
+        round = fee.round.toLowerCase();
+    }
 
-  for (let range of fee?.ranges ?? []) {
-    if (val <= range.from) continue;
-    if (val > range.to) continue;
-    percent = range.factor / 100 + 1;
-  }
+    for (let range of fee?.ranges ?? []) {
+        if (val <= range.from) continue;
+        if (val > range.to) continue;
+        percent = range.factor / 100 + 1;
+    }
 
-  return Math[round](val * percent * n) / n;
+    return Math[round](val * percent * n) / n;
 }
 
 export async function getClientIP() {
-  const regexp = /[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}/;
-  const response = await fetch("https://www.cloudflare.com/cdn-cgi/trace");
-  const text = await response.text();
-  return text.match(regexp)[0];
+    const regexp = /[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}/;
+    const response = await fetch("https://www.cloudflare.com/cdn-cgi/trace");
+    const text = await response.text();
+    return text.match(regexp)[0];
 }
 
 export function defaultFilterObject(item, queryText) {
-  return (
-    item?.title?.toLocaleLowerCase().indexOf(queryText.toLocaleLowerCase()) !==
-      -1 ||
-    item?.uuid?.toLocaleLowerCase().startsWith(queryText.toLocaleLowerCase())
-  );
+    return (
+        item?.title?.toLocaleLowerCase().indexOf(queryText.toLocaleLowerCase()) !==
+        -1 ||
+        item?.uuid?.toLocaleLowerCase().startsWith(queryText.toLocaleLowerCase())
+    );
 }
+
+function fetchMDIIconsHash() {
+    const icons = []
+    let block = null;
+
+    return () => {
+        if (block) {
+            return block
+        }
+        if (icons.length) {
+            return icons
+        }
+        block = fetch(
+            "https://raw.githubusercontent.com/Templarian/MaterialDesign/master/meta.json",
+            {method: "get"}
+        ).then((d) => d.json())
+
+        return block
+    }
+}
+
+export const fetchMDIIcons = fetchMDIIconsHash()

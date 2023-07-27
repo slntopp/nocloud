@@ -18,6 +18,7 @@ import currencies from "./currencies";
 import plugins from "./plugins";
 import snackbar from "./snackbar";
 import actions from "./actions";
+import showcases from "./showcases";
 
 Vue.use(Vuex);
 
@@ -42,6 +43,7 @@ const store = new Vuex.Store({
     plugins,
     snackbar,
     actions,
+    showcases,
   },
 });
 

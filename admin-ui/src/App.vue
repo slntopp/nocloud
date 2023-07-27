@@ -116,6 +116,18 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Showcases' }">
+          <v-list-item-icon>
+            <v-icon>mdi-store-search</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{
+                navTitle("Showcases")
+              }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-subheader>BILLING</v-subheader>
 
         <v-list-item v-bind="listItemBind" :to="{ name: 'Plans' }">
