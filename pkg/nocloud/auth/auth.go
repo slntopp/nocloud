@@ -94,6 +94,8 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 		if probe.Anonymously {
 			return handler(ctx, req)
 		}
+	case "/nocloud.services_providers.ShowcasesService/List":
+		return handler(ctx, req)
 	case "/nocloud.billing.BillingService/ListPlans":
 		probe := req.(*billpb.ListRequest)
 		if probe.Anonymously {
