@@ -99,7 +99,7 @@ import api from "@/api";
 import { useStore } from "@/store";
 import EditPriceModel from "@/components/modules/ovh/editPriceModel.vue";
 import useRate from "@/hooks/useRate";
-import { formatSecondsToDate } from "@/functions";
+import { formatSecondsToDate, getFullDate } from "@/functions";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -114,6 +114,7 @@ const pricesHeaders = ref([
   { text: "Name", value: "title" },
   { text: "Base price", value: "basePrice" },
   { text: "Price", value: "price" },
+  { text: "Billing period", value: "period" },
 ]);
 const totalNewPrice = ref(0);
 const isBasePricesLoading = ref(false);
@@ -261,6 +262,7 @@ const initPrices = () => {
       " "
     )}.price`,
     price: tarrif.value?.price,
+    period: tarrif.value?.period,
   });
 
   addons.value.forEach((key, ind) => {
@@ -274,7 +276,20 @@ const initPrices = () => {
       title: key,
       key: key,
       index: ind + 1,
+      period: template.value.billingPlan.resources[addonIndex]?.period,
     });
+  });
+
+  pricesItems.value = pricesItems.value.map((i) => {
+    const fullPeriod = i.period && getFullDate(i.period);
+    if (fullPeriod) {
+      i.period = Object.keys(fullPeriod)
+        .filter((key) => +fullPeriod[key])
+        .map((key) => `${fullPeriod[key]} (${key})`)
+        .join(", ");
+    }
+
+    return i;
   });
   setTotalNewPrice();
 };
