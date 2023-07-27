@@ -5,14 +5,14 @@
     v-if="balance !== undefined"
     :color="colorChip"
   >
-    {{ title }}{{ balance }} {{ currency || defaultCurrency }}
+    {{ title }}{{ balance }} {{!hideCurrency && (currency || defaultCurrency) || ''}}
   </v-chip>
 </template>
 
 <script>
 export default {
   name: "balance-display",
-  props: ["title", "value", "positive-color", "negative-color", "currency"],
+  props: ["title", "value", "positive-color", "negative-color", "currency",'hideCurrency'],
   mounted() {
     if (!this.balance) {
       this.$store

@@ -18,7 +18,7 @@
             params: { namespaceId: namespace?.uuid },
           }"
           label="Group(Namespace)"
-          :value="!namespace ? '' :  namespace.title"
+          :value="!namespace ? '' : namespace.title"
         />
       </v-col>
       <v-col>
@@ -43,7 +43,14 @@
         <v-text-field
           readonly
           label="balance"
-          :value="account?.balance?.toFixed(2)"
+          :value="account?.balance?.toFixed(2) || 0"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          readonly
+          label="client currency"
+          :value="account?.currency"
         />
       </v-col>
     </v-row>

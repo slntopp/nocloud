@@ -299,6 +299,30 @@ const routes = [
       requireLogin: true,
     },
   },
+  {
+    path: "/showcases",
+    name: "Showcases",
+    component: () => import("../views/Showcases.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/showcases/:uuid",
+    name: "ShowcasePage",
+    component: () => import("../views/ShowcasePage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/showcases/create",
+    name: "CreateShowcase",
+    component: () => import("../views/ShowcaseCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
 ];
 
 const router = new VueRouter({
