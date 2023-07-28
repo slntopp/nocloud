@@ -13,6 +13,7 @@
     >
       <v-tab>Info</v-tab>
       <v-tab>Promo</v-tab>
+      <v-tab>Template</v-tab>
     </v-tabs>
     <v-tabs-items
       class="rounded-b-lg"
@@ -29,7 +30,11 @@
       </v-tab-item>
       <v-tab-item>
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
-        <promo-tab :template="showcase"
+        <promo-tab :template="showcase" />
+      </v-tab-item>
+      <v-tab-item>
+        <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
+        <showcase-template :template="showcase" />
         />
       </v-tab-item>
     </v-tabs-items>
@@ -43,6 +48,7 @@ import { useRoute } from "vue-router/composables";
 import { useStore } from "@/store";
 import ShowcaseCreate from "@/views/ShowcaseCreate.vue";
 import PromoTab from "@/components/showcase/promo.vue";
+import ShowcaseTemplate from "@/components/showcase/template.vue";
 
 const route = useRoute();
 const store = useStore();
@@ -76,7 +82,7 @@ onMounted(async () => {
     isFetchLoading.value = true;
     await store.dispatch("showcases/fetchById", showcaseId.value);
   } catch (e) {
-    console.log(e)
+    console.log(e);
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during fetch showcase",
     });
