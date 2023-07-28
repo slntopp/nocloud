@@ -25,7 +25,7 @@
             v-model="product"
             label="tariff"
             item-text="title"
-            item-value="code"
+            item-value="key"
             :items="tarrifs"
           />
         </v-col>
@@ -109,9 +109,8 @@ const tarrifs = computed(() => {
       (plan.value.uuid === template.value.billingPlan.uuid &&
         instanceTarrifPrice.value === plan.value.products[key].price)
     )
-      tarrifs.push(key);
+      tarrifs.push({...plan.value.products[key],key});
   });
-
   return tarrifs;
 });
 
