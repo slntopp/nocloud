@@ -30,20 +30,65 @@
       :footer-error="fetchError"
     >
       <template v-slot:[`item.name`]="{ item }">
-        <v-text-field dense v-model="item.name" />
+        <v-text-field dense style="width: 300px" v-model="item.name" />
       </template>
+
+      <template v-slot:[`item.group`]="{ item }">
+        <template v-if="newGroup.mode === 'edit' && newGroup.planId === item.id">
+          <v-text-field
+            dense
+            class="d-inline-block mr-1"
+            style="width: 300px"
+            v-model="newGroup.name"
+          />
+          <v-icon @click="editGroup(item.group)">mdi-content-save</v-icon>
+          <v-icon @click="newGroup.mode = 'none'">mdi-close</v-icon>
+        </template>
+
+        <template v-if="newGroup.mode === 'create' && newGroup.planId === item.id">
+          <v-text-field
+            dense
+            class="d-inline-block mr-1"
+            style="width: 300px"
+            v-model="newGroup.name"
+          />
+          <v-icon @click="createGroup(item)">mdi-content-save</v-icon>
+          <v-icon @click="newGroup.mode = 'none'">mdi-close</v-icon>
+        </template>
+
+        <template v-if="newGroup.mode === 'none'">
+          <v-select
+            dense
+            class="d-inline-block"
+            style="width: 300px"
+            v-model="item.group"
+            :items="groups"
+            @change="item.name = getName(item)"
+          />
+          <v-icon @click="changeMode('create', item)">mdi-plus</v-icon>
+          <v-icon @click="changeMode('edit', item)">mdi-pencil</v-icon>
+          <v-icon v-if="groups.length > 1" @click="deleteGroup(item.group)">mdi-delete</v-icon>
+        </template>
+
+        <template v-else-if="newGroup.planId !== item.id">{{ item.group }}</template>
+      </template>
+
       <template v-slot:[`item.margin`]="{ item }">
         {{ getMargin(item, false) }}
       </template>
+
       <template v-slot:[`item.duration`]="{ value }">
         {{ getPayment(value) }}
       </template>
+
       <template v-slot:[`item.price.value`]="{ value }">
         {{ value }} {{ defaultCurrency }}
       </template>
+
       <template v-slot:[`item.value`]="{ item }">
         <v-text-field dense style="width: 150px" v-model="item.value" />
       </template>
+
       <template v-slot:[`item.addons`]="{ item }">
         <v-dialog width="90vw">
           <template v-slot:activator="{ on, attrs }">
@@ -107,6 +152,7 @@ export default {
     headers: [
       { text: "Name", value: "name" },
       { text: "API name", value: "apiName" },
+      { text: "Group", value: "group", sortable: false, class: "groupable" },
       { text: "Margin", value: "margin", sortable: false, class: "groupable" },
       {
         text: "Payment",
@@ -151,6 +197,9 @@ export default {
     column: "",
     fetchError: "",
     isAddonsLoading: false,
+
+    groups: [],
+    newGroup: { mode: "none", name: "", planId: "" },
   }),
   mixins: [currencyRate],
   methods: {
@@ -209,10 +258,15 @@ export default {
         });
     },
     async changePlan(plan) {
-      plan.resources = this.template.resources;
-      plan.products = this.template.products;
+      if (!this.plans.every(({ group }) => this.groups.includes(group))) {
+        return "You must select a group for the tariff!";
+      }
+
       const sp = this.$store.getters["servicesProviders/all"];
       const { uuid } = sp.find((el) => el.type === "ovh");
+
+      plan.resources = this.template.resources;
+      plan.products = this.template.products;
 
       for await (const el of this.plans) {
         if (el.sell) {
@@ -295,6 +349,10 @@ export default {
               if (menu.className.includes("menuable__content__active")) return;
 
               this.column = firstChild.textContent.trim();
+              if (this.column === "Group") {
+                this.filters.Group = this.groups;
+                this.selected.Group = this.groups;
+              }
 
               element.dispatchEvent(new Event("click"));
 
@@ -303,8 +361,7 @@ export default {
                 const menuWidth = menu.offsetWidth;
                 let marginLeft = 20;
 
-                if (width < menuWidth + x)
-                  marginLeft = width - (menuWidth + x) - 35;
+                if (width < menuWidth + x) marginLeft = width - (menuWidth + x) - 35;
                 const marginTop = marginLeft < 20 ? 20 : 0;
 
                 menu.style.left = `${x + marginLeft + window.scrollX}px`;
@@ -341,6 +398,7 @@ export default {
               duration,
               name: productName,
               apiName: productName,
+              group: productName.split(/[\W0-9]/)[0],
               value: price.value,
               sell: false,
               id,
@@ -390,6 +448,13 @@ export default {
           return "yearly";
       }
     },
+    getName({ name, group }) {
+      const newGroup = `${group[0].toUpperCase()}${group.slice(1)}`;
+      const sep = /[\W0-9]/.exec(name)[0];
+      const newName = name.split(sep).splice(1).join(sep);
+
+      return `${newGroup}${sep}${newName}`;
+    },
     getMargin({ value, price }, filter = true) {
       if (!this.fee.ranges) {
         if (filter) this.changeFilters({ margin: "none" }, ["Margin"]);
@@ -438,6 +503,38 @@ export default {
 
       if (filter) this.changeFilters({ margin }, ["Margin"]);
       return margin;
+    },
+    editGroup(group) {
+      const i = this.groups.indexOf(group);
+
+      this.groups.splice(i, 1, this.newGroup.name);
+      this.plans.forEach((plan, index) => {
+        if (plan.group !== group) return;
+        this.plans[index].group = this.newGroup.name;
+        this.plans[index].name = this.getName(plan);
+      });
+
+      this.changeMode("none", { id: -1, group: "" });
+    },
+    createGroup(plan) {
+      this.groups.push(this.newGroup.name);
+      plan.group = this.newGroup.name;
+      plan.name = this.getName(plan);
+
+      this.changeMode("none", { id: -1, group: "" });
+    },
+    deleteGroup(group) {
+      this.groups = this.groups.filter((el) => el !== group);
+      this.plans.forEach((plan, i) => {
+        if (plan.group !== group) return;
+        this.plans[i].group = this.groups[0];
+        this.plans[i].name = this.getName(plan);
+      });
+    },
+    changeMode(mode, { id, group }) {
+      this.newGroup.mode = mode;
+      this.newGroup.planId = id;
+      this.newGroup.name = group;
     },
     applyFilter(values) {
       return values.filter((plan) => {
@@ -510,15 +607,20 @@ export default {
       setTimeout(() => {
         this.setFee(this.plans);
 
+        this.groups = [];
         this.plans.forEach((plan, i) => {
           const product = this.template.products[plan.id];
+          const title = (product?.title ?? plan.name).toUpperCase();
+          const group = title.split(/[\W0-9]/)[0];
 
           if (product) {
             this.plans[i].name = product.title;
             this.plans[i].value = product.price;
+            this.plans[i].group = group;
             this.plans[i].sell = true;
             this.plans[i].isBeenSell = true;
           }
+          if (!this.groups.includes(group)) this.groups.push(group);
         });
 
         if (Object.keys(this.template.products).length === this.plans.length) {
