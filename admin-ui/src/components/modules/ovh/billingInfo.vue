@@ -23,7 +23,14 @@
         <v-text-field
           readonly
           label="Price instance total"
-          :value="type === 'dedicated' ? totalNewPrice?.toFixed(2) : getPrice"
+          :value="type === 'dedicated' ? +totalNewPrice?.toFixed(2) : getPrice"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          readonly
+          label="Account price instance total"
+          :value="accountTotalNewPrice"
         />
       </v-col>
       <v-col>
@@ -36,8 +43,7 @@
       <v-col>
         <v-text-field readonly label="Due to date/next payment" :value="date" />
       </v-col>
-      ></v-row
-    >
+    </v-row>
     <nocloud-table
       table-name="ovh-billing"
       hide-default-footer
@@ -49,8 +55,16 @@
     >
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field
-          v-model.number="item.price"
-          @change="onUpdatePrice(item)"
+          v-model="item.price"
+          @change="onUpdatePrice(item, false)"
+          type="number"
+          append-icon="mdi-pencil"
+        ></v-text-field>
+      </template>
+      <template v-slot:[`item.accountPrice`]="{ item }">
+        <v-text-field
+          v-model="item.accountPrice"
+          @change="onUpdatePrice(item, true)"
           type="number"
           append-icon="mdi-pencil"
         ></v-text-field>
@@ -72,6 +86,8 @@
               {{ totalNewPrice?.toFixed(2) }}
             </div>
           </td>
+          <td></td>
+          <td>{{ accountTotalNewPrice }}</td>
         </tr>
       </template>
     </nocloud-table>
@@ -99,7 +115,7 @@ import api from "@/api";
 import { useStore } from "@/store";
 import EditPriceModel from "@/components/modules/ovh/editPriceModel.vue";
 import useRate from "@/hooks/useRate";
-import { formatSecondsToDate } from "@/functions";
+import { formatSecondsToDate, getFullDate } from "@/functions";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -114,17 +130,57 @@ const pricesHeaders = ref([
   { text: "Name", value: "title" },
   { text: "Base price", value: "basePrice" },
   { text: "Price", value: "price" },
+  { text: "Account price", value: "accountPrice" },
+  { text: "Billing period", value: "period" },
 ]);
 const totalNewPrice = ref(0);
 const isBasePricesLoading = ref(false);
 const priceModelDialog = ref(false);
+const accountRate = ref(0);
 
+const namespace = computed(() =>
+  store.getters["namespaces/all"]?.find(
+    (n) => n.uuid == template.value.access.namespace
+  )
+);
+const accountTotalNewPrice = computed(() =>
+  toAccountPrice(totalNewPrice.value)
+);
+const account = computed(() => {
+  if (!namespace.value) {
+    return;
+  }
+  return store.getters["accounts/all"]?.find(
+    (a) => a?.uuid == namespace.value.access.namespace
+  );
+});
 const setTotalNewPrice = () => {
-  totalNewPrice.value = pricesItems.value.reduce((acc, i) => i.price + acc, 0);
+  totalNewPrice.value = +pricesItems.value
+    .reduce((acc, i) => +i.price + acc, 0)
+    .toFixed(2);
 };
 
-const onUpdatePrice = (item) => {
-  emit("update", { key: item.path, value: item.price });
+const onUpdatePrice = (item, isAccount) => {
+  if (isAccount) {
+    emit("update", {
+      key: item.path,
+      value: fromAccountPrice(item.accountPrice),
+    });
+    pricesItems.value = pricesItems.value.map((p) => {
+      if (p.path === item.path) {
+        p.price = fromAccountPrice(item.accountPrice);
+      }
+      return p;
+    });
+  } else {
+    emit("update", { key: item.path, value: item.price });
+    pricesItems.value = pricesItems.value.map((p) => {
+      if (p.path === item.path) {
+        p.accountPrice = toAccountPrice(item.price);
+      }
+      return p;
+    });
+  }
   setTotalNewPrice();
 };
 
@@ -261,6 +317,7 @@ const initPrices = () => {
       " "
     )}.price`,
     price: tarrif.value?.price,
+    period: tarrif.value?.period,
   });
 
   addons.value.forEach((key, ind) => {
@@ -274,7 +331,22 @@ const initPrices = () => {
       title: key,
       key: key,
       index: ind + 1,
+      period: template.value.billingPlan.resources[addonIndex]?.period,
     });
+  });
+
+  pricesItems.value = pricesItems.value.map((i) => {
+    const fullPeriod = i.period && getFullDate(i.period);
+    if (fullPeriod) {
+      i.period = Object.keys(fullPeriod)
+        .filter((key) => +fullPeriod[key])
+        .map((key) => `${fullPeriod[key]} (${key})`)
+        .join(", ");
+    }
+
+    i.accountPrice = i.price * accountRate.value;
+
+    return i;
   });
   setTotalNewPrice();
 };
@@ -334,9 +406,31 @@ const getBasePrices = async () => {
   }
 };
 
+const defaultCurrency = computed(() => {
+  return store.getters["currencies/default"];
+});
+
+const toAccountPrice = (price) => {
+  return (price / accountRate.value).toFixed(2);
+};
+const fromAccountPrice = (price) => {
+  return (price * accountRate.value).toFixed(2);
+};
+
 onMounted(() => {
   initPrices();
   getBasePrices();
+  api
+    .get(
+      `/billing/currencies/rates/${account.value.currency}/${defaultCurrency.value}`
+    )
+    .then((res) => {
+      accountRate.value = res.rate;
+      pricesItems.value = pricesItems.value.map((i) => {
+        i.accountPrice = toAccountPrice(i.price);
+        return i;
+      });
+    });
 });
 </script>
 
