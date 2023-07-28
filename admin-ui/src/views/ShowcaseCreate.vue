@@ -125,23 +125,18 @@ onMounted(async () => {
 const save = async () => {
   try {
     isSaveLoading.value = true;
+    const data = {
+      ...showcase.value,
+      locations: showcase.value.locations.map((l) => ({
+        ...l,
+        id: `${showcase.value.title}-${l.id}`,
+        sp: undefined,
+      })),
+    };
     if (isEdit.value) {
-      const data = await api.showcases.update({
-        ...showcase.value,
-        locations: showcase.value.locations.map((l) => ({
-          ...l,
-          sp: undefined,
-        })),
-      });
-      console.log(data);
+      await api.showcases.update(data);
     } else {
-      await api.showcases.create({
-        ...showcase.value,
-        locations: showcase.value.locations.map((l) => ({
-          ...l,
-          sp: undefined,
-        })),
-      });
+      await api.showcases.create(data);
     }
     store.commit("snackbar/showSnackbarSuccess", {
       message: `Showcase successfully ${isEdit.value ? "saved" : "created"}`,
