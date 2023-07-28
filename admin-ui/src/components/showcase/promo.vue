@@ -266,6 +266,6 @@ const save = () => {
     });
 };
 const getLocationKey = (location) => {
-  return `${template.value.title} ${location.id}`;
+  return location.id;
 };
 </script>
