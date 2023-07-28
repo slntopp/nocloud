@@ -45,8 +45,16 @@
       </v-row>
       <v-row>
         <v-col cols="6">
+          <v-autocomplete
+            multiple
+            label="Allowed types"
+            v-model="allowedTypes"
+            :items="locationsTypes"
+          />
+        </v-col>
+        <v-col cols="6">
           <locations-autocomplete
-            :locations="locations"
+            :locations="filtredLocations"
             v-model="showcase.locations"
           />
         </v-col>
@@ -89,6 +97,7 @@ const showcase = ref({
   locations: [],
 });
 const isLoading = ref(false);
+const allowedTypes = ref([]);
 const isSaveLoading = ref(false);
 
 const requiredRule = ref((val) => !!val || "Required field");
@@ -103,6 +112,17 @@ const locations = computed(() => {
     locations.push(...sp.locations.map((l) => ({ ...l, sp: sp.title })));
   });
   return locations;
+});
+
+const filtredLocations = computed(() => {
+  return locations.value.filter((l) => allowedTypes.value.includes(l.type));
+});
+const locationsTypes = computed(() => {
+  return [...new Set(locations.value.map((l) => l.type))];
+});
+
+watch(locationsTypes, () => {
+  allowedTypes.value = locationsTypes.value;
 });
 
 onMounted(async () => {
@@ -127,11 +147,13 @@ const save = async () => {
     isSaveLoading.value = true;
     const data = {
       ...showcase.value,
-      locations: showcase.value.locations.map((l) => ({
-        ...l,
-        id: `${showcase.value.title}-${l.id}`,
-        sp: undefined,
-      })),
+      locations: showcase.value.locations
+        .filter((l) => filtredLocations.value.find((l2) => l2.id === l.id))
+        .map((l) => ({
+          ...l,
+          id: `${showcase.value.title}-${l.id}`,
+          sp: undefined,
+        })),
     };
     if (isEdit.value) {
       await api.showcases.update(data);
