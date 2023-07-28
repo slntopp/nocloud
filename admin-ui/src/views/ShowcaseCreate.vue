@@ -1,5 +1,5 @@
 <template>
-  <div color="background-light" :loading="isLoading" class="pa-10 h-100 w-100">
+  <div class="pa-10 h-100 w-100">
     <h1 class="page__title" v-if="!isEdit">Create showcase</h1>
     <v-form ref="showcaseForm" align="center">
       <v-row>
@@ -46,18 +46,17 @@
       <v-row>
         <v-col cols="6">
           <v-autocomplete
-            item-value="id"
-            item-text="title"
             multiple
-            label="Locations"
-            return-object
-            :items="locations"
+            label="Allowed types"
+            v-model="allowedTypes"
+            :items="locationsTypes"
+          />
+        </v-col>
+        <v-col cols="6">
+          <locations-autocomplete
+            :locations="filtredLocations"
             v-model="showcase.locations"
-          >
-            <template v-slot:item="{ item }">
-              <span>{{ item.title }}({{ item.sp }})</span>
-            </template>
-          </v-autocomplete>
+          />
         </v-col>
       </v-row>
       <v-row justify="end">
@@ -75,6 +74,7 @@ import IconsAutocomplete from "@/components/ui/iconsAutocomplete.vue";
 import { useStore } from "@/store";
 import api from "@/api";
 import { useRouter } from "vue-router/composables";
+import LocationsAutocomplete from "@/components/ui/locationsAutocomplete.vue";
 
 const props = defineProps({
   "real-showcase": {},
@@ -97,6 +97,7 @@ const showcase = ref({
   locations: [],
 });
 const isLoading = ref(false);
+const allowedTypes = ref([]);
 const isSaveLoading = ref(false);
 
 const requiredRule = ref((val) => !!val || "Required field");
@@ -111,6 +112,17 @@ const locations = computed(() => {
     locations.push(...sp.locations.map((l) => ({ ...l, sp: sp.title })));
   });
   return locations;
+});
+
+const filtredLocations = computed(() => {
+  return locations.value.filter((l) => allowedTypes.value.includes(l.type));
+});
+const locationsTypes = computed(() => {
+  return [...new Set(locations.value.map((l) => l.type))];
+});
+
+watch(locationsTypes, () => {
+  allowedTypes.value = locationsTypes.value;
 });
 
 onMounted(async () => {
@@ -133,23 +145,20 @@ onMounted(async () => {
 const save = async () => {
   try {
     isSaveLoading.value = true;
+    const data = {
+      ...showcase.value,
+      locations: showcase.value.locations
+        .filter((l) => filtredLocations.value.find((l2) => l2.id === l.id))
+        .map((l) => ({
+          ...l,
+          id: `${showcase.value.title}-${l.id}`,
+          sp: undefined,
+        })),
+    };
     if (isEdit.value) {
-      const data = await api.showcases.update({
-        ...showcase.value,
-        locations: showcase.value.locations.map((l) => ({
-          ...l,
-          sp: undefined,
-        })),
-      });
-      console.log(data);
+      await api.showcases.update(data);
     } else {
-      await api.showcases.create({
-        ...showcase.value,
-        locations: showcase.value.locations.map((l) => ({
-          ...l,
-          sp: undefined,
-        })),
-      });
+      await api.showcases.create(data);
     }
     store.commit("snackbar/showSnackbarSuccess", {
       message: `Showcase successfully ${isEdit.value ? "saved" : "created"}`,

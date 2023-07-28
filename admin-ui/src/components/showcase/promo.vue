@@ -1,12 +1,10 @@
 <template>
   <div class="pa-10">
     <v-row v-if="promo.main">
-      <v-autocomplete
-        item-text="title"
-        item-value="id"
-        :items="template.locations"
+      <locations-autocomplete
+        :solo="true"
+        :locations="template.locations"
         v-model="promo.main.default"
-        label="Default location"
       />
     </v-row>
     <v-row align="center" justify="space-between">
@@ -163,6 +161,7 @@ import api from "@/api";
 import RichEditor from "@/components/ui/richEditor.vue";
 import { onBeforeMount, toRefs, watch, ref } from "vue";
 import { useStore } from "@/store";
+import LocationsAutocomplete from "@/components/ui/locationsAutocomplete.vue";
 
 const props = defineProps({ template: { type: Object, required: true } });
 
@@ -187,10 +186,10 @@ onBeforeMount(() => {
     language.value = "en";
   }
 
-  if(!template.value.promo.main){
-    promo.value.main={}
-  }else{
-    promo.value.main=template.value.promo?.main
+  if (!template.value.promo.main) {
+    promo.value.main = {};
+  } else {
+    promo.value.main = template.value.promo?.main;
   }
 });
 
@@ -242,7 +241,7 @@ const save = () => {
   isSaveLoading.value = true;
 
   const data = JSON.parse(JSON.stringify(template.value));
-  const defaultKeys=['languages','main']
+  const defaultKeys = ["languages", "main"];
 
   promo.value[language.value] = currentLocation.value;
   Object.keys(promo.value).forEach((key) => {
