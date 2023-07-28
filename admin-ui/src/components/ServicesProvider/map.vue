@@ -299,25 +299,6 @@ export default {
       });
     },
     saveCountry() {
-      let error = 0;
-      this.markers.forEach((el) => {
-        if (el.title && !el.title.trim()) {
-          const ref = this.$refs["textField_" + el.id][0];
-
-          this.mouseEnterHandler(el.id);
-          setTimeout(() => {
-            ref.focus();
-          }, 100);
-
-          error = 1;
-        }
-      });
-      if (error) {
-        this.showSnackbarError({
-          message: "Error: Enter location names.",
-        });
-        return;
-      }
       this.$emit("save", this.item);
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
