@@ -1,5 +1,5 @@
 <template>
-  <div color="background-light" :loading="isLoading" class="pa-10 h-100 w-100">
+  <div class="pa-10 h-100 w-100">
     <h1 class="page__title" v-if="!isEdit">Create showcase</h1>
     <v-form ref="showcaseForm" align="center">
       <v-row>
@@ -45,19 +45,10 @@
       </v-row>
       <v-row>
         <v-col cols="6">
-          <v-autocomplete
-            item-value="id"
-            item-text="title"
-            multiple
-            label="Locations"
-            return-object
-            :items="locations"
+          <locations-autocomplete
+            :locations="locations"
             v-model="showcase.locations"
-          >
-            <template v-slot:item="{ item }">
-              <span>{{ item.title }}({{ item.sp }})</span>
-            </template>
-          </v-autocomplete>
+          />
         </v-col>
       </v-row>
       <v-row justify="end">
@@ -75,6 +66,7 @@ import IconsAutocomplete from "@/components/ui/iconsAutocomplete.vue";
 import { useStore } from "@/store";
 import api from "@/api";
 import { useRouter } from "vue-router/composables";
+import LocationsAutocomplete from "@/components/ui/locationsAutocomplete.vue";
 
 const props = defineProps({
   "real-showcase": {},
