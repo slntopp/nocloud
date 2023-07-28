@@ -24,7 +24,7 @@
         <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
         <showcase-create
           v-if="showcase && showcaseTitle"
-          :real-showcase="showcase"
+          :real-showcase="showcaseCreateInst"
           is-edit
         />
       </v-tab-item>
@@ -75,6 +75,16 @@ const showcaseTitle = computed(() => {
   }
 
   return showcase.value.title;
+});
+
+const showcaseCreateInst = computed(() => {
+  return {
+    ...showcase.value,
+    locations: showcase.value.locations?.map((l) => ({
+      ...l,
+      id: l.id.replace(showcase.value.title + "-", ""),
+    })),
+  };
 });
 
 onMounted(async () => {
