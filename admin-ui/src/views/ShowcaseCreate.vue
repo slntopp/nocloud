@@ -77,7 +77,7 @@ import { useRouter } from "vue-router/composables";
 import LocationsAutocomplete from "@/components/ui/locationsAutocomplete.vue";
 
 const props = defineProps({
-  "real-showcase": {},
+  realShowcase: {},
   isEdit: { type: Boolean, default: false },
 });
 // const emits=defineEmits(['input'])
@@ -109,7 +109,7 @@ const locations = computed(() => {
   );
   const locations = [];
   sps.forEach((sp) => {
-    locations.push(...sp.locations.map((l) => ({ ...l, sp: sp.title })));
+    locations.push(...sp.locations.map((l) => ({ ...l, sp: sp.title,id:getNewLocationKey(l)})));
   });
   return locations;
 });
@@ -122,7 +122,19 @@ const locationsTypes = computed(() => {
 });
 
 watch(locationsTypes, () => {
-  allowedTypes.value = locationsTypes.value;
+  if (!isEdit.value) {
+    allowedTypes.value = locationsTypes.value;
+  }else if (allowedTypes.value.length === 0) {
+    allowedTypes.value = locationsTypes.value;
+  }
+});
+
+watch(realShowcase, () => {
+  showcase.value = realShowcase.value;
+  console.log(showcase.value,locations.value)
+  allowedTypes.value = [
+    ...new Set(showcase.value.locations.map((l) => l.type)),
+  ];
 });
 
 onMounted(async () => {
@@ -151,7 +163,6 @@ const save = async () => {
         .filter((l) => filtredLocations.value.find((l2) => l2.id === l.id))
         .map((l) => ({
           ...l,
-          id: `${showcase.value.title}-${l.id}`,
           sp: undefined,
         })),
     };
@@ -173,9 +184,9 @@ const save = async () => {
   }
 };
 
-watch(realShowcase, () => {
-  showcase.value = realShowcase.value;
-});
+const getNewLocationKey = (l) => {
+  return `${showcase.value.title.replaceAll(" ", `_`)}-${l.id}`;
+};
 </script>
 
 <style scoped lang="scss">
