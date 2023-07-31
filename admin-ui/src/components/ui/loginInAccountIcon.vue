@@ -14,14 +14,10 @@ const loginHandler = () => {
     .dispatch("auth/loginToApp", { uuid: props.uuid, type: "whmcs" })
     .then(({ token }) => {
       api.settings.get(["app"]).then((res) => {
-        const url = JSON.parse(res["app"]).url;
-        const win = window.open(
-          props.instanceId ? `${url}/#/cloud/${props.instanceId}` : url
-        );
-        console.log(props.instanceId, `${url}/#/cloud/${props.instanceId}`);
+        const win = window.open(JSON.parse(res.app).url);
 
         setTimeout(() => {
-          win.postMessage(token, "*");
+          win.postMessage({ token, uuid: props.instanceId }, "*");
         }, 100);
       });
     })
