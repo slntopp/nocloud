@@ -1,19 +1,19 @@
 <template>
   <nocloud-table
-      table-name="instances"
-      class="mt-4"
-      :value="value"
-      :items="instances"
-      :headers="headers"
-      :loading="isLoading"
-      :custom-sort="sortInstances"
-      :footer-error="fetchError"
-      @input="(value) => $emit('input', value)"
-      :default-filtres="defaultFiltres"
-      :filters-items="filterItems"
-      :filters-values="selectedFilters"
-      :show-select="showSelect"
-      @input:filter="selectedFilters[$event.key] = $event.value"
+    table-name="instances"
+    class="mt-4"
+    :value="value"
+    :items="instances"
+    :headers="headers"
+    :loading="isLoading"
+    :custom-sort="sortInstances"
+    :footer-error="fetchError"
+    @input="(value) => $emit('input', value)"
+    :default-filtres="defaultFiltres"
+    :filters-items="filterItems"
+    :filters-values="selectedFilters"
+    :show-select="showSelect"
+    @input:filter="selectedFilters[$event.key] = $event.value"
   >
     <template v-slot:[`item.id`]="{ index }">
       {{ index + 1 }}
@@ -22,20 +22,20 @@
     <template v-slot:[`item.title`]="{ item }">
       <div class="d-flex justify-space-between">
         <router-link
-            :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
+          :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
         >
           {{ item.title }}
         </router-link>
         <login-in-account-icon
-            :uuid="getAccount(item).uuid"
-            :instanceId="item.uuid"
+          :uuid="getAccount(item).uuid"
+          :instanceId="item.uuid"
         />
       </div>
     </template>
 
     <template v-slot:[`item.access`]="{ item }">
       <router-link
-          :to="{ name: 'Account', params: { accountId: getAccount(item)?.uuid } }"
+        :to="{ name: 'Account', params: { accountId: getAccount(item)?.uuid } }"
       >
         {{ getValue("access", item) }}
       </router-link>
@@ -85,7 +85,7 @@
 
     <template v-slot:[`item.access.namespace`]="{ item }">
       <router-link
-          :to="{
+        :to="{
           name: 'NamespacePage',
           params: { namespaceId: item.access.namespace },
         }"
@@ -96,7 +96,7 @@
 
     <template v-slot:[`item.billingPlan.title`]="{ item, value }">
       <router-link
-          :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
+        :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
       >
         {{ value }}
       </router-link>
@@ -120,7 +120,7 @@
 
     <template v-slot:[`item.state.meta.networking`]="{ item }">
       <template v-if="!item.state?.meta.networking?.public">-</template>
-      <instance-ip-menu v-else :item="item" ui="span"/>
+      <instance-ip-menu v-else :item="item" ui="span" />
     </template>
   </nocloud-table>
 </template>
@@ -229,18 +229,15 @@ export default {
     },
     chipColor(item) {
       if (!item.state) return "error";
-      const state =
-          item.billingPlan.type === "ione"
-              ? item.state.meta?.lcm_state_str
-              : item.state.state;
+      const state = this.headersGetters["state"](item);
 
       switch (state) {
         case "RUNNING":
           return "success";
         case "LCM_INIT":
         case "STOPPED":
-          return "warning";
         case "SUSPENDED":
+          return "warning";
         case "UNKNOWN":
           return "error";
         default:

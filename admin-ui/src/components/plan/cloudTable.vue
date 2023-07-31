@@ -3,50 +3,51 @@
     <v-row align="center">
       <v-col cols="3">
         <v-autocomplete
-            :items="regions"
-            label="Region"
-            v-model="selectedRegion"
-            :loading="isRegionsLoading"
+          :items="regions"
+          label="Region"
+          v-model="selectedRegion"
+          :loading="isRegionsLoading"
         />
       </v-col>
       <template v-if="selectedRegion">
         <v-col cols="1">
-          <v-btn @click="setEnabledToAll(true)">Enable all</v-btn>
+          <v-btn @click="setEnabledToTab(true)">Enable all</v-btn>
         </v-col>
         <v-col cols="1">
-          <v-btn @click="setEnabledToAll(false)">Disable all</v-btn>
+          <v-btn @click="setEnabledToTab(false)">Disable all</v-btn>
         </v-col>
       </template>
     </v-row>
     <v-tabs background-color="background-light" v-model="tab">
-      <v-tab key="flavors"> Flavors</v-tab>
-      <v-tab key="images"> Images</v-tab>
+      <v-tab v-for="tabKey in tabItems" :key="tabKey">
+        {{ tabKey[0].toUpperCase() + tabKey.slice(1) }}</v-tab
+      >
     </v-tabs>
 
     <v-tabs-items v-model="tab">
       <v-tab-item key="flavors">
         <nocloud-table
-            sort-by="enabled"
-            sort-desc
-            item-key="uniqueId"
-            table-name="cloud-flavors"
-            :show-select="false"
-            :loading="isFlavoursLoading"
-            :headers="pricesHeaders"
-            :items="flavors[selectedRegion]"
-            show-expand
-            :expanded.sync="expanded"
+          sort-by="enabled"
+          sort-desc
+          item-key="uniqueId"
+          table-name="cloud-flavors"
+          :show-select="false"
+          :loading="isFlavoursLoading"
+          :headers="pricesHeaders"
+          :items="flavors[selectedRegion]"
+          show-expand
+          :expanded.sync="expanded"
         >
           <template v-slot:[`item.name`]="{ item }">
-            <v-text-field v-model="item.name"/>
+            <v-text-field v-model="item.name" />
           </template>
           <template v-slot:[`item.endPrice`]="{ item }">
-            <v-text-field v-model.number="item.endPrice" type="number"/>
+            <v-text-field v-model.number="item.endPrice" type="number" />
           </template>
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
-                :input-value="item.enabled"
-                @change="item.enabled = $event"
+              :input-value="item.enabled"
+              @change="item.enabled = $event"
             />
           </template>
           <template v-slot:expanded-item="{ headers, item }">
@@ -54,12 +55,12 @@
               <v-card color="background-light">
                 <v-card-title> Capabilities</v-card-title>
                 <nocloud-table
-                    hide-default-footer
-                    :headers="capabilitiesHeaders"
-                    :items="item.capabilities"
-                    :show-select="false"
-                    no-hide-uuid
-                    table-name="cloud-capabilities"
+                  hide-default-footer
+                  :headers="capabilitiesHeaders"
+                  :items="item.capabilities"
+                  :show-select="false"
+                  no-hide-uuid
+                  table-name="cloud-capabilities"
                 />
               </v-card>
             </td>
@@ -68,19 +69,19 @@
       </v-tab-item>
       <v-tab-item key="images">
         <nocloud-table
-            item-key="id"
-            :loading="isImagesLoading"
-            :headers="imagesHeaders"
-            :items="images[selectedRegion]"
-            sort-by="enabled"
-            :show-select="false"
-            table-name="cloud-images"
-            sort-desc
+          item-key="id"
+          :loading="isImagesLoading"
+          :headers="imagesHeaders"
+          :items="images[selectedRegion]"
+          sort-by="enabled"
+          :show-select="false"
+          table-name="cloud-images"
+          sort-desc
         >
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
-                :input-value="item.enabled"
-                @change="item.enabled = $event"
+              :input-value="item.enabled"
+              @change="item.enabled = $event"
             />
           </template>
         </nocloud-table>
@@ -90,28 +91,37 @@
 </template>
 
 <script setup>
-import {computed, defineExpose, defineProps, onMounted, ref, toRefs, watch,} from "vue";
+import {
+  computed,
+  defineExpose,
+  defineProps,
+  onMounted,
+  ref,
+  toRefs,
+  watch,
+} from "vue";
 import api from "@/api";
-import {useStore} from "@/store";
+import { useStore } from "@/store";
 import NocloudTable from "@/components/table.vue";
 import useRate from "@/hooks/useRate";
-import {getMarginedValue} from "@/functions";
+import { getMarginedValue } from "@/functions";
 
 const props = defineProps({
-  fee: {type: Object, required: true},
-  template: {type: Object, required: true},
-  isPlansLoading: {type: Boolean, required: true},
-  getPeriod: {type: Function, required: true},
-  sp: {type: Object, required: true},
+  fee: { type: Object, required: true },
+  template: { type: Object, required: true },
+  isPlansLoading: { type: Boolean, required: true },
+  getPeriod: { type: Function, required: true },
+  sp: { type: Object, required: true },
 });
 
-const {sp, template, fee} = toRefs(props);
+const { sp, template, fee } = toRefs(props);
 
 const store = useStore();
 const rate = useRate();
 
 const expanded = ref([]);
 const tab = ref("prices");
+const tabItems = ref(["flavors", "images"]);
 const regions = ref([]);
 const flavors = ref({});
 const prices = ref({});
@@ -122,36 +132,36 @@ const isImagesLoading = ref(false);
 const isRegionsLoading = ref(false);
 
 const pricesHeaders = ref([
-  {text: "Name", value: "name"},
-  {text: "API Name", value: "apiName"},
-  {text: "Os type", value: "osType"},
-  {text: "Disk", value: "disk"},
-  {text: "In bound bandwidth", value: "inboundBandwidth"},
-  {text: "Out bound bandwidth", value: "outboundBandwidth"},
-  {text: "Period", value: "period"},
-  {text: "Quota", value: "quota"},
-  {text: "RAM", value: "ram"},
-  {text: "VCPUS", value: "vcpus"},
-  {text: "Type", value: "type"},
-  {text: "Base price", value: "price"},
-  {text: "End price", value: "endPrice"},
-  {text: "Enabled", value: "enabled"},
+  { text: "Name", value: "name" },
+  { text: "API Name", value: "apiName" },
+  { text: "Os type", value: "osType" },
+  { text: "Disk", value: "disk" },
+  { text: "In bound bandwidth", value: "inboundBandwidth" },
+  { text: "Out bound bandwidth", value: "outboundBandwidth" },
+  { text: "Period", value: "period" },
+  { text: "Quota", value: "quota" },
+  { text: "RAM", value: "ram" },
+  { text: "VCPUS", value: "vcpus" },
+  { text: "Type", value: "type" },
+  { text: "Base price", value: "price" },
+  { text: "End price", value: "endPrice" },
+  { text: "Enabled", value: "enabled" },
 ]);
 
 const capabilitiesHeaders = ref([
-  {text: "Name", value: "name"},
-  {text: "Enabled", value: "enabled"},
+  { text: "Name", value: "name" },
+  { text: "Enabled", value: "enabled" },
 ]);
 
 const imagesHeaders = ref([
-  {text: "ID", value: "id"},
-  {text: "Name", value: "name"},
-  {text: "Type", value: "type"},
-  {text: "Size", value: "size"},
-  {text: "Сreation date", value: "creationDate"},
-  {text: "Status", value: "status"},
-  {text: "Visibility", value: "visibility"},
-  {text: "Enabled", value: "enabled"},
+  { text: "ID", value: "id" },
+  { text: "Name", value: "name" },
+  { text: "Type", value: "type" },
+  { text: "Size", value: "size" },
+  { text: "Сreation date", value: "creationDate" },
+  { text: "Status", value: "status" },
+  { text: "Visibility", value: "visibility" },
+  { text: "Enabled", value: "enabled" },
 ]);
 
 const projectId = computed(() => {
@@ -162,7 +172,7 @@ onMounted(async () => {
   await store.dispatch("servicesProviders/fetchById", sp.value.uuid);
   isRegionsLoading.value = true;
   try {
-    const {meta} = await api.servicesProviders.action({
+    const { meta } = await api.servicesProviders.action({
       action: "regions",
       uuid: sp.value.uuid,
       params: {
@@ -187,15 +197,15 @@ watch(selectedRegion, () => {
 
 const fetchFlavours = async () => {
   if (
-      flavors.value[selectedRegion.value] &&
-      prices.value[selectedRegion.value]
+    flavors.value[selectedRegion.value] &&
+    prices.value[selectedRegion.value]
   ) {
     return;
   }
 
   isFlavoursLoading.value = true;
   try {
-    const {meta} = await api.servicesProviders.action({
+    const { meta } = await api.servicesProviders.action({
       action: "get_cloud_flavors",
       uuid: sp.value.uuid,
       params: {
@@ -213,7 +223,10 @@ const fetchFlavours = async () => {
       Object.keys(flavour.planCodes || {}).forEach((key) => {
         const period = key === "monthly" ? "P1M" : "P1H";
         const planCode = `${period} ${flavour.id}`;
-        const price = parseFloat(prices.value[selectedRegion.value]?.[flavour.planCodes[key]] * rate.value).toFixed(2)
+        const price = parseFloat(
+          prices.value[selectedRegion.value]?.[flavour.planCodes[key]] *
+            rate.value
+        ).toFixed(2);
         newFlavours.push({
           ...flavour,
           name: template.value.products[planCode]?.title || flavour.name,
@@ -225,7 +238,7 @@ const fetchFlavours = async () => {
           endPrice: template.value.products[planCode]?.price || price,
           enabled: !!template.value.products[planCode],
           uniqueId: `${period} ${flavour.id}`,
-          meta: {region: selectedRegion.value},
+          meta: { region: selectedRegion.value },
         });
       });
     });
@@ -247,7 +260,7 @@ const fetchImages = async () => {
 
   try {
     isImagesLoading.value = true;
-    const {meta} = await api.servicesProviders.action({
+    const { meta } = await api.servicesProviders.action({
       uuid: sp.value.uuid,
       action: "get_cloud_images",
       params: {
@@ -259,9 +272,9 @@ const fetchImages = async () => {
       return {
         ...i,
         enabled: !!Object.keys(template.value.products).find(
-            (k) =>
-                template.value.products[k].meta?.region === selectedRegion.value &&
-                template.value.products[k].meta?.os?.find((o) => i.id === o.id)
+          (k) =>
+            template.value.products[k].meta?.region === selectedRegion.value &&
+            template.value.products[k].meta?.os?.find((o) => i.id === o.id)
         ),
       };
     });
@@ -281,19 +294,25 @@ const changePlan = (plan) => {
     const regionFlavors = flavors.value[regionKey].filter((f) => f.enabled);
     const regionImages = {};
     images.value[regionKey]
-        .filter((item) => item.enabled).forEach((item) => {
-      regionImages[item.type] = regionImages[item.type] ? [...regionImages[item.type], {
-        name: item.name,
-        id: item.id
-      }] : [{name: item.name, id: item.id}];
-    })
+      .filter((item) => item.enabled)
+      .forEach((item) => {
+        regionImages[item.type] = regionImages[item.type]
+          ? [
+              ...regionImages[item.type],
+              {
+                name: item.name,
+                id: item.id,
+              },
+            ]
+          : [{ name: item.name, id: item.id }];
+      });
 
     if (!regionFlavors.length) {
       Object.keys(plan.products).forEach((key) => {
         if (plan.products[key]?.meta?.region === regionKey) {
-          plan.products[key] = undefined
+          plan.products[key] = undefined;
         }
-      })
+      });
     }
     regionFlavors.forEach((item) => {
       plan.products[item.key] = {
@@ -322,19 +341,24 @@ const changePlan = (plan) => {
     });
   });
 };
-
-const setEnabledToAll = (status = false) => {
-  images.value[selectedRegion
-      .value] = images.value[selectedRegion.value].map((i) => {
-    i.enabled = status
-    return i
-  })
-  flavors.value[selectedRegion
-      .value] = flavors.value[selectedRegion.value].map((i) => {
-    i.enabled = status
-    return i
-  })
-}
+const setEnabledToValues = (value, status) => {
+  value = value[selectedRegion.value].map((i) => {
+    i.enabled = status;
+    return i;
+  });
+};
+const setEnabledToTab = (status = false) => {
+  switch (tabItems.value[tab.value]) {
+    case "images": {
+      setEnabledToValues(images.value, status);
+      break;
+    }
+    case "flavors": {
+      setEnabledToValues(flavors.value, status);
+      break;
+    }
+  }
+};
 
 const setFee = () => {
   Object.keys(flavors.value).forEach((key) => {
@@ -345,7 +369,7 @@ const setFee = () => {
   });
 };
 
-defineExpose({changePlan, setFee});
+defineExpose({ changePlan, setFee });
 </script>
 
 <style scoped></style>
