@@ -431,6 +431,7 @@ export default {
         });
       });
       this.allImages = result[1].os;
+      this.allImages.sort();
       
       this.plans = result;
       this.plans.sort((a, b) => {
@@ -722,7 +723,8 @@ export default {
         const sellingPlans = this.plans.filter(({ sell }) => sell);
 
         if (sellingPlans.length < 1) this.images = this.plans[1].os;
-        else this.images = (sellingPlans[1] ?? sellingPlans[0]).os;
+        else this.images = (sellingPlans[1] ?? sellingPlans[0]).os
+          .filter((image) => this.allImages.includes(image));
 
         if (this.template.resources.length === this.addons.length) {
           this.filters["1"].Sell = ["true"];
