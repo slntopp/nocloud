@@ -139,15 +139,12 @@
                     @input="(e) => inputHandler(e, marker)"
                   />
 
-                  <color-picker
-                    label="Color"
-                    v-model="marker.extra.color"
-                  />
+                  <color-picker label="Color" v-model="marker.extra.color" />
 
                   <v-text-field
-                      dense
-                      label="Icon link"
-                      v-model="marker.extra.link"
+                    dense
+                    label="Icon link"
+                    v-model="marker.extra.link"
                   />
 
                   <div class="d-flex justify-end">
@@ -283,11 +280,12 @@ export default {
       e.stopPropagation();
     },
     inputHandler(e, marker) {
-      if (!e) {
-        marker.title = " ";
-      } else {
-        marker.title = e.trim();
-      }
+      this.markers = this.markers.map((m) => {
+        if (m.id === marker.id) {
+          m.title = !e ? " " : e.trim();
+        }
+        return m;
+      });
     },
     delMarker(e, id, x, y) {
       e.stopPropagation();
@@ -299,6 +297,23 @@ export default {
       });
     },
     saveCountry() {
+      let error = 0;
+      this.markers.forEach((el) => {
+        if (el.title && !el.title.trim()) {
+          const ref = this.$refs["textField_" + el.id][0];
+          this.mouseEnterHandler(el.id);
+          setTimeout(() => {
+            ref?.focus();
+          }, 100);
+          error = 1;
+        }
+      });
+      if (error) {
+        this.showSnackbarError({
+          message: "Error: Enter location names.",
+        });
+        return;
+      }
       this.$emit("save", this.item);
       this.isLoading = true;
       this.item.locations = JSON.parse(JSON.stringify(this.markers));
@@ -310,8 +325,6 @@ export default {
           )
         );
       }
-
-      console.log(this.item.locations, this.markers);
 
       if (this.item.locations.length < 1) {
         this.item.locations = [{ id: "_nocloud.remove" }];

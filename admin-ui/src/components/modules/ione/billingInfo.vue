@@ -102,7 +102,7 @@
       :available-tarrifs="availableTarrifs"
       :billing-plan="billingPlan"
     />
-    <change-ione-price-model
+    <edit-price-model
       v-model="priceModelDialog"
       :template="template"
       :plans="filtredPlans"
@@ -121,11 +121,11 @@ import {
   computed,
   onMounted,
 } from "vue";
-import { formatSecondsToDate, getFullDate } from "@/functions";
+import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
-import ChangeIonePriceModel from "@/components/dialogs/changeIonePriceModel.vue";
+import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -148,7 +148,8 @@ const billingHeaders = ref([
 
 const date = computed(() =>
   formatSecondsToDate(
-    +template.value?.data?.last_monitoring + +template.value.billingPlan.products[template.value.product].period
+    +template.value?.data?.last_monitoring +
+      +template.value.billingPlan.products[template.value.product].period
   )
 );
 const isMonitoringsEmpty = computed(() => date.value === "-");
@@ -239,14 +240,7 @@ const getBillingItems = () => {
   }
 
   return items.map((i) => {
-    const fullPeriod = i.period && getFullDate(i.period);
-    if (fullPeriod) {
-      i.period = Object.keys(fullPeriod)
-        .filter((key) => +fullPeriod[key])
-        .map((key) => `${fullPeriod[key]} (${key})`)
-        .join(", ");
-    }
-
+    i.period = getBillingPeriod(i.period);
     return i;
   });
 };
