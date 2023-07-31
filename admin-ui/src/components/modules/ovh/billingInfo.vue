@@ -115,10 +115,7 @@ import api from "@/api";
 import { useStore } from "@/store";
 import EditPriceModel from "@/components/modules/ovh/editPriceModel.vue";
 import useRate from "@/hooks/useRate";
-import {
-  formatSecondsToDate,
-  getBillingPeriod,
-} from "@/functions";
+import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -407,26 +404,28 @@ const defaultCurrency = computed(() => {
 });
 
 const toAccountPrice = (price) => {
-  return (price / accountRate.value).toFixed(2);
+  return accountRate.value ? (price / accountRate.value).toFixed(2) : 0;
 };
 const fromAccountPrice = (price) => {
-  return (price * accountRate.value).toFixed(2);
+  return accountRate.value ? (price * accountRate.value).toFixed(2) : 0;
 };
 
 onMounted(() => {
   initPrices();
   getBasePrices();
-  api
-    .get(
-      `/billing/currencies/rates/${account.value.currency}/${defaultCurrency.value}`
-    )
-    .then((res) => {
-      accountRate.value = res.rate;
-      pricesItems.value = pricesItems.value.map((i) => {
-        i.accountPrice = toAccountPrice(i.price);
-        return i;
+  if (account.value.currency) {
+    api
+      .get(
+        `/billing/currencies/rates/${account.value.currency}/${defaultCurrency.value}`
+      )
+      .then((res) => {
+        accountRate.value = res.rate;
+        pricesItems.value = pricesItems.value.map((i) => {
+          i.accountPrice = toAccountPrice(i.price);
+          return i;
+        });
       });
-    });
+  }
 });
 </script>
 
