@@ -121,7 +121,7 @@ import {
   computed,
   onMounted,
 } from "vue";
-import { formatSecondsToDate, getFullDate } from "@/functions";
+import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
@@ -148,7 +148,8 @@ const billingHeaders = ref([
 
 const date = computed(() =>
   formatSecondsToDate(
-    +template.value?.data?.last_monitoring + +template.value.billingPlan.products[template.value.product].period
+    +template.value?.data?.last_monitoring +
+      +template.value.billingPlan.products[template.value.product].period
   )
 );
 const isMonitoringsEmpty = computed(() => date.value === "-");
@@ -239,14 +240,7 @@ const getBillingItems = () => {
   }
 
   return items.map((i) => {
-    const fullPeriod = i.period && getFullDate(i.period);
-    if (fullPeriod) {
-      i.period = Object.keys(fullPeriod)
-        .filter((key) => +fullPeriod[key])
-        .map((key) => `${fullPeriod[key]} (${key})`)
-        .join(", ");
-    }
-
+    i.period = getBillingPeriod(i.period);
     return i;
   });
 };

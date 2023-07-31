@@ -115,7 +115,10 @@ import api from "@/api";
 import { useStore } from "@/store";
 import EditPriceModel from "@/components/modules/ovh/editPriceModel.vue";
 import useRate from "@/hooks/useRate";
-import { formatSecondsToDate, getFullDate } from "@/functions";
+import {
+  formatSecondsToDate,
+  getBillingPeriod,
+} from "@/functions";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -336,14 +339,7 @@ const initPrices = () => {
   });
 
   pricesItems.value = pricesItems.value.map((i) => {
-    const fullPeriod = i.period && getFullDate(i.period);
-    if (fullPeriod) {
-      i.period = Object.keys(fullPeriod)
-        .filter((key) => +fullPeriod[key])
-        .map((key) => `${fullPeriod[key]} (${key})`)
-        .join(", ");
-    }
-
+    i.period = getBillingPeriod(i.period);
     i.accountPrice = i.price * accountRate.value;
 
     return i;
