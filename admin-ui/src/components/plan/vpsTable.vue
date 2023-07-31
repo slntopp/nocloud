@@ -25,10 +25,10 @@
     </v-menu>
     <v-row class="mt-4" v-if="!isPlansLoading" align="center">
       <v-col cols="2">
-        <v-btn @click="setEnableToAll(true)">Enable all</v-btn>
+        <v-btn @click="setSellToTab(true)">Enable all</v-btn>
       </v-col>
       <v-col cols="2">
-        <v-btn @click="setEnableToAll(false)">Disable all</v-btn>
+        <v-btn @click="setSellToTab(false)">Disable all</v-btn>
       </v-col>
     </v-row>
     <v-tabs
@@ -180,8 +180,10 @@
             <v-chip
               close
               outlined
-              :color="(images.includes(item)) ? 'info' : 'error'"
-              :close-icon="(images.includes(item) ? 'mdi-close-circle' : 'mdi-plus-circle')"
+              :color="images.includes(item) ? 'info' : 'error'"
+              :close-icon="
+                images.includes(item) ? 'mdi-close-circle' : 'mdi-plus-circle'
+              "
               @click:close="changeImage(item)"
             >
               {{ item }}
@@ -422,7 +424,7 @@ export default {
               duration,
               name: productName,
               apiName: productName,
-              group: productName.replace(/VPS[\W0-9]/, '').split(/[\W0-9]/)[0],
+              group: productName.replace(/VPS[\W0-9]/, "").split(/[\W0-9]/)[0],
               value: price.value,
               sell: false,
               id: `${duration} ${planCode}`,
@@ -431,7 +433,7 @@ export default {
         });
       });
       this.allImages = result[1].os;
-      
+
       this.plans = result;
       this.plans.sort((a, b) => {
         const resA = a.planCode.split("-");
@@ -522,11 +524,11 @@ export default {
     },
     getName({ name, group }) {
       const newGroup = `${group[0].toUpperCase()}${group.slice(1)}`;
-      const slicedName = name.replace(/VPS[\W0-9]/, '');
+      const slicedName = name.replace(/VPS[\W0-9]/, "");
       const sep = /[\W0-9]/.exec(slicedName)[0];
       const newName = slicedName.split(sep).splice(1).join(sep);
 
-      if (!name.startsWith('VPS')) return `${newGroup}${sep}${newName}`;
+      if (!name.startsWith("VPS")) return `${newGroup}${sep}${newName}`;
       else return `VPS ${newGroup} ${name.split(" ").at(-1)}`;
     },
     getMargin({ value, price }, filter = true) {
@@ -628,15 +630,33 @@ export default {
         return result.every((el) => el);
       });
     },
-    setEnableToAll(status){
-      this.plans=this.plans.map((p)=>{
-        p.sell=status
-        return p
-      })
-      this.addons.forEach((p,ind)=>{
-        this.$set(this.addons,ind,{...p,sell:status})
-      })
-    }
+    setSellToTab(status) {
+      switch (this.tabs[this.tabsIndex]) {
+        case "Addons": {
+          this.setSellToValue(this.addons, status);
+          break;
+        }
+        case "OS": {
+          this.images = [];
+          if (status) {
+            this.allImages.forEach((img) => {
+              this.images.push(img);
+            });
+          }
+          break;
+        }
+        case "Tariffs": {
+          this.setSellToValue(this.plans, status);
+          break;
+        }
+      }
+    },
+    setSellToValue(value, status) {
+      value = value.map((p) => {
+        p.sell = status;
+        return p;
+      });
+    },
   },
   created() {
     this.$emit("changeLoading");
@@ -704,7 +724,7 @@ export default {
           const winKey = Object.keys(product?.meta || {}).find((el) =>
             el.includes("windows")
           );
-          const title = (product?.title ?? plan.name).replace(/VPS[\W0-9]/, '');
+          const title = (product?.title ?? plan.name).replace(/VPS[\W0-9]/, "");
           const group = title.split(/[\W0-9]/)[0];
 
           if (product) {
