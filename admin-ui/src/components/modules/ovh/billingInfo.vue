@@ -113,7 +113,7 @@ import {
 import NocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";
-import EditPriceModel from "@/components/modules/ovh/editPriceModel.vue";
+import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useRate from "@/hooks/useRate";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 

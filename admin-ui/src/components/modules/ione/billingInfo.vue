@@ -102,7 +102,7 @@
       :available-tarrifs="availableTarrifs"
       :billing-plan="billingPlan"
     />
-    <change-ione-price-model
+    <edit-price-model
       v-model="priceModelDialog"
       :template="template"
       :plans="filtredPlans"
@@ -125,7 +125,7 @@ import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
-import ChangeIonePriceModel from "@/components/dialogs/changeIonePriceModel.vue";
+import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh", "update"]);
