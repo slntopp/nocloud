@@ -18,7 +18,7 @@ const loginHandler = () => {
 
         setTimeout(() => {
           win.postMessage({ token, uuid: props.instanceId }, "*");
-        }, 100);
+        }, 300);
       });
     })
     .catch((e) => {
