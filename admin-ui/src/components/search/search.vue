@@ -11,7 +11,6 @@
           @input="isOpen = true"
           ref="search-input"
           hide-details
-          prepend-inner-icon="mdi-magnify"
           placeholder="Search..."
           single-line
           background-color="background-light"
@@ -21,19 +20,43 @@
           v-bind="attrs"
           v-on="on"
         >
-          <template v-slot:append>
-            <v-chip
-              outlined
-              color="primary"
-              v-for="key in Object.keys(customParams)"
-              :key="key"
-              class="mx-1"
+          <template v-slot:prepend-inner>
+            <v-icon
+              :style="{
+                marginTop: customParamsValues.length ? '12px !important' : 0,
+              }"
+              class="ma-auto"
+              >mdi-magnify</v-icon
             >
-              {{ customParams[key]?.title }}
-              <v-btn @click="deleteParam(key)" icon small>
-                <v-icon small>mdi-close</v-icon>
-              </v-btn>
-            </v-chip>
+          </template>
+
+          <template v-slot:append>
+            <search-tag
+              v-if="customParamsValues.length"
+              :param="customParamsValues[0]"
+              :variants="variants"
+            />
+            <v-menu v-if="customParamsValues.length > 1" offset-y>
+              <template v-slot:activator="{ on, attrs }">
+                <v-chip
+                  class="ma-auto pa-auto"
+                  color="primary"
+                  v-bind="attrs"
+                  outlined
+                  v-on="on"
+                >
+                  +{{ customParamsValues.length - 1 }}
+                </v-chip>
+              </template>
+              <v-card color="background-light" max-width="600px">
+                <search-tag
+                  v-for="param in customParamsValues.slice(1)"
+                  :key="param.key + param.title"
+                  :param="param"
+                  :variants="variants"
+                />
+              </v-card>
+            </v-menu>
           </template>
         </v-text-field>
       </template>
@@ -84,9 +107,11 @@
 
 <script>
 import { mapGetters } from "vuex";
+import SearchTag from "@/components/search/searchTag.vue";
 
 export default {
   name: "app-search",
+  components: { SearchTag },
   data: () => ({ selectedGroupKey: "", isOpen: false }),
   methods: {
     changeValue(e) {
@@ -98,6 +123,7 @@ export default {
           value: {
             value: searchItem[variant.itemKey || "uuid"],
             title: searchItem[variant.itemTitle || "title"],
+            isArray: variant.isArray,
           },
         });
         this.searchParam = "";
@@ -115,9 +141,6 @@ export default {
       } else {
         this.selectedGroupKey = searchItem.key;
       }
-    },
-    deleteParam(key) {
-      this.$store.commit("appSearch/deleteCustomParam", key);
     },
   },
   computed: {
@@ -146,6 +169,24 @@ export default {
           title: this.variants[key]?.title || key,
         }))
       );
+    },
+    customParamsValues() {
+      const values = [];
+      Object.keys(this.customParams).forEach((key) => {
+        if (Array.isArray(this.customParams[key])) {
+          values.push(
+            ...this.customParams[key]?.map((v) => ({
+              ...v,
+              isArray: true,
+              key,
+            }))
+          );
+        } else {
+          values.push({ ...this.customParams[key], key });
+        }
+      });
+
+      return values;
     },
   },
 };
