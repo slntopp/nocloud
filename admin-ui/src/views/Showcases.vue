@@ -19,41 +19,22 @@
         </v-btn>
       </confirm-dialog>
     </div>
-    <nocloud-table
-      v-model="selected"
-      :headers="headers"
-      item-key="uuid"
-      table-name="showcases"
-      :items="showcases"
+    <showcases_table
       :loading="isLoading"
-    >
-      <template v-slot:[`item.preview`]="{ item }">
-        <icon-title-preview is-mdi :icon="item.icon" :title="item.title" />
-      </template>
-
-      <template v-slot:[`item.title`]="{ item }">
-        <router-link :to="{ name: 'ShowcasePage', params: { uuid: item.uuid } }">
-          {{ item.title }}
-        </router-link>
-      </template>
-    </nocloud-table>
+      :items="showcases"
+      v-model="selected"
+    />
   </div>
 </template>
 
 <script setup>
 import ConfirmDialog from "@/components/confirmDialog.vue";
-import NocloudTable from "@/components/table.vue";
 import { computed, onMounted, ref } from "vue";
 import { useStore } from "@/store";
-import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
+import Showcases_table from "@/components/showcases_table.vue";
 
 const store = useStore();
 
-const headers = ref([
-  { text: "uuid", value: "uuid" },
-  { text: "title", value: "title" },
-  { text: "preview", value: "preview" },
-]);
 const isDeleteLoading = ref(false);
 const selected = ref([]);
 
@@ -61,9 +42,9 @@ const showcases = computed(() => store.getters["showcases/all"]);
 const isLoading = computed(() => store.getters["showcases/isLoading"]);
 
 onMounted(async () => {
-  try{
+  try {
     await store.dispatch("showcases/fetch");
-  }catch (e){
+  } catch (e) {
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during fetch info",
     });
@@ -79,7 +60,7 @@ const deleteSelected = async () => {
     await Promise.all(deletePromises);
     store.commit("snackbar/showSnackbarSuccess", {
       message: `Showcase${
-        deletePromises.length == 1 ? "" : "s"
+        deletePromises.length === 1 ? "" : "s"
       } deleted successfully.`,
     });
   } catch (e) {
