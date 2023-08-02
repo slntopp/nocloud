@@ -1,5 +1,7 @@
 <template>
   <v-autocomplete
+    item-text="displayName"
+    item-value="displayName"
     :label="label"
     :loading="isIconsLoading"
     :items="icons"
@@ -7,38 +9,43 @@
     @input="emits('input:value', $event)"
   >
     <template v-slot:prepend>
-      <v-icon class="ml-3">{{ `mdi-${value}` }}</v-icon>
+      <component :is="currentIcon" class="ml-3" />
     </template>
     <template v-slot:item="{ item }">
-      <icon-title-preview :icon="item" :title="item" is-mdi />
+      <div class="d-flex justify-space-between" style="width: 100%">
+        <span>{{ toKebabCase(item.displayName) }}</span>
+        <component :is="item" style="font-size: 24px" />
+      </div>
     </template>
   </v-autocomplete>
 </template>
 
 <script setup>
-import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
-import { onMounted, ref, toRefs } from "vue";
-import { fetchMDIIcons } from "@/functions";
+import { computed, onMounted, ref, toRefs } from "vue";
+import { toKebabCase } from "@/functions";
 
-const props = defineProps(["value", "label"]);
+const props = defineProps({
+  value: { type: String, default: 'CloudOutlined' },
+  label: { type: String, default: '' }
+});
 const emits = defineEmits(["input:value"]);
 
 const { value } = toRefs(props);
 const icons = ref([]);
+const currentIcon = computed(() =>
+  icons.value.find((icon) => icon.displayName === value.value)
+);
 const isIconsLoading = ref(false);
 
-onMounted(() => {
-  fetchIcons();
-});
+onMounted(fetchIcons);
 
-const fetchIcons = () => {
+async function fetchIcons() {
   isIconsLoading.value = true;
-  fetchMDIIcons()
-    .then((data) => {
-      icons.value = data.map((icon) => icon.name);
-    })
-    .finally(() => (isIconsLoading.value = false));
-};
-</script>
+  const iconsRes = await import("@ant-design/icons-vue");
 
-<style scoped></style>
+  icons.value = Object.values(iconsRes).filter((icon) =>
+    typeof icon !== 'function' && icon.displayName
+  );
+  isIconsLoading.value = false;
+}
+</script>

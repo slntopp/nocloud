@@ -10,13 +10,10 @@ export default {
       state.searchParam = newSearchParam;
     },
     setVariants(state, val) {
-      state.variants = {...state.variants,...val};
-      console.log(state.variants)
+      state.variants = { ...state.variants, ...val };
     },
     pushVariant(state, { key, value }) {
-      console.log(key,value)
       state.variants[key] = value;
-      console.log(state.variants)
     },
     resetSearchParams(state) {
       state.searchParam = "";
@@ -24,12 +21,22 @@ export default {
       state.customParams = {};
     },
     setCustomParam(state, { key, value }) {
-      // state.customParams[key] = value;
-      state.customParams = { ...state.customParams, [key]: value };
+      state.customParams = {
+        ...state.customParams,
+        [key]: !value.isArray
+          ? value
+          : [...(state.customParams[key] || []), value],
+      };
     },
-    deleteCustomParam(state, key) {
-      delete state.customParams[key];
-      state.customParams = { ...state.customParams };
+    deleteCustomParam(state, { key, value, isArray }) {
+      if (value && isArray) {
+        state.customParams[key] = state.customParams[key].filter(
+          (v) => v.value !== value
+        );
+      } else {
+        delete state.customParams[key];
+        state.customParams = { ...state.customParams };
+      }
     },
   },
   getters: {
@@ -37,7 +44,11 @@ export default {
       return state.searchParam;
     },
     variants(state) {
-      return state.variants;
+      const variants = { ...state.variants };
+      if (Object.keys(variants)) {
+        variants["searchParam"] = { title: "Anywhere", key: "searchParam" };
+      }
+      return variants;
     },
     customParams(state) {
       return state.customParams;
