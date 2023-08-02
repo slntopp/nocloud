@@ -116,12 +116,14 @@ import { useStore } from "@/store";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useRate from "@/hooks/useRate";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
+import useAccountConverter from "@/hooks/useAccountConverter";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);
 
 const store = useStore();
 const rate = useRate();
+const { toAccountPrice, fromAccountPrice } = useAccountConverter();
 
 const { template, plans } = toRefs(props);
 const pricesItems = ref([]);
@@ -144,7 +146,7 @@ const namespace = computed(() =>
   )
 );
 const accountTotalNewPrice = computed(() =>
-  toAccountPrice(totalNewPrice.value)
+  toAccountPrice(totalNewPrice.value, accountRate.value)
 );
 const account = computed(() => {
   if (!namespace.value) {
@@ -164,11 +166,11 @@ const onUpdatePrice = (item, isAccount) => {
   if (isAccount) {
     emit("update", {
       key: item.path,
-      value: fromAccountPrice(item.accountPrice),
+      value: fromAccountPrice(item.accountPrice, accountRate.value),
     });
     pricesItems.value = pricesItems.value.map((p) => {
       if (p.path === item.path) {
-        p.price = fromAccountPrice(item.accountPrice);
+        p.price = fromAccountPrice(item.accountPrice, accountRate.value);
       }
       return p;
     });
@@ -176,7 +178,7 @@ const onUpdatePrice = (item, isAccount) => {
     emit("update", { key: item.path, value: item.price });
     pricesItems.value = pricesItems.value.map((p) => {
       if (p.path === item.path) {
-        p.accountPrice = toAccountPrice(item.price);
+        p.accountPrice = toAccountPrice(item.price, accountRate.value);
       }
       return p;
     });
@@ -403,25 +405,24 @@ const defaultCurrency = computed(() => {
   return store.getters["currencies/default"];
 });
 
-const toAccountPrice = (price) => {
-  return accountRate.value ? (price / accountRate.value).toFixed(2) : 0;
-};
-const fromAccountPrice = (price) => {
-  return accountRate.value ? (price * accountRate.value).toFixed(2) : 0;
-};
+const accountCurrency = computed(() => account.value.currency);
 
 onMounted(() => {
   initPrices();
   getBasePrices();
-  if (account.value.currency) {
+  if (accountCurrency.value) {
+    if (accountCurrency.value === defaultCurrency.value) {
+      accountRate.value = 1;
+      return;
+    }
     api
       .get(
-        `/billing/currencies/rates/${account.value.currency}/${defaultCurrency.value}`
+        `/billing/currencies/rates/${accountCurrency.value}/${defaultCurrency.value}`
       )
       .then((res) => {
         accountRate.value = res.rate;
         pricesItems.value = pricesItems.value.map((i) => {
-          i.accountPrice = toAccountPrice(i.price);
+          i.accountPrice = toAccountPrice(i.price, accountRate.value);
           return i;
         });
       });
