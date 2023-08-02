@@ -25,6 +25,14 @@
       <v-col>
         <v-text-field
           readonly
+          label="Account price instance total"
+          :value="accountPrice"
+          :suffix="accountCurrency"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          readonly
           label="Date (create)"
           :value="template.data.creation"
         />
@@ -51,15 +59,22 @@
       :headers="billingHeaders"
       :items="billingItems"
       no-hide-uuid
-      table-name="ione-billing"
       :show-select="false"
       hide-default-footer
     >
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field
-          :value="item.price"
-          @input="updatePrice(item, $event)"
+          v-model="item.price"
+          @input="updatePrice(item, false)"
           append-icon="mdi-pencil"
+        />
+      </template>
+      <template v-slot:[`item.accountPrice`]="{ item }">
+        <v-text-field
+          v-model="item.accountPrice"
+          @input="updatePrice(item, true)"
+          append-icon="mdi-pencil"
+          :suffix="accountCurrency"
         />
       </template>
       <template v-slot:[`item.quantity`]="{ item }">
@@ -68,17 +83,21 @@
       <template v-slot:[`item.total`]="{ item }">
         {{ totalPrices[item.name]?.toFixed(2) }}
       </template>
+      <template v-slot:[`item.totalAccount`]="{ item }">
+        {{ totalAccountPrices[item.name]?.toFixed(2) }}
+      </template>
       <template v-slot:body.append>
         <tr>
-          <td>Total instance price</td>
+          <td></td>
           <td></td>
           <td></td>
           <td></td>
           <td></td>
           <td>
-            {{ billingItems.find((i) => i.name == template.product)?.period }}
+            {{ billingItems.find((i) => i.name === template.product)?.period }}
           </td>
-          <td>{{ totalPrice.toFixed(2) }}</td>
+          <td>{{ totalAccountPrice }}</td>
+          <td>{{ totalPrice }}</td>
         </tr>
       </template>
     </nocloud-table>
@@ -120,29 +139,43 @@ import {
   toRefs,
   computed,
   onMounted,
+  watch,
 } from "vue";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
+import useAccountConverter from "@/hooks/useAccountConverter";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh", "update"]);
 
 const { template, service, sp, plans } = toRefs(props);
+
+const {
+  fetchAccountRate,
+  accountCurrency,
+  toAccountPrice,
+  accountRate,
+  fromAccountPrice,
+} = useAccountConverter(template.value);
+
 const changeDatesDialog = ref(false);
 const changeTarrifDialog = ref(false);
 const priceModelDialog = ref(false);
 const price = ref(0);
+const accountPrice = ref(0);
 const billingItems = ref([]);
 const billingHeaders = ref([
   { text: "Name", value: "name" },
   { text: "Unit name", value: "unit" },
   { text: "Price per unit", value: "price" },
+  { text: "Account price per unit", value: "accountPrice" },
   { text: "Unit quantity", value: "quantity" },
   { text: "Payment term", value: "kind" },
   { text: "Billing period", value: "period" },
+  { text: "Total account price", value: "totalAccount" },
   { text: "Total price", value: "total" },
 ]);
 
@@ -164,15 +197,15 @@ const filtredPlans = computed(() =>
 );
 const billingPlan = computed(() => template.value.billingPlan);
 const totalPrice = computed(() =>
-  Object.keys(totalPrices.value || {}).reduce(
-    (acc, key) => acc + totalPrices.value[key],
-    0
-  )
+  Object.keys(totalPrices.value || {})
+    .reduce((acc, key) => acc + totalPrices.value[key], 0)
+    .toFixed(2)
 );
 
 onMounted(() => {
   billingItems.value = getBillingItems();
   price.value = totalPrice.value;
+  fetchAccountRate(accountCurrency);
 });
 
 const totalPrices = computed(() => {
@@ -185,13 +218,24 @@ const totalPrices = computed(() => {
   return prices;
 });
 
+const totalAccountPrices = computed(() => {
+  const prices = {};
+
+  billingItems.value.forEach((i) =>
+    toAccountPrice((prices[i.name] = i.price * i.quantity || 0))
+  );
+
+  return prices;
+});
+
+const totalAccountPrice = computed(() => toAccountPrice(totalPrice.value));
 const getBillingItems = () => {
   const items = [];
 
   items.push({
     name: template.value.product,
     price: billingPlan.value.products[template.value.product]?.price,
-    key: `billingPlan.products.${template.value.product}.price`,
+    path: `billingPlan.products.${template.value.product}.price`,
     quantity: 1,
     unit: "pcs",
     kind: billingPlan.value.products[template.value.product]?.kind,
@@ -216,7 +260,7 @@ const getBillingItems = () => {
         period: addon.period,
         quantity,
         unit: "pcs",
-        key: `billingPlan.resources.${addonIndex}.price`,
+        path: `billingPlan.resources.${addonIndex}.price`,
       });
     }
   });
@@ -231,7 +275,7 @@ const getBillingItems = () => {
     items.push({
       name: driveType,
       price: drive?.price,
-      key: `billingPlan.resources.${driveIndex}.price`,
+      path: `billingPlan.resources.${driveIndex}.price`,
       kind: drive?.kind,
       quantity: template.value.resources.drive_size / 1024,
       unit: "GB",
@@ -245,10 +289,36 @@ const getBillingItems = () => {
   });
 };
 
-const updatePrice = (item, value) => {
-  item.price = +value;
-  emit("update", { key: item.key, value: +value });
+const updatePrice = (item, isAccount) => {
+  if (isAccount) {
+    emit("update", {
+      key: item.path,
+      value: fromAccountPrice(item.accountPrice),
+    });
+    billingItems.value = billingItems.value.map((p) => {
+      if (p.path === item.path) {
+        p.price = fromAccountPrice(item.accountPrice);
+      }
+      return p;
+    });
+  } else {
+    emit("update", { key: item.path, value: item.price });
+    billingItems.value = billingItems.value.map((p) => {
+      if (p.path === item.path) {
+        p.accountPrice = toAccountPrice(item.price);
+      }
+      return p;
+    });
+  }
 };
+
+watch(accountRate, () => {
+  billingItems.value = billingItems.value.map((i) => {
+    i.accountPrice = toAccountPrice(i.price);
+    return i;
+  });
+  accountPrice.value = totalAccountPrice.value;
+});
 </script>
 
 <style scoped></style>
