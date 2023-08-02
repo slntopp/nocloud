@@ -54,83 +54,8 @@
                   </v-icon>
                 </template>
                 <v-card class="pa-4" color="background-light">
-                  <v-icon
-                    @click="formatText('b', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-format-bold
-                  </v-icon>
-
-                  <v-icon
-                    @click="formatText('i', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-format-italic
-                  </v-icon>
-
-                  <v-icon
-                    @click="formatText('u', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-format-underline
-                  </v-icon>
-
-                  <v-icon
-                    @click="formatText('s', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-format-strikethrough
-                  </v-icon>
-
-                  <v-icon
-                    class="mx-1"
-                    @click="formatText('a', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-link
-                  </v-icon>
-
-                  <v-icon
-                    class="mx-1"
-                    @click="formatText('img', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-image-outline
-                  </v-icon>
-
-                  <v-dialog width="400" :ref="`color-dialog.${marker.id}`">
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-icon v-on="on" v-bind="attrs">mdi-palette</v-icon>
-                    </template>
-
-                    <v-card class="pa-2">
-                      <v-color-picker
-                        hide-mode-switch
-                        style="margin: 0 auto"
-                        mode="hexa"
-                        v-model="textColor"
-                      />
-
-                      <v-card-actions class="justify-end">
-                        <v-btn @click="formatText('color', marker.id)">
-                          Save
-                        </v-btn>
-                      </v-card-actions>
-                    </v-card>
-                  </v-dialog>
-
-                  <v-textarea
-                    label="Description"
-                    style="
-                      color: #fff;
-                      background: var(--v-background-light-base);
-                      transition: 0.3s;
-                    "
-                    :ref="`textarea_${marker.id}`"
-                    v-model="marker.extra.description"
-                  />
-
                   <v-text-field
+                    class="mt-7"
                     dense
                     label="Title"
                     v-model="marker.title"
@@ -146,18 +71,6 @@
                     label="Icon link"
                     v-model="marker.extra.link"
                   />
-
-                  <div class="d-flex justify-end">
-                    <v-switch
-                      label="Is primary"
-                      style="
-                        color: #fff;
-                        background: var(--v-background-light-base);
-                        transition: 0.3s;
-                      "
-                      v-model="marker.extra.primary"
-                    />
-                  </div>
 
                   <v-card-actions class="justify-end">
                     <v-btn @click.stop="saveAndClose(marker.id)"> Save </v-btn>
@@ -273,7 +186,7 @@ export default {
       }
     },
     onEnterHandler(id, e) {
-      const ref = this.$refs["textField_" + id][0];
+      const ref = this.$refs["textField_" + id]?.[0];
 
       this.mouseLeaveHandler(id);
       ref.blur();
@@ -300,7 +213,7 @@ export default {
       let error = 0;
       this.markers.forEach((el) => {
         if (el.title && !el.title.trim()) {
-          const ref = this.$refs["textField_" + el.id][0];
+          const ref = this.$refs["textField_" + el.id]?.[0];
           this.mouseEnterHandler(el.id);
           setTimeout(() => {
             ref?.focus();
