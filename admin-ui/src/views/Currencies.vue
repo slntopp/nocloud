@@ -42,7 +42,7 @@
           </v-row>
         </v-card>
       </v-dialog>
-      <confirm-dialog @confirm="deleteSelectedCurrencies">
+      <confirm-dialog :disabled="selected.length < 1" @confirm="deleteSelectedCurrencies">
         <v-btn
           class="mr-2"
           color="background-light"
