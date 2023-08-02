@@ -414,7 +414,10 @@ export default {
         if (this.multiSelect) {
           this.markers.push({
             ...marker,
-            extra: { region: this.region },
+            extra: {
+              region: this.region,
+              country: target.id,
+            },
           });
         } else {
           this.markers = [marker];
