@@ -74,7 +74,6 @@
           v-model="item.accountPrice"
           @input="updatePrice(item, true)"
           append-icon="mdi-pencil"
-          :suffix="accountCurrency"
         />
       </template>
       <template v-slot:[`item.quantity`]="{ item }">
@@ -93,10 +92,11 @@
           <td></td>
           <td></td>
           <td></td>
+          <td></td>
           <td>
             {{ billingItems.find((i) => i.name === template.product)?.period }}
           </td>
-          <td>{{ totalAccountPrice }}</td>
+          <td>{{ [totalAccountPrice, accountCurrency].join(" ") }}</td>
           <td>{{ totalPrice }}</td>
         </tr>
       </template>

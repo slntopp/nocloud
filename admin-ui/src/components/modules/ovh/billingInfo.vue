@@ -58,7 +58,6 @@
           v-model="item.price"
           @change="onUpdatePrice(item, false)"
           type="number"
-          :suffix="accountCurrency"
           append-icon="mdi-pencil"
         ></v-text-field>
       </template>
@@ -67,7 +66,6 @@
           v-model="item.accountPrice"
           @change="onUpdatePrice(item, true)"
           type="number"
-          :suffix="accountCurrency"
           append-icon="mdi-pencil"
         ></v-text-field>
       </template>
@@ -88,7 +86,7 @@
               {{ totalNewPrice?.toFixed(2) }}
             </div>
           </td>
-          <td>{{ accountTotalNewPrice }}</td>
+          <td>{{ [accountTotalNewPrice, accountCurrency].join(" ") }}</td>
         </tr>
       </template>
     </nocloud-table>
