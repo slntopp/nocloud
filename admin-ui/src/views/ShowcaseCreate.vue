@@ -54,6 +54,7 @@
         </v-col>
         <v-col cols="6">
           <locations-autocomplete
+            label="Locations"
             :locations="filtredLocations"
             v-model="showcase.locations"
           />
@@ -109,7 +110,13 @@ const locations = computed(() => {
   );
   const locations = [];
   sps.forEach((sp) => {
-    locations.push(...sp.locations.map((l) => ({ ...l, sp: sp.title,id:getNewLocationKey(l)})));
+    locations.push(
+      ...sp.locations.map((l) => ({
+        ...l,
+        sp: sp.title,
+        id: getNewLocationKey(l),
+      }))
+    );
   });
   return locations;
 });
@@ -124,14 +131,14 @@ const locationsTypes = computed(() => {
 watch(locationsTypes, () => {
   if (!isEdit.value) {
     allowedTypes.value = locationsTypes.value;
-  }else if (allowedTypes.value.length === 0) {
+  } else if (allowedTypes.value.length === 0) {
     allowedTypes.value = locationsTypes.value;
   }
 });
 
 watch(realShowcase, () => {
   showcase.value = realShowcase.value;
-  console.log(showcase.value,locations.value)
+  console.log(showcase.value, locations.value);
   allowedTypes.value = [
     ...new Set(showcase.value.locations.map((l) => l.type)),
   ];
