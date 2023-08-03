@@ -112,7 +112,10 @@ const setProduct = () => {
   if (template.value.type === "ovh") {
     product.value =
       template.value.config.duration + " " + template.value.config.planCode;
-  } else {
+  } else if (
+    template.value.type === "ione" ||
+    template.value.type === "virtual"
+  ) {
     product.value = template.value.product;
   }
 };
@@ -126,9 +129,9 @@ const tarrifs = computed(() => {
   const tarrifs = [];
   Object.keys(plan.value?.products || {}).forEach((key) => {
     if (
-      plan.value.products[key].price > instanceTarrifPrice.value ||
+      plan.value.products[key]?.price > instanceTarrifPrice.value ||
       (plan.value.uuid === template.value.billingPlan.uuid &&
-        instanceTarrifPrice.value === plan.value.products[key].price)
+        instanceTarrifPrice.value === plan.value.products[key]?.price)
     )
       tarrifs.push({ ...plan.value.products[key], key });
   });
@@ -144,7 +147,7 @@ const avaliablePlans = computed(() => {
 
   copyPlans.forEach((p) => {
     const keys = Object.keys(p.products).filter(
-      (key) => p.products[key].price > instanceTarrifPrice.value
+      (key) => p.products[key]?.price > instanceTarrifPrice.value
     );
     if (keys.length > 0) {
       avaliablePlans.push(p);
@@ -157,12 +160,12 @@ const avaliablePlans = computed(() => {
 });
 
 const instanceTarrifPrice = computed(() => {
-  if (template.value.type === "ione") {
+  if (template.value.type === "ione" || template.value.type === "virtual") {
     return fullProduct.value.price;
   }
   return template.value.billingPlan.products[
     template.value.config.duration + " " + template.value.config.planCode
-  ].price;
+  ]?.price;
 });
 
 const isChangeBtnDisabled = computed(() => {

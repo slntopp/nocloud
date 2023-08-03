@@ -6,6 +6,8 @@
           readonly
           label="price model"
           :value="template.billingPlan.title"
+          @click:append="priceModelDialog = true"
+          append-icon="mdi-pencil"
         />
       </v-col>
       <v-col>
@@ -13,6 +15,8 @@
           readonly
           label="Tarif (product plan)"
           :value="template.product"
+          @click:append="priceModelDialog = true"
+          append-icon="mdi-pencil"
         />
       </v-col>
       <v-col>
@@ -47,6 +51,13 @@
       v-model="changeDatesDialog"
       @refresh="emit('refresh')"
     />
+    <edit-price-model
+      v-model="priceModelDialog"
+      :template="template"
+      :plans="filtredPlans"
+      @refresh="emit('refresh')"
+      :service="service"
+    />
   </div>
 </template>
 
@@ -54,13 +65,15 @@
 import { computed, defineProps, toRefs, ref } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import ChangeMonitorings from "@/components/dialogs/changeMonitorings.vue";
+import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh"]);
 
-const { template } = toRefs(props);
+const { template, plans, service } = toRefs(props);
 
 const changeDatesDialog = ref(false);
+const priceModelDialog = ref(false);
 
 const date = computed(() =>
   formatSecondsToDate(template.value?.data?.last_monitoring)
@@ -70,6 +83,10 @@ const isMonitoringsEmpty = computed(() => date.value === "-");
 const price = computed(() => {
   return template.value.billingPlan.products[template.value.product]?.price;
 });
+
+const filtredPlans = computed(() =>
+  plans.value.filter((p) => p.type === "virtual")
+);
 </script>
 
 <style scoped></style>
