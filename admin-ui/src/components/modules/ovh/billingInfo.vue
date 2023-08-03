@@ -31,6 +31,7 @@
           readonly
           label="Account price instance total"
           :value="accountTotalNewPrice"
+          :suffix="accountCurrency"
         />
       </v-col>
       <v-col>
@@ -45,7 +46,6 @@
       </v-col>
     </v-row>
     <nocloud-table
-      table-name="ovh-billing"
       hide-default-footer
       sort-by="index"
       item-key="key"
@@ -86,8 +86,7 @@
               {{ totalNewPrice?.toFixed(2) }}
             </div>
           </td>
-          <td></td>
-          <td>{{ accountTotalNewPrice }}</td>
+          <td>{{ [accountTotalNewPrice, accountCurrency].join(" ") }}</td>
         </tr>
       </template>
     </nocloud-table>
@@ -116,44 +115,40 @@ import { useStore } from "@/store";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useRate from "@/hooks/useRate";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
+import useAccountConverter from "@/hooks/useAccountConverter";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);
 
+const { template, plans } = toRefs(props);
+
 const store = useStore();
 const rate = useRate();
+const {
+  toAccountPrice,
+  fromAccountPrice,
+  fetchAccountRate,
+  accountCurrency,
+  accountRate,
+} = useAccountConverter(template.value);
 
-const { template, plans } = toRefs(props);
 const pricesItems = ref([]);
 const basePrices = ref({});
 const pricesHeaders = ref([
   { text: "Name", value: "title" },
-  { text: "Base price", value: "basePrice" },
-  { text: "Price", value: "price" },
-  { text: "Account price", value: "accountPrice" },
   { text: "Billing period", value: "period" },
+  { text: "Base price", value: "basePrice" },
+  { text: "Account price", value: "accountPrice" },
+  { text: "Price", value: "price" },
 ]);
 const totalNewPrice = ref(0);
 const isBasePricesLoading = ref(false);
 const priceModelDialog = ref(false);
-const accountRate = ref(0);
 
-const namespace = computed(() =>
-  store.getters["namespaces/all"]?.find(
-    (n) => n.uuid == template.value.access.namespace
-  )
-);
 const accountTotalNewPrice = computed(() =>
   toAccountPrice(totalNewPrice.value)
 );
-const account = computed(() => {
-  if (!namespace.value) {
-    return;
-  }
-  return store.getters["accounts/all"]?.find(
-    (a) => a?.uuid == namespace.value.access.namespace
-  );
-});
+
 const setTotalNewPrice = () => {
   totalNewPrice.value = +pricesItems.value
     .reduce((acc, i) => +i.price + acc, 0)
@@ -399,32 +394,16 @@ const getBasePrices = async () => {
   }
 };
 
-const defaultCurrency = computed(() => {
-  return store.getters["currencies/default"];
-});
-
-const toAccountPrice = (price) => {
-  return accountRate.value ? (price / accountRate.value).toFixed(2) : 0;
-};
-const fromAccountPrice = (price) => {
-  return accountRate.value ? (price * accountRate.value).toFixed(2) : 0;
-};
-
 onMounted(() => {
   initPrices();
   getBasePrices();
-  if (account.value.currency) {
-    api
-      .get(
-        `/billing/currencies/rates/${account.value.currency}/${defaultCurrency.value}`
-      )
-      .then((res) => {
-        accountRate.value = res.rate;
-        pricesItems.value = pricesItems.value.map((i) => {
-          i.accountPrice = toAccountPrice(i.price);
-          return i;
-        });
+  if (accountCurrency.value) {
+    fetchAccountRate(accountCurrency.value).then(() => {
+      pricesItems.value = pricesItems.value.map((i) => {
+        i.accountPrice = toAccountPrice(i.price);
+        return i;
       });
+    });
   }
 });
 </script>

@@ -2,6 +2,7 @@
   <div class="pa-10">
     <v-row v-if="promo.main">
       <locations-autocomplete
+        label="Default location"
         :solo="true"
         :locations="template.locations"
         v-model="promo.main.default"
