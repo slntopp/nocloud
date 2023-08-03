@@ -28,6 +28,7 @@
     :key="anIncreasingNumber"
     :server-items-length="serverItemsLength"
     :options="options"
+    :footer-props="{ 'items-per-page-options': itemsPerPageOptions }"
     @update:options="$emit('update:options', $event)"
     @update:items-per-page="saveItemsPerPage"
   >
@@ -303,6 +304,7 @@ export default {
     },
     filtersItems: { type: Object },
     filtersValues: { type: Object },
+    itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, -1] },
   },
   data() {
     return {
