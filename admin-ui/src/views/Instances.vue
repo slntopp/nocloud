@@ -98,7 +98,10 @@
       </v-card>
     </v-menu>
 
-    <confirm-dialog @confirm="deleteSelectedInstances">
+    <confirm-dialog
+      :disabled="selected.length < 1"
+      @confirm="deleteSelectedInstances"
+    >
       <v-btn
         class="mr-2"
         color="background-light"

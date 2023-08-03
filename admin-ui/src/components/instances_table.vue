@@ -10,10 +10,7 @@
     :footer-error="fetchError"
     @input="(value) => $emit('input', value)"
     :default-filtres="defaultFiltres"
-    :filters-items="filterItems"
-    :filters-values="selectedFilters"
     :show-select="showSelect"
-    @input:filter="selectedFilters[$event.key] = $event.value"
   >
     <template v-slot:[`item.id`]="{ index }">
       {{ index + 1 }}
@@ -128,17 +125,19 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
-import {getOvhPrice, getState} from "@/functions";
+import { getOvhPrice, getState } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
+import searchMixin from "@/mixins/search";
 
 export default {
   name: "instances-table",
-  components: {LoginInAccountIcon, nocloudTable, instanceIpMenu},
+  components: { LoginInAccountIcon, nocloudTable, instanceIpMenu },
+  mixins: [searchMixin],
   props: {
-    value: {type: Array, required: true},
-    selected: {type: Object, default: null},
-    showSelect: {type: Boolean, default: true},
-    items: {type: Array, default: () => []},
+    value: { type: Array, required: true },
+    selected: { type: Object, default: null },
+    showSelect: { type: Boolean, default: true },
+    items: { type: Array, default: () => [] },
   },
   data: () => ({
     fetchError: "",
@@ -157,24 +156,13 @@ export default {
       "period",
       "date",
     ],
-    selectedFilters: {
-      state: [],
-      "billingPlan.title": [],
-      service: [],
-      type: [],
-      sp: [],
-      access: [],
-      "access.namespace": [],
-      period: [],
-      product: [],
-    },
     instancesTypes: [],
   }),
   mounted() {
     const types = require.context(
-        "@/components/modules/",
-        true,
-        /serviceCreate\.vue$/
+      "@/components/modules/",
+      true,
+      /serviceCreate\.vue$/
     );
     types.keys().forEach((key) => {
       const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i);
@@ -244,17 +232,17 @@ export default {
           return "blue-grey darken-2";
       }
     },
-    getAccount({access}) {
+    getAccount({ access }) {
       const {
-        access: {namespace},
-      } = this.namespaces.find(({uuid}) => uuid === access.namespace) ?? {
+        access: { namespace },
+      } = this.namespaces.find(({ uuid }) => uuid === access.namespace) ?? {
         access: {},
       };
 
-      return this.accounts.find(({uuid}) => uuid === namespace) ?? {};
+      return this.accounts.find(({ uuid }) => uuid === namespace) ?? {};
     },
     getEmail(inst) {
-      const {email} = this.getAccount(inst);
+      const { email } = this.getAccount(inst);
 
       return email ?? "-";
     },
@@ -270,22 +258,22 @@ export default {
         }
         case "ione": {
           const initialPrice =
-              inst.billingPlan.products[inst.product]?.price ?? 0;
+            inst.billingPlan.products[inst.product]?.price ?? 0;
 
           return +inst.billingPlan.resources
-              .reduce((prev, curr) => {
-                if (
-                    curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
-                ) {
-                  return prev + (curr.price * inst.resources.drive_size) / 1024;
-                } else if (curr.key === "ram") {
-                  return prev + (curr.price * inst.resources.ram) / 1024;
-                } else if (inst.resources[curr.key]) {
-                  return prev + curr.price * inst.resources[curr.key];
-                }
-                return prev;
-              }, initialPrice)
-              ?.toFixed(2);
+            .reduce((prev, curr) => {
+              if (
+                curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
+              ) {
+                return prev + (curr.price * inst.resources.drive_size) / 1024;
+              } else if (curr.key === "ram") {
+                return prev + (curr.price * inst.resources.ram) / 1024;
+              } else if (inst.resources[curr.key]) {
+                return prev + curr.price * inst.resources[curr.key];
+              }
+              return prev;
+            }, initialPrice)
+            ?.toFixed(2);
         }
       }
     },
@@ -299,7 +287,7 @@ export default {
       }
 
       const period =
-          inst.type === "ovh" ? inst.config.duration : this.getIonePeriod(inst);
+        inst.type === "ovh" ? inst.config.duration : this.getIonePeriod(inst);
 
       switch (period) {
         case "P1H":
@@ -324,7 +312,7 @@ export default {
       const month = day * 30;
       const year = day * 365;
 
-      Object.values(inst.billingPlan.products ?? {}).forEach(({period}) => {
+      Object.values(inst.billingPlan.products ?? {}).forEach(({ period }) => {
         if (inst.billingPlan.kind === "DYNAMIC") value.add("P1H");
         if (inst.billingPlan.kind !== "STATIC") return;
 
@@ -344,23 +332,23 @@ export default {
       if (inst.type === "ione") return this.date(inst.data.last_monitoring);
       return "unknown";
     },
-    getService({service}) {
+    getService({ service }) {
       return (
-          this.services.find(({uuid}) => service === uuid)?.title ?? service
+        this.services.find(({ uuid }) => service === uuid)?.title ?? service
       );
     },
-    getServiceProvider({sp}) {
-      return this.sp.find(({uuid}) => uuid === sp)?.title;
+    getServiceProvider({ sp }) {
+      return this.sp.find(({ uuid }) => uuid === sp)?.title;
     },
     getOSName(id, sp) {
       if (!id) return;
-      return this.sp.find(({uuid}) => uuid === sp)?.publicData.templates[id]
-          .name;
+      return this.sp.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
+        .name;
     },
     getTariff(item) {
       const {
         billingPlan,
-        config: {planCode, duration},
+        config: { planCode, duration },
       } = item;
       const key = `${duration} ${planCode}`;
 
@@ -374,6 +362,12 @@ export default {
     },
   },
   computed: {
+    customParams() {
+      return this.$store.getters["appSearch/customParams"];
+    },
+    variants() {
+      return this.$store.getters["appSearch/variants"];
+    },
     services() {
       return this.$store.getters["services/all"];
     },
@@ -386,8 +380,13 @@ export default {
         "state.meta.networking.public",
       ];
       const instances = this.items.filter((i) => {
-        for (const key of Object.keys(this.selectedFilters)) {
-          if (this.selectedFilters[key].length === 0) {
+        for (const key of Object.keys(this.customParams)) {
+          if (!this.variants[key].isArray) {
+            continue;
+          }
+          const filter = this.customParams[key]?.map((c) => c.value);
+
+          if (filter.length === 0) {
             continue;
           }
 
@@ -396,27 +395,29 @@ export default {
             key.split(".").forEach((subkey) => {
               val = val[subkey];
             });
-            if (!this.selectedFilters[key].includes(val)) {
+            if (!filter.includes(val)) {
               return false;
             }
-          } else if (
-              !this.selectedFilters[key].includes(this.getValue(key, i))
-          ) {
+          } else if (!filter.includes(this.getValue(key, i))) {
             return false;
           }
         }
         return true;
       });
-      if (!this.searchParam) {
+      const searchParam = this.customParams.searchParam?.value?.toLowerCase();
+      if (!searchParam) {
         return instances;
       }
 
       return instances.filter((item) => {
-        const dynamicKeys = []
-        if (item.type === 'ovh') {
-          dynamicKeys.push(`data.${item.config.type}Name`, `data.${item.config.type}Id`)
+        const dynamicKeys = [];
+        if (item.type === "ovh") {
+          dynamicKeys.push(
+            `data.${item.config.type}Name`,
+            `data.${item.config.type}Id`
+          );
         }
-        const searchKeysFull = searchKeys.concat(dynamicKeys)
+        const searchKeysFull = searchKeys.concat(dynamicKeys);
         return searchKeysFull.some((key) => {
           let tempItem = item;
           if (this.headersGetters[key]) {
@@ -425,10 +426,10 @@ export default {
             key.split(".").forEach((subkey) => (tempItem = tempItem?.[subkey]));
           }
           if (Array.isArray(tempItem)) {
-            return tempItem.some((i) => i.startsWith(this.searchParam));
+            return tempItem.some((i) => i.startsWith(searchParam));
           }
 
-          return tempItem?.toString()?.startsWith(this.searchParam);
+          return tempItem?.toString()?.startsWith(searchParam);
         });
       });
     },
@@ -443,34 +444,33 @@ export default {
     },
     headers() {
       const headers = [
-        {text: "ID", value: "id"},
-        {text: "Title", value: "title"},
-        {text: "Service", value: "service", customFilter: true},
-        {text: "Account", value: "access", customFilter: true},
+        { text: "ID", value: "id" },
+        { text: "Title", value: "title" },
+        { text: "Service", value: "service" },
+        { text: "Account", value: "access" },
         {
           text: "Group (NameSpace)",
           value: "access.namespace",
-          customFilter: true,
         },
-        {text: "Due date", value: "dueDate"},
-        {text: "Status", value: "state", customFilter: true},
-        {text: "Tariff", value: "product", customFilter: true},
-        {text: "Service provider", value: "sp", customFilter: true},
-        {text: "Type", value: "type", customFilter: true},
-        {text: "Price", value: "price"},
-        {text: "Period", value: "period", customFilter: true},
-        {text: "Email", value: "email"},
-        {text: "Date", value: "date"},
-        {text: "UUID", value: "uuid"},
-        {text: "Price model", value: "billingPlan.title", customFilter: true},
-        {text: "IP", value: "state.meta.networking"},
-        {text: "CPU", value: "resources.cpu"},
-        {text: "RAM", value: "resources.ram"},
-        {text: "Disk", value: "resources.drive_size"},
-        {text: "OS", value: "config.template_id"},
-        {text: "Domain", value: "resources.domain"},
-        {text: "DCV", value: "resources.dcv"},
-        {text: "Approver email", value: "resources.approver_email"},
+        { text: "Due date", value: "dueDate" },
+        { text: "Status", value: "state" },
+        { text: "Tariff", value: "product" },
+        { text: "Service provider", value: "sp" },
+        { text: "Type", value: "type" },
+        { text: "Price", value: "price" },
+        { text: "Period", value: "period" },
+        { text: "Email", value: "email" },
+        { text: "Date", value: "date" },
+        { text: "UUID", value: "uuid" },
+        { text: "Price model", value: "billingPlan.title" },
+        { text: "IP", value: "state.meta.networking" },
+        { text: "CPU", value: "resources.cpu" },
+        { text: "RAM", value: "resources.ram" },
+        { text: "Disk", value: "resources.drive_size" },
+        { text: "OS", value: "config.template_id" },
+        { text: "Domain", value: "resources.domain" },
+        { text: "DCV", value: "resources.dcv" },
+        { text: "Approver email", value: "resources.approver_email" },
       ];
       return headers;
     },
@@ -489,9 +489,9 @@ export default {
         "access.namespace": (item) => this.getNamespace(item.access.namespace),
         "resources.ram": (item) => +(item?.resources?.ram / 1024).toFixed(2),
         "resources.drive_size": (item) =>
-            +(item?.resources?.drive_size / 1024).toFixed(2),
+          +(item?.resources?.drive_size / 1024).toFixed(2),
         "config.template_id": (item) =>
-            this.getOSName(item?.config?.template_id, item.sp),
+          this.getOSName(item?.config?.template_id, item.sp),
       };
     },
     isLoading() {
@@ -503,60 +503,127 @@ export default {
     currency() {
       return this.$store.getters["currencies/default"];
     },
-    filterItems() {
-      return {
-        state: ["RUNNING", "LCM_INIT", "STOPPED", "SUSPENDED", "UNKNOWN"],
-        type: this.instancesTypes,
-        "billingPlan.title": this.priceModelItems,
-        service: this.serviceItems,
-        sp: this.spItems,
-        period: this.periodItems,
-        access: this.accountsItems,
-        "access.namespace": this.namespacesItems,
-        product: this.productItems,
-      };
-    },
     priceModelItems() {
-      return new Set(this.items.map((i) => i.billingPlan?.title));
+      return [...new Set(this.items.map((i) => i.billingPlan?.title))];
     },
     serviceItems() {
-      return new Set([
-        ...this.$store.getters["services/all"].map((i) => i.title),
-      ]);
+      return this.$store.getters["services/all"].map((i) => ({
+        title: i.title,
+        uuid: i.title,
+      }));
     },
     spItems() {
       const instancesSP = this.items.map((i) => i.sp);
 
-      return new Set(
+      return [
+        ...new Set(
           this.sp
-              .filter((sp) => instancesSP.includes(sp.uuid))
-              .map((sp) => sp.title)
-      );
+            .filter((sp) => instancesSP.includes(sp.uuid))
+            .map((sp) => sp.title)
+        ),
+      ].map((sp) => ({
+        title: sp,
+        uuid: sp,
+      }));
     },
     periodItems() {
-      const periods = this.items.map((i) => this.getValue("period", i));
-
-      return new Set(periods);
+      return [
+        ...new Set(this.items.map((i) => this.getValue("period", i))),
+      ].map((p) => ({
+        title: p,
+        uuid: p,
+      }));
     },
     productItems() {
-      const products = this.items.map((i) => this.getValue("product", i));
-
-      return new Set(products);
+      return this.items
+        .map((i) => this.getValue("product", i))
+        .map((p) => ({
+          title: p,
+          uuid: p,
+        }));
     },
     accountsItems() {
-      const accounts = this.accounts.map((a) => a.title);
-
-      return new Set(accounts);
+      return this.accounts.map((a) => ({
+        title: a.title,
+        uuid: a.title,
+      }));
     },
     namespacesItems() {
-      const namespaces = this.namespaces.map((n) => n.title);
-
-      return new Set(namespaces);
+      return this.namespaces.map((n) => ({
+        title: n.title,
+        uuid: n.title,
+      }));
     },
   },
   watch: {
     instances() {
       this.fetchError = "";
+    },
+    isLoading() {
+      if (!this.isLoading) {
+        this.$store.commit("appSearch/setVariants", {
+          service: {
+            items: this.serviceItems,
+            title: "Service",
+            key: "service",
+            isArray: true,
+          },
+          period: {
+            items: this.periodItems,
+            title: "Period",
+            key: "period",
+            isArray: true,
+          },
+          sp: {
+            items: this.spItems,
+            title: "Service provider",
+            key: "sp",
+            isArray: true,
+          },
+          access: {
+            items: this.accountsItems,
+            title: "Account",
+            key: "access",
+            isArray: true,
+          },
+          "access.namespace": {
+            items: this.namespacesItems,
+            title: "Namespace",
+            key: "access.namespace",
+            isArray: true,
+          },
+          product: {
+            items: this.productItems,
+            title: "Product",
+            key: "product",
+            isArray: true,
+          },
+          state: {
+            items: [
+              { uuid: "RUNNING", title: "RUNNING" },
+              { uuid: "STOPPED", title: "STOPPED" },
+              { uuid: "LCM_INIT", title: "LCM_INIT" },
+              { uuid: "SUSPENDED", title: "SUSPENDED" },
+              { uuid: "UNKNOWN", title: "UNKNOWN" },
+            ],
+            isArray: true,
+            title: "State",
+            key: "state",
+          },
+          type: {
+            title: "Type",
+            key: "type",
+            items: this.instancesTypes.map((i) => ({ title: i, uuid: i })),
+            isArray: true,
+          },
+          "billingPlan.title": {
+            title: "Billing plan title",
+            key: "billingPlan.title",
+            items: this.priceModelItems,
+            isArray: true,
+          },
+        });
+      }
     },
   },
 };
