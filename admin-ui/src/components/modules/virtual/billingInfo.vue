@@ -25,6 +25,14 @@
       <v-col>
         <v-text-field
           readonly
+          label="Account price instance total"
+          :value="accountPrice"
+          :suffix="accountCurrency"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          readonly
           label="Date (create)"
           :value="template.data.creation"
         />
@@ -62,18 +70,23 @@
 </template>
 
 <script setup>
-import { computed, defineProps, toRefs, ref } from "vue";
+import { computed, defineProps, toRefs, ref, watch, onMounted } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import ChangeMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
+import useAccountConverter from "@/hooks/useAccountConverter";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh"]);
 
 const { template, plans, service } = toRefs(props);
 
+const { fetchAccountRate, accountCurrency, toAccountPrice, accountRate } =
+  useAccountConverter(template.value);
+
 const changeDatesDialog = ref(false);
 const priceModelDialog = ref(false);
+const accountPrice = ref(0);
 
 const date = computed(() =>
   formatSecondsToDate(template.value?.data?.last_monitoring)
@@ -87,6 +100,18 @@ const price = computed(() => {
 const filtredPlans = computed(() =>
   plans.value.filter((p) => p.type === "virtual")
 );
+
+const totalAccountPrice = computed(() => {
+  return toAccountPrice(price.value);
+});
+
+onMounted(() => {
+  fetchAccountRate();
+});
+
+watch(accountRate, () => {
+  accountPrice.value = totalAccountPrice.value;
+});
 </script>
 
 <style scoped></style>
