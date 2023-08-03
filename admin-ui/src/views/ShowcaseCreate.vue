@@ -6,7 +6,7 @@
         <v-col cols="6">
           <v-text-field
             :rules="[requiredRule]"
-            v-model="showcase.title"
+            v-model="showcase.newTitle"
             label="Title"
           />
         </v-col>
@@ -91,6 +91,7 @@ const router = useRouter();
 const showcase = ref({
   primary: false,
   title: "",
+  newTitle: "",
   icon: "",
   servicesProviders: [],
   plans: [],
@@ -138,7 +139,7 @@ watch(locationsTypes, () => {
 
 watch(realShowcase, () => {
   showcase.value = realShowcase.value;
-  console.log(showcase.value, locations.value);
+  showcase.value.newTitle = showcase.value.title;
   allowedTypes.value = [
     ...new Set(showcase.value.locations.map((l) => l.type)),
   ];
@@ -163,16 +164,20 @@ onMounted(async () => {
 
 const save = async () => {
   try {
-    isSaveLoading.value = true;
     const data = {
       ...showcase.value,
-      locations: showcase.value.locations
-        .filter((l) => filtredLocations.value.find((l2) => l2.id === l.id))
-        .map((l) => ({
-          ...l,
-          sp: undefined,
-        })),
     };
+    data.locations = data.locations
+      .filter((l) => filtredLocations.value.find((l2) => l2.id === l.id))
+      .map((l) => ({
+        ...l,
+        id: l.id.replace(data.title.replaceAll(' ','_'), data.newTitle.replaceAll(' ','_')),
+        sp: undefined,
+      }));
+    data.title = data.newTitle;
+    delete data.newTitle;
+    
+    isSaveLoading.value = true;
     if (isEdit.value) {
       await api.showcases.update(data);
     } else {
