@@ -12,6 +12,10 @@ const useRate = ({ currency } = { currency: "PLN" }) => {
   });
 
   onMounted(() => {
+    if (currency === defaultCurrency.value) {
+      rate.value = 1;
+      return;
+    }
     api
       .get(`/billing/currencies/rates/${currency}/${defaultCurrency.value}`)
       .then((res) => {

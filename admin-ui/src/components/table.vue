@@ -8,7 +8,7 @@
     loading-text="Loading... Please wait"
     color="background-light"
     :items="items"
-    :show-select="true"
+    :show-select="!!tableName || showSelect"
     :value="selected"
     @input="handleSelect"
     :hide-default-footer="hideDefaultFooter"
@@ -28,6 +28,7 @@
     :key="anIncreasingNumber"
     :server-items-length="serverItemsLength"
     :options="options"
+    :footer-props="{ 'items-per-page-options': itemsPerPageOptions }"
     @update:options="$emit('update:options', $event)"
     @update:items-per-page="saveItemsPerPage"
   >
@@ -143,7 +144,11 @@
           >
             <v-card-title>Table settings</v-card-title>
             <v-row class="pa-5">
-              <v-col v-for="header in headers.filter(h=>h.text)" :key="header.value" cols="4">
+              <v-col
+                v-for="header in headers.filter((h) => h.text)"
+                :key="header.value"
+                cols="4"
+              >
                 <v-checkbox
                   @click.stop
                   :label="header.text"
@@ -299,6 +304,7 @@ export default {
     },
     filtersItems: { type: Object },
     filtersValues: { type: Object },
+    itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, -1] },
   },
   data() {
     return {

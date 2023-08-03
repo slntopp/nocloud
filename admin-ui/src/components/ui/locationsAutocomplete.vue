@@ -3,7 +3,7 @@
     item-value="id"
     item-text="title"
     :multiple="!solo"
-    label="Locations"
+    :label="label"
     :return-object="!solo"
     :items="locations"
     :value="value"
@@ -21,10 +21,10 @@
 <script setup>
 import { toRefs } from "vue";
 
-const props = defineProps(["locations", "value", "solo"]);
+const props = defineProps(["locations", "value", "solo", "label"]);
 const emits = defineEmits("input");
 
-const { value, locations } = toRefs(props);
+const { value, locations, label } = toRefs(props);
 </script>
 
 <style scoped></style>
