@@ -228,6 +228,10 @@ export default {
           return "warning";
         case "UNKNOWN":
           return "error";
+        case "OPERATION":
+          return "yellow darken-2";
+        case "PENDING":
+          return "blue";
         default:
           return "blue-grey darken-2";
       }
