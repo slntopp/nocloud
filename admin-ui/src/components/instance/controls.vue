@@ -303,6 +303,7 @@ export default {
         : this.template.type;
 
       switch (type) {
+        case 'virtual':
         case "ione": {
           return (item) =>
             `IND_${this.sp.title}_${
