@@ -433,7 +433,7 @@ export default {
             return tempItem.some((i) => i.startsWith(searchParam));
           }
 
-          return tempItem?.toString()?.startsWith(searchParam);
+          return tempItem?.toString().toLowerCase()?.startsWith(searchParam);
         });
       });
     },
@@ -508,7 +508,14 @@ export default {
       return this.$store.getters["currencies/default"];
     },
     priceModelItems() {
-      return [...new Set(this.items.map((i) => i.billingPlan?.title))];
+      return [
+        ...new Set(
+          this.items.map((i) => ({
+            uuid: i.billingPlan?.title,
+            title: i.billingPlan?.title,
+          }))
+        ),
+      ];
     },
     serviceItems() {
       return this.$store.getters["services/all"].map((i) => ({
@@ -558,76 +565,83 @@ export default {
         uuid: n.title,
       }));
     },
+    instancesTypesItems() {
+      return this.instancesTypes.map((i) => ({ title: i, uuid: i }));
+    },
+    searchItems() {
+      return {
+        service: {
+          items: this.serviceItems,
+          title: "Service",
+          key: "service",
+          isArray: true,
+        },
+        period: {
+          items: this.periodItems,
+          title: "Period",
+          key: "period",
+          isArray: true,
+        },
+        sp: {
+          items: this.spItems,
+          title: "Service provider",
+          key: "sp",
+          isArray: true,
+        },
+        access: {
+          items: this.accountsItems,
+          title: "Account",
+          key: "access",
+          isArray: true,
+        },
+        "access.namespace": {
+          items: this.namespacesItems,
+          title: "Namespace",
+          key: "access.namespace",
+          isArray: true,
+        },
+        product: {
+          items: this.productItems,
+          title: "Product",
+          key: "product",
+          isArray: true,
+        },
+        state: {
+          items: [
+            { uuid: "RUNNING", title: "RUNNING" },
+            { uuid: "STOPPED", title: "STOPPED" },
+            { uuid: "LCM_INIT", title: "LCM_INIT" },
+            { uuid: "SUSPENDED", title: "SUSPENDED" },
+            { uuid: "UNKNOWN", title: "UNKNOWN" },
+          ],
+          isArray: true,
+          title: "State",
+          key: "state",
+        },
+        type: {
+          title: "Type",
+          key: "type",
+          items: this.instancesTypesItems,
+          isArray: true,
+        },
+        "billingPlan.title": {
+          title: "Billing plan",
+          key: "billingPlan.title",
+          items: this.priceModelItems,
+          isArray: true,
+        },
+      };
+    },
   },
   watch: {
     instances() {
       this.fetchError = "";
     },
-    isLoading() {
-      if (!this.isLoading) {
-        this.$store.commit("appSearch/setVariants", {
-          service: {
-            items: this.serviceItems,
-            title: "Service",
-            key: "service",
-            isArray: true,
-          },
-          period: {
-            items: this.periodItems,
-            title: "Period",
-            key: "period",
-            isArray: true,
-          },
-          sp: {
-            items: this.spItems,
-            title: "Service provider",
-            key: "sp",
-            isArray: true,
-          },
-          access: {
-            items: this.accountsItems,
-            title: "Account",
-            key: "access",
-            isArray: true,
-          },
-          "access.namespace": {
-            items: this.namespacesItems,
-            title: "Namespace",
-            key: "access.namespace",
-            isArray: true,
-          },
-          product: {
-            items: this.productItems,
-            title: "Product",
-            key: "product",
-            isArray: true,
-          },
-          state: {
-            items: [
-              { uuid: "RUNNING", title: "RUNNING" },
-              { uuid: "STOPPED", title: "STOPPED" },
-              { uuid: "LCM_INIT", title: "LCM_INIT" },
-              { uuid: "SUSPENDED", title: "SUSPENDED" },
-              { uuid: "UNKNOWN", title: "UNKNOWN" },
-            ],
-            isArray: true,
-            title: "State",
-            key: "state",
-          },
-          type: {
-            title: "Type",
-            key: "type",
-            items: this.instancesTypes.map((i) => ({ title: i, uuid: i })),
-            isArray: true,
-          },
-          "billingPlan.title": {
-            title: "Billing plan title",
-            key: "billingPlan.title",
-            items: this.priceModelItems,
-            isArray: true,
-          },
-        });
-      }
+    searchItems: {
+      deep: true,
+      handler() {
+        this.$store.commit("appSearch/setVariants", this.searchItems);
+      },
     },
   },
 };
