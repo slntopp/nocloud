@@ -206,6 +206,8 @@ github.com/slntopp/nocloud-proto v0.0.0-20230808122014-f0aa96e794fc h1:h9s216+IV
 github.com/slntopp/nocloud-proto v0.0.0-20230808122014-f0aa96e794fc/go.mod h1:rnndA8QZeTQG/IC6ZOJgQ53d1FXuiuaLBAgbiOhgois=
 github.com/slntopp/nocloud-proto v0.0.0-20230809141942-7d278873a4ea h1:J/BITtGBjJ9NuI8ubfAECj4VBm0Iu+r4PB11xnSl5RU=
 github.com/slntopp/nocloud-proto v0.0.0-20230809141942-7d278873a4ea/go.mod h1:rnndA8QZeTQG/IC6ZOJgQ53d1FXuiuaLBAgbiOhgois=
+github.com/slntopp/nocloud-proto v0.0.0-20230809142359-8a2bd56997c8 h1:TL2MuQHi+pI5R/9WYCfdENgGLv6DiPEyBE1+vgTBAsU=
+github.com/slntopp/nocloud-proto v0.0.0-20230809142359-8a2bd56997c8/go.mod h1:rnndA8QZeTQG/IC6ZOJgQ53d1FXuiuaLBAgbiOhgois=
 github.com/spf13/afero v1.9.5 h1:stMpOSZFs//0Lv29HduCmli3GUfpFoF3Y1Q/aXj/wVM=
 github.com/spf13/afero v1.9.5/go.mod h1:UBogFpq8E9Hx+xc5CNTTEpTnuHVmXDwZcZcE1eb/UhQ=
 github.com/spf13/cast v1.5.1 h1:R+kOtfhWQE6TVQzY+4D7wJLBgkdVasCEFxSUBYBYIlA=
