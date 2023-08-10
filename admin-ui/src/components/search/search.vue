@@ -61,10 +61,7 @@
           </template>
         </v-text-field>
       </template>
-      <v-card
-        color="background-light"
-        v-if="searchItems.length || selectedGroupKey"
-      >
+      <v-card v-if="searchItems.length || selectedGroupKey">
         <v-card-subtitle v-if="selectedGroupKey">
           <v-btn class="mr-4" icon @click="selectedGroupKey = null">
             <v-icon>mdi-arrow-left</v-icon>
@@ -72,17 +69,12 @@
           {{ variants[selectedGroupKey].title }}
         </v-card-subtitle>
         <div style="max-height: 600px">
-          <v-list ref="searchList" color="background-light">
-            <v-list-item-group
-              color="primary"
-              @change="changeValue"
-              :value="selectedGroupKey"
-            >
+          <v-list ref="searchList" color="grey darken-4">
+            <v-list-item-group @change="changeValue" :value="selectedGroupKey">
               <template v-if="searchItems.length > 0">
                 <v-list-item
                   class="search__list-item"
                   active-class="active"
-                  color="primary"
                   :key="item.key"
                   v-for="item in searchItems"
                 >
@@ -131,7 +123,7 @@ export default {
             isArray: variant.isArray,
           },
         });
-        this.isOpen=false
+        this.isOpen = false;
         this.selectedGroupKey = null;
       } else if (!variant?.items) {
         this.$store.commit("appSearch/setCustomParam", {
@@ -142,7 +134,7 @@ export default {
           },
         });
         this.selectedGroupKey = null;
-        this.isOpen=false
+        this.isOpen = false;
       } else {
         this.selectedGroupKey = searchItem.key;
       }
@@ -205,7 +197,7 @@ export default {
 
 <style lang="scss" scoped>
 .search__list-item {
-  //border:  1px solid #e06ffe;
+  //border: 1px solid #e06ffe;
   //border-radius: 10px;
 }
 </style>
