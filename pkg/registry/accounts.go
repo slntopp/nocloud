@@ -325,6 +325,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	claims := jwt.MapClaims{}
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = acc.Key
+	claims[nocloud.INFINIMESH_NOSESSION_CLAIM] = true
 	claims["exp"] = request.Exp
 
 	if request.GetRootClaim() {
