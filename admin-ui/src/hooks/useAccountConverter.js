@@ -1,5 +1,5 @@
 import api from "@/api";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useStore } from "@/store";
 
 const useAccountConverter = (instance) => {
@@ -36,18 +36,26 @@ const useAccountConverter = (instance) => {
   };
 
   const fetchAccountRate = async () => {
-    if(!account.value.currency){
-      return
+    if (!account.value.currency || !defaultCurrency.value) {
+      return;
     }
     if (account.value.currency === defaultCurrency.value) {
       accountRate.value = 1;
-      return
+      return;
     }
     const res = await api.get(
       `/billing/currencies/rates/${account.value.currency}/${defaultCurrency.value}`
     );
     accountRate.value = res.rate;
   };
+
+  watch(accountCurrency, () => {
+    fetchAccountRate();
+  });
+
+  watch(defaultCurrency, () => {
+    fetchAccountRate();
+  });
 
   return {
     toAccountPrice,
