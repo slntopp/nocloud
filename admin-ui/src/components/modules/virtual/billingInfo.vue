@@ -14,7 +14,7 @@
         <v-text-field
           readonly
           label="Tarif (product plan)"
-          :value="template.product"
+          :value="billingPlan.products[template.product].title"
           @click:append="priceModelDialog = true"
           append-icon="mdi-pencil"
         />
@@ -78,7 +78,7 @@
       <template v-slot:body.append>
         <tr>
           <td>Total:</td>
-          <td/>
+          <td />
           <td>
             {{ billingItems.find((i) => i.name === template.product)?.period }}
           </td>
