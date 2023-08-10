@@ -4830,15 +4830,15 @@ no-case@^3.0.4:
     lower-case "^2.0.2"
     tslib "^2.0.3"
 
-nocloud-ui@^1.0.5:
-  version "1.0.5"
-  resolved "https://registry.yarnpkg.com/nocloud-ui/-/nocloud-ui-1.0.5.tgz#bd773d7a1113854520cdd579a1007f6c3624aed5"
-  integrity sha512-rL1hTTrFuPo3t0NKOtQbFhJDrYtqTrYSLUA/ybBLPeQq3eKCmWN9grn/Etb1j617BOqMU8g/pbS2HW788fvkhQ==
+nocloud-ui@^1.0.7:
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/nocloud-ui/-/nocloud-ui-1.0.7.tgz#2aa8679dad52f7f9d0644bc88cbd07f3512c8a71"
+  integrity sha512-MMuuuBO7BO3HFq1LQqGQoJxGpbrdGgTJEzH0HtwUl0KeHPWaCXXhEytKZgP2HdJJL7CwzzC/Mt8/O4BLQ8lTmg==
 
-nocloudjsrest@^1.5.8:
-  version "1.5.8"
-  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.5.8.tgz#90676ca8d09fc3967e4ff05eedb2adc002ce07dd"
-  integrity sha512-sNYFIOac5gZwE44LcOG74uj/zYApeaQYvWxSQEjnLyEyEVK0yzH8XoRudrsUdPkAOjfSnwCrOwCf9Pp3YDvt8w==
+nocloudjsrest@^1.5.9:
+  version "1.5.9"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.5.9.tgz#c2a5860b2bb3ed252d9c0f7ec9f181190788385b"
+  integrity sha512-jY7JwyNJttETkJRHqaZs7f931HNTmjcfTGTt+9K/8Cq2PAgnhSvNY+q/DAzb8q1Lw0J4uzNKeSJ7iXhm7zqzkw==
   dependencies:
     axios "^0.24.0"
 
