@@ -317,7 +317,7 @@ export default {
       setTimeout(() => {
         const marker = {
           id: this.selected,
-          type: this.type || undefined,
+          type: this.type || this.template.type,
           title: " ",
           extra: {},
           x,
