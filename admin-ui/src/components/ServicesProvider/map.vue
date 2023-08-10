@@ -317,9 +317,9 @@ export default {
       setTimeout(() => {
         const marker = {
           id: this.selected,
-          type: this.type || undefined,
+          type: this.type || this.item.type,
           title: " ",
-          extra: {},
+          extra: { country: target.id },
           x,
           y,
         };
@@ -327,10 +327,7 @@ export default {
         if (this.multiSelect) {
           this.markers.push({
             ...marker,
-            extra: {
-              region: this.region,
-              country: target.id,
-            },
+            extra: { region: this.region },
           });
         } else {
           this.markers = [marker];

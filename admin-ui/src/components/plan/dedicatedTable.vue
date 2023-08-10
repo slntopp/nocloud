@@ -303,6 +303,7 @@ export default {
             price: el.value,
             period: this.getPeriod(el.duration),
             sorter: Object.keys(plan.products).length,
+            installation_fee: el.installation_fee,
             meta: { addons, datacenter, os },
           };
         }
@@ -313,6 +314,7 @@ export default {
             const resource = {
               key: el.id,
               kind: "PREPAID",
+              title: el.name,
               price: el.value,
               period: this.getPeriod(el.duration),
               except: false,
@@ -392,10 +394,15 @@ export default {
               ? this.getAddonId({ planCode, duration, tariff })
               : this.getTarrifId({ planCode, duration });
 
+            const installation = prices.find((price) =>
+              price.capacities.includes("installation") && price.pricingMode === pricingMode
+            );
+
             result.push({
               planCode,
-              price: { value: newPrice },
               duration,
+              installation_fee: installation.price.value,
+              price: { value: newPrice },
               name: productName,
               apiName: productName,
               group: productName.split(/[\W0-9]/)[0],

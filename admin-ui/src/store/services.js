@@ -11,7 +11,10 @@ export default {
   },
   getters: {
     all(state) {
-      return state.services.map(s=>({...s,title:`SRV_${s.title}`}));
+      return state.services.map((s) => ({
+        ...s,
+        title: s.title.startsWith("SRV_") ? s.title : `SRV_${s.title}`,
+      }));
     },
     one(state) {
       return state.service;
@@ -57,9 +60,9 @@ export default {
         instancesGroups.forEach(({ instances, sp, type }) => {
           instances.forEach((inst) => {
             state.instances.push({ ...inst, service: uuid, sp, type, access });
-          })
-        })
-      })
+          });
+        });
+      });
     },
     updateService(state, service) {
       if (!state.services.length) state.services.push(service);
@@ -87,7 +90,8 @@ export default {
     fetch({ commit }) {
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
-        api.services.list()
+        api.services
+          .list()
           .then((response) => {
             const servicesWithoutDel = response.pool.filter(
               (s) => s.status !== "DEL"
