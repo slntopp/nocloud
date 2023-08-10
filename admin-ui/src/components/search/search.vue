@@ -148,7 +148,6 @@ export default {
   },
   computed: {
     ...mapGetters("appSearch", {
-      isAdvancedSearch: "isAdvancedSearch",
       variants: "variants",
       customParams: "customParams",
     }),
@@ -190,6 +189,12 @@ export default {
       });
 
       return values;
+    },
+  },
+  watch: {
+    variants() {
+      this.selectedGroupKey = null;
+      this.isOpen = false;
     },
   },
 };
