@@ -92,8 +92,10 @@ func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) driver.
 
 const getRecordsQuery = `
 LET T = DOCUMENT(@transaction)
-FOR rec IN T.records
+LET recs = T.records ? T.records : []
+FOR rec IN recs
   RETURN DOCUMENT(CONCAT(@records, "/", rec))
+  
 `
 
 func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Record, err error) {
