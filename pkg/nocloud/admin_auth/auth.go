@@ -18,6 +18,8 @@ package auth
 import (
 	"context"
 	"errors"
+	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/sessions"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -32,11 +34,13 @@ import (
 
 var (
 	log         *zap.Logger
+	rdb         *redis.Client
 	SIGNING_KEY []byte
 )
 
-func SetContext(logger *zap.Logger, key []byte) {
+func SetContext(logger *zap.Logger, _rdb *redis.Client, key []byte) {
 	log = logger.Named("JWT")
+	rdb = _rdb
 	SIGNING_KEY = key
 	log.Debug("Context set", zap.ByteString("signing_key", key))
 }
@@ -75,6 +79,10 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	if acc == nil {
 		return ctx, status.Error(codes.Unauthenticated, "Invalid token format: no requestor ID")
 	}
+	uuid, ok := acc.(string)
+	if !ok {
+		return ctx, status.Error(codes.Unauthenticated, "Invalid token format: requestor ID isn't string")
+	}
 	rootAccessClaim := token[nocloud.NOCLOUD_ROOT_CLAIM]
 	lvlF, ok := rootAccessClaim.(float64)
 	if !ok {
@@ -84,6 +92,26 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	if lvl == 0 {
 		return ctx, status.Error(codes.PermissionDenied, "Account has no root access")
 	}
+
+	if token[nocloud.NOCLOUD_NOSESSION_CLAIM] == nil {
+		session := token[nocloud.NOCLOUD_SESSION_CLAIM]
+		if session == nil {
+			return ctx, status.Error(codes.Unauthenticated, "Invalid token format: no session ID")
+		}
+		sid, ok := session.(string)
+		if !ok {
+			return ctx, status.Error(codes.Unauthenticated, "Invalid token format: session ID isn't string")
+		}
+
+		// Check if session is valid
+		if err := sessions.Check(rdb, uuid, sid); err != nil {
+			log.Debug("Session check failed", zap.Any("error", err))
+			return ctx, status.Error(codes.Unauthenticated, "Session is expired, revoked or invalid")
+		}
+
+		ctx = context.WithValue(ctx, nocloud.NOCLOUD_SESSION_CLAIM, sid)
+	}
+
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.(string))
 	ctx = context.WithValue(ctx, nocloud.NoCloudRootAccess, lvl)
 
