@@ -25,12 +25,12 @@
       <v-expansion-panels :value="0">
         <v-expansion-panel v-for="(item, i) in showcase.items" :key="i">
           <v-expansion-panel-header color="indigo darken-4">
-            {{ item.serviceProvider }} - {{ item.plan }}
+            {{ item.servicesProvider }} - {{ item.plan }}
 
             <v-icon
               style="flex: 0 0 auto; margin: 0 auto 0 10px"
               color="error"
-              v-if="!(i === showcase.items.length - 1 || item.serviceProvider === '')"
+              v-if="!(i === showcase.items.length - 1 || item.servicesProvider === '')"
               @click="removeItem(i)"
             >
               mdi-close-circle
@@ -44,8 +44,9 @@
                   label="Service provider"
                   item-text="title"
                   item-value="uuid"
-                  v-model="item.serviceProvider"
+                  v-model="item.servicesProvider"
                   :items="serviceProviders"
+                  :rules="[requiredRule]"
                   @change="addItem"
                 />
               </v-col>
@@ -115,7 +116,7 @@ const showcase = ref({
   icon: "",
   items: [{
     plan: "",
-    serviceProvider: "",
+    servicesProvider: "",
     locations: [],
   }],
   promo: {},
@@ -131,9 +132,9 @@ const serviceProviders = computed(() => store.getters["servicesProviders/all"]);
 const plans = computed(() => {
   const allPlans = store.getters["plans/all"];
 
-  return showcase.value.items.reduce((result, { serviceProvider }, i) => {
+  return showcase.value.items.reduce((result, { servicesProvider }, i) => {
     const { meta } = serviceProviders.value.find(
-      ({ uuid }) => uuid === serviceProvider
+      ({ uuid }) => uuid === servicesProvider
     ) ?? {};
 
     return { ...result, [i]: allPlans.filter(({ uuid }) => meta?.plans?.includes(uuid)) };
@@ -141,9 +142,9 @@ const plans = computed(() => {
 });
 
 const locations = computed(() => {
-  return showcase.value.items.reduce((result, { serviceProvider }, i) => {
+  return showcase.value.items.reduce((result, { servicesProvider }, i) => {
     const { uuid, locations = [] } = serviceProviders.value.find(
-      (sp) => sp.uuid === serviceProvider
+      (sp) => sp.uuid === servicesProvider
     ) ?? {};
 
     return {
@@ -192,10 +193,10 @@ watch(realShowcase, () => {
   if (!Array.isArray(showcase.value.items)) {
     showcase.value.items = [];
   }
-  showcase.value.items.push({ plan: "", serviceProvider: "", locations: [] });
+  showcase.value.items.push({ plan: "", servicesProvider: "", locations: [] });
 
   allowedTypes.value = [
-    ...new Set(showcase.value.locations.map((location) => location.type))
+    ...new Set(showcase.value.locations?.map((location) => location.type) ?? [])
   ];
 });
 
@@ -261,8 +262,8 @@ const getNewLocationKey = (l) => {
 };
 
 const addItem = () => {
-  if (showcase.value.items.at(-1).serviceProvider !== '') {
-    showcase.value.items.push({ plan: '', serviceProvider: '', locations: [] });
+  if (showcase.value.items.at(-1).servicesProvider !== '') {
+    showcase.value.items.push({ plan: '', servicesProvider: '', locations: [] });
   }
 }
 
