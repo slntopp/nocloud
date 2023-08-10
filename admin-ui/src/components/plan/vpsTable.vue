@@ -311,6 +311,7 @@ export default {
             period: this.getPeriod(el.duration),
             resources: { cpu: +cpu, ram: ram * 1024, disk: disk * 1024 },
             sorter: Object.keys(plan.products).length,
+            installation_fee: el.installation_fee,
             meta,
           };
         }
@@ -321,6 +322,7 @@ export default {
           plan.resources.push({
             key: el.id,
             kind: "PREPAID",
+            title: el.name,
             price: el.value,
             period: this.getPeriod(el.duration),
             except: false,
@@ -333,8 +335,8 @@ export default {
       setTimeout(() => {
         const headers = document.querySelectorAll(".groupable");
 
-        headers.forEach(({ firstChild, children }) => {
-          if (!children[1]?.className.includes("group-icon")) {
+        headers.forEach(({ firstChild, childNodes }) => {
+          if (!childNodes[1]?.className?.includes("group-icon")) {
             const element = document.querySelector(".group-icon");
             const icon = element.cloneNode(true);
 
@@ -370,7 +372,7 @@ export default {
 
                 menu.style.left = `${x + marginLeft + window.scrollX}px`;
                 menu.style.top = `${y + marginTop + window.scrollY}px`;
-              }, 100);
+              }, 0);
             });
           }
         });
@@ -401,11 +403,8 @@ export default {
             const plan = { windows: null, addons, os, datacenter };
 
             if (option) {
-              const {
-                price: { value },
-              } = option.prices.find(
-                (el) =>
-                  el.duration === duration && el.pricingMode === pricingMode
+              const { price: { value } } = option.prices.find(
+                (el) => el.duration === duration && el.pricingMode === pricingMode
               );
               const newPrice = parseFloat((value * this.rate).toFixed(2));
 
@@ -417,11 +416,16 @@ export default {
               };
             }
 
+            const installation = prices.find((price) =>
+              price.capacities.includes("installation") && price.pricingMode === pricingMode
+            );
+
             result.push({
               ...plan,
               planCode,
-              price: { value: newPrice },
               duration,
+              installation_fee: installation.price.value,
+              price: { value: newPrice },
               name: productName,
               apiName: productName,
               group: productName.replace(/VPS[\W0-9]/, "").split(/[\W0-9]/)[0],
@@ -715,7 +719,7 @@ export default {
           const addon = this.addons.find((el) => el.id === key);
 
           addon.value = price;
-          addon.sell = false;
+          addon.sell = true;
         });
 
         this.groups = [];
