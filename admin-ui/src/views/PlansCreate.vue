@@ -500,6 +500,11 @@ export default {
 
       const filtered = {};
       Object.keys(this.plan.products).forEach((key) => {
+        if (key === this.searchParam) {
+          filtered[key] = this.plan.products[key];
+          return
+        }
+
         if (
           this.plan.products[key]?.title
             .toLowerCase()

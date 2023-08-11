@@ -378,10 +378,8 @@ export default {
     getSearchParamForTariff(item) {
       return {
         searchParam: {
-          value:
-            item.billingPlan.products[this.getValue("product", item)].title,
-          title:
-            item.billingPlan.products[this.getValue("product", item)].title,
+          value: this.getValue("product", item),
+          title: this.getValue("product", item),
         },
       };
     },
