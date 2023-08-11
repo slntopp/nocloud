@@ -238,6 +238,9 @@ export default {
 
       return values;
     },
+    routeCustomParams() {
+      return this.$route.params.search;
+    },
   },
   watch: {
     variants() {
@@ -247,6 +250,18 @@ export default {
       if (!val) {
         this.close();
       }
+    },
+    routeCustomParams(val) {
+      if (!val) {
+        return;
+      }
+
+      Object.keys(val).forEach((key) => {
+        this.$store.commit("appSearch/setCustomParam", {
+          key,
+          value: val[key],
+        });
+      });
     },
   },
 };
