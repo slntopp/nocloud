@@ -49,7 +49,17 @@
     </template>
 
     <template v-slot:[`item.product`]="{ item }">
-      {{ getValue("product", item) }}
+      <router-link
+        :to="{
+          name: 'Plan',
+          params: {
+            planId: item.billingPlan?.uuid,
+            search: getSearchParamForTariff(item),
+          },
+        }"
+      >
+        {{ getValue("product", item) }}
+      </router-link>
     </template>
 
     <template v-slot:[`item.price`]="{ item }">
@@ -364,6 +374,16 @@ export default {
     },
     getValue(key, item) {
       return this.headersGetters[key](item);
+    },
+    getSearchParamForTariff(item) {
+      return {
+        searchParam: {
+          value:
+            item.billingPlan.products[this.getValue("product", item)].title,
+          title:
+            item.billingPlan.products[this.getValue("product", item)].title,
+        },
+      };
     },
   },
   computed: {
