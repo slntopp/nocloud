@@ -160,7 +160,7 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 			return ctx, status.Error(codes.Unauthenticated, "Session is expired, revoked or invalid")
 		}
 
-		ctx = context.WithValue(ctx, nocloud.NOCLOUD_SESSION_CLAIM, sid)
+		ctx = context.WithValue(ctx, nocloud.NoCloudSession, sid)
 	}
 
 	var exp int64
