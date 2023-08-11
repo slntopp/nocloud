@@ -58,6 +58,8 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 		return nil, err
 	}
 
+	go handleLogActivity(ctx)
+
 	return handler(ctx, req)
 }
 
@@ -112,7 +114,13 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 		ctx = context.WithValue(ctx, nocloud.NOCLOUD_SESSION_CLAIM, sid)
 	}
 
+	var exp int64
+	if token["exp"] != nil {
+		exp = int64(token["exp"].(float64))
+	}
+
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.(string))
+	ctx = context.WithValue(ctx, nocloud.ContextKey("exp"), exp)
 	ctx = context.WithValue(ctx, nocloud.NoCloudRootAccess, lvl)
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudToken, tokenString)
@@ -142,4 +150,19 @@ func validateToken(tokenString string) (jwt.MapClaims, error) {
 	}
 
 	return nil, status.Error(codes.Unauthenticated, "Cannot Validate Token")
+}
+
+func handleLogActivity(ctx context.Context) {
+	sid_ctx := ctx.Value(nocloud.NoCloudSession)
+	if sid_ctx == nil {
+		return
+	}
+
+	sid := sid_ctx.(string)
+	req := ctx.Value(nocloud.NoCloudAccount).(string)
+	exp := ctx.Value(nocloud.ContextKey("exp")).(int64)
+
+	if err := sessions.LogActivity(rdb, req, sid, exp); err != nil {
+		log.Warn("Error logging activity", zap.Any("error", err))
+	}
 }
