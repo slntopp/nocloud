@@ -256,12 +256,14 @@ export default {
         return;
       }
 
-      Object.keys(val).forEach((key) => {
-        this.$store.commit("appSearch/setCustomParam", {
-          key,
-          value: val[key],
+      setTimeout(() => {
+        Object.keys(val).forEach((key) => {
+          this.$store.commit("appSearch/setCustomParam", {
+            key,
+            value: val[key],
+          });
         });
-      });
+      }, 100);
     },
   },
 };
