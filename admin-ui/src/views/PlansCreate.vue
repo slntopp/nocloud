@@ -104,7 +104,7 @@
             :is="template"
             :type="plan.type"
             :resources="plan.resources"
-            :products="plan.products"
+            :products="filteredProducts"
             @change:resource="(data) => changeConfig(data, 'resource')"
             @change:product="(data) => changeConfig(data, 'product')"
           />
@@ -456,7 +456,7 @@ export default {
       );
       if (matched && matched.length > 1) {
         if (matched[1] === "ovh") {
-          this.types.push("ovh vps", "ovh dedicated","ovh cloud");
+          this.types.push("ovh vps", "ovh dedicated", "ovh cloud");
         } else {
           this.types.push(matched[1]);
         }
@@ -466,6 +466,11 @@ export default {
     if (this.item) this.getItem();
   },
   computed: {
+    searchParam() {
+      return this.$store.getters[
+        "appSearch/customParams"
+      ]?.searchParam?.value.toLowerCase();
+    },
     template() {
       const type = this.plan.kind === "DYNAMIC" ? "resources" : "products";
 
@@ -484,10 +489,28 @@ export default {
     viewport() {
       return document.documentElement.clientWidth;
     },
-    productsHide(){
-      const hidden=['ovh', 'goget','acronis']
-      return hidden.some((h)=>this.plan.type.includes(h))
-    }
+    productsHide() {
+      const hidden = ["ovh", "goget", "acronis"];
+      return hidden.some((h) => this.plan.type.includes(h));
+    },
+    filteredProducts() {
+      if (!this.searchParam) {
+        return this.plan.products;
+      }
+
+      const filtered = {};
+      Object.keys(this.plan.products).forEach((key) => {
+        if (
+          this.plan.products[key]?.title
+            .toLowerCase()
+            .startsWith(this.searchParam)
+        ) {
+          filtered[key] = this.plan.products[key];
+        }
+      });
+
+      return filtered;
+    },
   },
   watch: {
     "plan.kind"() {
