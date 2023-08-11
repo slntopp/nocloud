@@ -61,10 +61,7 @@
           </template>
         </v-text-field>
       </template>
-      <v-card
-        color="background-light"
-        v-if="searchItems.length || selectedGroupKey"
-      >
+      <v-card v-if="searchItems.length || selectedGroupKey">
         <v-card-subtitle v-if="selectedGroupKey">
           <v-btn class="mr-4" icon @click="selectedGroupKey = null">
             <v-icon>mdi-arrow-left</v-icon>
@@ -72,31 +69,40 @@
           {{ variants[selectedGroupKey].title }}
         </v-card-subtitle>
         <div style="max-height: 600px">
-          <v-list ref="searchList" color="background-light">
+          <v-list ref="searchList" color="grey darken-4">
             <v-list-item-group
-              color="primary"
-              @change="changeValue"
+              @change="changeSearchListHandler"
               :value="selectedGroupKey"
             >
               <template v-if="searchItems.length > 0">
                 <v-list-item
                   class="search__list-item"
                   active-class="active"
-                  color="primary"
                   :key="item.key"
                   v-for="item in searchItems"
                 >
                   <div
+                    v-if="searchStatus === 'group'"
                     style="width: 100%"
                     class="d-flex justify-space-between"
-                    v-if="!selectedGroupKey"
                   >
                     <span>
                       {{ searchParam || "" }}
                     </span>
-                    <span> in {{ item.title }} </span>
+                    <div>
+                      <span> in {{ item.title }} </span>
+                      <v-btn
+                        v-if="variants[item.key]?.isArray"
+                        @click.stop="selectGroup(item)"
+                        icon
+                      >
+                        <v-icon>mdi-magnify</v-icon>
+                      </v-btn>
+                    </div>
                   </div>
-                  <span v-else>{{ item.title }}</span>
+                  <div style="width: 100%" class="d-flex" v-else>
+                    <span>{{ item.title }}</span>
+                  </div>
                 </v-list-item>
               </template>
               <div v-else style="width: 100%" class="d-flex justify-center">
@@ -119,33 +125,50 @@ export default {
   components: { SearchTag },
   data: () => ({ selectedGroupKey: "", isOpen: false }),
   methods: {
-    changeValue(e) {
-      const searchItem = this.searchItems[e];
-      const variant = this.variants[this.selectedGroupKey || searchItem?.key];
-      if (this.selectedGroupKey) {
+    setParam(index) {
+      const { key } = this.searchItems[index];
+      const isArray = this.variants[key]?.isArray;
+
+      if (this.searchParam) {
         this.$store.commit("appSearch/setCustomParam", {
-          key: variant?.key || this.selectedGroupKey,
-          value: {
-            value: searchItem[variant.itemKey || "uuid"],
-            title: searchItem[variant.itemTitle || "title"],
-            isArray: variant.isArray,
-          },
-        });
-        this.isOpen=false
-        this.selectedGroupKey = null;
-      } else if (!variant?.items) {
-        this.$store.commit("appSearch/setCustomParam", {
-          key: variant?.key,
+          key: key,
           value: {
             value: this.searchParam,
             title: this.searchParam,
+            isArray,
+            full: false,
           },
         });
-        this.selectedGroupKey = null;
-        this.isOpen=false
-      } else {
-        this.selectedGroupKey = searchItem.key;
       }
+      if (isArray) {
+        this.selectedGroupKey = key;
+      }
+    },
+    setEntity(index) {
+      const item = this.searchItems[index];
+      const variant = this.variants[this.selectedGroupKey || item?.key];
+      const key = variant?.key || this.selectedGroupKey;
+
+      this.customParams[key]?.forEach((i) => {
+        if (!i.full) {
+          this.$store.commit("appSearch/deleteCustomParam", { ...i, key });
+        }
+      });
+
+      this.$store.commit("appSearch/setCustomParam", {
+        key,
+        value: {
+          value: item[variant.itemKey || "uuid"],
+          title: item[variant.itemTitle || "title"],
+          isArray: variant.isArray,
+          full: true,
+        },
+      });
+
+      this.close();
+    },
+    selectGroup({ key }) {
+      this.selectedGroupKey = key;
     },
     onSearchInput() {
       this.isOpen = true;
@@ -153,10 +176,13 @@ export default {
         this.$refs.searchList.$el.focus();
       }
     },
+    close() {
+      this.isOpen = false;
+      this.selectedGroupKey = null;
+    },
   },
   computed: {
     ...mapGetters("appSearch", {
-      isAdvancedSearch: "isAdvancedSearch",
       variants: "variants",
       customParams: "customParams",
     }),
@@ -167,6 +193,19 @@ export default {
       set(newValue) {
         this.$store.commit("appSearch/setSearchParam", newValue);
       },
+    },
+    changeSearchListHandler() {
+      if (this.searchStatus === "item") {
+        return this.setEntity;
+      }
+
+      return this.setParam;
+    },
+    searchStatus() {
+      if (this.selectedGroupKey) {
+        return "item";
+      }
+      return "group";
     },
     searchItems() {
       return (
@@ -199,13 +238,40 @@ export default {
 
       return values;
     },
+    routeCustomParams() {
+      return this.$route.params.search;
+    },
+  },
+  watch: {
+    variants() {
+      this.close();
+    },
+    isOpen(val) {
+      if (!val) {
+        this.close();
+      }
+    },
+    routeCustomParams(val) {
+      if (!val) {
+        return;
+      }
+
+      setTimeout(() => {
+        Object.keys(val).forEach((key) => {
+          this.$store.commit("appSearch/setCustomParam", {
+            key,
+            value: val[key],
+          });
+        });
+      }, 100);
+    },
   },
 };
 </script>
 
 <style lang="scss" scoped>
 .search__list-item {
-  //border:  1px solid #e06ffe;
+  //border: 1px solid #e06ffe;
   //border-radius: 10px;
 }
 </style>
