@@ -260,7 +260,7 @@ export default {
         case "ovh": {
           return getOvhPrice(inst);
         }
-        case 'virtual':
+        case "virtual":
         case "ione": {
           const initialPrice =
             inst.billingPlan.products[inst.product]?.price ?? 0;
@@ -400,10 +400,16 @@ export default {
             key.split(".").forEach((subkey) => {
               val = val[subkey];
             });
-            if (!filter.includes(val)) {
+            if (
+              !filter.some((f) => val.toLowerCase().includes(f.toLowerCase()))
+            ) {
               return false;
             }
-          } else if (!filter.includes(this.getValue(key, i))) {
+          } else if (
+            !filter.some((f) =>
+              this.getValue(key, i).toLowerCase().includes(f.toLowerCase())
+            )
+          ) {
             return false;
           }
         }
