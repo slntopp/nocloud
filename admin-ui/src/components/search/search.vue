@@ -70,7 +70,10 @@
         </v-card-subtitle>
         <div style="max-height: 600px">
           <v-list ref="searchList" color="grey darken-4">
-            <v-list-item-group @change="changeValue" :value="selectedGroupKey">
+            <v-list-item-group
+              @change="changeSearchListHandler"
+              :value="selectedGroupKey"
+            >
               <template v-if="searchItems.length > 0">
                 <v-list-item
                   class="search__list-item"
@@ -79,16 +82,27 @@
                   v-for="item in searchItems"
                 >
                   <div
+                    v-if="searchStatus === 'group'"
                     style="width: 100%"
                     class="d-flex justify-space-between"
-                    v-if="!selectedGroupKey"
                   >
                     <span>
                       {{ searchParam || "" }}
                     </span>
-                    <span> in {{ item.title }} </span>
+                    <div>
+                      <span> in {{ item.title }} </span>
+                      <v-btn
+                        v-if="variants[item.key]?.isArray"
+                        @click.stop="selectGroup(item)"
+                        icon
+                      >
+                        <v-icon>mdi-magnify</v-icon>
+                      </v-btn>
+                    </div>
                   </div>
-                  <span v-else>{{ item.title }}</span>
+                  <div style="width: 100%" class="d-flex" v-else>
+                    <span>{{ item.title }}</span>
+                  </div>
                 </v-list-item>
               </template>
               <div v-else style="width: 100%" class="d-flex justify-center">
@@ -111,39 +125,60 @@ export default {
   components: { SearchTag },
   data: () => ({ selectedGroupKey: "", isOpen: false }),
   methods: {
-    changeValue(e) {
-      const searchItem = this.searchItems[e];
-      const variant = this.variants[this.selectedGroupKey || searchItem?.key];
-      if (this.selectedGroupKey) {
+    setParam(index) {
+      const { key } = this.searchItems[index];
+      const isArray = this.variants[key]?.isArray;
+
+      if (this.searchParam) {
         this.$store.commit("appSearch/setCustomParam", {
-          key: variant?.key || this.selectedGroupKey,
-          value: {
-            value: searchItem[variant.itemKey || "uuid"],
-            title: searchItem[variant.itemTitle || "title"],
-            isArray: variant.isArray,
-          },
-        });
-        this.isOpen = false;
-        this.selectedGroupKey = null;
-      } else if (!variant?.items) {
-        this.$store.commit("appSearch/setCustomParam", {
-          key: variant?.key,
+          key: key,
           value: {
             value: this.searchParam,
             title: this.searchParam,
+            isArray,
+            full: false,
           },
         });
-        this.selectedGroupKey = null;
-        this.isOpen = false;
-      } else {
-        this.selectedGroupKey = searchItem.key;
       }
+      if (isArray) {
+        this.selectedGroupKey = key;
+      }
+    },
+    setEntity(index) {
+      const item = this.searchItems[index];
+      const variant = this.variants[this.selectedGroupKey || item?.key];
+      const key = variant?.key || this.selectedGroupKey;
+
+      this.customParams[key]?.forEach((i) => {
+        if (!i.full) {
+          this.$store.commit("appSearch/deleteCustomParam", { ...i, key });
+        }
+      });
+
+      this.$store.commit("appSearch/setCustomParam", {
+        key,
+        value: {
+          value: item[variant.itemKey || "uuid"],
+          title: item[variant.itemTitle || "title"],
+          isArray: variant.isArray,
+          full: true,
+        },
+      });
+
+      this.close();
+    },
+    selectGroup({ key }) {
+      this.selectedGroupKey = key;
     },
     onSearchInput() {
       this.isOpen = true;
       if (this.$refs.searchList?.$el) {
         this.$refs.searchList.$el.focus();
       }
+    },
+    close() {
+      this.isOpen = false;
+      this.selectedGroupKey = null;
     },
   },
   computed: {
@@ -158,6 +193,19 @@ export default {
       set(newValue) {
         this.$store.commit("appSearch/setSearchParam", newValue);
       },
+    },
+    changeSearchListHandler() {
+      if (this.searchStatus === "item") {
+        return this.setEntity;
+      }
+
+      return this.setParam;
+    },
+    searchStatus() {
+      if (this.selectedGroupKey) {
+        return "item";
+      }
+      return "group";
     },
     searchItems() {
       return (
@@ -193,8 +241,12 @@ export default {
   },
   watch: {
     variants() {
-      this.selectedGroupKey = null;
-      this.isOpen = false;
+      this.close();
+    },
+    isOpen(val) {
+      if (!val) {
+        this.close();
+      }
     },
   },
 };
