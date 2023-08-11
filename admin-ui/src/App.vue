@@ -244,7 +244,7 @@
           </v-btn>
         </v-col>
         <v-col class="d-flex justify-end align-center">
-          <balance title="Balance: " />
+          <balance title="Balance: " loged-in-user/>
           <languages v-if="false" />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
