@@ -3,6 +3,7 @@
     :editor-toolbar="toolbarOptions"
     class="html-editor"
     :value="props.value"
+    :disabled="disabled"
     @input="emit('input', $event)"
   />
 </template>
@@ -10,8 +11,10 @@
 <script setup>
 import { VueEditor } from "vue2-editor";
 
-
-const props = defineProps(["value"]);
+const props = defineProps({
+  value: {},
+  disabled: { type: Boolean, default: false },
+});
 const emit = defineEmits(["input"]);
 
 const toolbarOptions = [
@@ -33,7 +36,7 @@ const toolbarOptions = [
 ];
 </script>
 
-<style  lang="scss">
+<style lang="scss">
 .html-editor {
   span.ql-picker-label {
     color: white;

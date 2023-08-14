@@ -49,7 +49,17 @@
     </template>
 
     <template v-slot:[`item.product`]="{ item }">
-      {{ getValue("product", item) }}
+      <router-link
+        :to="{
+          name: 'Plan',
+          params: {
+            planId: item.billingPlan?.uuid,
+            search: getSearchParamForTariff(item),
+          },
+        }"
+      >
+        {{ getValue("product", item) }}
+      </router-link>
     </template>
 
     <template v-slot:[`item.price`]="{ item }">
@@ -260,7 +270,7 @@ export default {
         case "ovh": {
           return getOvhPrice(inst);
         }
-        case 'virtual':
+        case "virtual":
         case "ione": {
           const initialPrice =
             inst.billingPlan.products[inst.product]?.price ?? 0;
@@ -365,6 +375,14 @@ export default {
     getValue(key, item) {
       return this.headersGetters[key](item);
     },
+    getSearchParamForTariff(item) {
+      return {
+        searchParam: {
+          value: this.getValue("product", item),
+          title: this.getValue("product", item),
+        },
+      };
+    },
   },
   computed: {
     customParams() {
@@ -400,10 +418,16 @@ export default {
             key.split(".").forEach((subkey) => {
               val = val[subkey];
             });
-            if (!filter.includes(val)) {
+            if (
+              !filter.some((f) => val.toLowerCase().includes(f.toLowerCase()))
+            ) {
               return false;
             }
-          } else if (!filter.includes(this.getValue(key, i))) {
+          } else if (
+            !filter.some((f) =>
+              this.getValue(key, i).toLowerCase().includes(f.toLowerCase())
+            )
+          ) {
             return false;
           }
         }

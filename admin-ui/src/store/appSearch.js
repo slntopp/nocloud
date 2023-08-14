@@ -21,8 +21,8 @@ export default {
       state.customParams = {};
     },
     setCustomParam(state, { key, value }) {
-      if((key==='searchParam' || !key) && !value.value){
-        return
+      if ((key === "searchParam" || !key) && !value.value) {
+        return;
       }
       state.customParams = {
         ...state.customParams,
