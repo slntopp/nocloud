@@ -543,10 +543,7 @@ export default {
       ];
     },
     serviceItems() {
-      return this.$store.getters["services/all"].map((i) => ({
-        title: i.title,
-        uuid: i.title,
-      }));
+      return this.$store.getters["services/all"].map((i) => i.title);
     },
     spItems() {
       const instancesSP = this.items.map((i) => i.sp);
@@ -557,41 +554,13 @@ export default {
             .filter((sp) => instancesSP.includes(sp.uuid))
             .map((sp) => sp.title)
         ),
-      ].map((sp) => ({
-        title: sp,
-        uuid: sp,
-      }));
+      ];
     },
     periodItems() {
-      return [
-        ...new Set(this.items.map((i) => this.getValue("period", i))),
-      ].map((p) => ({
-        title: p,
-        uuid: p,
-      }));
+      return [...new Set(this.items.map((i) => this.getValue("period", i)))];
     },
     productItems() {
-      return this.items
-        .map((i) => this.getValue("product", i))
-        .map((p) => ({
-          title: p,
-          uuid: p,
-        }));
-    },
-    accountsItems() {
-      return this.accounts.map((a) => ({
-        title: a.title,
-        uuid: a.title,
-      }));
-    },
-    namespacesItems() {
-      return this.namespaces.map((n) => ({
-        title: n.title,
-        uuid: n.title,
-      }));
-    },
-    instancesTypesItems() {
-      return this.instancesTypes.map((i) => ({ title: i, uuid: i }));
+      return this.items.map((i) => this.getValue("product", i));
     },
     searchItems() {
       return {
@@ -611,12 +580,12 @@ export default {
           isArray: true,
         },
         access: {
-          items: this.accountsItems,
+          items: this.accounts,
           title: "Account",
           isArray: true,
         },
         "access.namespace": {
-          items: this.namespacesItems,
+          items: this.namespaces,
           title: "Namespace",
           isArray: true,
         },
@@ -638,7 +607,7 @@ export default {
         },
         type: {
           title: "Type",
-          items: this.instancesTypesItems,
+          items: this.instancesTypes,
           isArray: true,
         },
         "billingPlan.title": {
