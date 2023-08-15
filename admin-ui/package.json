@@ -36,19 +36,19 @@
     "yaml": "^2.3.1"
   },
   "devDependencies": {
-    "@babel/eslint-parser": "^7.22.7",
+    "@babel/eslint-parser": "^7.22.10",
     "@vue/cli-plugin-babel": "~5.0.7",
     "@vue/cli-plugin-eslint": "~5.0.7",
     "@vue/cli-plugin-router": "~5.0.7",
     "@vue/cli-plugin-vuex": "~5.0.7",
     "@vue/cli-service": "~5.0.7",
-    "eslint": "^8.44.0",
+    "eslint": "^8.46.0",
     "eslint-plugin-vue": "^9.15.1",
     "sass": "~1.32.6",
     "vue-cli-plugin-vuetify": "~2.5.8",
     "vue-template-compiler": "^2.7.14",
     "vuetify-loader": "^1.9.2",
-    "webpack": "^5.88.1",
+    "webpack": "^5.88.2",
     "webpack-cli": "^5.1.4"
   }
 }

@@ -17,54 +17,80 @@
             @input:value="showcase.icon = $event"
           />
         </v-col>
-        <v-col cols="2">
+        <v-col cols="1">
           <v-switch label="Is primary" v-model="showcase.primary" />
         </v-col>
-      </v-row>
-      <v-row>
-        <v-col cols="6">
-          <v-autocomplete
-            item-text="title"
-            v-model="showcase.servicesProviders"
-            item-value="uuid"
-            multiple
-            label="Service providers"
-            :items="serviceProviders"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-autocomplete
-            item-text="title"
-            item-value="uuid"
-            multiple
-            label="Plans"
-            v-model="showcase.plans"
-            :items="plans"
-          />
+        <v-col cols="1">
+          <v-switch label="Enabled" v-model="showcase.public" />
         </v-col>
       </v-row>
-      <v-row>
-        <v-col cols="6">
-          <v-autocomplete
-            multiple
-            label="Allowed types"
-            v-model="allowedTypes"
-            :items="locationsTypes"
-          />
-        </v-col>
-        <v-col cols="6">
-          <locations-autocomplete
-            label="Locations"
-            :locations="filtredLocations"
-            v-model="showcase.locations"
-          />
-        </v-col>
-      </v-row>
-      <v-row justify="end">
-        <v-btn @click="save" :loading="isSaveLoading">{{
-          isEdit ? "Save" : "Create"
-        }}</v-btn>
-      </v-row>
+
+      <v-expansion-panels :value="0">
+        <v-expansion-panel v-for="(item, i) in showcase.items" :key="i">
+          <v-expansion-panel-header color="indigo darken-4">
+            {{ getProviderTitle(item.servicesProvider) }}
+            - {{ getPlanTitle(item.plan) }}
+
+            <v-icon
+              style="flex: 0 0 auto; margin: 0 auto 0 10px"
+              color="error"
+              v-if="!(i === showcase.items.length - 1 || item.servicesProvider === '')"
+              @click="removeItem(i)"
+            >
+              mdi-close-circle
+            </v-icon>
+          </v-expansion-panel-header>
+
+          <v-expansion-panel-content color="indigo darken-4">
+            <v-row>
+              <v-col cols="6">
+                <v-autocomplete
+                  label="Service provider"
+                  item-text="title"
+                  item-value="uuid"
+                  v-model="item.servicesProvider"
+                  :items="serviceProviders"
+                  :rules="[requiredRule]"
+                  @change="addItem"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-autocomplete
+                  label="Price model"
+                  item-text="title"
+                  item-value="uuid"
+                  v-model="item.plan"
+                  :items="plans[i]"
+                />
+              </v-col>
+              <v-col cols="6">
+                <locations-autocomplete
+                  label="Locations"
+                  v-model="item.locations"
+                  :locations="filteredLocations[i]"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-autocomplete
+                  item-text="title"
+                  item-value="uuid"
+                  label="Default location"
+                  v-model="defaultLocation"
+                  :items="item.locations"
+                />
+              </v-col>
+            </v-row>
+          </v-expansion-panel-content>
+        </v-expansion-panel>
+      </v-expansion-panels>
+
+      <v-btn
+        style="display: block; margin: 10px 0 0 auto"
+        :loading="isSaveLoading"
+        @click="save"
+      >
+        {{ isEdit ? "Save" : "Create" }}
+      </v-btn>
     </v-form>
   </div>
 </template>
@@ -93,56 +119,71 @@ const showcase = ref({
   title: "",
   newTitle: "",
   icon: "",
-  servicesProviders: [],
-  plans: [],
+  items: [{
+    plan: "",
+    servicesProvider: "",
+    locations: [],
+  }],
   promo: {},
   locations: [],
+  public: true
 });
+
 const isLoading = ref(false);
-const allowedTypes = ref([]);
+const defaultLocation = ref("");
 const isSaveLoading = ref(false);
 
 const requiredRule = ref((val) => !!val || "Required field");
 const serviceProviders = computed(() => store.getters["servicesProviders/all"]);
-const plans = computed(() => store.getters["plans/all"]);
+
+const plans = computed(() => {
+  const allPlans = store.getters["plans/all"];
+
+  return showcase.value.items.reduce((result, { servicesProvider }, i) => {
+    const { meta } = serviceProviders.value.find(
+      ({ uuid }) => uuid === servicesProvider
+    ) ?? {};
+
+    return { ...result, [i]: allPlans.filter(({ uuid }) => meta?.plans?.includes(uuid)) };
+  }, {});
+});
+
 const locations = computed(() => {
-  const sps = serviceProviders.value.filter((sp) =>
-    showcase.value.servicesProviders?.includes(sp.uuid)
-  );
-  const locations = [];
-  sps.forEach((sp) => {
-    locations.push(
-      ...sp.locations.map((l) => ({
-        ...l,
-        sp: sp.title,
-        id: getNewLocationKey(l),
+  return showcase.value.items.reduce((result, { servicesProvider }, i) => {
+    const { uuid, locations = [] } = serviceProviders.value.find(
+      (sp) => sp.uuid === servicesProvider
+    ) ?? {};
+
+    return {
+      ...result,
+      [i]: locations.map((location) => ({
+        ...location, sp: uuid, id: getNewLocationKey(location)
       }))
+    };
+  }, {});
+});
+
+const filteredLocations = computed(() => {
+  const result = {};
+
+  Object.entries(locations.value).forEach(([i, value]) => {
+    if (!plans.value[i][0]) return;
+    result[i] = value.filter(({ type }) =>
+      plans.value[i][0].type === type
     );
   });
-  return locations;
-});
 
-const filtredLocations = computed(() => {
-  return locations.value.filter((l) => allowedTypes.value.includes(l.type));
-});
-const locationsTypes = computed(() => {
-  return [...new Set(locations.value.map((l) => l.type))];
-});
-
-watch(locationsTypes, () => {
-  if (!isEdit.value) {
-    allowedTypes.value = locationsTypes.value;
-  } else if (allowedTypes.value.length === 0) {
-    allowedTypes.value = locationsTypes.value;
-  }
+  return result;
 });
 
 watch(realShowcase, () => {
   showcase.value = realShowcase.value;
   showcase.value.newTitle = showcase.value.title;
-  allowedTypes.value = [
-    ...new Set(showcase.value.locations.map((l) => l.type)),
-  ];
+
+  if (!Array.isArray(showcase.value.items)) {
+    showcase.value.items = [];
+  }
+  showcase.value.items.push({ plan: "", servicesProvider: "", locations: [] });
 });
 
 onMounted(async () => {
@@ -164,19 +205,37 @@ onMounted(async () => {
 
 const save = async () => {
   try {
-    const data = {
-      ...showcase.value,
-    };
-    data.locations = data.locations
-      .filter((l) => filtredLocations.value.find((l2) => l2.id === l.id))
-      .map((l) => ({
-        ...l,
-        id: l.id.replace(data.title.replaceAll(' ','_'), data.newTitle.replaceAll(' ','_')),
-        sp: undefined,
-      }));
+    const data = JSON.parse(JSON.stringify(showcase.value));
+
+    data.items.pop();
+    data.locations = [];
+    Object.entries(filteredLocations.value).forEach(([i, value]) => {
+      if (value.length < 1) return;
+      const item = data.items[i];
+      const locs = item.locations
+        .filter(({ id }) => value.find((location) => location.id === id))
+        .map((location) => ({
+          ...location,
+          sp: undefined,
+          id: location.id.replace(
+            data.title.replaceAll(' ', '_'),
+            data.newTitle.replaceAll(' ', '_')
+          )
+        }));
+
+      locs.forEach((location) => {
+        if (!data.locations.find(({ id }) => id === location.id)) {
+          data.locations.push(location);
+        }
+      });
+      item.locations = locs.map(({ id }) => id);
+    });
+
+    if (!data.promo.main) data.promo.main = {};
+    data.promo.main.default = defaultLocation.value;
     data.title = data.newTitle;
     delete data.newTitle;
-    
+
     isSaveLoading.value = true;
     if (isEdit.value) {
       await api.showcases.update(data);
@@ -188,6 +247,7 @@ const save = async () => {
     });
     router.push({ name: "Showcases" });
   } catch (e) {
+    console.log(e);
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during save showcase",
     });
@@ -199,6 +259,28 @@ const save = async () => {
 const getNewLocationKey = (l) => {
   return `${showcase.value.title.replaceAll(" ", `_`)}-${l.id}`;
 };
+
+const addItem = () => {
+  if (showcase.value.items.at(-1).servicesProvider !== '') {
+    showcase.value.items.push({ plan: '', servicesProvider: '', locations: [] });
+  }
+}
+
+const removeItem = (i) => {
+  showcase.value.items.splice(i, 1);
+}
+
+const getPlanTitle = (uuid) => {
+  const plans = store.getters['plans/all'] ?? [];
+
+  return plans.find((plan) => plan.uuid === uuid)?.title ?? uuid;
+}
+
+const getProviderTitle = (uuid) => {
+  return serviceProviders.value.find((provider) =>
+    provider.uuid === uuid
+  )?. title ?? uuid;
+}
 </script>
 
 <style scoped lang="scss">

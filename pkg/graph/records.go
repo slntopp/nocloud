@@ -17,6 +17,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -91,8 +92,10 @@ func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) driver.
 
 const getRecordsQuery = `
 LET T = DOCUMENT(@transaction)
-FOR rec IN T.records
+LET recs = T.records ? T.records : []
+FOR rec IN recs
   RETURN DOCUMENT(CONCAT(@records, "/", rec))
+  
 `
 
 func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Record, err error) {
@@ -119,4 +122,42 @@ func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Re
 	}
 
 	return res, nil
+}
+
+const getReportQuery = `
+LET records = (
+	FOR record in @@records 
+		%s
+        FILTER record.processed
+		FILTER record.instance == @instance
+)
+RETURN {total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}
+`
+
+func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetInstanceReportRequest) (*pb.GetInstanceReportResponse, error) {
+	query := getReportQuery
+	params := map[string]interface{}{
+		"@records": schema.RECORDS_COL,
+		"instance": req.GetUuid(),
+	}
+
+	if req.From != nil && req.To != nil {
+		query = fmt.Sprintf(query, "FILTER record.exec >= @from AND record.exec <=@to")
+		params["from"] = req.GetFrom()
+		params["to"] = req.GetTo()
+	}
+
+	cursor, err := ctrl.db.Query(ctx, query, params)
+	if err != nil {
+		return nil, err
+	}
+
+	res := pb.GetInstanceReportResponse{}
+
+	_, err = cursor.ReadDocument(ctx, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
 }

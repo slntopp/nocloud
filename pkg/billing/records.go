@@ -371,3 +371,20 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 		Pool: pool,
 	}, nil
 }
+
+func (s *BillingServiceServer) GetInstanceReport(ctx context.Context, req *pb.GetInstanceReportRequest) (*pb.GetInstanceReportResponse, error) {
+	log := s.log.Named("GetRecords")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	if req.GetUuid() == "" {
+		log.Error("Request has no instance UUID", zap.String("requestor", requestor))
+		return nil, status.Error(codes.InvalidArgument, "Request has no UUID")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(graph.INSTANCES_COL, req.GetUuid()), access.Level_ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Permission denied")
+	}
+
+	return s.records.GetReport(ctx, req)
+}
