@@ -64,6 +64,9 @@ export default {
     param(state) {
       return state.searchParam;
     },
+    customSearchParam(state){
+      return state.customParams.searchParam?.value
+    },
     variants(state) {
       const variants = { ...state.variants };
       if (Object.keys(variants).length) {
@@ -75,7 +78,9 @@ export default {
       return state.searchName + "_search";
     },
     customParams(state) {
-      return state.customParams;
+      const params={...state.customParams}
+      delete params['searchParam']
+      return params;
     },
   },
 };

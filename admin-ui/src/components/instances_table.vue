@@ -388,6 +388,9 @@ export default {
     customParams() {
       return this.$store.getters["appSearch/customParams"];
     },
+    searchParam(){
+      return this.$store.getters['appSearch/customSearchParam']
+    },
     variants() {
       return this.$store.getters["appSearch/variants"];
     },
@@ -433,7 +436,7 @@ export default {
         }
         return true;
       });
-      const searchParam = this.customParams.searchParam?.value?.toLowerCase();
+      const searchParam = this.searchParam?.toLowerCase();
       if (!searchParam) {
         return instances;
       }
@@ -525,9 +528,6 @@ export default {
     },
     isLoading() {
       return this.$store.getters["services/isLoading"];
-    },
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
     },
     currency() {
       return this.$store.getters["currencies/default"];

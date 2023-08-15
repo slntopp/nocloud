@@ -118,14 +118,14 @@ export default {
       }));
     },
     searchParam() {
-      return this.$store.getters["appSearch/param"];
+      return this.$store.getters["appSearch/customSearchParam"];
     },
     filteredSp() {
       const sp = this.tableData.filter((sp) => {
         return Object.keys(this.searchParams || {}).every(
           (key) =>
             this.searchParams[key].length === 0 ||
-            this.searchParams[key].find((p) => p.value === sp[key])
+            this.searchParams[key].find((p) => sp[key].includes(p.value))
         );
       });
       if (this.searchParam) {
