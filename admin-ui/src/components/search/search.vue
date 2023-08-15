@@ -92,7 +92,7 @@
                     <div>
                       <span> in {{ item.title }} </span>
                       <v-btn
-                        v-if="variants[item.key]?.isArray"
+                        v-if="variants[item.key].items"
                         @click.stop="selectGroup(item)"
                         icon
                       >
@@ -128,8 +128,9 @@ export default {
     setParam(index) {
       const { key } = this.searchItems[index];
       const isArray = this.variants[key]?.isArray;
+      const itemsExists = !!this.variants[key]?.items?.length;
 
-      if (this.searchParam) {
+      if (this.searchParam && isArray) {
         this.$store.commit("appSearch/setCustomParam", {
           key: key,
           value: {
@@ -140,20 +141,24 @@ export default {
           },
         });
       }
-      if (isArray) {
+
+      if (itemsExists) {
         this.selectedGroupKey = key;
       }
     },
     setEntity(index) {
       const item = this.searchItems[index];
-      const variant = this.variants[this.selectedGroupKey || item?.key];
+      const variant =
+        this.variants[this.selectedGroupKey] || this.variants[item?.key];
       const key = variant?.key || this.selectedGroupKey;
 
-      this.customParams[key]?.forEach((i) => {
-        if (!i.full) {
-          this.$store.commit("appSearch/deleteCustomParam", { ...i, key });
-        }
-      });
+      if (variant?.isArray) {
+        this.customParams[key].forEach((i) => {
+          if (!i.full) {
+            this.$store.commit("appSearch/deleteCustomParam", { ...i, key });
+          }
+        });
+      }
 
       this.$store.commit("appSearch/setCustomParam", {
         key,
