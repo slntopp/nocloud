@@ -598,37 +598,31 @@ export default {
         service: {
           items: this.serviceItems,
           title: "Service",
-          key: "service",
           isArray: true,
         },
         period: {
           items: this.periodItems,
           title: "Period",
-          key: "period",
           isArray: true,
         },
         sp: {
           items: this.spItems,
           title: "Service provider",
-          key: "sp",
           isArray: true,
         },
         access: {
           items: this.accountsItems,
           title: "Account",
-          key: "access",
           isArray: true,
         },
         "access.namespace": {
           items: this.namespacesItems,
           title: "Namespace",
-          key: "access.namespace",
           isArray: true,
         },
         product: {
           items: this.productItems,
           title: "Product",
-          key: "product",
           isArray: true,
         },
         state: {
@@ -641,17 +635,14 @@ export default {
           ],
           isArray: true,
           title: "State",
-          key: "state",
         },
         type: {
           title: "Type",
-          key: "type",
           items: this.instancesTypesItems,
           isArray: true,
         },
         "billingPlan.title": {
           title: "Billing plan",
-          key: "billingPlan.title",
           items: this.priceModelItems,
           isArray: true,
         },
