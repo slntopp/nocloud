@@ -17,15 +17,19 @@
             @input:value="showcase.icon = $event"
           />
         </v-col>
-        <v-col cols="2">
+        <v-col cols="1">
           <v-switch label="Is primary" v-model="showcase.primary" />
+        </v-col>
+        <v-col cols="1">
+          <v-switch label="Enabled" v-model="showcase.public" />
         </v-col>
       </v-row>
 
       <v-expansion-panels :value="0">
         <v-expansion-panel v-for="(item, i) in showcase.items" :key="i">
           <v-expansion-panel-header color="indigo darken-4">
-            {{ item.servicesProvider }} - {{ item.plan }}
+            {{ getProviderTitle(item.servicesProvider) }}
+            - {{ getPlanTitle(item.plan) }}
 
             <v-icon
               style="flex: 0 0 auto; margin: 0 auto 0 10px"
@@ -60,18 +64,19 @@
                 />
               </v-col>
               <v-col cols="6">
-                <v-autocomplete
-                  multiple
-                  label="Allowed types"
-                  v-model="allowedTypes[i]"
-                  :items="locationsTypes[i]"
-                />
-              </v-col>
-              <v-col cols="6">
                 <locations-autocomplete
                   label="Locations"
                   v-model="item.locations"
                   :locations="filteredLocations[i]"
+                />
+              </v-col>
+              <v-col cols="6">
+                <v-autocomplete
+                  item-text="title"
+                  item-value="uuid"
+                  label="Default location"
+                  v-model="defaultLocation"
+                  :items="item.locations"
                 />
               </v-col>
             </v-row>
@@ -120,10 +125,12 @@ const showcase = ref({
     locations: [],
   }],
   promo: {},
+  locations: [],
+  public: true
 });
 
 const isLoading = ref(false);
-const allowedTypes = ref({});
+const defaultLocation = ref("");
 const isSaveLoading = ref(false);
 
 const requiredRule = ref((val) => !!val || "Required field");
@@ -160,30 +167,13 @@ const filteredLocations = computed(() => {
   const result = {};
 
   Object.entries(locations.value).forEach(([i, value]) => {
+    if (!plans.value[i][0]) return;
     result[i] = value.filter(({ type }) =>
-      allowedTypes.value[i].includes(type)
+      plans.value[i][0].type === type
     );
   });
 
   return result;
-});
-
-const locationsTypes = computed(() => {
-  const result = {};
-
-  Object.entries(locations.value).forEach(([i, value]) => {
-    result[i] = [...new Set(value.map(({ type }) => type))];
-  });
-
-  return result;
-});
-
-watch(locationsTypes, () => {
-  if (!isEdit.value) {
-    allowedTypes.value = locationsTypes.value;
-  } else if (allowedTypes.value.length === 0) {
-    allowedTypes.value = locationsTypes.value;
-  }
 });
 
 watch(realShowcase, () => {
@@ -194,10 +184,6 @@ watch(realShowcase, () => {
     showcase.value.items = [];
   }
   showcase.value.items.push({ plan: "", servicesProvider: "", locations: [] });
-
-  allowedTypes.value = [
-    ...new Set(showcase.value.locations?.map((location) => location.type) ?? [])
-  ];
 });
 
 onMounted(async () => {
@@ -222,18 +208,31 @@ const save = async () => {
     const data = JSON.parse(JSON.stringify(showcase.value));
 
     data.items.pop();
+    data.locations = [];
     Object.entries(filteredLocations.value).forEach(([i, value]) => {
       if (value.length < 1) return;
-      data.items[i].locations = value.map((location) => ({
-        ...location,
-        sp: undefined,
-        id: location.id.replace(
-          data.title.replaceAll(' ', '_'),
-          data.newTitle.replaceAll(' ', '_')
-        )
-      }));
+      const item = data.items[i];
+      const locs = item.locations
+        .filter(({ id }) => value.find((location) => location.id === id))
+        .map((location) => ({
+          ...location,
+          sp: undefined,
+          id: location.id.replace(
+            data.title.replaceAll(' ', '_'),
+            data.newTitle.replaceAll(' ', '_')
+          )
+        }));
+
+      locs.forEach((location) => {
+        if (!data.locations.find(({ id }) => id === location.id)) {
+          data.locations.push(location);
+        }
+      });
+      item.locations = locs.map(({ id }) => id);
     });
 
+    if (!data.promo.main) data.promo.main = {};
+    data.promo.main.default = defaultLocation.value;
     data.title = data.newTitle;
     delete data.newTitle;
 
@@ -269,6 +268,18 @@ const addItem = () => {
 
 const removeItem = (i) => {
   showcase.value.items.splice(i, 1);
+}
+
+const getPlanTitle = (uuid) => {
+  const plans = store.getters['plans/all'] ?? [];
+
+  return plans.find((plan) => plan.uuid === uuid)?.title ?? uuid;
+}
+
+const getProviderTitle = (uuid) => {
+  return serviceProviders.value.find((provider) =>
+    provider.uuid === uuid
+  )?. title ?? uuid;
 }
 </script>
 

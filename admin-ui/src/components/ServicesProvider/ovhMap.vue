@@ -12,14 +12,22 @@
         <v-progress-circular size="40" color="primary" indeterminate />
       </div>
 
-      <v-list v-else flat dark color="rgba(12, 12, 60, 0.9)">
-        <v-subheader>REGIONS</v-subheader>
-        <v-list-item-group mandatory v-model="selectedRegion" color="primary">
-          <v-list-item v-for="(item, i) in allRegions" :key="i">
-            {{ item }}
-          </v-list-item>
-        </v-list-item-group>
-      </v-list>
+      <v-select
+        v-else
+        flat
+        dark
+        v-model="selectedRegion"
+        :items="allRegions"
+        label="regions"
+      />
+      <!--      <v-list v-else flat dark color="rgba(12, 12, 60, 0.9)">-->
+      <!--        <v-subheader>REGIONS</v-subheader>-->
+      <!--        <v-list-item-group mandatory v-model="selectedRegion" color="primary">-->
+      <!--          <v-list-item v-for="(item, i) in allRegions" :key="i">-->
+      <!--            {{ item }}-->
+      <!--          </v-list-item>-->
+      <!--        </v-list-item-group>-->
+      <!--      </v-list>-->
     </div>
     <support-map
       @errorAddPin="errorAddPin"
@@ -30,7 +38,7 @@
       :template="template"
       @set-locations="setLocations"
       :type="selectedType"
-      :region="allRegions[selectedRegion]"
+      :region="selectedRegion"
       @save="onSavePin"
       @pinHover="onPinHover"
     />
@@ -76,8 +84,8 @@ const selectedLocation = computed(() =>
   template.value.locations.find(
     (l) =>
       l.extra?.region &&
-      allRegions.value[selectedRegion.value] &&
-      l.extra?.region === allRegions.value[selectedRegion.value]
+      selectedRegion.value &&
+      l.extra?.region === selectedRegion.value
   )
 );
 
@@ -108,10 +116,10 @@ const fetchRegions = async () => {
   }
 };
 
-const setLocations=(locations)=>{
-  console.log(locations)
-  template.value.locations=locations
-}
+const setLocations = (locations) => {
+  console.log(locations);
+  template.value.locations = locations;
+};
 </script>
 
 <style scoped>
