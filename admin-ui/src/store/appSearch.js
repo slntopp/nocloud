@@ -11,7 +11,11 @@ export default {
       state.searchParam = newSearchParam;
     },
     setVariants(state, val) {
-      state.variants = { ...state.variants, ...val };
+      const variants = {};
+      Object.keys(val).forEach((key) => {
+        variants[key] = { key, ...val[key] };
+      });
+      state.variants = variants;
     },
     setSearchName(state, val) {
       state.searchName = val;
