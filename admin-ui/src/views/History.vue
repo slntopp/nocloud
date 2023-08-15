@@ -24,6 +24,8 @@ export default {
     path: null,
   }),
   async mounted() {
+    this.$store.commit("appSearch/setSearchName", "app-logs");
+
     await Promise.all([
       this.$store.dispatch("accounts/fetch"),
       this.$store.dispatch("services/fetch"),
@@ -35,7 +37,7 @@ export default {
       sp: { items: this.sps, title: "Service providers", key: "entity" },
       instance: { items: this.instances, title: "Instances", key: "entity" },
       account: { items: this.accounts, title: "Accounts" },
-      path: { title: "Path" ,key:'path'},
+      path: { title: "Path", key: "path" },
     });
   },
   computed: {

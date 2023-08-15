@@ -404,7 +404,7 @@ export default {
       ];
       const instances = this.items.filter((i) => {
         for (const key of Object.keys(this.customParams)) {
-          if (!this.variants[key].isArray) {
+          if (!this.variants[key]?.isArray) {
             continue;
           }
           const filter = this.customParams[key]?.map((c) => c.value);
@@ -419,13 +419,13 @@ export default {
               val = val[subkey];
             });
             if (
-              !filter.some((f) => val.toLowerCase().includes(f.toLowerCase()))
+              !filter.some((f) => val?.toLowerCase().includes(f?.toLowerCase()))
             ) {
               return false;
             }
           } else if (
             !filter.some((f) =>
-              this.getValue(key, i).toLowerCase().includes(f.toLowerCase())
+              this.getValue(key, i)?.toLowerCase().includes(f?.toLowerCase())
             )
           ) {
             return false;
