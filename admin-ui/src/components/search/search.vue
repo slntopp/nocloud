@@ -126,11 +126,13 @@ export default {
   data: () => ({ selectedGroupKey: "", isOpen: false }),
   methods: {
     setParam(index) {
-      const { key } = this.searchItems[index];
+      const item = this.searchItems[index];
+      const key = item?.key || "searchParam";
       const isArray = !!this.variants[key]?.isArray;
       const itemsExists = !!this.variants[key]?.items?.length;
+      const isSearchParam = key === "searchParam";
 
-      if (this.searchParam && (isArray || key === "searchParam")) {
+      if (this.searchParam && (isArray || isSearchParam)) {
         this.$store.commit("appSearch/setCustomParam", {
           key: key,
           value: {
@@ -144,6 +146,9 @@ export default {
 
       if (itemsExists) {
         this.selectedGroupKey = key;
+      }
+      if (isSearchParam) {
+        this.close();
       }
     },
     setEntity(index) {
