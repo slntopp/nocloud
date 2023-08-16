@@ -388,6 +388,9 @@ export default {
     customParams() {
       return this.$store.getters["appSearch/customParams"];
     },
+    searchParam(){
+      return this.$store.getters['appSearch/customSearchParam']
+    },
     variants() {
       return this.$store.getters["appSearch/variants"];
     },
@@ -404,7 +407,7 @@ export default {
       ];
       const instances = this.items.filter((i) => {
         for (const key of Object.keys(this.customParams)) {
-          if (!this.variants[key].isArray) {
+          if (!this.variants[key]?.isArray) {
             continue;
           }
           const filter = this.customParams[key]?.map((c) => c.value);
@@ -419,13 +422,13 @@ export default {
               val = val[subkey];
             });
             if (
-              !filter.some((f) => val.toLowerCase().includes(f.toLowerCase()))
+              !filter.some((f) => val?.toLowerCase().includes(f?.toLowerCase()))
             ) {
               return false;
             }
           } else if (
             !filter.some((f) =>
-              this.getValue(key, i).toLowerCase().includes(f.toLowerCase())
+              this.getValue(key, i)?.toLowerCase().includes(f?.toLowerCase())
             )
           ) {
             return false;
@@ -433,7 +436,7 @@ export default {
         }
         return true;
       });
-      const searchParam = this.customParams.searchParam?.value?.toLowerCase();
+      const searchParam = this.searchParam?.toLowerCase();
       if (!searchParam) {
         return instances;
       }
@@ -526,9 +529,6 @@ export default {
     isLoading() {
       return this.$store.getters["services/isLoading"];
     },
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
-    },
     currency() {
       return this.$store.getters["currencies/default"];
     },
@@ -543,10 +543,7 @@ export default {
       ];
     },
     serviceItems() {
-      return this.$store.getters["services/all"].map((i) => ({
-        title: i.title,
-        uuid: i.title,
-      }));
+      return this.$store.getters["services/all"].map((i) => i.title);
     },
     spItems() {
       const instancesSP = this.items.map((i) => i.sp);
@@ -557,78 +554,44 @@ export default {
             .filter((sp) => instancesSP.includes(sp.uuid))
             .map((sp) => sp.title)
         ),
-      ].map((sp) => ({
-        title: sp,
-        uuid: sp,
-      }));
+      ];
     },
     periodItems() {
-      return [
-        ...new Set(this.items.map((i) => this.getValue("period", i))),
-      ].map((p) => ({
-        title: p,
-        uuid: p,
-      }));
+      return [...new Set(this.items.map((i) => this.getValue("period", i)))];
     },
     productItems() {
-      return this.items
-        .map((i) => this.getValue("product", i))
-        .map((p) => ({
-          title: p,
-          uuid: p,
-        }));
-    },
-    accountsItems() {
-      return this.accounts.map((a) => ({
-        title: a.title,
-        uuid: a.title,
-      }));
-    },
-    namespacesItems() {
-      return this.namespaces.map((n) => ({
-        title: n.title,
-        uuid: n.title,
-      }));
-    },
-    instancesTypesItems() {
-      return this.instancesTypes.map((i) => ({ title: i, uuid: i }));
+      return this.items.map((i) => this.getValue("product", i));
     },
     searchItems() {
       return {
         service: {
           items: this.serviceItems,
           title: "Service",
-          key: "service",
           isArray: true,
         },
         period: {
           items: this.periodItems,
           title: "Period",
-          key: "period",
           isArray: true,
         },
         sp: {
           items: this.spItems,
           title: "Service provider",
-          key: "sp",
           isArray: true,
         },
         access: {
-          items: this.accountsItems,
+          items: this.accounts,
           title: "Account",
-          key: "access",
           isArray: true,
         },
         "access.namespace": {
-          items: this.namespacesItems,
+          items: this.namespaces,
           title: "Namespace",
-          key: "access.namespace",
           isArray: true,
         },
         product: {
           items: this.productItems,
           title: "Product",
-          key: "product",
           isArray: true,
         },
         state: {
@@ -641,17 +604,14 @@ export default {
           ],
           isArray: true,
           title: "State",
-          key: "state",
         },
         type: {
           title: "Type",
-          key: "type",
-          items: this.instancesTypesItems,
+          items: this.instancesTypes,
           isArray: true,
         },
         "billingPlan.title": {
           title: "Billing plan",
-          key: "billingPlan.title",
           items: this.priceModelItems,
           isArray: true,
         },

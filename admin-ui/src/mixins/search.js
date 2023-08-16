@@ -1,6 +1,6 @@
 const searchMixin = {
   beforeDestroy() {
-    this.$store.commit("appSearch/resetSearchParams");
+    this.$store.commit("appSearch/resetSearch");
   },
 };
 

@@ -2,6 +2,7 @@ export default {
   namespaced: true,
   state: {
     searchParam: "",
+    searchName: "",
     variants: {},
     customParams: {},
   },
@@ -10,7 +11,21 @@ export default {
       state.searchParam = newSearchParam;
     },
     setVariants(state, val) {
-      state.variants = { ...state.variants, ...val };
+      const variants = {};
+      Object.keys(val).forEach((key) => {
+        const items = val[key].items?.map((i) => ({
+          title: i.title || i,
+          uuid: i.uuid || i,
+        }));
+        variants[key] = { key, ...val[key], items };
+      });
+      state.variants = variants;
+    },
+    setSearchName(state, val) {
+      state.searchName = val;
+    },
+    resetSearch(state) {
+      state.searchName = "";
     },
     pushVariant(state, { key, value }) {
       state.variants[key] = value;
@@ -19,6 +34,9 @@ export default {
       state.searchParam = "";
       state.variants = {};
       state.customParams = {};
+    },
+    setCustomParams(state, params) {
+      state.customParams = params;
     },
     setCustomParam(state, { key, value }) {
       if ((key === "searchParam" || !key) && !value.value) {
@@ -46,15 +64,23 @@ export default {
     param(state) {
       return state.searchParam;
     },
+    customSearchParam(state){
+      return state.customParams.searchParam?.value
+    },
     variants(state) {
       const variants = { ...state.variants };
-      if (Object.keys(variants)) {
+      if (Object.keys(variants).length) {
         variants["searchParam"] = { title: "Anywhere", key: "searchParam" };
       }
       return variants;
     },
+    searchName(state) {
+      return state.searchName + "_search";
+    },
     customParams(state) {
-      return state.customParams;
+      const params={...state.customParams}
+      delete params['searchParam']
+      return params;
     },
   },
 };
