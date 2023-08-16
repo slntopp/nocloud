@@ -259,7 +259,10 @@ export default {
     },
     async changePlan(plan) {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
-        return "You must select a group for the tariff!";
+        this.$store.commit("snackbar/showSnackbarError", {
+          message: "You must select a group for the tariff!"
+        });
+        return;
       }
 
       const sp = this.$store.getters["servicesProviders/all"];
