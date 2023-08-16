@@ -8,9 +8,6 @@
     :single-select="singleSelect"
     :footer-error="fetchError"
     @input="handleSelect"
-    :filters-items="filterItems"
-    :filters-values="selectedFilter"
-    @input:filter="selectedFilter[$event.key] = $event.value"
   >
     <template v-slot:[`item.title`]="{ item }">
       <div class="d-flex justify-space-between">
@@ -66,6 +63,7 @@ import noCloudTable from "@/components/table.vue";
 import Balance from "./balance.vue";
 import { filterArrayByTitleAndUuid } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
+import { mapGetters } from "vuex";
 
 export default {
   name: "accounts-table",
@@ -83,10 +81,6 @@ export default {
       type: Boolean,
       default: false,
     },
-    searchParam: {
-      type: String,
-      default: "",
-    },
   },
   data() {
     return {
@@ -98,7 +92,7 @@ export default {
         { text: "UUID", value: "uuid" },
         { text: "Balance", value: "balance" },
         { text: "Client currency", value: "currency" },
-        { text: "Access level", value: "access.level", customFilter: true },
+        { text: "Access level", value: "access.level" },
         { text: "Group(NameSpace)", value: "namespace" },
       ],
       levelColorMap: {
@@ -108,7 +102,6 @@ export default {
         READ: "gray",
         NONE: "error",
       },
-      selectedFilter: { "access.level": [] },
     };
   },
   methods: {
@@ -129,14 +122,21 @@ export default {
     },
   },
   computed: {
+    ...mapGetters("appSearch", {
+      searchParam: "customSearchParam",
+      searchParams: "customParams",
+    }),
     tableData() {
       return this.$store.getters["accounts/all"];
     },
     filtredAccounts() {
       const accounts = this.tableData.filter(
         (a) =>
-          this.selectedFilter["access.level"].length === 0 ||
-          this.selectedFilter["access.level"].includes(a.access.level)
+          !this.searchParams?.["access.level"] ||
+          !this.searchParams["access.level"].length ||
+          this.searchParams["access.level"]?.find(
+            (t) => t.value === a.access.level
+          )
       );
 
       if (this.searchParam) {
@@ -146,9 +146,6 @@ export default {
     },
     namespaces() {
       return this.$store.getters["namespaces/all"];
-    },
-    filterItems() {
-      return { "access.level": Object.keys(this.levelColorMap) };
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
@@ -174,6 +171,17 @@ export default {
           this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
         }
       });
+  },
+  mounted() {
+    setTimeout(() => {
+      this.$store.commit("appSearch/setVariants", {
+        "access.level": {
+          items: Object.keys(this.levelColorMap),
+          isArray: true,
+          title: "Access",
+        },
+      });
+    }, 0);
   },
   watch: {
     tableData() {

@@ -1,8 +1,5 @@
 <template>
   <nocloud-table
-    :filters-items="filterItems"
-    :filters-values="selectedFiltres"
-    @input:filter="selectedFiltres[$event.key] = $event.value"
     table-name="service-providers-table"
     :loading="loading"
     :items="filteredSp"
@@ -31,8 +28,8 @@ import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 
 const Headers = [
   { text: "Title", value: "titleLink" },
-  { text: "Type", value: "type", customFilter: true },
-  { text: "State", value: "state", customFilter: true },
+  { text: "Type", value: "type" },
+  { text: "State", value: "state" },
   { text: "Preview", value: "meta" },
   {
     text: "UUID",
@@ -65,7 +62,6 @@ export default {
       Headers,
       fetchError: "",
       allTypes: [],
-      selectedFiltres: { type: [], state: [] },
       stateColorMap: {
         running: "success",
         operation: "success",
@@ -87,7 +83,23 @@ export default {
     },
     getShowcase(item) {
       return Object.values(item.meta?.showcase ?? {})[0];
-    }
+    },
+    getInstanceTypes() {
+      const types = require.context(
+        "@/components/modules/",
+        true,
+        /serviceCreate\.vue$/
+      );
+
+      types.keys().forEach((key) => {
+        const matched = key.match(
+          /\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i
+        );
+        if (matched && matched.length > 1) {
+          this.allTypes.push(matched[1]);
+        }
+      });
+    },
   },
   computed: {
     tableData() {
@@ -106,14 +118,14 @@ export default {
       }));
     },
     searchParam() {
-      return this.$store.getters["appSearch/param"];
+      return this.$store.getters["appSearch/customSearchParam"];
     },
     filteredSp() {
       const sp = this.tableData.filter((sp) => {
-        return Object.keys(this.selectedFiltres).every(
+        return Object.keys(this.searchParams || {}).every(
           (key) =>
-            this.selectedFiltres[key].length === 0 ||
-            this.selectedFiltres[key].includes(sp[key])
+            this.searchParams[key].length === 0 ||
+            this.searchParams[key].find((p) => sp[key]?.includes(p.value))
         );
       });
       if (this.searchParam) {
@@ -121,11 +133,8 @@ export default {
       }
       return sp;
     },
-    filterItems() {
-      return {
-        type: this.allTypes,
-        state: Object.keys(this.stateColorMap).map((k) => k.toUpperCase()),
-      };
+    searchParams() {
+      return this.$store.getters["appSearch/customParams"];
     },
   },
   created() {
@@ -159,22 +168,24 @@ export default {
         }
       });
 
-    const types = require.context(
-      "@/components/modules/",
-      true,
-      /serviceCreate\.vue$/
-    );
-
-    types.keys().forEach((key) => {
-      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i);
-      if (matched && matched.length > 1) {
-        this.allTypes.push(matched[1]);
-      }
-    });
+    this.getInstanceTypes();
   },
   watch: {
     tableData() {
       this.fetchError = "";
+    },
+    allTypes(val) {
+      if (val) {
+        this.$store.commit("appSearch/setSearchName", "services-providers");
+        this.$store.commit("appSearch/setVariants", {
+          type: { items: this.allTypes, title: "Type", isArray: true },
+          state: {
+            items: Object.keys(this.stateColorMap).map((k) => k.toUpperCase()),
+            title: "State",
+            isArray: true,
+          },
+        });
+      }
     },
   },
 };

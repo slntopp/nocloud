@@ -92,7 +92,7 @@
                     <div>
                       <span> in {{ item.title }} </span>
                       <v-btn
-                        v-if="variants[item.key]?.isArray"
+                        v-if="variants[item.key].items"
                         @click.stop="selectGroup(item)"
                         icon
                       >
@@ -126,10 +126,13 @@ export default {
   data: () => ({ selectedGroupKey: "", isOpen: false }),
   methods: {
     setParam(index) {
-      const { key } = this.searchItems[index];
-      const isArray = this.variants[key]?.isArray;
+      const item = this.searchItems[index];
+      const key = item?.key || "searchParam";
+      const isArray = !!this.variants[key]?.isArray;
+      const itemsExists = !!this.variants[key]?.items?.length;
+      const isSearchParam = key === "searchParam";
 
-      if (this.searchParam) {
+      if (this.searchParam && (isArray || isSearchParam)) {
         this.$store.commit("appSearch/setCustomParam", {
           key: key,
           value: {
@@ -140,20 +143,27 @@ export default {
           },
         });
       }
-      if (isArray) {
+
+      if (itemsExists) {
         this.selectedGroupKey = key;
+      }
+      if (isSearchParam) {
+        this.close();
       }
     },
     setEntity(index) {
       const item = this.searchItems[index];
-      const variant = this.variants[this.selectedGroupKey || item?.key];
+      const variant =
+        this.variants[this.selectedGroupKey] || this.variants[item?.key];
       const key = variant?.key || this.selectedGroupKey;
 
-      this.customParams[key]?.forEach((i) => {
-        if (!i.full) {
-          this.$store.commit("appSearch/deleteCustomParam", { ...i, key });
-        }
-      });
+      if (variant?.isArray) {
+        this.customParams[key]?.forEach((i) => {
+          if (!i.full) {
+            this.$store.commit("appSearch/deleteCustomParam", { ...i, key });
+          }
+        });
+      }
 
       this.$store.commit("appSearch/setCustomParam", {
         key,
@@ -184,8 +194,11 @@ export default {
   computed: {
     ...mapGetters("appSearch", {
       variants: "variants",
-      customParams: "customParams",
+      searchName: "searchName",
     }),
+    customParams() {
+      return this.$store.state["appSearch"].customParams;
+    },
     searchParam: {
       get() {
         return this.$store.getters["appSearch/param"];
@@ -245,6 +258,27 @@ export default {
   watch: {
     variants() {
       this.close();
+    },
+    searchName(val, prevVal) {
+      const isCustomParamsEmpty = !Object.keys(this.customParams).length;
+
+      if (prevVal && !isCustomParamsEmpty) {
+        localStorage.setItem(prevVal, JSON.stringify(this.customParams));
+        this.$store.commit("appSearch/resetSearchParams");
+      } else if (
+        prevVal &&
+        isCustomParamsEmpty &&
+        localStorage.getItem(prevVal)
+      ) {
+        localStorage.removeItem(prevVal);
+      }
+
+      if (localStorage.getItem(val)) {
+        this.$store.commit(
+          "appSearch/setCustomParams",
+          JSON.parse(localStorage.getItem(val))
+        );
+      }
     },
     isOpen(val) {
       if (!val) {

@@ -225,6 +225,8 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "accounts/fetch",
     });
+
+    this.$store.commit('appSearch/setSearchName','all-accounts')
   },
 };
 </script>
