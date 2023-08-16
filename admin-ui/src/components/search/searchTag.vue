@@ -2,7 +2,7 @@
   <v-chip class="ma-3 pa-2" outlined color="primary">
     {{
       param.isArray
-        ? `${variants[param.key].title}:${param?.title}`
+        ? `${variants[param.key]?.title || ''}:${param?.title}`
         : param.title
     }}
     <v-btn @click="deleteParam" icon small>
