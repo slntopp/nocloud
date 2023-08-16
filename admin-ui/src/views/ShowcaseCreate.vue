@@ -10,18 +10,25 @@
             label="Title"
           />
         </v-col>
-        <v-col cols="4">
+        <v-col cols="6" style="display: flex; gap: 30px; justify-content: flex-end">
+          <v-switch label="Is primary" v-model="showcase.primary" />
+          <v-switch label="Enabled" v-model="showcase.public" />
+        </v-col>
+        <v-col cols="6">
           <icons-autocomplete
             label="Preview icon"
             :value="showcase.icon"
             @input:value="showcase.icon = $event"
           />
         </v-col>
-        <v-col cols="1">
-          <v-switch label="Is primary" v-model="showcase.primary" />
-        </v-col>
-        <v-col cols="1">
-          <v-switch label="Enabled" v-model="showcase.public" />
+        <v-col cols="6">
+          <v-autocomplete
+            item-text="title"
+            item-value="uuid"
+            label="Default location"
+            v-model="defaultLocation"
+            :items="allLocations"
+          />
         </v-col>
       </v-row>
 
@@ -68,15 +75,6 @@
                   label="Locations"
                   v-model="item.locations"
                   :locations="filteredLocations[i]"
-                />
-              </v-col>
-              <v-col cols="6">
-                <v-autocomplete
-                  item-text="title"
-                  item-value="uuid"
-                  label="Default location"
-                  v-model="defaultLocation"
-                  :items="item.locations"
                 />
               </v-col>
             </v-row>
@@ -148,8 +146,8 @@ const plans = computed(() => {
   }, {});
 });
 
-const locations = computed(() => {
-  return showcase.value.items.reduce((result, { servicesProvider }, i) => {
+const locations = computed(() =>
+  showcase.value.items.reduce((result, { servicesProvider }, i) => {
     const { uuid, locations = [] } = serviceProviders.value.find(
       (sp) => sp.uuid === servicesProvider
     ) ?? {};
@@ -160,21 +158,29 @@ const locations = computed(() => {
         ...location, sp: uuid, id: getNewLocationKey(location)
       }))
     };
-  }, {});
-});
+  }, {})
+);
 
 const filteredLocations = computed(() => {
   const result = {};
 
   Object.entries(locations.value).forEach(([i, value]) => {
-    if (!plans.value[i][0]) return;
-    result[i] = value.filter(({ type }) =>
-      plans.value[i][0].type === type
+    const plan = plans.value[i].find(({ uuid }) =>
+      uuid === showcase.value.items[i].plan
     );
+
+    if (!plan) return;
+    result[i] = value.filter(({ type }) => plan.type === type);
   });
 
   return result;
 });
+
+const allLocations = computed(() =>
+  Object.values(filteredLocations.value).reduce(
+    (result, locations) => [...result, ...locations], []
+  )
+);
 
 watch(realShowcase, () => {
   showcase.value = realShowcase.value;
