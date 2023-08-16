@@ -23,6 +23,7 @@
         </v-col>
         <v-col cols="6">
           <v-autocomplete
+            clearable
             item-text="title"
             item-value="id"
             label="Default location"
@@ -63,6 +64,7 @@
               </v-col>
               <v-col cols="6">
                 <v-autocomplete
+                  clearable
                   label="Price model"
                   item-text="title"
                   item-value="uuid"
@@ -183,7 +185,8 @@ const allLocations = computed(() =>
 );
 
 watch(realShowcase, () => {
-  showcase.value = realShowcase.value;
+  defaultLocation.value = realShowcase.value.promo.main?.default ?? "";
+  showcase.value = JSON.parse(JSON.stringify(realShowcase.value));
   showcase.value.newTitle = showcase.value.title;
 
   if (!Array.isArray(showcase.value.items)) {
@@ -218,16 +221,16 @@ const save = async () => {
     Object.entries(filteredLocations.value).forEach(([i, value]) => {
       if (value.length < 1) return;
       const item = data.items[i];
-      const locs = item.locations
-        .filter(({ id }) => value.find((location) => location.id === id))
-        .map((location) => ({
-          ...location,
-          sp: undefined,
-          id: location.id.replace(
-            data.title.replaceAll(' ', '_'),
-            data.newTitle.replaceAll(' ', '_')
-          )
-        }));
+      const locs = value.filter(({ id }) =>
+        item.locations.find((locationId) => locationId === id)
+      ).map((location) => ({
+        ...location,
+        sp: undefined,
+        id: location.id.replace(
+          data.title.replaceAll(' ', '_'),
+          data.newTitle.replaceAll(' ', '_')
+        )
+      }));
 
       locs.forEach((location) => {
         if (!data.locations.find(({ id }) => id === location.id)) {
