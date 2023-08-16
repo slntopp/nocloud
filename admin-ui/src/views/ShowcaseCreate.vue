@@ -24,7 +24,7 @@
         <v-col cols="6">
           <v-autocomplete
             item-text="title"
-            item-value="uuid"
+            item-value="id"
             label="Default location"
             v-model="defaultLocation"
             :items="allLocations"
