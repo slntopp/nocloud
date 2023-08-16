@@ -125,7 +125,7 @@ export default {
         return Object.keys(this.searchParams || {}).every(
           (key) =>
             this.searchParams[key].length === 0 ||
-            this.searchParams[key].find((p) => sp[key].includes(p.value))
+            this.searchParams[key].find((p) => sp[key]?.includes(p.value))
         );
       });
       if (this.searchParam) {

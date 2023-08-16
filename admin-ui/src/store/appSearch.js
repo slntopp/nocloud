@@ -13,7 +13,7 @@ export default {
     setVariants(state, val) {
       const variants = {};
       Object.keys(val).forEach((key) => {
-        const items = val[key].items.map((i) => ({
+        const items = val[key].items?.map((i) => ({
           title: i.title || i,
           uuid: i.uuid || i,
         }));
