@@ -12,6 +12,7 @@
       v-model="tabs"
     >
       <v-tab>Info</v-tab>
+      <v-tab>Accounts</v-tab>
     </v-tabs>
     <v-tabs-items
       class="rounded-b-lg"
@@ -27,6 +28,13 @@
           @input:title="namespace.title = $event"
         />
       </v-tab-item>
+      <v-tab-item>
+        <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
+        <namespace-accounts
+          v-if="namespace && namespaceTitle"
+          :namespace="namespace"
+        />
+      </v-tab-item>
     </v-tabs-items>
   </div>
 </template>
@@ -34,6 +42,7 @@
 <script>
 import config from "@/config.js";
 import namespaceInfo from "../components/namespace/info.vue";
+import NamespaceAccounts from "@/components/namespace/accounts.vue";
 
 export default {
   name: "account-view",
@@ -43,7 +52,7 @@ export default {
     tabs: 0,
     namespace: {},
   }),
-  components: { namespaceInfo },
+  components: { NamespaceAccounts, namespaceInfo },
   methods: {
     navTitle(title) {
       if (title && this.navTitles[title]) {
