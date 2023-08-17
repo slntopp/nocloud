@@ -220,15 +220,17 @@ const fetchFlavours = async () => {
       if (!flavour.available) {
         return;
       }
-      Object.keys(flavour.planCodes || {}).forEach((key) => {
+      Object.entries(flavour.planCodes || {}).forEach(([key, value]) => {
+        const { gpu = { model: "", number: 0 } } = meta.technical[value] ?? {};
         const period = key === "monthly" ? "P1M" : "P1H";
         const planCode = `${period} ${flavour.id}`;
         const price = parseFloat(
-          prices.value[selectedRegion.value]?.[flavour.planCodes[key]] *
-            rate.value
+          prices.value[selectedRegion.value]?.[flavour.planCodes[key]] * rate.value
         ).toFixed(2);
+
         newFlavours.push({
           ...flavour,
+          gpu,
           name: template.value.products[planCode]?.title || flavour.name,
           apiName: flavour.name,
           period,
@@ -244,7 +246,8 @@ const fetchFlavours = async () => {
     });
 
     flavors.value[selectedRegion.value] = newFlavours;
-  } catch {
+  } catch (error) {
+    console.log(error);
     store.commit("snackbar/showSnackbarError", {
       message: "Erorr during fetch flavors",
     });
@@ -330,6 +333,8 @@ const changePlan = (plan) => {
           quota: item.quota,
           ram: item.ram,
           cpu: item.vcpus,
+          gpu_name: item.gpu.model,
+          gpu_count: item.gpu.number
         },
         meta: {
           priceCode: item.priceCode,

@@ -93,7 +93,8 @@
       <template v-slot:expanded-item="{ headers, item }">
         <template v-if="item.installation_fee">
           <td></td>
-          <td :colspan="headers.length - 4">Installation price</td>
+          <td></td>
+          <td :colspan="headers.length - 6">Installation price</td>
           <td>
             {{ item.installation_fee.price.value }}
             {{ defaultCurrency }}
@@ -105,6 +106,7 @@
               v-model="item.installation_fee.value"
             />
           </td>
+          <td></td>
           <td></td>
         </template>
       </template>
