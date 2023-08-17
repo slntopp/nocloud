@@ -4828,10 +4828,10 @@ nocloud-ui@^1.0.7:
   resolved "https://registry.yarnpkg.com/nocloud-ui/-/nocloud-ui-1.0.7.tgz#2aa8679dad52f7f9d0644bc88cbd07f3512c8a71"
   integrity sha512-MMuuuBO7BO3HFq1LQqGQoJxGpbrdGgTJEzH0HtwUl0KeHPWaCXXhEytKZgP2HdJJL7CwzzC/Mt8/O4BLQ8lTmg==
 
-nocloudjsrest@^1.5.9:
-  version "1.5.9"
-  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.5.9.tgz#c2a5860b2bb3ed252d9c0f7ec9f181190788385b"
-  integrity sha512-jY7JwyNJttETkJRHqaZs7f931HNTmjcfTGTt+9K/8Cq2PAgnhSvNY+q/DAzb8q1Lw0J4uzNKeSJ7iXhm7zqzkw==
+nocloudjsrest@^1.5.10:
+  version "1.5.10"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.5.10.tgz#12db0c29b52c31d277e0bbcdd0469ac978ef6b18"
+  integrity sha512-VSPpLP3evVXel3c35Aqqlvlv0WPGGAIEGB92gE7MqE1QgL2wN1bG/XYCR3J1auiTnhXXAcd0P9ArESSDeGPj2w==
   dependencies:
     axios "^0.24.0"
 
