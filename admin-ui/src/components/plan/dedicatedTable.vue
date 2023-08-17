@@ -23,6 +23,7 @@
       sort-by="isBeenSell"
       sort-desc
       item-key="id"
+      :show-expand="true"
       :show-select="false"
       :items="filteredPlans"
       :headers="headers"
@@ -87,6 +88,25 @@
 
       <template v-slot:[`item.value`]="{ item }">
         <v-text-field dense style="width: 150px" v-model="item.value" />
+      </template>
+
+      <template v-slot:expanded-item="{ headers, item }">
+        <template v-if="item.installation_fee">
+          <td></td>
+          <td :colspan="headers.length - 4">Installation price</td>
+          <td>
+            {{ item.installation_fee.price.value }}
+            {{ defaultCurrency }}
+          </td>
+          <td>
+            <v-text-field
+              dense
+              style="width: 150px"
+              v-model="item.installation_fee.value"
+            />
+          </td>
+          <td></td>
+        </template>
       </template>
 
       <template v-slot:[`item.addons`]="{ item }">
@@ -287,11 +307,9 @@ export default {
           const addons = this.getAddons(el)
             ? this.getAddons(el)
                 .filter((addon) => addon.sell)
-                ?.map((el) => ({
-                  id: el.planCode,
-                  title: el.name,
-                }))
+                ?.map((el) => ({ id: el.planCode, title: el.name }))
             : plan.products[el.id]?.meta.addons;
+
           const datacenter =
             requiredConfiguration.find((el) => el.label.includes("datacenter"))
               ?.allowedValues ?? [];
@@ -306,7 +324,7 @@ export default {
             price: el.value,
             period: this.getPeriod(el.duration),
             sorter: Object.keys(plan.products).length,
-            installation_fee: el.installation_fee,
+            installation_fee: el.installation_fee.value,
             meta: { addons, datacenter, os },
           };
         }
@@ -404,7 +422,10 @@ export default {
             result.push({
               planCode,
               duration,
-              installation_fee: installation.price.value,
+              installation_fee: {
+                price: installation.price,
+                value: installation.price.value
+              },
               price: { value: newPrice },
               name: productName,
               apiName: productName,
