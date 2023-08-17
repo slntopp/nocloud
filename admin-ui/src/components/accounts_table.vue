@@ -81,6 +81,9 @@ export default {
       type: Boolean,
       default: false,
     },
+    namespace: {
+      type: String,
+    },
   },
   data() {
     return {
@@ -130,13 +133,31 @@ export default {
       return this.$store.getters["accounts/all"];
     },
     filtredAccounts() {
-      const accounts = this.tableData.filter(
-        (a) =>
-          !this.searchParams?.["access.level"] ||
-          !this.searchParams["access.level"].length ||
-          this.searchParams["access.level"]?.find(
-            (t) => t.value === a.access.level
-          )
+      const searchParams = { ...this.searchParams };
+
+      if (this.namespace) {
+        searchParams["access.namespace"] = [{ value: this.namespace }];
+      }
+
+      const accounts = this.tableData.filter((a) =>
+        Object.keys(searchParams).every((k) => {
+          return (
+            !searchParams?.[k] ||
+            !searchParams[k].length ||
+            searchParams[k]?.find((t) => {
+              let key = k;
+              let data = { ...a };
+              k.split(".").forEach((subKey, index) => {
+                if (index === k.split(".").length - 1) {
+                  key = subKey;
+                  return;
+                }
+                data = a[subKey];
+              });
+              return t.value === data[key];
+            })
+          );
+        })
       );
 
       if (this.searchParam) {
