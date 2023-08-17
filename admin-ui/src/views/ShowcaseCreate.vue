@@ -179,8 +179,14 @@ const filteredLocations = computed(() => {
 });
 
 const allLocations = computed(() =>
-  Object.values(filteredLocations.value).reduce(
-    (result, locations) => [...result, ...locations], []
+  Object.entries(filteredLocations.value).reduce(
+    (result, [i, locations]) => [
+      ...result,
+      ...locations.filter(({ id }) =>
+        showcase.value.items[i].locations
+          .find((location) => id === (location.id ?? location))
+      )
+    ], []
   )
 );
 
@@ -222,7 +228,7 @@ const save = async () => {
       if (value.length < 1) return;
       const item = data.items[i];
       const locs = value.filter(({ id }) =>
-        item.locations.find((locationId) => locationId === id)
+        item.locations.find((location) => (location.id ?? location) === id)
       ).map((location) => ({
         ...location,
         sp: undefined,
