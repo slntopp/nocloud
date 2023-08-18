@@ -39,10 +39,14 @@
           :expanded.sync="expanded"
         >
           <template v-slot:[`item.name`]="{ item }">
-            <v-text-field v-model="item.name" />
+            <v-text-field style="min-width: 200px" v-model="item.name" />
           </template>
           <template v-slot:[`item.endPrice`]="{ item }">
-            <v-text-field v-model.number="item.endPrice" type="number" />
+            <v-text-field
+              style="min-width: 50px"
+              v-model.number="item.endPrice"
+              type="number"
+            />
           </template>
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
