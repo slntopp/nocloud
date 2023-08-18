@@ -122,7 +122,8 @@
                 dense
                 type="number"
                 style="width: 150px"
-                v-model="item.installation_fee"
+                :value="item.installationFee"
+                @input="(value) => changeProduct('installationFee', +value, item.id)"
               />
             </td>
           </template>
