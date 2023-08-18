@@ -49,7 +49,7 @@ import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import { getTodayFullDate } from "@/functions";
-import {mapActions, mapGetters} from "vuex";
+import { mapActions, mapGetters } from "vuex";
 
 export default {
   name: "instance-actions",
@@ -113,6 +113,10 @@ export default {
         const billingPlan = {
           ...this.copyTemplate.billingPlan,
           title,
+          products: {
+            [this.product]:
+              this.copyTemplate.billingPlan.products[this.product],
+          },
           public: false,
         };
         delete billingPlan.uuid;
@@ -179,9 +183,9 @@ export default {
           },
         ],
         "ovh dedicated": [
-          { action: "poweroff", disabled:true },
+          { action: "poweroff", disabled: true },
           { action: "resume", disabled: true },
-          { action: "suspend", disabled: true},
+          { action: "suspend", disabled: true },
           { action: "reboot", disabled: true },
           {
             action: "open_ipmi",
@@ -303,7 +307,7 @@ export default {
         : this.template.type;
 
       switch (type) {
-        case 'virtual':
+        case "virtual":
         case "ione": {
           return (item) =>
             `IND_${this.sp.title}_${
@@ -333,6 +337,21 @@ export default {
         JSON.stringify(this.copyTemplate.billingPlan) !==
         JSON.stringify(this.template.billingPlan)
       );
+    },
+    product() {
+      switch (this.template.type) {
+        case "ovh": {
+          return (
+            this.template.config.duration + " " + this.template.config.planCode
+          );
+        }
+        case "ione":
+        case "virtual": {
+          return this.template.product;
+        }
+      }
+
+      return null;
     },
   },
 };

@@ -69,6 +69,8 @@
               <v-col>
                 <v-select
                   :items="accessLevels"
+                  item-value="id"
+                  item-text="title"
                   v-model="newAccount.data.access"
                   label="access"
                 ></v-select>
@@ -145,7 +147,12 @@ export default {
         loading: false,
       },
       deletingLoading: false,
-      accessLevels: [0, 1, 2, 3],
+      accessLevels: [
+        { id: 0, title: "NONE" },
+        { id: 1, title: "READ" },
+        { id: 2, title: "MGMT" },
+        { id: 3, title: "ADMIN" },
+      ],
     };
   },
   methods: {
@@ -226,7 +233,7 @@ export default {
       type: "accounts/fetch",
     });
 
-    this.$store.commit('appSearch/setSearchName','all-accounts')
+    this.$store.commit("appSearch/setSearchName", "all-accounts");
   },
 };
 </script>

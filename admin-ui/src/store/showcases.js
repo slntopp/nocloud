@@ -27,11 +27,11 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit }) {
+    async fetch({ commit }, anonymously) {
       commit("setLoading", true);
 
       try {
-        const response = await api.showcases.list();
+        const response = await api.showcases.list(anonymously);
         commit("setShowcases", response.showcases);
       } catch (e) {
         throw new Error(e);

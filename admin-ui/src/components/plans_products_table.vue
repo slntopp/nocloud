@@ -116,6 +116,14 @@
                   (value) => changeProduct('amount', value, item.id)
                 "
               />
+
+              <v-subheader class="px-0 pt-4">Installation price:</v-subheader>
+              <v-text-field
+                dense
+                type="number"
+                style="width: 150px"
+                v-model="item.installation_fee"
+              />
             </td>
           </template>
         </nocloud-table>

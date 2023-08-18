@@ -40,7 +40,7 @@
         </v-btn>
       </confirm-dialog>
 
-      <v-dialog v-model="joinAccount.modalVisible" width="500" scrollable>
+      <v-dialog v-model="joinAccount.modalVisible" width="80%" scrollable>
         <template v-slot:activator="{ on, attrs }">
           <v-btn
             color="background-light"
@@ -53,7 +53,7 @@
           </v-btn>
         </template>
 
-        <v-card>
+        <v-card color="background-light">
           <v-card-title class=""> Select Accounts (join) </v-card-title>
 
           <v-card-text>
@@ -90,7 +90,7 @@
         </v-card>
       </v-dialog>
 
-      <v-dialog v-model="linkAccount.modalVisible" width="500" scrollable>
+      <v-dialog v-model="linkAccount.modalVisible" width="80%" scrollable>
         <template v-slot:activator="{ on, attrs }">
           <v-btn
             color="background-light"
@@ -103,7 +103,7 @@
           </v-btn>
         </template>
 
-        <v-card>
+        <v-card color="background-light">
           <v-card-title class=""> Select Accounts (link) </v-card-title>
 
           <v-card-text>
