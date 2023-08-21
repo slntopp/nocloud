@@ -284,7 +284,7 @@ export default {
         this.$store.commit("snackbar/showSnackbarError", {
           message: "You must select a group for the tariff!"
         });
-        return;
+        return "error";
       }
 
       const sp = this.$store.getters["servicesProviders/all"];
@@ -652,6 +652,9 @@ export default {
             this.plans[i].group = group;
             this.plans[i].sell = true;
             this.plans[i].isBeenSell = true;
+          } else {
+            this.plans[i].name = title;
+            this.plans[i].group = group;
           }
           if (!this.groups.includes(group)) this.groups.push(group);
         });

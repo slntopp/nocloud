@@ -39,10 +39,20 @@
           :expanded.sync="expanded"
         >
           <template v-slot:[`item.name`]="{ item }">
-            <v-text-field v-model="item.name" />
+            <v-text-field style="min-width: 200px" v-model="item.name" />
           </template>
           <template v-slot:[`item.endPrice`]="{ item }">
-            <v-text-field v-model.number="item.endPrice" type="number" />
+            <v-text-field
+              style="min-width: 50px"
+              v-model.number="item.endPrice"
+              type="number"
+            />
+          </template>
+          <template v-slot:[`item.gpu.model`]="{ item }">
+            <template v-if="item.gpu.model !== ''">
+              {{ item.gpu.model }} (x{{ item.gpu.number }})
+            </template>
+            <template v-else>-</template>
           </template>
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
@@ -142,6 +152,7 @@ const pricesHeaders = ref([
   { text: "Quota", value: "quota" },
   { text: "RAM", value: "ram" },
   { text: "VCPUS", value: "vcpus" },
+  { text: "GPU", value: "gpu.model" },
   { text: "Type", value: "type" },
   { text: "Base price", value: "price" },
   { text: "End price", value: "endPrice" },

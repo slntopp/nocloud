@@ -116,8 +116,9 @@ export default {
         this.isCreateLoading = true;
       }
 
-      await this.$refs.table.changePlan(newPlan);
+      const result = await this.$refs.table.changePlan(newPlan);
 
+      if (result === "error") return;
       if (!isEdit) delete newPlan.uuid;
       const request = isEdit
         ? api.plans.update(newPlan.uuid, newPlan)
