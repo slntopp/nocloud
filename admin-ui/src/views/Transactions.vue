@@ -152,14 +152,6 @@ export default {
       });
     },
     updateOptions(options) {
-      console.log(
-        "options",
-        this.transactionData,
-        Object.keys(this.transactionData)
-      );
-      if (Object.keys(this.transactionData).length < 1) {
-        return;
-      }
       options.itemsPerPage =
         options.itemsPerPage === -1 ? 0 : options.itemsPerPage;
       this.$store
