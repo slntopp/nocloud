@@ -23,7 +23,7 @@
     "nocloudjsrest": "^1.5.11",
     "nth-check": "^2.1.1",
     "sass-loader": "^13.0.2",
-    "sha256-uint8array": "^0.10.5",
+    "sha256-uint8array": "^0.10.7",
     "sortablejs": "^1.15.0",
     "vnc-ui-vue": "^1.0.0",
     "vue": "^2.7.14",
