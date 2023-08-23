@@ -172,7 +172,7 @@ LET instance = @instance
 
 LET records = (
 	FOR record in @@records 
-
+	%s
 	FILTER record.processed
 	FILTER record.instance == instance
 	RETURN record
