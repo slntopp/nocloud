@@ -18,7 +18,6 @@ package graph
 import (
 	"context"
 	"fmt"
-
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -124,21 +123,23 @@ func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Re
 	return res, nil
 }
 
-const getReportQuery = `
-LET records = (
-	FOR record in @@records 
-		%s
-        FILTER record.processed
-		FILTER record.instance == @instance
-)
-RETURN {total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}
+const getReportsQuery = `
+FOR i in @@instances
+	LET records = (
+		FOR record in @@records 
+			%s
+			FILTER record.processed
+			FILTER record.instance == i._key
+			RETURN record
+	)
+    RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}
 `
 
-func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetInstanceReportRequest) (*pb.GetInstanceReportResponse, error) {
-	query := getReportQuery
+func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error) {
+	query := getReportsQuery
 	params := map[string]interface{}{
-		"@records": schema.RECORDS_COL,
-		"instance": req.GetUuid(),
+		"@records":   schema.RECORDS_COL,
+		"@instances": schema.INSTANCES_COL,
 	}
 
 	if req.From != nil && req.To != nil {
@@ -152,7 +153,53 @@ func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetInstanc
 		return nil, err
 	}
 
-	res := pb.GetInstanceReportResponse{}
+	var res []*pb.InstanceReport
+
+	for cursor.HasMore() {
+		var rep = pb.InstanceReport{}
+		_, err := cursor.ReadDocument(ctx, &rep)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, &rep)
+	}
+
+	return res, nil
+}
+
+const getReportQuery = `
+LET instance = @instance
+
+LET records = (
+	FOR record in @@records 
+	%s
+	FILTER record.processed
+	FILTER record.instance == instance
+	RETURN record
+)
+
+RETURN {records: records, total: SUM(records[*].total), count: COUNT(records)}
+`
+
+func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetailedInstanceReportRequest) (*pb.GetDetailedInstanceReportResponse, error) {
+	query := getReportQuery
+	params := map[string]interface{}{
+		"@records": schema.RECORDS_COL,
+		"instance": driver.NewDocumentID(schema.INSTANCES_COL, req.GetUuid()),
+	}
+
+	if req.From != nil && req.To != nil {
+		query = fmt.Sprintf(query, "FILTER record.exec >= @from AND record.exec <=@to")
+		params["from"] = req.GetFrom()
+		params["to"] = req.GetTo()
+	}
+
+	cursor, err := ctrl.db.Query(ctx, query, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var res pb.GetDetailedInstanceReportResponse
 
 	_, err = cursor.ReadDocument(ctx, &res)
 	if err != nil {
