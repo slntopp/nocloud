@@ -14,7 +14,7 @@
           <plan-opensrs
             :fee="fee"
             :isEdit="true"
-            @changeFee="(data) => (fee = data)"
+            @changeFee="changeFee"
             @onValid="(data) => (isValid = data)"
           />
           <confirm-dialog
@@ -36,7 +36,7 @@
       :template="template"
       :isPlansLoading="isPlansLoading"
       :getPeriod="getPeriod"
-      @changeFee="(value) => (fee = value)"
+      @changeFee="changeFee"
       @changeLoading="isPlansLoading = !isPlansLoading"
     />
 
@@ -171,6 +171,9 @@ export default {
     setFee() {
       this.$refs.table.setFee();
     },
+    changeFee(value) {
+      this.fee = JSON.parse(JSON.stringify(value))
+    }
   },
   computed: {
     tableComponent() {
