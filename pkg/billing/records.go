@@ -372,7 +372,26 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 	}, nil
 }
 
-func (s *BillingServiceServer) GetInstanceReport(ctx context.Context, req *pb.GetInstanceReportRequest) (*pb.GetInstanceReportResponse, error) {
+func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) (*pb.GetInstancesReportResponse, error) {
+	log := s.log.Named("GetRecords")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Permission denied")
+	}
+
+	reports, err := s.records.GetReports(ctx, req)
+	if err != nil {
+		log.Error("Failed to get reports", zap.Error(err))
+	}
+
+	return &pb.GetInstancesReportResponse{
+		Reports: reports,
+	}, nil
+}
+
+func (s *BillingServiceServer) GetInstanceReport(ctx context.Context, req *pb.GetDetailedInstanceReportRequest) (*pb.GetDetailedInstanceReportResponse, error) {
 	log := s.log.Named("GetRecords")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
