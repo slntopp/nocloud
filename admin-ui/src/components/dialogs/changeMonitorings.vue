@@ -6,7 +6,7 @@
     max-width="60%"
   >
     <v-card class="pa-5">
-      <v-card-title class="text-center">Change monitoring dates</v-card-title>
+      <v-card-title class="text-center">Change next payment dates</v-card-title>
       <div v-if="!isChangeAll">
         <v-row v-for="key in Object.keys(lastMonitorings || {})" :key="key">
           <v-col cols="4">
