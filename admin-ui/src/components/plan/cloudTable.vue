@@ -107,7 +107,7 @@ import {
 import api from "@/api";
 import { useStore } from "@/store";
 import NocloudTable from "@/components/table.vue";
-import useRate from "@/hooks/useRate";
+import usePlnRate from "@/hooks/usePlnRate";
 import { getMarginedValue } from "@/functions";
 
 const props = defineProps({
@@ -121,7 +121,7 @@ const props = defineProps({
 const { sp, template, fee } = toRefs(props);
 
 const store = useStore();
-const rate = useRate();
+const rate = usePlnRate();
 
 const expanded = ref([]);
 const tab = ref("prices");
