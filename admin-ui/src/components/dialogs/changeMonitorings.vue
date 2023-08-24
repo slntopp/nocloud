@@ -104,19 +104,34 @@ const setLastMonitorings = () => {
 
   Object.keys(data).forEach((key) => {
     if (key.includes("last_monitoring") && data[key]) {
+      const title = key
+        .replace("_last_monitoring", "")
+        .replace("last_monitoring", "product");
+      let value = +data[key];
+
+      if (title === "product") {
+        value =
+          value +
+          +template.value.billingPlan.products[template.value.product].period;
+      } else {
+        value =
+          value +
+          +template.value.billingPlan.resources.find((r) => r.key === title)
+            ?.period;
+      }
+
+      value = formatSecondsToDate(value);
       monitorings[key] = {
-        value: formatSecondsToDate(data[key]),
-        firstValue: formatSecondsToDate(data[key]),
-        title: key
-          .replace("_last_monitoring", "")
-          .replace("last_monitoring", "product"),
+        value: value,
+        firstValue: value,
+        title: title,
       };
     }
   });
 
   lastMonitorings.value = monitorings;
 
-  newAllDate.value = formatSecondsToDate(data.last_monitoring);
+  newAllDate.value = monitorings["last_monitoring"].value;
 };
 
 const changeDates = async () => {
@@ -136,12 +151,23 @@ const changeDates = async () => {
       isChangeAll.value ||
       lastMonitorings.value[key].firstValue != lastMonitorings.value[key].value
     ) {
-      changedDates[key] =
-        new Date(
-          isChangeAll.value
-            ? newAllDate.value
-            : lastMonitorings.value[key].value
-        ).getTime() / 1000;
+      const { value, title } = lastMonitorings.value[key];
+
+      let baseVal =
+        new Date(isChangeAll.value ? newAllDate.value : value).getTime() / 1000;
+
+      if (title === "product") {
+        baseVal =
+          baseVal -
+          +template.value.billingPlan.products[template.value.product].period;
+      } else {
+        baseVal =
+          baseVal -
+          +template.value.billingPlan.resources.find((r) => r.key === title)
+            ?.period;
+      }
+
+      changedDates[key] = baseVal;
     }
   });
 
