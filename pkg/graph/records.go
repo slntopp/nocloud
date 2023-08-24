@@ -170,13 +170,11 @@ func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstan
 }
 
 const getReportQuery = `
-LET instance = @instance
-
 LET records = (
 	FOR record in @@records 
 	%s
 	FILTER record.processed
-	FILTER record.instance == instance
+	FILTER record.instance == @instance
 	RETURN record
 )
 
