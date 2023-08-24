@@ -77,6 +77,10 @@ export default {
           component: () => import("@/components/instance/history.vue"),
         },
         {
+          title: "Reports",
+          component: () => import("@/components/instance/reports.vue"),
+        },
+        {
           title: "Template",
           component: () => import("@/components/instance/template.vue"),
         },
