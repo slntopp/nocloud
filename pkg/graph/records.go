@@ -194,6 +194,8 @@ func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetaile
 		params["to"] = req.GetTo()
 	}
 
+	ctrl.log.Debug("Q", zap.String("q", query))
+
 	cursor, err := ctrl.db.Query(ctx, query, params)
 	if err != nil {
 		return nil, err
