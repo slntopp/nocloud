@@ -146,6 +146,8 @@ func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstan
 		query = fmt.Sprintf(query, "FILTER record.exec >= @from AND record.exec <=@to")
 		params["from"] = req.GetFrom()
 		params["to"] = req.GetTo()
+	} else {
+		query = fmt.Sprintf(query, "")
 	}
 
 	cursor, err := ctrl.db.Query(ctx, query, params)
@@ -192,6 +194,8 @@ func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetaile
 		query = fmt.Sprintf(query, "FILTER record.exec >= @from AND record.exec <=@to")
 		params["from"] = req.GetFrom()
 		params["to"] = req.GetTo()
+	} else {
+		query = fmt.Sprintf(query, "")
 	}
 
 	ctrl.log.Debug("Q", zap.String("q", query))
