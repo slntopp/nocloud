@@ -279,6 +279,7 @@ export default {
 
     planId: -1,
     tabsIndex: 0,
+    usedFee: {}
   }),
   mixins: [currencyRate],
   methods: {
@@ -506,6 +507,7 @@ export default {
       this.filters["1"].Margin = ["manual"];
       this.selected["1"].Margin = ["manual"];
 
+      this.usedFee = JSON.parse(JSON.stringify(this.fee));
       this.plans.forEach((el) => {
         if (el.windows) windows.push(el.windows);
       });
@@ -536,18 +538,20 @@ export default {
       else return `VPS ${newGroup} ${name.split(" ").at(-1)}`;
     },
     getMargin({ value, price }, filter = true) {
-      if (!this.fee.ranges) {
+      if (!this.usedFee.ranges) {
         if (filter) this.changeFilters({ margin: "none" }, ["Margin"]);
         return "none";
       }
-      const range = this.fee.ranges?.find(
+
+      const range = this.usedFee.ranges.find(
         ({ from, to }) => from <= price.value && to >= price.value
       );
-      const n = Math.pow(10, this.fee.precision ?? 0);
+      const n = Math.pow(10, this.usedFee.precision);
       let percent = range?.factor / 100 + 1;
+      let margin;
       let round;
 
-      switch (this.fee.round) {
+      switch (this.usedFee.round) {
         case 1:
           round = "floor";
           break;
@@ -557,27 +561,34 @@ export default {
         case 3:
           round = "ceil";
       }
-      if (!this.fee.round || this.fee.round === "NONE") round = "round";
-      else if (typeof this.fee.round === "string") {
-        round = this.fee.round.toLowerCase();
+      if (this.usedFee.round === "NONE") round = "round";
+      else if (typeof this.usedFee.round === "string") {
+        round = this.usedFee.round.toLowerCase();
       }
+
+      // value = Math[round](value * n) / n;
 
       if (value === Math[round](price.value * percent * n) / n) {
-        if (filter) this.changeFilters({ margin: "ranged" }, ["Margin"]);
-        return "ranged";
-      } else percent = (this.fee.default ?? 0) / 100 + 1;
+        margin = "ranged";
+      } else if (this.usedFee.default <= 0) {
+        margin = "none";
+      } else {
+        percent = this.usedFee.default / 100 + 1;
+      }
 
       switch (value) {
-        case price.value:
-          if (filter) this.changeFilters({ margin: "none" }, ["Margin"]);
-          return "none";
+        case Math[round](price.value * n) / n:
+          margin = "none";
+          break;
         case Math[round](price.value * percent * n) / n:
-          if (filter) this.changeFilters({ margin: "fixed" }, ["Margin"]);
-          return "fixed";
+          if (!margin) margin = "fixed";
+          break;
         default:
-          if (filter) this.changeFilters({ margin: "manual" }, ["Margin"]);
-          return "manual";
+          margin = "manual";
       }
+
+      if (filter) this.changeFilters({ margin }, ["Margin"]);
+      return margin;
     },
     editGroup(group) {
       const i = this.groups.indexOf(group);

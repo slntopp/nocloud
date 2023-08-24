@@ -222,6 +222,7 @@ export default {
 
     groups: [],
     newGroup: { mode: "none", name: "", planId: "" },
+    usedFee: {}
   }),
   mixins: [currencyRate],
   methods: {
@@ -425,7 +426,7 @@ export default {
               planCode,
               duration,
               installation_fee: {
-                price: installation.price,
+                price: { value: +(installation.price.value * this.rate).toFixed(2) },
                 value: installation.price.value
               },
               price: { value: newPrice },
@@ -461,6 +462,7 @@ export default {
     setFee(values) {
       this.filters.Margin = ["manual"];
       this.selected.Margin = ["manual"];
+      this.usedFee = JSON.parse(JSON.stringify(this.fee));
 
       if (!values) {
         this.setFee(this.plans);
@@ -469,6 +471,11 @@ export default {
         });
       }
       values?.forEach((plan, i, arr) => {
+        if (arr[i].installation_fee) {
+          const price = arr[i].installation_fee.price.value;
+
+          arr[i].installation_fee.value = getMarginedValue(this.fee, price);
+        }
         arr[i].value = getMarginedValue(this.fee, plan.price.value);
         this.getMargin(arr[i]);
       });
@@ -489,20 +496,20 @@ export default {
       return `${newGroup}${sep}${newName}`;
     },
     getMargin({ value, price }, filter = true) {
-      if (!this.fee.ranges) {
+      if (!this.usedFee.ranges) {
         if (filter) this.changeFilters({ margin: "none" }, ["Margin"]);
         return "none";
       }
 
-      const range = this.fee.ranges.find(
+      const range = this.usedFee.ranges.find(
         ({ from, to }) => from <= price.value && to >= price.value
       );
-      const n = Math.pow(10, this.fee.precision);
+      const n = Math.pow(10, this.usedFee.precision);
       let percent = range?.factor / 100 + 1;
       let margin;
       let round;
 
-      switch (this.fee.round) {
+      switch (this.usedFee.round) {
         case 1:
           round = "floor";
           break;
@@ -512,19 +519,23 @@ export default {
         case 3:
           round = "ceil";
       }
-      if (this.fee.round === "NONE") round = "round";
-      else if (typeof this.fee.round === "string") {
-        round = this.fee.round.toLowerCase();
+      if (this.usedFee.round === "NONE") round = "round";
+      else if (typeof this.usedFee.round === "string") {
+        round = this.usedFee.round.toLowerCase();
       }
+
+      // value = Math[round](value * n) / n;
 
       if (value === Math[round](price.value * percent * n) / n) {
         margin = "ranged";
+      } else if (this.usedFee.default <= 0) {
+        margin = "none";
       } else {
-        percent = this.fee.default / 100 + 1;
+        percent = this.usedFee.default / 100 + 1;
       }
 
       switch (value) {
-        case price.value:
+        case Math[round](price.value * n) / n:
           margin = "none";
           break;
         case Math[round](price.value * percent * n) / n:
