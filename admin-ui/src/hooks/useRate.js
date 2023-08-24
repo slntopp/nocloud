@@ -1,38 +1,54 @@
-import { computed, onMounted, ref } from "vue";
 import api from "@/api";
+import { computed, onMounted, ref, watch } from "vue";
 import { useStore } from "@/store";
 
-const useRate = ({ currency } = { currency: "PLN" }) => {
-  const rate = ref(0);
-
+const useRate = (currency = ref("")) => {
   const store = useStore();
+
+  const rate = ref(0);
 
   const defaultCurrency = computed(() => {
     return store.getters["currencies/default"];
   });
 
   onMounted(() => {
-    if (currency === defaultCurrency.value) {
+    fetchRate();
+  });
+
+  const fetchRate = async () => {
+    if (!currency.value || !defaultCurrency.value) {
+      return;
+    }
+    if (currency.value === defaultCurrency.value) {
       rate.value = 1;
       return;
     }
-    api
-      .get(`/billing/currencies/rates/${currency}/${defaultCurrency.value}`)
-      .then((res) => {
-        rate.value = res.rate;
-      })
-      .catch(() =>
-        api.get(
-          `/billing/currencies/rates/${defaultCurrency.value}/${currency}`
-        )
-      )
-      .then((res) => {
-        if (res) rate.value = 1 / res.rate;
-      })
-      .catch((err) => console.error(err));
+    const res = await api.get(
+      `/billing/currencies/rates/${currency.value}/${defaultCurrency.value}`
+    );
+    rate.value = res.rate;
+  };
+
+  watch(currency, () => {
+    fetchRate();
   });
 
-  return rate;
+  watch(defaultCurrency, () => {
+    fetchRate();
+  });
+
+  const convertFrom = (price) => {
+    return rate.value ? (price / rate.value).toFixed(2) : 0;
+  };
+  const convertTo = (price) => {
+    return rate.value ? (price * rate.value).toFixed(2) : 0;
+  };
+
+  return {
+    rate,
+    convertTo,
+    convertFrom,
+  };
 };
 
 export default useRate;
