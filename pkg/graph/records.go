@@ -185,7 +185,7 @@ func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetaile
 	query := getReportQuery
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
-		"instance": driver.NewDocumentID(schema.INSTANCES_COL, req.GetUuid()),
+		"instance": req.GetUuid(),
 	}
 
 	if req.From != nil && req.To != nil {
