@@ -175,7 +175,7 @@ LET records = (
 	%s
 	FILTER record.processed
 	FILTER record.instance == @instance
-	RETURN record
+	RETURN merge(record, {uuid: record._key})
 )
 
 RETURN {records: records, total: SUM(records[*].total), count: COUNT(records)}
