@@ -123,17 +123,6 @@ func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Re
 	return res, nil
 }
 
-const getReportsQuery = `
-FOR i in @@instances
-	LET records = (
-		FOR record in @@records 
-			FILTER record.processed
-			FILTER record.instance == i._key
-			RETURN record
-	)
-    RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}
-`
-
 func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error) {
 	query := "FOR i in @@instances LET records = ( FOR record in @@records  FILTER record.processed FILTER record.instance == i._key"
 	params := map[string]interface{}{
