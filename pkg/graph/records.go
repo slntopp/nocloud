@@ -140,7 +140,7 @@ func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstan
 		params["to"] = req.GetTo()
 	}
 
-	query += " RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0} FOR r in reports"
+	query += " RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}) FOR r in reports"
 
 	if req.Field != nil && req.Sort != nil {
 		subQuery := ` SORT r.%s %s`
