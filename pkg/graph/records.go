@@ -256,18 +256,6 @@ func (ctrl *RecordsController) GetReportsCount(ctx context.Context) (int64, erro
 	return result, nil
 }
 
-const reportsInstanceCountQuery = `
-LET records = ( 
-	FOR record in @@records 
-		%s
-		FILTER record.processed 
-		FILTER record.instance == @instance
-		RETURN record
-	) 
-
-RETURN LENGTH(records)
-`
-
 func (ctrl *RecordsController) GetInstanceReportCountReport(ctx context.Context, req *pb.GetInstanceReportCountRequest) (int64, error) {
 	query := "LET records = ( FOR record in @@records FILTER record.processed FILTER record.instance == @instance RETURN record"
 	params := map[string]interface{}{
