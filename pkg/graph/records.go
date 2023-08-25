@@ -137,7 +137,6 @@ func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstan
 
 	if req.To != nil {
 		query += " FILTER record.exec <=@to"
-		params["from"] = req.GetFrom()
 		params["to"] = req.GetTo()
 	}
 
@@ -191,9 +190,13 @@ func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetaile
 		"instance": req.GetUuid(),
 	}
 
-	if req.From != nil && req.To != nil {
-		query += "FILTER record.exec >= @from AND record.exec <=@to"
+	if req.From != nil {
+		query += " FILTER record.exec >= @from"
 		params["from"] = req.GetFrom()
+	}
+
+	if req.To != nil {
+		query += " FILTER record.exec <=@to"
 		params["to"] = req.GetTo()
 	}
 
@@ -266,19 +269,23 @@ RETURN LENGTH(records)
 `
 
 func (ctrl *RecordsController) GetInstanceReportCountReport(ctx context.Context, req *pb.GetInstanceReportCountRequest) (int64, error) {
-	query := reportsInstanceCountQuery
+	query := "LET records = ( FOR record in @@records FILTER record.processed FILTER record.instance == @instance RETURN record"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
 		"instance": req.GetUuid(),
 	}
 
-	if req.From != nil && req.To != nil {
-		query = fmt.Sprintf(query, "FILTER record.exec >= @from AND record.exec <=@to")
+	if req.From != nil {
+		query += " FILTER record.exec >= @from"
 		params["from"] = req.GetFrom()
-		params["to"] = req.GetTo()
-	} else {
-		query = fmt.Sprintf(query, "")
 	}
+
+	if req.To != nil {
+		query += " FILTER record.exec <=@to"
+		params["to"] = req.GetTo()
+	}
+
+	query += ") RETURN LENGTH(records)"
 
 	cursor, err := ctrl.db.Query(ctx, query, params)
 	if err != nil {
