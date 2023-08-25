@@ -127,7 +127,6 @@ const getReportsQuery = `
 FOR i in @@instances
 	LET records = (
 		FOR record in @@records 
-			%s
 			FILTER record.processed
 			FILTER record.instance == i._key
 			RETURN record
@@ -136,19 +135,39 @@ FOR i in @@instances
 `
 
 func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error) {
-	query := getReportsQuery
+	query := "FOR i in @@instances LET records = ( FOR record in @@records  FILTER record.processed FILTER record.instance == i._key"
 	params := map[string]interface{}{
 		"@records":   schema.RECORDS_COL,
 		"@instances": schema.INSTANCES_COL,
 	}
 
 	if req.From != nil && req.To != nil {
-		query = fmt.Sprintf(query, "FILTER record.exec >= @from AND record.exec <=@to")
+		query += " FILTER record.exec >= @from AND record.exec <=@to"
 		params["from"] = req.GetFrom()
 		params["to"] = req.GetTo()
-	} else {
-		query = fmt.Sprintf(query, "")
 	}
+
+	if req.Field != nil && req.Sort != nil {
+		subQuery := ` SORT record.%s %s`
+		field, sort := req.GetField(), req.GetSort()
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	if req.Page != nil && req.Limit != nil {
+		if req.GetLimit() != 0 {
+			limit, page := req.GetLimit(), req.GetPage()
+			offset := (page - 1) * limit
+
+			query += ` LIMIT @offset, @count`
+			params["offset"] = offset
+			params["count"] = limit
+		}
+	}
+
+	query += "RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}"
+
+	ctrl.log.Debug("Final query", zap.String("query", query))
 
 	cursor, err := ctrl.db.Query(ctx, query, params)
 	if err != nil {
@@ -185,14 +204,6 @@ func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetaile
 	if req.Field != nil && req.Sort != nil {
 		subQuery := ` SORT record.%s %s`
 		field, sort := req.GetField(), req.GetSort()
-
-		if field == "total" {
-			if sort == "asc" {
-				sort = "desc"
-			} else {
-				sort = "asc"
-			}
-		}
 
 		query += fmt.Sprintf(subQuery, field, sort)
 	}
