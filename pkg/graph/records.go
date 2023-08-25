@@ -154,7 +154,7 @@ func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstan
 		}
 	}
 
-	query += "RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}"
+	query += " RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}"
 
 	ctrl.log.Debug("Final query", zap.String("query", query))
 
