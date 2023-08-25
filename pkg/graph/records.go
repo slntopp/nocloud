@@ -257,7 +257,7 @@ func (ctrl *RecordsController) GetReportsCount(ctx context.Context) (int64, erro
 }
 
 func (ctrl *RecordsController) GetInstanceReportCountReport(ctx context.Context, req *pb.GetInstanceReportCountRequest) (int64, error) {
-	query := "LET records = ( FOR record in @@records FILTER record.processed FILTER record.instance == @instance RETURN record"
+	query := "LET records = ( FOR record in @@records FILTER record.processed FILTER record.instance == @instance"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
 		"instance": req.GetUuid(),
@@ -273,7 +273,7 @@ func (ctrl *RecordsController) GetInstanceReportCountReport(ctx context.Context,
 		params["to"] = req.GetTo()
 	}
 
-	query += ") RETURN LENGTH(records)"
+	query += " RETURN record) RETURN LENGTH(records)"
 
 	cursor, err := ctrl.db.Query(ctx, query, params)
 	if err != nil {
