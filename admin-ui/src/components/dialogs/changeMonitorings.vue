@@ -13,26 +13,7 @@
             <v-card-title>{{ lastMonitorings[key].title }}</v-card-title>
           </v-col>
           <v-col cols="8">
-            <v-menu
-              :close-on-content-click="false"
-              transition="scale-transition"
-              min-width="auto"
-            >
-              <template v-slot:activator="{ on, attrs }">
-                <v-text-field
-                  v-bind="attrs"
-                  v-on="on"
-                  prepend-inner-icon="mdi-calendar"
-                  :value="lastMonitorings[key].value"
-                  readonly
-                />
-              </template>
-              <v-date-picker
-                scrollable
-                :min="min"
-                v-model="lastMonitorings[key].value"
-              ></v-date-picker>
-            </v-menu>
+            <date-picker :min="min" v-model="lastMonitorings[key].value" />
           </v-col>
         </v-row>
       </div>
@@ -41,26 +22,7 @@
           <v-card-title>product</v-card-title>
         </v-col>
         <v-col cols="8">
-          <v-menu
-            :close-on-content-click="false"
-            transition="scale-transition"
-            min-width="auto"
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-text-field
-                v-bind="attrs"
-                v-on="on"
-                prepend-inner-icon="mdi-calendar"
-                :value="newAllDate"
-                readonly
-              />
-            </template>
-            <v-date-picker
-              scrollable
-              :min="min"
-              v-model="newAllDate"
-            ></v-date-picker>
-          </v-menu>
+          <date-picker :min="min" v-model="newAllDate" />
         </v-col>
       </v-row>
 
@@ -84,6 +46,7 @@ import { onMounted, toRefs, ref } from "vue";
 import api from "@/api";
 import { formatSecondsToDate } from "@/functions";
 import { useStore } from "@/store";
+import DatePicker from "@/components/ui/datePicker.vue";
 
 const props = defineProps(["template", "service", "value"]);
 const emit = defineEmits(["refresh", "input"]);
