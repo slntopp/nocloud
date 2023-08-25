@@ -407,3 +407,40 @@ func (s *BillingServiceServer) GetInstanceReport(ctx context.Context, req *pb.Ge
 
 	return s.records.GetReport(ctx, req)
 }
+
+func (s *BillingServiceServer) GetInstancesReportsCount(ctx context.Context, req *pb.GetReportsCountRequest) (*pb.GetReportsCountResponse, error) {
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Permission denied")
+	}
+
+	res, err := s.records.GetReportsCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetReportsCountResponse{Total: res}, nil
+}
+
+func (s *BillingServiceServer) GetInstanceReportsCount(ctx context.Context, req *pb.GetInstanceReportCountRequest) (*pb.GetReportsCountResponse, error) {
+	log := s.log.Named("GetRecords")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	if req.GetUuid() == "" {
+		log.Error("Request has no instance UUID", zap.String("requestor", requestor))
+		return nil, status.Error(codes.InvalidArgument, "Request has no UUID")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(graph.INSTANCES_COL, req.GetUuid()), access.Level_ADMIN)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Permission denied")
+	}
+
+	res, err := s.records.GetInstanceReportCountReport(ctx, req)
+
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetReportsCountResponse{Total: res}, nil
+}

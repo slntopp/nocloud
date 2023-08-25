@@ -146,6 +146,8 @@ func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstan
 		query = fmt.Sprintf(query, "FILTER record.exec >= @from AND record.exec <=@to")
 		params["from"] = req.GetFrom()
 		params["to"] = req.GetTo()
+	} else {
+		query = fmt.Sprintf(query, "")
 	}
 
 	cursor, err := ctrl.db.Query(ctx, query, params)
@@ -167,32 +169,48 @@ func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstan
 	return res, nil
 }
 
-const getReportQuery = `
-LET instance = @instance
-
-LET records = (
-	FOR record in @@records 
-	%s
-	FILTER record.processed
-	FILTER record.instance == instance
-	RETURN record
-)
-
-RETURN {records: records, total: SUM(records[*].total), count: COUNT(records)}
-`
-
 func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetailedInstanceReportRequest) (*pb.GetDetailedInstanceReportResponse, error) {
-	query := getReportQuery
+	query := "LET records = ( FOR record in @@records FILTER record.processed FILTER record.instance == @instance"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
-		"instance": driver.NewDocumentID(schema.INSTANCES_COL, req.GetUuid()),
+		"instance": req.GetUuid(),
 	}
 
 	if req.From != nil && req.To != nil {
-		query = fmt.Sprintf(query, "FILTER record.exec >= @from AND record.exec <=@to")
+		query += "FILTER record.exec >= @from AND record.exec <=@to"
 		params["from"] = req.GetFrom()
 		params["to"] = req.GetTo()
 	}
+
+	if req.Field != nil && req.Sort != nil {
+		subQuery := ` SORT record.%s %s`
+		field, sort := req.GetField(), req.GetSort()
+
+		if field == "total" {
+			if sort == "asc" {
+				sort = "desc"
+			} else {
+				sort = "asc"
+			}
+		}
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	if req.Page != nil && req.Limit != nil {
+		if req.GetLimit() != 0 {
+			limit, page := req.GetLimit(), req.GetPage()
+			offset := (page - 1) * limit
+
+			query += ` LIMIT @offset, @count`
+			params["offset"] = offset
+			params["count"] = limit
+		}
+	}
+
+	query += " RETURN merge(record, {uuid: record._key})) RETURN {records: records, total: SUM(records[*].total), count: COUNT(records)}"
+
+	ctrl.log.Debug("Final query", zap.String("query", query))
 
 	cursor, err := ctrl.db.Query(ctx, query, params)
 	if err != nil {
@@ -207,4 +225,65 @@ func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetaile
 	}
 
 	return &res, nil
+}
+
+const reportsCountQuery = `RETURN LENGTH(@@instances)`
+
+func (ctrl *RecordsController) GetReportsCount(ctx context.Context) (int64, error) {
+	cur, err := ctrl.db.Query(ctx, reportsCountQuery, map[string]interface{}{
+		"@instances": schema.INSTANCES_COL,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	var result int64
+
+	_, err = cur.ReadDocument(ctx, &result)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
+const reportsInstanceCountQuery = `
+LET records = ( 
+	FOR record in @@records 
+		%s
+		FILTER record.processed 
+		FILTER record.instance == @instance
+		RETURN record
+	) 
+
+RETURN LENGTH(records)
+`
+
+func (ctrl *RecordsController) GetInstanceReportCountReport(ctx context.Context, req *pb.GetInstanceReportCountRequest) (int64, error) {
+	query := reportsInstanceCountQuery
+	params := map[string]interface{}{
+		"@records": schema.RECORDS_COL,
+		"instance": req.GetUuid(),
+	}
+
+	if req.From != nil && req.To != nil {
+		query = fmt.Sprintf(query, "FILTER record.exec >= @from AND record.exec <=@to")
+		params["from"] = req.GetFrom()
+		params["to"] = req.GetTo()
+	} else {
+		query = fmt.Sprintf(query, "")
+	}
+
+	cursor, err := ctrl.db.Query(ctx, query, params)
+	if err != nil {
+		return 0, err
+	}
+
+	var result int64
+
+	_, err = cursor.ReadDocument(ctx, &result)
+	if err != nil {
+		return 0, err
+	}
+
+	return result, nil
 }

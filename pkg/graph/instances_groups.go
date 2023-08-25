@@ -17,6 +17,7 @@ package graph
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/arangodb/go-driver"
 	"go.uber.org/zap"
@@ -217,6 +218,9 @@ func (ctrl *InstancesGroupsController) Update(ctx context.Context, ig, oldIg *pb
 	}
 	if ig.GetTitle() != oldIg.GetTitle() {
 		mask.Title = ig.GetTitle()
+	}
+	if reflect.DeepEqual(ig.GetData(), oldIg.GetData()) {
+		mask.Data = ig.GetData()
 	}
 
 	_, err = ctrl.col.UpdateDocument(ctx, mask.Uuid, mask)
