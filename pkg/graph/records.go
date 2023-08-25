@@ -124,20 +124,27 @@ func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Re
 }
 
 func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error) {
-	query := "FOR i in @@instances LET records = ( FOR record in @@records  FILTER record.processed FILTER record.instance == i._key"
+	query := "LET reports = (FOR i in @@instances LET records = ( FOR record in @@records  FILTER record.processed FILTER record.instance == i._key"
 	params := map[string]interface{}{
 		"@records":   schema.RECORDS_COL,
 		"@instances": schema.INSTANCES_COL,
 	}
 
-	if req.From != nil && req.To != nil {
-		query += " FILTER record.exec >= @from AND record.exec <=@to"
+	if req.From != nil {
+		query += " FILTER record.exec >= @from"
+		params["from"] = req.GetFrom()
+	}
+
+	if req.To != nil {
+		query += " FILTER record.exec <=@to"
 		params["from"] = req.GetFrom()
 		params["to"] = req.GetTo()
 	}
 
+	query += " RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0} FOR r in reports"
+
 	if req.Field != nil && req.Sort != nil {
-		subQuery := ` SORT record.%s %s`
+		subQuery := ` SORT r.%s %s`
 		field, sort := req.GetField(), req.GetSort()
 
 		query += fmt.Sprintf(subQuery, field, sort)
@@ -154,7 +161,7 @@ func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstan
 		}
 	}
 
-	query += " RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}"
+	query += " RETURN r"
 
 	ctrl.log.Debug("Final query", zap.String("query", query))
 
