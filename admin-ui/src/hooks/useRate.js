@@ -37,11 +37,17 @@ const useRate = (currency = ref("")) => {
     fetchRate();
   });
 
-  const convertFrom = (price) => {
-    return rate.value ? (price / rate.value).toFixed(2) : 0;
+  const convertFrom = (price, convertedRate) => {
+    if (!convertedRate) {
+      convertedRate = rate.value;
+    }
+    return convertedRate ? (price / convertedRate).toFixed(2) : 0;
   };
-  const convertTo = (price) => {
-    return rate.value ? (price * rate.value).toFixed(2) : 0;
+  const convertTo = (price, convertedRate) => {
+    if (!convertedRate) {
+      convertedRate = rate.value;
+    }
+    return convertedRate ? (price * convertedRate).toFixed(2) : 0;
   };
 
   return {
