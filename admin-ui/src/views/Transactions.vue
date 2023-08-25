@@ -1,6 +1,14 @@
 <template>
   <div class="pa-4">
     <v-btn
+        class="mr-2"
+        color="background-light"
+        :to="{ name: 'Reports' }"
+    >
+      Reports
+    </v-btn>
+
+    <v-btn
       class="mr-2"
       color="background-light"
       :to="{ name: 'Transactions create' }"
