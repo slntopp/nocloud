@@ -184,7 +184,7 @@ func (ctrl *RecordsController) GetInstancesReports(ctx context.Context, req *pb.
 }
 
 func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*pb.GetRecordsReportsResponse, error) {
-	query := "LET records = ( FOR record in @@records FILTER record.processed FILTER record.instance == @instance"
+	query := "LET records = ( FOR record in @@records FILTER record.processed"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
 	}
@@ -263,7 +263,7 @@ func (ctrl *RecordsController) GetInstancesReportsCount(ctx context.Context) (in
 }
 
 func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error) {
-	query := "LET records = ( FOR record in @@records FILTER record.processed FILTER record.instance == @instance"
+	query := "LET records = ( FOR record in @@records FILTER record.processed"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
 	}
