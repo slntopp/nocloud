@@ -381,7 +381,7 @@ func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, req *pb.
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
 
-	reports, err := s.records.GetReports(ctx, req)
+	reports, err := s.records.GetInstancesReports(ctx, req)
 	if err != nil {
 		log.Error("Failed to get reports", zap.Error(err))
 	}
@@ -399,7 +399,7 @@ func (s *BillingServiceServer) GetInstancesReportsCount(ctx context.Context, req
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
 
-	res, err := s.records.GetReportsCount(ctx)
+	res, err := s.records.GetInstancesReportsCount(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -416,7 +416,7 @@ func (s *BillingServiceServer) GetRecordsReports(ctx context.Context, req *pb.Ge
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
 
-	return s.records.GetReport(ctx, req)
+	return s.records.GetRecordsReports(ctx, req)
 }
 
 func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (*pb.GetReportsCountResponse, error) {
@@ -429,7 +429,7 @@ func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, req *
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
 	}
 
-	res, err := s.records.GetInstanceReportCountReport(ctx, req)
+	res, err := s.records.GetRecordsReportsCount(ctx, req)
 
 	if err != nil {
 		return nil, err
