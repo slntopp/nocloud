@@ -201,7 +201,7 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			query += fmt.Sprintf(" FILTER record[%s] in @%s", key, key)
+			query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
 			params[key] = value.GetListValue().AsSlice()
 		}
 	}
@@ -280,7 +280,7 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			query += fmt.Sprintf(" FILTER record[%s] in @%s", key, key)
+			query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
 			params[key] = value.GetListValue().AsSlice()
 		}
 	}
