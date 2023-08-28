@@ -123,7 +123,7 @@ func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Re
 	return res, nil
 }
 
-func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error) {
+func (ctrl *RecordsController) GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error) {
 	query := "LET reports = (FOR i in @@instances LET records = ( FOR record in @@records  FILTER record.processed FILTER record.instance == i._key"
 	params := map[string]interface{}{
 		"@records":   schema.RECORDS_COL,
@@ -183,11 +183,10 @@ func (ctrl *RecordsController) GetReports(ctx context.Context, req *pb.GetInstan
 	return res, nil
 }
 
-func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetailedInstanceReportRequest) (*pb.GetDetailedInstanceReportResponse, error) {
+func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*pb.GetRecordsReportsResponse, error) {
 	query := "LET records = ( FOR record in @@records FILTER record.processed FILTER record.instance == @instance"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
-		"instance": req.GetUuid(),
 	}
 
 	if req.From != nil {
@@ -198,6 +197,13 @@ func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetaile
 	if req.To != nil {
 		query += " FILTER record.exec <=@to"
 		params["to"] = req.GetTo()
+	}
+
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			query += fmt.Sprintf(" FILTER record[%s] in @%s", key, key)
+			params[key] = value.GetListValue().AsSlice()
+		}
 	}
 
 	if req.Field != nil && req.Sort != nil {
@@ -227,7 +233,7 @@ func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetaile
 		return nil, err
 	}
 
-	var res pb.GetDetailedInstanceReportResponse
+	var res pb.GetRecordsReportsResponse
 
 	_, err = cursor.ReadDocument(ctx, &res)
 	if err != nil {
@@ -239,7 +245,7 @@ func (ctrl *RecordsController) GetReport(ctx context.Context, req *pb.GetDetaile
 
 const reportsCountQuery = `RETURN LENGTH(@@instances)`
 
-func (ctrl *RecordsController) GetReportsCount(ctx context.Context) (int64, error) {
+func (ctrl *RecordsController) GetInstancesReportsCount(ctx context.Context) (int64, error) {
 	cur, err := ctrl.db.Query(ctx, reportsCountQuery, map[string]interface{}{
 		"@instances": schema.INSTANCES_COL,
 	})
@@ -256,11 +262,10 @@ func (ctrl *RecordsController) GetReportsCount(ctx context.Context) (int64, erro
 	return result, nil
 }
 
-func (ctrl *RecordsController) GetInstanceReportCountReport(ctx context.Context, req *pb.GetInstanceReportCountRequest) (int64, error) {
+func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error) {
 	query := "LET records = ( FOR record in @@records FILTER record.processed FILTER record.instance == @instance"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
-		"instance": req.GetUuid(),
 	}
 
 	if req.From != nil {
@@ -271,6 +276,13 @@ func (ctrl *RecordsController) GetInstanceReportCountReport(ctx context.Context,
 	if req.To != nil {
 		query += " FILTER record.exec <=@to"
 		params["to"] = req.GetTo()
+	}
+
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			query += fmt.Sprintf(" FILTER record[%s] in @%s", key, key)
+			params[key] = value.GetListValue().AsSlice()
+		}
 	}
 
 	query += " RETURN record) RETURN LENGTH(records)"
