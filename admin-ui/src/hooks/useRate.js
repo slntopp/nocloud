@@ -15,18 +15,23 @@ const useRate = (currency = ref("")) => {
     fetchRate();
   });
 
-  const fetchRate = async () => {
-    if (!currency.value || !defaultCurrency.value) {
+  const fetchRate = async (fetchedCurrency) => {
+    if (!fetchedCurrency) {
+      fetchedCurrency = currency.value;
+    }
+
+    if (!fetchedCurrency || !defaultCurrency.value) {
       return;
     }
-    if (currency.value === defaultCurrency.value) {
+    if (fetchedCurrency === defaultCurrency.value) {
       rate.value = 1;
-      return;
+      return 1;
     }
     const res = await api.get(
-      `/billing/currencies/rates/${currency.value}/${defaultCurrency.value}`
+      `/billing/currencies/rates/${fetchedCurrency}/${defaultCurrency.value}`
     );
     rate.value = res.rate;
+    return res.rate;
   };
 
   watch(currency, () => {
@@ -54,6 +59,7 @@ const useRate = (currency = ref("")) => {
     rate,
     convertTo,
     convertFrom,
+    fetchRate
   };
 };
 
