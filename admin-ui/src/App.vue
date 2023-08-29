@@ -122,9 +122,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{
-                navTitle("Showcases")
-              }}</v-list-item-title>
+            <v-list-item-title>{{ navTitle("Showcases") }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -164,6 +162,16 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Reports' }">
+          <v-list-item-icon>
+            <v-icon>mdi-chart-gantt</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Reports") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-subheader v-if="plugins?.length > 0">PLUGINS</v-subheader>
 
         <v-list-item
@@ -183,7 +191,7 @@
 
         <v-subheader>SYSTEM</v-subheader>
 
-        <v-list-item v-bind="listItemBind"  :to="{ name: 'Chats'}">
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Chats' }">
           <v-list-item-icon>
             <v-icon>mdi-chat</v-icon>
           </v-list-item-icon>
@@ -244,7 +252,7 @@
           </v-btn>
         </v-col>
         <v-col class="d-flex justify-end align-center">
-          <balance title="Balance: " loged-in-user/>
+          <balance title="Balance: " loged-in-user />
           <languages v-if="false" />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
@@ -415,13 +423,13 @@ export default {
     this.onResize();
     window.addEventListener("resize", this.onResize, { passive: true });
   },
-  watch:{
-    isLoggedIn(newVal){
-      if(newVal){
+  watch: {
+    isLoggedIn(newVal) {
+      if (newVal) {
         this.$store.dispatch("plugins/fetch");
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
