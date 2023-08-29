@@ -101,7 +101,9 @@ const onUpdateOptions = async (newOptions) => {
   init();
   isFetchLoading.value = true;
   try {
-    const { reports: result } = await api.reports.list(requestOptions.value);
+    const { reports: result } = await api.reports.base_list(
+      requestOptions.value
+    );
 
     reports.value = result.map((r) => {
       return {
@@ -135,7 +137,7 @@ const setOptions = (newOptions) => {
 const init = async () => {
   isCountLoading.value = true;
   try {
-    count.value = +(await api.reports.count(requestOptions.value)).total;
+    count.value = +(await api.reports.base_count(requestOptions.value)).total;
   } finally {
     isCountLoading.value = false;
   }
