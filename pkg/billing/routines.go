@@ -349,8 +349,8 @@ FOR service IN @@services // Iterate over Services
 				processed: true, 
 				total: total,
 				currency: currency,
-				service: service,
-				account: account
+				service: service._key,
+				account: account._key
 			} IN @@records RETURN NEW
     )
     
