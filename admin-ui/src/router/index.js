@@ -110,7 +110,7 @@ const routes = [
     name: "Chats",
     redirect: {
       name: "Plugin",
-      params: { title: "Chats", url: "/cc.ui/"  },
+      params: { title: "Chats", url: "/cc.ui/" },
       query: { url: "/cc.ui/" },
     },
   },
@@ -271,6 +271,14 @@ const routes = [
     path: "/transactions",
     name: "Transactions",
     component: () => import("../views/Transactions.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/reports",
+    name: "Reports",
+    component: () => import("../views/Reports.vue"),
     meta: {
       requireLogin: true,
     },
