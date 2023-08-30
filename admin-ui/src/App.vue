@@ -7,7 +7,7 @@
       app
       permanent
       :color="asideColor"
-      :mini-variant="miniNav"
+      :mini-variant="isMenuMinimize"
     >
       <router-link to="/">
         <!-- <div class="d-flex gg-15px align-center justify-center" :class="[miniNav ? 'pa-3' : 'pa-5']"> -->
@@ -22,7 +22,7 @@
             ></v-img>
 
             <v-img
-              v-if="!miniNav"
+              v-if="!isMenuMinimize"
               transition="fade-transition"
               alt=""
               src="@/assets/logoTitle.svg"
@@ -33,7 +33,7 @@
           </template>
           <template v-else>
             <v-img
-              v-if="!miniNav"
+              v-if="!isMenuMinimize"
               transition="fade-transition"
               alt=""
               :src="config.logoSrc"
@@ -44,7 +44,20 @@
       </router-link>
 
       <v-list v-if="isLoggedIn" dense :dark="asideDark">
-        <v-subheader>MAIN</v-subheader>
+        <div
+          :class="{
+            'd-flex': true,
+            'align-center': true,
+            'justify-space-between': !isMenuMinimize,
+            'flex-column-reverse': isMenuMinimize,
+          }"
+        >
+          <v-subheader>MAIN</v-subheader>
+          <v-btn @click="isMenuMinimize = !isMenuMinimize" icon>
+            <v-icon v-if="isMenuMinimize">mdi-arrow-right</v-icon>
+            <v-icon v-else>mdi-arrow-left</v-icon>
+          </v-btn>
+        </div>
 
         <v-list-item v-bind="listItemBind" :to="{ name: 'Dashboard' }">
           <v-list-item-icon>
@@ -307,7 +320,7 @@ export default {
   name: "App",
   components: { AppSnackbar, balance, appSearch, languages },
   data: () => ({
-    miniNav: true,
+    isMenuMinimize: true,
     easterEgg: false,
     config,
     navTitles: config.navTitles ?? {},
@@ -319,8 +332,10 @@ export default {
     setTitle(value) {
       document.title = `${value} | NoCloud`;
     },
-    onResize() {
-      this.miniNav = window.innerWidth <= 768;
+    onResize(e) {
+      if (!(e instanceof UIEvent)) {
+        this.isMenuMinimize = window.innerWidth <= 768;
+      }
     },
     navTitle(title) {
       if (title && this.navTitles[title]) {
