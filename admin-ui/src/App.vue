@@ -451,3 +451,8 @@ export default {
 <style scoped lang="scss">
 @import "@/styles/globalStyles.scss";
 </style>
+<style>
+.v-navigation-drawer__content {
+  overflow-y: hidden;
+}
+</style>
