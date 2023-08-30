@@ -14,7 +14,7 @@
           <plan-opensrs
             :fee="fee"
             :isEdit="true"
-            @changeFee="(data) => (fee = data)"
+            @changeFee="changeFee"
             @onValid="(data) => (isValid = data)"
           />
           <confirm-dialog
@@ -36,7 +36,7 @@
       :template="template"
       :isPlansLoading="isPlansLoading"
       :getPeriod="getPeriod"
-      @changeFee="(value) => (fee = value)"
+      @changeFee="changeFee"
       @changeLoading="isPlansLoading = !isPlansLoading"
     />
 
@@ -116,8 +116,9 @@ export default {
         this.isCreateLoading = true;
       }
 
-      await this.$refs.table.changePlan(newPlan);
+      const result = await this.$refs.table.changePlan(newPlan);
 
+      if (result === "error") return;
       if (!isEdit) delete newPlan.uuid;
       const request = isEdit
         ? api.plans.update(newPlan.uuid, newPlan)
@@ -170,6 +171,9 @@ export default {
     setFee() {
       this.$refs.table.setFee();
     },
+    changeFee(value) {
+      this.fee = JSON.parse(JSON.stringify(value))
+    }
   },
   computed: {
     tableComponent() {

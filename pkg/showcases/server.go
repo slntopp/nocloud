@@ -39,11 +39,8 @@ func (s *ShowcasesServer) Create(ctx context.Context, req *sppb.Showcase) (*sppb
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
-	if err != nil {
-		return nil, err
-	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -60,11 +57,8 @@ func (s *ShowcasesServer) Update(ctx context.Context, req *sppb.Showcase) (*sppb
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
-	if err != nil {
-		return nil, err
-	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
@@ -87,7 +81,16 @@ func (s *ShowcasesServer) List(ctx context.Context, req *sppb.ListRequest) (*spp
 	log := s.log.Named("List")
 	log.Debug("List request received")
 
-	showcases, err := s.ctrl.List(ctx)
+	var requestor string
+	if !req.Anonymously {
+		requestor = ctx.Value(nocloud.NoCloudAccount).(string)
+	}
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	isRoot := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+
+	showcases, err := s.ctrl.List(ctx, requestor, isRoot)
 
 	result := &sppb.Showcases{Showcases: showcases}
 
@@ -101,16 +104,13 @@ func (s *ShowcasesServer) Delete(ctx context.Context, req *sppb.DeleteRequest) (
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	ns, err := s.ns_ctrl.Get(ctx, schema.ROOT_NAMESPACE_KEY)
-	if err != nil {
-		return nil, err
-	}
-	ok := graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN)
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to perform Invoke")
 	}
 
-	err = s.ctrl.Delete(ctx, req.GetUuid())
+	err := s.ctrl.Delete(ctx, req.GetUuid())
 
 	result := &sppb.DeleteResponse{
 		Result: true,

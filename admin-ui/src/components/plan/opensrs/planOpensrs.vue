@@ -169,6 +169,7 @@ export default {
       const round = roundes.find(({ key }) => key === this.fee?.round?.toLowerCase());
 
       if (round) this.currentFee.round = round.value;
+      else this.currentFee.round = 2;
     }
   },
   methods: {

@@ -544,7 +544,7 @@ export default {
       }
 
       const range = this.usedFee.ranges.find(
-          ({ from, to }) => from <= price.value && to >= price.value
+        ({ from, to }) => from <= price.value && to >= price.value
       );
       const n = Math.pow(10, this.usedFee.precision);
       let percent = range?.factor / 100 + 1;
