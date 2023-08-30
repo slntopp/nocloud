@@ -24,6 +24,24 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
+              <v-subheader>Amount type</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-autocomplete
+                label="Amount type"
+                v-model="amountType"
+                item-value="value"
+                item-text="title"
+                :items="amountTypes"
+              />
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col lg="6" cols="12">
+          <v-row align="center">
+            <v-col cols="3">
               <v-subheader>Account</v-subheader>
             </v-col>
             <v-col cols="9">
@@ -216,6 +234,12 @@ export default {
       { value: "transaction", title: "Transaction" },
     ],
     type: "transaction",
+
+    amountTypes: [
+      { title: "Accrual", value: false },
+      { title: "Write-off", value: true },
+    ],
+    amountType: true,
   }),
   methods: {
     defaultFilterObject,
@@ -232,8 +256,12 @@ export default {
       this.isLoading = true;
       this.refreshData();
 
+      const total = Math.abs(+this.transaction.total);
       api.transactions
-        .create(this.transaction)
+        .create({
+          ...this.transaction,
+          total: this.amountType ? total : -total,
+        })
         .then(() => {
           this.showSnackbarSuccess({
             message: "Transaction created successfully",
