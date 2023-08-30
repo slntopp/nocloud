@@ -23,6 +23,7 @@
       sort-by="isBeenSell"
       sort-desc
       item-key="id"
+      :show-expand="true"
       :show-select="false"
       :items="filteredPlans"
       :headers="headers"
@@ -87,6 +88,27 @@
 
       <template v-slot:[`item.value`]="{ item }">
         <v-text-field dense style="width: 150px" v-model="item.value" />
+      </template>
+
+      <template v-slot:expanded-item="{ headers, item }">
+        <template v-if="item.installation_fee">
+          <td></td>
+          <td></td>
+          <td :colspan="headers.length - 6">Installation price</td>
+          <td>
+            {{ item.installation_fee.price.value }}
+            {{ defaultCurrency }}
+          </td>
+          <td>
+            <v-text-field
+              dense
+              style="width: 150px"
+              v-model="item.installation_fee.value"
+            />
+          </td>
+          <td></td>
+          <td></td>
+        </template>
       </template>
 
       <template v-slot:[`item.addons`]="{ item }">
@@ -200,6 +222,7 @@ export default {
 
     groups: [],
     newGroup: { mode: "none", name: "", planId: "" },
+    usedFee: {}
   }),
   mixins: [currencyRate],
   methods: {
@@ -259,7 +282,10 @@ export default {
     },
     async changePlan(plan) {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
-        return "You must select a group for the tariff!";
+        this.$store.commit("snackbar/showSnackbarError", {
+          message: "You must select a group for the tariff!"
+        });
+        return "error";
       }
 
       const sp = this.$store.getters["servicesProviders/all"];
@@ -284,11 +310,9 @@ export default {
           const addons = this.getAddons(el)
             ? this.getAddons(el)
                 .filter((addon) => addon.sell)
-                ?.map((el) => ({
-                  id: el.planCode,
-                  title: el.name,
-                }))
+                ?.map((el) => ({ id: el.planCode, title: el.name }))
             : plan.products[el.id]?.meta.addons;
+
           const datacenter =
             requiredConfiguration.find((el) => el.label.includes("datacenter"))
               ?.allowedValues ?? [];
@@ -303,7 +327,7 @@ export default {
             price: el.value,
             period: this.getPeriod(el.duration),
             sorter: Object.keys(plan.products).length,
-            installation_fee: el.installation_fee,
+            installation_fee: el.installation_fee.value,
             meta: { addons, datacenter, os },
           };
         }
@@ -401,7 +425,10 @@ export default {
             result.push({
               planCode,
               duration,
-              installation_fee: installation.price.value,
+              installation_fee: {
+                price: { value: +(installation.price.value * this.rate).toFixed(2) },
+                value: installation.price.value
+              },
               price: { value: newPrice },
               name: productName,
               apiName: productName,
@@ -435,6 +462,7 @@ export default {
     setFee(values) {
       this.filters.Margin = ["manual"];
       this.selected.Margin = ["manual"];
+      this.usedFee = JSON.parse(JSON.stringify(this.fee));
 
       if (!values) {
         this.setFee(this.plans);
@@ -443,6 +471,11 @@ export default {
         });
       }
       values?.forEach((plan, i, arr) => {
+        if (arr[i].installation_fee) {
+          const price = arr[i].installation_fee.price.value;
+
+          arr[i].installation_fee.value = getMarginedValue(this.fee, price);
+        }
         arr[i].value = getMarginedValue(this.fee, plan.price.value);
         this.getMargin(arr[i]);
       });
@@ -463,20 +496,20 @@ export default {
       return `${newGroup}${sep}${newName}`;
     },
     getMargin({ value, price }, filter = true) {
-      if (!this.fee.ranges) {
+      if (!this.usedFee.ranges) {
         if (filter) this.changeFilters({ margin: "none" }, ["Margin"]);
         return "none";
       }
 
-      const range = this.fee.ranges.find(
+      const range = this.usedFee.ranges.find(
         ({ from, to }) => from <= price.value && to >= price.value
       );
-      const n = Math.pow(10, this.fee.precision);
+      const n = Math.pow(10, this.usedFee.precision);
       let percent = range?.factor / 100 + 1;
       let margin;
       let round;
 
-      switch (this.fee.round) {
+      switch (this.usedFee.round) {
         case 1:
           round = "floor";
           break;
@@ -486,19 +519,23 @@ export default {
         case 3:
           round = "ceil";
       }
-      if (this.fee.round === "NONE") round = "round";
-      else if (typeof this.fee.round === "string") {
-        round = this.fee.round.toLowerCase();
+      if (this.usedFee.round === "NONE") round = "round";
+      else if (typeof this.usedFee.round === "string") {
+        round = this.usedFee.round.toLowerCase();
       }
+
+      // value = Math[round](value * n) / n;
 
       if (value === Math[round](price.value * percent * n) / n) {
         margin = "ranged";
+      } else if (this.usedFee.default <= 0) {
+        margin = "none";
       } else {
-        percent = this.fee.default / 100 + 1;
+        percent = this.usedFee.default / 100 + 1;
       }
 
       switch (value) {
-        case price.value:
+        case Math[round](price.value * n) / n:
           margin = "none";
           break;
         case Math[round](price.value * percent * n) / n:
@@ -626,6 +663,9 @@ export default {
             this.plans[i].group = group;
             this.plans[i].sell = true;
             this.plans[i].isBeenSell = true;
+          } else {
+            this.plans[i].name = title;
+            this.plans[i].group = group;
           }
           if (!this.groups.includes(group)) this.groups.push(group);
         });

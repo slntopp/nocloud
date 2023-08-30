@@ -10,18 +10,26 @@
             label="Title"
           />
         </v-col>
-        <v-col cols="4">
+        <v-col cols="6" style="display: flex; gap: 30px; justify-content: flex-end">
+          <v-switch label="Is primary" v-model="showcase.primary" />
+          <v-switch label="Enabled" v-model="showcase.public" />
+        </v-col>
+        <v-col cols="6">
           <icons-autocomplete
             label="Preview icon"
             :value="showcase.icon"
             @input:value="showcase.icon = $event"
           />
         </v-col>
-        <v-col cols="1">
-          <v-switch label="Is primary" v-model="showcase.primary" />
-        </v-col>
-        <v-col cols="1">
-          <v-switch label="Enabled" v-model="showcase.public" />
+        <v-col cols="6">
+          <v-autocomplete
+            clearable
+            item-text="title"
+            item-value="id"
+            label="Default location"
+            v-model="defaultLocation"
+            :items="allLocations"
+          />
         </v-col>
       </v-row>
 
@@ -56,6 +64,7 @@
               </v-col>
               <v-col cols="6">
                 <v-autocomplete
+                  clearable
                   label="Price model"
                   item-text="title"
                   item-value="uuid"
@@ -68,15 +77,6 @@
                   label="Locations"
                   v-model="item.locations"
                   :locations="filteredLocations[i]"
-                />
-              </v-col>
-              <v-col cols="6">
-                <v-autocomplete
-                  item-text="title"
-                  item-value="uuid"
-                  label="Default location"
-                  v-model="defaultLocation"
-                  :items="item.locations"
                 />
               </v-col>
             </v-row>
@@ -148,8 +148,8 @@ const plans = computed(() => {
   }, {});
 });
 
-const locations = computed(() => {
-  return showcase.value.items.reduce((result, { servicesProvider }, i) => {
+const locations = computed(() =>
+  showcase.value.items.reduce((result, { servicesProvider }, i) => {
     const { uuid, locations = [] } = serviceProviders.value.find(
       (sp) => sp.uuid === servicesProvider
     ) ?? {};
@@ -160,24 +160,39 @@ const locations = computed(() => {
         ...location, sp: uuid, id: getNewLocationKey(location)
       }))
     };
-  }, {});
-});
+  }, {})
+);
 
 const filteredLocations = computed(() => {
   const result = {};
 
   Object.entries(locations.value).forEach(([i, value]) => {
-    if (!plans.value[i][0]) return;
-    result[i] = value.filter(({ type }) =>
-      plans.value[i][0].type === type
+    const plan = plans.value[i].find(({ uuid }) =>
+      uuid === showcase.value.items[i].plan
     );
+
+    if (!plan) return;
+    result[i] = value.filter(({ type }) => plan.type === type);
   });
 
   return result;
 });
 
+const allLocations = computed(() =>
+  Object.entries(filteredLocations.value).reduce(
+    (result, [i, locations]) => [
+      ...result,
+      ...locations.filter(({ id }) =>
+        showcase.value.items[i].locations
+          .find((location) => id === (location.id ?? location))
+      )
+    ], []
+  )
+);
+
 watch(realShowcase, () => {
-  showcase.value = realShowcase.value;
+  defaultLocation.value = realShowcase.value.promo.main?.default ?? "";
+  showcase.value = JSON.parse(JSON.stringify(realShowcase.value));
   showcase.value.newTitle = showcase.value.title;
 
   if (!Array.isArray(showcase.value.items)) {
@@ -212,16 +227,16 @@ const save = async () => {
     Object.entries(filteredLocations.value).forEach(([i, value]) => {
       if (value.length < 1) return;
       const item = data.items[i];
-      const locs = item.locations
-        .filter(({ id }) => value.find((location) => location.id === id))
-        .map((location) => ({
-          ...location,
-          sp: undefined,
-          id: location.id.replace(
-            data.title.replaceAll(' ', '_'),
-            data.newTitle.replaceAll(' ', '_')
-          )
-        }));
+      const locs = value.filter(({ id }) =>
+        item.locations.find((location) => (location.id ?? location) === id)
+      ).map((location) => ({
+        ...location,
+        sp: undefined,
+        id: location.id.replace(
+          data.title.replaceAll(' ', '_'),
+          data.newTitle.replaceAll(' ', '_')
+        )
+      }));
 
       locs.forEach((location) => {
         if (!data.locations.find(({ id }) => id === location.id)) {

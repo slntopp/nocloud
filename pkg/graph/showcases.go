@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"fmt"
 	"github.com/arangodb/go-driver"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -57,15 +58,32 @@ func (ctrl *ShowcasesController) Update(ctx context.Context, showcase *sppb.Show
 
 const listQuery = `
 FOR s IN @@showcases
+	%s
 	RETURN s
 `
 
-func (ctrl *ShowcasesController) List(ctx context.Context) ([]*sppb.Showcase, error) {
+func (ctrl *ShowcasesController) List(ctx context.Context, requestor string, root bool) ([]*sppb.Showcase, error) {
 	ctrl.log.Debug("Getting Showcases")
 
-	c, err := ctrl.col.Database().Query(ctx, listQuery, map[string]interface{}{
+	params := map[string]interface{}{
 		"@showcases": schema.SHOWCASES_COL,
-	})
+	}
+
+	var query string
+
+	if requestor == "" {
+		query = fmt.Sprintf(listQuery, "FILTER s.public == @public")
+		params["public"] = true
+	} else {
+		if root {
+			query = fmt.Sprintf(listQuery, "")
+		} else {
+			query = fmt.Sprintf(listQuery, "FILTER s.public == @public")
+			params["public"] = true
+		}
+	}
+
+	c, err := ctrl.col.Database().Query(ctx, query, params)
 	if err != nil {
 		return nil, err
 	}
