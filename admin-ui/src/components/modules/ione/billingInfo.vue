@@ -20,7 +20,12 @@
         />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Price instance total" :value="price" />
+        <v-text-field
+          :suffix="defaultCurrency"
+          readonly
+          label="Price instance total"
+          :value="price"
+        />
       </v-col>
       <v-col>
         <v-text-field
@@ -64,6 +69,7 @@
     >
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field
+          :suffix="defaultCurrency"
           v-model="item.price"
           @input="updatePrice(item, false)"
           append-icon="mdi-pencil"
@@ -71,6 +77,7 @@
       </template>
       <template v-slot:[`item.accountPrice`]="{ item }">
         <v-text-field
+          :suffix="accountCurrency"
           v-model="item.accountPrice"
           @input="updatePrice(item, true)"
           append-icon="mdi-pencil"
@@ -80,10 +87,10 @@
         {{ item.quantity?.toFixed(2) }}
       </template>
       <template v-slot:[`item.total`]="{ item }">
-        {{ totalPrices[item.name]?.toFixed(2) }}
+        {{ totalPrices[item.name]?.toFixed(2) }} {{ defaultCurrency }}
       </template>
       <template v-slot:[`item.totalAccount`]="{ item }">
-        {{ totalAccountPrices[item.name]?.toFixed(2) }}
+        {{ totalAccountPrices[item.name]?.toFixed(2) }} {{ accountCurrency }}
       </template>
       <template v-slot:body.append>
         <tr>
@@ -96,8 +103,8 @@
           <td>
             {{ billingItems.find((i) => i.name === template.product)?.period }}
           </td>
-          <td>{{ [totalAccountPrice, accountCurrency].join(" ") }}</td>
-          <td>{{ totalPrice }}</td>
+          <td>{{ totalAccountPrice }} {{ accountCurrency }}</td>
+          <td>{{ totalPrice }} {{ defaultCurrency }}</td>
         </tr>
       </template>
     </nocloud-table>
@@ -146,12 +153,14 @@ import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useAccountConverter from "@/hooks/useAccountConverter";
+import { useStore } from "@/store";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh", "update"]);
 
 const { template, service, sp, plans } = toRefs(props);
 
+const store = useStore();
 const {
   fetchAccountRate,
   accountCurrency,
@@ -178,12 +187,19 @@ const billingHeaders = ref([
   { text: "Total price", value: "total" },
 ]);
 
+onMounted(() => {
+  billingItems.value = getBillingItems();
+  price.value = totalPrice.value;
+  fetchAccountRate(accountCurrency);
+});
+
 const date = computed(() =>
   formatSecondsToDate(
     +template.value?.data?.last_monitoring +
       +template.value.billingPlan.products[template.value.product].period
   )
 );
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const isMonitoringEmpty = computed(() => date.value === "-");
 const fullPlan = computed(() =>
   plans.value.find((p) => p.uuid === template.value.billingPlan.uuid)
@@ -204,12 +220,6 @@ const totalPrice = computed(() =>
     .toFixed(2)
 );
 
-onMounted(() => {
-  billingItems.value = getBillingItems();
-  price.value = totalPrice.value;
-  fetchAccountRate(accountCurrency);
-});
-
 const totalPrices = computed(() => {
   const prices = {};
 
@@ -223,8 +233,8 @@ const totalPrices = computed(() => {
 const totalAccountPrices = computed(() => {
   const prices = {};
 
-  billingItems.value.forEach((i) =>
-    toAccountPrice((prices[i.name] = i.price * i.quantity || 0))
+  billingItems.value.forEach(
+    (i) => (prices[i.name] = i.accountPrice * i.quantity)
   );
 
   return prices;
