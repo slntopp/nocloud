@@ -59,55 +59,71 @@
       </v-col>
       ></v-row
     >
-    <nocloud-table
-      class="mb-5"
-      :headers="billingHeaders"
-      :items="billingItems"
-      no-hide-uuid
-      :show-select="false"
-      hide-default-footer
-    >
-      <template v-slot:[`item.price`]="{ item }">
-        <v-text-field
-          :suffix="defaultCurrency"
-          v-model="item.price"
-          @input="updatePrice(item, false)"
-          append-icon="mdi-pencil"
-        />
-      </template>
-      <template v-slot:[`item.accountPrice`]="{ item }">
-        <v-text-field
-          :suffix="accountCurrency"
-          v-model="item.accountPrice"
-          @input="updatePrice(item, true)"
-          append-icon="mdi-pencil"
-        />
-      </template>
-      <template v-slot:[`item.quantity`]="{ item }">
-        {{ item.quantity?.toFixed(2) }}
-      </template>
-      <template v-slot:[`item.total`]="{ item }">
-        {{ totalPrices[item.name]?.toFixed(2) }} {{ defaultCurrency }}
-      </template>
-      <template v-slot:[`item.totalAccount`]="{ item }">
-        {{ totalAccountPrices[item.name]?.toFixed(2) }} {{ accountCurrency }}
-      </template>
-      <template v-slot:body.append>
-        <tr>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td></td>
-          <td>
-            {{ billingItems.find((i) => i.name === template.product)?.period }}
-          </td>
-          <td>{{ totalAccountPrice }} {{ accountCurrency }}</td>
-          <td>{{ totalPrice }} {{ defaultCurrency }}</td>
-        </tr>
-      </template>
-    </nocloud-table>
+    <v-expansion-panels>
+      <v-expansion-panel>
+        <v-expansion-panel-header color="background-light"
+          >Prices</v-expansion-panel-header
+        >
+        <v-expansion-panel-content
+          class="ione-billing"
+          color="background-light"
+        >
+          <nocloud-table
+            class="mb-5"
+            :headers="billingHeaders"
+            :items="billingItems"
+            no-hide-uuid
+            :show-select="false"
+            hide-default-footer
+          >
+            <template v-slot:[`item.price`]="{ item }">
+              <v-text-field
+                :suffix="defaultCurrency"
+                v-model="item.price"
+                @input="updatePrice(item, false)"
+                append-icon="mdi-pencil"
+              />
+            </template>
+            <template v-slot:[`item.accountPrice`]="{ item }">
+              <v-text-field
+                :suffix="accountCurrency"
+                v-model="item.accountPrice"
+                @input="updatePrice(item, true)"
+                append-icon="mdi-pencil"
+              />
+            </template>
+            <template v-slot:[`item.quantity`]="{ item }">
+              {{ item.quantity?.toFixed(2) }}
+            </template>
+            <template v-slot:[`item.total`]="{ item }">
+              {{ totalPrices[item.name]?.toFixed(2) }} {{ defaultCurrency }}
+            </template>
+            <template v-slot:[`item.totalAccount`]="{ item }">
+              {{ totalAccountPrices[item.name]?.toFixed(2) }}
+              {{ accountCurrency }}
+            </template>
+            <template v-slot:body.append>
+              <tr>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td>
+                  {{
+                    billingItems.find((i) => i.name === template.product)
+                      ?.period
+                  }}
+                </td>
+                <td>{{ totalAccountPrice }} {{ accountCurrency }}</td>
+                <td>{{ totalPrice }} {{ defaultCurrency }}</td>
+              </tr>
+            </template>
+          </nocloud-table>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
     <change-ione-monitorings
       :template="template"
       :service="service"
@@ -333,4 +349,10 @@ watch(accountRate, () => {
 });
 </script>
 
-<style scoped></style>
+<style lang="scss">
+.ione-billing {
+  .v-expansion-panel-content__wrap {
+    padding: 0px !important;
+  }
+}
+</style>
