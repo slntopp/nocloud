@@ -236,8 +236,8 @@ export default {
     type: "transaction",
 
     amountTypes: [
-      { title: "Accrual", value: false },
-      { title: "Write-off", value: true },
+      { title: "Top-up", value: false },
+      { title: "Debit", value: true },
     ],
     amountType: true,
   }),
