@@ -193,6 +193,16 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Sessions' }">
+          <v-list-item-icon>
+            <v-icon>mdi-account-clock</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Sessions") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
           <v-list-item-icon>
             <v-icon>mdi-history</v-icon>

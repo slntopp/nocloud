@@ -292,6 +292,14 @@ const routes = [
     },
   },
   {
+    path: "/sessions",
+    name: "Sessions",
+    component: () => import("../views/Sessions.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/history",
     name: "History",
     component: () => import("../views/History.vue"),
