@@ -50,6 +50,7 @@ func MakeToken(account string) (string, error) {
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = account
 	claims[nocloud.NOCLOUD_INSTANCE_CLAIM] = "placeholder"
 	claims[nocloud.NOCLOUD_ROOT_CLAIM] = 4
+	claims[nocloud.INFINIMESH_NOSESSION_CLAIM] = true
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(SIGNING_KEY)
 }
@@ -90,6 +91,11 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 			return handler(ctx, req)
 		}
 	case "/nocloud.services_providers.ServicesProvidersService/List":
+		probe := req.(*sppb.ListRequest)
+		if probe.Anonymously {
+			return handler(ctx, req)
+		}
+	case "/nocloud.services_providers.ShowcasesService/List":
 		probe := req.(*sppb.ListRequest)
 		if probe.Anonymously {
 			return handler(ctx, req)

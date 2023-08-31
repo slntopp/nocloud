@@ -10,10 +10,7 @@
     :footer-error="fetchError"
     @input="(value) => $emit('input', value)"
     :default-filtres="defaultFiltres"
-    :filters-items="filterItems"
-    :filters-values="selectedFilters"
     :show-select="showSelect"
-    @input:filter="selectedFilters[$event.key] = $event.value"
   >
     <template v-slot:[`item.id`]="{ index }">
       {{ index + 1 }}
@@ -52,7 +49,17 @@
     </template>
 
     <template v-slot:[`item.product`]="{ item }">
-      {{ getValue("product", item) }}
+      <router-link
+        :to="{
+          name: 'Plan',
+          params: {
+            planId: item.billingPlan?.uuid,
+            search: getSearchParamForTariff(item),
+          },
+        }"
+      >
+        {{ getValue("product", item) }}
+      </router-link>
     </template>
 
     <template v-slot:[`item.price`]="{ item }">
@@ -130,10 +137,12 @@ import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
 import { getOvhPrice, getState } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
+import searchMixin from "@/mixins/search";
 
 export default {
   name: "instances-table",
   components: { LoginInAccountIcon, nocloudTable, instanceIpMenu },
+  mixins: [searchMixin],
   props: {
     value: { type: Array, required: true },
     selected: { type: Object, default: null },
@@ -157,17 +166,6 @@ export default {
       "period",
       "date",
     ],
-    selectedFilters: {
-      state: [],
-      "billingPlan.title": [],
-      service: [],
-      type: [],
-      sp: [],
-      access: [],
-      "access.namespace": [],
-      period: [],
-      product: [],
-    },
     instancesTypes: [],
   }),
   mounted() {
@@ -229,20 +227,21 @@ export default {
     },
     chipColor(item) {
       if (!item.state) return "error";
-      const state =
-        item.billingPlan.type === "ione"
-          ? item.state.meta?.lcm_state_str
-          : item.state.state;
+      const state = this.headersGetters["state"](item);
 
       switch (state) {
         case "RUNNING":
           return "success";
         case "LCM_INIT":
         case "STOPPED":
-          return "warning";
         case "SUSPENDED":
+          return "warning";
         case "UNKNOWN":
           return "error";
+        case "OPERATION":
+          return "yellow darken-2";
+        case "PENDING":
+          return "blue";
         default:
           return "blue-grey darken-2";
       }
@@ -271,6 +270,7 @@ export default {
         case "ovh": {
           return getOvhPrice(inst);
         }
+        case "virtual":
         case "ione": {
           const initialPrice =
             inst.billingPlan.products[inst.product]?.price ?? 0;
@@ -349,7 +349,7 @@ export default {
     },
     getService({ service }) {
       return (
-        "SRV_" + this.services.find(({ uuid }) => service === uuid)?.title ?? ""
+        this.services.find(({ uuid }) => service === uuid)?.title ?? service
       );
     },
     getServiceProvider({ sp }) {
@@ -358,7 +358,7 @@ export default {
     getOSName(id, sp) {
       if (!id) return;
       return this.sp.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
-        .name;
+        ?.name;
     },
     getTariff(item) {
       const {
@@ -370,13 +370,30 @@ export default {
       return billingPlan.products[key]?.title;
     },
     getNamespace(id) {
-      return "NS_" + this.namespaces.find((n) => n.uuid === id)?.title;
+      return this.namespaces.find((n) => n.uuid === id)?.title;
     },
     getValue(key, item) {
       return this.headersGetters[key](item);
     },
+    getSearchParamForTariff(item) {
+      return {
+        searchParam: {
+          value: this.getValue("product", item),
+          title: this.getValue("product", item),
+        },
+      };
+    },
   },
   computed: {
+    customParams() {
+      return this.$store.getters["appSearch/customParams"];
+    },
+    searchParam(){
+      return this.$store.getters['appSearch/customSearchParam']
+    },
+    variants() {
+      return this.$store.getters["appSearch/variants"];
+    },
     services() {
       return this.$store.getters["services/all"];
     },
@@ -389,8 +406,13 @@ export default {
         "state.meta.networking.public",
       ];
       const instances = this.items.filter((i) => {
-        for (const key of Object.keys(this.selectedFilters)) {
-          if (this.selectedFilters[key].length === 0) {
+        for (const key of Object.keys(this.customParams)) {
+          if (!this.variants[key]?.isArray) {
+            continue;
+          }
+          const filter = this.customParams[key]?.map((c) => c.value);
+
+          if (filter.length === 0) {
             continue;
           }
 
@@ -399,23 +421,36 @@ export default {
             key.split(".").forEach((subkey) => {
               val = val[subkey];
             });
-            if (!this.selectedFilters[key].includes(val)) {
+            if (
+              !filter.some((f) => val?.toLowerCase().includes(f?.toLowerCase()))
+            ) {
               return false;
             }
           } else if (
-            !this.selectedFilters[key].includes(this.getValue(key, i))
+            !filter.some((f) =>
+              this.getValue(key, i)?.toLowerCase().includes(f?.toLowerCase())
+            )
           ) {
             return false;
           }
         }
         return true;
       });
-      if (!this.searchParam) {
+      const searchParam = this.searchParam?.toLowerCase();
+      if (!searchParam) {
         return instances;
       }
 
       return instances.filter((item) => {
-        return searchKeys.some((key) => {
+        const dynamicKeys = [];
+        if (item.type === "ovh") {
+          dynamicKeys.push(
+            `data.${item.config.type}Name`,
+            `data.${item.config.type}Id`
+          );
+        }
+        const searchKeysFull = searchKeys.concat(dynamicKeys);
+        return searchKeysFull.some((key) => {
           let tempItem = item;
           if (this.headersGetters[key]) {
             tempItem = this.getValue(key, tempItem);
@@ -423,10 +458,10 @@ export default {
             key.split(".").forEach((subkey) => (tempItem = tempItem?.[subkey]));
           }
           if (Array.isArray(tempItem)) {
-            return tempItem.some((i) => i.startsWith(this.searchParam));
+            return tempItem.some((i) => i.startsWith(searchParam));
           }
 
-          return tempItem?.toString()?.startsWith(this.searchParam);
+          return tempItem?.toString().toLowerCase()?.startsWith(searchParam);
         });
       });
     },
@@ -443,24 +478,23 @@ export default {
       const headers = [
         { text: "ID", value: "id" },
         { text: "Title", value: "title" },
-        { text: "Service", value: "service", customFilter: true },
-        { text: "Account", value: "access", customFilter: true },
+        { text: "Service", value: "service" },
+        { text: "Account", value: "access" },
         {
           text: "Group (NameSpace)",
           value: "access.namespace",
-          customFilter: true,
         },
         { text: "Due date", value: "dueDate" },
-        { text: "Status", value: "state", customFilter: true },
-        { text: "Tariff", value: "product", customFilter: true },
-        { text: "Service provider", value: "sp", customFilter: true },
-        { text: "Type", value: "type", customFilter: true },
+        { text: "Status", value: "state" },
+        { text: "Tariff", value: "product" },
+        { text: "Service provider", value: "sp" },
+        { text: "Type", value: "type" },
         { text: "Price", value: "price" },
-        { text: "Period", value: "period", customFilter: true },
+        { text: "Period", value: "period" },
         { text: "Email", value: "email" },
         { text: "Date", value: "date" },
         { text: "UUID", value: "uuid" },
-        { text: "Price model", value: "billingPlan.title", customFilter: true },
+        { text: "Price model", value: "billingPlan.title" },
         { text: "IP", value: "state.meta.networking" },
         { text: "CPU", value: "resources.cpu" },
         { text: "RAM", value: "resources.ram" },
@@ -495,66 +529,104 @@ export default {
     isLoading() {
       return this.$store.getters["services/isLoading"];
     },
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
-    },
     currency() {
       return this.$store.getters["currencies/default"];
     },
-    filterItems() {
-      return {
-        state: ["RUNNING", "LCM_INIT", "STOPPED", "SUSPENDED", "UNKNOWN"],
-        type: this.instancesTypes,
-        "billingPlan.title": this.priceModelItems,
-        service: this.serviceItems,
-        sp: this.spItems,
-        period: this.periodItems,
-        access: this.accountsItems,
-        "access.namespace": this.namespacesItems,
-        product: this.productItems,
-      };
-    },
     priceModelItems() {
-      return new Set(this.items.map((i) => i.billingPlan?.title));
+      return [
+        ...new Set(
+          this.items.map((i) => ({
+            uuid: i.billingPlan?.title,
+            title: i.billingPlan?.title,
+          }))
+        ),
+      ];
     },
     serviceItems() {
-      return new Set([
-        ...this.$store.getters["services/all"].map((i) => "SRV_" + i.title),
-      ]);
+      return this.$store.getters["services/all"].map((i) => i.title);
     },
     spItems() {
       const instancesSP = this.items.map((i) => i.sp);
 
-      return new Set(
-        this.sp
-          .filter((sp) => instancesSP.includes(sp.uuid))
-          .map((sp) => sp.title)
-      );
+      return [
+        ...new Set(
+          this.sp
+            .filter((sp) => instancesSP.includes(sp.uuid))
+            .map((sp) => sp.title)
+        ),
+      ];
     },
     periodItems() {
-      const periods = this.items.map((i) => this.getValue("period", i));
-
-      return new Set(periods);
+      return [...new Set(this.items.map((i) => this.getValue("period", i)))];
     },
     productItems() {
-      const products = this.items.map((i) => this.getValue("product", i));
-
-      return new Set(products);
+      return this.items.map((i) => this.getValue("product", i));
     },
-    accountsItems() {
-      const accounts = this.accounts.map((a) => a.title);
-
-      return new Set(accounts);
-    },
-    namespacesItems() {
-      const namespaces = this.namespaces.map((n) => "NS_" + n.title);
-
-      return new Set(namespaces);
+    searchItems() {
+      return {
+        service: {
+          items: this.serviceItems,
+          title: "Service",
+          isArray: true,
+        },
+        period: {
+          items: this.periodItems,
+          title: "Period",
+          isArray: true,
+        },
+        sp: {
+          items: this.spItems,
+          title: "Service provider",
+          isArray: true,
+        },
+        access: {
+          items: this.accounts,
+          title: "Account",
+          isArray: true,
+        },
+        "access.namespace": {
+          items: this.namespaces,
+          title: "Namespace",
+          isArray: true,
+        },
+        product: {
+          items: this.productItems,
+          title: "Product",
+          isArray: true,
+        },
+        state: {
+          items: [
+            { uuid: "RUNNING", title: "RUNNING" },
+            { uuid: "STOPPED", title: "STOPPED" },
+            { uuid: "LCM_INIT", title: "LCM_INIT" },
+            { uuid: "SUSPENDED", title: "SUSPENDED" },
+            { uuid: "UNKNOWN", title: "UNKNOWN" },
+          ],
+          isArray: true,
+          title: "State",
+        },
+        type: {
+          title: "Type",
+          items: this.instancesTypes,
+          isArray: true,
+        },
+        "billingPlan.title": {
+          title: "Billing plan",
+          items: this.priceModelItems,
+          isArray: true,
+        },
+      };
     },
   },
   watch: {
     instances() {
       this.fetchError = "";
+    },
+    searchItems: {
+      deep: true,
+      handler() {
+        this.$store.commit("appSearch/setVariants", this.searchItems);
+      },
     },
   },
 };

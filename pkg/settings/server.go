@@ -18,7 +18,6 @@ package settings
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	redis "github.com/go-redis/redis/v8"
@@ -69,7 +68,7 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (re
 
 	for _, key := range req.GetKeys() {
 		dbKey := fmt.Sprintf("%s:%s", KEYS_PREFIX, strcase.LowerCamelCase(key))
-		log.Debug("Reading hash", zap.String("key", dbKey))
+
 		r := s.rdb.HGetAll(ctx, dbKey)
 		data, err := r.Result()
 		if err != nil {
@@ -77,18 +76,17 @@ func (s *SettingsServiceServer) Get(ctx context.Context, req *pb.GetRequest) (re
 			continue
 		}
 
-		lvl, err := strconv.Atoi(data["lvl"])
-		if err != nil {
-			lvl = 4
+		public := false
+		if data["public"] == "true" || data["public"] == "1" {
+			public = true
 		}
-
-		if level < lvl {
+		if !public && level < 3 {
 			continue
 		}
 
 		result[key] = data["value"]
 
-		log.Debug("Result", zap.Any("value", result[key]), zap.Int("lvl", lvl))
+		log.Debug("Result", zap.Any("value", result[key]))
 	}
 
 	res, err = structpb.NewStruct(result)
@@ -111,7 +109,7 @@ func (s *SettingsServiceServer) Put(ctx context.Context, req *pb.PutRequest) (*p
 	log.Debug("Put request received", zap.String("key", key))
 
 	r := s.rdb.HSet(ctx, key, "value", req.GetValue(),
-		"desc", req.GetDescription())
+		"desc", req.GetDescription(), "public", req.GetPublic())
 	_, err := r.Result()
 	if err != nil {
 		log.Error("Error allocating keys in Redis", zap.String("key", key), zap.Error(err))
@@ -146,13 +144,12 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 			continue
 		}
 
-		lvl, err := strconv.Atoi(data["lvl"])
-		if err != nil {
-			s.log.Warn("Setting has no lvl or field is corrupted", zap.Error(err))
-			lvl = 4
+		public := false
+		if data["public"] == "true" || data["public"] == "1" {
+			public = true
 		}
 
-		if level < lvl {
+		if !public && level < 3 {
 			result = append(result, &pb.KeysResponse_Key{
 				Key: key, Description: "Unresolved",
 			})
@@ -162,6 +159,7 @@ func (s *SettingsServiceServer) Keys(ctx context.Context, _ *pb.KeysRequest) (*p
 		result = append(result, &pb.KeysResponse_Key{
 			Key:         key,
 			Description: data["desc"],
+			Public:      public,
 		})
 	}
 

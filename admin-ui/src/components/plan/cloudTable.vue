@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-row>
+    <v-row align="center">
       <v-col cols="3">
         <v-autocomplete
           :items="regions"
@@ -9,10 +9,19 @@
           :loading="isRegionsLoading"
         />
       </v-col>
+      <template v-if="selectedRegion">
+        <v-col cols="1">
+          <v-btn @click="setEnabledToTab(true)">Enable all</v-btn>
+        </v-col>
+        <v-col cols="1">
+          <v-btn @click="setEnabledToTab(false)">Disable all</v-btn>
+        </v-col>
+      </template>
     </v-row>
     <v-tabs background-color="background-light" v-model="tab">
-      <v-tab key="flavors"> Flavors </v-tab>
-      <v-tab key="images"> Images </v-tab>
+      <v-tab v-for="tabKey in tabItems" :key="tabKey">
+        {{ tabKey[0].toUpperCase() + tabKey.slice(1) }}</v-tab
+      >
     </v-tabs>
 
     <v-tabs-items v-model="tab">
@@ -21,7 +30,7 @@
           sort-by="enabled"
           sort-desc
           item-key="uniqueId"
-          table-name="cloudFlavors"
+          table-name="cloud-flavors"
           :show-select="false"
           :loading="isFlavoursLoading"
           :headers="pricesHeaders"
@@ -29,8 +38,21 @@
           show-expand
           :expanded.sync="expanded"
         >
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field style="min-width: 200px" v-model="item.name" />
+          </template>
           <template v-slot:[`item.endPrice`]="{ item }">
-            <v-text-field v-model.number="item.endPrice" type="number" />
+            <v-text-field
+              style="min-width: 50px"
+              v-model.number="item.endPrice"
+              type="number"
+            />
+          </template>
+          <template v-slot:[`item.gpu.model`]="{ item }">
+            <template v-if="item.gpu.model !== ''">
+              {{ item.gpu.model }} (x{{ item.gpu.number }})
+            </template>
+            <template v-else>-</template>
           </template>
           <template v-slot:[`item.enabled`]="{ item }">
             <v-switch
@@ -41,13 +63,14 @@
           <template v-slot:expanded-item="{ headers, item }">
             <td :colspan="headers.length" style="padding: 0">
               <v-card color="background-light">
-                <v-card-title> Capabilities </v-card-title>
+                <v-card-title> Capabilities</v-card-title>
                 <nocloud-table
                   hide-default-footer
                   :headers="capabilitiesHeaders"
                   :items="item.capabilities"
                   :show-select="false"
                   no-hide-uuid
+                  table-name="cloud-capabilities"
                 />
               </v-card>
             </td>
@@ -61,7 +84,8 @@
           :headers="imagesHeaders"
           :items="images[selectedRegion]"
           sort-by="enabled"
-          table-name="cloudImages"
+          :show-select="false"
+          table-name="cloud-images"
           sort-desc
         >
           <template v-slot:[`item.enabled`]="{ item }">
@@ -78,18 +102,18 @@
 
 <script setup>
 import {
-  onMounted,
-  ref,
-  defineProps,
-  toRefs,
-  watch,
   computed,
   defineExpose,
+  defineProps,
+  onMounted,
+  ref,
+  toRefs,
+  watch,
 } from "vue";
 import api from "@/api";
 import { useStore } from "@/store";
 import NocloudTable from "@/components/table.vue";
-import useRate from "@/hooks/useRate";
+import usePlnRate from "@/hooks/usePlnRate";
 import { getMarginedValue } from "@/functions";
 
 const props = defineProps({
@@ -103,10 +127,11 @@ const props = defineProps({
 const { sp, template, fee } = toRefs(props);
 
 const store = useStore();
-const rate = useRate();
+const rate = usePlnRate();
 
 const expanded = ref([]);
 const tab = ref("prices");
+const tabItems = ref(["flavors", "images"]);
 const regions = ref([]);
 const flavors = ref({});
 const prices = ref({});
@@ -117,7 +142,8 @@ const isImagesLoading = ref(false);
 const isRegionsLoading = ref(false);
 
 const pricesHeaders = ref([
-  { text: "Name", value: "title" },
+  { text: "Name", value: "name" },
+  { text: "API Name", value: "apiName" },
   { text: "Os type", value: "osType" },
   { text: "Disk", value: "disk" },
   { text: "In bound bandwidth", value: "inboundBandwidth" },
@@ -126,6 +152,7 @@ const pricesHeaders = ref([
   { text: "Quota", value: "quota" },
   { text: "RAM", value: "ram" },
   { text: "VCPUS", value: "vcpus" },
+  { text: "GPU", value: "gpu.model" },
   { text: "Type", value: "type" },
   { text: "Base price", value: "price" },
   { text: "End price", value: "endPrice" },
@@ -140,6 +167,7 @@ const capabilitiesHeaders = ref([
 const imagesHeaders = ref([
   { text: "ID", value: "id" },
   { text: "Name", value: "name" },
+  { text: "Type", value: "type" },
   { text: "Size", value: "size" },
   { text: "Сreation date", value: "creationDate" },
   { text: "Status", value: "status" },
@@ -203,18 +231,24 @@ const fetchFlavours = async () => {
       if (!flavour.available) {
         return;
       }
-      Object.keys(flavour.planCodes || {}).forEach((key) => {
+      Object.entries(flavour.planCodes || {}).forEach(([key, value]) => {
+        const { gpu = { model: "", number: 0 } } = meta.technical[value] ?? {};
         const period = key === "monthly" ? "P1M" : "P1H";
         const planCode = `${period} ${flavour.id}`;
-        const price =
-          prices.value[selectedRegion.value]?.[flavour.planCodes[key]];
+        const price = parseFloat(
+          prices.value[selectedRegion.value]?.[flavour.planCodes[key]] * rate.value
+        ).toFixed(2);
+
         newFlavours.push({
           ...flavour,
-          title: flavour.planCodes[key],
+          gpu,
+          name: template.value.products[planCode]?.title || flavour.name,
+          apiName: flavour.name,
           period,
-          name: planCode,
-          price: parseFloat(price * rate.value).toFixed(2),
-          endPrice: template.value.products[planCode]?.price || 0,
+          key: planCode,
+          priceCode: flavour.planCodes[key],
+          price,
+          endPrice: template.value.products[planCode]?.price || price,
           enabled: !!template.value.products[planCode],
           uniqueId: `${period} ${flavour.id}`,
           meta: { region: selectedRegion.value },
@@ -223,7 +257,8 @@ const fetchFlavours = async () => {
     });
 
     flavors.value[selectedRegion.value] = newFlavours;
-  } catch {
+  } catch (error) {
+    console.log(error);
     store.commit("snackbar/showSnackbarError", {
       message: "Erorr during fetch flavors",
     });
@@ -271,43 +306,80 @@ const changePlan = (plan) => {
 
   Object.keys(flavors.value).forEach((regionKey) => {
     const regionFlavors = flavors.value[regionKey].filter((f) => f.enabled);
-
-    const regionImages = images.value[regionKey]
+    const regionImages = {};
+    images.value[regionKey]
       .filter((item) => item.enabled)
-      .map((item) => ({ name: item.name, id: item.id }));
+      .forEach((item) => {
+        regionImages[item.type] = regionImages[item.type]
+          ? [
+              ...regionImages[item.type],
+              {
+                name: item.name,
+                id: item.id,
+              },
+            ]
+          : [{ name: item.name, id: item.id }];
+      });
 
+    if (!regionFlavors.length) {
+      Object.keys(plan.products).forEach((key) => {
+        if (plan.products[key]?.meta?.region === regionKey) {
+          plan.products[key] = undefined;
+        }
+      });
+    }
     regionFlavors.forEach((item) => {
-      plan.products[item.name] = {
-        title: item.title,
+      plan.products[item.key] = {
+        title: item.name,
         kind: "PREPAID",
         price: item.endPrice,
         period: item.period === "P1H" ? 60 * 60 : 60 * 60 * 24 * 30,
         resources: {
           osType: item.osType,
-          drive_size: item.disk,
+          drive_size: item.disk && +item.disk ? +item.disk * 1024 : 0,
+          drive_type: "SSD",
           inboundBandwidth: item.inboundBandwidth,
           outboundBandwidth: item.outboundBandwidth,
           period: item.period,
           quota: item.quota,
           ram: item.ram,
           cpu: item.vcpus,
+          gpu_name: item.gpu.model,
+          gpu_count: item.gpu.number
         },
         meta: {
+          priceCode: item.priceCode,
           ...item.meta,
           datacenter: [regionKey],
-          os: regionImages,
+          os: regionImages[item.osType],
         },
       };
     });
   });
 };
+const setEnabledToValues = (value, status) => {
+  value = value[selectedRegion.value].map((i) => {
+    i.enabled = status;
+    return i;
+  });
+};
+const setEnabledToTab = (status = false) => {
+  switch (tabItems.value[tab.value]) {
+    case "images": {
+      setEnabledToValues(images.value, status);
+      break;
+    }
+    case "flavors": {
+      setEnabledToValues(flavors.value, status);
+      break;
+    }
+  }
+};
 
 const setFee = () => {
   Object.keys(flavors.value).forEach((key) => {
     flavors.value[key] = flavors.value[key].map((i) => {
-      if (!i.enabled) {
-        i.endPrice = getMarginedValue(fee.value, i.price);
-      }
+      i.endPrice = getMarginedValue(fee.value, i.price);
       return i;
     });
   });

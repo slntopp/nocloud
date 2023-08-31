@@ -8,7 +8,7 @@
     <v-card class="pa-5">
       <v-card-title class="text-center">Change price model</v-card-title>
       <v-row align="center">
-        <v-col cols="9">
+        <v-col cols="12">
           <v-autocomplete
             label="price model"
             item-text="title"
@@ -20,14 +20,24 @@
         </v-col>
       </v-row>
       <v-row align="center">
-        <v-col cols="9">
+        <v-col cols="6">
           <v-select
             v-model="product"
             label="tariff"
             item-text="title"
-            item-value="code"
+            item-value="key"
             :items="tarrifs"
           />
+        </v-col>
+        <v-col cols="3">
+          <v-text-field
+            readonly
+            v-model="productBillingPeriod"
+            label="billing period"
+          />
+        </v-col>
+        <v-col cols="3">
+          <v-text-field readonly :value="fullProduct?.price" label="price" />
         </v-col>
       </v-row>
 
@@ -48,6 +58,7 @@
 <script setup>
 import { onMounted, toRefs, ref, computed } from "vue";
 import api from "@/api";
+import { getBillingPeriod } from "@/functions";
 
 const props = defineProps(["template", "service", "value", "plans"]);
 const emit = defineEmits(["refresh", "input"]);
@@ -74,6 +85,8 @@ const changePM = () => {
   tempService.instancesGroups[igIndex].instances[
     instanceIndex
   ].config.planCode = planCode;
+  tempService.instancesGroups[igIndex].instances[instanceIndex].product =
+    product.value;
 
   if (product.value) {
     Object.keys(plan.value.products[product.value].resources).forEach((key) => {
@@ -95,23 +108,33 @@ const changePM = () => {
     });
 };
 
+const setProduct = () => {
+  if (template.value.type === "ovh") {
+    product.value =
+      template.value.config.duration + " " + template.value.config.planCode;
+  } else if (
+    template.value.type === "ione" ||
+    template.value.type === "virtual"
+  ) {
+    product.value = template.value.product;
+  }
+};
+
 onMounted(() => {
   plan.value = template.value.billingPlan;
-  product.value =
-    template.value.config.duration + " " + template.value.config.planCode;
+  setProduct();
 });
 
 const tarrifs = computed(() => {
   const tarrifs = [];
   Object.keys(plan.value?.products || {}).forEach((key) => {
     if (
-      plan.value.products[key].price > instanceTarrifPrice.value ||
+      plan.value.products[key]?.price > instanceTarrifPrice.value ||
       (plan.value.uuid === template.value.billingPlan.uuid &&
-        instanceTarrifPrice.value === plan.value.products[key].price)
+        instanceTarrifPrice.value === plan.value.products[key]?.price)
     )
-      tarrifs.push(key);
+      tarrifs.push({ ...plan.value.products[key], key });
   });
-
   return tarrifs;
 });
 
@@ -119,12 +142,12 @@ const avaliablePlans = computed(() => {
   const avaliablePlans = [];
 
   const copyPlans = JSON.parse(JSON.stringify(plans.value)).filter(
-    (p) => p.type === "ovh"
+    (p) => p.type === template.value.type
   );
 
   copyPlans.forEach((p) => {
     const keys = Object.keys(p.products).filter(
-      (key) => p.products[key].price > instanceTarrifPrice.value
+      (key) => p.products[key]?.price > instanceTarrifPrice.value
     );
     if (keys.length > 0) {
       avaliablePlans.push(p);
@@ -137,20 +160,28 @@ const avaliablePlans = computed(() => {
 });
 
 const instanceTarrifPrice = computed(() => {
+  if (template.value.type === "ione" || template.value.type === "virtual") {
+    return fullProduct.value.price;
+  }
   return template.value.billingPlan.products[
     template.value.config.duration + " " + template.value.config.planCode
-  ].price;
+  ]?.price;
 });
 
 const isChangeBtnDisabled = computed(() => {
-  if (
+  return (
     !plan.value ||
     (!product.value && tarrifs.value.length > 0) ||
     !product.value
-  ) {
-    return true;
-  }
-  return false;
+  );
+});
+
+const fullProduct = computed(() => {
+  return template.value.billingPlan.products[product.value];
+});
+
+const productBillingPeriod = computed(() => {
+  return getBillingPeriod(fullProduct.value?.period);
 });
 </script>
 

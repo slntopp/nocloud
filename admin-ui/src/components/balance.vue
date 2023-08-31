@@ -5,14 +5,23 @@
     v-if="balance !== undefined"
     :color="colorChip"
   >
-    {{ title }}{{ balance }} {{ currency || defaultCurrency }}
+    {{ title }}{{ balance }}
+    {{ (!hideCurrency && (currency || defaultCurrency)) || "" }}
   </v-chip>
 </template>
 
 <script>
 export default {
   name: "balance-display",
-  props: ["title", "value", "positive-color", "negative-color", "currency"],
+  props: {
+    title: {},
+    value: {},
+    "positive-color": {},
+    "negative-color": {},
+    currency: {},
+    hideCurrency: {},
+    logedInUser: { type: Boolean, default: false },
+  },
   mounted() {
     if (!this.balance) {
       this.$store
@@ -27,11 +36,13 @@ export default {
   },
   computed: {
     balance() {
-      if (this.value) return parseFloat(this.value).toFixed(2);
+      if (this.logedInUser) {
+        const { balance = 0 } = this.$store.getters["auth/userdata"];
 
-      const { balance = 0 } = this.$store.getters["auth/userdata"];
+        return parseFloat(balance).toFixed(2);
+      }
 
-      return parseFloat(balance).toFixed(2);
+      return parseFloat(this.value || 0).toFixed(2);
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];

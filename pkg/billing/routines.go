@@ -348,7 +348,9 @@ FOR service IN @@services // Iterate over Services
             UPDATE record._key WITH { 
 				processed: true, 
 				total: total,
-				currency: currency
+				currency: currency,
+				service: service._key,
+				account: account._key
 			} IN @@records RETURN NEW
     )
     

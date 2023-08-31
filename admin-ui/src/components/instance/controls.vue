@@ -3,10 +3,16 @@
     <v-btn
       class="mr-2"
       v-for="btn in vmControlBtns"
-      :key="btn.action"
+      :key="btn.action + btn.title"
       :disabled="btn.disabled"
-      :loading="isActionLoading"
-      @click="sendVmAction(btn.action, template, btn.data)"
+      :loading="isSendActionLoading"
+      @click="
+        sendVmAction({
+          action: btn.action,
+          template: { ...template, type: type },
+          params: btn.data,
+        })
+      "
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -42,13 +48,13 @@
 import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
-import sendVmAction from "@/mixins/sendVmAction";
 import { getTodayFullDate } from "@/functions";
+import { mapActions, mapGetters } from "vuex";
 
 export default {
   name: "instance-actions",
   components: { ConfirmDialog },
-  mixins: [snackbar, sendVmAction],
+  mixins: [snackbar],
   props: {
     template: { type: Object, required: true },
     copyTemplate: { type: Object },
@@ -56,6 +62,7 @@ export default {
   },
   data: () => ({ isLoading: false, isSaveLoading: false }),
   methods: {
+    ...mapActions("actions", ["sendVmAction"]),
     async deleteInstance() {
       this.isLoading = true;
       try {
@@ -106,6 +113,10 @@ export default {
         const billingPlan = {
           ...this.copyTemplate.billingPlan,
           title,
+          products: {
+            [this.product]:
+              this.copyTemplate.billingPlan.products[this.product],
+          },
           public: false,
         };
         delete billingPlan.uuid;
@@ -146,6 +157,18 @@ export default {
     },
   },
   computed: {
+    ...mapGetters("actions", ["isSendActionLoading"]),
+    type() {
+      return this.template.billingPlan.type;
+    },
+    ovhButtons() {
+      return [
+        { action: "poweroff", disabled: this.ovhActions?.poweroff },
+        { action: "resume", disabled: this.ovhActions?.resume },
+        { action: "suspend", disabled: this.ovhActions?.suspend },
+        { action: "reboot", disabled: this.ovhActions?.reboot },
+      ];
+    },
     vmControlBtns() {
       const types = {
         ione: [
@@ -159,11 +182,27 @@ export default {
             disabled: this.ioneActions?.vnc,
           },
         ],
-        ovh: [
-          { action: "poweroff", disabled: this.ovhActions?.poweroff },
-          { action: "resume", disabled: this.ovhActions?.resume },
-          { action: "suspend", disabled: this.ovhActions?.suspend },
-          { action: "reboot", disabled: this.ovhActions?.reboot },
+        "ovh dedicated": [
+          { action: "poweroff", disabled: true },
+          { action: "resume", disabled: true },
+          { action: "suspend", disabled: true },
+          { action: "reboot", disabled: true },
+          {
+            action: "open_ipmi",
+            title: "console",
+            disabled: this.ovhActions?.reboot,
+          },
+        ],
+        "ovh cloud": [
+          ...this.ovhButtons,
+          {
+            action: "vnc",
+            title: "Console",
+            disabled: this.ovhActions?.reboot,
+          },
+        ],
+        "ovh vps": [
+          ...this.ovhButtons,
           {
             action: "vnc",
             title: "Console",
@@ -194,11 +233,7 @@ export default {
         cpanel: [{ action: "session" }],
       };
 
-      const type = this.template.billingPlan?.type.includes("ovh")
-        ? "ovh"
-        : this.template.billingPlan?.type;
-
-      return types[type];
+      return types[this.type];
     },
     ioneActions() {
       if (!this.template?.state) return;
@@ -272,6 +307,7 @@ export default {
         : this.template.type;
 
       switch (type) {
+        case "virtual":
         case "ione": {
           return (item) =>
             `IND_${this.sp.title}_${
@@ -301,6 +337,21 @@ export default {
         JSON.stringify(this.copyTemplate.billingPlan) !==
         JSON.stringify(this.template.billingPlan)
       );
+    },
+    product() {
+      switch (this.template.type) {
+        case "ovh": {
+          return (
+            this.template.config.duration + " " + this.template.config.planCode
+          );
+        }
+        case "ione":
+        case "virtual": {
+          return this.template.product;
+        }
+      }
+
+      return null;
     },
   },
 };

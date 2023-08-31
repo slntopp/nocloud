@@ -53,9 +53,6 @@
       :loading="isLoading"
       :expanded.sync="expanded"
       :footer-error="fetchError"
-      :filters-values="selectedFilters"
-      :filters-items="filterItems"
-      @input:filter="selectedFilters[$event.key] = $event.value"
     >
       <template v-slot:[`item.hash`]="{ item, index }">
         <v-btn icon @click="addToClipboard(item.hash, index)">
@@ -69,7 +66,7 @@
         <router-link
           :to="{ name: 'Service', params: { serviceId: item.uuid } }"
         >
-          {{ "SRV_" + item.title }}
+          {{ item.title }}
         </router-link>
       </template>
 
@@ -153,10 +150,10 @@ export default {
   data: () => ({
     headers: [
       { text: "Title", value: "title" },
-      { text: "Status", value: "status", customFilter: true },
+      { text: "Status", value: "status" },
       { text: "UUID", value: "uuid", align: "start" },
       { text: "Hash", value: "hash" },
-      { text: "Access", value: "access", customFilter: true },
+      { text: "Access", value: "access" },
     ],
     copyed: -1,
     opened: {},
@@ -180,7 +177,6 @@ export default {
       UNKNOWN: "red darken-2",
       STOPPED: "orange darken-2",
     },
-    selectedFilters: { status: [], access: [] },
   }),
   computed: {
     services() {
@@ -196,12 +192,9 @@ export default {
     filteredServices() {
       let services = this.filterByStatus(
         this.services,
-        this.selectedFilters.status
+        this.searchParams?.status
       );
-      services = this.filterByAccessLevels(
-        services,
-        this.selectedFilters.access
-      );
+      services = this.filterByAccessLevels(services, this.searchParams?.access);
       if (this.searchParam) {
         const byIps = this.filterByPublicIps(services);
         const byDomains = this.filterByDomains(services);
@@ -228,14 +221,11 @@ export default {
     namespaces() {
       return this.$store.getters["namespaces/all"];
     },
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
+    searchParams() {
+      return this.$store.getters["appSearch/customParams"];
     },
-    filterItems() {
-      return {
-        status: Object.keys(this.stateColorMap),
-        access: Object.keys(this.accessColorsMap),
-      };
+    searchParam() {
+      return this.$store.getters["appSearch/customSearchParam"];
     },
   },
   created() {
@@ -324,7 +314,7 @@ export default {
       }
 
       return services.filter((service) => {
-        return status.includes(service.status);
+        return status.find((s) => s.value === service.status);
       });
     },
     filterByAccessLevels(services, access) {
@@ -333,7 +323,7 @@ export default {
       }
 
       return services.filter((service) => {
-        return access.includes(service.access.level);
+        return access.find((a) => a.value === service.access.level);
       });
     },
     hashTrim(hash) {
@@ -467,6 +457,22 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
     });
+
+    this.$store.commit("appSearch/setSearchName", "all-services");
+    setTimeout(() => {
+      this.$store.commit("appSearch/setVariants", {
+        status: {
+          items: Object.keys(this.stateColorMap),
+          isArray: true,
+          title: "Status",
+        },
+        access: {
+          items: Object.keys(this.accessColorsMap),
+          isArray: true,
+          title: "Access",
+        },
+      });
+    }, 0);
   },
   watch: {
     services() {

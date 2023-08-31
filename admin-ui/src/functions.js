@@ -262,6 +262,7 @@ export function readYAMLFile(file) {
     reader.readAsText(file);
   });
 }
+
 export function getSecondsByDays(days) {
   return +days * 60 * 60 * 24;
 }
@@ -404,4 +405,51 @@ export function getMarginedValue(fee, val) {
   }
 
   return Math[round](val * percent * n) / n;
+}
+
+export async function getClientIP() {
+  const regexp = /[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}/;
+  const response = await fetch("https://www.cloudflare.com/cdn-cgi/trace");
+  const text = await response.text();
+  return text.match(regexp)[0];
+}
+
+export function defaultFilterObject(item, queryText) {
+  return (
+    item?.title?.toLocaleLowerCase().indexOf(queryText.toLocaleLowerCase()) !==
+      -1 ||
+    item?.uuid?.toLocaleLowerCase().startsWith(queryText.toLocaleLowerCase())
+  );
+}
+
+function fetchMDIIconsHash() {
+  const icons = [];
+  let block = null;
+
+  return () => {
+    if (block) {
+      return block;
+    }
+    if (icons.length) {
+      return icons;
+    }
+    block = fetch(
+      "https://raw.githubusercontent.com/Templarian/MaterialDesign/master/meta.json",
+      { method: "get" }
+    ).then((d) => d.json());
+
+    return block;
+  };
+}
+
+export const fetchMDIIcons = fetchMDIIconsHash();
+
+export function getBillingPeriod(period) {
+  const fullPeriod = period && getFullDate(period);
+  if (fullPeriod) {
+    return Object.keys(fullPeriod)
+      .filter((key) => +fullPeriod[key])
+      .map((key) => `${fullPeriod[key]} (${key})`)
+      .join(", ");
+  }
 }

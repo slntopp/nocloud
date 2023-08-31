@@ -17,7 +17,7 @@ package graph
 
 import (
 	"context"
-
+	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -91,8 +91,10 @@ func (ctrl *RecordsController) Create(ctx context.Context, r *pb.Record) driver.
 
 const getRecordsQuery = `
 LET T = DOCUMENT(@transaction)
-FOR rec IN T.records
+LET recs = T.records ? T.records : []
+FOR rec IN recs
   RETURN DOCUMENT(CONCAT(@records, "/", rec))
+  
 `
 
 func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Record, err error) {
@@ -119,4 +121,191 @@ func (ctrl *RecordsController) Get(ctx context.Context, tr string) (res []*pb.Re
 	}
 
 	return res, nil
+}
+
+func (ctrl *RecordsController) GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error) {
+	query := "LET reports = (FOR i in @@instances LET records = ( FOR record in @@records  FILTER record.processed FILTER record.instance == i._key"
+	params := map[string]interface{}{
+		"@records":   schema.RECORDS_COL,
+		"@instances": schema.INSTANCES_COL,
+	}
+
+	if req.From != nil {
+		query += " FILTER record.exec >= @from"
+		params["from"] = req.GetFrom()
+	}
+
+	if req.To != nil {
+		query += " FILTER record.exec <=@to"
+		params["to"] = req.GetTo()
+	}
+
+	query += " RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}) FOR r in reports"
+
+	if req.Field != nil && req.Sort != nil {
+		subQuery := ` SORT r.%s %s`
+		field, sort := req.GetField(), req.GetSort()
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	if req.Page != nil && req.Limit != nil {
+		if req.GetLimit() != 0 {
+			limit, page := req.GetLimit(), req.GetPage()
+			offset := (page - 1) * limit
+
+			query += ` LIMIT @offset, @count`
+			params["offset"] = offset
+			params["count"] = limit
+		}
+	}
+
+	query += " RETURN r"
+
+	ctrl.log.Debug("Final query", zap.String("query", query))
+
+	cursor, err := ctrl.db.Query(ctx, query, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var res []*pb.InstanceReport
+
+	for cursor.HasMore() {
+		var rep = pb.InstanceReport{}
+		_, err := cursor.ReadDocument(ctx, &rep)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, &rep)
+	}
+
+	return res, nil
+}
+
+func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*pb.GetRecordsReportsResponse, error) {
+	query := "LET records = ( FOR record in @@records FILTER record.processed"
+	params := map[string]interface{}{
+		"@records": schema.RECORDS_COL,
+	}
+
+	if req.From != nil {
+		query += " FILTER record.exec >= @from"
+		params["from"] = req.GetFrom()
+	}
+
+	if req.To != nil {
+		query += " FILTER record.exec <=@to"
+		params["to"] = req.GetTo()
+	}
+
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+			params[key] = values
+		}
+	}
+
+	if req.Field != nil && req.Sort != nil {
+		subQuery := ` SORT record.%s %s`
+		field, sort := req.GetField(), req.GetSort()
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	if req.Page != nil && req.Limit != nil {
+		if req.GetLimit() != 0 {
+			limit, page := req.GetLimit(), req.GetPage()
+			offset := (page - 1) * limit
+
+			query += ` LIMIT @offset, @count`
+			params["offset"] = offset
+			params["count"] = limit
+		}
+	}
+
+	query += " RETURN merge(record, {uuid: record._key})) RETURN {records: records, total: SUM(records[*].total), count: COUNT(records)}"
+
+	ctrl.log.Debug("Final query", zap.String("query", query))
+
+	cursor, err := ctrl.db.Query(ctx, query, params)
+	if err != nil {
+		return nil, err
+	}
+
+	var res pb.GetRecordsReportsResponse
+
+	_, err = cursor.ReadDocument(ctx, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res, nil
+}
+
+const reportsCountQuery = `RETURN LENGTH(@@instances)`
+
+func (ctrl *RecordsController) GetInstancesReportsCount(ctx context.Context) (int64, error) {
+	cur, err := ctrl.db.Query(ctx, reportsCountQuery, map[string]interface{}{
+		"@instances": schema.INSTANCES_COL,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	var result int64
+
+	_, err = cur.ReadDocument(ctx, &result)
+	if err != nil {
+		return 0, err
+	}
+	return result, nil
+}
+
+func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error) {
+	query := "LET records = ( FOR record in @@records FILTER record.processed"
+	params := map[string]interface{}{
+		"@records": schema.RECORDS_COL,
+	}
+
+	if req.From != nil {
+		query += " FILTER record.exec >= @from"
+		params["from"] = req.GetFrom()
+	}
+
+	if req.To != nil {
+		query += " FILTER record.exec <=@to"
+		params["to"] = req.GetTo()
+	}
+
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+			params[key] = values
+		}
+	}
+
+	query += " RETURN record) RETURN LENGTH(records)"
+
+	cursor, err := ctrl.db.Query(ctx, query, params)
+	if err != nil {
+		return 0, err
+	}
+
+	var result int64
+
+	_, err = cursor.ReadDocument(ctx, &result)
+	if err != nil {
+		return 0, err
+	}
+
+	return result, nil
 }

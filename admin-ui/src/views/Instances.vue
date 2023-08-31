@@ -27,7 +27,8 @@
 
       <v-card class="pa-4">
         <v-form ref="form" v-model="newInstance.isValid">
-          <v-select
+          <v-autocomplete
+            :filter="defaultFilterObject"
             dense
             item-text="title"
             item-value="uuid"
@@ -37,8 +38,9 @@
             :items="accounts"
             :rules="rules.req"
           />
-          <v-select
+          <v-autocomplete
             dense
+            :filter="defaultFilterObject"
             label="service"
             item-text="title"
             item-value="uuid"
@@ -48,7 +50,7 @@
             :items="selectedAccountServices"
             :rules="rules.req"
           />
-          <v-select
+          <v-autocomplete
             dense
             label="type"
             style="width: 300px"
@@ -64,8 +66,9 @@
             v-model="newInstance.customTitle"
             :rules="rules.req"
           />
-          <v-select
+          <v-autocomplete
             dense
+            :filter="defaultFilterObject"
             label="service provider"
             style="width: 300px"
             item-text="title"
@@ -95,7 +98,10 @@
       </v-card>
     </v-menu>
 
-    <confirm-dialog @confirm="deleteSelectedInstances">
+    <confirm-dialog
+      :disabled="selected.length < 1"
+      @confirm="deleteSelectedInstances"
+    >
       <v-btn
         class="mr-2"
         color="background-light"
@@ -123,7 +129,7 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import instancesTable from "@/components/instances_table.vue";
-import { getState } from "@/functions";
+import { defaultFilterObject, getState } from "@/functions";
 
 export default {
   name: "instances-view",
@@ -150,6 +156,7 @@ export default {
     headers: [],
   }),
   methods: {
+    defaultFilterObject,
     deleteSelectedInstances() {
       if (this.selected.length > 0) {
         const deletePromises = this.selected.map((el) =>
@@ -270,6 +277,7 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
     });
+    this.$store.commit("appSearch/setSearchName", "all-instances");
 
     const icon = document.querySelector(".group-icon");
     icon.dispatchEvent(new Event("click"));

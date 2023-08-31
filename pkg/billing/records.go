@@ -295,7 +295,9 @@ FOR service IN @@services // Iterate over Services
             UPDATE record._key WITH { 
 				processed: true, 
 				total: total,
-				currency: currency
+				currency: currency,
+				service: service._key,
+				account: account._key
 			} IN @@records RETURN NEW
     )
     
@@ -370,4 +372,69 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 	return &pb.Records{
 		Pool: pool,
 	}, nil
+}
+
+func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) (*pb.GetInstancesReportResponse, error) {
+	log := s.log.Named("GetRecords")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Permission denied")
+	}
+
+	reports, err := s.records.GetInstancesReports(ctx, req)
+	if err != nil {
+		log.Error("Failed to get reports", zap.Error(err))
+	}
+
+	return &pb.GetInstancesReportResponse{
+		Reports: reports,
+	}, nil
+}
+
+func (s *BillingServiceServer) GetInstancesReportsCount(ctx context.Context, req *pb.GetInstancesReportsCountRequest) (*pb.GetReportsCountResponse, error) {
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Permission denied")
+	}
+
+	res, err := s.records.GetInstancesReportsCount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetReportsCountResponse{Total: res}, nil
+}
+
+func (s *BillingServiceServer) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*pb.GetRecordsReportsResponse, error) {
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Permission denied")
+	}
+
+	return s.records.GetRecordsReports(ctx, req)
+}
+
+func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (*pb.GetReportsCountResponse, error) {
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Permission denied")
+	}
+
+	res, err := s.records.GetRecordsReportsCount(ctx, req)
+
+	if err != nil {
+		return nil, err
+	}
+	return &pb.GetReportsCountResponse{Total: res}, nil
 }

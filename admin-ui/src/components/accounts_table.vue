@@ -8,9 +8,6 @@
     :single-select="singleSelect"
     :footer-error="fetchError"
     @input="handleSelect"
-    :filters-items="filterItems"
-    :filters-values="selectedFilter"
-    @input:filter="selectedFilter[$event.key] = $event.value"
   >
     <template v-slot:[`item.title`]="{ item }">
       <div class="d-flex justify-space-between">
@@ -41,12 +38,11 @@
     </template>
     <template v-slot:[`item.balance`]="{ item }">
       <balance
+        :hide-currency="true"
         :currency="item.currency"
         @click="goToBalance(item.uuid)"
-        v-if="item.balance"
         :value="item.balance"
       />
-      <template v-else>-</template>
     </template>
     <template v-slot:[`item.access.level`]="{ value }">
       <v-chip :color="colorChip(value)">
@@ -54,7 +50,10 @@
       </v-chip>
     </template>
     <template v-slot:[`item.namespace`]="{ item }">
-      {{ "NS_" + getName(item.uuid) }}
+      {{ getName(item.uuid) }}
+    </template>
+    <template v-slot:[`item.currency`]="{ item }">
+      {{ item.currency || defaultCurrency }}
     </template>
   </nocloud-table>
 </template>
@@ -64,6 +63,7 @@ import noCloudTable from "@/components/table.vue";
 import Balance from "./balance.vue";
 import { filterArrayByTitleAndUuid } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
+import { mapGetters } from "vuex";
 
 export default {
   name: "accounts-table",
@@ -81,9 +81,8 @@ export default {
       type: Boolean,
       default: false,
     },
-    searchParam: {
+    namespace: {
       type: String,
-      default: "",
     },
   },
   data() {
@@ -95,7 +94,8 @@ export default {
         { text: "Title", value: "title" },
         { text: "UUID", value: "uuid" },
         { text: "Balance", value: "balance" },
-        { text: "Access level", value: "access.level", customFilter: true },
+        { text: "Client currency", value: "currency" },
+        { text: "Access level", value: "access.level" },
         { text: "Group(NameSpace)", value: "namespace" },
       ],
       levelColorMap: {
@@ -105,7 +105,6 @@ export default {
         READ: "gray",
         NONE: "error",
       },
-      selectedFilter: { "access.level": [] },
     };
   },
   methods: {
@@ -126,14 +125,39 @@ export default {
     },
   },
   computed: {
+    ...mapGetters("appSearch", {
+      searchParam: "customSearchParam",
+      searchParams: "customParams",
+    }),
     tableData() {
       return this.$store.getters["accounts/all"];
     },
     filtredAccounts() {
-      const accounts = this.tableData.filter(
-        (a) =>
-          this.selectedFilter["access.level"].length === 0 ||
-          this.selectedFilter["access.level"].includes(a.access.level)
+      const searchParams = { ...this.searchParams };
+
+      if (this.namespace) {
+        searchParams["access.namespace"] = [{ value: this.namespace }];
+      }
+
+      const accounts = this.tableData.filter((a) =>
+        Object.keys(searchParams).every((k) => {
+          return (
+            !searchParams?.[k] ||
+            !searchParams[k].length ||
+            searchParams[k]?.find((t) => {
+              let key = k;
+              let data = { ...a };
+              k.split(".").forEach((subKey, index) => {
+                if (index === k.split(".").length - 1) {
+                  key = subKey;
+                  return;
+                }
+                data = a[subKey];
+              });
+              return t.value === data[key];
+            })
+          );
+        })
       );
 
       if (this.searchParam) {
@@ -144,8 +168,8 @@ export default {
     namespaces() {
       return this.$store.getters["namespaces/all"];
     },
-    filterItems() {
-      return { "access.level": Object.keys(this.levelColorMap) };
+    defaultCurrency() {
+      return this.$store.getters["currencies/default"];
     },
   },
   created() {
@@ -168,6 +192,17 @@ export default {
           this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
         }
       });
+  },
+  mounted() {
+    setTimeout(() => {
+      this.$store.commit("appSearch/setVariants", {
+        "access.level": {
+          items: Object.keys(this.levelColorMap),
+          isArray: true,
+          title: "Access",
+        },
+      });
+    }, 0);
   },
   watch: {
     tableData() {

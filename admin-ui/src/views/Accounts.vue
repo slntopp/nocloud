@@ -57,18 +57,20 @@
             </v-row>
             <v-row>
               <v-col>
-                <v-select
+                <v-autocomplete
                   :items="namespacesForSelect"
                   v-model="newAccount.data.namespace"
                   label="namespace"
                   :rules="newAccount.rules.selector"
-                ></v-select>
+                ></v-autocomplete>
               </v-col>
             </v-row>
             <v-row>
               <v-col>
                 <v-select
                   :items="accessLevels"
+                  item-value="id"
+                  item-text="title"
                   v-model="newAccount.data.access"
                   label="access"
                 ></v-select>
@@ -145,7 +147,12 @@ export default {
         loading: false,
       },
       deletingLoading: false,
-      accessLevels: [0, 1, 2, 3],
+      accessLevels: [
+        { id: 0, title: "NONE" },
+        { id: 1, title: "READ" },
+        { id: 2, title: "MGMT" },
+        { id: 3, title: "ADMIN" },
+      ],
     };
   },
   methods: {
@@ -225,6 +232,8 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "accounts/fetch",
     });
+
+    this.$store.commit("appSearch/setSearchName", "all-accounts");
   },
 };
 </script>

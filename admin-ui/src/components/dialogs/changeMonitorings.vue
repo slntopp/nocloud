@@ -6,33 +6,14 @@
     max-width="60%"
   >
     <v-card class="pa-5">
-      <v-card-title class="text-center">Change monitoring dates</v-card-title>
+      <v-card-title class="text-center">Change next payment dates</v-card-title>
       <div v-if="!isChangeAll">
         <v-row v-for="key in Object.keys(lastMonitorings || {})" :key="key">
           <v-col cols="4">
             <v-card-title>{{ lastMonitorings[key].title }}</v-card-title>
           </v-col>
           <v-col cols="8">
-            <v-menu
-              :close-on-content-click="false"
-              transition="scale-transition"
-              min-width="auto"
-            >
-              <template v-slot:activator="{ on, attrs }">
-                <v-text-field
-                  v-bind="attrs"
-                  v-on="on"
-                  prepend-inner-icon="mdi-calendar"
-                  :value="lastMonitorings[key].value"
-                  readonly
-                />
-              </template>
-              <v-date-picker
-                scrollable
-                :min="min"
-                v-model="lastMonitorings[key].value"
-              ></v-date-picker>
-            </v-menu>
+            <date-picker :min="min" v-model="lastMonitorings[key].value" />
           </v-col>
         </v-row>
       </div>
@@ -41,26 +22,7 @@
           <v-card-title>product</v-card-title>
         </v-col>
         <v-col cols="8">
-          <v-menu
-            :close-on-content-click="false"
-            transition="scale-transition"
-            min-width="auto"
-          >
-            <template v-slot:activator="{ on, attrs }">
-              <v-text-field
-                v-bind="attrs"
-                v-on="on"
-                prepend-inner-icon="mdi-calendar"
-                :value="newAllDate"
-                readonly
-              />
-            </template>
-            <v-date-picker
-              scrollable
-              :min="min"
-              v-model="newAllDate"
-            ></v-date-picker>
-          </v-menu>
+          <date-picker :min="min" v-model="newAllDate" />
         </v-col>
       </v-row>
 
@@ -84,6 +46,7 @@ import { onMounted, toRefs, ref } from "vue";
 import api from "@/api";
 import { formatSecondsToDate } from "@/functions";
 import { useStore } from "@/store";
+import DatePicker from "@/components/ui/datePicker.vue";
 
 const props = defineProps(["template", "service", "value"]);
 const emit = defineEmits(["refresh", "input"]);
@@ -104,19 +67,34 @@ const setLastMonitorings = () => {
 
   Object.keys(data).forEach((key) => {
     if (key.includes("last_monitoring") && data[key]) {
+      const title = key
+        .replace("_last_monitoring", "")
+        .replace("last_monitoring", "product");
+      let value = +data[key];
+
+      if (title === "product") {
+        value =
+          value +
+          +template.value.billingPlan.products[template.value.product].period;
+      } else {
+        value =
+          value +
+          +template.value.billingPlan.resources.find((r) => r.key === title)
+            ?.period;
+      }
+
+      value = formatSecondsToDate(value);
       monitorings[key] = {
-        value: formatSecondsToDate(data[key]),
-        firstValue: formatSecondsToDate(data[key]),
-        title: key
-          .replace("_last_monitoring", "")
-          .replace("last_monitoring", "product"),
+        value: value,
+        firstValue: value,
+        title: title,
       };
     }
   });
 
   lastMonitorings.value = monitorings;
 
-  newAllDate.value = formatSecondsToDate(data.last_monitoring);
+  newAllDate.value = monitorings["last_monitoring"].value;
 };
 
 const changeDates = async () => {
@@ -136,12 +114,23 @@ const changeDates = async () => {
       isChangeAll.value ||
       lastMonitorings.value[key].firstValue != lastMonitorings.value[key].value
     ) {
-      changedDates[key] =
-        new Date(
-          isChangeAll.value
-            ? newAllDate.value
-            : lastMonitorings.value[key].value
-        ).getTime() / 1000;
+      const { value, title } = lastMonitorings.value[key];
+
+      let baseVal =
+        new Date(isChangeAll.value ? newAllDate.value : value).getTime() / 1000;
+
+      if (title === "product") {
+        baseVal =
+          baseVal -
+          +template.value.billingPlan.products[template.value.product].period;
+      } else {
+        baseVal =
+          baseVal -
+          +template.value.billingPlan.resources.find((r) => r.key === title)
+            ?.period;
+      }
+
+      changedDates[key] = baseVal;
     }
   });
 

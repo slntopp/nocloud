@@ -33,6 +33,7 @@
       </v-btn>
       <template #actions>
         <nocloud-table
+          table-name="linked-plans"
           :show-select="false"
           :items="linked"
           :headers="linkedHeaders"
@@ -59,7 +60,8 @@
       </template>
     </confirm-dialog>
 
-    <v-select
+    <v-autocomplete
+      :filter="defaultFilterObject"
       label="Filter by SP"
       item-text="title"
       item-value="uuid"
@@ -78,9 +80,6 @@
       :loading="isLoading"
       :footer-error="fetchError"
       @input="(v) => (selected = v)"
-      :filters-values="selectedFilters"
-      :filters-items="filterItems"
-      @input:filter="selectedFilters[$event.key] = $event.value"
     >
       <template v-slot:[`item.title`]="{ item }">
         <router-link :to="{ name: 'Plan', params: { planId: item.uuid } }">
@@ -91,7 +90,11 @@
         {{ value.toLowerCase() }}
       </template>
       <template v-slot:[`item.instanceCount`]="{ item }">
-        <v-progress-circular v-if="isInstanceCountLoading" size="20" indeterminate/>
+        <v-progress-circular
+          v-if="isInstanceCountLoading"
+          size="20"
+          indeterminate
+        />
         <template v-else>
           {{ instanceCountMap[item.uuid] }}
         </template>
@@ -106,7 +109,7 @@ import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
 import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import { filterArrayByTitleAndUuid } from "@/functions";
+import { defaultFilterObject, filterArrayByTitleAndUuid } from "@/functions";
 import { mapGetters } from "vuex";
 
 export default {
@@ -117,9 +120,9 @@ export default {
     headers: [
       { text: "Title ", value: "title" },
       { text: "UUID ", value: "uuid" },
-      { text: "Kind ", value: "kind", customFilter: true },
-      { text: "Type ", value: "type", customFilter: true },
-      { text: "Public ", value: "public", customFilter: true },
+      { text: "Kind ", value: "kind" },
+      { text: "Type ", value: "type" },
+      { text: "Public ", value: "public" },
       { text: "Linked instances count ", value: "instanceCount" },
     ],
     linkedHeaders: [
@@ -133,9 +136,9 @@ export default {
     copyed: -1,
     fetchError: "",
     serviceProvider: null,
-    selectedFilters: { type: [], kind: [], public: [] },
   }),
   methods: {
+    defaultFilterObject,
     changePlan() {
       this.linked = [];
       this.services.forEach((service) => {
@@ -240,6 +243,8 @@ export default {
         withCount: true,
       },
     });
+
+    this.$store.commit("appSearch/setSearchName", "all-plans");
   },
   computed: {
     ...mapGetters("plans", {
@@ -248,11 +253,12 @@ export default {
       isInstanceCountLoading: "isInstanceCountLoading",
       instanceCountMap: "instanceCountMap",
     }),
+    ...mapGetters("appSearch", {
+      searchParams: "customParams",
+      searchParam: "customSearchParam",
+    }),
     services() {
       return this.$store.getters["services/all"];
-    },
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
     },
     availablePlans() {
       const plan = this.selected[0];
@@ -264,12 +270,12 @@ export default {
     },
     filtredPlans() {
       const plans = this.plans.filter((plan) => {
-        return Object.keys(this.selectedFilters).every(
+        return Object.keys(this.searchParams).every(
           (key) =>
-            this.selectedFilters[key].length === 0 ||
-            this.selectedFilters[key].includes(
-              plan[key]?.toString()?.toLowerCase()
-            )
+            this.searchParams[key].length === 0 ||
+            this.searchParams[key]
+              .map((f) => f.value)
+              .includes(plan[key]?.toString()?.toLowerCase())
         );
       });
 
@@ -283,13 +289,6 @@ export default {
 
       return [...sp];
     },
-    filterItems() {
-      return {
-        kind: ["static", "dynamic"],
-        type: this.typeItems,
-        public: ["true", "false"],
-      };
-    },
     typeItems() {
       return [...new Set(this.plans.map((p) => p.type.toLowerCase()))];
     },
@@ -297,6 +296,13 @@ export default {
   watch: {
     plans() {
       this.fetchError = "";
+    },
+    typeItems(){
+      this.$store.commit("appSearch/setVariants", {
+        kind: { items: ["static", "dynamic"], title: "Kind", isArray: true },
+        type: { items: this.typeItems, isArray: true, title: "Type" },
+        public: { items: ["true", "false"], title: "Public", isArray: true },
+      });
     },
     serviceProvider() {
       this.getPlans();

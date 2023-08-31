@@ -44,7 +44,7 @@
     </v-col>
     <v-col>
       <nocloud-table
-        table-name="instanceInfo"
+        table-name="snapshots"
         single-select
         item-key="ts"
         v-model="selected"

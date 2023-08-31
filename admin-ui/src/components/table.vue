@@ -8,7 +8,7 @@
     loading-text="Loading... Please wait"
     color="background-light"
     :items="items"
-    :show-select="showSelect"
+    :show-select="!!tableName || showSelect"
     :value="selected"
     @input="handleSelect"
     :hide-default-footer="hideDefaultFooter"
@@ -28,6 +28,7 @@
     :key="anIncreasingNumber"
     :server-items-length="serverItemsLength"
     :options="options"
+    :footer-props="{ 'items-per-page-options': itemsPerPageOptions }"
     @update:options="$emit('update:options', $event)"
     @update:items-per-page="saveItemsPerPage"
   >
@@ -115,43 +116,57 @@
         </v-list>
       </v-menu>
     </template>
-      <template v-slot:[`header.data-table-select`]="{props,on}">
-          <div class="d-flex">
-              <v-simple-checkbox v-bind="props" v-on="on"></v-simple-checkbox>
-                  <v-dialog
-                          @click:outside="changeFiltres"
-                          max-width="60%"
-                          v-model="settingsDialog"
-                          width="500"
-                  >
-                      <template v-slot:activator="{ on, attrs }">
-                          <v-icon v-bind="attrs" v-on="on" size="23" class="mr-1"
-                          >mdi-cog-outline</v-icon
-                          >
-                      </template>
-                      <v-card
-                              color="background-light"
-                              style="overflow: hidden"
-                              max-width="100%"
-                      >
-                          <v-card-title>Table settings</v-card-title>
-                          <v-row class="pa-5">
-                              <v-col v-for="header in headers" :key="header.value" cols="4">
-                                  <v-checkbox
-                                          @click.stop
-                                          :label="header.text"
-                                          v-model="filter"
-                                          :value="header.value"
-                                  />
-                              </v-col>
-                          </v-row>
-                      </v-card>
-                  </v-dialog>
-                  <v-icon @click="resetFilter" size="23" class="mr-1s"
-                  >mdi-filter-remove</v-icon
-                  >
-          </div>
-      </template>
+    <!--  if show select show v-checkbox all, and dont hide v-checkbox on every row-->
+    <!--  Else hide v-checkbox all and hide checkboxes on every row-->
+
+    <template v-slot:[`header.data-table-select`]="{ props, on }">
+      <div class="d-flex">
+        <v-simple-checkbox
+          v-if="showSelect"
+          v-bind="props"
+          v-on="on"
+        ></v-simple-checkbox>
+        <v-dialog
+          @click:outside="changeFiltres"
+          max-width="60%"
+          v-model="settingsDialog"
+          width="500"
+        >
+          <template v-slot:activator="{ on, attrs }">
+            <v-icon v-bind="attrs" v-on="on" size="23" class="mr-1"
+              >mdi-cog-outline</v-icon
+            >
+          </template>
+          <v-card
+            color="background-light"
+            style="overflow: hidden"
+            max-width="100%"
+          >
+            <v-card-title>Table settings</v-card-title>
+            <v-row class="pa-5">
+              <v-col
+                v-for="header in headers.filter((h) => h.text)"
+                :key="header.value"
+                cols="4"
+              >
+                <v-checkbox
+                  @click.stop
+                  :label="header.text"
+                  v-model="filter"
+                  :value="header.value"
+                />
+              </v-col>
+            </v-row>
+          </v-card>
+        </v-dialog>
+        <v-icon @click="resetFilter" size="23" class="mr-1s"
+          >mdi-filter-remove</v-icon
+        >
+      </div>
+    </template>
+    <template v-if="!showSelect" v-slot:[`item.data-table-select`]>
+      <div></div>
+    </template>
 
     <template v-if="footerError.length > 0" v-slot:footer>
       <v-toolbar class="mt-2" color="error" dark flat>
@@ -249,8 +264,8 @@ export default {
     showExpand: Boolean,
     showGroupBy: Boolean,
     height: [Number, String],
-      hideDefaultHeader: Boolean,
-      hideDefaultFooter: Boolean,
+    hideDefaultHeader: Boolean,
+    hideDefaultFooter: Boolean,
     groupBy: String,
     caption: String,
     dense: Boolean,
@@ -289,6 +304,7 @@ export default {
     },
     filtersItems: { type: Object },
     filtersValues: { type: Object },
+    itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, -1] },
   },
   data() {
     return {
@@ -544,6 +560,9 @@ export default {
     this.saveTableData();
     window.removeEventListener("beforeunload", this.saveTableData);
   },
+  created() {
+    this.configureItemsPerPage();
+  },
   mounted() {
     window.addEventListener("beforeunload", this.saveTableData);
     this.filtredHeaders = this.headers;
@@ -553,7 +572,6 @@ export default {
         this.page = +page;
       }, 100);
 
-    this.configureItemsPerPage();
     this.configureColumns();
     this.synchronizeFilterValues();
   },

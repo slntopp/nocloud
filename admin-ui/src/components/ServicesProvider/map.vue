@@ -54,83 +54,8 @@
                   </v-icon>
                 </template>
                 <v-card class="pa-4" color="background-light">
-                  <v-icon
-                    @click="formatText('b', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-format-bold
-                  </v-icon>
-
-                  <v-icon
-                    @click="formatText('i', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-format-italic
-                  </v-icon>
-
-                  <v-icon
-                    @click="formatText('u', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-format-underline
-                  </v-icon>
-
-                  <v-icon
-                    @click="formatText('s', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-format-strikethrough
-                  </v-icon>
-
-                  <v-icon
-                    class="mx-1"
-                    @click="formatText('a', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-link
-                  </v-icon>
-
-                  <v-icon
-                    class="mx-1"
-                    @click="formatText('img', marker.id)"
-                    @mousedown.prevent
-                  >
-                    mdi-image-outline
-                  </v-icon>
-
-                  <v-dialog width="400" :ref="`color-dialog.${marker.id}`">
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-icon v-on="on" v-bind="attrs">mdi-palette</v-icon>
-                    </template>
-
-                    <v-card class="pa-2">
-                      <v-color-picker
-                        hide-mode-switch
-                        style="margin: 0 auto"
-                        mode="hexa"
-                        v-model="textColor"
-                      />
-
-                      <v-card-actions class="justify-end">
-                        <v-btn @click="formatText('color', marker.id)">
-                          Save
-                        </v-btn>
-                      </v-card-actions>
-                    </v-card>
-                  </v-dialog>
-
-                  <v-textarea
-                    label="Description"
-                    style="
-                      color: #fff;
-                      background: var(--v-background-light-base);
-                      transition: 0.3s;
-                    "
-                    :ref="`textarea_${marker.id}`"
-                    v-model="marker.extra.description"
-                  />
-
                   <v-text-field
+                    class="mt-7"
                     dense
                     label="Title"
                     v-model="marker.title"
@@ -139,17 +64,13 @@
                     @input="(e) => inputHandler(e, marker)"
                   />
 
-                  <div class="d-flex justify-end">
-                    <v-switch
-                      label="Is primary"
-                      style="
-                        color: #fff;
-                        background: var(--v-background-light-base);
-                        transition: 0.3s;
-                      "
-                      v-model="marker.extra.primary"
-                    />
-                  </div>
+                  <color-picker label="Color" v-model="marker.extra.color" />
+
+                  <v-text-field
+                    dense
+                    label="Icon link"
+                    v-model="marker.extra.link"
+                  />
 
                   <v-card-actions class="justify-end">
                     <v-btn @click.stop="saveAndClose(marker.id)"> Save </v-btn>
@@ -194,9 +115,10 @@
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api.js";
 import { NcMap } from "nocloud-ui";
+import ColorPicker from "@/components/ui/colorPicker.vue";
 
 export default {
-  components: { NcMap },
+  components: { ColorPicker, NcMap },
   mixins: [snackbar],
   name: "support-map",
   props: {
@@ -264,18 +186,19 @@ export default {
       }
     },
     onEnterHandler(id, e) {
-      const ref = this.$refs["textField_" + id][0];
+      const ref = this.$refs["textField_" + id]?.[0];
 
       this.mouseLeaveHandler(id);
       ref.blur();
       e.stopPropagation();
     },
     inputHandler(e, marker) {
-      if (!e) {
-        marker.title = " ";
-      } else {
-        marker.title = e.trim();
-      }
+      this.markers = this.markers.map((m) => {
+        if (m.id === marker.id) {
+          m.title = !e ? " " : e.trim();
+        }
+        return m;
+      });
     },
     delMarker(e, id, x, y) {
       e.stopPropagation();
@@ -290,13 +213,11 @@ export default {
       let error = 0;
       this.markers.forEach((el) => {
         if (el.title && !el.title.trim()) {
-          const ref = this.$refs["textField_" + el.id][0];
-
+          const ref = this.$refs["textField_" + el.id]?.[0];
           this.mouseEnterHandler(el.id);
           setTimeout(() => {
-            ref.focus();
+            ref?.focus();
           }, 100);
-
           error = 1;
         }
       });
@@ -318,8 +239,6 @@ export default {
         );
       }
 
-      console.log(this.item.locations, this.markers);
-
       if (this.item.locations.length < 1) {
         this.item.locations = [{ id: "_nocloud.remove" }];
       }
@@ -329,7 +248,7 @@ export default {
           this.showSnackbarSuccess({
             message: "Service edited successfully",
           });
-          this.$emit('set-locations',data.locations)
+          this.$emit("set-locations", data.locations);
         })
         .catch((err) => {
           this.showSnackbarError({
@@ -398,9 +317,9 @@ export default {
       setTimeout(() => {
         const marker = {
           id: this.selected,
-          type: this.type || undefined,
+          type: this.type || this.item.type,
           title: " ",
-          extra: {},
+          extra: { country: target.id },
           x,
           y,
         };

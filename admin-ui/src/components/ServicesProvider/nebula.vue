@@ -51,7 +51,7 @@
       v-model="selectedVM"
       :headers="headers"
       :items="users"
-      table-name="nebulaAccounts"
+      table-name="nebula-accounts"
       :footer-error="fetchError"
       show-expand
       :expanded.sync="expanded"
@@ -66,6 +66,7 @@
               :headers="machinesHeaders"
               :items="item.vms"
               item-key="data.vmid"
+              table-name="nebula-machines"
               no-hide-uuid
             >
               <template v-slot:[`item.title`]="{ item }">

@@ -18,7 +18,7 @@
             params: { namespaceId: namespace?.uuid },
           }"
           label="Group(Namespace)"
-          :value="!namespace ? '' : 'NS_' + namespace.title"
+          :value="!namespace ? '' : namespace.title"
         />
       </v-col>
       <v-col>
@@ -43,7 +43,14 @@
         <v-text-field
           readonly
           label="balance"
-          :value="account?.balance?.toFixed(2)"
+          :value="account?.balance?.toFixed(2) || 0"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          readonly
+          label="client currency"
+          :value="account?.currency"
         />
       </v-col>
     </v-row>
@@ -79,7 +86,7 @@
         <v-col>
           <route-text-field
             :to="{ name: 'Service', params: { serviceId: service?.uuid } }"
-            :value="!service ? '' : 'SRV_' + service.title"
+            :value="!service ? '' : service.title"
             label="Service"
           />
         </v-col>

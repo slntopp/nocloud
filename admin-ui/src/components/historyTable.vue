@@ -11,13 +11,11 @@
     sort-by="ts"
     sort-desc
     item-key="id"
-    :filters-items="filterItems"
-    :filters-values="filterValues"
-    @input:filter="filterValues[$event.key] = $event.value"
     @update:options="onUpdateOptions"
     show-expand
     :expanded.sync="expanded"
     no-hide-uuid
+    :itemsPerPageOptions="itemsPerPageOptions"
   >
     <template v-slot:[`item.ts`]="{ value }">
       {{ new Date(new Date(1970, 0, 1).setSeconds(value)).toLocaleString() }}
@@ -30,7 +28,9 @@
     <template v-slot:[`item.uuid`]="{ item }">
       <router-link :to="getEntityByUuid(item).route">
         {{
-          `${getEntityByUuid(item).item?.title} (${getEntityByUuid(item).type})`
+          `${
+            getEntityByUuid(item).item?.title || getEntityByUuid(item).item
+          } (${getEntityByUuid(item).type})`
         }}
       </router-link>
     </template>
@@ -40,6 +40,7 @@
     >
       <td :colspan="headers.length" style="padding: 0">
         <nocloud-table
+          table-name="log-operations"
           :server-items-length="-1"
           hide-default-footer
           :headers="operationHeaders"
@@ -49,7 +50,6 @@
     </template>
   </nocloud-table>
 </template>
-
 <script setup>
 import { toRefs, ref, onMounted, computed, watch } from "vue";
 import nocloudTable from "@/components/table.vue";
@@ -74,12 +74,8 @@ const isFetchLoading = ref(false);
 const isCountLoading = ref(false);
 const fetchError = ref("");
 const expanded = ref([]);
-const filterValues = ref({ scope: [], action: [] });
-const filterItems = ref({
-  scope: [],
-  action: [],
-});
 const options = ref({});
+const itemsPerPageOptions = ref([5, 10, 15, 25]);
 
 const store = useStore();
 
@@ -87,8 +83,8 @@ const headers = computed(() => [
   { text: "Id", value: "id" },
   !hideRequestor.value && { text: "Account (Requestor)", value: "requestor" },
   !hideUuid.value && { text: "Entity", value: "uuid" },
-  { text: "Scope", value: "scope", customFilter: true },
-  { text: "Action", value: "action", customFilter: true },
+  { text: "Scope", value: "scope" },
+  { text: "Action", value: "action" },
   { text: "Timestamp", value: "ts" },
 ]);
 
@@ -194,25 +190,39 @@ const init = async () => {
 };
 
 const getAccount = (uuid) => {
-  return accounts.value.find((acc) => acc.uuid === uuid);
+  return accounts.value.find((acc) => acc.uuid === uuid) || uuid;
 };
 
 const getInstance = (uuid) => {
-  return instances.value.find((i) => i.uuid === uuid);
+  return instances.value.find((i) => i.uuid === uuid) || uuid;
 };
 
 const getService = (uuid) => {
-  return services.value.find((s) => s.uuid === uuid);
+  return services.value.find((s) => s.uuid === uuid) || uuid;
 };
 
 const getServiceProvider = (uuid) => {
-  return sps.value.find((s) => s.uuid === uuid);
+  return sps.value.find((s) => s.uuid === uuid) || uuid;
 };
 
 const getFilterItems = async () => {
   const { unique } = await api.logging.count({});
-  filterItems.value.scope = unique.scopes;
-  filterItems.value.action = unique.actions;
+  store.commit("appSearch/pushVariant", {
+    key: "action",
+    value: {
+      items: unique.actions.map((a) => ({ title: a, uuid: a })),
+      key: "action",
+      title: "Action",
+    },
+  });
+  store.commit("appSearch/pushVariant", {
+    key: "scope",
+    value: {
+      items: unique.scopes.map((s) => ({ title: s, uuid: s })),
+      key: "scope",
+      title: "Scopes",
+    },
+  });
 };
 
 const isLoading = computed(() => {
@@ -228,10 +238,12 @@ const requestOptions = computed(() => ({
   sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
   filters: {
     action:
-      (filterValues.value.action.length && filterValues.value.action) ||
+      (searchParams.value.action?.value && [
+        searchParams.value.action?.value,
+      ]) ||
       undefined,
     scope:
-      (filterValues.value.scope.length && filterValues.value.scope) ||
+      (searchParams.value.scope?.value && [searchParams.value.scope?.value]) ||
       undefined,
     path: path.value || undefined,
   },
@@ -241,6 +253,7 @@ const accounts = computed(() => store.getters["accounts/all"]);
 const services = computed(() => store.getters["services/all"]);
 const sps = computed(() => store.getters["servicesProviders/all"]);
 const instances = computed(() => store.getters["services/getInstances"]);
+const searchParams = computed(() => store.getters["appSearch/customParams"]);
 
 onMounted(() => {
   getFilterItems();
@@ -248,6 +261,6 @@ onMounted(() => {
 
 watch(accountId, () => updateProps());
 watch(uuid, () => updateProps());
-watch(filterValues, () => updateProps(), { deep: true });
+watch(searchParams, () => updateProps(), { deep: true });
 watch(path, () => updateProps());
 </script>

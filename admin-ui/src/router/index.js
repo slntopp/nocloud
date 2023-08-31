@@ -106,6 +106,15 @@ const routes = [
     },
   },
   {
+    path: "/chats",
+    name: "Chats",
+    redirect: {
+      name: "Plugin",
+      params: { title: "Chats", url: "/cc.ui/" },
+      query: { url: "/cc.ui/" },
+    },
+  },
+  {
     path: "/settings",
     name: "Settings",
     component: () => import("../views/Settings.vue"),
@@ -267,6 +276,14 @@ const routes = [
     },
   },
   {
+    path: "/reports",
+    name: "Reports",
+    component: () => import("../views/Reports.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/transactions/create",
     name: "Transactions create",
     component: () => import("../views/TransactionsCreate.vue"),
@@ -290,10 +307,34 @@ const routes = [
       requireLogin: true,
     },
   },
+  {
+    path: "/showcases",
+    name: "Showcases",
+    component: () => import("../views/Showcases.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/showcases/:uuid",
+    name: "ShowcasePage",
+    component: () => import("../views/ShowcasePage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/showcases/create",
+    name: "CreateShowcase",
+    component: () => import("../views/ShowcaseCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
 ];
 
 const router = new VueRouter({
-  mode: 'history',
+  mode: "history",
   base: process.env.BASE_URL,
   routes,
 });

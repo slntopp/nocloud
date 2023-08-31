@@ -116,6 +116,16 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Showcases' }">
+          <v-list-item-icon>
+            <v-icon>mdi-store-search</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Showcases") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-subheader>BILLING</v-subheader>
 
         <v-list-item v-bind="listItemBind" :to="{ name: 'Plans' }">
@@ -152,13 +162,23 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Reports' }">
+          <v-list-item-icon>
+            <v-icon>mdi-chart-gantt</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Reports") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-subheader v-if="plugins?.length > 0">PLUGINS</v-subheader>
 
         <v-list-item
           v-bind="listItemBind"
           v-for="plugin of plugins"
           :key="plugin.url"
-          :to="{ name: 'Plugin', params: plugin }"
+          :to="{ name: 'Plugin', params: plugin, query: { url: plugin.url } }"
         >
           <v-list-item-icon>
             <v-icon>mdi-{{ plugin.icon }}</v-icon>
@@ -170,6 +190,16 @@
         </v-list-item>
 
         <v-subheader>SYSTEM</v-subheader>
+
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Chats' }">
+          <v-list-item-icon>
+            <v-icon>mdi-chat</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Chats") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
 
         <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
           <v-list-item-icon>
@@ -222,7 +252,7 @@
           </v-btn>
         </v-col>
         <v-col class="d-flex justify-end align-center">
-          <balance title="Balance: " />
+          <balance title="Balance: " loged-in-user />
           <languages v-if="false" />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
@@ -387,12 +417,18 @@ export default {
 
     if (this.isLoggedIn) {
       this.$store.dispatch("auth/fetchUserData");
-      this.$store.dispatch("plugins/fetch");
     }
   },
   mounted() {
     this.onResize();
     window.addEventListener("resize", this.onResize, { passive: true });
+  },
+  watch: {
+    isLoggedIn(newVal) {
+      if (newVal) {
+        this.$store.dispatch("plugins/fetch");
+      }
+    },
   },
 };
 </script>

@@ -9,7 +9,8 @@
         />
       </v-col>
       <v-col cols="6" md="4" lg="3">
-        <v-select
+        <v-autocomplete
+          :filter="defaultFilterObject"
           label="namespace"
           :rules="rules.req"
           :items="namespaces"
@@ -142,7 +143,7 @@
             @change="(value) => (currentInstancesGroups.title = value)"
           />
 
-          <v-select
+          <v-autocomplete
             label="type"
             v-model="currentInstancesGroups.body.type"
             :items="types"
@@ -154,7 +155,8 @@
             :rules="rules.req"
           />
 
-          <v-select
+          <v-autocomplete
+            :filter="defaultFilterObject"
             label="service provider"
             item-value="uuid"
             item-text="title"
@@ -189,6 +191,7 @@ import api from "@/api";
 import snackbar from "@/mixins/snackbar.js";
 
 import {
+  defaultFilterObject,
   downloadJSONFile,
   downloadYAMLFile,
   readJSONFile,
@@ -238,6 +241,7 @@ export default {
   }),
   mixins: [snackbar],
   methods: {
+    defaultFilterObject,
     addInstancesGroup(title = "", type) {
       if (this.instances.some((inst) => inst.title == "")) return;
       this.instances = [...this.instances, this.defaultInstance(title, type)];
