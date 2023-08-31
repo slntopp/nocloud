@@ -16,7 +16,7 @@
           label="Tarif (product plan)"
           :value="template.product"
           append-icon="mdi-pencil"
-          @click:append="changeTarrifDialog = true"
+          @click:append="changeTariffDialog = true"
         />
       </v-col>
       <v-col>
@@ -41,14 +41,14 @@
       <v-col
         v-if="
           template.billingPlan.title.toLowerCase() !== 'payg' ||
-          isMonitoringsEmpty
+          isMonitoringEmpty
         "
       >
         <v-text-field
           readonly
           label="Due to date/next payment"
           :value="date"
-          :append-icon="!isMonitoringsEmpty ? 'mdi-pencil' : null"
+          :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
           @click:append="changeDatesDialog = true"
         />
       </v-col>
@@ -107,13 +107,12 @@
       v-model="changeDatesDialog"
       @refresh="emit('refresh')"
       v-if="
-        template.billingPlan.title.toLowerCase() !== 'payg' ||
-        isMonitoringsEmpty
+        template.billingPlan.title.toLowerCase() !== 'payg' || isMonitoringEmpty
       "
     />
     <change-ione-tarrif
       v-if="availableTarrifs?.length > 0"
-      v-model="changeTarrifDialog"
+      v-model="changeTariffDialog"
       @refresh="emit('refresh')"
       :template="template"
       :service="service"
@@ -124,7 +123,7 @@
     <edit-price-model
       v-model="priceModelDialog"
       :template="template"
-      :plans="filtredPlans"
+      :plans="filteredPlans"
       @refresh="emit('refresh')"
       :service="service"
     />
@@ -162,7 +161,7 @@ const {
 } = useAccountConverter(template.value);
 
 const changeDatesDialog = ref(false);
-const changeTarrifDialog = ref(false);
+const changeTariffDialog = ref(false);
 const priceModelDialog = ref(false);
 const price = ref(0);
 const accountPrice = ref(0);
@@ -185,14 +184,17 @@ const date = computed(() =>
       +template.value.billingPlan.products[template.value.product].period
   )
 );
-const isMonitoringsEmpty = computed(() => date.value === "-");
+const isMonitoringEmpty = computed(() => date.value === "-");
+const fullPlan = computed(() =>
+  plans.value.find((p) => p.uuid === template.value.billingPlan.uuid)
+);
 const availableTarrifs = computed(() =>
-  Object.keys(billingPlan.value?.products || {}).map((key) => ({
+  Object.keys(fullPlan.value?.products || {}).map((key) => ({
     title: key,
-    resources: billingPlan.value.products[key].resources,
+    resources: fullPlan.value.products[key].resources,
   }))
 );
-const filtredPlans = computed(() =>
+const filteredPlans = computed(() =>
   plans.value.filter((p) => p.type === "ione")
 );
 const billingPlan = computed(() => template.value.billingPlan);
