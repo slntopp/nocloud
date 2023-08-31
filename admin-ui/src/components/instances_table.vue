@@ -358,7 +358,7 @@ export default {
     getOSName(id, sp) {
       if (!id) return;
       return this.sp.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
-        .name;
+        ?.name;
     },
     getTariff(item) {
       const {

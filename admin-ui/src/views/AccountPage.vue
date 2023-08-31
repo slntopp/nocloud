@@ -14,6 +14,7 @@
       <v-tab>Info</v-tab>
       <v-tab>Template</v-tab>
       <v-tab>Events</v-tab>
+      <v-tab>Reports</v-tab>
       <v-tab>History</v-tab>
     </v-tabs>
     <v-tabs-items
@@ -39,6 +40,14 @@
       </v-tab-item>
       <v-tab-item>
         <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
+        <account-report
+          :is-loading="accountLoading"
+          v-if="account"
+          :account="account"
+        />
+      </v-tab-item>
+      <v-tab-item>
+        <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
         <accounts-history
           :is-loading="accountLoading"
           v-if="account"
@@ -55,10 +64,12 @@ import AccountsInfo from "@/components/account/info.vue";
 import AccountsTemplate from "@/components/account/template.vue";
 import AccountsEvents from "@/components/account/events.vue";
 import AccountsHistory from "@/components/account/history.vue";
+import AccountReport from "@/components/account/reports.vue";
 
 export default {
   name: "account-view",
   components: {
+    AccountReport,
     AccountsInfo,
     AccountsTemplate,
     AccountsEvents,

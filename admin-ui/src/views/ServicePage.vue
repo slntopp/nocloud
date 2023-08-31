@@ -15,6 +15,7 @@
       background-color="background-light"
     >
       <v-tab>Info</v-tab>
+      <v-tab>Reports</v-tab>
       <v-tab>History</v-tab>
       <!-- <v-tab>Control</v-tab> -->
       <v-tab>Template</v-tab>
@@ -33,6 +34,11 @@
           :service="service"
           :chipColor="chipColor"
         />
+      </v-tab-item>
+
+      <v-tab-item>
+        <v-progress-linear v-if="servicesLoading" indeterminate class="pt-2" />
+        <service-reports v-if="service" :service="service" />
       </v-tab-item>
 
       <!-- <v-tab-item>
@@ -62,13 +68,14 @@ import serviceTemplate from "@/components/service/template.vue";
 import serviceInfo from "@/components/service/info.vue";
 import snackbar from "@/mixins/snackbar.js";
 import ServiceHistory from "@/components/service/history.vue";
+import ServiceReports from "@/components/service/reports.vue";
 
 const url = "wss://api.nocloud.ione-cloud.net/services";
 let socket;
 
 export default {
   name: "service-view",
-  components: { ServiceHistory, serviceTemplate, serviceInfo },
+  components: { ServiceReports, ServiceHistory, serviceTemplate, serviceInfo },
   mixins: [snackbar],
   data: () => ({
     found: false,

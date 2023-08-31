@@ -47,13 +47,7 @@
       :series="series"
     />
 
-    <transactions-table
-      :page="page"
-      @update:options="updateOptions"
-      :count="count"
-      :transactions="filtredTransactions"
-      :selectTransaction="selectTransaction"
-    />
+    <reports-table :filters="filters" :select-record="selectTransaction" />
   </div>
 </template>
 
@@ -61,16 +55,13 @@
 import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
 import apexcharts from "vue-apexcharts";
-import transactionsTable from "@/components/transactions_table.vue";
-import {
-  filterArrayIncludes,
-  filterArrayBy,
-  defaultFilterObject,
-} from "@/functions";
+
+import { defaultFilterObject } from "@/functions";
 import { mapGetters } from "vuex";
+import reportsTable from "@/components/reports_table.vue";
 export default {
   name: "transactions-view",
-  components: { apexcharts, transactionsTable },
+  components: { reportsTable, apexcharts },
   mixins: [snackbar, search],
   data: () => ({
     accountId: null,
@@ -89,9 +80,6 @@ export default {
   }),
   methods: {
     defaultFilterObject,
-    getTransactions() {
-      this.fetchTransactions();
-    },
     setTransactions(dates, labels, values) {
       const min = Math.min(...dates);
       let counter = 1;
@@ -116,12 +104,12 @@ export default {
     selectTransaction(value) {
       this.series = [];
       this.chartLoading = true;
-      value.forEach(({ total, service, proc }) => {
-        const name = service.slice(0, 8);
-        const data = { data: [{ x: proc * 1000, y: total }], name, service };
+      value.forEach(({ total, item, exec }) => {
+        const name = item.slice(0, 8);
+        const data = { data: [{ x: exec * 1000, y: total }], name, item };
         const i = this.series.findIndex((item) => item.name === name);
         if (i !== -1) {
-          this.series[i].data.push({ x: proc * 1000, y: total });
+          this.series[i].data.push({ x: exec * 1000, y: total });
         } else {
           this.series.push(data);
         }
@@ -151,47 +139,6 @@ export default {
         });
       });
     },
-    updateOptions(options) {
-      console.log(
-        "options",
-        this.transactionData,
-        Object.keys(this.transactionData)
-      );
-      if (Object.keys(this.transactionData).length < 1) {
-        return;
-      }
-      options.itemsPerPage =
-        options.itemsPerPage === -1 ? 0 : options.itemsPerPage;
-      this.$store
-        .dispatch("transactions/changeFiltres", {
-          options,
-          data: this.transactionData,
-        })
-        .then(() => {
-          this.fetchError = "";
-        })
-        .catch((err) => {
-          console.error(err);
-          this.fetchError = "Can't reach the server";
-          if (err.response) {
-            this.fetchError += `: [ERROR]: ${err.response.data.message}`;
-          } else {
-            this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
-          }
-        });
-    },
-    initTransactions() {
-      this.$store.dispatch("transactions/init", this.transactionData);
-    },
-    fetchTransactions() {
-      this.$store.dispatch("transactions/fetch", this.transactionData);
-    },
-    changeTransactionData() {
-      this.$store.commit("transactions/setPage", 1);
-      this.$store.commit("transactions/setFilter", { field: "", sort: "" });
-      this.initTransactions();
-      this.fetchTransactions();
-    },
   },
   created() {
     if (this.$route.query.account) {
@@ -216,20 +163,6 @@ export default {
     transactions() {
       return this.all;
     },
-    filtredTransactions() {
-      if (this.searchParam) {
-        const byUuid = filterArrayIncludes(this.transactions, {
-          keys: ["uuid", "service"],
-          value: this.searchParam,
-        });
-        const byTotal = filterArrayBy(this.transactions, {
-          key: "total",
-          value: +this.searchParam,
-        });
-        return [...new Set([...byUuid, ...byTotal])];
-      }
-      return this.transactions;
-    },
     user() {
       return this.$store.getters["auth/userdata"];
     },
@@ -242,6 +175,12 @@ export default {
     },
     services() {
       return this.$store.getters["services/all"];
+    },
+    filters() {
+      return {
+        service: this.serviceId ? [this.serviceId] : undefined,
+        account: this.accountId ? [this.accountId] : undefined,
+      };
     },
     servicesByAccount() {
       let filtredServices = null;
@@ -312,17 +251,8 @@ export default {
     accountId() {
       if (this.serviceId === null) {
         this.serviceId = null;
-        this.changeTransactionData();
       } else {
         this.serviceId = null;
-      }
-    },
-    serviceId() {
-      this.changeTransactionData();
-    },
-    accounts() {
-      if (!this.all.length && !this.isLoading) {
-        this.getTransactions();
       }
     },
   },
