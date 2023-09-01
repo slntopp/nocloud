@@ -24,6 +24,24 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
+              <v-subheader>Amount type</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-autocomplete
+                label="Amount type"
+                v-model="amountType"
+                item-value="value"
+                item-text="title"
+                :items="amountTypes"
+              />
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col lg="6" cols="12">
+          <v-row align="center">
+            <v-col cols="3">
               <v-subheader>Account</v-subheader>
             </v-col>
             <v-col cols="9">
@@ -31,7 +49,7 @@
                 :filter="defaultFilterObject"
                 label="Account"
                 v-model="transaction.account"
-                item-value="title"
+                return-object
                 item-text="title"
                 :items="accounts"
                 :rules="generalRule"
@@ -80,6 +98,7 @@
               <v-text-field
                 type="number"
                 label="Amount"
+                :suffix="accountCurrency"
                 v-model="transaction.total"
                 :rules="generalRule"
               />
@@ -216,10 +235,16 @@ export default {
       { value: "transaction", title: "Transaction" },
     ],
     type: "transaction",
+
+    amountTypes: [
+      { title: "Top-up", value: false },
+      { title: "Debit", value: true },
+    ],
+    amountType: true,
   }),
   methods: {
     defaultFilterObject,
-    tryToSend() {
+    async tryToSend() {
       if (!this.isValid) {
         this.$refs.form.validate();
 
@@ -232,31 +257,32 @@ export default {
       this.isLoading = true;
       this.refreshData();
 
-      api.transactions
-        .create(this.transaction)
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Transaction created successfully",
-          });
+      try {
+        const rate = await this.fetchRate(this.accountCurrency);
+        const total = Math.abs(+this.transaction.total * rate);
+        console.log(rate, total);
 
-          setTimeout(() => {
-            this.$router.push({ name: "Transactions" });
-          }, 1500);
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: err,
-          });
-        })
-        .finally(() => {
-          this.isLoading = false;
+        await api.transactions.create({
+          ...this.transaction,
+          account: this.transaction.account.uuid,
+          total: this.amountType ? total : -total,
         });
+        this.showSnackbarSuccess({
+          message: "Transaction created successfully",
+        });
+
+        setTimeout(() => {
+          this.$router.push({ name: "Transactions" });
+        }, 1500);
+      } catch (err) {
+        this.showSnackbarError({
+          message: err,
+        });
+      } finally {
+        this.isLoading = false;
+      }
     },
     refreshData() {
-      this.transaction.account = this.accounts.find(
-        (acc) => acc.title === this.transaction.account
-      )?.uuid;
-
       this.transaction.service =
         this.services.find(
           (service) => service.title === this.transaction.service
@@ -271,6 +297,15 @@ export default {
     resetDate() {
       this.date.value = null;
       this.time.value = null;
+    },
+    async fetchRate(currency) {
+      if (currency === this.defaultCurrency) {
+        return 1;
+      }
+      const res = await api.get(
+        `/billing/currencies/rates/${currency}/${this.defaultCurrency}`
+      );
+      return res.rate;
     },
     initDate() {
       const date = new Date();
@@ -320,13 +355,16 @@ export default {
     services() {
       return this.$store.getters["services/all"];
     },
+    defaultCurrency() {
+      return this.$store.getters["currencies/default"];
+    },
+    accountCurrency() {
+      return this.transaction.account.currency || this.defaultCurrency;
+    },
     servicesByAccount() {
       if (this.transaction.account) {
-        const account = this.accounts.find(
-          (a) => a.title === this.transaction.account
-        );
         const namespace = this.namespaces.find(
-          (n) => n.access.namespace === account?.uuid
+          (n) => n.access.namespace === this.transaction.account?.uuid
         );
         return this.services.filter(
           (s) => s.access.namespace === namespace?.uuid

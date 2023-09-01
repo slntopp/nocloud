@@ -15,7 +15,7 @@
             item-value="uuid"
             return-object
             v-model="plan"
-            :items="avaliablePlans"
+            :items="availablePlans"
           />
         </v-col>
       </v-row>
@@ -26,7 +26,7 @@
             label="tariff"
             item-text="title"
             item-value="key"
-            :items="tarrifs"
+            :items="tariffs"
           />
         </v-col>
         <v-col cols="3">
@@ -56,7 +56,7 @@
 </template>
 
 <script setup>
-import { onMounted, toRefs, ref, computed } from "vue";
+import { toRefs, ref, computed, onMounted } from "vue";
 import api from "@/api";
 import { getBillingPeriod } from "@/functions";
 
@@ -68,6 +68,79 @@ const { template, plans, service } = toRefs(props);
 const isChangePMLoading = ref(false);
 const plan = ref({});
 const product = ref({});
+
+onMounted(() => {
+  plan.value = plans.value.find(
+    ({ uuid }) => uuid === template.value.billingPlan.uuid
+  );
+  setProduct();
+});
+
+const tariffs = computed(() => {
+  const tariffs = [];
+  Object.keys(plan.value?.products || {}).forEach((key) => {
+    if (
+      plan.value.products[key]?.price > instanceTariffPrice.value ||
+      (plan.value.uuid === template.value.billingPlan.uuid &&
+        instanceTariffPrice.value === plan.value.products[key]?.price)
+    )
+      tariffs.push({ ...plan.value.products[key], key });
+  });
+  return tariffs;
+});
+
+const availablePlans = computed(() => {
+  const availablePlans = [];
+
+  const copyPlans = JSON.parse(JSON.stringify(plans.value)).filter(
+    (p) => p.type === template.value.type
+  );
+
+  copyPlans.forEach((p) => {
+    const keys = Object.keys(p.products).filter(
+      (key) => p.products[key]?.price > instanceTariffPrice.value
+    );
+    if (keys.length > 0) {
+      availablePlans.push(p);
+    }
+  });
+
+  availablePlans.push(template.value.billingPlan);
+
+  return availablePlans;
+});
+
+const instanceTariffPrice = computed(() => {
+  switch (template.value.type) {
+    case "ovh": {
+      return template.value.billingPlan.products[
+        template.value.config.duration + " " + template.value.config.planCode
+      ]?.price;
+    }
+    case "ione":
+    case "virtual": {
+      return template.value.billingPlan.products[template.value.product]?.price;
+    }
+  }
+
+  return 0;
+});
+
+const isChangeBtnDisabled = computed(() => {
+  return (
+    !plan.value ||
+    (!product.value && tariffs.value.length > 0) ||
+    !product.value
+  );
+});
+
+const fullProduct = computed(() => {
+  return plan.value.products?.[product.value];
+});
+
+const productBillingPeriod = computed(() => {
+  return getBillingPeriod(fullProduct.value?.period);
+});
 
 const changePM = () => {
   const planCode = product.value.slice(4).toLowerCase().replace(" ", "-");
@@ -119,70 +192,6 @@ const setProduct = () => {
     product.value = template.value.product;
   }
 };
-
-onMounted(() => {
-  plan.value = template.value.billingPlan;
-  setProduct();
-});
-
-const tarrifs = computed(() => {
-  const tarrifs = [];
-  Object.keys(plan.value?.products || {}).forEach((key) => {
-    if (
-      plan.value.products[key]?.price > instanceTarrifPrice.value ||
-      (plan.value.uuid === template.value.billingPlan.uuid &&
-        instanceTarrifPrice.value === plan.value.products[key]?.price)
-    )
-      tarrifs.push({ ...plan.value.products[key], key });
-  });
-  return tarrifs;
-});
-
-const avaliablePlans = computed(() => {
-  const avaliablePlans = [];
-
-  const copyPlans = JSON.parse(JSON.stringify(plans.value)).filter(
-    (p) => p.type === template.value.type
-  );
-
-  copyPlans.forEach((p) => {
-    const keys = Object.keys(p.products).filter(
-      (key) => p.products[key]?.price > instanceTarrifPrice.value
-    );
-    if (keys.length > 0) {
-      avaliablePlans.push(p);
-    }
-  });
-
-  avaliablePlans.push(template.value.billingPlan);
-
-  return avaliablePlans;
-});
-
-const instanceTarrifPrice = computed(() => {
-  if (template.value.type === "ione" || template.value.type === "virtual") {
-    return fullProduct.value.price;
-  }
-  return template.value.billingPlan.products[
-    template.value.config.duration + " " + template.value.config.planCode
-  ]?.price;
-});
-
-const isChangeBtnDisabled = computed(() => {
-  return (
-    !plan.value ||
-    (!product.value && tarrifs.value.length > 0) ||
-    !product.value
-  );
-});
-
-const fullProduct = computed(() => {
-  return template.value.billingPlan.products[product.value];
-});
-
-const productBillingPeriod = computed(() => {
-  return getBillingPeriod(fullProduct.value?.period);
-});
 </script>
 
 <style scoped></style>

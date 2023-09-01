@@ -10,7 +10,7 @@
               <v-col cols="3">
                 <v-card-title>Tarrif:</v-card-title>
                 <v-select
-                  v-model="selectedTarrif"
+                  v-model="selectedTariff"
                   :items="availableTarrifs"
                   item-text="title"
                   return-object
@@ -21,10 +21,10 @@
                 <v-text-field
                   readonly
                   v-for="resource in Object.keys(
-                    selectedTarrif?.resources || {}
+                    selectedTariff?.resources || {}
                   )"
                   :key="resource"
-                  :value="selectedTarrif?.resources?.[resource]"
+                  :value="selectedTariff?.resources?.[resource]"
                   :label="resource"
                 ></v-text-field>
               </v-col>
@@ -33,9 +33,9 @@
               <v-btn class="mx-3" @click="emit('input', false)">Close</v-btn>
               <v-btn
                 class="mx-3"
-                @click="changeTarrif"
-                :disabled="selectedTarrif.title === template.product"
-                :loading="changeTarrifLoading"
+                @click="changeTariff"
+                :disabled="selectedTariff.title === template.product"
+                :loading="changeTariffLoading"
                 >Change tarrif</v-btn
               >
             </v-row>
@@ -122,12 +122,12 @@ const store = useStore();
 
 const { template, service, billingPlan, value, availableTarrifs, sp } =
   toRefs(props);
-const selectedTarrif = ref({});
+const selectedTariff = ref({});
 const individualPlan = ref({ product: {}, resources: {} });
-const changeTarrifLoading = ref(false);
+const changeTariffLoading = ref(false);
 const createIndividualLoading = ref(false);
 
-const changeTarrif = async () => {
+const changeTariff = async () => {
   const tempService = JSON.parse(JSON.stringify(service.value));
   const igIndex = tempService.instancesGroups.findIndex((ig) =>
     ig.instances.find((i) => i.uuid === template.value.uuid)
@@ -137,16 +137,16 @@ const changeTarrif = async () => {
   ].instances.findIndex((i) => i.uuid === template.value.uuid);
 
   tempService.instancesGroups[igIndex].instances[instanceIndex].product =
-    selectedTarrif.value.title;
-  Object.keys(selectedTarrif.value.resources).forEach((k) => {
+    selectedTariff.value.title;
+  Object.keys(selectedTariff.value.resources).forEach((k) => {
     tempService.instancesGroups[igIndex].instances[instanceIndex].resources[k] =
-      selectedTarrif.value.resources[k];
+      selectedTariff.value.resources[k];
   });
 
   tempService.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
     billingPlan.value;
 
-  changeTarrifLoading.value = true;
+  changeTariffLoading.value = true;
 
   try {
     await api.services._update(tempService);
@@ -156,7 +156,7 @@ const changeTarrif = async () => {
       message: e.response?.data?.message || "Error during change ione tarrif",
     });
   } finally {
-    changeTarrifLoading.value = false;
+    changeTariffLoading.value = false;
     emit("input", false);
   }
 };
@@ -202,7 +202,7 @@ const createIndividual = async () => {
     });
     await api.services._update(tempService);
     emit("refresh");
-    changeTarrifLoading.value = false;
+    changeTariffLoading.value = false;
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
       message:
@@ -233,7 +233,7 @@ const setIndividualPlan = () => {
 };
 
 onMounted(() => {
-  selectedTarrif.value = {
+  selectedTariff.value = {
     title: template.value.product,
     resources:
       template.value.billingPlan.products[template.value.product]?.resources,
