@@ -560,6 +560,9 @@ export default {
     this.saveTableData();
     window.removeEventListener("beforeunload", this.saveTableData);
   },
+  created() {
+    this.configureItemsPerPage();
+  },
   mounted() {
     window.addEventListener("beforeunload", this.saveTableData);
     this.filtredHeaders = this.headers;
@@ -569,7 +572,6 @@ export default {
         this.page = +page;
       }, 100);
 
-    this.configureItemsPerPage();
     this.configureColumns();
     this.synchronizeFilterValues();
   },

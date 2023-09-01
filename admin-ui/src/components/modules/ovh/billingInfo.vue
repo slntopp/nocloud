@@ -113,7 +113,7 @@ import NocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
-import useRate from "@/hooks/useRate";
+import usePlnRate from "@/hooks/usePlnRate";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import useAccountConverter from "@/hooks/useAccountConverter";
 
@@ -123,7 +123,7 @@ const emit = defineEmits(["refresh", "update"]);
 const { template, plans } = toRefs(props);
 
 const store = useStore();
-const rate = useRate();
+const rate = usePlnRate();
 const {
   toAccountPrice,
   fromAccountPrice,

@@ -7,7 +7,7 @@
       app
       permanent
       :color="asideColor"
-      :mini-variant="miniNav"
+      :mini-variant="isMenuMinimize"
     >
       <router-link to="/">
         <!-- <div class="d-flex gg-15px align-center justify-center" :class="[miniNav ? 'pa-3' : 'pa-5']"> -->
@@ -22,7 +22,7 @@
             ></v-img>
 
             <v-img
-              v-if="!miniNav"
+              v-if="!isMenuMinimize"
               transition="fade-transition"
               alt=""
               src="@/assets/logoTitle.svg"
@@ -33,7 +33,7 @@
           </template>
           <template v-else>
             <v-img
-              v-if="!miniNav"
+              v-if="!isMenuMinimize"
               transition="fade-transition"
               alt=""
               :src="config.logoSrc"
@@ -44,7 +44,20 @@
       </router-link>
 
       <v-list v-if="isLoggedIn" dense :dark="asideDark">
-        <v-subheader>MAIN</v-subheader>
+        <div
+          :class="{
+            'd-flex': true,
+            'align-center': true,
+            'justify-space-between': !isMenuMinimize,
+            'flex-column-reverse': isMenuMinimize,
+          }"
+        >
+          <v-subheader>MAIN</v-subheader>
+          <v-btn @click="isMenuMinimize = !isMenuMinimize" icon>
+            <v-icon v-if="isMenuMinimize">mdi-arrow-right</v-icon>
+            <v-icon v-else>mdi-arrow-left</v-icon>
+          </v-btn>
+        </div>
 
         <v-list-item v-bind="listItemBind" :to="{ name: 'Dashboard' }">
           <v-list-item-icon>
@@ -122,9 +135,7 @@
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{
-                navTitle("Showcases")
-              }}</v-list-item-title>
+            <v-list-item-title>{{ navTitle("Showcases") }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -164,6 +175,16 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Reports' }">
+          <v-list-item-icon>
+            <v-icon>mdi-chart-gantt</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Reports") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-subheader v-if="plugins?.length > 0">PLUGINS</v-subheader>
 
         <v-list-item
@@ -183,7 +204,7 @@
 
         <v-subheader>SYSTEM</v-subheader>
 
-        <v-list-item v-bind="listItemBind"  :to="{ name: 'Chats'}">
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Chats' }">
           <v-list-item-icon>
             <v-icon>mdi-chat</v-icon>
           </v-list-item-icon>
@@ -244,7 +265,7 @@
           </v-btn>
         </v-col>
         <v-col class="d-flex justify-end align-center">
-          <balance title="Balance: " loged-in-user/>
+          <balance title="Balance: " loged-in-user />
           <languages v-if="false" />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
@@ -299,7 +320,7 @@ export default {
   name: "App",
   components: { AppSnackbar, balance, appSearch, languages },
   data: () => ({
-    miniNav: true,
+    isMenuMinimize: true,
     easterEgg: false,
     config,
     navTitles: config.navTitles ?? {},
@@ -311,8 +332,10 @@ export default {
     setTitle(value) {
       document.title = `${value} | NoCloud`;
     },
-    onResize() {
-      this.miniNav = window.innerWidth <= 768;
+    onResize(e) {
+      if (!(e instanceof UIEvent)) {
+        this.isMenuMinimize = window.innerWidth <= 768;
+      }
     },
     navTitle(title) {
       if (title && this.navTitles[title]) {
@@ -415,13 +438,13 @@ export default {
     this.onResize();
     window.addEventListener("resize", this.onResize, { passive: true });
   },
-  watch:{
-    isLoggedIn(newVal){
-      if(newVal){
+  watch: {
+    isLoggedIn(newVal) {
+      if (newVal) {
         this.$store.dispatch("plugins/fetch");
       }
-    }
-  }
+    },
+  },
 };
 </script>
 
