@@ -453,3 +453,19 @@ export function getBillingPeriod(period) {
       .join(", ");
   }
 }
+
+export function filterByKeysAndParam(items, keys, param) {
+  const searchParam = param?.toLowerCase();
+  return items.filter((a) => {
+    return keys.some((key) => {
+      let data = a;
+      key.split(".").forEach((subkey) => {
+        data = data?.[subkey];
+      });
+      return (
+        data &&
+        data.toString().toLowerCase().includes(searchParam.toLowerCase())
+      );
+    });
+  });
+}
