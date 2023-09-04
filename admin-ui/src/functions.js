@@ -372,7 +372,7 @@ export function getTodayFullDate() {
     ("00" + date.getMinutes()).slice(-2) +
     ":" +
     ("00" + date.getSeconds()).slice(-2)
-  ).replace(" ", "_");
+  ).replace(" ", "-");
 }
 
 export function getMarginedValue(fee, val) {
