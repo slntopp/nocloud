@@ -333,8 +333,6 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	var uuid string
 	if request.Uuid != nil {
 		uuid = request.GetUuid()
-	} else {
-		uuid = requestor.(string)
 	}
 
 	session := sessions.New(int64(request.GetExp()), uuid)
