@@ -42,20 +42,6 @@ export default {
   data: () => ({
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
-    tabs: [
-      {
-        title: "Info",
-        component: () => import("@/views/PlansCreate.vue"),
-      },
-      {
-        title: "Instances",
-        component: () => import("@/components/plan/instances.vue"),
-      },
-      {
-        title: "Template",
-        component: () => import("@/components/plan/template.vue"),
-      },
-    ],
   }),
   methods: {
     navTitle(title) {
@@ -75,6 +61,27 @@ export default {
     },
     planLoading() {
       return this.$store.getters["plans/isLoading"];
+    },
+    tabs() {
+      return [
+        {
+          title: "Info",
+          component: () => import("@/views/PlansCreate.vue"),
+        },
+        this.plan.type === "ione" && {
+          title: "Configuration",
+          component: () =>
+            import("@/components/modules/ione/planConfiguration.vue"),
+        },
+        {
+          title: "Instances",
+          component: () => import("@/components/plan/instances.vue"),
+        },
+        {
+          title: "Template",
+          component: () => import("@/components/plan/template.vue"),
+        },
+      ].filter(t=>t);
     },
   },
   created() {
