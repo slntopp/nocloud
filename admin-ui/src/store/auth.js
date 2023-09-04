@@ -12,8 +12,10 @@ export default {
   },
   mutations: {
     setToken(state, token) {
+      const expires = new Date(Date.now() + 7776e6).toUTCString();
+
       state.token = token;
-      Cookies.set(COOKIES_NAME, token);
+      Cookies.set(COOKIES_NAME, token, { expires });
     },
     setUserdata(state, data) {
       state.userdata = data;
