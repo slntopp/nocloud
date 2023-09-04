@@ -26,11 +26,11 @@
       </template>
 
       <template v-slot:[`item.created`]="{ value }">
-        {{ formatSecondsToDate(value, true, '.') }}
+        {{ getDate(value) }}
       </template>
 
       <template v-slot:[`item.expires`]="{ value }">
-        {{ formatSecondsToDate(value, true, '.') }}
+        {{ getDate(value) }}
       </template>
     </nocloud-table>
   </v-card>
@@ -76,11 +76,18 @@ Promise.all([
   api.get('/sessions')
 ])
   .then((response) => {
-    console.log(response.sessions);
-    sessions.value = response.sessions
+    sessions.value = response[1].sessions
       .map((session) => ({ ...session, uuid: session.id }));
   })
   .catch((error) => {
+    sessions.value = [{
+      uuid: Math.random().toString(16).slice(2),
+      client: "0",
+      created: Date.now() / 1000,
+      expires: Date.now() / 1000 + 3600 * 24,
+      current: true
+    }];
+
     console.error(error);
     fetchError.value = "Can't reach the server";
     if (error.response?.data.message) {
@@ -124,6 +131,12 @@ async function deleteSelectedSession() {
   } finally {
     isDeleteLoading.value = false;
   }
+}
+
+function getDate(date) {
+  return (typeof date === 'string')
+    ? formatSecondsToDate(new Date(date).getTime() / 1000, true, '.')
+    : formatSecondsToDate(date, true, '.')
 }
 </script>
 
