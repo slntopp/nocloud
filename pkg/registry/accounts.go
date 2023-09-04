@@ -330,7 +330,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	log.Debug("Authorized user", zap.String("ID", acc.ID.String()))
 
-	session := sessions.New(int64(request.GetExp()), request.GetUuid())
+	session := sessions.New(int64(request.GetExp()), acc.Key)
 	if err := sessions.Store(s.rdb, acc.Key, session); err != nil {
 		log.Error("Failed to store session", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to issue token: session")
