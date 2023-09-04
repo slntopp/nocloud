@@ -296,7 +296,9 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	var acc graph.Account
 	var ok bool
 
-	if requestor := ctx.Value(nocloud.NoCloudAccount); requestor != nil && request.Uuid != nil {
+	requestor := ctx.Value(nocloud.NoCloudAccount)
+
+	if requestor != nil && request.Uuid != nil {
 		var err error
 		acc, err = s.ctrl.Get(ctx, *request.Uuid)
 		if err != nil {
@@ -328,7 +330,14 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	log.Debug("Authorized user", zap.String("ID", acc.ID.String()))
 
-	session := sessions.New(int64(request.GetExp()), request.GetUuid())
+	var uuid string
+	if request.Uuid != nil {
+		uuid = request.GetUuid()
+	} else {
+		uuid = requestor.(string)
+	}
+
+	session := sessions.New(int64(request.GetExp()), uuid)
 	if err := sessions.Store(s.rdb, acc.Key, session); err != nil {
 		log.Error("Failed to store session", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to issue token: session")
