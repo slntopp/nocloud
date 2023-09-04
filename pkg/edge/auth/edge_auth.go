@@ -19,6 +19,8 @@ package auth
 import (
 	"context"
 	"errors"
+	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/sessions"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -33,11 +35,13 @@ import (
 
 var (
 	log         *zap.Logger
+	rdb         *redis.Client
 	SIGNING_KEY []byte
 )
 
-func SetContext(logger *zap.Logger, key []byte) {
+func SetContext(logger *zap.Logger, _rdb *redis.Client, key []byte) {
 	log = logger.Named("JWT")
+	rdb = _rdb
 	SIGNING_KEY = key
 	log.Debug("Context set", zap.ByteString("signing_key", key))
 }
@@ -55,6 +59,8 @@ func JWT_AUTH_INTERCEPTOR(ctx context.Context, req interface{}, info *grpc.Unary
 	if err != nil {
 		return nil, err
 	}
+
+	go handleLogActivity(ctx)
 
 	return handler(ctx, req)
 }
@@ -104,4 +110,19 @@ func validateToken(tokenString string) (jwt.MapClaims, error) {
 	}
 
 	return nil, status.Error(codes.Unauthenticated, "Cannot Validate Token")
+}
+
+func handleLogActivity(ctx context.Context) {
+	sid_ctx := ctx.Value(nocloud.NoCloudSession)
+	if sid_ctx == nil {
+		return
+	}
+
+	sid := sid_ctx.(string)
+	req := ctx.Value(nocloud.NoCloudAccount).(string)
+	exp := ctx.Value(nocloud.ContextKey("exp")).(int64)
+
+	if err := sessions.LogActivity(rdb, req, sid, exp); err != nil {
+		log.Warn("Error logging activity", zap.Any("error", err))
+	}
 }

@@ -17,6 +17,7 @@ package registry
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/sessions"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -36,6 +37,7 @@ import (
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 
+	"github.com/go-redis/redis/v8"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -69,9 +71,11 @@ type AccountsServiceServer struct {
 
 	log         *zap.Logger
 	SIGNING_KEY []byte
+
+	rdb *redis.Client
 }
 
-func NewAccountsServer(log *zap.Logger, db driver.Database) *AccountsServiceServer {
+func NewAccountsServer(log *zap.Logger, db driver.Database, rdb *redis.Client) *AccountsServiceServer {
 	return &AccountsServiceServer{
 		log: log, db: db,
 		ctrl: graph.NewAccountsController(
@@ -80,6 +84,7 @@ func NewAccountsServer(log *zap.Logger, db driver.Database) *AccountsServiceServ
 		ns_ctrl: graph.NewNamespacesController(
 			log.Named("NamespacesController"), db,
 		),
+		rdb: rdb,
 	}
 }
 
@@ -323,9 +328,15 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	log.Debug("Authorized user", zap.String("ID", acc.ID.String()))
 
+	session := sessions.New(int64(request.GetExp()), request.GetUuid())
+	if err := sessions.Store(s.rdb, acc.Key, session); err != nil {
+		log.Error("Failed to store session", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to issue token: session")
+	}
+
 	claims := jwt.MapClaims{}
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = acc.Key
-	claims[nocloud.INFINIMESH_NOSESSION_CLAIM] = true
+	claims[nocloud.NOCLOUD_SESSION_CLAIM] = session.GetId()
 	claims["exp"] = request.Exp
 
 	if request.GetRootClaim() {
