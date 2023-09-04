@@ -79,11 +79,17 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	}
 	log.Debug("Validated token", zap.Any("claims", token))
 
+	var exp int64
+	if token["exp"] != nil {
+		exp = int64(token["exp"].(float64))
+	}
+
 	inst := token[nocloud.NOCLOUD_INSTANCE_CLAIM]
 	if inst == nil {
 		return ctx, status.Error(codes.Unauthenticated, "Instance Claim not present")
 	}
 	ctx = context.WithValue(ctx, nocloud.NoCloudInstance, inst.(string))
+	ctx = context.WithValue(ctx, nocloud.Expiration, exp)
 	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_INSTANCE_CLAIM, inst.(string))
 
 	return ctx, nil
@@ -120,7 +126,7 @@ func handleLogActivity(ctx context.Context) {
 
 	sid := sid_ctx.(string)
 	req := ctx.Value(nocloud.NoCloudAccount).(string)
-	exp := ctx.Value(nocloud.ContextKey("exp")).(int64)
+	exp := ctx.Value(nocloud.Expiration).(int64)
 
 	if err := sessions.LogActivity(rdb, req, sid, exp); err != nil {
 		log.Warn("Error logging activity", zap.Any("error", err))

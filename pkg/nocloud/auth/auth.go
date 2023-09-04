@@ -172,7 +172,7 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	}
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.(string))
-	ctx = context.WithValue(ctx, nocloud.ContextKey("exp"), exp)
+	ctx = context.WithValue(ctx, nocloud.Expiration, exp)
 	ctx = metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, acc.(string))
 
 	ctx, err = func(ctx context.Context) (context.Context, error) {
@@ -262,7 +262,7 @@ func handleLogActivity(ctx context.Context) {
 
 	sid := sid_ctx.(string)
 	req := ctx.Value(nocloud.NoCloudAccount).(string)
-	exp := ctx.Value(nocloud.ContextKey("exp")).(int64)
+	exp := ctx.Value(nocloud.Expiration).(int64)
 
 	if err := sessions.LogActivity(rdb, req, sid, exp); err != nil {
 		log.Warn("Error logging activity", zap.Any("error", err))
