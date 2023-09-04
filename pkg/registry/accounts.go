@@ -330,12 +330,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	log.Debug("Authorized user", zap.String("ID", acc.ID.String()))
 
-	var uuid string
-	if request.Uuid != nil {
-		uuid = request.GetUuid()
-	}
-
-	session := sessions.New(int64(request.GetExp()), uuid)
+	session := sessions.New(int64(request.GetExp()), request.GetUuid())
 	if err := sessions.Store(s.rdb, acc.Key, session); err != nil {
 		log.Error("Failed to store session", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to issue token: session")
@@ -344,7 +339,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	claims := jwt.MapClaims{}
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = acc.Key
 	claims[nocloud.NOCLOUD_SESSION_CLAIM] = session.GetId()
-	claims["expires"] = ctx.Value(nocloud.Expiration).(int64)
+	claims["expires"] = request.GetExp()
 
 	if request.GetRootClaim() {
 		ns := driver.NewDocumentID(schema.NAMESPACES_COL, "0")
