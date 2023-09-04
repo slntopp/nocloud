@@ -68,7 +68,8 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('resources.drive_size', +newVal)"
-            label="drive size"
+            :label="`drive size (minimum ${driveSizeConfig?.minDisk}, maximum ${driveSizeConfig?.maxDisk})`"
+            :rules="[driveSizeRule]"
             :value="instance.resources.drive_size"
             type="number"
           >
@@ -229,6 +230,18 @@ export default {
       return this.instance.billing_plan?.resources
         ?.filter((r) => r.key.includes("drive"))
         .map((k) => k.key.split("_")[1].toUpperCase());
+    },
+    driveSizeConfig() {
+      return this.instance.billing_plan?.meta?.minDisk &&
+        this.instance.billing_plan?.meta?.maxDisk
+        ? this.instance.billing_plan?.meta
+        : { minDisk: 0, maxDisk: 100000000 };
+    },
+    driveSizeRule() {
+      return (val) =>
+        (+val >= +this.driveSizeConfig.minDisk &&
+          +val <= +this.driveSizeConfig.maxDisk) ||
+        "Bad drive size";
     },
   },
   watch: {
