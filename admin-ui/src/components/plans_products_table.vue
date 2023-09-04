@@ -74,6 +74,12 @@
               @changeDate="(value) => changeDate(value, item.id)"
             />
           </template>
+          <template v-slot:[`item.public`]="{ item }">
+            <v-switch
+              :input-value="item.public"
+              @change="(value) => changeProduct('public', value, item.id)"
+            />
+          </template>
           <template v-slot:[`item.kind`]="{ item }">
             <v-radio-group
               row
@@ -101,7 +107,9 @@
                 v-model="item.meta.image"
               />
               <v-subheader class="px-0">
-                {{ (type === 'virtual') ? 'Description' : 'Amount of resources' }}:
+                {{
+                  type === "virtual" ? "Description" : "Amount of resources"
+                }}:
               </v-subheader>
 
               <vue-editor
@@ -123,7 +131,9 @@
                 type="number"
                 style="width: 150px"
                 :value="item.installationFee"
-                @input="(value) => changeProduct('installationFee', +value, item.id)"
+                @input="
+                  (value) => changeProduct('installationFee', +value, item.id)
+                "
               />
             </td>
           </template>
@@ -173,6 +183,7 @@ const headers = [
   { text: "Price", value: "price" },
   { text: "Period", value: "period" },
   { text: "Kind", value: "kind", width: 228 },
+  { text: "Public", value: "public" },
 ];
 
 function changeDate({ value }, id) {
@@ -199,6 +210,7 @@ function addConfig() {
     price: 0,
     period: 0,
     resources: {},
+    public:true,
     meta: {},
     sorter: value.length,
     id: Math.random().toString(16).slice(2),
