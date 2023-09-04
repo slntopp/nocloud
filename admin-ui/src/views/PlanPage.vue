@@ -81,7 +81,7 @@ export default {
           title: "Template",
           component: () => import("@/components/plan/template.vue"),
         },
-      ];
+      ].filter(t=>t);
     },
   },
   created() {
