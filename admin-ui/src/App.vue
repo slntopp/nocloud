@@ -7,6 +7,7 @@
       app
       permanent
       :color="asideColor"
+      style="position: relative; height: 100%"
       :mini-variant="isMenuMinimize"
     >
       <router-link to="/">
@@ -301,7 +302,13 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
-    <v-main>
+    <v-main
+      :class="{
+        main: true,
+        menuClosed: isMenuMinimize,
+        menuOpen: !isMenuMinimize,
+      }"
+    >
       <router-view />
     </v-main>
     <app-snackbar />
@@ -450,4 +457,21 @@ export default {
 
 <style scoped lang="scss">
 @import "@/styles/globalStyles.scss";
+</style>
+
+<style lang="scss">
+.v-application--wrap{
+  display: flex;
+  flex-direction: row;
+  max-width: unset;
+}
+.main {
+  padding: 64px 0px 0px 0px !important;
+  &.menuClosed {
+    max-width: calc(100vw - 70px);
+  }
+  &.menuOpen {
+    max-width: calc(100vw - 260px)
+  }
+}
 </style>
