@@ -80,6 +80,13 @@
               @change="(value) => changeProduct('public', value, item.id)"
             />
           </template>
+          <template v-slot:[`item.sorter`]="{ item }">
+            <v-text-field
+              type="number"
+              :value="item.sorter"
+              @change="(value) => changeProduct('sorter', value, item.id)"
+            />
+          </template>
           <template v-slot:[`item.kind`]="{ item }">
             <v-radio-group
               row
@@ -184,6 +191,7 @@ const headers = [
   { text: "Period", value: "period" },
   { text: "Kind", value: "kind", width: 228 },
   { text: "Public", value: "public" },
+  { text: "Sorter", value: "sorter" },
 ];
 
 function changeDate({ value }, id) {
@@ -210,7 +218,7 @@ function addConfig() {
     price: 0,
     period: 0,
     resources: {},
-    public:true,
+    public: true,
     meta: {},
     sorter: value.length,
     id: Math.random().toString(16).slice(2),
