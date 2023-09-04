@@ -80,8 +80,8 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	log.Debug("Validated token", zap.Any("claims", token))
 
 	var exp int64
-	if token["exp"] != nil {
-		exp = int64(token["exp"].(float64))
+	if token["expires"] != nil {
+		exp = int64(token["expires"].(float64))
 	}
 
 	inst := token[nocloud.NOCLOUD_INSTANCE_CLAIM]

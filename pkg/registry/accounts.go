@@ -337,7 +337,7 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	claims := jwt.MapClaims{}
 	claims[nocloud.NOCLOUD_ACCOUNT_CLAIM] = acc.Key
 	claims[nocloud.NOCLOUD_SESSION_CLAIM] = session.GetId()
-	claims["exp"] = ctx.Value(nocloud.Expiration).(int64)
+	claims["expires"] = ctx.Value(nocloud.Expiration).(int64)
 
 	if request.GetRootClaim() {
 		ns := driver.NewDocumentID(schema.NAMESPACES_COL, "0")

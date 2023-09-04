@@ -36,7 +36,7 @@ const NOCLOUD_NOSESSION_CLAIM = "nosession"
 type ContextKey string
 
 const NoCloudAccount = ContextKey("account")
-const Expiration = ContextKey("exp")
+const Expiration = ContextKey("expires")
 const NoCloudSession = ContextKey("session")
 const NoCloudRootAccess = ContextKey("root_access")
 const NoCloudSp = ContextKey("sp")

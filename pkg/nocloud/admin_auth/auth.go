@@ -115,8 +115,8 @@ func JWT_AUTH_MIDDLEWARE(ctx context.Context) (context.Context, error) {
 	}
 
 	var exp int64
-	if token["exp"] != nil {
-		exp = int64(token["exp"].(float64))
+	if token["expires"] != nil {
+		exp = int64(token["expires"].(float64))
 	}
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, acc.(string))
