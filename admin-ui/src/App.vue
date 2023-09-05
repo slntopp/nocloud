@@ -7,6 +7,7 @@
       app
       permanent
       :color="asideColor"
+      style="position: relative; height: 100%"
       :mini-variant="isMenuMinimize"
     >
       <router-link to="/">
@@ -214,6 +215,16 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Sessions' }">
+          <v-list-item-icon>
+            <v-icon>mdi-account-clock</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Sessions") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
           <v-list-item-icon>
             <v-icon>mdi-history</v-icon>
@@ -301,7 +312,13 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
-    <v-main>
+    <v-main
+      :class="{
+        main: true,
+        menuClosed: isMenuMinimize,
+        menuOpen: !isMenuMinimize,
+      }"
+    >
       <router-view />
     </v-main>
     <app-snackbar />
@@ -450,4 +467,21 @@ export default {
 
 <style scoped lang="scss">
 @import "@/styles/globalStyles.scss";
+</style>
+
+<style lang="scss">
+.v-application--wrap{
+  display: flex;
+  flex-direction: row;
+  max-width: unset;
+}
+.main {
+  padding: 64px 0px 0px 0px !important;
+  &.menuClosed {
+    max-width: calc(100vw - 70px);
+  }
+  &.menuOpen {
+    max-width: calc(100vw - 260px)
+  }
+}
 </style>

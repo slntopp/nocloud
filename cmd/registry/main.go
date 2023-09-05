@@ -17,6 +17,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"net"
 
 	"github.com/spf13/viper"
@@ -35,9 +36,11 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	accounting "github.com/slntopp/nocloud/pkg/registry"
+	"github.com/slntopp/nocloud/pkg/sessions"
 
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	pb "github.com/slntopp/nocloud-proto/registry"
+	sspb "github.com/slntopp/nocloud-proto/sessions"
 )
 
 var (
@@ -48,6 +51,7 @@ var (
 	arangodbCred    string
 	nocloudRootPass string
 	settingsHost    string
+	redisHost       string
 	SIGNING_KEY     []byte
 )
 
@@ -61,6 +65,7 @@ func init() {
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("NOCLOUD_ROOT_PASSWORD", "secret")
 	viper.SetDefault("SETTINGS_HOST", "settings:8000")
+	viper.SetDefault("REDIS_HOST", "redis:6379")
 
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
@@ -70,6 +75,7 @@ func init() {
 	arangodbCred = viper.GetString("DB_CRED")
 	nocloudRootPass = viper.GetString("NOCLOUD_ROOT_PASSWORD")
 	settingsHost = viper.GetString("SETTINGS_HOST")
+	redisHost = viper.GetString("REDIS_HOST")
 
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 }
@@ -98,7 +104,12 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	auth.SetContext(log, SIGNING_KEY)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisHost,
+		DB:   0,
+	})
+
+	auth.SetContext(log, rdb, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(log),
@@ -114,7 +125,10 @@ func main() {
 	sc, sconn := SetupSettingsClient()
 	defer sconn.Close()
 
-	accounts_server := accounting.NewAccountsServer(log, db)
+	sessions_server := sessions.NewSessionsServer(log, rdb)
+	sspb.RegisterSessionsServiceServer(s, sessions_server)
+
+	accounts_server := accounting.NewAccountsServer(log, db, rdb)
 	accounts_server.SIGNING_KEY = SIGNING_KEY
 	credentials.SetupSettingsClient(log.Named("Credentials"), sc, token)
 	accounts_server.SetupSettingsClient(sc, token)

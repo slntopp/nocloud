@@ -165,9 +165,14 @@ const createIndividual = async () => {
   const product = individualPlan.value.product;
   const resources = individualPlan.value.resources;
 
-  const planTitle = `IND_${sp.value.title}_${
+  let planTitle = `IND_${sp.value.title}_${
     billingPlan.value.title
   }_${getTodayFullDate()}`;
+  if (billingPlan.value.title.startsWith("IND_")) {
+    const titleKeys = billingPlan.value.title.split("_");
+    titleKeys[3] = getTodayFullDate();
+    planTitle = titleKeys.join("_");
+  }
   const productTitle = `IND_${product.resources.cpu}_${product.resources.ram}`;
   product.period = getTimestamp(product.period);
   const plan = {

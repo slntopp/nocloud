@@ -23,6 +23,7 @@ import (
 var (
 	arangodbHost string
 	arangodbCred string
+	redisHost    string
 	log          *zap.Logger
 )
 

@@ -29,6 +29,7 @@ import (
 	registrypb "github.com/slntopp/nocloud-proto/registry"
 	servicespb "github.com/slntopp/nocloud-proto/services"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
+	sessionspb "github.com/slntopp/nocloud-proto/sessions"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/tmc/grpc-websocket-proxy/wsproxy"
@@ -107,6 +108,18 @@ func main() {
 	)
 	if err != nil {
 		log.Fatal("Failed to register HealthService gateway", zap.Error(err))
+	}
+
+	// AccountsService
+	log.Info("Registering AccountsService Gateway")
+	err = sessionspb.RegisterSessionsServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
+	if err != nil {
+		log.Fatal("Failed to register AccountsService gateway", zap.Error(err))
 	}
 
 	// AccountsService

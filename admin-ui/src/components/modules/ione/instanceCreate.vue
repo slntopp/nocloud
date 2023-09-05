@@ -57,17 +57,19 @@
           </v-text-field>
         </v-col>
         <v-col cols="6">
-          <v-text-field
+          <v-select
+            :items="driveTypes"
             @change="(newVal) => setValue('resources.drive_type', newVal)"
             label="drive type"
             :value="instance.resources.drive_type"
           >
-          </v-text-field>
+          </v-select>
         </v-col>
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('resources.drive_size', +newVal)"
-            label="drive size"
+            :label="`drive size (minimum ${driveSizeConfig?.minDisk}, maximum ${driveSizeConfig?.maxDisk})`"
+            :rules="[driveSizeRule]"
             :value="instance.resources.drive_size"
             type="number"
           >
@@ -146,12 +148,12 @@ const getDefaultInstance = () => ({
   config: {
     template_id: "",
     password: "",
-    auto_renew:true,
+    auto_renew: true,
   },
   resources: {
     cpu: 1,
     ram: 1024,
-    drive_type: "SSD",
+    drive_type: null,
     drive_size: 10000,
     ips_public: 0,
     ips_private: 0,
@@ -223,6 +225,23 @@ export default {
       if (!this.getOsTemplates) return [];
 
       return Object.values(this.getOsTemplates).map((os) => os.name);
+    },
+    driveTypes() {
+      return this.instance.billing_plan?.resources
+        ?.filter((r) => r.key.includes("drive"))
+        .map((k) => k.key.split("_")[1].toUpperCase());
+    },
+    driveSizeConfig() {
+      return this.instance.billing_plan?.meta?.minDisk &&
+        this.instance.billing_plan?.meta?.maxDisk
+        ? this.instance.billing_plan?.meta
+        : { minDisk: 0, maxDisk: 100000000 };
+    },
+    driveSizeRule() {
+      return (val) =>
+        (+val >= +this.driveSizeConfig.minDisk &&
+          +val <= +this.driveSizeConfig.maxDisk) ||
+        "Bad drive size";
     },
   },
   watch: {

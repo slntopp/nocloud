@@ -19,6 +19,7 @@ package billing
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"net"
 	"testing"
 	"time"
@@ -49,6 +50,7 @@ var (
 	port          string
 	arangodbHost  string
 	arangodbCred  string
+	redisHost     string
 	SIGNING_KEY   []byte
 	db            driver.Database
 	billingServer *BillingServiceServer
@@ -61,6 +63,7 @@ func init() {
 
 	viper.SetDefault("PORT", "8000")
 
+	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("DB_HOST", "localhost:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("DRIVERS", "")
@@ -71,6 +74,7 @@ func init() {
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
+	redisHost = viper.GetString("REDIS_HOST")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
@@ -86,7 +90,12 @@ func init() {
 	db = connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
 	log.Info("DB connection established")
 
-	auth.SetContext(log, SIGNING_KEY)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisHost,
+		DB:   0,
+	})
+
+	auth.SetContext(log, rdb, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(log),

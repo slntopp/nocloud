@@ -388,8 +388,8 @@ export default {
     customParams() {
       return this.$store.getters["appSearch/customParams"];
     },
-    searchParam(){
-      return this.$store.getters['appSearch/customSearchParam']
+    searchParam() {
+      return this.$store.getters["appSearch/customSearchParam"];
     },
     variants() {
       return this.$store.getters["appSearch/variants"];
@@ -402,6 +402,7 @@ export default {
         "title",
         "uuid",
         "billingPlan.title",
+        "account.data.email",
         "price",
         "state.meta.networking.public",
       ];
@@ -442,6 +443,7 @@ export default {
       }
 
       return instances.filter((item) => {
+        item.account = this.getAccount(item);
         const dynamicKeys = [];
         if (item.type === "ovh") {
           dynamicKeys.push(

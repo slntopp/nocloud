@@ -18,6 +18,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"net"
 
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
@@ -37,6 +38,7 @@ import (
 var (
 	port        string
 	log         *zap.Logger
+	redisHost   string
 	SIGNING_KEY []byte
 )
 
@@ -45,9 +47,11 @@ func init() {
 	log = nocloud.NewLogger()
 
 	viper.SetDefault("PORT", "8000")
+	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
 
 	port = viper.GetString("PORT")
+	redisHost = viper.GetString("REDIS_HOST")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 }
 
@@ -61,7 +65,12 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	auth.SetContext(log, SIGNING_KEY)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisHost,
+		DB:   0,
+	})
+
+	auth.SetContext(log, rdb, SIGNING_KEY)
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Failed to generate root token")

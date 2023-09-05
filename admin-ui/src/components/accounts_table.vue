@@ -61,9 +61,9 @@
 <script>
 import noCloudTable from "@/components/table.vue";
 import Balance from "./balance.vue";
-import { filterArrayByTitleAndUuid } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import { mapGetters } from "vuex";
+import { filterByKeysAndParam } from "@/functions";
 
 export default {
   name: "accounts-table",
@@ -161,7 +161,11 @@ export default {
       );
 
       if (this.searchParam) {
-        return filterArrayByTitleAndUuid(accounts, this.searchParam);
+        return filterByKeysAndParam(
+          accounts,
+          ["title", "uuid", "data.email"],
+          this.searchParam
+        );
       }
       return accounts;
     },

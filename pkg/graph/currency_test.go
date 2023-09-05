@@ -2,6 +2,7 @@ package graph
 
 import (
 	"context"
+	"github.com/go-redis/redis/v8"
 	"testing"
 
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -18,16 +19,22 @@ func TestConvert(t *testing.T) {
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("DB_HOST", "localhost:8529")
 	viper.SetDefault("SIGNING_KEY", "seeeecreet")
+	viper.SetDefault("REDIS_HOST", "redis:6379")
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
+	redisHost = viper.GetString("REDIS_HOST")
 
 	log := nocloud.NewLogger()
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisHost,
+		DB:   0,
+	})
 
 	SIGNING_KEY := []byte(viper.GetString("SIGNING_KEY"))
 
-	auth.SetContext(log, SIGNING_KEY)
+	auth.SetContext(log, rdb, SIGNING_KEY)
 
 	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
