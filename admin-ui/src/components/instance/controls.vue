@@ -309,13 +309,29 @@ export default {
       switch (type) {
         case "virtual":
         case "ione": {
-          return (item) =>
-            `IND_${this.sp.title}_${
+          return (item) => {
+            let planTitle = `IND_${this.sp.title}_${
               item.billingPlan.title
             }_${getTodayFullDate()}`;
+            if (item.billingPlan.title.startsWith("IND_")) {
+              const titleKeys = item.billingPlan.title.split("_");
+              titleKeys[3] = getTodayFullDate();
+              planTitle = titleKeys.join("_");
+            }
+            return planTitle;
+          };
         }
         case "ovh": {
-          return (item) => `IND_${item.title}_${getTodayFullDate()}`;
+          return (item) => {
+            let planTitle = `IND_${item.title}_${getTodayFullDate()}`;
+
+            if (item.billingPlan.title.startsWith("IND_")) {
+              const titleKeys = item.billingPlan.title.split("_");
+              titleKeys[2] = getTodayFullDate();
+              planTitle = titleKeys.join("_");
+            }
+            return planTitle;
+          };
         }
         default: {
           return null;

@@ -18,6 +18,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/go-redis/redis/v8"
 	"net"
 
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -40,6 +41,7 @@ var (
 	port string
 	log  *zap.Logger
 
+	redisHost    string
 	arangodbHost string
 	arangodbCred string
 	SIGNING_KEY  []byte
@@ -51,6 +53,7 @@ func init() {
 
 	viper.SetDefault("PORT", "8000")
 
+	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("DB_HOST", "db:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")
 	viper.SetDefault("DRIVERS", "")
@@ -61,6 +64,7 @@ func init() {
 
 	arangodbHost = viper.GetString("DB_HOST")
 	arangodbCred = viper.GetString("DB_CRED")
+	redisHost = viper.GetString("REDIS_HOST")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
 }
 
@@ -78,7 +82,12 @@ func main() {
 		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
 	}
 
-	auth.SetContext(log, SIGNING_KEY)
+	rdb := redis.NewClient(&redis.Options{
+		Addr: redisHost,
+		DB:   0,
+	})
+
+	auth.SetContext(log, rdb, SIGNING_KEY)
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
 			grpc_zap.UnaryServerInterceptor(log),

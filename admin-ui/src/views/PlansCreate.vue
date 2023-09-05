@@ -339,7 +339,6 @@ export default {
       }
     },
     setPeriod(date, id) {
-      console.log("set period", date, id);
       const period = getTimestamp(date);
       const resource = this.plan.resources.find((el) => el.id === id);
       const product = Object.values(this.plan.products).find(

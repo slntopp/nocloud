@@ -303,9 +303,10 @@ export function toPascalCase(text) {
   );
 }
 
-export function formatSecondsToDate(seconds) {
-  if (!seconds) return "-";
-  const date = new Date(seconds * 1000);
+export function formatSecondsToDate(timestamp, withTime, sep = "-") {
+  if (!timestamp) return "-";
+  const date = new Date(timestamp * 1000);
+  const time = date.toUTCString().split(" ")[4];
 
   const year = date.toUTCString().split(" ")[3];
   let month = date.getUTCMonth() + 1;
@@ -314,7 +315,10 @@ export function formatSecondsToDate(seconds) {
   if (`${month}`.length < 2) month = `0${month}`;
   if (`${day}`.length < 2) day = `0${day}`;
 
-  return `${year}-${month}-${day}`;
+  let result = `${year}${sep}${month}${sep}${day}`;
+
+  if (withTime) result += ` ${time}`;
+  return result;
 }
 
 export function getTimestamp({ day, month, year, quarter, week, time }) {
@@ -372,7 +376,7 @@ export function getTodayFullDate() {
     ("00" + date.getMinutes()).slice(-2) +
     ":" +
     ("00" + date.getSeconds()).slice(-2)
-  ).replace(" ", "_");
+  ).replace(" ", "-");
 }
 
 export function getMarginedValue(fee, val) {
