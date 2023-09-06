@@ -94,7 +94,7 @@ func GetActivity(rdb *redis.Client, user string) (map[string]*timestamppb.Timest
 			return nil, fmt.Errorf("invalid data type: %s | %v", keys[i], err)
 		}
 
-		result[strings.Split(keys[i], ":")[3]] = timestamppb.New(time.Unix(int64(ts), 0))
+		result[strings.Split(keys[i], ":")[2]] = timestamppb.New(time.Unix(int64(ts), 0))
 	}
 
 	return result, nil
