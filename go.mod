@@ -13,7 +13,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.17.1
 	github.com/rabbitmq/amqp091-go v1.8.1
-	github.com/rs/cors v1.9.0
+	github.com/rs/cors v1.10.0
 	github.com/slntopp/nocloud-proto v0.0.0-20230904195054-4f2d1760c6b8
 	github.com/spf13/viper v1.16.0
 	github.com/stoewer/go-strcase v1.3.0
