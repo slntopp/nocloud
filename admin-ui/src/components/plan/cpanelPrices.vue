@@ -86,8 +86,16 @@ export default {
     async fetchPrices() {
       this.isPricesLoading = true;
       await this.$store.dispatch("servicesProviders/fetch");
-      const sp = this.sps.find((sp) => sp.type === "cpanel");
-
+      const sp = this.sps.find(
+        (sp) =>
+          sp.type === "cpanel" && sp.meta.plans?.includes(this.template.uuid)
+      );
+      if (!sp) {
+        this.isPricesLoading = false;
+        return this.showSnackbarError({
+          message: "Bind plan to cpanel service provider",
+        });
+      }
       const res = await api.servicesProviders.action({
         action: "plans",
         uuid: sp.uuid,
