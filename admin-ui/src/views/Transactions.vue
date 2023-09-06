@@ -47,7 +47,11 @@
       :series="series"
     />
 
-    <reports-table :filters="filters" :select-record="selectTransaction" />
+    <reports-table
+      table-name="transaction-table"
+      :filters="filters"
+      :select-record="selectTransaction"
+    />
   </div>
 </template>
 
