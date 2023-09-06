@@ -9,11 +9,11 @@
       :headers="headers"
       :loading="isPricesLoading"
     >
-      <template v-slot:[`item.isSell`]="{ item }">
+      <template v-slot:[`item.enabled`]="{ item }">
         <v-switch
           @change="changeSell(item, $event)"
-          :input-value="item.isSell"
-          :value="item.isSell"
+          :input-value="item.enabled"
+          :value="item.enabled"
         />
       </template>
       <template v-slot:[`item.price`]="{ item }">
@@ -77,9 +77,9 @@ export default {
       { text: "lve_nproc", value: "lve_nproc" },
       { text: "lve_cpu", value: "lve_cpu" },
       { text: "lve_pmem", value: "lve_pmem" },
-      { text: "Period", value: "period" },
-      { text: "Price", value: "price" },
-      { text: "Sell", value: "isSell" },
+      { text: "Period", value: "period", width: 220 },
+      { text: "Price", value: "price", width: 150 },
+      { text: "Sell", value: "enabled" },
     ],
   }),
   methods: {
@@ -105,7 +105,7 @@ export default {
         const product = this.template.products[el.name];
         price.price = product?.price || 0;
         price.period = product?.period || 0;
-        price.isSell = !!product;
+        price.enabled = !!product;
         const date = new Date(price.period * 1000);
         const time = date.toUTCString().split(" ");
 
@@ -125,7 +125,7 @@ export default {
     changeSell(item, val) {
       if (val) {
         if (!getTimestamp(item.period) || !item.price) {
-          this.$set(item, "isSell", false);
+          this.$set(item, "enabled", false);
           return this.showSnackbarError({
             message: "Price and period required",
           });
