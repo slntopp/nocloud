@@ -17,7 +17,7 @@ package registry
 
 import (
 	"context"
-	"github.com/slntopp/nocloud/pkg/sessions"
+	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"time"
 
 	"github.com/arangodb/go-driver"

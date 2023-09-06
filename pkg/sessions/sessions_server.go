@@ -6,6 +6,7 @@ import (
 	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -52,7 +53,7 @@ func (c *SessionsServer) Get(ctx context.Context, req *sspb.GetSessions) (*sspb.
 
 	log.Debug("Invoked", zap.String("requestor", requestor), zap.String("sid", sid))
 
-	result, err := Get(c.rdb, user_id)
+	result, err := sessions.Get(c.rdb, user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +82,7 @@ func (c *SessionsServer) GetActivity(ctx context.Context, req *sspb.GetActivityR
 
 	log.Debug("Invoked", zap.String("requestor", uuid))
 
-	result, err := GetActivity(c.rdb, uuid)
+	result, err := sessions.GetActivity(c.rdb, uuid)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +98,7 @@ func (c *SessionsServer) Revoke(ctx context.Context, req *sspb.Session) (*sspb.D
 
 	log.Debug("Invoked", zap.String("requestor", requestor), zap.String("sid", req.Id))
 
-	err := Revoke(c.rdb, requestor, req.Id)
+	err := sessions.Revoke(c.rdb, requestor, req.Id)
 	if err != nil {
 		return nil, err
 	}
