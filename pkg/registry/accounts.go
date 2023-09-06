@@ -392,6 +392,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
 		Currency: &request.Currency,
+		Data:     request.GetData(),
 	}
 
 	if request.Auth.Type == "whmcs" {
