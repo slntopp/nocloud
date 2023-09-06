@@ -1,6 +1,6 @@
 <template>
   <v-row class="ma-0 pa-0" dense align="center">
-    <v-col cols="10">
+    <v-col>
       <v-select
         dense
         :value="date"
@@ -9,7 +9,7 @@
         :rules="rules.general"
       />
     </v-col>
-    <v-col cols="2" v-if="date !== 'Custom'">
+    <v-col cols="3" v-if="date !== 'Custom'" style="min-width: 50px">
       <v-text-field
         dense
         type="number"
@@ -130,11 +130,10 @@ const changeAmountValue = (value) => {
 
 const changeDateValue = (value) => {
   date.value = value;
-  
+
   if (value === "Custom") {
     return;
   }
-
 
   resetDate(fullDate.value);
 

@@ -100,7 +100,7 @@
                 label="Amount"
                 :suffix="accountCurrency"
                 v-model="transaction.total"
-                :rules="generalRule"
+                :rules="amountRule"
               />
             </v-col>
           </v-row>
@@ -226,7 +226,6 @@ export default {
       visible: false,
     },
     generalRule: [(v) => !!v || "This field is required!"],
-
     isValid: false,
     isLoading: false,
 
@@ -239,6 +238,7 @@ export default {
     amountTypes: [
       { title: "Top-up", value: false },
       { title: "Debit", value: true },
+      { title: "Account balance", value: null },
     ],
     amountType: true,
   }),
@@ -258,14 +258,21 @@ export default {
       this.refreshData();
 
       try {
-        const rate = await this.fetchRate(this.accountCurrency);
-        const total = Math.abs(+this.transaction.total * rate);
-        console.log(rate, total);
+        let total = this.transaction.total;
+        if (this.amountType === null) {
+          const balance = this.transaction.account.balance || 0;
+          const difference = Math.abs(total - balance);
+          total = (balance > total ? +difference : -difference).toFixed(2);
+        } else {
+          total = Math.abs(total);
+          total = this.amountType ? total : -total;
+        }
 
         await api.transactions.create({
           ...this.transaction,
           account: this.transaction.account.uuid,
-          total: this.amountType ? total : -total,
+          total,
+          currency: this.transaction.account.currency,
         });
         this.showSnackbarSuccess({
           message: "Transaction created successfully",
@@ -297,15 +304,6 @@ export default {
     resetDate() {
       this.date.value = null;
       this.time.value = null;
-    },
-    async fetchRate(currency) {
-      if (currency === this.defaultCurrency) {
-        return 1;
-      }
-      const res = await api.get(
-        `/billing/currencies/rates/${currency}/${this.defaultCurrency}`
-      );
-      return res.rate;
     },
     initDate() {
       const date = new Date();
@@ -399,6 +397,13 @@ export default {
     },
     isInvoice() {
       return this.type === "invoice";
+    },
+    amountRule() {
+      return [
+        (v) =>
+          (this.amountType === null ? v === 0 || !!v : !!v) ||
+          "This field is required!",
+      ];
     },
   },
   watch: {

@@ -187,8 +187,8 @@ const tabs = ["Products", "Resources"];
 const headers = [
   { text: "Key", value: "key" },
   { text: "Title", value: "title" },
-  { text: "Price", value: "price" },
-  { text: "Period", value: "period" },
+  { text: "Price", value: "price",width:150 },
+  { text: "Period", value: "period" ,width:220},
   { text: "Kind", value: "kind", width: 228 },
   { text: "Public", value: "public" },
   { text: "Sorter", value: "sorter" },

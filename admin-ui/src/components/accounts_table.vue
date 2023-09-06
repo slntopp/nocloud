@@ -94,6 +94,7 @@ export default {
         { text: "Title", value: "title" },
         { text: "UUID", value: "uuid" },
         { text: "Balance", value: "balance" },
+        { text: "Email", value: "data.email" },
         { text: "Client currency", value: "currency" },
         { text: "Access level", value: "access.level" },
         { text: "Group(NameSpace)", value: "namespace" },
