@@ -1,5 +1,5 @@
 <template>
-  <v-chip small :color="chipColor">
+  <v-chip :small="small" :color="chipColor">
     {{ state }}
   </v-chip>
 </template>
@@ -7,7 +7,7 @@
 <script setup>
 import { computed, toRefs } from "vue";
 
-const props = defineProps(["state"]);
+const props = defineProps(["state",'small']);
 const { state } = toRefs(props);
 
 const chipColor = computed(() => {

@@ -43,7 +43,7 @@
     </template>
 
     <template v-slot:[`item.state`]="{ item }">
-      <instance-state :state="headersGetters['state'](item)" />
+      <instance-state small :state="headersGetters['state'](item)" />
     </template>
 
     <template v-slot:[`item.product`]="{ item }">
