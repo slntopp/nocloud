@@ -1,7 +1,7 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
     <nocloud-table
-      table-text="cpanel-prices"
+      table-name="cpanel-prices"
       class="pa-4"
       item-key="text"
       :show-select="false"
