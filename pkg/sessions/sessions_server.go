@@ -2,6 +2,12 @@ package sessions
 
 import (
 	"context"
+	"github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud-proto/access"
+	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/go-redis/redis/v8"
 	sspb "github.com/slntopp/nocloud-proto/sessions"
@@ -14,23 +20,39 @@ type SessionsServer struct {
 
 	log *zap.Logger
 	rdb *redis.Client
+	db  driver.Database
 }
 
-func NewSessionsServer(log *zap.Logger, rdb *redis.Client) *SessionsServer {
+func NewSessionsServer(log *zap.Logger, rdb *redis.Client, db driver.Database) *SessionsServer {
 	return &SessionsServer{
 		log: log.Named("Sessions"),
 		rdb: rdb,
+		db:  db,
 	}
 }
 
-func (c *SessionsServer) Get(ctx context.Context, req *sspb.EmptyMessage) (*sspb.Sessions, error) {
+func (c *SessionsServer) Get(ctx context.Context, req *sspb.GetSessions) (*sspb.Sessions, error) {
 	log := c.log.Named("Get")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	sid := ctx.Value(nocloud.NoCloudSession).(string)
 
+	var user_id = "*"
+
+	if req.UserId == nil {
+		if ok := graph.HasAccess(ctx, c.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT); !ok {
+			user_id = requestor
+		}
+	} else {
+		uuid := req.GetUserId()
+		if ok := graph.HasAccess(ctx, c.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, uuid), access.Level_ROOT); !ok {
+			return nil, status.Error(codes.PermissionDenied, "No access to account")
+		}
+		user_id = uuid
+	}
+
 	log.Debug("Invoked", zap.String("requestor", requestor), zap.String("sid", sid))
 
-	result, err := Get(c.rdb, requestor)
+	result, err := Get(c.rdb, user_id)
 	if err != nil {
 		return nil, err
 	}
@@ -48,13 +70,18 @@ func (c *SessionsServer) Get(ctx context.Context, req *sspb.EmptyMessage) (*sspb
 	}, nil
 }
 
-func (c *SessionsServer) GetActivity(ctx context.Context, req *sspb.EmptyMessage) (*sspb.Activity, error) {
+func (c *SessionsServer) GetActivity(ctx context.Context, req *sspb.GetActivityRequest) (*sspb.Activity, error) {
 	log := c.log.Named("GetActivity")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	log.Debug("Invoked", zap.String("requestor", requestor))
+	uuid := req.GetUuid()
+	if ok := graph.HasAccess(ctx, c.db, requestor, driver.NewDocumentID(schema.ACCOUNTS_COL, uuid), access.Level_ROOT); !ok {
+		return nil, status.Error(codes.PermissionDenied, "No access to account")
+	}
 
-	result, err := GetActivity(c.rdb, requestor)
+	log.Debug("Invoked", zap.String("requestor", uuid))
+
+	result, err := GetActivity(c.rdb, uuid)
 	if err != nil {
 		return nil, err
 	}

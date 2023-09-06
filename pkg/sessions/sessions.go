@@ -73,11 +73,11 @@ func Check(rdb *redis.Client, user, sid string) error {
 }
 
 func LogActivity(rdb *redis.Client, user, sid string, exp int64) error {
-	return rdb.Set(context.Background(), fmt.Sprintf("sessions:activity:%s:%s", user, sid), time.Now().Unix(), time.Until(time.Unix(exp, 0))).Err()
+	return rdb.Set(context.Background(), fmt.Sprintf("sessions-activity:%s:%s", user, sid), time.Now().Unix(), time.Until(time.Unix(exp, 0))).Err()
 }
 
 func GetActivity(rdb *redis.Client, user string) (map[string]*timestamppb.Timestamp, error) {
-	keys, err := rdb.Keys(context.Background(), fmt.Sprintf("sessions:activity:%s:*", user)).Result()
+	keys, err := rdb.Keys(context.Background(), fmt.Sprintf("sessions-activity:%s:*", user)).Result()
 	if err != nil {
 		return nil, err
 	}
