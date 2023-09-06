@@ -59,7 +59,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center" v-if="selectedKind === 'STATIC'">
+          <v-row align="center" v-if="plan.kind === 'STATIC'">
             <v-col cols="3">
               <v-subheader>Default tariff</v-subheader>
             </v-col>
