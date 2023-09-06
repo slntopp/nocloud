@@ -43,9 +43,7 @@
     </template>
 
     <template v-slot:[`item.state`]="{ item }">
-      <v-chip small :color="chipColor(item)">
-        {{ getValue("state", item) }}
-      </v-chip>
+      <instance-state :state="headersGetters['state'](item)" />
     </template>
 
     <template v-slot:[`item.product`]="{ item }">
@@ -138,10 +136,16 @@ import instanceIpMenu from "./ui/instanceIpMenu.vue";
 import { getOvhPrice, getState } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import searchMixin from "@/mixins/search";
+import InstanceState from "@/components/ui/instanceState.vue";
 
 export default {
   name: "instances-table",
-  components: { LoginInAccountIcon, nocloudTable, instanceIpMenu },
+  components: {
+    InstanceState,
+    LoginInAccountIcon,
+    nocloudTable,
+    instanceIpMenu,
+  },
   mixins: [searchMixin],
   props: {
     value: { type: Array, required: true },
@@ -224,27 +228,6 @@ export default {
       if (`${day}`.length < 2) day = `0${day}`;
 
       return `${year}-${month}-${day}`;
-    },
-    chipColor(item) {
-      if (!item.state) return "error";
-      const state = this.headersGetters["state"](item);
-
-      switch (state) {
-        case "RUNNING":
-          return "success";
-        case "LCM_INIT":
-        case "STOPPED":
-        case "SUSPENDED":
-          return "warning";
-        case "UNKNOWN":
-          return "error";
-        case "OPERATION":
-          return "yellow darken-2";
-        case "PENDING":
-          return "blue";
-        default:
-          return "blue-grey darken-2";
-      }
     },
     getAccount({ access }) {
       const {
