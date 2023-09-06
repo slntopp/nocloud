@@ -59,7 +59,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center" v-if="selectedKind === 'STATIC'">
+          <v-row align="center" v-if="plan.kind === 'STATIC'">
             <v-col cols="3">
               <v-subheader>Default tariff</v-subheader>
             </v-col>
@@ -489,7 +489,7 @@ export default {
       return document.documentElement.clientWidth;
     },
     productsHide() {
-      const hidden = ["ovh", "goget", "acronis"];
+      const hidden = ["ovh", "goget", "acronis",'cpanel'];
       return hidden.some((h) => this.plan.type.includes(h));
     },
     filteredProducts() {

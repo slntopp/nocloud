@@ -16,7 +16,7 @@
     >
       <v-tab>Info</v-tab>
       <v-tab>Reports</v-tab>
-      <v-tab>History</v-tab>
+      <v-tab>Event log</v-tab>
       <!-- <v-tab>Control</v-tab> -->
       <v-tab>Template</v-tab>
     </v-tabs>
