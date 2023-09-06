@@ -138,11 +138,11 @@ export default {
           period: getTimestamp(item.period),
           resources: {
             model: item.name,
-            bandwidth: item.BWLIMIT,
-            ssd: item.QUOTA,
-            email: item.MAX_EMAILACCT_QUOTA,
-            mysql: item.MAXSQL,
-            websites: 1 + +item.MAXADDON,
+            bandwidth: item.BWLIMIT || undefined,
+            ssd: item.QUOTA || undefined,
+            email: item.MAX_EMAILACCT_QUOTA  || undefined,
+            mysql: item.MAXSQL || undefined,
+            websites: 1 + +item.MAXADDON || undefined,
           },
         });
       }
@@ -156,7 +156,9 @@ export default {
           ...this.template,
           products: this.products,
         });
+        this.showSnackbarSuccess({ message: "Plan save successfully" });
       } catch (e) {
+        console.log(e)
         this.showSnackbarError({ message: "Error on save plan" });
       } finally {
         this.isSaveLoading = false;
