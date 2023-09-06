@@ -84,7 +84,7 @@ export default {
           component: () => import("@/components/ServicesProvider/showcase.vue"),
         },
         {
-          title: "History",
+          title: "Event log",
           component: () => import("@/components/ServicesProvider/history.vue"),
         },
         {
