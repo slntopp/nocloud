@@ -28,7 +28,7 @@ export default {
       state.searchName = "";
     },
     pushVariant(state, { key, value }) {
-      state.variants[key] = value;
+      state.variants = { ...state.variants, [key]: value };
     },
     resetSearchParams(state) {
       state.searchParam = "";
@@ -64,8 +64,8 @@ export default {
     param(state) {
       return state.searchParam;
     },
-    customSearchParam(state){
-      return state.customParams.searchParam?.value
+    customSearchParam(state) {
+      return state.customParams.searchParam?.value;
     },
     variants(state) {
       const variants = { ...state.variants };
@@ -78,8 +78,8 @@ export default {
       return state.searchName + "_search";
     },
     customParams(state) {
-      const params={...state.customParams}
-      delete params['searchParam']
+      const params = { ...state.customParams };
+      delete params["searchParam"];
       return params;
     },
   },
