@@ -131,7 +131,7 @@ FOR e in @@col
 func (ctrl *NamespacesController) Unlink(ctx context.Context, acc Account, ns Namespace) error {
 	db := ctrl.col.Database()
 
-	_, err := db.Query(ctx, disjoinQuery, map[string]interface{}{
+	_, err := db.Query(ctx, unlinkQuery, map[string]interface{}{
 		"@col": schema.ACC2NS,
 		"ns":   driver.NewDocumentID(schema.NAMESPACES_COL, ns.Key),
 		"acc":  driver.NewDocumentID(schema.ACCOUNTS_COL, acc.Key),
