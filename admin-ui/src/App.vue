@@ -7,7 +7,6 @@
       app
       permanent
       :color="asideColor"
-      style="position: relative; height: 100%"
       :mini-variant="isMenuMinimize"
     >
       <router-link to="/">
@@ -302,13 +301,7 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
-    <v-main
-      :class="{
-        main: true,
-        menuClosed: isMenuMinimize,
-        menuOpen: !isMenuMinimize,
-      }"
-    >
+    <v-main>
       <router-view />
     </v-main>
     <app-snackbar />
@@ -460,18 +453,22 @@ export default {
 </style>
 
 <style lang="scss">
-.v-application--wrap{
-  display: flex;
-  flex-direction: row;
-  max-width: unset;
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  border: none;
+  border-radius: unset;
 }
-.main {
-  padding: 64px 0px 0px 0px !important;
-  &.menuClosed {
-    max-width: calc(100vw - 70px);
-  }
-  &.menuOpen {
-    max-width: calc(100vw - 260px)
-  }
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #000033;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c921c9;
 }
 </style>
