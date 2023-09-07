@@ -20,10 +20,9 @@ import (
 	"context"
 	"errors"
 	"github.com/go-redis/redis/v8"
-	"github.com/slntopp/nocloud/pkg/sessions"
-
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"go.uber.org/zap"
 
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"

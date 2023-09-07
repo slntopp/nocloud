@@ -1,7 +1,7 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
     <nocloud-table
-      table-text="cpanel-prices"
+      table-name="cpanel-prices"
       class="pa-4"
       item-key="text"
       :show-select="false"
@@ -9,11 +9,11 @@
       :headers="headers"
       :loading="isPricesLoading"
     >
-      <template v-slot:[`item.isSell`]="{ item }">
+      <template v-slot:[`item.enabled`]="{ item }">
         <v-switch
           @change="changeSell(item, $event)"
-          :input-value="item.isSell"
-          :value="item.isSell"
+          :input-value="item.enabled"
+          :value="item.enabled"
         />
       </template>
       <template v-slot:[`item.price`]="{ item }">
@@ -77,17 +77,25 @@ export default {
       { text: "lve_nproc", value: "lve_nproc" },
       { text: "lve_cpu", value: "lve_cpu" },
       { text: "lve_pmem", value: "lve_pmem" },
-      { text: "Period", value: "period" },
-      { text: "Price", value: "price" },
-      { text: "Sell", value: "isSell" },
+      { text: "Period", value: "period", width: 220 },
+      { text: "Price", value: "price", width: 150 },
+      { text: "Sell", value: "enabled" },
     ],
   }),
   methods: {
     async fetchPrices() {
       this.isPricesLoading = true;
       await this.$store.dispatch("servicesProviders/fetch");
-      const sp = this.sps.find((sp) => sp.type === "cpanel");
-
+      const sp = this.sps.find(
+        (sp) =>
+          sp.type === "cpanel" && sp.meta.plans?.includes(this.template.uuid)
+      );
+      if (!sp) {
+        this.isPricesLoading = false;
+        return this.showSnackbarError({
+          message: "Bind plan to cpanel service provider",
+        });
+      }
       const res = await api.servicesProviders.action({
         action: "plans",
         uuid: sp.uuid,
@@ -97,7 +105,7 @@ export default {
         const product = this.template.products[el.name];
         price.price = product?.price || 0;
         price.period = product?.period || 0;
-        price.isSell = !!product;
+        price.enabled = !!product;
         const date = new Date(price.period * 1000);
         const time = date.toUTCString().split(" ");
 
@@ -117,7 +125,7 @@ export default {
     changeSell(item, val) {
       if (val) {
         if (!getTimestamp(item.period) || !item.price) {
-          this.$set(item, "isSell", false);
+          this.$set(item, "enabled", false);
           return this.showSnackbarError({
             message: "Price and period required",
           });
@@ -130,11 +138,11 @@ export default {
           period: getTimestamp(item.period),
           resources: {
             model: item.name,
-            bandwidth: item.BWLIMIT,
-            ssd: item.QUOTA,
-            email: item.MAX_EMAILACCT_QUOTA,
-            mysql: item.MAXSQL,
-            websites: 1 + +item.MAXADDON,
+            bandwidth: item.BWLIMIT || undefined,
+            ssd: item.QUOTA || undefined,
+            email: item.MAX_EMAILACCT_QUOTA  || undefined,
+            mysql: item.MAXSQL || undefined,
+            websites: 1 + +item.MAXADDON || undefined,
           },
         });
       }
@@ -148,7 +156,9 @@ export default {
           ...this.template,
           products: this.products,
         });
+        this.showSnackbarSuccess({ message: "Plan save successfully" });
       } catch (e) {
+        console.log(e)
         this.showSnackbarError({ message: "Error on save plan" });
       } finally {
         this.isSaveLoading = false;

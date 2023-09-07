@@ -5,9 +5,6 @@
         <v-chip outlined color="primary">Due to date: {{ dueDate }}</v-chip>
       </v-col>
       <v-col>
-        <v-chip color="primary" outlined>Price: {{ price }}</v-chip>
-      </v-col>
-      <v-col>
         <confirm-dialog
           title="Do you want to renew server?"
           :text="renewTemplate"
@@ -25,6 +22,14 @@
         </confirm-dialog>
       </v-col>
     </v-row>
+    <v-row justify="end" align="center">
+      <v-col class="d-flex justify-end">
+        <v-chip color="primary" outlined>Price: {{ price }}</v-chip>
+      </v-col>
+      <v-col class="d-flex justify-end">
+        <instance-state :state="template.state.state" />
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
@@ -33,6 +38,7 @@ import { computed, ref } from "vue";
 import { formatSecondsToDate, getOvhPrice } from "@/functions";
 import { useStore } from "@/store";
 import confirmDialog from "@/components/confirmDialog.vue";
+import InstanceState from "@/components/ui/instanceState.vue";
 
 const props = defineProps(["template"]);
 

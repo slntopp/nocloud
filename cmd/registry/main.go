@@ -125,7 +125,7 @@ func main() {
 	sc, sconn := SetupSettingsClient()
 	defer sconn.Close()
 
-	sessions_server := sessions.NewSessionsServer(log, rdb)
+	sessions_server := sessions.NewSessionsServer(log, rdb, db)
 	sspb.RegisterSessionsServiceServer(s, sessions_server)
 
 	accounts_server := accounting.NewAccountsServer(log, db, rdb)

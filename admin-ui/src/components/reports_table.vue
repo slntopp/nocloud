@@ -9,6 +9,7 @@
       </div>
     </v-row>
     <nocloud-table
+      :table-name="tableName"
       @input="selectRecord"
       :headers="reportsHeaders"
       :items="reports"
@@ -78,6 +79,7 @@ const props = defineProps({
   hideAccount: { type: Boolean, default: false },
   hideService: { type: Boolean, default: false },
   selectRecord: { type: Function, default: () => {} },
+  tableName: { type: String },
 });
 const { filters, hideInstance, hideService, hideAccount } = toRefs(props);
 

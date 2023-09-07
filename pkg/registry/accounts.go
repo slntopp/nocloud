@@ -17,7 +17,7 @@ package registry
 
 import (
 	"context"
-	"github.com/slntopp/nocloud/pkg/sessions"
+	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -392,6 +392,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
 		Currency: &request.Currency,
+		Data:     request.GetData(),
 	}
 
 	if request.Auth.Type == "whmcs" {

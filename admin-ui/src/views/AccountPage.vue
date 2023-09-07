@@ -15,7 +15,7 @@
       <v-tab>Template</v-tab>
       <v-tab>Events</v-tab>
       <v-tab>Reports</v-tab>
-      <v-tab>History</v-tab>
+      <v-tab>Event log</v-tab>
     </v-tabs>
     <v-tabs-items
       class="rounded-b-lg"

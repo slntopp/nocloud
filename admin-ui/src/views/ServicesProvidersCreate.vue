@@ -40,7 +40,10 @@
             </v-col>
           </v-row>
 
-          <v-row :align="provider.vars.console?.value ? null : 'center'">
+          <v-row
+            v-if="!isProxyHide"
+            :align="provider.vars.console?.value ? null : 'center'"
+          >
             <v-col cols="3">
               <v-subheader> Proxy </v-subheader>
             </v-col>
@@ -257,15 +260,17 @@ export default {
     });
 
     this.providerKey = this.generateComponentId();
-
     this.fetchExtentions();
-    this.$store.dispatch("servicesProviders/fetchById", id).then((res) => {
-      if (!this.types.includes(res.type)) {
-        this.customTitle = res.type;
-        res.type = "custom";
-      }
-      this.provider = res;
-    });
+
+    if(id){
+      this.$store.dispatch("servicesProviders/fetchById", id).then((res) => {
+        if (!this.types.includes(res.type)) {
+          this.customTitle = res.type;
+          res.type = "custom";
+        }
+        this.provider = res;
+      });
+    }
   },
   computed: {
     template() {
@@ -308,6 +313,9 @@ export default {
       } else {
         return this.provider;
       }
+    },
+    isProxyHide() {
+      return ["cpanel"].includes(this.serviceProviderBody.type);
     },
   },
   methods: {
