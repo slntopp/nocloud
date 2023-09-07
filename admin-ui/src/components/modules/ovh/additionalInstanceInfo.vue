@@ -4,13 +4,6 @@
       <v-col>
         <v-text-field
           readonly
-          label="State"
-          :value="template.state.meta?.state_str || template.state.state"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
           :label="`Provider API ${ovhType}Name`"
           :value="template.data[ovhType + 'Name']"
         />
@@ -31,11 +24,11 @@
           @click:append="isVisible = !isVisible"
         />
       </v-col>
-    </v-row>
-    <v-row>
       <v-col>
         <v-text-field readonly :value="cpu" label="CPU" />
       </v-col>
+    </v-row>
+    <v-row>
       <v-col>
         <v-text-field readonly :value="template.resources.ram" label="RAM" />
       </v-col>
@@ -87,10 +80,10 @@ const ovhType = computed(() => {
   return template.value.config.type;
 });
 
-const cpu=ref('')
+const cpu = ref("");
 
 onMounted(async () => {
-  cpu.value=template.value.resources.cpu;
+  cpu.value = template.value.resources.cpu;
   if (template.value.config.type === "dedicated") {
     const { meta } = await api.servicesProviders.action({
       uuid: template.value.sp,

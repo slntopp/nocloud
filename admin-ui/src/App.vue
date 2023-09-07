@@ -7,7 +7,8 @@
       app
       permanent
       :color="asideColor"
-      :mini-variant="miniNav"
+      style="position: relative; height: 100%"
+      :mini-variant="isMenuMinimize"
     >
       <router-link to="/">
         <!-- <div class="d-flex gg-15px align-center justify-center" :class="[miniNav ? 'pa-3' : 'pa-5']"> -->
@@ -22,7 +23,7 @@
             ></v-img>
 
             <v-img
-              v-if="!miniNav"
+              v-if="!isMenuMinimize"
               transition="fade-transition"
               alt=""
               src="@/assets/logoTitle.svg"
@@ -33,7 +34,7 @@
           </template>
           <template v-else>
             <v-img
-              v-if="!miniNav"
+              v-if="!isMenuMinimize"
               transition="fade-transition"
               alt=""
               :src="config.logoSrc"
@@ -44,7 +45,20 @@
       </router-link>
 
       <v-list v-if="isLoggedIn" dense :dark="asideDark">
-        <v-subheader>MAIN</v-subheader>
+        <div
+          :class="{
+            'd-flex': true,
+            'align-center': true,
+            'justify-space-between': !isMenuMinimize,
+            'flex-column-reverse': isMenuMinimize,
+          }"
+        >
+          <v-subheader>MAIN</v-subheader>
+          <v-btn @click="isMenuMinimize = !isMenuMinimize" icon>
+            <v-icon v-if="isMenuMinimize">mdi-arrow-right</v-icon>
+            <v-icon v-else>mdi-arrow-left</v-icon>
+          </v-btn>
+        </div>
 
         <v-list-item v-bind="listItemBind" :to="{ name: 'Dashboard' }">
           <v-list-item-icon>
@@ -201,13 +215,23 @@
           </v-list-item-content>
         </v-list-item>
 
+        <v-list-item v-bind="listItemBind" :to="{ name: 'Sessions' }">
+          <v-list-item-icon>
+            <v-icon>mdi-account-clock</v-icon>
+          </v-list-item-icon>
+
+          <v-list-item-content>
+            <v-list-item-title>{{ navTitle("Sessions") }}</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+
         <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
           <v-list-item-icon>
             <v-icon>mdi-history</v-icon>
           </v-list-item-icon>
 
           <v-list-item-content>
-            <v-list-item-title>{{ navTitle("History") }}</v-list-item-title>
+            <v-list-item-title>{{ navTitle("Event log") }}</v-list-item-title>
           </v-list-item-content>
         </v-list-item>
 
@@ -288,7 +312,13 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
-    <v-main>
+    <v-main
+      :class="{
+        main: true,
+        menuClosed: isMenuMinimize,
+        menuOpen: !isMenuMinimize,
+      }"
+    >
       <router-view />
     </v-main>
     <app-snackbar />
@@ -307,7 +337,7 @@ export default {
   name: "App",
   components: { AppSnackbar, balance, appSearch, languages },
   data: () => ({
-    miniNav: true,
+    isMenuMinimize: true,
     easterEgg: false,
     config,
     navTitles: config.navTitles ?? {},
@@ -319,8 +349,10 @@ export default {
     setTitle(value) {
       document.title = `${value} | NoCloud`;
     },
-    onResize() {
-      this.miniNav = window.innerWidth <= 768;
+    onResize(e) {
+      if (!(e instanceof UIEvent)) {
+        this.isMenuMinimize = window.innerWidth <= 768;
+      }
     },
     navTitle(title) {
       if (title && this.navTitles[title]) {
@@ -435,4 +467,21 @@ export default {
 
 <style scoped lang="scss">
 @import "@/styles/globalStyles.scss";
+</style>
+
+<style lang="scss">
+.v-application--wrap{
+  display: flex;
+  flex-direction: row;
+  max-width: unset;
+}
+.main {
+  padding: 64px 0px 0px 0px !important;
+  &.menuClosed {
+    max-width: calc(100vw - 70px);
+  }
+  &.menuOpen {
+    max-width: calc(100vw - 260px)
+  }
+}
 </style>

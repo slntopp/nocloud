@@ -5,9 +5,20 @@
         <v-col cols="4" md="3" lg="2">
           <v-autocomplete
             :filter="defaultFilterObject"
+            label="account"
+            item-text="title"
+            item-value="uuid"
+            :items="accounts"
+            v-model="accountId"
+            :rules="rules.req"
+          />
+        </v-col>
+        <v-col v-if="servicesByAccount.length > 2" cols="4" md="3" lg="2">
+          <v-autocomplete
+            :filter="defaultFilterObject"
             label="service"
             item-text="title"
-            :items="services"
+            :items="servicesByAccount"
             return-object
             v-model="service"
             :rules="rules.req"
@@ -39,9 +50,13 @@
             :rules="rules.req"
           />
         </v-col>
-        <v-col cols="4" md="3" lg="2">
+        <v-col
+          v-if="serviceInstanceGroupTitles.length > 2"
+          cols="4"
+          md="3"
+          lg="2"
+        >
           <v-autocomplete
-            @input.native="customInstanceGroup = $event.target.value"
             :items="serviceInstanceGroupTitles"
             v-model="instanceGroupTitle"
             label="instanceGroup"
@@ -76,7 +91,7 @@ import api from "@/api";
 import { defaultFilterObject } from "@/functions";
 
 export default {
-  name: "service-create",
+  name: "instance-create",
   data: () => ({
     isEdit: false,
 
@@ -86,9 +101,9 @@ export default {
     customTypeName: null,
     instance: {},
     service: {},
+    accountId: null,
     instanceGroup: {},
     instanceGroupTitle: "",
-    customInstanceGroup: "",
     serviceProviderId: null,
 
     meta: {},
@@ -120,7 +135,8 @@ export default {
         }
       }
     },
-    save() {
+    async save() {
+      console.log(this.service);
       if (!this.$refs.form.validate()) {
         return;
       }
@@ -130,7 +146,10 @@ export default {
 
       if (igIndex === -1) {
         this.service.instancesGroups.push({
-          title: this.instanceGroupTitle,
+          title:
+            this.instanceGroupTitle ||
+            this.accounts.find((ac) => ac.uuid === this.accountId).title +
+              new Date().getTime(),
           type: this.customTypeName || this.type,
           instances: [],
           sp: this.serviceProviderId,
@@ -161,32 +180,28 @@ export default {
       };
 
       this.isLoading = true;
-      api.services
-        .testConfig(data)
-        .then((res) => {
-          if (res.result) api.services._update(data.service);
-          else throw res;
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: this.isEdit
-              ? "instance updated successfully"
-              : "instance created successfully",
-          });
-          if (!this.isEdit && isExisted) {
-            api.services.up(data.service.uuid);
-          }
-        })
-        .then(() => this.$router.push({ name: "Instances" }))
-        .catch((err) => {
-          const opts = {
-            message: err.errors.map((error) => error),
-          };
-          this.showSnackbarError(opts);
-        })
-        .finally(() => {
-          this.isLoading = false;
+      try {
+        const res = await api.services.testConfig(data);
+
+        if (!res.result) throw res;
+        await api.services._update(data.service);
+        this.showSnackbarSuccess({
+          message: this.isEdit
+            ? "instance updated successfully"
+            : "instance created successfully",
         });
+        if (!this.isEdit && isExisted) {
+          api.services.up(data.service.uuid);
+        }
+        this.$router.push({ name: "Instances" });
+      } catch (err) {
+        const opts = {
+          message: err.errors.map((error) => error),
+        };
+        this.showSnackbarError(opts);
+      } finally {
+        this.isLoading = false;
+      }
     },
   },
   computed: {
@@ -197,6 +212,20 @@ export default {
     },
     services() {
       return this.$store.getters["services/all"];
+    },
+    servicesByAccount() {
+      return this.services.filter(
+        (s) =>
+          s.access.namespace ===
+          this.namespaces.find((n) => n.access.namespace === this.accountId)
+            ?.uuid
+      );
+    },
+    accounts() {
+      return this.$store.getters["accounts/all"];
+    },
+    namespaces() {
+      return this.$store.getters["namespaces/all"];
     },
     serviceInstanceGroups() {
       if (
@@ -213,9 +242,6 @@ export default {
     },
     serviceInstanceGroupTitles() {
       const igs = this.serviceInstanceGroups.map((i) => i.title);
-      if (this.customInstanceGroup) {
-        igs.unshift(this.customInstanceGroup);
-      }
 
       return igs;
     },
@@ -232,41 +258,8 @@ export default {
       );
     },
   },
-  created() {
+  async created() {
     this.$store.dispatch("servicesProviders/fetch", false);
-    this.$store.dispatch("services/fetch").then(() => {
-      const instanceId = this.$route.params.instanceId;
-      if (instanceId) {
-        this.services.forEach((s) => {
-          s.instancesGroups.forEach((ig) => {
-            this.isEdit = true;
-            const instance = ig.instances.find((i) => i.uuid === instanceId);
-            if (instance) {
-              this.type = ig.type;
-              this.service = s;
-              this.serviceProviderId = ig.sp;
-              this.instanceGroupTitle = ig.title;
-              this.instance = instance;
-            }
-          });
-        });
-        return;
-      }
-
-      let type = this.$route.params.type;
-
-      if (type && this.$route.params.serviceId) {
-        this.service = this.services.find(
-          (s) => s.uuid === this.$route.params.serviceId
-        );
-        if (!this.typeItems.includes(type)) {
-          this.customTypeName = type;
-          type = "custom";
-        }
-        this.type = type;
-        this.serviceProviderId = this.$route.params.serviceProviderId;
-      }
-    });
 
     const types = require.context(
       "@/components/modules/",
@@ -282,6 +275,46 @@ export default {
           import(`@/components/modules/${type}/instanceCreate.vue`);
       }
     });
+
+    await Promise.all([
+      this.$store.dispatch("accounts/fetch"),
+      this.$store.dispatch("namespaces/fetch"),
+      this.$store.dispatch("services/fetch"),
+    ]);
+    const instanceId = this.$route.params.instanceId;
+    if (instanceId) {
+      this.services.forEach((s) => {
+        s.instancesGroups.forEach((ig) => {
+          this.isEdit = true;
+          const instance = ig.instances.find((i) => i.uuid === instanceId);
+          if (instance) {
+            this.type = ig.type;
+            this.service = s;
+            this.serviceProviderId = ig.sp;
+            this.instanceGroupTitle = ig.title;
+            this.instance = instance;
+          }
+        });
+      });
+      return;
+    }
+
+    let type = this.$route.params.type;
+
+    if (type && this.$route.params.serviceId) {
+      this.service = this.services.find(
+        (s) => s.uuid === this.$route.params.serviceId
+      );
+      this.accountId = this.namespaces.find(
+        (n) => n.uuid === this.service.access.namespace
+      )?.access.namespace;
+      if (!this.typeItems.includes(type)) {
+        this.customTypeName = type;
+        type = "custom";
+      }
+      this.type = type;
+      this.serviceProviderId = this.$route.params.serviceProviderId;
+    }
   },
   watch: {
     serviceProviderId(sp_uuid) {
@@ -302,6 +335,11 @@ export default {
       this.instanceGroup = this.serviceInstanceGroups.find(
         (ig) => ig.title === newVal
       );
+    },
+    accountId() {
+      if (this.servicesByAccount.length === 1) {
+        this.service = this.servicesByAccount[0];
+      }
     },
     type() {
       if (this.isEdit) {

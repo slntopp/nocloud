@@ -1,5 +1,10 @@
 <template>
-  <reports_table hide-account hide-service :filters="filters" />
+  <reports_table
+    table-name="service-reports"
+    hide-account
+    hide-service
+    :filters="filters"
+  />
 </template>
 
 <script setup>

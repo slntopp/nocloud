@@ -24,6 +24,24 @@
         <v-col lg="6" cols="12">
           <v-row align="center">
             <v-col cols="3">
+              <v-subheader>Amount type</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-autocomplete
+                label="Amount type"
+                v-model="amountType"
+                item-value="value"
+                item-text="title"
+                :items="amountTypes"
+              />
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col lg="6" cols="12">
+          <v-row align="center">
+            <v-col cols="3">
               <v-subheader>Account</v-subheader>
             </v-col>
             <v-col cols="9">
@@ -31,7 +49,7 @@
                 :filter="defaultFilterObject"
                 label="Account"
                 v-model="transaction.account"
-                item-value="title"
+                return-object
                 item-text="title"
                 :items="accounts"
                 :rules="generalRule"
@@ -80,8 +98,9 @@
               <v-text-field
                 type="number"
                 label="Amount"
+                :suffix="accountCurrency"
                 v-model="transaction.total"
-                :rules="generalRule"
+                :rules="amountRule"
               />
             </v-col>
           </v-row>
@@ -207,7 +226,6 @@ export default {
       visible: false,
     },
     generalRule: [(v) => !!v || "This field is required!"],
-
     isValid: false,
     isLoading: false,
 
@@ -216,10 +234,17 @@ export default {
       { value: "transaction", title: "Transaction" },
     ],
     type: "transaction",
+
+    amountTypes: [
+      { title: "Top-up", value: false },
+      { title: "Debit", value: true },
+      { title: "Account balance", value: null },
+    ],
+    amountType: true,
   }),
   methods: {
     defaultFilterObject,
-    tryToSend() {
+    async tryToSend() {
       if (!this.isValid) {
         this.$refs.form.validate();
 
@@ -232,31 +257,39 @@ export default {
       this.isLoading = true;
       this.refreshData();
 
-      api.transactions
-        .create(this.transaction)
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Transaction created successfully",
-          });
+      try {
+        let total = this.transaction.total;
+        if (this.amountType === null) {
+          const balance = this.transaction.account.balance || 0;
+          const difference = Math.abs(total - balance);
+          total = (balance > total ? +difference : -difference).toFixed(2);
+        } else {
+          total = Math.abs(total);
+          total = this.amountType ? total : -total;
+        }
 
-          setTimeout(() => {
-            this.$router.push({ name: "Transactions" });
-          }, 1500);
-        })
-        .catch((err) => {
-          this.showSnackbarError({
-            message: err,
-          });
-        })
-        .finally(() => {
-          this.isLoading = false;
+        await api.transactions.create({
+          ...this.transaction,
+          account: this.transaction.account.uuid,
+          total,
+          currency: this.transaction.account.currency,
         });
+        this.showSnackbarSuccess({
+          message: "Transaction created successfully",
+        });
+
+        setTimeout(() => {
+          this.$router.push({ name: "Transactions" });
+        }, 1500);
+      } catch (err) {
+        this.showSnackbarError({
+          message: err,
+        });
+      } finally {
+        this.isLoading = false;
+      }
     },
     refreshData() {
-      this.transaction.account = this.accounts.find(
-        (acc) => acc.title === this.transaction.account
-      )?.uuid;
-
       this.transaction.service =
         this.services.find(
           (service) => service.title === this.transaction.service
@@ -320,13 +353,16 @@ export default {
     services() {
       return this.$store.getters["services/all"];
     },
+    defaultCurrency() {
+      return this.$store.getters["currencies/default"];
+    },
+    accountCurrency() {
+      return this.transaction.account.currency || this.defaultCurrency;
+    },
     servicesByAccount() {
       if (this.transaction.account) {
-        const account = this.accounts.find(
-          (a) => a.title === this.transaction.account
-        );
         const namespace = this.namespaces.find(
-          (n) => n.access.namespace === account?.uuid
+          (n) => n.access.namespace === this.transaction.account?.uuid
         );
         return this.services.filter(
           (s) => s.access.namespace === namespace?.uuid
@@ -361,6 +397,13 @@ export default {
     },
     isInvoice() {
       return this.type === "invoice";
+    },
+    amountRule() {
+      return [
+        (v) =>
+          (this.amountType === null ? v === 0 || !!v : !!v) ||
+          "This field is required!",
+      ];
     },
   },
   watch: {

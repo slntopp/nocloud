@@ -30,11 +30,14 @@ const NOCLOUD_SP_CLAIM = "sp"
 const NOCLOUD_INSTANCE_CLAIM = "instance"
 const NOCLOUD_LOG_LEVEL = zapcore.DebugLevel - 1
 
-const INFINIMESH_NOSESSION_CLAIM = "nosession"
+const NOCLOUD_SESSION_CLAIM = "session"
+const NOCLOUD_NOSESSION_CLAIM = "nosession"
 
 type ContextKey string
 
 const NoCloudAccount = ContextKey("account")
+const Expiration = ContextKey("expires")
+const NoCloudSession = ContextKey("session")
 const NoCloudRootAccess = ContextKey("root_access")
 const NoCloudSp = ContextKey("sp")
 const NoCloudInstance = ContextKey("instance")

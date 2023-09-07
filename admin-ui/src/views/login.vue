@@ -83,6 +83,7 @@ export default {
             this.$store.dispatch("auth/fetchUserData");
           })
           .catch((error) => {
+            console.log(error);
             this.showSnackbarError({
               message: error.response.data.message || "Error during login",
             });

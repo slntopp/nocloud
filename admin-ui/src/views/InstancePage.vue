@@ -73,7 +73,7 @@ export default {
           component: () => import("@/components/instance/snapshots.vue"),
         },
         {
-          title: "History",
+          title: "Event log",
           component: () => import("@/components/instance/history.vue"),
         },
         {
