@@ -116,16 +116,23 @@
         </v-list>
       </v-menu>
     </template>
-    <!--  if show select show v-checkbox all, and dont hide v-checkbox on every row-->
-    <!--  Else hide v-checkbox all and hide checkboxes on every row-->
 
-    <template v-slot:[`header.data-table-select`]="{ props, on }">
-      <div class="d-flex">
-        <v-simple-checkbox
-          v-if="showSelect"
-          v-bind="props"
-          v-on="on"
-        ></v-simple-checkbox>
+    <template v-if="!showSelect" v-slot:[`item.data-table-select`]>
+      <div></div>
+    </template>
+
+    <template v-if="footerError.length > 0" v-slot:footer>
+      <v-toolbar class="mt-2" color="error" dark flat>
+        <v-toolbar-title class="subheading">
+          {{ footerError }}
+        </v-toolbar-title>
+      </v-toolbar>
+    </template>
+
+    <template
+      v-slot:[`footer.page-text`]="{ pageStart, pageStop, itemsLength }"
+    >
+      <div class="d-flex align-center">
         <v-dialog
           @click:outside="changeFiltres"
           max-width="60%"
@@ -162,18 +169,10 @@
         <v-icon @click="resetFilter" size="23" class="mr-1s"
           >mdi-filter-remove</v-icon
         >
+        <span class="ml-3">
+          {{ pageStart }}-{{ pageStop }} of {{ itemsLength }}
+        </span>
       </div>
-    </template>
-    <template v-if="!showSelect" v-slot:[`item.data-table-select`]>
-      <div></div>
-    </template>
-
-    <template v-if="footerError.length > 0" v-slot:footer>
-      <v-toolbar class="mt-2" color="error" dark flat>
-        <v-toolbar-title class="subheading">
-          {{ footerError }}
-        </v-toolbar-title>
-      </v-toolbar>
     </template>
   </components>
 </template>
