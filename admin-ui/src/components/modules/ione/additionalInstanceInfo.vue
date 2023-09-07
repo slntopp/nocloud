@@ -9,13 +9,6 @@
         />
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          label="Lcm state"
-          :value="template.state?.meta.lcm_state_str"
-        />
-      </v-col>
-      <v-col>
         <instance-ip-menu :item="template" />
       </v-col>
       <v-col>

@@ -20,14 +20,14 @@
           </v-btn>
         </template>
         <v-card class="pa-4">
-          <v-form ref="form" v-model="newAccount.formValid">
+          <v-form ref="form" v-model="formValid">
             <v-row>
               <v-col>
                 <v-text-field
                   dense
-                  v-model="newAccount.data.title"
+                  v-model="newAccount.title"
                   placeholder="title"
-                  :rules="newAccount.rules.title"
+                  :rules="rules.title"
                 >
                 </v-text-field>
               </v-col>
@@ -36,9 +36,9 @@
               <v-col>
                 <v-text-field
                   dense
-                  hide-details
-                  v-model="newAccount.data.auth.data[0]"
+                  v-model="newAccount.auth.data[0]"
                   placeholder="username"
+                  :rules="rules.required"
                 >
                 </v-text-field>
               </v-col>
@@ -47,10 +47,21 @@
               <v-col>
                 <v-text-field
                   dense
-                  hide-details
-                  v-model="newAccount.data.auth.data[1]"
+                  v-model="newAccount.data.email"
+                  placeholder="email"
+                  :rules="rules.email"
+                >
+                </v-text-field>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                <v-text-field
+                  dense
+                  v-model="newAccount.auth.data[1]"
                   placeholder="password"
                   type="password"
+                  :rules="rules.required"
                 >
                 </v-text-field>
               </v-col>
@@ -58,29 +69,39 @@
             <v-row>
               <v-col>
                 <v-autocomplete
+                  dense
                   :items="namespacesForSelect"
-                  v-model="newAccount.data.namespace"
+                  v-model="newAccount.namespace"
                   label="namespace"
-                  :rules="newAccount.rules.selector"
+                  :rules="rules.required"
                 ></v-autocomplete>
               </v-col>
             </v-row>
             <v-row>
               <v-col>
                 <v-select
+                  dense
                   :items="accessLevels"
                   item-value="id"
                   item-text="title"
-                  v-model="newAccount.data.access"
+                  v-model="newAccount.access"
                   label="access"
+                ></v-select>
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                <v-select
+                  dense
+                  :items="currencies"
+                  v-model="newAccount.currency"
+                  label="currency"
                 ></v-select>
               </v-col>
             </v-row>
             <v-row justify="end">
               <v-col md="5">
-                <v-btn :loading="newAccount.loading" @click="createAccount">
-                  send
-                </v-btn>
+                <v-btn :loading="loading" @click="createAccount"> send </v-btn>
               </v-col>
             </v-row>
           </v-form>
@@ -126,26 +147,20 @@ export default {
     return {
       createMenuVisible: false,
       selected: [],
-      newAccount: {
-        data: {
-          title: "",
-          auth: {
-            type: "standard",
-            data: ["", ""],
-          },
-          namespace: "",
-          access: 1,
-        },
-        rules: {
-          title: [
-            (value) => !!value || "Title is required",
-            (value) => (value || "").length >= 3 || "Min 3 characters",
-          ],
-          selector: [(value) => !!value || "Namespace is required"],
-        },
-        formValid: true,
-        loading: false,
+      newAccount: {},
+      rules: {
+        title: [
+          (value) => !!value || "Title is required",
+          (value) => (value || "").length >= 3 || "Min 3 characters",
+        ],
+        required: [(value) => !!value || "Namespace is required"],
+        email: [
+          (value) =>
+            !!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.exec(value) || "Wrong email",
+        ],
       },
+      formValid: true,
+      loading: false,
       deletingLoading: false,
       accessLevels: [
         { id: 0, title: "NONE" },
@@ -155,26 +170,36 @@ export default {
       ],
     };
   },
+  created() {
+    this.setDefaultAccount();
+  },
   methods: {
+    setDefaultAccount() {
+      this.newAccount = {
+        title: "",
+        auth: {
+          type: "standard",
+          data: ["", ""],
+        },
+        namespace: "",
+        access: 1,
+        currency: this.defaultCurrency,
+        data: {
+          email: "",
+        },
+      };
+    },
     createAccount() {
-      if (!this.newAccount.formValid) return;
-      this.newAccount.loading = true;
+      if (!this.formValid) return;
+      this.loading = true;
       api.accounts
-        .create(this.newAccount.data)
+        .create(this.newAccount)
         .then(() => {
           this.newAccount.title = "";
           this.createMenuVisible = false;
           this.$store.dispatch("accounts/fetch");
 
-          this.newAccount.data = {
-            title: "",
-            auth: {
-              type: "standard",
-              data: ["", ""],
-            },
-            namespace: "",
-            access: 1,
-          };
+          this.setDefaultAccount();
         })
         .catch((error) => {
           console.error(error);
@@ -182,7 +207,7 @@ export default {
           this.snackbar.visibility = true;
         })
         .finally(() => {
-          this.newAccount.loading = false;
+          this.loading = false;
         });
     },
     deleteSelectedAccount() {
@@ -227,6 +252,12 @@ export default {
     searchParam() {
       return this.$store.getters["appSearch/param"];
     },
+    defaultCurrency() {
+      return this.$store.getters["currencies/default"];
+    },
+    currencies() {
+      return this.$store.getters["currencies/all"];
+    },
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
@@ -234,6 +265,14 @@ export default {
     });
 
     this.$store.commit("appSearch/setSearchName", "all-accounts");
+    this.$store.dispatch("currencies/fetch");
+  },
+  watch: {
+    defaultCurrency(newVal) {
+      if (!this.newAccount.currency) {
+        this.newAccount.currency = newVal;
+      }
+    },
   },
 };
 </script>

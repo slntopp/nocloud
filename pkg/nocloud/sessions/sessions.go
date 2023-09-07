@@ -73,11 +73,11 @@ func Check(rdb *redis.Client, user, sid string) error {
 }
 
 func LogActivity(rdb *redis.Client, user, sid string, exp int64) error {
-	return rdb.Set(context.Background(), fmt.Sprintf("sessions:activity:%s:%s", user, sid), time.Now().Unix(), time.Until(time.Unix(exp, 0))).Err()
+	return rdb.Set(context.Background(), fmt.Sprintf("sessions-activity:%s:%s", user, sid), time.Now().Unix(), time.Until(time.Unix(exp, 0))).Err()
 }
 
 func GetActivity(rdb *redis.Client, user string) (map[string]*timestamppb.Timestamp, error) {
-	keys, err := rdb.Keys(context.Background(), fmt.Sprintf("sessions:activity:%s:*", user)).Result()
+	keys, err := rdb.Keys(context.Background(), fmt.Sprintf("sessions-activity:%s:*", user)).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -94,21 +94,23 @@ func GetActivity(rdb *redis.Client, user string) (map[string]*timestamppb.Timest
 			return nil, fmt.Errorf("invalid data type: %s | %v", keys[i], err)
 		}
 
-		result[strings.Split(keys[i], ":")[3]] = timestamppb.New(time.Unix(int64(ts), 0))
+		result[strings.Split(keys[i], ":")[2]] = timestamppb.New(time.Unix(int64(ts), 0))
 	}
 
 	return result, nil
 }
 
 func Get(rdb *redis.Client, user string) ([]*sessions.Session, error) {
-
+	fmt.Println(user)
 	keys, err := rdb.Keys(context.Background(), fmt.Sprintf("sessions:%s:*", user)).Result()
 	if err != nil {
+		fmt.Println(1)
 		return nil, err
 	}
 
 	data, err := rdb.MGet(context.Background(), keys...).Result()
 	if err != nil {
+		fmt.Println(2)
 		return nil, err
 	}
 
@@ -118,11 +120,14 @@ func Get(rdb *redis.Client, user string) ([]*sessions.Session, error) {
 
 		bytes, ok := d.(string)
 		if !ok {
+			fmt.Println(3)
 			return nil, fmt.Errorf("invalid data type: %s", keys[i])
 		}
+		fmt.Println(bytes)
 
 		err = proto.Unmarshal([]byte(bytes), session)
 		if err != nil {
+			fmt.Println(4)
 			return nil, err
 		}
 
