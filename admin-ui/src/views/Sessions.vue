@@ -2,7 +2,6 @@
   <v-card elevation="0" color="background" class="pa-4">
     <confirm-dialog :disabled="selected.length < 1" @confirm="deleteSelectedSession">
       <v-btn
-        class="mb-4"
         color="background-light"
         :disabled="selected.length < 1"
         :loading="isDeleteLoading"
@@ -10,6 +9,16 @@
         Delete
       </v-btn>
     </confirm-dialog>
+
+    <v-autocomplete
+      :filter="defaultFilterObject"
+      label="Account"
+      item-text="title"
+      item-value="uuid"
+      class="d-inline-block ml-2"
+      :items="accounts"
+      @change="getActivity($event)"
+    />
 
     <nocloud-table
       table-name="sessions"
@@ -32,20 +41,25 @@
       <template v-slot:[`item.expires`]="{ value }">
         {{ getDate(value) }}
       </template>
+
+      <template v-slot:[`item.lastSeen`]="{ value }">
+        {{ getDate(value) }}
+      </template>
     </nocloud-table>
   </v-card>
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, reactive } from "vue";
 import { useStore } from "@/store";
-import { formatSecondsToDate } from "@/functions.js";
+import { formatSecondsToDate, defaultFilterObject } from "@/functions.js";
 import api from "@/api";
 import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 
 const store = useStore();
 
+const allSessions = reactive({});
 const sessions = ref([]);
 const isLoading = ref(false);
 const fetchError = ref("");
@@ -55,7 +69,8 @@ const sessionsHeaders = [
   { text: "Account", value: "client" },
   { text: "Creation date", value: "created" },
   { text: "Expiration date", value: "expires" },
-  { text: "Current", value: "current" }
+  { text: "Current", value: "current" },
+  { text: "Last seen", value: "lastSeen" }
 ];
 
 const accounts = computed(() =>
@@ -78,16 +93,10 @@ Promise.all([
   .then((response) => {
     sessions.value = response[1].sessions
       .map((session) => ({ ...session, uuid: session.id }));
+
+    allSessions.all = JSON.parse(JSON.stringify(sessions.value));
   })
   .catch((error) => {
-    sessions.value = [{
-      uuid: Math.random().toString(16).slice(2),
-      client: "0",
-      created: Date.now() / 1000,
-      expires: Date.now() / 1000 + 3600 * 24,
-      current: true
-    }];
-
     console.error(error);
     fetchError.value = "Can't reach the server";
     if (error.response?.data.message) {
@@ -130,6 +139,34 @@ async function deleteSelectedSession() {
     }
   } finally {
     isDeleteLoading.value = false;
+  }
+}
+
+async function getActivity(uuid) {
+  if (allSessions[uuid]) {
+    sessions.value = JSON.parse(JSON.stringify(allSessions[uuid]));
+    return;
+  }
+
+  try {
+    isLoading.value = true;
+    const { lastSeen } = await api.get(`/sessions/activity/${uuid}`);
+
+    sessions.value = [];
+
+    allSessions.all.forEach((session) => {
+      if (!lastSeen[session.uuid]) return;
+      sessions.value.push({ ...session, lastSeen: lastSeen[session.uuid] });
+    });
+    allSessions[uuid] = JSON.parse(JSON.stringify(sessions.value));
+  } catch (error) {
+    console.error(error);
+    store.commit("snackbar/showSnackbarError", {
+      message: `Error: ${error.response?.data.message ?? "Unknown"}.`,
+      timeout: 0
+    });
+  } finally {
+    isLoading.value = false;
   }
 }
 
