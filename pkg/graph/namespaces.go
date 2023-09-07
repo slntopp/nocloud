@@ -105,6 +105,40 @@ func (ctrl *NamespacesController) Join(ctx context.Context, acc Account, ns Name
 	return acc.JoinNamespace(ctx, edge, ns, access, role)
 }
 
+const disjoinQuery = `
+FOR e in @@col
+    FILTER e._from == @ns AND e._to == @acc
+    REMOVE e IN @@col
+`
+
+func (ctrl *NamespacesController) Disjoin(ctx context.Context, acc Account, ns Namespace) error {
+	db := ctrl.col.Database()
+
+	_, err := db.Query(ctx, disjoinQuery, map[string]interface{}{
+		"@col": schema.NS2ACC,
+		"ns":   driver.NewDocumentID(schema.NAMESPACES_COL, ns.Key),
+		"acc":  driver.NewDocumentID(schema.ACCOUNTS_COL, acc.Key),
+	})
+	return err
+}
+
+const unlinkQuery = `
+FOR e in @@col
+    FILTER e._from == @acc AND e._to == @ns
+    REMOVE e IN @@col
+`
+
+func (ctrl *NamespacesController) Unlink(ctx context.Context, acc Account, ns Namespace) error {
+	db := ctrl.col.Database()
+
+	_, err := db.Query(ctx, disjoinQuery, map[string]interface{}{
+		"@col": schema.ACC2NS,
+		"ns":   driver.NewDocumentID(schema.NAMESPACES_COL, ns.Key),
+		"acc":  driver.NewDocumentID(schema.ACCOUNTS_COL, acc.Key),
+	})
+	return err
+}
+
 func (ns *Namespace) Delete(ctx context.Context, db driver.Database) error {
 	err := DeleteRecursive(ctx, db, ns.ID)
 	if err != nil {

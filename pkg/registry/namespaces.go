@@ -168,6 +168,69 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 	return &namespacespb.LinkResponse{Result: true}, nil
 }
 
+func (s *NamespacesServiceServer) Disjoin(ctx context.Context, request *namespacespb.DisjoinRequest) (*namespacespb.DisjoinResponse, error) {
+	log := s.log.Named("DisjoinNamespace")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	acc, err := s.acc_ctrl.Get(ctx, request.Account)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+	ns, err := s.ctrl.Get(ctx, request.Namespace)
+	if err != nil {
+		s.log.Debug("Error getting namespace", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Namespace not found")
+	}
+
+	var ok bool
+	var level access.Level
+	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), acc.ID)
+	if !ok || level < access.Level_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	ok, level = graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID)
+	if !ok || level < access.Level_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
+	}
+
+	err = s.ctrl.Disjoin(ctx, acc, ns)
+	if err != nil {
+		s.log.Debug("Error while disjoining account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while disjoining account")
+	}
+	return &namespacespb.DisjoinResponse{Result: true}, nil
+}
+
+func (s *NamespacesServiceServer) Unlink(ctx context.Context, request *namespacespb.UnlinkRequest) (*namespacespb.UnlinkResponse, error) {
+	log := s.log.Named("LinkNamespace")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	acc, err := s.acc_ctrl.Get(ctx, request.Account)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+	ns, err := s.ctrl.Get(ctx, request.Namespace)
+	if err != nil {
+		s.log.Debug("Error getting namespace", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Namespace not found")
+	}
+
+	ok, level := graph.AccessLevel(ctx, s.db, ctx.Value(nocloud.NoCloudAccount).(string), ns.ID)
+	if !ok || level < access.Level_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
+	}
+
+	err = s.ctrl.Unlink(ctx, acc, ns)
+	if err != nil {
+		s.log.Debug("Error while linking account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while linking account to namespace")
+	}
+	return &namespacespb.UnlinkResponse{Result: true}, nil
+}
+
 func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespacespb.DeleteRequest) (*namespacespb.DeleteResponse, error) {
 	log := s.log.Named("Delete")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
