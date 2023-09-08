@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"google.golang.org/protobuf/types/known/structpb"
 	"reflect"
 	"time"
 
@@ -187,10 +186,6 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 					for key := range plan.GetProducts() {
 						if key != instance.GetProduct() {
 							delete(plan.Products, key)
-						} else {
-							product := plan.GetProducts()[key]
-							product.Meta = map[string]*structpb.Value{}
-							plan.Products[key] = product
 						}
 					}
 				}
