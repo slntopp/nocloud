@@ -274,9 +274,16 @@ export default {
       }
 
       if (localStorage.getItem(val)) {
+        const savedValue = JSON.parse(localStorage.getItem(val));
+        const savedValueWithoutEmptys = {};
+        Object.keys(savedValue).forEach((key) => {
+          if (Object.keys(savedValue[key]).length > 0) {
+            savedValueWithoutEmptys[key] = savedValue[key];
+          }
+        });
         this.$store.commit(
           "appSearch/setCustomParams",
-          JSON.parse(localStorage.getItem(val))
+          savedValueWithoutEmptys
         );
       }
     },

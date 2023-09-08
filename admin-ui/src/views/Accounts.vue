@@ -256,7 +256,7 @@ export default {
       return this.$store.getters["currencies/default"];
     },
     currencies() {
-      return this.$store.getters["currencies/all"];
+      return this.$store.getters["currencies/all"].filter((c) => c !== "NCU");
     },
   },
   mounted() {

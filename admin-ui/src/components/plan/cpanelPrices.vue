@@ -79,7 +79,7 @@ export default {
       { text: "lve_pmem", value: "lve_pmem" },
       { text: "Period", value: "period", width: 220 },
       { text: "Price", value: "price", width: 150 },
-      { text: "Sell", value: "enabled" },
+      { text: "Enabled", value: "enabled" },
     ],
   }),
   methods: {
@@ -140,7 +140,7 @@ export default {
             model: item.name,
             bandwidth: item.BWLIMIT || undefined,
             ssd: item.QUOTA || undefined,
-            email: item.MAX_EMAILACCT_QUOTA  || undefined,
+            email: item.MAX_EMAILACCT_QUOTA || undefined,
             mysql: item.MAXSQL || undefined,
             websites: 1 + +item.MAXADDON || undefined,
           },
@@ -158,7 +158,7 @@ export default {
         });
         this.showSnackbarSuccess({ message: "Plan save successfully" });
       } catch (e) {
-        console.log(e)
+        console.log(e);
         this.showSnackbarError({ message: "Error on save plan" });
       } finally {
         this.isSaveLoading = false;

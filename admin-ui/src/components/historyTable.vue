@@ -207,10 +207,14 @@ const getServiceProvider = (uuid) => {
 
 const getFilterItems = async () => {
   const { unique } = await api.logging.count({});
+  const actionItems = unique.actions.map((a) => ({ title: a, uuid: a }));
+  const scopeItems = unique.scopes.map((a) => ({ title: a, uuid: a }));
+
   store.commit("appSearch/pushVariant", {
     key: "action",
     value: {
-      items: unique.actions.map((a) => ({ title: a, uuid: a })),
+      items: actionItems,
+      isArray: true,
       key: "action",
       title: "Action",
     },
@@ -218,11 +222,23 @@ const getFilterItems = async () => {
   store.commit("appSearch/pushVariant", {
     key: "scope",
     value: {
-      items: unique.scopes.map((s) => ({ title: s, uuid: s })),
+      isArray: true,
+      items: scopeItems,
       key: "scope",
       title: "Scopes",
     },
   });
+  if (Object.keys(store.getters["appSearch/customParams"]).length === 0) {
+    const hiddenActions = ["monitoring", "regions"];
+
+    const defaultCustomParams = [];
+    actionItems.forEach(({ title, uuid }) => {
+      if (!hiddenActions.includes(title)) {
+        defaultCustomParams.push({ title, value: uuid });
+      }
+    });
+    store.commit("appSearch/setCustomParams", { action: defaultCustomParams });
+  }
 };
 
 const isLoading = computed(() => {
@@ -237,14 +253,8 @@ const requestOptions = computed(() => ({
   field: options.value.sortBy[0],
   sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
   filters: {
-    action:
-      (searchParams.value.action?.value && [
-        searchParams.value.action?.value,
-      ]) ||
-      undefined,
-    scope:
-      (searchParams.value.scope?.value && [searchParams.value.scope?.value]) ||
-      undefined,
+    action: searchParams.value.action?.map(({ value }) => value) || undefined,
+    scope: searchParams.value.scope?.map(({ value }) => value) || undefined,
     path: path.value || undefined,
   },
 }));
