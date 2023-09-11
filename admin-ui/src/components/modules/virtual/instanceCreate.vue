@@ -29,12 +29,13 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             label="product"
             :value="instance.product"
             v-if="products.length > 0"
             :items="products"
             item-text="key"
+            item-value="key"
             @change="setValue('product', $event)"
           >
             <template v-slot:item="{ item }">
@@ -46,7 +47,7 @@
                 <span class="ml-4">{{ item.title }}</span>
               </div>
             </template>
-          </v-select>
+          </v-autocomplete>
         </v-col>
       </v-row>
     </v-card>
