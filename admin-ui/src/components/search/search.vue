@@ -112,8 +112,15 @@
                       </v-btn>
                     </div>
                   </div>
-                  <div style="width: 100%" class="d-flex" v-else>
+                  <div
+                    style="width: 100%"
+                    class="d-flex justify-space-between"
+                    v-else
+                  >
                     <span>{{ item.title }}</span>
+                    <v-icon v-if="item.isSelect" color="green"
+                      >mdi-check</v-icon
+                    >
                   </div>
                 </v-list-item>
               </template>
@@ -151,7 +158,7 @@ export default {
             value: this.searchParam,
             title: this.searchParam,
             isArray,
-            full: false,
+            temporary: true,
           },
         });
       }
@@ -165,13 +172,17 @@ export default {
     },
     setEntity(index) {
       const item = this.searchItems[index];
+      if (item.isSelect) {
+        return;
+      }
+
       const variant =
         this.variants[this.selectedGroupKey] || this.variants[item?.key];
       const key = variant?.key || this.selectedGroupKey;
 
       if (variant?.isArray) {
         this.customParams[key]?.forEach((i) => {
-          if (!i.full) {
+          if (i.temporary) {
             this.$store.commit("appSearch/deleteCustomParam", { ...i, key });
           }
         });
@@ -183,7 +194,6 @@ export default {
           value: item[variant.itemKey || "uuid"],
           title: item[variant.itemTitle || "title"],
           isArray: variant.isArray,
-          full: true,
         },
       });
 
@@ -233,17 +243,27 @@ export default {
       return "group";
     },
     searchItems() {
-      return (
-        this.variants[this.selectedGroupKey]?.items.filter(
-          (i) =>
-            !this.searchParam ||
-            i.title.toLowerCase().includes(this.searchParam.toLowerCase())
-        ) ||
-        Object.keys(this.variants).map((key) => ({
-          key,
-          title: this.variants[key]?.title || key,
-        }))
-      );
+      if (this.variants[this.selectedGroupKey]?.items) {
+        return this.variants[this.selectedGroupKey]?.items
+          .filter(
+            (i) =>
+              !this.searchParam ||
+              i.title.toLowerCase().includes(this.searchParam.toLowerCase())
+          )
+          .map((p) => ({
+            ...p,
+            isSelect: !!this.customParamsValues.find(
+              (cp) => cp.value === p.uuid
+            ),
+          }))
+          .sort((x, y) =>
+            x.isSelect === y.isSelect ? 0 : x.isSelect ? 1 : -1
+          );
+      }
+      return Object.keys(this.variants).map((key) => ({
+        key,
+        title: this.variants[key]?.title || key,
+      }));
     },
     customParamsValues() {
       const values = [];
