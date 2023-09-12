@@ -74,6 +74,7 @@
         @set-meta="meta = $event"
         :instance="instance"
         :plans="plans"
+        :account-id="accountId"
         :plan-rules="planRules"
         :sp-uuid="serviceProviderId"
         :is="templates[type] ?? templates.custom"
