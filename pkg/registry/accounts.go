@@ -369,11 +369,11 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 
 	var event = &elpb.Event{
 		Entity:    schema.ACCOUNTS_COL,
-		Uuid:      requestor.(string),
+		Uuid:      acc.Key,
 		Scope:     "database",
 		Action:    "login",
 		Rc:        0,
-		Requestor: requestor.(string),
+		Requestor: acc.Key,
 		Ts:        time.Now().Unix(),
 		Snapshot: &elpb.Snapshot{
 			Diff: "",
