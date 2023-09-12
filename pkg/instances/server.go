@@ -138,7 +138,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 
 	var event = &elpb.Event{
 		Entity:    schema.INSTANCES_COL,
-		Uuid:      instance.GetUuid(),
+		Uuid:      req.GetUuid(),
 		Scope:     "driver",
 		Action:    req.Method,
 		Rc:        0,
@@ -188,7 +188,7 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 
 	var event = &elpb.Event{
 		Entity:    schema.INSTANCES_COL,
-		Uuid:      instance.GetUuid(),
+		Uuid:      req.GetUuid(),
 		Scope:     "database",
 		Action:    "delete",
 		Rc:        0,
