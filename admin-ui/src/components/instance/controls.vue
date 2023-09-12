@@ -114,8 +114,9 @@ export default {
           ...this.copyTemplate.billingPlan,
           title,
           products: {
-            [this.product]:
-              this.copyTemplate.billingPlan.products[this.product],
+            [this.product]: this.product
+              ? this.copyTemplate.billingPlan.products[this.product]
+              : undefined,
           },
           public: false,
         };
@@ -308,6 +309,7 @@ export default {
 
       switch (type) {
         case "virtual":
+        case "openai":
         case "ione": {
           return (item) => {
             let planTitle = `IND_${this.sp.title}_${
