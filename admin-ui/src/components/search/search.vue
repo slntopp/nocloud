@@ -249,6 +249,8 @@ export default {
         }
       });
 
+      values.sort((a, b) => a.title.localeCompare(b.title));
+
       return values;
     },
     routeCustomParams() {
