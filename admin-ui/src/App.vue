@@ -92,22 +92,6 @@
             </v-list-item-content>
           </v-list-item>
 
-          <v-list-item
-            v-bind="listItemBind"
-            :to="{ name: 'Services' }"
-            @click.ctrl="() => (easterEgg = true)"
-          >
-            <v-list-item-icon>
-              <v-icon :color="easterEgg ? 'green darker-2' : undefined"
-                >mdi-alien</v-icon
-              >
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Services") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
           <v-list-item v-bind="listItemBind" :to="{ name: 'Instances' }">
             <v-list-item-icon>
               <v-icon>mdi-server</v-icon>
@@ -140,6 +124,22 @@
 
             <v-list-item-content>
               <v-list-item-title>{{ navTitle("Showcases") }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+
+          <v-list-item
+            v-bind="listItemBind"
+            :to="{ name: 'Services' }"
+            @click.ctrl="() => (easterEgg = true)"
+          >
+            <v-list-item-icon>
+              <v-icon :color="easterEgg ? 'green darker-2' : undefined"
+                >mdi-alien</v-icon
+              >
+            </v-list-item-icon>
+
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Services") }}</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
 
