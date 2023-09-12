@@ -29,13 +29,25 @@
           />
         </v-col>
         <v-col cols="6">
-          <v-select
+          <v-autocomplete
             label="product"
             :value="instance.product"
             v-if="products.length > 0"
             :items="products"
+            item-text="key"
+            item-value="key"
             @change="setValue('product', $event)"
-          />
+          >
+            <template v-slot:item="{ item }">
+              <div
+                style="width: 100%"
+                class="d-flex justify-space-between align-center"
+              >
+                <span>{{ item.key }}</span>
+                <span class="ml-4">{{ item.title }}</span>
+              </div>
+            </template>
+          </v-autocomplete>
         </v-col>
       </v-row>
     </v-card>
@@ -63,7 +75,10 @@ export default {
     changeBilling(val) {
       this.bilingPlan = this.plans.list.find((p) => p.uuid === val);
       if (this.bilingPlan) {
-        this.products = Object.keys(this.bilingPlan.products);
+        this.products = Object.keys(this.bilingPlan.products).map((key) => ({
+          key,
+          title: this.bilingPlan.products[key].title,
+        }));
       }
       this.setValue("billing_plan", this.bilingPlan);
     },

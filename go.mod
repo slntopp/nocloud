@@ -11,17 +11,17 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.17.1
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/rabbitmq/amqp091-go v1.8.1
 	github.com/rs/cors v1.10.0
-	github.com/slntopp/nocloud-proto v0.0.0-20230906145611-38013b51cf89
+	github.com/slntopp/nocloud-proto v0.0.0-20230906151231-bea1cc083598
 	github.com/spf13/viper v1.16.0
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
 	github.com/wI2L/jsondiff v0.4.0
 	go.uber.org/zap v1.25.0
 	golang.org/x/crypto v0.13.0
-	google.golang.org/grpc v1.57.0
+	google.golang.org/grpc v1.58.0
 	google.golang.org/protobuf v1.31.0
 )
 
