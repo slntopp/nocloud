@@ -143,6 +143,8 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	log := ctrl.log.Named("Update")
 	log.Debug("Updating Instance", zap.Any("instance", inst))
 
+	uuid := inst.GetUuid()
+
 	if oldInst.GetStatus() == spb.NoCloudStatus_DEL {
 		log.Info("Inst cannot be updated. Status DEL", zap.String("uuid", oldInst.GetUuid()))
 		return nil
@@ -235,7 +237,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	var event = &elpb.Event{
 		Entity:    INSTANCES_COL,
-		Uuid:      inst.GetUuid(),
+		Uuid:      uuid,
 		Scope:     "database",
 		Action:    "update",
 		Rc:        0,
