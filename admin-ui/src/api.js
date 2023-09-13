@@ -1,6 +1,6 @@
 import Api from "nocloudjsrest";
 import vuex from "@/store/index.js";
-const api = new Api("http://localhost/http://api.nocloud.ione-cloud.net", 8624);
+const api = new Api();
 
 api.axios.interceptors.response.use(
   (response) => response,
