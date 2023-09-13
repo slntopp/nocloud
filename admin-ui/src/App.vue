@@ -43,7 +43,7 @@
         </div>
       </router-link>
 
-      <v-list v-if="isLoggedIn" dense :dark="asideDark">
+      <v-list style="height: 100%" v-if="isLoggedIn" dense :dark="asideDark">
         <div
           :class="{
             'd-flex': true,
@@ -59,200 +59,201 @@
           </v-btn>
         </div>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Dashboard' }">
-          <v-list-item-icon>
-            <v-icon>mdi-view-dashboard-variant</v-icon>
-          </v-list-item-icon>
+        <div style="height: 100%" id="drawer-menu-hover">
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Dashboard' }">
+            <v-list-item-icon>
+              <v-icon>mdi-view-dashboard-variant</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Dashboard") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Dashboard") }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Accounts' }">
-          <v-list-item-icon>
-            <v-icon>mdi-account-multiple</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Accounts' }">
+            <v-list-item-icon>
+              <v-icon>mdi-account-multiple</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Accounts") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Accounts") }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Namespaces' }">
-          <v-list-item-icon>
-            <v-icon>mdi-form-textbox</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Namespaces' }">
+            <v-list-item-icon>
+              <v-icon>mdi-form-textbox</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{
-              navTitle("Groups (NameSpaces)")
-            }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{
+                navTitle("Groups (NameSpaces)")
+              }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item
-          v-bind="listItemBind"
-          :to="{ name: 'Services' }"
-          @click.ctrl="() => (easterEgg = true)"
-        >
-          <v-list-item-icon>
-            <v-icon :color="easterEgg ? 'green darker-2' : undefined"
-              >mdi-alien</v-icon
-            >
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Instances' }">
+            <v-list-item-icon>
+              <v-icon>mdi-server</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Services") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Instances") }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Instances' }">
-          <v-list-item-icon>
-            <v-icon>mdi-server</v-icon>
-          </v-list-item-icon>
+          <v-list-item
+            v-bind="listItemBind"
+            :to="{ name: 'ServicesProviders' }"
+          >
+            <v-list-item-icon>
+              <v-icon>mdi-database-marker</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Instances") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{
+                navTitle("Services Providers")
+              }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'ServicesProviders' }">
-          <v-list-item-icon>
-            <v-icon>mdi-database-marker</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Showcases' }">
+            <v-list-item-icon>
+              <v-icon>mdi-store-search</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{
-              navTitle("Services Providers")
-            }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Showcases") }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Showcases' }">
-          <v-list-item-icon>
-            <v-icon>mdi-store-search</v-icon>
-          </v-list-item-icon>
+          <v-list-item
+            v-bind="listItemBind"
+            :to="{ name: 'Services' }"
+            @click.ctrl="() => (easterEgg = true)"
+          >
+            <v-list-item-icon>
+              <v-icon :color="easterEgg ? 'green darker-2' : undefined"
+                >mdi-alien</v-icon
+              >
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Showcases") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Services") }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-subheader>BILLING</v-subheader>
+          <v-subheader>BILLING</v-subheader>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Plans' }">
-          <v-list-item-icon>
-            <v-icon>mdi-script-text</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Plans' }">
+            <v-list-item-icon>
+              <v-icon>mdi-script-text</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{
-              navTitle("Price Models")
-            }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{
+                navTitle("Price Models")
+              }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Transactions' }">
-          <v-list-item-icon>
-            <v-icon>mdi-abacus</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Transactions' }">
+            <v-list-item-icon>
+              <v-icon>mdi-abacus</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{
-              navTitle("Transactions")
-            }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{
+                navTitle("Transactions")
+              }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Currencies' }">
-          <v-list-item-icon>
-            <v-icon>mdi-cash</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Currencies' }">
+            <v-list-item-icon>
+              <v-icon>mdi-cash</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Currencies") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{
+                navTitle("Currencies")
+              }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Reports' }">
-          <v-list-item-icon>
-            <v-icon>mdi-chart-gantt</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Reports' }">
+            <v-list-item-icon>
+              <v-icon>mdi-chart-gantt</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Reports") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Reports") }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-subheader v-if="plugins?.length > 0">PLUGINS</v-subheader>
+          <v-subheader v-if="plugins?.length > 0">PLUGINS</v-subheader>
 
-        <v-list-item
-          v-bind="listItemBind"
-          v-for="plugin of plugins"
-          :key="plugin.url"
-          :to="{ name: 'Plugin', params: plugin, query: { url: plugin.url } }"
-        >
-          <v-list-item-icon>
-            <v-icon>mdi-{{ plugin.icon }}</v-icon>
-          </v-list-item-icon>
+          <v-list-item
+            v-bind="listItemBind"
+            v-for="plugin of plugins"
+            :key="plugin.url"
+            :to="{ name: 'Plugin', params: plugin, query: { url: plugin.url } }"
+          >
+            <v-list-item-icon>
+              <v-icon>mdi-{{ plugin.icon }}</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle(plugin.title) }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{
+                navTitle(plugin.title)
+              }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-subheader>SYSTEM</v-subheader>
+          <v-subheader>SYSTEM</v-subheader>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Chats' }">
-          <v-list-item-icon>
-            <v-icon>mdi-chat</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Chats' }">
+            <v-list-item-icon>
+              <v-icon>mdi-chat</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Chats") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Chats") }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Sessions' }">
-          <v-list-item-icon>
-            <v-icon>mdi-account-clock</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
+            <v-list-item-icon>
+              <v-icon>mdi-history</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Sessions") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Event log") }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
-          <v-list-item-icon>
-            <v-icon>mdi-history</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'DNS manager' }">
+            <v-list-item-icon>
+              <v-icon>mdi-dns</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Event log") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{
+                navTitle("DNS manager")
+              }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
 
-        <v-list-item v-bind="listItemBind" :to="{ name: 'DNS manager' }">
-          <v-list-item-icon>
-            <v-icon>mdi-dns</v-icon>
-          </v-list-item-icon>
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Settings' }">
+            <v-list-item-icon>
+              <v-icon>mdi-cogs</v-icon>
+            </v-list-item-icon>
 
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("DNS manager") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
-
-        <v-list-item v-bind="listItemBind" :to="{ name: 'Settings' }">
-          <v-list-item-icon>
-            <v-icon>mdi-cogs</v-icon>
-          </v-list-item-icon>
-
-          <v-list-item-content>
-            <v-list-item-title>{{ navTitle("Settings") }}</v-list-item-title>
-          </v-list-item-content>
-        </v-list-item>
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Settings") }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+        </div>
       </v-list>
     </v-navigation-drawer>
 
@@ -331,6 +332,7 @@ export default {
   components: { AppSnackbar, balance, appSearch, languages },
   data: () => ({
     isMenuMinimize: true,
+    isMouseOnMenu: false,
     easterEgg: false,
     config,
     navTitles: config.navTitles ?? {},
@@ -353,6 +355,30 @@ export default {
       }
 
       return title;
+    },
+    configureHoverOnMenu() {
+      document
+        .getElementById("drawer-menu-hover")
+        .addEventListener("mouseenter", () => {
+          if (this.isMenuMinimize) {
+            this.isMouseOnMenu = true;
+            setTimeout(() => {
+              if (this.isMouseOnMenu) {
+                this.isMenuMinimize = false;
+              }
+            }, 500);
+          }
+        });
+      document
+        .getElementById("drawer-menu-hover")
+        .addEventListener("mouseleave", () => {
+          if (this.isMouseOnMenu) {
+            this.isMouseOnMenu = false;
+            setTimeout(() => {
+              this.isMenuMinimize = true;
+            }, 500);
+          }
+        });
     },
   },
   computed: {
@@ -447,6 +473,8 @@ export default {
   mounted() {
     this.onResize();
     window.addEventListener("resize", this.onResize, { passive: true });
+
+    this.configureHoverOnMenu();
   },
   watch: {
     isLoggedIn(newVal) {

@@ -26,6 +26,11 @@
       </v-col>
     </v-row>
     <template v-if="language && Object.keys(currentLocation).length">
+      <v-text-field
+        v-model.trim="currentLocation.title"
+        outlined
+        label="Title"
+      />
       <v-card-title class="text-center">Service settings</v-card-title>
       <v-text-field
         v-model.trim="currentLocation.service.title"
