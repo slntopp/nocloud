@@ -552,7 +552,7 @@ func (s *ServicesProviderServer) Invoke(ctx context.Context, req *sppb.InvokeReq
 
 	var event = &elpb.Event{
 		Entity:    schema.SERVICES_PROVIDERS_COL,
-		Uuid:      sp.GetUuid(),
+		Uuid:      req.GetUuid(),
 		Scope:     "driver",
 		Action:    req.Method,
 		Rc:        0,

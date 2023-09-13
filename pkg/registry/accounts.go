@@ -17,6 +17,7 @@ package registry
 
 import (
 	"context"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"time"
 
@@ -365,6 +366,21 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 	if err != nil {
 		return nil, status.Error(codes.Internal, "Failed to issue token")
 	}
+
+	var event = &elpb.Event{
+		Entity:    schema.ACCOUNTS_COL,
+		Uuid:      acc.Key,
+		Scope:     "database",
+		Action:    "login",
+		Rc:        0,
+		Requestor: acc.Key,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
+	nocloud.Log(log, event)
 
 	return &accountspb.TokenResponse{Token: token_string}, nil
 }

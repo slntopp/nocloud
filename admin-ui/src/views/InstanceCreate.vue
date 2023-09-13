@@ -74,6 +74,7 @@
         @set-meta="meta = $event"
         :instance="instance"
         :plans="plans"
+        :account-id="accountId"
         :plan-rules="planRules"
         :sp-uuid="serviceProviderId"
         :is="templates[type] ?? templates.custom"
@@ -264,10 +265,12 @@ export default {
     const types = require.context(
       "@/components/modules/",
       true,
-      /serviceCreate\.vue$/
+      /instanceCreate\.vue$/
     );
     types.keys().forEach((key) => {
-      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i);
+      const matched = key.match(
+        /\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i
+      );
       if (matched && matched.length > 1) {
         const type = matched[1];
         this.typeItems.push(type);

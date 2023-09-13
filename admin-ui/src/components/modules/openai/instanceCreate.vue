@@ -28,27 +28,6 @@
             @change="changeBilling"
           />
         </v-col>
-        <v-col cols="6">
-          <v-autocomplete
-            label="product"
-            :value="instance.product"
-            v-if="products.length > 0"
-            :items="products"
-            item-text="key"
-            item-value="key"
-            @change="setValue('product', $event)"
-          >
-            <template v-slot:item="{ item }">
-              <div
-                style="width: 100%"
-                class="d-flex justify-space-between align-center"
-              >
-                <span>{{ item.key }}</span>
-                <span class="ml-4">{{ item.title }}</span>
-              </div>
-            </template>
-          </v-autocomplete>
-        </v-col>
       </v-row>
     </v-card>
   </div>
@@ -59,10 +38,13 @@ const getDefaultInstance = () => ({
   title: "instance",
   data: {},
   billing_plan: {},
+  config: {
+    user: null,
+  },
 });
 export default {
-  name: "instance-virtual-create",
-  props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
+  name: "instance-openai-create",
+  props: ["plans", "instance", "planRules", "sp-uuid", "is-edit", "accountId"],
   data: () => ({ bilingPlan: null, products: [] }),
   mounted() {
     if (!this.isEdit) {
@@ -70,6 +52,7 @@ export default {
     } else {
       this.changeBilling(this.instance.billing_plan);
     }
+    this.setValue("config.user", this.accountId);
   },
   methods: {
     changeBilling(val) {
@@ -89,6 +72,9 @@ export default {
   watch: {
     "plans.list"() {
       this.changeBilling(this.instance.billing_plan);
+    },
+    accountId() {
+      this.setValue("config.user", this.accountId);
     },
   },
 };
