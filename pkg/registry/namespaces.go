@@ -17,6 +17,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/registry"
@@ -129,7 +130,7 @@ func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacesp
 	err = s.ctrl.Join(ctx, acc, ns, level, roles.DEFAULT)
 	if err != nil {
 		s.log.Debug("Error while joining account", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Error while joining account")
+		return nil, status.Error(codes.Internal, fmt.Sprintf("Error while joining account. %s", err.Error()))
 	}
 	return &namespacespb.JoinResponse{Result: true}, nil
 }
