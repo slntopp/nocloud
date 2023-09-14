@@ -22,6 +22,7 @@
       <v-col>
         <v-text-field
           readonly
+          :suffix="defaultCurrency"
           label="Price instance total"
           :value="type === 'dedicated' ? +totalNewPrice?.toFixed(2) : getPrice"
         />
@@ -57,6 +58,7 @@
         <v-text-field
           v-model="item.price"
           @change="onUpdatePrice(item, false)"
+          :suffix="defaultCurrency"
           type="number"
           append-icon="mdi-pencil"
         ></v-text-field>
@@ -65,6 +67,7 @@
         <v-text-field
           v-model="item.accountPrice"
           @change="onUpdatePrice(item, true)"
+          :suffix="accountCurrency"
           type="number"
           append-icon="mdi-pencil"
         ></v-text-field>
@@ -73,6 +76,7 @@
         <v-text-field
           :loading="isBasePricesLoading"
           readonly
+          suffix="PLN"
           :value="convertedBasePrices[item.key]"
         ></v-text-field>
       </template>
@@ -80,10 +84,16 @@
         <tr>
           <td>Total instance price</td>
           <td></td>
-          <td>{{ isBasePricesLoading ? "Loading..." : totalBasePrice }}</td>
+          <td>
+            {{
+              isBasePricesLoading
+                ? "Loading..."
+                : [totalBasePrice, "PLN"].join(" ")
+            }}
+          </td>
           <td>
             <div class="d-flex justify-space-between align-center">
-              {{ totalNewPrice?.toFixed(2) }}
+              {{ [totalNewPrice?.toFixed(2), defaultCurrency].join(" ") }}
             </div>
           </td>
           <td>{{ [accountTotalNewPrice, accountCurrency].join(" ") }}</td>
@@ -148,6 +158,8 @@ const priceModelDialog = ref(false);
 const accountTotalNewPrice = computed(() =>
   toAccountPrice(totalNewPrice.value)
 );
+
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const setTotalNewPrice = () => {
   totalNewPrice.value = +pricesItems.value
