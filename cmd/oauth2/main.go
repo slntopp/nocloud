@@ -1,4 +1,4 @@
-package oauth2
+package main
 
 import (
 	"github.com/go-redis/redis/v8"
@@ -64,5 +64,5 @@ func main() {
 
 	server := oauth2.NewOAuth2Server(log, registryHost)
 	server.SetupRegistryClient(registryClient)
-	server.Start(port, []string{})
+	server.Start(port, corsAllowed)
 }
