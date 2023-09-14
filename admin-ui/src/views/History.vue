@@ -4,6 +4,7 @@
       :path="path"
       :account-id="account"
       :uuid="uuid"
+      :loading="isVariantsLoading"
       table-name="all-logs"
     />
   </div>
@@ -22,15 +23,18 @@ export default {
     account: null,
     uuid: null,
     path: null,
+    isVariantsLoading: false,
   }),
   async mounted() {
     this.$store.commit("appSearch/setSearchName", "app-logs");
 
+    this.isVariantsLoading = true;
     await Promise.all([
       this.$store.dispatch("accounts/fetch"),
       this.$store.dispatch("services/fetch"),
       this.$store.dispatch("servicesProviders/fetch"),
     ]);
+    this.isVariantsLoading = false;
 
     this.$store.commit("appSearch/setVariants", {
       service: { items: this.services, title: "Service", key: "entity" },

@@ -98,6 +98,13 @@
           />
         </v-col>
         <v-col>
+          <route-text-field
+            :to="{ name: 'Plan', params: { planId: plan?.uuid } }"
+            :value="plan?.title"
+            label="Billing plan"
+          />
+        </v-col>
+        <v-col>
           <v-text-field readonly :value="type" label="Type" />
         </v-col>
       </v-row>
@@ -223,6 +230,9 @@ export default {
     },
     sp() {
       return this.servicesProviders?.find((sp) => sp?.uuid == this.template.sp);
+    },
+    plan() {
+      return this.template.billingPlan;
     },
     additionalInstanceInfoComponent() {
       return () =>

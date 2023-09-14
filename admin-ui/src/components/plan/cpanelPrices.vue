@@ -3,7 +3,7 @@
     <nocloud-table
       table-name="cpanel-prices"
       class="pa-4"
-      item-key="text"
+      item-key="key"
       :show-select="false"
       :items="prices"
       :headers="headers"
@@ -16,8 +16,14 @@
           :value="item.enabled"
         />
       </template>
+      <template v-slot:[`item.name`]="{ item }">
+        <v-text-field v-model="item.name" />
+      </template>
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field type="number" v-model.number="item.price" />
+      </template>
+      <template v-slot:[`item.sorter`]="{ item }">
+        <v-text-field type="number" v-model.number="item.sorter" />
       </template>
       <template v-slot:[`item.period`]="{ item }">
         <date-field :period="item.period" @changeDate="item.period = $event" />
@@ -49,7 +55,7 @@ export default {
     isPricesLoading: false,
     isSaveLoading: false,
     headers: [
-      { text: "name", value: "name" },
+      { text: "name", value: "name", width: "220px" },
       { text: "BWLIMIT", value: "BWLIMIT" },
       { text: "CGI", value: "CGI" },
       { text: "CPMOD", value: "CPMOD" },
@@ -77,6 +83,7 @@ export default {
       { text: "lve_nproc", value: "lve_nproc" },
       { text: "lve_cpu", value: "lve_cpu" },
       { text: "lve_pmem", value: "lve_pmem" },
+      { text: "Sorter", value: "sorter" },
       { text: "Period", value: "period", width: 220 },
       { text: "Price", value: "price", width: 150 },
       { text: "Enabled", value: "enabled" },
@@ -103,8 +110,10 @@ export default {
       this.prices = res.meta.pkg.map((el) => {
         const price = { ...el };
         const product = this.template.products[el.name];
+        price.key = el.name;
         price.price = product?.price || 0;
         price.period = product?.period || 0;
+        price.sorter = product?.sorter || 0;
         price.enabled = !!product;
         const date = new Date(price.period * 1000);
         const time = date.toUTCString().split(" ");
@@ -131,30 +140,39 @@ export default {
           });
         }
 
-        return (this.products[item.name] = {
-          title: item.name,
-          kind: "PREPAID",
-          price: item.price,
-          period: getTimestamp(item.period),
-          resources: {
-            model: item.name,
-            bandwidth: item.BWLIMIT || undefined,
-            ssd: item.QUOTA || undefined,
-            email: item.MAX_EMAILACCT_QUOTA || undefined,
-            mysql: item.MAXSQL || undefined,
-            websites: 1 + +item.MAXADDON || undefined,
-          },
-        });
+        return;
       }
 
-      this.products[item.name] = undefined;
+      this.products[item.key] = undefined;
     },
     async savePrices() {
+      const products = {};
+
+      this.prices
+        .filter((p) => p.enabled)
+        .forEach((item) => {
+          products[item.key] = {
+            title: item.name,
+            kind: "PREPAID",
+            price: item.price,
+            period: getTimestamp(item.period),
+            sorter: item.sorter,
+            resources: {
+              model: item.name,
+              bandwidth: item.BWLIMIT || undefined,
+              ssd: item.QUOTA || undefined,
+              email: item.MAX_EMAILACCT_QUOTA || undefined,
+              mysql: item.MAXSQL || undefined,
+              websites: 1 + +item.MAXADDON || undefined,
+            },
+          };
+        });
+
       this.isSaveLoading = true;
       try {
         await api.plans.update(this.template.uuid, {
           ...this.template,
-          products: this.products,
+          products,
         });
         this.showSnackbarSuccess({ message: "Plan save successfully" });
       } catch (e) {
