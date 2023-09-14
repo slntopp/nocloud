@@ -3,22 +3,19 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"github.com/dghubble/gologin/v2"
+	google_gologin "github.com/dghubble/gologin/v2/google"
+	"github.com/gorilla/mux"
+	"github.com/slntopp/nocloud-proto/registry"
 	"github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"github.com/slntopp/nocloud/pkg/oauth2/config"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/grpc/metadata"
 	"net/http"
 	"time"
-
-	"github.com/slntopp/nocloud-proto/registry"
-	"github.com/slntopp/nocloud/pkg/oauth2/config"
-
-	"github.com/dghubble/gologin/v2"
-	"github.com/gorilla/mux"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-
-	google_gologin "github.com/dghubble/gologin/v2/google"
 )
 
 type GoogleOauthHandler struct{}
@@ -82,6 +79,9 @@ func (g *GoogleOauthHandler) successHandler(regClient registry.AccountsServiceCl
 				},
 				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
 			})
+			if err != nil {
+				return
+			}
 		}
 
 		res := map[string]string{

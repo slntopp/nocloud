@@ -79,6 +79,9 @@ func (g *GithubOauthHandler) successHandler(regClient registry.AccountsServiceCl
 				},
 				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
 			})
+			if err != nil {
+				return
+			}
 		}
 
 		res := map[string]string{
