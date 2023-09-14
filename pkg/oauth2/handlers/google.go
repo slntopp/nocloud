@@ -1,8 +1,15 @@
 package handlers
 
 import (
-	"github.com/slntopp/nocloud/pkg/oauth2/config"
+	"context"
+	"github.com/slntopp/nocloud-proto/registry/accounts"
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"google.golang.org/grpc/metadata"
 	"net/http"
+
+	"github.com/slntopp/nocloud-proto/registry"
+	"github.com/slntopp/nocloud/pkg/oauth2/config"
 
 	"github.com/dghubble/gologin/v2"
 	"github.com/gorilla/mux"
@@ -14,7 +21,7 @@ import (
 
 type GoogleOauthHandler struct{}
 
-func (g *GoogleOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config) {
+func (g *GoogleOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
 	oauth2Config := &oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
@@ -24,11 +31,35 @@ func (g *GoogleOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config) 
 	stateConfig := gologin.DefaultCookieConfig
 
 	router.Handle("/oauth/google/login", google_gologin.StateHandler(stateConfig, google_gologin.LoginHandler(oauth2Config, nil)))
-	router.Handle("/oauth/google/checkout", google_gologin.StateHandler(stateConfig, google_gologin.CallbackHandler(oauth2Config, g.successHandler(), nil)))
+	router.Handle("/oauth/google/checkout", google_gologin.StateHandler(stateConfig, google_gologin.CallbackHandler(oauth2Config, g.successHandler(regClient), nil)))
 }
 
-func (g *GoogleOauthHandler) successHandler() http.Handler {
+func (g *GoogleOauthHandler) successHandler(regClient registry.AccountsServiceClient) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		user, err := google_gologin.UserFromContext(request.Context())
+		if err != nil {
+			return
+		}
 
+		token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+		if err != nil {
+			return
+		}
+
+		ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+
+		_, err = regClient.Create(ctx, &accounts.CreateRequest{
+			Title:     user.Name,
+			Namespace: schema.ROOT_NAMESPACE_KEY,
+			Auth: &accounts.Credentials{
+				Type: "oauth2-google",
+				Data: []string{
+					user.Email,
+				},
+			},
+		})
+		if err != nil {
+			return
+		}
 	})
 }

@@ -27,6 +27,6 @@ func (g *GithubOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config) 
 
 func (g *GithubOauthHandler) successHandler() http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-
+		github_gologin.UserFromContext(request.Context())
 	})
 }

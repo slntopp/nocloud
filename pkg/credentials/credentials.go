@@ -70,6 +70,8 @@ func Determine(auth_type string) (cred Credentials, ok bool) {
 		return &StandardCredentials{}, true
 	case "whmcs":
 		return &WHMCSCredentials{}, true
+	case "oauth2-google":
+		return &OAuth2GoogleCredentials{}, true
 	default:
 		return nil, false
 	}
@@ -82,6 +84,8 @@ func Find(ctx context.Context, db driver.Database, log *zap.Logger, auth_type st
 		cred = &StandardCredentials{Username: args[0]}
 	case "whmcs":
 		cred = &WHMCSCredentials{Email: args[0]}
+	case "oauth2-google":
+		cred = &OAuth2GoogleCredentials{Email: args[0]}
 	default:
 		return nil, errors.New("unknown auth type")
 	}
