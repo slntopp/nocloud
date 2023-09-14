@@ -63,8 +63,9 @@ const props = defineProps({
   path: {},
   hideRequestor: { type: Boolean, default: false },
   hideUuid: { type: Boolean, default: false },
+  loading: { type: Boolean, default: false },
 });
-const { tableName, accountId, uuid, hideRequestor, hideUuid, path } =
+const { tableName, accountId, uuid, hideRequestor, hideUuid, path, loading } =
   toRefs(props);
 
 const count = ref(10);
@@ -266,10 +267,17 @@ const instances = computed(() => store.getters["services/getInstances"]);
 const searchParams = computed(() => store.getters["appSearch/customParams"]);
 
 onMounted(() => {
-  getFilterItems();
+  if (!loading.value) {
+    getFilterItems();
+  }
 });
 
 watch(accountId, () => updateProps());
+watch(loading, () => {
+  if (!loading.value) {
+    getFilterItems();
+  }
+});
 watch(uuid, () => updateProps());
 watch(searchParams, () => updateProps(), { deep: true });
 watch(path, () => updateProps());
