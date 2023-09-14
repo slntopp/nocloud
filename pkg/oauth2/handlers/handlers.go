@@ -13,6 +13,8 @@ func GetOAuthHandler(handlerType string) OAuthHandler {
 	switch handlerType {
 	case "google":
 		return &GoogleOauthHandler{}
+	case "github":
+		return &GithubOauthHandler{}
 	default:
 		return nil
 	}

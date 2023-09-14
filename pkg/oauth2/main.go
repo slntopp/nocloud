@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
+	"github.com/slntopp/nocloud-proto/registry"
 	config2 "github.com/slntopp/nocloud/pkg/oauth2/config"
 	"github.com/slntopp/nocloud/pkg/oauth2/handlers"
 	"go.uber.org/zap"
@@ -11,16 +12,21 @@ import (
 )
 
 type OAuth2Server struct {
-	router *mux.Router
+	router         *mux.Router
+	registryClient registry.AccountsServiceClient
 
 	log *zap.Logger
 }
 
-func NewOAuth2Server(log *zap.Logger) *OAuth2Server {
+func NewOAuth2Server(log *zap.Logger, host string) *OAuth2Server {
 	return &OAuth2Server{
 		log:    log,
 		router: mux.NewRouter(),
 	}
+}
+
+func (s *OAuth2Server) SetupRegistryClient(registryClient registry.AccountsServiceClient) {
+	s.registryClient = registryClient
 }
 
 func (s *OAuth2Server) registerOAuthHandlers() {
