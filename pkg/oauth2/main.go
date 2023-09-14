@@ -41,7 +41,7 @@ func (s *OAuth2Server) registerOAuthHandlers() {
 			continue
 		}
 
-		handler.Setup(s.router, conf)
+		handler.Setup(s.router, conf, s.registryClient)
 	}
 
 }
