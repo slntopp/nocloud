@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/arangodb/go-driver v1.6.0
+	github.com/dghubble/gologin/v2 v2.4.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/uuid v1.3.1
@@ -21,13 +22,19 @@ require (
 	github.com/wI2L/jsondiff v0.4.0
 	go.uber.org/zap v1.25.0
 	golang.org/x/crypto v0.13.0
+	golang.org/x/oauth2 v0.12.0
 	google.golang.org/grpc v1.58.0
 	google.golang.org/protobuf v1.31.0
 )
 
 require (
+	cloud.google.com/go/compute v1.23.0 // indirect
+	cloud.google.com/go/compute/metadata v0.2.3 // indirect
+	github.com/google/go-github/v48 v48.2.0 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	golang.org/x/net v0.15.0 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
