@@ -46,60 +46,73 @@
         <v-text-field readonly label="Due to date/next payment" :value="date" />
       </v-col>
     </v-row>
-    <nocloud-table
-      hide-default-footer
-      sort-by="index"
-      item-key="key"
-      :show-select="false"
-      :headers="pricesHeaders"
-      :items="pricesItems"
-    >
-      <template v-slot:[`item.price`]="{ item }">
-        <v-text-field
-          v-model="item.price"
-          @change="onUpdatePrice(item, false)"
-          :suffix="defaultCurrency"
-          type="number"
-          append-icon="mdi-pencil"
-        ></v-text-field>
-      </template>
-      <template v-slot:[`item.accountPrice`]="{ item }">
-        <v-text-field
-          v-model="item.accountPrice"
-          @change="onUpdatePrice(item, true)"
-          :suffix="accountCurrency"
-          type="number"
-          append-icon="mdi-pencil"
-        ></v-text-field>
-      </template>
-      <template v-slot:[`item.basePrice`]="{ item }">
-        <v-text-field
-          :loading="isBasePricesLoading"
-          readonly
-          suffix="PLN"
-          :value="convertedBasePrices[item.key]"
-        ></v-text-field>
-      </template>
-      <template v-slot:body.append>
-        <tr>
-          <td>Total instance price</td>
-          <td></td>
-          <td>
-            {{
-              isBasePricesLoading
-                ? "Loading..."
-                : [totalBasePrice, "PLN"].join(" ")
-            }}
-          </td>
-          <td>
-            <div class="d-flex justify-space-between align-center">
-              {{ [totalNewPrice?.toFixed(2), defaultCurrency].join(" ") }}
-            </div>
-          </td>
-          <td>{{ [accountTotalNewPrice, accountCurrency].join(" ") }}</td>
-        </tr>
-      </template>
-    </nocloud-table>
+    <v-expansion-panels>
+      <v-expansion-panel>
+        <v-expansion-panel-header color="background-light"
+          >Prices</v-expansion-panel-header
+        >
+        <v-expansion-panel-content
+          class="ione-billing"
+          color="background-light"
+        >
+          <nocloud-table
+            hide-default-footer
+            sort-by="index"
+            item-key="key"
+            :show-select="false"
+            :headers="pricesHeaders"
+            :items="pricesItems"
+          >
+            <template v-slot:[`item.price`]="{ item }">
+              <v-text-field
+                v-model="item.price"
+                @change="onUpdatePrice(item, false)"
+                :suffix="defaultCurrency"
+                type="number"
+                append-icon="mdi-pencil"
+              ></v-text-field>
+            </template>
+            <template v-slot:[`item.accountPrice`]="{ item }">
+              <v-text-field
+                v-model="item.accountPrice"
+                @change="onUpdatePrice(item, true)"
+                :suffix="accountCurrency"
+                type="number"
+                append-icon="mdi-pencil"
+              ></v-text-field>
+            </template>
+            <template v-slot:[`item.basePrice`]="{ item }">
+              <v-text-field
+                :loading="isBasePricesLoading"
+                readonly
+                suffix="PLN"
+                :value="convertedBasePrices[item.key]"
+              ></v-text-field>
+            </template>
+            <template v-slot:body.append>
+              <tr>
+                <td>Total instance price</td>
+                <td></td>
+                <td>
+                  {{
+                    isBasePricesLoading
+                      ? "Loading..."
+                      : [totalBasePrice, "PLN"].join(" ")
+                  }}
+                </td>
+                <td>
+                  <div class="d-flex justify-space-between align-center">
+                    {{ [totalNewPrice?.toFixed(2), defaultCurrency].join(" ") }}
+                  </div>
+                </td>
+                <td>{{ [accountTotalNewPrice, accountCurrency].join(" ") }}</td>
+              </tr>
+            </template>
+          </nocloud-table>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
+
     <edit-price-model
       @refresh="emit('refresh')"
       :template="template"
