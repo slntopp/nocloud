@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/dghubble/gologin/v2"
 	github_gologin "github.com/dghubble/gologin/v2/github"
 	"github.com/gorilla/mux"
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/oauth2/github"
 	"google.golang.org/grpc/metadata"
 	"net/http"
+	"time"
 )
 
 type GithubOauthHandler struct{}
@@ -45,18 +47,44 @@ func (g *GithubOauthHandler) successHandler(regClient registry.AccountsServiceCl
 
 		ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
 
-		_, err = regClient.Create(ctx, &accounts.CreateRequest{
-			Title:     *user.Name,
-			Namespace: schema.ROOT_NAMESPACE_KEY,
+		response, err := regClient.Token(ctx, &accounts.TokenRequest{
 			Auth: &accounts.Credentials{
-				Type: "oauth2-google",
+				Type: "oauth2-github",
 				Data: []string{
 					*user.Login,
 				},
 			},
+			Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
 		})
 		if err != nil {
-			return
+			_, err = regClient.Create(ctx, &accounts.CreateRequest{
+				Title:     *user.Name,
+				Namespace: schema.ROOT_NAMESPACE_KEY,
+				Auth: &accounts.Credentials{
+					Type: "oauth2-github",
+					Data: []string{
+						*user.Login,
+					},
+				},
+			})
+			if err != nil {
+				return
+			}
+			response, err = regClient.Token(ctx, &accounts.TokenRequest{
+				Auth: &accounts.Credentials{
+					Type: "oauth2-github",
+					Data: []string{
+						*user.Login,
+					},
+				},
+				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
+			})
 		}
+
+		res := map[string]string{
+			"token": response.GetToken(),
+		}
+		marshal, _ := json.Marshal(res)
+		writer.Write(marshal)
 	})
 }

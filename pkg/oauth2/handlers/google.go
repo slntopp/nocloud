@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"google.golang.org/grpc/metadata"
 	"net/http"
+	"time"
 
 	"github.com/slntopp/nocloud-proto/registry"
 	"github.com/slntopp/nocloud/pkg/oauth2/config"
@@ -48,18 +50,44 @@ func (g *GoogleOauthHandler) successHandler(regClient registry.AccountsServiceCl
 
 		ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
 
-		_, err = regClient.Create(ctx, &accounts.CreateRequest{
-			Title:     user.Name,
-			Namespace: schema.ROOT_NAMESPACE_KEY,
+		response, err := regClient.Token(ctx, &accounts.TokenRequest{
 			Auth: &accounts.Credentials{
 				Type: "oauth2-google",
 				Data: []string{
 					user.Email,
 				},
 			},
+			Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
 		})
 		if err != nil {
-			return
+			_, err = regClient.Create(ctx, &accounts.CreateRequest{
+				Title:     user.Name,
+				Namespace: schema.ROOT_NAMESPACE_KEY,
+				Auth: &accounts.Credentials{
+					Type: "oauth2-google",
+					Data: []string{
+						user.Email,
+					},
+				},
+			})
+			if err != nil {
+				return
+			}
+			response, err = regClient.Token(ctx, &accounts.TokenRequest{
+				Auth: &accounts.Credentials{
+					Type: "oauth2-google",
+					Data: []string{
+						user.Email,
+					},
+				},
+				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
+			})
 		}
+
+		res := map[string]string{
+			"token": response.GetToken(),
+		}
+		marshal, _ := json.Marshal(res)
+		writer.Write(marshal)
 	})
 }
