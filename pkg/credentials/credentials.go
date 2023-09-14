@@ -72,6 +72,8 @@ func Determine(auth_type string) (cred Credentials, ok bool) {
 		return &WHMCSCredentials{}, true
 	case "oauth2-google":
 		return &OAuth2GoogleCredentials{}, true
+	case "oauth2-github":
+		return &OAuth2GithubCredentials{}, true
 	default:
 		return nil, false
 	}
@@ -86,6 +88,8 @@ func Find(ctx context.Context, db driver.Database, log *zap.Logger, auth_type st
 		cred = &WHMCSCredentials{Email: args[0]}
 	case "oauth2-google":
 		cred = &OAuth2GoogleCredentials{Email: args[0]}
+	case "oauth2-github":
+		cred = &OAuth2GithubCredentials{Login: args[0]}
 	default:
 		return nil, errors.New("unknown auth type")
 	}
@@ -112,6 +116,10 @@ func MakeCredentials(credentials *accountspb.Credentials, log *zap.Logger) (Cred
 		cred, err = NewStandardCredentials(credentials.Data)
 	case "whmcs":
 		cred, err = NewWHMCSCredentials(credentials.Data)
+	case "oauth2-google":
+		cred, err = NewOAuth2GoogleCredentials(credentials.Data)
+	case "oauth2-github":
+		cred, err = NewOAuth2GithubCredentials(credentials.Data)
 	default:
 		return nil, errors.New("auth type is wrong")
 	}

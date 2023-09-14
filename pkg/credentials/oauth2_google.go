@@ -40,7 +40,7 @@ func (cred *OAuth2GoogleCredentials) SetLogger(log *zap.Logger) {
 func (cred *OAuth2GoogleCredentials) Find(ctx context.Context, db driver.Database) bool {
 	query := `FOR cred IN @@credentials FILTER cred.email == @email RETURN cred`
 	c, err := db.Query(ctx, query, map[string]interface{}{
-		"username":     cred.Email,
+		"email":        cred.Email,
 		"@credentials": schema.CREDENTIALS_COL,
 	})
 	if err != nil {
