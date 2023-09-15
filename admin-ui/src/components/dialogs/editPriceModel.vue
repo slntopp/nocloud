@@ -3,7 +3,7 @@
     persistent
     :value="value"
     @input="emit('input', value)"
-    max-width="60%"
+    max-width="80%"
   >
     <v-card class="pa-5">
       <v-card-title class="text-center">Change price model</v-card-title>
@@ -20,7 +20,7 @@
         </v-col>
       </v-row>
       <v-row align="center">
-        <v-col cols="6">
+        <v-col cols="4">
           <v-select
             v-model="product"
             label="tariff"
@@ -29,15 +29,28 @@
             :items="tariffs"
           />
         </v-col>
-        <v-col cols="3">
+        <v-col cols="2">
           <v-text-field
             readonly
             v-model="productBillingPeriod"
             label="billing period"
           />
         </v-col>
-        <v-col cols="3">
-          <v-text-field readonly :value="fullProduct?.price" label="price" />
+        <v-col v-if="accountRate">
+          <v-text-field
+            :suffix="accountCurrency"
+            readonly
+            :value="accountPrice"
+            label="account price"
+          />
+        </v-col>
+        <v-col>
+          <v-text-field
+            :suffix="defaultCurrency"
+            readonly
+            :value="fullProduct?.price"
+            label="price"
+          />
         </v-col>
       </v-row>
 
@@ -59,11 +72,25 @@
 import { toRefs, ref, computed, onMounted, watch } from "vue";
 import api from "@/api";
 import { getBillingPeriod } from "@/functions";
+import useRate from "@/hooks/useRate";
+import { useStore } from "@/store";
 
-const props = defineProps(["template", "service", "value", "plans"]);
+const props = defineProps([
+  "template",
+  "service",
+  "value",
+  "plans",
+  "accountRate",
+  "accountCurrency",
+]);
 const emit = defineEmits(["refresh", "input"]);
 
-const { template, plans, service } = toRefs(props);
+const { convertFrom } = useRate();
+
+const { template, plans, service, accountRate, accountCurrency } =
+  toRefs(props);
+
+const store = useStore();
 
 const isChangePMLoading = ref(false);
 const plan = ref({});
@@ -133,6 +160,14 @@ const isChangeBtnDisabled = computed(() => {
 });
 
 const fullProduct = computed(() => plan.value?.products?.[product.value]);
+
+const accountPrice = computed(() =>
+  accountRate.value
+    ? convertFrom(fullProduct.value.price, accountRate.value)
+    : 0
+);
+
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const productBillingPeriod = computed(() => {
   return getBillingPeriod(fullProduct.value?.period);
