@@ -56,7 +56,7 @@
 </template>
 
 <script setup>
-import { toRefs, ref, computed, onMounted } from "vue";
+import { toRefs, ref, computed, onMounted, watch } from "vue";
 import api from "@/api";
 import { getBillingPeriod } from "@/functions";
 
@@ -70,9 +70,7 @@ const plan = ref({});
 const product = ref({});
 
 onMounted(() => {
-  plan.value = plans.value.find(
-    ({ uuid }) => uuid === template.value.billingPlan.uuid
-  );
+  setPlan();
   setProduct();
 });
 
@@ -134,9 +132,7 @@ const isChangeBtnDisabled = computed(() => {
   );
 });
 
-const fullProduct = computed(() => {
-  return plan.value.products?.[product.value];
-});
+const fullProduct = computed(() => plan.value?.products?.[product.value]);
 
 const productBillingPeriod = computed(() => {
   return getBillingPeriod(fullProduct.value?.period);
@@ -181,6 +177,12 @@ const changePM = () => {
     });
 };
 
+const setPlan = () => {
+  plan.value =
+    plans.value.find(({ uuid }) => uuid === template.value.billingPlan.uuid) ||
+    template.value.billingPlan;
+};
+
 const setProduct = () => {
   if (template.value.type === "ovh") {
     product.value =
@@ -192,6 +194,8 @@ const setProduct = () => {
     product.value = template.value.product;
   }
 };
+
+watch(plans, setPlan);
 </script>
 
 <style scoped></style>
