@@ -125,6 +125,8 @@
       @refresh="emit('refresh')"
       :template="template"
       :plans="plans"
+      :account-currency="accountCurrency"
+      :account-rate="accountRate"
       :service="service"
       v-model="priceModelDialog"
     />
