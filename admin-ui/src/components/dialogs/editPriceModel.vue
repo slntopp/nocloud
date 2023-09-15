@@ -20,27 +20,27 @@
         </v-col>
       </v-row>
       <v-row align="center">
+        <v-col cols="2">
+          <v-select
+            v-model="selectedPeriod"
+            :items="uniqueBillingPeriods"
+            label="billing period"
+          />
+        </v-col>
         <v-col cols="4">
           <v-select
             v-model="product"
             label="tariff"
             item-text="title"
             item-value="key"
-            :items="tariffs"
-          />
-        </v-col>
-        <v-col cols="2">
-          <v-text-field
-            readonly
-            v-model="productBillingPeriod"
-            label="billing period"
+            :items="filteredTariffs"
           />
         </v-col>
         <v-col v-if="accountRate">
           <v-text-field
             :suffix="accountCurrency"
             readonly
-            :value="accountPrice"
+            :value="isSelectedPlanAvailable ? accountPrice : null"
             label="account price"
           />
         </v-col>
@@ -48,7 +48,7 @@
           <v-text-field
             :suffix="defaultCurrency"
             readonly
-            :value="fullProduct?.price"
+            :value="isSelectedPlanAvailable ? fullProduct?.price : null"
             label="price"
           />
         </v-col>
@@ -95,10 +95,12 @@ const store = useStore();
 const isChangePMLoading = ref(false);
 const plan = ref({});
 const product = ref({});
+const selectedPeriod = ref("");
 
 onMounted(() => {
   setPlan();
   setProduct();
+  selectedPeriod.value = billingPeriods.value[originalProduct.value];
 });
 
 const tariffs = computed(() => {
@@ -116,6 +118,34 @@ const tariffs = computed(() => {
   }
   return tariffs;
 });
+
+const filteredTariffs = computed(() => {
+  return tariffs.value.filter(
+    (t) => billingPeriods.value[t.key] === selectedPeriod.value
+  );
+});
+
+const billingPeriods = computed(() => {
+  const billingPeriods = {};
+
+  tariffs.value.forEach((t) => {
+    billingPeriods[t.key] = getBillingPeriod(t?.period);
+  });
+
+  return billingPeriods;
+});
+
+const uniqueBillingPeriods = computed(() => {
+  const unique = new Map();
+  Object.keys(billingPeriods.value).forEach((k) => {
+    unique.set(billingPeriods.value[k], billingPeriods.value[k]);
+  });
+  return [...unique.values()];
+});
+
+const isSelectedPlanAvailable = computed(() =>
+  filteredTariffs.value.find((t) => product.value === t.key)
+);
 
 const originalProduct = computed(() => {
   switch (template.value.type) {
@@ -188,10 +218,6 @@ const accountPrice = computed(() =>
 
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
-const productBillingPeriod = computed(() => {
-  return getBillingPeriod(fullProduct.value?.period);
-});
-
 const changePM = () => {
   const planCode = product.value.slice(4).toLowerCase().replace(" ", "-");
   const tempService = JSON.parse(JSON.stringify(service.value));
@@ -250,6 +276,9 @@ const setProduct = () => {
 };
 
 watch(plans, setPlan);
+watch(plan, () => {
+  selectedPeriod.value = uniqueBillingPeriods.value[0];
+});
 </script>
 
 <style scoped></style>
