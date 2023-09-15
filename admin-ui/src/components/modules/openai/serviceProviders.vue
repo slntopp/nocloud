@@ -85,7 +85,7 @@ export default {
       if (this.fields[input].type === "secrets") {
         newSecrets[input] = data;
       } else {
-        newVars[input] = { default: data };
+        newVars[input] = { value: { default: data } };
       }
 
       this.$emit(`change:secrets`, newSecrets);
@@ -102,15 +102,11 @@ export default {
         }
       });
     },
-    setVarsValueDefault(vars, fieldName, isChange, data) {
-      vars[fieldName] = {
-        value: {
-          default: isChange ? JSON.parse(data) : this.getValue(fieldName),
-        },
-      };
-    },
     getValue(fieldName) {
-      return this.secrets[fieldName];
+      if (this.fields[fieldName].type === "secrets") {
+        return this.secrets[fieldName];
+      }
+      return this.vars[fieldName]?.value?.default;
     },
   },
 };
