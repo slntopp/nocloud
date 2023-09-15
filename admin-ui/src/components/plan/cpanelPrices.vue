@@ -73,6 +73,7 @@ export default {
       { text: "MAXSUB", value: "MAXSUB" },
       { text: "MAX_DEFER_FAIL_PERCENTAGE", value: "MAX_DEFER_FAIL_PERCENTAGE" },
       { text: "MAX_EMAIL_PER_HOUR", value: "MAX_EMAIL_PER_HOUR" },
+      { text: "MAX_EMAILACCT_QUOTA", value: "MAX_EMAILACCT_QUOTA" },
       { text: "QUOTA", value: "QUOTA" },
       { text: "lve_cpu", value: "lve_cpu" },
       { text: "lve_ep", value: "lve_ep" },
