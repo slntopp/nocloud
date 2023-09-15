@@ -104,14 +104,33 @@ onMounted(() => {
 const tariffs = computed(() => {
   const tariffs = [];
   Object.keys(plan.value?.products || {}).forEach((key) => {
-    if (
-      plan.value.products[key]?.price > instanceTariffPrice.value ||
-      (plan.value.uuid === template.value.billingPlan.uuid &&
-        instanceTariffPrice.value === plan.value.products[key]?.price)
-    )
+    if (plan.value.products[key]?.price > instanceTariffPrice.value)
       tariffs.push({ ...plan.value.products[key], key });
   });
+
+  if (plan.value?.uuid === template.value.billingPlan.uuid) {
+    tariffs.push({
+      ...plan.value.products[originalProduct.value],
+      key: originalProduct.value,
+    });
+  }
   return tariffs;
+});
+
+const originalProduct = computed(() => {
+  switch (template.value.type) {
+    case "ovh": {
+      return (
+        template.value.config.duration + " " + template.value.config.planCode
+      );
+    }
+    case "ione":
+    case "virtual": {
+      return template.value.product;
+    }
+  }
+
+  return null;
 });
 
 const availablePlans = computed(() => {
@@ -162,7 +181,7 @@ const isChangeBtnDisabled = computed(() => {
 const fullProduct = computed(() => plan.value?.products?.[product.value]);
 
 const accountPrice = computed(() =>
-  accountRate.value
+  accountRate.value && fullProduct.value?.price
     ? convertFrom(fullProduct.value.price, accountRate.value)
     : 0
 );
