@@ -22,6 +22,7 @@
       <v-col>
         <v-text-field
           readonly
+          :suffix="defaultCurrency"
           label="Price instance total"
           :value="type === 'dedicated' ? +totalNewPrice?.toFixed(2) : getPrice"
         />
@@ -45,55 +46,87 @@
         <v-text-field readonly label="Due to date/next payment" :value="date" />
       </v-col>
     </v-row>
-    <nocloud-table
-      hide-default-footer
-      sort-by="index"
-      item-key="key"
-      :show-select="false"
-      :headers="pricesHeaders"
-      :items="pricesItems"
-    >
-      <template v-slot:[`item.price`]="{ item }">
-        <v-text-field
-          v-model="item.price"
-          @change="onUpdatePrice(item, false)"
-          type="number"
-          append-icon="mdi-pencil"
-        ></v-text-field>
-      </template>
-      <template v-slot:[`item.accountPrice`]="{ item }">
-        <v-text-field
-          v-model="item.accountPrice"
-          @change="onUpdatePrice(item, true)"
-          type="number"
-          append-icon="mdi-pencil"
-        ></v-text-field>
-      </template>
-      <template v-slot:[`item.basePrice`]="{ item }">
-        <v-text-field
-          :loading="isBasePricesLoading"
-          readonly
-          :value="convertedBasePrices[item.key]"
-        ></v-text-field>
-      </template>
-      <template v-slot:body.append>
-        <tr>
-          <td>Total instance price</td>
-          <td></td>
-          <td>{{ isBasePricesLoading ? "Loading..." : totalBasePrice }}</td>
-          <td>
-            <div class="d-flex justify-space-between align-center">
-              {{ totalNewPrice?.toFixed(2) }}
-            </div>
-          </td>
-          <td>{{ [accountTotalNewPrice, accountCurrency].join(" ") }}</td>
-        </tr>
-      </template>
-    </nocloud-table>
+    <v-expansion-panels>
+      <v-expansion-panel>
+        <v-expansion-panel-header color="background-light"
+          >Prices</v-expansion-panel-header
+        >
+        <v-expansion-panel-content
+          class="ione-billing"
+          color="background-light"
+        >
+          <nocloud-table
+            hide-default-footer
+            sort-by="index"
+            item-key="key"
+            :show-select="false"
+            :headers="pricesHeaders"
+            :items="pricesItems"
+          >
+            <template v-slot:[`item.prices`]="{ item }">
+              <div class="d-flex">
+                <v-text-field
+                  class="mr-1"
+                  v-model="item.accountPrice"
+                  @change="onUpdatePrice(item, true)"
+                  :suffix="accountCurrency"
+                  type="number"
+                  append-icon="mdi-pencil"
+                ></v-text-field>
+                <v-text-field
+                  class="ml-1"
+                  v-model="item.price"
+                  @change="onUpdatePrice(item, false)"
+                  :suffix="defaultCurrency"
+                  type="number"
+                  append-icon="mdi-pencil"
+                ></v-text-field>
+              </div>
+            </template>
+            <template v-slot:[`item.basePrice`]="{ item }">
+              <v-text-field
+                :loading="isBasePricesLoading"
+                readonly
+                suffix="PLN"
+                :value="convertedBasePrices[item.key]"
+              ></v-text-field>
+            </template>
+            <template v-slot:body.append>
+              <tr>
+                <td>Total instance price</td>
+                <td></td>
+                <td>
+                  {{
+                    isBasePricesLoading
+                      ? "Loading..."
+                      : [totalBasePrice, "PLN"].join(" ")
+                  }}
+                </td>
+                <td>
+                  <div class="d-flex align-center">
+                    <span style="width: 50%">
+                      {{ [accountTotalNewPrice, accountCurrency].join(" ") }}
+                    </span>
+                    <span style="width: 50%">
+                      {{
+                        [totalNewPrice?.toFixed(2), defaultCurrency].join(" ")
+                      }}
+                    </span>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </nocloud-table>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
+
     <edit-price-model
       @refresh="emit('refresh')"
       :template="template"
       :plans="plans"
+      :account-currency="accountCurrency"
+      :account-rate="accountRate"
       :service="service"
       v-model="priceModelDialog"
     />
@@ -138,8 +171,7 @@ const pricesHeaders = ref([
   { text: "Name", value: "title" },
   { text: "Billing period", value: "period" },
   { text: "Base price", value: "basePrice" },
-  { text: "Account price", value: "accountPrice" },
-  { text: "Price", value: "price" },
+  { text: "Price", value: "prices" },
 ]);
 const totalNewPrice = ref(0);
 const isBasePricesLoading = ref(false);
@@ -148,6 +180,8 @@ const priceModelDialog = ref(false);
 const accountTotalNewPrice = computed(() =>
   toAccountPrice(totalNewPrice.value)
 );
+
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const setTotalNewPrice = () => {
   totalNewPrice.value = +pricesItems.value

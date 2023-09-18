@@ -359,7 +359,7 @@ export default {
     configureHoverOnMenu() {
       document
         .getElementById("drawer-menu-hover")
-        .addEventListener("mouseenter", () => {
+        ?.addEventListener("mouseenter", () => {
           if (this.isMenuMinimize) {
             this.isMouseOnMenu = true;
             setTimeout(() => {
@@ -371,7 +371,7 @@ export default {
         });
       document
         .getElementById("drawer-menu-hover")
-        .addEventListener("mouseleave", () => {
+        ?.addEventListener("mouseleave", () => {
           if (this.isMouseOnMenu) {
             this.isMouseOnMenu = false;
             setTimeout(() => {
