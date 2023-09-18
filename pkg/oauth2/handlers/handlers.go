@@ -16,6 +16,8 @@ func GetOAuthHandler(handlerType string) OAuthHandler {
 		return &GoogleOauthHandler{}
 	case "github":
 		return &GithubOauthHandler{}
+	case "bitrix":
+		return &BitrixOauthHandler{}
 	default:
 		return nil
 	}

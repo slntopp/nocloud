@@ -17,13 +17,13 @@ import (
 	"time"
 )
 
-type BitrixHandler struct{}
+type BitrixOauthHandler struct{}
 
 type UserInfo struct {
 	Result []map[string]interface{} `json:"result"`
 }
 
-func (g *BitrixHandler) Setup(router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
+func (g *BitrixOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
 	oauth2Config := &oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,

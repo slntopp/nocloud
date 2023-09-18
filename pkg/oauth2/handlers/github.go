@@ -51,6 +51,7 @@ func (g *GithubOauthHandler) successHandler(regClient registry.AccountsServiceCl
 			Auth: &accounts.Credentials{
 				Type: "oauth2-github",
 				Data: []string{
+					"login",
 					*user.Login,
 				},
 			},
@@ -63,6 +64,7 @@ func (g *GithubOauthHandler) successHandler(regClient registry.AccountsServiceCl
 				Auth: &accounts.Credentials{
 					Type: "oauth2-github",
 					Data: []string{
+						"login",
 						*user.Login,
 					},
 				},
@@ -74,6 +76,7 @@ func (g *GithubOauthHandler) successHandler(regClient registry.AccountsServiceCl
 				Auth: &accounts.Credentials{
 					Type: "oauth2-github",
 					Data: []string{
+						"login",
 						*user.Login,
 					},
 				},

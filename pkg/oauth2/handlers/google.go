@@ -51,6 +51,7 @@ func (g *GoogleOauthHandler) successHandler(regClient registry.AccountsServiceCl
 			Auth: &accounts.Credentials{
 				Type: "oauth2-google",
 				Data: []string{
+					"email",
 					user.Email,
 				},
 			},
@@ -63,6 +64,7 @@ func (g *GoogleOauthHandler) successHandler(regClient registry.AccountsServiceCl
 				Auth: &accounts.Credentials{
 					Type: "oauth2-google",
 					Data: []string{
+						"email",
 						user.Email,
 					},
 				},
@@ -74,6 +76,7 @@ func (g *GoogleOauthHandler) successHandler(regClient registry.AccountsServiceCl
 				Auth: &accounts.Credentials{
 					Type: "oauth2-google",
 					Data: []string{
+						"email",
 						user.Email,
 					},
 				},
