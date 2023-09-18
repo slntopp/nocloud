@@ -127,22 +127,6 @@
             </v-list-item-content>
           </v-list-item>
 
-          <v-list-item
-            v-bind="listItemBind"
-            :to="{ name: 'Services' }"
-            @click.ctrl="() => (easterEgg = true)"
-          >
-            <v-list-item-icon>
-              <v-icon :color="easterEgg ? 'green darker-2' : undefined"
-                >mdi-alien</v-icon
-              >
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Services") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
           <v-subheader>BILLING</v-subheader>
 
           <v-list-item v-bind="listItemBind" :to="{ name: 'Plans' }">
@@ -241,6 +225,22 @@
               <v-list-item-title>{{
                 navTitle("DNS manager")
               }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+
+          <v-list-item
+            v-bind="listItemBind"
+            :to="{ name: 'Services' }"
+            @click.ctrl="() => (easterEgg = true)"
+          >
+            <v-list-item-icon>
+              <v-icon :color="easterEgg ? 'green darker-2' : undefined"
+                >mdi-alien</v-icon
+              >
+            </v-list-item-icon>
+
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Services") }}</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
 
