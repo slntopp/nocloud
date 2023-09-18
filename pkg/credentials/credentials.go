@@ -18,6 +18,7 @@ package credentials
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/arangodb/go-driver"
 	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
@@ -65,15 +66,13 @@ type Credentials interface {
 }
 
 func Determine(auth_type string) (cred Credentials, ok bool) {
-	switch auth_type {
-	case "standard":
+	switch {
+	case auth_type == "standard":
 		return &StandardCredentials{}, true
-	case "whmcs":
+	case auth_type == "whmcs":
 		return &WHMCSCredentials{}, true
-	case "oauth2-google":
-		return &OAuth2GoogleCredentials{}, true
-	case "oauth2-github":
-		return &OAuth2GithubCredentials{}, true
+	case strings.HasPrefix(auth_type, "oauth2"):
+		return &OAuth2Credentials{}, true
 	default:
 		return nil, false
 	}
@@ -81,15 +80,13 @@ func Determine(auth_type string) (cred Credentials, ok bool) {
 
 func Find(ctx context.Context, db driver.Database, log *zap.Logger, auth_type string, args ...string) (cred Credentials, err error) {
 	var ok bool
-	switch auth_type {
-	case "standard":
+	switch {
+	case auth_type == "standard":
 		cred = &StandardCredentials{Username: args[0]}
-	case "whmcs":
+	case auth_type == "whmcs":
 		cred = &WHMCSCredentials{Email: args[0]}
-	case "oauth2-google":
-		cred = &OAuth2GoogleCredentials{Email: args[0]}
-	case "oauth2-github":
-		cred = &OAuth2GithubCredentials{Login: args[0]}
+	case strings.HasPrefix(auth_type, "oauth2"):
+		cred = &OAuth2Credentials{AuthField: args[0], AuthValue: args[1]}
 	default:
 		return nil, errors.New("unknown auth type")
 	}
@@ -111,15 +108,13 @@ func Find(ctx context.Context, db driver.Database, log *zap.Logger, auth_type st
 func MakeCredentials(credentials *accountspb.Credentials, log *zap.Logger) (Credentials, error) {
 	var cred Credentials
 	var err error
-	switch credentials.Type {
-	case "standard":
+	switch {
+	case credentials.Type == "standard":
 		cred, err = NewStandardCredentials(credentials.Data)
-	case "whmcs":
+	case credentials.Type == "whmcs":
 		cred, err = NewWHMCSCredentials(credentials.Data)
-	case "oauth2-google":
-		cred, err = NewOAuth2GoogleCredentials(credentials.Data)
-	case "oauth2-github":
-		cred, err = NewOAuth2GithubCredentials(credentials.Data)
+	case strings.HasPrefix(credentials.Type, "oauth2"):
+		cred, err = NewOAuth2Credentials(credentials.Data)
 	default:
 		return nil, errors.New("auth type is wrong")
 	}
