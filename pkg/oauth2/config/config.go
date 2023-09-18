@@ -25,6 +25,11 @@ type OAuth2Config struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 	RedirectURL  string `json:"redirect_url"`
+	AuthURL      string `json:"auth_url"`
+	TokenURL     string `json:"token_url"`
+	StateString  string `json:"state_string"`
+	UserInfoURL  string `json:"user_info_url"`
+	AuthField    string `json:"auth_field"`
 }
 
 func Config() (map[string]OAuth2Config, error) {
