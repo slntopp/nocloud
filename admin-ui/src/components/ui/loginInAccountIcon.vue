@@ -6,7 +6,7 @@
 import api from "@/api";
 import { useStore } from "@/store";
 
-const props = defineProps(["uuid", "instanceId"]);
+const props = defineProps(["uuid", "instanceId", "type"]);
 const store = useStore();
 
 const loginHandler = () => {
@@ -16,9 +16,9 @@ const loginHandler = () => {
       api.settings.get(["app"]).then((res) => {
         const win = window.open(JSON.parse(res.app).url);
 
-        setTimeout(() => {
-          win.postMessage({ token, uuid: props.instanceId }, "*");
-        }, 300);
+        window.addEventListener('message', () => {
+          win.postMessage({ token, uuid: props.instanceId, type: props.type }, "*");
+        });
       });
     })
     .catch((e) => {
