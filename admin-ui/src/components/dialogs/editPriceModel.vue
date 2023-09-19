@@ -55,7 +55,7 @@
       </v-row>
 
       <v-row justify="end">
-        <v-btn class="mx-3" @click="emit('input', false)">Close</v-btn>
+        <v-btn class="mx-3" @click="cancel">Cancel</v-btn>
         <v-btn
           class="mx-3"
           :loading="isChangePMLoading"
@@ -98,9 +98,7 @@ const product = ref({});
 const selectedPeriod = ref("");
 
 onMounted(() => {
-  setPlan();
-  setProduct();
-  selectedPeriod.value = billingPeriods.value[originalProduct.value];
+  setDefaultPlan();
 });
 
 const tariffs = computed(() => {
@@ -259,6 +257,17 @@ const changePM = () => {
       isChangePMLoading.value = false;
       emit("input", false);
     });
+};
+
+const cancel = () => {
+  setDefaultPlan();
+  emit("input", false);
+};
+
+const setDefaultPlan = () => {
+  setPlan();
+  setProduct();
+  selectedPeriod.value = billingPeriods.value[originalProduct.value];
 };
 
 const setPlan = () => {
