@@ -10,6 +10,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/oauth2/config"
+	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc/metadata"
 	"io"
@@ -23,7 +24,7 @@ type UserInfo struct {
 	Result []map[string]interface{} `json:"result"`
 }
 
-func (g *BitrixOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
+func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
 	oauth2Config := &oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
@@ -46,11 +47,13 @@ func (g *BitrixOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config, 
 		state, code := r.FormValue("state"), r.FormValue("code")
 
 		if state != stateString {
+			log.Debug("State string not equal to state", zap.String("state", state), zap.String("stateString", stateString))
 			return
 		}
 
 		token, err := oauth2Config.Exchange(context.Background(), code)
 		if err != nil {
+			log.Error("Failed to get token from exchange", zap.Error(err))
 			return
 		}
 
@@ -62,6 +65,7 @@ func (g *BitrixOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config, 
 		var userInfo = UserInfo{}
 		err = json.Unmarshal(body, &userInfo)
 		if err != nil {
+			log.Error("Failed unmarshal body", zap.Error(err))
 			return
 		}
 
@@ -81,6 +85,7 @@ func (g *BitrixOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config, 
 
 		rootToken, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 		if err != nil {
+			log.Error("Failed create token", zap.Error(err))
 			return
 		}
 
@@ -109,6 +114,7 @@ func (g *BitrixOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config, 
 				},
 			})
 			if err != nil {
+				log.Error("Failed create account", zap.Error(err))
 				return
 			}
 			resp, err = regClient.Token(ctx, &accounts.TokenRequest{
@@ -122,6 +128,7 @@ func (g *BitrixOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config, 
 				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
 			})
 			if err != nil {
+				log.Error("Failed get token", zap.Error(err))
 				return
 			}
 		}

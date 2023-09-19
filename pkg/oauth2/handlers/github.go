@@ -11,6 +11,7 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/oauth2/config"
+	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 	"google.golang.org/grpc/metadata"
@@ -20,7 +21,7 @@ import (
 
 type GithubOauthHandler struct{}
 
-func (g *GithubOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
+func (g *GithubOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
 	oauth2Config := &oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
@@ -30,18 +31,20 @@ func (g *GithubOauthHandler) Setup(router *mux.Router, cfg config.OAuth2Config, 
 	stateConfig := gologin.DefaultCookieConfig
 
 	router.Handle("/oauth/github/login", github_gologin.StateHandler(stateConfig, github_gologin.LoginHandler(oauth2Config, nil)))
-	router.Handle("/oauth/github/checkout", github_gologin.StateHandler(stateConfig, github_gologin.CallbackHandler(oauth2Config, g.successHandler(regClient), nil)))
+	router.Handle("/oauth/github/checkout", github_gologin.StateHandler(stateConfig, github_gologin.CallbackHandler(oauth2Config, g.successHandler(log, regClient), nil)))
 }
 
-func (g *GithubOauthHandler) successHandler(regClient registry.AccountsServiceClient) http.Handler {
+func (g *GithubOauthHandler) successHandler(log *zap.Logger, regClient registry.AccountsServiceClient) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		user, err := github_gologin.UserFromContext(request.Context())
 		if err != nil {
+			log.Error("Failed to get user from ctx", zap.Error(err))
 			return
 		}
 
 		token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 		if err != nil {
+			log.Error("Failed to create token", zap.Error(err))
 			return
 		}
 
@@ -70,6 +73,7 @@ func (g *GithubOauthHandler) successHandler(regClient registry.AccountsServiceCl
 				},
 			})
 			if err != nil {
+				log.Error("Failed to create account", zap.Error(err))
 				return
 			}
 			response, err = regClient.Token(ctx, &accounts.TokenRequest{
@@ -83,6 +87,7 @@ func (g *GithubOauthHandler) successHandler(regClient registry.AccountsServiceCl
 				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
 			})
 			if err != nil {
+				log.Error("Failed to get token", zap.Error(err))
 				return
 			}
 		}
