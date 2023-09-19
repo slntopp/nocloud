@@ -16,10 +16,14 @@ import (
 	"golang.org/x/oauth2/github"
 	"google.golang.org/grpc/metadata"
 	"net/http"
+	"sync"
 	"time"
 )
 
-type GithubOauthHandler struct{}
+type GithubOauthHandler struct {
+	states map[string]string
+	m      *sync.Mutex
+}
 
 func (g *GithubOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
 	oauth2Config := &oauth2.Config{

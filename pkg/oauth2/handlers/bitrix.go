@@ -15,16 +15,23 @@ import (
 	"google.golang.org/grpc/metadata"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 )
 
-type BitrixOauthHandler struct{}
+type BitrixOauthHandler struct {
+	states map[string]string
+	m      *sync.Mutex
+}
 
 type UserInfo struct {
 	Result []map[string]interface{} `json:"result"`
 }
 
 func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
+	g.states = map[string]string{}
+	g.m = &sync.Mutex{}
+
 	oauth2Config := &oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
@@ -40,16 +47,29 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 	field := cfg.AuthField
 
 	router.Handle("/oauth/bitrix/login", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		state, redirect := r.FormValue("state"), r.FormValue("redirect")
+
+		g.m.Lock()
+		g.states[state] = redirect
+		g.m.Unlock()
+
 		url := oauth2Config.AuthCodeURL(stateString)
 		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 	}))
 	router.Handle("/oauth/bitrix/checkout", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		state, code := r.FormValue("state"), r.FormValue("code")
+		var redirect string
 
-		if state != stateString {
+		g.m.Lock()
+
+		if _, ok := g.states[state]; !ok {
 			log.Debug("State string not equal to state", zap.String("state", state), zap.String("stateString", stateString))
 			return
 		}
+
+		redirect = g.states[state]
+		delete(g.states, state)
+		g.m.Unlock()
 
 		token, err := oauth2Config.Exchange(context.Background(), code)
 		if err != nil {
@@ -143,10 +163,7 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 			}
 		}
 
-		res := map[string]string{
-			"token": resp.GetToken(),
-		}
-		marshal, _ := json.Marshal(res)
-		w.Write(marshal)
+		http.Redirect(w, r, fmt.Sprintf("%s?token=?%s", redirect, resp.GetToken()), http.StatusSeeOther)
+
 	}))
 }

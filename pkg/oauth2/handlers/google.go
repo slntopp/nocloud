@@ -16,12 +16,20 @@ import (
 	"golang.org/x/oauth2/google"
 	"google.golang.org/grpc/metadata"
 	"net/http"
+	"sync"
 	"time"
 )
 
-type GoogleOauthHandler struct{}
+type GoogleOauthHandler struct {
+	states map[string]string
+	m      *sync.Mutex
+}
 
 func (g *GoogleOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
+
+	g.states = map[string]string{}
+	g.m = &sync.Mutex{}
+
 	oauth2Config := &oauth2.Config{
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,

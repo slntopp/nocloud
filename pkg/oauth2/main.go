@@ -1,11 +1,12 @@
 package oauth2
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
 	"github.com/slntopp/nocloud-proto/registry"
-	config2 "github.com/slntopp/nocloud/pkg/oauth2/config"
+	config "github.com/slntopp/nocloud/pkg/oauth2/config"
 	"github.com/slntopp/nocloud/pkg/oauth2/handlers"
 	"go.uber.org/zap"
 	"net/http"
@@ -30,12 +31,12 @@ func (s *OAuth2Server) SetupRegistryClient(registryClient registry.AccountsServi
 }
 
 func (s *OAuth2Server) registerOAuthHandlers() {
-	config, err := config2.Config()
+	cfg, err := config.Config()
 	if err != nil {
 		s.log.Fatal("Failed to read config", zap.Error(err))
 	}
 
-	for key, conf := range config {
+	for key, conf := range cfg {
 		handler := handlers.GetOAuthHandler(key)
 		if handler == nil {
 			continue
@@ -48,6 +49,28 @@ func (s *OAuth2Server) registerOAuthHandlers() {
 
 func (s *OAuth2Server) Start(port string, corsAllowed []string) {
 	s.registerOAuthHandlers()
+
+	s.router.HandleFunc("/oauth", func(writer http.ResponseWriter, request *http.Request) {
+		cfg, err := config.Config()
+		if err != nil {
+			s.log.Error("Failed to read config", zap.Error(err))
+			return
+		}
+
+		var resp []string
+
+		for key := range cfg {
+			resp = append(resp, key)
+		}
+
+		marshal, err := json.Marshal(resp)
+		if err != nil {
+			s.log.Error("Failed to marshal config", zap.Error(err))
+			return
+		}
+
+		writer.Write(marshal)
+	})
 
 	handler := cors.New(cors.Options{
 		AllowedOrigins:   corsAllowed,
