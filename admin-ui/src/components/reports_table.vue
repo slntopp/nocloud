@@ -136,6 +136,7 @@ const isLoading = computed(() => {
 });
 
 const requestOptions = computed(() => ({
+  ...filters.value,
   page: page.value,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
@@ -146,7 +147,6 @@ const requestOptions = computed(() => ({
   to: durationFilter.value.to
     ? new Date(durationFilter.value.to).getTime() / 1000
     : undefined,
-  filters: filters.value,
 }));
 
 const onUpdateOptions = async (newOptions) => {
