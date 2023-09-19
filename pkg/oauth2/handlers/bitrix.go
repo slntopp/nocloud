@@ -59,8 +59,18 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 
 		response, err := http.Get(fmt.Sprintf("%s/rest/user.current.json?auth=%s", userInfoUrl, token.AccessToken))
 
+		if err != nil {
+			log.Error("Failed to make request", zap.Error(err))
+			return
+		}
+
 		defer response.Body.Close()
 		body, err := io.ReadAll(response.Body)
+
+		if err != nil {
+			log.Error("Failed to read body", zap.Error(err))
+			return
+		}
 
 		var userInfo = UserInfo{}
 		err = json.Unmarshal(body, &userInfo)
