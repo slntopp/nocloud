@@ -219,7 +219,6 @@ const accountPrice = computed(() =>
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const changePM = () => {
-  const planCode = product.value.slice(4).toLowerCase().replace(" ", "-");
   const tempService = JSON.parse(JSON.stringify(service.value));
 
   const igIndex = tempService.instancesGroups.findIndex((ig) =>
@@ -231,9 +230,14 @@ const changePM = () => {
 
   tempService.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
     plan.value;
-  tempService.instancesGroups[igIndex].instances[
-    instanceIndex
-  ].config.planCode = planCode;
+  if (template.value.type.includes("ovh")) {
+    tempService.instancesGroups[igIndex].instances[
+      instanceIndex
+    ].config.duration = product.value.split(" ")[0];
+    tempService.instancesGroups[igIndex].instances[
+      instanceIndex
+    ].config.planCode = product.value.split(" ")[1];
+  }
   tempService.instancesGroups[igIndex].instances[instanceIndex].product =
     product.value;
 
