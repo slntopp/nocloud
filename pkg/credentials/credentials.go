@@ -86,7 +86,7 @@ func Find(ctx context.Context, db driver.Database, log *zap.Logger, auth_type st
 	case auth_type == "whmcs":
 		cred = &WHMCSCredentials{Email: args[0]}
 	case strings.HasPrefix(auth_type, "oauth2"):
-		cred = &OAuth2Credentials{AuthField: args[0], AuthValue: args[1]}
+		cred = &OAuth2Credentials{AuthField: args[0], AuthValue: args[1], AuthType: auth_type}
 	default:
 		return nil, errors.New("unknown auth type")
 	}

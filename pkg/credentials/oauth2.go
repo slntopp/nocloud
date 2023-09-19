@@ -12,6 +12,8 @@ type OAuth2Credentials struct {
 	AuthField string `json:"auth_field"`
 	AuthValue string `json:"auth_value"`
 
+	AuthType string `json:"auth_type"`
+
 	log *zap.Logger
 	driver.DocumentMeta
 }
@@ -24,8 +26,8 @@ func NewOAuth2Credentials(data []string) (Credentials, error) {
 	return &OAuth2Credentials{AuthField: field, AuthValue: value}, nil
 }
 
-func (*OAuth2Credentials) Type() string {
-	return "oauth2-github"
+func (cred *OAuth2Credentials) Type() string {
+	return cred.AuthType
 }
 
 // Authorize method for StandardCredentials assumes that args consist of username and password stored at 0 and 1 accordingly
