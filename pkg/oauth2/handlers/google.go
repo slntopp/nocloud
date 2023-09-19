@@ -3,8 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"github.com/dghubble/gologin/v2"
-	google_gologin "github.com/dghubble/gologin/v2/google"
+	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/slntopp/nocloud-proto/registry"
 	"github.com/slntopp/nocloud-proto/registry/accounts"
@@ -15,6 +14,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/grpc/metadata"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -34,76 +34,121 @@ func (g *GoogleOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
 		RedirectURL:  cfg.RedirectURL,
+		Scopes:       []string{cfg.Scope},
 		Endpoint:     google.Endpoint,
 	}
-	stateConfig := gologin.DefaultCookieConfig
 
-	router.Handle("/oauth/google/login", google_gologin.StateHandler(stateConfig, google_gologin.LoginHandler(oauth2Config, nil)))
-	router.Handle("/oauth/google/checkout", google_gologin.StateHandler(stateConfig, google_gologin.CallbackHandler(oauth2Config, g.successHandler(log, regClient), nil)))
-}
+	userInfoUrl := cfg.UserInfoURL
+	field := cfg.AuthField
 
-func (g *GoogleOauthHandler) successHandler(log *zap.Logger, regClient registry.AccountsServiceClient) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		user, err := google_gologin.UserFromContext(request.Context())
-		if err != nil {
-			log.Error("Failed to get user from ctx", zap.Error(err))
+	router.Handle("/oauth/google/login", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		state, redirect := r.FormValue("state"), r.FormValue("redirect")
+
+		g.m.Lock()
+		g.states[state] = redirect
+		g.m.Unlock()
+
+		url := oauth2Config.AuthCodeURL(state)
+		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	}))
+
+	router.Handle("/oauth/google/checkout", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		state, code := r.FormValue("state"), r.FormValue("code")
+		var redirect string
+
+		g.m.Lock()
+
+		if _, ok := g.states[state]; !ok {
+			log.Debug("State string not equal to state", zap.String("state", state), zap.String("stateString", state))
 			return
 		}
 
-		token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+		redirect = g.states[state]
+		delete(g.states, state)
+		g.m.Unlock()
+
+		token, err := oauth2Config.Exchange(context.Background(), code)
 		if err != nil {
-			log.Error("Failed to create token", zap.Error(err))
+			log.Error("Failed to get token from exchange", zap.Error(err))
 			return
 		}
 
-		ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+token)
+		response, err := http.Get(fmt.Sprintf("%s%s", userInfoUrl, token.AccessToken))
 
-		response, err := regClient.Token(ctx, &accounts.TokenRequest{
+		if err != nil {
+			log.Error("Failed to make request", zap.Error(err))
+			return
+		}
+
+		defer response.Body.Close()
+		body, err := io.ReadAll(response.Body)
+
+		if err != nil {
+			log.Error("Failed to read body", zap.Error(err))
+			return
+		}
+
+		var userInfo = map[string]interface{}{}
+		err = json.Unmarshal(body, &userInfo)
+		if err != nil {
+			log.Error("Failed unmarshal body", zap.Error(err))
+			return
+		}
+
+		value := userInfo[field].(string)
+
+		name := userInfo["name"].(string)
+
+		rootToken, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+		if err != nil {
+			log.Error("Failed create token", zap.Error(err))
+			return
+		}
+
+		ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+rootToken)
+
+		resp, err := regClient.Token(ctx, &accounts.TokenRequest{
 			Auth: &accounts.Credentials{
 				Type: "oauth2-google",
 				Data: []string{
-					"email",
-					user.Email,
+					field,
+					value,
 				},
 			},
 			Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
 		})
 		if err != nil {
 			_, err = regClient.Create(ctx, &accounts.CreateRequest{
-				Title:     user.Name,
+				Title:     name,
 				Namespace: schema.ROOT_NAMESPACE_KEY,
 				Auth: &accounts.Credentials{
 					Type: "oauth2-google",
 					Data: []string{
-						"email",
-						user.Email,
+						field,
+						value,
 					},
 				},
 			})
 			if err != nil {
-				log.Error("Failed to create account", zap.Error(err))
+				log.Error("Failed create account", zap.Error(err))
 				return
 			}
-			response, err = regClient.Token(ctx, &accounts.TokenRequest{
+			resp, err = regClient.Token(ctx, &accounts.TokenRequest{
 				Auth: &accounts.Credentials{
 					Type: "oauth2-google",
 					Data: []string{
-						"email",
-						user.Email,
+						field,
+						value,
 					},
 				},
 				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
 			})
 			if err != nil {
-				log.Error("Failed to get token", zap.Error(err))
+				log.Error("Failed get token", zap.Error(err))
 				return
 			}
 		}
 
-		res := map[string]string{
-			"token": response.GetToken(),
-		}
-		marshal, _ := json.Marshal(res)
-		writer.Write(marshal)
-	})
+		http.Redirect(w, r, fmt.Sprintf("%s?token=?%s", redirect, resp.GetToken()), http.StatusSeeOther)
+	}))
 }

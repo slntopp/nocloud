@@ -42,7 +42,6 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 		},
 	}
 
-	stateString := cfg.StateString
 	userInfoUrl := cfg.UserInfoURL
 	field := cfg.AuthField
 
@@ -53,7 +52,7 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 		g.states[state] = redirect
 		g.m.Unlock()
 
-		url := oauth2Config.AuthCodeURL(stateString)
+		url := oauth2Config.AuthCodeURL(state)
 		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 	}))
 	router.Handle("/oauth/bitrix/checkout", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +62,7 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 		g.m.Lock()
 
 		if _, ok := g.states[state]; !ok {
-			log.Debug("State string not equal to state", zap.String("state", state), zap.String("stateString", stateString))
+			log.Debug("State string not equal to state", zap.String("state", state), zap.String("stateString", state))
 			return
 		}
 
@@ -77,7 +76,7 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 			return
 		}
 
-		response, err := http.Get(fmt.Sprintf("%s/rest/user.current.json?auth=%s", userInfoUrl, token.AccessToken))
+		response, err := http.Get(fmt.Sprintf("%s%s", userInfoUrl, token.AccessToken))
 
 		if err != nil {
 			log.Error("Failed to make request", zap.Error(err))
@@ -123,7 +122,7 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 
 		resp, err := regClient.Token(ctx, &accounts.TokenRequest{
 			Auth: &accounts.Credentials{
-				Type: "oauth2-github",
+				Type: "oauth2-bitrix",
 				Data: []string{
 					field,
 					value,
@@ -149,7 +148,7 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 			}
 			resp, err = regClient.Token(ctx, &accounts.TokenRequest{
 				Auth: &accounts.Credentials{
-					Type: "oauth2-github",
+					Type: "oauth2-bitrix",
 					Data: []string{
 						field,
 						value,
