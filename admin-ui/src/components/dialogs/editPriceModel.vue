@@ -229,12 +229,16 @@ const changePM = () => {
   tempService.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
     plan.value;
   if (template.value.type.includes("ovh")) {
+    const duration = product.value.split(" ")[0];
     tempService.instancesGroups[igIndex].instances[
       instanceIndex
-    ].config.duration = product.value.split(" ")[0];
+    ].config.duration = duration;
     tempService.instancesGroups[igIndex].instances[
       instanceIndex
     ].config.planCode = product.value.split(" ")[1];
+    tempService.instancesGroups[igIndex].instances[
+      instanceIndex
+    ].config.pricingMode = duration === "P1M" ? "default" : "upfront12";
   }
   tempService.instancesGroups[igIndex].instances[instanceIndex].product =
     product.value;
