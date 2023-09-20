@@ -79,34 +79,32 @@
             <template v-slot:[`item.price`]="{ item }">
               <div class="d-flex">
                 <v-text-field
-                  class="mr-1"
-                  :suffix="accountCurrency"
-                  v-model="item.accountPrice"
-                  @input="updatePrice(item, true)"
-                  append-icon="mdi-pencil"
-                />
-                <v-text-field
-                  class="ml-1"
+                  class="mr-2"
                   :suffix="defaultCurrency"
                   v-model="item.price"
                   @input="updatePrice(item, false)"
                   append-icon="mdi-pencil"
                 />
+                <v-text-field
+                  class="ml-2"
+                  :suffix="accountCurrency"
+                  v-model="item.accountPrice"
+                  @input="updatePrice(item, true)"
+                  append-icon="mdi-pencil"
+                />
               </div>
             </template>
             <template v-slot:[`item.quantity`]="{ item }">
-              {{ item.quantity?.toFixed(2) }}
+              {{ item.quantity?.toFixed(2) }} {{ item.unit }}
             </template>
             <template v-slot:[`item.total`]="{ item }">
+              {{ totalPrices[item.name]?.toFixed(2) }}
+              {{ defaultCurrency }} /
               {{ totalAccountPrices[item.name]?.toFixed(2) }}
-              {{ accountCurrency }} / {{ totalPrices[item.name]?.toFixed(2) }}
-              {{ defaultCurrency }}
+              {{ accountCurrency }}
             </template>
             <template v-slot:body.append>
               <tr>
-                <td></td>
-                <td></td>
-                <td></td>
                 <td></td>
                 <td></td>
                 <td>
@@ -115,6 +113,8 @@
                       ?.period
                   }}
                 </td>
+                <td></td>
+                <td></td>
                 <td>
                   {{ totalAccountPrice }} {{ accountCurrency }} /
                   {{ totalPrice }}
@@ -197,11 +197,10 @@ const accountPrice = ref(0);
 const billingItems = ref([]);
 const billingHeaders = ref([
   { text: "Name", value: "name" },
-  { text: "Unit name", value: "unit" },
-  { text: "Price per unit", value: "price" },
-  { text: "Unit quantity", value: "quantity" },
   { text: "Payment term", value: "kind" },
   { text: "Billing period", value: "period" },
+  { text: "Price per unit", value: "price" },
+  { text: "Unit quantity", value: "quantity" },
   { text: "Total price", value: "total" },
 ]);
 
