@@ -17,7 +17,6 @@
       :footer-error="fetchError"
       :server-items-length="count"
       :server-side-page="page"
-      :show-select="false"
       sort-by="exec"
       sort-desc
       @update:options="onUpdateOptions"
