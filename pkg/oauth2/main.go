@@ -32,11 +32,13 @@ func (s *OAuth2Server) SetupRegistryClient(registryClient registry.AccountsServi
 
 func (s *OAuth2Server) registerOAuthHandlers() {
 	cfg, err := config.Config()
+	s.log.Debug("Read config", zap.Any("cfg", cfg))
 	if err != nil {
 		s.log.Fatal("Failed to read config", zap.Error(err))
 	}
 
 	for key, conf := range cfg {
+		s.log.Debug("Setting handler", zap.String("key", key))
 		handler := handlers.GetOAuthHandler(key)
 		if handler == nil {
 			continue
@@ -79,7 +81,8 @@ func (s *OAuth2Server) Start(port string, corsAllowed []string) {
 		AllowCredentials: true,
 	}).Handler(s.router)
 
-	err := http.ListenAndServe(fmt.Sprintf("localhost:%s", port), handler)
+	s.log.Debug("listen", zap.String("port", port))
+	err := http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", port), handler)
 	if err != nil {
 		s.log.Fatal("Failed to start server", zap.Error(err))
 	}
