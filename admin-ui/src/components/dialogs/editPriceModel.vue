@@ -55,7 +55,7 @@
       </v-row>
 
       <v-row justify="end">
-        <v-btn class="mx-3" @click="emit('input', false)">Close</v-btn>
+        <v-btn class="mx-3" @click="cancel">Cancel</v-btn>
         <v-btn
           class="mx-3"
           :loading="isChangePMLoading"
@@ -98,9 +98,7 @@ const product = ref({});
 const selectedPeriod = ref("");
 
 onMounted(() => {
-  setPlan();
-  setProduct();
-  selectedPeriod.value = billingPeriods.value[originalProduct.value];
+  setDefaultPlan();
 });
 
 const tariffs = computed(() => {
@@ -219,7 +217,6 @@ const accountPrice = computed(() =>
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const changePM = () => {
-  const planCode = product.value.slice(4).toLowerCase().replace(" ", "-");
   const tempService = JSON.parse(JSON.stringify(service.value));
 
   const igIndex = tempService.instancesGroups.findIndex((ig) =>
@@ -231,9 +228,18 @@ const changePM = () => {
 
   tempService.instancesGroups[igIndex].instances[instanceIndex].billingPlan =
     plan.value;
-  tempService.instancesGroups[igIndex].instances[
-    instanceIndex
-  ].config.planCode = planCode;
+  if (template.value.type.includes("ovh")) {
+    const duration = product.value.split(" ")[0];
+    tempService.instancesGroups[igIndex].instances[
+      instanceIndex
+    ].config.duration = duration;
+    tempService.instancesGroups[igIndex].instances[
+      instanceIndex
+    ].config.planCode = product.value.split(" ")[1];
+    tempService.instancesGroups[igIndex].instances[
+      instanceIndex
+    ].config.pricingMode = duration === "P1M" ? "default" : "upfront12";
+  }
   tempService.instancesGroups[igIndex].instances[instanceIndex].product =
     product.value;
 
@@ -255,6 +261,17 @@ const changePM = () => {
       isChangePMLoading.value = false;
       emit("input", false);
     });
+};
+
+const cancel = () => {
+  setDefaultPlan();
+  emit("input", false);
+};
+
+const setDefaultPlan = () => {
+  setPlan();
+  setProduct();
+  selectedPeriod.value = billingPeriods.value[originalProduct.value];
 };
 
 const setPlan = () => {

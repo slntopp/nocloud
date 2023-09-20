@@ -8,7 +8,7 @@
     loading-text="Loading... Please wait"
     color="background-light"
     :items="items"
-    :show-select="!!tableName || showSelect"
+    :show-select="showSelect"
     :value="selected"
     @input="handleSelect"
     :hide-default-footer="hideDefaultFooter"

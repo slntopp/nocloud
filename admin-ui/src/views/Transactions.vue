@@ -48,6 +48,7 @@
     />
 
     <reports-table
+      v-if="!isInitLoading"
       table-name="transaction-table"
       :filters="filters"
       :select-record="selectTransaction"
@@ -72,6 +73,7 @@ export default {
     serviceId: null,
     series: [],
     chartLoading: false,
+    isInitLoading: true,
     chartOptions: {
       chart: { height: 250, type: "line" },
       dataLabels: { enabled: false },
@@ -148,8 +150,9 @@ export default {
     if (this.$route.query.account) {
       this.accountId = this.$route.query.account;
     } else {
-      this.accountId = this.user.uuid || null;
+      this.accountId = null;
     }
+    this.isInitLoading = false;
   },
   mounted() {
     this.$store.dispatch("accounts/fetch");
