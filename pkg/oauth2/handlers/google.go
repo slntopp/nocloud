@@ -41,7 +41,7 @@ func (g *GoogleOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 	userInfoUrl := cfg.UserInfoURL
 	field := cfg.AuthField
 
-	router.Handle("/oauth/google/login", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.Handle("/oauth/google/sign_in", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		state, redirect := r.FormValue("state"), r.FormValue("redirect")
 
 		g.m.Lock()

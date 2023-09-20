@@ -45,7 +45,7 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 	userInfoUrl := cfg.UserInfoURL
 	field := cfg.AuthField
 
-	router.Handle("/oauth/bitrix/login", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.Handle("/oauth/bitrix/sign_in", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		state, redirect := r.FormValue("state"), r.FormValue("redirect")
 
 		g.m.Lock()
