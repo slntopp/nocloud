@@ -76,7 +76,7 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 			return
 		}
 
-		response, err := http.Get(fmt.Sprintf("%s%s", userInfoUrl, token.AccessToken))
+		response, err := http.Get(fmt.Sprintf("%s?auth=%s", userInfoUrl, token.AccessToken))
 
 		if err != nil {
 			log.Error("Failed to make request", zap.Error(err))
