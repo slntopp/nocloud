@@ -150,7 +150,7 @@ export default {
     if (this.$route.query.account) {
       this.accountId = this.$route.query.account;
     } else {
-      this.accountId = this.user.uuid || null;
+      this.accountId = null;
     }
     this.isInitLoading = false;
   },
