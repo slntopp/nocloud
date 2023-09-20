@@ -23,7 +23,7 @@ const useCurrency = () => {
       )?.rate;
     }
 
-    return rate ? (price * rate).toFixed(2) : 0;
+    return rate ? (price / rate).toFixed(2) : 0;
   };
 
   const convertTo = (price, currency) => {
