@@ -20,13 +20,15 @@ type OAuth2Server struct {
 }
 
 func NewOAuth2Server(log *zap.Logger, host string) *OAuth2Server {
+	log.Debug("New Server")
 	return &OAuth2Server{
-		log:    log,
+		log:    log.Named("OauthServer"),
 		router: mux.NewRouter(),
 	}
 }
 
 func (s *OAuth2Server) SetupRegistryClient(registryClient registry.AccountsServiceClient) {
+	s.log.Debug("Reg registry client")
 	s.registryClient = registryClient
 }
 
