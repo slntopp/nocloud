@@ -234,12 +234,6 @@ export default {
       { value: "transaction", title: "Transaction" },
     ],
     type: "transaction",
-
-    amountTypes: [
-      { title: "Top-up", value: false },
-      { title: "Debit", value: true },
-      { title: "Account balance", value: null },
-    ],
     amountType: true,
   }),
   methods: {
@@ -405,6 +399,20 @@ export default {
           "This field is required!",
       ];
     },
+    amountTypes() {
+      if (this.isTransaction) {
+        return [
+          { title: "Top-up", value: false },
+          { title: "Debit", value: true },
+          { title: "Account balance", value: null },
+        ];
+      }
+
+      return [
+        { title: "Top-up invoice (with balance change)", value: true },
+        { title: "Payment invoice (no balance change)", value: false },
+      ];
+    },
   },
   watch: {
     "transaction.service"() {
@@ -413,6 +421,7 @@ export default {
     type() {
       this.transaction.meta.type = this.type;
       if (this.isInvoice) {
+        this.amountType = false;
         this.resetDate();
       } else if (this.isTransaction) {
         this.initDate();
