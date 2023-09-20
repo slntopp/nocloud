@@ -420,13 +420,14 @@ export default {
     },
   },
   created() {
-    window.addEventListener("message", ({ data, origin }) => {
-      const url = `https://app.${location.host.split(".").slice(1).join(".")}`;
+    // window.addEventListener("message", ({ data, origin }) => {
+    //   const url = `https://app.${location.host.split(".").slice(1).join(".")}`;
 
-      if (origin !== url) return;
-      this.$store.commit("auth/setToken", data);
-      location.assign("/admin");
-    });
+    //   if (origin !== url) return;
+    //   if (data === 'ready') return;
+    //   this.$store.commit("auth/setToken", data);
+    //   location.assign("/admin");
+    // });
 
     this.$store.dispatch("auth/load");
 

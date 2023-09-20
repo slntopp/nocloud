@@ -26,6 +26,7 @@
         <login-in-account-icon
           :uuid="getAccount(item).uuid"
           :instanceId="item.uuid"
+          :type="item.type"
         />
       </div>
     </template>
