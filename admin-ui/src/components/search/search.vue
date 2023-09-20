@@ -172,13 +172,17 @@ export default {
     },
     setEntity(index) {
       const item = this.searchItems[index];
-      if (item.isSelect) {
-        return;
-      }
-
       const variant =
         this.variants[this.selectedGroupKey] || this.variants[item?.key];
       const key = variant?.key || this.selectedGroupKey;
+
+      if (item.isSelect) {
+        return this.$store.commit("appSearch/deleteCustomParam", {
+          isArray: variant.isArray,
+          key,
+          value: item.uuid,
+        });
+      }
 
       if (variant?.isArray) {
         this.customParams[key]?.forEach((i) => {

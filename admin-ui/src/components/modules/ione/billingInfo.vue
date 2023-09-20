@@ -77,34 +77,33 @@
             hide-default-footer
           >
             <template v-slot:[`item.price`]="{ item }">
-              <v-text-field
-                :suffix="defaultCurrency"
-                v-model="item.price"
-                @input="updatePrice(item, false)"
-                append-icon="mdi-pencil"
-              />
-            </template>
-            <template v-slot:[`item.accountPrice`]="{ item }">
-              <v-text-field
-                :suffix="accountCurrency"
-                v-model="item.accountPrice"
-                @input="updatePrice(item, true)"
-                append-icon="mdi-pencil"
-              />
+              <div class="d-flex">
+                <v-text-field
+                  class="mr-1"
+                  :suffix="accountCurrency"
+                  v-model="item.accountPrice"
+                  @input="updatePrice(item, true)"
+                  append-icon="mdi-pencil"
+                />
+                <v-text-field
+                  class="ml-1"
+                  :suffix="defaultCurrency"
+                  v-model="item.price"
+                  @input="updatePrice(item, false)"
+                  append-icon="mdi-pencil"
+                />
+              </div>
             </template>
             <template v-slot:[`item.quantity`]="{ item }">
               {{ item.quantity?.toFixed(2) }}
             </template>
             <template v-slot:[`item.total`]="{ item }">
-              {{ totalPrices[item.name]?.toFixed(2) }} {{ defaultCurrency }}
-            </template>
-            <template v-slot:[`item.totalAccount`]="{ item }">
               {{ totalAccountPrices[item.name]?.toFixed(2) }}
-              {{ accountCurrency }}
+              {{ accountCurrency }} / {{ totalPrices[item.name]?.toFixed(2) }}
+              {{ defaultCurrency }}
             </template>
             <template v-slot:body.append>
               <tr>
-                <td></td>
                 <td></td>
                 <td></td>
                 <td></td>
@@ -116,8 +115,11 @@
                       ?.period
                   }}
                 </td>
-                <td>{{ totalAccountPrice }} {{ accountCurrency }}</td>
-                <td>{{ totalPrice }} {{ defaultCurrency }}</td>
+                <td>
+                  {{ totalAccountPrice }} {{ accountCurrency }} /
+                  {{ totalPrice }}
+                  {{ defaultCurrency }}
+                </td>
               </tr>
             </template>
           </nocloud-table>
@@ -144,6 +146,8 @@
       :billing-plan="billingPlan"
     />
     <edit-price-model
+      :account-rate="accountRate"
+      :account-currency="accountCurrency"
       v-model="priceModelDialog"
       :template="template"
       :plans="filteredPlans"
@@ -195,11 +199,9 @@ const billingHeaders = ref([
   { text: "Name", value: "name" },
   { text: "Unit name", value: "unit" },
   { text: "Price per unit", value: "price" },
-  { text: "Account price per unit", value: "accountPrice" },
   { text: "Unit quantity", value: "quantity" },
   { text: "Payment term", value: "kind" },
   { text: "Billing period", value: "period" },
-  { text: "Total account price", value: "totalAccount" },
   { text: "Total price", value: "total" },
 ]);
 
