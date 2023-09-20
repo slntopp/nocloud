@@ -480,6 +480,7 @@ export default {
     isLoggedIn(newVal) {
       if (newVal) {
         this.$store.dispatch("plugins/fetch");
+        this.$store.dispatch("currencies/fetch");
       }
     },
   },
