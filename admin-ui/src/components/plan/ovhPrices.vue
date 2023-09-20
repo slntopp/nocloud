@@ -165,7 +165,7 @@ export default {
         case "P1M":
           return 3600 * 24 * 30;
         case "P1Y":
-          return 3600 * 24 * 30 * 12;
+          return 3600 * 24 * 365;
       }
     },
     setFee() {

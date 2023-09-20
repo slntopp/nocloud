@@ -260,6 +260,11 @@ export default {
         } else {
           total = Math.abs(total);
           total = this.amountType ? total : -total;
+          if (this.isInvoice) {
+            this.transaction.meta.invoiceType = this.amountType
+              ? "top-up"
+              : "payment";
+          }
         }
 
         await api.transactions.create({
