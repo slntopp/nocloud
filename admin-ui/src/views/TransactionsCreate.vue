@@ -9,31 +9,20 @@
               <v-subheader>Type</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-autocomplete
+              <v-select
+                item-value="id"
+                item-text="title"
                 label="Type"
-                v-model="type"
-                item-value="value"
-                item-text="title"
+                v-model="typeId"
                 :items="types"
-              />
-            </v-col>
-          </v-row>
-        </v-col>
-      </v-row>
-      <v-row>
-        <v-col lg="6" cols="12">
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Amount type</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-autocomplete
-                label="Amount type"
-                v-model="amountType"
-                item-value="value"
-                item-text="title"
-                :items="amountTypes"
-              />
+              >
+                <template v-slot:item="{ item }">
+                  <span>{{ item.title }} - {{ item.amount.title }}</span>
+                </template>
+                <template v-slot:selection="{ item }">
+                  <span>{{ item.title }} - {{ item.amount.title }}</span>
+                </template>
+              </v-select>
             </v-col>
           </v-row>
         </v-col>
@@ -67,6 +56,7 @@
                 label="Service"
                 item-value="title"
                 item-text="title"
+                clearable
                 v-model="transaction.service"
                 :items="servicesByAccount"
               />
@@ -230,11 +220,38 @@ export default {
     isLoading: false,
 
     types: [
-      { value: "invoice", title: "Invoice" },
-      { value: "transaction", title: "Transaction" },
+      {
+        id: 1,
+        value: "invoice",
+        title: "Invoice",
+        amount: { title: "Top-up invoice (with balance change)", value: true },
+      },
+      {
+        id: 2,
+        value: "invoice",
+        title: "Invoice",
+        amount: { title: "Payment invoice (no balance change)", value: false },
+      },
+      {
+        id: 3,
+        value: "transaction",
+        title: "Transaction",
+        amount: { title: "Top-up", value: false },
+      },
+      {
+        id: 4,
+        value: "transaction",
+        title: "Transaction",
+        amount: { title: "Debit", value: true },
+      },
+      {
+        id: 5,
+        value: "transaction",
+        title: "Transaction",
+        amount: { title: "Account balance", value: null },
+      },
     ],
-    type: "transaction",
-    amountType: true,
+    typeId: 4,
   }),
   methods: {
     defaultFilterObject,
@@ -253,15 +270,16 @@ export default {
 
       try {
         let total = this.transaction.total;
-        if (this.amountType === null) {
+        const amountType = this.fullType.amount.value;
+        if (amountType === null) {
           const balance = this.transaction.account.balance || 0;
           const difference = Math.abs(total - balance);
           total = (balance > total ? +difference : -difference).toFixed(2);
         } else {
           total = Math.abs(total);
-          total = this.amountType ? total : -total;
+          total = amountType ? total : -total;
           if (this.isInvoice) {
-            this.transaction.meta.invoiceType = this.amountType
+            this.transaction.meta.invoiceType = amountType
               ? "top-up"
               : "payment";
           }
@@ -279,7 +297,7 @@ export default {
 
         setTimeout(() => {
           this.$router.push({ name: "Transactions" });
-        }, 1500);
+        }, 500);
       } catch (err) {
         this.showSnackbarError({
           message: err,
@@ -319,7 +337,7 @@ export default {
   },
   created() {
     this.initDate();
-    this.transaction.meta.type = this.type;
+    this.transaction.meta.type = this.fullType.value;
 
     if (this.accounts.length < 2) {
       this.$store.dispatch("accounts/fetch");
@@ -392,41 +410,29 @@ export default {
       return new Date(`${this.date.value}T${this.time.value}`).getTime() / 1000;
     },
     isTransaction() {
-      return this.type === "transaction";
+      return this.fullType.value === "transaction";
     },
     isInvoice() {
-      return this.type === "invoice";
+      return this.fullType.value === "invoice";
     },
     amountRule() {
       return [
         (v) =>
-          (this.amountType === null ? v === 0 || !!v : !!v) ||
+          (this.fullType.amount.value === null ? v === 0 || !!v : !!v) ||
           "This field is required!",
       ];
     },
-    amountTypes() {
-      if (this.isTransaction) {
-        return [
-          { title: "Top-up", value: false },
-          { title: "Debit", value: true },
-          { title: "Account balance", value: null },
-        ];
-      }
-
-      return [
-        { title: "Top-up invoice (with balance change)", value: true },
-        { title: "Payment invoice (no balance change)", value: false },
-      ];
+    fullType() {
+      return this.types.find((t) => t.id === this.typeId);
     },
   },
   watch: {
     "transaction.service"() {
       this.transaction.meta.instances = [];
     },
-    type() {
-      this.transaction.meta.type = this.type;
+    typeId() {
+      this.transaction.meta.type = this.fullType.value;
       if (this.isInvoice) {
-        this.amountType = false;
         this.resetDate();
       } else if (this.isTransaction) {
         this.initDate();
