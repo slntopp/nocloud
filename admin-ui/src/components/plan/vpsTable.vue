@@ -113,7 +113,12 @@
             {{ value }} {{ defaultCurrency }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
-            <v-text-field dense style="width: 150px" v-model="item.value" />
+            <v-text-field
+              dense
+              style="width: 200px"
+              :suffix="defaultCurrency"
+              v-model="item.value"
+            />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
             <v-switch v-model="item.sell" />
@@ -161,7 +166,12 @@
             {{ value }} {{ defaultCurrency }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
-            <v-text-field dense style="width: 150px" v-model="item.value" />
+            <v-text-field
+              dense
+              style="width: 200px"
+              :suffix="defaultCurrency"
+              v-model="item.value"
+            />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
             <v-switch v-model="item.sell" />
