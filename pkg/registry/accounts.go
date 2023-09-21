@@ -45,7 +45,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var (
@@ -409,14 +408,6 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		Title:    request.Title,
 		Currency: &request.Currency,
 		Data:     request.GetData(),
-	}
-
-	if request.Auth.Type == "whmcs" {
-		creationAccount.Data = &structpb.Struct{
-			Fields: map[string]*structpb.Value{
-				"email": structpb.NewStringValue(request.Auth.Data[0]),
-			},
-		}
 	}
 
 	acc, err := s.ctrl.Create(ctx, creationAccount)
