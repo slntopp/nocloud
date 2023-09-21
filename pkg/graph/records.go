@@ -190,12 +190,12 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 	}
 
 	if req.Account != nil {
-		query += ` FILTER t.account == @acc`
+		query += ` FILTER record.account == @acc`
 		params["acc"] = req.GetAccount()
 	}
 
 	if req.Service != nil {
-		query += ` FILTER t.service == @srv`
+		query += ` FILTER record.service == @srv`
 		params["srv"] = req.GetService()
 	}
 
@@ -283,12 +283,12 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 	}
 
 	if req.Account != nil {
-		query += ` FILTER t.account == @acc`
+		query += ` FILTER record.account == @acc`
 		params["acc"] = req.GetAccount()
 	}
 
 	if req.Service != nil {
-		query += ` FILTER t.service == @srv`
+		query += ` FILTER record.service == @srv`
 		params["srv"] = req.GetService()
 	}
 
