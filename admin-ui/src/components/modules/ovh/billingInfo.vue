@@ -67,7 +67,6 @@
               <div class="d-flex">
                 <v-text-field
                   class="mr-2"
-                  color="red"
                   v-model="item.price"
                   @change="onUpdatePrice(item, false)"
                   :suffix="defaultCurrency"
@@ -76,6 +75,7 @@
                 ></v-text-field>
                 <v-text-field
                   class="ml-2"
+                  style="color: #c921c9"
                   v-model="item.accountPrice"
                   @change="onUpdatePrice(item, true)"
                   :suffix="accountCurrency"
@@ -93,9 +93,7 @@
                 <td></td>
                 <td></td>
                 <td>
-                  {{
-                    getBillingPeriod(tarrif.period)
-                  }}
+                  {{ getBillingPeriod(tarrif.period) }}
                 </td>
                 <td>
                   {{
