@@ -124,10 +124,11 @@
           >
             Create
           </v-btn>
-
-          <v-btn class="mr-2" @click="downloadFile">
-            Download {{ isJson ? "JSON" : "YAML" }}
-          </v-btn>
+          <download-template-button
+            :template="plan"
+            :type="isJson ? 'JSON' : 'YAML'"
+            :name="downloadedFileName"
+          />
           <v-switch
             class="d-inline-block mr-2"
             style="margin-top: 5px; padding-top: 0"
@@ -173,19 +174,18 @@ import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
-
-import {
-  downloadJSONFile,
-  readJSONFile,
-  readYAMLFile,
-  downloadYAMLFile,
-  getTimestamp,
-} from "@/functions.js";
+import { readJSONFile, readYAMLFile, getTimestamp } from "@/functions.js";
+import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
-  components: { confirmDialog, planOpensrs, JsonEditor },
+  components: {
+    DownloadTemplateButton,
+    confirmDialog,
+    planOpensrs,
+    JsonEditor,
+  },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({
     types: [],
@@ -422,16 +422,6 @@ export default {
           });
       }
     },
-    downloadFile() {
-      const name = this.plan.title
-        ? this.plan.title.replaceAll(" ", "_")
-        : "unknown_price_model";
-      if (this.isJson) {
-        downloadJSONFile(this.plan, name);
-      } else {
-        downloadYAMLFile(this.plan, name);
-      }
-    },
   },
   created() {
     this.$store.dispatch("plans/fetch", { silent: true }).catch((err) => {
@@ -512,6 +502,11 @@ export default {
       });
 
       return filtered;
+    },
+    downloadedFileName() {
+      return this.plan.title
+        ? this.plan.title.replaceAll(" ", "_")
+        : "unknown_price_model";
     },
   },
   watch: {
