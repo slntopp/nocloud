@@ -102,10 +102,6 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 			return
 		}
 
-		if len(userInfo.Result) != 1 {
-			return
-		}
-
 		user := userInfo.Result
 		value := user[field].(string)
 
