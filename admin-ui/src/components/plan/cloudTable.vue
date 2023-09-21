@@ -113,8 +113,8 @@ import {
 import api from "@/api";
 import { useStore } from "@/store";
 import NocloudTable from "@/components/table.vue";
-import usePlnRate from "@/hooks/usePlnRate";
 import { getMarginedValue } from "@/functions";
+import useCurrency from "@/hooks/useCurrency";
 
 const props = defineProps({
   fee: { type: Object, required: true },
@@ -127,7 +127,7 @@ const props = defineProps({
 const { sp, template, fee } = toRefs(props);
 
 const store = useStore();
-const rate = usePlnRate();
+const { convertTo } = useCurrency();
 
 const expanded = ref([]);
 const tab = ref("prices");
@@ -235,9 +235,10 @@ const fetchFlavours = async () => {
         const { gpu = { model: "", number: 0 } } = meta.technical[value] ?? {};
         const period = key === "monthly" ? "P1M" : "P1H";
         const planCode = `${period} ${flavour.id}`;
-        const price = parseFloat(
-          prices.value[selectedRegion.value]?.[flavour.planCodes[key]] * rate.value
-        ).toFixed(2);
+        const price = convertTo(
+          prices.value[selectedRegion.value]?.[flavour.planCodes[key]],
+          "PLN"
+        );
 
         newFlavours.push({
           ...flavour,
@@ -345,7 +346,7 @@ const changePlan = (plan) => {
           ram: item.ram,
           cpu: item.vcpus,
           gpu_name: item.gpu.model,
-          gpu_count: item.gpu.number
+          gpu_count: item.gpu.number,
         },
         meta: {
           priceCode: item.priceCode,

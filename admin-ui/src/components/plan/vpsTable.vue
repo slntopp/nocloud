@@ -198,7 +198,6 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
-import currencyRate from "@/mixins/currencyRate";
 import { getMarginedValue } from "@/functions";
 
 export default {
@@ -281,7 +280,6 @@ export default {
     tabsIndex: 0,
     usedFee: {},
   }),
-  mixins: [currencyRate],
   methods: {
     changeImage(value) {
       const i = this.images.indexOf(value);
@@ -390,7 +388,7 @@ export default {
           if (isMonthly || isYearly) {
             const code = planCode.split("-").slice(1).join("-");
             const option = windows.find((el) => el.planCode.includes(code));
-            const newPrice = parseFloat((price.value * this.rate).toFixed(2));
+            const newPrice = this.convertPrice(price.value);
 
             const { configurations, addonFamilies } = catalog.plans.find(
               ({ planCode }) => planCode.includes(code)
@@ -410,7 +408,7 @@ export default {
                 (el) =>
                   el.duration === duration && el.pricingMode === pricingMode
               );
-              const newPrice = parseFloat((value * this.rate).toFixed(2));
+              const newPrice = this.convertPrice(value);
 
               plan.windows = {
                 value,
@@ -467,7 +465,7 @@ export default {
             const isYearly = duration === "P1Y" && pricingMode === "upfront12";
 
             if (isMonthly || isYearly) {
-              const newPrice = parseFloat((price.value * this.rate).toFixed(2));
+              const newPrice = this.convertPrice(price.value);
 
               result.push({
                 price: { value: newPrice },
@@ -680,11 +678,12 @@ export default {
         return p;
       });
     },
+    convertPrice(price) {
+      return (price * this.plnRate).toFixed(2);
+    },
   },
   created() {
     this.$emit("changeLoading");
-
-    this.fetchRate();
 
     api.servicesProviders
       .action({ action: "get_plans", uuid: this.sp.uuid })
@@ -717,6 +716,17 @@ export default {
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
+    },
+    rates() {
+      return this.$store.getters["currencies/rates"];
+    },
+    plnRate() {
+      if (this.defaultCurrency === "PLN") {
+        return 1;
+      }
+      return this.rates.find(
+        (r) => r.to === "PLN" && r.from === this.defaultCurrency
+      )?.rate;
     },
   },
   watch: {
