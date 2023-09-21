@@ -158,7 +158,7 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 			}
 		}
 
-		http.Redirect(w, r, fmt.Sprintf("%s?token=?%s", redirect, resp.GetToken()), http.StatusSeeOther)
+		http.Redirect(w, r, fmt.Sprintf("%s?token=%s", redirect, resp.GetToken()), http.StatusSeeOther)
 
 	}))
 }
