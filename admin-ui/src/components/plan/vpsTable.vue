@@ -7,16 +7,16 @@
 
       <v-list dense v-if="tabsIndex < 2">
         <v-list-item
-            dense
-            v-for="item of filters[tabsIndex][column]"
-            :key="item"
+          dense
+          v-for="item of filters[tabsIndex][column]"
+          :key="item"
         >
           <v-checkbox
-              dense
-              v-model="selected[tabsIndex][column]"
-              :value="item"
-              :label="item"
-              @change="
+            dense
+            v-model="selected[tabsIndex][column]"
+            :value="item"
+            :label="item"
+            @change="
               selected[tabsIndex] = Object.assign({}, selected[tabsIndex])
             "
           />
@@ -32,32 +32,32 @@
       </v-col>
     </v-row>
     <v-tabs
-        class="rounded-t-lg"
-        v-model="tabsIndex"
-        background-color="background-light"
+      class="rounded-t-lg"
+      v-model="tabsIndex"
+      background-color="background-light"
     >
       <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
     </v-tabs>
 
     <v-tabs-items
-        v-model="tabsIndex"
-        style="background: var(--v-background-light-base)"
-        class="rounded-b-lg"
+      v-model="tabsIndex"
+      style="background: var(--v-background-light-base)"
+      class="rounded-b-lg"
     >
       <v-tab-item v-for="tab in tabs" :key="tab">
         <v-progress-linear v-if="isPlansLoading" indeterminate class="pt-1" />
 
         <nocloud-table
-            item-key="id"
-            table-name="vps-tarrifs"
-            v-else-if="tab === 'Tariffs'"
-            :show-expand="true"
-            :show-select="false"
-            :items="filteredPlans"
-            :headers="headers"
-            :expanded.sync="expanded"
-            :loading="isPlansLoading"
-            :footer-error="fetchError"
+          item-key="id"
+          table-name="vps-tarrifs"
+          v-else-if="tab === 'Tariffs'"
+          :show-expand="true"
+          :show-select="false"
+          :items="filteredPlans"
+          :headers="headers"
+          :expanded.sync="expanded"
+          :loading="isPlansLoading"
+          :footer-error="fetchError"
         >
           <template v-slot:[`item.name`]="{ item }">
             <v-text-field dense style="width: 200px" v-model="item.name" />
@@ -65,10 +65,10 @@
           <template v-slot:[`item.group`]="{ item }">
             <template v-if="mode === 'edit' && planId === item.id">
               <v-text-field
-                  dense
-                  class="d-inline-block mr-1"
-                  style="width: 200px"
-                  v-model="newGroupName"
+                dense
+                class="d-inline-block mr-1"
+                style="width: 200px"
+                v-model="newGroupName"
               />
               <v-icon @click="editGroup(item.group)">mdi-content-save</v-icon>
               <v-icon @click="mode = 'none'">mdi-close</v-icon>
@@ -76,10 +76,10 @@
 
             <template v-if="mode === 'create' && planId === item.id">
               <v-text-field
-                  dense
-                  class="d-inline-block mr-1"
-                  style="width: 200px"
-                  v-model="newGroupName"
+                dense
+                class="d-inline-block mr-1"
+                style="width: 200px"
+                v-model="newGroupName"
               />
               <v-icon @click="createGroup(item)">mdi-content-save</v-icon>
               <v-icon @click="mode = 'none'">mdi-close</v-icon>
@@ -87,17 +87,17 @@
 
             <template v-if="mode === 'none'">
               <v-select
-                  dense
-                  class="d-inline-block"
-                  style="width: 200px"
-                  v-model="item.group"
-                  :items="groups"
-                  @change="item.name = getName(item)"
+                dense
+                class="d-inline-block"
+                style="width: 200px"
+                v-model="item.group"
+                :items="groups"
+                @change="item.name = getName(item)"
               />
               <v-icon @click="changeMode('create', item)">mdi-plus</v-icon>
               <v-icon @click="changeMode('edit', item)">mdi-pencil</v-icon>
               <v-icon v-if="groups.length > 1" @click="deleteGroup(item.group)"
-              >mdi-delete</v-icon
+                >mdi-delete</v-icon
               >
             </template>
 
@@ -128,9 +128,9 @@
               </td>
               <td>
                 <v-text-field
-                    dense
-                    style="width: 150px"
-                    v-model="item.windows.value"
+                  dense
+                  style="width: 150px"
+                  v-model="item.windows.value"
                 />
               </td>
               <td></td>
@@ -143,13 +143,13 @@
         </nocloud-table>
 
         <nocloud-table
-            table-name="vps-addons"
-            v-else-if="tab === 'Addons'"
-            :show-select="false"
-            :items="filteredAddons"
-            :headers="addonsHeaders"
-            :loading="isPlansLoading"
-            :footer-error="fetchError"
+          table-name="vps-addons"
+          v-else-if="tab === 'Addons'"
+          :show-select="false"
+          :items="filteredAddons"
+          :headers="addonsHeaders"
+          :loading="isPlansLoading"
+          :footer-error="fetchError"
         >
           <template v-slot:[`item.margin`]="{ item }">
             {{ getMargin(item, false) }}
@@ -170,21 +170,21 @@
 
         <div class="os-tab__card" v-else-if="tab === 'OS'">
           <v-card
-              outlined
-              class="pt-4 pl-4 d-flex"
-              style="gap: 10px"
-              color="background"
-              v-for="item of allImages"
-              :key="item"
+            outlined
+            class="pt-4 pl-4 d-flex"
+            style="gap: 10px"
+            color="background"
+            v-for="item of allImages"
+            :key="item"
           >
             <v-chip
-                close
-                outlined
-                :color="images.includes(item) ? 'info' : 'error'"
-                :close-icon="
+              close
+              outlined
+              :color="images.includes(item) ? 'info' : 'error'"
+              :close-icon="
                 images.includes(item) ? 'mdi-close-circle' : 'mdi-plus-circle'
               "
-                @click:close="changeImage(item)"
+              @click:close="changeImage(item)"
             >
               {{ item }}
             </v-chip>
@@ -279,7 +279,7 @@ export default {
 
     planId: -1,
     tabsIndex: 0,
-    usedFee: {}
+    usedFee: {},
   }),
   mixins: [currencyRate],
   methods: {
@@ -357,8 +357,8 @@ export default {
               }
 
               this.filters[this.tabsIndex] = Object.assign(
-                  {},
-                  this.filters[this.tabsIndex]
+                {},
+                this.filters[this.tabsIndex]
               );
               element.dispatchEvent(new Event("click"));
 
@@ -393,19 +393,22 @@ export default {
             const newPrice = parseFloat((price.value * this.rate).toFixed(2));
 
             const { configurations, addonFamilies } = catalog.plans.find(
-                ({ planCode }) => planCode.includes(code)
+              ({ planCode }) => planCode.includes(code)
             );
             const os = configurations[1].values;
             const datacenter = configurations[0].values;
             const addons = addonFamilies.reduce(
-                (res, { addons }) => [...res, ...addons],
-                []
+              (res, { addons }) => [...res, ...addons],
+              []
             );
             const plan = { windows: null, addons, os, datacenter };
 
             if (option) {
-              const { price: { value } } = option.prices.find(
-                  (el) => el.duration === duration && el.pricingMode === pricingMode
+              const {
+                price: { value },
+              } = option.prices.find(
+                (el) =>
+                  el.duration === duration && el.pricingMode === pricingMode
               );
               const newPrice = parseFloat((value * this.rate).toFixed(2));
 
@@ -417,8 +420,10 @@ export default {
               };
             }
 
-            const installation = prices.find((price) =>
-                price.capacities.includes("installation") && price.pricingMode === pricingMode
+            const installation = prices.find(
+              (price) =>
+                price.capacities.includes("installation") &&
+                price.pricingMode === pricingMode
             );
 
             result.push({
@@ -634,10 +639,13 @@ export default {
             case "Payment":
               filter = this.getPayment(plan[value]);
               break;
-            case "Margin":
+            case "Margin": {
               filter = this.getMargin(plan, false);
+            }
           }
-
+          if (i === 1 && key === "Margin") {
+            return result.push(true);
+          }
           if (filters.includes(filter)) result.push(true);
           else result.push(false);
         });
@@ -679,21 +687,21 @@ export default {
     this.fetchRate();
 
     api.servicesProviders
-        .action({ action: "get_plans", uuid: this.sp.uuid })
-        .then(({ meta }) => {
-          this.changePlans(meta);
-          this.changeAddons(meta);
+      .action({ action: "get_plans", uuid: this.sp.uuid })
+      .then(({ meta }) => {
+        this.changePlans(meta);
+        this.changeAddons(meta);
 
-          this.fetchError = "";
-          this.changeIcon();
-        })
-        .catch((err) => {
-          this.fetchError = err.response?.data?.message ?? err.message ?? err;
-          console.error(err);
-        })
-        .finally(() => {
-          this.$emit("changeLoading");
-        });
+        this.fetchError = "";
+        this.changeIcon();
+      })
+      .catch((err) => {
+        this.fetchError = err.response?.data?.message ?? err.message ?? err;
+        console.error(err);
+      })
+      .finally(() => {
+        this.$emit("changeLoading");
+      });
   },
   mounted() {
     const icon = document.querySelector(".group-icon");
@@ -737,7 +745,7 @@ export default {
         this.plans.forEach((plan, i) => {
           const product = this.template.products[plan.id];
           const winKey = Object.keys(product?.meta || {}).find((el) =>
-              el.includes("windows")
+            el.includes("windows")
           );
           const title = (product?.title ?? plan.name).replace(/VPS[\W0-9]/, "");
           const group = title.split(/[\W0-9]/)[0];
@@ -757,8 +765,10 @@ export default {
         const sellingPlans = this.plans.filter(({ sell }) => sell);
 
         if (sellingPlans.length < 1) this.images = this.plans[1].os;
-        else this.images = (sellingPlans[1] ?? sellingPlans[0]).os
-            .filter((image) => this.allImages.includes(image));
+        else
+          this.images = (sellingPlans[1] ?? sellingPlans[0]).os.filter(
+            (image) => this.allImages.includes(image)
+          );
 
         if (this.template.resources.length === this.addons.length) {
           this.filters["1"].Sell = ["true"];

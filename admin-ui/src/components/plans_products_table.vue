@@ -32,6 +32,15 @@
               <v-divider inset vertical class="mx-4" />
               <v-spacer />
 
+              <v-btn
+                :disabled="selected.length < 1"
+                class="mr-2"
+                color="background-light"
+                @click="copyProducts"
+              >
+                Copy
+              </v-btn>
+
               <v-btn class="mr-2" color="background-light" @click="addConfig">
                 Create
               </v-btn>
@@ -157,7 +166,7 @@
 </template>
 
 <script setup>
-import { computed, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { VueEditor } from "vue2-editor";
 import dateField from "@/components/date.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
@@ -187,12 +196,16 @@ const tabs = ["Products", "Resources"];
 const headers = [
   { text: "Key", value: "key" },
   { text: "Title", value: "title" },
-  { text: "Price", value: "price",width:150 },
-  { text: "Period", value: "period" ,width:220},
+  { text: "Price", value: "price", width: 150 },
+  { text: "Period", value: "period", width: 220 },
   { text: "Kind", value: "kind", width: 228 },
   { text: "Public", value: "public" },
   { text: "Sorter", value: "sorter" },
 ];
+
+onMounted(() => {
+  setFullDates(products.value);
+});
 
 function changeDate({ value }, id) {
   fullDate.value[id] = value;
@@ -206,6 +219,31 @@ function changeProduct(key, value, id) {
 function changeResource(data) {
   emits("change:resource", data);
 }
+
+const copyProducts = () => {
+  const copiedProducts = [
+    ...selected.value.map((p) => ({
+      ...p,
+      id: Math.random().toString(16).slice(2),
+    })),
+  ];
+
+  const newProducts = {};
+  for (const product of productsArray.value) {
+    const key = product.key;
+    delete product.key;
+    newProducts[key] = product;
+  }
+  for (const product of copiedProducts) {
+    const key = product.key;
+    delete product.key;
+    newProducts[key + " 1"] = product;
+  }
+
+  changeProduct("products", newProducts);
+  setFullDates(newProducts);
+  selected.value = [];
+};
 
 function addConfig() {
   const value = [...productsArray.value];
@@ -250,9 +288,11 @@ function removeConfig() {
   changeProduct("products", result);
 }
 
-Object.values(products.value).forEach(({ period, id }) => {
-  fullDate.value[id] = getFullDate(period);
-});
+const setFullDates = (products) => {
+  Object.values(products).forEach(({ period, id }) => {
+    fullDate.value[id] = getFullDate(period);
+  });
+};
 
 const productsArray = computed(() =>
   Object.entries(products.value).map(([key, value]) => ({ key, ...value }))
