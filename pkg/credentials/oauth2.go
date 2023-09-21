@@ -18,12 +18,12 @@ type OAuth2Credentials struct {
 	driver.DocumentMeta
 }
 
-func NewOAuth2Credentials(data []string) (Credentials, error) {
+func NewOAuth2Credentials(data []string, credType string) (Credentials, error) {
 	if len(data) < 2 {
 		return nil, fmt.Errorf("some credentials data is missing, expected data length to be 2, got: %d", len(data))
 	}
 	field, value := data[0], data[1]
-	return &OAuth2Credentials{AuthField: field, AuthValue: value}, nil
+	return &OAuth2Credentials{AuthField: field, AuthValue: value, AuthType: credType}, nil
 }
 
 func (cred *OAuth2Credentials) Type() string {
@@ -41,10 +41,11 @@ func (cred *OAuth2Credentials) SetLogger(log *zap.Logger) {
 }
 
 func (cred *OAuth2Credentials) Find(ctx context.Context, db driver.Database) bool {
-	query := `FOR cred IN @@credentials FILTER cred[@field] == @value RETURN cred`
+	query := `FOR cred IN @@credentials FILTER cred.auth_field == @field AND cred.auth_value == @value && cred.auth_type == @type RETURN cred`
 	c, err := db.Query(ctx, query, map[string]interface{}{
 		"field":        cred.AuthField,
 		"value":        cred.AuthValue,
+		"type":         cred.AuthType,
 		"@credentials": schema.CREDENTIALS_COL,
 	})
 	if err != nil {
