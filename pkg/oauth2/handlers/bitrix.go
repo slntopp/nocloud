@@ -53,7 +53,13 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 		g.m.Unlock()
 
 		url := oauth2Config.AuthCodeURL(state)
-		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+
+		result := map[string]string{
+			"url": url,
+		}
+
+		marshal, _ := json.Marshal(result)
+		w.Write(marshal)
 	}))
 	router.Handle("/oauth/bitrix/checkout", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		state, code := r.FormValue("state"), r.FormValue("code")
