@@ -220,6 +220,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
 			"@accounts":      schema.ACCOUNTS_COL,
 			"@transactions":  schema.TRANSACTIONS_COL,
+			"@records":       schema.RECORDS_COL,
 			"accountKey":     acc.String(),
 			"transactionKey": transaction.String(),
 			"currency":       currencyConf.Currency,
@@ -292,6 +293,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 
 		_, err := s.db.Query(ctx, updateTransactionWithCurrency, map[string]interface{}{
 			"@transactions":  schema.TRANSACTIONS_COL,
+			"@records":       schema.RECORDS_COL,
 			"accountKey":     acc.String(),
 			"transactionKey": transaction.String(),
 			"currency":       currencyConf.Currency,
