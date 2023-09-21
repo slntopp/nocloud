@@ -25,7 +25,7 @@ type BitrixOauthHandler struct {
 }
 
 type UserInfo struct {
-	Result []map[string]interface{} `json:"result"`
+	Result map[string]interface{} `json:"result"`
 }
 
 func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
@@ -106,7 +106,7 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 			return
 		}
 
-		user := userInfo.Result[0]
+		user := userInfo.Result
 		value := user[field].(string)
 
 		name := user["NAME"].(string)
