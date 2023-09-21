@@ -127,7 +127,7 @@ const props = defineProps({
 const { sp, template, fee } = toRefs(props);
 
 const store = useStore();
-const { convertTo } = useCurrency();
+const { convertFrom } = useCurrency();
 
 const expanded = ref([]);
 const tab = ref("prices");
@@ -235,7 +235,7 @@ const fetchFlavours = async () => {
         const { gpu = { model: "", number: 0 } } = meta.technical[value] ?? {};
         const period = key === "monthly" ? "P1M" : "P1H";
         const planCode = `${period} ${flavour.id}`;
-        const price = convertTo(
+        const price = convertFrom(
           prices.value[selectedRegion.value]?.[flavour.planCodes[key]],
           "PLN"
         );

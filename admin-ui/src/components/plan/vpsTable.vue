@@ -725,7 +725,7 @@ export default {
         return 1;
       }
       return this.rates.find(
-        (r) => r.to === "PLN" && r.from === this.defaultCurrency
+        (r) => r.to === this.defaultCurrency && r.from === "PLN"
       )?.rate;
     },
   },
