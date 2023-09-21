@@ -147,6 +147,17 @@
             </v-col>
           </v-row>
 
+          <v-row align="center" v-if="!isSendEmailHide">
+            <v-col cols="3">
+              <v-subheader>Send email</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <div class="d-flex justify-end">
+                <v-switch v-model="transaction.meta.sendEmail" />
+              </div>
+            </v-col>
+          </v-row>
+
           <v-row v-if="!isAdminNoteHide" class="mx-5">
             <v-textarea
               no-resize
@@ -440,6 +451,9 @@ export default {
     isAdminNoteHide() {
       return this.isTransaction;
     },
+    isSendEmailHide() {
+      return this.isTransaction;
+    },
   },
   watch: {
     "transaction.service"() {
@@ -452,6 +466,7 @@ export default {
         this.resetDate();
       } else if (this.isTransaction) {
         this.transaction.meta.note = undefined;
+        this.transaction.meta.sendEmail = undefined;
         this.transaction.meta.invoiceType = undefined;
         this.initDate();
       }
