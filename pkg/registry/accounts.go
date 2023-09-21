@@ -17,6 +17,7 @@ package registry
 
 import (
 	"context"
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
 	"time"
 
@@ -44,7 +45,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var (
@@ -366,6 +366,21 @@ func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.T
 		return nil, status.Error(codes.Internal, "Failed to issue token")
 	}
 
+	var event = &elpb.Event{
+		Entity:    schema.ACCOUNTS_COL,
+		Uuid:      acc.Key,
+		Scope:     "database",
+		Action:    "login",
+		Rc:        0,
+		Requestor: acc.Key,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
+	nocloud.Log(log, event)
+
 	return &accountspb.TokenResponse{Token: token_string}, nil
 }
 
@@ -393,14 +408,6 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		Title:    request.Title,
 		Currency: &request.Currency,
 		Data:     request.GetData(),
-	}
-
-	if request.Auth.Type == "whmcs" {
-		creationAccount.Data = &structpb.Struct{
-			Fields: map[string]*structpb.Value{
-				"email": structpb.NewStringValue(request.Auth.Data[0]),
-			},
-		}
 	}
 
 	acc, err := s.ctrl.Create(ctx, creationAccount)

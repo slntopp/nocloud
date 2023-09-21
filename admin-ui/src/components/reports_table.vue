@@ -17,7 +17,6 @@
       :footer-error="fetchError"
       :server-items-length="count"
       :server-side-page="page"
-      :show-select="false"
       sort-by="exec"
       sort-desc
       @update:options="onUpdateOptions"
@@ -70,8 +69,8 @@ import { toRefs, ref, computed, watch } from "vue";
 import api from "@/api";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
-import useRate from "@/hooks/useRate";
 import DatePicker from "@/components/ui/datePicker.vue";
+import useCurrency from "@/hooks/useCurrency";
 
 const props = defineProps({
   filters: { type: Object },
@@ -84,7 +83,7 @@ const props = defineProps({
 const { filters, hideInstance, hideService, hideAccount } = toRefs(props);
 
 const store = useStore();
-const { convertTo, fetchRate } = useRate();
+const { rates, convertFrom, defaultCurrency } = useCurrency();
 
 const reports = ref([]);
 const count = ref(10);
@@ -95,7 +94,6 @@ const fetchError = ref("");
 const options = ref({});
 const itemsPerPageOptions = ref([5, 10, 15, 25]);
 const durationFilter = ref({ to: "", from: "" });
-const rates = ref({});
 
 const reportsHeaders = computed(() => {
   const headers = [
@@ -119,14 +117,6 @@ const reportsHeaders = computed(() => {
   return headers;
 });
 
-const defaultCurrency = computed(() => store.getters["currencies/default"]);
-const allCurrencies = computed(() => {
-  const currencies = new Map(
-    reports.value.map((r) => [r.currency, r.currency])
-  );
-  return [...currencies.values()];
-});
-
 const instances = computed(() => store.getters["services/getInstances"]);
 const services = computed(() => store.getters["services/all"]);
 const accounts = computed(() => store.getters["accounts/all"]);
@@ -136,6 +126,7 @@ const isLoading = computed(() => {
 });
 
 const requestOptions = computed(() => ({
+  ...filters.value,
   page: page.value,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
@@ -146,7 +137,6 @@ const requestOptions = computed(() => ({
   to: durationFilter.value.to
     ? new Date(durationFilter.value.to).getTime() / 1000
     : undefined,
-  filters: filters.value,
 }));
 
 const onUpdateOptions = async (newOptions) => {
@@ -172,9 +162,7 @@ const onUpdateOptions = async (newOptions) => {
         service: r.service,
         instance: r.instance,
         account: r.account,
-        totalDefault: rates.value[r.currency]
-          ? convertTo(r.total, rates.value[r.currency])
-          : null,
+        totalDefault: convertFrom(r.total, r.currency),
       };
     });
   } finally {
@@ -210,22 +198,8 @@ const getService = (value) => services.value.find((s) => s.uuid === value);
 watch(rates, () => {
   reports.value = reports.value.map((r) => ({
     ...r,
-    totalDefault: rates.value[r.currency]
-      ? convertTo(r.total, rates.value[r.currency])
-      : null,
+    totalDefault: convertFrom(r.total, r.currency),
   }));
-});
-
-watch(allCurrencies, () => {
-  allCurrencies.value.map(async (c) => {
-    if (rates.value[c]) {
-      return;
-    }
-
-    rates.value[c] = "blocked";
-    const rate = await fetchRate(c);
-    rates.value = { ...rates.value, [c]: rate };
-  });
 });
 
 watch(

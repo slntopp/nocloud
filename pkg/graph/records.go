@@ -189,6 +189,16 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 		"@records": schema.RECORDS_COL,
 	}
 
+	if req.Account != nil {
+		query += ` FILTER record.account == @acc`
+		params["acc"] = req.GetAccount()
+	}
+
+	if req.Service != nil {
+		query += ` FILTER record.service == @srv`
+		params["srv"] = req.GetService()
+	}
+
 	if req.From != nil {
 		query += " FILTER record.exec >= @from"
 		params["from"] = req.GetFrom()
@@ -270,6 +280,16 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 	query := "LET records = ( FOR record in @@records FILTER record.processed"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
+	}
+
+	if req.Account != nil {
+		query += ` FILTER record.account == @acc`
+		params["acc"] = req.GetAccount()
+	}
+
+	if req.Service != nil {
+		query += ` FILTER record.service == @srv`
+		params["srv"] = req.GetService()
 	}
 
 	if req.From != nil {

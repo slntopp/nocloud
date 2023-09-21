@@ -466,9 +466,7 @@ export default {
   },
   computed: {
     searchParam() {
-      return this.$store.getters[
-        "appSearch/customParams"
-      ]?.searchParam?.value.toLowerCase();
+      return this.$store.getters["appSearch/customSearchParam"]?.toLowerCase();
     },
     template() {
       const type = this.plan.kind === "DYNAMIC" ? "resources" : "products";
@@ -489,7 +487,7 @@ export default {
       return document.documentElement.clientWidth;
     },
     productsHide() {
-      const hidden = ["ovh", "goget", "acronis",'cpanel'];
+      const hidden = ["ovh", "goget", "acronis", "cpanel"];
       return hidden.some((h) => this.plan.type.includes(h));
     },
     filteredProducts() {
@@ -501,7 +499,7 @@ export default {
       Object.keys(this.plan.products).forEach((key) => {
         if (key === this.searchParam) {
           filtered[key] = this.plan.products[key];
-          return
+          return;
         }
 
         if (

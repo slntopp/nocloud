@@ -94,6 +94,8 @@
       @refresh="emit('refresh')"
     />
     <edit-price-model
+      :account-rate="accountRate"
+      :account-currency="accountCurrency"
       v-model="priceModelDialog"
       :template="template"
       :plans="filtredPlans"

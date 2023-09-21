@@ -37,7 +37,15 @@
               :param="customParamsValues[0]"
               :variants="variants"
             />
-            <v-menu v-if="customParamsValues.length > 1" offset-y>
+            <v-menu
+              :close-on-content-click="false"
+              v-if="customParamsValues.length > 1"
+              offset-y
+              min-height="300px"
+              max-height="300px"
+              max-width="600px"
+              min-width="600px"
+            >
               <template v-slot:activator="{ on, attrs }">
                 <v-chip
                   class="ma-auto pa-auto"
@@ -49,9 +57,13 @@
                   +{{ customParamsValues.length - 1 }}
                 </v-chip>
               </template>
-              <v-card color="background-light" max-width="600px">
+              <v-card class="px-3" color="background-light">
+                <v-text-field
+                  v-model="tagsSearchParam"
+                  prepend-inner-icon="mdi-magnify"
+                />
                 <search-tag
-                  v-for="param in customParamsValues.slice(1)"
+                  v-for="param in filteredCustomParamsValues"
                   :key="param.key + param.title"
                   :param="param"
                   :variants="variants"
@@ -100,8 +112,15 @@
                       </v-btn>
                     </div>
                   </div>
-                  <div style="width: 100%" class="d-flex" v-else>
+                  <div
+                    style="width: 100%"
+                    class="d-flex justify-space-between"
+                    v-else
+                  >
                     <span>{{ item.title }}</span>
+                    <v-icon v-if="item.isSelect" color="green"
+                      >mdi-check</v-icon
+                    >
                   </div>
                 </v-list-item>
               </template>
@@ -123,7 +142,7 @@ import SearchTag from "@/components/search/searchTag.vue";
 export default {
   name: "app-search",
   components: { SearchTag },
-  data: () => ({ selectedGroupKey: "", isOpen: false }),
+  data: () => ({ selectedGroupKey: "", isOpen: false, tagsSearchParam: "" }),
   methods: {
     setParam(index) {
       const item = this.searchItems[index];
@@ -139,7 +158,7 @@ export default {
             value: this.searchParam,
             title: this.searchParam,
             isArray,
-            full: false,
+            temporary: true,
           },
         });
       }
@@ -157,9 +176,17 @@ export default {
         this.variants[this.selectedGroupKey] || this.variants[item?.key];
       const key = variant?.key || this.selectedGroupKey;
 
+      if (item.isSelect) {
+        return this.$store.commit("appSearch/deleteCustomParam", {
+          isArray: variant.isArray,
+          key,
+          value: item.uuid,
+        });
+      }
+
       if (variant?.isArray) {
         this.customParams[key]?.forEach((i) => {
-          if (!i.full) {
+          if (i.temporary) {
             this.$store.commit("appSearch/deleteCustomParam", { ...i, key });
           }
         });
@@ -171,7 +198,6 @@ export default {
           value: item[variant.itemKey || "uuid"],
           title: item[variant.itemTitle || "title"],
           isArray: variant.isArray,
-          full: true,
         },
       });
 
@@ -221,17 +247,27 @@ export default {
       return "group";
     },
     searchItems() {
-      return (
-        this.variants[this.selectedGroupKey]?.items.filter(
-          (i) =>
-            !this.searchParam ||
-            i.title.toLowerCase().includes(this.searchParam.toLowerCase())
-        ) ||
-        Object.keys(this.variants).map((key) => ({
-          key,
-          title: this.variants[key]?.title || key,
-        }))
-      );
+      if (this.variants[this.selectedGroupKey]?.items) {
+        return this.variants[this.selectedGroupKey]?.items
+          .filter(
+            (i) =>
+              !this.searchParam ||
+              i.title.toLowerCase().includes(this.searchParam.toLowerCase())
+          )
+          .map((p) => ({
+            ...p,
+            isSelect: !!this.customParamsValues.find(
+              (cp) => cp.value === p.uuid
+            ),
+          }))
+          .sort((x, y) =>
+            x.isSelect === y.isSelect ? 0 : x.isSelect ? 1 : -1
+          );
+      }
+      return Object.keys(this.variants).map((key) => ({
+        key,
+        title: this.variants[key]?.title || key,
+      }));
     },
     customParamsValues() {
       const values = [];
@@ -249,7 +285,17 @@ export default {
         }
       });
 
+      values.sort((a, b) => a.title.localeCompare(b.title));
+
       return values;
+    },
+    filteredCustomParamsValues() {
+      if (!this.tagsSearchParam) {
+        return this.customParamsValues;
+      }
+      return this.customParamsValues.filter((c) =>
+        c.title.toLowerCase().includes(this.tagsSearchParam.toLowerCase())
+      );
     },
     routeCustomParams() {
       return this.$route.params.search;

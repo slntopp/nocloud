@@ -76,6 +76,7 @@
               <login-in-account-icon
                 :uuid="account?.uuid"
                 :instanceId="template.uuid"
+                :type="template.type"
               />
             </template>
           </v-text-field>
@@ -95,6 +96,13 @@
             :to="{ name: 'ServicesProvider', params: { uuid: sp?.uuid } }"
             :value="sp?.title"
             label="Service provider"
+          />
+        </v-col>
+        <v-col>
+          <route-text-field
+            :to="{ name: 'Plan', params: { planId: plan?.uuid } }"
+            :value="plan?.title"
+            label="Billing plan"
           />
         </v-col>
         <v-col>
@@ -223,6 +231,9 @@ export default {
     },
     sp() {
       return this.servicesProviders?.find((sp) => sp?.uuid == this.template.sp);
+    },
+    plan() {
+      return this.template.billingPlan;
     },
     additionalInstanceInfoComponent() {
       return () =>
