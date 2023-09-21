@@ -46,7 +46,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center">
+          <v-row align="center" v-if="!isServiceHide">
             <v-col cols="3">
               <v-subheader>Service</v-subheader>
             </v-col>
@@ -145,6 +145,15 @@
                 />
               </v-menu>
             </v-col>
+          </v-row>
+
+          <v-row v-if="!isAdminNoteHide" class="mx-5">
+            <v-textarea
+              no-resize
+              label="Admin note"
+              :rules="generalRule"
+              v-model="transaction.meta.note"
+            ></v-textarea>
           </v-row>
 
           <v-row class="mx-5">
@@ -310,7 +319,7 @@ export default {
       this.transaction.service =
         this.services.find(
           (service) => service.title === this.transaction.service
-        )?.uuid || "";
+        )?.uuid || undefined;
 
       this.transaction.exec = this.exec;
       if (!this.transaction.exec) {
@@ -425,6 +434,12 @@ export default {
     fullType() {
       return this.types.find((t) => t.id === this.typeId);
     },
+    isServiceHide() {
+      return this.isInvoice;
+    },
+    isAdminNoteHide() {
+      return this.isTransaction;
+    },
   },
   watch: {
     "transaction.service"() {
@@ -433,8 +448,11 @@ export default {
     typeId() {
       this.transaction.meta.type = this.fullType.value;
       if (this.isInvoice) {
+        this.transaction.service = undefined;
         this.resetDate();
       } else if (this.isTransaction) {
+        this.transaction.meta.note = undefined;
+        this.transaction.meta.invoiceType = undefined;
         this.initDate();
       }
     },
