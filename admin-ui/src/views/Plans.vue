@@ -1,14 +1,11 @@
 <template>
   <div class="pa-4">
-    <v-btn class="mr-2" color="background-light" :to="{ name: 'Plans create' }">
-      Create
-    </v-btn>
+    <v-btn class="mr-2" :to="{ name: 'Plans create' }"> Create </v-btn>
 
-    <confirm-dialog v-if="linked.length < 1" @confirm="deleteSelectedPlan">
+    <confirm-dialog v-if="linked.length !== 1" @confirm="deleteSelectedPlan">
       <v-btn
         class="mr-2"
-        color="background-light"
-        :disabled="selected.length < 1"
+        :disabled="selected.length !== 1"
         :loading="isDeleteLoading"
       >
         Delete
@@ -25,7 +22,6 @@
     >
       <v-btn
         class="mr-2"
-        color="background-light"
         :disabled="selected.length < 1"
         :loading="isDeleteLoading"
       >
@@ -72,7 +68,6 @@
 
     <nocloud-table
       table-name="plans"
-      single-select
       class="mt-4"
       :items="filtredPlans"
       :headers="headers"
@@ -99,6 +94,25 @@
           {{ instanceCountMap[item.uuid] }}
         </template>
       </template>
+
+      <template v-slot:footer.prepend>
+        <div class="d-flex align-center mt-2">
+          <v-select
+            style="width: 100px"
+            :items="fileTypes"
+            label="File type"
+            v-model="selectedFileType"
+            class="d-inline-block mx-2"
+          />
+          <download-template-button
+            class="mx-2"
+            :disabled="!selected.length"
+            name="selected_copy"
+            :type="selectedFileType"
+            :template="selected"
+          />
+        </div>
+      </template>
     </nocloud-table>
   </div>
 </template>
@@ -111,10 +125,11 @@ import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { defaultFilterObject, filterArrayByTitleAndUuid } from "@/functions";
 import { mapGetters } from "vuex";
+import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
 export default {
   name: "plans-view",
-  components: { nocloudTable, confirmDialog },
+  components: { DownloadTemplateButton, nocloudTable, confirmDialog },
   mixins: [snackbar, search],
   data: () => ({
     headers: [
@@ -136,6 +151,9 @@ export default {
     copyed: -1,
     fetchError: "",
     serviceProvider: null,
+
+    fileTypes: ["JSON", "YAML"],
+    selectedFileType: "JSON",
   }),
   methods: {
     defaultFilterObject,
@@ -297,7 +315,7 @@ export default {
     plans() {
       this.fetchError = "";
     },
-    typeItems(){
+    typeItems() {
       this.$store.commit("appSearch/setVariants", {
         kind: { items: ["static", "dynamic"], title: "Kind", isArray: true },
         type: { items: this.typeItems, isArray: true, title: "Type" },

@@ -20,7 +20,12 @@
         />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Price instance total" :value="price" />
+        <v-text-field
+          readonly
+          label="Price instance total"
+          :suffix="defaultCurrency"
+          :value="price"
+        />
       </v-col>
       <v-col>
         <v-text-field
@@ -53,40 +58,67 @@
         />
       </v-col>
     </v-row>
-    <nocloud-table
-      class="mb-5"
-      :headers="billingHeaders"
-      :items="billingItems"
-      no-hide-uuid
-      :show-select="false"
-      hide-default-footer
-    >
-      <template v-slot:[`item.price`]="{ item }">
-        <v-text-field
-          v-model="item.price"
-          @input="updatePrice(item, false)"
-          append-icon="mdi-pencil"
-        />
-      </template>
-      <template v-slot:[`item.accountPrice`]="{ item }">
-        <v-text-field
-          v-model="item.accountPrice"
-          @input="updatePrice(item, true)"
-          append-icon="mdi-pencil"
-        />
-      </template>
-      <template v-slot:body.append>
-        <tr>
-          <td>Total:</td>
-          <td />
-          <td>
-            {{ billingItems.find((i) => i.name === template.product)?.period }}
-          </td>
-          <td>{{ [totalAccountPrice, accountCurrency].join(" ") }}</td>
-          <td>{{ totalPrice }}</td>
-        </tr>
-      </template>
-    </nocloud-table>
+
+    <v-expansion-panels>
+      <v-expansion-panel>
+        <v-expansion-panel-header color="background-light"
+          >Prices</v-expansion-panel-header
+        >
+        <v-expansion-panel-content
+          class="ione-billing"
+          color="background-light"
+        >
+          <nocloud-table
+            class="mb-5"
+            :headers="billingHeaders"
+            :items="billingItems"
+            no-hide-uuid
+            :show-select="false"
+            hide-default-footer
+          >
+            <template v-slot:[`item.price`]="{ item }">
+              <div class="d-flex">
+                <v-text-field
+                  class="mr-2"
+                  v-model="item.price"
+                  :suffix="defaultCurrency"
+                  @input="updatePrice(item, false)"
+                  append-icon="mdi-pencil"
+                />
+                <v-text-field
+                  class="ml-2"
+                  :suffix="accountCurrency"
+                  style="color: #c921c9"
+                  v-model="item.accountPrice"
+                  @input="updatePrice(item, true)"
+                  append-icon="mdi-pencil"
+                />
+              </div>
+            </template>
+            <template v-slot:body.append>
+              <tr>
+                <td></td>
+                <td />
+                <td>
+                  {{
+                    billingItems.find((i) => i.name === template.product)
+                      ?.period
+                  }}
+                </td>
+                <td>
+                  <div class="d-flex justify-end mr-4">
+                    {{ [totalPrice, defaultCurrency].join(" ") }}
+                    /
+                    {{ [totalAccountPrice, accountCurrency].join(" ") }}
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </nocloud-table>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
+
     <change-monitorings
       :template="template"
       :service="service"
@@ -112,12 +144,14 @@ import ChangeMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useAccountConverter from "@/hooks/useAccountConverter";
 import NocloudTable from "@/components/table.vue";
+import { useStore } from "@/store";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh"]);
 
 const { template, plans, service } = toRefs(props);
 
+const store = useStore();
 const {
   fetchAccountRate,
   accountCurrency,
@@ -133,7 +167,6 @@ const billingHeaders = ref([
   { text: "Name", value: "name" },
   { text: "Payment term", value: "kind" },
   { text: "Billing period", value: "period" },
-  { text: "Account price", value: "accountPrice" },
   { text: "Price", value: "price" },
 ]);
 const billingItems = ref([]);
@@ -159,6 +192,8 @@ const totalPrice = computed(() => {
 });
 
 const billingPlan = computed(() => template.value.billingPlan);
+
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 onMounted(() => {
   fetchAccountRate();
