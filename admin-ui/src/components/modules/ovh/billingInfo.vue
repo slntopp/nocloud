@@ -67,6 +67,7 @@
               <div class="d-flex">
                 <v-text-field
                   class="mr-2"
+                  color="red"
                   v-model="item.price"
                   @change="onUpdatePrice(item, false)"
                   :suffix="defaultCurrency"
@@ -74,7 +75,6 @@
                   append-icon="mdi-pencil"
                 ></v-text-field>
                 <v-text-field
-                    color="grey"
                   class="ml-2"
                   v-model="item.accountPrice"
                   @change="onUpdatePrice(item, true)"

@@ -80,6 +80,7 @@
               <div class="d-flex">
                 <v-text-field
                   class="mr-2"
+                  color="red"
                   :suffix="defaultCurrency"
                   v-model="item.price"
                   @input="updatePrice(item, false)"
