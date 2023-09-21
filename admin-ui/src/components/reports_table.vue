@@ -37,27 +37,18 @@
         <span>{{ new Date(value * 1000).toLocaleString() }}</span>
       </template>
       <template v-slot:[`item.service`]="{ value }">
-        <router-link
-          v-if="getService(value)"
-          :to="{ name: 'Service', params: { serviceId: value } }"
-        >
-          {{ getService(value).title }}
+        <router-link :to="{ name: 'Service', params: { serviceId: value } }">
+          {{ getService(value)?.title || value }}
         </router-link>
       </template>
       <template v-slot:[`item.instance`]="{ value }">
-        <router-link
-          v-if="getInstance(value)"
-          :to="{ name: 'Instance', params: { instanceId: value } }"
-        >
-          {{ getInstance(value).title }}
+        <router-link :to="{ name: 'Instance', params: { instanceId: value } }">
+          {{ getInstance(value)?.title || value }}
         </router-link>
       </template>
       <template v-slot:[`item.account`]="{ value }">
-        <router-link
-          v-if="getAccount(value)"
-          :to="{ name: 'Account', params: { accountId: value } }"
-        >
-          {{ getAccount(value).title }}
+        <router-link :to="{ name: 'Account', params: { accountId: value } }">
+          {{ getAccount(value)?.title || value }}
         </router-link>
       </template>
     </nocloud-table>
