@@ -1,13 +1,12 @@
 <template>
   <div class="pa-4">
-    <v-btn class="mr-2" color="background-light" :to="{ name: 'Plans create' }">
+    <v-btn class="mr-2" :to="{ name: 'Plans create' }">
       Create
     </v-btn>
 
     <confirm-dialog v-if="linked.length < 1" @confirm="deleteSelectedPlan">
       <v-btn
         class="mr-2"
-        color="background-light"
         :disabled="selected.length < 1"
         :loading="isDeleteLoading"
       >
@@ -25,7 +24,6 @@
     >
       <v-btn
         class="mr-2"
-        color="background-light"
         :disabled="selected.length < 1"
         :loading="isDeleteLoading"
       >
