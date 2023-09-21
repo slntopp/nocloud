@@ -1,5 +1,5 @@
 <template>
-  <v-btn class="mr-2" @click="downloadFile">
+  <v-btn class="mr-2" @click="downloadFile" :disabled="disabled">
     Download {{ isJson ? "JSON" : "YAML" }}
   </v-btn>
 </template>
@@ -8,8 +8,8 @@
 import { downloadJSONFile, downloadYAMLFile } from "@/functions";
 import { computed, toRefs } from "vue";
 
-const props = defineProps(["name", "template", "type"]);
-const { name, template, type } = toRefs(props);
+const props = defineProps(["name", "template", "type", "disabled"]);
+const { name, template, type, disabled } = toRefs(props);
 
 const isJson = computed(() => {
   return type.value === "JSON";

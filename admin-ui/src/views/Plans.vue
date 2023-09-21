@@ -60,6 +60,20 @@
       </template>
     </confirm-dialog>
 
+    <v-select
+      :items="fileTypes"
+      label="file type"
+      v-model="selectedFileType"
+      class="d-inline-block mx-2"
+    />
+    <download-template-button
+      class="mx-2"
+      :disabled="!selected.length"
+      :name="selected[0]?.title"
+      :type="selectedFileType"
+      :template="selected[0]"
+    />
+
     <v-autocomplete
       :filter="defaultFilterObject"
       label="Filter by SP"
@@ -111,10 +125,11 @@ import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { defaultFilterObject, filterArrayByTitleAndUuid } from "@/functions";
 import { mapGetters } from "vuex";
+import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
 export default {
   name: "plans-view",
-  components: { nocloudTable, confirmDialog },
+  components: { DownloadTemplateButton, nocloudTable, confirmDialog },
   mixins: [snackbar, search],
   data: () => ({
     headers: [
@@ -136,6 +151,9 @@ export default {
     copyed: -1,
     fetchError: "",
     serviceProvider: null,
+
+    fileTypes: ["JSON", "YAML"],
+    selectedFileType: "JSON",
   }),
   methods: {
     defaultFilterObject,
@@ -297,7 +315,7 @@ export default {
     plans() {
       this.fetchError = "";
     },
-    typeItems(){
+    typeItems() {
       this.$store.commit("appSearch/setVariants", {
         kind: { items: ["static", "dynamic"], title: "Kind", isArray: true },
         type: { items: this.typeItems, isArray: true, title: "Type" },
