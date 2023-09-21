@@ -1,13 +1,11 @@
 <template>
   <div class="pa-4">
-    <v-btn class="mr-2" :to="{ name: 'Plans create' }">
-      Create
-    </v-btn>
+    <v-btn class="mr-2" :to="{ name: 'Plans create' }"> Create </v-btn>
 
-    <confirm-dialog v-if="linked.length < 1" @confirm="deleteSelectedPlan">
+    <confirm-dialog v-if="linked.length !== 1" @confirm="deleteSelectedPlan">
       <v-btn
         class="mr-2"
-        :disabled="selected.length < 1"
+        :disabled="selected.length !== 1"
         :loading="isDeleteLoading"
       >
         Delete
@@ -58,20 +56,6 @@
       </template>
     </confirm-dialog>
 
-    <v-select
-      :items="fileTypes"
-      label="file type"
-      v-model="selectedFileType"
-      class="d-inline-block mx-2"
-    />
-    <download-template-button
-      class="mx-2"
-      :disabled="!selected.length"
-      :name="selected[0]?.title"
-      :type="selectedFileType"
-      :template="selected[0]"
-    />
-
     <v-autocomplete
       :filter="defaultFilterObject"
       label="Filter by SP"
@@ -84,7 +68,6 @@
 
     <nocloud-table
       table-name="plans"
-      single-select
       class="mt-4"
       :items="filtredPlans"
       :headers="headers"
@@ -110,6 +93,25 @@
         <template v-else>
           {{ instanceCountMap[item.uuid] }}
         </template>
+      </template>
+
+      <template v-slot:footer.prepend>
+        <div class="d-flex align-center mt-2">
+          <v-select
+            style="width: 100px"
+            :items="fileTypes"
+            label="File type"
+            v-model="selectedFileType"
+            class="d-inline-block mx-2"
+          />
+          <download-template-button
+            class="mx-2"
+            :disabled="!selected.length"
+            name="selected_copy"
+            :type="selectedFileType"
+            :template="selected"
+          />
+        </div>
       </template>
     </nocloud-table>
   </div>
