@@ -31,7 +31,7 @@
       :footer-error="fetchError"
     >
       <template v-slot:[`item.name`]="{ item }">
-        <v-text-field dense style="width: 300px" v-model="item.name" />
+        <v-text-field dense style="width: 200px" v-model="item.name" />
       </template>
 
       <template v-slot:[`item.group`]="{ item }">
@@ -41,7 +41,7 @@
           <v-text-field
             dense
             class="d-inline-block mr-1"
-            style="width: 300px"
+            style="width: 200px"
             v-model="newGroup.name"
           />
           <v-icon @click="editGroup(item.group)">mdi-content-save</v-icon>
@@ -54,7 +54,7 @@
           <v-text-field
             dense
             class="d-inline-block mr-1"
-            style="width: 300px"
+            style="width: 200px"
             v-model="newGroup.name"
           />
           <v-icon @click="createGroup(item)">mdi-content-save</v-icon>
@@ -65,7 +65,7 @@
           <v-select
             dense
             class="d-inline-block"
-            style="width: 300px"
+            style="width: 200px"
             v-model="item.group"
             :items="groups"
             @change="item.name = getName(item)"
@@ -95,7 +95,12 @@
       </template>
 
       <template v-slot:[`item.value`]="{ item }">
-        <v-text-field dense style="width: 150px" v-model="item.value" />
+        <v-text-field
+          dense
+          style="min-width: 200px"
+          v-model="item.value"
+          :suffix="defaultCurrency"
+        />
       </template>
 
       <template v-slot:expanded-item="{ headers, item }">
@@ -146,7 +151,12 @@
               {{ value }} {{ defaultCurrency }}
             </template>
             <template v-slot:[`item.value`]="{ item }">
-              <v-text-field dense style="width: 150px" v-model="item.value" />
+              <v-text-field
+                dense
+                style="width: 200px"
+                :suffix="defaultCurrency"
+                v-model="item.value"
+              />
             </template>
             <template v-slot:[`item.sell`]="{ item }">
               <v-switch v-model="item.sell" />
