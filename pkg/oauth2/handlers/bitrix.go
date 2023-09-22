@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 	"io"
 	"net/http"
 	"strings"
@@ -118,7 +119,6 @@ func (g *BitrixOauthHandler) Setup(
 	}))
 	router.Handle("/oauth/bitrix/checkout", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		state, code := r.FormValue("state"), r.FormValue("code")
-		var redirect string
 
 		g.m.Lock()
 
@@ -213,7 +213,7 @@ func (g *BitrixOauthHandler) Setup(
 			})
 
 			if err != nil {
-				log.Error("Failed create account", zap.Error(err))
+				log.Error("Failed set creds", zap.Error(err))
 				return
 			}
 
@@ -221,7 +221,39 @@ func (g *BitrixOauthHandler) Setup(
 				log.Error("False result")
 				return
 			}
-			http.Redirect(w, r, fmt.Sprintf("%s?token=%s", redirect, stateInfo.Token), http.StatusSeeOther)
+
+			get, err := regClient.Get(ctx, &accounts.GetRequest{
+				Uuid: acc,
+			})
+
+			if get.GetData() == nil {
+				get.Data = &structpb.Struct{
+					Fields: make(map[string]*structpb.Value),
+				}
+			}
+
+			if get.GetData().GetFields() == nil {
+				get.Data.Fields = map[string]*structpb.Value{}
+			}
+
+			_, ok := get.GetData().GetFields()["oauth_types"]
+
+			if !ok {
+				list, _ := structpb.NewList([]interface{}{
+					"oauth2-bitrix",
+				})
+				get.Data.Fields["oauth_types"] = structpb.NewListValue(list)
+			} else {
+				get.Data.GetFields()["oauth_types"].GetListValue().Values = append(get.Data.GetFields()["oauth_types"].GetListValue().GetValues(), structpb.NewStringValue("oauth2-bitrix"))
+			}
+
+			_, err = regClient.Update(ctx, get)
+			if err != nil {
+				log.Error("Failed to update")
+				return
+			}
+
+			http.Redirect(w, r, fmt.Sprintf("%s?token=%s", stateInfo.RedirectUrl, stateInfo.Token), http.StatusSeeOther)
 		} else {
 			resp, err := regClient.Token(ctx, &accounts.TokenRequest{
 				Auth: &accounts.Credentials{
@@ -234,7 +266,7 @@ func (g *BitrixOauthHandler) Setup(
 				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
 			})
 			if err != nil {
-				_, err = regClient.Create(ctx, &accounts.CreateRequest{
+				create, err := regClient.Create(ctx, &accounts.CreateRequest{
 					Title:     fmt.Sprintf("%s %s", name, last_name),
 					Namespace: schema.ROOT_NAMESPACE_KEY,
 					Auth: &accounts.Credentials{
@@ -263,8 +295,29 @@ func (g *BitrixOauthHandler) Setup(
 					log.Error("Failed get token", zap.Error(err))
 					return
 				}
+
+				get, err := regClient.Get(ctx, &accounts.GetRequest{
+					Uuid: create.GetUuid(),
+				})
+
+				list, _ := structpb.NewList([]interface{}{
+					"oauth2-bitrix",
+				})
+				listValue := structpb.NewListValue(list)
+
+				get.Data = &structpb.Struct{
+					Fields: map[string]*structpb.Value{
+						"oauth_types": listValue,
+					},
+				}
+
+				_, err = regClient.Update(ctx, get)
+				if err != nil {
+					log.Error("Failed to update")
+					return
+				}
 			}
-			http.Redirect(w, r, fmt.Sprintf("%s?token=%s", redirect, resp.GetToken()), http.StatusSeeOther)
+			http.Redirect(w, r, fmt.Sprintf("%s?token=%s", stateInfo.RedirectUrl, resp.GetToken()), http.StatusSeeOther)
 		}
 	}))
 }
