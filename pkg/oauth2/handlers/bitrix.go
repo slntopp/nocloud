@@ -204,7 +204,7 @@ func (g *BitrixOauthHandler) Setup(
 			resp, err := regClient.SetCredentials(ctx, &accounts.SetCredentialsRequest{
 				Account: acc,
 				Auth: &accounts.Credentials{
-					Type: "oauth2",
+					Type: "oauth2-bitrix",
 					Data: []string{
 						field,
 						value,
