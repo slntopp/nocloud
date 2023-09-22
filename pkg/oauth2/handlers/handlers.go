@@ -8,7 +8,7 @@ import (
 )
 
 type OAuthHandler interface {
-	Setup(*zap.Logger, *mux.Router, config.OAuth2Config, registry.AccountsServiceClient)
+	Setup(*zap.Logger, *mux.Router, config.OAuth2Config, registry.AccountsServiceClient, []byte)
 }
 
 func GetOAuthHandler(handlerType string) OAuthHandler {

@@ -66,35 +66,35 @@
             <template v-slot:[`item.prices`]="{ item }">
               <div class="d-flex">
                 <v-text-field
-                  class="mr-1"
-                  v-model="item.accountPrice"
-                  @change="onUpdatePrice(item, true)"
-                  :suffix="accountCurrency"
-                  type="number"
-                  append-icon="mdi-pencil"
-                ></v-text-field>
-                <v-text-field
-                  class="ml-1"
+                  class="mr-2"
                   v-model="item.price"
                   @change="onUpdatePrice(item, false)"
                   :suffix="defaultCurrency"
                   type="number"
                   append-icon="mdi-pencil"
                 ></v-text-field>
+                <v-text-field
+                  class="ml-2"
+                  style="color: #c921c9"
+                  v-model="item.accountPrice"
+                  @change="onUpdatePrice(item, true)"
+                  :suffix="accountCurrency"
+                  type="number"
+                  append-icon="mdi-pencil"
+                ></v-text-field>
               </div>
             </template>
             <template v-slot:[`item.basePrice`]="{ item }">
-              <v-text-field
-                :loading="isBasePricesLoading"
-                readonly
-                suffix="PLN"
-                :value="convertedBasePrices[item.key]"
-              ></v-text-field>
+              <v-skeleton-loader type="text" v-if="isBasePricesLoading" />
+              <span v-else> {{ convertedBasePrices[item.key] }} PLN </span>
             </template>
             <template v-slot:body.append>
               <tr>
-                <td>Total instance price</td>
                 <td></td>
+                <td></td>
+                <td>
+                  {{ getBillingPeriod(tarrif.period) }}
+                </td>
                 <td>
                   {{
                     isBasePricesLoading
@@ -103,14 +103,13 @@
                   }}
                 </td>
                 <td>
-                  <div class="d-flex align-center">
-                    <span style="width: 50%">
-                      {{ [accountTotalNewPrice, accountCurrency].join(" ") }}
-                    </span>
-                    <span style="width: 50%">
+                  <div class="d-flex justify-end">
+                    <span class="mr-4">
                       {{
                         [totalNewPrice?.toFixed(2), defaultCurrency].join(" ")
                       }}
+                      /
+                      {{ [accountTotalNewPrice, accountCurrency].join(" ") }}
                     </span>
                   </div>
                 </td>
@@ -169,6 +168,7 @@ const pricesItems = ref([]);
 const basePrices = ref({});
 const pricesHeaders = ref([
   { text: "Name", value: "title" },
+  { text: "Payment term", value: "kind" },
   { text: "Billing period", value: "period" },
   { text: "Base price", value: "basePrice" },
   { text: "Price", value: "prices" },
@@ -345,6 +345,7 @@ const initPrices = () => {
     path: `billingPlan.products.${[duration.value, planCode.value].join(
       " "
     )}.price`,
+    kind: tarrif.value.kind,
     price: tarrif.value?.price,
     period: tarrif.value?.period,
   });
@@ -354,13 +355,20 @@ const initPrices = () => {
       (p) => p.key === getAddonKey(key)
     );
 
+    const addon = template.value.billingPlan.resources[addonIndex];
+
+    if (!addon) {
+      return;
+    }
+
     pricesItems.value.push({
-      price: template.value.billingPlan.resources[addonIndex]?.price || 0,
+      price: addon.price || 0,
       path: `billingPlan.resources.${addonIndex}.price`,
       title: key,
+      kind: addon.kind,
       key: key,
       index: ind + 1,
-      period: template.value.billingPlan.resources[addonIndex]?.period,
+      period: addon.period,
     });
   });
 
