@@ -70,6 +70,7 @@ func (g *BitrixOauthHandler) Setup(
 			RedirectUrl: redirect,
 			Method:      "sign_in",
 		}
+		log.Debug("Put state", zap.Any("state", g.states[state]))
 		g.m.Unlock()
 
 		url := oauth2Config.AuthCodeURL(state)
@@ -88,10 +89,12 @@ func (g *BitrixOauthHandler) Setup(
 		authHeaderSplit := strings.Split(authHeader, " ")
 
 		if len(authHeaderSplit) != 2 {
+			log.Error("Len is not 2")
 			return
 		}
 
-		if authHeaderSplit[0] != "bearer" {
+		if strings.ToLower(authHeaderSplit[0]) != "bearer" {
+			log.Error("No bearer")
 			return
 		}
 
@@ -101,6 +104,7 @@ func (g *BitrixOauthHandler) Setup(
 			Token:       authHeaderSplit[1],
 			Method:      "link",
 		}
+		log.Debug("Put state", zap.Any("state", g.states[state]))
 		g.m.Unlock()
 
 		url := oauth2Config.AuthCodeURL(state)
@@ -124,6 +128,8 @@ func (g *BitrixOauthHandler) Setup(
 		}
 
 		stateInfo := g.states[state]
+
+		log.Debug("Get state", zap.Any("state", stateInfo))
 		delete(g.states, state)
 		g.m.Unlock()
 
@@ -156,6 +162,7 @@ func (g *BitrixOauthHandler) Setup(
 		}
 
 		if userInfo.Result == nil {
+			log.Error("No user info")
 			return
 		}
 
