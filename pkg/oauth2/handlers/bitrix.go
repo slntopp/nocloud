@@ -226,6 +226,11 @@ func (g *BitrixOauthHandler) Setup(
 				Uuid: acc,
 			})
 
+			if err != nil {
+				log.Error("Failed get acc", zap.Error(err))
+				return
+			}
+
 			if get.GetData() == nil {
 				get.Data = &structpb.Struct{
 					Fields: make(map[string]*structpb.Value),
@@ -299,6 +304,11 @@ func (g *BitrixOauthHandler) Setup(
 				get, err := regClient.Get(ctx, &accounts.GetRequest{
 					Uuid: create.GetUuid(),
 				})
+
+				if err != nil {
+					log.Error("Failed get acc", zap.Error(err))
+					return
+				}
 
 				list, _ := structpb.NewList([]interface{}{
 					"oauth2-bitrix",
