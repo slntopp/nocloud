@@ -69,7 +69,11 @@
             :items="fileTypes"
             v-model="selectedFileType"
           />
-          <v-btn class="mr-3" @click="downloadFile">Download</v-btn>
+          <download-template-button
+            :template="getService()"
+            :type="selectedFileType"
+            :name="downloadedFileName"
+          />
           <upload-file-button
             @file="uploadFile"
             :accept="selectedFileType.toLowerCase()"
@@ -192,16 +196,15 @@ import snackbar from "@/mixins/snackbar.js";
 
 import {
   defaultFilterObject,
-  downloadJSONFile,
-  downloadYAMLFile,
   readJSONFile,
   readYAMLFile,
 } from "@/functions.js";
 import UploadFileButton from "@/components/uploadFileButton.vue";
+import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
 export default {
   name: "service-create",
-  components: { UploadFileButton },
+  components: { DownloadTemplateButton, UploadFileButton },
   data: () => ({
     formValid: false,
     rules: {
@@ -394,18 +397,6 @@ export default {
         this.plans.products.push(title);
       });
     },
-    downloadFile() {
-      const data = this.getService();
-      const name = data.service.title
-        ? (data.service.title + " service").replaceAll(" ", "_")
-        : "unknown_service";
-
-      if (this.selectedFileType === "JSON") {
-        downloadJSONFile(data, name);
-      } else if (this.selectedFileType === "YAML") {
-        downloadYAMLFile(data, name);
-      }
-    },
     async uploadFile(file) {
       let data = {};
       if (this.selectedFileType === "JSON") {
@@ -445,6 +436,12 @@ export default {
     },
     planRules() {
       return this.plansVisible ? this.rules.req : [];
+    },
+    downloadedFileName() {
+      const data = this.getService();
+      return data.service.title
+        ? (data.service.title + " service").replaceAll(" ", "_")
+        : "unknown_service";
     },
   },
   created() {

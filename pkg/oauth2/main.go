@@ -15,15 +15,17 @@ import (
 type OAuth2Server struct {
 	router         *mux.Router
 	registryClient registry.AccountsServiceClient
+	signingKey     []byte
 
 	log *zap.Logger
 }
 
-func NewOAuth2Server(log *zap.Logger, host string) *OAuth2Server {
+func NewOAuth2Server(log *zap.Logger, signingKey []byte) *OAuth2Server {
 	log.Debug("New Server")
 	return &OAuth2Server{
-		log:    log.Named("OauthServer"),
-		router: mux.NewRouter(),
+		log:        log.Named("OauthServer"),
+		router:     mux.NewRouter(),
+		signingKey: signingKey,
 	}
 }
 
@@ -46,7 +48,7 @@ func (s *OAuth2Server) registerOAuthHandlers() {
 			continue
 		}
 
-		handler.Setup(s.log.Named(key), s.router, conf, s.registryClient)
+		handler.Setup(s.log.Named(key), s.router, conf, s.registryClient, s.signingKey)
 	}
 
 }

@@ -114,7 +114,7 @@ func MakeCredentials(credentials *accountspb.Credentials, log *zap.Logger) (Cred
 	case credentials.Type == "whmcs":
 		cred, err = NewWHMCSCredentials(credentials.Data)
 	case strings.HasPrefix(credentials.Type, "oauth2"):
-		cred, err = NewOAuth2Credentials(credentials.Data)
+		cred, err = NewOAuth2Credentials(credentials.Data, credentials.GetType())
 	default:
 		return nil, errors.New("auth type is wrong")
 	}

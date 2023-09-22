@@ -25,8 +25,13 @@ type GoogleOauthHandler struct {
 	m      *sync.Mutex
 }
 
-func (g *GoogleOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
-
+func (g *GoogleOauthHandler) Setup(
+	log *zap.Logger,
+	router *mux.Router,
+	cfg config.OAuth2Config,
+	regClient registry.AccountsServiceClient,
+	signingKey []byte,
+) {
 	g.states = map[string]string{}
 	g.m = &sync.Mutex{}
 

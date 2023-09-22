@@ -1,15 +1,19 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
+    <div style="position: absolute; top: 0; right: 75px">
+      <div>
+        <v-chip color="primary" outlined
+          >Balance: {{ account.balance?.toFixed(2) }}
+          {{ account.currency }}</v-chip
+        >
+      </div>
+    </div>
+
     <v-row>
-      <v-col cols="6">
-        <v-text-field
-          v-model="uuid"
-          readonly
-          label="UUID"
-          style="width: 330px"
-        />
+      <v-col cols="3">
+        <v-text-field v-model="uuid" readonly label="UUID" />
       </v-col>
-      <v-col cols="6">
+      <v-col cols="3">
         <v-text-field v-model="title" label="name" style="width: 330px" />
       </v-col>
     </v-row>

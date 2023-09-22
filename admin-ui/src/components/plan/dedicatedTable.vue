@@ -31,26 +31,30 @@
       :footer-error="fetchError"
     >
       <template v-slot:[`item.name`]="{ item }">
-        <v-text-field dense style="width: 300px" v-model="item.name" />
+        <v-text-field dense style="width: 200px" v-model="item.name" />
       </template>
 
       <template v-slot:[`item.group`]="{ item }">
-        <template v-if="newGroup.mode === 'edit' && newGroup.planId === item.id">
+        <template
+          v-if="newGroup.mode === 'edit' && newGroup.planId === item.id"
+        >
           <v-text-field
             dense
             class="d-inline-block mr-1"
-            style="width: 300px"
+            style="width: 200px"
             v-model="newGroup.name"
           />
           <v-icon @click="editGroup(item.group)">mdi-content-save</v-icon>
           <v-icon @click="newGroup.mode = 'none'">mdi-close</v-icon>
         </template>
 
-        <template v-if="newGroup.mode === 'create' && newGroup.planId === item.id">
+        <template
+          v-if="newGroup.mode === 'create' && newGroup.planId === item.id"
+        >
           <v-text-field
             dense
             class="d-inline-block mr-1"
-            style="width: 300px"
+            style="width: 200px"
             v-model="newGroup.name"
           />
           <v-icon @click="createGroup(item)">mdi-content-save</v-icon>
@@ -61,17 +65,21 @@
           <v-select
             dense
             class="d-inline-block"
-            style="width: 300px"
+            style="width: 200px"
             v-model="item.group"
             :items="groups"
             @change="item.name = getName(item)"
           />
           <v-icon @click="changeMode('create', item)">mdi-plus</v-icon>
           <v-icon @click="changeMode('edit', item)">mdi-pencil</v-icon>
-          <v-icon v-if="groups.length > 1" @click="deleteGroup(item.group)">mdi-delete</v-icon>
+          <v-icon v-if="groups.length > 1" @click="deleteGroup(item.group)"
+            >mdi-delete</v-icon
+          >
         </template>
 
-        <template v-else-if="newGroup.planId !== item.id">{{ item.group }}</template>
+        <template v-else-if="newGroup.planId !== item.id">{{
+          item.group
+        }}</template>
       </template>
 
       <template v-slot:[`item.margin`]="{ item }">
@@ -87,7 +95,12 @@
       </template>
 
       <template v-slot:[`item.value`]="{ item }">
-        <v-text-field dense style="width: 150px" v-model="item.value" />
+        <v-text-field
+          dense
+          style="min-width: 200px"
+          v-model="item.value"
+          :suffix="defaultCurrency"
+        />
       </template>
 
       <template v-slot:expanded-item="{ headers, item }">
@@ -138,7 +151,12 @@
               {{ value }} {{ defaultCurrency }}
             </template>
             <template v-slot:[`item.value`]="{ item }">
-              <v-text-field dense style="width: 150px" v-model="item.value" />
+              <v-text-field
+                dense
+                style="width: 200px"
+                :suffix="defaultCurrency"
+                v-model="item.value"
+              />
             </template>
             <template v-slot:[`item.sell`]="{ item }">
               <v-switch v-model="item.sell" />
@@ -156,7 +174,6 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
-import currencyRate from "@/mixins/currencyRate";
 import { getMarginedValue } from "@/functions";
 
 export default {
@@ -222,9 +239,8 @@ export default {
 
     groups: [],
     newGroup: { mode: "none", name: "", planId: "" },
-    usedFee: {}
+    usedFee: {},
   }),
-  mixins: [currencyRate],
   methods: {
     getAddons({ planCode, duration }) {
       return this.addons[planCode]?.filter((a) => a.duration === duration);
@@ -283,7 +299,7 @@ export default {
     async changePlan(plan) {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
         this.$store.commit("snackbar/showSnackbarError", {
-          message: "You must select a group for the tariff!"
+          message: "You must select a group for the tariff!",
         });
         return "error";
       }
@@ -387,7 +403,8 @@ export default {
                 const menuWidth = menu.offsetWidth;
                 let marginLeft = 20;
 
-                if (width < menuWidth + x) marginLeft = width - (menuWidth + x) - 35;
+                if (width < menuWidth + x)
+                  marginLeft = width - (menuWidth + x) - 35;
                 const marginTop = marginLeft < 20 ? 20 : 0;
 
                 menu.style.left = `${x + marginLeft + window.scrollX}px`;
@@ -413,21 +430,24 @@ export default {
           const isYearly = duration === "P1Y" && pricingMode === "upfront12";
 
           if (isMonthly || isYearly) {
-            const newPrice = parseFloat((price.value * this.rate).toFixed(2));
+            const newPrice = this.convertPrice(price.value);
+
             const id = tariff
               ? this.getAddonId({ planCode, duration, tariff })
               : this.getTarrifId({ planCode, duration });
 
-            const installation = prices.find((price) =>
-              price.capacities.includes("installation") && price.pricingMode === pricingMode
+            const installation = prices.find(
+              (price) =>
+                price.capacities.includes("installation") &&
+                price.pricingMode === pricingMode
             );
 
             result.push({
               planCode,
               duration,
               installation_fee: {
-                price: { value: +(installation.price.value * this.rate).toFixed(2) },
-                value: installation.price.value
+                price: { value: +this.convertPrice(installation.price.value) },
+                value: installation.price.value,
               },
               price: { value: newPrice },
               name: productName,
@@ -603,11 +623,13 @@ export default {
         return result.every((el) => el);
       });
     },
+    convertPrice(price) {
+      return (price * this.plnRate).toFixed(2);
+    },
   },
   created() {
     this.$emit("changeLoading");
 
-    this.fetchRate();
     api.servicesProviders
       .action({
         action: "get_baremetal_plans",
@@ -643,6 +665,17 @@ export default {
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
+    },
+    rates() {
+      return this.$store.getters["currencies/rates"];
+    },
+    plnRate() {
+      if (this.defaultCurrency === "PLN") {
+        return 1;
+      }
+      return this.rates.find(
+        (r) => r.from === "PLN" && r.to === this.defaultCurrency
+      )?.rate;
     },
   },
   watch: {

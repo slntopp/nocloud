@@ -40,9 +40,12 @@
           >
             Edit
           </v-btn>
-          <v-btn class="mx-2" @click="downloadFile">
-            Download {{ isJson ? "JSON" : "YAML" }}
-          </v-btn>
+          <download-template-button
+            :name="downloadedFileName"
+            :template="template"
+            class="mx-2"
+            :type="isJson ? 'JSON' : 'YAML'"
+          />
           <v-switch
             class="mr-2"
             style="margin-top: 5px; padding-top: 0"
@@ -93,7 +96,7 @@
               color="background-light"
             >
               <nocloud-table
-                  table-name="sp-binded-plans"
+                table-name="sp-binded-plans"
                 :items="plans"
                 :headers="headers"
                 :loading="isPlanLoading"
@@ -155,11 +158,16 @@ import extentionsMap from "@/components/extentions/map.js";
 import nocloudTable from "@/components/table.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import { format } from "date-fns";
-import { downloadJSONFile, downloadYAMLFile } from "@/functions.js";
+import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
 export default {
   name: "services-provider-info",
-  components: { JsonEditor, nocloudTable, ConfirmDialog },
+  components: {
+    DownloadTemplateButton,
+    JsonEditor,
+    nocloudTable,
+    ConfirmDialog,
+  },
   props: { template: { type: Object, required: true } },
   mixins: [snackbar],
   data: () => ({
@@ -321,16 +329,6 @@ export default {
           this.isDeleteLoading = false;
         });
     },
-    downloadFile() {
-      const name = this.template.title
-        ? this.template.title.replaceAll(" ", "_")
-        : "unknown_sp";
-      if (this.isJson) {
-        downloadJSONFile(this.template, name);
-      } else {
-        downloadYAMLFile(this.template, name);
-      }
-    },
   },
   mounted() {
     this.provider = this.template;
@@ -384,6 +382,11 @@ export default {
           return () =>
             import("@/components/modules/custom/serviceProviderInfo.vue");
       }
+    },
+    downloadedFileName() {
+      return this.template.title
+        ? this.template.title.replaceAll(" ", "_")
+        : "unknown_sp";
     },
   },
 };

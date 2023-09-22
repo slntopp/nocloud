@@ -51,7 +51,7 @@ const props = defineProps([
 ]);
 
 const store = useStore();
-const { convertFrom } = useCurrency();
+const { convertTo } = useCurrency();
 
 const { template, addonsPrice, tariffPrice, dueDate, account } = toRefs(props);
 
@@ -66,7 +66,7 @@ const accountCurrency = computed(() => {
 const price = computed(() => {
   const addonsSum = Object.values(addonsPrice.value).reduce((a, b) => a + b);
 
-  return convertFrom(tariffPrice.value + addonsSum, accountCurrency.value);
+  return convertTo(tariffPrice.value + addonsSum, accountCurrency.value);
 });
 
 const isRenewDisabled = computed(() => {
