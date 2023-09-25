@@ -32,14 +32,17 @@
           </template>
 
           <template v-slot:append>
-            <search-tag
-              v-if="customParamsValues.length"
-              :param="customParamsValues[0]"
-              :variants="variants"
-            />
+            <div class="d-flex" v-if="customParamsValues.length">
+              <search-tag
+                v-for="param in showedCustomParams"
+                :key="param.value"
+                :param="param"
+                :variants="variants"
+              />
+            </div>
             <v-menu
               :close-on-content-click="false"
-              v-if="customParamsValues.length > 1"
+              v-if="filteredCustomParamsValues.length > 1"
               offset-y
               min-height="300px"
               max-height="300px"
@@ -54,7 +57,7 @@
                   outlined
                   v-on="on"
                 >
-                  +{{ customParamsValues.length - 1 }}
+                  +{{ filteredCustomParamsValues.length }}
                 </v-chip>
               </template>
               <v-card class="px-3" color="background-light">
@@ -102,13 +105,13 @@
                       {{ searchParam || "" }}
                     </span>
                     <div>
-                      <span> in {{ item.title }} </span>
+                      <span> {{ item.title }} </span>
                       <v-btn
                         v-if="variants[item.key].items"
                         @click.stop="selectGroup(item)"
                         icon
                       >
-                        <v-icon>mdi-magnify</v-icon>
+                        <v-icon>mdi-arrow-right</v-icon>
                       </v-btn>
                     </div>
                   </div>
@@ -168,6 +171,7 @@ export default {
       }
       if (isSearchParam) {
         this.close();
+        this.searchParam = "";
       }
     },
     setEntity(index) {
@@ -201,7 +205,7 @@ export default {
         },
       });
 
-      this.close();
+      this.searchParam = "";
     },
     selectGroup({ key }) {
       this.selectedGroupKey = key;
@@ -289,11 +293,34 @@ export default {
 
       return values;
     },
-    filteredCustomParamsValues() {
-      if (!this.tagsSearchParam) {
-        return this.customParamsValues;
+    showedCustomParams() {
+      const showed = [];
+      const maxLength = Math.floor(((window.innerWidth / 12) * 6) / 15);
+      let currLength = 0;
+
+      for (const param of this.customParamsValues) {
+        const title = param.isArray
+          ? `${this.variants[param.key]?.title || ""}:${param?.title}`
+          : param.title;
+        if (title.length + currLength < maxLength) {
+          currLength += title.length;
+          showed.push(param);
+        } else {
+          break;
+        }
       }
-      return this.customParamsValues.filter((c) =>
+
+      return showed;
+    },
+    filteredCustomParamsValues() {
+      const params = this.customParamsValues.filter(
+        (a, i) => i > this.showedCustomParams.length
+      );
+
+      if (!this.tagsSearchParam) {
+        return params;
+      }
+      return params.filter((c) =>
         c.title.toLowerCase().includes(this.tagsSearchParam.toLowerCase())
       );
     },

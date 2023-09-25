@@ -5,15 +5,20 @@
     hide-instance
     hide-service
     :filters="filters"
+    show-dates
+    :duration="duration"
+    @input:duration="duration = $event"
   />
 </template>
 
 <script setup>
-import { toRefs, computed } from "vue";
+import { toRefs, computed, ref } from "vue";
 import Reports_table from "@/components/reports_table.vue";
 
 const props = defineProps(["template"]);
 const { template } = toRefs(props);
+
+const duration = ref({ to: null, from: null });
 
 const filters = computed(() => {
   return {
