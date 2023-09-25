@@ -290,10 +290,12 @@ export default {
       return values;
     },
     filteredCustomParamsValues() {
+      const params = this.customParamsValues.filter((a, i) => i > 0);
+
       if (!this.tagsSearchParam) {
-        return this.customParamsValues;
+        return params;
       }
-      return this.customParamsValues.filter((c) =>
+      return params.filter((c) =>
         c.title.toLowerCase().includes(this.tagsSearchParam.toLowerCase())
       );
     },
