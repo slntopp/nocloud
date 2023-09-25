@@ -171,6 +171,7 @@ export default {
       }
       if (isSearchParam) {
         this.close();
+        this.searchParam = "";
       }
     },
     setEntity(index) {
