@@ -102,7 +102,7 @@
                       {{ searchParam || "" }}
                     </span>
                     <div>
-                      <span> in {{ item.title }} </span>
+                      <span> {{ item.title }} </span>
                       <v-btn
                         v-if="variants[item.key].items"
                         @click.stop="selectGroup(item)"
@@ -201,7 +201,7 @@ export default {
         },
       });
 
-      this.close();
+      this.searchParam = "";
     },
     selectGroup({ key }) {
       this.selectedGroupKey = key;
