@@ -244,13 +244,13 @@ export default {
         id: 1,
         value: "invoice",
         title: "Invoice",
-        amount: { title: "Top-up invoice (with balance change)", value: true },
+        amount: { title: "Top-up invoice (with balance change)", value: false },
       },
       {
         id: 2,
         value: "invoice",
         title: "Invoice",
-        amount: { title: "Payment invoice (no balance change)", value: false },
+        amount: { title: "Payment invoice (no balance change)", value: true },
       },
       {
         id: 3,
