@@ -111,7 +111,7 @@
                         @click.stop="selectGroup(item)"
                         icon
                       >
-                        <v-icon>mdi-magnify</v-icon>
+                        <v-icon>mdi-arrow-right</v-icon>
                       </v-btn>
                     </div>
                   </div>
