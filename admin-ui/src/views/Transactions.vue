@@ -26,6 +26,17 @@
       :items="accounts"
     />
 
+    <v-autocomplete
+      :filter="defaultFilterObject"
+      label="Instances"
+      item-text="title"
+      item-value="uuid"
+      class="d-inline-block mr-2"
+      v-model="selectedInstances"
+      multiple
+      :items="instances"
+    />
+
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
     <template v-else-if="series.length < 1">
       <v-subheader v-if="balance.values.length > 1"> Balance: </v-subheader>
@@ -71,6 +82,7 @@ export default {
   mixins: [snackbar, search],
   data: () => ({
     selectedAccounts: [],
+    selectedInstances: [],
     series: [],
     chartLoading: false,
     isInitLoading: true,
@@ -183,27 +195,31 @@ export default {
         account: this.selectedAccounts.length
           ? this.selectedAccounts
           : undefined,
+        instance: this.selectedInstances.length
+          ? this.selectedInstances
+          : undefined,
       };
     },
     servicesByAccount() {
-      let filtredServices = null;
-      if (this.selectedAccounts.length) {
-        const namespaceId = this.namespaces.find((n) =>
-          this.selectedAccounts.includes(n.access.namespace)
-        )?.uuid;
-        filtredServices = this.services.filter((s) => {
-          return s.access.namespace === namespaceId;
-        });
-      } else {
-        filtredServices = this.services;
-      }
+      const namespaces = this.namespaces
+        .filter((n) => this.selectedAccounts.includes(n.access.namespace))
+        .map((n) => n.uuid);
 
-      return [{ title: "all", uuid: null }].concat(
-        filtredServices.map((el) => ({
-          title: `${el.title} (${el.uuid.slice(0, 8)})`,
-          uuid: el.uuid,
-        }))
-      );
+      return this.services.filter((s) => {
+        return namespaces.includes(s.access.namespace);
+      });
+    },
+    instances() {
+      const instances = [];
+      this.servicesByAccount.forEach((s) => {
+        s.instancesGroups.forEach((ig) => {
+          ig.instances.forEach((i) =>
+            instances.push({ title: i.title, uuid: i.uuid })
+          );
+        });
+      });
+
+      return instances;
     },
     balance() {
       const dates = [];
@@ -238,8 +254,13 @@ export default {
     chartLoading() {
       setTimeout(this.setListenerToLegend);
     },
-    accountId(newAccount) {
-      console.log(newAccount);
+    selectedAccounts: {
+      handler() {
+        this.selectedInstances = this.selectedInstances.filter((si) =>
+          this.instances.find((i) => i.uuid === si)
+        );
+      },
+      deep: true,
     },
   },
 };
