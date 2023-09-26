@@ -262,9 +262,6 @@ export default {
     chartLoading() {
       setTimeout(this.setListenerToLegend);
     },
-    user() {
-      this.accountId = this.user.uuid;
-    },
     accountId() {
       if (this.serviceId === null) {
         this.serviceId = null;
