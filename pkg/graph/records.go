@@ -313,7 +313,11 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+			if key == "transactionType" {
+				query += fmt.Sprintf(` FILTER record.meta["%s"] in @%s`, key, key)
+			} else {
+				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+			}
 			params[key] = values
 		}
 	}
