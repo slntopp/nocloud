@@ -1,41 +1,56 @@
 <template>
   <div class="pa-4">
-    <v-btn
-      class="mr-2"
-      color="background-light"
-      :to="{ name: 'Transactions create' }"
-    >
-      Create
-    </v-btn>
-
-    <div style="max-width: 300px" class="mx-3 d-inline-block">
-      <date-picker label="from" v-model="duration.from" />
-    </div>
-    <div style="max-width: 300px" class="mx-3 d-inline-block">
-      <date-picker label="to" v-model="duration.to" />
-    </div>
-
-    <v-autocomplete
-      :filter="defaultFilterObject"
-      label="Accounts"
-      item-text="title"
-      item-value="uuid"
-      class="d-inline-block mr-2"
-      v-model="selectedAccounts"
-      multiple
-      :items="accounts"
-    />
-
-    <v-autocomplete
-      :filter="defaultFilterObject"
-      label="Instances"
-      item-text="title"
-      item-value="uuid"
-      class="d-inline-block mr-2"
-      v-model="selectedInstances"
-      multiple
-      :items="instances"
-    />
+    <v-row align="start">
+      <v-col cols="1">
+        <v-btn
+          class="mr-2"
+          color="background-light"
+          :to="{ name: 'Transactions create' }"
+        >
+          Create
+        </v-btn>
+      </v-col>
+      <v-col>
+        <date-picker dense label="from" v-model="duration.from" />
+      </v-col>
+      <v-col>
+        <date-picker dense label="to" v-model="duration.to" />
+      </v-col>
+      <v-col>
+        <v-autocomplete
+          :filter="defaultFilterObject"
+          label="Types"
+          dense
+          v-model="selectedTypes"
+          multiple
+          :items="types"
+        />
+      </v-col>
+      <v-col>
+        <v-autocomplete
+          dense
+          :filter="defaultFilterObject"
+          label="Accounts"
+          item-text="title"
+          item-value="uuid"
+          v-model="selectedAccounts"
+          multiple
+          :items="accounts"
+        />
+      </v-col>
+      <v-col>
+        <v-autocomplete
+          :filter="defaultFilterObject"
+          dense
+          label="Instances"
+          item-text="title"
+          item-value="uuid"
+          v-model="selectedInstances"
+          multiple
+          :items="instances"
+        />
+      </v-col>
+    </v-row>
 
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
     <template v-else-if="series.length < 1">
@@ -62,6 +77,7 @@
       table-name="transaction-table"
       :filters="filters"
       :duration="duration"
+      @input:unique="types = $event.transactionType"
       :select-record="selectTransaction"
     />
   </div>
@@ -83,6 +99,8 @@ export default {
   data: () => ({
     selectedAccounts: [],
     selectedInstances: [],
+    selectedTypes: [],
+    types: [],
     series: [],
     chartLoading: false,
     isInitLoading: true,
@@ -197,6 +215,9 @@ export default {
           : undefined,
         instance: this.selectedInstances.length
           ? this.selectedInstances
+          : undefined,
+        transactionType: this.selectedTypes.length
+          ? this.selectedTypes
           : undefined,
       };
     },
