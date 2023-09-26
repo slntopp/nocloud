@@ -191,7 +191,9 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		Currency:  t.GetCurrency(),
 		Service:   t.GetService(),
 		Account:   t.GetAccount(),
-		Meta:      t.GetMeta(),
+		Meta: map[string]*structpb.Value{
+			"transactionType": t.Meta["transactionType"],
+		},
 	})
 
 	if t.GetRecords() == nil {
