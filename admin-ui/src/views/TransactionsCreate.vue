@@ -314,18 +314,16 @@ export default {
           total = amountType ? total : -total;
         }
 
-        const promises = [];
-        promises.push(
-          api.transactions.create({
-            ...this.transaction,
-            account: this.transaction.account.uuid,
-            total,
-            currency: this.transaction.account.currency,
-          })
-        );
+        const transaction = await api.transactions.create({
+          ...this.transaction,
+          account: this.transaction.account.uuid,
+          total,
+          currency: this.transaction.account.currency,
+        });
+        console.log(transaction);
 
         if (this.transaction.meta.transactionType.startsWith("invoice")) {
-          console.log(
+          await fetch(
             /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
               `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
                 this.transaction.account.uuid
@@ -333,23 +331,12 @@ export default {
                 this.transaction.meta.transactionType.split(" ")[1]
               }&description=${
                 this.transaction.meta.description
-              }&is_email=${!!this.transaction.meta.sendEmail}`
-          );
-          promises.push(
-            fetch(
-              /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
-                `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
-                  this.transaction.account.uuid
-                }&total=${this.transaction.total}&type=${
-                  this.transaction.meta.transactionType.split(" ")[1]
-                }&description=${
-                  this.transaction.meta.description
-                }&is_email=${!!this.transaction.meta.sendEmail}`
-            )
+              }&send_email=${!!this.transaction.meta.sendEmail}&transaction=${
+                transaction.uuid
+              }`
           );
         }
 
-        await Promise.all(promises);
         this.showSnackbarSuccess({
           message: "Transaction created successfully",
         });
