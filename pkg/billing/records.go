@@ -476,6 +476,8 @@ func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, req *
 		return nil, err
 	}
 
+	s.log.Debug("Types", zap.Any("types", types))
+
 	value, err := structpb.NewValue(types)
 	if err != nil {
 		return nil, err
