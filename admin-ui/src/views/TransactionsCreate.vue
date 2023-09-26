@@ -162,7 +162,6 @@
             <v-textarea
               no-resize
               label="Admin note"
-              :rules="generalRule"
               v-model="transaction.meta.note"
             ></v-textarea>
           </v-row>
