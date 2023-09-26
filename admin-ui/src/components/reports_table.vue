@@ -130,7 +130,7 @@ const isLoading = computed(() => {
 });
 
 const requestOptions = computed(() => ({
-  ...filters.value,
+  filters:filters.value,
   page: page.value,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
