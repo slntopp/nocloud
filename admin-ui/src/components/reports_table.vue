@@ -105,6 +105,7 @@ const reportsHeaders = computed(() => {
     { text: "Total", value: "totalPreview" },
     { text: "Total in default currency", value: "totalDefaultPreview" },
     { text: "Product or resource", value: "item" },
+    { text: "Type", value: "type" },
   ];
 
   if (!hideAccount.value) {
@@ -165,6 +166,7 @@ const onUpdateOptions = async (newOptions) => {
         service: r.service,
         instance: r.instance,
         account: r.account,
+        type: r.meta.transactionType,
         totalDefault: convertFrom(r.total, r.currency),
       };
     });
