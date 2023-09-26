@@ -214,10 +214,7 @@ onMounted(() => {
 });
 
 const date = computed(() =>
-  formatSecondsToDate(
-    +template.value?.data?.last_monitoring +
-      +template.value.billingPlan.products[template.value.product].period
-  )
+  formatSecondsToDate(+template.value?.data?.next_payment_date)
 );
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const isMonitoringEmpty = computed(() => date.value === "-");

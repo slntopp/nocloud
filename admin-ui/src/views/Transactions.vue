@@ -8,6 +8,13 @@
       Create
     </v-btn>
 
+    <div style="max-width: 300px" class="mx-3 d-inline-block">
+      <date-picker label="from" v-model="duration.from" />
+    </div>
+    <div style="max-width: 300px" class="mx-3 d-inline-block">
+      <date-picker label="to" v-model="duration.to" />
+    </div>
+
     <v-autocomplete
       :filter="defaultFilterObject"
       label="Account"
@@ -51,6 +58,7 @@
       v-if="!isInitLoading"
       table-name="transaction-table"
       :filters="filters"
+      :duration="duration"
       :select-record="selectTransaction"
     />
   </div>
@@ -64,9 +72,10 @@ import apexcharts from "vue-apexcharts";
 import { defaultFilterObject } from "@/functions";
 import { mapGetters } from "vuex";
 import reportsTable from "@/components/reports_table.vue";
+import DatePicker from "@/components/ui/datePicker.vue";
 export default {
   name: "transactions-view",
-  components: { reportsTable, apexcharts },
+  components: { DatePicker, reportsTable, apexcharts },
   mixins: [snackbar, search],
   data: () => ({
     accountId: null,
@@ -83,6 +92,7 @@ export default {
       theme: { palette: "palette10", mode: "dark" },
       legend: { showForSingleSeries: true },
     },
+    duration: { to: null, from: null },
   }),
   methods: {
     defaultFilterObject,

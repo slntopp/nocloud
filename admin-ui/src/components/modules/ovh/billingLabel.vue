@@ -31,16 +31,9 @@ const account = computed(() => {
 });
 
 const dueDate = computed(() => {
-  const { duration, planCode } = props.template.config;
-  const key = `${duration} ${planCode}`;
-  if (props.template.config.type === "cloud") {
     return formatSecondsToDate(
-      +props.template?.data?.last_monitoring +
-        +props.template.billingPlan.products[key].period
+      +props.template?.data?.next_payment_date
     );
-  }
-
-  return props.template.data.expiration;
 });
 
 const tariffPrice = computed(() => {

@@ -1,11 +1,19 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <v-row>
+    <v-row v-if="showDates">
       <div style="max-width: 300px" class="mx-3">
-        <date-picker label="from" v-model="durationFilter.from" />
+        <date-picker
+          label="from"
+          :value="duration.from"
+          @input="emit('input:duration', { ...duration, from: $event })"
+        />
       </div>
       <div style="max-width: 300px" class="mx-3">
-        <date-picker label="to" v-model="durationFilter.to" />
+        <date-picker
+          label="to"
+          :value="duration.to"
+          @input="emit('input:duration', { ...duration, to: $event })"
+        />
       </div>
     </v-row>
     <nocloud-table
@@ -70,8 +78,13 @@ const props = defineProps({
   hideService: { type: Boolean, default: false },
   selectRecord: { type: Function, default: () => {} },
   tableName: { type: String },
+  showDates: { type: Boolean, default: false },
+  duration: { type: Object, default: () => ({ from: null, to: null }) },
 });
-const { filters, hideInstance, hideService, hideAccount } = toRefs(props);
+const { filters, hideInstance, hideService, hideAccount, duration, showDates } =
+  toRefs(props);
+
+const emit = defineEmits(["input:duration"]);
 
 const store = useStore();
 const { rates, convertFrom, defaultCurrency } = useCurrency();
@@ -84,7 +97,6 @@ const isCountLoading = ref(false);
 const fetchError = ref("");
 const options = ref({});
 const itemsPerPageOptions = ref([5, 10, 15, 25]);
-const durationFilter = ref({ to: "", from: "" });
 
 const reportsHeaders = computed(() => {
   const headers = [
@@ -122,11 +134,11 @@ const requestOptions = computed(() => ({
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
   sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
-  from: durationFilter.value.from
-    ? new Date(durationFilter.value.from).getTime() / 1000
+  from: duration.value.from
+    ? new Date(duration.value.from).getTime() / 1000
     : undefined,
-  to: durationFilter.value.to
-    ? new Date(durationFilter.value.to).getTime() / 1000
+  to: duration.value.to
+    ? new Date(duration.value.to).getTime() / 1000
     : undefined,
 }));
 
@@ -194,7 +206,7 @@ watch(rates, () => {
 });
 
 watch(
-  durationFilter,
+  duration,
   () => {
     onUpdateOptions(options.value);
   },
