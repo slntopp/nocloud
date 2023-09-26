@@ -64,10 +64,7 @@ const addonsPrice = ref(
 );
 
 const dueDate = computed(() => {
-  return formatSecondsToDate(
-    +template.value?.data?.last_monitoring +
-      +template.value.billingPlan.products[template.value.product].period
-  );
+  return formatSecondsToDate(+template.value?.data?.next_payment_date);
 });
 </script>
 

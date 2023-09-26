@@ -351,8 +351,8 @@ export default {
       return inst.data.creation ?? "unknown";
     },
     getExpirationDate(inst) {
-      if (inst.type === "ovh") return inst.data.expiration;
-      if (inst.type === "ione") return this.date(inst.data.last_monitoring);
+      if (inst.data.next_payment_date)
+        return this.date(inst.data.next_payment_date);
       return "unknown";
     },
     getService({ service }) {
