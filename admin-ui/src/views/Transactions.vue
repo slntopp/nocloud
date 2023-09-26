@@ -17,21 +17,13 @@
 
     <v-autocomplete
       :filter="defaultFilterObject"
-      label="Account"
+      label="Accounts"
       item-text="title"
       item-value="uuid"
       class="d-inline-block mr-2"
-      v-model="accountId"
+      v-model="selectedAccounts"
+      multiple
       :items="accounts"
-    />
-    <v-autocomplete
-      :filter="defaultFilterObject"
-      label="Service"
-      item-text="title"
-      item-value="uuid"
-      class="d-inline-block"
-      v-model="serviceId"
-      :items="servicesByAccount"
     />
 
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
@@ -78,8 +70,7 @@ export default {
   components: { DatePicker, reportsTable, apexcharts },
   mixins: [snackbar, search],
   data: () => ({
-    accountId: null,
-    serviceId: null,
+    selectedAccounts: [],
     series: [],
     chartLoading: false,
     isInitLoading: true,
@@ -158,9 +149,9 @@ export default {
   },
   created() {
     if (this.$route.query.account) {
-      this.accountId = this.$route.query.account;
+      this.selectedAccounts = [this.$route.query.account];
     } else {
-      this.accountId = null;
+      this.selectedAccounts = [];
     }
     this.isInitLoading = false;
   },
@@ -169,11 +160,6 @@ export default {
     this.$store.dispatch("services/fetch");
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("currencies/fetch");
-
-    this.$store.commit("reloadBtn/setCallback", {
-      type: "transactions/init",
-      params: this.transactionData,
-    });
   },
   computed: {
     ...mapGetters("transactions", ["count", "page", "isLoading", "all"]),
@@ -187,23 +173,23 @@ export default {
       return this.$store.getters["namespaces/all"];
     },
     accounts() {
-      const accounts = this.$store.getters["accounts/all"];
-      return [{ title: "all", uuid: null }].concat(accounts);
+      return this.$store.getters["accounts/all"];
     },
     services() {
       return this.$store.getters["services/all"];
     },
     filters() {
       return {
-        service: this.serviceId ? [this.serviceId] : undefined,
-        account: this.accountId ? [this.accountId] : undefined,
+        account: this.selectedAccounts.length
+          ? this.selectedAccounts
+          : undefined,
       };
     },
     servicesByAccount() {
       let filtredServices = null;
-      if (this.accountId) {
-        const namespaceId = this.namespaces.find(
-          (n) => this.accountId === n.access.namespace
+      if (this.selectedAccounts.length) {
+        const namespaceId = this.namespaces.find((n) =>
+          this.selectedAccounts.includes(n.access.namespace)
         )?.uuid;
         filtredServices = this.services.filter((s) => {
           return s.access.namespace === namespaceId;
@@ -224,7 +210,7 @@ export default {
       let labels = [`0 ${this.defaultCurrency}`];
       let values = [0];
       let balance = 0;
-      if (!this.accountId) {
+      if (!this.selectedAccounts) {
         return { labels, values };
       }
       this.transactions?.forEach((el, i, arr) => {
@@ -247,27 +233,13 @@ export default {
     searchParam() {
       return this.$store.getters["appSearch/param"];
     },
-    transactionData() {
-      const data = {};
-      if (this.accountId || this.accountId === "all") {
-        data.account = this.accountId;
-      }
-      if (this.accountId) {
-        data.service = this.serviceId;
-      }
-      return data;
-    },
   },
   watch: {
     chartLoading() {
       setTimeout(this.setListenerToLegend);
     },
-    accountId() {
-      if (this.serviceId === null) {
-        this.serviceId = null;
-      } else {
-        this.serviceId = null;
-      }
+    accountId(newAccount) {
+      console.log(newAccount);
     },
   },
 };
