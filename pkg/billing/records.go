@@ -17,6 +17,7 @@ package billing
 
 import (
 	"context"
+	"google.golang.org/protobuf/types/known/structpb"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -468,5 +469,20 @@ func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, req *
 	if err != nil {
 		return nil, err
 	}
-	return &pb.GetReportsCountResponse{Total: res}, nil
+
+	types, err := s.records.GetUnique(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	value, err := structpb.NewValue(types)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.GetReportsCountResponse{
+		Total:  res,
+		Unique: value,
+	}, nil
 }

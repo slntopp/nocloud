@@ -329,3 +329,44 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 
 	return result, nil
 }
+
+const uniqueQuery = `
+LET records = (
+	FOR r in @@records
+	FILTER r.meta != null
+	FILTER r.meta.transactionType != null
+	FILTER r.meta.transactionType != ""
+	RETURN r
+)
+
+RETURN UNIQUE(records[*].meta.transactionType)
+`
+
+func (ctrl *RecordsController) GetUnique(ctx context.Context) (map[string]interface{}, error) {
+
+	cur, err := ctrl.db.Query(ctx, uniqueQuery, map[string]interface{}{
+		"@records": schema.RECORDS_COL,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var types []interface{}
+
+	for cur.HasMore() {
+		var uniqueType string
+
+		_, err := cur.ReadDocument(ctx, &uniqueType)
+		if err != nil {
+			return nil, err
+		}
+
+		types = append(types, uniqueType)
+	}
+
+	var result = map[string]interface{}{
+		"transactionType": types,
+	}
+
+	return result, nil
+}
