@@ -64,7 +64,7 @@ const accountCurrency = computed(() => {
 });
 
 const price = computed(() => {
-  const addonsSum = Object.values(addonsPrice.value).reduce((a, b) => a + b);
+  const addonsSum = Object.values(addonsPrice.value).reduce((a, b) => a + b, 0);
 
   return convertTo(tariffPrice.value + addonsSum, accountCurrency.value);
 });
