@@ -62,7 +62,11 @@
     </template>
 
     <template v-slot:[`item.price`]="{ item }">
-      {{ getValue("price", item) }} {{ currency }}
+      {{ getValue("price", item) }}
+    </template>
+
+    <template v-slot:[`item.accountPrice`]="{ item }">
+      {{ getValue("accountPrice", item) }}
     </template>
 
     <template v-slot:[`item.period`]="{ item }">
@@ -276,6 +280,26 @@ export default {
         }
       }
     },
+    getNcuPrice(inst) {
+      return this.getPrice(inst) + " " + this.defaultCurrency;
+    },
+    getAccountPrice(inst) {
+      const accountCurrency = this.getAccount(inst)?.currency;
+
+      return (
+        (this.getPrice(inst) * this.getRate(accountCurrency)).toFixed(2) +
+        " " +
+        accountCurrency
+      );
+    },
+    getRate(currency) {
+      if (this.defaultCurrency === currency) {
+        return 1;
+      }
+      return this.rates.find(
+        (r) => r.to === currency && r.from === this.defaultCurrency
+      )?.rate;
+    },
     getPeriod(inst) {
       if (inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC") {
         return "PayG";
@@ -388,6 +412,7 @@ export default {
         "billingPlan.title",
         "account.data.email",
         "price",
+        "accountPrice",
         "state.meta.networking.public",
       ];
       const instances = this.items.filter((i) => {
@@ -475,7 +500,8 @@ export default {
         { text: "Tariff", value: "product" },
         { text: "Service provider", value: "sp" },
         { text: "Type", value: "type" },
-        { text: "Price", value: "price" },
+        { text: "NCU price", value: "price" },
+        { text: "Account price", value: "accountPrice" },
         { text: "Period", value: "period" },
         { text: "Email", value: "email" },
         { text: "Date", value: "date" },
@@ -499,7 +525,8 @@ export default {
         email: this.getEmail,
         state: getState,
         product: (item) => item.product ?? this.getTariff(item) ?? "custom",
-        price: this.getPrice,
+        price: this.getNcuPrice,
+        accountPrice: this.getAccountPrice,
         period: this.getPeriod,
         date: this.getCreationDate,
         dueDate: this.getExpirationDate,
@@ -514,9 +541,6 @@ export default {
     },
     isLoading() {
       return this.$store.getters["services/isLoading"];
-    },
-    currency() {
-      return this.$store.getters["currencies/default"];
     },
     priceModelItems() {
       return [
@@ -602,6 +626,12 @@ export default {
           isArray: true,
         },
       };
+    },
+    rates() {
+      return this.$store.getters["currencies/rates"];
+    },
+    defaultCurrency() {
+      return this.$store.getters["currencies/default"];
     },
   },
   watch: {
