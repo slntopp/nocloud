@@ -5,6 +5,7 @@
         <v-text-field
           label="Minimum disk size"
           type="number"
+          suffix="GB"
           v-model="meta.minDisk"
         />
       </v-col>
@@ -12,6 +13,7 @@
         <v-text-field
           label="Maximum disk size"
           type="number"
+          suffix="GB"
           v-model="meta.maxDisk"
         />
       </v-col>
@@ -54,7 +56,7 @@ export default {
     },
   },
   mounted() {
-    this.meta=this.template.meta
+    this.meta = this.template.meta;
   },
   watch: {
     "template.meta"(newVal) {

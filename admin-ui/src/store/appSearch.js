@@ -70,7 +70,7 @@ export default {
     variants(state) {
       const variants = { ...state.variants };
       if (Object.keys(variants).length) {
-        variants["searchParam"] = { title: "Anywhere", key: "searchParam" };
+        variants["searchParam"] = { title: "Other", key: "searchParam" };
       }
       return variants;
     },
