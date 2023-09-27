@@ -46,79 +46,68 @@
         <v-text-field readonly label="Due to date/next payment" :value="date" />
       </v-col>
     </v-row>
-    <v-expansion-panels>
-      <v-expansion-panel>
-        <v-expansion-panel-header color="background-light"
-          >Prices</v-expansion-panel-header
-        >
-        <v-expansion-panel-content
-          class="ione-billing"
-          color="background-light"
-        >
-          <nocloud-table
-            hide-default-footer
-            sort-by="index"
-            item-key="key"
-            :show-select="false"
-            :headers="pricesHeaders"
-            :items="pricesItems"
-          >
-            <template v-slot:[`item.prices`]="{ item }">
-              <div class="d-flex">
-                <v-text-field
-                  class="mr-2"
-                  v-model="item.price"
-                  @change="onUpdatePrice(item, false)"
-                  :suffix="defaultCurrency"
-                  type="number"
-                  append-icon="mdi-pencil"
-                ></v-text-field>
-                <v-text-field
-                  class="ml-2"
-                  style="color: #c921c9"
-                  v-model="item.accountPrice"
-                  @change="onUpdatePrice(item, true)"
-                  :suffix="accountCurrency"
-                  type="number"
-                  append-icon="mdi-pencil"
-                ></v-text-field>
+
+    <instances-prices-panels>
+      <nocloud-table
+        hide-default-footer
+        sort-by="index"
+        item-key="key"
+        :show-select="false"
+        :headers="pricesHeaders"
+        :items="pricesItems"
+      >
+        <template v-slot:[`item.prices`]="{ item }">
+          <div class="d-flex">
+            <v-text-field
+              class="mr-2"
+              v-model="item.price"
+              @change="onUpdatePrice(item, false)"
+              :suffix="defaultCurrency"
+              type="number"
+              append-icon="mdi-pencil"
+            ></v-text-field>
+            <v-text-field
+              class="ml-2"
+              style="color: #c921c9"
+              v-model="item.accountPrice"
+              @change="onUpdatePrice(item, true)"
+              :suffix="accountCurrency"
+              type="number"
+              append-icon="mdi-pencil"
+            ></v-text-field>
+          </div>
+        </template>
+        <template v-slot:[`item.basePrice`]="{ item }">
+          <v-skeleton-loader type="text" v-if="isBasePricesLoading" />
+          <span v-else> {{ convertedBasePrices[item.key] }} PLN </span>
+        </template>
+        <template v-slot:body.append>
+          <tr>
+            <td></td>
+            <td></td>
+            <td>
+              {{ getBillingPeriod(tarrif.period) }}
+            </td>
+            <td>
+              {{
+                isBasePricesLoading
+                  ? "Loading..."
+                  : [totalBasePrice, "PLN"].join(" ")
+              }}
+            </td>
+            <td>
+              <div class="d-flex justify-end">
+                <span class="mr-4">
+                  {{ [totalNewPrice?.toFixed(2), defaultCurrency].join(" ") }}
+                  /
+                  {{ [accountTotalNewPrice, accountCurrency].join(" ") }}
+                </span>
               </div>
-            </template>
-            <template v-slot:[`item.basePrice`]="{ item }">
-              <v-skeleton-loader type="text" v-if="isBasePricesLoading" />
-              <span v-else> {{ convertedBasePrices[item.key] }} PLN </span>
-            </template>
-            <template v-slot:body.append>
-              <tr>
-                <td></td>
-                <td></td>
-                <td>
-                  {{ getBillingPeriod(tarrif.period) }}
-                </td>
-                <td>
-                  {{
-                    isBasePricesLoading
-                      ? "Loading..."
-                      : [totalBasePrice, "PLN"].join(" ")
-                  }}
-                </td>
-                <td>
-                  <div class="d-flex justify-end">
-                    <span class="mr-4">
-                      {{
-                        [totalNewPrice?.toFixed(2), defaultCurrency].join(" ")
-                      }}
-                      /
-                      {{ [accountTotalNewPrice, accountCurrency].join(" ") }}
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </nocloud-table>
-        </v-expansion-panel-content>
-      </v-expansion-panel>
-    </v-expansion-panels>
+            </td>
+          </tr>
+        </template>
+      </nocloud-table>
+    </instances-prices-panels>
 
     <edit-price-model
       @refresh="emit('refresh')"
@@ -148,6 +137,7 @@ import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import usePlnRate from "@/hooks/usePlnRate";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import useAccountConverter from "@/hooks/useAccountConverter";
+import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);

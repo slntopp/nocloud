@@ -57,78 +57,66 @@
           @click:append="changeDatesDialog = true"
         />
       </v-col>
-      ></v-row
-    >
-    <v-expansion-panels>
-      <v-expansion-panel>
-        <v-expansion-panel-header color="background-light"
-          >Prices</v-expansion-panel-header
-        >
-        <v-expansion-panel-content
-          class="ione-billing"
-          color="background-light"
-        >
-          <nocloud-table
-            class="mb-5"
-            :headers="billingHeaders"
-            :items="billingItems"
-            no-hide-uuid
-            :show-select="false"
-            hide-default-footer
-          >
-            <template v-slot:[`item.price`]="{ item }">
-              <div class="d-flex">
-                <v-text-field
-                  class="mr-2"
-                  :suffix="defaultCurrency"
-                  v-model="item.price"
-                  type="number"
-                  @input="updatePrice(item, false)"
-                  append-icon="mdi-pencil"
-                />
-                <v-text-field
-                  style="color: #c921c9"
-                  class="ml-2"
-                  type="number"
-                  :suffix="accountCurrency"
-                  v-model="item.accountPrice"
-                  @input="updatePrice(item, true)"
-                  append-icon="mdi-pencil"
-                />
-              </div>
-            </template>
-            <template v-slot:[`item.quantity`]="{ item }">
-              {{ item.quantity?.toFixed(2) }} {{ item.unit }}
-            </template>
-            <template v-slot:[`item.total`]="{ item }">
-              {{ totalPrices[item.name]?.toFixed(2) }}
-              {{ defaultCurrency }} /
-              {{ totalAccountPrices[item.name]?.toFixed(2) }}
-              {{ accountCurrency }}
-            </template>
-            <template v-slot:body.append>
-              <tr>
-                <td></td>
-                <td></td>
-                <td>
-                  {{
-                    billingItems.find((i) => i.name === template.product)
-                      ?.period
-                  }}
-                </td>
-                <td></td>
-                <td></td>
-                <td>
-                  {{ totalAccountPrice }} {{ accountCurrency }} /
-                  {{ totalPrice }}
-                  {{ defaultCurrency }}
-                </td>
-              </tr>
-            </template>
-          </nocloud-table>
-        </v-expansion-panel-content>
-      </v-expansion-panel>
-    </v-expansion-panels>
+    </v-row>
+    <instances-prices-panels>
+      <nocloud-table
+        class="mb-5"
+        :headers="billingHeaders"
+        :items="billingItems"
+        no-hide-uuid
+        :show-select="false"
+        hide-default-footer
+      >
+        <template v-slot:[`item.price`]="{ item }">
+          <div class="d-flex">
+            <v-text-field
+              class="mr-2"
+              :suffix="defaultCurrency"
+              v-model="item.price"
+              type="number"
+              @input="updatePrice(item, false)"
+              append-icon="mdi-pencil"
+            />
+            <v-text-field
+              style="color: #c921c9"
+              class="ml-2"
+              type="number"
+              :suffix="accountCurrency"
+              v-model="item.accountPrice"
+              @input="updatePrice(item, true)"
+              append-icon="mdi-pencil"
+            />
+          </div>
+        </template>
+        <template v-slot:[`item.quantity`]="{ item }">
+          {{ item.quantity?.toFixed(2) }} {{ item.unit }}
+        </template>
+        <template v-slot:[`item.total`]="{ item }">
+          {{ totalPrices[item.name]?.toFixed(2) }}
+          {{ defaultCurrency }} /
+          {{ totalAccountPrices[item.name]?.toFixed(2) }}
+          {{ accountCurrency }}
+        </template>
+        <template v-slot:body.append>
+          <tr>
+            <td></td>
+            <td></td>
+            <td>
+              {{
+                billingItems.find((i) => i.name === template.product)?.period
+              }}
+            </td>
+            <td></td>
+            <td></td>
+            <td>
+              {{ totalAccountPrice }} {{ accountCurrency }} /
+              {{ totalPrice }}
+              {{ defaultCurrency }}
+            </td>
+          </tr>
+        </template>
+      </nocloud-table>
+    </instances-prices-panels>
     <change-ione-monitorings
       :template="template"
       :service="service"
@@ -177,6 +165,7 @@ import NocloudTable from "@/components/table.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useAccountConverter from "@/hooks/useAccountConverter";
 import { useStore } from "@/store";
+import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh", "update"]);

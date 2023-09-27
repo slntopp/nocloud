@@ -59,65 +59,54 @@
       </v-col>
     </v-row>
 
-    <v-expansion-panels>
-      <v-expansion-panel>
-        <v-expansion-panel-header color="background-light"
-          >Prices</v-expansion-panel-header
-        >
-        <v-expansion-panel-content
-          class="ione-billing"
-          color="background-light"
-        >
-          <nocloud-table
-            class="mb-5"
-            :headers="billingHeaders"
-            :items="billingItems"
-            no-hide-uuid
-            :show-select="false"
-            hide-default-footer
-          >
-            <template v-slot:[`item.price`]="{ item }">
-              <div class="d-flex">
-                <v-text-field
-                  class="mr-2"
-                  v-model="item.price"
-                  :suffix="defaultCurrency"
-                  @input="updatePrice(item, false)"
-                  append-icon="mdi-pencil"
-                />
-                <v-text-field
-                  class="ml-2"
-                  :suffix="accountCurrency"
-                  style="color: #c921c9"
-                  v-model="item.accountPrice"
-                  @input="updatePrice(item, true)"
-                  append-icon="mdi-pencil"
-                />
+    <instances-prices-panels>
+      <nocloud-table
+        class="mb-5"
+        :headers="billingHeaders"
+        :items="billingItems"
+        no-hide-uuid
+        :show-select="false"
+        hide-default-footer
+      >
+        <template v-slot:[`item.price`]="{ item }">
+          <div class="d-flex">
+            <v-text-field
+              class="mr-2"
+              v-model="item.price"
+              :suffix="defaultCurrency"
+              @input="updatePrice(item, false)"
+              append-icon="mdi-pencil"
+            />
+            <v-text-field
+              class="ml-2"
+              :suffix="accountCurrency"
+              style="color: #c921c9"
+              v-model="item.accountPrice"
+              @input="updatePrice(item, true)"
+              append-icon="mdi-pencil"
+            />
+          </div>
+        </template>
+        <template v-slot:body.append>
+          <tr>
+            <td></td>
+            <td />
+            <td>
+              {{
+                billingItems.find((i) => i.name === template.product)?.period
+              }}
+            </td>
+            <td>
+              <div class="d-flex justify-end mr-4">
+                {{ [totalPrice, defaultCurrency].join(" ") }}
+                /
+                {{ [totalAccountPrice, accountCurrency].join(" ") }}
               </div>
-            </template>
-            <template v-slot:body.append>
-              <tr>
-                <td></td>
-                <td />
-                <td>
-                  {{
-                    billingItems.find((i) => i.name === template.product)
-                      ?.period
-                  }}
-                </td>
-                <td>
-                  <div class="d-flex justify-end mr-4">
-                    {{ [totalPrice, defaultCurrency].join(" ") }}
-                    /
-                    {{ [totalAccountPrice, accountCurrency].join(" ") }}
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </nocloud-table>
-        </v-expansion-panel-content>
-      </v-expansion-panel>
-    </v-expansion-panels>
+            </td>
+          </tr>
+        </template>
+      </nocloud-table>
+    </instances-prices-panels>
 
     <change-monitorings
       :template="template"
@@ -145,6 +134,7 @@ import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useAccountConverter from "@/hooks/useAccountConverter";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
+import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh"]);
