@@ -169,6 +169,8 @@ func (g *BitrixOauthHandler) Setup(
 		user := userInfo.Result
 		value := user[field].(string)
 
+		log.Debug("User", zap.Any("user", user))
+
 		name := user["NAME"].(string)
 		last_name := user["LAST_NAME"].(string)
 
