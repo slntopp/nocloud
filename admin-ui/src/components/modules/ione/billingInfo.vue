@@ -149,7 +149,7 @@ import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
-import useAccountConverter from "@/hooks/useAccountConverter";
+import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
 
@@ -159,13 +159,8 @@ const emit = defineEmits(["refresh", "update"]);
 const { template, service, sp, plans } = toRefs(props);
 
 const store = useStore();
-const {
-  fetchAccountRate,
-  accountCurrency,
-  toAccountPrice,
-  accountRate,
-  fromAccountPrice,
-} = useAccountConverter(template.value);
+const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
+  useInstancePrices(template.value);
 
 const changeDatesDialog = ref(false);
 const changeTariffDialog = ref(false);
@@ -182,7 +177,6 @@ const billingHeaders = ref([
 
 onMounted(() => {
   billingItems.value = getBillingItems();
-  fetchAccountRate(accountCurrency);
 });
 
 const date = computed(() =>
@@ -233,9 +227,11 @@ const totalAccountPrice = computed(() => toAccountPrice(totalPrice.value));
 const getBillingItems = () => {
   const items = [];
 
+  const price = billingPlan.value.products[template.value.product]?.price;
   items.push({
     name: template.value.product,
-    price: billingPlan.value.products[template.value.product]?.price,
+    price,
+    accountPrice: toAccountPrice(price),
     path: `billingPlan.products.${template.value.product}.price`,
     quantity: 1,
     unit: "pcs",
@@ -257,6 +253,7 @@ const getBillingItems = () => {
       items.push({
         name: resourceKey,
         price: addon.price,
+        accountPrice: toAccountPrice(addon.price),
         kind: addon.kind,
         period: addon.period,
         quantity,
@@ -276,6 +273,7 @@ const getBillingItems = () => {
     items.push({
       name: driveType,
       price: drive?.price,
+      accountPrice: toAccountPrice(drive.price),
       path: `billingPlan.resources.${driveIndex}.price`,
       kind: drive?.kind,
       quantity: template.value.resources.drive_size / 1024,

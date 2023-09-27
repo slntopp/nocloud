@@ -120,7 +120,7 @@ import { useStore } from "@/store";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import usePlnRate from "@/hooks/usePlnRate";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
-import useAccountConverter from "@/hooks/useAccountConverter";
+import useInstancePrices from "@/hooks/useInstancePrices";
 import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
 
 const props = defineProps(["template", "plans"]);
@@ -130,13 +130,8 @@ const { template, plans } = toRefs(props);
 
 const store = useStore();
 const rate = usePlnRate();
-const {
-  toAccountPrice,
-  fromAccountPrice,
-  fetchAccountRate,
-  accountCurrency,
-  accountRate,
-} = useAccountConverter(template.value);
+const { toAccountPrice, fromAccountPrice, accountCurrency, accountRate } =
+  useInstancePrices(template.value);
 
 const pricesItems = ref([]);
 const basePrices = ref({});
@@ -342,7 +337,7 @@ const initPrices = () => {
 
   pricesItems.value = pricesItems.value.map((i) => {
     i.period = getBillingPeriod(i.period);
-    i.accountPrice = i.price * accountRate.value;
+    i.accountPrice = toAccountPrice(i.price);
 
     return i;
   });
@@ -393,14 +388,6 @@ const getBasePrices = async () => {
 onMounted(() => {
   initPrices();
   getBasePrices();
-  if (accountCurrency.value) {
-    fetchAccountRate(accountCurrency.value).then(() => {
-      pricesItems.value = pricesItems.value.map((i) => {
-        i.accountPrice = toAccountPrice(i.price);
-        return i;
-      });
-    });
-  }
 });
 </script>
 

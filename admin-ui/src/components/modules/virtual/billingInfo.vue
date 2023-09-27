@@ -117,7 +117,7 @@ import { computed, defineProps, toRefs, ref, watch, onMounted } from "vue";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import ChangeMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
-import useAccountConverter from "@/hooks/useAccountConverter";
+import useInstancePrices from "@/hooks/useInstancePrices";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
@@ -128,13 +128,8 @@ const emit = defineEmits(["refresh"]);
 const { template, plans, service } = toRefs(props);
 
 const store = useStore();
-const {
-  fetchAccountRate,
-  accountCurrency,
-  toAccountPrice,
-  accountRate,
-  fromAccountPrice,
-} = useAccountConverter(template.value);
+const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
+  useInstancePrices(template.value);
 
 const changeDatesDialog = ref(false);
 const priceModelDialog = ref(false);
@@ -159,12 +154,15 @@ const totalPrice = computed(() => {
   return billingItems.value.reduce((acc, i) => acc + +i.price, 0);
 });
 
+const totalAccountPrice = computed(() => {
+  return billingItems.value.reduce((acc, i) => acc + +i.accountPrice, 0);
+});
+
 const billingPlan = computed(() => template.value.billingPlan);
 
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 onMounted(() => {
-  fetchAccountRate();
   billingItems.value = getBillingItems();
 });
 
@@ -177,13 +175,14 @@ watch(accountRate, () => {
 
 const getBillingItems = () => {
   const items = [];
-
+  const price = billingPlan.value.products[template.value.product]?.price;
   items.push({
     name: template.value.product,
-    price: billingPlan.value.products[template.value.product]?.price,
+    price,
     path: `billingPlan.products.${template.value.product}.price`,
     kind: billingPlan.value.products[template.value.product]?.kind,
     period: billingPlan.value.products[template.value.product]?.period,
+    accountPrice: toAccountPrice(price),
   });
 
   return items.map((i) => {
