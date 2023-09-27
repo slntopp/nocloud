@@ -11,6 +11,7 @@
         prepend-inner-icon="mdi-calendar"
         :value="value"
         readonly
+        :dense="dense"
         :label="label"
       />
     </template>
@@ -26,8 +27,13 @@
 <script setup>
 import { toRefs } from "vue";
 
-const props = defineProps(["value", "min", "label"]);
-const { value, min, label } = toRefs(props);
+const props = defineProps({
+  value: {},
+  min: {},
+  label: {},
+  dense: { type: Boolean, default: false },
+});
+const { value, min, label, dense } = toRefs(props);
 
 const emits = defineEmits(["input"]);
 </script>

@@ -147,17 +147,6 @@
             </v-col>
           </v-row>
 
-          <v-row align="center" v-if="!isSendEmailHide">
-            <v-col cols="3">
-              <v-subheader>Send email</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <div class="d-flex justify-end">
-                <v-switch v-model="transaction.meta.sendEmail" />
-              </div>
-            </v-col>
-          </v-row>
-
           <v-row v-if="!isAdminNoteHide" class="mx-5">
             <v-textarea
               no-resize
@@ -189,17 +178,24 @@
         </v-col>
       </v-row>
 
-      <v-row>
-        <v-col>
-          <v-btn
-            class="mr-2"
-            color="background-light"
-            :loading="isLoading"
-            @click="tryToSend"
-          >
-            Create
-          </v-btn>
-        </v-col>
+      <v-row justify="start" class="mb-4">
+        <v-btn
+          class="mx-3"
+          color="background-light"
+          :loading="isLoading"
+          @click="tryToSend(false)"
+        >
+          Publish
+        </v-btn>
+        <v-btn
+          v-if="isPublishWithEmailAvailble"
+          class="mx-4"
+          color="background-light"
+          :loading="isLoading"
+          @click="tryToSend(true)"
+        >
+          Publish + email
+        </v-btn>
       </v-row>
     </v-form>
   </div>
@@ -289,7 +285,7 @@ export default {
         amount,
       ].join(" ");
     },
-    async tryToSend() {
+    async tryToSend(withEmail = false) {
       if (!this.isValid) {
         this.$refs.form.validate();
 
@@ -314,18 +310,15 @@ export default {
           total = amountType ? total : -total;
         }
 
-        const promises = [];
-        promises.push(
-          api.transactions.create({
-            ...this.transaction,
-            account: this.transaction.account.uuid,
-            total,
-            currency: this.transaction.account.currency,
-          })
-        );
+        const transaction = await api.transactions.create({
+          ...this.transaction,
+          account: this.transaction.account.uuid,
+          total,
+          currency: this.transaction.account.currency,
+        });
 
         if (this.transaction.meta.transactionType.startsWith("invoice")) {
-          console.log(
+          await fetch(
             /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
               `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
                 this.transaction.account.uuid
@@ -333,23 +326,10 @@ export default {
                 this.transaction.meta.transactionType.split(" ")[1]
               }&description=${
                 this.transaction.meta.description
-              }&is_email=${!!this.transaction.meta.sendEmail}`
-          );
-          promises.push(
-            fetch(
-              /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
-                `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
-                  this.transaction.account.uuid
-                }&total=${this.transaction.total}&type=${
-                  this.transaction.meta.transactionType.split(" ")[1]
-                }&description=${
-                  this.transaction.meta.description
-                }&is_email=${!!this.transaction.meta.sendEmail}`
-            )
+              }&send_email=${withEmail}&transaction=${transaction.uuid}`
           );
         }
 
-        await Promise.all(promises);
         this.showSnackbarSuccess({
           message: "Transaction created successfully",
         });
@@ -498,8 +478,8 @@ export default {
     isAdminNoteHide() {
       return this.isTransaction;
     },
-    isSendEmailHide() {
-      return this.isTransaction;
+    isPublishWithEmailAvailble() {
+      return this.isInvoice;
     },
   },
   watch: {
@@ -513,7 +493,6 @@ export default {
         this.resetDate();
       } else if (this.isTransaction) {
         this.transaction.meta.note = undefined;
-        this.transaction.meta.sendEmail = undefined;
         this.initDate();
       }
     },
