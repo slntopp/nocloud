@@ -22,6 +22,11 @@ export default {
     removeShowcase(state, uuid) {
       state.showcases = state.showcases.filter((s) => s.uuid !== uuid);
     },
+    replaceShowcase(state, value) {
+      state.showcases = state.showcases.map((s) =>
+        s.uuid === value.uuid ? value : s
+      );
+    },
     setLoading(state, data) {
       state.loading = data;
     },

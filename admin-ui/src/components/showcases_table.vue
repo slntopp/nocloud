@@ -17,6 +17,16 @@
         {{ item.title }}
       </router-link>
     </template>
+
+    <template v-slot:[`item.public`]="{ item }">
+      <v-skeleton-loader v-if="updatedShowcase === item.uuid" type="text" />
+      <v-switch
+        v-else
+        :readonly="!!updatedShowcase"
+        :input-value="item.public"
+        @change="changeEnabled(item, $event)"
+      />
+    </template>
   </nocloud-table>
 </template>
 
@@ -24,17 +34,39 @@
 import NocloudTable from "@/components/table.vue";
 import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 import { ref, toRefs } from "vue";
+import api from "@/api";
+import { useStore } from "@/store";
 
 const props = defineProps(["items", "loading", "value"]);
 const emits = defineEmits(["input"]);
 
 const { value, loading, items } = toRefs(props);
 
+const store = useStore();
+
+const updatedShowcase = ref("");
+
 const headers = ref([
-  { text: "uuid", value: "uuid" },
-  { text: "title", value: "title" },
-  { text: "preview", value: "preview" },
+  { text: "UUID", value: "uuid" },
+  { text: "Title", value: "title" },
+  { text: "Preview", value: "preview" },
+  { text: "Enabled", value: "public" },
 ]);
+
+const changeEnabled = async (item, value) => {
+  try {
+    updatedShowcase.value = item.uuid;
+    const data = { ...item, public: value };
+    await api.showcases.update(data);
+    store.commit("showcases/replaceShowcase", data);
+  } catch {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Error during update showcase enabled",
+    });
+  } finally {
+    updatedShowcase.value = "";
+  }
+};
 </script>
 
 <style scoped></style>

@@ -147,22 +147,10 @@
             </v-col>
           </v-row>
 
-          <v-row align="center" v-if="!isSendEmailHide">
-            <v-col cols="3">
-              <v-subheader>Send email</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <div class="d-flex justify-end">
-                <v-switch v-model="transaction.meta.sendEmail" />
-              </div>
-            </v-col>
-          </v-row>
-
           <v-row v-if="!isAdminNoteHide" class="mx-5">
             <v-textarea
               no-resize
               label="Admin note"
-              :rules="generalRule"
               v-model="transaction.meta.note"
             ></v-textarea>
           </v-row>
@@ -190,17 +178,24 @@
         </v-col>
       </v-row>
 
-      <v-row>
-        <v-col>
-          <v-btn
-            class="mr-2"
-            color="background-light"
-            :loading="isLoading"
-            @click="tryToSend"
-          >
-            Create
-          </v-btn>
-        </v-col>
+      <v-row justify="start" class="mb-4">
+        <v-btn
+          class="mx-3"
+          color="background-light"
+          :loading="isLoading"
+          @click="tryToSend(false)"
+        >
+          Publish
+        </v-btn>
+        <v-btn
+          v-if="isPublishWithEmailAvailble"
+          class="mx-4"
+          color="background-light"
+          :loading="isLoading"
+          @click="tryToSend(true)"
+        >
+          Publish + email
+        </v-btn>
       </v-row>
     </v-form>
   </div>
@@ -223,7 +218,7 @@ export default {
       service: "",
       total: "",
       exec: 0,
-      meta: { instances: [], description: "", type: "" },
+      meta: { instances: [], description: "", transactionType: "" },
     },
     date: {
       title: "Date",
@@ -244,13 +239,13 @@ export default {
         id: 1,
         value: "invoice",
         title: "Invoice",
-        amount: { title: "Top-up invoice (with balance change)", value: false },
+        amount: { title: "Payment invoice (no balance change)", value: true },
       },
       {
         id: 2,
         value: "invoice",
         title: "Invoice",
-        amount: { title: "Payment invoice (no balance change)", value: true },
+        amount: { title: "Top-up invoice (with balance change)", value: false },
       },
       {
         id: 3,
@@ -272,10 +267,25 @@ export default {
       },
     ],
     typeId: 4,
+
+    whmcsApi: "",
   }),
   methods: {
     defaultFilterObject,
-    async tryToSend() {
+    sendTransactionType() {
+      let amount = "";
+
+      if (this.fullType.amount.value === null) {
+        amount = "account";
+      } else {
+        amount = this.fullType.amount.value ? "payment" : "top-up";
+      }
+      this.transaction.meta.transactionType = [
+        this.fullType.value,
+        amount,
+      ].join(" ");
+    },
+    async tryToSend(withEmail = false) {
       if (!this.isValid) {
         this.$refs.form.validate();
 
@@ -298,19 +308,28 @@ export default {
         } else {
           total = Math.abs(total);
           total = amountType ? total : -total;
-          if (this.isInvoice) {
-            this.transaction.meta.invoiceType = amountType
-              ? "top-up"
-              : "payment";
-          }
         }
 
-        await api.transactions.create({
+        const transaction = await api.transactions.create({
           ...this.transaction,
           account: this.transaction.account.uuid,
           total,
           currency: this.transaction.account.currency,
         });
+
+        if (this.transaction.meta.transactionType.startsWith("invoice")) {
+          await fetch(
+            /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
+              `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
+                this.transaction.account.uuid
+              }&total=${this.transaction.total}&type=${
+                this.transaction.meta.transactionType.split(" ")[1]
+              }&description=${
+                this.transaction.meta.description
+              }&send_email=${withEmail}&transaction=${transaction.uuid}`
+          );
+        }
+
         this.showSnackbarSuccess({
           message: "Transaction created successfully",
         });
@@ -355,29 +374,34 @@ export default {
       this.time.value = `${time}`;
     },
   },
-  created() {
+  async created() {
     this.initDate();
-    this.transaction.meta.type = this.fullType.value;
+    this.sendTransactionType();
 
     if (this.accounts.length < 2) {
       this.$store.dispatch("accounts/fetch");
     }
 
-    this.$store.dispatch("namespaces/fetch");
-    this.$store
-      .dispatch("services/fetch")
+    await Promise.all([
+      this.$store.dispatch("settings/fetch"),
+      this.$store.dispatch("namespaces/fetch"),
+      this.$store.dispatch("services/fetch"),
+    ])
       .then(() => {
         this.fetchError = "";
+        this.whmcsApi = JSON.parse(
+          this.settings.find(({ key }) => key === "whmcs").value
+        ).api;
       })
       .catch((err) => {
-        console.error(err);
-
-        this.fetchError = "Can't reach the server";
+        let fetchError = "Can't reach the server";
         if (err.response) {
-          this.fetchError += `: [ERROR]: ${err.response.data.message}`;
+          fetchError += `: [ERROR]: ${err.response.data.message}`;
         } else {
-          this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
+          fetchError += `: [ERROR]: ${err.toJSON().message}`;
         }
+
+        this.showSnackbarError({ message: fetchError });
       });
   },
   computed: {
@@ -389,6 +413,9 @@ export default {
     },
     services() {
       return this.$store.getters["services/all"];
+    },
+    settings() {
+      return this.$store.getters["settings/all"];
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
@@ -451,8 +478,8 @@ export default {
     isAdminNoteHide() {
       return this.isTransaction;
     },
-    isSendEmailHide() {
-      return this.isTransaction;
+    isPublishWithEmailAvailble() {
+      return this.isInvoice;
     },
   },
   watch: {
@@ -460,14 +487,12 @@ export default {
       this.transaction.meta.instances = [];
     },
     typeId() {
-      this.transaction.meta.type = this.fullType.value;
+      this.sendTransactionType();
       if (this.isInvoice) {
         this.transaction.service = undefined;
         this.resetDate();
       } else if (this.isTransaction) {
         this.transaction.meta.note = undefined;
-        this.transaction.meta.sendEmail = undefined;
-        this.transaction.meta.invoiceType = undefined;
         this.initDate();
       }
     },

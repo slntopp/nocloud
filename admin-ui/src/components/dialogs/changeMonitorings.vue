@@ -8,12 +8,12 @@
     <v-card class="pa-5">
       <v-card-title class="text-center">Change next payment dates</v-card-title>
       <div v-if="!isChangeAll">
-        <v-row v-for="key in Object.keys(lastMonitorings || {})" :key="key">
+        <v-row v-for="key in Object.keys(nextPaymentDates || {})" :key="key">
           <v-col cols="4">
-            <v-card-title>{{ lastMonitorings[key].title }}</v-card-title>
+            <v-card-title>{{ nextPaymentDates[key].title }}</v-card-title>
           </v-col>
           <v-col cols="8">
-            <date-picker :min="min" v-model="lastMonitorings[key].value" />
+            <date-picker :min="min" v-model="nextPaymentDates[key].value" />
           </v-col>
         </v-row>
       </div>
@@ -56,32 +56,21 @@ const store = useStore();
 const { template, service } = toRefs(props);
 const changeDatesLoading = ref(false);
 const isChangeAll = ref(true);
-const lastMonitorings = ref({});
+const nextPaymentDates = ref({});
 const newAllDate = ref();
 const min = ref();
 
-const setLastMonitorings = () => {
+const setNextPaymentDate = () => {
   const data = JSON.parse(JSON.stringify(template.value.data));
 
   const monitorings = {};
 
   Object.keys(data).forEach((key) => {
-    if (key.includes("last_monitoring") && data[key]) {
+    if (key.includes("next_payment_date") && data[key]) {
       const title = key
-        .replace("_last_monitoring", "")
-        .replace("last_monitoring", "product");
+        .replace("_next_payment_date", "")
+        .replace("next_payment_date", "product");
       let value = +data[key];
-
-      if (title === "product") {
-        value =
-          value +
-          +template.value.billingPlan.products[template.value.product].period;
-      } else {
-        value =
-          value +
-          +template.value.billingPlan.resources.find((r) => r.key === title)
-            ?.period;
-      }
 
       value = formatSecondsToDate(value);
       monitorings[key] = {
@@ -92,12 +81,14 @@ const setLastMonitorings = () => {
     }
   });
 
-  lastMonitorings.value = monitorings;
+  nextPaymentDates.value = monitorings;
 
-  newAllDate.value = monitorings["last_monitoring"].value;
+  newAllDate.value = monitorings["next_payment_date"].value;
 };
 
 const changeDates = async () => {
+  changeDatesLoading.value = true;
+
   const tempService = JSON.parse(JSON.stringify(service.value));
 
   const igIndex = tempService.instancesGroups.findIndex((ig) =>
@@ -109,28 +100,21 @@ const changeDates = async () => {
 
   const changedDates = {};
 
-  Object.keys(lastMonitorings.value).forEach((key) => {
+  Object.keys(nextPaymentDates.value).forEach((key) => {
     if (
       isChangeAll.value ||
-      lastMonitorings.value[key].firstValue != lastMonitorings.value[key].value
+      nextPaymentDates.value[key].firstValue !=
+        nextPaymentDates.value[key].value
     ) {
-      const { value, title } = lastMonitorings.value[key];
+      const { value } = nextPaymentDates.value[key];
 
-      let baseVal =
+      let newVal =
         new Date(isChangeAll.value ? newAllDate.value : value).getTime() / 1000;
+      let oldVal = new Date(template.value.data[key]).getTime();
 
-      if (title === "product") {
-        baseVal =
-          baseVal -
-          +template.value.billingPlan.products[template.value.product].period;
-      } else {
-        baseVal =
-          baseVal -
-          +template.value.billingPlan.resources.find((r) => r.key === title)
-            ?.period;
-      }
-
-      changedDates[key] = baseVal;
+      changedDates[key.replace("next_payment_date", "last_monitoring")] =
+        oldVal + (newVal - oldVal);
+      changedDates[key] = newVal;
     }
   });
 
@@ -139,7 +123,6 @@ const changeDates = async () => {
     ...changedDates,
   };
 
-  changeDatesLoading.value = true;
   try {
     await api.services._update(tempService);
     emit("refresh");
@@ -154,7 +137,7 @@ const changeDates = async () => {
 };
 
 onMounted(() => {
-  setLastMonitorings();
+  setNextPaymentDate();
   //tommoraw
   min.value = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
     .toISOString()

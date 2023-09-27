@@ -172,7 +172,7 @@ const billingHeaders = ref([
 const billingItems = ref([]);
 
 const date = computed(() =>
-  formatSecondsToDate(template.value?.data?.last_monitoring)
+  formatSecondsToDate(template.value?.data?.next_payment_date)
 );
 const isMonitoringsEmpty = computed(() => date.value === "-");
 

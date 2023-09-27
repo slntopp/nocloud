@@ -328,13 +328,7 @@ const getAddonKey = (key) => {
 };
 
 const date = computed(() => {
-  if (type.value === "cloud") {
-    return formatSecondsToDate(
-      +template.value?.data?.last_monitoring + +tarrif.value.period
-    );
-  }
-
-  return template.value.data.expiration;
+  return formatSecondsToDate(+template.value?.data?.next_payment_date);
 });
 
 const initPrices = () => {

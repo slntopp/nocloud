@@ -181,6 +181,14 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
 
+	meta := map[string]*structpb.Value{}
+
+	trType, ok := t.Meta["transactionType"]
+
+	if ok {
+		meta["transactionType"] = trType
+	}
+
 	rec := s.records.Create(ctx, &pb.Record{
 		Start:     time.Now().Unix(),
 		End:       time.Now().Unix() + 1,
@@ -191,9 +199,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		Currency:  t.GetCurrency(),
 		Service:   t.GetService(),
 		Account:   t.GetAccount(),
-		Meta: map[string]*structpb.Value{
-			"transactionType": t.Meta["transactionType"],
-		},
+		Meta:      meta,
 	})
 
 	if t.GetRecords() == nil {

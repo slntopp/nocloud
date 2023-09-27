@@ -84,7 +84,7 @@ const props = defineProps({
 const { filters, hideInstance, hideService, hideAccount, duration, showDates } =
   toRefs(props);
 
-const emit = defineEmits(["input:duration"]);
+const emit = defineEmits(["input:unique", "input:duration"]);
 
 const store = useStore();
 const { rates, convertFrom, defaultCurrency } = useCurrency();
@@ -105,6 +105,7 @@ const reportsHeaders = computed(() => {
     { text: "Total", value: "totalPreview" },
     { text: "Total in default currency", value: "totalDefaultPreview" },
     { text: "Product or resource", value: "item" },
+    { text: "Type", value: "type" },
   ];
 
   if (!hideAccount.value) {
@@ -129,7 +130,7 @@ const isLoading = computed(() => {
 });
 
 const requestOptions = computed(() => ({
-  ...filters.value,
+  filters: filters.value,
   page: page.value,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
@@ -165,6 +166,7 @@ const onUpdateOptions = async (newOptions) => {
         service: r.service,
         instance: r.instance,
         account: r.account,
+        type: r.meta.transactionType,
         totalDefault: convertFrom(r.total, r.currency),
       };
     });
@@ -188,7 +190,9 @@ const setOptions = (newOptions) => {
 const init = async () => {
   isCountLoading.value = true;
   try {
-    count.value = +(await api.reports.count(requestOptions.value)).total;
+    const { total, unique } = await api.reports.count(requestOptions.value);
+    count.value = +total;
+    emit("input:unique", unique);
   } finally {
     isCountLoading.value = false;
   }
