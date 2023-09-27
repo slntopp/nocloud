@@ -109,9 +109,11 @@
             <td></td>
             <td></td>
             <td>
-              {{ totalAccountPrice }} {{ accountCurrency }} /
-              {{ totalPrice }}
-              {{ defaultCurrency }}
+              <v-chip color="primary" outlined>
+                {{ totalAccountPrice }} {{ accountCurrency }} /
+                {{ totalPrice }}
+                {{ defaultCurrency }}
+              </v-chip>
             </td>
           </tr>
         </template>

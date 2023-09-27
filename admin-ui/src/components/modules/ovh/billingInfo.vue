@@ -97,11 +97,11 @@
             </td>
             <td>
               <div class="d-flex justify-end">
-                <span class="mr-4">
+                <v-chip outlined color="primary" class="mr-4">
                   {{ [totalNewPrice?.toFixed(2), defaultCurrency].join(" ") }}
                   /
                   {{ [accountTotalNewPrice, accountCurrency].join(" ") }}
-                </span>
+                </v-chip>
               </div>
             </td>
           </tr>

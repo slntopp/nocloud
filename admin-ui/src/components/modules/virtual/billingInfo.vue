@@ -98,9 +98,11 @@
             </td>
             <td>
               <div class="d-flex justify-end mr-4">
-                {{ [totalPrice, defaultCurrency].join(" ") }}
-                /
-                {{ [totalAccountPrice, accountCurrency].join(" ") }}
+                <v-chip color="primary" outlined>
+                  {{ [totalPrice, defaultCurrency].join(" ") }}
+                  /
+                  {{ [totalAccountPrice, accountCurrency].join(" ") }}
+                </v-chip>
               </div>
             </td>
           </tr>
