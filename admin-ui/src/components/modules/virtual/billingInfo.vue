@@ -22,22 +22,6 @@
       <v-col>
         <v-text-field
           readonly
-          label="Price instance total"
-          :suffix="defaultCurrency"
-          :value="price"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          label="Account price instance total"
-          :value="accountPrice"
-          :suffix="accountCurrency"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
           label="Date (create)"
           :value="template.data.creation"
         />
@@ -154,7 +138,6 @@ const {
 
 const changeDatesDialog = ref(false);
 const priceModelDialog = ref(false);
-const accountPrice = ref(0);
 const billingHeaders = ref([
   { text: "Name", value: "name" },
   { text: "Payment term", value: "kind" },
@@ -168,17 +151,10 @@ const date = computed(() =>
 );
 const isMonitoringsEmpty = computed(() => date.value === "-");
 
-const price = computed(() => {
-  return template.value.billingPlan.products[template.value.product]?.price;
-});
-
 const filtredPlans = computed(() =>
   plans.value.filter((p) => p.type === "virtual")
 );
 
-const totalAccountPrice = computed(() => {
-  return toAccountPrice(totalPrice.value);
-});
 const totalPrice = computed(() => {
   return billingItems.value.reduce((acc, i) => acc + +i.price, 0);
 });
@@ -193,7 +169,6 @@ onMounted(() => {
 });
 
 watch(accountRate, () => {
-  accountPrice.value = totalAccountPrice.value;
   billingItems.value = billingItems.value.map((i) => {
     i.accountPrice = toAccountPrice(i.price);
     return i;

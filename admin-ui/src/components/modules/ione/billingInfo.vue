@@ -21,22 +21,6 @@
       </v-col>
       <v-col>
         <v-text-field
-          :suffix="defaultCurrency"
-          readonly
-          label="Price instance total"
-          :value="price"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          label="Account price instance total"
-          :value="accountPrice"
-          :suffix="accountCurrency"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
           readonly
           label="Date (create)"
           :value="template.data.creation"
@@ -186,8 +170,6 @@ const {
 const changeDatesDialog = ref(false);
 const changeTariffDialog = ref(false);
 const priceModelDialog = ref(false);
-const price = ref(0);
-const accountPrice = ref(0);
 const billingItems = ref([]);
 const billingHeaders = ref([
   { text: "Name", value: "name" },
@@ -200,7 +182,6 @@ const billingHeaders = ref([
 
 onMounted(() => {
   billingItems.value = getBillingItems();
-  price.value = totalPrice.value;
   fetchAccountRate(accountCurrency);
 });
 
@@ -337,7 +318,6 @@ watch(accountRate, () => {
     i.accountPrice = toAccountPrice(i.price);
     return i;
   });
-  accountPrice.value = totalAccountPrice.value;
 });
 </script>
 

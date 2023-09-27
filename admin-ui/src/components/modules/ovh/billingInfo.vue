@@ -22,22 +22,6 @@
       <v-col>
         <v-text-field
           readonly
-          :suffix="defaultCurrency"
-          label="Price instance total"
-          :value="type === 'dedicated' ? +totalNewPrice?.toFixed(2) : getPrice"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          label="Account price instance total"
-          :value="accountTotalNewPrice"
-          :suffix="accountCurrency"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
           label="Date (create)"
           :value="template.data.creation"
         />
@@ -377,20 +361,6 @@ const tarrif = computed(() => {
     key = [duration.value, planCode.value].join(" ");
   }
   return template.value.billingPlan.products[key];
-});
-const getPrice = computed(() => {
-  const prices = [];
-  prices.push(tarrif.value?.price);
-  addons.value.forEach((name) => {
-    prices.push(
-      template.value.billingPlan.resources.find(
-        (p) =>
-          p.key === [duration.value, planCode, name].join(" ") ||
-          p.key === [duration.value, name].join(" ")
-      )?.price || 0
-    );
-  });
-  return prices.reduce((acc, val) => acc + val, 0);
 });
 
 const service = computed(() =>
