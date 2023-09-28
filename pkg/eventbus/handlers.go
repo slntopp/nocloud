@@ -41,14 +41,23 @@ LET account = LAST(
         RETURN node
     )
     
-RETURN {account: account._key, service: srv.title, instance: doc.title, product: doc.product}
+RETURN {
+	account: account._key, 
+	service: srv.title, 
+	instance: doc.title, 
+	product: doc.product, 
+	next_payment_date: doc.data.next_payment_date,
+	ip: doc.state.meta.networking.public[0]
+}
 `
 
 type EventInfo struct {
-	Account  string `json:"account"`
-	Service  string `json:"service"`
-	Instance string `json:"instance"`
-	Product  string `json:"product,omitempty"`
+	Account         string `json:"account"`
+	Service         string `json:"service"`
+	Instance        string `json:"instance"`
+	Product         string `json:"product,omitempty"`
+	Ip              string `json:"ip,omitempty"`
+	NextPaymentDate string `json:"next_payment_date,omitempty"`
 }
 
 func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
@@ -82,6 +91,12 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 	event.Data["instance"] = structpb.NewStringValue(eventInfo.Instance)
 	if eventInfo.Product != "" {
 		event.Data["product"] = structpb.NewStringValue(eventInfo.Product)
+	}
+	if eventInfo.Ip != "" {
+		event.Data["ip"] = structpb.NewStringValue(eventInfo.Ip)
+	}
+	if eventInfo.NextPaymentDate != "" {
+		event.Data["next_payment_date"] = structpb.NewStringValue(eventInfo.NextPaymentDate)
 	}
 	event.Data["instance_uuid"] = structpb.NewStringValue(event.GetUuid())
 	event.Uuid = eventInfo.Account
