@@ -94,7 +94,7 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 		"@services":   schema.SERVICES_COL,
 		"@accounts":   schema.ACCOUNTS_COL,
-		"@currencies": schema.CUR_COL,
+		"currencies":  schema.CUR_COL,
 		"graph":       schema.BILLING_GRAPH.Name,
 		"@c2c":        schema.CUR2CUR,
 	})
