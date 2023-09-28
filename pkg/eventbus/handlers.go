@@ -42,7 +42,7 @@ LET account = LAST(
     )
 
 LET rate_one = LAST(
-	FOR i IN Currencies2Currencies
+	FOR i IN @@c2c
     FILTER (i.to == 0 || i.from == 0) && i.rate == 1
         RETURN i
 )
@@ -52,14 +52,14 @@ LET default_cur = rate_one.to == 0 ? rate_one.from : rate_one.to
 LET currency = account.currency != null ? account.currency : default_cur
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
-	SHORTEST_PATH DOCUMENT(CONCAT(@@currencies, "/", default_cur))
-	TO DOCUMENT(CONCAT(@@currencies, "/", currency))
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", default_cur))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate
 )
 
-LET price = doc.billing_plan.products[doc.product] == null ? 0 : doc.billing_plan.products[doc.product]
+LET price = doc.billing_plan.products[doc.product] == null ? 0 : doc.billing_plan.products[doc.product].price
 
 RETURN {
 	account: account._key, 
@@ -96,6 +96,7 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 		"@accounts":   schema.ACCOUNTS_COL,
 		"@currencies": schema.CUR_COL,
 		"graph":       schema.BILLING_GRAPH.Name,
+		"@c2c":        schema.CUR2CUR,
 	})
 	if err != nil {
 		return nil, err
