@@ -52,12 +52,12 @@ RETURN {
 `
 
 type EventInfo struct {
-	Account         string `json:"account"`
-	Service         string `json:"service"`
-	Instance        string `json:"instance"`
-	Product         string `json:"product,omitempty"`
-	Ip              string `json:"ip,omitempty"`
-	NextPaymentDate string `json:"next_payment_date,omitempty"`
+	Account         string  `json:"account"`
+	Service         string  `json:"service"`
+	Instance        string  `json:"instance"`
+	Product         string  `json:"product,omitempty"`
+	Ip              string  `json:"ip,omitempty"`
+	NextPaymentDate float64 `json:"next_payment_date,omitempty"`
 }
 
 func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
@@ -95,8 +95,8 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 	if eventInfo.Ip != "" {
 		event.Data["ip"] = structpb.NewStringValue(eventInfo.Ip)
 	}
-	if eventInfo.NextPaymentDate != "" {
-		event.Data["next_payment_date"] = structpb.NewStringValue(eventInfo.NextPaymentDate)
+	if eventInfo.NextPaymentDate != 0 {
+		event.Data["next_payment_date"] = structpb.NewNumberValue(eventInfo.NextPaymentDate)
 	}
 	event.Data["instance_uuid"] = structpb.NewStringValue(event.GetUuid())
 	event.Uuid = eventInfo.Account
