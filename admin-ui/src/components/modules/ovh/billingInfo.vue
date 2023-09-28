@@ -209,7 +209,7 @@ const getVpsPrices = async () => {
   const prices = {};
 
   const planCodeCurr = meta.plans.find((p) => planCode.value === p.planCode);
-  prices["tarrif"] = getPriceFromProduct(planCodeCurr);
+  prices[planCode.value] = getPriceFromProduct(planCodeCurr);
   addons.value.forEach((addon) => {
     Object.keys(meta).forEach((metaKey) => {
       const product =
@@ -231,7 +231,7 @@ const getDedicatedPrice = async () => {
   const prices = {};
 
   const planCodeCurr = meta.plans.find((p) => planCode.value === p.planCode);
-  prices["tarrif"] = getPriceFromProduct(planCodeCurr);
+  prices[planCode.value] = getPriceFromProduct(planCodeCurr);
   const addonsPrice = await api.servicesProviders.action({
     action: "get_baremetal_options",
     uuid: template.value.sp,
@@ -273,7 +273,7 @@ const getCloudPrices = async () => {
       projectId: fullSp.vars?.projectId?.value?.default,
     },
   });
-  prices["tarrif"] = meta.codes[tarrif.value?.meta?.priceCode];
+  prices[planCode.value] = meta.codes[tarrif.value?.meta?.priceCode];
   return prices;
 };
 const getPriceFromProduct = (product) => {
