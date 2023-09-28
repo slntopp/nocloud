@@ -2,7 +2,7 @@
   <nocloud-table
     table-name="accounts"
     :headers="headers"
-    :items="filtredAccounts"
+    :items="filteredAccounts"
     :value="selected"
     :loading="loading"
     :single-select="singleSelect"
@@ -44,6 +44,17 @@
         :value="item.balance"
       />
     </template>
+    <template v-slot:[`item.address`]="{ item }">
+      <v-tooltip> </v-tooltip>
+      <v-tooltip bottom>
+        <template v-slot:activator="{ on, attrs }">
+          <span v-bind="attrs" v-on="on">
+            {{ item.data?.city || item.data?.address }}
+          </span>
+        </template>
+        <span>{{ item.data?.address }}</span>
+      </v-tooltip>
+    </template>
     <template v-slot:[`item.access.level`]="{ value }">
       <v-chip :color="colorChip(value)">
         {{ value }}
@@ -63,7 +74,7 @@ import noCloudTable from "@/components/table.vue";
 import Balance from "./balance.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import { mapGetters } from "vuex";
-import { filterByKeysAndParam } from "@/functions";
+import { filterByKeysAndParam, formatSecondsToDate } from "@/functions";
 
 export default {
   name: "accounts-table",
@@ -95,6 +106,9 @@ export default {
         { text: "UUID", value: "uuid" },
         { text: "Balance", value: "balance" },
         { text: "Email", value: "data.email" },
+        { text: "Created date", value: "data.date_create" },
+        { text: "Country", value: "data.country" },
+        { text: "Address", value: "address" },
         { text: "Client currency", value: "currency" },
         { text: "Access level", value: "access.level" },
         { text: "Group(NameSpace)", value: "namespace" },
@@ -130,17 +144,23 @@ export default {
       searchParam: "customSearchParam",
       searchParams: "customParams",
     }),
-    tableData() {
-      return this.$store.getters["accounts/all"];
+    accounts() {
+      return this.$store.getters["accounts/all"].map((a) => ({
+        ...a,
+        data: {
+          ...a.data,
+          date_create: formatSecondsToDate(a.data?.date_create),
+        },
+      }));
     },
-    filtredAccounts() {
+    filteredAccounts() {
       const searchParams = { ...this.searchParams };
 
       if (this.namespace) {
         searchParams["access.namespace"] = [{ value: this.namespace }];
       }
 
-      const accounts = this.tableData.filter((a) =>
+      const accounts = this.accounts.filter((a) =>
         Object.keys(searchParams).every((k) => {
           return (
             !searchParams?.[k] ||
@@ -210,7 +230,7 @@ export default {
     }, 0);
   },
   watch: {
-    tableData() {
+    accounts() {
       this.fetchError = "";
     },
   },
