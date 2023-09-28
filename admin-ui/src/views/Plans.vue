@@ -199,7 +199,7 @@ export default {
       Promise.all(promises)
         .then(() => api.plans.delete(this.selected[0].uuid))
         .then(() => {
-          this.$store.dispatch("plans/fetch", { withCount: true });
+          this.$store.dispatch("plans/fetch");
           this.showSnackbar({
             message: "Price model deleted successfully.",
           });
