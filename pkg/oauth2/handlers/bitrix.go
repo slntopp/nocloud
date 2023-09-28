@@ -255,7 +255,7 @@ func (g *BitrixOauthHandler) Setup(
 				get.Data.GetFields()["oauth_types"].GetListValue().Values = append(get.Data.GetFields()["oauth_types"].GetListValue().GetValues(), structpb.NewStringValue("oauth2-bitrix"))
 			}
 
-			get.Data.Fields["bitrix"] = structpb.NewStringValue(id)
+			get.Data.Fields["bitrix24"] = structpb.NewStringValue(id)
 
 			_, err = regClient.Update(ctx, get)
 			if err != nil {
@@ -284,7 +284,7 @@ func (g *BitrixOauthHandler) Setup(
 				data := &structpb.Struct{
 					Fields: map[string]*structpb.Value{
 						"oauth_types": listValue,
-						"bitrix":      structpb.NewStringValue(id),
+						"bitrix24":    structpb.NewStringValue(id),
 					},
 				}
 				_, err := regClient.Create(ctx, &accounts.CreateRequest{
