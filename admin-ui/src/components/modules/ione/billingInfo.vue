@@ -13,8 +13,11 @@
       <v-col>
         <v-text-field
           readonly
-          label="Tarif (product plan)"
-          :value="template.product"
+          label="Product name"
+          :value="
+            template.billingPlan.products[template.product]?.title ||
+            template.product
+          "
           append-icon="mdi-pencil"
           @click:append="changeTariffDialog = true"
         />

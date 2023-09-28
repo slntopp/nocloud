@@ -13,7 +13,7 @@
       <v-col>
         <v-text-field
           readonly
-          label="Tarif (product plan)"
+          label="Product name"
           :value="billingPlan.products[template.product].title"
           @click:append="priceModelDialog = true"
           append-icon="mdi-pencil"

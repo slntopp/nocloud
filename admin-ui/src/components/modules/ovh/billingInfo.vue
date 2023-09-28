@@ -13,7 +13,7 @@
       <v-col>
         <v-text-field
           readonly
-          label="Tarif (product plan)"
+          label="Product name"
           :value="tarrif.title"
           append-icon="mdi-pencil"
           @click:append="priceModelDialog = true"
@@ -302,8 +302,8 @@ const date = computed(() => {
 
 const initPrices = () => {
   pricesItems.value.push({
-    title: "tarrif",
-    key: "tarrif",
+    title: planCode.value,
+    key: planCode.value,
     ind: 0,
     path: `billingPlan.products.${[duration.value, planCode.value].join(
       " "
