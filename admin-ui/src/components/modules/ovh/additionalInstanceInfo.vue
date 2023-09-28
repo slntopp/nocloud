@@ -24,11 +24,11 @@
           @click:append="isVisible = !isVisible"
         />
       </v-col>
+    </v-row>
+    <v-row>
       <v-col>
         <v-text-field readonly :value="cpu" label="CPU" />
       </v-col>
-    </v-row>
-    <v-row>
       <v-col>
         <v-text-field readonly :value="template.resources.ram" label="RAM" />
       </v-col>
