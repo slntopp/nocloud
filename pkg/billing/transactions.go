@@ -220,7 +220,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		Key:  "transaction_created",
 	})
 
-	if r.Transaction.Priority == pb.Priority_URGENT {
+	if r.Transaction.Priority == pb.Priority_URGENT && r.Transaction.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
 		currencyConf := MakeCurrencyConf(ctx, log)
@@ -424,6 +424,83 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 		log.Error("Failed to update transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update transaction")
 	}
+
+	if t.GetPriority() == pb.Priority_URGENT {
+		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
+		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
+		currencyConf := MakeCurrencyConf(ctx, log)
+		suspConf := MakeSuspendConf(ctx, log)
+
+		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
+			"@accounts":      schema.ACCOUNTS_COL,
+			"@transactions":  schema.TRANSACTIONS_COL,
+			"@records":       schema.RECORDS_COL,
+			"accountKey":     acc.String(),
+			"transactionKey": transaction.String(),
+			"currency":       currencyConf.Currency,
+			"currencies":     schema.CUR_COL,
+			"now":            time.Now().Unix(),
+			"graph":          schema.BILLING_GRAPH.Name,
+		})
+		if err != nil {
+			log.Error("Failed to process transaction", zap.String("err", err.Error()))
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: t.Account, Public: false})
+
+		if err != nil {
+			log.Error("Failed to get account", zap.String("err", err.Error()))
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		var cur pb.Currency
+
+		if dbAcc.Currency == nil {
+			cur = pb.Currency_NCU
+		} else {
+			cur = *dbAcc.Currency
+		}
+
+		var rate float64 = 1
+
+		if cur != pb.Currency(currencyConf.Currency) {
+			rate, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
+
+			if err != nil {
+				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+
+		var balance = 0.0
+		if dbAcc.Balance != nil {
+			balance = *dbAcc.Balance
+		}
+
+		balance = balance * rate
+
+		var isSuspended = false
+
+		if dbAcc.Suspended != nil {
+			isSuspended = *dbAcc.Suspended
+		}
+
+		if !isSuspended && balance < suspConf.Limit {
+			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: t.Account})
+			if err != nil {
+				log.Error("Failed to suspend account", zap.String("err", err.Error()))
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		} else if isSuspended && balance > suspConf.Limit {
+			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: t.Account})
+			if err != nil {
+				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
+				return nil, status.Error(codes.Internal, err.Error())
+			}
+		}
+	}
+
 	return &pb.UpdateTransactionResponse{Result: true}, nil
 }
 

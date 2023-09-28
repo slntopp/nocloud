@@ -58,6 +58,7 @@ type EventInfo struct {
 	Product         string  `json:"product,omitempty"`
 	Ip              string  `json:"ip,omitempty"`
 	NextPaymentDate float64 `json:"next_payment_date,omitempty"`
+	Price           float64 `json:"price"`
 }
 
 func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
