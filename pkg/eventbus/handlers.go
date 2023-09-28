@@ -124,6 +124,7 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 		event.Data["next_payment_date"] = structpb.NewNumberValue(eventInfo.NextPaymentDate)
 	}
 	event.Data["instance_uuid"] = structpb.NewStringValue(event.GetUuid())
+	event.Data["price"] = structpb.NewNumberValue(eventInfo.Price)
 	event.Uuid = eventInfo.Account
 	event.Type = "email"
 
