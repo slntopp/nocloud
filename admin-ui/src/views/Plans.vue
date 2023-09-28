@@ -5,7 +5,7 @@
     <confirm-dialog v-if="linked.length !== 1" @confirm="deleteSelectedPlan">
       <v-btn
         class="mr-2"
-        :disabled="selected.length !== 1"
+        :disabled="isDeleteDisabled"
         :loading="isDeleteLoading"
       >
         Delete
@@ -196,8 +196,10 @@ export default {
       }
 
       this.isDeleteLoading = true;
+      const deletePromises = this.selected.map((s) => api.plans.delete(s.uuid));
+
       Promise.all(promises)
-        .then(() => api.plans.delete(this.selected[0].uuid))
+        .then(() => Promise.all(deletePromises))
         .then(() => {
           this.$store.dispatch("plans/fetch");
           this.showSnackbar({
@@ -309,6 +311,25 @@ export default {
     },
     typeItems() {
       return [...new Set(this.plans.map((p) => p.type.toLowerCase()))];
+    },
+    isDeleteDisabled() {
+      if (
+        !Object.keys(this.instanceCountMap).length ||
+        this.selected.length === 0
+      ) {
+        return true;
+      }
+      const withInstances = this.selected.filter(
+        (s) => this.instanceCountMap[s.uuid] > 0
+      );
+      const withOutInstances = this.selected.filter(
+        (s) => this.instanceCountMap[s.uuid] === 0
+      );
+
+      return (
+        withInstances.length > 1 ||
+        (withOutInstances.length > 0 && withInstances.length > 0)
+      );
     },
   },
   watch: {
