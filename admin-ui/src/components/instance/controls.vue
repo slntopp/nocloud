@@ -16,6 +16,11 @@
     >
       {{ btn.title || btn.action }}
     </v-btn>
+    <confirm-dialog @confirm="lockInstance">
+      <v-btn :loading="isLockLoading" class="mr-2">
+        {{ template.data.lock ? "Unlock" : "Lock" }}
+      </v-btn>
+    </confirm-dialog>
     <confirm-dialog @confirm="deleteInstance">
       <v-btn class="mr-2" :loading="isLoading"> Delete </v-btn>
     </confirm-dialog>
@@ -60,7 +65,11 @@ export default {
     copyTemplate: { type: Object },
     sp: { type: Object },
   },
-  data: () => ({ isLoading: false, isSaveLoading: false }),
+  data: () => ({
+    isLoading: false,
+    isSaveLoading: false,
+    isLockLoading: false,
+  }),
   methods: {
     ...mapActions("actions", ["sendVmAction"]),
     async deleteInstance() {
@@ -96,6 +105,40 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+    lockInstance() {
+      const lock = !this.template.data.lock;
+
+      const tempService = JSON.parse(JSON.stringify(this.service));
+      const igIndex = tempService.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === this.template.uuid)
+      );
+      const instanceIndex = tempService.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === this.template.uuid);
+
+      tempService.instancesGroups[igIndex].instances[instanceIndex] = {
+        ...this.template,
+        data: { ...this.template.data, lock },
+      };
+
+      this.isLockLoading = true;
+      api.services
+        ._update(tempService)
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: `Instance ${lock ? "lock" : "unlock"} successfully`,
+          });
+
+          this.$store.dispatch("services/fetch", this.template.uuid);
+          this.$store.dispatch("servicesProviders/fetch");
+        })
+        .catch((err) => {
+          this.showSnackbarError({ message: err });
+        })
+        .finally(() => {
+          this.isSaveLoading = false;
+        });
     },
     async save() {
       const tempService = JSON.parse(JSON.stringify(this.service));
