@@ -52,7 +52,7 @@ LET default_cur = rate_one.to == 0 ? rate_one.from : rate_one.to
 LET currency = account.currency != null ? account.currency : default_cur
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
-	SHORTEST_PATH DOCUMENT(CONCAT(@@currencies, "/", TO_NUMBER(transaction.currency)))
+	SHORTEST_PATH DOCUMENT(CONCAT(@@currencies, "/", default_cur))
 	TO DOCUMENT(CONCAT(@@currencies, "/", currency))
 	GRAPH @graph
 	FILTER edge
