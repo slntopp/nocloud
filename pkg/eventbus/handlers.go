@@ -40,14 +40,35 @@ LET account = LAST(
     FILTER IS_SAME_COLLECTION(node, @@accounts)
         RETURN node
     )
-    
+
+LET rate_one = LAST(
+	FOR i IN Currencies2Currencies
+    FILTER (i.to == 0 || i.from == 0) && i.rate == 1
+        RETURN i
+)
+
+LET default_cur = rate_one.to == 0 ? rate_one.from : rate_one.to
+
+LET currency = account.currency != null ? account.currency : default_cur
+LET rate = PRODUCT(
+	FOR vertex, edge IN OUTBOUND
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency)))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	GRAPH @graph
+	FILTER edge
+		RETURN edge.rate
+)
+
+LET price = doc.billing_plan.products[doc.product] == null ? 0 : doc.billing_plan.products[doc.product]
+
 RETURN {
 	account: account._key, 
 	service: srv.title, 
 	instance: doc.title, 
 	product: doc.product, 
 	next_payment_date: doc.data.next_payment_date,
-	ip: doc.state.meta.networking.public[0]
+	ip: doc.state.meta.networking.public[0],
+	price: price * rate
 }
 `
 
@@ -58,7 +79,7 @@ type EventInfo struct {
 	Product         string  `json:"product,omitempty"`
 	Ip              string  `json:"ip,omitempty"`
 	NextPaymentDate float64 `json:"next_payment_date,omitempty"`
-	Price           float64 `json:"price"`
+	Price           float64 `json:"price,omitempty"`
 }
 
 func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
