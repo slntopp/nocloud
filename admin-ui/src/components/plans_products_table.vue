@@ -97,6 +97,33 @@
               @change="(value) => changeProduct('sorter', value, item.id)"
             />
           </template>
+          <template v-slot:[`item.group`]="{ item }">
+            <div class="d-flex align-center">
+              <v-select
+                v-if="productId !== item.id"
+                :items="[...groups.values()]"
+                :value="products[item.key].group"
+                @change="setGroup($event, item.id)"
+              />
+              <v-text-field v-else v-model="groupActionPayload" />
+              <template v-if="productId !== item.id">
+                <v-btn icon @click="setGroupAction('edit', products[item.key])">
+                  <v-icon>mdi-pencil</v-icon>
+                </v-btn>
+                <v-btn icon @click="setGroupAction('add', products[item.key])">
+                  <v-icon>mdi-plus</v-icon>
+                </v-btn>
+              </template>
+              <template v-else>
+                <v-btn icon @click="setGroupAction('')">
+                  <v-icon>mdi-cancel</v-icon>
+                </v-btn>
+                <v-btn icon @click="invokeGroupAction(item)">
+                  <v-icon>mdi-content-save</v-icon>
+                </v-btn>
+              </template>
+            </div>
+          </template>
           <template v-slot:[`item.kind`]="{ item }">
             <v-radio-group
               row
@@ -168,7 +195,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, toRefs, watch } from "vue";
+import { onMounted, ref, toRefs, watch } from "vue";
 import { VueEditor } from "vue2-editor";
 import dateField from "@/components/date.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
@@ -188,11 +215,17 @@ const { products, resources } = toRefs(props);
 
 const { defaultCurrency } = useCurrency();
 
+const productsArray = ref([]);
 const table = ref();
 const fullDate = ref({});
 const selected = ref([]);
 const expanded = ref([]);
 const tabsIndex = ref(0);
+
+const groups = ref(new Map());
+const productId = ref("");
+const groupAction = ref("");
+const groupActionPayload = ref("");
 
 const generalRule = [(v) => !!v || "This field is required!"];
 const kinds = ["POSTPAID", "PREPAID"];
@@ -204,12 +237,15 @@ const headers = [
   { text: "Price", value: "price", width: 150 },
   { text: "Period", value: "period", width: 220 },
   { text: "Kind", value: "kind", width: 228 },
+  { text: "Group", value: "group", width: 300 },
   { text: "Public", value: "public" },
   { text: "Sorter", value: "sorter" },
 ];
 
 onMounted(() => {
+  setProductsArray();
   setFullDates(products.value);
+  setDefaultGroups();
 });
 
 function changeDate({ value }, id) {
@@ -225,7 +261,61 @@ function changeResource(data) {
   emits("change:resource", data);
 }
 
+const setProductsArray = () => {
+  productsArray.value = Object.keys(products.value).map((key) => ({
+    ...products.value[key],
+    key,
+  }));
+};
+
+const setDefaultGroups = () => {
+  for (const key in products.value) {
+    let group = products.value[key]?.group;
+    if (!group) {
+      changeProduct("group", "default", products.value[key].id);
+      group = "default";
+    }
+
+    groups.value.set(group, group);
+  }
+};
+
+const setGroupAction = (action, item) => {
+  groupAction.value = action;
+  groupActionPayload.value = item?.group || "";
+  productId.value = item?.id || "";
+};
+
+const invokeGroupAction = (item) => {
+  if (groupAction.value === "edit") {
+    changeGroupName(products.value[item.key].group, groupActionPayload.value);
+  } else {
+    setGroup(groupActionPayload.value, item.id);
+  }
+
+  setGroupAction("");
+};
+
+const changeGroupName = (group, newGroup) => {
+  for (const key in products.value) {
+    if (products.value[key].group === group) {
+      changeProduct("group", newGroup, products.value[key].id);
+    }
+  }
+
+  groups.value.delete(group);
+  groups.value.set(newGroup, newGroup);
+  setProductsArray();
+};
+
+const setGroup = (group, id) => {
+  changeProduct("group", group, id);
+  groups.value.set(group, group);
+  setProductsArray();
+};
+
 const copyProducts = () => {
+  setProductsArray();
   const copiedProducts = [
     ...selected.value.map((p) => ({
       ...p,
@@ -251,30 +341,23 @@ const copyProducts = () => {
 };
 
 function addConfig() {
-  const value = [...productsArray.value];
-  const result = {};
-
-  value.push({
+  const result = { ...products.value };
+  result[""] = {
     key: "",
     title: "",
     kind: "POSTPAID",
     price: 0,
+    group: groups.value.values().next().value,
     period: 0,
     resources: {},
     public: true,
     meta: {},
-    sorter: value.length,
+    sorter: Object.keys(result).length,
     id: Math.random().toString(16).slice(2),
-  });
+  };
 
-  value.forEach((product, i) => {
-    const { key } = product;
-
-    delete product.key;
-    product.sorter = i;
-    result[key] = product;
-  });
   changeProduct("products", result);
+  setProductsArray();
 }
 
 function removeConfig() {
@@ -298,10 +381,6 @@ const setFullDates = (products) => {
     fullDate.value[id] = getFullDate(period);
   });
 };
-
-const productsArray = computed(() =>
-  Object.entries(products.value).map(([key, value]) => ({ key, ...value }))
-);
 
 watch(table, (value) => {
   const { rows } = value[0].$el.children[1].children[0];
@@ -369,6 +448,13 @@ watch(table, (value) => {
     });
   });
 });
+watch(
+  products,
+  () => {
+    setProductsArray();
+  },
+  { deep: true }
+);
 </script>
 
 <style lang="scss">
