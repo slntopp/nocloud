@@ -52,8 +52,8 @@ LET default_cur = rate_one.to == 0 ? rate_one.from : rate_one.to
 LET currency = account.currency != null ? account.currency : default_cur
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
-	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency)))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	SHORTEST_PATH DOCUMENT(CONCAT(@@currencies, "/", TO_NUMBER(transaction.currency)))
+	TO DOCUMENT(CONCAT(@@currencies, "/", currency))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate
@@ -94,6 +94,8 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 		"@services":   schema.SERVICES_COL,
 		"@accounts":   schema.ACCOUNTS_COL,
+		"@currencies": schema.CUR_COL,
+		"graph":       schema.BILLING_GRAPH.Name,
 	})
 	if err != nil {
 		return nil, err
