@@ -352,9 +352,6 @@ export default {
         )?.uuid || undefined;
 
       this.transaction.exec = this.exec;
-      if (!this.transaction.exec) {
-        this.transaction.priority = "NORMAL";
-      }
       this.transaction.total *= 1;
     },
     resetDate() {
