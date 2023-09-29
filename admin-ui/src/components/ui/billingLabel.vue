@@ -4,6 +4,18 @@
       <v-col>
         <v-chip outlined color="primary">Due to date: {{ dueDate }}</v-chip>
       </v-col>
+      <v-col
+        style="max-height: 50px"
+        class="d-flex justify-end align-start pa-0"
+      >
+        <v-switch
+          hide-details
+          dense
+          :input-value="template.config.auto_renew"
+          @change="emit('update', { key: 'config.auto_renew', value: !!$event })"
+          label="Auto"
+        />
+      </v-col>
       <v-col>
         <confirm-dialog
           title="Do you want to renew server?"
@@ -23,12 +35,12 @@
       </v-col>
     </v-row>
     <v-row class="mt-0" align="center" justify="end">
-      <v-col class="d-flex justify-end">
+      <v-col cols="4" class="d-flex justify-end px-0">
         <v-chip color="primary" outlined
           >Price: {{ price }} {{ accountCurrency }}</v-chip
         >
       </v-col>
-      <v-col class="d-flex justify-end">
+      <v-col cols="4" class="d-flex justify-end px-0">
         <instance-state :state="template.state.state" />
       </v-col>
     </v-row>
@@ -49,11 +61,12 @@ const props = defineProps([
   "tariffPrice",
   "account",
 ]);
+const { template, addonsPrice, tariffPrice, dueDate, account } = toRefs(props);
+
+const emit = defineEmits(["update"]);
 
 const store = useStore();
 const { convertTo } = useCurrency();
-
-const { template, addonsPrice, tariffPrice, dueDate, account } = toRefs(props);
 
 const currency = computed(() => ({
   code: store.getters["currencies/default"],

@@ -5,6 +5,7 @@
     :addons-price="addonsPrice"
     :tariff-price="tariffPrice"
     :due-date="dueDate"
+    @update="emit('update', $event)"
   />
 </template>
 
@@ -15,6 +16,7 @@ import { useStore } from "@/store";
 import billingLabel from "@/components/ui/billingLabel.vue";
 
 const props = defineProps(["template"]);
+const emit = defineEmits(["update"]);
 
 const store = useStore();
 
