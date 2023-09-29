@@ -40,15 +40,46 @@ LET account = LAST(
     FILTER IS_SAME_COLLECTION(node, @@accounts)
         RETURN node
     )
-    
-RETURN {account: account._key, service: srv.title, instance: doc.title, product: doc.product}
+
+LET rate_one = LAST(
+	FOR i IN @@c2c
+    FILTER (i.to == 0 || i.from == 0) && i.rate == 1
+        RETURN i
+)
+
+LET default_cur = rate_one.to == 0 ? rate_one.from : rate_one.to
+
+LET currency = account.currency != null ? account.currency : default_cur
+LET rate = PRODUCT(
+	FOR vertex, edge IN OUTBOUND
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", default_cur))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	GRAPH @graph
+	FILTER edge
+		RETURN edge.rate
+)
+
+LET price = doc.billing_plan.products[doc.product] == null ? 0 : doc.billing_plan.products[doc.product].price
+
+RETURN {
+	account: account._key, 
+	service: srv.title, 
+	instance: doc.title, 
+	product: doc.product, 
+	next_payment_date: doc.data.next_payment_date,
+	ip: doc.state.meta.networking.public[0],
+	price: price * rate
+}
 `
 
 type EventInfo struct {
-	Account  string `json:"account"`
-	Service  string `json:"service"`
-	Instance string `json:"instance"`
-	Product  string `json:"product,omitempty"`
+	Account         string  `json:"account"`
+	Service         string  `json:"service"`
+	Instance        string  `json:"instance"`
+	Product         string  `json:"product,omitempty"`
+	Ip              string  `json:"ip,omitempty"`
+	NextPaymentDate float64 `json:"next_payment_date,omitempty"`
+	Price           float64 `json:"price,omitempty"`
 }
 
 func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Database) (*pb.Event, error) {
@@ -63,6 +94,9 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 		"@services":   schema.SERVICES_COL,
 		"@accounts":   schema.ACCOUNTS_COL,
+		"currencies":  schema.CUR_COL,
+		"graph":       schema.BILLING_GRAPH.Name,
+		"@c2c":        schema.CUR2CUR,
 	})
 	if err != nil {
 		return nil, err
@@ -83,7 +117,14 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 	if eventInfo.Product != "" {
 		event.Data["product"] = structpb.NewStringValue(eventInfo.Product)
 	}
+	if eventInfo.Ip != "" {
+		event.Data["ip"] = structpb.NewStringValue(eventInfo.Ip)
+	}
+	if eventInfo.NextPaymentDate != 0 {
+		event.Data["next_payment_date"] = structpb.NewNumberValue(eventInfo.NextPaymentDate)
+	}
 	event.Data["instance_uuid"] = structpb.NewStringValue(event.GetUuid())
+	event.Data["price"] = structpb.NewNumberValue(eventInfo.Price)
 	event.Uuid = eventInfo.Account
 	event.Type = "email"
 

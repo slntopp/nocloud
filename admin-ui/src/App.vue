@@ -276,7 +276,6 @@
           </v-btn>
         </v-col>
         <v-col class="d-flex justify-end align-center">
-          <balance title="Balance: " loged-in-user />
           <languages v-if="false" />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
@@ -300,6 +299,9 @@
                     >#{{ userdata.uuid }}</v-list-item-subtitle
                   >
                 </v-list-item-content>
+              </v-list-item>
+              <v-list-item>
+                <balance title="Balance: " loged-in-user />
               </v-list-item>
               <v-divider></v-divider>
               <v-list-item @click="logoutHandler">

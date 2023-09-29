@@ -1,0 +1,21 @@
+<template>
+  <v-expansion-panels>
+    <v-expansion-panel>
+      <v-expansion-panel-header color="background-light">
+        <span style="color: rgb(255, 0, 255)" class="text-h6">Prices</span>
+        <template v-slot:actions>
+          <v-icon color="primary" x-large> $expand </v-icon>
+        </template>
+      </v-expansion-panel-header>
+      <v-expansion-panel-content color="background-light">
+        <slot />
+      </v-expansion-panel-content>
+    </v-expansion-panel>
+  </v-expansion-panels>
+</template>
+
+<script>
+export default {
+  name: "instancesPricesPanels",
+};
+</script>

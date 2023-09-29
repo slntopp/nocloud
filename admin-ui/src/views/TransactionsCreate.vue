@@ -263,7 +263,7 @@ export default {
         id: 5,
         value: "transaction",
         title: "Transaction",
-        amount: { title: "Account balance", value: null },
+        amount: { title: "Set account balance", value: null },
       },
     ],
     typeId: 4,
@@ -276,7 +276,7 @@ export default {
       let amount = "";
 
       if (this.fullType.amount.value === null) {
-        amount = "account";
+        amount = "account-balance";
       } else {
         amount = this.fullType.amount.value ? "payment" : "top-up";
       }
@@ -352,9 +352,6 @@ export default {
         )?.uuid || undefined;
 
       this.transaction.exec = this.exec;
-      if (!this.transaction.exec) {
-        this.transaction.priority = "NORMAL";
-      }
       this.transaction.total *= 1;
     },
     resetDate() {

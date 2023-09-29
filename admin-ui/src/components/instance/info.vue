@@ -46,13 +46,6 @@
           :value="account?.balance?.toFixed(2) || 0"
         />
       </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          label="client currency"
-          :value="account?.currency"
-        />
-      </v-col>
     </v-row>
     <!--    <component-->
     <!--      v-if="!type.includes('ovh') && !type.includes('ione')"-->

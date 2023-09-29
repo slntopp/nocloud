@@ -4,7 +4,7 @@
       <v-col>
         <v-text-field
           readonly
-          label="State"
+          label="OpenNebula State"
           :value="template.state.meta?.state_str || template.state.state"
         />
       </v-col>
