@@ -6,6 +6,7 @@
     <v-navigation-drawer
       app
       permanent
+      v-if="$route.name !== 'Instances by account'"
       :color="asideColor"
       :mini-variant="isMenuMinimize"
     >
@@ -275,7 +276,7 @@
             <v-icon>mdi-reload</v-icon>
           </v-btn>
         </v-col>
-        <v-col class="d-flex justify-end align-center">
+        <v-col v-if="$route.name !== 'Instances by account'" class="d-flex justify-end align-center">
           <languages v-if="false" />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
@@ -314,6 +315,15 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
+    <v-btn
+      color="success"
+      v-if="overlay.uuid"
+      style="position: absolute; top: 90px; right: 25px; z-index: 100"
+      @click="overlay.onClick(overlay.uuid)"
+    >
+      {{ overlay.buttonTitle }}
+    </v-btn>
+
     <v-main>
       <router-view />
     </v-main>
@@ -323,6 +333,7 @@
 </template>
 
 <script>
+import api from "@/api.js";
 import config from "@/config.js";
 import balance from "@/components/balance.vue";
 import languages from "@/components/languages.vue";
@@ -338,6 +349,15 @@ export default {
     easterEgg: false,
     config,
     navTitles: config.navTitles ?? {},
+    overlay: {
+      buttonTitle: '',
+      uuid: '',
+      onClick(uuid) {
+        const params = `scrollbars=no,status=no,location=no,toolbar=no,menubar=no,popup=yes width=768,height=540,left=100,top=100`;
+
+        window.open(`/admin/instances/account/${uuid}`, 'overlay', params);
+      }
+    }
   }),
   methods: {
     logoutHandler() {
@@ -422,14 +442,28 @@ export default {
     },
   },
   created() {
-    // window.addEventListener("message", ({ data, origin }) => {
-    //   const url = `https://app.${location.host.split(".").slice(1).join(".")}`;
+    window.addEventListener("message", ({ data, origin }) => {
+      if (origin.includes("localhost") || !data) return;
+      if (data === "ready") return;
+      if (data.type === "get-user") {
+        const setting = "plugin-chats-overlay";
 
-    //   if (origin !== url) return;
-    //   if (data === 'ready') return;
-    //   this.$store.commit("auth/setToken", data);
-    //   location.assign("/admin");
-    // });
+        api.settings.get([setting]).then((res) => {
+          const { title } = JSON.parse(res[setting]);
+
+          this.overlay.buttonTitle = title;
+          this.overlay.uuid = data.value.uuid;
+        });
+        return;
+      }
+      if (data.type === "open-user") {
+        window.open(`/admin/accounts/${data.value.uuid}`, "_blank");
+        return;
+      }
+
+      this.$store.commit("auth/setToken", data);
+      location.assign("/admin");
+    });
 
     this.$store.dispatch("auth/load");
 
@@ -466,6 +500,8 @@ export default {
     });
 
     this.$router.afterEach((to) => {
+      this.overlay.uuid = "";
+      this.overlay.buttonTitle = "";
       this.setTitle(to.name);
     });
 

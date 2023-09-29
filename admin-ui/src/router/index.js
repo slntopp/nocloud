@@ -50,6 +50,14 @@ const routes = [
     },
   },
   {
+    path: "/instances/account/:uuid",
+    name: "Instances by account",
+    component: () => import("../views/ChatsInstancesPage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/sp",
     name: "ServicesProviders",
     component: () => import("../views/ServicesProviders.vue"),
