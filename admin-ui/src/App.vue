@@ -460,9 +460,7 @@ export default {
         window.open(`/admin/accounts/${data.value.uuid}`, "_blank");
         return;
       }
-
-      this.$store.commit("auth/setToken", data);
-      location.assign("/admin");
+      console.log(data, origin);
     });
 
     this.$store.dispatch("auth/load");
