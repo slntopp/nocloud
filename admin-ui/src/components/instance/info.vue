@@ -132,7 +132,9 @@
       v-if="billingLabelComponent"
       style="position: absolute; top: 0; right: 75px"
     >
-      <component :is="billingLabelComponent" :template="copyInstance" />
+      <component
+          @update="updateCopy"
+          :is="billingLabelComponent" :template="copyInstance" />
     </div>
   </v-card>
 </template>
