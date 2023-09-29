@@ -503,6 +503,11 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 		patch["title"] = request.Title
 	}
 
+	if acc.Currency != request.Currency {
+		log.Debug("Title patch detected")
+		patch["currency"] = request.Currency
+	}
+
 	if request.Data == nil {
 		log.Debug("Data patch is not present, skipping")
 		goto patch
