@@ -5,6 +5,7 @@
     :template="template"
     :addons-price="{}"
     :account="account"
+    @update="emit('update', $event)"
   />
 </template>
 
@@ -15,6 +16,7 @@ import billingLabel from "@/components/ui/billingLabel.vue";
 import { useStore } from "@/store";
 
 const props = defineProps(["template"]);
+const emit = defineEmits(["update"]);
 
 const { template } = toRefs(props);
 

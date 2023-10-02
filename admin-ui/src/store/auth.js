@@ -9,6 +9,7 @@ export default {
   state: {
     token: "",
     userdata: {},
+    appURL: ""
   },
   mutations: {
     setToken(state, token) {
@@ -21,12 +22,14 @@ export default {
     setUserdata(state, data) {
       state.userdata = data;
     },
+    setAppURL(state, data) {
+      state.appURL = data;
+    }
   },
   actions: {
     login({ commit }, { login, password, type }) {
       return new Promise((resolve, reject) => {
-        api
-          .authorizeCustom({
+        api.authorizeCustom({
             auth: { data: [login, password], type },
             exp: Math.round((Date.now() + 7776e6) / 1000),
             root_claim: true
@@ -41,10 +44,26 @@ export default {
           });
       });
     },
+    getAppURL({ state, commit }) {
+      return new Promise((resolve, reject) => {
+        if (state.appURL !== "") {
+          resolve(state.appURL);
+          return;
+        }
+
+        api.settings.get(["app"])
+          .then((response) => {
+            commit("setAppURL", JSON.parse(response.app).url)
+            resolve(response);
+          })
+          .catch((error) => {
+            reject(error);
+          });
+      });
+    },
     loginToApp(_, { type, uuid }) {
       return new Promise((resolve, reject) => {
-        api
-          .authorizeCustom({ auth: { type, data: [] }, uuid })
+        api.authorizeCustom({ auth: { type, data: [] }, uuid })
           .then((response) => {
             resolve(response);
           })

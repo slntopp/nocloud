@@ -3,7 +3,6 @@
 </template>
 
 <script setup>
-import api from "@/api";
 import { useStore } from "@/store";
 
 const props = defineProps(["uuid", "instanceId", "type"]);
@@ -13,7 +12,7 @@ const loginHandler = () => {
   store
     .dispatch("auth/loginToApp", { uuid: props.uuid, type: "whmcs" })
     .then(({ token }) => {
-      api.settings.get(["app"]).then((res) => {
+      store.dispatch('auth/getAppURL').then((res) => {
         const win = window.open(JSON.parse(res.app).url);
 
         window.addEventListener('message', () => {

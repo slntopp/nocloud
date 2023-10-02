@@ -16,6 +16,9 @@
       <v-col cols="3">
         <v-text-field v-model="title" label="name" style="width: 330px" />
       </v-col>
+      <v-col cols="3">
+        <v-select :items="currencies" v-model="currency" label="currency" style="width: 330px" />
+      </v-col>
     </v-row>
     <v-card-title class="px-0">Instances:</v-card-title>
 
@@ -109,6 +112,7 @@ export default {
     navTitles: config.navTitles ?? {},
     uuid: "",
     title: "",
+    currency:"",
     keys: [],
     selected: [],
     isVisible: false,
@@ -135,7 +139,10 @@ export default {
       this.selected = [];
     },
     editAccount() {
-      const newAccount = { ...this.account, title: this.title };
+      const newAccount = { ...this.account, title: this.title ,currency:this.currency};
+      if(!newAccount.data){
+        newAccount.data={}
+      }
       newAccount.data.ssh_keys = this.keys;
 
       this.isEditLoading = true;
@@ -160,6 +167,7 @@ export default {
   },
   mounted() {
     this.title = this.account.title;
+    this.currency = this.account.currency;
     this.uuid = this.account.uuid;
     this.keys = this.account.data?.ssh_keys || [];
     if (this.namespaces.length < 2) {
@@ -178,6 +186,9 @@ export default {
     },
     services() {
       return this.$store.getters["services/all"];
+    },
+    currencies() {
+      return this.$store.getters["currencies/all"].filter((c) => c !== "NCU");
     },
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];

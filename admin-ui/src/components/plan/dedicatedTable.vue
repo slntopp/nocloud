@@ -310,43 +310,49 @@ export default {
       plan.resources = this.template.resources;
       plan.products = this.template.products;
 
-      for await (const el of this.plans) {
-        if (el.sell) {
-          const {
-            meta: { requiredConfiguration },
-          } = await api.post(`/sp/${uuid}/invoke`, {
+      const enabledPlans = this.plans.filter((el) => el.sell);
+      const configurations = await Promise.all(
+        enabledPlans.map((el) =>
+          api.post(`/sp/${uuid}/invoke`, {
             method: "get_required_configuration",
             params: {
               planCode: el.planCode,
               duration: el.duration,
               pricingMode: el.duration === "P1M" ? "default" : "upfront12",
             },
-          });
+          })
+        )
+      );
 
-          const addons = this.getAddons(el)
-            ? this.getAddons(el)
-                .filter((addon) => addon.sell)
-                ?.map((el) => ({ id: el.planCode, title: el.name }))
-            : plan.products[el.id]?.meta.addons;
+      for (let i = 0; i < configurations.length; i++) {
+        const {
+          meta: { requiredConfiguration },
+        } = configurations[i];
+        const el = enabledPlans[i];
 
-          const datacenter =
-            requiredConfiguration.find((el) => el.label.includes("datacenter"))
-              ?.allowedValues ?? [];
+        const addons = this.getAddons(el)
+          ? this.getAddons(el)
+              .filter((addon) => addon.sell)
+              ?.map((el) => ({ id: el.planCode, title: el.name }))
+          : plan.products[el.id]?.meta.addons;
 
-          const os =
-            requiredConfiguration.find((el) => el.label.includes("os"))
-              ?.allowedValues ?? [];
+        const datacenter =
+          requiredConfiguration.find((el) => el.label.includes("datacenter"))
+            ?.allowedValues ?? [];
 
-          plan.products[el.id] = {
-            kind: "PREPAID",
-            title: el.name,
-            price: el.value,
-            period: this.getPeriod(el.duration),
-            sorter: Object.keys(plan.products).length,
-            installation_fee: el.installation_fee.value,
-            meta: { addons, datacenter, os },
-          };
-        }
+        const os =
+          requiredConfiguration.find((el) => el.label.includes("os"))
+            ?.allowedValues ?? [];
+
+        plan.products[el.id] = {
+          kind: "PREPAID",
+          title: el.name,
+          price: el.value,
+          period: this.getPeriod(el.duration),
+          sorter: Object.keys(plan.products).length,
+          installation_fee: el.installation_fee.value,
+          meta: { addons, datacenter, os },
+        };
       }
       Object.values(this.addons).forEach((planCodeAddons) => {
         planCodeAddons.forEach((el) => {
