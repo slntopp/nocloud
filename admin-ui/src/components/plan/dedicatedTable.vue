@@ -68,7 +68,6 @@
             style="width: 200px"
             v-model="item.group"
             :items="groups"
-            @change="item.name = getName(item)"
           />
           <v-icon @click="changeMode('create', item)">mdi-plus</v-icon>
           <v-icon @click="changeMode('edit', item)">mdi-pencil</v-icon>
@@ -304,11 +303,12 @@ export default {
         return "error";
       }
 
+      plan.products = {};
+
       const sp = this.$store.getters["servicesProviders/all"];
       const { uuid } = sp.find((el) => el.type === "ovh");
 
       plan.resources = this.template.resources;
-      plan.products = this.template.products;
 
       const enabledPlans = this.plans.filter((el) => el.sell);
       const configurations = await Promise.all(
@@ -348,6 +348,7 @@ export default {
           kind: "PREPAID",
           title: el.name,
           price: el.value,
+          group: el.group,
           period: this.getPeriod(el.duration),
           sorter: Object.keys(plan.products).length,
           installation_fee: el.installation_fee.value,
@@ -514,13 +515,6 @@ export default {
           return "yearly";
       }
     },
-    getName({ name, group }) {
-      const newGroup = `${group[0].toUpperCase()}${group.slice(1)}`;
-      const sep = /[\W0-9]/.exec(name)[0];
-      const newName = name.split(sep).splice(1).join(sep);
-
-      return `${newGroup}${sep}${newName}`;
-    },
     getMargin({ value, price }, filter = true) {
       if (!this.usedFee.ranges) {
         if (filter) this.changeFilters({ margin: "none" }, ["Margin"]);
@@ -581,7 +575,6 @@ export default {
       this.plans.forEach((plan, index) => {
         if (plan.group !== group) return;
         this.plans[index].group = this.newGroup.name;
-        this.plans[index].name = this.getName(plan);
       });
 
       this.changeMode("none", { id: -1, group: "" });
@@ -589,7 +582,6 @@ export default {
     createGroup(plan) {
       this.groups.push(this.newGroup.name);
       plan.group = this.newGroup.name;
-      plan.name = this.getName(plan);
 
       this.changeMode("none", { id: -1, group: "" });
     },
@@ -598,7 +590,6 @@ export default {
       this.plans.forEach((plan, i) => {
         if (plan.group !== group) return;
         this.plans[i].group = this.groups[0];
-        this.plans[i].name = this.getName(plan);
       });
     },
     changeMode(mode, { id, group }) {
@@ -694,18 +685,18 @@ export default {
         this.plans.forEach((plan, i) => {
           const product = this.template.products[plan.id];
           const title = (product?.title ?? plan.name).toUpperCase();
-          const group = title.split(/[\W0-9]/)[0];
+          const group = product?.group || title.split(/[\W0-9]/)[0];
 
           if (product) {
             this.plans[i].name = product.title;
             this.plans[i].value = product.price;
-            this.plans[i].group = group;
             this.plans[i].sell = true;
             this.plans[i].isBeenSell = true;
           } else {
             this.plans[i].name = title;
-            this.plans[i].group = group;
           }
+          this.plans[i].group = group;
+
           if (!this.groups.includes(group)) this.groups.push(group);
         });
 

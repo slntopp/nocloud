@@ -92,7 +92,6 @@
                 style="width: 200px"
                 v-model="item.group"
                 :items="groups"
-                @change="item.name = getName(item)"
               />
               <v-icon @click="changeMode('create', item)">mdi-plus</v-icon>
               <v-icon @click="changeMode('edit', item)">mdi-pencil</v-icon>
@@ -317,6 +316,7 @@ export default {
             kind: "PREPAID",
             title: el.name,
             price: el.value,
+            group: el.group,
             period: this.getPeriod(el.duration),
             resources: { cpu: +cpu, ram: ram * 1024, disk: disk * 1024 },
             sorter: Object.keys(plan.products).length,
@@ -541,15 +541,6 @@ export default {
           return "yearly";
       }
     },
-    getName({ name, group }) {
-      const newGroup = `${group[0].toUpperCase()}${group.slice(1)}`;
-      const slicedName = name.replace(/VPS[\W0-9]/, "");
-      const sep = /[\W0-9]/.exec(slicedName)[0];
-      const newName = slicedName.split(sep).splice(1).join(sep);
-
-      if (!name.startsWith("VPS")) return `${newGroup}${sep}${newName}`;
-      else return `VPS ${newGroup} ${name.split(" ").at(-1)}`;
-    },
     getMargin({ value, price }, filter = true) {
       if (!this.usedFee.ranges) {
         if (filter) this.changeFilters({ margin: "none" }, ["Margin"]);
@@ -610,7 +601,6 @@ export default {
       this.plans.forEach((plan, index) => {
         if (plan.group !== group) return;
         this.plans[index].group = this.newGroupName;
-        this.plans[index].name = this.getName(plan);
       });
 
       this.changeMode("none", { id: -1, group: "" });
@@ -618,7 +608,6 @@ export default {
     createGroup(plan) {
       this.groups.push(this.newGroupName);
       plan.group = this.newGroupName;
-      plan.name = this.getName(plan);
 
       this.changeMode("none", { id: -1, group: "" });
     },
@@ -627,7 +616,6 @@ export default {
       this.plans.forEach((plan, i) => {
         if (plan.group !== group) return;
         this.plans[i].group = this.groups[0];
-        this.plans[i].name = this.getName(plan);
       });
     },
     changeMode(mode, { id, group }) {
@@ -768,7 +756,7 @@ export default {
             el.includes("windows")
           );
           const title = (product?.title ?? plan.name).replace(/VPS[\W0-9]/, "");
-          const group = title.split(/[\W0-9]/)[0];
+          const group = product?.group || title.split(/[\W0-9]/)[0];
 
           if (product) {
             this.plans[i].name = product.title;
