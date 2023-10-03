@@ -374,13 +374,10 @@ export default {
       return this.instance.config.addons.find((a) => addon.includes(a));
     },
     setProduct() {
-      const data = JSON.parse(JSON.stringify(this.instance));
-      if (data.billing_plan?.kind?.toLowerCase() === "static") {
-        this.$emit("set-value", {
-          value: `${data.config?.duration} ${data.config?.planCode}`,
-          key: "product",
-        });
-      }
+      this.$emit("set-value", {
+        value: this.product,
+        key: "product",
+      });
     },
     setInstanceGroup(key, value) {
       this.$emit("set-instance-group", { ...this.instanceGroup, [key]: value });
@@ -399,6 +396,12 @@ export default {
       }
 
       return tariffs;
+    },
+    product() {
+      return [
+        this.instance.config.duration,
+        this.instance.config.planCode,
+      ].join(" ");
     },
     durationItems() {
       const items = new Set();
@@ -426,9 +429,7 @@ export default {
         this.instance.config.configuration.vps_os
       );
       this.setAddons(
-        this.instance.billing_plan.products[
-          `${this.instance.config.duration} ${this.instance.config.planCode}`
-        ]?.meta?.addons,
+        this.instance.billing_plan.products[this.product]?.meta?.addons,
         this.instance.config.planCode
       );
     }
