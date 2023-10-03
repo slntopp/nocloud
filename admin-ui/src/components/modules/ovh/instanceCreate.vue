@@ -193,7 +193,6 @@ export default {
     regions: {},
     images: {},
     addons: {},
-    durationItems: ["P1H", "P1M", "P1Y"],
 
     ovhTypes: [
       { title: "ovh vps", value: "vps" },
@@ -396,6 +395,14 @@ export default {
       }
 
       return tariffs;
+    },
+    durationItems() {
+      const items = new Set();
+      this.flavors[this.instance.billing_plan?.uuid]?.forEach((item) => {
+        items.add(item.duration);
+      });
+
+      return [...items.values()];
     },
   },
   async created() {
