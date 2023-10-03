@@ -59,17 +59,22 @@
             </v-col>
           </v-row>
 
-          <v-row>
-            <v-col cols="3">
-              <v-subheader>Meta</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <json-editor
-                :json="provider.meta"
-                @changeValue="(data) => (provider.meta = data)"
-              />
-            </v-col>
-          </v-row>
+          <v-expansion-panels>
+            <v-expansion-panel>
+              <v-expansion-panel-header color="background-light">
+                <span class="text-h6">Meta</span>
+                <template v-slot:actions>
+                  <v-icon x-large> $expand </v-icon>
+                </template>
+              </v-expansion-panel-header>
+              <v-expansion-panel-content color="background-light">
+                <json-editor
+                  :json="provider.meta"
+                  @changeValue="(data) => (provider.meta = data)"
+                />
+              </v-expansion-panel-content>
+            </v-expansion-panel>
+          </v-expansion-panels>
 
           <v-row align="center">
             <v-col cols="3">
