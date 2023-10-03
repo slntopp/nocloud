@@ -1,9 +1,6 @@
 <template>
   <v-container>
-    <v-row>
-      <v-col>
-        <v-chip outlined color="primary">Due to date: {{ dueDate }}</v-chip>
-      </v-col>
+    <v-row justify="end">
       <v-col
         style="max-height: 50px"
         class="d-flex justify-end align-start pa-0"
@@ -12,11 +9,13 @@
           hide-details
           dense
           :input-value="template.config.auto_renew"
-          @change="emit('update', { key: 'config.auto_renew', value: !!$event })"
+          @change="
+            emit('update', { key: 'config.auto_renew', value: !!$event })
+          "
           label="Auto"
         />
       </v-col>
-      <v-col>
+      <v-col class="d-flex justify-end" style="max-width: 120px">
         <confirm-dialog
           title="Do you want to renew server?"
           :text="renewTemplate"
@@ -35,13 +34,16 @@
       </v-col>
     </v-row>
     <v-row class="mt-0" align="center" justify="end">
-      <v-col cols="4" class="d-flex justify-end px-0">
+      <v-col class="d-flex justify-end px-1">
+        <instance-state :state="template.state.state" />
+      </v-col>
+      <v-col class="d-flex justify-end px-1">
         <v-chip color="primary" outlined
           >Price: {{ price }} {{ accountCurrency }}</v-chip
         >
       </v-col>
-      <v-col cols="4" class="d-flex justify-end px-0">
-        <instance-state :state="template.state.state" />
+      <v-col class="px-1">
+        <v-chip outlined color="primary">Due to date: {{ dueDate }}</v-chip>
       </v-col>
     </v-row>
   </v-container>
