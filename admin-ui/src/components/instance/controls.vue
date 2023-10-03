@@ -18,7 +18,7 @@
     </v-btn>
     <confirm-dialog @confirm="lockInstance">
       <v-btn :loading="isLockLoading" class="mr-2">
-        {{ template.data.lock ? "Unlock" : "Lock" }}
+        {{ template.data.lock ? "User unlock" : "User lock" }}
       </v-btn>
     </confirm-dialog>
     <confirm-dialog @confirm="deleteInstance">

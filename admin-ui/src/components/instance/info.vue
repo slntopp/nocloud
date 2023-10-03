@@ -130,11 +130,13 @@
 
     <div
       v-if="billingLabelComponent"
-      style="position: absolute; top: 0; right: 75px"
+      style="position: absolute; top: 0px; right: 5px; z-index: 2"
     >
       <component
-          @update="updateCopy"
-          :is="billingLabelComponent" :template="copyInstance" />
+        @update="updateCopy"
+        :is="billingLabelComponent"
+        :template="copyInstance"
+      />
     </div>
   </v-card>
 </template>
