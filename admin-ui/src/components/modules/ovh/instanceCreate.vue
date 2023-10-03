@@ -246,6 +246,7 @@ export default {
       this.addons[planCode] = newAddons;
     },
     setValue(path, val) {
+      console.log(path, val);
       const data = JSON.parse(JSON.stringify(this.instance));
 
       if (path.includes("billing_plan")) {
@@ -320,7 +321,10 @@ export default {
       }
 
       if (path.includes("duration")) {
-        data.config.pricingMode = val === "P1M" ? "default" : "upfront12";
+        this.$emit("set-value", {
+          value: val === "P1M" ? "default" : "upfront12",
+          key: "config.pricingMode",
+        });
       }
 
       if (path.includes("addons")) {
