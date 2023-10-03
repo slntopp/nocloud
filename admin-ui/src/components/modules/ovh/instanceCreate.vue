@@ -322,7 +322,7 @@ export default {
 
       if (path.includes("duration")) {
         this.$emit("set-value", {
-          value: val === "P1M" ? "default" : "upfront12",
+          value: val === "P1Y" ? "upfront12" : "default",
           key: "config.pricingMode",
         });
       }
