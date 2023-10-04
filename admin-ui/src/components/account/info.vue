@@ -17,7 +17,13 @@
         <v-text-field v-model="title" label="name" style="width: 330px" />
       </v-col>
       <v-col cols="3">
-        <v-select :items="currencies" v-model="currency" label="currency" style="width: 330px" />
+        <v-select
+          :readonly="isCurrencyReadonly"
+          :items="currencies"
+          v-model="currency"
+          label="currency"
+          style="width: 330px"
+        />
       </v-col>
     </v-row>
     <v-card-title class="px-0">Instances:</v-card-title>
@@ -112,7 +118,7 @@ export default {
     navTitles: config.navTitles ?? {},
     uuid: "",
     title: "",
-    currency:"",
+    currency: "",
     keys: [],
     selected: [],
     isVisible: false,
@@ -139,9 +145,13 @@ export default {
       this.selected = [];
     },
     editAccount() {
-      const newAccount = { ...this.account, title: this.title ,currency:this.currency};
-      if(!newAccount.data){
-        newAccount.data={}
+      const newAccount = {
+        ...this.account,
+        title: this.title,
+        currency: this.currency,
+      };
+      if (!newAccount.data) {
+        newAccount.data = {};
       }
       newAccount.data.ssh_keys = this.keys;
 
@@ -203,6 +213,9 @@ export default {
       return this.instances.filter(
         (i) => i.access.namespace === accountNamespace.uuid
       );
+    },
+    isCurrencyReadonly() {
+      return this.account.currency && this.account.currency !== "NCU";
     },
   },
 };

@@ -72,8 +72,7 @@
 import { toRefs, ref, computed, onMounted, watch } from "vue";
 import api from "@/api";
 import { getBillingPeriod } from "@/functions";
-import useRate from "@/hooks/useRate";
-import { useStore } from "@/store";
+import useCurrency from "@/hooks/useCurrency";
 
 const props = defineProps([
   "template",
@@ -85,12 +84,10 @@ const props = defineProps([
 ]);
 const emit = defineEmits(["refresh", "input"]);
 
-const { convertFrom } = useRate();
+const { convertTo, defaultCurrency } = useCurrency();
 
 const { template, plans, service, accountRate, accountCurrency } =
   toRefs(props);
-
-const store = useStore();
 
 const isChangePMLoading = ref(false);
 const plan = ref({});
@@ -209,12 +206,10 @@ const isChangeBtnDisabled = computed(() => {
 const fullProduct = computed(() => plan.value?.products?.[product.value]);
 
 const accountPrice = computed(() =>
-  accountRate.value && fullProduct.value?.price
-    ? convertFrom(fullProduct.value.price, accountRate.value)
+  accountCurrency.value && fullProduct.value?.price
+    ? convertTo(fullProduct.value.price, accountCurrency.value)
     : 0
 );
-
-const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const changePM = () => {
   const tempService = JSON.parse(JSON.stringify(service.value));

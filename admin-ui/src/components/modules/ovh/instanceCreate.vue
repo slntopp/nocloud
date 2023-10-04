@@ -164,8 +164,8 @@ const getDefaultInstance = () => ({
       vps_datacenter: null,
       vps_os: null,
     },
-    duration: "P1M",
-    pricingMode: "default",
+    duration: "",
+    pricingMode: "",
     addons: [],
   },
   data: { existing: false },
@@ -193,7 +193,6 @@ export default {
     regions: {},
     images: {},
     addons: {},
-    durationItems: ["P1H", "P1M", "P1Y"],
 
     ovhTypes: [
       { title: "ovh vps", value: "vps" },
@@ -247,6 +246,7 @@ export default {
       this.addons[planCode] = newAddons;
     },
     setValue(path, val) {
+      console.log(path, val);
       const data = JSON.parse(JSON.stringify(this.instance));
 
       if (path.includes("billing_plan")) {
@@ -321,7 +321,10 @@ export default {
       }
 
       if (path.includes("duration")) {
-        data.config.pricingMode = val === "P1M" ? "default" : "upfront12";
+        this.$emit("set-value", {
+          value: val === "P1Y" ? "upfront12" : "default",
+          key: "config.pricingMode",
+        });
       }
 
       if (path.includes("addons")) {
@@ -371,13 +374,10 @@ export default {
       return this.instance.config.addons.find((a) => addon.includes(a));
     },
     setProduct() {
-      const data = JSON.parse(JSON.stringify(this.instance));
-      if (data.billing_plan?.kind?.toLowerCase() === "static") {
-        this.$emit("set-value", {
-          value: `${data.config?.duration} ${data.config?.planCode}`,
-          key: "product",
-        });
-      }
+      this.$emit("set-value", {
+        value: this.product,
+        key: "product",
+      });
     },
     setInstanceGroup(key, value) {
       this.$emit("set-instance-group", { ...this.instanceGroup, [key]: value });
@@ -397,6 +397,20 @@ export default {
 
       return tariffs;
     },
+    product() {
+      return [
+        this.instance.config.duration,
+        this.instance.config.planCode,
+      ].join(" ");
+    },
+    durationItems() {
+      const items = new Set();
+      this.flavors[this.instance.billing_plan?.uuid]?.forEach((item) => {
+        items.add(item.duration);
+      });
+
+      return [...items.values()];
+    },
   },
   async created() {
     if (!this.isEdit) {
@@ -415,9 +429,7 @@ export default {
         this.instance.config.configuration.vps_os
       );
       this.setAddons(
-        this.instance.billing_plan.products[
-          `${this.instance.config.duration} ${this.instance.config.planCode}`
-        ]?.meta?.addons,
+        this.instance.billing_plan.products[this.product]?.meta?.addons,
         this.instance.config.planCode
       );
     }
