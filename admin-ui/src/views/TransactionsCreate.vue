@@ -163,18 +163,22 @@
               v-model="transaction.meta.description"
             ></v-textarea>
           </v-row>
-
-          <v-row>
-            <v-col cols="3">
-              <v-subheader>Meta</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <json-editor
-                :json="transaction.meta"
-                @changeValue="(data) => (transaction.meta = data)"
-              />
-            </v-col>
-          </v-row>
+          <v-expansion-panels class="mt-4">
+            <v-expansion-panel>
+              <v-expansion-panel-header color="background-light">
+                <span class="text-h6">Meta</span>
+                <template v-slot:actions>
+                  <v-icon x-large> $expand </v-icon>
+                </template>
+              </v-expansion-panel-header>
+              <v-expansion-panel-content color="background-light">
+                <json-editor
+                  :json="transaction.meta"
+                  @changeValue="(data) => (transaction.meta = data)"
+                />
+              </v-expansion-panel-content>
+            </v-expansion-panel>
+          </v-expansion-panels>
         </v-col>
       </v-row>
 
