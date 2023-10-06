@@ -6,7 +6,6 @@
     <v-navigation-drawer
       app
       permanent
-      v-if="$route.name !== 'Instances by account'"
       :color="asideColor"
       :mini-variant="isMenuMinimize"
     >
@@ -276,7 +275,7 @@
             <v-icon>mdi-reload</v-icon>
           </v-btn>
         </v-col>
-        <v-col v-if="$route.name !== 'Instances by account'" class="d-flex justify-end align-center">
+        <v-col class="d-flex justify-end align-center">
           <languages v-if="false" />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
@@ -315,14 +314,22 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
-    <v-btn
-      color="success"
+    <instances-table-modal
       v-if="overlay.uuid"
-      style="position: absolute; top: 90px; right: 25px; z-index: 100"
-      @click="overlay.onClick(overlay.uuid)"
+      :uuid="overlay.uuid"
+      :visible="overlay.isVisible"
+      @close="() => { overlay.isVisible = false }"
     >
-      {{ overlay.buttonTitle }}
-    </v-btn>
+      <template #activator>
+        <v-btn
+          color="success"
+          style="position: absolute; top: 90px; right: 25px; z-index: 100"
+          @click="overlay.isVisible = true"
+        >
+          {{ overlay.buttonTitle }}
+        </v-btn>
+      </template>
+    </instances-table-modal>
 
     <v-main>
       <router-view />
@@ -339,10 +346,17 @@ import balance from "@/components/balance.vue";
 import languages from "@/components/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
+import instancesTableModal from "@/components/instances_table_modal.vue";
 
 export default {
   name: "App",
-  components: { AppSnackbar, balance, appSearch, languages },
+  components: {
+    AppSnackbar,
+    balance,
+    appSearch,
+    languages,
+    instancesTableModal
+  },
   data: () => ({
     isMenuMinimize: true,
     isMouseOnMenu: false,
@@ -350,13 +364,9 @@ export default {
     config,
     navTitles: config.navTitles ?? {},
     overlay: {
+      isVisible: false,
       buttonTitle: '',
-      uuid: '',
-      onClick(uuid) {
-        const params = `scrollbars=no,status=no,location=no,toolbar=no,menubar=no,popup=yes width=768,height=540,left=100,top=100`;
-
-        window.open(`/admin/instances/account/${uuid}`, 'overlay', params);
-      }
+      uuid: ''
     }
   }),
   methods: {
