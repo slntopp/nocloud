@@ -9,31 +9,20 @@
               <v-subheader>Type</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-autocomplete
+              <v-select
+                item-value="id"
+                item-text="title"
                 label="Type"
-                v-model="type"
-                item-value="value"
-                item-text="title"
+                v-model="typeId"
                 :items="types"
-              />
-            </v-col>
-          </v-row>
-        </v-col>
-      </v-row>
-      <v-row>
-        <v-col lg="6" cols="12">
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Amount type</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-autocomplete
-                label="Amount type"
-                v-model="amountType"
-                item-value="value"
-                item-text="title"
-                :items="amountTypes"
-              />
+              >
+                <template v-slot:item="{ item }">
+                  <span>{{ item.title }} - {{ item.amount.title }}</span>
+                </template>
+                <template v-slot:selection="{ item }">
+                  <span>{{ item.title }} - {{ item.amount.title }}</span>
+                </template>
+              </v-select>
             </v-col>
           </v-row>
         </v-col>
@@ -57,7 +46,7 @@
             </v-col>
           </v-row>
 
-          <v-row align="center">
+          <v-row align="center" v-if="!isServiceHide">
             <v-col cols="3">
               <v-subheader>Service</v-subheader>
             </v-col>
@@ -67,6 +56,7 @@
                 label="Service"
                 item-value="title"
                 item-text="title"
+                clearable
                 v-model="transaction.service"
                 :items="servicesByAccount"
               />
@@ -157,6 +147,14 @@
             </v-col>
           </v-row>
 
+          <v-row v-if="!isAdminNoteHide" class="mx-5">
+            <v-textarea
+              no-resize
+              label="Admin note"
+              v-model="transaction.meta.note"
+            ></v-textarea>
+          </v-row>
+
           <v-row class="mx-5">
             <v-textarea
               no-resize
@@ -165,32 +163,43 @@
               v-model="transaction.meta.description"
             ></v-textarea>
           </v-row>
-
-          <v-row>
-            <v-col cols="3">
-              <v-subheader>Meta</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <json-editor
-                :json="transaction.meta"
-                @changeValue="(data) => (transaction.meta = data)"
-              />
-            </v-col>
-          </v-row>
+          <v-expansion-panels class="mt-4">
+            <v-expansion-panel>
+              <v-expansion-panel-header color="background-light">
+                <span class="text-h6">Meta</span>
+                <template v-slot:actions>
+                  <v-icon x-large> $expand </v-icon>
+                </template>
+              </v-expansion-panel-header>
+              <v-expansion-panel-content color="background-light">
+                <json-editor
+                  :json="transaction.meta"
+                  @changeValue="(data) => (transaction.meta = data)"
+                />
+              </v-expansion-panel-content>
+            </v-expansion-panel>
+          </v-expansion-panels>
         </v-col>
       </v-row>
 
-      <v-row>
-        <v-col>
-          <v-btn
-            class="mr-2"
-            color="background-light"
-            :loading="isLoading"
-            @click="tryToSend"
-          >
-            Create
-          </v-btn>
-        </v-col>
+      <v-row justify="start" class="mb-4">
+        <v-btn
+          class="mx-3"
+          color="background-light"
+          :loading="isLoading"
+          @click="tryToSend(false)"
+        >
+          Publish
+        </v-btn>
+        <v-btn
+          v-if="isPublishWithEmailAvailble"
+          class="mx-4"
+          color="background-light"
+          :loading="isLoading"
+          @click="tryToSend(true)"
+        >
+          Publish + email
+        </v-btn>
       </v-row>
     </v-form>
   </div>
@@ -213,7 +222,7 @@ export default {
       service: "",
       total: "",
       exec: 0,
-      meta: { instances: [], description: "", type: "" },
+      meta: { instances: [], description: "", transactionType: "" },
     },
     date: {
       title: "Date",
@@ -230,15 +239,57 @@ export default {
     isLoading: false,
 
     types: [
-      { value: "invoice", title: "Invoice" },
-      { value: "transaction", title: "Transaction" },
+      {
+        id: 1,
+        value: "invoice",
+        title: "Invoice",
+        amount: { title: "Payment invoice (no balance change)", value: true },
+      },
+      {
+        id: 2,
+        value: "invoice",
+        title: "Invoice",
+        amount: { title: "Top-up invoice (with balance change)", value: false },
+      },
+      {
+        id: 3,
+        value: "transaction",
+        title: "Transaction",
+        amount: { title: "Top-up", value: false },
+      },
+      {
+        id: 4,
+        value: "transaction",
+        title: "Transaction",
+        amount: { title: "Debit", value: true },
+      },
+      {
+        id: 5,
+        value: "transaction",
+        title: "Transaction",
+        amount: { title: "Set account balance", value: null },
+      },
     ],
-    type: "transaction",
-    amountType: true,
+    typeId: 4,
+
+    whmcsApi: "",
   }),
   methods: {
     defaultFilterObject,
-    async tryToSend() {
+    sendTransactionType() {
+      let amount = "";
+
+      if (this.fullType.amount.value === null) {
+        amount = "account-balance";
+      } else {
+        amount = this.fullType.amount.value ? "payment" : "top-up";
+      }
+      this.transaction.meta.transactionType = [
+        this.fullType.value,
+        amount,
+      ].join(" ");
+    },
+    async tryToSend(withEmail = false) {
       if (!this.isValid) {
         this.$refs.form.validate();
 
@@ -253,33 +304,43 @@ export default {
 
       try {
         let total = this.transaction.total;
-        if (this.amountType === null) {
+        const amountType = this.fullType.amount.value;
+        if (amountType === null) {
           const balance = this.transaction.account.balance || 0;
           const difference = Math.abs(total - balance);
           total = (balance > total ? +difference : -difference).toFixed(2);
         } else {
           total = Math.abs(total);
-          total = this.amountType ? total : -total;
-          if (this.isInvoice) {
-            this.transaction.meta.invoiceType = this.amountType
-              ? "top-up"
-              : "payment";
-          }
+          total = amountType ? total : -total;
         }
 
-        await api.transactions.create({
+        const transaction = await api.transactions.create({
           ...this.transaction,
           account: this.transaction.account.uuid,
           total,
           currency: this.transaction.account.currency,
         });
+
+        if (this.transaction.meta.transactionType.startsWith("invoice")) {
+          await fetch(
+            /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
+              `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
+                this.transaction.account.uuid
+              }&total=${this.transaction.total}&type=${
+                this.transaction.meta.transactionType.split(" ")[1]
+              }&description=${
+                this.transaction.meta.description
+              }&send_email=${withEmail}&transaction=${transaction.uuid}`
+          );
+        }
+
         this.showSnackbarSuccess({
           message: "Transaction created successfully",
         });
 
         setTimeout(() => {
           this.$router.push({ name: "Transactions" });
-        }, 1500);
+        }, 500);
       } catch (err) {
         this.showSnackbarError({
           message: err,
@@ -292,12 +353,9 @@ export default {
       this.transaction.service =
         this.services.find(
           (service) => service.title === this.transaction.service
-        )?.uuid || "";
+        )?.uuid || undefined;
 
       this.transaction.exec = this.exec;
-      if (!this.transaction.exec) {
-        this.transaction.priority = "NORMAL";
-      }
       this.transaction.total *= 1;
     },
     resetDate() {
@@ -317,29 +375,34 @@ export default {
       this.time.value = `${time}`;
     },
   },
-  created() {
+  async created() {
     this.initDate();
-    this.transaction.meta.type = this.type;
+    this.sendTransactionType();
 
     if (this.accounts.length < 2) {
       this.$store.dispatch("accounts/fetch");
     }
 
-    this.$store.dispatch("namespaces/fetch");
-    this.$store
-      .dispatch("services/fetch")
+    await Promise.all([
+      this.$store.dispatch("settings/fetch"),
+      this.$store.dispatch("namespaces/fetch"),
+      this.$store.dispatch("services/fetch"),
+    ])
       .then(() => {
         this.fetchError = "";
+        this.whmcsApi = JSON.parse(
+          this.settings.find(({ key }) => key === "whmcs").value
+        ).api;
       })
       .catch((err) => {
-        console.error(err);
-
-        this.fetchError = "Can't reach the server";
+        let fetchError = "Can't reach the server";
         if (err.response) {
-          this.fetchError += `: [ERROR]: ${err.response.data.message}`;
+          fetchError += `: [ERROR]: ${err.response.data.message}`;
         } else {
-          this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
+          fetchError += `: [ERROR]: ${err.toJSON().message}`;
         }
+
+        this.showSnackbarError({ message: fetchError });
       });
   },
   computed: {
@@ -351,6 +414,9 @@ export default {
     },
     services() {
       return this.$store.getters["services/all"];
+    },
+    settings() {
+      return this.$store.getters["settings/all"];
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
@@ -392,43 +458,42 @@ export default {
       return new Date(`${this.date.value}T${this.time.value}`).getTime() / 1000;
     },
     isTransaction() {
-      return this.type === "transaction";
+      return this.fullType.value === "transaction";
     },
     isInvoice() {
-      return this.type === "invoice";
+      return this.fullType.value === "invoice";
     },
     amountRule() {
       return [
         (v) =>
-          (this.amountType === null ? v === 0 || !!v : !!v) ||
+          (this.fullType.amount.value === null ? v === 0 || !!v : !!v) ||
           "This field is required!",
       ];
     },
-    amountTypes() {
-      if (this.isTransaction) {
-        return [
-          { title: "Top-up", value: false },
-          { title: "Debit", value: true },
-          { title: "Account balance", value: null },
-        ];
-      }
-
-      return [
-        { title: "Top-up invoice (with balance change)", value: true },
-        { title: "Payment invoice (no balance change)", value: false },
-      ];
+    fullType() {
+      return this.types.find((t) => t.id === this.typeId);
+    },
+    isServiceHide() {
+      return this.isInvoice;
+    },
+    isAdminNoteHide() {
+      return this.isTransaction;
+    },
+    isPublishWithEmailAvailble() {
+      return this.isInvoice;
     },
   },
   watch: {
     "transaction.service"() {
       this.transaction.meta.instances = [];
     },
-    type() {
-      this.transaction.meta.type = this.type;
+    typeId() {
+      this.sendTransactionType();
       if (this.isInvoice) {
-        this.amountType = false;
+        this.transaction.service = undefined;
         this.resetDate();
       } else if (this.isTransaction) {
+        this.transaction.meta.note = undefined;
         this.initDate();
       }
     },

@@ -37,6 +37,7 @@
         <v-text-field
           dense
           type="number"
+          :suffix="defaultCurrency"
           :value="item.price"
           :rules="generalRule"
           @input="(value) => changeResource('price', value, item.id)"
@@ -94,15 +95,16 @@ import { ref, toRefs } from "vue";
 import nocloudTable from "@/components/table.vue";
 import dateField from "@/components/date.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import {
-  getFullDate,
-} from "@/functions";
+import { getFullDate } from "@/functions";
+import useCurrency from "@/hooks/useCurrency";
 
 const props = defineProps({
   resources: { type: Array, required: true },
 });
 const emits = defineEmits(["change:resource"]);
 const { resources } = toRefs(props);
+
+const { defaultCurrency } = useCurrency();
 
 const fullDates = ref({});
 const selected = ref([]);

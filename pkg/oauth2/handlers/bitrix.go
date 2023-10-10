@@ -4,23 +4,35 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/gorilla/mux"
 	"github.com/slntopp/nocloud-proto/registry"
 	"github.com/slntopp/nocloud-proto/registry/accounts"
+	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/slntopp/nocloud/pkg/oauth2/config"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
 
+type StateInfo struct {
+	RedirectUrl string
+	Token       string
+	Method      string
+}
+
 type BitrixOauthHandler struct {
-	states map[string]string
+	states map[string]*StateInfo
 	m      *sync.Mutex
 }
 
@@ -28,8 +40,14 @@ type UserInfo struct {
 	Result map[string]interface{} `json:"result"`
 }
 
-func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg config.OAuth2Config, regClient registry.AccountsServiceClient) {
-	g.states = map[string]string{}
+func (g *BitrixOauthHandler) Setup(
+	log *zap.Logger,
+	router *mux.Router,
+	cfg config.OAuth2Config,
+	regClient registry.AccountsServiceClient,
+	signingKey []byte,
+) {
+	g.states = map[string]*StateInfo{}
 	g.m = &sync.Mutex{}
 
 	oauth2Config := &oauth2.Config{
@@ -49,7 +67,45 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 		state, redirect := r.FormValue("state"), r.FormValue("redirect")
 
 		g.m.Lock()
-		g.states[state] = redirect
+		g.states[state] = &StateInfo{
+			RedirectUrl: redirect,
+			Method:      "sign_in",
+		}
+		log.Debug("Put state", zap.Any("state", g.states[state]))
+		g.m.Unlock()
+
+		url := oauth2Config.AuthCodeURL(state)
+
+		result := map[string]string{
+			"url": url,
+		}
+
+		marshal, _ := json.Marshal(result)
+		w.Write(marshal)
+	}))
+	router.Handle("/oauth/bitrix/link", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		state, redirect := r.FormValue("state"), r.FormValue("redirect")
+
+		authHeader := r.Header.Get("Authorization")
+		authHeaderSplit := strings.Split(authHeader, " ")
+
+		if len(authHeaderSplit) != 2 {
+			log.Error("Len is not 2")
+			return
+		}
+
+		if strings.ToLower(authHeaderSplit[0]) != "bearer" {
+			log.Error("No bearer")
+			return
+		}
+
+		g.m.Lock()
+		g.states[state] = &StateInfo{
+			RedirectUrl: redirect,
+			Token:       authHeaderSplit[1],
+			Method:      "link",
+		}
+		log.Debug("Put state", zap.Any("state", g.states[state]))
 		g.m.Unlock()
 
 		url := oauth2Config.AuthCodeURL(state)
@@ -63,7 +119,6 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 	}))
 	router.Handle("/oauth/bitrix/checkout", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		state, code := r.FormValue("state"), r.FormValue("code")
-		var redirect string
 
 		g.m.Lock()
 
@@ -72,7 +127,9 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 			return
 		}
 
-		redirect = g.states[state]
+		stateInfo := g.states[state]
+
+		log.Debug("Get state", zap.Any("state", stateInfo))
 		delete(g.states, state)
 		g.m.Unlock()
 
@@ -105,14 +162,18 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 		}
 
 		if userInfo.Result == nil {
+			log.Error("No user info")
 			return
 		}
 
 		user := userInfo.Result
 		value := user[field].(string)
 
+		log.Debug("User", zap.Any("user", user))
+
 		name := user["NAME"].(string)
 		last_name := user["LAST_NAME"].(string)
+		id := user["ID"].(string)
 
 		rootToken, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 		if err != nil {
@@ -122,20 +183,29 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 
 		ctx := metadata.AppendToOutgoingContext(context.Background(), "authorization", "bearer "+rootToken)
 
-		resp, err := regClient.Token(ctx, &accounts.TokenRequest{
-			Auth: &accounts.Credentials{
-				Type: "oauth2-bitrix",
-				Data: []string{
-					field,
-					value,
-				},
-			},
-			Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
-		})
-		if err != nil {
-			_, err = regClient.Create(ctx, &accounts.CreateRequest{
-				Title:     fmt.Sprintf("%s %s", name, last_name),
-				Namespace: schema.ROOT_NAMESPACE_KEY,
+		if stateInfo.Method == "link" {
+			ncToken, err := jwt.Parse(stateInfo.Token, func(t *jwt.Token) (interface{}, error) {
+				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, status.Errorf(codes.Unauthenticated, "Unexpected signing method: %v", t.Header["alg"])
+				}
+				return signingKey, nil
+			})
+
+			if err != nil {
+				log.Error("Failed to get token", zap.Error(err))
+				return
+			}
+
+			if !ncToken.Valid {
+				log.Error("Token invalid", zap.Error(err))
+				return
+			}
+
+			claims := ncToken.Claims.(jwt.MapClaims)
+			acc := claims[nocloud.NOCLOUD_ACCOUNT_CLAIM].(string)
+
+			resp, err := regClient.SetCredentials(ctx, &accounts.SetCredentialsRequest{
+				Account: acc,
 				Auth: &accounts.Credentials{
 					Type: "oauth2-bitrix",
 					Data: []string{
@@ -144,11 +214,58 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 					},
 				},
 			})
+
 			if err != nil {
-				log.Error("Failed create account", zap.Error(err))
+				log.Error("Failed set creds", zap.Error(err))
 				return
 			}
-			resp, err = regClient.Token(ctx, &accounts.TokenRequest{
+
+			if !resp.GetResult() {
+				log.Error("False result")
+				return
+			}
+
+			get, err := regClient.Get(ctx, &accounts.GetRequest{
+				Uuid: acc,
+			})
+
+			if err != nil {
+				log.Error("Failed get acc", zap.Error(err))
+				return
+			}
+
+			if get.GetData() == nil {
+				get.Data = &structpb.Struct{
+					Fields: make(map[string]*structpb.Value),
+				}
+			}
+
+			if get.GetData().GetFields() == nil {
+				get.Data.Fields = map[string]*structpb.Value{}
+			}
+
+			_, ok := get.GetData().GetFields()["oauth_types"]
+
+			if !ok {
+				list, _ := structpb.NewList([]interface{}{
+					"oauth2-bitrix",
+				})
+				get.Data.Fields["oauth_types"] = structpb.NewListValue(list)
+			} else {
+				get.Data.GetFields()["oauth_types"].GetListValue().Values = append(get.Data.GetFields()["oauth_types"].GetListValue().GetValues(), structpb.NewStringValue("oauth2-bitrix"))
+			}
+
+			get.Data.Fields["bitrix24"] = structpb.NewStringValue(id)
+
+			_, err = regClient.Update(ctx, get)
+			if err != nil {
+				log.Error("Failed to update")
+				return
+			}
+
+			http.Redirect(w, r, fmt.Sprintf("%s?token=%s", stateInfo.RedirectUrl, stateInfo.Token), http.StatusSeeOther)
+		} else {
+			resp, err := regClient.Token(ctx, &accounts.TokenRequest{
 				Auth: &accounts.Credentials{
 					Type: "oauth2-bitrix",
 					Data: []string{
@@ -159,12 +276,49 @@ func (g *BitrixOauthHandler) Setup(log *zap.Logger, router *mux.Router, cfg conf
 				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
 			})
 			if err != nil {
-				log.Error("Failed get token", zap.Error(err))
-				return
+				list, _ := structpb.NewList([]interface{}{
+					"oauth2-bitrix",
+				})
+				listValue := structpb.NewListValue(list)
+
+				data := &structpb.Struct{
+					Fields: map[string]*structpb.Value{
+						"oauth_types": listValue,
+						"bitrix24":    structpb.NewStringValue(id),
+					},
+				}
+				_, err := regClient.Create(ctx, &accounts.CreateRequest{
+					Title:     fmt.Sprintf("%s %s", name, last_name),
+					Namespace: schema.ROOT_NAMESPACE_KEY,
+					Data:      data,
+					Auth: &accounts.Credentials{
+						Type: "oauth2-bitrix",
+						Data: []string{
+							field,
+							value,
+						},
+					},
+				})
+				if err != nil {
+					log.Error("Failed create account", zap.Error(err))
+					return
+				}
+				resp, err = regClient.Token(ctx, &accounts.TokenRequest{
+					Auth: &accounts.Credentials{
+						Type: "oauth2-bitrix",
+						Data: []string{
+							field,
+							value,
+						},
+					},
+					Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
+				})
+				if err != nil {
+					log.Error("Failed get token", zap.Error(err))
+					return
+				}
 			}
+			http.Redirect(w, r, fmt.Sprintf("%s?token=%s", stateInfo.RedirectUrl, resp.GetToken()), http.StatusSeeOther)
 		}
-
-		http.Redirect(w, r, fmt.Sprintf("%s?token=%s", redirect, resp.GetToken()), http.StatusSeeOther)
-
 	}))
 }

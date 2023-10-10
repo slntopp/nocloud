@@ -13,21 +13,10 @@
       <v-col>
         <v-text-field
           readonly
-          label="Tarif (product plan)"
+          label="Product name"
           :value="billingPlan.products[template.product].title"
           @click:append="priceModelDialog = true"
           append-icon="mdi-pencil"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field readonly label="Price instance total" :value="price" />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          label="Account price instance total"
-          :value="accountPrice"
-          :suffix="accountCurrency"
         />
       </v-col>
       <v-col>
@@ -53,40 +42,58 @@
         />
       </v-col>
     </v-row>
-    <nocloud-table
-      class="mb-5"
-      :headers="billingHeaders"
-      :items="billingItems"
-      no-hide-uuid
-      :show-select="false"
-      hide-default-footer
-    >
-      <template v-slot:[`item.price`]="{ item }">
-        <v-text-field
-          v-model="item.price"
-          @input="updatePrice(item, false)"
-          append-icon="mdi-pencil"
-        />
-      </template>
-      <template v-slot:[`item.accountPrice`]="{ item }">
-        <v-text-field
-          v-model="item.accountPrice"
-          @input="updatePrice(item, true)"
-          append-icon="mdi-pencil"
-        />
-      </template>
-      <template v-slot:body.append>
-        <tr>
-          <td>Total:</td>
-          <td />
-          <td>
-            {{ billingItems.find((i) => i.name === template.product)?.period }}
-          </td>
-          <td>{{ [totalAccountPrice, accountCurrency].join(" ") }}</td>
-          <td>{{ totalPrice }}</td>
-        </tr>
-      </template>
-    </nocloud-table>
+
+    <instances-prices-panels>
+      <nocloud-table
+        class="mb-5"
+        :headers="billingHeaders"
+        :items="billingItems"
+        no-hide-uuid
+        :show-select="false"
+        hide-default-footer
+      >
+        <template v-slot:[`item.price`]="{ item }">
+          <div class="d-flex">
+            <v-text-field
+              class="mr-2"
+              v-model="item.price"
+              :suffix="defaultCurrency"
+              @input="updatePrice(item, false)"
+              append-icon="mdi-pencil"
+            />
+            <v-text-field
+              class="ml-2"
+              :suffix="accountCurrency"
+              style="color: #c921c9"
+              v-model="item.accountPrice"
+              @input="updatePrice(item, true)"
+              append-icon="mdi-pencil"
+            />
+          </div>
+        </template>
+        <template v-slot:body.append>
+          <tr>
+            <td></td>
+            <td />
+            <td>
+              {{
+                billingItems.find((i) => i.name === template.product)?.period
+              }}
+            </td>
+            <td>
+              <div class="d-flex justify-end mr-4">
+                <v-chip color="primary" outlined>
+                  {{ [totalPrice, defaultCurrency].join(" ") }}
+                  /
+                  {{ [totalAccountPrice, accountCurrency].join(" ") }}
+                </v-chip>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </nocloud-table>
+    </instances-prices-panels>
+
     <change-monitorings
       :template="template"
       :service="service"
@@ -110,63 +117,56 @@ import { computed, defineProps, toRefs, ref, watch, onMounted } from "vue";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import ChangeMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
-import useAccountConverter from "@/hooks/useAccountConverter";
+import useInstancePrices from "@/hooks/useInstancePrices";
 import NocloudTable from "@/components/table.vue";
+import { useStore } from "@/store";
+import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh"]);
 
 const { template, plans, service } = toRefs(props);
 
-const {
-  fetchAccountRate,
-  accountCurrency,
-  toAccountPrice,
-  accountRate,
-  fromAccountPrice,
-} = useAccountConverter(template.value);
+const store = useStore();
+const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
+  useInstancePrices(template.value);
 
 const changeDatesDialog = ref(false);
 const priceModelDialog = ref(false);
-const accountPrice = ref(0);
 const billingHeaders = ref([
   { text: "Name", value: "name" },
   { text: "Payment term", value: "kind" },
   { text: "Billing period", value: "period" },
-  { text: "Account price", value: "accountPrice" },
   { text: "Price", value: "price" },
 ]);
 const billingItems = ref([]);
 
 const date = computed(() =>
-  formatSecondsToDate(template.value?.data?.last_monitoring)
+  formatSecondsToDate(template.value?.data?.next_payment_date)
 );
 const isMonitoringsEmpty = computed(() => date.value === "-");
-
-const price = computed(() => {
-  return template.value.billingPlan.products[template.value.product]?.price;
-});
 
 const filtredPlans = computed(() =>
   plans.value.filter((p) => p.type === "virtual")
 );
 
-const totalAccountPrice = computed(() => {
-  return toAccountPrice(totalPrice.value);
-});
 const totalPrice = computed(() => {
   return billingItems.value.reduce((acc, i) => acc + +i.price, 0);
 });
 
+const totalAccountPrice = computed(() => {
+  return billingItems.value.reduce((acc, i) => acc + +i.accountPrice, 0);
+});
+
 const billingPlan = computed(() => template.value.billingPlan);
 
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
+
 onMounted(() => {
-  fetchAccountRate();
   billingItems.value = getBillingItems();
 });
 
 watch(accountRate, () => {
-  accountPrice.value = totalAccountPrice.value;
   billingItems.value = billingItems.value.map((i) => {
     i.accountPrice = toAccountPrice(i.price);
     return i;
@@ -175,13 +175,14 @@ watch(accountRate, () => {
 
 const getBillingItems = () => {
   const items = [];
-
+  const price = billingPlan.value.products[template.value.product]?.price;
   items.push({
     name: template.value.product,
-    price: billingPlan.value.products[template.value.product]?.price,
+    price,
     path: `billingPlan.products.${template.value.product}.price`,
     kind: billingPlan.value.products[template.value.product]?.kind,
     period: billingPlan.value.products[template.value.product]?.period,
+    accountPrice: toAccountPrice(price),
   });
 
   return items.map((i) => {

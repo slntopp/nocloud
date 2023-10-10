@@ -1,11 +1,19 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <v-row>
+    <v-row v-if="showDates">
       <div style="max-width: 300px" class="mx-3">
-        <date-picker label="from" v-model="durationFilter.from" />
+        <date-picker
+          label="from"
+          :value="duration.from"
+          @input="emit('input:duration', { ...duration, from: $event })"
+        />
       </div>
       <div style="max-width: 300px" class="mx-3">
-        <date-picker label="to" v-model="durationFilter.to" />
+        <date-picker
+          label="to"
+          :value="duration.to"
+          @input="emit('input:duration', { ...duration, to: $event })"
+        />
       </div>
     </v-row>
     <nocloud-table
@@ -37,27 +45,18 @@
         <span>{{ new Date(value * 1000).toLocaleString() }}</span>
       </template>
       <template v-slot:[`item.service`]="{ value }">
-        <router-link
-          v-if="getService(value)"
-          :to="{ name: 'Service', params: { serviceId: value } }"
-        >
-          {{ getService(value).title }}
+        <router-link :to="{ name: 'Service', params: { serviceId: value } }">
+          {{ getService(value)?.title || value }}
         </router-link>
       </template>
       <template v-slot:[`item.instance`]="{ value }">
-        <router-link
-          v-if="getInstance(value)"
-          :to="{ name: 'Instance', params: { instanceId: value } }"
-        >
-          {{ getInstance(value).title }}
+        <router-link :to="{ name: 'Instance', params: { instanceId: value } }">
+          {{ getInstance(value)?.title || value }}
         </router-link>
       </template>
       <template v-slot:[`item.account`]="{ value }">
-        <router-link
-          v-if="getAccount(value)"
-          :to="{ name: 'Account', params: { accountId: value } }"
-        >
-          {{ getAccount(value).title }}
+        <router-link :to="{ name: 'Account', params: { accountId: value } }">
+          {{ getAccount(value)?.title || value }}
         </router-link>
       </template>
     </nocloud-table>
@@ -79,8 +78,13 @@ const props = defineProps({
   hideService: { type: Boolean, default: false },
   selectRecord: { type: Function, default: () => {} },
   tableName: { type: String },
+  showDates: { type: Boolean, default: false },
+  duration: { type: Object, default: () => ({ from: null, to: null }) },
 });
-const { filters, hideInstance, hideService, hideAccount } = toRefs(props);
+const { filters, hideInstance, hideService, hideAccount, duration, showDates } =
+  toRefs(props);
+
+const emit = defineEmits(["input:unique", "input:duration"]);
 
 const store = useStore();
 const { rates, convertFrom, defaultCurrency } = useCurrency();
@@ -93,7 +97,6 @@ const isCountLoading = ref(false);
 const fetchError = ref("");
 const options = ref({});
 const itemsPerPageOptions = ref([5, 10, 15, 25]);
-const durationFilter = ref({ to: "", from: "" });
 
 const reportsHeaders = computed(() => {
   const headers = [
@@ -102,6 +105,7 @@ const reportsHeaders = computed(() => {
     { text: "Total", value: "totalPreview" },
     { text: "Total in default currency", value: "totalDefaultPreview" },
     { text: "Product or resource", value: "item" },
+    { text: "Type", value: "type" },
   ];
 
   if (!hideAccount.value) {
@@ -126,16 +130,16 @@ const isLoading = computed(() => {
 });
 
 const requestOptions = computed(() => ({
-  ...filters.value,
+  filters: filters.value,
   page: page.value,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
   sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
-  from: durationFilter.value.from
-    ? new Date(durationFilter.value.from).getTime() / 1000
+  from: duration.value.from
+    ? new Date(duration.value.from).getTime() / 1000
     : undefined,
-  to: durationFilter.value.to
-    ? new Date(durationFilter.value.to).getTime() / 1000
+  to: duration.value.to
+    ? new Date(duration.value.to).getTime() / 1000
     : undefined,
 }));
 
@@ -162,6 +166,7 @@ const onUpdateOptions = async (newOptions) => {
         service: r.service,
         instance: r.instance,
         account: r.account,
+        type: r.meta.transactionType,
         totalDefault: convertFrom(r.total, r.currency),
       };
     });
@@ -185,7 +190,9 @@ const setOptions = (newOptions) => {
 const init = async () => {
   isCountLoading.value = true;
   try {
-    count.value = +(await api.reports.count(requestOptions.value)).total;
+    const { total, unique } = await api.reports.count(requestOptions.value);
+    count.value = +total;
+    emit("input:unique", unique);
   } finally {
     isCountLoading.value = false;
   }
@@ -203,7 +210,7 @@ watch(rates, () => {
 });
 
 watch(
-  durationFilter,
+  duration,
   () => {
     onUpdateOptions(options.value);
   },

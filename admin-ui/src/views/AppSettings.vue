@@ -10,9 +10,12 @@
           @change="onFileChange"
         />
       </div>
-      <v-btn @click="downloadSettings" color="background-light" class="mr-10"
-        >Download settings</v-btn
-      >
+      <download-template-button
+        class="mr-10"
+        :template="settings"
+        name="settings"
+        type="JSON"
+      />
     </div>
     <v-card-title class="px-0 mb-3"> Main:</v-card-title>
     <v-row>
@@ -96,12 +99,13 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import JsonEditor from "@/components/JsonEditor.vue";
-import { downloadJSONFile, readJSONFile } from "@/functions.js";
+import { readJSONFile } from "@/functions.js";
 import ColorPicker from "@/components/ui/colorPicker.vue";
+import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
 export default {
   key: "app-settings",
-  components: { ColorPicker, JsonEditor },
+  components: { DownloadTemplateButton, ColorPicker, JsonEditor },
   mixins: [snackbar],
   data() {
     return {
@@ -132,9 +136,6 @@ export default {
   methods: {
     onFileChange(file) {
       readJSONFile(file).then((res) => (this.settings = res));
-    },
-    downloadSettings() {
-      downloadJSONFile(this.settings, "settings");
     },
     edit(data) {
       this.settings = data;

@@ -90,7 +90,7 @@ import {
   watch,
 } from "vue";
 import NocloudTable from "@/components/table.vue";
-import useAccountConverter from "@/hooks/useAccountConverter";
+import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import api from "@/api";
 
@@ -101,12 +101,11 @@ const { template, plans, service } = toRefs(props);
 
 const store = useStore();
 const {
-  fetchAccountRate,
   accountCurrency,
   toAccountPrice,
   accountRate,
   fromAccountPrice,
-} = useAccountConverter(template.value);
+} = useInstancePrices(template.value);
 
 const priceModelDialog = ref(false);
 const newPlan = ref();
@@ -121,7 +120,6 @@ const billingHeaders = ref([
 
 onMounted(() => {
   billingItems.value = getBillingItems();
-  fetchAccountRate(accountCurrency);
 });
 const filteredPlans = computed(() =>
   plans.value.filter((p) => p.type === "openai")

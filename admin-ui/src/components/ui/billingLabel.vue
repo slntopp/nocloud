@@ -1,10 +1,21 @@
 <template>
   <v-container>
-    <v-row>
-      <v-col>
-        <v-chip outlined color="primary">Due to date: {{ dueDate }}</v-chip>
+    <v-row justify="end">
+      <v-col
+        style="max-height: 50px"
+        class="d-flex justify-end align-start pa-0"
+      >
+        <v-switch
+          hide-details
+          dense
+          :input-value="template.config.auto_renew"
+          @change="
+            emit('update', { key: 'config.auto_renew', value: !!$event })
+          "
+          label="Auto"
+        />
       </v-col>
-      <v-col>
+      <v-col class="d-flex justify-end" style="max-width: 120px">
         <confirm-dialog
           title="Do you want to renew server?"
           :text="renewTemplate"
@@ -23,13 +34,16 @@
       </v-col>
     </v-row>
     <v-row class="mt-0" align="center" justify="end">
-      <v-col class="d-flex justify-end">
+      <v-col class="d-flex justify-end px-1">
+        <instance-state :state="template.state.state" />
+      </v-col>
+      <v-col class="d-flex justify-end px-1">
         <v-chip color="primary" outlined
           >Price: {{ price }} {{ accountCurrency }}</v-chip
         >
       </v-col>
-      <v-col class="d-flex justify-end">
-        <instance-state :state="template.state.state" />
+      <v-col class="px-1">
+        <v-chip outlined color="primary">Due to date: {{ dueDate }}</v-chip>
       </v-col>
     </v-row>
   </v-container>
@@ -49,11 +63,12 @@ const props = defineProps([
   "tariffPrice",
   "account",
 ]);
+const { template, addonsPrice, tariffPrice, dueDate, account } = toRefs(props);
+
+const emit = defineEmits(["update"]);
 
 const store = useStore();
-const { convertFrom } = useCurrency();
-
-const { template, addonsPrice, tariffPrice, dueDate, account } = toRefs(props);
+const { convertTo } = useCurrency();
 
 const currency = computed(() => ({
   code: store.getters["currencies/default"],
@@ -64,9 +79,9 @@ const accountCurrency = computed(() => {
 });
 
 const price = computed(() => {
-  const addonsSum = Object.values(addonsPrice.value).reduce((a, b) => a + b);
+  const addonsSum = Object.values(addonsPrice.value).reduce((a, b) => a + b, 0);
 
-  return convertFrom(tariffPrice.value + addonsSum, accountCurrency.value);
+  return convertTo(tariffPrice.value + addonsSum, accountCurrency.value);
 });
 
 const isRenewDisabled = computed(() => {

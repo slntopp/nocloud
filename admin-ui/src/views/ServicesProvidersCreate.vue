@@ -59,17 +59,22 @@
             </v-col>
           </v-row>
 
-          <v-row>
-            <v-col cols="3">
-              <v-subheader>Meta</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <json-editor
-                :json="provider.meta"
-                @changeValue="(data) => (provider.meta = data)"
-              />
-            </v-col>
-          </v-row>
+          <v-expansion-panels>
+            <v-expansion-panel>
+              <v-expansion-panel-header color="background-light">
+                <span class="text-h6">Meta</span>
+                <template v-slot:actions>
+                  <v-icon x-large> $expand </v-icon>
+                </template>
+              </v-expansion-panel-header>
+              <v-expansion-panel-content color="background-light">
+                <json-editor
+                  :json="provider.meta"
+                  @changeValue="(data) => (provider.meta = data)"
+                />
+              </v-expansion-panel-content>
+            </v-expansion-panel>
+          </v-expansion-panels>
 
           <v-row align="center">
             <v-col cols="3">
@@ -162,9 +167,12 @@
         </v-col>
         <v-col cols="6">
           <div class="d-flex align-start justify-center">
-            <v-btn class="mr-2" @click="downloadFile">
-              Download {{ isJson ? "JSON" : "YAML" }}
-            </v-btn>
+            <download-template-button
+              :type="isJson ? 'JSON' : 'YAML'"
+              class="mr-2"
+              :template="serviceProviderBody"
+              :name="downloadedFileName"
+            />
             <v-switch
               class="mr-2"
               style="margin-top: 5px; padding-top: 5px"
@@ -192,19 +200,18 @@ import JsonEditor from "@/components/JsonEditor.vue";
 
 import {
   mergeDeep,
-  downloadJSONFile,
   readJSONFile,
   readYAMLFile,
-  downloadYAMLFile,
   toKebabCase,
   toPascalCase,
 } from "@/functions.js";
 import AntIcon from "@/components/ui/antIcon.vue";
 import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
+import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
 export default {
   name: "servicesProviders-create",
-  components: { IconTitlePreview, AntIcon, JsonEditor },
+  components: { DownloadTemplateButton, IconTitlePreview, AntIcon, JsonEditor },
   mixins: [snackbar],
   data: () => ({
     types: [],
@@ -262,7 +269,7 @@ export default {
     this.providerKey = this.generateComponentId();
     this.fetchExtentions();
 
-    if(id){
+    if (id) {
       this.$store.dispatch("servicesProviders/fetchById", id).then((res) => {
         if (!this.types.includes(res.type)) {
           this.customTitle = res.type;
@@ -316,6 +323,11 @@ export default {
     },
     isProxyHide() {
       return ["cpanel"].includes(this.serviceProviderBody.type);
+    },
+    downloadedFileName() {
+      return this.serviceProviderBody.title
+        ? this.serviceProviderBody.title.replaceAll(" ", "_")
+        : "unknown_sp";
     },
   },
   methods: {
@@ -473,16 +485,6 @@ export default {
           .catch(({ message }) => {
             this.showSnackbarError({ message });
           });
-      }
-    },
-    downloadFile() {
-      const name = this.serviceProviderBody.title
-        ? this.serviceProviderBody.title.replaceAll(" ", "_")
-        : "unknown_sp";
-      if (this.isJson) {
-        downloadJSONFile(this.serviceProviderBody, name);
-      } else {
-        downloadYAMLFile(this.serviceProviderBody, name);
       }
     },
     setIconToKebabCase(icon) {

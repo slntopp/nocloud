@@ -13,26 +13,10 @@
       <v-col>
         <v-text-field
           readonly
-          label="Tarif (product plan)"
+          label="Product name"
           :value="tarrif.title"
           append-icon="mdi-pencil"
           @click:append="priceModelDialog = true"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          :suffix="defaultCurrency"
-          label="Price instance total"
-          :value="type === 'dedicated' ? +totalNewPrice?.toFixed(2) : getPrice"
-        />
-      </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          label="Account price instance total"
-          :value="accountTotalNewPrice"
-          :suffix="accountCurrency"
         />
       </v-col>
       <v-col>
@@ -46,80 +30,68 @@
         <v-text-field readonly label="Due to date/next payment" :value="date" />
       </v-col>
     </v-row>
-    <v-expansion-panels>
-      <v-expansion-panel>
-        <v-expansion-panel-header color="background-light"
-          >Prices</v-expansion-panel-header
-        >
-        <v-expansion-panel-content
-          class="ione-billing"
-          color="background-light"
-        >
-          <nocloud-table
-            hide-default-footer
-            sort-by="index"
-            item-key="key"
-            :show-select="false"
-            :headers="pricesHeaders"
-            :items="pricesItems"
-          >
-            <template v-slot:[`item.prices`]="{ item }">
-              <div class="d-flex">
-                <v-text-field
-                  class="mr-1"
-                  v-model="item.accountPrice"
-                  @change="onUpdatePrice(item, true)"
-                  :suffix="accountCurrency"
-                  type="number"
-                  append-icon="mdi-pencil"
-                ></v-text-field>
-                <v-text-field
-                  class="ml-1"
-                  v-model="item.price"
-                  @change="onUpdatePrice(item, false)"
-                  :suffix="defaultCurrency"
-                  type="number"
-                  append-icon="mdi-pencil"
-                ></v-text-field>
+
+    <instances-prices-panels>
+      <nocloud-table
+        hide-default-footer
+        sort-by="index"
+        item-key="key"
+        :show-select="false"
+        :headers="pricesHeaders"
+        :items="pricesItems"
+      >
+        <template v-slot:[`item.prices`]="{ item }">
+          <div class="d-flex">
+            <v-text-field
+              class="mr-2"
+              v-model="item.price"
+              @change="onUpdatePrice(item, false)"
+              :suffix="defaultCurrency"
+              type="number"
+              append-icon="mdi-pencil"
+            ></v-text-field>
+            <v-text-field
+              class="ml-2"
+              style="color: #c921c9"
+              v-model="item.accountPrice"
+              @change="onUpdatePrice(item, true)"
+              :suffix="accountCurrency"
+              type="number"
+              append-icon="mdi-pencil"
+            ></v-text-field>
+          </div>
+        </template>
+        <template v-slot:[`item.basePrice`]="{ item }">
+          <v-skeleton-loader type="text" v-if="isBasePricesLoading" />
+          <span v-else> {{ convertedBasePrices[item.key] }} PLN </span>
+        </template>
+        <template v-slot:body.append>
+          <tr>
+            <td></td>
+            <td></td>
+            <td>
+              {{ getBillingPeriod(tarrif.period) }}
+            </td>
+            <td>
+              {{
+                isBasePricesLoading
+                  ? "Loading..."
+                  : [totalBasePrice, "PLN"].join(" ")
+              }}
+            </td>
+            <td>
+              <div class="d-flex justify-end">
+                <v-chip outlined color="primary" class="mr-4">
+                  {{ [totalNewPrice?.toFixed(2), defaultCurrency].join(" ") }}
+                  /
+                  {{ [accountTotalNewPrice, accountCurrency].join(" ") }}
+                </v-chip>
               </div>
-            </template>
-            <template v-slot:[`item.basePrice`]="{ item }">
-              <v-text-field
-                :loading="isBasePricesLoading"
-                readonly
-                suffix="PLN"
-                :value="convertedBasePrices[item.key]"
-              ></v-text-field>
-            </template>
-            <template v-slot:body.append>
-              <tr>
-                <td>Total instance price</td>
-                <td></td>
-                <td>
-                  {{
-                    isBasePricesLoading
-                      ? "Loading..."
-                      : [totalBasePrice, "PLN"].join(" ")
-                  }}
-                </td>
-                <td>
-                  <div class="d-flex align-center">
-                    <span style="width: 50%">
-                      {{ [accountTotalNewPrice, accountCurrency].join(" ") }}
-                    </span>
-                    <span style="width: 50%">
-                      {{
-                        [totalNewPrice?.toFixed(2), defaultCurrency].join(" ")
-                      }}
-                    </span>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </nocloud-table>
-        </v-expansion-panel-content>
-      </v-expansion-panel>
-    </v-expansion-panels>
+            </td>
+          </tr>
+        </template>
+      </nocloud-table>
+    </instances-prices-panels>
 
     <edit-price-model
       @refresh="emit('refresh')"
@@ -148,7 +120,8 @@ import { useStore } from "@/store";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import usePlnRate from "@/hooks/usePlnRate";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
-import useAccountConverter from "@/hooks/useAccountConverter";
+import useInstancePrices from "@/hooks/useInstancePrices";
+import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -157,18 +130,14 @@ const { template, plans } = toRefs(props);
 
 const store = useStore();
 const rate = usePlnRate();
-const {
-  toAccountPrice,
-  fromAccountPrice,
-  fetchAccountRate,
-  accountCurrency,
-  accountRate,
-} = useAccountConverter(template.value);
+const { toAccountPrice, fromAccountPrice, accountCurrency, accountRate } =
+  useInstancePrices(template.value);
 
 const pricesItems = ref([]);
 const basePrices = ref({});
 const pricesHeaders = ref([
   { text: "Name", value: "title" },
+  { text: "Payment term", value: "kind" },
   { text: "Billing period", value: "period" },
   { text: "Base price", value: "basePrice" },
   { text: "Price", value: "prices" },
@@ -240,7 +209,7 @@ const getVpsPrices = async () => {
   const prices = {};
 
   const planCodeCurr = meta.plans.find((p) => planCode.value === p.planCode);
-  prices["tarrif"] = getPriceFromProduct(planCodeCurr);
+  prices[planCode.value] = getPriceFromProduct(planCodeCurr);
   addons.value.forEach((addon) => {
     Object.keys(meta).forEach((metaKey) => {
       const product =
@@ -262,7 +231,7 @@ const getDedicatedPrice = async () => {
   const prices = {};
 
   const planCodeCurr = meta.plans.find((p) => planCode.value === p.planCode);
-  prices["tarrif"] = getPriceFromProduct(planCodeCurr);
+  prices[planCode.value] = getPriceFromProduct(planCodeCurr);
   const addonsPrice = await api.servicesProviders.action({
     action: "get_baremetal_options",
     uuid: template.value.sp,
@@ -304,7 +273,7 @@ const getCloudPrices = async () => {
       projectId: fullSp.vars?.projectId?.value?.default,
     },
   });
-  prices["tarrif"] = meta.codes[tarrif.value?.meta?.priceCode];
+  prices[planCode.value] = meta.codes[tarrif.value?.meta?.priceCode];
   return prices;
 };
 const getPriceFromProduct = (product) => {
@@ -328,23 +297,18 @@ const getAddonKey = (key) => {
 };
 
 const date = computed(() => {
-  if (type.value === "cloud") {
-    return formatSecondsToDate(
-      +template.value?.data?.last_monitoring + +tarrif.value.period
-    );
-  }
-
-  return template.value.data.expiration;
+  return formatSecondsToDate(+template.value?.data?.next_payment_date);
 });
 
 const initPrices = () => {
   pricesItems.value.push({
-    title: "tarrif",
-    key: "tarrif",
+    title: planCode.value,
+    key: planCode.value,
     ind: 0,
     path: `billingPlan.products.${[duration.value, planCode.value].join(
       " "
     )}.price`,
+    kind: tarrif.value.kind,
     price: tarrif.value?.price,
     period: tarrif.value?.period,
   });
@@ -354,19 +318,26 @@ const initPrices = () => {
       (p) => p.key === getAddonKey(key)
     );
 
+    const addon = template.value.billingPlan.resources[addonIndex];
+
+    if (!addon) {
+      return;
+    }
+
     pricesItems.value.push({
-      price: template.value.billingPlan.resources[addonIndex]?.price || 0,
+      price: addon.price || 0,
       path: `billingPlan.resources.${addonIndex}.price`,
       title: key,
+      kind: addon.kind,
       key: key,
       index: ind + 1,
-      period: template.value.billingPlan.resources[addonIndex]?.period,
+      period: addon.period,
     });
   });
 
   pricesItems.value = pricesItems.value.map((i) => {
     i.period = getBillingPeriod(i.period);
-    i.accountPrice = i.price * accountRate.value;
+    i.accountPrice = toAccountPrice(i.price);
 
     return i;
   });
@@ -385,20 +356,6 @@ const tarrif = computed(() => {
     key = [duration.value, planCode.value].join(" ");
   }
   return template.value.billingPlan.products[key];
-});
-const getPrice = computed(() => {
-  const prices = [];
-  prices.push(tarrif.value?.price);
-  addons.value.forEach((name) => {
-    prices.push(
-      template.value.billingPlan.resources.find(
-        (p) =>
-          p.key === [duration.value, planCode, name].join(" ") ||
-          p.key === [duration.value, name].join(" ")
-      )?.price || 0
-    );
-  });
-  return prices.reduce((acc, val) => acc + val, 0);
 });
 
 const service = computed(() =>
@@ -431,14 +388,6 @@ const getBasePrices = async () => {
 onMounted(() => {
   initPrices();
   getBasePrices();
-  if (accountCurrency.value) {
-    fetchAccountRate(accountCurrency.value).then(() => {
-      pricesItems.value = pricesItems.value.map((i) => {
-        i.accountPrice = toAccountPrice(i.price);
-        return i;
-      });
-    });
-  }
 });
 </script>
 

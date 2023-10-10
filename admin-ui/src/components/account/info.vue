@@ -1,16 +1,29 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
+    <div style="position: absolute; top: 0; right: 75px">
+      <div>
+        <v-chip color="primary" outlined
+          >Balance: {{ account.balance?.toFixed(2) }}
+          {{ account.currency }}</v-chip
+        >
+      </div>
+    </div>
+
     <v-row>
-      <v-col cols="6">
-        <v-text-field
-          v-model="uuid"
-          readonly
-          label="UUID"
+      <v-col cols="3">
+        <v-text-field v-model="uuid" readonly label="UUID" />
+      </v-col>
+      <v-col cols="3">
+        <v-text-field v-model="title" label="name" style="width: 330px" />
+      </v-col>
+      <v-col cols="3">
+        <v-select
+          :readonly="isCurrencyReadonly"
+          :items="currencies"
+          v-model="currency"
+          label="currency"
           style="width: 330px"
         />
-      </v-col>
-      <v-col cols="6">
-        <v-text-field v-model="title" label="name" style="width: 330px" />
       </v-col>
     </v-row>
     <v-card-title class="px-0">Instances:</v-card-title>
@@ -105,6 +118,7 @@ export default {
     navTitles: config.navTitles ?? {},
     uuid: "",
     title: "",
+    currency: "",
     keys: [],
     selected: [],
     isVisible: false,
@@ -131,7 +145,14 @@ export default {
       this.selected = [];
     },
     editAccount() {
-      const newAccount = { ...this.account, title: this.title };
+      const newAccount = {
+        ...this.account,
+        title: this.title,
+        currency: this.currency,
+      };
+      if (!newAccount.data) {
+        newAccount.data = {};
+      }
       newAccount.data.ssh_keys = this.keys;
 
       this.isEditLoading = true;
@@ -156,6 +177,7 @@ export default {
   },
   mounted() {
     this.title = this.account.title;
+    this.currency = this.account.currency;
     this.uuid = this.account.uuid;
     this.keys = this.account.data?.ssh_keys || [];
     if (this.namespaces.length < 2) {
@@ -175,6 +197,9 @@ export default {
     services() {
       return this.$store.getters["services/all"];
     },
+    currencies() {
+      return this.$store.getters["currencies/all"].filter((c) => c !== "NCU");
+    },
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];
     },
@@ -188,6 +213,9 @@ export default {
       return this.instances.filter(
         (i) => i.access.namespace === accountNamespace.uuid
       );
+    },
+    isCurrencyReadonly() {
+      return this.account.currency && this.account.currency !== "NCU";
     },
   },
 };

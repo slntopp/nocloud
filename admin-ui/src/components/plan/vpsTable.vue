@@ -92,7 +92,6 @@
                 style="width: 200px"
                 v-model="item.group"
                 :items="groups"
-                @change="item.name = getName(item)"
               />
               <v-icon @click="changeMode('create', item)">mdi-plus</v-icon>
               <v-icon @click="changeMode('edit', item)">mdi-pencil</v-icon>
@@ -113,7 +112,12 @@
             {{ value }} {{ defaultCurrency }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
-            <v-text-field dense style="width: 150px" v-model="item.value" />
+            <v-text-field
+              dense
+              style="width: 200px"
+              :suffix="defaultCurrency"
+              v-model="item.value"
+            />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
             <v-switch v-model="item.sell" />
@@ -161,7 +165,12 @@
             {{ value }} {{ defaultCurrency }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
-            <v-text-field dense style="width: 150px" v-model="item.value" />
+            <v-text-field
+              dense
+              style="width: 200px"
+              :suffix="defaultCurrency"
+              v-model="item.value"
+            />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
             <v-switch v-model="item.sell" />
@@ -198,7 +207,6 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
-import currencyRate from "@/mixins/currencyRate";
 import { getMarginedValue } from "@/functions";
 
 export default {
@@ -281,7 +289,6 @@ export default {
     tabsIndex: 0,
     usedFee: {},
   }),
-  mixins: [currencyRate],
   methods: {
     changeImage(value) {
       const i = this.images.indexOf(value);
@@ -309,6 +316,7 @@ export default {
             kind: "PREPAID",
             title: el.name,
             price: el.value,
+            group: el.group,
             period: this.getPeriod(el.duration),
             resources: { cpu: +cpu, ram: ram * 1024, disk: disk * 1024 },
             sorter: Object.keys(plan.products).length,
@@ -390,7 +398,7 @@ export default {
           if (isMonthly || isYearly) {
             const code = planCode.split("-").slice(1).join("-");
             const option = windows.find((el) => el.planCode.includes(code));
-            const newPrice = parseFloat((price.value * this.rate).toFixed(2));
+            const newPrice = this.convertPrice(price.value);
 
             const { configurations, addonFamilies } = catalog.plans.find(
               ({ planCode }) => planCode.includes(code)
@@ -410,7 +418,7 @@ export default {
                 (el) =>
                   el.duration === duration && el.pricingMode === pricingMode
               );
-              const newPrice = parseFloat((value * this.rate).toFixed(2));
+              const newPrice = this.convertPrice(value);
 
               plan.windows = {
                 value,
@@ -467,7 +475,7 @@ export default {
             const isYearly = duration === "P1Y" && pricingMode === "upfront12";
 
             if (isMonthly || isYearly) {
-              const newPrice = parseFloat((price.value * this.rate).toFixed(2));
+              const newPrice = this.convertPrice(price.value);
 
               result.push({
                 price: { value: newPrice },
@@ -533,15 +541,6 @@ export default {
           return "yearly";
       }
     },
-    getName({ name, group }) {
-      const newGroup = `${group[0].toUpperCase()}${group.slice(1)}`;
-      const slicedName = name.replace(/VPS[\W0-9]/, "");
-      const sep = /[\W0-9]/.exec(slicedName)[0];
-      const newName = slicedName.split(sep).splice(1).join(sep);
-
-      if (!name.startsWith("VPS")) return `${newGroup}${sep}${newName}`;
-      else return `VPS ${newGroup} ${name.split(" ").at(-1)}`;
-    },
     getMargin({ value, price }, filter = true) {
       if (!this.usedFee.ranges) {
         if (filter) this.changeFilters({ margin: "none" }, ["Margin"]);
@@ -602,7 +601,6 @@ export default {
       this.plans.forEach((plan, index) => {
         if (plan.group !== group) return;
         this.plans[index].group = this.newGroupName;
-        this.plans[index].name = this.getName(plan);
       });
 
       this.changeMode("none", { id: -1, group: "" });
@@ -610,7 +608,6 @@ export default {
     createGroup(plan) {
       this.groups.push(this.newGroupName);
       plan.group = this.newGroupName;
-      plan.name = this.getName(plan);
 
       this.changeMode("none", { id: -1, group: "" });
     },
@@ -619,7 +616,6 @@ export default {
       this.plans.forEach((plan, i) => {
         if (plan.group !== group) return;
         this.plans[i].group = this.groups[0];
-        this.plans[i].name = this.getName(plan);
       });
     },
     changeMode(mode, { id, group }) {
@@ -680,11 +676,12 @@ export default {
         return p;
       });
     },
+    convertPrice(price) {
+      return (price * this.plnRate).toFixed(2);
+    },
   },
   created() {
     this.$emit("changeLoading");
-
-    this.fetchRate();
 
     api.servicesProviders
       .action({ action: "get_plans", uuid: this.sp.uuid })
@@ -718,6 +715,17 @@ export default {
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
+    rates() {
+      return this.$store.getters["currencies/rates"];
+    },
+    plnRate() {
+      if (this.defaultCurrency === "PLN") {
+        return 1;
+      }
+      return this.rates.find(
+        (r) => r.to === this.defaultCurrency && r.from === "PLN"
+      )?.rate;
+    },
   },
   watch: {
     tabsIndex(value) {
@@ -748,7 +756,7 @@ export default {
             el.includes("windows")
           );
           const title = (product?.title ?? plan.name).replace(/VPS[\W0-9]/, "");
-          const group = title.split(/[\W0-9]/)[0];
+          const group = product?.group || title.split(/[\W0-9]/)[0];
 
           if (product) {
             this.plans[i].name = product.title;

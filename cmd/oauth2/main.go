@@ -62,7 +62,7 @@ func main() {
 
 	registryClient := registry.NewAccountsServiceClient(registryConn)
 
-	server := oauth2.NewOAuth2Server(log, registryHost)
+	server := oauth2.NewOAuth2Server(log, SIGNING_KEY)
 	server.SetupRegistryClient(registryClient)
 	server.Start(port, corsAllowed)
 }

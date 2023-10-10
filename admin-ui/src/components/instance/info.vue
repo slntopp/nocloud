@@ -46,13 +46,6 @@
           :value="account?.balance?.toFixed(2) || 0"
         />
       </v-col>
-      <v-col>
-        <v-text-field
-          readonly
-          label="client currency"
-          :value="account?.currency"
-        />
-      </v-col>
     </v-row>
     <!--    <component-->
     <!--      v-if="!type.includes('ovh') && !type.includes('ione')"-->
@@ -137,9 +130,13 @@
 
     <div
       v-if="billingLabelComponent"
-      style="position: absolute; top: 0; right: 75px"
+      style="position: absolute; top: 0px; right: 5px; z-index: 2"
     >
-      <component :is="billingLabelComponent" :template="copyInstance" />
+      <component
+        @update="updateCopy"
+        :is="billingLabelComponent"
+        :template="copyInstance"
+      />
     </div>
   </v-card>
 </template>

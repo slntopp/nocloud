@@ -31,26 +31,30 @@
       :footer-error="fetchError"
     >
       <template v-slot:[`item.name`]="{ item }">
-        <v-text-field dense style="width: 300px" v-model="item.name" />
+        <v-text-field dense style="width: 200px" v-model="item.name" />
       </template>
 
       <template v-slot:[`item.group`]="{ item }">
-        <template v-if="newGroup.mode === 'edit' && newGroup.planId === item.id">
+        <template
+          v-if="newGroup.mode === 'edit' && newGroup.planId === item.id"
+        >
           <v-text-field
             dense
             class="d-inline-block mr-1"
-            style="width: 300px"
+            style="width: 200px"
             v-model="newGroup.name"
           />
           <v-icon @click="editGroup(item.group)">mdi-content-save</v-icon>
           <v-icon @click="newGroup.mode = 'none'">mdi-close</v-icon>
         </template>
 
-        <template v-if="newGroup.mode === 'create' && newGroup.planId === item.id">
+        <template
+          v-if="newGroup.mode === 'create' && newGroup.planId === item.id"
+        >
           <v-text-field
             dense
             class="d-inline-block mr-1"
-            style="width: 300px"
+            style="width: 200px"
             v-model="newGroup.name"
           />
           <v-icon @click="createGroup(item)">mdi-content-save</v-icon>
@@ -61,17 +65,20 @@
           <v-select
             dense
             class="d-inline-block"
-            style="width: 300px"
+            style="width: 200px"
             v-model="item.group"
             :items="groups"
-            @change="item.name = getName(item)"
           />
           <v-icon @click="changeMode('create', item)">mdi-plus</v-icon>
           <v-icon @click="changeMode('edit', item)">mdi-pencil</v-icon>
-          <v-icon v-if="groups.length > 1" @click="deleteGroup(item.group)">mdi-delete</v-icon>
+          <v-icon v-if="groups.length > 1" @click="deleteGroup(item.group)"
+            >mdi-delete</v-icon
+          >
         </template>
 
-        <template v-else-if="newGroup.planId !== item.id">{{ item.group }}</template>
+        <template v-else-if="newGroup.planId !== item.id">{{
+          item.group
+        }}</template>
       </template>
 
       <template v-slot:[`item.margin`]="{ item }">
@@ -87,7 +94,12 @@
       </template>
 
       <template v-slot:[`item.value`]="{ item }">
-        <v-text-field dense style="width: 150px" v-model="item.value" />
+        <v-text-field
+          dense
+          style="min-width: 200px"
+          v-model="item.value"
+          :suffix="defaultCurrency"
+        />
       </template>
 
       <template v-slot:expanded-item="{ headers, item }">
@@ -138,7 +150,12 @@
               {{ value }} {{ defaultCurrency }}
             </template>
             <template v-slot:[`item.value`]="{ item }">
-              <v-text-field dense style="width: 150px" v-model="item.value" />
+              <v-text-field
+                dense
+                style="width: 200px"
+                :suffix="defaultCurrency"
+                v-model="item.value"
+              />
             </template>
             <template v-slot:[`item.sell`]="{ item }">
               <v-switch v-model="item.sell" />
@@ -156,7 +173,6 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
-import currencyRate from "@/mixins/currencyRate";
 import { getMarginedValue } from "@/functions";
 
 export default {
@@ -222,9 +238,8 @@ export default {
 
     groups: [],
     newGroup: { mode: "none", name: "", planId: "" },
-    usedFee: {}
+    usedFee: {},
   }),
-  mixins: [currencyRate],
   methods: {
     getAddons({ planCode, duration }) {
       return this.addons[planCode]?.filter((a) => a.duration === duration);
@@ -283,54 +298,62 @@ export default {
     async changePlan(plan) {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
         this.$store.commit("snackbar/showSnackbarError", {
-          message: "You must select a group for the tariff!"
+          message: "You must select a group for the tariff!",
         });
         return "error";
       }
+
+      plan.products = {};
 
       const sp = this.$store.getters["servicesProviders/all"];
       const { uuid } = sp.find((el) => el.type === "ovh");
 
       plan.resources = this.template.resources;
-      plan.products = this.template.products;
 
-      for await (const el of this.plans) {
-        if (el.sell) {
-          const {
-            meta: { requiredConfiguration },
-          } = await api.post(`/sp/${uuid}/invoke`, {
+      const enabledPlans = this.plans.filter((el) => el.sell);
+      const configurations = await Promise.all(
+        enabledPlans.map((el) =>
+          api.post(`/sp/${uuid}/invoke`, {
             method: "get_required_configuration",
             params: {
               planCode: el.planCode,
               duration: el.duration,
               pricingMode: el.duration === "P1M" ? "default" : "upfront12",
             },
-          });
+          })
+        )
+      );
 
-          const addons = this.getAddons(el)
-            ? this.getAddons(el)
-                .filter((addon) => addon.sell)
-                ?.map((el) => ({ id: el.planCode, title: el.name }))
-            : plan.products[el.id]?.meta.addons;
+      for (let i = 0; i < configurations.length; i++) {
+        const {
+          meta: { requiredConfiguration },
+        } = configurations[i];
+        const el = enabledPlans[i];
 
-          const datacenter =
-            requiredConfiguration.find((el) => el.label.includes("datacenter"))
-              ?.allowedValues ?? [];
+        const addons = this.getAddons(el)
+          ? this.getAddons(el)
+              .filter((addon) => addon.sell)
+              ?.map((el) => ({ id: el.planCode, title: el.name }))
+          : plan.products[el.id]?.meta.addons;
 
-          const os =
-            requiredConfiguration.find((el) => el.label.includes("os"))
-              ?.allowedValues ?? [];
+        const datacenter =
+          requiredConfiguration.find((el) => el.label.includes("datacenter"))
+            ?.allowedValues ?? [];
 
-          plan.products[el.id] = {
-            kind: "PREPAID",
-            title: el.name,
-            price: el.value,
-            period: this.getPeriod(el.duration),
-            sorter: Object.keys(plan.products).length,
-            installation_fee: el.installation_fee.value,
-            meta: { addons, datacenter, os },
-          };
-        }
+        const os =
+          requiredConfiguration.find((el) => el.label.includes("os"))
+            ?.allowedValues ?? [];
+
+        plan.products[el.id] = {
+          kind: "PREPAID",
+          title: el.name,
+          price: el.value,
+          group: el.group,
+          period: this.getPeriod(el.duration),
+          sorter: Object.keys(plan.products).length,
+          installation_fee: el.installation_fee.value,
+          meta: { addons, datacenter, os },
+        };
       }
       Object.values(this.addons).forEach((planCodeAddons) => {
         planCodeAddons.forEach((el) => {
@@ -387,7 +410,8 @@ export default {
                 const menuWidth = menu.offsetWidth;
                 let marginLeft = 20;
 
-                if (width < menuWidth + x) marginLeft = width - (menuWidth + x) - 35;
+                if (width < menuWidth + x)
+                  marginLeft = width - (menuWidth + x) - 35;
                 const marginTop = marginLeft < 20 ? 20 : 0;
 
                 menu.style.left = `${x + marginLeft + window.scrollX}px`;
@@ -413,21 +437,24 @@ export default {
           const isYearly = duration === "P1Y" && pricingMode === "upfront12";
 
           if (isMonthly || isYearly) {
-            const newPrice = parseFloat((price.value * this.rate).toFixed(2));
+            const newPrice = this.convertPrice(price.value);
+
             const id = tariff
               ? this.getAddonId({ planCode, duration, tariff })
               : this.getTarrifId({ planCode, duration });
 
-            const installation = prices.find((price) =>
-              price.capacities.includes("installation") && price.pricingMode === pricingMode
+            const installation = prices.find(
+              (price) =>
+                price.capacities.includes("installation") &&
+                price.pricingMode === pricingMode
             );
 
             result.push({
               planCode,
               duration,
               installation_fee: {
-                price: { value: +(installation.price.value * this.rate).toFixed(2) },
-                value: installation.price.value
+                price: { value: +this.convertPrice(installation.price.value) },
+                value: installation.price.value,
               },
               price: { value: newPrice },
               name: productName,
@@ -487,13 +514,6 @@ export default {
         case "P1Y":
           return "yearly";
       }
-    },
-    getName({ name, group }) {
-      const newGroup = `${group[0].toUpperCase()}${group.slice(1)}`;
-      const sep = /[\W0-9]/.exec(name)[0];
-      const newName = name.split(sep).splice(1).join(sep);
-
-      return `${newGroup}${sep}${newName}`;
     },
     getMargin({ value, price }, filter = true) {
       if (!this.usedFee.ranges) {
@@ -555,7 +575,6 @@ export default {
       this.plans.forEach((plan, index) => {
         if (plan.group !== group) return;
         this.plans[index].group = this.newGroup.name;
-        this.plans[index].name = this.getName(plan);
       });
 
       this.changeMode("none", { id: -1, group: "" });
@@ -563,7 +582,6 @@ export default {
     createGroup(plan) {
       this.groups.push(this.newGroup.name);
       plan.group = this.newGroup.name;
-      plan.name = this.getName(plan);
 
       this.changeMode("none", { id: -1, group: "" });
     },
@@ -572,7 +590,6 @@ export default {
       this.plans.forEach((plan, i) => {
         if (plan.group !== group) return;
         this.plans[i].group = this.groups[0];
-        this.plans[i].name = this.getName(plan);
       });
     },
     changeMode(mode, { id, group }) {
@@ -603,11 +620,13 @@ export default {
         return result.every((el) => el);
       });
     },
+    convertPrice(price) {
+      return (price * this.plnRate).toFixed(2);
+    },
   },
   created() {
     this.$emit("changeLoading");
 
-    this.fetchRate();
     api.servicesProviders
       .action({
         action: "get_baremetal_plans",
@@ -644,6 +663,17 @@ export default {
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
+    rates() {
+      return this.$store.getters["currencies/rates"];
+    },
+    plnRate() {
+      if (this.defaultCurrency === "PLN") {
+        return 1;
+      }
+      return this.rates.find(
+        (r) => r.from === "PLN" && r.to === this.defaultCurrency
+      )?.rate;
+    },
   },
   watch: {
     plans() {
@@ -655,18 +685,18 @@ export default {
         this.plans.forEach((plan, i) => {
           const product = this.template.products[plan.id];
           const title = (product?.title ?? plan.name).toUpperCase();
-          const group = title.split(/[\W0-9]/)[0];
+          const group = product?.group || title.split(/[\W0-9]/)[0];
 
           if (product) {
             this.plans[i].name = product.title;
             this.plans[i].value = product.price;
-            this.plans[i].group = group;
             this.plans[i].sell = true;
             this.plans[i].isBeenSell = true;
           } else {
             this.plans[i].name = title;
-            this.plans[i].group = group;
           }
+          this.plans[i].group = group;
+
           if (!this.groups.includes(group)) this.groups.push(group);
         });
 

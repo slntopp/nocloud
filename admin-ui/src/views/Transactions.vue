@@ -1,31 +1,56 @@
 <template>
   <div class="pa-4">
-    <v-btn
-      class="mr-2"
-      color="background-light"
-      :to="{ name: 'Transactions create' }"
-    >
-      Create
-    </v-btn>
-
-    <v-autocomplete
-      :filter="defaultFilterObject"
-      label="Account"
-      item-text="title"
-      item-value="uuid"
-      class="d-inline-block mr-2"
-      v-model="accountId"
-      :items="accounts"
-    />
-    <v-autocomplete
-      :filter="defaultFilterObject"
-      label="Service"
-      item-text="title"
-      item-value="uuid"
-      class="d-inline-block"
-      v-model="serviceId"
-      :items="servicesByAccount"
-    />
+    <v-row align="start">
+      <v-col cols="1">
+        <v-btn
+          class="mr-2"
+          color="background-light"
+          :to="{ name: 'Transactions create' }"
+        >
+          Create
+        </v-btn>
+      </v-col>
+      <v-col>
+        <date-picker dense label="from" v-model="duration.from" />
+      </v-col>
+      <v-col>
+        <date-picker dense label="to" v-model="duration.to" />
+      </v-col>
+      <v-col>
+        <v-autocomplete
+          :filter="defaultFilterObject"
+          label="Types"
+          dense
+          v-model="selectedTypes"
+          multiple
+          :items="types"
+        />
+      </v-col>
+      <v-col>
+        <v-autocomplete
+          dense
+          :filter="defaultFilterObject"
+          label="Accounts"
+          item-text="title"
+          item-value="uuid"
+          v-model="selectedAccounts"
+          multiple
+          :items="accounts"
+        />
+      </v-col>
+      <v-col>
+        <v-autocomplete
+          :filter="defaultFilterObject"
+          dense
+          label="Instances"
+          item-text="title"
+          item-value="uuid"
+          v-model="selectedInstances"
+          multiple
+          :items="instances"
+        />
+      </v-col>
+    </v-row>
 
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
     <template v-else-if="series.length < 1">
@@ -51,6 +76,8 @@
       v-if="!isInitLoading"
       table-name="transaction-table"
       :filters="filters"
+      :duration="duration"
+      @input:unique="types = $event.transactionType"
       :select-record="selectTransaction"
     />
   </div>
@@ -64,13 +91,16 @@ import apexcharts from "vue-apexcharts";
 import { defaultFilterObject } from "@/functions";
 import { mapGetters } from "vuex";
 import reportsTable from "@/components/reports_table.vue";
+import DatePicker from "@/components/ui/datePicker.vue";
 export default {
   name: "transactions-view",
-  components: { reportsTable, apexcharts },
+  components: { DatePicker, reportsTable, apexcharts },
   mixins: [snackbar, search],
   data: () => ({
-    accountId: null,
-    serviceId: null,
+    selectedAccounts: [],
+    selectedInstances: [],
+    selectedTypes: [],
+    types: [],
     series: [],
     chartLoading: false,
     isInitLoading: true,
@@ -83,6 +113,7 @@ export default {
       theme: { palette: "palette10", mode: "dark" },
       legend: { showForSingleSeries: true },
     },
+    duration: { to: null, from: null },
   }),
   methods: {
     defaultFilterObject,
@@ -148,9 +179,9 @@ export default {
   },
   created() {
     if (this.$route.query.account) {
-      this.accountId = this.$route.query.account;
+      this.selectedAccounts = [this.$route.query.account];
     } else {
-      this.accountId = null;
+      this.selectedAccounts = [];
     }
     this.isInitLoading = false;
   },
@@ -159,11 +190,6 @@ export default {
     this.$store.dispatch("services/fetch");
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("currencies/fetch");
-
-    this.$store.commit("reloadBtn/setCallback", {
-      type: "transactions/init",
-      params: this.transactionData,
-    });
   },
   computed: {
     ...mapGetters("transactions", ["count", "page", "isLoading", "all"]),
@@ -177,44 +203,51 @@ export default {
       return this.$store.getters["namespaces/all"];
     },
     accounts() {
-      const accounts = this.$store.getters["accounts/all"];
-      return [{ title: "all", uuid: null }].concat(accounts);
+      return this.$store.getters["accounts/all"];
     },
     services() {
       return this.$store.getters["services/all"];
     },
     filters() {
       return {
-        service: this.serviceId ? [this.serviceId] : undefined,
-        account: this.accountId ? [this.accountId] : undefined,
+        account: this.selectedAccounts.length
+          ? this.selectedAccounts
+          : undefined,
+        instance: this.selectedInstances.length
+          ? this.selectedInstances
+          : undefined,
+        transactionType: this.selectedTypes.length
+          ? this.selectedTypes
+          : undefined,
       };
     },
     servicesByAccount() {
-      let filtredServices = null;
-      if (this.accountId) {
-        const namespaceId = this.namespaces.find(
-          (n) => this.accountId === n.access.namespace
-        )?.uuid;
-        filtredServices = this.services.filter((s) => {
-          return s.access.namespace === namespaceId;
-        });
-      } else {
-        filtredServices = this.services;
-      }
+      const namespaces = this.namespaces
+        .filter((n) => this.selectedAccounts.includes(n.access.namespace))
+        .map((n) => n.uuid);
 
-      return [{ title: "all", uuid: null }].concat(
-        filtredServices.map((el) => ({
-          title: `${el.title} (${el.uuid.slice(0, 8)})`,
-          uuid: el.uuid,
-        }))
-      );
+      return this.services.filter((s) => {
+        return namespaces.includes(s.access.namespace);
+      });
+    },
+    instances() {
+      const instances = [];
+      this.servicesByAccount.forEach((s) => {
+        s.instancesGroups.forEach((ig) => {
+          ig.instances.forEach((i) =>
+            instances.push({ title: i.title, uuid: i.uuid })
+          );
+        });
+      });
+
+      return instances;
     },
     balance() {
       const dates = [];
       let labels = [`0 ${this.defaultCurrency}`];
       let values = [0];
       let balance = 0;
-      if (!this.accountId) {
+      if (!this.selectedAccounts) {
         return { labels, values };
       }
       this.transactions?.forEach((el, i, arr) => {
@@ -237,30 +270,18 @@ export default {
     searchParam() {
       return this.$store.getters["appSearch/param"];
     },
-    transactionData() {
-      const data = {};
-      if (this.accountId || this.accountId === "all") {
-        data.account = this.accountId;
-      }
-      if (this.accountId) {
-        data.service = this.serviceId;
-      }
-      return data;
-    },
   },
   watch: {
     chartLoading() {
       setTimeout(this.setListenerToLegend);
     },
-    user() {
-      this.accountId = this.user.uuid;
-    },
-    accountId() {
-      if (this.serviceId === null) {
-        this.serviceId = null;
-      } else {
-        this.serviceId = null;
-      }
+    selectedAccounts: {
+      handler() {
+        this.selectedInstances = this.selectedInstances.filter((si) =>
+          this.instances.find((i) => i.uuid === si)
+        );
+      },
+      deep: true,
     },
   },
 };
