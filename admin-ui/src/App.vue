@@ -483,6 +483,7 @@ export default {
       if (newVal) {
         this.$store.dispatch("plugins/fetch");
         this.$store.dispatch("currencies/fetch");
+        this.$store.dispatch("settings/fetch");
       }
     },
   },
