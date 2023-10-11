@@ -55,6 +55,7 @@ import { toRefs, ref, onMounted, computed, watch } from "vue";
 import nocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";
+import useCustomSearch from "@/hooks/useCustomSearch";
 
 const props = defineProps({
   tableName: {},
@@ -79,6 +80,7 @@ const options = ref({});
 const itemsPerPageOptions = ref([5, 10, 15, 25]);
 
 const store = useStore();
+useCustomSearch();
 
 const headers = computed(() => [
   { text: "Id", value: "id" },
