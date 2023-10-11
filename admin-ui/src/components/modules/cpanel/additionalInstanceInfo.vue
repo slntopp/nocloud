@@ -3,6 +3,9 @@
     <v-col cols="2">
       <v-text-field readonly :value="template.config.domain" label="Domain" />
     </v-col>
+    <v-col cols="2">
+      <v-text-field readonly :value="template.config.email" label="Email" />
+    </v-col>
   </v-row>
 </template>
 
