@@ -135,6 +135,7 @@
       <component
         @update="updateCopy"
         :is="billingLabelComponent"
+        v-if="Object.keys(copyInstance).length"
         :template="copyInstance"
       />
     </div>
