@@ -1,10 +1,10 @@
 <template>
-  <div class="sp-virtual"></div>
+  <div class="sp-empty"></div>
 </template>
 
 <script>
 export default {
-  name: "servicesProviders-create-virtual",
+  name: "servicesProviders-create-empty",
   props: {
     secrets: {
       type: Object,
