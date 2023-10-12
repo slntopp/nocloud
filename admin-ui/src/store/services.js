@@ -69,18 +69,20 @@ export default {
       state.services = state.services.map((serv) =>
         serv.uuid === service.uuid ? service : serv
       );
+      this.commit("services/setInstances", state.services);
     },
-    updateInstance(state, { value, uuid }) {
+    updateInstance(state, { value, uuid, key = "state" }) {
       const i = state.services.findIndex((el) => uuid === el.uuid);
       const service = state.services[i];
 
       service.instancesGroups.forEach((el, i, groups) => {
         el.instances.forEach(({ uuid }, j) => {
           if (uuid === value.uuid) {
-            groups[i].instances[j].state = value.state;
+            groups[i].instances[j][key] = value[key];
           }
         });
       });
+      this.commit("services/updateService", service);
     },
     fetchByIdElem(state, data) {
       state.service = data;
