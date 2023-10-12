@@ -4,15 +4,9 @@
       class="mr-2"
       v-for="btn in vmControlBtns"
       :key="btn.action + btn.title"
-      :disabled="btn.disabled"
-      :loading="isSendActionLoading"
-      @click="
-        sendVmAction({
-          action: btn.action,
-          template: { ...template, type: type },
-          params: btn.data,
-        })
-      "
+      :disabled="btn.disabled || (!!runningActionName && runningActionName!==btn.action)"
+      :loading="runningActionName === btn.action"
+      @click="sendAction(btn)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -69,6 +63,7 @@ export default {
     isLoading: false,
     isSaveLoading: false,
     isLockLoading: false,
+    runningActionName: "",
   }),
   methods: {
     ...mapActions("actions", ["sendVmAction"]),
@@ -198,6 +193,18 @@ export default {
         .finally(() => {
           this.isSaveLoading = false;
         });
+    },
+    async sendAction(btn) {
+      this.runningActionName = btn.action;
+      try {
+        await this.sendVmAction({
+          action: btn.action,
+          template: { ...this.template, type: this.type },
+          params: btn.data,
+        });
+      } finally {
+        this.runningActionName = "";
+      }
     },
   },
   computed: {
