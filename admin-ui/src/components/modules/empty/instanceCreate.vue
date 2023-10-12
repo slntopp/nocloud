@@ -61,7 +61,7 @@ const getDefaultInstance = () => ({
   billing_plan: {},
 });
 export default {
-  name: "instance-virtual-create",
+  name: "instance-empty-create",
   props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
   data: () => ({ bilingPlan: null, products: [] }),
   mounted() {
