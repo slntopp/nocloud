@@ -271,8 +271,6 @@ export default {
       },
     ],
     typeId: 4,
-
-    whmcsApi: "",
   }),
   methods: {
     defaultFilterObject,
@@ -384,15 +382,11 @@ export default {
     }
 
     await Promise.all([
-      this.$store.dispatch("settings/fetch"),
       this.$store.dispatch("namespaces/fetch"),
       this.$store.dispatch("services/fetch"),
     ])
       .then(() => {
         this.fetchError = "";
-        this.whmcsApi = JSON.parse(
-          this.settings.find(({ key }) => key === "whmcs").value
-        ).api;
       })
       .catch((err) => {
         let fetchError = "Can't reach the server";
@@ -417,6 +411,11 @@ export default {
     },
     settings() {
       return this.$store.getters["settings/all"];
+    },
+    whmcsApi(){
+      return JSON.parse(
+          this.settings.find(({ key }) => key === "whmcs").value || '{}'
+      ).api
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
