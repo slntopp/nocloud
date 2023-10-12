@@ -147,7 +147,7 @@ const date = computed(() =>
 const isMonitoringsEmpty = computed(() => date.value === "-");
 
 const filtredPlans = computed(() =>
-  plans.value.filter((p) => p.type === "virtual")
+  plans.value.filter((p) => p.type === "empty")
 );
 
 const totalPrice = computed(() => {

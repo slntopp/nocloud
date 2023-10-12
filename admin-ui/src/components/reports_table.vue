@@ -54,6 +54,18 @@
           {{ getInstance(value)?.title || value }}
         </router-link>
       </template>
+      <template v-slot:[`item.actions`]="{ item }">
+        <div class="d-flex justify-center align-center">
+          <v-btn
+            v-for="action in getReportActions(item)"
+            :key="action.title"
+            @click="action.handler(item)"
+            small
+          >
+            {{ action.title }}
+          </v-btn>
+        </div>
+      </template>
       <template v-slot:[`item.account`]="{ value }">
         <router-link :to="{ name: 'Account', params: { accountId: value } }">
           {{ getAccount(value)?.title || value }}
@@ -106,6 +118,7 @@ const reportsHeaders = computed(() => {
     { text: "Total in default currency", value: "totalDefaultPreview" },
     { text: "Product or resource", value: "item" },
     { text: "Type", value: "type" },
+    { text: "Actions", value: "actions" },
   ];
 
   if (!hideAccount.value) {
@@ -124,6 +137,7 @@ const reportsHeaders = computed(() => {
 const instances = computed(() => store.getters["services/getInstances"]);
 const services = computed(() => store.getters["services/all"]);
 const accounts = computed(() => store.getters["accounts/all"]);
+const settings = computed(() => store.getters["settings/all"]);
 
 const isLoading = computed(() => {
   return isFetchLoading.value || isCountLoading.value;
@@ -142,6 +156,21 @@ const requestOptions = computed(() => ({
     ? new Date(duration.value.to).getTime() / 1000
     : undefined,
 }));
+
+const whmcsApi = computed(() => {
+  return JSON.parse(
+    settings.value.find(({ key }) => key === "whmcs").value || "{}"
+  ).api;
+});
+
+const getReportActions = (report) => {
+  const actions = [];
+
+  if (report.type?.startsWith("invoice")) {
+    actions.push({ title: "Email", handler: sendEmail });
+  }
+  return actions;
+};
 
 const onUpdateOptions = async (newOptions) => {
   setOptions(newOptions);
@@ -201,6 +230,22 @@ const init = async () => {
 const getAccount = (value) => accounts.value.find((s) => s.uuid === value);
 const getInstance = (value) => instances.value.find((s) => s.uuid === value);
 const getService = (value) => services.value.find((s) => s.uuid === value);
+
+const sendEmail = async (report) => {
+  try {
+    await fetch(
+      /https:\/\/(.+?\.?\/)/.exec(whmcsApi.value)[0] +
+        `modules/addons/nocloud/api/index.php?run=send_email&account=${report.account}&invoiceid=${report.uuid}`
+    );
+    store.commit("snackbar/showSnackbarError", {
+      message: "Email resend successfully",
+    });
+  } catch {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Error while try resend email",
+    });
+  }
+};
 
 watch(rates, () => {
   reports.value = reports.value.map((r) => ({

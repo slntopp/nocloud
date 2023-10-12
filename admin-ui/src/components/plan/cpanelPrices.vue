@@ -11,9 +11,7 @@
     >
       <template v-slot:[`item.enabled`]="{ item }">
         <v-switch
-          @change="changeSell(item, $event)"
-          :input-value="item.enabled"
-          :value="item.enabled"
+          v-model="item.enabled"
         />
       </template>
       <template v-slot:[`item.name`]="{ item }">
@@ -148,7 +146,6 @@ export default {
     },
     async savePrices() {
       const products = {};
-
       this.prices
         .filter((p) => p.enabled)
         .forEach((item) => {
