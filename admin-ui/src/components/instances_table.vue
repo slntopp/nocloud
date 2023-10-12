@@ -4,7 +4,7 @@
     class="mt-4"
     :value="value"
     :items="instances"
-    :headers="headers"
+    :headers="instancesHeaders"
     :loading="isLoading"
     :custom-sort="sortInstances"
     :footer-error="fetchError"
@@ -154,6 +154,7 @@ export default {
   mixins: [searchMixin],
   props: {
     value: { type: Array, required: true },
+    headers: { type: Array, default: null },
     selected: { type: Object, default: null },
     showSelect: { type: Boolean, default: true },
     items: { type: Array, default: () => [] },
@@ -258,7 +259,7 @@ export default {
         case "ovh": {
           return getOvhPrice(inst);
         }
-        case "virtual":
+        case "empty":
         case "ione": {
           const initialPrice =
             inst.billingPlan.products[inst.product]?.price ?? 0;
@@ -485,7 +486,8 @@ export default {
     accounts() {
       return this.$store.getters["accounts/all"];
     },
-    headers() {
+    instancesHeaders() {
+      if (this.headers) return this.headers;
       const headers = [
         { text: "ID", value: "id" },
         { text: "Title", value: "title" },
