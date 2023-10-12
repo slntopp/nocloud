@@ -294,6 +294,8 @@ export default {
           (this.template.state.meta.state !== 3 &&
             [0, 18, 20].includes(this.template.state.meta.lcm_state)),
         reboot:
+          this.template.state.meta.lcm_state === 6 ||
+          this.template.state.meta.lcm_state === 21 ||
           this.template.state.meta.state === 5 ||
           (this.template.state.meta.state !== 3 &&
             (this.template.state.meta.lcm_state === 18 ||
@@ -301,10 +303,18 @@ export default {
           (this.template.state.meta.lcm_state === 0 &&
             this.template.state.meta.state === 8),
         resume:
-          this.template.state.meta.state === 3 &&
-          ![18, 20].includes(this.template.state.meta.lcm_state),
-        suspend: this.template.state.meta.state === 5,
-        vnc: this.template.state.meta.state === 5,
+          this.template.state.meta.lcm_state === 21 ||
+          this.template.state.meta.lcm_state === 6 ||
+          (this.template.state.meta.state === 3 &&
+            ![18, 20].includes(this.template.state.meta.lcm_state)),
+        suspend:
+          this.template.state.meta.state === 5 ||
+          this.template.state.meta.lcm_state === 21 ||
+          this.template.state.meta.lcm_state === 6,
+        vnc:
+          this.template.state.meta.state === 5 ||
+          this.template.state.meta.lcm_state === 21 ||
+          this.template.state.meta.lcm_state === 6,
       };
     },
     ovhActions() {
