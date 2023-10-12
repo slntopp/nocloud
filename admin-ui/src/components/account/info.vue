@@ -1,10 +1,17 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <div style="position: absolute; top: 0; right: 75px">
+    <div style="position: absolute; top: 0; right: 25px">
       <div>
-        <v-chip color="primary" outlined
+        <v-chip class="mr-3" color="primary" outlined
           >Balance: {{ account.balance?.toFixed(2) }}
           {{ account.currency }}</v-chip
+        >
+        <v-btn
+          :to="{
+            name: 'Transactions create',
+            params: { account: account.uuid },
+          }"
+          >Create transaction/invoice</v-btn
         >
       </div>
     </div>
