@@ -4,15 +4,9 @@
       class="mr-2"
       v-for="btn in vmControlBtns"
       :key="btn.action + btn.title"
-      :disabled="btn.disabled"
-      :loading="isSendActionLoading"
-      @click="
-        sendVmAction({
-          action: btn.action,
-          template: { ...template, type: type },
-          params: btn.data,
-        })
-      "
+      :disabled="btn.disabled || (!!runningActionName && runningActionName!==btn.action)"
+      :loading="runningActionName === btn.action"
+      @click="sendAction(btn)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -69,6 +63,7 @@ export default {
     isLoading: false,
     isSaveLoading: false,
     isLockLoading: false,
+    runningActionName: "",
   }),
   methods: {
     ...mapActions("actions", ["sendVmAction"]),
@@ -199,6 +194,18 @@ export default {
           this.isSaveLoading = false;
         });
     },
+    async sendAction(btn) {
+      this.runningActionName = btn.action;
+      try {
+        await this.sendVmAction({
+          action: btn.action,
+          template: { ...this.template, type: this.type },
+          params: btn.data,
+        });
+      } finally {
+        this.runningActionName = "";
+      }
+    },
   },
   computed: {
     ...mapGetters("actions", ["isSendActionLoading"]),
@@ -294,6 +301,8 @@ export default {
           (this.template.state.meta.state !== 3 &&
             [0, 18, 20].includes(this.template.state.meta.lcm_state)),
         reboot:
+          this.template.state.meta.lcm_state === 6 ||
+          this.template.state.meta.lcm_state === 21 ||
           this.template.state.meta.state === 5 ||
           (this.template.state.meta.state !== 3 &&
             (this.template.state.meta.lcm_state === 18 ||
@@ -301,10 +310,18 @@ export default {
           (this.template.state.meta.lcm_state === 0 &&
             this.template.state.meta.state === 8),
         resume:
-          this.template.state.meta.state === 3 &&
-          ![18, 20].includes(this.template.state.meta.lcm_state),
-        suspend: this.template.state.meta.state === 5,
-        vnc: this.template.state.meta.state === 5,
+          this.template.state.meta.lcm_state === 21 ||
+          this.template.state.meta.lcm_state === 6 ||
+          (this.template.state.meta.state === 3 &&
+            ![18, 20].includes(this.template.state.meta.lcm_state)),
+        suspend:
+          this.template.state.meta.state === 5 ||
+          this.template.state.meta.lcm_state === 21 ||
+          this.template.state.meta.lcm_state === 6,
+        vnc:
+          this.template.state.meta.state === 5 ||
+          this.template.state.meta.lcm_state === 21 ||
+          this.template.state.meta.lcm_state === 6,
       };
     },
     ovhActions() {

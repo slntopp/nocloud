@@ -32,6 +32,10 @@
 
 <script>
 import config from "@/config.js";
+import snackbar from "@/mixins/snackbar";
+
+const url = "wss://api.nocloud.ione-cloud.net/services";
+let socket;
 
 export default {
   name: "instance-view",
@@ -39,6 +43,7 @@ export default {
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
   }),
+  mixins: [snackbar],
   methods: {
     navTitle(title) {
       if (title && this.navTitles[title]) {
@@ -46,6 +51,34 @@ export default {
       }
 
       return title;
+    },
+    initSocket() {
+      if (!socket && this.instance?.service) {
+        socket = new WebSocket(`${url}/${this.instance.service}/stream`, [
+          "Bearer",
+          this.$store.getters["auth/token"],
+        ]);
+        socket.onmessage = (msg) => {
+          const response = JSON.parse(msg.data).result;
+          if (!response) {
+            this.showSnackbarError({
+              message: `Empty response, message:${
+                JSON.parse(msg.data).error.message
+              }`,
+            });
+            return;
+          }
+
+          try {
+            this.$store.commit("services/updateInstance", {
+              value: response,
+              uuid: this.instance.service,
+            });
+          } catch {
+            socket.close(1000, "job is done");
+          }
+        };
+      }
     },
   },
   computed: {
@@ -68,10 +101,11 @@ export default {
           title: "Info",
           component: () => import("@/components/instance/info.vue"),
         },
-        this.instance?.state && this.instance.billingPlan.type!=='ovh dedicated' && {
-          title: "Snapshots",
-          component: () => import("@/components/instance/snapshots.vue"),
-        },
+        this.instance?.state &&
+          this.instance.billingPlan.type !== "ovh dedicated" && {
+            title: "Snapshots",
+            component: () => import("@/components/instance/snapshots.vue"),
+          },
         {
           title: "Event log",
           component: () => import("@/components/instance/history.vue"),
@@ -98,12 +132,18 @@ export default {
     });
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("accounts/fetch");
-    this.$store.dispatch("servicesProviders/fetch",false);
+    this.$store.dispatch("servicesProviders/fetch", false);
     this.$store.dispatch("plans/fetch");
+
+    this.initSocket();
+  },
+  destroyed() {
+    socket?.close(1000, "job is done");
   },
   watch: {
     instance(newVal) {
       if (newVal) {
+        this.initSocket();
         this.$store.dispatch("plans/fetchItem", this.instance.billingPlan.uuid);
       }
     },
