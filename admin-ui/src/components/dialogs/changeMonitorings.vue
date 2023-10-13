@@ -13,7 +13,7 @@
             <v-card-title>{{ nextPaymentDates[key].title }}</v-card-title>
           </v-col>
           <v-col cols="8">
-            <date-picker :min="min" v-model="nextPaymentDates[key].value" />
+            <date-picker v-model="nextPaymentDates[key].value" />
           </v-col>
         </v-row>
       </div>
@@ -58,7 +58,6 @@ const changeDatesLoading = ref(false);
 const isChangeAll = ref(true);
 const nextPaymentDates = ref({});
 const newAllDate = ref();
-const min = ref();
 
 const setNextPaymentDate = () => {
   const data = JSON.parse(JSON.stringify(template.value.data));
@@ -138,10 +137,6 @@ const changeDates = async () => {
 
 onMounted(() => {
   setNextPaymentDate();
-  //tommoraw
-  min.value = new Date(new Date().getTime() + 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
 });
 </script>
 

@@ -259,7 +259,7 @@ export default {
         case "ovh": {
           return getOvhPrice(inst);
         }
-        case "virtual":
+        case "empty":
         case "ione": {
           const initialPrice =
             inst.billingPlan.products[inst.product]?.price ?? 0;

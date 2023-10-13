@@ -31,6 +31,14 @@
         outlined
         label="Title"
       />
+      <v-card-title class="d-flex align-center"
+        >Service preview
+        <v-switch class="ml-4"
+          v-model.trim="currentLocation.previewEnable"
+          outlined
+        />
+      </v-card-title>
+      <rich-editor v-model="currentLocation.preview" />
       <v-card-title class="text-center">Service settings</v-card-title>
       <v-text-field
         v-model.trim="currentLocation.service.title"

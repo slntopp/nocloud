@@ -150,7 +150,7 @@ const originalProduct = computed(() => {
       );
     }
     case "ione":
-    case "virtual": {
+    case "empty": {
       return template.value.product;
     }
   }
@@ -187,7 +187,7 @@ const instanceTariffPrice = computed(() => {
       ]?.price;
     }
     case "ione":
-    case "virtual": {
+    case "empty": {
       return template.value.billingPlan.products[template.value.product]?.price;
     }
   }
@@ -281,7 +281,7 @@ const setProduct = () => {
       template.value.config.duration + " " + template.value.config.planCode;
   } else if (
     template.value.type === "ione" ||
-    template.value.type === "virtual"
+    template.value.type === "empty"
   ) {
     product.value = template.value.product;
   }

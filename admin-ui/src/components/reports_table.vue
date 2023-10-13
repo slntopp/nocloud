@@ -32,14 +32,16 @@
       :itemsPerPageOptions="itemsPerPageOptions"
     >
       <template v-slot:[`item.totalPreview`]="{ item }">
-        <span>{{ `${item.total} ${item.currency}` }}</span>
+        <v-chip :color="+item.total > 0 ? 'success' : 'error'">{{
+          `${item.total} ${item.currency}`
+        }}</v-chip>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
-        <span>{{
+        <v-chip :color="+item.totalDefault > 0 ? 'success' : 'error'">{{
           item.totalDefault
             ? `${item.totalDefault} ${defaultCurrency}`
             : item.totalDefault
-        }}</span>
+        }}</v-chip>
       </template>
       <template v-slot:[`item.exec`]="{ value }">
         <span>{{ new Date(value * 1000).toLocaleString() }}</span>
@@ -182,7 +184,7 @@ const onUpdateOptions = async (newOptions) => {
 
     reports.value = result.map((r) => {
       return {
-        total: r.total.toFixed(2),
+        total: -r.total.toFixed(2),
         start: r.start,
         end: r.end,
         duration: `${new Date(r.start * 1000).toLocaleString()} - ${new Date(
@@ -196,7 +198,7 @@ const onUpdateOptions = async (newOptions) => {
         instance: r.instance,
         account: r.account,
         type: r.meta.transactionType,
-        totalDefault: convertFrom(r.total, r.currency),
+        totalDefault: -convertFrom(r.total, r.currency),
       };
     });
   } finally {

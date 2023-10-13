@@ -38,8 +38,8 @@
                 :filter="defaultFilterObject"
                 label="Account"
                 v-model="transaction.account"
-                return-object
                 item-text="title"
+                item-value="uuid"
                 :items="accounts"
                 :rules="generalRule"
               />
@@ -304,7 +304,7 @@ export default {
         let total = this.transaction.total;
         const amountType = this.fullType.amount.value;
         if (amountType === null) {
-          const balance = this.transaction.account.balance || 0;
+          const balance = this.fullAccount.balance || 0;
           const difference = Math.abs(total - balance);
           total = (balance > total ? +difference : -difference).toFixed(2);
         } else {
@@ -314,16 +314,16 @@ export default {
 
         const transaction = await api.transactions.create({
           ...this.transaction,
-          account: this.transaction.account.uuid,
+          account: this.transaction.account,
           total,
-          currency: this.transaction.account.currency,
+          currency: this.accountCurrency,
         });
 
         if (this.transaction.meta.transactionType.startsWith("invoice")) {
           await fetch(
             /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
               `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
-                this.transaction.account.uuid
+                this.transaction.account
               }&total=${this.transaction.total}&type=${
                 this.transaction.meta.transactionType.split(" ")[1]
               }&description=${
@@ -374,6 +374,10 @@ export default {
     },
   },
   async created() {
+    if (this.$route.params.account) {
+      this.transaction.account = this.$route.params.account;
+    }
+
     this.initDate();
     this.sendTransactionType();
 
@@ -412,21 +416,24 @@ export default {
     settings() {
       return this.$store.getters["settings/all"];
     },
-    whmcsApi(){
+    whmcsApi() {
       return JSON.parse(
-          this.settings.find(({ key }) => key === "whmcs").value || '{}'
-      ).api
+        this.settings.find(({ key }) => key === "whmcs").value || "{}"
+      ).api;
+    },
+    fullAccount() {
+      return this.accounts.find((a) => a.uuid === this.transaction.account);
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
     accountCurrency() {
-      return this.transaction.account.currency || this.defaultCurrency;
+      return this.fullAccount.currency || this.defaultCurrency;
     },
     servicesByAccount() {
-      if (this.transaction.account) {
+      if (this.fullAccount) {
         const namespace = this.namespaces.find(
-          (n) => n.access.namespace === this.transaction.account?.uuid
+          (n) => n.access.namespace === this.transaction.account
         );
         return this.services.filter(
           (s) => s.access.namespace === namespace?.uuid
