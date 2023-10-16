@@ -1359,6 +1359,11 @@
   dependencies:
     "@types/node" "*"
 
+"@ungap/global-this@^0.4.4":
+  version "0.4.4"
+  resolved "https://registry.yarnpkg.com/@ungap/global-this/-/global-this-0.4.4.tgz#8a1b2cfcd3e26e079a847daba879308c924dd695"
+  integrity sha512-mHkm6FvepJECMNthFuIgpAEFmPOk71UyXuIxYfjytvFTnSDBIz7jmViO+LfHI/AjrazWije0PnSP3+/NlwzqtA==
+
 "@vue/babel-helper-vue-jsx-merge-props@^1.4.0":
   version "1.4.0"
   resolved "https://registry.npmjs.org/@vue/babel-helper-vue-jsx-merge-props/-/babel-helper-vue-jsx-merge-props-1.4.0.tgz"
@@ -1969,6 +1974,11 @@ at-least-node@^1.0.0:
   version "1.0.0"
   resolved "https://registry.npmjs.org/at-least-node/-/at-least-node-1.0.0.tgz"
   integrity sha512-+q/t7Ekv1EDY2l6Gda6LLiX14rU9TV20Wa3ofeQmwPFZbOMo9DXrLbOjFaaclkXKWidIaopwAObQDqwWtGUjqg==
+
+autobind-decorator@^2.4.0:
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/autobind-decorator/-/autobind-decorator-2.4.0.tgz#ea9e1c98708cf3b5b356f7cf9f10f265ff18239c"
+  integrity sha512-OGYhWUO72V6DafbF8PM8rm3EPbfuyMZcJhtm5/n26IDwO18pohE4eNazLoCGhPiXOCD0gEGmrbU3849QvM8bbw==
 
 autoprefixer@^10.2.4:
   version "10.4.14"
@@ -2889,6 +2899,11 @@ core-js@^2.4.0:
   version "2.6.12"
   resolved "https://registry.npmjs.org/core-js/-/core-js-2.6.12.tgz"
   integrity sha512-Kb2wC0fvsWfQrgk8HU5lW6U/Lcs8+9aaYcy4ZFc6DDlo4nZ7n70dEgE5rtR0oG6ufKDUnrwfWL1mXR5ljDatrQ==
+
+core-js@^3.28.0:
+  version "3.33.0"
+  resolved "https://registry.yarnpkg.com/core-js/-/core-js-3.33.0.tgz#70366dbf737134761edb017990cf5ce6c6369c40"
+  integrity sha512-HoZr92+ZjFEKar5HS6MC776gYslNOKHt75mEBKWKnPeFDpZ6nH5OeF3S6HFT1mUAUZKrzkez05VboaX8myjSuw==
 
 core-js@^3.32.1, core-js@^3.8.3:
   version "3.32.1"
@@ -4349,6 +4364,22 @@ jest-worker@^28.0.2:
     merge-stream "^2.0.0"
     supports-color "^8.0.0"
 
+jodit-vue@^2.6.0:
+  version "2.6.0"
+  resolved "https://registry.yarnpkg.com/jodit-vue/-/jodit-vue-2.6.0.tgz#3b2a255076e60f614e271e1b361a49623b6e1dc6"
+  integrity sha512-VTd/5UJe1T9qXM6Zi3252LJxjW/jX2Kfxw6inIIzOZ2eAXCqQKMN0toh/cgabMUSCQjBpXnjtOyqyvO1R2C7xQ==
+  dependencies:
+    "@ungap/global-this" "^0.4.4"
+    jodit "^3.17.1"
+
+jodit@^3.17.1:
+  version "3.24.9"
+  resolved "https://registry.yarnpkg.com/jodit/-/jodit-3.24.9.tgz#575a0218996f31003c230f81db0f056132dea9b5"
+  integrity sha512-t2d73v7GFbGI08ZzdCTwrzi8ZtoOG4icGzD6IIN2e+ghlpUKYxcHZ/Rmy6/mc6055172z+tv7QSr9BcOz6IOFQ==
+  dependencies:
+    autobind-decorator "^2.4.0"
+    core-js "^3.28.0"
+
 joi@^17.4.0:
   version "17.9.2"
   resolved "https://registry.npmjs.org/joi/-/joi-17.9.2.tgz"
@@ -4825,11 +4856,10 @@ nocloud-ui@^1.0.7:
   resolved "https://registry.npmjs.org/nocloud-ui/-/nocloud-ui-1.0.7.tgz"
   integrity sha512-MMuuuBO7BO3HFq1LQqGQoJxGpbrdGgTJEzH0HtwUl0KeHPWaCXXhEytKZgP2HdJJL7CwzzC/Mt8/O4BLQ8lTmg==
 
-
-nocloudjsrest@^1.5.11:
-  version "1.5.11"
-  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.5.11.tgz#b07ec73e95f84d26d1bcda0fec875ca691d22067"
-  integrity sha512-xM6Na/Dj0obmL+uYkrouluWMpSznoR2qwjWK8eCiit9POgDkGKEtDEorFYIdAbpHHlzrsfLrqzrRn7EDbAqmIw==
+nocloudjsrest@^1.5.14:
+  version "1.5.14"
+  resolved "https://registry.yarnpkg.com/nocloudjsrest/-/nocloudjsrest-1.5.14.tgz#c199049f1266ee026a25f5b5c29c3dfe82baeb56"
+  integrity sha512-OIfnJYYeYglZ/bjCciKoLnDbqklSexogfUk8GQsbp+p4vPhFp/9IA5qoZBCITPnx6O8z5ao+OmYjepARV3TW5A==
   dependencies:
     axios "^0.24.0"
 
