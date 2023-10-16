@@ -428,7 +428,7 @@ export default {
       return this.$store.getters["currencies/default"];
     },
     accountCurrency() {
-      return this.fullAccount.currency || this.defaultCurrency;
+      return this.fullAccount?.currency || this.defaultCurrency;
     },
     servicesByAccount() {
       if (this.fullAccount) {
