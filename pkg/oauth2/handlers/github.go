@@ -275,7 +275,7 @@ func (g *GithubOauthHandler) Setup(
 					},
 				}
 				_, err := regClient.Create(ctx, &accounts.CreateRequest{
-					Title:     fmt.Sprintf(name),
+					Title:     name,
 					Namespace: schema.ROOT_NAMESPACE_KEY,
 					Data:      data,
 					Auth: &accounts.Credentials{
