@@ -161,6 +161,8 @@ func (g *GithubOauthHandler) Setup(
 			return
 		}
 
+		log.Debug("Info", zap.Any("info", userInfo))
+
 		value := userInfo[field].(string)
 
 		name := userInfo["name"].(string)
