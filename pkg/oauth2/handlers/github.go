@@ -77,7 +77,17 @@ func (g *GithubOauthHandler) Setup(
 			return
 		}
 
-		response, err := http.Get(fmt.Sprintf("%s%s", userInfoUrl, token.AccessToken))
+		request, err := http.NewRequest("GET", userInfoUrl, nil)
+		if err != nil {
+			log.Error("Failed to create user info request", zap.Error(err))
+			return
+		}
+		request.Header.Set("Accept", "application/vnd.github+json")
+		request.Header.Set("Authorization", "Bearer "+token.AccessToken)
+		request.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+
+		client := http.Client{}
+		response, err := client.Do(request)
 
 		if err != nil {
 			log.Error("Failed to make request", zap.Error(err))
