@@ -191,13 +191,14 @@ const onUpdateOptions = async (newOptions) => {
           r.end * 1000
         ).toLocaleString()}`,
         exec: r.exec,
+        transactionUuid:r.meta?.transaction,
         currency: r.currency,
         item: r.product || r.resource,
         uuid: r.uuid,
         service: r.service,
         instance: r.instance,
         account: r.account,
-        type: r.meta.transactionType,
+        type: r.meta?.transactionType,
         totalDefault: -convertFrom(r.total, r.currency),
       };
     });
@@ -237,7 +238,7 @@ const sendEmail = async (report) => {
   try {
     await fetch(
       /https:\/\/(.+?\.?\/)/.exec(whmcsApi.value)[0] +
-        `modules/addons/nocloud/api/index.php?run=send_email&account=${report.account}&invoiceid=${report.uuid}`
+        `modules/addons/nocloud/api/index.php?run=send_email&account=${report.account}&invoiceid=${report.transactionUuid}`
     );
     store.commit("snackbar/showSnackbarError", {
       message: "Email resend successfully",
