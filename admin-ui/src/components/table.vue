@@ -14,8 +14,8 @@
     :hide-default-footer="hideDefaultFooter"
     :single-select="singleSelect"
     :headers="filtredHeaders"
-    :sort-by="sortByTable"
-    :sort-desc="sortDesc"
+    :sort-by="tableSortBy"
+    :sort-desc="tableSortDesc"
     :expanded="expanded"
     @update:expanded="(nw) => $emit('update:expanded', nw)"
     :show-expand="showExpand"
@@ -29,7 +29,7 @@
     :server-items-length="serverItemsLength"
     :options="options"
     :footer-props="{ 'items-per-page-options': itemsPerPageOptions }"
-    @update:options="$emit('update:options', $event)"
+    @update:options="updateOptions"
     @update:items-per-page="saveItemsPerPage"
   >
     <template v-if="!noHideUuid" v-slot:[`item.${itemKey}`]="props">
@@ -317,6 +317,8 @@ export default {
       columns: {},
       filter: [],
       filtredHeaders: [],
+      tableSortBy: "title",
+      tableSortDesc: false,
       settingsDialog: false,
     };
   },
@@ -549,10 +551,29 @@ export default {
         this.itemsPerPage = +itemsPerPage[this.tableName] || 15;
       }
     },
-  },
-  computed: {
-    sortByTable() {
-      return this.sortBy || "title";
+    updateOptions(options) {
+      if (this.tableName) {
+        this.saveSortBy(options);
+      }
+      this.$emit("update:options", options);
+    },
+    saveSortBy(options) {
+      const sorts = JSON.parse(localStorage.getItem("sorts") || "{}");
+      sorts[this.tableName] = !options.sortBy[0]
+        ? undefined
+        : options.sortBy[0] + "$" + options.sortDesc[0];
+      localStorage.setItem("sorts", JSON.stringify(sorts));
+    },
+    configureSortBy() {
+      const sorts = JSON.parse(localStorage.getItem("sorts") || "{}");
+      if (sorts[this.tableName]) {
+        const [sortBy, sortDesc] = sorts[this.tableName].split("$");
+        this.tableSortBy = sortBy;
+        this.tableSortDesc = sortDesc==='true';
+      } else if (this.sortBy) {
+        this.tableSortBy = this.sortBy;
+        this.tableSortDesc = !!this.sortDesc;
+      }
     },
   },
   beforeDestroy() {
@@ -561,6 +582,7 @@ export default {
   },
   created() {
     this.configureItemsPerPage();
+    this.configureSortBy();
   },
   mounted() {
     window.addEventListener("beforeunload", this.saveTableData);
