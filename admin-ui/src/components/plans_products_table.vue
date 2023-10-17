@@ -147,17 +147,16 @@
                 dense
                 class="pt-4"
                 label="Image link"
-                v-if="type === 'virtual'"
+                v-if="type === 'empty'"
                 v-model="item.meta.image"
               />
               <v-subheader class="px-0">
                 {{
-                  type === "virtual" ? "Description" : "Amount of resources"
+                  type === "empty" ? "Description" : "Amount of resources"
                 }}:
               </v-subheader>
-
               <rich-editor
-                v-if="type === 'virtual'"
+                v-if="type === 'empty'"
                 v-model="item.meta.description"
               />
               <json-editor

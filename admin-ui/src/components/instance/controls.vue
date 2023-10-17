@@ -260,24 +260,24 @@ export default {
             disabled: this.ovhActions?.reboot,
           },
         ],
-        virtual: [
+        empty: [
           {
             action: "change_state",
             data: { state: 3 },
             title: "start",
-            disabled: this.virtualActions.start,
+            disabled: this.emptyActions.start,
           },
           {
             action: "change_state",
             data: { state: 2 },
             title: "stop",
-            disabled: this.virtualActions.stop,
+            disabled: this.emptyActions.stop,
           },
           {
             action: "change_state",
             data: { state: 6 },
             title: "suspend",
-            disabled: this.virtualActions.suspend,
+            disabled: this.emptyActions.suspend,
           },
         ],
         opensrs: [{ action: "dns" }],
@@ -350,7 +350,7 @@ export default {
         vnc: this.template.state.state !== "RUNNING",
       };
     },
-    virtualActions() {
+    emptyActions() {
       if (!this.template?.state || this.template.state.state === "PENDING")
         return {
           stop: true,
@@ -368,7 +368,7 @@ export default {
         : this.template.type;
 
       switch (type) {
-        case "virtual":
+        case "empty":
         case "openai":
         case "ione": {
           return (item) => {
@@ -424,7 +424,7 @@ export default {
           );
         }
         case "ione":
-        case "virtual": {
+        case "empty": {
           return this.template.product;
         }
       }
