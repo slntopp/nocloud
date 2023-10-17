@@ -155,9 +155,7 @@
                   type === "empty" ? "Description" : "Amount of resources"
                 }}:
               </v-subheader>
-
-              <vue-editor
-                class="html-editor"
+              <rich-editor
                 v-if="type === 'empty'"
                 v-model="item.meta.description"
               />
@@ -196,7 +194,6 @@
 
 <script setup>
 import { onMounted, ref, toRefs, watch } from "vue";
-import { VueEditor } from "vue2-editor";
 import dateField from "@/components/date.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
@@ -204,6 +201,7 @@ import plansResourcesTable from "@/components/plans_resources_table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { getFullDate } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
+import RichEditor from "@/components/ui/richEditor.vue";
 
 const props = defineProps({
   type: { type: String, required: true },
@@ -460,33 +458,5 @@ watch(
 <style lang="scss">
 .mw-20 {
   max-width: 150px;
-}
-.html-editor {
-  span.ql-picker-label {
-    color: white;
-  }
-}
-
-.quillWrapper .ql-snow .ql-stroke {
-  stroke: rgb(255 255 255 / 95%) !important;
-}
-.ql-snow .ql-fill {
-  fill: white;
-}
-
-.quillWrapper .ql-editor {
-  color: white;
-}
-.quillWrapper .ql-editor ul[data-checked="false"] > li::before {
-  color: white !important;
-}
-.quillWrapper .ql-editor ul[data-checked="true"] > li::before {
-  color: white !important;
-}
-
-.ql-active {
-  color: #e06ffe !important;
-  fill: #e06ffe !important;
-  stroke: #e06ffe !important;
 }
 </style>
