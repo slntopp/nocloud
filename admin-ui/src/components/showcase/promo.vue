@@ -33,7 +33,8 @@
       />
       <v-card-title class="d-flex align-center"
         >Service preview
-        <v-switch class="ml-4"
+        <v-switch
+          class="ml-4"
           v-model.trim="currentLocation.previewEnable"
           outlined
         />
@@ -221,6 +222,8 @@ watch(language, (newValue, prevValue) => {
       locations: {},
       offer: { text: "", src: "", link: "" },
       rewards: { description: "", title: "" },
+      preview: "",
+      previewEnable: false,
       ...template.value.promo?.[language.value],
     };
   }
