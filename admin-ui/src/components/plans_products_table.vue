@@ -155,10 +155,17 @@
                   type === "empty" ? "Description" : "Amount of resources"
                 }}:
               </v-subheader>
-              <rich-editor
-                v-if="type === 'empty'"
-                v-model="item.meta.description"
-              />
+
+              <template v-if="type === 'empty'">
+                <rich-editor class="html-editor" v-model="item.meta.description" />
+                <plans-empty-table
+                  :resources="item.meta.resources ?? []"
+                  @update:resource="(value) =>
+                    changeMeta(value, item.id, item.meta.resources)
+                  "
+                />
+              </template>
+
               <json-editor
                 v-else
                 :json="item.resources"
@@ -198,6 +205,7 @@ import dateField from "@/components/date.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
 import plansResourcesTable from "@/components/plans_resources_table.vue";
+import plansEmptyTable from "@/components/plans_empty_table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { getFullDate } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
@@ -208,7 +216,7 @@ const props = defineProps({
   products: { type: Object, required: true },
   resources: { type: Array, required: true },
 });
-const emits = defineEmits(["change:resource", "change:product"]);
+const emits = defineEmits(["change:resource", "change:product", "change:meta"]);
 const { products, resources } = toRefs(props);
 
 const { defaultCurrency } = useCurrency();
@@ -257,6 +265,24 @@ function changeProduct(key, value, id) {
 
 function changeResource(data) {
   emits("change:resource", data);
+}
+
+function changeMeta(data, id, resources) {
+  const value = (data.key === "resources")
+    ? data.value
+    : JSON.parse(JSON.stringify(resources));
+
+  if (data.key !== "resources") {
+    const i = value.findIndex(({ id }) => id === data.id);
+
+    try {
+      value[i][data.key] = JSON.parse(data.value);
+    } catch {
+      value[i][data.key] = data.value;
+    }
+  }
+
+  emits("change:meta", { key: "resources", value, id });
 }
 
 const setProductsArray = () => {
