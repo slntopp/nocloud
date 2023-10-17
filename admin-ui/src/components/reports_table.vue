@@ -240,7 +240,7 @@ const sendEmail = async (report) => {
       /https:\/\/(.+?\.?\/)/.exec(whmcsApi.value)[0] +
         `modules/addons/nocloud/api/index.php?run=send_email&account=${report.account}&invoiceid=${report.transactionUuid}`
     );
-    store.commit("snackbar/showSnackbarError", {
+    store.commit("snackbar/showSnackbarSuccess", {
       message: "Email resend successfully",
     });
   } catch {
