@@ -314,6 +314,23 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
+    <instances-table-modal
+      v-if="overlay.uuid"
+      :uuid="overlay.uuid"
+      :visible="overlay.isVisible"
+      @close="() => { overlay.isVisible = false }"
+    >
+      <template #activator>
+        <v-btn
+          color="success"
+          style="position: absolute; top: 90px; right: 25px; z-index: 100"
+          @click="overlay.isVisible = true"
+        >
+          {{ overlay.buttonTitle }}
+        </v-btn>
+      </template>
+    </instances-table-modal>
+
     <v-main>
       <router-view />
     </v-main>
@@ -323,21 +340,34 @@
 </template>
 
 <script>
+import api from "@/api.js";
 import config from "@/config.js";
 import balance from "@/components/balance.vue";
 import languages from "@/components/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
+import instancesTableModal from "@/components/instances_table_modal.vue";
 
 export default {
   name: "App",
-  components: { AppSnackbar, balance, appSearch, languages },
+  components: {
+    AppSnackbar,
+    balance,
+    appSearch,
+    languages,
+    instancesTableModal
+  },
   data: () => ({
     isMenuMinimize: true,
     isMouseOnMenu: false,
     easterEgg: false,
     config,
     navTitles: config.navTitles ?? {},
+    overlay: {
+      isVisible: false,
+      buttonTitle: '',
+      uuid: ''
+    }
   }),
   methods: {
     logoutHandler() {
@@ -423,11 +453,24 @@ export default {
   },
   created() {
     window.addEventListener("message", ({ data, origin }) => {
-      const url = `https://app.${location.host.split(".").slice(1).join(".")}`;
+      if (origin.includes("localhost") || !data) return;
+      if (data === "ready") return;
+      if (data.type === "get-user") {
+        const setting = "plugin-chats-overlay";
 
-      if (origin !== url) return;
-      this.$store.commit("auth/setToken", data);
-      location.assign("/admin");
+        api.settings.get([setting]).then((res) => {
+          const { title } = JSON.parse(res[setting]);
+
+          this.overlay.buttonTitle = title;
+          this.overlay.uuid = data.value.uuid;
+        });
+        return;
+      }
+      if (data.type === "open-user") {
+        window.open(`/admin/accounts/${data.value.uuid}`, "_blank");
+        return;
+      }
+      console.log(data, origin);
     });
 
     this.$store.dispatch("auth/load");
@@ -465,6 +508,8 @@ export default {
     });
 
     this.$router.afterEach((to) => {
+      this.overlay.uuid = "";
+      this.overlay.buttonTitle = "";
       this.setTitle(to.name);
     });
 

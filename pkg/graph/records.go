@@ -17,6 +17,7 @@ package graph
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -190,12 +191,12 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 	}
 
 	if req.Account != nil {
-		query += ` FILTER t.account == @acc`
+		query += ` FILTER record.account == @acc`
 		params["acc"] = req.GetAccount()
 	}
 
 	if req.Service != nil {
-		query += ` FILTER t.service == @srv`
+		query += ` FILTER record.service == @srv`
 		params["srv"] = req.GetService()
 	}
 
@@ -215,7 +216,11 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+			if key == "transactionType" {
+				query += fmt.Sprintf(` FILTER record.meta["%s"] in @%s`, key, key)
+			} else {
+				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+			}
 			params[key] = values
 		}
 	}
@@ -283,12 +288,12 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 	}
 
 	if req.Account != nil {
-		query += ` FILTER t.account == @acc`
+		query += ` FILTER record.account == @acc`
 		params["acc"] = req.GetAccount()
 	}
 
 	if req.Service != nil {
-		query += ` FILTER t.service == @srv`
+		query += ` FILTER record.service == @srv`
 		params["srv"] = req.GetService()
 	}
 
@@ -308,7 +313,11 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+			if key == "transactionType" {
+				query += fmt.Sprintf(` FILTER record.meta["%s"] in @%s`, key, key)
+			} else {
+				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+			}
 			params[key] = values
 		}
 	}
@@ -325,6 +334,53 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 	_, err = cursor.ReadDocument(ctx, &result)
 	if err != nil {
 		return 0, err
+	}
+
+	return result, nil
+}
+
+const uniqueQuery = `
+LET records = (
+	FOR r in @@records
+	FILTER r.meta != null
+	FILTER r.meta.transactionType != null
+	FILTER r.meta.transactionType != ""
+	RETURN r
+)
+
+RETURN UNIQUE(records[*].meta.transactionType)
+`
+
+func (ctrl *RecordsController) GetUnique(ctx context.Context) (map[string]interface{}, error) {
+
+	cur, err := ctrl.db.Query(ctx, uniqueQuery, map[string]interface{}{
+		"@records": schema.RECORDS_COL,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var types []string
+
+	_, err = cur.ReadDocument(ctx, &types)
+	if err != nil {
+		return nil, err
+	}
+
+	marshal, err := json.Marshal(types)
+	if err != nil {
+		return nil, err
+	}
+
+	var iTypes []interface{}
+
+	err = json.Unmarshal(marshal, &iTypes)
+	if err != nil {
+		return nil, err
+	}
+
+	var result = map[string]interface{}{
+		"transactionType": iTypes,
 	}
 
 	return result, nil

@@ -69,6 +69,7 @@
               <login-in-account-icon
                 :uuid="account?.uuid"
                 :instanceId="template.uuid"
+                :type="template.type"
               />
             </template>
           </v-text-field>

@@ -3,22 +3,21 @@
 </template>
 
 <script setup>
-import api from "@/api";
 import { useStore } from "@/store";
 
-const props = defineProps(["uuid", "instanceId"]);
+const props = defineProps(["uuid", "instanceId", "type"]);
 const store = useStore();
 
 const loginHandler = () => {
   store
     .dispatch("auth/loginToApp", { uuid: props.uuid, type: "whmcs" })
     .then(({ token }) => {
-      api.settings.get(["app"]).then((res) => {
+      store.dispatch('auth/getAppURL').then((res) => {
         const win = window.open(JSON.parse(res.app).url);
 
-        setTimeout(() => {
-          win.postMessage({ token, uuid: props.instanceId }, "*");
-        }, 300);
+        window.addEventListener('message', () => {
+          win.postMessage({ token, uuid: props.instanceId, type: props.type }, "*");
+        });
       });
     })
     .catch((e) => {
