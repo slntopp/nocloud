@@ -559,6 +559,14 @@ export default {
     },
     saveSortBy(options) {
       const sorts = JSON.parse(localStorage.getItem("sorts") || "{}");
+      if (!options.sortBy[0] && sorts[this.tableName]) {
+        const [sortBy] = sorts[this.tableName].split("$");
+        this.tableSortBy = sortBy;
+        this.tableSortDesc = false;
+        options.sortBy.push(sortBy);
+        options.sortDesc.push(false);
+      }
+
       sorts[this.tableName] = !options.sortBy[0]
         ? undefined
         : options.sortBy[0] + "$" + options.sortDesc[0];
@@ -569,7 +577,7 @@ export default {
       if (sorts[this.tableName]) {
         const [sortBy, sortDesc] = sorts[this.tableName].split("$");
         this.tableSortBy = sortBy;
-        this.tableSortDesc = sortDesc==='true';
+        this.tableSortDesc = sortDesc === "true";
       } else if (this.sortBy) {
         this.tableSortBy = this.sortBy;
         this.tableSortDesc = !!this.sortDesc;
