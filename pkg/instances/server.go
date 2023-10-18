@@ -207,7 +207,7 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 }
 
 func (s *InstancesServer) Detach(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
-	log := s.log.Named("delete")
+	log := s.log.Named("Detach")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -253,7 +253,7 @@ func (s *InstancesServer) Detach(ctx context.Context, req *pb.DeleteRequest) (*p
 }
 
 func (s *InstancesServer) Attach(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
-	log := s.log.Named("delete")
+	log := s.log.Named("Attach")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
