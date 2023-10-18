@@ -7,10 +7,16 @@ export default {
     ...mapGetters("app", ["theme"]),
   },
   created() {
-    this.$store.commit(
-      "app/setTheme",
-      localStorage.getItem("nocloud-theme") || undefined
-    );
+    let savedTheme = localStorage.getItem("nocloud-theme");
+    if (!savedTheme && window.matchMedia) {
+      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        savedTheme = "dark";
+      } else {
+        savedTheme = "light";
+      }
+    }
+
+    this.$store.commit("app/setTheme", savedTheme || undefined);
     this.$vuetify.theme.dark = this.theme === "dark";
   },
   watch: {
@@ -22,16 +28,31 @@ export default {
 </script>
 
 <script setup>
-import { computed, watch } from "vue";
+import { computed, watch, ref, onMounted } from "vue";
 import { useStore } from "@/store";
 
 const store = useStore();
+const systemTheme = ref("");
+
+onMounted(() => {
+  if (window.matchMedia) {
+    if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      systemTheme.value = "dark";
+    } else {
+      systemTheme.value = "light";
+    }
+  }
+});
 
 const themes = computed(() => {
-  return [
+  const themes = [
     { title: "dark", icon: "mdi-moon-waning-crescent" },
     { title: "light", icon: "mdi-brightness-5" },
   ];
+  if (systemTheme.value) {
+    themes.push({ title: "system", icon: "mdi-cog" });
+  }
+  return themes;
 });
 
 const theme = computed(() => store.getters["app/theme"]);
@@ -41,6 +62,9 @@ const currentTheme = computed(() => {
 });
 
 const changeTheme = (theme) => {
+  if (theme === "system") {
+    theme = systemTheme.value;
+  }
   store.commit("app/setTheme", theme);
 };
 
