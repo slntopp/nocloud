@@ -206,6 +206,52 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 	}, nil
 }
 
+func (s *InstancesServer) Detach(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+	log := s.log.Named("delete")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
+	var instance graph.Instance
+	instance, err := graph.GetWithAccess[graph.Instance](
+		ctx, s.db,
+		instance_id,
+	)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if instance.GetAccess().GetLevel() < accesspb.Level_MGMT {
+		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	err = s.ctrl.SetStatus(ctx, instance.Instance, spb.NoCloudStatus_DETACHED)
+	if err != nil {
+		return nil, err
+	}
+
+	var event = &elpb.Event{
+		Entity:    schema.INSTANCES_COL,
+		Uuid:      req.GetUuid(),
+		Scope:     "database",
+		Action:    "detach",
+		Rc:        0,
+		Requestor: requestor,
+		Ts:        time.Now().Unix(),
+		Snapshot: &elpb.Snapshot{
+			Diff: "",
+		},
+	}
+
+	nocloud.Log(log, event)
+
+	return &pb.DeleteResponse{
+		Result: true,
+	}, nil
+}
+
 func (s *InstancesServer) TransferIG(ctx context.Context, req *pb.TransferIGRequest) (*pb.TransferIGResponse, error) {
 	log := s.log.Named("transfer")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
