@@ -94,7 +94,6 @@ func (g *GithubOauthHandler) Setup(
 			Token:       authHeaderSplit[1],
 			Method:      "link",
 		}
-		log.Debug("Put state", zap.Any("state", g.states[state]))
 		g.m.Unlock()
 
 		url := oauth2Config.AuthCodeURL(state)
