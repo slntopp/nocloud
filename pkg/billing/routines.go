@@ -107,6 +107,7 @@ func (s *BillingServiceServer) GenTransactions(ctx context.Context, log *zap.Log
 	_, err = s.db.Query(ctx, processTransactions, map[string]interface{}{
 		"@transactions": schema.TRANSACTIONS_COL,
 		"@accounts":     schema.ACCOUNTS_COL,
+		"@records":      schema.RECORDS_COL,
 		"accounts":      schema.ACCOUNTS_COL,
 		"now":           tick.Unix(),
 		"graph":         schema.BILLING_GRAPH.Name,
@@ -385,6 +386,9 @@ FILTER !t.processed
 			RETURN edge.rate
 	)
 	LET total = t.total * rate
+
+	FOR r in t.records
+		UPDATE r WITH {meta: {transaction: t._key}} in @@records
 
     UPDATE account WITH { balance: account.balance - t.total * rate} IN @@accounts
     UPDATE t WITH { 

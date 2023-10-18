@@ -107,6 +107,7 @@
             :products="filteredProducts"
             @change:resource="(data) => changeConfig(data, 'resource')"
             @change:product="(data) => changeConfig(data, 'product')"
+            @change:meta="(data) => changeMetaConfig(data, 'meta')"
           />
         </v-col>
       </v-row>
@@ -252,6 +253,19 @@ export default {
       }
 
       if (product) product[key] = value;
+    },
+    changeMetaConfig({ key, value, id }) {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        value;
+      }
+
+      const product = Object.values(this.plan.products)
+        .find((product) => product.id === id);
+      
+      this.$set(product.meta, key, value);
+      this.plan.meta = Object.assign({}, this.plan.meta);
     },
     tryToSend(action) {
       let message = "";

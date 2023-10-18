@@ -3,7 +3,7 @@
     <div style="position: absolute; top: 0; right: 25px">
       <div>
         <v-chip class="mr-3" color="primary" outlined
-          >Balance: {{ account.balance?.toFixed(2) }}
+          >Balance: {{ account.balance?.toFixed(2) || 0 }}
           {{ account.currency }}</v-chip
         >
         <v-btn

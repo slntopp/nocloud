@@ -17,7 +17,24 @@
         </v-list-item>
       </v-list>
     </v-menu>
-
+    <v-row class="mt-3" v-if="!isPlansLoading">
+      <v-col cols="2">
+        <v-btn
+          :loading="isAddonsLoading && setToAllValue === true"
+          :disabled="isAddonsLoading && setToAllValue !== true"
+          @click="setEnabledToTab(true)"
+          >Enable all</v-btn
+        >
+      </v-col>
+      <v-col cols="2">
+        <v-btn
+          :loading="isAddonsLoading && setToAllValue === false"
+          :disabled="isAddonsLoading && setToAllValue !== false"
+          @click="setEnabledToTab(false)"
+          >Disable all</v-btn
+        >
+      </v-col>
+    </v-row>
     <nocloud-table
       table-name="dedicated-prices"
       sort-by="isBeenSell"
@@ -126,9 +143,15 @@
       <template v-slot:[`item.addons`]="{ item }">
         <v-dialog width="90vw">
           <template v-slot:activator="{ on, attrs }">
-            <v-icon v-bind="attrs" v-on="on" @click="fetchAddons(item)">
-              mdi-menu-open
-            </v-icon>
+            <v-btn
+              icon
+              v-bind="attrs"
+              v-on="on"
+              :disabled="isAddonsLoading"
+              @click="fetchAddonsToOne(item)"
+            >
+              <v-icon> mdi-menu-open </v-icon>
+            </v-btn>
           </template>
 
           <nocloud-table
@@ -164,7 +187,12 @@
         </v-dialog>
       </template>
       <template v-slot:[`item.sell`]="{ item }">
-        <v-switch v-model="item.sell" @change="fetchAddons(item)" />
+        <v-switch
+          :loading="isAddonsLoading && fetchAddonsItemId === item.id"
+          :disabled="isAddonsLoading && fetchAddonsItemId !== item.id"
+          v-model="item.sell"
+          @change="fetchAddonsToOne(item)"
+        />
       </template>
     </nocloud-table>
   </div>
@@ -235,6 +263,8 @@ export default {
     column: "",
     fetchError: "",
     isAddonsLoading: false,
+    fetchAddonsItemId: "",
+    setToAllValue: null,
 
     groups: [],
     newGroup: { mode: "none", name: "", planId: "" },
@@ -244,7 +274,7 @@ export default {
     getAddons({ planCode, duration }) {
       return this.addons[planCode]?.filter((a) => a.duration === duration);
     },
-    fetchAddons({ planCode, sell }) {
+    async fetchAddons({ planCode, sell }) {
       if (this.addons[planCode]) {
         this.addons[planCode].forEach(({ price }, i) => {
           if (price.value !== 0) return;
@@ -253,47 +283,53 @@ export default {
         return;
       }
 
-      this.isAddonsLoading = true;
-      api
-        .post(`/sp/${this.sp.uuid}/invoke`, {
+      try {
+        const {
+          meta: { options },
+        } = await api.post(`/sp/${this.sp.uuid}/invoke`, {
           method: "get_baremetal_options",
           params: { planCode },
-        })
-        .then(({ meta: { options } }) => {
-          const {
-            bandwidth = [],
-            memory = [],
-            storage = [],
-            vrack = [],
-            ["system-storage"]: sys = [],
-          } = options;
-          const plans = [...bandwidth, ...memory, ...storage, ...vrack, ...sys];
-          const value = this.setPlans({ plans }, planCode);
-          this.setFee(value);
-          this.$set(
-            this.addons,
-            planCode,
-            value.map((addon) => {
-              const resource = this.template.resources.find(
-                (el) => addon.id === el.key
-              );
-
-              if (resource) {
-                addon.value = resource.price;
-                addon.sell = true;
-              }
-              if (addon.price.value === 0 && sell) addon.sell = true;
-
-              return addon;
-            })
-          );
-        })
-        .catch((err) => {
-          console.error(err);
-        })
-        .finally(() => {
-          this.isAddonsLoading = false;
         });
+        const {
+          bandwidth = [],
+          memory = [],
+          storage = [],
+          vrack = [],
+          ["system-storage"]: sys = [],
+        } = options;
+        const plans = [...bandwidth, ...memory, ...storage, ...vrack, ...sys];
+        const value = this.setPlans({ plans }, planCode);
+        this.setFee(value);
+        this.$set(
+          this.addons,
+          planCode,
+          value.map((addon) => {
+            const resource = this.template.resources.find(
+              (el) => addon.id === el.key
+            );
+
+            if (resource) {
+              addon.value = resource.price;
+              addon.sell = true;
+            }
+            if (addon.price.value === 0 && sell) addon.sell = true;
+
+            return addon;
+          })
+        );
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    async fetchAddonsToOne(tariff) {
+      this.isAddonsLoading = true;
+      this.fetchAddonsItemId = tariff.id;
+      try {
+        await this.fetchAddons(tariff);
+      } finally {
+        this.fetchAddonsItemId = "";
+        this.isAddonsLoading = false;
+      }
     },
     async changePlan(plan) {
       if (!this.plans.every(({ group }) => this.groups.includes(group))) {
@@ -334,7 +370,7 @@ export default {
           ? this.getAddons(el)
               .filter((addon) => addon.sell)
               ?.map((el) => ({ id: el.planCode, title: el.name }))
-          : plan.products[el.id]?.meta.addons;
+          : this.template.products[el.id]?.meta.addons;
 
         const datacenter =
           requiredConfiguration.find((el) => el.label.includes("datacenter"))
@@ -623,6 +659,37 @@ export default {
     convertPrice(price) {
       return (price * this.plnRate).toFixed(2);
     },
+    async setEnabledToTab(value) {
+      this.plans = this.plans.map((p) => {
+        const { planCode, duration } = p;
+        const inFilter = !!this.filteredPlans.find(
+          (fp) => fp.planCode === planCode && duration === fp.duration
+        );
+        if (inFilter) {
+          p.sell = value;
+        }
+
+        return p;
+      });
+      this.setToAllValue = value;
+      this.isAddonsLoading = true;
+      try {
+        await Promise.all(this.filteredPlans.map((p) => this.fetchAddons(p)));
+        this.filteredPlans.forEach(({ planCode }) =>
+          this.$set(
+            this.addons,
+            planCode,
+            this.addons[planCode].map((addon) => {
+              addon.sell = value;
+              return addon;
+            })
+          )
+        );
+      } finally {
+        this.setToAllValue = null;
+        this.isAddonsLoading = false;
+      }
+    },
   },
   created() {
     this.$emit("changeLoading");
@@ -634,6 +701,24 @@ export default {
       })
       .then(({ meta }) => {
         this.plans = this.setPlans(meta);
+        this.groups = [];
+        this.plans.forEach((plan, i) => {
+          const product = this.template.products[plan.id];
+          const title = (product?.title ?? plan.name).toUpperCase();
+          const group = product?.group || title.split(/[\W0-9]/)[0];
+
+          if (product) {
+            this.plans[i].name = product.title;
+            this.plans[i].value = product.price;
+            this.plans[i].sell = true;
+            this.plans[i].isBeenSell = true;
+          } else {
+            this.plans[i].name = title;
+          }
+          this.plans[i].group = group;
+
+          if (!this.groups.includes(group)) this.groups.push(group);
+        });
 
         this.fetchError = "";
         this.changeIcon();
@@ -680,30 +765,6 @@ export default {
       this.$emit("changeFee", this.template.fee ?? {});
       setTimeout(() => {
         this.setFee(this.plans);
-
-        this.groups = [];
-        this.plans.forEach((plan, i) => {
-          const product = this.template.products[plan.id];
-          const title = (product?.title ?? plan.name).toUpperCase();
-          const group = product?.group || title.split(/[\W0-9]/)[0];
-
-          if (product) {
-            this.plans[i].name = product.title;
-            this.plans[i].value = product.price;
-            this.plans[i].sell = true;
-            this.plans[i].isBeenSell = true;
-          } else {
-            this.plans[i].name = title;
-          }
-          this.plans[i].group = group;
-
-          if (!this.groups.includes(group)) this.groups.push(group);
-        });
-
-        if (Object.keys(this.template.products).length === this.plans.length) {
-          this.filters.Sell = ["true"];
-          this.selected.Sell = ["true"];
-        }
       });
     },
   },
