@@ -2,6 +2,7 @@ import Vue from "vue";
 import Vuex from "vuex";
 
 // modules
+import app from "./app";
 import auth from "./auth";
 import namespaces from "./namespaces";
 import accounts from "./accounts";
@@ -27,6 +28,7 @@ const store = new Vuex.Store({
   mutations: {},
   actions: {},
   modules: {
+    app,
     auth,
     namespaces,
     accounts,
