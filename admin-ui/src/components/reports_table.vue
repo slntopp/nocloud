@@ -32,14 +32,16 @@
       :itemsPerPageOptions="itemsPerPageOptions"
     >
       <template v-slot:[`item.totalPreview`]="{ item }">
-        <span>{{ `${item.total} ${item.currency}` }}</span>
+        <v-chip :color="+item.total > 0 ? 'success' : 'error'">{{
+          `${item.total} ${item.currency}`
+        }}</v-chip>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
-        <span>{{
+        <v-chip :color="+item.totalDefault > 0 ? 'success' : 'error'">{{
           item.totalDefault
             ? `${item.totalDefault} ${defaultCurrency}`
             : item.totalDefault
-        }}</span>
+        }}</v-chip>
       </template>
       <template v-slot:[`item.exec`]="{ value }">
         <span>{{ new Date(value * 1000).toLocaleString() }}</span>
@@ -182,21 +184,22 @@ const onUpdateOptions = async (newOptions) => {
 
     reports.value = result.map((r) => {
       return {
-        total: r.total.toFixed(2),
+        total: -r.total.toFixed(2),
         start: r.start,
         end: r.end,
         duration: `${new Date(r.start * 1000).toLocaleString()} - ${new Date(
           r.end * 1000
         ).toLocaleString()}`,
         exec: r.exec,
+        transactionUuid:r.meta?.transaction,
         currency: r.currency,
         item: r.product || r.resource,
         uuid: r.uuid,
         service: r.service,
         instance: r.instance,
         account: r.account,
-        type: r.meta.transactionType,
-        totalDefault: convertFrom(r.total, r.currency),
+        type: r.meta?.transactionType,
+        totalDefault: -convertFrom(r.total, r.currency),
       };
     });
   } finally {
@@ -235,9 +238,9 @@ const sendEmail = async (report) => {
   try {
     await fetch(
       /https:\/\/(.+?\.?\/)/.exec(whmcsApi.value)[0] +
-        `modules/addons/nocloud/api/index.php?run=send_email&account=${report.account}&invoiceid=${report.uuid}`
+        `modules/addons/nocloud/api/index.php?run=send_email&account=${report.account}&invoiceid=${report.transactionUuid}`
     );
-    store.commit("snackbar/showSnackbarError", {
+    store.commit("snackbar/showSnackbarSuccess", {
       message: "Email resend successfully",
     });
   } catch {

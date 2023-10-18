@@ -84,6 +84,7 @@
               params: {
                 serviceId,
                 serviceProviderId: newInstance.serviceProviderId,
+                accountId: newInstance.account,
                 type:
                   newInstance.type === 'custom'
                     ? newInstance.customTitle
@@ -289,14 +290,7 @@ export default {
       return this.$store.getters["services/all"];
     },
     accounts() {
-      return this.$store.getters["accounts/all"].filter((acc) => {
-        const namespace = this.namespaces.find(
-          (n) => n.access.namespace === acc.uuid
-        );
-        return this.services.find(
-          (s) => s.access.namespace === namespace?.uuid
-        );
-      });
+      return this.$store.getters["accounts/all"];
     },
     namespaces() {
       return this.$store.getters["namespaces/all"];
