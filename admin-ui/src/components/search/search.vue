@@ -76,7 +76,7 @@
           </template>
         </v-text-field>
       </template>
-      <v-card v-if="searchItems.length || selectedGroupKey">
+      <v-card color="background-light" v-if="searchItems.length || selectedGroupKey">
         <v-card-subtitle v-if="selectedGroupKey">
           <v-btn class="mr-4" icon @click="selectedGroupKey = null">
             <v-icon>mdi-arrow-left</v-icon>
@@ -84,7 +84,7 @@
           {{ variants[selectedGroupKey].title }}
         </v-card-subtitle>
         <div style="max-height: 600px">
-          <v-list ref="searchList" color="grey darken-4">
+          <v-list ref="searchList" color="background-light">
             <v-list-item-group
               @change="changeSearchListHandler"
               :value="selectedGroupKey"

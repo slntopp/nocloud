@@ -5,13 +5,13 @@
         <v-expansion-panels :value="0">
           <v-expansion-panel>
             <v-expansion-panel-header
-              color="indigo darken-4"
-              style="padding-left: 16px; color: rgba(255, 255, 255, 0.7)"
+              color="background"
+              style="padding-left: 16px"
             >
               Ranged margin (%)
             </v-expansion-panel-header>
-            <v-expansion-panel-content color="indigo darken-4">
-              <v-list v-if="currentFee.ranges.length > 0" color="indigo darken-4">
+            <v-expansion-panel-content color="background">
+              <v-list v-if="currentFee.ranges.length > 0" color="background">
                 <v-list-item-group>
                   <template v-for="(item, index) in currentFee.ranges">
                     <v-list-item :key="generateKey(index)">
@@ -157,16 +157,18 @@ export default {
     };
   },
   created() {
-    if (this.isEdit && ('ranges' in this.fee)) {
+    if (this.isEdit && "ranges" in this.fee) {
       this.currentFee = this.fee;
 
-      if (typeof this.fee?.round !== 'string') return;
+      if (typeof this.fee?.round !== "string") return;
       const roundes = [
-        { key: 'floor', value: 1 },
-        { key: 'round', value: 2 },
-        { key: 'ceil', value: 3 }
+        { key: "floor", value: 1 },
+        { key: "round", value: 2 },
+        { key: "ceil", value: 3 },
       ];
-      const round = roundes.find(({ key }) => key === this.fee?.round?.toLowerCase());
+      const round = roundes.find(
+        ({ key }) => key === this.fee?.round?.toLowerCase()
+      );
 
       if (round) this.currentFee.round = round.value;
       else this.currentFee.round = 2;
@@ -192,15 +194,15 @@ export default {
       });
 
       if (+to <= +from) {
-        alert('The value to must be greater than the value from!');
+        alert("The value to must be greater than the value from!");
         return;
       }
       if (+from < 0) {
-        alert('The value to must be greater or equal than 0!');
+        alert("The value to must be greater or equal than 0!");
         return;
       }
       if (range) {
-        alert('The Rule for proposed price range has been existed already!');
+        alert("The Rule for proposed price range has been existed already!");
         return;
       }
 
@@ -229,8 +231,8 @@ export default {
   },
   computed: {
     defaultCurrency() {
-      return this.$store.getters['currencies/default'];
-    }
+      return this.$store.getters["currencies/default"];
+    },
   },
   watch: {
     "currentFee.ranges"() {

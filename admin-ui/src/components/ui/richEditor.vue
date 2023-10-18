@@ -8,6 +8,7 @@
 import "jodit/build/jodit.min.css";
 import { JoditEditor } from "jodit-vue";
 import { computed, toRefs } from "vue";
+import { useStore } from "@/store";
 
 const props = defineProps({
   value: {},
@@ -15,14 +16,18 @@ const props = defineProps({
 });
 const emit = defineEmits(["input"]);
 
+const store = useStore();
+
 const onInput = (e) => {
   emit("input", e);
 };
 
 const { value, disabled } = toRefs(props);
 
+const theme = computed(() => store.getters["app/theme"]);
+
 const config = computed(() => ({
-  theme: "dark",
+  theme: theme.value,
   disabled: disabled.value,
   minHeight: 400,
 }));
