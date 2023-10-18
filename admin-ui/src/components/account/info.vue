@@ -215,10 +215,10 @@ export default {
     },
     accountInstances() {
       const accountNamespace = this.namespaces.find(
-        (n) => n.access.namespace === this.account.uuid
+        (n) => n.access.namespace === this.account?.uuid
       );
       return this.instances.filter(
-        (i) => i.access.namespace === accountNamespace.uuid
+        (i) => i.access.namespace === accountNamespace?.uuid
       );
     },
     isCurrencyReadonly() {
