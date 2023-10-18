@@ -1,7 +1,7 @@
 <template>
   <v-app
     v-if="!isVNC"
-    :style="{ background: $vuetify.theme.themes.dark.background }"
+    :style="{ background: $vuetify.theme.themes[theme].background }"
   >
     <v-navigation-drawer
       app
@@ -279,6 +279,26 @@
           <languages v-if="false" />
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
+              <v-btn class="mx-2" icon v-bind="attrs" v-on="on">
+                <v-icon>{{ currentTheme.icon }} </v-icon>
+              </v-btn>
+            </template>
+            <v-list dense>
+              <v-list-item
+                :value="theme.title === currentTheme.title"
+                @change="$store.commit('app/setTheme', theme.title)"
+                :key="theme.title"
+                v-for="theme in themes"
+              >
+                <div class="d-flex align-center justify-space-between">
+                  <v-icon>{{ theme.icon }}</v-icon>
+                  <span class="ml-3">{{ theme.title }}</span>
+                </div>
+              </v-list-item>
+            </v-list>
+          </v-menu>
+          <v-menu offset-y transition="slide-y-transition">
+            <template v-slot:activator="{ on, attrs }">
               <v-btn
                 class="mx-2"
                 fab
@@ -318,7 +338,11 @@
       v-if="overlay.uuid"
       :uuid="overlay.uuid"
       :visible="overlay.isVisible"
-      @close="() => { overlay.isVisible = false }"
+      @close="
+        () => {
+          overlay.isVisible = false;
+        }
+      "
     >
       <template #activator>
         <v-btn
@@ -347,6 +371,7 @@ import languages from "@/components/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
 import instancesTableModal from "@/components/instances_table_modal.vue";
+import { mapGetters } from "vuex";
 
 export default {
   name: "App",
@@ -355,7 +380,7 @@ export default {
     balance,
     appSearch,
     languages,
-    instancesTableModal
+    instancesTableModal,
   },
   data: () => ({
     isMenuMinimize: true,
@@ -365,9 +390,9 @@ export default {
     navTitles: config.navTitles ?? {},
     overlay: {
       isVisible: false,
-      buttonTitle: '',
-      uuid: ''
-    }
+      buttonTitle: "",
+      uuid: "",
+    },
   }),
   methods: {
     logoutHandler() {
@@ -414,6 +439,7 @@ export default {
     },
   },
   computed: {
+    ...mapGetters("app", ["theme"]),
     isLoggedIn() {
       const result = this.$store.getters["auth/isLoggedIn"];
       return result;
@@ -449,6 +475,15 @@ export default {
     },
     plugins() {
       return this.$store.getters["plugins/all"];
+    },
+    themes() {
+      return [
+        { title: "dark", icon: "mdi-moon-waning-crescent" },
+        { title: "light", icon: "mdi-brightness-5" },
+      ];
+    },
+    currentTheme() {
+      return this.themes.find((t) => t.title === this.theme);
     },
   },
   created() {
@@ -531,6 +566,9 @@ export default {
         this.$store.dispatch("settings/fetch");
       }
     },
+    theme() {
+      this.$vuetify.theme.dark = this.theme === "dark";
+    },
   },
 };
 </script>
@@ -552,10 +590,10 @@ export default {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #000033;
+  background: var(--v-background-base);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #c921c9;
+  background: var(--v-primary-base);
 }
 </style>
