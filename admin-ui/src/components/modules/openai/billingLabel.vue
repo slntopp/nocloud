@@ -2,7 +2,7 @@
   <v-container>
     <v-row class="mt-0" align="start" justify="end">
       <v-col class="d-flex justify-end px-1 py-1">
-        <instance-state :state="template.state.state" />
+        <instance-state :template="template" />
       </v-col>
       <v-col class="d-flex justify-end px-1 py-1">
         <v-chip

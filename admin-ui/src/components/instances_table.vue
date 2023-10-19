@@ -44,7 +44,7 @@
     </template>
 
     <template v-slot:[`item.state`]="{ item }">
-      <instance-state small :state="headersGetters['state'](item)" />
+      <instance-state small :template="item" />
     </template>
 
     <template v-slot:[`item.product`]="{ item }">
