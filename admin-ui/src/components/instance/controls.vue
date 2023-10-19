@@ -16,7 +16,7 @@
       </v-btn>
     </confirm-dialog>
     <confirm-dialog @confirm="deleteInstance">
-      <v-btn class="mr-2" :loading="isLoading"> Delete </v-btn>
+      <v-btn class="mr-2" :loading="isLoading"> Determinate </v-btn>
     </confirm-dialog>
 
     <confirm-dialog
