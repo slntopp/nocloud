@@ -4,9 +4,12 @@
       class="mr-2"
       v-for="btn in vmControlBtns"
       :key="btn.action + btn.title"
-      :disabled="btn.disabled || (!!runningActionName && runningActionName!==btn.action)"
+      :disabled="
+        btn.disabled ||
+        (!!runningActionName && runningActionName !== btn.action)
+      "
       :loading="runningActionName === btn.action"
-      @click="sendAction(btn)"
+      @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
@@ -99,6 +102,24 @@ export default {
         });
       } finally {
         this.isLoading = false;
+      }
+    },
+    async attachInstance(detach = false) {
+      const action = detach ? "detach" : "attach";
+      this.runningActionName = action;
+
+      try {
+        await api.delete(`/instances/${action}/${this.template.uuid}`);
+        this.showSnackbarSuccess({ message: "Done!" });
+        setTimeout(() => {
+          this.$router.push({ name: "Instances" });
+        }, 100);
+      } catch (err) {
+        this.showSnackbarError({
+          message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
+        });
+      } finally {
+        this.runningActionName = "";
       }
     },
     lockInstance() {
@@ -232,6 +253,13 @@ export default {
             title: "Console", //not reqired, use 'action' for a name if not found
             disabled: this.ioneActions?.vnc,
           },
+          this.isDetached
+            ? { action: "attach", type: "method", method: this.attachInstance }
+            : {
+                action: "detach",
+                type: "method",
+                method: () => this.attachInstance(true),
+              },
         ],
         "ovh dedicated": [
           { action: "poweroff", disabled: true },
@@ -284,16 +312,17 @@ export default {
         cpanel: [{ action: "session" }],
       };
 
-      return types[this.type];
+      return types[this.type].map((b) => ({ ...b, type: b.type || "action" }));
     },
     ioneActions() {
       if (!this.template?.state) return;
-      if (this.template.state.meta.state === 1)
+      if (this.template.state.meta.state === 1 || this.isDetached)
         return {
           resume: true,
           poweroff: true,
           reboot: true,
           suspend: true,
+          vnc: true,
         };
       return {
         poweroff:
@@ -415,6 +444,9 @@ export default {
         JSON.stringify(this.copyTemplate.billingPlan) !==
         JSON.stringify(this.template.billingPlan)
       );
+    },
+    isDetached() {
+      return this.template?.status?.toLowerCase() === "detached";
     },
     product() {
       switch (this.template.type) {
