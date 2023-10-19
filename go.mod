@@ -14,7 +14,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/rs/cors v1.10.1
-	github.com/slntopp/nocloud-proto v0.0.0-20230928084001-11a2827103dc
+	github.com/slntopp/nocloud-proto v0.0.0-20231018203755-65e6664c3118
 	github.com/spf13/viper v1.17.0
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
@@ -22,7 +22,7 @@ require (
 	go.uber.org/zap v1.26.0
 	golang.org/x/crypto v0.14.0
 	golang.org/x/oauth2 v0.13.0
-	google.golang.org/grpc v1.58.3
+	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
 )
 

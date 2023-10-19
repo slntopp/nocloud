@@ -14,7 +14,11 @@
           <slot name="actions" />
           <v-card-actions class="buttons">
             <v-btn color="red darken-1" @click="onCancel"> Cancel </v-btn>
-            <v-btn color="primary darken-1" :disabled="successDisabled" @click="onConfirm">
+            <v-btn
+              color="primary darken-1"
+              :disabled="successDisabled"
+              @click="onConfirm"
+            >
               Confirm
             </v-btn>
           </v-card-actions>
@@ -56,7 +60,7 @@ export default {
   display: inline;
 }
 .confirm-card {
-  background-color: rgba(12, 12, 60, 0.9);
+  background-color: var(--v-background-base);
   padding: 30px;
 
   .buttons {

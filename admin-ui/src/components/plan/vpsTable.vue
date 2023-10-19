@@ -23,7 +23,7 @@
         </v-list-item>
       </v-list>
     </v-menu>
-    <v-row class="mt-4" v-if="!isPlansLoading" align="center">
+    <v-row class="my-4" v-if="!isPlansLoading" align="center">
       <v-col cols="2">
         <v-btn @click="setSellToTab(true)">Enable all</v-btn>
       </v-col>
@@ -188,14 +188,15 @@
           >
             <v-chip
               close
-              outlined
               :color="images.includes(item) ? 'info' : 'error'"
               :close-icon="
                 images.includes(item) ? 'mdi-close-circle' : 'mdi-plus-circle'
               "
               @click:close="changeImage(item)"
             >
+              <span>
               {{ item }}
+              </span>
             </v-chip>
           </v-card>
         </div>

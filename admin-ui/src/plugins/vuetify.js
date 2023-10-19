@@ -4,11 +4,12 @@ import Vuetify from 'vuetify/lib/framework';
 
 Vue.use(Vuetify);
 
+
 export default new Vuetify({
   theme: {
     themes: {
-      dark: config.colors,
-      light: config.colors,
+      dark: config.colors.dark,
+      light: config.colors.light,
     },
     options: {
       customProperties: true,

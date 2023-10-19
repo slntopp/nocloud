@@ -1,7 +1,7 @@
 <template>
   <v-app
     v-if="!isVNC"
-    :style="{ background: $vuetify.theme.themes.dark.background }"
+    :style="{ background: $vuetify.theme.themes[theme].background }"
   >
     <v-navigation-drawer
       app
@@ -277,6 +277,7 @@
         </v-col>
         <v-col class="d-flex justify-end align-center">
           <languages v-if="false" />
+          <themes/>
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
@@ -318,7 +319,11 @@
       v-if="overlay.uuid"
       :uuid="overlay.uuid"
       :visible="overlay.isVisible"
-      @close="() => { overlay.isVisible = false }"
+      @close="
+        () => {
+          overlay.isVisible = false;
+        }
+      "
     >
       <template #activator>
         <v-btn
@@ -347,15 +352,18 @@ import languages from "@/components/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
 import instancesTableModal from "@/components/instances_table_modal.vue";
+import { mapGetters } from "vuex";
+import Themes from "@/components/themes.vue";
 
 export default {
   name: "App",
   components: {
+    Themes,
     AppSnackbar,
     balance,
     appSearch,
     languages,
-    instancesTableModal
+    instancesTableModal,
   },
   data: () => ({
     isMenuMinimize: true,
@@ -365,9 +373,9 @@ export default {
     navTitles: config.navTitles ?? {},
     overlay: {
       isVisible: false,
-      buttonTitle: '',
-      uuid: ''
-    }
+      buttonTitle: "",
+      uuid: "",
+    },
   }),
   methods: {
     logoutHandler() {
@@ -414,6 +422,7 @@ export default {
     },
   },
   computed: {
+    ...mapGetters("app", ["theme"]),
     isLoggedIn() {
       const result = this.$store.getters["auth/isLoggedIn"];
       return result;
@@ -552,10 +561,10 @@ export default {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #000033;
+  background: var(--v-background-base);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #c921c9;
+  background: var(--v-primary-base);
 }
 </style>

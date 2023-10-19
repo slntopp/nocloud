@@ -137,51 +137,68 @@ export default {
       }
     },
     async save() {
-      console.log(this.service);
       if (!this.$refs.form.validate()) {
         return;
       }
-      let igIndex = this.service.instancesGroups.findIndex(
-        (i) => i.title === this.instanceGroupTitle
-      );
-
-      if (igIndex === -1) {
-        this.service.instancesGroups.push({
-          title:
-            this.instanceGroupTitle ||
-            this.accounts.find((ac) => ac.uuid === this.accountId).title +
-              new Date().getTime(),
-          type: this.customTypeName || this.type,
-          instances: [],
-          sp: this.serviceProviderId,
-        });
-        igIndex = this.service.instancesGroups.length - 1;
-      }
-
-      this.service.instancesGroups[igIndex] = {
-        ...this.service.instancesGroups[igIndex],
-        ...this.instanceGroup,
-      };
-
-      if (this.isEdit) {
-        const instanceIndex = this.service.instancesGroups[
-          igIndex
-        ].instances.findIndex((i) => i.uuid === this.instance.uuid);
-        this.service.instancesGroups[igIndex].instances[instanceIndex] =
-          this.instance;
-      } else {
-        this.service.instancesGroups[igIndex].instances.push(this.instance);
-      }
-
-      const isExisted = this.instance?.data?.existing;
-
-      const data = {
-        namespace: this.service.access.namespace,
-        service: this.service,
-      };
 
       this.isLoading = true;
+
       try {
+        const namespaceUuid = this.namespaces.find(
+          (n) => n.access.namespace == this.accountId
+        )?.uuid;
+
+        if (!this.service) {
+          this.service = await api.services.create({
+            namespace: namespaceUuid,
+            service: {
+              version: "1",
+              title: this.accounts.find((a) => a.uuid === this.accountId).title,
+              context: {},
+              instancesGroups: [],
+            },
+          });
+        }
+
+        let igIndex = this.service.instancesGroups.findIndex(
+          (i) => i.title === this.instanceGroupTitle
+        );
+
+        if (igIndex === -1) {
+          this.service.instancesGroups.push({
+            title:
+              this.instanceGroupTitle ||
+              this.accounts.find((ac) => ac.uuid === this.accountId).title +
+                new Date().getTime(),
+            type: this.customTypeName || this.type,
+            instances: [],
+            sp: this.serviceProviderId,
+          });
+          igIndex = this.service.instancesGroups.length - 1;
+        }
+
+        this.service.instancesGroups[igIndex] = {
+          ...this.service.instancesGroups[igIndex],
+          ...this.instanceGroup,
+        };
+
+        if (this.isEdit) {
+          const instanceIndex = this.service.instancesGroups[
+            igIndex
+          ].instances.findIndex((i) => i.uuid === this.instance.uuid);
+          this.service.instancesGroups[igIndex].instances[instanceIndex] =
+            this.instance;
+        } else {
+          this.service.instancesGroups[igIndex].instances.push(this.instance);
+        }
+
+        const isExisted = this.instance?.data?.existing;
+
+        const data = {
+          namespace: namespaceUuid,
+          service: this.service,
+        };
+
         const res = await api.services.testConfig(data);
 
         if (!res.result) throw res;
@@ -230,6 +247,7 @@ export default {
     },
     serviceInstanceGroups() {
       if (
+        !this.service ||
         !this.service.instancesGroups ||
         !this.type ||
         !this.serviceProviderId
@@ -302,21 +320,17 @@ export default {
       return;
     }
 
-    let type = this.$route.params.type;
+    let { type, serviceId, accountId, serviceProviderId } = this.$route.params;
 
-    if (type && this.$route.params.serviceId) {
-      this.service = this.services.find(
-        (s) => s.uuid === this.$route.params.serviceId
-      );
-      this.accountId = this.namespaces.find(
-        (n) => n.uuid === this.service.access.namespace
-      )?.access.namespace;
+    if (type) {
+      this.service = this.services.find((s) => s.uuid === serviceId);
+      this.accountId = accountId;
       if (!this.typeItems.includes(type)) {
         this.customTypeName = type;
         type = "custom";
       }
       this.type = type;
-      this.serviceProviderId = this.$route.params.serviceProviderId;
+      this.serviceProviderId = serviceProviderId;
     }
   },
   watch: {
@@ -340,9 +354,7 @@ export default {
       );
     },
     accountId() {
-      if (this.servicesByAccount.length === 1) {
-        this.service = this.servicesByAccount[0];
-      }
+      this.service = this.servicesByAccount?.[0];
     },
     type() {
       if (this.isEdit) {
