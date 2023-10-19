@@ -153,7 +153,7 @@ export default {
   },
   mixins: [searchMixin],
   props: {
-    value: { type: Array, required: true },
+    value: { type: Array, required: false },
     headers: { type: Array, default: null },
     selected: { type: Object, default: null },
     showSelect: { type: Boolean, default: true },

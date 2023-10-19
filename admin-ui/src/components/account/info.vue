@@ -54,7 +54,6 @@
     <v-card-title class="px-0">Instances:</v-card-title>
 
     <instances-table
-      :value="null"
       :items="accountInstances"
       :show-select="false"
     />
