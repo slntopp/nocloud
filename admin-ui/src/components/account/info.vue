@@ -14,6 +14,24 @@
           >Create transaction/invoice</v-btn
         >
       </div>
+      <div class="d-flex justify-end mt-3">
+        <confirm-dialog
+          v-for="button in stateButtons"
+          :key="button.title"
+          @confirm="
+            button.method
+              ? button.method()
+              : changeStatus(button.newStatusValue)
+          "
+        >
+          <v-btn
+            :loading="button.newStatusValue === statusChangeValue"
+            class="mr-2"
+          >
+            {{ button.title }}
+          </v-btn>
+        </confirm-dialog>
+      </div>
     </div>
 
     <v-row>
@@ -109,10 +127,11 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import InstancesTable from "@/components/instances_table.vue";
+import ConfirmDialog from "@/components/confirmDialog.vue";
 
 export default {
   name: "account-info",
-  components: { InstancesTable, nocloudTable },
+  components: { ConfirmDialog, InstancesTable, nocloudTable },
   mixins: [snackbar],
   props: ["account"],
   data: () => ({
@@ -130,6 +149,7 @@ export default {
     selected: [],
     isVisible: false,
     isEditLoading: false,
+    statusChangeValue: "",
   }),
   methods: {
     navTitle(title) {
@@ -151,7 +171,12 @@ export default {
       this.keys = this.keys.filter((el) => !arr.includes(el.value));
       this.selected = [];
     },
-    editAccount() {
+    updateAccount(newAccount) {
+      return api.accounts.update(this.account.uuid, newAccount).catch((err) => {
+        this.showSnackbarError({ message: err });
+      });
+    },
+    async editAccount() {
       const newAccount = {
         ...this.account,
         title: this.title,
@@ -163,23 +188,56 @@ export default {
       newAccount.data.ssh_keys = this.keys;
 
       this.isEditLoading = true;
-      api.accounts
-        .update(this.account.uuid, newAccount)
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Account edited successfully",
-          });
-
-          setTimeout(() => {
-            this.$router.push({ name: "Accounts" });
-          }, 1500);
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isEditLoading = false;
+      try {
+        await this.updateAccount(newAccount);
+        this.showSnackbarSuccess({
+          message: "Account edited successfully",
         });
+
+        setTimeout(() => {
+          this.$router.push({ name: "Accounts" });
+        }, 1500);
+      } finally {
+        this.isEditLoading = false;
+      }
+    },
+    async changeStatus(newStatus) {
+      this.statusChangeValue = newStatus;
+      try {
+        await this.updateAccount({ ...this.account, status: newStatus });
+        this.$set(this.account, "status", newStatus);
+        this.showSnackbarSuccess({
+          message: "Status change successfully",
+        });
+      } finally {
+        this.statusChangeValue = "";
+      }
+    },
+    async permanentLock() {
+      const newStatus = "PERMANENT_LOCK";
+      this.statusChangeValue = newStatus;
+      try {
+        const accountServices = this.services.filter(
+          (s) => s.access.namespace === this.accountNamespace?.uuid
+        );
+
+        const servicesForDown = accountServices.filter(
+          (s) => s.status !== "INIT"
+        );
+        await Promise.all(
+          servicesForDown.map((s) => api.services.down(s.uuid))
+        );
+        await Promise.all(
+          accountServices.map((s) => api.services.delete(s.uuid))
+        );
+        await this.changeStatus(newStatus);
+      } catch {
+        this.showSnackbarError({
+          message: "Error while change status",
+        });
+      } finally {
+        this.statusChangeValue = "";
+      }
     },
   },
   mounted() {
@@ -213,16 +271,38 @@ export default {
     instances() {
       return this.$store.getters["services/getInstances"];
     },
-    accountInstances() {
-      const accountNamespace = this.namespaces.find(
+    accountNamespace() {
+      return this.namespaces.find(
         (n) => n.access.namespace === this.account?.uuid
       );
+    },
+    accountInstances() {
       return this.instances.filter(
-        (i) => i.access.namespace === accountNamespace?.uuid
+        (i) => i.access.namespace === this.accountNamespace?.uuid
       );
     },
     isCurrencyReadonly() {
       return this.account.currency && this.account.currency !== "NCU";
+    },
+    stateButtons() {
+      const status = this.account.status.toLowerCase();
+      const permanentLock = {
+        title: "Permanent lock",
+        newStatusValue: "PERMANENT_LOCK",
+        method: this.permanentLock,
+      };
+
+      switch (status) {
+        case "lock": {
+          return [{ title: "Unlock", newStatusValue: "ACTIVE" }, permanentLock];
+        }
+        case "active": {
+          return [{ title: "Lock", newStatusValue: "LOCK" }, permanentLock];
+        }
+        default: {
+          return [];
+        }
+      }
     },
   },
 };
