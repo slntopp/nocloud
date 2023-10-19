@@ -64,7 +64,7 @@
             <v-text-field
               class="ml-2"
               :suffix="accountCurrency"
-              style="color: #c921c9"
+              style="color: var(--v-primary-base)"
               v-model="item.accountPrice"
               @input="updatePrice(item, true)"
               append-icon="mdi-pencil"
