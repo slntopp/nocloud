@@ -20,6 +20,7 @@ export default {
       const { token } = this.$store.state.auth;
       const url = this.$route.params.url || this.$route.query.url;
       const params = JSON.stringify({ title, token, api: location.host });
+
       return `${url}?a=${Buffer.from(params).toString("base64")}`;
     },
   },
