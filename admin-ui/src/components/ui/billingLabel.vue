@@ -8,6 +8,20 @@
         <v-switch
           hide-details
           dense
+          :input-value="template.config.regular_payment"
+          @change="
+            emit('update', { key: 'config.regular_payment', value: !!$event })
+          "
+          label="Regular payment"
+        />
+      </v-col>
+      <v-col
+        style="max-height: 50px; max-width: 90px"
+        class="d-flex justify-end align-start pa-0"
+      >
+        <v-switch
+          hide-details
+          dense
           :input-value="template.config.auto_renew"
           @change="
             emit('update', { key: 'config.auto_renew', value: !!$event })
