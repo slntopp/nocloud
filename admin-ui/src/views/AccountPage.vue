@@ -9,18 +9,22 @@
     <v-tabs
       class="rounded-t-lg"
       background-color="background-light"
-      v-model="tabs"
+      v-model="selectedTab"
     >
       <v-tab v-for="tab in tabItems" :key="tab.title">{{ tab.title }}</v-tab>
     </v-tabs>
     <v-tabs-items
       class="rounded-b-lg"
       style="background: var(--v-background-light-base)"
-      v-model="tabs"
+      v-model="selectedTab"
     >
-      <v-tab-item v-for="tab in tabItems" :key="tab.title">
+      <v-tab-item v-for="(tab, index) in tabItems" :key="tab.title">
         <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
-        <component v-if="account" :is="tab.component" :account="account" />
+        <component
+          v-if="account && index === selectedTab"
+          :is="tab.component"
+          :account="account"
+        />
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -43,7 +47,7 @@ export default {
     AccountsEvents,
     AccountsHistory,
   },
-  data: () => ({ tabs: 0, navTitles: config.navTitles ?? {} }),
+  data: () => ({ selectedTab: 0, navTitles: config.navTitles ?? {} }),
   methods: {
     navTitle(title) {
       if (title && this.navTitles[title]) {
@@ -105,7 +109,7 @@ export default {
       type: "accounts/fetchById",
       params: this.accountId,
     });
-    this.tabs = this.$route.query.tab || 0;
+    this.selectedTab = this.$route.query.tab || 0;
   },
 };
 </script>
