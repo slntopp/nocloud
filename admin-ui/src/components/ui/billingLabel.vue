@@ -35,7 +35,7 @@
     </v-row>
     <v-row class="mt-0" align="center" justify="end">
       <v-col class="d-flex justify-end px-1">
-        <instance-state :state="template.state.state" />
+        <instance-state :template="template" />
       </v-col>
       <v-col class="d-flex justify-end px-1">
         <v-chip color="primary" outlined

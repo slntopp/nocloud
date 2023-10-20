@@ -52,7 +52,7 @@
             ></v-text-field>
             <v-text-field
               class="ml-2"
-              style="color: #c921c9"
+              style="color: var(--v-primary-base)"
               v-model="item.accountPrice"
               @change="onUpdatePrice(item, true)"
               :suffix="accountCurrency"
