@@ -1,15 +1,14 @@
 <template>
-  <vue-editor
-    :editor-toolbar="toolbarOptions"
-    class="html-editor"
-    :value="props.value"
-    :disabled="disabled"
-    @input="emit('input', $event)"
-  />
+  <div class="editor">
+    <jodit-editor :config="config" :value="value" @input="onInput" />
+  </div>
 </template>
 
 <script setup>
-import { VueEditor } from "vue2-editor";
+import "jodit/build/jodit.min.css";
+import { JoditEditor } from "jodit-vue";
+import { computed, toRefs } from "vue";
+import { useStore } from "@/store";
 
 const props = defineProps({
   value: {},
@@ -17,52 +16,19 @@ const props = defineProps({
 });
 const emit = defineEmits(["input"]);
 
-const toolbarOptions = [
-  [{ header: [false, 1, 2, 3, 4, 5, 6] }],
-  [{ size: [] }],
-  ["bold", "italic", "underline", "strike"], // toggled buttons
-  [
-    { align: "" },
-    { align: "center" },
-    { align: "right" },
-    { align: "justify" },
-  ],
-  ["blockquote", "code-block"],
-  [{ list: "ordered" }, { list: "bullet" }, { list: "check" }],
-  [{ indent: "-1" }, { indent: "+1" }],
-  [{ color: [] }, { background: [] }],
-  ["link", "image", "video"],
-  ["clean"],
-];
+const store = useStore();
+
+const onInput = (e) => {
+  emit("input", e);
+};
+
+const { value, disabled } = toRefs(props);
+
+const theme = computed(() => store.getters["app/theme"]);
+
+const config = computed(() => ({
+  theme: theme.value,
+  disabled: disabled.value,
+  minHeight: 400,
+}));
 </script>
-
-<style lang="scss">
-.html-editor {
-  span.ql-picker-label {
-    color: white;
-  }
-}
-
-.quillWrapper .ql-snow .ql-stroke {
-  stroke: rgb(255 255 255 / 95%) !important;
-}
-.ql-snow .ql-fill {
-  fill: white;
-}
-
-.quillWrapper .ql-editor {
-  color: white;
-}
-.quillWrapper .ql-editor ul[data-checked="false"] > li::before {
-  color: white !important;
-}
-.quillWrapper .ql-editor ul[data-checked="true"] > li::before {
-  color: white !important;
-}
-
-.ql-active {
-  color: #e06ffe !important;
-  fill: #e06ffe !important;
-  stroke: #e06ffe !important;
-}
-</style>

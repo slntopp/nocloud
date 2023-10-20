@@ -9,48 +9,20 @@
     <v-tabs
       class="rounded-t-lg"
       background-color="background-light"
-      v-model="tabs"
+      v-model="selectedTab"
     >
-      <v-tab>Info</v-tab>
-      <v-tab>Template</v-tab>
-      <v-tab>Events</v-tab>
-      <v-tab>Reports</v-tab>
-      <v-tab>Event log</v-tab>
+      <v-tab v-for="tab in tabItems" :key="tab.title">{{ tab.title }}</v-tab>
     </v-tabs>
     <v-tabs-items
       class="rounded-b-lg"
       style="background: var(--v-background-light-base)"
-      v-model="tabs"
+      v-model="selectedTab"
     >
-      <v-tab-item>
+      <v-tab-item v-for="(tab, index) in tabItems" :key="tab.title">
         <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
-        <accounts-info v-if="account" :account="account" />
-      </v-tab-item>
-      <v-tab-item>
-        <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
-        <accounts-template v-if="account" :template="account" />
-      </v-tab-item>
-      <v-tab-item>
-        <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
-        <accounts-events
-          :is-loading="accountLoading"
-          v-if="account"
-          :account="account"
-        />
-      </v-tab-item>
-      <v-tab-item>
-        <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
-        <account-report
-          :is-loading="accountLoading"
-          v-if="account"
-          :account="account"
-        />
-      </v-tab-item>
-      <v-tab-item>
-        <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
-        <accounts-history
-          :is-loading="accountLoading"
-          v-if="account"
+        <component
+          v-if="account && index === selectedTab"
+          :is="tab.component"
           :account="account"
         />
       </v-tab-item>
@@ -75,7 +47,7 @@ export default {
     AccountsEvents,
     AccountsHistory,
   },
-  data: () => ({ tabs: 0, navTitles: config.navTitles ?? {} }),
+  data: () => ({ selectedTab: 0, navTitles: config.navTitles ?? {} }),
   methods: {
     navTitle(title) {
       if (title && this.navTitles[title]) {
@@ -102,6 +74,30 @@ export default {
     accountId() {
       return this.$route.params.accountId;
     },
+    tabItems() {
+      return [
+        {
+          component: AccountsInfo,
+          title: "info",
+        },
+        {
+          component: AccountsEvents,
+          title: "events",
+        },
+        {
+          component: AccountsHistory,
+          title: "event log",
+        },
+        {
+          component: AccountReport,
+          title: "reports",
+        },
+        {
+          component: AccountsTemplate,
+          title: "template",
+        },
+      ];
+    },
   },
   created() {
     this.$store.dispatch("accounts/fetchById", this.accountId).then(() => {
@@ -113,7 +109,7 @@ export default {
       type: "accounts/fetchById",
       params: this.accountId,
     });
-    this.tabs = this.$route.query.tab || 0;
+    this.selectedTab = this.$route.query.tab || 0;
   },
 };
 </script>

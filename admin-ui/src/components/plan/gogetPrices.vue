@@ -3,10 +3,10 @@
     <v-icon class="group-icon">mdi-format-list-group</v-icon>
     <v-expansion-panels v-if="!isPlansLoading">
       <v-expansion-panel>
-        <v-expansion-panel-header color="indigo darken-4">
+        <v-expansion-panel-header color="background">
           Margin rules:
         </v-expansion-panel-header>
-        <v-expansion-panel-content color="indigo darken-4">
+        <v-expansion-panel-content color="background">
           <plan-opensrs
             :fee="fee"
             :isEdit="true"

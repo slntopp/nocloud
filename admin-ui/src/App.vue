@@ -1,7 +1,7 @@
 <template>
   <v-app
     v-if="!isVNC"
-    :style="{ background: $vuetify.theme.themes.dark.background }"
+    :style="{ background: $vuetify.theme.themes[theme].background }"
   >
     <v-navigation-drawer
       app
@@ -277,6 +277,7 @@
         </v-col>
         <v-col class="d-flex justify-end align-center">
           <languages v-if="false" />
+          <themes/>
           <v-menu offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
@@ -316,15 +317,19 @@
 
     <instances-table-modal
       v-if="overlay.uuid"
+      type="menu"
       :uuid="overlay.uuid"
       :visible="overlay.isVisible"
-      @close="() => { overlay.isVisible = false }"
+      @close="overlay.isVisible = false"
+      @hover="hoverOverlay"
     >
       <template #activator>
         <v-btn
+          outlined
           color="success"
-          style="position: absolute; top: 90px; right: 25px; z-index: 100"
-          @click="overlay.isVisible = true"
+          style="position: absolute; top: 70px; right: 25px; z-index: 100"
+          @mouseenter="overlay.isVisible = true"
+          @mouseleave="hiddenOverlay"
         >
           {{ overlay.buttonTitle }}
         </v-btn>
@@ -332,7 +337,7 @@
     </instances-table-modal>
 
     <v-main>
-      <router-view />
+      <router-view :style="(overlay.uuid) ? 'padding-top: 55px !important' : null" />
     </v-main>
     <app-snackbar />
   </v-app>
@@ -347,15 +352,18 @@ import languages from "@/components/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
 import instancesTableModal from "@/components/instances_table_modal.vue";
+import { mapGetters } from "vuex";
+import Themes from "@/components/themes.vue";
 
 export default {
   name: "App",
   components: {
+    Themes,
     AppSnackbar,
     balance,
     appSearch,
     languages,
-    instancesTableModal
+    instancesTableModal,
   },
   data: () => ({
     isMenuMinimize: true,
@@ -364,10 +372,11 @@ export default {
     config,
     navTitles: config.navTitles ?? {},
     overlay: {
+      timeoutId: null,
       isVisible: false,
-      buttonTitle: '',
-      uuid: ''
-    }
+      buttonTitle: "",
+      uuid: "",
+    },
   }),
   methods: {
     logoutHandler() {
@@ -412,8 +421,17 @@ export default {
           }
         });
     },
+    hoverOverlay() {
+      clearTimeout(this.overlay.timeoutId)
+    },
+    hiddenOverlay() {
+      this.overlay.timeoutId = setTimeout(() => {
+        this.overlay.isVisible = false;
+      }, 100)
+    },
   },
   computed: {
+    ...mapGetters("app", ["theme"]),
     isLoggedIn() {
       const result = this.$store.getters["auth/isLoggedIn"];
       return result;
@@ -452,7 +470,7 @@ export default {
     },
   },
   created() {
-    window.addEventListener("message", ({ data, origin }) => {
+    window.addEventListener("message", ({ data, origin, source }) => {
       if (origin.includes("localhost") || !data) return;
       if (data === "ready") return;
       if (data.type === "get-user") {
@@ -468,6 +486,10 @@ export default {
       }
       if (data.type === "open-user") {
         window.open(`/admin/accounts/${data.value.uuid}`, "_blank");
+        return;
+      }
+      if (data.type === "get-theme") {
+        source.postMessage({ theme: this.theme }, "*");
         return;
       }
       console.log(data, origin);
@@ -552,10 +574,10 @@ export default {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #000033;
+  background: var(--v-background-base);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #c921c9;
+  background: var(--v-primary-base);
 }
 </style>

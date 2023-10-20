@@ -19,6 +19,7 @@
     <template v-slot:[`item.title`]="{ item }">
       <div class="d-flex justify-space-between">
         <router-link
+          :target="(openInNewTab) ? '_blank' : null"
           :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
         >
           {{ item.title }}
@@ -44,7 +45,7 @@
     </template>
 
     <template v-slot:[`item.state`]="{ item }">
-      <instance-state small :state="headersGetters['state'](item)" />
+      <instance-state small :template="item" />
     </template>
 
     <template v-slot:[`item.product`]="{ item }">
@@ -153,10 +154,11 @@ export default {
   },
   mixins: [searchMixin],
   props: {
-    value: { type: Array, required: true },
+    value: { type: Array, required: false },
     headers: { type: Array, default: null },
     selected: { type: Object, default: null },
     showSelect: { type: Boolean, default: true },
+    openInNewTab: { type: Boolean, default: false },
     items: { type: Array, default: () => [] },
   },
   data: () => ({
