@@ -14,7 +14,18 @@
           >Create transaction/invoice</v-btn
         >
       </div>
-      <div class="d-flex justify-end mt-3">
+      <div class="d-flex justify-end mt-3 align-center">
+        <v-switch
+          :loading="isChangeRegularPaymentLoading"
+          :input-value="
+            account.data?.regular_payment === undefined
+              ? true
+              : account.data?.regular_payment
+          "
+          @change="changeRegularPayment"
+          label="Regular payment"
+          class="mr-4"
+        />
         <confirm-dialog
           v-for="button in stateButtons"
           :key="button.title"
@@ -35,13 +46,13 @@
     </div>
 
     <v-row>
-      <v-col cols="3">
+      <v-col cols="2">
         <v-text-field v-model="uuid" readonly label="UUID" />
       </v-col>
-      <v-col cols="3">
+      <v-col cols="2">
         <v-text-field v-model="title" label="name" style="width: 330px" />
       </v-col>
-      <v-col cols="3">
+      <v-col cols="2">
         <v-select
           :readonly="isCurrencyReadonly"
           :items="currencies"
@@ -53,10 +64,7 @@
     </v-row>
     <v-card-title class="px-0">Instances:</v-card-title>
 
-    <instances-table
-      :items="accountInstances"
-      :show-select="false"
-    />
+    <instances-table :items="accountInstances" :show-select="false" />
 
     <v-card-title class="px-0">SSH keys:</v-card-title>
 
@@ -149,6 +157,7 @@ export default {
     isVisible: false,
     isEditLoading: false,
     statusChangeValue: "",
+    isChangeRegularPaymentLoading: false,
   }),
   methods: {
     navTitle(title) {
@@ -236,6 +245,25 @@ export default {
         });
       } finally {
         this.statusChangeValue = "";
+      }
+    },
+    async changeRegularPayment(value) {
+      this.isChangeRegularPaymentLoading = true;
+      try {
+        await this.updateAccount({
+          ...this.account,
+          data: {
+            ...this.account.data,
+            regular_payment: value,
+          },
+        });
+        this.$set(this.account.data, "regular_payment", value);
+      } catch {
+        this.showSnackbarError({
+          message: "Error while change regular payment",
+        });
+      } finally {
+        this.isChangeRegularPaymentLoading = false;
       }
     },
   },
