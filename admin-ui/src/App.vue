@@ -471,7 +471,7 @@ export default {
   },
   created() {
     window.addEventListener("message", ({ data, origin, source }) => {
-      if (origin.includes(location.host) || !data) return;
+      if (origin.includes("localhost") || !data) return;
       if (data === "ready") return;
       if (data.type === "get-user") {
         const setting = "plugin-chats-overlay";
