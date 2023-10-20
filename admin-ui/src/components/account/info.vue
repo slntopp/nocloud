@@ -212,6 +212,12 @@ export default {
     async changeStatus(newStatus) {
       this.statusChangeValue = newStatus;
       try {
+        await fetch(
+          /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
+            `modules/addons/nocloud/api/index.php?run=status_user&account=${
+              this.account.uuid
+            }&status=${newStatus === "ACTIVE" ? "open" : "close"}`
+        );
         await this.updateAccount({ ...this.account, status: newStatus });
         this.$set(this.account, "status", newStatus);
         this.showSnackbarSuccess({
@@ -330,6 +336,14 @@ export default {
           return [];
         }
       }
+    },
+    settings() {
+      return this.$store.getters["settings/all"];
+    },
+    whmcsApi() {
+      return JSON.parse(
+        this.settings.find(({ key }) => key === "whmcs").value || "{}"
+      ).api;
     },
   },
 };
