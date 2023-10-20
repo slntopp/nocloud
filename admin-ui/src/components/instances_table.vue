@@ -19,6 +19,7 @@
     <template v-slot:[`item.title`]="{ item }">
       <div class="d-flex justify-space-between">
         <router-link
+          :target="(openInNewTab) ? '_blank' : null"
           :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
         >
           {{ item.title }}
@@ -157,6 +158,7 @@ export default {
     headers: { type: Array, default: null },
     selected: { type: Object, default: null },
     showSelect: { type: Boolean, default: true },
+    openInNewTab: { type: Boolean, default: false },
     items: { type: Array, default: () => [] },
   },
   data: () => ({

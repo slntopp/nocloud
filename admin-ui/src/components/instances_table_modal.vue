@@ -1,29 +1,47 @@
 <template>
-  <v-dialog max-width="1280" :value="visible" @input="$emit('close')">
+  <component
+    offset-y
+    max-width="1280"
+    :is="(type === 'dialog') ? VDialog : VMenu"
+    :value="visible"
+    :close-on-content-click="false"
+    @input="emits('close')"
+  >
     <template v-slot:activator="{ on, attrs }">
       <slot v-on="on" v-bind="attrs" name="activator" />
     </template>
-    <v-card elevation="0" color="background" class="pa-4">
+
+    <v-card
+      class="pa-4"
+      elevation="0"
+      color="background"
+      @mouseenter="emits('hover')"
+      @mouseleave="emits('close')"
+    >
       <instances-table
-        class="mt-0"
-        :value="null"
+        open-in-new-tab
+        style="margin-top: 0 !important"
+        :value="[]"
         :headers="headers"
         :items="accountInstances"
         :show-select="false"
       />
     </v-card>
-  </v-dialog>
+  </component>
 </template>
 
 <script setup>
 import { computed } from 'vue'
+import { VDialog, VMenu } from 'vuetify/lib/components'
 import store from '@/store'
 import instancesTable from '@/components/instances_table.vue'
 
 const props = defineProps({
   uuid: { type: String, required: true },
-  visible: { type: Boolean, required: true }
+  visible: { type: Boolean, required: true },
+  type: { type: String, default: 'dialog' }
 })
+const emits = defineEmits(['hover', 'close'])
 
 const headers = [
   { text: "Title", value: "title" },
