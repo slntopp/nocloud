@@ -13,6 +13,12 @@
     >
       {{ btn.title || btn.action }}
     </v-btn>
+    <v-dialog style="height: 100%" v-if="isAnsibleActive">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn class="mr-2" dark v-bind="attrs" v-on="on"> Playbook </v-btn>
+      </template>
+      <iframe style="height: 80vh" :src="ansiblePlaybookLink"> </iframe>
+    </v-dialog>
     <confirm-dialog @confirm="lockInstance">
       <v-btn :loading="isLockLoading" class="mr-2">
         {{ template.data.lock ? "User unlock" : "User lock" }}
@@ -52,6 +58,7 @@ import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import { getTodayFullDate } from "@/functions";
 import { mapActions, mapGetters } from "vuex";
+import { Buffer } from "buffer";
 
 export default {
   name: "instance-actions",
@@ -462,6 +469,39 @@ export default {
       }
 
       return null;
+    },
+    plugins() {
+      return this.$store.getters["plugins/all"];
+    },
+    ansiblePlugin() {
+      return this.plugins.find((p) =>
+        p.title.toLowerCase().includes("ansible")
+      );
+    },
+    isAnsibleActive() {
+      const allowedTypes = ["ione"];
+      return allowedTypes.includes(this.template.type) && !!this.ansiblePlugin;
+    },
+    ansiblePlaybookLink() {
+      if (!this.isAnsibleActive) {
+        return;
+      }
+
+      const { title } = this.$store.getters["auth/userdata"];
+      const { token } = this.$store.state.auth;
+      const params = JSON.stringify({
+        title,
+        token,
+        api: location.host,
+        theme: this.theme,
+        params: {
+          instances: [this.template],
+        },
+      });
+
+      return `${this.ansiblePlugin.url}playbooks-preview?a=${Buffer.from(
+        params
+      ).toString("base64")}`;
     },
   },
 };
