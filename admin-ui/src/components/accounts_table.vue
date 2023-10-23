@@ -104,6 +104,7 @@ export default {
       headers: [
         { text: "Title", value: "title" },
         { text: "UUID", value: "uuid" },
+        { text: "Status", value: "status" },
         { text: "Balance", value: "balance" },
         { text: "Email", value: "data.email" },
         { text: "Created date", value: "data.date_create" },

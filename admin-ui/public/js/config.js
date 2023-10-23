@@ -4,7 +4,7 @@ globalThis.colors = {
     "background-dark": "#e7e4e4",
     "background-light": "#ffffff", //old #202033
     accent: "#FF00FF",
-    primary: "#2007ff",
+    primary: "#5272F2",
   },
   dark: {
     background: "#000033",

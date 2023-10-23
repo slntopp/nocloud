@@ -65,7 +65,7 @@
               append-icon="mdi-pencil"
             />
             <v-text-field
-              style="color: #c921c9"
+              style="color: var(--v-primary-base)"
               class="ml-2"
               type="number"
               :suffix="accountCurrency"
@@ -97,9 +97,9 @@
             <td></td>
             <td>
               <v-chip color="primary" outlined>
-                {{ totalAccountPrice }} {{ accountCurrency }} /
                 {{ totalPrice }}
-                {{ defaultCurrency }}
+                {{ defaultCurrency }} /
+                {{ totalAccountPrice }} {{ accountCurrency }}
               </v-chip>
             </td>
           </tr>

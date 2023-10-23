@@ -203,8 +203,9 @@ export default {
         })
         .catch((error) => {
           console.error(error);
-          this.snackbar.message = "Something went wrong... Try later.";
-          this.snackbar.visibility = true;
+          this.showSnackbarError({
+            message: "Something went wrong... Try later.",
+          });
         })
         .finally(() => {
           this.loading = false;
@@ -219,10 +220,11 @@ export default {
         Promise.all(deletePromices)
           .then((res) => {
             if (res.every((el) => el.result)) {
-              this.snackbar.message = `Account${
-                deletePromices.length == 1 ? "" : "s"
-              } deleted successfully.`;
-              this.snackbar.visibility = true;
+              this.showSnackbarSuccess({
+                message: `Account${
+                  deletePromices.length == 1 ? "" : "s"
+                } deleted successfully.`,
+              });
             }
 
             this.selected = [];

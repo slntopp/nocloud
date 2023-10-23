@@ -34,8 +34,8 @@
       >
         Cancel
       </v-btn>
-      <json-textarea class="mt-4" v-if="ObjectDisplay === 'JSON'" :json="template" @getTree="changeTree" />
-      <yaml-editor class="mt-4" v-else :json="template" @getTree="changeTree" />
+      <json-textarea class="mt-4" v-if="ObjectDisplay === 'JSON'" :json="account" @getTree="changeTree" />
+      <yaml-editor class="mt-4" v-else :json="account" @getTree="changeTree" />
     </template>
     <template v-else>
       <v-btn @click="editing = true">Edit</v-btn>
@@ -63,7 +63,7 @@ export default {
   components: { JsonTextarea, YamlEditor },
   mixins: [snackbar],
 	props: {
-		template: {
+		account: {
 			type: Object,
 			required: true
 		}
@@ -93,7 +93,7 @@ export default {
         : yaml.parse(this.tree);
 
       this.isLoading = true;
-      api.accounts.update(this.template.uuid, request)
+      api.accounts.update(this.account.uuid, request)
         .then(() => {
           this.showSnackbarSuccess({
             message: 'Account edited successfully'
@@ -117,7 +117,7 @@ export default {
   },
 	computed: {
 		templateObjectJSON(){
-			let json = JSON.stringify(this.template, null, 2);
+			let json = JSON.stringify(this.account, null, 2);
 			json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 			return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g, function (match) {
 				let cls = 'number';
@@ -137,7 +137,7 @@ export default {
 		},
 		templateObjectYAML(){
 			const doc = new yaml.Document();
-			doc.contents = this.template;
+			doc.contents = this.account;
 
 			return doc.toString();
 		}

@@ -22,7 +22,7 @@
           <v-card-title>product</v-card-title>
         </v-col>
         <v-col cols="8">
-          <date-picker :min="min" v-model="newAllDate" />
+          <date-picker v-model="newAllDate" />
         </v-col>
       </v-row>
 

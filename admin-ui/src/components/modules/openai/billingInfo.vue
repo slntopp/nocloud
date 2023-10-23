@@ -11,43 +11,34 @@
         />
       </v-col>
     </v-row>
-    <v-expansion-panels>
-      <v-expansion-panel>
-        <v-expansion-panel-header color="background-light"
-          >Prices</v-expansion-panel-header
-        >
-        <v-expansion-panel-content
-          class="openai-billing"
-          color="background-light"
-        >
-          <nocloud-table
-            class="mb-5"
-            :headers="billingHeaders"
-            :items="billingItems"
-            no-hide-uuid
-            :show-select="false"
-            hide-default-footer
-          >
-            <template v-slot:[`item.price`]="{ item }">
-              <v-text-field
-                :suffix="defaultCurrency"
-                v-model="item.price"
-                @input="updatePrice(item, false)"
-                append-icon="mdi-pencil"
-              />
-            </template>
-            <template v-slot:[`item.accountPrice`]="{ item }">
-              <v-text-field
-                :suffix="accountCurrency"
-                v-model="item.accountPrice"
-                @input="updatePrice(item, true)"
-                append-icon="mdi-pencil"
-              />
-            </template>
-          </nocloud-table>
-        </v-expansion-panel-content>
-      </v-expansion-panel>
-    </v-expansion-panels>
+    <instances-prices-panels>
+      <nocloud-table
+        class="mb-5"
+        :headers="billingHeaders"
+        :items="billingItems"
+        no-hide-uuid
+        :show-select="false"
+        hide-default-footer
+      >
+        <template v-slot:[`item.price`]="{ item }">
+          <v-text-field
+            :suffix="defaultCurrency"
+            v-model="item.price"
+            @input="updatePrice(item, false)"
+            append-icon="mdi-pencil"
+          />
+        </template>
+        <template v-slot:[`item.accountPrice`]="{ item }">
+          <v-text-field
+            :suffix="accountCurrency"
+            style="color: var(--v-primary-base)"
+            v-model="item.accountPrice"
+            @input="updatePrice(item, true)"
+            append-icon="mdi-pencil"
+          />
+        </template>
+      </nocloud-table>
+    </instances-prices-panels>
     <v-dialog persistent :value="priceModelDialog" max-width="60%">
       <v-card class="pa-5">
         <v-card-title class="text-center">Change price model</v-card-title>
@@ -93,6 +84,7 @@ import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import api from "@/api";
+import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -100,12 +92,8 @@ const emit = defineEmits(["refresh", "update"]);
 const { template, plans, service } = toRefs(props);
 
 const store = useStore();
-const {
-  accountCurrency,
-  toAccountPrice,
-  accountRate,
-  fromAccountPrice,
-} = useInstancePrices(template.value);
+const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
+  useInstancePrices(template.value);
 
 const priceModelDialog = ref(false);
 const newPlan = ref();

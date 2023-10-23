@@ -11,15 +11,22 @@
 
 <script>
 import { Buffer } from "buffer";
+import { mapGetters } from "vuex";
 
 export default {
   name: "plugin-view",
   computed: {
+    ...mapGetters("app", ["theme"]),
     src() {
       const { title } = this.$store.getters["auth/userdata"];
       const { token } = this.$store.state.auth;
       const url = this.$route.params.url || this.$route.query.url;
-      const params = JSON.stringify({ title, token, api: location.host });
+      const params = JSON.stringify({
+        title,
+        token,
+        api: location.host,
+        theme: this.theme,
+      });
 
       return `${url}?a=${Buffer.from(params).toString("base64")}`;
     },
