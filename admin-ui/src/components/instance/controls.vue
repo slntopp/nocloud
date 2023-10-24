@@ -17,7 +17,11 @@
       <template v-slot:activator="{ on, attrs }">
         <v-btn class="mr-2" dark v-bind="attrs" v-on="on"> Playbook </v-btn>
       </template>
-      <iframe style="height: 80vh" :src="ansiblePlaybookLink"> </iframe>
+      <plugin-iframe
+        style="height: 80vh"
+        :params="{ instances: [template] }"
+        :url="ansiblePlaybookUrl"
+      />
     </v-dialog>
     <confirm-dialog @confirm="lockInstance">
       <v-btn :loading="isLockLoading" class="mr-2">
@@ -58,11 +62,11 @@ import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import { getTodayFullDate } from "@/functions";
 import { mapActions, mapGetters } from "vuex";
-import { Buffer } from "buffer";
+import PluginIframe from "@/components/plugin/iframe.vue";
 
 export default {
   name: "instance-actions",
-  components: { ConfirmDialog },
+  components: { PluginIframe, ConfirmDialog },
   mixins: [snackbar],
   props: {
     template: { type: Object, required: true },
@@ -482,26 +486,12 @@ export default {
       const allowedTypes = ["ione"];
       return allowedTypes.includes(this.template.type) && !!this.ansiblePlugin;
     },
-    ansiblePlaybookLink() {
+    ansiblePlaybookUrl() {
       if (!this.isAnsibleActive) {
         return;
       }
 
-      const { title } = this.$store.getters["auth/userdata"];
-      const { token } = this.$store.state.auth;
-      const params = JSON.stringify({
-        title,
-        token,
-        api: location.host,
-        theme: this.theme,
-        params: {
-          instances: [this.template],
-        },
-      });
-
-      return `${this.ansiblePlugin.url}playbooks-preview?a=${Buffer.from(
-        params
-      ).toString("base64")}`;
+      return `${this.ansiblePlugin.url}playbooks-preview`;
     },
   },
 };
