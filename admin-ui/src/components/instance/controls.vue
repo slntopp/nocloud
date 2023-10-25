@@ -13,6 +13,16 @@
     >
       {{ btn.title || btn.action }}
     </v-btn>
+    <v-dialog style="height: 100%" v-if="isAnsibleActive">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn class="mr-2" dark v-bind="attrs" v-on="on"> Playbook </v-btn>
+      </template>
+      <plugin-iframe
+        style="height: 80vh"
+        :params="{ instances: [template] }"
+        :url="ansiblePlaybookUrl"
+      />
+    </v-dialog>
     <confirm-dialog @confirm="lockInstance">
       <v-btn :loading="isLockLoading" class="mr-2">
         {{ template.data.lock ? "User unlock" : "User lock" }}
@@ -52,10 +62,11 @@ import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import { getTodayFullDate } from "@/functions";
 import { mapActions, mapGetters } from "vuex";
+import PluginIframe from "@/components/plugin/iframe.vue";
 
 export default {
   name: "instance-actions",
-  components: { ConfirmDialog },
+  components: { PluginIframe, ConfirmDialog },
   mixins: [snackbar],
   props: {
     template: { type: Object, required: true },
@@ -462,6 +473,25 @@ export default {
       }
 
       return null;
+    },
+    plugins() {
+      return this.$store.getters["plugins/all"];
+    },
+    ansiblePlugin() {
+      return this.plugins.find((p) =>
+        p.title.toLowerCase().includes("ansible")
+      );
+    },
+    isAnsibleActive() {
+      const allowedTypes = ["ione"];
+      return allowedTypes.includes(this.template.type) && !!this.ansiblePlugin;
+    },
+    ansiblePlaybookUrl() {
+      if (!this.isAnsibleActive) {
+        return;
+      }
+
+      return `${this.ansiblePlugin.url}playbooks-preview`;
     },
   },
 };

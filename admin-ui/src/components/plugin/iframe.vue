@@ -1,0 +1,37 @@
+<script>
+export default {
+  name: "PluginIframe",
+};
+</script>
+
+<script setup>
+import { Buffer } from "buffer";
+import { useStore } from "@/store";
+import { computed, toRefs } from "vue";
+
+const props = defineProps(["url", "params"]);
+const { url, params } = toRefs(props);
+
+const store = useStore();
+
+const theme = computed(() => store.getters["app/theme"]);
+const src = computed(() => {
+  const { title } = store.getters["auth/userdata"];
+  const { token } = store.state.auth;
+  const fullParams = JSON.stringify({
+    title,
+    token,
+    api: location.host,
+    theme: theme.value,
+    params: params.value,
+  });
+
+  return `${url.value}?a=${Buffer.from(fullParams).toString("base64")}`;
+});
+</script>
+
+<template>
+  <iframe frameborder="0" :src="src"></iframe>
+</template>
+
+<style scoped></style>
