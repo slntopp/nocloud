@@ -60,6 +60,13 @@
         {{ value }}
       </v-chip>
     </template>
+    <template v-slot:[`item.data.regular_payment`]="{ value, item }">
+      <v-switch
+        @change="changeRegularPayment(item, $event)"
+        :input-value="value === undefined || value"
+      >
+      </v-switch>
+    </template>
     <template v-slot:[`item.namespace`]="{ item }">
       {{ getName(item.uuid) }}
     </template>
@@ -75,6 +82,7 @@ import Balance from "./balance.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import { mapGetters } from "vuex";
 import { filterByKeysAndParam, formatSecondsToDate } from "@/functions";
+import api from "@/api";
 
 export default {
   name: "accounts-table",
@@ -101,6 +109,7 @@ export default {
       selected: this.value,
       loading: false,
       fetchError: "",
+      changeRegularPaymentUuid: "",
       headers: [
         { text: "Title", value: "title" },
         { text: "UUID", value: "uuid" },
@@ -112,6 +121,7 @@ export default {
         { text: "Address", value: "address" },
         { text: "Client currency", value: "currency" },
         { text: "Access level", value: "access.level" },
+        { text: "Invoice based", value: "data.regular_payment" },
         { text: "Group(NameSpace)", value: "namespace" },
       ],
       levelColorMap: {
@@ -138,6 +148,21 @@ export default {
     },
     goToBalance(uuid) {
       this.$router.push({ name: "Transactions", query: { account: uuid } });
+    },
+    changeRegularPayment(item, value) {
+      try {
+        if (!item.data) {
+          item.data = {};
+        }
+        item.data.regular_payment = value;
+        return api.accounts.update(item.uuid, item).catch((err) => {
+          this.showSnackbarError({ message: err });
+        });
+      } catch {
+        this.showSnackbarError({
+          message: "Error while change invoice based",
+        });
+      }
     },
   },
   computed: {
