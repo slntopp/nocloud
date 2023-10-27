@@ -62,6 +62,12 @@
     </template>
     <template v-slot:[`item.data.regular_payment`]="{ value, item }">
       <v-switch
+        :disabled="
+          !!changeRegularPaymentUuid && changeRegularPaymentUuid !== item.uuid
+        "
+        :loading="
+          !!changeRegularPaymentUuid && changeRegularPaymentUuid === item.uuid
+        "
         @change="changeRegularPayment(item, $event)"
         :input-value="value === undefined || value"
       >
@@ -149,19 +155,23 @@ export default {
     goToBalance(uuid) {
       this.$router.push({ name: "Transactions", query: { account: uuid } });
     },
-    changeRegularPayment(item, value) {
+    async changeRegularPayment(item, value) {
+      this.changeRegularPaymentUuid = item.uuid;
       try {
         if (!item.data) {
           item.data = {};
         }
         item.data.regular_payment = value;
-        return api.accounts.update(item.uuid, item).catch((err) => {
+        await api.accounts.update(item.uuid, item).catch((err) => {
           this.showSnackbarError({ message: err });
         });
+        this.$store.commit('accounts/pushAccount',item)
       } catch {
         this.showSnackbarError({
           message: "Error while change invoice based",
         });
+      } finally {
+        this.changeRegularPaymentUuid = "";
       }
     },
   },

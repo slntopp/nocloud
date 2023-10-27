@@ -280,6 +280,7 @@ export default {
             return api.accounts.update(el.uuid, el);
           })
         );
+        this.$store.dispatch("accounts/fetch");
         this.showSnackbarSuccess({ message: "Success" });
       } finally {
         this.changeInvoiceBasedAction = undefined;
