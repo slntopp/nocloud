@@ -23,7 +23,7 @@
               : account.data?.regular_payment
           "
           @change="changeRegularPayment"
-          label="Regular payment"
+          label="Invoice based"
           class="mr-4"
         />
         <confirm-dialog
@@ -266,7 +266,7 @@ export default {
         this.$set(this.account.data, "regular_payment", value);
       } catch {
         this.showSnackbarError({
-          message: "Error while change regular payment",
+          message: "Error while change invoice based",
         });
       } finally {
         this.isChangeRegularPaymentLoading = false;
