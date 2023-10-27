@@ -12,7 +12,7 @@
           @change="
             emit('update', { key: 'config.regular_payment', value: !!$event })
           "
-          label="Regular payment"
+          label="Invoice based"
         />
       </v-col>
       <v-col
