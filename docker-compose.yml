@@ -123,7 +123,7 @@ services:
       SETTINGS_HOST: settings:8000
       BILLING_HOST: billing:8000
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-      # DRIVERS: host:port # your drivers here
+      DRIVERS: driver-ione:8080 # your drivers here
     depends_on:
       - db
       - billing
@@ -157,6 +157,7 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      DRIVERS: driver-ione:8080 # your drivers here
     networks:
       - proxy
       - arangodb
@@ -341,6 +342,21 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
+
+  # driver-ione:
+  #   container_name: driver-ione
+  #   restart: always
+  #   image: ghcr.io/slntopp/nocloud-driver-ione:latest
+  #   networks:
+  #     - grpc-internal
+  #     - mq
+  #     - redis
+  #   environment:
+  #     DRIVER_TYPE_KEY: ione
+  #     SIGNING_KEY: "${SIGNING_KEY}"
+  #     RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+  #     LOG_LEVEL: -1
+  #     REDIS_HOST: redis:6379
 
 networks:
   proxy:
