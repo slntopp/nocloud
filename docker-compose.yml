@@ -97,6 +97,7 @@ services:
       - proxy
       - arangodb
       - grpc-internal
+      - redis
     links:
       - db
 
@@ -134,6 +135,7 @@ services:
       arangodb:
       grpc-internal:
       mq:
+      redis:
     links:
       - db
       - billing
@@ -160,6 +162,7 @@ services:
       - arangodb
       - grpc-internal
       - mq
+      - redis
     links:
       - db
 
@@ -179,6 +182,7 @@ services:
     networks:
       - proxy
       - mq
+      - redis
     links:
       - db
 
@@ -198,7 +202,7 @@ services:
       LOG_LEVEL: -1
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
-      REDIS_HOST: redis_settings:6379
+      REDIS_HOST: redis:6379
 
   settings:
     image: ghcr.io/slntopp/nocloud/settings:latest
@@ -209,7 +213,7 @@ services:
       - traefik.http.services.settings.loadbalancer.server.port=8000
       - traefik.http.services.settings.loadbalancer.server.scheme=h2c
     depends_on:
-      - redis_settings
+      - redis
     networks:
       - proxy
       - grpc-internal
@@ -218,9 +222,9 @@ services:
       LOG_LEVEL: -1
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
-      REDIS_HOST: redis_settings:6379
+      REDIS_HOST: redis:6379
 
-  redis_settings:
+  redis:
     image: redis
     restart: always
     command: redis-server --save 60 1
@@ -231,7 +235,7 @@ services:
     networks:
       - redis
     volumes:
-      - redis-settings-data:/data
+      - redis-data:/data
 
   billing:
     image: ghcr.io/slntopp/nocloud/billing:latest
@@ -249,6 +253,7 @@ services:
       - arangodb
       - grpc-internal
       - mq
+      - redis
     environment:
       LOG_LEVEL: -1
       PORT: 8000
@@ -278,6 +283,7 @@ services:
       - proxy
       - arangodb
       - mq
+      - redis
 
   # events-logging:
   #   image: ghcr.io/slntopp/nocloud/events-logging:latest
@@ -301,6 +307,7 @@ services:
   #     #   ipv4_address: 172.20.0.5
   #     proxy:
   #     arangodb:
+  #     redis:
 
 
   db:
@@ -354,5 +361,5 @@ networks:
 
 volumes:
   sqlite-data:
-  redis-settings-data:
+  redis-data:
   data:
