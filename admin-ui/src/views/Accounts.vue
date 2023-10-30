@@ -113,11 +113,37 @@
       >
         <v-btn
           color="background-light"
-          class="mr-8"
+          class="mr-2"
           :disabled="selected.length < 1"
           :loading="deletingLoading"
         >
           delete
+        </v-btn>
+      </confirm-dialog>
+      <confirm-dialog
+        :disabled="selected.length < 1"
+        @confirm="changeInvoiceBased(true)"
+      >
+        <v-btn
+          color="background-light"
+          class="mr-2"
+          :disabled="selected.length < 1 || changeInvoiceBasedAction === false"
+          :loading="deletingLoading || changeInvoiceBasedAction === true"
+        >
+          Enabled invoice based
+        </v-btn>
+      </confirm-dialog>
+      <confirm-dialog
+        :disabled="selected.length < 1"
+        @confirm="changeInvoiceBased(false)"
+      >
+        <v-btn
+          color="background-light"
+          class="mr-8"
+          :disabled="selected.length < 1 || changeInvoiceBasedAction === true"
+          :loading="deletingLoading || changeInvoiceBasedAction === false"
+        >
+          Disabled invoice based
         </v-btn>
       </confirm-dialog>
     </div>
@@ -148,6 +174,7 @@ export default {
       createMenuVisible: false,
       selected: [],
       newAccount: {},
+      changeInvoiceBasedAction: undefined,
       rules: {
         title: [
           (value) => !!value || "Title is required",
@@ -236,6 +263,27 @@ export default {
           .finally(() => {
             this.deletingLoading = false;
           });
+      }
+    },
+    async changeInvoiceBased(value) {
+      this.changeInvoiceBasedAction = value;
+      try {
+        await Promise.all(
+          this.selected.map((el) => {
+            if (el.data?.regular_payment === value) {
+              return Promise.resolve();
+            }
+            if (!el.data) {
+              el.data = {};
+            }
+            el.data.regular_payment = value;
+            return api.accounts.update(el.uuid, el);
+          })
+        );
+        this.$store.dispatch("accounts/fetch");
+        this.showSnackbarSuccess({ message: "Success" });
+      } finally {
+        this.changeInvoiceBasedAction = undefined;
       }
     },
     openCreateAccountMenuHandler() {
