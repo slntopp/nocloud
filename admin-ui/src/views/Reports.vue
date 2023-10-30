@@ -70,8 +70,18 @@ const reportsHeaders = [
   { text: "Total in default currency", value: "totalDefaultPreview" },
 ];
 
-onMounted(() => {
+const fetchData = () => {
   store.dispatch("services/fetch");
+};
+
+onMounted(() => {
+  fetchData();
+  store.commit("reloadBtn/setCallback", {
+    event: () => {
+      fetchData();
+      onUpdateOptions(options.value);
+    },
+  });
 });
 
 const instances = computed(() => store.getters["services/getInstances"]);
