@@ -323,7 +323,7 @@ export default {
         cpanel: [{ action: "session" }],
       };
 
-      return types[this.type].map((b) => ({ ...b, type: b.type || "action" }));
+      return types[this.type]?.map((b) => ({ ...b, type: b.type || "action" })) || [];
     },
     ioneActions() {
       if (!this.template?.state) return;
