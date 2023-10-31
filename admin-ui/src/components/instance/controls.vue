@@ -1,7 +1,7 @@
 <template>
-  <div>
+  <div class="controls">
     <v-btn
-      class="mr-2"
+      class="ma-1"
       v-for="btn in vmControlBtns"
       :key="btn.action + btn.title"
       :disabled="
@@ -15,7 +15,7 @@
     </v-btn>
     <v-dialog style="height: 100%" v-if="isAnsibleActive">
       <template v-slot:activator="{ on, attrs }">
-        <v-btn class="mr-2" dark v-bind="attrs" v-on="on"> Playbook </v-btn>
+        <v-btn class="ma-1" dark v-bind="attrs" v-on="on"> Playbook </v-btn>
       </template>
       <plugin-iframe
         style="height: 80vh"
@@ -24,12 +24,12 @@
       />
     </v-dialog>
     <confirm-dialog @confirm="lockInstance">
-      <v-btn :loading="isLockLoading" class="mr-2">
+      <v-btn :loading="isLockLoading" class="ma-1">
         {{ template.data.lock ? "User unlock" : "User lock" }}
       </v-btn>
     </confirm-dialog>
     <confirm-dialog @confirm="deleteInstance">
-      <v-btn class="mr-2" :loading="isLoading"> Terminate </v-btn>
+      <v-btn class="ma-1" :loading="isLoading"> Terminate </v-btn>
     </confirm-dialog>
 
     <confirm-dialog
@@ -38,7 +38,7 @@
       @confirm="save"
     >
       <v-btn
-        class="mr-2"
+        class="ma-1"
         :loading="isSaveLoading"
         :color="isChanged ? 'primary' : ''"
       >
@@ -48,7 +48,7 @@
     <v-btn
       v-else
       @click="save"
-      class="mr-2"
+      class="ma-1"
       :loading="isSaveLoading"
       :color="isChanged ? 'primary' : ''"
     >
@@ -323,7 +323,7 @@ export default {
         cpanel: [{ action: "session" }],
       };
 
-      return types[this.type].map((b) => ({ ...b, type: b.type || "action" }));
+      return types[this.type]?.map((b) => ({ ...b, type: b.type || "action" })) || [];
     },
     ioneActions() {
       if (!this.template?.state) return;
@@ -496,3 +496,10 @@ export default {
   },
 };
 </script>
+
+<style scoped lang="scss">
+.controls {
+  max-width: calc(100% - 450px);
+  min-width: 60%;
+}
+</style>
