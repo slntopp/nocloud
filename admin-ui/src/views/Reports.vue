@@ -28,14 +28,7 @@
         </router-link>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
-        {{
-          rates[item.currency]
-            ? `${convertTo(
-                item.total,
-                rates[item.currency]
-              )} ${defaultCurrency}`
-            : ""
-        }}
+        {{ `${convertTo(item.total,item.currency)} ${defaultCurrency}` }}
       </template>
     </nocloud-table>
   </v-card>
@@ -47,10 +40,10 @@ import api from "@/api";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import DatePicker from "@/components/ui/datePicker.vue";
-import useRate from "@/hooks/useRate";
+import useCurrency from "@/hooks/useCurrency";
 
 const store = useStore();
-const { convertTo } = useRate();
+const { convertTo, defaultCurrency } = useCurrency();
 
 const reports = ref([]);
 const count = ref(10);
@@ -62,21 +55,27 @@ const options = ref({});
 const itemsPerPageOptions = ref([5, 10, 15, 25]);
 const durationFilter = ref({ to: "", from: "" });
 
-const rates = ref({});
-
 const reportsHeaders = [
   { text: "Instance", value: "uuid" },
   { text: "Total", value: "totalPreview" },
   { text: "Total in default currency", value: "totalDefaultPreview" },
 ];
 
-onMounted(() => {
+const fetchData = () => {
   store.dispatch("services/fetch");
+};
+
+onMounted(() => {
+  fetchData();
+  store.commit("reloadBtn/setCallback", {
+    event: () => {
+      fetchData();
+      onUpdateOptions(options.value);
+    },
+  });
 });
 
 const instances = computed(() => store.getters["services/getInstances"]);
-
-const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const isLoading = computed(() => {
   return isFetchLoading.value || isCountLoading.value;
@@ -118,10 +117,6 @@ const onUpdateOptions = async (newOptions) => {
   }
 };
 
-const currencies = computed(() => [
-  ...new Map(reports.value.map((r) => [r.currency, r.currency])).values(),
-]);
-
 const setOptions = (newOptions) => {
   const sortByReplaceKeys = {
     totalPreview: "total",
@@ -154,19 +149,6 @@ watch(
   },
   { deep: true }
 );
-
-watch(currencies, () => {
-  currencies.value.forEach(async (currency) => {
-    if (currency === defaultCurrency.value) {
-      rates.value[currency] = 1;
-      return;
-    }
-    const res = await api.get(
-      `/billing/currencies/rates/${currency}/${defaultCurrency.value}`
-    );
-    rates.value = { ...rates.value, [currency]: res.rate };
-  });
-});
 </script>
 
 <script>

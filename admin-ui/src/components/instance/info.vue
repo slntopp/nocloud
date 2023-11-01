@@ -128,10 +128,7 @@
       v-model="moveDialog"
     />
 
-    <div
-      v-if="billingLabelComponent"
-      style="position: absolute; top: 0px; right: 5px; z-index: 2"
-    >
+    <div v-if="billingLabelComponent" class="billing-label">
       <component
         @update="updateCopy"
         :is="billingLabelComponent"
@@ -269,7 +266,7 @@ export default {
   },
   mounted() {
     //break reactivity
-    if (this.template.config?.regular_payment===undefined) {
+    if (this.template.config?.regular_payment === undefined) {
       this.$set(this.template.config, "regular_payment", true);
     }
 
@@ -285,3 +282,14 @@ export default {
   },
 };
 </script>
+
+<style scoped lang="scss">
+.billing-label {
+  position: absolute;
+  top: 0;
+  right: 5px;
+  z-index: 2;
+  max-width: 450px;
+  width: 40%;
+}
+</style>

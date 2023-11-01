@@ -56,7 +56,7 @@
           >Price: {{ price }} {{ accountCurrency }}</v-chip
         >
       </v-col>
-      <v-col class="px-1">
+      <v-col class="px-1 d-flex justify-end">
         <v-chip outlined color="primary">Due to date: {{ dueDate }}</v-chip>
       </v-col>
     </v-row>
