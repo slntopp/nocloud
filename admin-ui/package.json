@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@ant-design/icons": "^2.0.0",
-    "@ant-design/icons-vue": "^2.0.0",
+    "@ant-design/icons-vue": "^4.0.6",
     "@sardinefish/asn1": "^1.0.4",
     "ansi-regex": "^6.0.1",
     "apexcharts": "^3.41.1",
