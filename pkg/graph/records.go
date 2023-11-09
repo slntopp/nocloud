@@ -199,16 +199,6 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 		params["srv"] = req.GetService()
 	}
 
-	if req.From != nil {
-		query += " FILTER record.exec >= @from"
-		params["from"] = req.GetFrom()
-	}
-
-	if req.To != nil {
-		query += " FILTER record.exec <=@to"
-		params["to"] = req.GetTo()
-	}
-
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
 			if key == "transactionType" {
@@ -218,18 +208,17 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 				}
 				query += fmt.Sprintf(` FILTER record.meta["%s"] in @%s`, key, key)
 				params[key] = values
-			} else if key == "duration" {
+			} else if key == "start" || key == "end" || key == "exec" || key == "total" {
 				values := value.GetStructValue().AsMap()
-				from := int64(values["from"].(float64))
-				to := int64(values["to"].(float64))
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] >= %f`, key, from)
+				}
 
-				query += fmt.Sprintf(` FILTER record.start >= %d && record.end <= %d`, from, to)
-			} else if key == "total" {
-				values := value.GetStructValue().AsMap()
-				from := int64(values["from"].(float64))
-				to := int64(values["to"].(float64))
-
-				query += fmt.Sprintf(` FILTER record.total >= %d && record.total <= %d`, from, to)
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] <= %d`, key, to)
+				}
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -313,16 +302,6 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 		params["srv"] = req.GetService()
 	}
 
-	if req.From != nil {
-		query += " FILTER record.exec >= @from"
-		params["from"] = req.GetFrom()
-	}
-
-	if req.To != nil {
-		query += " FILTER record.exec <=@to"
-		params["to"] = req.GetTo()
-	}
-
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
 			if key == "transactionType" {
@@ -332,18 +311,17 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 				}
 				query += fmt.Sprintf(` FILTER record.meta["%s"] in @%s`, key, key)
 				params[key] = values
-			} else if key == "duration" {
+			} else if key == "start" || key == "end" || key == "exec" || key == "total" {
 				values := value.GetStructValue().AsMap()
-				from := int64(values["from"].(float64))
-				to := int64(values["to"].(float64))
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] >= %f`, key, from)
+				}
 
-				query += fmt.Sprintf(` FILTER record.start >= %d && record.end <= %d`, from, to)
-			} else if key == "total" {
-				values := value.GetStructValue().AsMap()
-				from := int64(values["from"].(float64))
-				to := int64(values["to"].(float64))
-
-				query += fmt.Sprintf(` FILTER record.total >= %d && record.total <= %d`, from, to)
+				if val, ok := values["to"]; ok {
+					to := int64(val.(float64))
+					query += fmt.Sprintf(` FILTER record["%s"] <= %d`, key, to)
+				}
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
