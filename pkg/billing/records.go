@@ -305,6 +305,7 @@ FOR service IN @@services // Iterate over Services
     FILTER LENGTH(records) > 0 // Skip if no Records (no empty Transaction)
     INSERT {
         exec: @now, // Timestamp in seconds
+		created: @now,
         processed: false,
 		currency: currency,
         account: account._key,
