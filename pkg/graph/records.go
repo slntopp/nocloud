@@ -17,7 +17,6 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -348,7 +347,11 @@ LET records = (
 	RETURN r
 )
 
-RETURN UNIQUE(records[*].meta.transactionType)
+RETURN {
+	types: UNIQUE(records[*].meta.transactionType),
+	products: UNIQUE(records[*].product),
+	resources: UNIQUE(records[*].resource)
+}
 `
 
 func (ctrl *RecordsController) GetUnique(ctx context.Context) (map[string]interface{}, error) {
@@ -360,27 +363,11 @@ func (ctrl *RecordsController) GetUnique(ctx context.Context) (map[string]interf
 		return nil, err
 	}
 
-	var types []string
+	var result = map[string]interface{}{}
 
-	_, err = cur.ReadDocument(ctx, &types)
+	_, err = cur.ReadDocument(ctx, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	marshal, err := json.Marshal(types)
-	if err != nil {
-		return nil, err
-	}
-
-	var iTypes []interface{}
-
-	err = json.Unmarshal(marshal, &iTypes)
-	if err != nil {
-		return nil, err
-	}
-
-	var result = map[string]interface{}{
-		"transactionType": iTypes,
 	}
 
 	return result, nil
