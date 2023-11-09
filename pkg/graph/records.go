@@ -211,16 +211,27 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			values := value.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
 			if key == "transactionType" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
 				query += fmt.Sprintf(` FILTER record.meta["%s"] in @%s`, key, key)
+				params[key] = values
+			} else if key == "duration" || key == "total" {
+				values := value.GetStructValue().AsMap()
+				from := int64(values["from"].(float64))
+				to := int64(values["to"].(float64))
+
+				query += fmt.Sprintf(` FILTER record["%s"] >= %d && record["%s"] <= %d`, key, from, key, to)
 			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
 				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+				params[key] = values
 			}
-			params[key] = values
 		}
 	}
 
@@ -308,16 +319,27 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			values := value.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
 			if key == "transactionType" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
 				query += fmt.Sprintf(` FILTER record.meta["%s"] in @%s`, key, key)
+				params[key] = values
+			} else if key == "duration" || key == "total" {
+				values := value.GetStructValue().AsMap()
+				from := int64(values["from"].(float64))
+				to := int64(values["to"].(float64))
+
+				query += fmt.Sprintf(` FILTER record["%s"] >= %d && record["%s"] <= %d`, key, from, key, to)
 			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
 				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+				params[key] = values
 			}
-			params[key] = values
 		}
 	}
 
