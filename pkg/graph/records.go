@@ -217,7 +217,7 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 
 				if val, ok := values["to"]; ok {
 					to := val.(float64)
-					query += fmt.Sprintf(` FILTER record["%s"] <= %d`, key, to)
+					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
 				}
 			} else {
 				values := value.GetListValue().AsSlice()
@@ -319,8 +319,8 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 				}
 
 				if val, ok := values["to"]; ok {
-					to := int64(val.(float64))
-					query += fmt.Sprintf(` FILTER record["%s"] <= %d`, key, to)
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
 				}
 			} else {
 				values := value.GetListValue().AsSlice()
