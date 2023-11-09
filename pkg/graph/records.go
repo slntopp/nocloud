@@ -218,12 +218,18 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 				}
 				query += fmt.Sprintf(` FILTER record.meta["%s"] in @%s`, key, key)
 				params[key] = values
-			} else if key == "duration" || key == "total" {
+			} else if key == "duration" {
 				values := value.GetStructValue().AsMap()
 				from := int64(values["from"].(float64))
 				to := int64(values["to"].(float64))
 
-				query += fmt.Sprintf(` FILTER record["%s"] >= %d && record["%s"] <= %d`, key, from, key, to)
+				query += fmt.Sprintf(` FILTER record.start >= %d && record.end <= %d`, from, to)
+			} else if key == "total" {
+				values := value.GetStructValue().AsMap()
+				from := int64(values["from"].(float64))
+				to := int64(values["to"].(float64))
+
+				query += fmt.Sprintf(` FILTER record.total >= %d && record.total <= %d`, from, to)
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
