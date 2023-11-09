@@ -369,10 +369,22 @@ LET records = (
 	RETURN r
 )
 
+LET records_products = (
+	FOR r in @@records
+	FILTER r.product != null
+	RETURN r
+)
+
+LET records_resources = (
+	FOR r in @@records
+	FILTER r.resource != null
+	RETURN r
+)
+
 RETURN {
 	types: UNIQUE(records[*].meta.transactionType),
-	products: UNIQUE(records[*].product),
-	resources: UNIQUE(records[*].resource)
+	products: UNIQUE(records_products[*].product),
+	resources: UNIQUE(records_resources[*].resource)
 }
 `
 
