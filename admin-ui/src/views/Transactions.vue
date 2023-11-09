@@ -176,6 +176,11 @@ export default {
         });
       });
     },
+    fetchData() {
+      this.$store.dispatch("accounts/fetch");
+      this.$store.dispatch("services/fetch");
+      this.$store.dispatch("namespaces/fetch");
+    },
   },
   created() {
     if (this.$route.query.account) {
@@ -186,10 +191,14 @@ export default {
     this.isInitLoading = false;
   },
   mounted() {
-    this.$store.dispatch("accounts/fetch");
-    this.$store.dispatch("services/fetch");
-    this.$store.dispatch("namespaces/fetch");
-    this.$store.dispatch("currencies/fetch");
+    this.fetchData();
+    this.$store.commit("reloadBtn/setCallback", {
+      event: async () => {
+        this.isInitLoading = true;
+        this.fetchData();
+        setTimeout(() => (this.isInitLoading = false), 0);
+      },
+    });
   },
   computed: {
     ...mapGetters("transactions", ["count", "page", "isLoading", "all"]),

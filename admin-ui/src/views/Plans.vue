@@ -106,11 +106,24 @@
           />
           <download-template-button
             class="mx-2"
-            :disabled="!selected.length"
+            :disabled="!selected.length || isPlansUploadLoading"
             name="selected_copy"
             :type="selectedFileType"
             :template="selected"
           />
+          <v-file-input
+            class="file-input mx-2 mt-4"
+            :label="`upload ${selectedFileType} price models...`"
+            :accept="`.${selectedFileType}`"
+            @change="onJsonInputChange"
+          />
+          <confirm-dialog @confirm="uploadPlans" :text="uploadedPlansText">
+            <v-btn
+              :disabled="!uploadedPlans.length"
+              :loading="isPlansUploadLoading"
+              >Upload</v-btn
+            >
+          </confirm-dialog>
         </div>
       </template>
     </nocloud-table>
@@ -123,7 +136,12 @@ import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
 import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import { defaultFilterObject, filterArrayByTitleAndUuid } from "@/functions";
+import {
+  defaultFilterObject,
+  filterArrayByTitleAndUuid,
+  readJSONFile,
+  readYAMLFile,
+} from "@/functions";
 import { mapGetters } from "vuex";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
@@ -154,6 +172,8 @@ export default {
 
     fileTypes: ["JSON", "YAML"],
     selectedFileType: "JSON",
+    isPlansUploadLoading: false,
+    uploadedPlans: [],
   }),
   methods: {
     defaultFilterObject,
@@ -246,6 +266,38 @@ export default {
           }
         });
     },
+    async onJsonInputChange(file) {
+      this.uploadedPlans = [];
+      try {
+        if (this.isJson) {
+          this.uploadedPlans.push(...(await readJSONFile(file)));
+        } else {
+          this.uploadedPlans.push(...(await readYAMLFile(file)));
+        }
+      } catch (err) {
+        this.uploadedPlans = [];
+        this.showSnackbarError({ message: err });
+      }
+    },
+    async uploadPlans() {
+      this.isPlansUploadLoading = true;
+      try {
+        await Promise.all(
+          this.uploadedPlans.map((p) =>
+            api.plans.create({
+              ...p,
+              uuid: undefined,
+            })
+          )
+        );
+        this.getPlans();
+      } catch (err) {
+        this.showSnackbarError({ message: err });
+      } finally {
+        this.uploadedPlans = [];
+        this.isPlansUploadLoading = false;
+      }
+    },
   },
   created() {
     this.$store.dispatch("services/fetch");
@@ -331,6 +383,12 @@ export default {
         (withOutInstances.length > 0 && withInstances.length > 0)
       );
     },
+    uploadedPlansText() {
+      return (
+        "Uploaded plans:<br/>" +
+        this.uploadedPlans.map((p) => p.title).join("<br/>")
+      );
+    },
   },
   watch: {
     plans() {
@@ -362,3 +420,12 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.file-input {
+  max-width: 300px;
+  min-width: 200px;
+  margin-top: 0;
+  padding-top: 0;
+}
+</style>
