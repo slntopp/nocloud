@@ -137,7 +137,7 @@
                   :item-text="currentFields[fieldKey].item?.title"
                   :items="currentFields[fieldKey].items"
                   :is="getFieldComponent(currentFields[fieldKey])"
-                  v-model="filter[fieldKey]"
+                  v-model="localFilter[fieldKey]"
                   range
                 />
                 <v-btn
@@ -210,6 +210,12 @@
                 </v-row>
               </v-card>
             </v-menu>
+            <v-btn
+              @click="saveFilter"
+              :disabled="isSaveDisabled"
+              color="primary"
+              >Save</v-btn
+            >
           </v-col>
         </v-row>
       </v-card>
@@ -228,6 +234,7 @@ import FromToNumberField from "@/components/ui/fromToNumberField.vue";
 const store = useStore();
 
 const isOpen = ref(false);
+const localFilter = ref({});
 const currentFieldsKeys = ref([]);
 const layouts = ref([]);
 const layoutMode = ref("preview");
@@ -280,6 +287,17 @@ const isFieldsDisabled = computed(
 const isLayoutsOptionsDisabled = computed(
   () => isLayoutModeAdd.value || !currentLayout.value
 );
+const isSaveDisabled = computed(() => {
+  return (
+    JSON.stringify(localFilter.value) === JSON.stringify(filter.value) &&
+    !(
+      currentLayout.value &&
+      JSON.stringify(
+        layouts.value.find((l) => l.id === currentLayout.value.id)?.fields
+      ) !== JSON.stringify(currentFieldsKeys.value)
+    )
+  );
+});
 
 const getFieldComponent = (field) => {
   switch (field.type) {
@@ -330,6 +348,14 @@ const loadSearchData = (name) => {
   }
 };
 
+const saveFilter = () => {
+  filter.value = { ...localFilter.value };
+  const layoutIndex = layouts.value.findIndex(
+    (l) => l.id === currentLayout.value.id
+  );
+  layouts.value[layoutIndex].fields = currentFieldsKeys.value;
+};
+
 const setCurrentFieldsKeys = () => {
   if (allFields.value.length === 0) {
     return;
@@ -362,9 +388,8 @@ const changeFields = ({ key }, value) => {
     currentFieldsKeys.value = currentFieldsKeys.value.filter((f) => f !== key);
     const newFilter = { ...filter.value };
     delete newFilter[key];
-    filter.value = newFilter;
+    localFilter.value = newFilter;
   }
-  currentLayout.value.fields = currentFieldsKeys.value;
 };
 
 const addNewLayout = (title = "New layout") => {
@@ -410,7 +435,6 @@ watch(visibleLayout, (_, prevLayout) => {
 
   if (typeof prevLayoutIndex === "number" && prevLayoutIndex !== -1) {
     layouts.value[prevLayoutIndex].filter = filter.value;
-    layouts.value[prevLayoutIndex].fields = currentFieldsKeys.value;
   }
   filter.value = currentLayout.value?.filter || {};
   setCurrentFieldsKeys();
@@ -419,6 +443,9 @@ watch(currentLayout, () => {
   if (!currentLayout.value) {
     filter.value = {};
   }
+});
+watch(filter, (newValue) => {
+  localFilter.value = { ...newValue };
 });
 </script>
 
