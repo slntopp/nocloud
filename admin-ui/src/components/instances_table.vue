@@ -269,7 +269,7 @@ export default {
           return +inst.billingPlan.resources
             .reduce((prev, curr) => {
               if (
-                curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
+                curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`
               ) {
                 return prev + (curr.price * inst.resources.drive_size) / 1024;
               } else if (curr.key === "ram") {
