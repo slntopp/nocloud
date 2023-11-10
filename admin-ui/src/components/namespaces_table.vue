@@ -18,7 +18,7 @@
       <router-link
         :to="{ name: 'NamespacePage', params: { namespaceId: item.uuid } }"
       >
-        {{item.title }}
+        {{ item.title }}
       </router-link>
     </template>
   </nocloud-table>
@@ -26,10 +26,13 @@
 
 <script>
 import noCloudTable from "@/components/table.vue";
-import { filterArrayByTitleAndUuid } from "@/functions";
+import { compareSearchValue, filterArrayByTitleAndUuid } from "@/functions";
+import search from "@/mixins/search";
+import { mapGetters } from "vuex";
 
 export default {
   name: "namespaces-table",
+  mixins: [search("namespaces-table")],
   components: {
     "nocloud-table": noCloudTable,
   },
@@ -41,10 +44,6 @@ export default {
     "single-select": {
       type: Boolean,
       default: false,
-    },
-    searchParam: {
-      type: String,
-      default: "",
     },
   },
   data() {
@@ -68,14 +67,51 @@ export default {
     },
   },
   computed: {
+    ...mapGetters("appSearch", ["filter", "param"]),
     tableData() {
       return this.$store.getters["namespaces/all"];
     },
     filtredNamespaces() {
-      if (this.searchParam) {
-        return filterArrayByTitleAndUuid(this.tableData, this.searchParam);
+      const namespaces = this.tableData.filter((n) =>
+        Object.keys(this.filter).every((key) => {
+          let data;
+
+          let localKey = key;
+          let value = { ...n };
+          localKey.split(".").forEach((subKey, index) => {
+            if (index === localKey.split(".").length - 1) {
+              localKey = subKey;
+              return;
+            }
+            value = n[subKey];
+          });
+          data = value[localKey];
+
+          return compareSearchValue(
+            data,
+            this.filter[key],
+            this.searchFields.find((f) => f.key === key)
+          );
+        })
+      );
+
+      if (this.param) {
+        return filterArrayByTitleAndUuid(namespaces, this.param);
       }
-      return this.tableData;
+      return namespaces;
+    },
+    accessLevels() {
+      return [...new Set(this.tableData.map((n) => n.access.level)), "NONE"];
+    },
+    searchFields() {
+      return [
+        {
+          title: "Access",
+          key: "access.level",
+          type: "select",
+          items: this.accessLevels,
+        },
+      ];
     },
     accounts() {
       return this.$store.getters["accounts/all"];
@@ -105,6 +141,7 @@ export default {
   watch: {
     tableData() {
       this.fetchError = "";
+      this.$store.commit("appSearch/setFields", this.searchFields);
     },
   },
 };
