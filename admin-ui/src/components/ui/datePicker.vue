@@ -12,12 +12,17 @@
         :value="value"
         readonly
         :dense="dense"
+        clearable
+        @input="emits('input', $event)"
         :label="label"
+        :disabled="disabled"
       />
     </template>
     <v-date-picker
       scrollable
+      :disabled="disabled"
       :min="min"
+      :range="range"
       :value="value"
       @input="emits('input', $event)"
     ></v-date-picker>
@@ -31,7 +36,10 @@ const props = defineProps({
   value: {},
   min: {},
   label: {},
+  clearable: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
+  range: { type: Boolean, default: false },
+  disabled: { type: Boolean, default: false },
 });
 const { value, min, label, dense } = toRefs(props);
 
