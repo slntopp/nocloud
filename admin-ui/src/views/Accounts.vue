@@ -148,8 +148,7 @@
       </confirm-dialog>
     </div>
 
-    <accounts-table :searchParam="searchParam" v-model="selected">
-    </accounts-table>
+    <accounts-table v-model="selected"> </accounts-table>
   </div>
 </template>
 
@@ -158,7 +157,6 @@ import accountsTable from "@/components/accounts_table.vue";
 import api from "@/api.js";
 
 import snackbar from "@/mixins/snackbar.js";
-import search from "@/mixins/search.js";
 
 import ConfirmDialog from "../components/confirmDialog.vue";
 
@@ -168,7 +166,7 @@ export default {
     "accounts-table": accountsTable,
     ConfirmDialog,
   },
-  mixins: [snackbar, search],
+  mixins: [snackbar],
   data() {
     return {
       createMenuVisible: false,
@@ -299,9 +297,6 @@ export default {
       }));
       return namespaces;
     },
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
-    },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
@@ -313,8 +308,6 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "accounts/fetch",
     });
-
-    this.$store.commit("appSearch/setSearchName", "all-accounts");
     this.$store.dispatch("currencies/fetch");
   },
   watch: {

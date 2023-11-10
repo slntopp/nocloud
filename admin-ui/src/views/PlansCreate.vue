@@ -469,9 +469,6 @@ export default {
     if (this.item) this.getItem();
   },
   computed: {
-    searchParam() {
-      return this.$store.getters["appSearch/customSearchParam"]?.toLowerCase();
-    },
     template() {
       const type = this.plan.kind === "DYNAMIC" ? "resources" : "products";
 

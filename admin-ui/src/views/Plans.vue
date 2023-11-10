@@ -56,16 +56,6 @@
       </template>
     </confirm-dialog>
 
-    <v-autocomplete
-      :filter="defaultFilterObject"
-      label="Filter by SP"
-      item-text="title"
-      item-value="uuid"
-      class="d-inline-block"
-      v-model="serviceProvider"
-      :items="servicesProviders"
-    />
-
     <nocloud-table
       table-name="plans"
       class="mt-4"
@@ -137,6 +127,7 @@ import search from "@/mixins/search.js";
 import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import {
+  compareSearchValue,
   defaultFilterObject,
   filterArrayByTitleAndUuid,
   readJSONFile,
@@ -148,7 +139,7 @@ import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 export default {
   name: "plans-view",
   components: { DownloadTemplateButton, nocloudTable, confirmDialog },
-  mixins: [snackbar, search],
+  mixins: [snackbar, search("billing-plans")],
   data: () => ({
     headers: [
       { text: "Title ", value: "title" },
@@ -168,7 +159,6 @@ export default {
     selected: [],
     copyed: -1,
     fetchError: "",
-    serviceProvider: null,
 
     fileTypes: ["JSON", "YAML"],
     selectedFileType: "JSON",
@@ -247,9 +237,6 @@ export default {
     getPlans() {
       this.$store
         .dispatch("plans/fetch", {
-          params: {
-            sp_uuid: this.serviceProvider,
-          },
           withCount: true,
         })
         .then(() => {
@@ -309,14 +296,11 @@ export default {
       type: "plans/fetch",
       params: {
         params: {
-          sp_uuid: this.serviceProvider,
           anonymously: false,
         },
         withCount: true,
       },
     });
-
-    this.$store.commit("appSearch/setSearchName", "all-plans");
   },
   computed: {
     ...mapGetters("plans", {
@@ -326,8 +310,8 @@ export default {
       instanceCountMap: "instanceCountMap",
     }),
     ...mapGetters("appSearch", {
-      searchParams: "customParams",
-      searchParam: "customSearchParam",
+      filter: "filter",
+      searchParam: "param",
     }),
     services() {
       return this.$store.getters["services/all"];
@@ -341,15 +325,28 @@ export default {
       );
     },
     filtredPlans() {
-      const plans = this.plans.filter((plan) => {
-        return Object.keys(this.searchParams).every(
-          (key) =>
-            this.searchParams[key].length === 0 ||
-            this.searchParams[key]
-              .map((f) => f.value)
-              .includes(plan[key]?.toString()?.toLowerCase())
-        );
-      });
+      const plans = this.plans.filter((p) =>
+        Object.keys(this.filter).every((key) => {
+          let data;
+
+          let localKey = key;
+          let value = { ...p };
+          localKey.split(".").forEach((subKey, index) => {
+            if (index === localKey.split(".").length - 1) {
+              localKey = subKey;
+              return;
+            }
+            value = p[subKey];
+          });
+          data = value[localKey];
+
+          return compareSearchValue(
+            data,
+            this.filter[key],
+            this.searchFields.find((f) => f.key === key)
+          );
+        })
+      );
 
       if (this.searchParam) {
         return filterArrayByTitleAndUuid(plans, this.searchParam);
@@ -389,30 +386,25 @@ export default {
         this.uploadedPlans.map((p) => p.title).join("<br/>")
       );
     },
+    searchFields() {
+      return [
+        {
+          items: ["STATIC", "DYNAMIC"],
+          title: "Kind",
+          key: "kind",
+          type: "select",
+        },
+        { items: this.typeItems, title: "Type", key: "type", type: "select" },
+        { title: "Public", key: "public", type: "logic-select" },
+      ];
+    },
   },
   watch: {
     plans() {
       this.fetchError = "";
     },
     typeItems() {
-      this.$store.commit("appSearch/setVariants", {
-        kind: { items: ["static", "dynamic"], title: "Kind", isArray: true },
-        type: { items: this.typeItems, isArray: true, title: "Type" },
-        public: { items: ["true", "false"], title: "Public", isArray: true },
-      });
-    },
-    serviceProvider() {
-      this.getPlans();
-      this.$store.commit("reloadBtn/setCallback", {
-        type: "plans/fetch",
-        params: {
-          params: {
-            sp_uuid: this.serviceProvider,
-            anonymously: false,
-          },
-          withCount: true,
-        },
-      });
+      this.$store.commit("appSearch/setFields", this.searchFields);
     },
     selected() {
       this.changePlan();
