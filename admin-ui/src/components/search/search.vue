@@ -334,19 +334,23 @@ const setCurrentFieldsKeys = () => {
   if (allFields.value.length === 0) {
     return;
   }
-
-  const newCurrentFields = currentLayout.value?.fields || [];
-  let i = 0;
-  while (
-    newCurrentFields.length < 5 &&
-    newCurrentFields.length !== allFields.value.length
-  ) {
-    const key = allFields.value[i].key;
-    if (newCurrentFields.findIndex((f) => f.key === key) === -1) {
-      newCurrentFields.push(key);
+  const newCurrentFields = [];
+  if (currentLayout.value?.fields) {
+    newCurrentFields.push(...currentLayout.value?.fields);
+  } else {
+    let i = 0;
+    while (
+      newCurrentFields.length < 5 &&
+      newCurrentFields.length !== allFields.value.length
+    ) {
+      const key = allFields.value[i].key;
+      if (newCurrentFields.findIndex((f) => f.key === key) === -1) {
+        newCurrentFields.push(key);
+      }
+      i++;
     }
-    i++;
   }
+
   currentFieldsKeys.value = newCurrentFields.filter(
     (key) => !!allFields.value?.find((f) => f.key === key)
   );
@@ -364,7 +368,7 @@ const changeFields = ({ key }, value) => {
 };
 
 const addNewLayout = (title = "New layout") => {
-  layouts.value.push({ title, id: Date.now(), filter: {}, fields: [] });
+  layouts.value.push({ title, id: Date.now(), filter: {} });
 };
 const saveNewLayout = () => {
   addNewLayout(newLayoutName.value);
