@@ -26,7 +26,11 @@
 
 <script>
 import noCloudTable from "@/components/table.vue";
-import { compareSearchValue, filterArrayByTitleAndUuid } from "@/functions";
+import {
+  compareSearchValue,
+  filterArrayByTitleAndUuid,
+  getDeepObjectValue,
+} from "@/functions";
 import search from "@/mixins/search";
 import { mapGetters } from "vuex";
 
@@ -74,18 +78,7 @@ export default {
     filtredNamespaces() {
       const namespaces = this.tableData.filter((n) =>
         Object.keys(this.filter).every((key) => {
-          let data;
-
-          let localKey = key;
-          let value = { ...n };
-          localKey.split(".").forEach((subKey, index) => {
-            if (index === localKey.split(".").length - 1) {
-              localKey = subKey;
-              return;
-            }
-            value = n[subKey];
-          });
-          data = value[localKey];
+          const data = getDeepObjectValue(n, key);
 
           return compareSearchValue(
             data,

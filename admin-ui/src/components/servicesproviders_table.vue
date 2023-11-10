@@ -23,7 +23,7 @@
 
 <script>
 import noCloudTable from "@/components/table.vue";
-import { compareSearchValue, filterArrayByTitleAndUuid } from "@/functions";
+import {compareSearchValue, filterArrayByTitleAndUuid, getDeepObjectValue} from "@/functions";
 import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 import search from "@/mixins/search";
 import { mapGetters } from "vuex";
@@ -124,17 +124,8 @@ export default {
     filteredSp() {
       const sp = this.tableData.filter((sp) =>
         Object.keys(this.filter).every((key) => {
-          let data;
-          let localKey = key;
-          let value = { ...sp };
-          localKey.split(".").forEach((subKey, index) => {
-            if (index === localKey.split(".").length - 1) {
-              localKey = subKey;
-              return;
-            }
-            value = sp[subKey];
-          });
-          data = value[localKey];
+          const data=getDeepObjectValue(sp,key)
+
           return compareSearchValue(
             data,
             this.filter[key],

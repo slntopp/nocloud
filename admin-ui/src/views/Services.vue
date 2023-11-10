@@ -137,7 +137,11 @@ import serviceInstancesItem from "@/components/service_instances_item.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import search from "@/mixins/search.js";
 import snackbar from "@/mixins/snackbar.js";
-import { compareSearchValue, filterArrayByTitleAndUuid } from "@/functions";
+import {
+  compareSearchValue,
+  filterArrayByTitleAndUuid,
+  getDeepObjectValue,
+} from "@/functions";
 import { mapGetters } from "vuex";
 
 export default {
@@ -194,18 +198,7 @@ export default {
     filteredServices() {
       const services = this.services.filter((s) =>
         Object.keys(this.filter).every((key) => {
-          let data;
-
-          let localKey = key;
-          let value = { ...s };
-          localKey.split(".").forEach((subKey, index) => {
-            if (index === localKey.split(".").length - 1) {
-              localKey = subKey;
-              return;
-            }
-            value = s[subKey];
-          });
-          data = value[localKey];
+          const data = getDeepObjectValue(s, key);
 
           return compareSearchValue(
             data,

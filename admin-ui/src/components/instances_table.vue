@@ -140,7 +140,7 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
-import { compareSearchValue, getOvhPrice, getState } from "@/functions";
+import {compareSearchValue, getDeepObjectValue, getOvhPrice, getState} from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import searchMixin from "@/mixins/search";
 import InstanceState from "@/components/ui/instanceState.vue";
@@ -412,16 +412,7 @@ export default {
           if (this.headersGetters[key]) {
             value = this.getValue(key, i);
           } else {
-            let localKey = key;
-            let data = { ...i };
-            localKey.split(".").forEach((subKey, index) => {
-              if (index === localKey.split(".").length - 1) {
-                localKey = subKey;
-                return;
-              }
-              data = i[subKey];
-            });
-            value = data[localKey];
+            value=getDeepObjectValue(i,key)
           }
           return compareSearchValue(
             value,
