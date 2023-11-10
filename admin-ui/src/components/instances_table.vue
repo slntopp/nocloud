@@ -19,7 +19,7 @@
     <template v-slot:[`item.title`]="{ item }">
       <div class="d-flex justify-space-between">
         <router-link
-          :target="(openInNewTab) ? '_blank' : null"
+          :target="openInNewTab ? '_blank' : null"
           :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
         >
           {{ item.title }}
@@ -113,16 +113,17 @@
       </router-link>
     </template>
 
-    <template v-slot:[`item.resources.cpu`]="{ value }">
-      {{ value || 0 }} {{ value || 0 > 1 ? "cores" : "core" }}
+    <template v-slot:[`item.resources.cpu`]="{ item }">
+      {{ getValue("resources.cpu", item) }}
+      {{ getValue("resources.cpu", item) || 0 > 1 ? "cores" : "core" }}
     </template>
 
     <template v-slot:[`item.resources.ram`]="{ item }">
-      {{ getValue("resources.ram", item) || 0 }} GB
+      {{ getValue("resources.ram", item) }} GB
     </template>
 
     <template v-slot:[`item.resources.drive_size`]="{ item }">
-      {{ getValue("resources.drive_size", item) || 0 }} GB
+      {{ getValue("resources.drive_size", item) }} GB
     </template>
 
     <template v-slot:[`item.config.template_id`]="{ item }">
@@ -139,10 +140,11 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
-import { getOvhPrice, getState } from "@/functions";
+import { compareSearchValue, getOvhPrice, getState } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import searchMixin from "@/mixins/search";
 import InstanceState from "@/components/ui/instanceState.vue";
+import { mapGetters } from "vuex";
 
 export default {
   name: "instances-table",
@@ -152,7 +154,7 @@ export default {
     nocloudTable,
     instanceIpMenu,
   },
-  mixins: [searchMixin],
+  mixins: [searchMixin("instances-table")],
   props: {
     value: { type: Array, required: false },
     headers: { type: Array, default: null },
@@ -269,7 +271,7 @@ export default {
           return +inst.billingPlan.resources
             .reduce((prev, curr) => {
               if (
-                curr.key === `drive_${inst.resources.drive_type.toLowerCase()}`
+                curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`
               ) {
                 return prev + (curr.price * inst.resources.drive_size) / 1024;
               } else if (curr.key === "ram") {
@@ -394,21 +396,46 @@ export default {
         },
       };
     },
+    getSearchKeyItems(key) {
+      return [...new Set(this.items.map((i) => this.getValue(key, i)))];
+    },
   },
   computed: {
-    customParams() {
-      return this.$store.getters["appSearch/customParams"];
-    },
-    searchParam() {
-      return this.$store.getters["appSearch/customSearchParam"];
-    },
-    variants() {
-      return this.$store.getters["appSearch/variants"];
-    },
+    ...mapGetters("appSearch", { searchParam: "param", filter: "filter" }),
     services() {
       return this.$store.getters["services/all"];
     },
     instances() {
+      const instances = this.items.filter((i) => {
+        return Object.keys(this.filter || {}).every((key) => {
+          let value;
+          if (this.headersGetters[key]) {
+            value = this.getValue(key, i);
+          } else {
+            let localKey = key;
+            let data = { ...i };
+            localKey.split(".").forEach((subKey, index) => {
+              if (index === localKey.split(".").length - 1) {
+                localKey = subKey;
+                return;
+              }
+              data = i[subKey];
+            });
+            value = data[localKey];
+          }
+          return compareSearchValue(
+            value,
+            this.filter[key],
+            this.searchFields.find((f) => f.key === key)
+          );
+        });
+      });
+
+      const searchParam = this.searchParam?.toLowerCase();
+      if (!searchParam) {
+        return instances;
+      }
+
       const searchKeys = [
         "title",
         "uuid",
@@ -418,41 +445,6 @@ export default {
         "accountPrice",
         "state.meta.networking.public",
       ];
-      const instances = this.items.filter((i) => {
-        for (const key of Object.keys(this.customParams)) {
-          if (!this.variants[key]?.isArray) {
-            continue;
-          }
-          const filter = this.customParams[key]?.map((c) => c.value);
-
-          if (filter.length === 0) {
-            continue;
-          }
-
-          if (!this.headersGetters[key]) {
-            let val = i;
-            key.split(".").forEach((subkey) => {
-              val = val[subkey];
-            });
-            if (
-              !filter.some((f) => val?.toLowerCase().includes(f?.toLowerCase()))
-            ) {
-              return false;
-            }
-          } else if (
-            !filter.some((f) =>
-              this.getValue(key, i)?.toLowerCase().includes(f?.toLowerCase())
-            )
-          ) {
-            return false;
-          }
-        }
-        return true;
-      });
-      const searchParam = this.searchParam?.toLowerCase();
-      if (!searchParam) {
-        return instances;
-      }
 
       return instances.filter((item) => {
         item.account = this.getAccount(item);
@@ -536,100 +528,99 @@ export default {
         dueDate: this.getExpirationDate,
         sp: this.getServiceProvider,
         "access.namespace": (item) => this.getNamespace(item.access.namespace),
-        "resources.ram": (item) => +(item?.resources?.ram / 1024).toFixed(2),
+        "resources.ram": (item) =>
+          +(item?.resources?.ram / 1024).toFixed(2) || 0,
         "resources.drive_size": (item) =>
-          +(item?.resources?.drive_size / 1024).toFixed(2),
+          +(item?.resources?.drive_size / 1024).toFixed(2) || 0,
         "config.template_id": (item) =>
           this.getOSName(item?.config?.template_id, item.sp),
+        "resources.cpu": (item) => item.resources?.cpu || 0,
       };
     },
     isLoading() {
       return this.$store.getters["services/isLoading"];
     },
     priceModelItems() {
+      return [...new Set(this.items.map((i) => i.billingPlan?.title))];
+    },
+    searchFields() {
       return [
-        ...new Set(
-          this.items.map((i) => ({
-            uuid: i.billingPlan?.title,
-            title: i.billingPlan?.title,
-          }))
-        ),
-      ];
-    },
-    serviceItems() {
-      return this.$store.getters["services/all"].map((i) => i.title);
-    },
-    spItems() {
-      const instancesSP = this.items.map((i) => i.sp);
-
-      return [
-        ...new Set(
-          this.sp
-            .filter((sp) => instancesSP.includes(sp.uuid))
-            .map((sp) => sp.title)
-        ),
-      ];
-    },
-    periodItems() {
-      return [...new Set(this.items.map((i) => this.getValue("period", i)))];
-    },
-    productItems() {
-      return this.items.map((i) => this.getValue("product", i));
-    },
-    searchItems() {
-      return {
-        service: {
-          items: this.serviceItems,
+        {
+          key: "service",
+          items: this.getSearchKeyItems("service"),
           title: "Service",
-          isArray: true,
+          type: "select",
         },
-        period: {
-          items: this.periodItems,
+        {
+          key: "period",
+          items: this.getSearchKeyItems("period"),
           title: "Period",
-          isArray: true,
+          type: "select",
         },
-        sp: {
-          items: this.spItems,
+        {
+          key: "sp",
+          items: this.getSearchKeyItems("sp"),
+          type: "select",
           title: "Service provider",
-          isArray: true,
         },
-        access: {
-          items: this.accounts,
+        {
+          key: "access",
+          type: "select",
+          items: this.getSearchKeyItems("access"),
           title: "Account",
-          isArray: true,
         },
-        "access.namespace": {
-          items: this.namespaces,
+        {
+          key: "access.namespace",
+          items: this.getSearchKeyItems("access.namespace"),
+          type: "select",
           title: "Namespace",
-          isArray: true,
         },
-        product: {
-          items: this.productItems,
+        {
+          key: "product",
+          items: this.getSearchKeyItems("product"),
+          type: "select",
           title: "Product",
-          isArray: true,
         },
-        state: {
-          items: [
-            { uuid: "RUNNING", title: "RUNNING" },
-            { uuid: "STOPPED", title: "STOPPED" },
-            { uuid: "LCM_INIT", title: "LCM_INIT" },
-            { uuid: "SUSPENDED", title: "SUSPENDED" },
-            { uuid: "UNKNOWN", title: "UNKNOWN" },
-          ],
-          isArray: true,
+        {
+          key: "state",
+          items: ["RUNNING", "STOPPED", "LCM_INIT", "SUSPENDED", "UNKNOWN"],
+          type: "select",
           title: "State",
         },
-        type: {
+        {
+          key: "type",
           title: "Type",
+          type: "select",
           items: this.instancesTypes,
-          isArray: true,
         },
-        "billingPlan.title": {
+        {
+          key: "billingPlan.title",
+          type: "select",
           title: "Billing plan",
           items: this.priceModelItems,
-          isArray: true,
         },
-      };
+        { title: "Due date", key: "dueDate", type: "date" },
+        { title: "NCU price", key: "price", type: "number-range" },
+        { title: "Account price", key: "accountPrice", type: "number-range" },
+        { title: "Email", key: "email", type: "input" },
+        { title: "Date", key: "date", type: "date" },
+        { title: "IP", key: "state.meta.networking", type: "input" },
+        {
+          key: "resources.cpu",
+          type: "number-range",
+          title: "CPU",
+        },
+        { title: "RAM", key: "resources.ram", type: "number-range" },
+        { title: "Disk", key: "resources.drive_size", type: "number-range" },
+        { title: "OS", key: "config.template_id", type: "input" },
+        { title: "Domain", key: "resources.domain", type: "input" },
+        { title: "DCV", key: "resources.dcv", type: "input" },
+        {
+          title: "Approver email",
+          key: "resources.approver_email",
+          type: "input",
+        },
+      ];
     },
     rates() {
       return this.$store.getters["currencies/rates"];
@@ -642,10 +633,10 @@ export default {
     instances() {
       this.fetchError = "";
     },
-    searchItems: {
+    searchFields: {
       deep: true,
       handler() {
-        this.$store.commit("appSearch/setVariants", this.searchItems);
+        this.$store.commit("appSearch/setFields", this.searchFields);
       },
     },
   },

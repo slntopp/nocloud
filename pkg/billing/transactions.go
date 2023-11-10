@@ -208,6 +208,8 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 
 	t.Records = append(t.Records, rec.Key())
 
+	t.Created = time.Now().Unix()
+
 	r, err := s.transactions.Create(ctx, t)
 	if err != nil {
 		log.Error("Failed to create transaction", zap.Error(err))
@@ -521,7 +523,7 @@ LET rate = PRODUCT(
 LET total = transaction.total * rate
 
 FOR r in transaction.records
-	UPDATE r WITH {total: total, meta: {transaction: transaction._key}} in @@records
+	UPDATE r WITH {total: total, meta: {transaction: transaction._key, payment_date: @now}, exec: transaction.exec} in @@records
 
 UPDATE transaction WITH {processed: true, proc: @now, currency: currency, total: total} IN @@transactions
 UPDATE account WITH { balance: account.balance - total } IN @@accounts
