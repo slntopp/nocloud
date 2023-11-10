@@ -4,10 +4,12 @@
 
 <script>
 import historyTable from "@/components/historyTable.vue";
+import search from "@/mixins/search";
 
 export default {
   props: ["template"],
   name: "invoice-history",
+  mixins:[search('instance-history')],
   components: { historyTable },
 };
 </script>
