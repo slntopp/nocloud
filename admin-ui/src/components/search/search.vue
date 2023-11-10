@@ -146,7 +146,7 @@
                   small
                   @click="changeFields(currentFields[fieldKey], false)"
                 >
-                  <v-icon small>mdi-close</v-icon>
+                  <v-icon size="22">mdi-delete</v-icon>
                 </v-btn>
               </v-col>
             </v-row>
