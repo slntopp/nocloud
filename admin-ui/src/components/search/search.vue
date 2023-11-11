@@ -211,10 +211,18 @@
               </v-card>
             </v-menu>
             <v-btn
+              class="mx-2"
+              @click="resetFilter"
+              :disabled="isResetDisabled"
+              color="primary"
+              >Reset</v-btn
+            >
+            <v-btn
+              class="mx-2"
               @click="saveFilter"
               :disabled="isSaveDisabled"
               color="primary"
-              >Save</v-btn
+              >Search</v-btn
             >
           </v-col>
         </v-row>
@@ -298,6 +306,9 @@ const isSaveDisabled = computed(() => {
     )
   );
 });
+const isResetDisabled = computed(() => {
+  return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
+});
 
 const getFieldComponent = (field) => {
   switch (field.type) {
@@ -354,6 +365,9 @@ const saveFilter = () => {
     (l) => l.id === currentLayout.value.id
   );
   layouts.value[layoutIndex].fields = currentFieldsKeys.value;
+};
+const resetFilter = () => {
+  localFilter.value = { ...filter.value };
 };
 
 const setCurrentFieldsKeys = () => {
