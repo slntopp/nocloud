@@ -95,10 +95,11 @@
           </v-row>
         </v-col>
 
-        <v-col />
-        <v-divider />
+        <v-col :cols="viewport > 2560 ? 6 : 12">
+          <v-divider />
+        </v-col>
 
-        <v-col :cols="viewport > 2200 ? 6 : 12">
+        <v-col :cols="viewport > 2560 ? 6 : 12">
           <component
             v-if="!productsHide"
             :is="template"
