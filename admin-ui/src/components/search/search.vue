@@ -80,12 +80,7 @@
                     class="pa-0 ma-0"
                   >
                     <template v-slot:append>
-                      <v-btn
-                        :disabled="currentLayout?.id === layout.id"
-                        @click="deleteLayout(layout.id)"
-                        small
-                        icon
-                      >
+                      <v-btn @click="deleteLayout(layout.id)" small icon>
                         <v-icon small>mdi-close</v-icon>
                       </v-btn>
                     </template>
@@ -165,11 +160,12 @@
               :disabled="isLayoutsOptionsDisabled"
               plain
               color="primary"
-              @click="setLayoutMode(isLayoutModePreview ? 'edit' : 'preview')"
+              @click="onLayoutsOptionsClick"
               small
             >
               <span v-if="isLayoutModeEdit">Save</span>
-              <span v-else>Edit layouts</span>
+              <span v-else-if="isLayoutModeAdd">Cancel</span>
+              <span v-else-if="isLayoutModePreview">Edit layouts</span>
             </v-btn>
           </v-col>
           <v-col class="d-flex justify-end align-end">
@@ -291,7 +287,7 @@ const isLayoutModeEdit = computed(() => layoutMode.value === "edit");
 const isLayoutModeAdd = computed(() => layoutMode.value === "add");
 
 const isFieldsDisabled = computed(() => layoutMode.value !== "preview");
-const isLayoutsOptionsDisabled = computed(() => isLayoutModeAdd.value);
+const isLayoutsOptionsDisabled = computed(() => false);
 const isSaveDisabled = computed(() => {
   return (
     JSON.stringify(localFilter.value) === JSON.stringify(filter.value) &&
@@ -438,6 +434,17 @@ const setCurrentLayout = (layout) => {
 };
 const setLayoutMode = (mode) => {
   layoutMode.value = mode;
+};
+
+const onLayoutsOptionsClick = () => {
+  if (isLayoutModePreview.value) {
+    setLayoutMode("edit");
+  } else if (isLayoutModeEdit.value) {
+    setLayoutMode("preview");
+  } else {
+    newLayoutName.value = "New layout";
+    setLayoutMode("preview");
+  }
 };
 
 watch(searchName, (value, oldValue) => {
