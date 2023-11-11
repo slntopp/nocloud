@@ -18,6 +18,7 @@ var handlers = map[string]EventHandler{
 	"expiry_notification":         GetInstAccountHandler,
 	"suspend_expiry_notification": GetInstAccountHandler,
 	"suspend_delete_instance":     GetInstAccountHandler,
+	"instance_renew":              GetInstAccountHandler,
 }
 
 var getInstanceAccount = `

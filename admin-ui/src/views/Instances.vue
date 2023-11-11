@@ -280,8 +280,6 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
     });
-    this.$store.commit("appSearch/setSearchName", "all-instances");
-
     const icon = document.querySelector(".group-icon");
     icon.dispatchEvent(new Event("click"));
   },

@@ -21,6 +21,14 @@ const duration = ref({ to: null, from: null });
 
 const filters = computed(() => {
   return {
+    exec: {
+      to: duration.value.to
+        ? new Date(duration.value.to).getTime() / 1000
+        : undefined,
+      from: duration.value.from
+        ? new Date(duration.value.from).getTime() / 1000
+        : undefined,
+    },
     service: [service.value.uuid],
   };
 });

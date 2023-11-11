@@ -30,8 +30,7 @@
       </v-btn>
     </div>
 
-    <services-providers :searchParams="searchParams" v-model="selected">
-    </services-providers>
+    <services-providers v-model="selected"> </services-providers>
   </div>
 </template>
 
@@ -40,7 +39,6 @@ import api from "@/api.js";
 import servicesProviders from "@/components/servicesproviders_table.vue";
 
 import snackbar from "@/mixins/snackbar.js";
-import search from "@/mixins/search.js";
 import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
@@ -49,17 +47,12 @@ export default {
     servicesProviders,
     ConfirmDialog,
   },
-  mixins: [snackbar, search],
+  mixins: [snackbar],
   data() {
     return {
       selected: [],
       allTypes: [],
     };
-  },
-  computed: {
-    searchParams() {
-      return this.$store.getters["appSearch/advancedParams"];
-    },
   },
   methods: {
     deleteSelectedServicesProviders() {
@@ -112,7 +105,7 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "servicesProviders/fetch",
-      params: false
+      params: false,
     });
   },
 };
