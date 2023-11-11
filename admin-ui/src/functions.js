@@ -533,3 +533,15 @@ export function compareSearchValue(data, searchValue, field) {
     }
   }
 }
+
+export function getDeepObjectValue(data, key) {
+  let value = { ...data};
+  key.split(".").forEach((subKey, index) => {
+    if (index === key.split(".").length - 1) {
+      key = subKey;
+      return;
+    }
+    value = data?.[subKey];
+  });
+  return value?.[key];
+}

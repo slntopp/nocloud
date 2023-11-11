@@ -80,12 +80,7 @@
                     class="pa-0 ma-0"
                   >
                     <template v-slot:append>
-                      <v-btn
-                        :disabled="currentLayout?.id === layout.id"
-                        @click="deleteLayout(layout.id)"
-                        small
-                        icon
-                      >
+                      <v-btn @click="deleteLayout(layout.id)" small icon>
                         <v-icon small>mdi-close</v-icon>
                       </v-btn>
                     </template>
@@ -137,7 +132,7 @@
                   :item-text="currentFields[fieldKey].item?.title"
                   :items="currentFields[fieldKey].items"
                   :is="getFieldComponent(currentFields[fieldKey])"
-                  v-model="filter[fieldKey]"
+                  v-model="localFilter[fieldKey]"
                   range
                 />
                 <v-btn
@@ -146,7 +141,7 @@
                   small
                   @click="changeFields(currentFields[fieldKey], false)"
                 >
-                  <v-icon small>mdi-close</v-icon>
+                  <v-icon size="22">mdi-delete</v-icon>
                 </v-btn>
               </v-col>
             </v-row>
@@ -165,11 +160,12 @@
               :disabled="isLayoutsOptionsDisabled"
               plain
               color="primary"
-              @click="setLayoutMode(isLayoutModePreview ? 'edit' : 'preview')"
+              @click="onLayoutsOptionsClick"
               small
             >
               <span v-if="isLayoutModeEdit">Save</span>
-              <span v-else>Edit layouts</span>
+              <span v-else-if="isLayoutModeAdd">Cancel</span>
+              <span v-else-if="isLayoutModePreview">Edit layouts</span>
             </v-btn>
           </v-col>
           <v-col class="d-flex justify-end align-end">
@@ -210,6 +206,20 @@
                 </v-row>
               </v-card>
             </v-menu>
+            <v-btn
+              class="mx-2"
+              @click="resetFilter"
+              :disabled="isResetDisabled"
+              color="primary"
+              >Reset</v-btn
+            >
+            <v-btn
+              class="mx-2"
+              @click="saveFilter"
+              :disabled="isSaveDisabled"
+              color="primary"
+              >Search</v-btn
+            >
           </v-col>
         </v-row>
       </v-card>
@@ -228,8 +238,13 @@ import FromToNumberField from "@/components/ui/fromToNumberField.vue";
 const store = useStore();
 
 const isOpen = ref(false);
+const localFilter = ref({});
 const currentFieldsKeys = ref([]);
 const layouts = ref([]);
+function getBlankLayout() {
+  return { filter: {}, fields: {}, id: "blank" };
+}
+const blankLayout = ref(getBlankLayout());
 const layoutMode = ref("preview");
 const newLayoutName = ref("New layout");
 
@@ -256,7 +271,7 @@ const currentLayout = computed({
     ),
   set: (val) => store.commit("appSearch/setCurrentLayout", val?.id),
 });
-const visibleLayout = computed(() => currentLayout.value || layouts.value[0]);
+const visibleLayout = computed(() => currentLayout.value || blankLayout.value);
 const searchName = computed(() => store.getters["appSearch/searchName"]);
 const param = computed({
   get: () => store.getters["appSearch/param"],
@@ -271,15 +286,18 @@ const isLayoutModePreview = computed(() => layoutMode.value === "preview");
 const isLayoutModeEdit = computed(() => layoutMode.value === "edit");
 const isLayoutModeAdd = computed(() => layoutMode.value === "add");
 
-const isFieldsDisabled = computed(
-  () =>
-    layoutMode.value !== "preview" ||
-    !visibleLayout.value ||
-    !!(visibleLayout.value && !currentLayout.value)
-);
-const isLayoutsOptionsDisabled = computed(
-  () => isLayoutModeAdd.value || !currentLayout.value
-);
+const isFieldsDisabled = computed(() => layoutMode.value !== "preview");
+const isLayoutsOptionsDisabled = computed(() => false);
+const isSaveDisabled = computed(() => {
+  return (
+    JSON.stringify(localFilter.value) === JSON.stringify(filter.value) &&
+    JSON.stringify(visibleLayout.value.fields) ===
+      JSON.stringify(currentFieldsKeys.value)
+  );
+});
+const isResetDisabled = computed(() => {
+  return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
+});
 
 const getFieldComponent = (field) => {
   switch (field.type) {
@@ -330,23 +348,45 @@ const loadSearchData = (name) => {
   }
 };
 
+const saveFilter = () => {
+  filter.value = { ...localFilter.value };
+  if (visibleLayout.value.id === blankLayout.value.id) {
+    blankLayout.value.fields = [...currentFieldsKeys.value];
+  } else {
+    const layoutIndex = layouts.value.findIndex(
+      (l) => l.id === currentLayout.value?.id
+    );
+    if (layoutIndex !== -1) {
+      layouts.value[layoutIndex].fields = [...currentFieldsKeys.value];
+      layouts.value[layoutIndex].filter = { ...filter.value };
+    }
+  }
+};
+const resetFilter = () => {
+  localFilter.value = { ...filter.value };
+};
+
 const setCurrentFieldsKeys = () => {
   if (allFields.value.length === 0) {
     return;
   }
-
-  const newCurrentFields = currentLayout.value?.fields || [];
-  let i = 0;
-  while (
-    newCurrentFields.length < 5 &&
-    newCurrentFields.length !== allFields.value.length
-  ) {
-    const key = allFields.value[i].key;
-    if (newCurrentFields.findIndex((f) => f.key === key) === -1) {
-      newCurrentFields.push(key);
+  const newCurrentFields = [];
+  if (currentLayout.value?.fields) {
+    newCurrentFields.push(...currentLayout.value?.fields);
+  } else {
+    let i = 0;
+    while (
+      newCurrentFields.length < 5 &&
+      newCurrentFields.length !== allFields.value.length
+    ) {
+      const key = allFields.value[i].key;
+      if (newCurrentFields.findIndex((f) => f.key === key) === -1) {
+        newCurrentFields.push(key);
+      }
+      i++;
     }
-    i++;
   }
+
   currentFieldsKeys.value = newCurrentFields.filter(
     (key) => !!allFields.value?.find((f) => f.key === key)
   );
@@ -358,16 +398,28 @@ const changeFields = ({ key }, value) => {
     currentFieldsKeys.value = currentFieldsKeys.value.filter((f) => f !== key);
     const newFilter = { ...filter.value };
     delete newFilter[key];
-    filter.value = newFilter;
+    localFilter.value = newFilter;
   }
-  currentLayout.value.fields = currentFieldsKeys.value;
 };
 
-const addNewLayout = (title = "New layout") => {
-  layouts.value.push({ title, id: Date.now(), filter: {}, fields: [] });
+const addNewLayout = (data) => {
+  layouts.value.push({
+    filter: {},
+    ...data,
+    id: Date.now(),
+  });
 };
 const saveNewLayout = () => {
-  addNewLayout(newLayoutName.value);
+  if (blankLayout.value.id === visibleLayout.value.id) {
+    addNewLayout({
+      title: newLayoutName.value,
+      filter: { ...filter.value },
+      fields: [...currentFieldsKeys.value],
+    });
+    blankLayout.value = getBlankLayout();
+  } else {
+    addNewLayout({ title: newLayoutName.value });
+  }
   newLayoutName.value = "New layout";
   currentLayout.value = layouts.value[layouts.value.length - 1];
   setLayoutMode("preview");
@@ -384,6 +436,17 @@ const setLayoutMode = (mode) => {
   layoutMode.value = mode;
 };
 
+const onLayoutsOptionsClick = () => {
+  if (isLayoutModePreview.value) {
+    setLayoutMode("edit");
+  } else if (isLayoutModeEdit.value) {
+    setLayoutMode("preview");
+  } else {
+    newLayoutName.value = "New layout";
+    setLayoutMode("preview");
+  }
+};
+
 watch(searchName, (value, oldValue) => {
   if (oldValue) {
     saveSearchData(oldValue);
@@ -396,25 +459,28 @@ watch(searchName, (value, oldValue) => {
     loadSearchData(value);
   }
   if (layouts.value.length === 0) {
-    addNewLayout("Default");
+    addNewLayout({ title: "Default" });
   }
 });
 watch(allFields, setCurrentFieldsKeys);
 watch(visibleLayout, (_, prevLayout) => {
-  const prevLayoutIndex =
-    prevLayout && layouts.value.findIndex((l) => l.id === prevLayout.id);
+  if (prevLayout?.id === blankLayout.value.id) {
+    blankLayout.value.filter = { ...filter.value };
+    blankLayout.value.fields = [...currentFieldsKeys.value];
+  } else {
+    const prevLayoutIndex =
+      prevLayout && layouts.value.findIndex((l) => l.id === prevLayout.id);
 
-  if (typeof prevLayoutIndex === "number" && prevLayoutIndex !== -1) {
-    layouts.value[prevLayoutIndex].filter = filter.value;
-    layouts.value[prevLayoutIndex].fields = currentFieldsKeys.value;
+    if (typeof prevLayoutIndex === "number" && prevLayoutIndex !== -1) {
+      layouts.value[prevLayoutIndex].filter = filter.value;
+    }
   }
-  filter.value = currentLayout.value?.filter || {};
+
+  filter.value = visibleLayout.value?.filter || {};
   setCurrentFieldsKeys();
 });
-watch(currentLayout, () => {
-  if (!currentLayout.value) {
-    filter.value = {};
-  }
+watch(filter, (newValue) => {
+  localFilter.value = { ...newValue };
 });
 </script>
 

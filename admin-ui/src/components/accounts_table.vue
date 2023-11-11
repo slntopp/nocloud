@@ -88,6 +88,7 @@ import {
   compareSearchValue,
   filterByKeysAndParam,
   formatSecondsToDate,
+  getDeepObjectValue,
 } from "@/functions";
 import api from "@/api";
 import search from "@/mixins/search";
@@ -205,16 +206,7 @@ export default {
           if (key === "namespace") {
             data = this.getNamespaceName(a.uuid);
           } else {
-            let localKey = key;
-            let value = { ...a };
-            localKey.split(".").forEach((subKey, index) => {
-              if (index === localKey.split(".").length - 1) {
-                localKey = subKey;
-                return;
-              }
-              value = a[subKey];
-            });
-            data = value[localKey];
+            data = getDeepObjectValue(a, key);
           }
 
           return compareSearchValue(

@@ -129,7 +129,7 @@ import confirmDialog from "@/components/confirmDialog.vue";
 import {
   compareSearchValue,
   defaultFilterObject,
-  filterArrayByTitleAndUuid,
+  filterArrayByTitleAndUuid, getDeepObjectValue,
   readJSONFile,
   readYAMLFile,
 } from "@/functions";
@@ -327,18 +327,7 @@ export default {
     filtredPlans() {
       const plans = this.plans.filter((p) =>
         Object.keys(this.filter).every((key) => {
-          let data;
-
-          let localKey = key;
-          let value = { ...p };
-          localKey.split(".").forEach((subKey, index) => {
-            if (index === localKey.split(".").length - 1) {
-              localKey = subKey;
-              return;
-            }
-            value = p[subKey];
-          });
-          data = value[localKey];
+          const data = getDeepObjectValue(p, key);
 
           return compareSearchValue(
             data,
