@@ -245,6 +245,10 @@ const isOpen = ref(false);
 const localFilter = ref({});
 const currentFieldsKeys = ref([]);
 const layouts = ref([]);
+function getBlankLayout() {
+  return { filter: {}, fields: {}, id: "blank" };
+}
+const blankLayout = ref(getBlankLayout());
 const layoutMode = ref("preview");
 const newLayoutName = ref("New layout");
 
@@ -271,7 +275,7 @@ const currentLayout = computed({
     ),
   set: (val) => store.commit("appSearch/setCurrentLayout", val?.id),
 });
-const visibleLayout = computed(() => currentLayout.value || layouts.value[0]);
+const visibleLayout = computed(() => currentLayout.value || blankLayout.value);
 const searchName = computed(() => store.getters["appSearch/searchName"]);
 const param = computed({
   get: () => store.getters["appSearch/param"],
@@ -286,24 +290,13 @@ const isLayoutModePreview = computed(() => layoutMode.value === "preview");
 const isLayoutModeEdit = computed(() => layoutMode.value === "edit");
 const isLayoutModeAdd = computed(() => layoutMode.value === "add");
 
-const isFieldsDisabled = computed(
-  () =>
-    layoutMode.value !== "preview" ||
-    !visibleLayout.value ||
-    !!(visibleLayout.value && !currentLayout.value)
-);
-const isLayoutsOptionsDisabled = computed(
-  () => isLayoutModeAdd.value || !currentLayout.value
-);
+const isFieldsDisabled = computed(() => layoutMode.value !== "preview");
+const isLayoutsOptionsDisabled = computed(() => isLayoutModeAdd.value);
 const isSaveDisabled = computed(() => {
   return (
     JSON.stringify(localFilter.value) === JSON.stringify(filter.value) &&
-    !(
-      currentLayout.value &&
-      JSON.stringify(
-        layouts.value.find((l) => l.id === currentLayout.value.id)?.fields
-      ) !== JSON.stringify(currentFieldsKeys.value)
-    )
+    JSON.stringify(visibleLayout.value.fields) ===
+      JSON.stringify(currentFieldsKeys.value)
   );
 });
 const isResetDisabled = computed(() => {
@@ -361,10 +354,17 @@ const loadSearchData = (name) => {
 
 const saveFilter = () => {
   filter.value = { ...localFilter.value };
-  const layoutIndex = layouts.value.findIndex(
-    (l) => l.id === currentLayout.value.id
-  );
-  layouts.value[layoutIndex].fields = currentFieldsKeys.value;
+  if (visibleLayout.value.id === blankLayout.value.id) {
+    blankLayout.value.fields = [...currentFieldsKeys.value];
+  } else {
+    const layoutIndex = layouts.value.findIndex(
+      (l) => l.id === currentLayout.value?.id
+    );
+    if (layoutIndex !== -1) {
+      layouts.value[layoutIndex].fields = [...currentFieldsKeys.value];
+      layouts.value[layoutIndex].filter = { ...filter.value };
+    }
+  }
 };
 const resetFilter = () => {
   localFilter.value = { ...filter.value };
@@ -406,11 +406,24 @@ const changeFields = ({ key }, value) => {
   }
 };
 
-const addNewLayout = (title = "New layout") => {
-  layouts.value.push({ title, id: Date.now(), filter: {} });
+const addNewLayout = (data) => {
+  layouts.value.push({
+    filter: {},
+    ...data,
+    id: Date.now(),
+  });
 };
 const saveNewLayout = () => {
-  addNewLayout(newLayoutName.value);
+  if (blankLayout.value.id === visibleLayout.value.id) {
+    addNewLayout({
+      title: newLayoutName.value,
+      filter: { ...filter.value },
+      fields: [...currentFieldsKeys.value],
+    });
+    blankLayout.value = getBlankLayout();
+  } else {
+    addNewLayout({ title: newLayoutName.value });
+  }
   newLayoutName.value = "New layout";
   currentLayout.value = layouts.value[layouts.value.length - 1];
   setLayoutMode("preview");
@@ -439,24 +452,25 @@ watch(searchName, (value, oldValue) => {
     loadSearchData(value);
   }
   if (layouts.value.length === 0) {
-    addNewLayout("Default");
+    addNewLayout({ title: "Default" });
   }
 });
 watch(allFields, setCurrentFieldsKeys);
 watch(visibleLayout, (_, prevLayout) => {
-  const prevLayoutIndex =
-    prevLayout && layouts.value.findIndex((l) => l.id === prevLayout.id);
+  if (prevLayout?.id === blankLayout.value.id) {
+    blankLayout.value.filter = { ...filter.value };
+    blankLayout.value.fields = [...currentFieldsKeys.value];
+  } else {
+    const prevLayoutIndex =
+      prevLayout && layouts.value.findIndex((l) => l.id === prevLayout.id);
 
-  if (typeof prevLayoutIndex === "number" && prevLayoutIndex !== -1) {
-    layouts.value[prevLayoutIndex].filter = filter.value;
+    if (typeof prevLayoutIndex === "number" && prevLayoutIndex !== -1) {
+      layouts.value[prevLayoutIndex].filter = filter.value;
+    }
   }
-  filter.value = currentLayout.value?.filter || {};
+
+  filter.value = visibleLayout.value?.filter || {};
   setCurrentFieldsKeys();
-});
-watch(currentLayout, () => {
-  if (!currentLayout.value) {
-    filter.value = {};
-  }
 });
 watch(filter, (newValue) => {
   localFilter.value = { ...newValue };
