@@ -358,7 +358,7 @@ export default {
     getExpirationDate(inst) {
       if (inst.data.next_payment_date)
         return this.date(inst.data.next_payment_date);
-      return "unknown";
+      return "-";
     },
     getService({ service }) {
       return (
