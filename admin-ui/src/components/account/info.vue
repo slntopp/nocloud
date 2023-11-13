@@ -7,12 +7,24 @@
           {{ account.currency }}</v-chip
         >
         <v-btn
+          class="mx-1"
           :to="{
             name: 'Transactions create',
             params: { account: account.uuid },
           }"
           >Create transaction/invoice</v-btn
         >
+        <v-btn
+          class="mx-1"
+          :to="{
+            name: 'Instance create',
+            params: {
+              accountId: account.uuid,
+            },
+          }"
+        >
+          Create instance
+        </v-btn>
       </div>
       <div class="d-flex justify-end mt-3 align-center">
         <v-switch
