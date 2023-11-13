@@ -53,7 +53,7 @@
       </template>
       <template v-slot:[`item.status`]="{ item }">
         <div class="d-flex justify-center align-center">
-          {{ item.paymentDate ? "Paid" : "Not paid" }}
+          {{ item.paymentDate ? "Paid" : "Unpaid" }}
         </div>
       </template>
       <template v-slot:[`item.service`]="{ value }">
