@@ -141,7 +141,7 @@
                   small
                   @click="changeFields(currentFields[fieldKey], false)"
                 >
-                  <v-icon size="22">mdi-delete</v-icon>
+                  <v-icon size="20">mdi-delete-outline</v-icon>
                 </v-btn>
               </v-col>
             </v-row>
