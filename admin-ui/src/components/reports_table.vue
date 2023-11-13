@@ -47,7 +47,14 @@
         <span>{{ new Date(value * 1000).toLocaleString() }}</span>
       </template>
       <template v-slot:[`item.paymentDate`]="{ value }">
-        <div class="d-flex justify-center align-center">{{ value ? new Date(value * 1000).toLocaleString() : "-" }}</div>
+        <div class="d-flex justify-center align-center">
+          {{ value ? new Date(value * 1000).toLocaleString() : "-" }}
+        </div>
+      </template>
+      <template v-slot:[`item.status`]="{ item }">
+        <div class="d-flex justify-center align-center">
+          {{ item.paymentDate ? "Paid" : "Not paid" }}
+        </div>
       </template>
       <template v-slot:[`item.service`]="{ value }">
         <router-link :to="{ name: 'Service', params: { serviceId: value } }">
@@ -120,6 +127,7 @@ const reportsHeaders = computed(() => {
     { text: "Duration", value: "duration" },
     { text: "Executed date", value: "exec" },
     { text: "Payment date", value: "paymentDate" },
+    { text: "Status", value: "status" },
     { text: "Total", value: "totalPreview" },
     { text: "Total in default currency", value: "totalDefaultPreview" },
     { text: "Product or resource", value: "item" },
