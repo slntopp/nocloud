@@ -80,7 +80,7 @@
         :is="templates[type] ?? templates.custom"
       />
       <v-row class="mx-5" justify="end">
-        <v-btn @click="save">Save</v-btn>
+        <v-btn @click="save">Create</v-btn>
       </v-row>
     </v-container>
   </v-form>
@@ -324,7 +324,6 @@ export default {
 
     if (type) {
       this.service = this.services.find((s) => s.uuid === serviceId);
-      this.accountId = accountId;
       if (!this.typeItems.includes(type)) {
         this.customTypeName = type;
         type = "custom";
@@ -332,6 +331,7 @@ export default {
       this.type = type;
       this.serviceProviderId = serviceProviderId;
     }
+    this.accountId = accountId;
   },
   watch: {
     serviceProviderId(sp_uuid) {
