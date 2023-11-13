@@ -69,15 +69,12 @@
           !!changeRegularPaymentUuid && changeRegularPaymentUuid === item.uuid
         "
         @change="changeRegularPayment(item, $event)"
-        :input-value="value === undefined || value"
+        :input-value="value"
       >
       </v-switch>
     </template>
     <template v-slot:[`item.namespace`]="{ item }">
-      {{ getName(item.uuid) }}
-    </template>
-    <template v-slot:[`item.currency`]="{ item }">
-      {{ item.currency || defaultCurrency }}
+      {{ getNamespaceName(item.uuid) }}
     </template>
   </nocloud-table>
 </template>
@@ -87,11 +84,18 @@ import noCloudTable from "@/components/table.vue";
 import Balance from "./balance.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import { mapGetters } from "vuex";
-import { filterByKeysAndParam, formatSecondsToDate } from "@/functions";
+import {
+  compareSearchValue,
+  filterByKeysAndParam,
+  formatSecondsToDate,
+  getDeepObjectValue,
+} from "@/functions";
 import api from "@/api";
+import search from "@/mixins/search";
 
 export default {
   name: "accounts-table",
+  mixins: [search("accounts-table")],
   components: {
     LoginInAccountIcon,
     "nocloud-table": noCloudTable,
@@ -143,7 +147,7 @@ export default {
     handleSelect(item) {
       this.$emit("input", item);
     },
-    getName(uuid) {
+    getNamespaceName(uuid) {
       return (
         this.namespaces.find(({ access }) => access.namespace === uuid)
           ?.title ?? ""
@@ -177,46 +181,42 @@ export default {
   },
   computed: {
     ...mapGetters("appSearch", {
-      searchParam: "customSearchParam",
-      searchParams: "customParams",
+      searchParam: "param",
+      filter: "filter",
     }),
     accounts() {
       return this.$store.getters["accounts/all"].map((a) => ({
         ...a,
         balance: a.balance || 0,
+        currency: a.currency || this.defaultCurrency,
         data: {
           ...a.data,
           date_create: formatSecondsToDate(a.data?.date_create),
+          regular_payment:
+            a.data?.regular_payment === undefined ||
+            a.data?.regular_payment === true,
         },
       }));
     },
     filteredAccounts() {
-      const searchParams = { ...this.searchParams };
+      const filter = { ...this.filter };
 
-      if (this.namespace) {
-        searchParams["access.namespace"] = [{ value: this.namespace }];
-      }
+      const accounts = this.accounts.filter((a) => {
+        return Object.keys(filter).every((key) => {
+          let data;
+          if (key === "namespace") {
+            data = this.getNamespaceName(a.uuid);
+          } else {
+            data = getDeepObjectValue(a, key);
+          }
 
-      const accounts = this.accounts.filter((a) =>
-        Object.keys(searchParams).every((k) => {
-          return (
-            !searchParams?.[k] ||
-            !searchParams[k].length ||
-            searchParams[k]?.find((t) => {
-              let key = k;
-              let data = { ...a };
-              k.split(".").forEach((subKey, index) => {
-                if (index === k.split(".").length - 1) {
-                  key = subKey;
-                  return;
-                }
-                data = a[subKey];
-              });
-              return t.value === data[key];
-            })
+          return compareSearchValue(
+            data,
+            filter[key],
+            this.searchFields.find((f) => f.key === key)
           );
-        })
-      );
+        });
+      });
 
       if (this.searchParam) {
         return filterByKeysAndParam(
@@ -233,6 +233,48 @@ export default {
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
+    searchFields() {
+      return [
+        {
+          title: "Status",
+          key: "status",
+          type: "select",
+          items: [...new Set(this.accounts.map((a) => a.status))],
+        },
+        { title: "Balance", key: "balance", type: "number-range" },
+        { title: "Email", key: "data.email", type: "input" },
+        { title: "Created date", key: "data.date_create", type: "date" },
+        { title: "Country", key: "data.country", type: "input" },
+        { title: "Address", key: "data.address", type: "input" },
+        {
+          title: "Client currency",
+          key: "currency",
+          type: "select",
+          items: this.$store.getters["currencies/all"].filter(
+            (c) => c !== "NCU"
+          ),
+        },
+        {
+          title: "Access level",
+          key: "access.level",
+          type: "select",
+          items: Object.keys(this.levelColorMap),
+        },
+        {
+          title: "Invoice based",
+          key: "data.regular_payment",
+          type: "logic-select",
+        },
+        {
+          title: "Group(NameSpace)",
+          key: "namespace",
+          type: "select",
+          items: [
+            ...new Set(this.accounts.map((a) => this.getNamespaceName(a.uuid))),
+          ],
+        },
+      ];
+    },
   },
   created() {
     this.loading = true;
@@ -241,6 +283,7 @@ export default {
       .dispatch("accounts/fetch")
       .then(() => {
         this.fetchError = "";
+        this.$store.commit("appSearch/setFields", this.searchFields);
       })
       .finally(() => {
         this.loading = false;
@@ -254,17 +297,6 @@ export default {
           this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
         }
       });
-  },
-  mounted() {
-    setTimeout(() => {
-      this.$store.commit("appSearch/setVariants", {
-        "access.level": {
-          items: Object.keys(this.levelColorMap),
-          isArray: true,
-          title: "Access",
-        },
-      });
-    }, 0);
   },
   watch: {
     accounts() {

@@ -259,7 +259,7 @@
 
     <v-app-bar v-if="isLoggedIn" app color="background" elevation="0">
       <v-row style="width: 100%" justify="center" align="center">
-        <v-col cols="8">
+        <v-col>
           <app-search />
         </v-col>
         <v-col class="d-flex justify-start">

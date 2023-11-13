@@ -49,7 +49,6 @@ import zones from "@/components/zones_table.vue";
 import api from "@/api.js";
 
 import snackbar from "@/mixins/snackbar.js";
-import search from "@/mixins/search.js";
 import ConfirmDialog from "../components/confirmDialog.vue";
 
 export default {
@@ -58,7 +57,7 @@ export default {
     "zones-table": zones,
     ConfirmDialog,
   },
-  mixins: [snackbar, search],
+  mixins: [snackbar],
   data() {
     return {
       createMenuVisible: false,
