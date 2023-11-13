@@ -396,7 +396,7 @@ const changeFields = ({ key }, value) => {
     currentFieldsKeys.value.push(key);
   } else {
     currentFieldsKeys.value = currentFieldsKeys.value.filter((f) => f !== key);
-    const newFilter = { ...filter.value };
+    const newFilter = { ...localFilter.value };
     delete newFilter[key];
     localFilter.value = newFilter;
   }
