@@ -187,6 +187,7 @@ export default {
     accounts() {
       return this.$store.getters["accounts/all"].map((a) => ({
         ...a,
+        balance: a.balance || 0,
         currency: a.currency || this.defaultCurrency,
         data: {
           ...a.data,

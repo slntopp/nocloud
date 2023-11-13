@@ -3,7 +3,7 @@
     <v-row align="start">
       <v-col cols="1">
         <v-btn
-          class="mr-2"
+          class="ma-2"
           color="background-light"
           :to="{ name: 'Transactions create' }"
         >
@@ -192,7 +192,7 @@ export default {
       }
 
       const dates = {};
-      const dateKeys = ["exec", "start", "end"];
+      const dateKeys = ["exec", "start", "end",'payment_date'];
       dateKeys.forEach((key) => {
         if (!this.filter[key]) {
           return;
@@ -299,6 +299,7 @@ export default {
         { key: "exec", type: "date", title: "Exec" },
         { key: "start", type: "date", title: "Start" },
         { key: "end", type: "date", title: "End" },
+        { key: "payment_date", type: "date", title: "Payment date" },
         { key: "total", type: "number-range", title: "Total" },
       ];
     },

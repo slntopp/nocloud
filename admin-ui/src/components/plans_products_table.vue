@@ -140,6 +140,22 @@
               />
             </v-radio-group>
           </template>
+          
+        <template v-slot:[`item.meta.addons`]="{ item }">
+          <v-dialog width="90vw">
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn icon v-bind="attrs" v-on="on">
+                <v-icon> mdi-menu-open </v-icon>
+              </v-btn>
+            </template>
+
+            <plans-empty-addons-table
+              :product="item"
+              @update:addons="(value) => $set(item.meta, 'addons', value)"
+            />
+          </v-dialog>
+        </template>
+
           <template v-slot:expanded-item="{ headers, item }">
             <td />
             <td :colspan="headers.length - 1">
@@ -206,6 +222,7 @@ import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
 import plansResourcesTable from "@/components/plans_resources_table.vue";
 import plansEmptyTable from "@/components/plans_empty_table.vue";
+import plansEmptyAddonsTable from "@/components/plans_empty_addons_table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { getFullDate } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
@@ -237,7 +254,7 @@ const generalRule = [(v) => !!v || "This field is required!"];
 const kinds = ["POSTPAID", "PREPAID"];
 const tabs = ["Products", "Resources"];
 
-const headers = [
+const headers = ref([
   { text: "Key", value: "key" },
   { text: "Title", value: "title" },
   { text: "Price", value: "price", width: 150 },
@@ -246,7 +263,11 @@ const headers = [
   { text: "Group", value: "group", width: 300 },
   { text: "Public", value: "public" },
   { text: "Sorter", value: "sorter" },
-];
+]);
+
+if (props.type === "empty") headers.value.push({
+  text: "Addons", value: "meta.addons"
+})
 
 onMounted(() => {
   setProductsArray();
