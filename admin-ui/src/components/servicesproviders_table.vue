@@ -23,8 +23,10 @@
 
 <script>
 import noCloudTable from "@/components/table.vue";
-import { filterArrayByTitleAndUuid } from "@/functions";
+import {compareSearchValue, filterArrayByTitleAndUuid, getDeepObjectValue} from "@/functions";
 import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
+import search from "@/mixins/search";
+import { mapGetters } from "vuex";
 
 const Headers = [
   { text: "Title", value: "titleLink" },
@@ -41,6 +43,7 @@ const Headers = [
 
 export default {
   name: "servicesProviders-table",
+  mixins: [search("service-providers-table")],
   components: {
     IconTitlePreview,
     "nocloud-table": noCloudTable,
@@ -102,6 +105,7 @@ export default {
     },
   },
   computed: {
+    ...mapGetters("appSearch", { filter: "filter", searchParam: "param" }),
     tableData() {
       return this.$store.getters["servicesProviders/all"].map((el) => ({
         titleLink: el.title,
@@ -117,24 +121,34 @@ export default {
         region: el.secrets?.endpoint?.split("-")[1] ?? "-",
       }));
     },
-    searchParam() {
-      return this.$store.getters["appSearch/customSearchParam"];
-    },
     filteredSp() {
-      const sp = this.tableData.filter((sp) => {
-        return Object.keys(this.searchParams || {}).every(
-          (key) =>
-            this.searchParams[key].length === 0 ||
-            this.searchParams[key].find((p) => sp[key]?.includes(p.value))
-        );
-      });
+      const sp = this.tableData.filter((sp) =>
+        Object.keys(this.filter).every((key) => {
+          const data=getDeepObjectValue(sp,key)
+
+          return compareSearchValue(
+            data,
+            this.filter[key],
+            this.searchFields.find((f) => f.key === key)
+          );
+        })
+      );
       if (this.searchParam) {
         return filterArrayByTitleAndUuid(sp, this.searchParam);
       }
       return sp;
     },
-    searchParams() {
-      return this.$store.getters["appSearch/customParams"];
+    searchFields() {
+      return [
+        { items: this.allTypes, title: "Type", type: "select", key: "type" },
+        { title: "Region", type: "input", key: "region" },
+        {
+          items: Object.keys(this.stateColorMap).map((k) => k.toUpperCase()),
+          title: "State",
+          type: "select",
+          key: "state",
+        },
+      ];
     },
   },
   created() {
@@ -177,14 +191,7 @@ export default {
     allTypes(val) {
       if (val) {
         this.$store.commit("appSearch/setSearchName", "services-providers");
-        this.$store.commit("appSearch/setVariants", {
-          type: { items: this.allTypes, title: "Type", isArray: true },
-          state: {
-            items: Object.keys(this.stateColorMap).map((k) => k.toUpperCase()),
-            title: "State",
-            isArray: true,
-          },
-        });
+        this.$store.commit("appSearch/setFields", this.searchFields);
       }
     },
   },

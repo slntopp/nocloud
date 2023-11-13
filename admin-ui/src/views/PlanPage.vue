@@ -34,11 +34,9 @@
 
 <script>
 import config from "@/config.js";
-import searchMixin from "@/mixins/search";
 
 export default {
   name: "plan-view",
-  mixins: [searchMixin],
   data: () => ({
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},

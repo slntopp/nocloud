@@ -127,12 +127,7 @@
       </v-dialog>
     </div>
 
-    <namespaces-table
-      :searchParam="searchParam"
-      v-model="selected"
-      single-select
-    >
-    </namespaces-table>
+    <namespaces-table v-model="selected" single-select> </namespaces-table>
   </div>
 </template>
 
@@ -142,7 +137,6 @@ import accountsTable from "@/components/accounts_table.vue";
 import api from "@/api.js";
 
 import snackbar from "@/mixins/snackbar.js";
-import search from "@/mixins/search.js";
 
 import ConfirmDialog from "../components/confirmDialog.vue";
 
@@ -153,7 +147,7 @@ export default {
     "accounts-table": accountsTable,
     ConfirmDialog,
   },
-  mixins: [snackbar, search],
+  mixins: [snackbar],
   data() {
     return {
       createMenuVisible: false,
@@ -177,11 +171,6 @@ export default {
         },
       },
     };
-  },
-  computed: {
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
-    },
   },
   methods: {
     createNamespace() {

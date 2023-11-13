@@ -1,86 +1,51 @@
 export default {
   namespaced: true,
   state: {
-    searchParam: "",
+    fields: [],
+    currentLayout: "",
     searchName: "",
-    variants: {},
-    customParams: {},
+    filter: {},
+    param: "",
   },
   mutations: {
-    setSearchParam(state, newSearchParam) {
-      state.searchParam = newSearchParam;
+    setFields(state, fields) {
+      state.fields = fields;
     },
-    setVariants(state, val) {
-      const variants = {};
-      Object.keys(val).forEach((key) => {
-        const items = val[key].items?.map((i) => ({
-          title: i.title || i,
-          uuid: i.uuid || i,
-        }));
-        variants[key] = { key, ...val[key], items };
-      });
-      state.variants = variants;
+    pushFields(state, fields) {
+      console.log(state.fields)
+      state.fields=[...state.fields,...fields]
     },
-    setSearchName(state, val) {
-      state.searchName = val;
+    setCurrentLayout(state, name) {
+      state.currentLayout = name;
     },
-    resetSearch(state) {
-      state.searchName = "";
+    setSearchName(state, name) {
+      state.searchName = name;
     },
-    pushVariant(state, { key, value }) {
-      state.variants = { ...state.variants, [key]: value };
+    setFilter(state, filter) {
+      state.filter = filter;
     },
-    resetSearchParams(state) {
-      state.searchParam = "";
-      state.variants = {};
-      state.customParams = {};
+    setParam(state, param) {
+      state.param = param;
     },
-    setCustomParams(state, params) {
-      state.customParams = params;
-    },
-    setCustomParam(state, { key, value }) {
-      if ((key === "searchParam" || !key) && !value.value) {
-        return;
-      }
-      state.customParams = {
-        ...state.customParams,
-        [key]: !value.isArray
-          ? value
-          : [...(state.customParams[key] || []), value],
-      };
-    },
-    deleteCustomParam(state, { key, value, isArray }) {
-      if (value && isArray) {
-        state.customParams[key] = state.customParams[key].filter(
-          (v) => v.value !== value
-        );
-      } else {
-        delete state.customParams[key];
-        state.customParams = { ...state.customParams };
-      }
+    setFilterValue(state, { key, value }) {
+      state.filter[key] = value;
     },
   },
   getters: {
     param(state) {
-      return state.searchParam;
+      return state.param;
     },
-    customSearchParam(state) {
-      return state.customParams.searchParam?.value;
+    fields(state) {
+      return state.fields;
     },
-    variants(state) {
-      const variants = { ...state.variants };
-      if (Object.keys(variants).length) {
-        variants["searchParam"] = { title: "Other", key: "searchParam" };
-      }
-      return variants;
+    currentLayout(state) {
+      return state.currentLayout;
+    },
+    filter(state) {
+      return state.filter;
     },
     searchName(state) {
-      return state.searchName + "_search";
-    },
-    customParams(state) {
-      const params = { ...state.customParams };
-      delete params["searchParam"];
-      return params;
+      return state.searchName;
     },
   },
 };

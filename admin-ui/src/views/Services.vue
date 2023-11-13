@@ -137,7 +137,12 @@ import serviceInstancesItem from "@/components/service_instances_item.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import search from "@/mixins/search.js";
 import snackbar from "@/mixins/snackbar.js";
-import { filterArrayByTitleAndUuid } from "@/functions";
+import {
+  compareSearchValue,
+  filterArrayByTitleAndUuid,
+  getDeepObjectValue,
+} from "@/functions";
+import { mapGetters } from "vuex";
 
 export default {
   name: "Services-view",
@@ -146,7 +151,7 @@ export default {
     serviceInstancesItem,
     confirmDialog,
   },
-  mixins: [snackbar, search],
+  mixins: [snackbar, search("services")],
   data: () => ({
     headers: [
       { text: "Title", value: "title" },
@@ -179,6 +184,7 @@ export default {
     },
   }),
   computed: {
+    ...mapGetters("appSearch", { searchParam: "param", filter: "filter" }),
     services() {
       const items = this.$store.getters["services/all"];
 
@@ -190,22 +196,20 @@ export default {
       return items;
     },
     filteredServices() {
-      let services = this.filterByStatus(
-        this.services,
-        this.searchParams?.status
+      const services = this.services.filter((s) =>
+        Object.keys(this.filter).every((key) => {
+          const data = getDeepObjectValue(s, key);
+
+          return compareSearchValue(
+            data,
+            this.filter[key],
+            this.searchFields.find((f) => f.key === key)
+          );
+        })
       );
-      services = this.filterByAccessLevels(services, this.searchParams?.access);
+
       if (this.searchParam) {
-        const byIps = this.filterByPublicIps(services);
-        const byDomains = this.filterByDomains(services);
-
-        const byTitleAndUuid = filterArrayByTitleAndUuid(
-          services,
-          this.searchParam,
-          { unique: false }
-        );
-
-        return [...new Set([...byIps, ...byTitleAndUuid, ...byDomains])];
+        return filterArrayByTitleAndUuid(services, this.searchParam);
       }
       return services;
     },
@@ -221,11 +225,26 @@ export default {
     namespaces() {
       return this.$store.getters["namespaces/all"];
     },
-    searchParams() {
-      return this.$store.getters["appSearch/customParams"];
-    },
-    searchParam() {
-      return this.$store.getters["appSearch/customSearchParam"];
+    searchFields() {
+      return [
+        {
+          items: Object.keys(this.stateColorMap),
+          type: "select",
+          title: "Status",
+          key: "status",
+        },
+        {
+          key: "access.level",
+          items: Object.keys(this.accessColorsMap),
+          type: "select",
+          title: "Access",
+        },
+        {
+          key: "hash",
+          type: "input",
+          title: "Hash",
+        },
+      ];
     },
   },
   created() {
@@ -258,73 +277,6 @@ export default {
             this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
           }
         });
-    },
-    treeview(item) {
-      const result = [];
-      let index = 0;
-      for (const [name, group] of Object.entries(item.instancesGroups)) {
-        const temp = {};
-        temp.id = ++index;
-        temp.name = name;
-        const childs = [];
-        for (const [ind, inst] of Object.entries(group.instances)) {
-          ind;
-          const temp = {};
-          temp.id = ++index;
-          temp.name = inst.title;
-          childs.push(temp);
-        }
-        temp.children = childs;
-        result.push(temp);
-      }
-      return result;
-    },
-    filterByPublicIps(services) {
-      return services.filter((service) => {
-        const ips = this.getPublicIpsFromService(service);
-        const isItIpExists = ips.find((ip) => ip.includes(this.searchParam));
-        const isTitleIncludes = service.title
-          .toLowerCase()
-          .includes(this.searchParam.toLowerCase());
-        return isTitleIncludes || isItIpExists;
-      });
-    },
-    filterByDomains(services) {
-      return services.filter((service) => {
-        const domains = [];
-
-        service.instancesGroups.forEach((serviceInstance) => {
-          if (serviceInstance.type === "opensrs") {
-            serviceInstance.instances.forEach((instance) => {
-              domains.push(instance.resources.domain);
-            });
-          } else {
-            return false;
-          }
-        });
-
-        return domains.find((d) =>
-          d.toLowerCase().startsWith(this.searchParam.toLowerCase())
-        );
-      });
-    },
-    filterByStatus(services, status) {
-      if (!status || !status.length) {
-        return services;
-      }
-
-      return services.filter((service) => {
-        return status.find((s) => s.value === service.status);
-      });
-    },
-    filterByAccessLevels(services, access) {
-      if (!access || !access.length) {
-        return services;
-      }
-
-      return services.filter((service) => {
-        return access.find((a) => a.value === service.access.level);
-      });
     },
     hashTrim(hash) {
       if (hash) return hash.slice(0, 8) + "...";
@@ -435,44 +387,13 @@ export default {
     fetchAfterTimeout(ms = 500) {
       setTimeout(this.fetchServices, ms);
     },
-    getPublicIpsFromService(service) {
-      const ips = [];
-
-      service.instancesGroups.forEach((group) => {
-        if (group.type === "ione") {
-          group.instances.forEach((instance) => {
-            instance.state?.meta?.networking?.public.forEach((p) => {
-              if (typeof p === "string") {
-                ips.push(p);
-              }
-            });
-          });
-        }
-      });
-
-      return ips;
-    },
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
     });
 
-    this.$store.commit("appSearch/setSearchName", "all-services");
-    setTimeout(() => {
-      this.$store.commit("appSearch/setVariants", {
-        status: {
-          items: Object.keys(this.stateColorMap),
-          isArray: true,
-          title: "Status",
-        },
-        access: {
-          items: Object.keys(this.accessColorsMap),
-          isArray: true,
-          title: "Access",
-        },
-      });
-    }, 0);
+    this.$store.commit("appSearch/setFields", this.searchFields);
   },
   watch: {
     services() {

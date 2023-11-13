@@ -389,7 +389,7 @@ FILTER !t.processed
 	LET total = t.total * rate
 
 	FOR r in t.records
-		UPDATE r WITH {meta: {transaction: t._key}} in @@records
+		UPDATE r WITH {meta: {transaction: t._key, payment_date: @now}} in @@records
 
     UPDATE account WITH { balance: account.balance - t.total * rate} IN @@accounts
     UPDATE t WITH { 

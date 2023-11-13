@@ -32,13 +32,17 @@ import ConfirmDialog from "@/components/confirmDialog.vue";
 import { computed, onMounted, ref } from "vue";
 import { useStore } from "@/store";
 import Showcases_table from "@/components/showcases_table.vue";
+import { filterArrayByTitleAndUuid } from "@/functions";
 
 const store = useStore();
 
 const isDeleteLoading = ref(false);
 const selected = ref([]);
 
-const showcases = computed(() => store.getters["showcases/all"]);
+const searchParam = computed(() => store.getters["appSearch/param"]);
+const showcases = computed(() =>
+  filterArrayByTitleAndUuid(store.getters["showcases/all"], searchParam.value)
+);
 const isLoading = computed(() => store.getters["showcases/isLoading"]);
 
 onMounted(async () => {

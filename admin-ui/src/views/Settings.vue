@@ -4,7 +4,7 @@
       <v-btn color="background-light" class="mr-2" to="/settings/app">
         app settings
       </v-btn>
-   <v-btn color="background-light" class="mr-2" to="/settings/widget">
+      <v-btn color="background-light" class="mr-2" to="/settings/widget">
         widget settings</v-btn
       >
       <v-btn color="background-light" class="mr-2" to="/settings/plugins">
@@ -145,7 +145,6 @@
 import { mapGetters } from "vuex";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
-import search from "@/mixins/search.js";
 import noCloudTable from "@/components/table.vue";
 import ConfirmDialog from "../components/confirmDialog.vue";
 import { filterArrayIncludes } from "@/functions";
@@ -188,7 +187,7 @@ export default {
     "nocloud-table": noCloudTable,
     ConfirmDialog,
   },
-  mixins: [snackbar, search],
+  mixins: [snackbar],
   data: () => ({
     headers,
     selected: [],
@@ -215,7 +214,7 @@ export default {
     filtredSettings() {
       if (this.searchParam) {
         return filterArrayIncludes(this.settings, {
-          keys: ["key"],
+          keys: ["key", "description", "value"],
           value: this.searchParam,
         });
       }

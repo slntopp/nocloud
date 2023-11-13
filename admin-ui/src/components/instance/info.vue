@@ -200,6 +200,7 @@ export default {
       } else {
         this.copyInstance[key] = value;
       }
+      this.copyInstance={...this.copyInstance}
     },
   },
   computed: {

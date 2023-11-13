@@ -1,7 +1,6 @@
 <template>
   <div class="pa-4">
     <history-table
-      :path="path"
       :account-id="account"
       :uuid="uuid"
       :loading="isVariantsLoading"
@@ -18,11 +17,10 @@ import searchMixin from "@/mixins/search";
 export default {
   name: "all-history",
   components: { HistoryTable },
-  mixins: [searchMixin],
+  mixins: [searchMixin('history')],
   data: () => ({
     account: null,
     uuid: null,
-    path: null,
     isVariantsLoading: false,
   }),
   async mounted() {
@@ -36,17 +34,28 @@ export default {
     ]);
     this.isVariantsLoading = false;
 
-    this.$store.commit("appSearch/setVariants", {
-      service: { items: this.services, title: "Service", key: "entity" },
-      sp: { items: this.sps, title: "Service providers", key: "entity" },
-      instance: { items: this.instances, title: "Instances", key: "entity" },
-      account: { items: this.accounts, title: "Accounts" },
-      path: { title: "Path" },
-    });
+    this.$store.commit("appSearch/pushFields", [
+      {
+        items: this.services.concat(this.instances).concat(this.sps),
+        type: "select",
+        title: "Entity",
+        key: "entity",
+        item: { value: "uuid", title: "title" },
+        single: true,
+      },
+      {
+        items: this.accounts,
+        title: "Accounts",
+        type: "select",
+        single: true,
+        item: { value: "uuid", title: "title" },
+        key: "account",
+      },
+    ]);
   },
   computed: {
     ...mapGetters("accounts", { accounts: "all" }),
-    ...mapGetters("appSearch", { customParams: "customParams" }),
+    ...mapGetters("appSearch", { filter: "filter" }),
     instances() {
       return this.$store.getters["services/getInstances"];
     },
@@ -61,11 +70,10 @@ export default {
     },
   },
   watch: {
-    customParams: {
+    filter: {
       handler(newValue) {
-        this.uuid = newValue.entity?.value;
-        this.account = newValue.account?.value;
-        this.path = newValue.path?.value;
+        this.uuid = newValue.entity;
+        this.account = newValue.account;
       },
       deep: true,
     },

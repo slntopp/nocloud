@@ -151,12 +151,6 @@ const requestOptions = computed(() => ({
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
   sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
-  from: duration.value.from
-    ? new Date(duration.value.from).getTime() / 1000
-    : undefined,
-  to: duration.value.to
-    ? new Date(duration.value.to).getTime() / 1000
-    : undefined,
 }));
 
 const whmcsApi = computed(() => {
@@ -256,14 +250,6 @@ watch(rates, () => {
     totalDefault: convertFrom(r.total, r.currency),
   }));
 });
-
-watch(
-  duration,
-  () => {
-    onUpdateOptions(options.value);
-  },
-  { deep: true }
-);
 
 watch(
   filters,
