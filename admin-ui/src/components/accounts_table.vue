@@ -165,7 +165,7 @@ export default {
         await api.accounts.update(item.uuid, item).catch((err) => {
           this.showSnackbarError({ message: err });
         });
-        this.$store.commit('accounts/pushAccount',item)
+        this.$store.commit("accounts/pushAccount", item);
       } catch {
         this.showSnackbarError({
           message: "Error while change invoice based",
@@ -183,6 +183,7 @@ export default {
     accounts() {
       return this.$store.getters["accounts/all"].map((a) => ({
         ...a,
+        balance: a.balance || 0,
         data: {
           ...a.data,
           date_create: formatSecondsToDate(a.data?.date_create),
