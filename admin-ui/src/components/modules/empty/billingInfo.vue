@@ -27,6 +27,14 @@
         />
       </v-col>
 
+      <v-col>
+        <v-text-field
+            readonly
+            label="Start date"
+            :value="template.data.start || '-'"
+        />
+      </v-col>
+
       <v-col
         v-if="
           template.billingPlan.title.toLowerCase() !== 'payg' ||
