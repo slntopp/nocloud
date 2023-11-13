@@ -80,7 +80,7 @@
         :is="templates[type] ?? templates.custom"
       />
       <v-row class="mx-5" justify="end">
-        <v-btn @click="save">Save</v-btn>
+        <v-btn @click="save">Create</v-btn>
       </v-row>
     </v-container>
   </v-form>
