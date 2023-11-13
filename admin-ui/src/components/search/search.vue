@@ -101,12 +101,13 @@
               </v-list-item>
 
               <v-list-item
+                class="pa-0"
                 :disabled="isLayoutModeAdd"
                 dense
                 @click="setLayoutMode('add')"
               >
-                <v-list-item-content>
-                  <v-list-item-title class="text-center">Add</v-list-item-title>
+                <v-list-item-content class="pa-0">
+                  <v-btn outlined color="primary"> Add </v-btn>
                 </v-list-item-content>
               </v-list-item>
             </v-list>
@@ -158,7 +159,7 @@
           >
             <v-btn
               :disabled="isLayoutsOptionsDisabled"
-              plain
+              outlined
               color="primary"
               @click="onLayoutsOptionsClick"
               small
@@ -168,7 +169,7 @@
               <span v-else-if="isLayoutModePreview">Edit layouts</span>
             </v-btn>
           </v-col>
-          <v-col class="d-flex justify-end align-end">
+          <v-col class="d-flex justify-space-between align-end">
             <v-menu
               :disabled="isFieldsDisabled"
               :close-on-content-click="false"
@@ -179,7 +180,7 @@
                 <v-btn
                   small
                   color="primary"
-                  plain
+                  outlined
                   :disabled="isFieldsDisabled"
                   v-bind="attrs"
                   v-on="on"
@@ -206,20 +207,22 @@
                 </v-row>
               </v-card>
             </v-menu>
-            <v-btn
-              class="mx-2"
-              @click="resetFilter"
-              :disabled="isResetDisabled"
-              color="primary"
-              >Reset</v-btn
-            >
-            <v-btn
-              class="mx-2"
-              @click="saveFilter"
-              :disabled="isSaveDisabled"
-              color="primary"
-              >Search</v-btn
-            >
+            <div class="buttons">
+              <v-btn
+                class="mx-2"
+                @click="resetFilter"
+                :disabled="isResetDisabled"
+                color="primary"
+                >Reset</v-btn
+              >
+              <v-btn
+                class="mx-2"
+                @click="saveFilter"
+                :disabled="isSaveDisabled"
+                color="primary"
+                >Search</v-btn
+              >
+            </div>
           </v-col>
         </v-row>
       </v-card>
