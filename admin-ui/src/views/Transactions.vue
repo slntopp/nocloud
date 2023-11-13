@@ -3,7 +3,7 @@
     <v-row align="start">
       <v-col cols="1">
         <v-btn
-          class="mr-2"
+          class="ma-2"
           color="background-light"
           :to="{ name: 'Transactions create' }"
         >
