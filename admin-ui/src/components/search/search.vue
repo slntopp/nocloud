@@ -433,6 +433,10 @@ const deleteLayout = (id) => {
 const setCurrentLayout = (layout) => {
   if (isLayoutModePreview.value) {
     currentLayout.value = layout;
+    if (!layout) {
+      blankLayout.value.filter = {};
+      blankLayout.value.fields = [];
+    }
   }
 };
 const setLayoutMode = (mode) => {
