@@ -289,7 +289,7 @@ export default {
       return this.getPrice(inst) + " " + this.defaultCurrency;
     },
     getAccountPrice(inst) {
-      const accountCurrency = this.getAccount(inst)?.currency;
+      const accountCurrency = this.getAccount(inst)?.currency || this.defaultCurrency;
 
       return (
         (this.getPrice(inst) * this.getRate(accountCurrency)).toFixed(2) +
