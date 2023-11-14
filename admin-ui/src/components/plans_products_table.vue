@@ -32,6 +32,32 @@
               <v-divider inset vertical class="mx-4" />
               <v-spacer />
 
+              <v-dialog width="90vw" v-model="isEditOpen">
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn
+                    :disabled="selected.length < 1"
+                    v-bind="attrs"
+                    v-on="on"
+                    class="mr-2"
+                    color="background-light"
+                  >
+                    Edit
+                  </v-btn>
+                </template>
+
+                <v-card class="pa-4">
+                  <v-subheader class="px-0"> Description: </v-subheader>
+                  <rich-editor v-model="newMeta.description" />
+
+                  <v-row class="mt-5" justify="end">
+                    <v-btn class="mx-2" @click="isEditOpen = false"
+                      >Close</v-btn
+                    >
+                    <v-btn @click="saveNewMeta" class="mx-2">Save</v-btn>
+                  </v-row>
+                </v-card>
+              </v-dialog>
+
               <v-btn
                 :disabled="selected.length < 1"
                 class="mr-2"
@@ -267,6 +293,9 @@ const headers = ref([
   { text: "Sorter", value: "sorter" },
 ]);
 
+const isEditOpen = ref(false);
+const newMeta = ref({ description: "" });
+
 if (props.type === "empty")
   headers.value.push({
     text: "Addons",
@@ -388,6 +417,32 @@ const copyProducts = () => {
   changeProduct("products", newProducts);
   setFullDates(newProducts);
   selected.value = [];
+};
+
+const saveNewMeta = () => {
+  setProductsArray();
+
+  const newProducts = {};
+  for (const product of productsArray.value) {
+    const key = product.key;
+    delete product.key;
+    newProducts[key] = product;
+  }
+  for (const product of selected.value) {
+    const key = product.key;
+    delete product.key;
+    newProducts[key] = {
+      ...product,
+      meta: { ...product.meta, ...newMeta.value },
+    };
+  }
+
+  changeProduct("products", newProducts);
+  setFullDates(newProducts);
+
+  selected.value = [];
+  isEditOpen.value = false;
+  newMeta.value = { description: "" };
 };
 
 function addConfig() {
