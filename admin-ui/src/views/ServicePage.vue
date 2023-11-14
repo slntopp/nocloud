@@ -69,8 +69,8 @@ import serviceInfo from "@/components/service/info.vue";
 import snackbar from "@/mixins/snackbar.js";
 import ServiceHistory from "@/components/service/history.vue";
 import ServiceReports from "@/components/service/reports.vue";
+import api from "@/api";
 
-const url = "wss://api.nocloud.ione-cloud.net/services";
 let socket;
 
 export default {
@@ -138,10 +138,11 @@ export default {
 
     this.$store.dispatch("accounts/fetch");
 
-    socket = new WebSocket(`${url}/${this.serviceId}/stream`, [
-      "Bearer",
-      this.$store.getters["auth/token"],
-    ]);
+    const url = `${api.axios.defaults.baseURL.replace(
+      "https",
+      "wss"
+    )}/services/${this.serviceId}/stream`;
+    socket = new WebSocket(url, ["Bearer", this.$store.getters["auth/token"]]);
     socket.onmessage = (msg) => {
       const response = JSON.parse(msg.data).result;
       if (!response) {

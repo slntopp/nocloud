@@ -17,7 +17,7 @@ import searchMixin from "@/mixins/search";
 export default {
   name: "all-history",
   components: { HistoryTable },
-  mixins: [searchMixin('history')],
+  mixins: [searchMixin("history")],
   data: () => ({
     account: null,
     uuid: null,
@@ -29,7 +29,7 @@ export default {
     this.isVariantsLoading = true;
     await Promise.all([
       this.$store.dispatch("accounts/fetch"),
-      this.$store.dispatch("services/fetch"),
+      this.$store.dispatch("services/fetch", { showDeleted: true }),
       this.$store.dispatch("servicesProviders/fetch"),
     ]);
     this.isVariantsLoading = false;
