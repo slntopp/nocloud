@@ -542,6 +542,11 @@ export default {
     searchFields() {
       return [
         {
+          key: "title",
+          title: "Title",
+          type: "input",
+        },
+        {
           key: "service",
           items: this.getSearchKeyItems("service"),
           title: "Service",
