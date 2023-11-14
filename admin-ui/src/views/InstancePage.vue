@@ -33,8 +33,8 @@
 <script>
 import config from "@/config.js";
 import snackbar from "@/mixins/snackbar";
+import api from "@/api";
 
-const url = "wss://api.nocloud.ione-cloud.net/services";
 let socket;
 
 export default {
@@ -54,7 +54,11 @@ export default {
     },
     initSocket() {
       if (!socket && this.instance?.service) {
-        socket = new WebSocket(`${url}/${this.instance.service}/stream`, [
+        const url = `${api.axios.defaults.baseURL.replace(
+          "https",
+          "wss"
+        )}/services/${this.instance.service}/stream`;
+        socket = new WebSocket(url, [
           "Bearer",
           this.$store.getters["auth/token"],
         ]);
