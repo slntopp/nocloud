@@ -33,7 +33,6 @@
 <script>
 import config from "@/config.js";
 import snackbar from "@/mixins/snackbar";
-import api from "@/api";
 
 let socket;
 

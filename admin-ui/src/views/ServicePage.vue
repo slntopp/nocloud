@@ -69,7 +69,6 @@ import serviceInfo from "@/components/service/info.vue";
 import snackbar from "@/mixins/snackbar.js";
 import ServiceHistory from "@/components/service/history.vue";
 import ServiceReports from "@/components/service/reports.vue";
-import api from "@/api";
 
 let socket;
 
