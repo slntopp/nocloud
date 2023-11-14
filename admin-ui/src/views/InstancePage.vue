@@ -122,7 +122,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("services/fetch").then(() => {
+    this.$store.dispatch("services/fetch", { showDeleted: true }).then(() => {
       document.title = `${this.instanceTitle} | NoCloud`;
     });
   },
