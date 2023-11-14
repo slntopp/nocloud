@@ -257,28 +257,30 @@
       </v-list>
     </v-navigation-drawer>
 
-    <v-app-bar v-if="isLoggedIn" app color="background" elevation="0">
+    <v-app-bar app color="background" elevation="0">
       <v-row style="width: 100%" justify="center" align="center">
-        <v-col>
-          <app-search />
-        </v-col>
-        <v-col class="d-flex justify-start">
-          <v-btn
-            v-if="btnStates.visible"
-            :disabled="btnStates.disabled"
-            color="background-light"
-            fab
-            small
-            :loading="btnLoading"
-            @click="() => this.$store.dispatch('reloadBtn/onclick')"
-          >
-            <v-icon>mdi-reload</v-icon>
-          </v-btn>
-        </v-col>
+        <template v-if="isLoggedIn">
+          <v-col>
+            <app-search />
+          </v-col>
+          <v-col class="d-flex justify-start">
+            <v-btn
+                v-if="btnStates.visible"
+                :disabled="btnStates.disabled"
+                color="background-light"
+                fab
+                small
+                :loading="btnLoading"
+                @click="() => this.$store.dispatch('reloadBtn/onclick')"
+            >
+              <v-icon>mdi-reload</v-icon>
+            </v-btn>
+          </v-col>
+        </template>
         <v-col class="d-flex justify-end align-center">
           <languages v-if="false" />
           <themes/>
-          <v-menu offset-y transition="slide-y-transition">
+          <v-menu v-if="isLoggedIn" offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
                 class="mx-2"
@@ -492,7 +494,6 @@ export default {
         source.postMessage({ theme: this.theme }, "*");
         return;
       }
-      console.log(data, origin);
     });
 
     this.$store.dispatch("auth/load");
