@@ -138,10 +138,9 @@ export default {
 
     this.$store.dispatch("accounts/fetch");
 
-    const url = `${api.axios.defaults.baseURL.replace(
-      "https",
-      "wss"
-    )}services/${this.serviceId}/stream`;
+    const url = `${/^(.*?)\/admin/
+      .exec(window.location.href)[1]
+      .replace("https", "wss")}/services/${this.serviceId}/stream`;
     socket = new WebSocket(url, ["Bearer", this.$store.getters["auth/token"]]);
     socket.onmessage = (msg) => {
       const response = JSON.parse(msg.data).result;
