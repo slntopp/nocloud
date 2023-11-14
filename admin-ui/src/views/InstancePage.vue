@@ -57,7 +57,7 @@ export default {
         const url = `${api.axios.defaults.baseURL.replace(
           "https",
           "wss"
-        )}/services/${this.instance.service}/stream`;
+        )}services/${this.instance.service}/stream`;
         socket = new WebSocket(url, [
           "Bearer",
           this.$store.getters["auth/token"],
