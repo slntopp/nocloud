@@ -304,7 +304,7 @@ export function toPascalCase(text) {
 }
 
 export function formatSecondsToDate(timestamp, withTime, sep = "-") {
-  if (!timestamp) return "-";
+  if (!timestamp || !+timestamp) return "-";
   const date = new Date(timestamp * 1000);
   const time = date.toUTCString().split(" ")[4];
 

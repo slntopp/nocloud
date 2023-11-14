@@ -326,7 +326,7 @@ export default {
               this.$router.push({ name: "Plans" });
             }, 100);
           }
-          this.isDialogVisible=false
+          this.isDialogVisible = false;
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -534,6 +534,9 @@ export default {
           this.plan.resources = [];
         }
       }
+    },
+    "plan.type"(newVal) {
+      this.plan.meta.auto_start = newVal === "empty" ? false : undefined;
     },
   },
 };
