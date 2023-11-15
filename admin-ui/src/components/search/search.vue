@@ -107,8 +107,9 @@
                 @click="setLayoutMode('add')"
               >
                 <v-list-item-content>
-                  <v-btn small outlined color="primary"> Add
-                    <v-icon small>mdi-plus</v-icon></v-btn>
+                  <v-btn small outlined color="primary">
+                    Add <v-icon small>mdi-plus</v-icon></v-btn
+                  >
                 </v-list-item-content>
               </v-list-item>
             </v-list>
@@ -293,11 +294,7 @@ const isLayoutModeAdd = computed(() => layoutMode.value === "add");
 const isFieldsDisabled = computed(() => layoutMode.value !== "preview");
 const isLayoutsOptionsDisabled = computed(() => false);
 const isSaveDisabled = computed(() => {
-  return (
-    JSON.stringify(localFilter.value) === JSON.stringify(filter.value) &&
-    JSON.stringify(visibleLayout.value.fields) ===
-      JSON.stringify(currentFieldsKeys.value)
-  );
+  return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
 });
 const isResetDisabled = computed(() => {
   return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
@@ -368,7 +365,13 @@ const saveFilter = () => {
       layouts.value[layoutIndex].filter = { ...filter.value };
     }
   }
+  hideSearch();
 };
+
+const hideSearch = () => {
+  isOpen.value = false;
+};
+
 const resetFilter = () => {
   localFilter.value = { ...filter.value };
 };
@@ -469,7 +472,7 @@ watch(searchName, (value, oldValue) => {
   if (oldValue) {
     saveSearchData(oldValue);
   }
-  param.value=''
+  param.value = "";
   filter.value = {};
   currentLayout.value = undefined;
 
