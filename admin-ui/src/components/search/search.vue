@@ -21,19 +21,19 @@
           v-model="param"
         >
           <template v-if="!isResetAllHide" v-slot:append>
-            <v-btn icon small @click="resetAll">
+            <v-btn icon x-small @click="resetAll">
               <v-icon small>mdi-close</v-icon>
             </v-btn>
           </template>
           <template v-slot:prepend-inner>
             <v-chip
+              class="px-2"
               small
-              class="mx-1"
               outlined
               color="primary"
               v-if="currentLayout"
               >{{ currentLayout.title }}
-              <v-btn icon small @click="setCurrentLayout('')">
+              <v-btn icon x-small @click="setCurrentLayout('')">
                 <v-icon small>mdi-close</v-icon>
               </v-btn>
             </v-chip>
@@ -559,5 +559,9 @@ export default {
 <style>
 .search__input .v-input__control .v-input__slot {
   padding: 0 10px;
+}
+
+.search__input .v-input__append-inner{
+  margin-top: 6px;
 }
 </style>

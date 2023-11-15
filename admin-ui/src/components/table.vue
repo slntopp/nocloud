@@ -307,7 +307,7 @@ export default {
   },
   data() {
     return {
-      selected: this.value,
+      selected: [],
       showed: [],
       copyed: -1,
       VDataTable,
@@ -609,6 +609,9 @@ export default {
       localStorage.setItem("page", value);
       localStorage.setItem("url", this.$route.path);
     },
+    value(){
+      this.selected=this.value
+    }
   },
   directives: {
     "sortable-table": {

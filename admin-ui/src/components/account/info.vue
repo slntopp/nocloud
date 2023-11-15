@@ -1,6 +1,6 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <div style="position: absolute; top: 0; right: 25px;max-width: 45%;">
+    <div style="position: absolute; top: 0; right: 25px; max-width: 45%">
       <div>
         <v-chip class="ma-1" color="primary" outlined
           >Balance: {{ account.balance?.toFixed(2) || 0 }}
@@ -8,6 +8,7 @@
         >
         <v-btn
           class="ma-1"
+          :disabled="isLocked"
           :to="{
             name: 'Transactions create',
             params: { account: account.uuid },
@@ -15,6 +16,7 @@
           >Create transaction/invoice</v-btn
         >
         <v-btn
+          :disabled="isLocked"
           class="ma-1"
           :to="{
             name: 'Instance create',
@@ -329,6 +331,9 @@ export default {
     isCurrencyReadonly() {
       return this.account.currency && this.account.currency !== "NCU";
     },
+    isLocked() {
+      return this.account.status !== "ACTIVE";
+    },
     stateButtons() {
       const status = this.account.status.toLowerCase();
       const permanentLock = {
@@ -349,13 +354,8 @@ export default {
         }
       }
     },
-    settings() {
-      return this.$store.getters["settings/all"];
-    },
     whmcsApi() {
-      return JSON.parse(
-        this.settings.find(({ key }) => key === "whmcs").value || "{}"
-      ).api;
+      return this.$store.getters['settings/whmcsApi']
     },
   },
 };
