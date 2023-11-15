@@ -55,7 +55,7 @@ export default {
       if (!socket && this.instance?.service) {
         const url = `${/^(.*?)\/admin/
           .exec(window.location.href)[1]
-          .replace("https", "wss")}/services/${this.serviceId}/stream`;
+          .replace("https", "wss")}/services/${this.instance.service}/stream`;
         socket = new WebSocket(url, [
           "Bearer",
           this.$store.getters["auth/token"],
