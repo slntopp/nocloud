@@ -15,6 +15,7 @@
           background-color="background-light"
           dence
           rounded
+          class="search__input"
           v-bind="searchName ? attrs : undefined"
           v-on="searchName ? on : undefined"
           v-model="param"
@@ -376,7 +377,7 @@ const resetAll = () => {
   setLayoutMode("preview");
   setCurrentLayout();
   resetFilter();
-  param.value=''
+  param.value = "";
 };
 
 const setCurrentFieldsKeys = () => {
@@ -548,5 +549,11 @@ export default {
       background-color: var(--v-background-base);
     }
   }
+}
+</style>
+
+<style>
+.search__input .v-input__control .v-input__slot {
+  padding: 0 10px;
 }
 </style>
