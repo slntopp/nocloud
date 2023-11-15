@@ -116,7 +116,7 @@ export default {
   },
   data() {
     return {
-      selected: this.value,
+      selected: [],
       loading: false,
       fetchError: "",
       changeRegularPaymentUuid: "",
@@ -288,7 +288,6 @@ export default {
       .dispatch("accounts/fetch")
       .then(() => {
         this.fetchError = "";
-        this.$store.commit("appSearch/setFields", this.searchFields);
       })
       .finally(() => {
         this.loading = false;
@@ -306,6 +305,12 @@ export default {
   watch: {
     accounts() {
       this.fetchError = "";
+    },
+    searchFields() {
+      this.$store.commit("appSearch/setFields", this.searchFields);
+    },
+    value() {
+      this.selected = this.value;
     },
   },
 };
