@@ -89,11 +89,11 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }) {
+    fetch({ commit },params) {
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
         api.services
-          .list()
+          .list(params)
           .then((response) => {
             const servicesWithoutDel = response.pool.filter(
               (s) => s.status !== "DEL"

@@ -99,6 +99,11 @@ export default {
     searchFields() {
       return [
         {
+          title: "Title",
+          key: "title",
+          type: "input",
+        },
+        {
           title: "Access",
           key: "access.level",
           type: "select",

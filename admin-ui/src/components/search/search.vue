@@ -15,13 +15,14 @@
           background-color="background-light"
           dence
           rounded
-          v-model="param"
+          class="search__input"
           v-bind="searchName ? attrs : undefined"
           v-on="searchName ? on : undefined"
+          v-model="param"
         >
-          <template v-slot:append>
-            <v-btn icon small>
-              <v-icon small>mdi-send</v-icon>
+          <template v-if="!isResetAllHide" v-slot:append>
+            <v-btn icon small @click="resetAll">
+              <v-icon small>mdi-close</v-icon>
             </v-btn>
           </template>
           <template v-slot:prepend-inner>
@@ -101,13 +102,14 @@
               </v-list-item>
 
               <v-list-item
-                class="pa-0"
                 :disabled="isLayoutModeAdd"
                 dense
                 @click="setLayoutMode('add')"
               >
-                <v-list-item-content class="pa-0">
-                  <v-btn outlined color="primary"> Add </v-btn>
+                <v-list-item-content>
+                  <v-btn small outlined color="primary">
+                    Add <v-icon small>mdi-plus</v-icon></v-btn
+                  >
                 </v-list-item-content>
               </v-list-item>
             </v-list>
@@ -159,7 +161,7 @@
           >
             <v-btn
               :disabled="isLayoutsOptionsDisabled"
-              outlined
+              plain
               color="primary"
               @click="onLayoutsOptionsClick"
               small
@@ -180,7 +182,7 @@
                 <v-btn
                   small
                   color="primary"
-                  outlined
+                  plain
                   :disabled="isFieldsDisabled"
                   v-bind="attrs"
                   v-on="on"
@@ -292,14 +294,13 @@ const isLayoutModeAdd = computed(() => layoutMode.value === "add");
 const isFieldsDisabled = computed(() => layoutMode.value !== "preview");
 const isLayoutsOptionsDisabled = computed(() => false);
 const isSaveDisabled = computed(() => {
-  return (
-    JSON.stringify(localFilter.value) === JSON.stringify(filter.value) &&
-    JSON.stringify(visibleLayout.value.fields) ===
-      JSON.stringify(currentFieldsKeys.value)
-  );
+  return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
 });
 const isResetDisabled = computed(() => {
   return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
+});
+const isResetAllHide = computed(() => {
+  return !currentLayout.value && !param.value;
 });
 
 const getFieldComponent = (field) => {
@@ -364,9 +365,22 @@ const saveFilter = () => {
       layouts.value[layoutIndex].filter = { ...filter.value };
     }
   }
+  hideSearch();
 };
+
+const hideSearch = () => {
+  isOpen.value = false;
+};
+
 const resetFilter = () => {
   localFilter.value = { ...filter.value };
+};
+
+const resetAll = () => {
+  setLayoutMode("preview");
+  setCurrentLayout();
+  resetFilter();
+  param.value = "";
 };
 
 const setCurrentFieldsKeys = () => {
@@ -458,6 +472,7 @@ watch(searchName, (value, oldValue) => {
   if (oldValue) {
     saveSearchData(oldValue);
   }
+  param.value = "";
   filter.value = {};
   currentLayout.value = undefined;
 
@@ -538,5 +553,11 @@ export default {
       background-color: var(--v-background-base);
     }
   }
+}
+</style>
+
+<style>
+.search__input .v-input__control .v-input__slot {
+  padding: 0 10px;
 }
 </style>
