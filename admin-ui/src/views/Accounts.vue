@@ -372,13 +372,8 @@ export default {
         { title: "PERMANENT LOCK", value: "PERMANENT_LOCK" },
       ];
     },
-    settings() {
-      return this.$store.getters["settings/all"];
-    },
     whmcsApi() {
-      return JSON.parse(
-        this.settings.find(({ key }) => key === "whmcs").value || "{}"
-      ).api;
+      return this.$store.getters["settings/whmcsApi"];
     },
   },
   mounted() {
