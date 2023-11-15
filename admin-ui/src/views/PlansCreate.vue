@@ -93,6 +93,14 @@
               <v-switch style="width: fit-content" v-model="plan.public" />
             </v-col>
           </v-row>
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Auto start</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-switch style="width: fit-content" v-model="plan.meta.auto_start" />
+            </v-col>
+          </v-row>
         </v-col>
 
         <v-col :cols="viewport > 2560 ? 6 : 12">
@@ -536,7 +544,9 @@ export default {
       }
     },
     "plan.type"(newVal) {
-      this.plan.meta.auto_start = newVal === "empty" ? false : undefined;
+      if(!this.isEdit){
+        this.plan.meta.auto_start = newVal === "empty" ? false : undefined;
+      }
     },
   },
 };

@@ -236,6 +236,11 @@ export default {
     searchFields() {
       return [
         {
+          title: "Title",
+          key: "title",
+          type: "input",
+        },
+        {
           title: "Status",
           key: "status",
           type: "select",

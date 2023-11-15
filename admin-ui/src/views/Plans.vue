@@ -378,6 +378,11 @@ export default {
     searchFields() {
       return [
         {
+          title: "Title",
+          key: "title",
+          type: "input",
+        },
+        {
           items: ["STATIC", "DYNAMIC"],
           title: "Kind",
           key: "kind",

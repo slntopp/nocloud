@@ -26,7 +26,10 @@
       </router-link>
     </template>
     <template v-slot:[`item.uuid`]="{ item }">
-      <router-link :to="getEntityByUuid(item).route">
+      <router-link
+        v-if="getEntityByUuid(item).route"
+        :to="getEntityByUuid(item).route"
+      >
         {{
           `${
             getEntityByUuid(item).item?.title || getEntityByUuid(item).item

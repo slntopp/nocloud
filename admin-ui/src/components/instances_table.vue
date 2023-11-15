@@ -378,7 +378,12 @@ export default {
         billingPlan,
         config: { planCode, duration },
       } = item;
-      const key = `${duration} ${planCode}`;
+      let key;
+      if(item.type==='ovh'){
+        key = `${duration} ${planCode}`;
+      }else{
+        key=item.product
+      }
 
       return billingPlan.products[key]?.title;
     },
@@ -511,7 +516,7 @@ export default {
         access: (item) => this.getAccount(item)?.title,
         email: this.getEmail,
         state: getState,
-        product: (item) => item.product ?? this.getTariff(item) ?? "custom",
+        product: (item) => this.getTariff(item) ?? item.product ?? "custom",
         price: this.getNcuPrice,
         accountPrice: this.getAccountPrice,
         period: this.getPeriod,
@@ -536,6 +541,11 @@ export default {
     },
     searchFields() {
       return [
+        {
+          key: "title",
+          title: "Title",
+          type: "input",
+        },
         {
           key: "service",
           items: this.getSearchKeyItems("service"),

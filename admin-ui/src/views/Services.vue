@@ -228,6 +228,11 @@ export default {
     searchFields() {
       return [
         {
+          type: "input",
+          title: "Title",
+          key: "title",
+        },
+        {
           items: Object.keys(this.stateColorMap),
           type: "select",
           title: "Status",

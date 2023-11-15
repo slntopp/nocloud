@@ -140,6 +140,7 @@ export default {
     },
     searchFields() {
       return [
+        {  title: "Title", type: "input", key: "title" },
         { items: this.allTypes, title: "Type", type: "select", key: "type" },
         { title: "Region", type: "input", key: "region" },
         {

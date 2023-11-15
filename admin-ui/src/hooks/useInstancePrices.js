@@ -21,7 +21,7 @@ const useInstancePrices = (instance) => {
     );
   });
 
-  const accountCurrency = computed(() => account.value.currency);
+  const accountCurrency = computed(() => account.value?.currency);
   const accountRate = computed(() => {
     if (defaultCurrency.value === accountCurrency.value) {
       return 1;

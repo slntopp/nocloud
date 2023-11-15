@@ -32,6 +32,32 @@
               <v-divider inset vertical class="mx-4" />
               <v-spacer />
 
+              <v-dialog width="90vw" v-model="isEditOpen">
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn
+                    :disabled="selected.length < 1"
+                    v-bind="attrs"
+                    v-on="on"
+                    class="mr-2"
+                    color="background-light"
+                  >
+                    Edit
+                  </v-btn>
+                </template>
+
+                <v-card class="pa-4">
+                  <v-subheader class="px-0"> Description: </v-subheader>
+                  <rich-editor v-model="newMeta.description" />
+
+                  <v-row class="mt-5" justify="end">
+                    <v-btn class="mx-2" @click="isEditOpen = false"
+                      >Close</v-btn
+                    >
+                    <v-btn @click="saveNewMeta" class="mx-2">Save</v-btn>
+                  </v-row>
+                </v-card>
+              </v-dialog>
+
               <v-btn
                 :disabled="selected.length < 1"
                 class="mr-2"
@@ -140,21 +166,21 @@
               />
             </v-radio-group>
           </template>
-          
-        <template v-slot:[`item.meta.addons`]="{ item }">
-          <v-dialog width="90vw">
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn icon v-bind="attrs" v-on="on">
-                <v-icon> mdi-menu-open </v-icon>
-              </v-btn>
-            </template>
 
-            <plans-empty-addons-table
-              :product="item"
-              @update:addons="(value) => $set(item.meta, 'addons', value)"
-            />
-          </v-dialog>
-        </template>
+          <template v-slot:[`item.meta.addons`]="{ item }">
+            <v-dialog width="90vw">
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn icon v-bind="attrs" v-on="on">
+                  <v-icon> mdi-menu-open </v-icon>
+                </v-btn>
+              </template>
+
+              <plans-empty-addons-table
+                :product="item"
+                @update:addons="(value) => $set(item.meta, 'addons', value)"
+              />
+            </v-dialog>
+          </template>
 
           <template v-slot:expanded-item="{ headers, item }">
             <td />
@@ -166,29 +192,31 @@
                 v-if="type === 'empty'"
                 v-model="item.meta.image"
               />
-              <v-subheader class="px-0">
-                {{
-                  type === "empty" ? "Description" : "Amount of resources"
-                }}:
-              </v-subheader>
+
+              <v-subheader class="px-0"> Description: </v-subheader>
+              <rich-editor
+                class="html-editor"
+                v-model="item.meta.description"
+              />
 
               <template v-if="type === 'empty'">
-                <rich-editor class="html-editor" v-model="item.meta.description" />
                 <plans-empty-table
                   :resources="item.meta.resources ?? []"
-                  @update:resource="(value) =>
-                    changeMeta(value, item.id, item.meta.resources)
+                  @update:resource="
+                    (value) => changeMeta(value, item.id, item.meta.resources)
                   "
                 />
               </template>
 
-              <json-editor
-                v-else
-                :json="item.resources"
-                @changeValue="
-                  (value) => changeProduct('amount', value, item.id)
-                "
-              />
+              <template v-else>
+                <v-subheader class="px-0"> Amount of resources </v-subheader>
+                <json-editor
+                  :json="item.resources"
+                  @changeValue="
+                    (value) => changeProduct('amount', value, item.id)
+                  "
+                />
+              </template>
 
               <v-subheader class="px-0 pt-4">Installation price:</v-subheader>
               <v-text-field
@@ -265,9 +293,14 @@ const headers = ref([
   { text: "Sorter", value: "sorter" },
 ]);
 
-if (props.type === "empty") headers.value.push({
-  text: "Addons", value: "meta.addons"
-})
+const isEditOpen = ref(false);
+const newMeta = ref({ description: "" });
+
+if (props.type === "empty")
+  headers.value.push({
+    text: "Addons",
+    value: "meta.addons",
+  });
 
 onMounted(() => {
   setProductsArray();
@@ -289,9 +322,10 @@ function changeResource(data) {
 }
 
 function changeMeta(data, id, resources) {
-  const value = (data.key === "resources")
-    ? data.value
-    : JSON.parse(JSON.stringify(resources));
+  const value =
+    data.key === "resources"
+      ? data.value
+      : JSON.parse(JSON.stringify(resources));
 
   if (data.key !== "resources") {
     const i = value.findIndex(({ id }) => id === data.id);
@@ -383,6 +417,32 @@ const copyProducts = () => {
   changeProduct("products", newProducts);
   setFullDates(newProducts);
   selected.value = [];
+};
+
+const saveNewMeta = () => {
+  setProductsArray();
+
+  const newProducts = {};
+  for (const product of productsArray.value) {
+    const key = product.key;
+    delete product.key;
+    newProducts[key] = product;
+  }
+  for (const product of selected.value) {
+    const key = product.key;
+    delete product.key;
+    newProducts[key] = {
+      ...product,
+      meta: { ...product.meta, ...newMeta.value },
+    };
+  }
+
+  changeProduct("products", newProducts);
+  setFullDates(newProducts);
+
+  selected.value = [];
+  isEditOpen.value = false;
+  newMeta.value = { description: "" };
 };
 
 function addConfig() {
