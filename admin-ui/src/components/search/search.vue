@@ -15,13 +15,13 @@
           background-color="background-light"
           dence
           rounded
-          v-model="param"
           v-bind="searchName ? attrs : undefined"
           v-on="searchName ? on : undefined"
+          v-model="param"
         >
-          <template v-slot:append>
-            <v-btn icon small>
-              <v-icon small>mdi-send</v-icon>
+          <template v-if="!isResetAllHide" v-slot:append>
+            <v-btn icon small @click="resetAll">
+              <v-icon small>mdi-close</v-icon>
             </v-btn>
           </template>
           <template v-slot:prepend-inner>
@@ -301,6 +301,9 @@ const isSaveDisabled = computed(() => {
 const isResetDisabled = computed(() => {
   return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
 });
+const isResetAllHide = computed(() => {
+  return !currentLayout.value && !param.value;
+});
 
 const getFieldComponent = (field) => {
   switch (field.type) {
@@ -367,6 +370,13 @@ const saveFilter = () => {
 };
 const resetFilter = () => {
   localFilter.value = { ...filter.value };
+};
+
+const resetAll = () => {
+  setLayoutMode("preview");
+  setCurrentLayout();
+  resetFilter();
+  param.value=''
 };
 
 const setCurrentFieldsKeys = () => {
