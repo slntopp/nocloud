@@ -15,7 +15,7 @@
     </v-btn>
     <v-dialog style="height: 100%" v-if="isAnsibleActive">
       <template v-slot:activator="{ on, attrs }">
-        <v-btn class="ma-1" dark v-bind="attrs" v-on="on"> Playbook </v-btn>
+        <v-btn class="ma-1" v-bind="attrs" v-on="on"> Playbook </v-btn>
       </template>
       <plugin-iframe
         style="height: 80vh"
