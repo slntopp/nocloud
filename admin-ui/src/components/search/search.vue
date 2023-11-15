@@ -469,6 +469,7 @@ watch(searchName, (value, oldValue) => {
   if (oldValue) {
     saveSearchData(oldValue);
   }
+  param.value=''
   filter.value = {};
   currentLayout.value = undefined;
 
