@@ -12,6 +12,7 @@
           @change="
             emit('update', { key: 'config.regular_payment', value: !!$event })
           "
+          :disabled="isDeleted"
           label="Invoice based"
         />
       </v-col>
@@ -20,6 +21,7 @@
         class="d-flex justify-end align-start pa-0"
       >
         <v-switch
+            :disabled="isDeleted"
           hide-details
           dense
           :input-value="template.config.auto_renew"
@@ -33,13 +35,14 @@
         <confirm-dialog
           title="Do you want to renew server?"
           :text="renewTemplate"
+          :disabled="isDeleted"
           :width="500"
           :success-disabled="isRenewDisabled"
           @confirm="sendRenew"
         >
           <v-btn
             color="primary"
-            :disabled="isRenewDisabled"
+            :disabled="isRenewDisabled || isDeleted"
             :loading="isLoading"
           >
             Renew
@@ -102,6 +105,10 @@ const isRenewDisabled = computed(() => {
   return (
     (account.value.balance || 0) < price.value || template.value.data.blocked
   );
+});
+
+const isDeleted = computed(() => {
+  return template.value.state?.state==='DELETED'
 });
 
 function sendRenew() {
