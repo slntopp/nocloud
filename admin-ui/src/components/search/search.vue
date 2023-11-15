@@ -102,13 +102,13 @@
               </v-list-item>
 
               <v-list-item
-                class="pa-0"
                 :disabled="isLayoutModeAdd"
                 dense
                 @click="setLayoutMode('add')"
               >
-                <v-list-item-content class="pa-0">
-                  <v-btn outlined color="primary"> Add </v-btn>
+                <v-list-item-content>
+                  <v-btn small outlined color="primary"> Add
+                    <v-icon small>mdi-plus</v-icon></v-btn>
                 </v-list-item-content>
               </v-list-item>
             </v-list>
@@ -160,7 +160,7 @@
           >
             <v-btn
               :disabled="isLayoutsOptionsDisabled"
-              outlined
+              plain
               color="primary"
               @click="onLayoutsOptionsClick"
               small
@@ -181,7 +181,7 @@
                 <v-btn
                   small
                   color="primary"
-                  outlined
+                  plain
                   :disabled="isFieldsDisabled"
                   v-bind="attrs"
                   v-on="on"
