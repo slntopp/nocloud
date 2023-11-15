@@ -1,14 +1,22 @@
 <template>
   <v-chip :small="small" :color="chipColor">
-    {{ state }}
+    {{ state }} {{ isDetached ? "(Detached)" : "" }}
   </v-chip>
 </template>
 
 <script setup>
 import { computed, toRefs } from "vue";
 
-const props = defineProps(["state",'small']);
-const { state } = toRefs(props);
+const props = defineProps(["template", "small"]);
+const { template } = toRefs(props);
+
+const state = computed(() => {
+  return template.value.state.state;
+});
+
+const isDetached = computed(() => {
+  return template.value?.status.toLowerCase() === "detached";
+});
 
 const chipColor = computed(() => {
   if (!state.value) return "error";

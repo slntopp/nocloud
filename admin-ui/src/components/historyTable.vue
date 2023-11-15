@@ -26,7 +26,10 @@
       </router-link>
     </template>
     <template v-slot:[`item.uuid`]="{ item }">
-      <router-link :to="getEntityByUuid(item).route">
+      <router-link
+        v-if="getEntityByUuid(item).route"
+        :to="getEntityByUuid(item).route"
+      >
         {{
           `${
             getEntityByUuid(item).item?.title || getEntityByUuid(item).item
@@ -55,18 +58,16 @@ import { toRefs, ref, onMounted, computed, watch } from "vue";
 import nocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";
-import useCustomSearch from "@/hooks/useCustomSearch";
 
 const props = defineProps({
   tableName: {},
   accountId: {},
   uuid: {},
-  path: {},
   hideRequestor: { type: Boolean, default: false },
   hideUuid: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
 });
-const { tableName, accountId, uuid, hideRequestor, hideUuid, path, loading } =
+const { tableName, accountId, uuid, hideRequestor, hideUuid, loading } =
   toRefs(props);
 
 const count = ref(10);
@@ -78,9 +79,10 @@ const fetchError = ref("");
 const expanded = ref([]);
 const options = ref({});
 const itemsPerPageOptions = ref([5, 10, 15, 25]);
+const scopeItems = ref([]);
+const actionItems = ref([]);
 
 const store = useStore();
-useCustomSearch();
 
 const headers = computed(() => [
   { text: "Id", value: "id" },
@@ -209,39 +211,25 @@ const getServiceProvider = (uuid) => {
 };
 
 const getFilterItems = async () => {
-  const { unique } = await api.logging.count({});
-  const actionItems = unique.actions.map((a) => ({ title: a, uuid: a }));
-  const scopeItems = unique.scopes.map((a) => ({ title: a, uuid: a }));
-
-  store.commit("appSearch/pushVariant", {
-    key: "action",
-    value: {
-      items: actionItems,
-      isArray: true,
-      key: "action",
-      title: "Action",
-    },
-  });
-  store.commit("appSearch/pushVariant", {
-    key: "scope",
-    value: {
-      isArray: true,
-      items: scopeItems,
-      key: "scope",
-      title: "Scopes",
-    },
-  });
-  if (Object.keys(store.getters["appSearch/customParams"]).length === 0) {
-    const hiddenActions = ["monitoring", "regions"];
-
-    const defaultCustomParams = [];
-    actionItems.forEach(({ title, uuid }) => {
-      if (!hiddenActions.includes(title)) {
-        defaultCustomParams.push({ title, value: uuid });
-      }
-    });
-    store.commit("appSearch/setCustomParams", { action: defaultCustomParams });
+  if (actionItems.value.length && scopeItems.value.length) {
+    return;
   }
+  const { unique } = await api.logging.count({});
+  actionItems.value = unique.actions;
+  scopeItems.value = unique.scopes;
+
+  // if (Object.keys(store.getters["appSearch/customParams"]).length === 0) {
+  //   const hiddenActions = ["monitoring", "regions"];
+  //
+  //   const defaultCustomParams = [];
+  //   actionItems.value.forEach(({ title, uuid }) => {
+  //     if (!hiddenActions.includes(title)) {
+  //       defaultCustomParams.push({ title, value: uuid });
+  //     }
+  //   });
+  //   store.commit("appSearch/setCustomParams", { action: defaultCustomParams });
+  // }
+  store.commit("appSearch/pushFields", searchFields.value);
 };
 
 const isLoading = computed(() => {
@@ -256,17 +244,37 @@ const requestOptions = computed(() => ({
   field: options.value.sortBy[0],
   sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
   filters: {
-    action: searchParams.value.action?.map(({ value }) => value) || undefined,
-    scope: searchParams.value.scope?.map(({ value }) => value) || undefined,
-    path: path.value || undefined,
+    action: action.value,
+    scope: scope.value,
+    path: path.value,
   },
 }));
+
+const searchFields = computed(() => {
+  return [
+    {
+      items: actionItems.value,
+      type: "select",
+      key: "action",
+      title: "Action",
+    },
+    { type: "select", items: scopeItems.value, key: "scope", title: "Scopes" },
+    { type: "input", key: "path", title: "Path" },
+  ];
+});
 
 const accounts = computed(() => store.getters["accounts/all"]);
 const services = computed(() => store.getters["services/all"]);
 const sps = computed(() => store.getters["servicesProviders/all"]);
 const instances = computed(() => store.getters["services/getInstances"]);
-const searchParams = computed(() => store.getters["appSearch/customParams"]);
+const filter = computed(() => store.getters["appSearch/filter"]);
+const path = computed(() => filter.value.path || undefined);
+const action = computed(() =>
+  filter.value.action?.length ? filter.value.action : undefined
+);
+const scope = computed(() =>
+  filter.value.scope?.length ? filter.value.scope : undefined
+);
 
 onMounted(() => {
   if (!loading.value) {
@@ -281,6 +289,11 @@ watch(loading, () => {
   }
 });
 watch(uuid, () => updateProps());
-watch(searchParams, () => updateProps(), { deep: true });
-watch(path, () => updateProps());
+watch(
+  filter,
+  () => {
+    onUpdateOptions(options.value);
+  },
+  { deep: true }
+);
 </script>

@@ -17,7 +17,6 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -200,28 +199,45 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 		params["srv"] = req.GetService()
 	}
 
-	if req.From != nil {
-		query += " FILTER record.exec >= @from"
-		params["from"] = req.GetFrom()
-	}
-
-	if req.To != nil {
-		query += " FILTER record.exec <=@to"
-		params["to"] = req.GetTo()
-	}
-
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			values := value.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
 			if key == "transactionType" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
 				query += fmt.Sprintf(` FILTER record.meta["%s"] in @%s`, key, key)
+				params[key] = values
+			} else if key == "start" || key == "end" || key == "exec" || key == "total" {
+				values := value.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] >= %f`, key, from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
+				}
+			} else if key == "payment_date" {
+				values := value.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER record.meta["%s"] >= %f`, key, from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER record.meta["%s"] <= %f`, key, to)
+				}
 			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
 				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+				params[key] = values
 			}
-			params[key] = values
 		}
 	}
 
@@ -297,28 +313,45 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 		params["srv"] = req.GetService()
 	}
 
-	if req.From != nil {
-		query += " FILTER record.exec >= @from"
-		params["from"] = req.GetFrom()
-	}
-
-	if req.To != nil {
-		query += " FILTER record.exec <=@to"
-		params["to"] = req.GetTo()
-	}
-
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			values := value.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
 			if key == "transactionType" {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
 				query += fmt.Sprintf(` FILTER record.meta["%s"] in @%s`, key, key)
+				params[key] = values
+			} else if key == "start" || key == "end" || key == "exec" || key == "total" {
+				values := value.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] >= %f`, key, from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
+				}
+			} else if key == "payment_date" {
+				values := value.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER record.meta["%s"] >= %f`, key, from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER record.meta["%s"] <= %f`, key, to)
+				}
 			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
 				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+				params[key] = values
 			}
-			params[key] = values
 		}
 	}
 
@@ -348,7 +381,23 @@ LET records = (
 	RETURN r
 )
 
-RETURN UNIQUE(records[*].meta.transactionType)
+LET records_products = (
+	FOR r in @@records
+	FILTER r.product != null
+	RETURN r
+)
+
+LET records_resources = (
+	FOR r in @@records
+	FILTER r.resource != null
+	RETURN r
+)
+
+RETURN {
+	types: UNIQUE(records[*].meta.transactionType),
+	products: UNIQUE(records_products[*].product),
+	resources: UNIQUE(records_resources[*].resource)
+}
 `
 
 func (ctrl *RecordsController) GetUnique(ctx context.Context) (map[string]interface{}, error) {
@@ -360,27 +409,11 @@ func (ctrl *RecordsController) GetUnique(ctx context.Context) (map[string]interf
 		return nil, err
 	}
 
-	var types []string
+	var result = map[string]interface{}{}
 
-	_, err = cur.ReadDocument(ctx, &types)
+	_, err = cur.ReadDocument(ctx, &result)
 	if err != nil {
 		return nil, err
-	}
-
-	marshal, err := json.Marshal(types)
-	if err != nil {
-		return nil, err
-	}
-
-	var iTypes []interface{}
-
-	err = json.Unmarshal(marshal, &iTypes)
-	if err != nil {
-		return nil, err
-	}
-
-	var result = map[string]interface{}{
-		"transactionType": iTypes,
 	}
 
 	return result, nil

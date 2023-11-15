@@ -113,17 +113,42 @@
       >
         <v-btn
           color="background-light"
-          class="mr-8"
+          class="mr-2"
           :disabled="selected.length < 1"
           :loading="deletingLoading"
         >
           delete
         </v-btn>
       </confirm-dialog>
+      <confirm-dialog
+        :disabled="selected.length < 1"
+        @confirm="changeInvoiceBased(true)"
+      >
+        <v-btn
+          color="background-light"
+          class="mr-2"
+          :disabled="selected.length < 1 || changeInvoiceBasedAction === false"
+          :loading="deletingLoading || changeInvoiceBasedAction === true"
+        >
+          Enabled invoice based
+        </v-btn>
+      </confirm-dialog>
+      <confirm-dialog
+        :disabled="selected.length < 1"
+        @confirm="changeInvoiceBased(false)"
+      >
+        <v-btn
+          color="background-light"
+          class="mr-8"
+          :disabled="selected.length < 1 || changeInvoiceBasedAction === true"
+          :loading="deletingLoading || changeInvoiceBasedAction === false"
+        >
+          Disabled invoice based
+        </v-btn>
+      </confirm-dialog>
     </div>
 
-    <accounts-table :searchParam="searchParam" v-model="selected">
-    </accounts-table>
+    <accounts-table v-model="selected"> </accounts-table>
   </div>
 </template>
 
@@ -132,7 +157,6 @@ import accountsTable from "@/components/accounts_table.vue";
 import api from "@/api.js";
 
 import snackbar from "@/mixins/snackbar.js";
-import search from "@/mixins/search.js";
 
 import ConfirmDialog from "../components/confirmDialog.vue";
 
@@ -142,12 +166,13 @@ export default {
     "accounts-table": accountsTable,
     ConfirmDialog,
   },
-  mixins: [snackbar, search],
+  mixins: [snackbar],
   data() {
     return {
       createMenuVisible: false,
       selected: [],
       newAccount: {},
+      changeInvoiceBasedAction: undefined,
       rules: {
         title: [
           (value) => !!value || "Title is required",
@@ -203,8 +228,9 @@ export default {
         })
         .catch((error) => {
           console.error(error);
-          this.snackbar.message = "Something went wrong... Try later.";
-          this.snackbar.visibility = true;
+          this.showSnackbarError({
+            message: "Something went wrong... Try later.",
+          });
         })
         .finally(() => {
           this.loading = false;
@@ -219,10 +245,11 @@ export default {
         Promise.all(deletePromices)
           .then((res) => {
             if (res.every((el) => el.result)) {
-              this.snackbar.message = `Account${
-                deletePromices.length == 1 ? "" : "s"
-              } deleted successfully.`;
-              this.snackbar.visibility = true;
+              this.showSnackbarSuccess({
+                message: `Account${
+                  deletePromices.length == 1 ? "" : "s"
+                } deleted successfully.`,
+              });
             }
 
             this.selected = [];
@@ -234,6 +261,27 @@ export default {
           .finally(() => {
             this.deletingLoading = false;
           });
+      }
+    },
+    async changeInvoiceBased(value) {
+      this.changeInvoiceBasedAction = value;
+      try {
+        await Promise.all(
+          this.selected.map((el) => {
+            if (el.data?.regular_payment === value) {
+              return Promise.resolve();
+            }
+            if (!el.data) {
+              el.data = {};
+            }
+            el.data.regular_payment = value;
+            return api.accounts.update(el.uuid, el);
+          })
+        );
+        this.$store.dispatch("accounts/fetch");
+        this.showSnackbarSuccess({ message: "Success" });
+      } finally {
+        this.changeInvoiceBasedAction = undefined;
       }
     },
     openCreateAccountMenuHandler() {
@@ -249,9 +297,6 @@ export default {
       }));
       return namespaces;
     },
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
-    },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
@@ -263,8 +308,6 @@ export default {
     this.$store.commit("reloadBtn/setCallback", {
       type: "accounts/fetch",
     });
-
-    this.$store.commit("appSearch/setSearchName", "all-accounts");
     this.$store.dispatch("currencies/fetch");
   },
   watch: {

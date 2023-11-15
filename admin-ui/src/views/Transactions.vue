@@ -3,52 +3,12 @@
     <v-row align="start">
       <v-col cols="1">
         <v-btn
-          class="mr-2"
+          class="ma-2"
           color="background-light"
           :to="{ name: 'Transactions create' }"
         >
           Create
         </v-btn>
-      </v-col>
-      <v-col>
-        <date-picker dense label="from" v-model="duration.from" />
-      </v-col>
-      <v-col>
-        <date-picker dense label="to" v-model="duration.to" />
-      </v-col>
-      <v-col>
-        <v-autocomplete
-          :filter="defaultFilterObject"
-          label="Types"
-          dense
-          v-model="selectedTypes"
-          multiple
-          :items="types"
-        />
-      </v-col>
-      <v-col>
-        <v-autocomplete
-          dense
-          :filter="defaultFilterObject"
-          label="Accounts"
-          item-text="title"
-          item-value="uuid"
-          v-model="selectedAccounts"
-          multiple
-          :items="accounts"
-        />
-      </v-col>
-      <v-col>
-        <v-autocomplete
-          :filter="defaultFilterObject"
-          dense
-          label="Instances"
-          item-text="title"
-          item-value="uuid"
-          v-model="selectedInstances"
-          multiple
-          :items="instances"
-        />
       </v-col>
     </v-row>
 
@@ -77,7 +37,7 @@
       table-name="transaction-table"
       :filters="filters"
       :duration="duration"
-      @input:unique="types = $event.transactionType"
+      @input:unique="setUniques"
       :select-record="selectTransaction"
     />
   </div>
@@ -88,19 +48,19 @@ import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
 import apexcharts from "vue-apexcharts";
 
-import { defaultFilterObject } from "@/functions";
 import { mapGetters } from "vuex";
 import reportsTable from "@/components/reports_table.vue";
-import DatePicker from "@/components/ui/datePicker.vue";
 export default {
   name: "transactions-view",
-  components: { DatePicker, reportsTable, apexcharts },
-  mixins: [snackbar, search],
+  components: { reportsTable, apexcharts },
+  mixins: [snackbar, search("transactions")],
   data: () => ({
     selectedAccounts: [],
     selectedInstances: [],
     selectedTypes: [],
     types: [],
+    resources: [],
+    products: [],
     series: [],
     chartLoading: false,
     isInitLoading: true,
@@ -116,7 +76,6 @@ export default {
     duration: { to: null, from: null },
   }),
   methods: {
-    defaultFilterObject,
     setTransactions(dates, labels, values) {
       const min = Math.min(...dates);
       let counter = 1;
@@ -176,6 +135,16 @@ export default {
         });
       });
     },
+    setUniques({ resources, products, types }) {
+      this.resources = resources;
+      this.types = types;
+      this.products = products;
+    },
+    fetchData() {
+      this.$store.dispatch("accounts/fetch");
+      this.$store.dispatch("services/fetch");
+      this.$store.dispatch("namespaces/fetch");
+    },
   },
   created() {
     if (this.$route.query.account) {
@@ -186,13 +155,18 @@ export default {
     this.isInitLoading = false;
   },
   mounted() {
-    this.$store.dispatch("accounts/fetch");
-    this.$store.dispatch("services/fetch");
-    this.$store.dispatch("namespaces/fetch");
-    this.$store.dispatch("currencies/fetch");
+    this.fetchData();
+    this.$store.commit("reloadBtn/setCallback", {
+      event: async () => {
+        this.isInitLoading = true;
+        this.fetchData();
+        setTimeout(() => (this.isInitLoading = false), 0);
+      },
+    });
   },
   computed: {
     ...mapGetters("transactions", ["count", "page", "isLoading", "all"]),
+    ...mapGetters("appSearch", ["filter"]),
     transactions() {
       return this.all;
     },
@@ -209,21 +183,47 @@ export default {
       return this.$store.getters["services/all"];
     },
     filters() {
+      const total = {};
+      if (this.filter.total?.to) {
+        total.to = +this.filter.total.to;
+      }
+      if (this.filter.total?.from) {
+        total.from = +this.filter.total.from;
+      }
+
+      const dates = {};
+      const dateKeys = ["exec", "start", "end",'payment_date'];
+      dateKeys.forEach((key) => {
+        if (!this.filter[key]) {
+          return;
+        }
+        dates[key] = {};
+
+        if (this.filter[key][0]) {
+          dates[key].from = new Date(this.filter[key][0]).getTime() / 1000;
+        }
+        if (this.filter[key][1]) {
+          dates[key].to = new Date(this.filter[key][1]).getTime() / 1000;
+        }
+      });
+
       return {
-        account: this.selectedAccounts.length
-          ? this.selectedAccounts
+        ...dates,
+        account: this.filter.account?.length ? this.filter.account : undefined,
+        instance: this.filter.instance?.length
+          ? this.filter.instance
           : undefined,
-        instance: this.selectedInstances.length
-          ? this.selectedInstances
+        transactionType: this.filter.type?.length
+          ? this.filter.type
           : undefined,
-        transactionType: this.selectedTypes.length
-          ? this.selectedTypes
-          : undefined,
+        total: Object.keys(total).length ? total : undefined,
+        resource: this.filter.resource,
+        product: this.filter.product,
       };
     },
     servicesByAccount() {
       const namespaces = this.namespaces
-        .filter((n) => this.selectedAccounts.includes(n.access.namespace))
+        .filter((n) => this.filter.account?.includes(n.access.namespace))
         .map((n) => n.uuid);
 
       return this.services.filter((s) => {
@@ -267,13 +267,49 @@ export default {
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
-    searchParam() {
-      return this.$store.getters["appSearch/param"];
+    searchFields() {
+      return [
+        { key: "type", type: "select", items: this.types, title: "Type" },
+        {
+          key: "instance",
+          type: "select",
+          item: { value: "uuid", title: "title" },
+          items: this.instances,
+          title: "Instances",
+        },
+        {
+          key: "account",
+          type: "select",
+          item: { value: "uuid", title: "title" },
+          items: this.accounts,
+          title: "Accounts",
+        },
+        {
+          key: "product",
+          type: "select",
+          items: this.products,
+          title: "Product",
+        },
+        {
+          key: "resource",
+          type: "select",
+          items: this.resources,
+          title: "Resource",
+        },
+        { key: "exec", type: "date", title: "Exec" },
+        { key: "start", type: "date", title: "Start" },
+        { key: "end", type: "date", title: "End" },
+        { key: "payment_date", type: "date", title: "Payment date" },
+        { key: "total", type: "number-range", title: "Total" },
+      ];
     },
   },
   watch: {
     chartLoading() {
       setTimeout(this.setListenerToLegend);
+    },
+    searchFields() {
+      this.$store.commit("appSearch/setFields", this.searchFields);
     },
     selectedAccounts: {
       handler() {

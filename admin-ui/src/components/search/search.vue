@@ -1,391 +1,563 @@
 <template>
-  <div>
+  <div style="width: 50vw">
     <v-menu
-      v-model="isOpen"
-      :close-on-click="true"
+      @input="setLayoutMode('preview')"
+      content-class="search"
       :close-on-content-click="false"
+      v-model="isOpen"
       offset-y
     >
       <template v-slot:activator="{ attrs, on }">
         <v-text-field
-          @input="onSearchInput"
-          @click="onSearchInput"
-          ref="search-input"
           hide-details
           placeholder="Search..."
           single-line
           background-color="background-light"
           dence
-          v-model="searchParam"
           rounded
-          v-bind="attrs"
-          v-on="on"
+          class="search__input"
+          v-bind="searchName ? attrs : undefined"
+          v-on="searchName ? on : undefined"
+          v-model="param"
         >
-          <template v-slot:prepend-inner>
-            <v-icon
-              :style="{
-                marginTop: customParamsValues.length ? '12px !important' : 0,
-              }"
-              class="ma-auto"
-              >mdi-magnify
-            </v-icon>
+          <template v-if="!isResetAllHide" v-slot:append>
+            <v-btn icon small @click="resetAll">
+              <v-icon small>mdi-close</v-icon>
+            </v-btn>
           </template>
-
-          <template v-slot:append>
-            <div class="d-flex" v-if="customParamsValues.length">
-              <search-tag
-                v-for="param in showedCustomParams"
-                :key="param.value"
-                :param="param"
-                :variants="variants"
-              />
-            </div>
-            <v-menu
-              :close-on-content-click="false"
-              v-if="filteredCustomParamsValues.length > 1"
-              offset-y
-              min-height="300px"
-              max-height="300px"
-              max-width="600px"
-              min-width="600px"
-            >
-              <template v-slot:activator="{ on, attrs }">
-                <v-chip
-                  class="ma-auto pa-auto"
-                  color="primary"
-                  v-bind="attrs"
-                  outlined
-                  v-on="on"
-                >
-                  +{{ filteredCustomParamsValues.length }}
-                </v-chip>
-              </template>
-              <v-card class="px-3" color="background-light">
-                <v-text-field
-                  v-model="tagsSearchParam"
-                  prepend-inner-icon="mdi-magnify"
-                />
-                <search-tag
-                  v-for="param in filteredCustomParamsValues"
-                  :key="param.key + param.title"
-                  :param="param"
-                  :variants="variants"
-                />
-              </v-card>
-            </v-menu>
+          <template v-slot:prepend-inner>
+            <v-chip
+              small
+              class="mx-1"
+              outlined
+              color="primary"
+              v-if="currentLayout"
+              >{{ currentLayout.title }}
+              <v-btn icon small @click="setCurrentLayout('')">
+                <v-icon small>mdi-close</v-icon>
+              </v-btn>
+            </v-chip>
           </template>
         </v-text-field>
       </template>
-      <v-card v-if="searchItems.length || selectedGroupKey">
-        <v-card-subtitle v-if="selectedGroupKey">
-          <v-btn class="mr-4" icon @click="selectedGroupKey = null">
-            <v-icon>mdi-arrow-left</v-icon>
-          </v-btn>
-          {{ variants[selectedGroupKey].title }}
-        </v-card-subtitle>
-        <div style="max-height: 600px">
-          <v-list ref="searchList" color="grey darken-4">
-            <v-list-item-group
-              @change="changeSearchListHandler"
-              :value="selectedGroupKey"
-            >
-              <template v-if="searchItems.length > 0">
-                <v-list-item
-                  class="search__list-item"
-                  active-class="active"
-                  :key="item.key"
-                  v-for="item in searchItems"
-                >
-                  <div
-                    v-if="searchStatus === 'group'"
-                    style="width: 100%"
-                    class="d-flex justify-space-between"
+      <v-card
+        style="height: 100%"
+        class="pa-3 search__card"
+        color="background-light"
+      >
+        <v-row style="height: 100%" class="search__content">
+          <v-col
+            cols="3"
+            :class="{
+              layouts: true,
+              dark: theme === 'dark',
+              light: theme !== 'dark',
+            }"
+          >
+            <v-list dense color="background-light">
+              <v-subheader>LAYOUTS</v-subheader>
+              <v-list-item
+                dense
+                v-for="layout in layouts"
+                :key="layout.id"
+                :disabled="isLayoutModeAdd"
+                @click="setCurrentLayout(layout)"
+              >
+                <v-list-item-content class="ma-0 pa-0">
+                  <v-list-item-title
+                    :style="{
+                      color:
+                        layout.id === currentLayout?.id
+                          ? 'var(--v-primary-base) !important'
+                          : undefined,
+                    }"
+                    v-if="isLayoutModePreview || isLayoutModeAdd"
+                    >{{ layout.title }}</v-list-item-title
                   >
-                    <span>
-                      {{ searchParam || "" }}
-                    </span>
-                    <div>
-                      <span> {{ item.title }} </span>
-                      <v-btn
-                        v-if="variants[item.key].items"
-                        @click.stop="selectGroup(item)"
-                        icon
-                      >
-                        <v-icon>mdi-arrow-right</v-icon>
+                  <v-text-field
+                    v-else-if="isLayoutModeEdit"
+                    v-model="layout.title"
+                    dense
+                    class="pa-0 ma-0"
+                  >
+                    <template v-slot:append>
+                      <v-btn @click="deleteLayout(layout.id)" small icon>
+                        <v-icon small>mdi-close</v-icon>
                       </v-btn>
-                    </div>
-                  </div>
-                  <div
-                    style="width: 100%"
-                    class="d-flex justify-space-between"
-                    v-else
+                    </template>
+                  </v-text-field>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-if="isLayoutModeAdd" dense>
+                <v-list-item-content>
+                  <v-text-field v-model="newLayoutName" dense class="pa-0 ma-0">
+                    <template v-slot:append>
+                      <v-btn @click="saveNewLayout" small icon>
+                        <v-icon small>mdi-content-save</v-icon>
+                      </v-btn>
+                    </template>
+                  </v-text-field>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item
+                :disabled="isLayoutModeAdd"
+                dense
+                @click="setLayoutMode('add')"
+              >
+                <v-list-item-content>
+                  <v-btn small outlined color="primary">
+                    Add <v-icon small>mdi-plus</v-icon></v-btn
                   >
-                    <span>{{ item.title }}</span>
-                    <v-icon v-if="item.isSelect" color="green"
-                      >mdi-check</v-icon
-                    >
-                  </div>
-                </v-list-item>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list>
+          </v-col>
+          <v-col cols="9" class="filter" v-if="allFields.length">
+            <v-row
+              v-for="fieldKey in currentFieldsKeys"
+              :key="fieldKey"
+              class="px-2"
+            >
+              <v-col class="d-flex align-center">
+                <component
+                  clearable
+                  :disabled="isFieldsDisabled"
+                  dense
+                  :multiple="
+                    currentFields[fieldKey]?.type === 'select'
+                      ? !currentFields[fieldKey]?.single
+                      : false
+                  "
+                  :label="currentFields[fieldKey].title"
+                  :item-value="currentFields[fieldKey].item?.value"
+                  :item-text="currentFields[fieldKey].item?.title"
+                  :items="currentFields[fieldKey].items"
+                  :is="getFieldComponent(currentFields[fieldKey])"
+                  v-model="localFilter[fieldKey]"
+                  range
+                />
+                <v-btn
+                  :disabled="isFieldsDisabled"
+                  icon
+                  small
+                  @click="changeFields(currentFields[fieldKey], false)"
+                >
+                  <v-icon size="20">mdi-delete-outline</v-icon>
+                </v-btn>
+              </v-col>
+            </v-row>
+          </v-col>
+        </v-row>
+        <v-row justify="space-between">
+          <v-col
+            cols="3"
+            :class="{
+              layout__controls: true,
+              dark: theme === 'dark',
+              light: theme !== 'dark',
+            }"
+          >
+            <v-btn
+              :disabled="isLayoutsOptionsDisabled"
+              plain
+              color="primary"
+              @click="onLayoutsOptionsClick"
+              small
+            >
+              <span v-if="isLayoutModeEdit">Save</span>
+              <span v-else-if="isLayoutModeAdd">Cancel</span>
+              <span v-else-if="isLayoutModePreview">Edit layouts</span>
+            </v-btn>
+          </v-col>
+          <v-col class="d-flex justify-space-between align-end">
+            <v-menu
+              :disabled="isFieldsDisabled"
+              :close-on-content-click="false"
+              offset-y
+              top
+            >
+              <template v-slot:activator="{ attrs, on }">
+                <v-btn
+                  small
+                  color="primary"
+                  plain
+                  :disabled="isFieldsDisabled"
+                  v-bind="attrs"
+                  v-on="on"
+                  >Add fields</v-btn
+                >
               </template>
-              <div v-else style="width: 100%" class="d-flex justify-center">
-                <span class="text-center"> No data available</span>
-              </div>
-            </v-list-item-group>
-          </v-list>
-        </div>
+              <v-card class="pa-5">
+                <v-row align="center" style="max-width: 35vw">
+                  <v-col
+                    v-for="field in allFields"
+                    :key="field.key"
+                    class="ma-0 pa-0 mx-2"
+                    cols="4"
+                  >
+                    <v-checkbox
+                      dense
+                      :input-value="
+                        currentFieldsKeys.find((key) => key === field.key)
+                      "
+                      @change="changeFields(field, $event)"
+                      :label="field.title"
+                    />
+                  </v-col>
+                </v-row>
+              </v-card>
+            </v-menu>
+            <div class="buttons">
+              <v-btn
+                class="mx-2"
+                @click="resetFilter"
+                :disabled="isResetDisabled"
+                color="primary"
+                >Reset</v-btn
+              >
+              <v-btn
+                class="mx-2"
+                @click="saveFilter"
+                :disabled="isSaveDisabled"
+                color="primary"
+                >Search</v-btn
+              >
+            </div>
+          </v-col>
+        </v-row>
       </v-card>
     </v-menu>
   </div>
 </template>
 
-<script>
-import { mapGetters } from "vuex";
-import SearchTag from "@/components/search/searchTag.vue";
+<script setup>
+import { computed, watch, ref, onMounted } from "vue";
+import { useStore } from "@/store";
+import { VAutocomplete, VTextField } from "vuetify/lib";
+import DatePicker from "@/components/ui/datePicker.vue";
+import LogickSelect from "@/components/ui/logickSelect.vue";
+import FromToNumberField from "@/components/ui/fromToNumberField.vue";
 
+const store = useStore();
+
+const isOpen = ref(false);
+const localFilter = ref({});
+const currentFieldsKeys = ref([]);
+const layouts = ref([]);
+function getBlankLayout() {
+  return { filter: {}, fields: {}, id: "blank" };
+}
+const blankLayout = ref(getBlankLayout());
+const layoutMode = ref("preview");
+const newLayoutName = ref("New layout");
+
+onMounted(() => {
+  window.addEventListener("beforeunload", () => saveSearchData());
+});
+
+const theme = computed(() => store.getters["app/theme"]);
+
+const allFields = computed(() => store.getters["appSearch/fields"]);
+const currentFields = computed(() => {
+  const fields = {};
+
+  currentFieldsKeys.value.forEach((key) => {
+    fields[key] = allFields.value?.find((f) => f.key === key);
+  });
+
+  return fields;
+});
+const currentLayout = computed({
+  get: () =>
+    layouts.value.find(
+      (l) => l.id === store.getters["appSearch/currentLayout"]
+    ),
+  set: (val) => store.commit("appSearch/setCurrentLayout", val?.id),
+});
+const visibleLayout = computed(() => currentLayout.value || blankLayout.value);
+const searchName = computed(() => store.getters["appSearch/searchName"]);
+const param = computed({
+  get: () => store.getters["appSearch/param"],
+  set: (val) => store.commit("appSearch/setParam", val),
+});
+const filter = computed({
+  get: () => store.getters["appSearch/filter"],
+  set: (filter) => store.commit("appSearch/setFilter", filter),
+});
+
+const isLayoutModePreview = computed(() => layoutMode.value === "preview");
+const isLayoutModeEdit = computed(() => layoutMode.value === "edit");
+const isLayoutModeAdd = computed(() => layoutMode.value === "add");
+
+const isFieldsDisabled = computed(() => layoutMode.value !== "preview");
+const isLayoutsOptionsDisabled = computed(() => false);
+const isSaveDisabled = computed(() => {
+  return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
+});
+const isResetDisabled = computed(() => {
+  return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
+});
+const isResetAllHide = computed(() => {
+  return !currentLayout.value && !param.value;
+});
+
+const getFieldComponent = (field) => {
+  switch (field.type) {
+    case "input": {
+      return VTextField;
+    }
+    case "select": {
+      return VAutocomplete;
+    }
+    case "date": {
+      return DatePicker;
+    }
+    case "logic-select": {
+      return LogickSelect;
+    }
+    case "number-range": {
+      return FromToNumberField;
+    }
+  }
+};
+
+const getSearchKey = (name) => `searchFilter-${name}`;
+
+const saveSearchData = (name) => {
+  name = name || searchName.value;
+  if (!name) {
+    return;
+  }
+  const data = { current: currentLayout.value?.id, layouts: layouts.value };
+  const key = getSearchKey(name);
+  localStorage.setItem(key, JSON.stringify(data));
+};
+
+const loadSearchData = (name) => {
+  name = name || searchName.value;
+  if (!name) {
+    return;
+  }
+  const key = getSearchKey(name);
+  const data = JSON.parse(localStorage.getItem(key) || `{}`);
+  if (!data.layouts) {
+    return;
+  }
+  layouts.value = data.layouts;
+  if (data?.current) {
+    currentLayout.value = layouts.value.find((l) => l.id === data.current);
+    filter.value = currentLayout.value.filter;
+  }
+};
+
+const saveFilter = () => {
+  filter.value = { ...localFilter.value };
+  if (visibleLayout.value.id === blankLayout.value.id) {
+    blankLayout.value.fields = [...currentFieldsKeys.value];
+  } else {
+    const layoutIndex = layouts.value.findIndex(
+      (l) => l.id === currentLayout.value?.id
+    );
+    if (layoutIndex !== -1) {
+      layouts.value[layoutIndex].fields = [...currentFieldsKeys.value];
+      layouts.value[layoutIndex].filter = { ...filter.value };
+    }
+  }
+  hideSearch();
+};
+
+const hideSearch = () => {
+  isOpen.value = false;
+};
+
+const resetFilter = () => {
+  localFilter.value = { ...filter.value };
+};
+
+const resetAll = () => {
+  setLayoutMode("preview");
+  setCurrentLayout();
+  resetFilter();
+  param.value = "";
+};
+
+const setCurrentFieldsKeys = () => {
+  if (allFields.value.length === 0) {
+    return;
+  }
+  const newCurrentFields = [];
+  if (currentLayout.value?.fields) {
+    newCurrentFields.push(...currentLayout.value?.fields);
+  } else {
+    let i = 0;
+    while (
+      newCurrentFields.length < 5 &&
+      newCurrentFields.length !== allFields.value.length
+    ) {
+      const key = allFields.value[i].key;
+      if (newCurrentFields.findIndex((f) => f.key === key) === -1) {
+        newCurrentFields.push(key);
+      }
+      i++;
+    }
+  }
+
+  currentFieldsKeys.value = newCurrentFields.filter(
+    (key) => !!allFields.value?.find((f) => f.key === key)
+  );
+};
+const changeFields = ({ key }, value) => {
+  if (value) {
+    currentFieldsKeys.value.push(key);
+  } else {
+    currentFieldsKeys.value = currentFieldsKeys.value.filter((f) => f !== key);
+    const newFilter = { ...localFilter.value };
+    delete newFilter[key];
+    localFilter.value = newFilter;
+  }
+};
+
+const addNewLayout = (data) => {
+  layouts.value.push({
+    filter: {},
+    ...data,
+    id: Date.now(),
+  });
+};
+const saveNewLayout = () => {
+  if (blankLayout.value.id === visibleLayout.value.id) {
+    addNewLayout({
+      title: newLayoutName.value,
+      filter: { ...filter.value },
+      fields: [...currentFieldsKeys.value],
+    });
+    blankLayout.value = getBlankLayout();
+  } else {
+    addNewLayout({ title: newLayoutName.value });
+  }
+  newLayoutName.value = "New layout";
+  currentLayout.value = layouts.value[layouts.value.length - 1];
+  setLayoutMode("preview");
+};
+const deleteLayout = (id) => {
+  layouts.value = layouts.value.filter((l) => l.id !== id);
+};
+const setCurrentLayout = (layout) => {
+  if (isLayoutModePreview.value) {
+    currentLayout.value = layout;
+    if (!layout) {
+      blankLayout.value.filter = {};
+      blankLayout.value.fields = [];
+    }
+  }
+};
+const setLayoutMode = (mode) => {
+  layoutMode.value = mode;
+};
+
+const onLayoutsOptionsClick = () => {
+  if (isLayoutModePreview.value) {
+    setLayoutMode("edit");
+  } else if (isLayoutModeEdit.value) {
+    setLayoutMode("preview");
+  } else {
+    newLayoutName.value = "New layout";
+    setLayoutMode("preview");
+  }
+};
+
+watch(searchName, (value, oldValue) => {
+  if (oldValue) {
+    saveSearchData(oldValue);
+  }
+  param.value = "";
+  filter.value = {};
+  currentLayout.value = undefined;
+
+  layouts.value = [];
+  if (value) {
+    loadSearchData(value);
+  }
+  if (layouts.value.length === 0) {
+    addNewLayout({ title: "Default" });
+  }
+});
+watch(allFields, setCurrentFieldsKeys);
+watch(visibleLayout, (_, prevLayout) => {
+  if (prevLayout?.id === blankLayout.value.id) {
+    blankLayout.value.filter = { ...filter.value };
+    blankLayout.value.fields = [...currentFieldsKeys.value];
+  } else {
+    const prevLayoutIndex =
+      prevLayout && layouts.value.findIndex((l) => l.id === prevLayout.id);
+
+    if (typeof prevLayoutIndex === "number" && prevLayoutIndex !== -1) {
+      layouts.value[prevLayoutIndex].filter = filter.value;
+    }
+  }
+
+  filter.value = visibleLayout.value?.filter || {};
+  setCurrentFieldsKeys();
+});
+watch(filter, (newValue) => {
+  localFilter.value = { ...newValue };
+});
+</script>
+
+<script>
 export default {
   name: "app-search",
-  components: { SearchTag },
-  data: () => ({ selectedGroupKey: "", isOpen: false, tagsSearchParam: "" }),
-  methods: {
-    setParam(index) {
-      const item = this.searchItems[index];
-      const key = item?.key || "searchParam";
-      const isArray = !!this.variants[key]?.isArray;
-      const itemsExists = !!this.variants[key]?.items?.length;
-      const isSearchParam = key === "searchParam";
-
-      if (this.searchParam && (isArray || isSearchParam)) {
-        this.$store.commit("appSearch/setCustomParam", {
-          key: key,
-          value: {
-            value: this.searchParam,
-            title: this.searchParam,
-            isArray,
-            temporary: true,
-          },
-        });
-      }
-
-      if (itemsExists) {
-        this.selectedGroupKey = key;
-      }
-      if (isSearchParam) {
-        this.close();
-        this.searchParam = "";
-      }
-    },
-    setEntity(index) {
-      const item = this.searchItems[index];
-      const variant =
-        this.variants[this.selectedGroupKey] || this.variants[item?.key];
-      const key = variant?.key || this.selectedGroupKey;
-
-      if (item.isSelect) {
-        return this.$store.commit("appSearch/deleteCustomParam", {
-          isArray: variant.isArray,
-          key,
-          value: item.uuid,
-        });
-      }
-
-      if (variant?.isArray) {
-        this.customParams[key]?.forEach((i) => {
-          if (i.temporary) {
-            this.$store.commit("appSearch/deleteCustomParam", { ...i, key });
-          }
-        });
-      }
-
-      this.$store.commit("appSearch/setCustomParam", {
-        key,
-        value: {
-          value: item[variant.itemKey || "uuid"],
-          title: item[variant.itemTitle || "title"],
-          isArray: variant.isArray,
-        },
-      });
-
-      this.searchParam = "";
-    },
-    selectGroup({ key }) {
-      this.selectedGroupKey = key;
-    },
-    onSearchInput() {
-      this.isOpen = true;
-      if (this.$refs.searchList?.$el) {
-        this.$refs.searchList.$el.focus();
-      }
-    },
-    close() {
-      this.isOpen = false;
-      this.selectedGroupKey = null;
-    },
-  },
-  computed: {
-    ...mapGetters("appSearch", {
-      variants: "variants",
-      searchName: "searchName",
-    }),
-    customParams() {
-      return this.$store.state["appSearch"].customParams;
-    },
-    searchParam: {
-      get() {
-        return this.$store.getters["appSearch/param"];
-      },
-      set(newValue) {
-        this.$store.commit("appSearch/setSearchParam", newValue);
-      },
-    },
-    changeSearchListHandler() {
-      if (this.searchStatus === "item") {
-        return this.setEntity;
-      }
-
-      return this.setParam;
-    },
-    searchStatus() {
-      if (this.selectedGroupKey) {
-        return "item";
-      }
-      return "group";
-    },
-    searchItems() {
-      if (this.variants[this.selectedGroupKey]?.items) {
-        return this.variants[this.selectedGroupKey]?.items
-          .filter(
-            (i) =>
-              !this.searchParam ||
-              i.title.toLowerCase().includes(this.searchParam.toLowerCase())
-          )
-          .map((p) => ({
-            ...p,
-            isSelect: !!this.customParamsValues.find(
-              (cp) => cp.value === p.uuid
-            ),
-          }))
-          .sort((x, y) =>
-            x.isSelect === y.isSelect ? 0 : x.isSelect ? 1 : -1
-          );
-      }
-      return Object.keys(this.variants).map((key) => ({
-        key,
-        title: this.variants[key]?.title || key,
-      }));
-    },
-    customParamsValues() {
-      const values = [];
-      Object.keys(this.customParams).forEach((key) => {
-        if (Array.isArray(this.customParams[key])) {
-          values.push(
-            ...this.customParams[key]?.map((v) => ({
-              ...v,
-              isArray: true,
-              key,
-            }))
-          );
-        } else {
-          values.push({ ...this.customParams[key], key });
-        }
-      });
-
-      values.sort((a, b) => a.title.localeCompare(b.title));
-
-      return values;
-    },
-    showedCustomParams() {
-      const showed = [];
-      const maxLength = Math.floor(((window.innerWidth / 12) * 6) / 15);
-      let currLength = 0;
-
-      for (const param of this.customParamsValues) {
-        const title = param.isArray
-          ? `${this.variants[param.key]?.title || ""}:${param?.title}`
-          : param.title;
-        if (title.length + currLength < maxLength) {
-          currLength += title.length;
-          showed.push(param);
-        } else {
-          break;
-        }
-      }
-
-      return showed;
-    },
-    filteredCustomParamsValues() {
-      const params = this.customParamsValues.filter(
-        (a, i) => i > this.showedCustomParams.length
-      );
-
-      if (!this.tagsSearchParam) {
-        return params;
-      }
-      return params.filter((c) =>
-        c.title.toLowerCase().includes(this.tagsSearchParam.toLowerCase())
-      );
-    },
-    routeCustomParams() {
-      return this.$route.params.search;
-    },
-  },
-  watch: {
-    variants() {
-      this.close();
-    },
-    searchName(val, prevVal) {
-      const isCustomParamsEmpty = !Object.keys(this.customParams).length;
-
-      if (prevVal && !isCustomParamsEmpty) {
-        localStorage.setItem(prevVal, JSON.stringify(this.customParams));
-        this.$store.commit("appSearch/resetSearchParams");
-      } else if (
-        prevVal &&
-        isCustomParamsEmpty &&
-        localStorage.getItem(prevVal)
-      ) {
-        localStorage.removeItem(prevVal);
-      }
-
-      if (localStorage.getItem(val)) {
-        const savedValue = JSON.parse(localStorage.getItem(val));
-        const savedValueWithoutEmptys = {};
-        Object.keys(savedValue).forEach((key) => {
-          if (Object.keys(savedValue[key]).length > 0) {
-            savedValueWithoutEmptys[key] = savedValue[key];
-          }
-        });
-        this.$store.commit(
-          "appSearch/setCustomParams",
-          savedValueWithoutEmptys
-        );
-      }
-    },
-    isOpen(val) {
-      if (!val) {
-        this.close();
-      }
-    },
-    routeCustomParams(val) {
-      if (!val) {
-        return;
-      }
-
-      setTimeout(() => {
-        Object.keys(val).forEach((key) => {
-          this.$store.commit("appSearch/setCustomParam", {
-            key,
-            value: val[key],
-          });
-        });
-      }, 100);
-    },
-  },
 };
 </script>
 
-<style lang="scss" scoped>
-.search__list-item {
-  //border: 1px solid #e06ffe;
-  //border-radius: 10px;
+<style scoped lang="scss">
+.search {
+  max-width: 50vw !important;
+  max-height: 80vh !important;
+  margin-top: 5px;
+  .search__card {
+    min-height: 40vh !important;
+    padding-bottom: 100px;
+
+    .search__content {
+      min-height: calc(40vh - 55px) !important;
+      .layouts {
+        min-height: calc(40vh - 55px) !important;
+        * {
+          background-color: inherit !important;
+        }
+      }
+    }
+
+    .fields__controls {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+    }
+    .layout__controls {
+      background-color: var(--v-background-base);
+      * {
+        background-color: inherit !important;
+      }
+    }
+
+    .dark {
+      filter: brightness(110%);
+      background-color: var(--v-background-base);
+    }
+
+    .light {
+      filter: brightness(95%);
+      background-color: var(--v-background-base);
+    }
+  }
+}
+</style>
+
+<style>
+.search__input .v-input__control .v-input__slot {
+  padding: 0 10px;
 }
 </style>

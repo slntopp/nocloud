@@ -1,6 +1,6 @@
 <template>
   <v-row class="flex-column mb-5">
-    <v-col>
+    <v-col class="mx-4">
       <v-card-title class="mb-2 px-0">Snapshots:</v-card-title>
       <v-menu
         bottom

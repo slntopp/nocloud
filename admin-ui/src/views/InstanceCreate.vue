@@ -80,7 +80,7 @@
         :is="templates[type] ?? templates.custom"
       />
       <v-row class="mx-5" justify="end">
-        <v-btn @click="save">Save</v-btn>
+        <v-btn @click="save">Create</v-btn>
       </v-row>
     </v-container>
   </v-form>
@@ -192,8 +192,6 @@ export default {
           this.service.instancesGroups[igIndex].instances.push(this.instance);
         }
 
-        const isExisted = this.instance?.data?.existing;
-
         const data = {
           namespace: namespaceUuid,
           service: this.service,
@@ -208,9 +206,7 @@ export default {
             ? "instance updated successfully"
             : "instance created successfully",
         });
-        if (!this.isEdit && isExisted) {
-          api.services.up(data.service.uuid);
-        }
+        api.services.up(data.service.uuid);
         this.$router.push({ name: "Instances" });
       } catch (err) {
         const opts = {
@@ -324,7 +320,6 @@ export default {
 
     if (type) {
       this.service = this.services.find((s) => s.uuid === serviceId);
-      this.accountId = accountId;
       if (!this.typeItems.includes(type)) {
         this.customTypeName = type;
         type = "custom";
@@ -332,6 +327,7 @@ export default {
       this.type = type;
       this.serviceProviderId = serviceProviderId;
     }
+    this.accountId = accountId;
   },
   watch: {
     serviceProviderId(sp_uuid) {

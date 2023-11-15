@@ -56,16 +56,6 @@
       </template>
     </confirm-dialog>
 
-    <v-autocomplete
-      :filter="defaultFilterObject"
-      label="Filter by SP"
-      item-text="title"
-      item-value="uuid"
-      class="d-inline-block"
-      v-model="serviceProvider"
-      :items="servicesProviders"
-    />
-
     <nocloud-table
       table-name="plans"
       class="mt-4"
@@ -106,11 +96,24 @@
           />
           <download-template-button
             class="mx-2"
-            :disabled="!selected.length"
+            :disabled="!selected.length || isPlansUploadLoading"
             name="selected_copy"
             :type="selectedFileType"
             :template="selected"
           />
+          <v-file-input
+            class="file-input mx-2 mt-4"
+            :label="`upload ${selectedFileType} price models...`"
+            :accept="`.${selectedFileType}`"
+            @change="onJsonInputChange"
+          />
+          <confirm-dialog @confirm="uploadPlans" :text="uploadedPlansText">
+            <v-btn
+              :disabled="!uploadedPlans.length"
+              :loading="isPlansUploadLoading"
+              >Upload</v-btn
+            >
+          </confirm-dialog>
         </div>
       </template>
     </nocloud-table>
@@ -123,14 +126,20 @@ import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
 import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import { defaultFilterObject, filterArrayByTitleAndUuid } from "@/functions";
+import {
+  compareSearchValue,
+  defaultFilterObject,
+  filterArrayByTitleAndUuid, getDeepObjectValue,
+  readJSONFile,
+  readYAMLFile,
+} from "@/functions";
 import { mapGetters } from "vuex";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
 export default {
   name: "plans-view",
   components: { DownloadTemplateButton, nocloudTable, confirmDialog },
-  mixins: [snackbar, search],
+  mixins: [snackbar, search("billing-plans")],
   data: () => ({
     headers: [
       { text: "Title ", value: "title" },
@@ -150,10 +159,11 @@ export default {
     selected: [],
     copyed: -1,
     fetchError: "",
-    serviceProvider: null,
 
     fileTypes: ["JSON", "YAML"],
     selectedFileType: "JSON",
+    isPlansUploadLoading: false,
+    uploadedPlans: [],
   }),
   methods: {
     defaultFilterObject,
@@ -227,9 +237,6 @@ export default {
     getPlans() {
       this.$store
         .dispatch("plans/fetch", {
-          params: {
-            sp_uuid: this.serviceProvider,
-          },
           withCount: true,
         })
         .then(() => {
@@ -246,6 +253,38 @@ export default {
           }
         });
     },
+    async onJsonInputChange(file) {
+      this.uploadedPlans = [];
+      try {
+        if (this.isJson) {
+          this.uploadedPlans.push(...(await readJSONFile(file)));
+        } else {
+          this.uploadedPlans.push(...(await readYAMLFile(file)));
+        }
+      } catch (err) {
+        this.uploadedPlans = [];
+        this.showSnackbarError({ message: err });
+      }
+    },
+    async uploadPlans() {
+      this.isPlansUploadLoading = true;
+      try {
+        await Promise.all(
+          this.uploadedPlans.map((p) =>
+            api.plans.create({
+              ...p,
+              uuid: undefined,
+            })
+          )
+        );
+        this.getPlans();
+      } catch (err) {
+        this.showSnackbarError({ message: err });
+      } finally {
+        this.uploadedPlans = [];
+        this.isPlansUploadLoading = false;
+      }
+    },
   },
   created() {
     this.$store.dispatch("services/fetch");
@@ -257,14 +296,11 @@ export default {
       type: "plans/fetch",
       params: {
         params: {
-          sp_uuid: this.serviceProvider,
           anonymously: false,
         },
         withCount: true,
       },
     });
-
-    this.$store.commit("appSearch/setSearchName", "all-plans");
   },
   computed: {
     ...mapGetters("plans", {
@@ -274,8 +310,8 @@ export default {
       instanceCountMap: "instanceCountMap",
     }),
     ...mapGetters("appSearch", {
-      searchParams: "customParams",
-      searchParam: "customSearchParam",
+      filter: "filter",
+      searchParam: "param",
     }),
     services() {
       return this.$store.getters["services/all"];
@@ -289,15 +325,17 @@ export default {
       );
     },
     filtredPlans() {
-      const plans = this.plans.filter((plan) => {
-        return Object.keys(this.searchParams).every(
-          (key) =>
-            this.searchParams[key].length === 0 ||
-            this.searchParams[key]
-              .map((f) => f.value)
-              .includes(plan[key]?.toString()?.toLowerCase())
-        );
-      });
+      const plans = this.plans.filter((p) =>
+        Object.keys(this.filter).every((key) => {
+          const data = getDeepObjectValue(p, key);
+
+          return compareSearchValue(
+            data,
+            this.filter[key],
+            this.searchFields.find((f) => f.key === key)
+          );
+        })
+      );
 
       if (this.searchParam) {
         return filterArrayByTitleAndUuid(plans, this.searchParam);
@@ -331,30 +369,36 @@ export default {
         (withOutInstances.length > 0 && withInstances.length > 0)
       );
     },
+    uploadedPlansText() {
+      return (
+        "Uploaded plans:<br/>" +
+        this.uploadedPlans.map((p) => p.title).join("<br/>")
+      );
+    },
+    searchFields() {
+      return [
+        {
+          title: "Title",
+          key: "title",
+          type: "input",
+        },
+        {
+          items: ["STATIC", "DYNAMIC"],
+          title: "Kind",
+          key: "kind",
+          type: "select",
+        },
+        { items: this.typeItems, title: "Type", key: "type", type: "select" },
+        { title: "Public", key: "public", type: "logic-select" },
+      ];
+    },
   },
   watch: {
     plans() {
       this.fetchError = "";
     },
     typeItems() {
-      this.$store.commit("appSearch/setVariants", {
-        kind: { items: ["static", "dynamic"], title: "Kind", isArray: true },
-        type: { items: this.typeItems, isArray: true, title: "Type" },
-        public: { items: ["true", "false"], title: "Public", isArray: true },
-      });
-    },
-    serviceProvider() {
-      this.getPlans();
-      this.$store.commit("reloadBtn/setCallback", {
-        type: "plans/fetch",
-        params: {
-          params: {
-            sp_uuid: this.serviceProvider,
-            anonymously: false,
-          },
-          withCount: true,
-        },
-      });
+      this.$store.commit("appSearch/setFields", this.searchFields);
     },
     selected() {
       this.changePlan();
@@ -362,3 +406,12 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.file-input {
+  max-width: 300px;
+  min-width: 200px;
+  margin-top: 0;
+  padding-top: 0;
+}
+</style>

@@ -1,29 +1,70 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <div style="position: absolute; top: 0; right: 25px">
+    <div style="position: absolute; top: 0; right: 25px;max-width: 45%;">
       <div>
-        <v-chip class="mr-3" color="primary" outlined
+        <v-chip class="ma-1" color="primary" outlined
           >Balance: {{ account.balance?.toFixed(2) || 0 }}
           {{ account.currency }}</v-chip
         >
         <v-btn
+          class="ma-1"
           :to="{
             name: 'Transactions create',
             params: { account: account.uuid },
           }"
           >Create transaction/invoice</v-btn
         >
+        <v-btn
+          class="ma-1"
+          :to="{
+            name: 'Instance create',
+            params: {
+              accountId: account.uuid,
+            },
+          }"
+        >
+          Create instance
+        </v-btn>
+      </div>
+      <div class="d-flex justify-end mt-3 align-center">
+        <v-switch
+          :loading="isChangeRegularPaymentLoading"
+          :input-value="
+            account.data?.regular_payment === undefined
+              ? true
+              : account.data?.regular_payment
+          "
+          @change="changeRegularPayment"
+          label="Invoice based"
+          class="mr-4"
+        />
+        <confirm-dialog
+          v-for="button in stateButtons"
+          :key="button.title"
+          @confirm="
+            button.method
+              ? button.method()
+              : changeStatus(button.newStatusValue)
+          "
+        >
+          <v-btn
+            :loading="button.newStatusValue === statusChangeValue"
+            class="mr-2"
+          >
+            {{ button.title }}
+          </v-btn>
+        </confirm-dialog>
       </div>
     </div>
 
     <v-row>
-      <v-col cols="3">
+      <v-col cols="2">
         <v-text-field v-model="uuid" readonly label="UUID" />
       </v-col>
-      <v-col cols="3">
+      <v-col cols="2">
         <v-text-field v-model="title" label="name" style="width: 330px" />
       </v-col>
-      <v-col cols="3">
+      <v-col cols="2">
         <v-select
           :readonly="isCurrencyReadonly"
           :items="currencies"
@@ -35,11 +76,7 @@
     </v-row>
     <v-card-title class="px-0">Instances:</v-card-title>
 
-    <instances-table
-      :value="null"
-      :items="accountInstances"
-      :show-select="false"
-    />
+    <instances-table :items="accountInstances" :show-select="false" />
 
     <v-card-title class="px-0">SSH keys:</v-card-title>
 
@@ -109,10 +146,11 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import InstancesTable from "@/components/instances_table.vue";
+import ConfirmDialog from "@/components/confirmDialog.vue";
 
 export default {
   name: "account-info",
-  components: { InstancesTable, nocloudTable },
+  components: { ConfirmDialog, InstancesTable, nocloudTable },
   mixins: [snackbar],
   props: ["account"],
   data: () => ({
@@ -130,6 +168,8 @@ export default {
     selected: [],
     isVisible: false,
     isEditLoading: false,
+    statusChangeValue: "",
+    isChangeRegularPaymentLoading: false,
   }),
   methods: {
     navTitle(title) {
@@ -151,7 +191,12 @@ export default {
       this.keys = this.keys.filter((el) => !arr.includes(el.value));
       this.selected = [];
     },
-    editAccount() {
+    updateAccount(newAccount) {
+      return api.accounts.update(this.account.uuid, newAccount).catch((err) => {
+        this.showSnackbarError({ message: err });
+      });
+    },
+    async editAccount() {
       const newAccount = {
         ...this.account,
         title: this.title,
@@ -163,23 +208,81 @@ export default {
       newAccount.data.ssh_keys = this.keys;
 
       this.isEditLoading = true;
-      api.accounts
-        .update(this.account.uuid, newAccount)
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: "Account edited successfully",
-          });
-
-          setTimeout(() => {
-            this.$router.push({ name: "Accounts" });
-          }, 1500);
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isEditLoading = false;
+      try {
+        await this.updateAccount(newAccount);
+        this.showSnackbarSuccess({
+          message: "Account edited successfully",
         });
+
+        setTimeout(() => {
+          this.$router.push({ name: "Accounts" });
+        }, 1500);
+      } finally {
+        this.isEditLoading = false;
+      }
+    },
+    async changeStatus(newStatus) {
+      this.statusChangeValue = newStatus;
+      try {
+        await fetch(
+          /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
+            `modules/addons/nocloud/api/index.php?run=status_user&account=${
+              this.account.uuid
+            }&status=${newStatus === "ACTIVE" ? "open" : "close"}`
+        );
+        await this.updateAccount({ ...this.account, status: newStatus });
+        this.$set(this.account, "status", newStatus);
+        this.showSnackbarSuccess({
+          message: "Status change successfully",
+        });
+      } finally {
+        this.statusChangeValue = "";
+      }
+    },
+    async permanentLock() {
+      const newStatus = "PERMANENT_LOCK";
+      this.statusChangeValue = newStatus;
+      try {
+        const accountServices = this.services.filter(
+          (s) => s.access.namespace === this.accountNamespace?.uuid
+        );
+
+        const servicesForDown = accountServices.filter(
+          (s) => s.status !== "INIT"
+        );
+        await Promise.all(
+          servicesForDown.map((s) => api.services.down(s.uuid))
+        );
+        await Promise.all(
+          accountServices.map((s) => api.services.delete(s.uuid))
+        );
+        await this.changeStatus(newStatus);
+      } catch {
+        this.showSnackbarError({
+          message: "Error while change status",
+        });
+      } finally {
+        this.statusChangeValue = "";
+      }
+    },
+    async changeRegularPayment(value) {
+      this.isChangeRegularPaymentLoading = true;
+      try {
+        await this.updateAccount({
+          ...this.account,
+          data: {
+            ...this.account.data,
+            regular_payment: value,
+          },
+        });
+        this.$set(this.account.data, "regular_payment", value);
+      } catch {
+        this.showSnackbarError({
+          message: "Error while change invoice based",
+        });
+      } finally {
+        this.isChangeRegularPaymentLoading = false;
+      }
     },
   },
   mounted() {
@@ -213,16 +316,46 @@ export default {
     instances() {
       return this.$store.getters["services/getInstances"];
     },
-    accountInstances() {
-      const accountNamespace = this.namespaces.find(
-        (n) => n.access.namespace === this.account.uuid
+    accountNamespace() {
+      return this.namespaces.find(
+        (n) => n.access.namespace === this.account?.uuid
       );
+    },
+    accountInstances() {
       return this.instances.filter(
-        (i) => i.access.namespace === accountNamespace.uuid
+        (i) => i.access.namespace === this.accountNamespace?.uuid
       );
     },
     isCurrencyReadonly() {
       return this.account.currency && this.account.currency !== "NCU";
+    },
+    stateButtons() {
+      const status = this.account.status.toLowerCase();
+      const permanentLock = {
+        title: "Permanent lock",
+        newStatusValue: "PERMANENT_LOCK",
+        method: this.permanentLock,
+      };
+
+      switch (status) {
+        case "lock": {
+          return [{ title: "Unlock", newStatusValue: "ACTIVE" }, permanentLock];
+        }
+        case "active": {
+          return [{ title: "Lock", newStatusValue: "LOCK" }, permanentLock];
+        }
+        default: {
+          return [];
+        }
+      }
+    },
+    settings() {
+      return this.$store.getters["settings/all"];
+    },
+    whmcsApi() {
+      return JSON.parse(
+        this.settings.find(({ key }) => key === "whmcs").value || "{}"
+      ).api;
     },
   },
 };

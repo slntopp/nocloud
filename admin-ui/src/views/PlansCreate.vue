@@ -93,12 +93,21 @@
               <v-switch style="width: fit-content" v-model="plan.public" />
             </v-col>
           </v-row>
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Auto start</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-switch style="width: fit-content" v-model="plan.meta.auto_start" />
+            </v-col>
+          </v-row>
         </v-col>
 
-        <v-col />
-        <v-divider />
+        <v-col :cols="viewport > 2560 ? 6 : 12">
+          <v-divider />
+        </v-col>
 
-        <v-col :cols="viewport > 2200 ? 6 : 12">
+        <v-col :cols="viewport > 2560 ? 6 : 12">
           <component
             v-if="!productsHide"
             :is="template"
@@ -261,9 +270,10 @@ export default {
         value;
       }
 
-      const product = Object.values(this.plan.products)
-        .find((product) => product.id === id);
-      
+      const product = Object.values(this.plan.products).find(
+        (product) => product.id === id
+      );
+
       this.$set(product.meta, key, value);
       this.plan.meta = Object.assign({}, this.plan.meta);
     },
@@ -319,9 +329,12 @@ export default {
                 ? "Price model edited successfully"
                 : "Price model created successfully",
           });
-          setTimeout(() => {
-            this.$router.push({ name: "Plans" });
-          }, 100);
+          if (action !== "edit") {
+            setTimeout(() => {
+              this.$router.push({ name: "Plans" });
+            }, 100);
+          }
+          this.isDialogVisible = false;
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -469,9 +482,6 @@ export default {
     if (this.item) this.getItem();
   },
   computed: {
-    searchParam() {
-      return this.$store.getters["appSearch/customSearchParam"]?.toLowerCase();
-    },
     template() {
       const type = this.plan.kind === "DYNAMIC" ? "resources" : "products";
 
@@ -531,6 +541,11 @@ export default {
         } else {
           this.plan.resources = [];
         }
+      }
+    },
+    "plan.type"(newVal) {
+      if(!this.isEdit){
+        this.plan.meta.auto_start = newVal === "empty" ? false : undefined;
       }
     },
   },

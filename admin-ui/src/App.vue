@@ -1,7 +1,7 @@
 <template>
   <v-app
     v-if="!isVNC"
-    :style="{ background: $vuetify.theme.themes.dark.background }"
+    :style="{ background: $vuetify.theme.themes[theme].background }"
   >
     <v-navigation-drawer
       app
@@ -257,27 +257,30 @@
       </v-list>
     </v-navigation-drawer>
 
-    <v-app-bar v-if="isLoggedIn" app color="background" elevation="0">
+    <v-app-bar app color="background" elevation="0">
       <v-row style="width: 100%" justify="center" align="center">
-        <v-col cols="8">
-          <app-search />
-        </v-col>
-        <v-col class="d-flex justify-start">
-          <v-btn
-            v-if="btnStates.visible"
-            :disabled="btnStates.disabled"
-            color="background-light"
-            fab
-            small
-            :loading="btnLoading"
-            @click="() => this.$store.dispatch('reloadBtn/onclick')"
-          >
-            <v-icon>mdi-reload</v-icon>
-          </v-btn>
-        </v-col>
+        <template v-if="isLoggedIn">
+          <v-col>
+            <app-search />
+          </v-col>
+          <v-col class="d-flex justify-start">
+            <v-btn
+                v-if="btnStates.visible"
+                :disabled="btnStates.disabled"
+                color="background-light"
+                fab
+                small
+                :loading="btnLoading"
+                @click="() => this.$store.dispatch('reloadBtn/onclick')"
+            >
+              <v-icon>mdi-reload</v-icon>
+            </v-btn>
+          </v-col>
+        </template>
         <v-col class="d-flex justify-end align-center">
           <languages v-if="false" />
-          <v-menu offset-y transition="slide-y-transition">
+          <themes/>
+          <v-menu v-if="isLoggedIn" offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
                 class="mx-2"
@@ -316,15 +319,19 @@
 
     <instances-table-modal
       v-if="overlay.uuid"
+      type="menu"
       :uuid="overlay.uuid"
       :visible="overlay.isVisible"
-      @close="() => { overlay.isVisible = false }"
+      @close="overlay.isVisible = false"
+      @hover="hoverOverlay"
     >
       <template #activator>
         <v-btn
+          outlined
           color="success"
-          style="position: absolute; top: 90px; right: 25px; z-index: 100"
-          @click="overlay.isVisible = true"
+          style="position: absolute; top: 70px; right: 25px; z-index: 100"
+          @mouseenter="overlay.isVisible = true"
+          @mouseleave="hiddenOverlay"
         >
           {{ overlay.buttonTitle }}
         </v-btn>
@@ -332,7 +339,7 @@
     </instances-table-modal>
 
     <v-main>
-      <router-view />
+      <router-view :style="(overlay.uuid) ? 'padding-top: 55px !important' : null" />
     </v-main>
     <app-snackbar />
   </v-app>
@@ -347,15 +354,18 @@ import languages from "@/components/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
 import instancesTableModal from "@/components/instances_table_modal.vue";
+import { mapGetters } from "vuex";
+import Themes from "@/components/themes.vue";
 
 export default {
   name: "App",
   components: {
+    Themes,
     AppSnackbar,
     balance,
     appSearch,
     languages,
-    instancesTableModal
+    instancesTableModal,
   },
   data: () => ({
     isMenuMinimize: true,
@@ -364,10 +374,11 @@ export default {
     config,
     navTitles: config.navTitles ?? {},
     overlay: {
+      timeoutId: null,
       isVisible: false,
-      buttonTitle: '',
-      uuid: ''
-    }
+      buttonTitle: "",
+      uuid: "",
+    },
   }),
   methods: {
     logoutHandler() {
@@ -412,8 +423,17 @@ export default {
           }
         });
     },
+    hoverOverlay() {
+      clearTimeout(this.overlay.timeoutId)
+    },
+    hiddenOverlay() {
+      this.overlay.timeoutId = setTimeout(() => {
+        this.overlay.isVisible = false;
+      }, 100)
+    },
   },
   computed: {
+    ...mapGetters("app", ["theme"]),
     isLoggedIn() {
       const result = this.$store.getters["auth/isLoggedIn"];
       return result;
@@ -452,7 +472,7 @@ export default {
     },
   },
   created() {
-    window.addEventListener("message", ({ data, origin }) => {
+    window.addEventListener("message", ({ data, origin, source }) => {
       if (origin.includes("localhost") || !data) return;
       if (data === "ready") return;
       if (data.type === "get-user") {
@@ -470,7 +490,10 @@ export default {
         window.open(`/admin/accounts/${data.value.uuid}`, "_blank");
         return;
       }
-      console.log(data, origin);
+      if (data.type === "get-theme") {
+        source.postMessage({ theme: this.theme }, "*");
+        return;
+      }
     });
 
     this.$store.dispatch("auth/load");
@@ -552,10 +575,10 @@ export default {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #000033;
+  background: var(--v-background-base);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #c921c9;
+  background: var(--v-primary-base);
 }
 </style>

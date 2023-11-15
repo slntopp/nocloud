@@ -304,7 +304,7 @@ export function toPascalCase(text) {
 }
 
 export function formatSecondsToDate(timestamp, withTime, sep = "-") {
-  if (!timestamp) return "-";
+  if (!timestamp || !+timestamp) return "-";
   const date = new Date(timestamp * 1000);
   const time = date.toUTCString().split(" ")[4];
 
@@ -472,4 +472,76 @@ export function filterByKeysAndParam(items, keys, param) {
       );
     });
   });
+}
+
+export function compareSearchValue(data, searchValue, field) {
+  const type=field?.type || ''
+  switch (type) {
+    case "input": {
+      return (
+        !searchValue ||
+        data?.toString().toLowerCase().includes(searchValue.toLowerCase())
+      );
+    }
+    case "select": {
+      return !searchValue.length || searchValue.includes(data);
+    }
+    case "logic-select": {
+      return (
+        (!searchValue && searchValue !== false) ||
+        searchValue?.toString()?.toLowerCase() ===
+          data?.toString()?.toLowerCase()
+      );
+    }
+    case "number-range": {
+      const isNegative = data?.toString().startsWith("-");
+      data = +data?.toString().replace(/[^\d\\.]*/g, "");
+      if (isNegative) {
+        data = -data;
+      }
+      return (
+        ((!searchValue?.from && searchValue?.from !== 0) ||
+          +searchValue.from <= data) &&
+        ((!searchValue?.to && searchValue?.to !== 0) || +searchValue.to >= data)
+      );
+    }
+    case "date": {
+      if (!searchValue) {
+        return true;
+      }
+
+      data = new Date(data).toLocaleString();
+      const [first, second] = searchValue;
+      if (first && second) {
+        const min = (
+          new Date(first).getDate() > new Date(second)
+            ? new Date(second)
+            : new Date(first)
+        )?.toLocaleString();
+        const max = (
+          new Date(first).getDate() < new Date(second)
+            ? new Date(second)
+            : new Date(first)
+        )?.toLocaleString();
+        return data && min <= data && max >= data;
+      } else {
+        return data && data === new Date(first).toLocaleString();
+      }
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+export function getDeepObjectValue(data, key) {
+  let value = { ...data};
+  key.split(".").forEach((subKey, index) => {
+    if (index === key.split(".").length - 1) {
+      key = subKey;
+      return;
+    }
+    value = data?.[subKey];
+  });
+  return value?.[key];
 }

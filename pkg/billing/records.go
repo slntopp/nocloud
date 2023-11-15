@@ -137,6 +137,12 @@ init:
 			continue
 		}
 
+		if record.GetMeta() == nil {
+			record.Meta = map[string]*structpb.Value{}
+		}
+
+		record.Meta["transactionType"] = structpb.NewStringValue("system")
+
 		s.records.Create(ctx, &record)
 		s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 		if err = msg.Ack(false); err != nil {
@@ -305,6 +311,7 @@ FOR service IN @@services // Iterate over Services
     FILTER LENGTH(records) > 0 // Skip if no Records (no empty Transaction)
     INSERT {
         exec: @now, // Timestamp in seconds
+		created: @now,
         processed: false,
 		currency: currency,
         account: account._key,
@@ -331,6 +338,8 @@ FILTER t.priority == @priority
 	)
 	LET total = t.total * rate
 
+	FOR r in t.records
+		UPDATE r WITH {meta: {transaction: t._key, payment_date: @now}} in @@records
 
     UPDATE account WITH { balance: account.balance - t.total * rate} IN @@accounts
     UPDATE t WITH { 

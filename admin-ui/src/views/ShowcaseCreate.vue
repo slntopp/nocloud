@@ -35,7 +35,7 @@
 
       <v-expansion-panels :value="0">
         <v-expansion-panel v-for="(item, i) in showcase.items" :key="i">
-          <v-expansion-panel-header color="indigo darken-4">
+          <v-expansion-panel-header color="background">
             {{ getProviderTitle(item.servicesProvider) }}
             - {{ getPlanTitle(item.plan) }}
 
@@ -49,7 +49,7 @@
             </v-icon>
           </v-expansion-panel-header>
 
-          <v-expansion-panel-content color="indigo darken-4">
+          <v-expansion-panel-content color="background">
             <v-row>
               <v-col cols="6">
                 <v-autocomplete

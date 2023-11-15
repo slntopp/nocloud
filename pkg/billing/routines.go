@@ -358,6 +358,7 @@ FOR service IN @@services // Iterate over Services
     FILTER LENGTH(records) > 0 // Skip if no Records (no empty Transaction)
     INSERT {
         exec: @now, // Timestamp in seconds
+		created: @now,
         processed: false,
 		currency: currency,
         account: account._key,
@@ -388,7 +389,7 @@ FILTER !t.processed
 	LET total = t.total * rate
 
 	FOR r in t.records
-		UPDATE r WITH {meta: {transaction: t._key}} in @@records
+		UPDATE r WITH {meta: {transaction: t._key, payment_date: @now}} in @@records
 
     UPDATE account WITH { balance: account.balance - t.total * rate} IN @@accounts
     UPDATE t WITH { 

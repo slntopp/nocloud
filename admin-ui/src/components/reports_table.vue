@@ -46,6 +46,16 @@
       <template v-slot:[`item.exec`]="{ value }">
         <span>{{ new Date(value * 1000).toLocaleString() }}</span>
       </template>
+      <template v-slot:[`item.paymentDate`]="{ value }">
+        <div class="d-flex justify-center align-center">
+          {{ value ? new Date(value * 1000).toLocaleString() : "-" }}
+        </div>
+      </template>
+      <template v-slot:[`item.status`]="{ item }">
+        <div class="d-flex justify-center align-center">
+          {{ item.paymentDate ? "Paid" : "Unpaid" }}
+        </div>
+      </template>
       <template v-slot:[`item.service`]="{ value }">
         <router-link :to="{ name: 'Service', params: { serviceId: value } }">
           {{ getService(value)?.title || value }}
@@ -116,6 +126,8 @@ const reportsHeaders = computed(() => {
   const headers = [
     { text: "Duration", value: "duration" },
     { text: "Executed date", value: "exec" },
+    { text: "Payment date", value: "paymentDate" },
+    { text: "Status", value: "status" },
     { text: "Total", value: "totalPreview" },
     { text: "Total in default currency", value: "totalDefaultPreview" },
     { text: "Product or resource", value: "item" },
@@ -151,12 +163,6 @@ const requestOptions = computed(() => ({
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
   sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
-  from: duration.value.from
-    ? new Date(duration.value.from).getTime() / 1000
-    : undefined,
-  to: duration.value.to
-    ? new Date(duration.value.to).getTime() / 1000
-    : undefined,
 }));
 
 const whmcsApi = computed(() => {
@@ -191,7 +197,7 @@ const onUpdateOptions = async (newOptions) => {
           r.end * 1000
         ).toLocaleString()}`,
         exec: r.exec,
-        transactionUuid:r.meta?.transaction,
+        transactionUuid: r.meta?.transaction,
         currency: r.currency,
         item: r.product || r.resource,
         uuid: r.uuid,
@@ -199,6 +205,7 @@ const onUpdateOptions = async (newOptions) => {
         instance: r.instance,
         account: r.account,
         type: r.meta?.transactionType,
+        paymentDate: r.meta?.payment_date,
         totalDefault: -convertFrom(r.total, r.currency),
       };
     });
@@ -256,14 +263,6 @@ watch(rates, () => {
     totalDefault: convertFrom(r.total, r.currency),
   }));
 });
-
-watch(
-  duration,
-  () => {
-    onUpdateOptions(options.value);
-  },
-  { deep: true }
-);
 
 watch(
   filters,

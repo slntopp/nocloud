@@ -34,7 +34,6 @@
 import config from "@/config.js";
 import snackbar from "@/mixins/snackbar";
 
-const url = "wss://api.nocloud.ione-cloud.net/services";
 let socket;
 
 export default {
@@ -54,7 +53,10 @@ export default {
     },
     initSocket() {
       if (!socket && this.instance?.service) {
-        socket = new WebSocket(`${url}/${this.instance.service}/stream`, [
+        const url = `${/^(.*?)\/admin/
+          .exec(window.location.href)[1]
+          .replace("https", "wss")}/services/${this.instance.service}/stream`;
+        socket = new WebSocket(url, [
           "Bearer",
           this.$store.getters["auth/token"],
         ]);
@@ -122,7 +124,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("services/fetch").then(() => {
+    this.$store.dispatch("services/fetch", { showDeleted: true }).then(() => {
       document.title = `${this.instanceTitle} | NoCloud`;
     });
   },

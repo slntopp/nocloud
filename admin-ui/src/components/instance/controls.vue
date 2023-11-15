@@ -1,22 +1,35 @@
 <template>
-  <div>
+  <div class="controls">
     <v-btn
-      class="mr-2"
+      class="ma-1"
       v-for="btn in vmControlBtns"
       :key="btn.action + btn.title"
-      :disabled="btn.disabled || (!!runningActionName && runningActionName!==btn.action)"
+      :disabled="
+        btn.disabled ||
+        (!!runningActionName && runningActionName !== btn.action)
+      "
       :loading="runningActionName === btn.action"
-      @click="sendAction(btn)"
+      @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
+    <v-dialog style="height: 100%" v-if="isAnsibleActive">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn class="ma-1" dark v-bind="attrs" v-on="on"> Playbook </v-btn>
+      </template>
+      <plugin-iframe
+        style="height: 80vh"
+        :params="{ instances: [template] }"
+        :url="ansiblePlaybookUrl"
+      />
+    </v-dialog>
     <confirm-dialog @confirm="lockInstance">
-      <v-btn :loading="isLockLoading" class="mr-2">
+      <v-btn :loading="isLockLoading" class="ma-1">
         {{ template.data.lock ? "User unlock" : "User lock" }}
       </v-btn>
     </confirm-dialog>
     <confirm-dialog @confirm="deleteInstance">
-      <v-btn class="mr-2" :loading="isLoading"> Delete </v-btn>
+      <v-btn class="ma-1" :loading="isLoading"> Terminate </v-btn>
     </confirm-dialog>
 
     <confirm-dialog
@@ -25,7 +38,7 @@
       @confirm="save"
     >
       <v-btn
-        class="mr-2"
+        class="ma-1"
         :loading="isSaveLoading"
         :color="isChanged ? 'primary' : ''"
       >
@@ -35,7 +48,7 @@
     <v-btn
       v-else
       @click="save"
-      class="mr-2"
+      class="ma-1"
       :loading="isSaveLoading"
       :color="isChanged ? 'primary' : ''"
     >
@@ -49,10 +62,11 @@ import snackbar from "@/mixins/snackbar.js";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import { getTodayFullDate } from "@/functions";
 import { mapActions, mapGetters } from "vuex";
+import PluginIframe from "@/components/plugin/iframe.vue";
 
 export default {
   name: "instance-actions",
-  components: { ConfirmDialog },
+  components: { PluginIframe, ConfirmDialog },
   mixins: [snackbar],
   props: {
     template: { type: Object, required: true },
@@ -99,6 +113,24 @@ export default {
         });
       } finally {
         this.isLoading = false;
+      }
+    },
+    async attachInstance(detach = false) {
+      const action = detach ? "detach" : "attach";
+      this.runningActionName = action;
+
+      try {
+        await api.delete(`/instances/${action}/${this.template.uuid}`);
+        this.showSnackbarSuccess({ message: "Done!" });
+        setTimeout(() => {
+          this.$router.push({ name: "Instances" });
+        }, 100);
+      } catch (err) {
+        this.showSnackbarError({
+          message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
+        });
+      } finally {
+        this.runningActionName = "";
       }
     },
     lockInstance() {
@@ -232,6 +264,13 @@ export default {
             title: "Console", //not reqired, use 'action' for a name if not found
             disabled: this.ioneActions?.vnc,
           },
+          this.isDetached
+            ? { action: "attach", type: "method", method: this.attachInstance }
+            : {
+                action: "detach",
+                type: "method",
+                method: () => this.attachInstance(true),
+              },
         ],
         "ovh dedicated": [
           { action: "poweroff", disabled: true },
@@ -284,16 +323,17 @@ export default {
         cpanel: [{ action: "session" }],
       };
 
-      return types[this.type];
+      return types[this.type]?.map((b) => ({ ...b, type: b.type || "action" })) || [];
     },
     ioneActions() {
       if (!this.template?.state) return;
-      if (this.template.state.meta.state === 1)
+      if (this.template.state.meta.state === 1 || this.isDetached)
         return {
           resume: true,
           poweroff: true,
           reboot: true,
           suspend: true,
+          vnc: true,
         };
       return {
         poweroff:
@@ -416,6 +456,9 @@ export default {
         JSON.stringify(this.template.billingPlan)
       );
     },
+    isDetached() {
+      return this.template?.status?.toLowerCase() === "detached";
+    },
     product() {
       switch (this.template.type) {
         case "ovh": {
@@ -431,6 +474,32 @@ export default {
 
       return null;
     },
+    plugins() {
+      return this.$store.getters["plugins/all"];
+    },
+    ansiblePlugin() {
+      return this.plugins.find((p) =>
+        p.title.toLowerCase().includes("ansible")
+      );
+    },
+    isAnsibleActive() {
+      const allowedTypes = ["ione"];
+      return allowedTypes.includes(this.template.type) && !!this.ansiblePlugin;
+    },
+    ansiblePlaybookUrl() {
+      if (!this.isAnsibleActive) {
+        return;
+      }
+
+      return `${this.ansiblePlugin.url}playbooks-preview`;
+    },
   },
 };
 </script>
+
+<style scoped lang="scss">
+.controls {
+  max-width: calc(100% - 450px);
+  min-width: 60%;
+}
+</style>

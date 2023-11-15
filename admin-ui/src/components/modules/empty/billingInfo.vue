@@ -27,6 +27,14 @@
         />
       </v-col>
 
+      <v-col>
+        <v-text-field
+            readonly
+            label="Start date"
+            :value="template.data.start || '-'"
+        />
+      </v-col>
+
       <v-col
         v-if="
           template.billingPlan.title.toLowerCase() !== 'payg' ||
@@ -64,7 +72,7 @@
             <v-text-field
               class="ml-2"
               :suffix="accountCurrency"
-              style="color: #c921c9"
+              style="color: var(--v-primary-base)"
               v-model="item.accountPrice"
               @input="updatePrice(item, true)"
               append-icon="mdi-pencil"
