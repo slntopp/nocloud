@@ -398,7 +398,6 @@ const getLocationKey = (location) => {
       .service {
         background-color: var(--v-background-dark-base);
         margin: 2px;
-        border: 1px solid var(--v-primary-base);
         border-radius: 5px;
         height: 50%;
         cursor: pointer;
@@ -406,7 +405,6 @@ const getLocationKey = (location) => {
       .location {
         background-color: var(--v-background-dark-base);
         margin: 2px;
-        border: 1px solid var(--v-primary-base);
         border-radius: 5px;
         height: 50%;
         cursor: pointer;
@@ -420,7 +418,6 @@ const getLocationKey = (location) => {
     .rewards {
       background-color: var(--v-background-dark-base);
       margin: 2px;
-      border: 1px solid var(--v-primary-base);
       border-radius: 5px;
       width: 70%;
       cursor: pointer;
@@ -428,7 +425,6 @@ const getLocationKey = (location) => {
     .offer {
       background-color: var(--v-background-dark-base);
       margin: 2px 2px 2px 6px;
-      border: 1px solid var(--v-primary-base);
       border-radius: 5px;
       width: 30%;
       cursor: pointer;
