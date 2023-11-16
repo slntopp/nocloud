@@ -54,7 +54,7 @@
             <div class="widget__template">
               <div class="main">
                 <div class="map">
-                  <v-img height="275px" src="/admin/img/promo/map.svg" />
+                  <v-img height="190px" src="/admin/img/promo/map.svg" />
                 </div>
                 <div class="right-menus">
                   <div
@@ -380,8 +380,8 @@ const getLocationKey = (location) => {
 .widget__template {
   display: flex;
   flex-direction: column;
-  height: 400px;
-  width: 500px;
+  height: 275px;
+  width: 350px;
   margin-bottom: 20px;
   .main {
     display: flex;
@@ -396,14 +396,18 @@ const getLocationKey = (location) => {
       display: flex;
       flex-direction: column;
       .service {
+        background-color: var(--v-background-dark-base);
         margin: 2px;
         border: 1px solid var(--v-primary-base);
+        border-radius: 5px;
         height: 50%;
         cursor: pointer;
       }
       .location {
+        background-color: var(--v-background-dark-base);
         margin: 2px;
         border: 1px solid var(--v-primary-base);
+        border-radius: 5px;
         height: 50%;
         cursor: pointer;
       }
@@ -414,20 +418,24 @@ const getLocationKey = (location) => {
     height: 30%;
     min-height: 75px;
     .rewards {
+      background-color: var(--v-background-dark-base);
       margin: 2px;
       border: 1px solid var(--v-primary-base);
+      border-radius: 5px;
       width: 70%;
       cursor: pointer;
     }
     .offer {
+      background-color: var(--v-background-dark-base);
       margin: 2px 2px 2px 6px;
       border: 1px solid var(--v-primary-base);
+      border-radius: 5px;
       width: 30%;
       cursor: pointer;
     }
   }
 }
 .active {
-  background-color: var(--v-primary-base);
+  background-color: var(--v-primary-base) !important;
 }
 </style>
