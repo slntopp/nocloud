@@ -6,16 +6,17 @@
       :key="btn.action + btn.title"
       :disabled="
         btn.disabled ||
-        (!!runningActionName && runningActionName !== btn.action)
+        (!!runningActionName && runningActionName !== btn.action) ||
+        isDeleted
       "
       :loading="runningActionName === btn.action"
       @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
     >
       {{ btn.title || btn.action }}
     </v-btn>
-    <v-dialog style="height: 100%" v-if="isAnsibleActive">
+    <v-dialog style="height: 100%" v-if="isAnsibleActive && !isDeleted">
       <template v-slot:activator="{ on, attrs }">
-        <v-btn class="ma-1" dark v-bind="attrs" v-on="on"> Playbook </v-btn>
+        <v-btn class="ma-1" v-bind="attrs" v-on="on"> Playbook </v-btn>
       </template>
       <plugin-iframe
         style="height: 80vh"
@@ -23,17 +24,19 @@
         :url="ansiblePlaybookUrl"
       />
     </v-dialog>
-    <confirm-dialog @confirm="lockInstance">
-      <v-btn :loading="isLockLoading" class="ma-1">
+    <confirm-dialog @confirm="lockInstance" :disabled="isDeleted">
+      <v-btn :loading="isLockLoading" class="ma-1" :disabled="isDeleted">
         {{ template.data.lock ? "User unlock" : "User lock" }}
       </v-btn>
     </confirm-dialog>
-    <confirm-dialog @confirm="deleteInstance">
-      <v-btn class="ma-1" :loading="isLoading"> Terminate </v-btn>
+    <confirm-dialog :disabled="isDeleted" @confirm="deleteInstance">
+      <v-btn class="ma-1" :disabled="isDeleted" :loading="isLoading">
+        Terminate
+      </v-btn>
     </confirm-dialog>
 
     <confirm-dialog
-      v-if="isBillingChange"
+      v-if="isBillingChange && !isDeleted"
       text="Billing plan has changed, a new plan will be created"
       @confirm="save"
     >
@@ -47,6 +50,7 @@
     </confirm-dialog>
     <v-btn
       v-else
+      :disabled="isDeleted"
       @click="save"
       class="ma-1"
       :loading="isSaveLoading"
@@ -63,6 +67,7 @@ import ConfirmDialog from "@/components/confirmDialog.vue";
 import { getTodayFullDate } from "@/functions";
 import { mapActions, mapGetters } from "vuex";
 import PluginIframe from "@/components/plugin/iframe.vue";
+import { is } from "date-fns/locale";
 
 export default {
   name: "instance-actions",
@@ -240,6 +245,9 @@ export default {
     },
   },
   computed: {
+    is() {
+      return is;
+    },
     ...mapGetters("actions", ["isSendActionLoading"]),
     type() {
       return this.template.billingPlan.type;
@@ -323,7 +331,9 @@ export default {
         cpanel: [{ action: "session" }],
       };
 
-      return types[this.type]?.map((b) => ({ ...b, type: b.type || "action" })) || [];
+      return (
+        types[this.type]?.map((b) => ({ ...b, type: b.type || "action" })) || []
+      );
     },
     ioneActions() {
       if (!this.template?.state) return;
@@ -492,6 +502,9 @@ export default {
       }
 
       return `${this.ansiblePlugin.url}playbooks-preview`;
+    },
+    isDeleted() {
+      return this.template.state?.state === "DELETED";
     },
   },
 };

@@ -151,7 +151,6 @@ const reportsHeaders = computed(() => {
 const instances = computed(() => store.getters["services/getInstances"]);
 const services = computed(() => store.getters["services/all"]);
 const accounts = computed(() => store.getters["accounts/all"]);
-const settings = computed(() => store.getters["settings/all"]);
 
 const isLoading = computed(() => {
   return isFetchLoading.value || isCountLoading.value;
@@ -165,11 +164,7 @@ const requestOptions = computed(() => ({
   sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
 }));
 
-const whmcsApi = computed(() => {
-  return JSON.parse(
-    settings.value.find(({ key }) => key === "whmcs").value || "{}"
-  ).api;
-});
+const whmcsApi = computed(() => store.getters['settings/whmcsApi']);
 
 const getReportActions = (report) => {
   const actions = [];

@@ -9,13 +9,7 @@
         v-model="createMenuVisible"
       >
         <template v-slot:activator="{ on, attrs }">
-          <v-btn
-            color="background-light"
-            class="mr-2"
-            v-bind="attrs"
-            v-on="on"
-            @click="openCreateAccountMenuHandler"
-          >
+          <v-btn color="background-light" class="mr-2" v-bind="attrs" v-on="on">
             create
           </v-btn>
         </template>
@@ -109,26 +103,17 @@
       </v-menu>
       <confirm-dialog
         :disabled="selected.length < 1"
-        @confirm="deleteSelectedAccount"
-      >
-        <v-btn
-          color="background-light"
-          class="mr-2"
-          :disabled="selected.length < 1"
-          :loading="deletingLoading"
-        >
-          delete
-        </v-btn>
-      </confirm-dialog>
-      <confirm-dialog
-        :disabled="selected.length < 1"
         @confirm="changeInvoiceBased(true)"
       >
         <v-btn
           color="background-light"
           class="mr-2"
-          :disabled="selected.length < 1 || changeInvoiceBasedAction === false"
-          :loading="deletingLoading || changeInvoiceBasedAction === true"
+          :disabled="
+            selected.length < 1 ||
+            changeInvoiceBasedAction === false ||
+            !!changeAccountStatusAction
+          "
+          :loading="changeInvoiceBasedAction === true"
         >
           Enabled invoice based
         </v-btn>
@@ -139,11 +124,38 @@
       >
         <v-btn
           color="background-light"
-          class="mr-8"
-          :disabled="selected.length < 1 || changeInvoiceBasedAction === true"
-          :loading="deletingLoading || changeInvoiceBasedAction === false"
+          class="mr-2"
+          :disabled="
+            selected.length < 1 ||
+            changeInvoiceBasedAction === true ||
+            !!changeAccountStatusAction
+          "
+          :loading="changeInvoiceBasedAction === false"
         >
           Disabled invoice based
+        </v-btn>
+      </confirm-dialog>
+      <confirm-dialog
+        v-for="btn in changeStateButtons"
+        :key="btn.value"
+        :disabled="
+          selected.length < 1 ||
+          (!!changeAccountStatusAction &&
+            changeAccountStatusAction !== btn.value)
+        "
+        @confirm="changeAccountsStatus(btn.value)"
+      >
+        <v-btn
+          color="background-light"
+          class="mr-2"
+          :disabled="
+            selected.length < 1 ||
+            (!!changeAccountStatusAction &&
+              changeAccountStatusAction !== btn.value)
+          "
+          :loading="changeAccountStatusAction === btn.value"
+        >
+          {{ btn.title }}
         </v-btn>
       </confirm-dialog>
     </div>
@@ -184,9 +196,9 @@ export default {
             !!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.exec(value) || "Wrong email",
         ],
       },
+      changeAccountStatusAction: "",
       formValid: true,
       loading: false,
-      deletingLoading: false,
       accessLevels: [
         { id: 0, title: "NONE" },
         { id: 1, title: "READ" },
@@ -236,31 +248,78 @@ export default {
           this.loading = false;
         });
     },
-    deleteSelectedAccount() {
-      if (this.selected.length > 0) {
-        const deletePromices = this.selected.map((el) =>
-          api.accounts.delete(el.uuid)
-        );
-        this.deletingLoading = true;
-        Promise.all(deletePromices)
-          .then((res) => {
-            if (res.every((el) => el.result)) {
-              this.showSnackbarSuccess({
-                message: `Account${
-                  deletePromices.length == 1 ? "" : "s"
-                } deleted successfully.`,
-              });
-            }
+    async changeAccountsStatus(newStatus) {
+      this.changeAccountStatusAction = newStatus;
+      try {
+        const servicesForDown = [];
+        const accountServices = [];
 
-            this.selected = [];
-            this.$store.dispatch("accounts/fetch");
-          })
-          .catch((err) => {
-            console.error(err);
-          })
-          .finally(() => {
-            this.deletingLoading = false;
-          });
+        const accounts = this.selected.filter((account) => {
+          if (account.status === newStatus) {
+            return false;
+          }
+
+          switch (newStatus) {
+            case "PERMANENT_LOCK": {
+              const accountNamespace = this.namespaces.find(
+                (n) => n.access.namespace === account?.uuid
+              );
+
+              accountServices.push(
+                ...this.services.filter(
+                  (s) => s.access.namespace === accountNamespace?.uuid
+                )
+              );
+
+              servicesForDown.push(
+                ...accountServices.filter((s) => s.status !== "INIT")
+              );
+              return true;
+            }
+            case "LOCK": {
+              return account.status !== "PERMANENT_LOCK";
+            }
+            case "ACTIVE": {
+              return account.status === "LOCK";
+            }
+          }
+        });
+
+        if (servicesForDown.length) {
+          await Promise.all(
+            servicesForDown.map((s) => api.services.down(s.uuid))
+          );
+          await Promise.all(
+            accountServices.map((s) => api.services.delete(s.uuid))
+          );
+        }
+        await Promise.all(
+          accounts.map((account) =>
+            fetch(
+              /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
+                `modules/addons/nocloud/api/index.php?run=status_user&account=${
+                  account.uuid
+                }&status=${newStatus === "ACTIVE" ? "open" : "close"}`
+            )
+          )
+        );
+
+        await Promise.all(
+          accounts.map((account) =>
+            api.accounts.update(account.uuid, { ...account, status: newStatus })
+          )
+        );
+
+        if (accounts.length) {
+          await this.$store.dispatch("accounts/fetch");
+        }
+      } catch (e) {
+        this.showSnackbarError({
+          message: "Error while change accounts statuses",
+        });
+      } finally {
+        this.changeAccountStatusAction = "";
+        this.selected = [];
       }
     },
     async changeInvoiceBased(value) {
@@ -284,18 +343,21 @@ export default {
         this.changeInvoiceBasedAction = undefined;
       }
     },
-    openCreateAccountMenuHandler() {
-      this.$store.dispatch("namespaces/fetch");
-    },
   },
   computed: {
+    namespaces() {
+      return this.$store.getters["namespaces/all"];
+    },
     namespacesForSelect() {
-      let namespaces = this.$store.getters["namespaces/all"] ?? [];
+      let namespaces = this.namespaces ?? [];
       namespaces = namespaces.map((namespace) => ({
         text: namespace.title,
         value: namespace.uuid,
       }));
       return namespaces;
+    },
+    services() {
+      return this.$store.getters["services/all"];
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
@@ -303,12 +365,23 @@ export default {
     currencies() {
       return this.$store.getters["currencies/all"].filter((c) => c !== "NCU");
     },
+    changeStateButtons() {
+      return [
+        { title: "Unlock", value: "ACTIVE" },
+        { title: "Lock", value: "LOCK" },
+        { title: "PERMANENT LOCK", value: "PERMANENT_LOCK" },
+      ];
+    },
+    whmcsApi() {
+      return this.$store.getters["settings/whmcsApi"];
+    },
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "accounts/fetch",
     });
     this.$store.dispatch("currencies/fetch");
+    this.$store.dispatch("services/fetch");
   },
   watch: {
     defaultCurrency(newVal) {

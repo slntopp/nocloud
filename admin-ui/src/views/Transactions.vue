@@ -142,7 +142,7 @@ export default {
     },
     fetchData() {
       this.$store.dispatch("accounts/fetch");
-      this.$store.dispatch("services/fetch");
+      this.$store.dispatch("services/fetch", { showDeleted: true });
       this.$store.dispatch("namespaces/fetch");
     },
   },
@@ -192,7 +192,7 @@ export default {
       }
 
       const dates = {};
-      const dateKeys = ["exec", "start", "end",'payment_date'];
+      const dateKeys = ["exec", "start", "end", "payment_date"];
       dateKeys.forEach((key) => {
         if (!this.filter[key]) {
           return;
