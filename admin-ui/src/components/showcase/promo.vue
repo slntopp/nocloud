@@ -33,9 +33,11 @@
       >
         <v-tab-item>
           <v-text-field
-              v-model.trim="currentLocation.title"
-              outlined
-              label="Title"
+            class="mt-3"
+            hide-details
+            v-model.trim="currentLocation.title"
+            outlined
+            label="Title"
           />
           <v-card-title class="d-flex align-center"
             >Service preview
@@ -152,8 +154,6 @@
           </template>
           <template v-else-if="activeWidgetPlace === 'offer'">
             <v-card-title class="text-center">Offer settings</v-card-title>
-            <v-card-subtitle class="mt-3">Description:</v-card-subtitle>
-            <rich-editor v-model="currentLocation.offer.text" />
             <v-text-field
               class="mt-5"
               outlined
@@ -165,6 +165,8 @@
               label="Media src link"
               v-model="currentLocation.offer.link"
             />
+            <v-card-subtitle class="mt-3">Description:</v-card-subtitle>
+            <rich-editor v-model="currentLocation.offer.text" />
           </template>
           <template v-if="activeWidgetPlace === 'rewards'">
             <v-card-title class="text-center">Rewards settings</v-card-title>
