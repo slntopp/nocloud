@@ -32,6 +32,11 @@
         v-model="tabsIndex"
       >
         <v-tab-item>
+          <v-text-field
+              v-model.trim="currentLocation.title"
+              outlined
+              label="Title"
+          />
           <v-card-title class="d-flex align-center"
             >Service preview
             <v-switch
@@ -100,11 +105,6 @@
           </div>
           <template v-if="activeWidgetPlace === 'service'">
             <v-card-title class="text-center">Service settings</v-card-title>
-            <v-text-field
-              v-model.trim="currentLocation.title"
-              outlined
-              label="Title"
-            />
             <v-text-field
               v-model.trim="currentLocation.service.title"
               outlined
