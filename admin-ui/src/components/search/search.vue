@@ -454,9 +454,13 @@ const setCurrentFieldsKeys = () => {
     }
   }
 
-  currentFieldsKeys.value = newCurrentFields.filter(
-    (key) => !!allFields.value?.find((f) => f.key === key)
-  );
+  currentFieldsKeys.value = [
+    ...new Set(
+      newCurrentFields.filter(
+        (key) => !!allFields.value?.find((f) => f.key === key)
+      )
+    ),
+  ];
 };
 const changeFields = ({ key }, value) => {
   if (value) {
