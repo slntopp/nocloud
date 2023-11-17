@@ -27,6 +27,8 @@
           </template>
           <template v-slot:prepend-inner>
             <v-chip
+              v-bind="searchName ? attrs : undefined"
+              v-on="searchName ? on : undefined"
               class="px-2"
               small
               outlined
@@ -37,6 +39,9 @@
                 <v-icon small>mdi-close</v-icon>
               </v-btn>
             </v-chip>
+            <template v-else>
+              <filter-tags @click="isOpen = true" />
+            </template>
           </template>
         </v-text-field>
       </template>
@@ -256,6 +261,7 @@ import { VAutocomplete, VTextField } from "vuetify/lib";
 import DatePicker from "@/components/ui/datePicker.vue";
 import LogickSelect from "@/components/ui/logickSelect.vue";
 import FromToNumberField from "@/components/ui/fromToNumberField.vue";
+import FilterTags from "@/components/search/filterTags.vue";
 
 const store = useStore();
 
@@ -329,7 +335,9 @@ const isResetDisabled = computed(() => {
   return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
 });
 const isResetAllHide = computed(() => {
-  return !currentLayout.value && !param.value;
+  return (
+    !currentLayout.value && !param.value && !Object.keys(filter.value).length
+  );
 });
 
 const getFieldComponent = (field) => {
@@ -402,7 +410,7 @@ const hideSearch = () => {
 };
 
 const resetFilter = () => {
-  localFilter.value = { ...filter.value };
+  localFilter.value = { ...visibleLayout.value };
 };
 
 const resetAll = () => {
@@ -535,9 +543,13 @@ watch(visibleLayout, (_, prevLayout) => {
   filter.value = visibleLayout.value?.filter || {};
   setCurrentFieldsKeys();
 });
-watch(filter, (newValue) => {
-  localFilter.value = { ...newValue };
-});
+watch(
+  filter,
+  (newValue) => {
+    localFilter.value = { ...newValue };
+  },
+  { deep: true }
+);
 </script>
 
 <script>
@@ -597,5 +609,9 @@ export default {
 
 .search__input .v-input__append-inner {
   margin-top: 6px;
+}
+
+.search__input .v-input__prepend-inner {
+  margin-right: unset !important;
 }
 </style>
