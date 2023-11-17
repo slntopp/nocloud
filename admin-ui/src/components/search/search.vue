@@ -370,6 +370,16 @@ const saveSearchData = (name) => {
   const data = { current: currentLayout.value?.id, layouts: layouts.value };
   const key = getSearchKey(name);
   localStorage.setItem(key, JSON.stringify(data));
+
+  const localKey = `${key}-local`;
+  if (
+    !currentLayout.value?.id &&
+    JSON.stringify(filter.value) !== JSON.stringify("{}")
+  ) {
+    localStorage.setItem(localKey, JSON.stringify(filter.value));
+  } else {
+    localStorage.removeItem(localKey);
+  }
 };
 
 const loadSearchData = (name) => {
@@ -386,6 +396,9 @@ const loadSearchData = (name) => {
   if (data?.current) {
     currentLayout.value = layouts.value.find((l) => l.id === data.current);
     filter.value = currentLayout.value.filter;
+  } else {
+    const localKey = `${key}-local`;
+    filter.value = JSON.parse(localStorage.getItem(localKey) || `{}`);
   }
 };
 
@@ -514,13 +527,14 @@ watch(searchName, (value, oldValue) => {
   if (oldValue) {
     saveSearchData(oldValue);
   }
+  currentLayout.value = undefined;
   param.value = "";
   filter.value = {};
-  currentLayout.value = undefined;
+  blankLayout.value = getBlankLayout();
 
   layouts.value = [];
   if (value) {
-    loadSearchData(value);
+    setTimeout(() => loadSearchData(value), 0);
   }
   if (layouts.value.length === 0) {
     addNewLayout({ title: "Default" });
