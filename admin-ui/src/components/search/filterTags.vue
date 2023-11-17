@@ -3,7 +3,7 @@
     <v-chip
       v-for="tag in tags.slice(0, 2)"
       :key="tag.title"
-      class="ml-1"
+      class="ml-1 pa-1"
       small
       outlined
       color="primary"
@@ -12,7 +12,7 @@
         <v-icon small>mdi-close</v-icon>
       </v-btn>
     </v-chip>
-    <v-chip v-if="tags.length > 2" class="ml-1" small outlined color="primary"
+    <v-chip v-if="tags.length > 2" class="ml-1 pa-1" small outlined color="primary"
       >and more {{ tags.length - 2 }}</v-chip
     >
   </div>
