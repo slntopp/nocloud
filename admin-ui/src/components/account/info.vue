@@ -292,15 +292,9 @@ export default {
     this.currency = this.account.currency;
     this.uuid = this.account.uuid;
     this.keys = this.account.data?.ssh_keys || [];
-    if (this.namespaces.length < 2) {
-      this.$store.dispatch("namespaces/fetch");
-    }
-    if (this.services.length < 2) {
-      this.$store.dispatch("services/fetch");
-    }
-    if (this.servicesProviders.length < 2) {
-      this.$store.dispatch("servicesProviders/fetch");
-    }
+    this.$store.dispatch("namespaces/fetch");
+    this.$store.dispatch("services/fetch", { showDeleted: true });
+    this.$store.dispatch("servicesProviders/fetch");
   },
   computed: {
     namespaces() {
@@ -355,7 +349,7 @@ export default {
       }
     },
     whmcsApi() {
-      return this.$store.getters['settings/whmcsApi']
+      return this.$store.getters["settings/whmcsApi"];
     },
   },
 };
