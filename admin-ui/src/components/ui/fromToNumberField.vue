@@ -1,5 +1,5 @@
 <script setup>
-import { toRefs } from "vue";
+import { computed, toRefs } from "vue";
 
 const props = defineProps({
   value: {},
@@ -10,6 +10,22 @@ const props = defineProps({
 const { disabled, dense, value, label } = toRefs(props);
 
 const emit = defineEmits(["input"]);
+
+const fromRules = computed(() => {
+  if (!value.value?.from) {
+    return [];
+  }
+
+  return [(v) => !value.value.to || +v < +value.value.to];
+});
+
+const toRules = computed(() => {
+  if (!value.value?.to) {
+    return [];
+  }
+
+  return [(v) => !value.value.from || +v > +value.value.from];
+});
 
 const onInput = (key, e) => {
   let newValue = { ...value.value };
@@ -23,7 +39,7 @@ const onInput = (key, e) => {
 </script>
 
 <template>
-  <div class="d-flex" style="width:100%">
+  <div class="d-flex" style="width: 100%">
     <v-text-field
       class="mr-1"
       @input="onInput('from', $event)"
@@ -32,12 +48,14 @@ const onInput = (key, e) => {
       :dense="dense"
       :label="`${label} from`"
       :value="value?.from"
+      :rules="fromRules"
     ></v-text-field>
     <v-text-field
       class="ml-1"
       @input="onInput('to', $event)"
       type="number"
       :disabled="disabled"
+      :rules="toRules"
       :dense="dense"
       :label="`${label} to`"
       :value="value?.to"

@@ -89,5 +89,10 @@ export default {
     isLoading(state) {
       return state.loading;
     },
+    whmcsApi(state) {
+      return JSON.parse(
+        state.values["whmcs"] || "{}"
+      ).api;
+    },
   },
 };

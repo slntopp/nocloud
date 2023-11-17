@@ -413,13 +413,8 @@ export default {
     services() {
       return this.$store.getters["services/all"];
     },
-    settings() {
-      return this.$store.getters["settings/all"];
-    },
     whmcsApi() {
-      return JSON.parse(
-        this.settings.find(({ key }) => key === "whmcs").value || "{}"
-      ).api;
+      return this.$store.getters['settings/whmcsApi']
     },
     fullAccount() {
       return this.accounts.find((a) => a.uuid === this.transaction.account);
