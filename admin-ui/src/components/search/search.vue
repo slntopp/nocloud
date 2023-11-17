@@ -91,23 +91,40 @@
 
               <v-list-item v-if="isLayoutModeAdd" dense>
                 <v-list-item-content>
-                  <v-text-field v-model="newLayoutName" dense class="pa-0 ma-0">
-                    <template v-slot:append>
-                      <v-btn @click="saveNewLayout" small icon>
-                        <v-icon small>mdi-content-save</v-icon>
-                      </v-btn>
-                    </template>
-                  </v-text-field>
+                  <v-form ref="addNewLayoutForm" v-model="isNewLayoutValid">
+                    <v-text-field
+                      :rules="newLayoutRules"
+                      v-model="newLayoutName"
+                      dense
+                      class="pa-0 ma-0"
+                    >
+                      <template v-slot:append>
+                        <v-btn
+                          :disabled="!isNewLayoutValid"
+                          @click="saveNewLayout"
+                          small
+                          icon
+                        >
+                          <v-icon small>mdi-content-save</v-icon>
+                        </v-btn>
+                      </template>
+                    </v-text-field>
+                  </v-form>
                 </v-list-item-content>
               </v-list-item>
 
               <v-list-item
                 :disabled="isLayoutModeAdd"
                 dense
-                @click="setLayoutMode('add')"
+                @click="onAddClick"
               >
                 <v-list-item-content>
-                  <v-btn small outlined color="primary">
+                  <v-btn
+                    :disabled="isLayoutModeAdd"
+                    small
+                    outlined
+                    color="primary"
+                  >
                     Add <v-icon small>mdi-plus</v-icon></v-btn
                   >
                 </v-list-item-content>
@@ -252,6 +269,18 @@ function getBlankLayout() {
 const blankLayout = ref(getBlankLayout());
 const layoutMode = ref("preview");
 const newLayoutName = ref("New layout");
+
+const addNewLayoutForm = ref();
+const isNewLayoutValid = ref(false);
+const newLayoutRules = ref([
+  (val) => {
+    if (!val) {
+      return false;
+    }
+
+    return layouts.value.findIndex((l) => l.title === val) === -1;
+  },
+]);
 
 onMounted(() => {
   window.addEventListener("beforeunload", () => saveSearchData());
@@ -426,6 +455,11 @@ const addNewLayout = (data) => {
     id: Date.now(),
   });
 };
+
+const onAddClick = () => {
+  setLayoutMode("add");
+  setTimeout(() => addNewLayoutForm.value.validate(), 300);
+};
 const saveNewLayout = () => {
   if (blankLayout.value.id === visibleLayout.value.id) {
     addNewLayout({
@@ -561,7 +595,7 @@ export default {
   padding: 0 10px;
 }
 
-.search__input .v-input__append-inner{
+.search__input .v-input__append-inner {
   margin-top: 6px;
 }
 </style>

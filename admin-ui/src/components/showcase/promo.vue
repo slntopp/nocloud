@@ -32,6 +32,13 @@
         v-model="tabsIndex"
       >
         <v-tab-item>
+          <v-text-field
+            class="mt-3"
+            hide-details
+            v-model.trim="currentLocation.title"
+            outlined
+            label="Title"
+          />
           <v-card-title class="d-flex align-center"
             >Service preview
             <v-switch
@@ -47,7 +54,7 @@
             <div class="widget__template">
               <div class="main">
                 <div class="map">
-                  <v-img height="275px" src="/admin/img/promo/map.svg" />
+                  <v-img height="190px" src="/admin/img/promo/map.svg" />
                 </div>
                 <div class="right-menus">
                   <div
@@ -101,11 +108,6 @@
           <template v-if="activeWidgetPlace === 'service'">
             <v-card-title class="text-center">Service settings</v-card-title>
             <v-text-field
-              v-model.trim="currentLocation.title"
-              outlined
-              label="Title"
-            />
-            <v-text-field
               v-model.trim="currentLocation.service.title"
               outlined
               label="Title"
@@ -152,8 +154,6 @@
           </template>
           <template v-else-if="activeWidgetPlace === 'offer'">
             <v-card-title class="text-center">Offer settings</v-card-title>
-            <v-card-subtitle class="mt-3">Description:</v-card-subtitle>
-            <rich-editor v-model="currentLocation.offer.text" />
             <v-text-field
               class="mt-5"
               outlined
@@ -165,6 +165,8 @@
               label="Media src link"
               v-model="currentLocation.offer.link"
             />
+            <v-card-subtitle class="mt-3">Description:</v-card-subtitle>
+            <rich-editor v-model="currentLocation.offer.text" />
           </template>
           <template v-if="activeWidgetPlace === 'rewards'">
             <v-card-title class="text-center">Rewards settings</v-card-title>
@@ -378,8 +380,8 @@ const getLocationKey = (location) => {
 .widget__template {
   display: flex;
   flex-direction: column;
-  height: 400px;
-  width: 500px;
+  height: 275px;
+  width: 350px;
   margin-bottom: 20px;
   .main {
     display: flex;
@@ -394,14 +396,16 @@ const getLocationKey = (location) => {
       display: flex;
       flex-direction: column;
       .service {
+        background-color: var(--v-background-dark-base);
         margin: 2px;
-        border: 1px solid var(--v-primary-base);
+        border-radius: 5px;
         height: 50%;
         cursor: pointer;
       }
       .location {
+        background-color: var(--v-background-dark-base);
         margin: 2px;
-        border: 1px solid var(--v-primary-base);
+        border-radius: 5px;
         height: 50%;
         cursor: pointer;
       }
@@ -412,20 +416,22 @@ const getLocationKey = (location) => {
     height: 30%;
     min-height: 75px;
     .rewards {
+      background-color: var(--v-background-dark-base);
       margin: 2px;
-      border: 1px solid var(--v-primary-base);
+      border-radius: 5px;
       width: 70%;
       cursor: pointer;
     }
     .offer {
+      background-color: var(--v-background-dark-base);
       margin: 2px 2px 2px 6px;
-      border: 1px solid var(--v-primary-base);
+      border-radius: 5px;
       width: 30%;
       cursor: pointer;
     }
   }
 }
 .active {
-  background-color: var(--v-primary-base);
+  background-color: var(--v-primary-base) !important;
 }
 </style>
