@@ -94,9 +94,7 @@ export default {
             message: "Showcase edited successfully",
           });
 
-          setTimeout(() => {
-            this.$router.push({ name: "Showcases" });
-          }, 1500);
+          this.$router.push({ name: "Showcases" });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });

@@ -53,7 +53,10 @@ export default {
       { commit, dispatch },
       options = { params: { anonymously: false }, withCount: false }
     ) {
-      if (!options?.silent) commit("setLoading", true);
+      if (!options?.silent) {
+        commit("setPlans", []);
+        commit("setLoading", true);
+      }
 
       if (options.withCount) {
         dispatch("fetchCount", options);
