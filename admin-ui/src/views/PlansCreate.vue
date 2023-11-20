@@ -78,8 +78,10 @@
             </v-col>
             <v-col cols="9">
               <v-autocomplete
+                clearable
+                @change="plan.meta.linkedPlan = $event ?? undefined"
                 label="Price model"
-                v-model="plan.meta.linkedPlan"
+                :value="plan.meta.linkedPlan"
                 :items="filteredPlans"
               />
             </v-col>
