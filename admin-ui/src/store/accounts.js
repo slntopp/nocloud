@@ -25,6 +25,7 @@ export default {
   },
   actions: {
     fetch({ commit }) {
+      commit("setAccounts", []);
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
         api.accounts
