@@ -439,8 +439,12 @@ export default {
       const originalHeaders = JSON.parse(JSON.stringify(this.headers));
       for (const [key, value] of Object.entries(columns)) {
         const el = originalHeaders.find((h) => h.value === key);
+        let index = value;
+        if (tempHeaders[value]) {
+          index++;
+        }
         if (el) {
-          tempHeaders[value] = el;
+          tempHeaders[index] = el;
         }
       }
       if (
