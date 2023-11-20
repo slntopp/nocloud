@@ -98,7 +98,10 @@
               <v-subheader>Auto start</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-switch style="width: fit-content" v-model="plan.meta.auto_start" />
+              <v-switch
+                style="width: fit-content"
+                v-model="plan.meta.auto_start"
+              />
             </v-col>
           </v-row>
         </v-col>
@@ -330,9 +333,7 @@ export default {
                 : "Price model created successfully",
           });
           if (action !== "edit") {
-            setTimeout(() => {
-              this.$router.push({ name: "Plans" });
-            }, 100);
+            this.$router.push({ name: "Plans" });
           }
           this.isDialogVisible = false;
         })
@@ -544,7 +545,7 @@ export default {
       }
     },
     "plan.type"(newVal) {
-      if(!this.isEdit){
+      if (!this.isEdit) {
         this.plan.meta.auto_start = newVal === "empty" ? false : undefined;
       }
     },
