@@ -93,7 +93,7 @@
               <v-switch style="width: fit-content" v-model="plan.public" />
             </v-col>
           </v-row>
-          <v-row align="center">
+          <v-row align="center" v-if="plan.type === 'empty'">
             <v-col cols="3">
               <v-subheader>Auto start</v-subheader>
             </v-col>
