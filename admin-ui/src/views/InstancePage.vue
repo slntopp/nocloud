@@ -41,6 +41,7 @@ export default {
   data: () => ({
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
+    instanceTitle: "",
   }),
   mixins: [snackbar],
   methods: {
@@ -91,9 +92,6 @@ export default {
         ({ uuid }) => uuid === id
       );
     },
-    instanceTitle() {
-      return this.instance?.title ?? "not found";
-    },
     instanceLoading() {
       return this.$store.getters["services/isLoading"];
     },
@@ -125,6 +123,11 @@ export default {
   },
   created() {
     this.$store.dispatch("services/fetch", { showDeleted: true }).then(() => {
+      if (!this.instance) {
+        this.instanceTitle = "Not found";
+      } else {
+        this.instanceTitle = this.instance.title;
+      }
       document.title = `${this.instanceTitle} | NoCloud`;
     });
   },

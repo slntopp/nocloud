@@ -238,6 +238,9 @@ export default {
       this.$store
         .dispatch("plans/fetch", {
           withCount: true,
+          params: {
+            anonymously: false,
+          },
         })
         .then(() => {
           this.fetchError = "";

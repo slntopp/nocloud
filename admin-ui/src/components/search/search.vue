@@ -27,6 +27,8 @@
           </template>
           <template v-slot:prepend-inner>
             <v-chip
+              v-bind="searchName ? attrs : undefined"
+              v-on="searchName ? on : undefined"
               class="px-2"
               small
               outlined
@@ -37,6 +39,9 @@
                 <v-icon small>mdi-close</v-icon>
               </v-btn>
             </v-chip>
+            <template v-else>
+              <filter-tags @click="isOpen = true" />
+            </template>
           </template>
         </v-text-field>
       </template>
@@ -256,6 +261,7 @@ import { VAutocomplete, VTextField } from "vuetify/lib";
 import DatePicker from "@/components/ui/datePicker.vue";
 import LogickSelect from "@/components/ui/logickSelect.vue";
 import FromToNumberField from "@/components/ui/fromToNumberField.vue";
+import FilterTags from "@/components/search/filterTags.vue";
 
 const store = useStore();
 
@@ -329,7 +335,9 @@ const isResetDisabled = computed(() => {
   return JSON.stringify(localFilter.value) === JSON.stringify(filter.value);
 });
 const isResetAllHide = computed(() => {
-  return !currentLayout.value && !param.value;
+  return (
+    !currentLayout.value && !param.value && !Object.keys(filter.value).length
+  );
 });
 
 const getFieldComponent = (field) => {
@@ -362,6 +370,16 @@ const saveSearchData = (name) => {
   const data = { current: currentLayout.value?.id, layouts: layouts.value };
   const key = getSearchKey(name);
   localStorage.setItem(key, JSON.stringify(data));
+
+  const localKey = `${key}-local`;
+  if (
+    !currentLayout.value?.id &&
+    JSON.stringify(filter.value) !== JSON.stringify("{}")
+  ) {
+    localStorage.setItem(localKey, JSON.stringify(filter.value));
+  } else {
+    localStorage.removeItem(localKey);
+  }
 };
 
 const loadSearchData = (name) => {
@@ -378,6 +396,9 @@ const loadSearchData = (name) => {
   if (data?.current) {
     currentLayout.value = layouts.value.find((l) => l.id === data.current);
     filter.value = currentLayout.value.filter;
+  } else {
+    const localKey = `${key}-local`;
+    filter.value = JSON.parse(localStorage.getItem(localKey) || `{}`);
   }
 };
 
@@ -402,7 +423,7 @@ const hideSearch = () => {
 };
 
 const resetFilter = () => {
-  localFilter.value = { ...filter.value };
+  localFilter.value = { ...visibleLayout.value };
 };
 
 const resetAll = () => {
@@ -433,9 +454,13 @@ const setCurrentFieldsKeys = () => {
     }
   }
 
-  currentFieldsKeys.value = newCurrentFields.filter(
-    (key) => !!allFields.value?.find((f) => f.key === key)
-  );
+  currentFieldsKeys.value = [
+    ...new Set(
+      newCurrentFields.filter(
+        (key) => !!allFields.value?.find((f) => f.key === key)
+      )
+    ),
+  ];
 };
 const changeFields = ({ key }, value) => {
   if (value) {
@@ -506,13 +531,14 @@ watch(searchName, (value, oldValue) => {
   if (oldValue) {
     saveSearchData(oldValue);
   }
+  currentLayout.value = undefined;
   param.value = "";
   filter.value = {};
-  currentLayout.value = undefined;
+  blankLayout.value = getBlankLayout();
 
   layouts.value = [];
   if (value) {
-    loadSearchData(value);
+    setTimeout(() => loadSearchData(value), 0);
   }
   if (layouts.value.length === 0) {
     addNewLayout({ title: "Default" });
@@ -535,9 +561,13 @@ watch(visibleLayout, (_, prevLayout) => {
   filter.value = visibleLayout.value?.filter || {};
   setCurrentFieldsKeys();
 });
-watch(filter, (newValue) => {
-  localFilter.value = { ...newValue };
-});
+watch(
+  filter,
+  (newValue) => {
+    localFilter.value = { ...newValue };
+  },
+  { deep: true }
+);
 </script>
 
 <script>
@@ -597,5 +627,9 @@ export default {
 
 .search__input .v-input__append-inner {
   margin-top: 6px;
+}
+
+.search__input .v-input__prepend-inner {
+  margin-right: unset !important;
 }
 </style>
