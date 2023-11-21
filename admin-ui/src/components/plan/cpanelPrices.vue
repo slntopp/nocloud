@@ -159,7 +159,7 @@ export default {
               model: item.name,
               bandwidth: item.BWLIMIT || undefined,
               ssd: item.QUOTA || undefined,
-              email: item.MAX_EMAILACCT_QUOTA || undefined,
+              email: item.MAXPOP || undefined,
               mysql: item.MAXSQL || undefined,
               websites: 1 + +item.MAXADDON || undefined,
             },

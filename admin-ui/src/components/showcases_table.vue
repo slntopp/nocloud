@@ -9,7 +9,7 @@
     :loading="loading"
   >
     <template v-slot:[`item.preview`]="{ item }">
-      <icon-title-preview is-mdi :icon="item.icon" :title="item.title" />
+      <icon-title-preview :is-mdi="false" :icon="item.icon" :title="item.title" />
     </template>
 
     <template v-slot:[`item.title`]="{ item }">

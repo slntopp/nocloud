@@ -17,6 +17,7 @@ export default {
   actions: {
     fetch({ commit }) {
       commit("setLoading", true);
+      commit("setNamespaces", []);
       return new Promise((resolve, reject) => {
         api.namespaces
           .list()

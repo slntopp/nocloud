@@ -78,8 +78,10 @@
             </v-col>
             <v-col cols="9">
               <v-autocomplete
+                clearable
+                @change="plan.meta.linkedPlan = $event ?? undefined"
                 label="Price model"
-                v-model="plan.meta.linkedPlan"
+                :value="plan.meta.linkedPlan"
                 :items="filteredPlans"
               />
             </v-col>
@@ -93,12 +95,15 @@
               <v-switch style="width: fit-content" v-model="plan.public" />
             </v-col>
           </v-row>
-          <v-row align="center">
+          <v-row align="center" v-if="plan.type === 'empty'">
             <v-col cols="3">
               <v-subheader>Auto start</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-switch style="width: fit-content" v-model="plan.meta.auto_start" />
+              <v-switch
+                style="width: fit-content"
+                v-model="plan.meta.auto_start"
+              />
             </v-col>
           </v-row>
         </v-col>
@@ -330,9 +335,7 @@ export default {
                 : "Price model created successfully",
           });
           if (action !== "edit") {
-            setTimeout(() => {
-              this.$router.push({ name: "Plans" });
-            }, 100);
+            this.$router.push({ name: "Plans" });
           }
           this.isDialogVisible = false;
         })
@@ -397,8 +400,10 @@ export default {
     },
     changePlan(isReset) {
       if (isReset) {
-        this.selectedKind = this.item.kind;
-        return;
+        return (this.selectedKind =
+          this.item?.kind || this.selectedKind === "STATIC"
+            ? "DYNAMIC"
+            : "STATIC");
       }
       this.plan.kind = this.selectedKind;
     },
@@ -544,7 +549,7 @@ export default {
       }
     },
     "plan.type"(newVal) {
-      if(!this.isEdit){
+      if (!this.isEdit) {
         this.plan.meta.auto_start = newVal === "empty" ? false : undefined;
       }
     },

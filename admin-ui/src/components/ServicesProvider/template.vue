@@ -102,9 +102,7 @@ export default {
             message: 'Service provider edited successfully'
           });
 
-          setTimeout(() => {
-            this.$router.push({ name: 'ServicesProviders' });
-          }, 1500);
+          this.$router.push({ name: 'ServicesProviders' });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -166,18 +164,18 @@ pre {
 	white-space: pre-wrap;
 }
 .string {
-	color: var(--v-success-base); 
+	color: var(--v-success-base);
 }
 .number {
-	color: var(--v-warning-base); 
+	color: var(--v-warning-base);
 }
 .boolean {
-	color: var(--v-info-base); 
+	color: var(--v-info-base);
 }
 .null {
-	color: var(--v-accent-base); 
+	color: var(--v-accent-base);
 }
 .key {
-	color: var(--v-error-base); 
+	color: var(--v-error-base);
 }
 </style>
