@@ -400,8 +400,10 @@ export default {
     },
     changePlan(isReset) {
       if (isReset) {
-        this.selectedKind = this.item.kind;
-        return;
+        return (this.selectedKind =
+          this.item?.kind || this.selectedKind === "STATIC"
+            ? "DYNAMIC"
+            : "STATIC");
       }
       this.plan.kind = this.selectedKind;
     },
