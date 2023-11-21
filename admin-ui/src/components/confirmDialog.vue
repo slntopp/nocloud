@@ -3,7 +3,7 @@
     <div class="empty" @click.stop="() => !disabled && open()">
       <slot></slot>
     </div>
-    <v-dialog v-model="dialog" :max-width="width">
+    <v-dialog persistent v-model="dialog" :max-width="width">
       <v-card>
         <div class="confirm-card">
           <v-card-title class="text-h6">{{ title }}</v-card-title>
