@@ -225,7 +225,7 @@ export default {
       type: Array,
       default: () => [],
     },
-    "table-name": {
+    tableName: {
       type: String,
       default: "",
     },
@@ -237,19 +237,19 @@ export default {
       type: Array,
       default: () => defaultHeaders,
     },
-    "single-select": {
+    singleSelect: {
       type: Boolean,
       default: false,
     },
-    "item-key": {
+    itemKey: {
       type: String,
       default: "uuid",
     },
-    "no-hide-uuid": {
+    noHideUuid: {
       type: Boolean,
       default: false,
     },
-    "server-items-length": Number,
+    serverItemsLength: Number,
     options: Object,
     expanded: {
       type: Array,
@@ -284,7 +284,7 @@ export default {
       type: [Number, String],
       default: 4,
     },
-    "footer-error": {
+    footerError: {
       type: String,
       default: "",
     },
@@ -307,7 +307,7 @@ export default {
   },
   data() {
     return {
-      selected: this.value,
+      selected: [],
       showed: [],
       copyed: -1,
       VDataTable,
@@ -439,8 +439,27 @@ export default {
       const originalHeaders = JSON.parse(JSON.stringify(this.headers));
       for (const [key, value] of Object.entries(columns)) {
         const el = originalHeaders.find((h) => h.value === key);
+        let index = value;
+        if (tempHeaders[value]) {
+          index++;
+        }
         if (el) {
-          tempHeaders[value] = el;
+          tempHeaders[index] = el;
+        }
+      }
+      if (
+        Object.keys(tempHeaders).length ===
+        Object.keys(this.filtredHeaders).length
+      ) {
+        let isSame = true;
+        for (const key of Object.keys(tempHeaders)) {
+          if (!isSame) {
+            continue;
+          }
+          isSame = tempHeaders[key]?.value === this.filtredHeaders[key]?.value;
+        }
+        if (isSame) {
+          return;
         }
       }
 
@@ -462,18 +481,15 @@ export default {
           newColumns[key] = value;
         }
       }
-
       //add new columns
       const newColumnsKeys = Object.keys(newColumns);
       this.filter
-        ?.filter((f) => newColumnsKeys.findIndex((nc) => nc === f))
+        ?.filter((f) => newColumnsKeys.findIndex((nc) => nc === f) === -1)
         .forEach((key, index) => {
           newColumns[key] = newColumnsKeys.length + index;
         });
-
       this.setHeadersBy(newColumns);
       this.columns = newColumns;
-
       this.settingsDialog = false;
     },
     setDefaultHeaders() {
@@ -530,7 +546,6 @@ export default {
     configureColumns() {
       if (this.tableName) {
         const columnsString = localStorage.getItem("columns");
-
         if (columnsString) {
           this.columns = JSON.parse(columnsString)?.[this.tableName];
         }
@@ -608,6 +623,9 @@ export default {
     page(value) {
       localStorage.setItem("page", value);
       localStorage.setItem("url", this.$route.path);
+    },
+    value() {
+      this.selected = this.value;
     },
   },
   directives: {

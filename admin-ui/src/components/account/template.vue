@@ -99,9 +99,7 @@ export default {
             message: 'Account edited successfully'
           });
 
-          setTimeout(() => {
-            this.$router.push({ name: 'Accounts' });
-          }, 1500);
+          this.$router.push({ name: 'Accounts' });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });

@@ -89,17 +89,16 @@ export default {
     },
   },
   actions: {
-    fetch({ commit },params) {
+    fetch({ commit }, params) {
+      commit("setInstances", []);
+      commit("setServices", []);
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
         api.services
           .list(params)
           .then((response) => {
-            const servicesWithoutDel = response.pool.filter(
-              (s) => s.status !== "DEL"
-            );
-            commit("setServices", servicesWithoutDel);
-            commit("setInstances", servicesWithoutDel);
+            commit("setServices", response.pool);
+            commit("setInstances", response.pool);
             resolve(response);
           })
           .catch((error) => {

@@ -53,7 +53,7 @@ export default {
 
         api.settings.get(["app"])
           .then((response) => {
-            commit("setAppURL", JSON.parse(response.app).url)
+            commit("setAppURL", response)
             resolve(response);
           })
           .catch((error) => {

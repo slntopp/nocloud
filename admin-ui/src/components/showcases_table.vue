@@ -9,7 +9,7 @@
     :loading="loading"
   >
     <template v-slot:[`item.preview`]="{ item }">
-      <icon-title-preview is-mdi :icon="item.icon" :title="item.title" />
+      <icon-title-preview :is-mdi="false" :icon="item.icon" :title="item.title" />
     </template>
 
     <template v-slot:[`item.title`]="{ item }">
@@ -18,13 +18,25 @@
       </router-link>
     </template>
 
+    <template v-slot:[`item.sorter`]="{ item }">
+      <v-skeleton-loader v-if="updatedShowcase === item.uuid" type="text" />
+      <v-text-field
+        v-else
+        style="max-width: 50px"
+        type="number"
+        :disabled="!!updatedShowcase"
+        :value="item.sorter"
+        @change="updateShowcase(item, { key: 'sorter', value: +$event })"
+      />
+    </template>
+
     <template v-slot:[`item.public`]="{ item }">
       <v-skeleton-loader v-if="updatedShowcase === item.uuid" type="text" />
       <v-switch
         v-else
         :readonly="!!updatedShowcase"
         :input-value="item.public"
-        @change="changeEnabled(item, $event)"
+        @change="updateShowcase(item, { key: 'public', value: $event })"
       />
     </template>
   </nocloud-table>
@@ -51,17 +63,18 @@ const headers = ref([
   { text: "Title", value: "title" },
   { text: "Preview", value: "preview" },
   { text: "Enabled", value: "public" },
+  { text: "Sorter", value: "sorter" },
 ]);
 
-const changeEnabled = async (item, value) => {
+const updateShowcase = async (item, { key, value }) => {
   try {
     updatedShowcase.value = item.uuid;
-    const data = { ...item, public: value };
+    const data = { ...item, [key]: value };
     await api.showcases.update(data);
     store.commit("showcases/replaceShowcase", data);
   } catch {
     store.commit("snackbar/showSnackbarError", {
-      message: "Error during update showcase enabled",
+      message: "Error during update showcase",
     });
   } finally {
     updatedShowcase.value = "";

@@ -60,7 +60,12 @@ export default {
   actions: {
     fetch({ commit, state }, options) {
       if (state.loading) return;
-      if (!options?.silent) commit("setLoading", true);
+      if (!options?.silent) {
+        commit("setRates", []);
+        commit("setDefault", []);
+        commit("setCurrencies", []);
+        commit("setLoading", true);
+      }
 
       return new Promise((resolve, reject) => {
         api

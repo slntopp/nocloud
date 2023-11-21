@@ -475,7 +475,7 @@ export function filterByKeysAndParam(items, keys, param) {
 }
 
 export function compareSearchValue(data, searchValue, field) {
-  const type=field?.type || ''
+  const type = field?.type || "";
   switch (type) {
     case "input": {
       return (
@@ -535,7 +535,7 @@ export function compareSearchValue(data, searchValue, field) {
 }
 
 export function getDeepObjectValue(data, key) {
-  let value = { ...data};
+  let value = { ...data };
   key.split(".").forEach((subKey, index) => {
     if (index === key.split(".").length - 1) {
       key = subKey;
@@ -544,4 +544,15 @@ export function getDeepObjectValue(data, key) {
     value = data?.[subKey];
   });
   return value?.[key];
+}
+
+export function debounce(callback, wait = 100) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      console.log(args)
+      callback(...args);
+    }, wait);
+  };
 }

@@ -2,7 +2,11 @@
   <div class="pa-4">
     <v-btn class="mr-2" :to="{ name: 'Plans create' }"> Create </v-btn>
 
-    <confirm-dialog v-if="linked.length !== 1" @confirm="deleteSelectedPlan">
+    <confirm-dialog
+      v-if="linked.length !== 1"
+      :disabled="isDeleteDisabled"
+      @confirm="deleteSelectedPlan"
+    >
       <v-btn
         class="mr-2"
         :disabled="isDeleteDisabled"
@@ -107,7 +111,11 @@
             :accept="`.${selectedFileType}`"
             @change="onJsonInputChange"
           />
-          <confirm-dialog @confirm="uploadPlans" :text="uploadedPlansText">
+          <confirm-dialog
+            @confirm="uploadPlans"
+            :disabled="!uploadedPlans.length"
+            :text="uploadedPlansText"
+          >
             <v-btn
               :disabled="!uploadedPlans.length"
               :loading="isPlansUploadLoading"
@@ -129,7 +137,8 @@ import confirmDialog from "@/components/confirmDialog.vue";
 import {
   compareSearchValue,
   defaultFilterObject,
-  filterArrayByTitleAndUuid, getDeepObjectValue,
+  filterArrayByTitleAndUuid,
+  getDeepObjectValue,
   readJSONFile,
   readYAMLFile,
 } from "@/functions";
@@ -238,6 +247,9 @@ export default {
       this.$store
         .dispatch("plans/fetch", {
           withCount: true,
+          params: {
+            anonymously: false,
+          },
         })
         .then(() => {
           this.fetchError = "";

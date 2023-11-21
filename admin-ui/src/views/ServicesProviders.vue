@@ -22,12 +22,6 @@
         </v-btn>
       </confirm-dialog>
 
-      <v-btn
-        color="background-light"
-        :to="{ name: 'ServicesProviders showcases' }"
-      >
-        showcases
-      </v-btn>
     </div>
 
     <services-providers v-model="selected"> </services-providers>

@@ -45,7 +45,12 @@ const showcases = computed(() =>
 );
 const isLoading = computed(() => store.getters["showcases/isLoading"]);
 
-onMounted(async () => {
+onMounted(() => {
+  fetchShowcases();
+  store.commit("reloadBtn/setCallback", { event: fetchShowcases});
+});
+
+const fetchShowcases = async () => {
   try {
     await store.dispatch("showcases/fetch", false);
   } catch (e) {
@@ -53,7 +58,7 @@ onMounted(async () => {
       message: e.response?.data?.message || "Error during fetch info",
     });
   }
-});
+};
 
 const deleteSelected = async () => {
   try {

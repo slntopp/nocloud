@@ -27,7 +27,7 @@
       :server-side-page="page"
       sort-by="exec"
       sort-desc
-      @update:options="onUpdateOptions"
+      @update:options="setOptions"
       no-hide-uuid
       :itemsPerPageOptions="itemsPerPageOptions"
     >
@@ -94,6 +94,7 @@ import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import DatePicker from "@/components/ui/datePicker.vue";
 import useCurrency from "@/hooks/useCurrency";
+import { debounce } from "@/functions";
 
 const props = defineProps({
   filters: { type: Object },
@@ -151,7 +152,6 @@ const reportsHeaders = computed(() => {
 const instances = computed(() => store.getters["services/getInstances"]);
 const services = computed(() => store.getters["services/all"]);
 const accounts = computed(() => store.getters["accounts/all"]);
-const settings = computed(() => store.getters["settings/all"]);
 
 const isLoading = computed(() => {
   return isFetchLoading.value || isCountLoading.value;
@@ -165,11 +165,7 @@ const requestOptions = computed(() => ({
   sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
 }));
 
-const whmcsApi = computed(() => {
-  return JSON.parse(
-    settings.value.find(({ key }) => key === "whmcs").value || "{}"
-  ).api;
-});
+const whmcsApi = computed(() => store.getters["settings/whmcsApi"]);
 
 const getReportActions = (report) => {
   const actions = [];
@@ -179,10 +175,7 @@ const getReportActions = (report) => {
   }
   return actions;
 };
-
-const onUpdateOptions = async (newOptions) => {
-  setOptions(newOptions);
-  page.value = newOptions.page;
+const fetchReports = async () => {
   init();
   isFetchLoading.value = true;
   try {
@@ -214,16 +207,22 @@ const onUpdateOptions = async (newOptions) => {
   }
 };
 
+const fetchReportsDebounced = debounce(fetchReports);
+
 const setOptions = (newOptions) => {
   const sortByReplaceKeys = {
     totalPreview: "total",
     totalDefaultPreview: "total",
     duration: "start",
   };
-  options.value = {
+  newOptions = {
     ...newOptions,
     sortBy: newOptions.sortBy.map((k) => sortByReplaceKeys[k] || k),
   };
+  page.value = newOptions.page;
+  if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
+    options.value = newOptions;
+  }
 };
 
 const init = async () => {
@@ -264,11 +263,6 @@ watch(rates, () => {
   }));
 });
 
-watch(
-  filters,
-  () => {
-    onUpdateOptions(options.value);
-  },
-  { deep: true }
-);
+watch(filters, fetchReportsDebounced, { deep: true });
+watch(options, fetchReportsDebounced);
 </script>

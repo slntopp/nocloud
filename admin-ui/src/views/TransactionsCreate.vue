@@ -336,9 +336,7 @@ export default {
           message: "Transaction created successfully",
         });
 
-        setTimeout(() => {
-          this.$router.push({ name: "Transactions" });
-        }, 500);
+        this.$router.push({ name: "Transactions" });
       } catch (err) {
         this.showSnackbarError({
           message: err,
@@ -413,13 +411,8 @@ export default {
     services() {
       return this.$store.getters["services/all"];
     },
-    settings() {
-      return this.$store.getters["settings/all"];
-    },
     whmcsApi() {
-      return JSON.parse(
-        this.settings.find(({ key }) => key === "whmcs").value || "{}"
-      ).api;
+      return this.$store.getters["settings/whmcsApi"];
     },
     fullAccount() {
       return this.accounts.find((a) => a.uuid === this.transaction.account);
