@@ -50,6 +50,16 @@
           />
         </v-col>
         <v-col cols="6">
+          <v-select
+            :items="durationItems"
+            :value="instance.config?.duration"
+            item-value="value"
+            item-text="title"
+            label="payment:"
+            @change="(value) => setValue('config.duration', value)"
+          />
+        </v-col>
+        <v-col cols="6">
           <v-autocomplete
             label="tariff"
             item-text="title"
@@ -93,14 +103,6 @@
             label="SSH"
             :value="instanceGroup?.config?.ssh"
             @change="setInstanceGroup('config', { ssh: $event })"
-          />
-        </v-col>
-        <v-col cols="6" class="d-flex align-center">
-          <v-select
-            :items="durationItems"
-            :value="instance.config?.duration"
-            label="Payment:"
-            @change="(value) => setValue('config.duration', value)"
           />
         </v-col>
         <v-col cols="6" class="d-flex align-center">
@@ -404,12 +406,16 @@ export default {
       ].join(" ");
     },
     durationItems() {
-      const items = new Set();
-      this.flavors[this.instance.billing_plan?.uuid]?.forEach((item) => {
-        items.add(item.duration);
-      });
+      const annotations = { P1M: "Monthly", P1Y: "Yearly", P1D: "Daily" };
 
-      return [...items.values()];
+      return [
+        ...new Set(
+          this.flavors[this.instance.billing_plan?.uuid]?.map((item) => ({
+            value: item.duration,
+            title: annotations[item.duration] || item.duration,
+          }))
+        ),
+      ];
     },
   },
   async created() {

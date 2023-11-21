@@ -90,9 +90,9 @@ export default {
   },
   actions: {
     fetch({ commit }, params) {
-      commit("setLoading", true);
       commit("setInstances", []);
       commit("setServices", []);
+      commit("setLoading", true);
       return new Promise((resolve, reject) => {
         api.services
           .list(params)

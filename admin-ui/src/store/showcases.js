@@ -33,6 +33,7 @@ export default {
   },
   actions: {
     async fetch({ commit }, anonymously) {
+      commit("setShowcases", []);
       commit("setLoading", true);
 
       try {

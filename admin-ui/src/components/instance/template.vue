@@ -110,9 +110,7 @@ export default {
             message: "Instance edited successfully",
           });
 
-          setTimeout(() => {
-            this.$router.push({ name: "Instances" });
-          }, 1500);
+          this.$router.push({ name: "Instances" });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });

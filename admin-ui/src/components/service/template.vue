@@ -99,9 +99,7 @@ export default {
             message: 'Service edited successfully'
           });
 
-          setTimeout(() => {
-            this.$router.push({ name: 'Services' });
-          }, 1500);
+          this.$router.push({ name: 'Services' });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });

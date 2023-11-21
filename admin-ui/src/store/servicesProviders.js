@@ -31,6 +31,7 @@ export default {
   },
   actions: {
     fetch({ commit }, anonymously) {
+      commit("setServicesProviders", []);
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
         api.servicesProviders

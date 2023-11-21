@@ -1,7 +1,7 @@
 <template>
   <nocloud-table
     table-name="namespaces"
-    :loading="loading"
+    :loading="isLoading"
     :items="filtredNamespaces"
     :headers="headers"
     :value="selected"
@@ -58,7 +58,6 @@ export default {
         { text: "Access", value: "access" },
       ],
       selected: this.value,
-      loading: false,
       fetchError: "",
     };
   },
@@ -72,9 +71,7 @@ export default {
   },
   computed: {
     ...mapGetters("appSearch", ["filter", "param"]),
-    tableData() {
-      return this.$store.getters["namespaces/all"];
-    },
+    ...mapGetters("namespaces", { tableData: "all", isLoading: "isLoading" }),
     filtredNamespaces() {
       const namespaces = this.tableData.filter((n) =>
         Object.keys(this.filter).every((key) => {
@@ -116,15 +113,11 @@ export default {
     },
   },
   created() {
-    this.loading = true;
     this.$store.dispatch("accounts/fetch");
     this.$store
       .dispatch("namespaces/fetch")
       .then(() => {
         this.fetchError = "";
-      })
-      .finally(() => {
-        this.loading = false;
       })
       .catch((err) => {
         console.log(`err`, err);

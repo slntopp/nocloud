@@ -39,6 +39,27 @@
 
       <v-row>
         <v-col cols="6">
+          <v-autocomplete
+            :filter="defaultFilterObject"
+            label="price model"
+            item-text="title"
+            item-value="uuid"
+            :value="instance.billing_plan"
+            :items="plans.list"
+            :rules="planRules"
+            @change="changeBilling"
+          />
+        </v-col>
+        <v-col cols="6">
+          <v-autocomplete
+            label="product"
+            :value="instance.product"
+            :items="products"
+            @change="setProduct"
+          />
+        </v-col>
+
+        <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('resources.cpu', +newVal)"
             label="cpu"
@@ -92,27 +113,6 @@
             type="number"
           >
           </v-text-field>
-        </v-col>
-        <v-col cols="6">
-          <v-autocomplete
-            :filter="defaultFilterObject"
-            label="price model"
-            item-text="title"
-            item-value="uuid"
-            :value="instance.billing_plan"
-            :items="plans.list"
-            :rules="planRules"
-            @change="changeBilling"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-autocomplete
-            label="product"
-            :value="instance.product"
-            v-if="products.length > 0"
-            :items="products"
-            @change="setProduct"
-          />
         </v-col>
       </v-row>
       <v-row>
@@ -251,6 +251,11 @@ export default {
     existing() {
       this.setValue("data.vm_id", null);
       this.setValue("data.vm_name", null);
+    },
+    driveTypes(newVal) {
+      if (newVal && newVal.length > 0) {
+        this.setValue("resources.drive_type", newVal[0]);
+      }
     },
   },
 };

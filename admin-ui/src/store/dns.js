@@ -20,6 +20,7 @@ export default {
   },
   actions: {
     fetch({ commit }) {
+      commit("setZones", []);
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
         api.dns

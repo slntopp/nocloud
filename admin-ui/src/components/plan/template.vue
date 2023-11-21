@@ -96,9 +96,7 @@ export default {
             message: "Price model edited successfully",
           });
 
-          setTimeout(() => {
-            this.$router.push({ name: "Plans" });
-          }, 1500);
+          this.$router.push({ name: "Plans" });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });

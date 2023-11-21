@@ -140,7 +140,12 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
-import {compareSearchValue, getDeepObjectValue, getOvhPrice, getState} from "@/functions";
+import {
+  compareSearchValue,
+  getDeepObjectValue,
+  getOvhPrice,
+  getState,
+} from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import searchMixin from "@/mixins/search";
 import InstanceState from "@/components/ui/instanceState.vue";
@@ -286,13 +291,22 @@ export default {
       }
     },
     getNcuPrice(inst) {
-      return this.getPrice(inst) + " " + this.defaultCurrency;
+      const price = this.getPrice(inst);
+      if (!price) {
+        return "";
+      }
+      return price + " " + this.defaultCurrency;
     },
     getAccountPrice(inst) {
-      const accountCurrency = this.getAccount(inst)?.currency || this.defaultCurrency;
+      const price = this.getPrice(inst);
+      if (!price) {
+        return "";
+      }
 
+      const accountCurrency =
+        this.getAccount(inst)?.currency || this.defaultCurrency;
       return (
-        (this.getPrice(inst) * this.getRate(accountCurrency)).toFixed(2) +
+        (price * this.getRate(accountCurrency)).toFixed(2) +
         " " +
         accountCurrency
       );
@@ -379,10 +393,10 @@ export default {
         config: { planCode, duration },
       } = item;
       let key;
-      if(item.type==='ovh'){
+      if (item.type === "ovh") {
         key = `${duration} ${planCode}`;
-      }else{
-        key=item.product
+      } else {
+        key = item.product;
       }
 
       return billingPlan.products[key]?.title;
@@ -417,7 +431,7 @@ export default {
           if (this.headersGetters[key]) {
             value = this.getValue(key, i);
           } else {
-            value=getDeepObjectValue(i,key)
+            value = getDeepObjectValue(i, key);
           }
           return compareSearchValue(
             value,

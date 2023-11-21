@@ -76,6 +76,7 @@ export default {
   },
   actions: {
     init({ commit }, data) {
+      commit("setCount", 0);
       commit("setLoading", true);
       return api.transactions
         .count(data)
@@ -87,6 +88,7 @@ export default {
         });
     },
     fetch({ commit, state }, data) {
+      commit("setTransactions", []);
       commit("setLoading", true);
       return api.transactions
         .list({
@@ -113,6 +115,7 @@ export default {
       return dispatch("fetch", data);
     },
     fetchById({ commit }, params) {
+      commit("setTransaction", []);
       commit("setLoading", true);
 
       return new Promise((resolve, reject) => {
