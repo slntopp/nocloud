@@ -1,28 +1,5 @@
 <template>
   <div>
-    <v-menu :value="true" :close-on-content-click="false">
-      <template v-slot:activator="{ on, attrs }">
-        <v-icon class="group-icon" v-bind="attrs" v-on="on">mdi-filter</v-icon>
-      </template>
-
-      <v-list dense v-if="tabsIndex < 2">
-        <v-list-item
-          dense
-          v-for="item of filters[tabsIndex][column]"
-          :key="item"
-        >
-          <v-checkbox
-            dense
-            v-model="selected[tabsIndex][column]"
-            :value="item"
-            :label="item"
-            @change="
-              selected[tabsIndex] = Object.assign({}, selected[tabsIndex])
-            "
-          />
-        </v-list-item>
-      </v-list>
-    </v-menu>
     <v-row class="my-4" v-if="!isPlansLoading" align="center">
       <v-col cols="2">
         <v-btn @click="setSellToTab(true)">Enable all</v-btn>
@@ -53,7 +30,7 @@
           v-else-if="tab === 'Tariffs'"
           :show-expand="true"
           :show-select="false"
-          :items="filteredPlans"
+          :items="plans"
           :headers="headers"
           :expanded.sync="expanded"
           :loading="isPlansLoading"
@@ -150,7 +127,7 @@
           table-name="vps-addons"
           v-else-if="tab === 'Addons'"
           :show-select="false"
-          :items="filteredAddons"
+          :items="addons"
           :headers="addonsHeaders"
           :loading="isPlansLoading"
           :footer-error="fetchError"
@@ -178,27 +155,39 @@
         </nocloud-table>
 
         <div class="os-tab__card" v-else-if="tab === 'OS'">
-          <v-card
-            outlined
-            class="pt-4 pl-4 d-flex"
-            style="gap: 10px"
-            color="background"
-            v-for="item of allImages"
-            :key="item"
-          >
-            <v-chip
-              close
-              :color="images.includes(item) ? 'info' : 'error'"
-              :close-icon="
-                images.includes(item) ? 'mdi-close-circle' : 'mdi-plus-circle'
-              "
-              @click:close="changeImage(item)"
+          <template v-if="allImages.length">
+            <v-card
+              outlined
+              class="pt-4 pl-4 d-flex"
+              style="gap: 10px"
+              color="background"
+              v-for="item of allImages"
+              :key="item"
             >
-              <span>
-              {{ item }}
-              </span>
-            </v-chip>
-          </v-card>
+              <v-chip
+                close
+                :color="images.includes(item) ? 'info' : 'error'"
+                :close-icon="
+                  images.includes(item) ? 'mdi-close-circle' : 'mdi-plus-circle'
+                "
+                @click:close="changeImage(item)"
+              >
+                <span>
+                  {{ item }}
+                </span>
+              </v-chip>
+            </v-card>
+          </template>
+          <template v-else>
+            <v-card
+              outlined
+              class="pt-4 pl-4 d-flex"
+              style="gap: 10px"
+              color="background"
+            >
+              <v-card-title>No os in selected tariffs</v-card-title>
+            </v-card>
+          </template>
         </div>
       </v-tab-item>
     </v-tabs-items>
@@ -224,7 +213,6 @@ export default {
     groups: [],
     expanded: [],
     tabs: ["Tariffs", "Addons", "OS"],
-    allImages: [],
     images: [],
 
     plans: [],
@@ -232,21 +220,17 @@ export default {
       { text: "", value: "data-table-expand" },
       { text: "Name", value: "name" },
       { text: "API name", value: "apiName" },
-      { text: "Group", value: "group", sortable: false, class: "groupable" },
-      { text: "Margin", value: "margin", sortable: false, class: "groupable" },
+      { text: "Group", value: "group" },
+      { text: "Margin", value: "margin" },
       {
         text: "Payment",
         value: "duration",
-        sortable: false,
-        class: "groupable",
       },
       { text: "Income price", value: "price.value" },
       { text: "Sale price", value: "value" },
       {
         text: "Sell",
         value: "sell",
-        sortable: false,
-        class: "groupable",
         width: 100,
       },
     ],
@@ -254,32 +238,19 @@ export default {
     addons: [],
     addonsHeaders: [
       { text: "Addon", value: "name" },
-      { text: "Margin", value: "margin", sortable: false, class: "groupable" },
+      { text: "Margin", value: "margin" },
       {
         text: "Payment",
         value: "duration",
-        sortable: false,
-        class: "groupable",
       },
       { text: "Income price", value: "price.value" },
       { text: "Sale price", value: "value" },
       {
         text: "Sell",
         value: "sell",
-        sortable: false,
-        class: "groupable",
         width: 100,
       },
     ],
-
-    filters: {
-      0: { Sell: ["true", "false"], Payment: ["monthly", "yearly"] },
-      1: { Sell: ["true", "false"], Payment: ["monthly", "yearly"] },
-    },
-    selected: {
-      0: { Sell: ["true", "false"], Payment: ["monthly", "yearly"] },
-      1: { Sell: ["true", "false"], Payment: ["monthly", "yearly"] },
-    },
 
     column: "",
     fetchError: "",
@@ -360,15 +331,6 @@ export default {
               if (menu.className.includes("menuable__content__active")) return;
 
               this.column = firstChild.textContent.trim();
-              if (this.column === "Group") {
-                this.filters[this.tabsIndex].Group = this.groups;
-                this.selected[this.tabsIndex].Group = this.groups;
-              }
-
-              this.filters[this.tabsIndex] = Object.assign(
-                {},
-                this.filters[this.tabsIndex]
-              );
               element.dispatchEvent(new Event("click"));
 
               setTimeout(() => {
@@ -451,8 +413,6 @@ export default {
           }
         });
       });
-      this.allImages = result[1].os;
-      this.allImages.sort();
       this.plans = result;
       this.plans.sort((a, b) => {
         const resA = a.planCode.split("-");
@@ -493,33 +453,8 @@ export default {
 
       this.addons = result;
     },
-    changeFilters(plan, filters) {
-      filters.forEach((text) => {
-        if (!this.filters[this.tabsIndex][text]) {
-          this.filters[this.tabsIndex][text] = [];
-        }
-        if (!this.selected[this.tabsIndex][text]) {
-          this.selected[this.tabsIndex][text] = [];
-        }
-
-        const { value } = this.headers.find((el) => el.text === text);
-        const filter = `${plan[value]}`;
-
-        if (!this.filters[this.tabsIndex][text].includes(filter)) {
-          this.filters[this.tabsIndex][text].push(filter);
-        }
-        if (!this.selected[this.tabsIndex][text].includes(filter)) {
-          this.selected[this.tabsIndex][text].push(filter);
-        }
-      });
-    },
     setFee() {
       const windows = [];
-
-      this.filters["0"].Margin = ["manual"];
-      this.selected["0"].Margin = ["manual"];
-      this.filters["1"].Margin = ["manual"];
-      this.selected["1"].Margin = ["manual"];
 
       this.usedFee = JSON.parse(JSON.stringify(this.fee));
       this.plans.forEach((el) => {
@@ -542,9 +477,8 @@ export default {
           return "yearly";
       }
     },
-    getMargin({ value, price }, filter = true) {
+    getMargin({ value, price }) {
       if (!this.usedFee.ranges) {
-        if (filter) this.changeFilters({ margin: "none" }, ["Margin"]);
         return "none";
       }
 
@@ -592,7 +526,6 @@ export default {
           margin = "manual";
       }
 
-      if (filter) this.changeFilters({ margin }, ["Margin"]);
       return margin;
     },
     editGroup(group) {
@@ -623,32 +556,6 @@ export default {
       this.mode = mode;
       this.planId = id;
       this.newGroupName = group;
-    },
-    applyFilter(values, i) {
-      return values.filter((plan) => {
-        const result = [];
-
-        Object.entries(this.selected[i]).forEach(([key, filters]) => {
-          const { value } = this.headers.find(({ text }) => text === key);
-          let filter = `${plan[value]}`;
-
-          switch (key) {
-            case "Payment":
-              filter = this.getPayment(plan[value]);
-              break;
-            case "Margin": {
-              filter = this.getMargin(plan, false);
-            }
-          }
-          if (i === 1 && key === "Margin") {
-            return result.push(true);
-          }
-          if (filters.includes(filter)) result.push(true);
-          else result.push(false);
-        });
-
-        return result.every((el) => el);
-      });
     },
     setSellToTab(status) {
       switch (this.tabs[this.tabsIndex]) {
@@ -707,12 +614,6 @@ export default {
     icon.dispatchEvent(new Event("click"));
   },
   computed: {
-    filteredPlans() {
-      return this.applyFilter(this.plans, 0);
-    },
-    filteredAddons() {
-      return this.applyFilter(this.addons, 1);
-    },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
@@ -726,6 +627,18 @@ export default {
       return this.rates.find(
         (r) => r.to === this.defaultCurrency && r.from === "PLN"
       )?.rate;
+    },
+    allImages() {
+      const imagesSet = new Set();
+      this.plans
+        .filter((p) => !!p.sell)
+        .map((p) => {
+          p.os.forEach((os) => imagesSet.add(os));
+        });
+
+      const imagesArr = [...imagesSet.values()];
+      imagesArr.sort();
+      return imagesArr;
     },
   },
   watch: {
@@ -751,6 +664,7 @@ export default {
         });
 
         this.groups = [];
+        const imagesSet = new Set();
         this.plans.forEach((plan, i) => {
           const product = this.template.products[plan.id];
           const winKey = Object.keys(product?.meta || {}).find((el) =>
@@ -762,7 +676,8 @@ export default {
           if (product) {
             this.plans[i].name = product.title;
             this.plans[i].value = product.price;
-            this.plans[i].os = product.meta.os;
+            product.meta.os?.forEach((os) => imagesSet.add(os));
+
             this.plans[i].group = group;
             this.plans[i].sell = true;
 
@@ -771,22 +686,7 @@ export default {
           if (!this.groups.includes(group)) this.groups.push(group);
         });
 
-        const sellingPlans = this.plans.filter(({ sell }) => sell);
-
-        if (sellingPlans.length < 1) this.images = this.plans[1].os;
-        else
-          this.images = (sellingPlans[1] ?? sellingPlans[0]).os.filter(
-            (image) => this.allImages.includes(image)
-          );
-
-        if (this.template.resources.length === this.addons.length) {
-          this.filters["1"].Sell = ["true"];
-          this.selected["1"].Sell = ["true"];
-        }
-        if (Object.keys(this.template.products).length === this.plans.length) {
-          this.filters["0"].Sell = ["true"];
-          this.selected["0"].Sell = ["true"];
-        }
+        this.images = [...imagesSet.values()];
       });
     },
   },
