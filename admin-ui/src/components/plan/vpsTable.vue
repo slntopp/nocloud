@@ -1,12 +1,8 @@
 <template>
   <div>
     <v-row class="my-4" v-if="!isPlansLoading" align="center">
-      <v-col cols="2">
-        <v-btn @click="setSellToTab(true)">Enable all</v-btn>
-      </v-col>
-      <v-col cols="2">
-        <v-btn @click="setSellToTab(false)">Disable all</v-btn>
-      </v-col>
+      <v-btn class="ml-3" @click="setSellToTab(true)">Enable all</v-btn>
+      <v-btn class="ml-3" @click="setSellToTab(false)">Disable all</v-btn>
     </v-row>
     <v-tabs
       class="rounded-t-lg"
