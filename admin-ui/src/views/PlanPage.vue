@@ -79,7 +79,7 @@ export default {
           title: "Template",
           component: () => import("@/components/plan/template.vue"),
         },
-      ].filter(t=>t);
+      ].filter((t) => t);
     },
   },
   created() {
@@ -96,15 +96,14 @@ export default {
   },
   watch: {
     plan() {
+      const pricesComponents = require
+        .context("@/components/plan/", true, /\.vue$/)
+        .keys();
+
       if (
-        ![
-          "ovh vps",
-          "ovh dedicated",
-          "ovh cloud",
-          "goget",
-          "cpanel",
-          "acronis",
-        ].includes(this.plan.type)
+        !pricesComponents.includes(
+          `./${this.plan.type.split(" ")[0]}Prices.vue`
+        )
       )
         return;
       if (this.tabs.find(({ title }) => title === "Prices")) return;
