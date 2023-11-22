@@ -5,7 +5,7 @@
     item-key="id"
     v-model="selected"
     :show-expand="true"
-    :items="product.meta.addons ?? []"
+    :items="filteredAddons ?? []"
     :headers="addonsHeaders"
     :expanded.sync="expanded"
   >
@@ -26,11 +26,12 @@
       </v-toolbar>
     </template>
 
-    <template v-slot:[`item.title`]="{ item }">
+    <template v-slot:[`item.key`]="{ item }">
       <v-text-field
         dense
-        v-model="item.title"
+        :value="item.key.split(`; product: ${product}`)[0]"
         :rules="generalRule"
+        @input="item.key = `${$event}; product: ${product}`"
       />
     </template>
 
@@ -61,14 +62,14 @@
       <td :colspan="headers.length - 1">
         <v-subheader class="px-0">Description</v-subheader>
 
-        <rich-editor class="html-editor" v-model="item.description" />
+        <rich-editor class="html-editor" v-model="item.title" />
       </td>
     </template>
   </nocloud-table>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import useCurrency from "@/hooks/useCurrency.js";
 import { getFullDate, getTimestamp } from "@/functions.js";
 
@@ -78,7 +79,8 @@ import RichEditor from "@/components/ui/richEditor.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 
 const props = defineProps({
-  product: { type: Object, required: true }
+  product: { type: String, required: true },
+  addons: { type: Array, required: true }
 })
 const emits = defineEmits(["update:addons"])
 
@@ -88,22 +90,29 @@ const selected = ref([])
 const expanded = ref([])
 
 const addonsHeaders = [
-  { text: "Title", value: "title" },
+  { text: "Key", value: "key" },
   { text: "Price", value: "price" },
   { text: "Period", value: "period", width: 400 },
   { text: "Public", value: "public" },
 ];
 const generalRule = [(v) => !!v || "This field is required!"];
 
+const filteredAddons = computed(() =>
+  props.addons.filter(({ key }) =>
+    key.split("; product: ")[1] === props.product
+  )
+)
+
 function addConfig() {
-  const addons = JSON.parse(JSON.stringify(props.product.meta.addons ?? []))
+  const addons = JSON.parse(JSON.stringify(props.addons ?? []))
 
   addons.push({
     id: Math.random().toString(16).slice(2),
-    description: "",
+    key: "",
     title: "",
     price: 0,
     period: 0,
+    kind: "PREPAID",
     public: true
   })
 
@@ -111,7 +120,7 @@ function addConfig() {
 }
 
 function removeConfig() {
-  const addons = JSON.parse(JSON.stringify(props.product.meta.addons ?? []))
+  const addons = JSON.parse(JSON.stringify(props.addons ?? []))
     .filter(({ id }) => !selected.value.find((el) => el.id === id))
 
   selected.value = []
@@ -119,13 +128,13 @@ function removeConfig() {
 }
 
 function setPeriod(value, id) {
-  const item = props.product.meta.addons.find((addon) => addon.id === id)
+  const item = props.addons.find((addon) => addon.id === id)
 
   fullDate.value[id] = value
   item.period = getTimestamp(value)
 }
 
-props.product.meta.addons?.forEach(({ period, id }) => {
+props.addons?.forEach(({ period, id }) => {
   fullDate.value[id] = getFullDate(period);
 });
 </script>
