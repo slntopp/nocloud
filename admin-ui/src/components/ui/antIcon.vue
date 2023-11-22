@@ -1,17 +1,28 @@
 <template>
-  <component :is="icon" />
+  <antd-icon style="font-size: 24px" :type="icon" />
 </template>
 
 <script>
+import antdIcon from "@ant-design/icons-vue";
+
 export default {
   name: "ant-icon",
   props: ["name"],
-  computed: {
-    icon() {
-      let name = this.name.charAt(0).toUpperCase() + this.name.slice(1);
+  components: { antdIcon },
+  data: () => ({ icon: {} }),
+  async mounted() {
+    const iconsRes = await import("@ant-design/icons");
+    let displayName = this.name;
 
-      return () => import(`@ant-design/icons-vue/${name}Outlined`);
-    },
+    if (displayName.endsWith("Outlined")) {
+      displayName = displayName.replace("Outlined", "Outline");
+    } else if (displayName.endsWith("Filled")) {
+      displayName = displayName.replace("Filled", "Fill");
+    }
+    const [name, icon] = Object.entries(iconsRes).find(
+      ([name]) => name === displayName
+    );
+    this.icon = { name, ...icon };
   },
 };
 </script>

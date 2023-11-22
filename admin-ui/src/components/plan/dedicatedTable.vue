@@ -17,23 +17,21 @@
         </v-list-item>
       </v-list>
     </v-menu>
-    <v-row class="mt-3" v-if="!isPlansLoading">
-      <v-col cols="2">
-        <v-btn
-          :loading="isAddonsLoading && setToAllValue === true"
-          :disabled="isAddonsLoading && setToAllValue !== true"
-          @click="setEnabledToTab(true)"
-          >Enable all</v-btn
-        >
-      </v-col>
-      <v-col cols="2">
-        <v-btn
-          :loading="isAddonsLoading && setToAllValue === false"
-          :disabled="isAddonsLoading && setToAllValue !== false"
-          @click="setEnabledToTab(false)"
-          >Disable all</v-btn
-        >
-      </v-col>
+    <v-row class="my-3" v-if="!isPlansLoading">
+      <v-btn
+        class="ml-3"
+        :loading="isAddonsLoading && setToAllValue === true"
+        :disabled="isAddonsLoading && setToAllValue !== true"
+        @click="setEnabledToTab(true)"
+        >Enable all</v-btn
+      >
+      <v-btn
+        class="ml-3"
+        :loading="isAddonsLoading && setToAllValue === false"
+        :disabled="isAddonsLoading && setToAllValue !== false"
+        @click="setEnabledToTab(false)"
+        >Disable all</v-btn
+      >
     </v-row>
     <nocloud-table
       table-name="dedicated-prices"

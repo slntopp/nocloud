@@ -5,11 +5,25 @@
         app settings
       </v-btn>
       <v-btn color="background-light" class="mr-2" to="/settings/widget">
-        widget settings</v-btn
-      >
+        widget settings
+      </v-btn>
       <v-btn color="background-light" class="mr-2" to="/settings/plugins">
         plugins settings
       </v-btn>
+
+      <v-dialog style="height: 100%">
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn color="background-light" class="mr-2" v-on="on" v-bind="attrs">
+            chats settings
+          </v-btn>
+        </template>
+        <plugin-iframe
+          style="height: 80vh"
+          url="/cc.ui/"
+          :params="{ redirect: 'settings' }"
+        />
+      </v-dialog>
+
       <v-menu
         offset-y
         transition="slide-y-transition"
@@ -146,7 +160,8 @@ import { mapGetters } from "vuex";
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import noCloudTable from "@/components/table.vue";
-import ConfirmDialog from "../components/confirmDialog.vue";
+import PluginIframe from "@/components/plugin/iframe.vue";
+import ConfirmDialog from "@/components/confirmDialog.vue";
 import { filterArrayIncludes } from "@/functions";
 
 const headers = [
@@ -186,6 +201,7 @@ export default {
   components: {
     "nocloud-table": noCloudTable,
     ConfirmDialog,
+    PluginIframe
   },
   mixins: [snackbar],
   data: () => ({

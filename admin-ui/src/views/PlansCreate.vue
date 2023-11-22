@@ -78,8 +78,10 @@
             </v-col>
             <v-col cols="9">
               <v-autocomplete
+                clearable
+                @change="plan.meta.linkedPlan = $event ?? undefined"
                 label="Price model"
-                v-model="plan.meta.linkedPlan"
+                :value="plan.meta.linkedPlan"
                 :items="filteredPlans"
               />
             </v-col>
@@ -93,7 +95,7 @@
               <v-switch style="width: fit-content" v-model="plan.public" />
             </v-col>
           </v-row>
-          <v-row align="center">
+          <v-row align="center" v-if="plan.type === 'empty'">
             <v-col cols="3">
               <v-subheader>Auto start</v-subheader>
             </v-col>
@@ -398,8 +400,10 @@ export default {
     },
     changePlan(isReset) {
       if (isReset) {
-        this.selectedKind = this.item.kind;
-        return;
+        return (this.selectedKind =
+          this.item?.kind || this.selectedKind === "STATIC"
+            ? "DYNAMIC"
+            : "STATIC");
       }
       this.plan.kind = this.selectedKind;
     },

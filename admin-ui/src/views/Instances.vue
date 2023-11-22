@@ -109,7 +109,7 @@
         :disabled="selected.length < 1"
         :loading="isDeleteLoading"
       >
-        Delete
+        Terminate
       </v-btn>
     </confirm-dialog>
 

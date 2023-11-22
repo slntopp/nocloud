@@ -11,7 +11,7 @@
     sort-by="ts"
     sort-desc
     item-key="id"
-    @update:options="onUpdateOptions"
+    @update:options="setOptions"
     show-expand
     :expanded.sync="expanded"
     no-hide-uuid
@@ -54,10 +54,11 @@
   </nocloud-table>
 </template>
 <script setup>
-import { toRefs, ref, onMounted, computed, watch } from "vue";
+import { toRefs, ref, computed, watch } from "vue";
 import nocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";
+import { debounce } from "@/functions";
 
 const props = defineProps({
   tableName: {},
@@ -65,10 +66,8 @@ const props = defineProps({
   uuid: {},
   hideRequestor: { type: Boolean, default: false },
   hideUuid: { type: Boolean, default: false },
-  loading: { type: Boolean, default: false },
 });
-const { tableName, accountId, uuid, hideRequestor, hideUuid, loading } =
-  toRefs(props);
+const { tableName, accountId, uuid, hideRequestor, hideUuid } = toRefs(props);
 
 const count = ref(10);
 const logs = ref([]);
@@ -163,9 +162,14 @@ const getEntityByUuid = (item) => {
   }
 };
 
-const onUpdateOptions = async (newOptions) => {
-  options.value = newOptions;
-  page.value = newOptions.page;
+const setOptions = (newOptions) => {
+  if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
+    options.value = newOptions;
+    page.value = newOptions.page;
+  }
+};
+
+const fetchLogs = async () => {
   init();
   isFetchLoading.value = true;
   try {
@@ -175,11 +179,12 @@ const onUpdateOptions = async (newOptions) => {
   }
 };
 
+const fetchLogsDebounced = debounce(fetchLogs);
+
 const updateProps = async () => {
   page.value = 1;
   try {
-    await init();
-    await onUpdateOptions(options.value);
+    await fetchLogsDebounced(options.value);
   } catch (e) {
     fetchError.value = e.message;
   }
@@ -188,7 +193,15 @@ const updateProps = async () => {
 const init = async () => {
   isCountLoading.value = true;
   try {
-    count.value = +(await api.logging.count(requestOptions.value)).total;
+    const { total, unique } = await api.logging.count(requestOptions.value);
+    count.value = +total;
+
+    if (!actionItems.value.length || !scopeItems.value.length) {
+      actionItems.value = unique.actions;
+      scopeItems.value = unique.scopes;
+
+      store.commit("appSearch/pushFields", searchFields.value);
+    }
   } finally {
     isCountLoading.value = false;
   }
@@ -208,28 +221,6 @@ const getService = (uuid) => {
 
 const getServiceProvider = (uuid) => {
   return sps.value.find((s) => s.uuid === uuid) || uuid;
-};
-
-const getFilterItems = async () => {
-  if (actionItems.value.length && scopeItems.value.length) {
-    return;
-  }
-  const { unique } = await api.logging.count({});
-  actionItems.value = unique.actions;
-  scopeItems.value = unique.scopes;
-
-  // if (Object.keys(store.getters["appSearch/customParams"]).length === 0) {
-  //   const hiddenActions = ["monitoring", "regions"];
-  //
-  //   const defaultCustomParams = [];
-  //   actionItems.value.forEach(({ title, uuid }) => {
-  //     if (!hiddenActions.includes(title)) {
-  //       defaultCustomParams.push({ title, value: uuid });
-  //     }
-  //   });
-  //   store.commit("appSearch/setCustomParams", { action: defaultCustomParams });
-  // }
-  store.commit("appSearch/pushFields", searchFields.value);
 };
 
 const isLoading = computed(() => {
@@ -276,24 +267,8 @@ const scope = computed(() =>
   filter.value.scope?.length ? filter.value.scope : undefined
 );
 
-onMounted(() => {
-  if (!loading.value) {
-    getFilterItems();
-  }
-});
-
 watch(accountId, () => updateProps());
-watch(loading, () => {
-  if (!loading.value) {
-    getFilterItems();
-  }
-});
 watch(uuid, () => updateProps());
-watch(
-  filter,
-  () => {
-    onUpdateOptions(options.value);
-  },
-  { deep: true }
-);
+watch(filter, fetchLogsDebounced, { deep: true });
+watch(options, fetchLogsDebounced);
 </script>
