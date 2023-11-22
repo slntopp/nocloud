@@ -178,7 +178,10 @@
               <plans-empty-addons-table
                 :addons="resources"
                 :product="item.key"
-                @update:addons="(value) => changeResource({ key: 'resources', value })"
+                @update:addons="(value) => {
+                  changeResource({ key: 'resources', value })
+                  item.meta.addons = value.map(({ key }) => key) 
+                }"
               />
             </v-dialog>
           </template>

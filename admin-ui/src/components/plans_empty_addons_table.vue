@@ -31,7 +31,7 @@
         dense
         :value="item.key.split(`; product: ${product}`)[0]"
         :rules="generalRule"
-        @input="item.key = `${$event}; product: ${product}`"
+        @input="setKey($event, item)"
       />
     </template>
 
@@ -49,12 +49,8 @@
     <template v-slot:[`item.period`]="{ item }">
       <date-field
         :period="fullDate[item.id]"
-        @changeDate="(date) => setPeriod(date.value, item.id)"
+        @changeDate="(date) => setPeriod(date.value, item)"
       />
-    </template>
-
-    <template v-slot:[`item.public`]="{ item }">
-      <v-switch v-model="item.public" />
     </template>
     
     <template v-slot:expanded-item="{ headers, item }">
@@ -93,7 +89,6 @@ const addonsHeaders = [
   { text: "Key", value: "key" },
   { text: "Price", value: "price" },
   { text: "Period", value: "period", width: 400 },
-  { text: "Public", value: "public" },
 ];
 const generalRule = [(v) => !!v || "This field is required!"];
 
@@ -108,12 +103,11 @@ function addConfig() {
 
   addons.push({
     id: Math.random().toString(16).slice(2),
-    key: "",
+    key: `key; product: ${props.product}`,
     title: "",
     price: 0,
     period: 0,
-    kind: "PREPAID",
-    public: true
+    kind: "PREPAID"
   })
 
   emits("update:addons", addons)
@@ -127,10 +121,13 @@ function removeConfig() {
   emits("update:addons", addons)
 }
 
-function setPeriod(value, id) {
-  const item = props.addons.find((addon) => addon.id === id)
+function setKey(value, item) {
+  item.key = `${value}; product: ${props.product}`
+  emits("update:addons", JSON.parse(JSON.stringify(props.addons)))
+}
 
-  fullDate.value[id] = value
+function setPeriod(value, item) {
+  fullDate.value[item.id] = value
   item.period = getTimestamp(value)
 }
 
