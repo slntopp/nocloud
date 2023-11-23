@@ -119,10 +119,12 @@ import api from "@/api";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { getMarginedValue } from "@/functions";
+import useCurrency from "@/hooks/useCurrency";
 
 const props = defineProps(["template"]);
 
 const store = useStore();
+const { convertFrom } = useCurrency();
 
 const isLoading = ref(false);
 const isSaveLoading = ref(false);
@@ -201,10 +203,15 @@ onMounted(async () => {
       Object.keys(addonsAnnotations).forEach((key) => {
         const metaKey = addonsAnnotations[key];
         p.configOptions[metaKey]?.configurableSubOptions.forEach((c) => {
-          const basePriceYearly =
-            +p.pricing.configOptions[metaKey][c.optionname].annually;
-          const basePriceMonthly =
-            +p.pricing.configOptions[metaKey][c.optionname].monthly;
+          const basePriceYearly = convertFrom(
+            +p.pricing.configOptions[metaKey][c.optionname].annually,
+            "EUR"
+          );
+          const basePriceMonthly = convertFrom(
+            +p.pricing.configOptions[metaKey][c.optionname].monthly,
+            "EUR"
+          );
+
           const data = { name: c.optionname, sell: false, type: metaKey };
           addonsValues[key].push({
             ...data,
@@ -238,10 +245,12 @@ onMounted(async () => {
       };
 
       const getProduct = (duration) => {
-        const basePrice =
+        const basePrice = convertFrom(
           p.pricing.productrenew[
             duration === "yearly" ? "annually" : "monthly"
-          ];
+          ],
+          "EUR"
+        );
 
         return {
           ...data,
