@@ -29,9 +29,9 @@
 
       <v-col>
         <v-text-field
-            readonly
-            label="Start date"
-            :value="template.data.start || '-'"
+          readonly
+          label="Start date"
+          :value="template.data.start || '-'"
         />
       </v-col>
 
@@ -183,14 +183,33 @@ watch(accountRate, () => {
 
 const getBillingItems = () => {
   const items = [];
-  const price = billingPlan.value.products[template.value.product]?.price;
+  const product = billingPlan.value.products[template.value.product];
   items.push({
     name: template.value.product,
-    price,
+    price: product?.price,
     path: `billingPlan.products.${template.value.product}.price`,
-    kind: billingPlan.value.products[template.value.product]?.kind,
-    period: billingPlan.value.products[template.value.product]?.period,
-    accountPrice: toAccountPrice(price),
+    kind: product?.kind,
+    period: product?.period,
+    accountPrice: toAccountPrice(product?.price),
+  });
+
+  template.value.config?.addons?.forEach((a) => {
+    const resourceIndex = billingPlan.value.resources.findIndex(
+      ({ key }) => key === a
+    );
+    if (resourceIndex === -1) {
+      return;
+    }
+    const { price, kind, period } = billingPlan.value.resources[resourceIndex];
+
+    items.push({
+      name: a,
+      price,
+      path: `billingPlan.resources.${resourceIndex}.price`,
+      kind,
+      period,
+      accountPrice: toAccountPrice(price),
+    });
   });
 
   return items.map((i) => {
