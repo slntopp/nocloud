@@ -93,7 +93,13 @@ func NewOAuth2Credentials(data []string, credType string) (Credentials, error) {
 			return nil, fmt.Errorf("failed to do unmarshal, got: %s", err.Error())
 		}
 
-		bodyMap = responseBody["result"].(map[string]any)
+		result, ok := responseBody["result"]
+
+		if !ok {
+			return nil, fmt.Errorf("you've got failed token")
+		}
+
+		bodyMap = result.(map[string]any)
 	} else {
 		err := json.Unmarshal(all, &bodyMap)
 		if err != nil {
