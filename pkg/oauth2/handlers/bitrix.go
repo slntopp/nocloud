@@ -138,7 +138,7 @@ func (g *BitrixOauthHandler) Setup(
 			return
 		}
 
-		response, err := http.Get(fmt.Sprintf("%s?auth=%s", userInfoUrl, token.AccessToken))
+		response, err := http.Get(fmt.Sprintf("%s%s", userInfoUrl, token.AccessToken))
 
 		if err != nil {
 			log.Error("Failed to make request", zap.Error(err))
@@ -268,8 +268,7 @@ func (g *BitrixOauthHandler) Setup(
 				Auth: &accounts.Credentials{
 					Type: "oauth2-bitrix",
 					Data: []string{
-						field,
-						value,
+						token.AccessToken,
 					},
 				},
 				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
@@ -293,8 +292,7 @@ func (g *BitrixOauthHandler) Setup(
 					Auth: &accounts.Credentials{
 						Type: "oauth2-bitrix",
 						Data: []string{
-							field,
-							value,
+							token.AccessToken,
 						},
 					},
 				})
@@ -306,8 +304,7 @@ func (g *BitrixOauthHandler) Setup(
 					Auth: &accounts.Credentials{
 						Type: "oauth2-bitrix",
 						Data: []string{
-							field,
-							value,
+							token.AccessToken,
 						},
 					},
 					Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
