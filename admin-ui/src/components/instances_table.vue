@@ -254,9 +254,9 @@ export default {
       return this.accounts.find(({ uuid }) => uuid === namespace) ?? {};
     },
     getEmail(inst) {
-      const { email } = this.getAccount(inst);
+      const account = this.getAccount(inst);
 
-      return email ?? "-";
+      return account?.data?.email ?? "-";
     },
     getPrice(inst) {
       switch (inst.type) {
