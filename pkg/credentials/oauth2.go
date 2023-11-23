@@ -101,9 +101,15 @@ func NewOAuth2Credentials(data []string, credType string) (Credentials, error) {
 		}
 	}
 
-	authValue := bodyMap[oauth2TypeConfig.AuthField].(string)
+	authValue, ok := bodyMap[oauth2TypeConfig.AuthField]
 
-	return &OAuth2Credentials{AuthField: oauth2TypeConfig.AuthField, AuthValue: authValue, AuthType: credType}, nil
+	if !ok {
+		return nil, fmt.Errorf("you've got failed token")
+	}
+
+	authValueString := authValue.(string)
+
+	return &OAuth2Credentials{AuthField: oauth2TypeConfig.AuthField, AuthValue: authValueString, AuthType: credType}, nil
 }
 
 func (cred *OAuth2Credentials) Type() string {
@@ -176,9 +182,15 @@ func (cred *OAuth2Credentials) Authorize(args ...string) bool {
 		}
 	}
 
-	authValue := bodyMap[oauth2TypeConfig.AuthField].(string)
+	authValue, ok := bodyMap[oauth2TypeConfig.AuthField]
 
-	return cred.AuthField == oauth2TypeConfig.AuthField && cred.AuthValue == authValue
+	if !ok {
+		return false
+	}
+
+	authValueString := authValue.(string)
+
+	return cred.AuthField == oauth2TypeConfig.AuthField && cred.AuthValue == authValueString
 }
 
 func (cred *OAuth2Credentials) SetLogger(log *zap.Logger) {
