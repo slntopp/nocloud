@@ -205,19 +205,18 @@ onMounted(async () => {
             +p.pricing.configOptions[metaKey][c.optionname].annually;
           const basePriceMonthly =
             +p.pricing.configOptions[metaKey][c.optionname].monthly;
+          const data = { name: c.optionname, sell: false, type: metaKey };
           addonsValues[key].push({
-            name: c.optionname,
+            ...data,
             price: basePriceYearly,
             basePrice: basePriceYearly,
             duration: "yearly",
-            sell: false,
           });
           addonsValues[key].push({
-            name: c.optionname,
+            ...data,
             price: basePriceMonthly,
             basePrice: basePriceMonthly,
             duration: "monthly",
-            sell: false,
           });
         });
       });
@@ -327,8 +326,13 @@ const save = async () => {
       price: t.price,
       title: t.name,
       meta: {
-        addons: enabledAddons.map((a) => a.name + "$" + t.key),
-        os: enabledOs.map((a) => a.name + "$" + t.key),
+        addons: enabledAddons.map((a) => ({
+          key: a.name + "$" + t.key,
+          type: a.type,
+        })),
+        os: enabledOs.map((a) => ({key:a.name + "$" + t.key,
+          type: a.type,
+        })),
         keywebId: t.id,
       },
     };
