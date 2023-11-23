@@ -167,7 +167,7 @@
             </v-radio-group>
           </template>
 
-          <template v-slot:[`item.meta.addons`]="{ item }">
+          <template v-slot:[`item.resources`]="{ item }">
             <v-dialog width="90vw">
               <template v-slot:activator="{ on, attrs }">
                 <v-btn icon v-bind="attrs" v-on="on">
@@ -176,8 +176,12 @@
               </template>
 
               <plans-empty-addons-table
-                :product="item"
-                @update:addons="(value) => $set(item.meta, 'addons', value)"
+                :addons="resources"
+                :product="item.key"
+                @update:addons="(value) => {
+                  changeResource({ key: 'resources', value })
+                  item.meta.addons = value.map(({ key }) => key) 
+                }"
               />
             </v-dialog>
           </template>
@@ -299,7 +303,7 @@ const newMeta = ref({ description: "" });
 if (props.type === "empty")
   headers.value.push({
     text: "Addons",
-    value: "meta.addons",
+    value: "resources",
   });
 
 onMounted(() => {
