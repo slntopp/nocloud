@@ -45,7 +45,7 @@ func (g *GoogleOauthHandler) Setup(
 		ClientID:     cfg.ClientID,
 		ClientSecret: cfg.ClientSecret,
 		RedirectURL:  cfg.RedirectURL,
-		Scopes:       []string{cfg.Scope},
+		Scopes:       cfg.Scopes,
 		Endpoint:     google.Endpoint,
 	}
 
