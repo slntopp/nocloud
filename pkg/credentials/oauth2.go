@@ -35,6 +35,8 @@ type OAuth2Credentials struct {
 }
 
 func NewOAuth2Credentials(data []string, credType string) (Credentials, error) {
+	fmt.Println(cfg)
+
 	if len(data) != 1 {
 		return nil, fmt.Errorf("some credentials data is missing, expected data length to be 2, got: %d", len(data))
 	}
@@ -83,6 +85,8 @@ func NewOAuth2Credentials(data []string, credType string) (Credentials, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to do read body, got: %s", err.Error())
 	}
+
+	fmt.Println(string(all))
 
 	if oauth2TypeValue == "bitrix" {
 		var responseBody = map[string]any{}
