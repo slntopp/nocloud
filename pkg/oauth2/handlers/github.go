@@ -200,8 +200,7 @@ func (g *GithubOauthHandler) Setup(
 				Auth: &accounts.Credentials{
 					Type: "oauth2-github",
 					Data: []string{
-						field,
-						value,
+						token.AccessToken,
 					},
 				},
 			})

@@ -208,8 +208,7 @@ func (g *BitrixOauthHandler) Setup(
 				Auth: &accounts.Credentials{
 					Type: "oauth2-bitrix",
 					Data: []string{
-						field,
-						value,
+						token.AccessToken,
 					},
 				},
 			})

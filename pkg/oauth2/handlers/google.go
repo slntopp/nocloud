@@ -191,8 +191,7 @@ func (g *GoogleOauthHandler) Setup(
 				Auth: &accounts.Credentials{
 					Type: "oauth2-google",
 					Data: []string{
-						field,
-						value,
+						token.AccessToken,
 					},
 				},
 			})
