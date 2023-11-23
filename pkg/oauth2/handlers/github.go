@@ -49,7 +49,6 @@ func (g *GithubOauthHandler) Setup(
 	}
 
 	userInfoUrl := cfg.UserInfoURL
-	field := cfg.AuthField
 
 	router.Handle("/oauth/github/sign_in", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		state, redirect := r.FormValue("state"), r.FormValue("redirect")
@@ -161,8 +160,6 @@ func (g *GithubOauthHandler) Setup(
 		}
 
 		log.Debug("Info", zap.Any("info", userInfo))
-
-		value := userInfo[field].(string)
 
 		name := userInfo["name"].(string)
 

@@ -61,7 +61,6 @@ func (g *BitrixOauthHandler) Setup(
 	}
 
 	userInfoUrl := cfg.UserInfoURL
-	field := cfg.AuthField
 
 	router.Handle("/oauth/bitrix/sign_in", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		state, redirect := r.FormValue("state"), r.FormValue("redirect")
@@ -166,7 +165,6 @@ func (g *BitrixOauthHandler) Setup(
 		}
 
 		user := userInfo.Result
-		value := user[field].(string)
 
 		log.Debug("User", zap.Any("user", user))
 

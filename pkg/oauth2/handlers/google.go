@@ -50,7 +50,6 @@ func (g *GoogleOauthHandler) Setup(
 	}
 
 	userInfoUrl := cfg.UserInfoURL
-	field := cfg.AuthField
 
 	router.Handle("/oauth/google/sign_in", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		state, redirect := r.FormValue("state"), r.FormValue("redirect")
@@ -152,8 +151,6 @@ func (g *GoogleOauthHandler) Setup(
 		}
 
 		log.Debug("User info", zap.Any("User info", userInfo))
-
-		value := userInfo[field].(string)
 
 		name := userInfo["name"].(string)
 
