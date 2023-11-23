@@ -73,6 +73,9 @@
           :items="selectedTariff?.addons"
           :headers="addonsHeaders"
         >
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field v-model="item.name" />
+          </template>
           <template v-slot:[`item.price`]="{ item }">
             <v-text-field v-model.number="item.price" type="number" />
           </template>
@@ -96,6 +99,9 @@
           :items="selectedTariff?.os"
           :headers="osHeaders"
         >
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field v-model="item.name" />
+          </template>
           <template v-slot:[`item.price`]="{ item }">
             <v-text-field v-model.number="item.price" type="number" />
           </template>
@@ -147,7 +153,8 @@ const headers = ref([
 ]);
 
 const addonsHeaders = ref([
-  { text: "Name", value: "name" },
+  { text: "Base name", value: "baseName" },
+  { text: "Name", value: "name", width: "250" },
   { text: "Duration", value: "duration" },
   { text: "Base price", value: "basePrice", width: "75" },
   { text: "Price", value: "price", width: "200" },
@@ -155,7 +162,8 @@ const addonsHeaders = ref([
 ]);
 
 const osHeaders = ref([
-  { text: "Name", value: "name" },
+  { text: "Base name", value: "baseName" },
+  { text: "Name", value: "name", width: "250" },
   { text: "Duration", value: "duration" },
   { text: "Base price", value: "basePrice", width: "75" },
   { text: "Price", value: "price", width: "200" },
@@ -212,7 +220,12 @@ onMounted(async () => {
             "EUR"
           );
 
-          const data = { name: c.optionname, sell: false, type: metaKey };
+          const data = {
+            name: c.optionname,
+            sell: false,
+            type: metaKey,
+            baseName: c.optionname,
+          };
           addonsValues[key].push({
             ...data,
             price: basePriceYearly,
@@ -233,10 +246,11 @@ onMounted(async () => {
           .filter((a) => a.duration === duration)
           .map((a) => {
             const realAddon = props.template.resources.find(
-              (r) => r.key === a.name + "$" + keys[duration]
+              (r) => r.key === a.baseName + "$" + keys[duration]
             );
             if (realAddon) {
               a.price = realAddon?.price;
+              a.name = realAddon?.title;
               a.sell = true;
             }
 
@@ -326,7 +340,7 @@ const save = async () => {
     const enabledOs = t.os.filter((os) => os.sell);
     enabledOs.concat(enabledAddons).forEach((r) => {
       resources.push({
-        key: r.name + "$" + t.key,
+        key: r.baseName + "$" + t.key,
         kind,
         price: r.price,
         title: r.name,
@@ -341,10 +355,10 @@ const save = async () => {
       title: t.name,
       meta: {
         addons: enabledAddons.map((a) => ({
-          key: a.name + "$" + t.key,
+          key: a.baseName + "$" + t.key,
           type: a.type,
         })),
-        os: enabledOs.map((a) => ({ key: a.name + "$" + t.key, type: a.type })),
+        os: enabledOs.map((a) => ({ key: a.baseName + "$" + t.key, type: a.type })),
         keywebId: t.id,
       },
     };
