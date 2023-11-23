@@ -103,6 +103,9 @@ func NewOAuth2Credentials(data []string, credType string) (Credentials, error) {
 
 	authValue := bodyMap[oauth2TypeConfig.AuthField].(string)
 
+	fmt.Println("authValue", authValue)
+	fmt.Println("authField", oauth2TypeConfig.AuthField)
+
 	return &OAuth2Credentials{AuthField: oauth2TypeConfig.AuthField, AuthValue: authValue, AuthType: credType}, nil
 }
 

@@ -103,6 +103,9 @@ func Find(ctx context.Context, db driver.Database, log *zap.Logger, auth_type st
 		return nil, errors.New("couldn't find credentials")
 	}
 
+	fmt.Println(cred)
+	fmt.Println(args)
+
 	if cred.Authorize(args...) {
 		return cred, nil
 	}
