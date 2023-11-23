@@ -141,8 +141,11 @@ export default {
         return;
       }
 
-      this.isLoading = true;
+      if (typeof this.instance.billing_plan === "string") {
+        this.instance.billing_plan = { uuid: this.instance.billing_plan };
+      }
 
+      this.isLoading = true;
       try {
         const namespaceUuid = this.namespaces.find(
           (n) => n.access.namespace == this.accountId
