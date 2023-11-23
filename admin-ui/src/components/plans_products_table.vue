@@ -471,11 +471,10 @@ function removeConfig() {
   );
   const result = {};
 
-  value.forEach((product, i) => {
+  value.forEach((product) => {
     const { key } = product;
 
     delete product.key;
-    product.sorter = i;
     result[key] = product;
   });
   changeProduct("products", result);
