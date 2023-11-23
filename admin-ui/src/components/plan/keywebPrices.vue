@@ -296,7 +296,12 @@ const setSellToAllAddons = (value) => {
 };
 
 const setSellToAllTariffs = (value) => {
-  tariffs.value = tariffs.value.map((os) => ({ ...os, sell: value }));
+  tariffs.value = tariffs.value.map((t) => {
+    t.sell = value;
+    t.os = t.os.map((os) => ({ ...os, sell: value }));
+    t.addons = t.addons.map((a) => ({ ...a, sell: value }));
+    return t;
+  });
 };
 
 const save = async () => {
@@ -330,9 +335,7 @@ const save = async () => {
           key: a.name + "$" + t.key,
           type: a.type,
         })),
-        os: enabledOs.map((a) => ({key:a.name + "$" + t.key,
-          type: a.type,
-        })),
+        os: enabledOs.map((a) => ({ key: a.name + "$" + t.key, type: a.type })),
         keywebId: t.id,
       },
     };
@@ -363,11 +366,11 @@ const setFee = () => {
     t.price = getMarginedValue(fee.value, t.basePrice);
     t.os = t.os.map((os) => ({
       ...os,
-      price: getMarginedValue(fee.value, os.price),
+      price: getMarginedValue(fee.value, os.basePrice),
     }));
-    t.addons = t.os.map((a) => ({
+    t.addons = t.addons.map((a) => ({
       ...a,
-      price: getMarginedValue(fee.value, a.price),
+      price: getMarginedValue(fee.value, a.basePrice),
     }));
   });
 };
