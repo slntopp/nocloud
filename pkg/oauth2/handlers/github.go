@@ -258,8 +258,7 @@ func (g *GithubOauthHandler) Setup(
 				Auth: &accounts.Credentials{
 					Type: "oauth2-github",
 					Data: []string{
-						field,
-						value,
+						token.AccessToken,
 					},
 				},
 				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
@@ -282,8 +281,7 @@ func (g *GithubOauthHandler) Setup(
 					Auth: &accounts.Credentials{
 						Type: "oauth2-github",
 						Data: []string{
-							field,
-							value,
+							token.AccessToken,
 						},
 					},
 				})
@@ -295,8 +293,7 @@ func (g *GithubOauthHandler) Setup(
 					Auth: &accounts.Credentials{
 						Type: "oauth2-github",
 						Data: []string{
-							field,
-							value,
+							token.AccessToken,
 						},
 					},
 					Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
