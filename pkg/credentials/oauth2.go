@@ -103,9 +103,6 @@ func NewOAuth2Credentials(data []string, credType string) (Credentials, error) {
 
 	authValue := bodyMap[oauth2TypeConfig.AuthField].(string)
 
-	fmt.Println("authValue", authValue)
-	fmt.Println("authField", oauth2TypeConfig.AuthField)
-
 	return &OAuth2Credentials{AuthField: oauth2TypeConfig.AuthField, AuthValue: authValue, AuthType: credType}, nil
 }
 
@@ -115,7 +112,73 @@ func (cred *OAuth2Credentials) Type() string {
 
 // Authorize method for StandardCredentials assumes that args consist of username and password stored at 0 and 1 accordingly
 func (cred *OAuth2Credentials) Authorize(args ...string) bool {
-	return cred.AuthField == args[0] && cred.AuthValue == args[1]
+	if len(args) != 1 {
+		return false
+	}
+	token := args[0]
+
+	oauth2Type := strings.Split(cred.AuthType, "-")
+	if len(oauth2Type) != 2 {
+		return false
+	}
+
+	oauth2TypeValue := oauth2Type[1]
+
+	oauth2TypeConfig := cfg[oauth2TypeValue]
+
+	var req *http.Request
+
+	if oauth2TypeValue == "github" {
+		request, err := http.NewRequest("GET", oauth2TypeConfig.UserInfoURL, nil)
+		if err != nil {
+			return false
+		}
+		request.Header.Set("Accept", "application/vnd.github+json")
+		request.Header.Set("Authorization", "Bearer "+token)
+		request.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+
+		req = request
+	} else {
+		request, err := http.NewRequest("GET", fmt.Sprintf("%s%s", oauth2TypeConfig.UserInfoURL, token), nil)
+		if err != nil {
+			return false
+		}
+		req = request
+	}
+
+	client := http.Client{}
+
+	response, err := client.Do(req)
+	if err != nil {
+		return false
+	}
+
+	var bodyMap = map[string]any{}
+
+	defer response.Body.Close()
+	all, err := io.ReadAll(response.Body)
+	if err != nil {
+		return false
+	}
+
+	if oauth2TypeValue == "bitrix" {
+		var responseBody = map[string]any{}
+		err := json.Unmarshal(all, &responseBody)
+		if err != nil {
+			return false
+		}
+
+		bodyMap = responseBody["result"].(map[string]any)
+	} else {
+		err := json.Unmarshal(all, &bodyMap)
+		if err != nil {
+			return false
+		}
+	}
+
+	authValue := bodyMap[oauth2TypeConfig.AuthField].(string)
+
+	return cred.AuthField == oauth2TypeConfig.AuthField && cred.AuthValue == authValue
 }
 
 func (cred *OAuth2Credentials) SetLogger(log *zap.Logger) {
