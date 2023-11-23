@@ -35,8 +35,6 @@ type OAuth2Credentials struct {
 }
 
 func NewOAuth2Credentials(data []string, credType string) (Credentials, error) {
-	fmt.Println(cfg)
-
 	if len(data) != 1 {
 		return nil, fmt.Errorf("some credentials data is missing, expected data length to be 2, got: %d", len(data))
 	}

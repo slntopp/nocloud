@@ -124,6 +124,10 @@ func MakeCredentials(credentials *accountspb.Credentials, log *zap.Logger) (Cred
 		return nil, errors.New("auth type is wrong")
 	}
 
+	if err != nil {
+		return nil, err
+	}
+
 	cred.SetLogger(log)
 
 	return cred, err
