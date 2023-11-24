@@ -18,7 +18,7 @@
     "core-js": "^3.32.1",
     "date-fns": "^2.29.3",
     "glob-parent": "^6.0.2",
-    "jodit-vue": "^2.6.0",
+    "jodit-vue": "^3.1.0",
     "js-cookie": "^3.0.5",
     "json-schema": "^0.4.0",
     "nocloud-ui": "^1.0.13",

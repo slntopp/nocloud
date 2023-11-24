@@ -1424,11 +1424,6 @@
   dependencies:
     "@types/node" "*"
 
-"@ungap/global-this@^0.4.4":
-  version "0.4.4"
-  resolved "https://registry.yarnpkg.com/@ungap/global-this/-/global-this-0.4.4.tgz#8a1b2cfcd3e26e079a847daba879308c924dd695"
-  integrity sha512-mHkm6FvepJECMNthFuIgpAEFmPOk71UyXuIxYfjytvFTnSDBIz7jmViO+LfHI/AjrazWije0PnSP3+/NlwzqtA==
-
 "@ungap/structured-clone@^1.2.0":
   version "1.2.0"
   resolved "https://registry.yarnpkg.com/@ungap/structured-clone/-/structured-clone-1.2.0.tgz#756641adb587851b5ccb3e095daf27ae581c8406"
@@ -4358,15 +4353,14 @@ jest-worker@^28.0.2:
     merge-stream "^2.0.0"
     supports-color "^8.0.0"
 
-jodit-vue@^2.6.0:
-  version "2.6.0"
-  resolved "https://registry.yarnpkg.com/jodit-vue/-/jodit-vue-2.6.0.tgz#3b2a255076e60f614e271e1b361a49623b6e1dc6"
-  integrity sha512-VTd/5UJe1T9qXM6Zi3252LJxjW/jX2Kfxw6inIIzOZ2eAXCqQKMN0toh/cgabMUSCQjBpXnjtOyqyvO1R2C7xQ==
+jodit-vue@^3.1.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/jodit-vue/-/jodit-vue-3.1.0.tgz#73e07592dac0059732e14533ff05330896666ae9"
+  integrity sha512-imK1/C2ruIi38S0KkTzi4Iw6xyw36bnIfL0tQSGIl12qx0mkC9rgNZQUPenfiVnQ9XoxFMKo9couNwc9FxIyxA==
   dependencies:
-    "@ungap/global-this" "^0.4.4"
-    jodit "^3.17.1"
+    jodit "^3.24.5"
 
-jodit@^3.17.1:
+jodit@^3.24.5:
   version "3.24.9"
   resolved "https://registry.yarnpkg.com/jodit/-/jodit-3.24.9.tgz#575a0218996f31003c230f81db0f056132dea9b5"
   integrity sha512-t2d73v7GFbGI08ZzdCTwrzi8ZtoOG4icGzD6IIN2e+ghlpUKYxcHZ/Rmy6/mc6055172z+tv7QSr9BcOz6IOFQ==
