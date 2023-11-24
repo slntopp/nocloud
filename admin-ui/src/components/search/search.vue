@@ -429,8 +429,8 @@ const resetFilter = () => {
 const resetAll = () => {
   setLayoutMode("preview");
   setCurrentLayout();
-  resetFilter();
   param.value = "";
+  setTimeout(() => (filter.value = {}));
 };
 
 const setCurrentFieldsKeys = () => {

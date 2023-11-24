@@ -49,7 +49,6 @@ func (g *GithubOauthHandler) Setup(
 	}
 
 	userInfoUrl := cfg.UserInfoURL
-	field := cfg.AuthField
 
 	router.Handle("/oauth/github/sign_in", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		state, redirect := r.FormValue("state"), r.FormValue("redirect")
@@ -162,8 +161,6 @@ func (g *GithubOauthHandler) Setup(
 
 		log.Debug("Info", zap.Any("info", userInfo))
 
-		value := userInfo[field].(string)
-
 		name := userInfo["name"].(string)
 
 		rootToken, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
@@ -200,8 +197,7 @@ func (g *GithubOauthHandler) Setup(
 				Auth: &accounts.Credentials{
 					Type: "oauth2-github",
 					Data: []string{
-						field,
-						value,
+						token.AccessToken,
 					},
 				},
 			})
@@ -258,8 +254,7 @@ func (g *GithubOauthHandler) Setup(
 				Auth: &accounts.Credentials{
 					Type: "oauth2-github",
 					Data: []string{
-						field,
-						value,
+						token.AccessToken,
 					},
 				},
 				Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
@@ -282,8 +277,7 @@ func (g *GithubOauthHandler) Setup(
 					Auth: &accounts.Credentials{
 						Type: "oauth2-github",
 						Data: []string{
-							field,
-							value,
+							token.AccessToken,
 						},
 					},
 				})
@@ -295,8 +289,7 @@ func (g *GithubOauthHandler) Setup(
 					Auth: &accounts.Credentials{
 						Type: "oauth2-github",
 						Data: []string{
-							field,
-							value,
+							token.AccessToken,
 						},
 					},
 					Exp: int32(time.Now().Unix() + int64(time.Hour.Seconds()*2160)),
