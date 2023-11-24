@@ -30,88 +30,89 @@
   </div>
 </template>
 
-<script>
+<script setup>
+import { computed, onMounted, ref } from "vue";
+import { useRoute } from "vue-router/composables";
+import { useStore } from "@/store";
 import config from "@/config.js";
+
 import AccountsInfo from "@/components/account/info.vue";
 import AccountsTemplate from "@/components/account/template.vue";
 import AccountsEvents from "@/components/account/events.vue";
 import AccountsHistory from "@/components/account/history.vue";
 import AccountReport from "@/components/account/reports.vue";
+import AccountChats from "@/components/account/chats.vue";
 
-export default {
-  name: "account-view",
-  components: {
-    AccountReport,
-    AccountsInfo,
-    AccountsTemplate,
-    AccountsEvents,
-    AccountsHistory,
-  },
-  data: () => ({ selectedTab: 0, navTitles: config.navTitles ?? {} }),
-  methods: {
-    navTitle(title) {
-      if (title && this.navTitles[title]) {
-        return this.navTitles[title];
-      }
+const store = useStore()
+const route = useRoute()
 
-      return title;
-    },
-  },
-  computed: {
-    account() {
-      const id = this.$route.params?.accountId;
+const selectedTab = ref(0)
+const navTitles = ref(config.navTitles ?? {})
 
-      return this.$store.getters["accounts/all"].find(
-        ({ uuid }) => uuid === id
-      );
-    },
-    accountTitle() {
-      return this?.account?.title ?? "not found";
-    },
-    accountLoading() {
-      return this.$store.getters["accounts/isLoading"];
-    },
-    accountId() {
-      return this.$route.params.accountId;
-    },
-    tabItems() {
-      return [
-        {
-          component: AccountsInfo,
-          title: "info",
-        },
-        {
-          component: AccountsEvents,
-          title: "events",
-        },
-        {
-          component: AccountsHistory,
-          title: "event log",
-        },
-        {
-          component: AccountReport,
-          title: "reports",
-        },
-        {
-          component: AccountsTemplate,
-          title: "template",
-        },
-      ];
-    },
+function navTitle(title) {
+  if (title && navTitles.value[title]) {
+    return navTitles.value[title];
+  }
+
+  return title;
+}
+
+const account = computed(() =>
+  store.getters["accounts/all"].find(({ uuid }) =>
+    uuid === route.params?.accountId
+  )
+)
+
+const accountTitle = computed(() => {
+  return account.value?.title ?? "not found";
+})
+
+const accountLoading = computed(() => {
+  return store.getters["accounts/isLoading"];
+})
+
+const tabItems = computed(() => [
+  {
+    component: AccountsInfo,
+    title: "info",
   },
-  created() {
-    this.$store.dispatch("accounts/fetchById", this.accountId).then(() => {
-      document.title = `${this.accountTitle} | NoCloud`;
-    });
+  {
+    component: AccountsEvents,
+    title: "events",
   },
-  mounted() {
-    this.$store.commit("reloadBtn/setCallback", {
-      type: "accounts/fetchById",
-      params: this.accountId,
-    });
-    this.selectedTab = this.$route.query.tab || 0;
+  {
+    component: AccountsHistory,
+    title: "event log",
   },
-};
+  {
+    component: AccountReport,
+    title: "reports",
+  },
+  {
+    component: AccountChats,
+    title: "chats",
+  },
+  {
+    component: AccountsTemplate,
+    title: "template",
+  },
+])
+
+onMounted(() => {
+  store.commit("reloadBtn/setCallback", {
+    type: "accounts/fetchById",
+    params: route.params?.accountId,
+  });
+  selectedTab.value = route.query.tab || 0;
+})
+
+store.dispatch("accounts/fetchById", route.params?.accountId).then(() => {
+  document.title = `${accountTitle.value} | NoCloud`;
+});
+</script>
+
+<script>
+export default { name: "account-view" }
 </script>
 
 <style scoped lang="scss">

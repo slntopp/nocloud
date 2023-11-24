@@ -18,6 +18,7 @@ package credentials
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/arangodb/go-driver"
@@ -82,13 +83,17 @@ func Find(ctx context.Context, db driver.Database, log *zap.Logger, auth_type st
 	var ok bool
 	switch {
 	case auth_type == "standard":
-		cred = &StandardCredentials{Username: args[0]}
+		cred, err = NewStandardCredentials(args)
 	case auth_type == "whmcs":
-		cred = &WHMCSCredentials{Email: args[0]}
+		cred, err = NewWHMCSCredentials(args)
 	case strings.HasPrefix(auth_type, "oauth2"):
-		cred = &OAuth2Credentials{AuthField: args[0], AuthValue: args[1], AuthType: auth_type}
+		cred, err = NewOAuth2Credentials(args, auth_type)
 	default:
 		return nil, errors.New("unknown auth type")
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("cannot create credentials, got: %s", err.Error())
 	}
 
 	cred.SetLogger(log)
@@ -117,6 +122,10 @@ func MakeCredentials(credentials *accountspb.Credentials, log *zap.Logger) (Cred
 		cred, err = NewOAuth2Credentials(credentials.Data, credentials.GetType())
 	default:
 		return nil, errors.New("auth type is wrong")
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	cred.SetLogger(log)

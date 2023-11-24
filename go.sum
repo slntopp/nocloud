@@ -205,8 +205,8 @@ github.com/sirupsen/logrus v1.4.2/go.mod h1:tLMulIdttU9McNUspp0xgXVQah82FyeX6Mwd
 github.com/sirupsen/logrus v1.8.1/go.mod h1:yWOB1SBYBC5VeMP7gHvWumXLIWorT60ONWic61uBYv0=
 github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ=
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
-github.com/slntopp/nocloud-proto v0.0.0-20231109140425-3db0c2428292 h1:mntRZO4rDGXWCVB2pkD9d0XfNEa1TSpESm4Pf17PC/E=
-github.com/slntopp/nocloud-proto v0.0.0-20231109140425-3db0c2428292/go.mod h1:qYtzXeMBwKJxH0P6BU7g00mCwAk9RqS3iS/EdBOIYgg=
+github.com/slntopp/nocloud-proto v0.0.0-20231117131026-4eabeef236f4 h1:ZHKPElCEb0zsQNXZtPv/OT9RRitT2bPKc9k7fsbeZIQ=
+github.com/slntopp/nocloud-proto v0.0.0-20231117131026-4eabeef236f4/go.mod h1:CwJXNOt1iMCIskt/QA0Toyu2kdCmzYqEJ47e/G7Rg7E=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/spf13/afero v1.10.0 h1:EaGW2JJh15aKOejeuJ+wpFSHnbd7GE6Wvp3TsNhb6LY=

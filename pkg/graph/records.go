@@ -219,6 +219,17 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 					to := val.(float64)
 					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
 				}
+			} else if key == "payment_date" {
+				values := value.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER record.meta["%s"] >= %f`, key, from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER record.meta["%s"] <= %f`, key, to)
+				}
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -321,6 +332,17 @@ func (ctrl *RecordsController) GetRecordsReportsCount(ctx context.Context, req *
 				if val, ok := values["to"]; ok {
 					to := val.(float64)
 					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
+				}
+			} else if key == "payment_date" {
+				values := value.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER record.meta["%s"] >= %f`, key, from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER record.meta["%s"] <= %f`, key, to)
 				}
 			} else {
 				values := value.GetListValue().AsSlice()
