@@ -11,7 +11,7 @@ const props = defineProps(["template", "small"]);
 const { template } = toRefs(props);
 
 const state = computed(() => {
-  return template.value.state.state;
+  return template.value.state?.state || 'ERROR';
 });
 
 const isDetached = computed(() => {
@@ -29,6 +29,7 @@ const chipColor = computed(() => {
     case "SUSPENDED":
       return "warning";
     case "UNKNOWN":
+    case "ERROR":
       return "error";
     case "OPERATION":
       return "yellow darken-2";
