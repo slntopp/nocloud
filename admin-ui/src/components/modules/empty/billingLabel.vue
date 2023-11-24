@@ -1,7 +1,7 @@
 <template>
   <billing-label
     :due-date="dueDate"
-    :tariff-price="tariffPrice"
+    :tariff-price="instancePrice"
     :template="template"
     :addons-price="{}"
     :account="account"
@@ -36,10 +36,19 @@ const dueDate = computed(() => {
   return formatSecondsToDate(+props.template?.data?.next_payment_date);
 });
 
-const tariffPrice = computed(() => {
+const instancePrice = computed(() => {
   const key = props.template.product;
+  const tarrif = props.template.billingPlan.products[key]?.price ?? 0;
 
-  return props.template.billingPlan.products[key]?.price ?? 0;
+  return (
+    tarrif +
+    props.template.config?.addons?.reduce(
+      (acc, a) =>
+        acc +
+        props.template.billingPlan?.resources?.find((r) => r.key === a)?.price,
+      0
+    )
+  );
 });
 </script>
 
