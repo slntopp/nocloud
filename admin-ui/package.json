@@ -21,7 +21,7 @@
     "jodit-vue": "^2.6.0",
     "js-cookie": "^3.0.5",
     "json-schema": "^0.4.0",
-    "nocloud-ui": "^1.0.7",
+    "nocloud-ui": "^1.0.13",
     "nocloudjsrest": "^1.5.14",
     "nth-check": "^2.1.1",
     "sass-loader": "^13.0.2",

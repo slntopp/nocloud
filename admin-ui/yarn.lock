@@ -4845,10 +4845,10 @@ no-case@^3.0.4:
     lower-case "^2.0.2"
     tslib "^2.0.3"
 
-nocloud-ui@^1.0.7:
-  version "1.0.7"
-  resolved "https://registry.npmjs.org/nocloud-ui/-/nocloud-ui-1.0.7.tgz"
-  integrity sha512-MMuuuBO7BO3HFq1LQqGQoJxGpbrdGgTJEzH0HtwUl0KeHPWaCXXhEytKZgP2HdJJL7CwzzC/Mt8/O4BLQ8lTmg==
+nocloud-ui@^1.0.13:
+  version "1.0.13"
+  resolved "https://registry.yarnpkg.com/nocloud-ui/-/nocloud-ui-1.0.13.tgz#c00ecd809ee0dbaf714795245432d255c509a265"
+  integrity sha512-Vqzq9SQMJppk9m82k0vmF5boao9JVKbBlJDSi79Ho+OADL0gAoX6Me0mWGBDaEZf767ZjnlVBU4QsiVPv1hLAg==
 
 nocloudjsrest@^1.5.14:
   version "1.5.14"
