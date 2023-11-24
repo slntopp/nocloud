@@ -178,10 +178,16 @@
               <plans-empty-addons-table
                 :addons="resources"
                 :product="item.key"
-                @update:addons="(value) => {
-                  changeResource({ key: 'resources', value })
-                  item.meta.addons = value.map(({ key }) => key) 
-                }"
+                :item="item"
+                @update:addons="
+                  (value) => {
+                    changeResource({ key: 'resources', value });
+                    item.meta.addons = value.map(({ key }) => key);
+                    item.meta.autoEnabled = value
+                      .filter(({ auto }) => !!auto)
+                      .map(({ key }) => key);
+                  }
+                "
               />
             </v-dialog>
           </template>
