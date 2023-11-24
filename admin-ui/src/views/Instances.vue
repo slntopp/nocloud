@@ -258,7 +258,7 @@ export default {
   created() {
     this.$store.dispatch("accounts/fetch", false);
     this.$store.dispatch("namespaces/fetch", false);
-    this.$store.dispatch("services/fetch", false);
+    this.$store.dispatch("services/fetch", { showDeleted: true });
     this.$store.dispatch("servicesProviders/fetch", false);
 
     const types = require.context(
@@ -279,6 +279,7 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
+      params: { showDeleted: true },
     });
     const icon = document.querySelector(".group-icon");
     icon.dispatchEvent(new Event("click"));
