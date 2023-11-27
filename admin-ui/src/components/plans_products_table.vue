@@ -178,10 +178,16 @@
               <plans-empty-addons-table
                 :addons="resources"
                 :product="item.key"
-                @update:addons="(value) => {
-                  changeResource({ key: 'resources', value })
-                  item.meta.addons = value.map(({ key }) => key) 
-                }"
+                :item="item"
+                @update:addons="
+                  (value) => {
+                    changeResource({ key: 'resources', value });
+                    item.meta.addons = value.map(({ key }) => key);
+                    item.meta.autoEnabled = value
+                      .filter(({ auto }) => !!auto)
+                      .map(({ key }) => key);
+                  }
+                "
               />
             </v-dialog>
           </template>
@@ -475,11 +481,10 @@ function removeConfig() {
   );
   const result = {};
 
-  value.forEach((product, i) => {
+  value.forEach((product) => {
     const { key } = product;
 
     delete product.key;
-    product.sorter = i;
     result[key] = product;
   });
   changeProduct("products", result);

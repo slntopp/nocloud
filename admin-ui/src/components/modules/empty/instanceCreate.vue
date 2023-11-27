@@ -36,7 +36,7 @@
             :items="products"
             item-text="key"
             item-value="key"
-            @change="setValue('product', $event)"
+            @change="changeProduct"
           >
             <template v-slot:item="{ item }">
               <div
@@ -49,6 +49,18 @@
             </template>
           </v-autocomplete>
         </v-col>
+
+        <v-col cols="6" v-if="addons.length">
+          <v-autocomplete
+            label="addons"
+            :value="instance.config.addons"
+            :items="addons"
+            multiple
+            item-text="title"
+            item-value="key"
+            @change="setValue('config.addons', $event)"
+          />
+        </v-col>
       </v-row>
     </v-card>
   </div>
@@ -58,12 +70,15 @@
 const getDefaultInstance = () => ({
   title: "instance",
   data: {},
+  config: {
+    addons: [],
+  },
   billing_plan: {},
 });
 export default {
   name: "instance-empty-create",
   props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
-  data: () => ({ bilingPlan: null, products: [] }),
+  data: () => ({ bilingPlan: null, products: [], product: [] }),
   mounted() {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
@@ -82,13 +97,32 @@ export default {
       }
       this.setValue("billing_plan", this.bilingPlan);
     },
+    changeProduct(val) {
+      console.log(val);
+      this.product = val;
+      this.setValue("product", this.product);
+    },
     setValue(key, value) {
       this.$emit("set-value", { key, value });
+    },
+  },
+  computed: {
+    addons() {
+      return this.bilingPlan?.products[this.product]?.meta.addons || [];
+    },
+    autoEnabled() {
+      return this.bilingPlan?.products[this.product]?.meta.autoEnabled || [];
     },
   },
   watch: {
     "plans.list"() {
       this.changeBilling(this.instance.billing_plan);
+    },
+    autoEnabled: {
+      handler() {
+        this.setValue("config.addons", this.autoEnabled);
+      },
+      deep: true,
     },
   },
 };

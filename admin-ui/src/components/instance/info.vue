@@ -36,9 +36,6 @@
       <v-col>
         <v-text-field readonly label="email" :value="account?.data?.email" />
       </v-col>
-      <v-col v-if="template.state?.meta.networking?.public">
-        <instance-ip-menu :item="template" />
-      </v-col>
       <v-col>
         <v-text-field
           readonly
@@ -144,7 +141,6 @@ import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import instanceActions from "@/components/instance/controls.vue";
 import JsonTextarea from "@/components/JsonTextarea.vue";
-import instanceIpMenu from "../ui/instanceIpMenu.vue";
 import { mapGetters } from "vuex";
 import RouteTextField from "@/components/ui/routeTextField.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
@@ -159,7 +155,6 @@ export default {
     nocloudTable,
     instanceActions,
     JsonTextarea,
-    instanceIpMenu,
   },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
@@ -200,7 +195,7 @@ export default {
       } else {
         this.copyInstance[key] = value;
       }
-      this.copyInstance={...this.copyInstance}
+      this.copyInstance = { ...this.copyInstance };
     },
   },
   computed: {

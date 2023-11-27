@@ -510,27 +510,7 @@ export default {
       return hidden.some((h) => this.plan.type.includes(h));
     },
     filteredProducts() {
-      if (!this.searchParam) {
-        return this.plan.products;
-      }
-
-      const filtered = {};
-      Object.keys(this.plan.products).forEach((key) => {
-        if (key === this.searchParam) {
-          filtered[key] = this.plan.products[key];
-          return;
-        }
-
-        if (
-          this.plan.products[key]?.title
-            .toLowerCase()
-            .startsWith(this.searchParam)
-        ) {
-          filtered[key] = this.plan.products[key];
-        }
-      });
-
-      return filtered;
+      return this.plan.products;
     },
     downloadedFileName() {
       return this.plan.title

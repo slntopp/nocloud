@@ -33,7 +33,6 @@
     />
 
     <reports-table
-      v-if="!isInitLoading"
       table-name="transaction-table"
       :filters="filters"
       :duration="duration"
@@ -55,15 +54,11 @@ export default {
   components: { reportsTable, apexcharts },
   mixins: [snackbar, search("transactions")],
   data: () => ({
-    selectedAccounts: [],
-    selectedInstances: [],
-    selectedTypes: [],
     types: [],
     resources: [],
     products: [],
     series: [],
     chartLoading: false,
-    isInitLoading: true,
     chartOptions: {
       chart: { height: 250, type: "line" },
       dataLabels: { enabled: false },
@@ -146,21 +141,11 @@ export default {
       this.$store.dispatch("namespaces/fetch");
     },
   },
-  created() {
-    if (this.$route.query.account) {
-      this.selectedAccounts = [this.$route.query.account];
-    } else {
-      this.selectedAccounts = [];
-    }
-    this.isInitLoading = false;
-  },
   mounted() {
     this.fetchData();
     this.$store.commit("reloadBtn/setCallback", {
       event: async () => {
-        this.isInitLoading = true;
         this.fetchData();
-        setTimeout(() => (this.isInitLoading = false), 0);
       },
     });
   },
@@ -247,9 +232,6 @@ export default {
       let labels = [`0 ${this.defaultCurrency}`];
       let values = [0];
       let balance = 0;
-      if (!this.selectedAccounts) {
-        return { labels, values };
-      }
       this.transactions?.forEach((el, i, arr) => {
         values.push((balance -= el.total));
         labels.push(`${balance.toFixed(2)} ${this.defaultCurrency}`);
@@ -310,14 +292,6 @@ export default {
     },
     searchFields() {
       this.$store.commit("appSearch/setFields", this.searchFields);
-    },
-    selectedAccounts: {
-      handler() {
-        this.selectedInstances = this.selectedInstances.filter((si) =>
-          this.instances.find((i) => i.uuid === si)
-        );
-      },
-      deep: true,
     },
   },
 };
