@@ -92,7 +92,7 @@ const currency = computed(() => ({
 }));
 
 const accountCurrency = computed(() => {
-  return account.value.currency;
+  return account.value?.currency;
 });
 
 const price = computed(() => {
@@ -103,7 +103,7 @@ const price = computed(() => {
 
 const isRenewDisabled = computed(() => {
   return (
-    (account.value.balance || 0) < price.value || template.value.data.blocked
+    (account.value?.balance || 0) < price.value || template.value.data.blocked
   );
 });
 
@@ -124,7 +124,7 @@ function sendRenew() {
 }
 
 const addonsTemplate = Object.entries(addonsPrice.value).map(
-  ([key, value]) => `<li>${key}: ${value} ${currency.value.code}</li>`
+  ([key, value]) => `<li>${key}: ${value} ${currency.value?.code}</li>`
 );
 
 const isLoading = computed(() => store.getters["actions/isSendActionLoading"]);
@@ -133,7 +133,7 @@ const renewTemplate = `
       <div style="font-size: 16px; white-space: initial">
         <div>Manual renewal:</div>
         <span style="font-weight: 700">Tariff price: </span>
-        ${tariffPrice.value} ${currency.value.code}
+        ${tariffPrice.value} ${currency.value?.code}
         ${
           addonsPrice.value
             ? `
@@ -149,7 +149,7 @@ const renewTemplate = `
 
         <div>
           <span style="font-weight: 700">Total: </span>
-          ${price.value} ${currency.value.code}
+          ${price.value} ${currency.value?.code}
         </div>
       </div>
     `.trim();
