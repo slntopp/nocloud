@@ -73,6 +73,9 @@ export default {
           }
 
           try {
+            if (response.state) {
+              response.state = { state: response.state.state };
+            }
             this.$store.commit("services/updateInstance", {
               value: response,
               uuid: this.instance.service,
