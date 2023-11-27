@@ -118,6 +118,10 @@ export default {
           component: () => import("@/components/instance/reports.vue"),
         },
         {
+          title: "Helpdesk",
+          component: () => import("@/components/instance/chats.vue"),
+        },
+        {
           title: "Template",
           component: () => import("@/components/instance/template.vue"),
         },
