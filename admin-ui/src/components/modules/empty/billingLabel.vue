@@ -42,12 +42,12 @@ const instancePrice = computed(() => {
 
   return (
     tarrif +
-    props.template.config?.addons?.reduce(
+    (props.template.config?.addons?.reduce(
       (acc, a) =>
         acc +
         props.template.billingPlan?.resources?.find((r) => r.key === a)?.price,
       0
-    )
+    ) || 0)
   );
 });
 </script>
