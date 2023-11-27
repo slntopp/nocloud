@@ -24,10 +24,10 @@ const store = useStore();
 
 const account = computed(() => {
   const namespace = store.getters["namespaces/all"]?.find(
-    (n) => n.uuid === template.value.access.namespace
+      (n) => n.uuid === template.value?.access.namespace
   );
   const account = store.getters["accounts/all"].find(
-    (a) => a.uuid === namespace.access.namespace
+      (a) => a.uuid === namespace?.access.namespace
   );
   return account;
 });
