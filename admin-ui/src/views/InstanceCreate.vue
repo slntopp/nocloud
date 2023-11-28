@@ -265,7 +265,7 @@ export default {
       return igs;
     },
     planRules() {
-      return this.plansVisible ? this.rules.req : [];
+      return this.rules.req;
     },
     isDataLoading() {
       return (
