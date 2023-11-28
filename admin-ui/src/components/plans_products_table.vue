@@ -168,28 +168,20 @@
           </template>
 
           <template v-slot:[`item.resources`]="{ item }">
-            <v-dialog width="90vw">
-              <template v-slot:activator="{ on, attrs }">
-                <v-btn icon v-bind="attrs" v-on="on">
-                  <v-icon> mdi-menu-open </v-icon>
-                </v-btn>
-              </template>
-
-              <plans-empty-addons-table
-                :addons="resources"
-                :product="item.key"
-                :item="item"
-                @update:addons="
-                  (value) => {
-                    changeResource({ key: 'resources', value });
-                    item.meta.addons = value.map(({ key }) => key);
-                    item.meta.autoEnabled = value
-                      .filter(({ auto }) => !!auto)
-                      .map(({ key }) => key);
-                  }
-                "
-              />
-            </v-dialog>
+            <plans-empty-addons-table
+              :addons="resources"
+              :product="item.key"
+              :item="item"
+              @update:addons="
+                (value) => {
+                  changeResource({ key: 'resources', value });
+                  item.meta.addons = value.map(({ key }) => key);
+                  item.meta.autoEnabled = value
+                    .filter(({ auto }) => !!auto)
+                    .map(({ key }) => key);
+                }
+              "
+            />
           </template>
 
           <template v-slot:expanded-item="{ headers, item }">
@@ -260,7 +252,7 @@ import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
 import plansResourcesTable from "@/components/plans_resources_table.vue";
 import plansEmptyTable from "@/components/plans_empty_table.vue";
-import plansEmptyAddonsTable from "@/components/plans_empty_addons_table.vue";
+import plansEmptyAddonsTable from "@/components/plans_empty_addons_table_dialog.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { getFullDate } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";

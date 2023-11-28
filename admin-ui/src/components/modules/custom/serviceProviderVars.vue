@@ -1,5 +1,5 @@
 <template>
-  <div class="pa-4">
+  <div class="pa-10">
     <v-row v-if="!editing">
       <v-col v-for="(variable, varTitle) in template.vars" :key="varTitle">
         {{ varTitle.replaceAll("_", " ") }}

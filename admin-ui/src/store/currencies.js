@@ -77,11 +77,9 @@ export default {
           .then((response) => {
             commit("setRates", response.rates);
             commit("setDefault", response.rates);
-            console.log("resolve", resolve);
             resolve(response);
           })
           .catch((error) => {
-            console.log("reject", error);
             reject(error);
           })
           .finally(() => {
