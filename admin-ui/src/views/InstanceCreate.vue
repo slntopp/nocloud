@@ -80,7 +80,7 @@
         :is="templates[type] ?? templates.custom"
       />
       <v-row class="mx-5" justify="end">
-        <v-btn @click="save">Create</v-btn>
+        <v-btn :loading="isCreateLoading" @click="save">Create</v-btn>
       </v-row>
     </v-container>
   </v-form>
@@ -95,6 +95,7 @@ export default {
   name: "instance-create",
   data: () => ({
     isEdit: false,
+    isCreateLoading:false,
 
     typeItems: [],
     templates: [],
@@ -145,7 +146,7 @@ export default {
         this.instance.billing_plan = { uuid: this.instance.billing_plan };
       }
 
-      this.isLoading = true;
+      this.isCreateLoading = true;
       try {
         const namespaceUuid = this.namespaces.find(
           (n) => n.access.namespace == this.accountId
@@ -217,7 +218,7 @@ export default {
         };
         this.showSnackbarError(opts);
       } finally {
-        this.isLoading = false;
+        this.isCreateLoading = false;
       }
     },
   },
