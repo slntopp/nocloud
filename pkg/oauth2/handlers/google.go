@@ -153,6 +153,9 @@ func (g *GoogleOauthHandler) Setup(
 		log.Debug("User info", zap.Any("User info", userInfo))
 
 		name := userInfo["name"].(string)
+		givenName := userInfo["given_name"].(string)
+		familyName := userInfo["family_name"].(string)
+		mail := userInfo["email"].(string)
 
 		rootToken, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 		if err != nil {
@@ -259,6 +262,9 @@ func (g *GoogleOauthHandler) Setup(
 				data := &structpb.Struct{
 					Fields: map[string]*structpb.Value{
 						"oauth_types": listValue,
+						"name":        structpb.NewStringValue(givenName),
+						"lastname":    structpb.NewStringValue(familyName),
+						"email":       structpb.NewStringValue(mail),
 					},
 				}
 				_, err := regClient.Create(ctx, &accounts.CreateRequest{

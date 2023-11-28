@@ -268,7 +268,7 @@ export function getSecondsByDays(days) {
 }
 
 export function getState(item) {
-  if (!item.state) return "UNKNOWN";
+  if (!item.state) return "ERROR";
   const state =
     item.billingPlan.type === "ione"
       ? item.state.meta?.lcm_state_str

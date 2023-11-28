@@ -35,29 +35,43 @@
       </v-btn>
     </confirm-dialog>
 
-    <confirm-dialog
-      v-if="isBillingChange && !isDeleted"
-      text="Billing plan has changed, a new plan will be created"
-      @confirm="save"
-    >
-      <v-btn
-        class="ma-1"
-        :loading="isSaveLoading"
-        :color="isChanged ? 'primary' : ''"
-      >
-        Save
-      </v-btn>
-    </confirm-dialog>
-    <v-btn
-      v-else
-      :disabled="isDeleted"
-      @click="save"
-      class="ma-1"
-      :loading="isSaveLoading"
-      :color="isChanged ? 'primary' : ''"
-    >
-      Save
-    </v-btn>
+    <v-dialog persistent v-model="isBillingDialog" max-width="600px">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn
+          v-bind="isBillingChange && !isDeleted ? attrs : undefined"
+          v-on="isBillingChange && !isDeleted ? on : undefined"
+          :disabled="isDeleted"
+          @click="onSaveClick"
+          class="ma-1"
+          :loading="isSaveLoading"
+          :color="isChanged ? 'primary' : ''"
+        >
+          Save
+        </v-btn>
+      </template>
+      <v-card color="background-light">
+        <v-card-title
+          >Do you really want to change your current price model?</v-card-title
+        >
+        <v-card-subtitle class="mt-1"
+          >You can also create a new price model based on the current
+          one.</v-card-subtitle
+        >
+        <v-card-actions class="d-flex justify-end">
+          <v-btn
+            class="mr-2"
+            :loading="isLoading"
+            @click="isBillingDialog = false"
+          >
+            Close
+          </v-btn>
+          <v-btn class="mr-2" :loading="isLoading" @click="save(true)">
+            Create
+          </v-btn>
+          <v-btn :loading="isLoading" @click="save(false)"> Edit </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 <script>
@@ -83,6 +97,7 @@ export default {
     isSaveLoading: false,
     isLockLoading: false,
     runningActionName: "",
+    isBillingDialog: false,
   }),
   methods: {
     ...mapActions("actions", ["sendVmAction"]),
@@ -168,7 +183,16 @@ export default {
           this.isSaveLoading = false;
         });
     },
-    async save() {
+    onSaveClick() {
+      if (!this.isChanged) {
+        return;
+      }
+
+      if (!this.isBillingChange && !this.isDeleted) {
+        this.save();
+      }
+    },
+    async save(createNewPlan = false) {
       const tempService = JSON.parse(JSON.stringify(this.service));
       const instance = JSON.parse(JSON.stringify(this.copyTemplate));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
@@ -179,7 +203,8 @@ export default {
       ].instances.findIndex((i) => i.uuid === this.template.uuid);
 
       tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
-      if (this.isBillingChange) {
+
+      if (this.isBillingChange && createNewPlan) {
         const title = this.getPlanTitle(this.template);
         const billingPlan = {
           ...this.copyTemplate.billingPlan,
@@ -205,6 +230,36 @@ export default {
             message:
               e.response?.data?.message ||
               "Error during create individual plan",
+          });
+        }
+      } else if (this.isBillingChange) {
+        const title = this.getPlanTitle(this.template);
+        const ogPlan = this.$store.getters["plans/all"].find(
+          (p) => p.uuid === this.copyTemplate.billingPlan.uuid
+        );
+        const updatedPlan = {
+          ...ogPlan,
+          ...this.copyTemplate.billingPlan,
+          products: {
+            ...ogPlan.products,
+            ...this.copyTemplate.billingPlan.products,
+          },
+          resources: [
+            ...ogPlan.resources,
+            ...this.copyTemplate.billingPlan.resources,
+          ],
+          title,
+        };
+
+        this.isSaveLoading = true;
+        try {
+          const data = await api.plans.update(updatedPlan.uuid, updatedPlan);
+          tempService.instancesGroups[igIndex].instances[
+            instanceIndex
+          ].billingPlan = data;
+        } catch (e) {
+          this.$store.commit("snackbar/showSnackbarError", {
+            message: e.response?.data?.message || "Error during update plan",
           });
         }
       }

@@ -171,6 +171,7 @@ func (g *BitrixOauthHandler) Setup(
 		name := user["NAME"].(string)
 		last_name := user["LAST_NAME"].(string)
 		id := user["ID"].(string)
+		mail := user["EMAIL"].(string)
 
 		rootToken, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
 		if err != nil {
@@ -280,6 +281,9 @@ func (g *BitrixOauthHandler) Setup(
 					Fields: map[string]*structpb.Value{
 						"oauth_types": listValue,
 						"bitrix24":    structpb.NewStringValue(id),
+						"name":        structpb.NewStringValue(name),
+						"lastname":    structpb.NewStringValue(last_name),
+						"email":       structpb.NewStringValue(mail),
 					},
 				}
 				_, err := regClient.Create(ctx, &accounts.CreateRequest{

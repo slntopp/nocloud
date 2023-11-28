@@ -598,7 +598,7 @@ export default {
         },
         {
           key: "state",
-          items: ["RUNNING", "STOPPED", "LCM_INIT", "SUSPENDED", "UNKNOWN","DELETED","ERROR"],
+          items: ["RUNNING", "STOPPED", "LCM_INIT","PENDING","SUSPENDED", "UNKNOWN","DELETED","ERROR"],
           type: "select",
           title: "State",
         },
