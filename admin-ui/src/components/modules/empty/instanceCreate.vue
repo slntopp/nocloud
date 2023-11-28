@@ -31,6 +31,7 @@
         <v-col cols="6">
           <v-autocomplete
             label="product"
+            :rules="requiredRule"
             :value="instance.product"
             v-if="products.length > 0"
             :items="products"
@@ -78,7 +79,7 @@ const getDefaultInstance = () => ({
 export default {
   name: "instance-empty-create",
   props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
-  data: () => ({ bilingPlan: null, products: [], product: [] }),
+  data: () => ({ bilingPlan: null, products: [], product: [] ,requiredRule:[(val)=>!!val || 'Field required']}),
   mounted() {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
