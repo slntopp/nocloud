@@ -44,6 +44,10 @@
             />
           </template>
 
+          <template v-slot:[`item.title`]="{ item }">
+            <v-text-field dense v-model="item.title" :rules="generalRule" />
+          </template>
+
           <template v-slot:[`item.price`]="{ item }">
             <v-text-field
               dense
@@ -116,6 +120,7 @@ const expanded = ref([]);
 
 const addonsHeaders = [
   { text: "Key", value: "key" },
+  { text: "Title", value: "title" },
   { text: "Price", value: "price" },
   { text: "Auto", value: "auto" },
   { text: "Period", value: "period", width: 400 },
