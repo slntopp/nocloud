@@ -12,7 +12,6 @@ export default {
       state.fields = fields;
     },
     pushFields(state, fields) {
-      console.log(state.fields)
       state.fields=[...state.fields,...fields]
     },
     setCurrentLayout(state, name) {

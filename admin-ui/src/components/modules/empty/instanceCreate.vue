@@ -98,7 +98,6 @@ export default {
       this.setValue("billing_plan", this.bilingPlan);
     },
     changeProduct(val) {
-      console.log(val);
       this.product = val;
       this.setValue("product", this.product);
     },

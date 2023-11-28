@@ -248,7 +248,6 @@ export default {
       this.addons[planCode] = newAddons;
     },
     setValue(path, val) {
-      console.log(path, val);
       const data = JSON.parse(JSON.stringify(this.instance));
 
       if (path.includes("billing_plan")) {
