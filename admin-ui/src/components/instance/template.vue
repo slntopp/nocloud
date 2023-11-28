@@ -87,7 +87,6 @@ export default {
         this.ObjectDisplay === "JSON"
           ? JSON.parse(this.tree)
           : yaml.parse(this.tree);
-          console.log(instance);
 
       const service = this.$store.getters["services/all"].find(
         ({ uuid }) => uuid === this.template.service
