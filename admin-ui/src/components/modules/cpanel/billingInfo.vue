@@ -6,7 +6,6 @@
           readonly
           label="price model"
           :value="template.billingPlan.title"
-          @click:append="priceModelDialog = true"
           append-icon="mdi-pencil"
         />
       </v-col>
@@ -15,11 +14,9 @@
           readonly
           label="Product name"
           :value="
-            template.billingPlan.products[template.product]?.title ||
-            template.product
+            template.billingPlan.products[template.resources.plan]?.title ||
+            template.resources.plan
           "
-          append-icon="mdi-pencil"
-          @click:append="changeTariffDialog = true"
         />
       </v-col>
       <v-col>
