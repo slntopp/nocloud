@@ -171,10 +171,20 @@
           one.</v-card-subtitle
         >
         <v-card-actions>
-          <v-btn class="mr-2" :loading="isLoading" @click="tryToSend('create')">
+          <v-btn
+            class="mr-2"
+            :loading="isLoading && savePlanAction === 'create'"
+            :disabled="isLoading && savePlanAction !== 'create'"
+            @click="tryToSend('create')"
+          >
             Create
           </v-btn>
-          <v-btn v-if="item" :loading="isLoading" @click="tryToSend('edit')">
+          <v-btn
+            v-if="item"
+            :loading="isLoading && savePlanAction === 'edit'"
+            :disabled="isLoading && savePlanAction !== 'edit'"
+            @click="tryToSend('edit')"
+          >
             Edit
           </v-btn>
         </v-card-actions>
@@ -224,6 +234,7 @@ export default {
     isValid: false,
     isFeeValid: true,
     isLoading: false,
+    savePlanAction: "",
     isJson: true,
   }),
   methods: {
@@ -318,6 +329,7 @@ export default {
       }
 
       this.isLoading = true;
+      this.savePlanAction = action;
       this.plan.title = checkName(this.plan, this.plans);
 
       const id = this.$route.params?.planId;
@@ -344,6 +356,7 @@ export default {
         })
         .finally(() => {
           this.isLoading = false;
+          this.savePlanAction = "";
         });
     },
     checkPeriods(periods) {
