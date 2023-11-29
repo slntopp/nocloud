@@ -6,22 +6,20 @@
           readonly
           :label="`Provider API ${ovhType}Name`"
           :value="template.data[ovhType + 'Name']"
+          @click:append="addToClipboard(template.data[ovhType + 'Name'])" append-icon="mdi-content-copy"
         />
       </v-col>
       <v-col>
         <instance-ip-menu :item="template" />
       </v-col>
       <v-col>
-        <v-text-field readonly :value="os" label="OS login" />
+        <v-text-field readonly :value="os" label="OS login" @click:append="addToClipboard(os)" append-icon="mdi-content-copy" />
       </v-col>
       <v-col>
-        <v-text-field
+        <password-text-field
           readonly
-          label="Pass"
-          :type="isVisible ? 'text' : 'password'"
           :value="template.state.meta.password"
-          :append-icon="isVisible ? 'mdi-eye' : 'mdi-eye-off'"
-          @click:append="isVisible = !isVisible"
+          copy
         />
       </v-col>
     </v-row>
@@ -61,12 +59,12 @@
 import { toRefs, defineProps, ref, computed, onMounted } from "vue";
 import InstanceIpMenu from "@/components/ui/instanceIpMenu.vue";
 import api from "@/api";
+import {addToClipboard} from "@/functions";
+import PasswordTextField from "@/components/ui/passwordTextField.vue";
 
 const props = defineProps(["template"]);
 
 const { template } = toRefs(props);
-
-const isVisible = ref(false);
 
 const os = computed(() => {
   return template.value.config.configuration[
