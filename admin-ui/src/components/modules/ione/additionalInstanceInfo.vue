@@ -15,11 +15,12 @@
         <instance-ip-menu type="private" :item="template" />
       </v-col>
       <v-col>
-        <v-text-field readonly :value="os" label="OS login" />
+        <v-text-field readonly :value="os" label="OS login" append-icon="mdi-content-copy" @click:append="addToClipboard(os)" />
       </v-col>
       <v-col>
         <password-text-field
           :value="template.config.password"
+          copy
         />
       </v-col>
     </v-row>
@@ -59,6 +60,7 @@
 import { toRefs, defineProps, computed } from "vue";
 import InstanceIpMenu from "@/components/ui/instanceIpMenu.vue";
 import PasswordTextField from "@/components/ui/passwordTextField.vue";
+import {addToClipboard} from "@/functions";
 
 const props = defineProps(["template", "sp"]);
 
