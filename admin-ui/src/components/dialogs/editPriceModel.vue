@@ -149,13 +149,10 @@ const originalProduct = computed(() => {
         template.value.config.duration + " " + template.value.config.planCode
       );
     }
-    case "ione":
-    case "empty": {
+    default: {
       return template.value.product;
     }
   }
-
-  return null;
 });
 
 const availablePlans = computed(() => {
@@ -186,13 +183,12 @@ const instanceTariffPrice = computed(() => {
         template.value.config.duration + " " + template.value.config.planCode
       ]?.price;
     }
-    case "ione":
-    case "empty": {
-      return template.value.billingPlan.products[template.value.product]?.price;
+    default: {
+      return (
+        template.value.billingPlan.products[template.value.product]?.price || 0
+      );
     }
   }
-
-  return 0;
 });
 
 const isChangeBtnDisabled = computed(() => {
@@ -265,7 +261,7 @@ const cancel = () => {
 
 const setDefaultPlan = () => {
   setPlan();
-  setProduct();
+  setProduct()
   selectedPeriod.value = billingPeriods.value[originalProduct.value];
 };
 
@@ -279,18 +275,12 @@ const setProduct = () => {
   if (template.value.type === "ovh") {
     product.value =
       template.value.config.duration + " " + template.value.config.planCode;
-  } else if (
-    template.value.type === "ione" ||
-    template.value.type === "empty"
-  ) {
+  } else {
     product.value = template.value.product;
   }
 };
 
 watch(plans, setPlan);
-watch(plan, () => {
-  selectedPeriod.value = uniqueBillingPeriods.value[0];
-});
 </script>
 
 <style scoped></style>

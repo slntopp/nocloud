@@ -378,6 +378,33 @@ export default {
             disabled: this.emptyActions.suspend,
           },
         ],
+        keyweb: [
+          {
+            action: "start",
+            title: "start",
+            disabled: !this.keywebActions.start,
+          },
+          {
+            action: "stop",
+            title: "stop",
+            disabled: !this.keywebActions.stop,
+          },
+          {
+            action: "reboot",
+            title: "reboot",
+            disabled: !this.keywebActions.reboot,
+          },
+          {
+            action: "suspend",
+            title: "suspend",
+            disabled: !this.keywebActions.suspend,
+          },
+          {
+            action: "unsuspend",
+            title: "unsuspend",
+            disabled: !this.keywebActions.unsuspend,
+          },
+        ],
         opensrs: [{ action: "dns" }],
         cpanel: [{ action: "session" }],
       };
@@ -463,6 +490,43 @@ export default {
         start: this.template.state.state === "RUNNING",
       };
     },
+    keywebActions() {
+      const state = this.template?.state.state;
+
+      switch (state) {
+        case "RUNNING": {
+          return {
+            stop: true,
+            reboot: true,
+            suspend: true,
+          };
+        }
+        case "STOPPED": {
+          return {
+            start: true,
+            reboot: true,
+            suspend: true,
+          };
+        }
+        case "DELETED":
+        case "PENDING":
+        case "OPERATION": {
+          return {};
+        }
+        case "SUSPENDED": {
+          return {
+            unsuspend: true,
+          };
+        }
+        default: {
+          return {
+            stop: true,
+            reboot: true,
+            suspend: true,
+          };
+        }
+      }
+    },
     getPlanTitle() {
       const type = this.template.type.includes("ovh")
         ? "ovh"
@@ -471,6 +535,7 @@ export default {
       switch (type) {
         case "empty":
         case "openai":
+        case "keyweb":
         case "ione": {
           return (item) => {
             let planTitle = `IND_${this.sp.title}_${
@@ -528,6 +593,8 @@ export default {
           );
         }
         case "ione":
+        case "openai":
+        case "keyweb":
         case "empty": {
           return this.template.product;
         }
