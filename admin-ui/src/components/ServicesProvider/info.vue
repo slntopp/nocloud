@@ -125,7 +125,6 @@
             table-name="service-providers"
             :items="relatedPlans"
             :headers="headers"
-            :loading="isPlanLoading"
             :footer-error="fetchError"
             v-model="selected"
           />
