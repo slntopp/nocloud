@@ -10,7 +10,7 @@
 </template>
 
 <script setup>
-import { computed, ref, toRefs } from "vue";
+import { computed,  toRefs } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import { useStore } from "@/store";
 import billingLabel from "@/components/ui/billingLabel.vue";
@@ -32,8 +32,8 @@ const account = computed(() => {
   return account;
 });
 
-const tariffPrice = ref(
-  template.value.billingPlan.products[template.value.product]?.price ?? 0
+const tariffPrice = computed(
+    ()=>template.value.billingPlan.products[template.value.resources.plan]?.price ?? 0
 );
 
 const dueDate = computed(() => {

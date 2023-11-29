@@ -252,7 +252,7 @@ const getBillingItems = () => {
   const items = [];
   const product = billingPlan.value.products[template.value.product];
   items.push({
-    name: template.value.product,
+    name: product.title,
     price: product?.price,
     path: `billingPlan.products.${template.value.product}.price`,
     kind: product?.kind,
