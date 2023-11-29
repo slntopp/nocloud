@@ -113,6 +113,7 @@ export default {
   methods: {
     setValue(key, value) {
       if (key === "resources.plan") {
+        this.setValue("product", value);
         const product = this.products.find((p) => p.key === value);
         Object.keys(product.resources || {}).forEach((key) => {
           this.setValue("resources." + key, product.resources[key]);
