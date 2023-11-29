@@ -22,7 +22,7 @@ const selected = ref([]);
 
 const showcases = computed(() =>
   store.getters["showcases/all"].filter((sh) =>
-    sh.servicesProviders?.includes(template.value.uuid)
+    sh.items.find((i) => i.servicesProvider === template.value.uuid)
   )
 );
 const isLoading = computed(() => store.getters["showcases/isLoading"]);

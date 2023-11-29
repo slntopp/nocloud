@@ -117,7 +117,6 @@ const fetchRegions = async () => {
 };
 
 const setLocations = (locations) => {
-  console.log(locations);
   template.value.locations = locations;
 };
 </script>

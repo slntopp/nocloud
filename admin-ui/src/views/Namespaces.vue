@@ -220,7 +220,6 @@ export default {
         Promise.all(linkPromices)
           .then((res) => {
             if (res.every((el) => el.result)) {
-              console.log("all ok");
               this.linkAccount.modalVisible = false;
 
               this.snackbar.message = "Successfully.";

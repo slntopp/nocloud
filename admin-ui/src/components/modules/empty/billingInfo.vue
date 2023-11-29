@@ -61,7 +61,7 @@
             <v-dialog max-width="60%">
               <template v-slot:activator="{ on, attrs }">
                 <v-btn class="ml-2" color="primary" v-bind="attrs" v-on="on"
-                  >Change addons</v-btn
+                  >addons</v-btn
                 >
               </template>
               <v-card>

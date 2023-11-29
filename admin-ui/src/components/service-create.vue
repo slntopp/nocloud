@@ -404,7 +404,6 @@ export default {
       } else if (this.selectedFileType === "YAML") {
         data = await readYAMLFile(file);
       }
-      console.log(data);
 
       this.setService(data);
     },

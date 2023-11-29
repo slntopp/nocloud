@@ -77,8 +77,14 @@
                           : undefined,
                     }"
                     v-if="isLayoutModePreview || isLayoutModeAdd"
-                    >{{ layout.title }}</v-list-item-title
                   >
+                    <div class="d-flex justify-space-between">
+                      <span>
+                        {{ layout.title }}
+                      </span>
+                      <v-icon v-if="isPinned(layout)" small>mdi-pin</v-icon>
+                    </div>
+                  </v-list-item-title>
                   <v-text-field
                     v-else-if="isLayoutModeEdit"
                     v-model="layout.title"
@@ -86,6 +92,11 @@
                     class="pa-0 ma-0"
                   >
                     <template v-slot:append>
+                      <v-btn @click="setPinned(layout.id)" small icon>
+                        <v-icon small>{{
+                          isPinned(layout) ? "mdi-pin-off" : "mdi-pin"
+                        }}</v-icon>
+                      </v-btn>
                       <v-btn @click="deleteLayout(layout.id)" small icon>
                         <v-icon small>mdi-close</v-icon>
                       </v-btn>
@@ -267,6 +278,7 @@ const store = useStore();
 
 const isOpen = ref(false);
 const localFilter = ref({});
+const pinnedLayout = ref();
 const currentFieldsKeys = ref([]);
 const layouts = ref([]);
 function getBlankLayout() {
@@ -367,7 +379,11 @@ const saveSearchData = (name) => {
   if (!name) {
     return;
   }
-  const data = { current: currentLayout.value?.id, layouts: layouts.value };
+  const data = {
+    current: currentLayout.value?.id,
+    layouts: layouts.value,
+    pinned: pinnedLayout.value,
+  };
   const key = getSearchKey(name);
   localStorage.setItem(key, JSON.stringify(data));
 
@@ -399,6 +415,11 @@ const loadSearchData = (name) => {
   } else {
     const localKey = `${key}-local`;
     filter.value = JSON.parse(localStorage.getItem(localKey) || `{}`);
+  }
+
+  pinnedLayout.value = data?.pinned;
+  if (pinnedLayout.value && !currentLayout.value) {
+    currentLayout.value = layouts.value.find((l) => isPinned(l));
   }
 };
 
@@ -503,8 +524,27 @@ const saveNewLayout = () => {
 const deleteLayout = (id) => {
   layouts.value = layouts.value.filter((l) => l.id !== id);
 };
+
+const isPinned = (layout) => pinnedLayout.value === layout.id;
+
+const setPinned = (id) => {
+  if (pinnedLayout.value === id) {
+    pinnedLayout.value = undefined;
+  } else {
+    pinnedLayout.value = id;
+  }
+};
+
 const setCurrentLayout = (layout) => {
   if (isLayoutModePreview.value) {
+    if (
+      currentLayout.value &&
+      pinnedLayout.value &&
+      !isPinned(currentLayout.value) &&
+      !layout
+    ) {
+      layout = layouts.value.find((l) => isPinned(l));
+    }
     currentLayout.value = layout;
     if (!layout) {
       blankLayout.value.filter = {};

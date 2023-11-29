@@ -12,6 +12,7 @@
             @change="(newVal) => setValue('title', newVal)"
             label="title"
             :value="instance.title"
+            :rules="requiredRule"
           >
           </v-text-field>
         </v-col>
@@ -22,8 +23,9 @@
           <v-autocomplete
             @change="(newVal) => changeOS(newVal)"
             label="template"
+            :rules="requiredRule"
             :items="getOsNames"
-            :value="getOsTemplates[instance.config.template_id]?.name"
+            :value="selectedTemplate?.name"
           >
           </v-autocomplete>
         </v-col>
@@ -31,6 +33,7 @@
           <v-text-field
             @change="(newVal) => setValue('config.password', newVal)"
             label="password"
+            :rules="requiredRule"
             :value="instance.config?.password"
           >
           </v-text-field>
@@ -53,6 +56,7 @@
         <v-col cols="6">
           <v-autocomplete
             label="product"
+            :rules="requiredRule"
             :value="instance.product"
             :items="products"
             @change="setProduct"
@@ -65,11 +69,13 @@
             label="cpu"
             :value="instance.resources.cpu"
             type="number"
+            :rules="requiredRule"
           >
           </v-text-field>
         </v-col>
         <v-col cols="6">
           <v-text-field
+            :rules="requiredRule"
             @change="(newVal) => setValue('resources.ram', +newVal)"
             label="ram"
             :value="instance.resources.ram"
@@ -80,6 +86,7 @@
         <v-col cols="6">
           <v-select
             :items="driveTypes"
+            :rules="requiredRule"
             @change="(newVal) => setValue('resources.drive_type', newVal)"
             label="drive type"
             :value="instance.resources.drive_type"
@@ -88,10 +95,12 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            @change="(newVal) => setValue('resources.drive_size', +newVal)"
-            :label="`drive size (minimum ${driveSizeConfig?.minDisk}, maximum ${driveSizeConfig?.maxDisk})`"
+            @change="
+              (newVal) => setValue('resources.drive_size', +newVal * 1024)
+            "
+            :label="`drive size (minimum ${driveSizeConfig?.minDisk} GB, maximum ${driveSizeConfig?.maxDisk} GB)`"
             :rules="[driveSizeRule]"
-            :value="instance.resources.drive_size"
+            :value="instance.resources.drive_size / 1024"
             type="number"
           >
           </v-text-field>
@@ -154,7 +163,7 @@ const getDefaultInstance = () => ({
     cpu: 1,
     ram: 1024,
     drive_type: null,
-    drive_size: 10000,
+    drive_size: null,
     ips_public: 0,
     ips_private: 0,
   },
@@ -164,7 +173,12 @@ const getDefaultInstance = () => ({
 export default {
   name: "instance-ione-create",
   props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
-  data: () => ({ bilingPlan: null, products: [], existing: false }),
+  data: () => ({
+    bilingPlan: null,
+    products: [],
+    existing: false,
+    requiredRule: [(val) => !!val || "Field required"],
+  }),
   mounted() {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
@@ -232,10 +246,25 @@ export default {
         .map((k) => k.key.split("_")[1].toUpperCase());
     },
     driveSizeConfig() {
-      return this.instance.billing_plan?.meta?.minDisk &&
-        this.instance.billing_plan?.meta?.maxDisk
-        ? this.instance.billing_plan?.meta
-        : { minDisk: 0, maxDisk: 100000000 };
+      let minDisk, maxDisk;
+      if (this.instance.billing_plan?.meta?.minDisk) {
+        minDisk = this.instance.billing_plan.meta.minDisk;
+      }
+      if (this.instance.billing_plan?.meta?.maxDisk) {
+        maxDisk = this.instance.billing_plan.meta.maxDisk;
+      }
+
+      if (this.selectedTemplate?.min_size) {
+        minDisk = this.selectedTemplate?.min_size;
+      }
+
+      return {
+        minDisk: (minDisk || 0) / 1024,
+        maxDisk: (maxDisk || 1024000000) / 1024,
+      };
+    },
+    selectedTemplate() {
+      return this.getOsTemplates[this.instance.config.template_id];
     },
     driveSizeRule() {
       return (val) =>

@@ -551,7 +551,6 @@ export function debounce(callback, wait = 100) {
   return (...args) => {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      console.log(args)
       callback(...args);
     }, wait);
   };

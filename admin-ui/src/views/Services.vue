@@ -331,7 +331,6 @@ export default {
                 message: `Service${ending} deleted successfully.`,
               });
             } else {
-              console.log(this.showSnackbar);
               this.showSnackbarError({
                 message: `Can’t delete Services Provider: Has Services deployed.`,
               });
