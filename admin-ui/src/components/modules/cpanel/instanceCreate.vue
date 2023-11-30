@@ -22,11 +22,22 @@
             @change="setValue('billingPlan', $event)"
             item-text="title"
             return-object
+            label="price model"
+            :rules="planRules"
             item-value="uuid"
           ></v-select>
         </v-col>
-      </v-row>
-      <v-row>
+        <v-col cols="6">
+          <v-autocomplete
+            label="product"
+            :items="products"
+            item-text="title"
+            item-value="key"
+            :rules="rules.req"
+            :value="instance.resources.plan"
+            @change="setValue('resources.plan', $event)"
+          />
+        </v-col>
         <v-col cols="6">
           <v-text-field
             label="domain"
@@ -37,28 +48,18 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            label="mail"
+            label="email"
             :rules="rules.req"
-            :value="instance.config.mail"
-            @change="setValue('config.mail', $event)"
+            :value="instance.config.email"
+            @change="setValue('config.email', $event)"
           />
         </v-col>
-      </v-row>
-      <v-row>
         <v-col cols="6">
           <v-text-field
             label="password"
             :rules="rules.req"
             :value="instance.config.password"
             @change="setValue('config.password', $event)"
-          />
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            label="plan"
-            :rules="rules.req"
-            :value="instance.resources.plan"
-            @change="setValue('resources.plan', $event)"
           />
         </v-col>
       </v-row>
@@ -70,7 +71,7 @@ const getDefaultInstance = () => ({
   title: "instance",
   config: {
     domain: "",
-    mail: "",
+    email: "",
     password: "",
   },
   resources: {
@@ -90,9 +91,9 @@ export default {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
     } else {
-      const plan = this.plans.list.find((p) => {
-        return p.uuid == this.instance.billing_plan;
-      });
+      const plan = this.plans.list.find(
+        (p) => p.uuid == this.instance.billing_plan
+      );
       this.setValue("billingPlan", plan);
       this.setValue("billing_plan", undefined);
     }
@@ -101,9 +102,24 @@ export default {
     billingPlanId() {
       return this.instance.billing_plan || this.instance.billingPlan.uuid;
     },
+    products() {
+      const plan = this.plans.list.find((p) => p.uuid == this.billingPlanId);
+      return Object.keys(plan?.products || {}).map((key) => ({
+        ...plan.products[key],
+        key,
+      }));
+    },
   },
   methods: {
     setValue(key, value) {
+      if (key === "resources.plan") {
+        this.setValue("product", value);
+        const product = this.products.find((p) => p.key === value);
+        Object.keys(product.resources || {}).forEach((key) => {
+          this.setValue("resources." + key, product.resources[key]);
+        });
+      }
+
       this.$emit("set-value", { key, value });
     },
   },

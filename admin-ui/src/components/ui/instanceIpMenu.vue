@@ -14,7 +14,10 @@
         v-on="on"
         readonly
         :value="ip"
-      />
+        :append-icon="ip ? 'mdi-content-copy' : ''"
+        @click:append="addToClipboard(ip)"
+      >
+      </v-text-field>
       <span v-else v-bind="attrs" v-on="on">{{ ip }}</span>
     </template>
 
@@ -28,6 +31,7 @@
 
 <script setup>
 import { computed, defineProps } from "vue";
+import { addToClipboard } from "@/functions";
 const props = defineProps({
   item: {},
   ui: {},

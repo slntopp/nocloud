@@ -111,7 +111,7 @@ export default {
         const product = this.template.products[el.name];
         price.key = el.name;
         price.price = product?.price || 0;
-        price.period = product?.period || 0;
+        price.period = product?.period ||  3600 * 24 * 30;
         price.sorter = product?.sorter || 0;
         price.enabled = !!product;
         const date = new Date(price.period * 1000);
@@ -156,7 +156,7 @@ export default {
             period: getTimestamp(item.period),
             sorter: item.sorter,
             resources: {
-              model: item.name,
+              model: item.key,
               bandwidth: item.BWLIMIT || undefined,
               ssd: item.QUOTA || undefined,
               email: item.MAXPOP || undefined,

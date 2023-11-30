@@ -11,6 +11,7 @@
           <v-text-field
             @change="(newVal) => setValue('title', newVal)"
             label="title"
+            :rules="rules.req"
             :value="instance.title"
           >
           </v-text-field>
@@ -19,6 +20,7 @@
           <v-text-field
             @change="(newVal) => setValue('config.username', newVal)"
             label="username"
+            :rules="rules.req"
             :value="instance.config?.username"
           />
         </v-col>
@@ -26,11 +28,13 @@
           <v-text-field
             @change="(newVal) => setValue('config.password', newVal)"
             label="password"
+            :rules="rules.req"
             :value="instance.config?.password"
           />
         </v-col>
         <v-col cols="6">
           <v-text-field
+            :rules="rules.req"
             @change="(newVal) => setValue('config.hostname', newVal)"
             label="hostname"
             :value="instance.hostname?.password"
@@ -52,10 +56,29 @@
           <v-autocomplete
             label="product"
             :value="instance.product"
+            :rules="rules.req"
             :items="products"
             @change="setValue('product', $event)"
             item-text="title"
             item-value="key"
+          />
+        </v-col>
+        <v-col cols="6" class="d-flex align-center">
+          Existing:
+          <v-switch
+            class="d-inline-block ml-2"
+            :input-value="instance.data?.existing"
+            @change="setValue('data.existing', $event)"
+          />
+        </v-col>
+        <v-col cols="6" class="d-flex align-center">
+          <v-text-field
+            v-if="instance.data?.existing"
+            label="Service id"
+            type="number"
+            :value="instance.data?.serviceId"
+            :rules="rules.req"
+            @change="setValue(`data.serviceId`, +$event)"
           />
         </v-col>
         <v-col cols="6">
@@ -97,7 +120,7 @@ const getDefaultInstance = () => ({
     configurations: {},
   },
   resources: {},
-  data: {},
+  data: { existing: false },
   billing_plan: {},
 });
 
@@ -112,6 +135,9 @@ const { plans, instance, planRules } = toRefs(props);
 const emits = defineEmits(["set-instance", "set-value"]);
 
 const product = ref("");
+const rules = ref({
+  req: [(v) => !!v || "required field"],
+});
 
 const billingPlan = computed(() =>
   plans.value.list.find((p) => p.uuid === instance.value.billing_plan)
@@ -171,6 +197,9 @@ const setValue = (key, value) => {
         value.endsWith("monthly") ? "monthly" : "annually"
       );
       setValue("config.id", fullProduct.value?.meta?.keywebId);
+    }
+    case 'data.existing':{
+      setValue("data.serviceId", undefined);
     }
   }
   /* eslint-enable */

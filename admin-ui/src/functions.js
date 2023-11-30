@@ -555,3 +555,15 @@ export function debounce(callback, wait = 100) {
     }, wait);
   };
 }
+
+export function addToClipboard(text){
+  if (navigator?.clipboard) {
+    navigator.clipboard
+        .writeText(text)
+        .catch((res) => {
+          console.error(res);
+        });
+  } else {
+    alert('Clipboard is not supported!')
+  }
+}

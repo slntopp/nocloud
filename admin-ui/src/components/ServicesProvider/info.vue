@@ -125,7 +125,6 @@
             table-name="service-providers"
             :items="relatedPlans"
             :headers="headers"
-            :loading="isPlanLoading"
             :footer-error="fetchError"
             v-model="selected"
           />
@@ -318,6 +317,7 @@ export default {
           this.relatedPlans = this.relatedPlans.filter(
             (rp) => this.selected.findIndex((s) => s.uuid === rp.uuid) === -1
           );
+          this.selected=[]
           this.showSnackbarSuccess({
             message: `Price model${ending} deleted successfully.`,
           });
