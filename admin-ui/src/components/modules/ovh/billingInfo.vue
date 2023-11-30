@@ -33,6 +33,10 @@
           <v-skeleton-loader type="text" v-if="isBasePricesLoading" />
           <span v-else> {{ convertedBasePrices[item.key] }} PLN </span>
         </template>
+        <template v-slot:[`item.title`]="{ item }">
+          <span v-html="item.title" />
+          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
+        </template>
         <template v-slot:body.append>
           <tr>
             <td></td>
@@ -317,6 +321,7 @@ const initPrices = () => {
 
     pricesItems.value.push({
       price: addon.price || 0,
+      isAddon: true,
       path: `billingPlan.resources.${addonIndex}.price`,
       title: template.value.billingPlan.resources[addonIndex]?.title || key,
       kind: addon.kind,

@@ -43,6 +43,7 @@
       >
         <template v-slot:[`item.name`]="{ item }">
           <span v-html="item.name" />
+          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
         </template>
         <template v-slot:[`item.price`]="{ item }">
           <div class="d-flex">
@@ -200,7 +201,7 @@ const getBillingItems = () => {
     accountPrice: toAccountPrice(product?.price),
   });
 
-  items.push(...addons.value);
+  items.push(...addons.value.map(a=>({...a,isAddon:true})));
 
   return items.map((i) => {
     i.period = getBillingPeriod(i.period);
