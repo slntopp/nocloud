@@ -13,7 +13,7 @@
         <instance-ip-menu :item="template" />
       </v-col>
       <v-col>
-        <v-text-field readonly :value="os" label="OS login" @click:append="addToClipboard(os)" append-icon="mdi-content-copy" />
+        <v-text-field readonly :value="os" label="OS"/>
       </v-col>
       <v-col>
         <password-text-field
