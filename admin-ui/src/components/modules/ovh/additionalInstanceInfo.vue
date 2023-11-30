@@ -16,6 +16,14 @@
         <v-text-field readonly :value="os" label="OS"/>
       </v-col>
       <v-col>
+        <v-text-field
+          readonly
+          label="Login"
+          :value="template.state.meta.login"
+          @click:append="addToClipboard(template.data[ovhType + 'Name'])" append-icon="mdi-content-copy"
+        />
+      </v-col>
+      <v-col>
         <password-text-field
           readonly
           :value="template.state.meta.password"
