@@ -363,46 +363,46 @@ export default {
             action: "change_state",
             data: { state: 3 },
             title: "start",
-            disabled: this.emptyActions.start,
+            disabled: this.emptyActions?.start,
           },
           {
             action: "change_state",
             data: { state: 2 },
             title: "stop",
-            disabled: this.emptyActions.stop,
+            disabled: this.emptyActions?.stop,
           },
           {
             action: "change_state",
             data: { state: 6 },
             title: "suspend",
-            disabled: this.emptyActions.suspend,
+            disabled: this.emptyActions?.suspend,
           },
         ],
         keyweb: [
           {
             action: "start",
             title: "start",
-            disabled: !this.keywebActions.start,
+            disabled: !this.keywebActions?.start,
           },
           {
             action: "stop",
             title: "stop",
-            disabled: !this.keywebActions.stop,
+            disabled: !this.keywebActions?.stop,
           },
           {
             action: "reboot",
             title: "reboot",
-            disabled: !this.keywebActions.reboot,
+            disabled: !this.keywebActions?.reboot,
           },
           {
             action: "suspend",
             title: "suspend",
-            disabled: !this.keywebActions.suspend,
+            disabled: !this.keywebActions?.suspend,
           },
           {
             action: "unsuspend",
             title: "unsuspend",
-            disabled: !this.keywebActions.unsuspend,
+            disabled: !this.keywebActions?.unsuspend,
           },
         ],
         opensrs: [{ action: "dns" }],
@@ -491,6 +491,8 @@ export default {
       };
     },
     keywebActions() {
+      if (!this.template?.state) return;
+
       const state = this.template?.state.state;
 
       switch (state) {
