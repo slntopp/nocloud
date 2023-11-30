@@ -242,7 +242,7 @@ const addons = computed(() => {
       path: `billingPlan.resources.${index}.price`,
       kind,
       key,
-      period,
+      period:getBillingPeriod(period),
       accountPrice: toAccountPrice(price),
     })
   );
