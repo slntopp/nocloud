@@ -92,7 +92,7 @@ const { template, plans } = toRefs(props);
 
 const store = useStore();
 const rate = usePlnRate();
-const { toAccountPrice, fromAccountPrice, accountCurrency, accountRate, rates } =
+const { toAccountPrice, fromAccountPrice, accountCurrency, accountRate } =
   useInstancePrices(template.value);
 
 const pricesItems = ref([]);
@@ -366,7 +366,7 @@ const setAccountsPrices = () => {
   });
 }
 
-watch(rates, () => {
+watch(accountRate, () => {
   setAccountsPrices()
 })
 </script>
