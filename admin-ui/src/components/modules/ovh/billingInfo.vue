@@ -2,29 +2,15 @@
   <div>
     <v-row>
       <v-col>
-        <v-text-field
-          readonly
-          label="price model"
-          append-icon="mdi-pencil"
-          @click:append="priceModelDialog = true"
-          :value="template.billingPlan.title"
-        />
+        <v-text-field readonly label="price model" append-icon="mdi-pencil" @click:append="priceModelDialog = true"
+          :value="template.billingPlan.title" />
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          label="Product name"
-          :value="tarrif.title"
-          append-icon="mdi-pencil"
-          @click:append="priceModelDialog = true"
-        />
+        <v-text-field readonly label="Product name" :value="tarrif.title" append-icon="mdi-pencil"
+          @click:append="priceModelDialog = true" />
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          label="Date (create)"
-          :value="template.data.creation"
-        />
+        <v-text-field readonly label="Date (create)" :value="template.data.creation" />
       </v-col>
       <v-col>
         <v-text-field readonly label="Due to date/next payment" :value="date" />
@@ -32,33 +18,15 @@
     </v-row>
 
     <instances-prices-panels>
-      <nocloud-table
-        hide-default-footer
-        sort-by="index"
-        item-key="key"
-        :show-select="false"
-        :headers="pricesHeaders"
-        :items="pricesItems"
-      >
+      <nocloud-table hide-default-footer sort-by="index" item-key="key" :show-select="false" :headers="pricesHeaders"
+        :items="pricesItems">
         <template v-slot:[`item.prices`]="{ item }">
           <div class="d-flex">
-            <v-text-field
-              class="mr-2"
-              v-model="item.price"
-              @change="onUpdatePrice(item, false)"
-              :suffix="defaultCurrency"
-              type="number"
-              append-icon="mdi-pencil"
-            ></v-text-field>
-            <v-text-field
-              class="ml-2"
-              style="color: var(--v-primary-base)"
-              v-model="item.accountPrice"
-              @change="onUpdatePrice(item, true)"
-              :suffix="accountCurrency"
-              type="number"
-              append-icon="mdi-pencil"
-            ></v-text-field>
+            <v-text-field class="mr-2" v-model="item.price" @change="onUpdatePrice(item, false)" :suffix="defaultCurrency"
+              type="number" append-icon="mdi-pencil"></v-text-field>
+            <v-text-field class="ml-2" style="color: var(--v-primary-base)" v-model="item.accountPrice"
+              @change="onUpdatePrice(item, true)" :suffix="accountCurrency" type="number"
+              append-icon="mdi-pencil"></v-text-field>
           </div>
         </template>
         <template v-slot:[`item.basePrice`]="{ item }">
@@ -75,8 +43,8 @@
             <td>
               {{
                 isBasePricesLoading
-                  ? "Loading..."
-                  : [totalBasePrice, "PLN"].join(" ")
+                ? "Loading..."
+                : [totalBasePrice, "PLN"].join(" ")
               }}
             </td>
             <td>
@@ -93,15 +61,8 @@
       </nocloud-table>
     </instances-prices-panels>
 
-    <edit-price-model
-      @refresh="emit('refresh')"
-      :template="template"
-      :plans="plans"
-      :account-currency="accountCurrency"
-      :account-rate="accountRate"
-      :service="service"
-      v-model="priceModelDialog"
-    />
+    <edit-price-model @refresh="emit('refresh')" :template="template" :plans="plans" :account-currency="accountCurrency"
+      :account-rate="accountRate" :service="service" v-model="priceModelDialog" />
   </div>
 </template>
 
@@ -301,13 +262,14 @@ const date = computed(() => {
 });
 
 const initPrices = () => {
+  const productKey = [duration.value, planCode.value].join(
+    " "
+  )
   pricesItems.value.push({
-    title: planCode.value,
+    title: template.value.billingPlan.products[productKey]?.title,
     key: planCode.value,
     ind: 0,
-    path: `billingPlan.products.${[duration.value, planCode.value].join(
-      " "
-    )}.price`,
+    path: `billingPlan.products.${productKey}.price`,
     kind: tarrif.value.kind,
     price: tarrif.value?.price,
     period: tarrif.value?.period,
@@ -327,7 +289,7 @@ const initPrices = () => {
     pricesItems.value.push({
       price: addon.price || 0,
       path: `billingPlan.resources.${addonIndex}.price`,
-      title: key,
+      title: template.value.billingPlan.resources[addonIndex]?.title || key,
       kind: addon.kind,
       key: key,
       index: ind + 1,
