@@ -17,7 +17,7 @@
       </v-col>
     </v-row>
 
-    <instances-prices-panels>
+    <instances-panels title="Prices">
       <nocloud-table hide-default-footer sort-by="index" item-key="key" :show-select="false" :headers="pricesHeaders"
         :items="pricesItems">
         <template v-slot:[`item.prices`]="{ item }">
@@ -59,7 +59,7 @@
           </tr>
         </template>
       </nocloud-table>
-    </instances-prices-panels>
+    </instances-panels>
 
     <edit-price-model @refresh="emit('refresh')" :template="template" :plans="plans" :account-currency="accountCurrency"
       :account-rate="accountRate" :service="service" v-model="priceModelDialog" />
@@ -83,7 +83,7 @@ import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import usePlnRate from "@/hooks/usePlnRate";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import useInstancePrices from "@/hooks/useInstancePrices";
-import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
+import InstancesPanels from "@/components/ui/instancesPanels.vue";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);

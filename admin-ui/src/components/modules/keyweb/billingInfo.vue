@@ -32,7 +32,7 @@
       </v-col>
     </v-row>
 
-    <instances-prices-panels>
+    <instances-panels title="Prices">
       <nocloud-table
         class="mb-5"
         :headers="billingHeaders"
@@ -84,7 +84,7 @@
           </tr>
         </template>
       </nocloud-table>
-    </instances-prices-panels>
+    </instances-panels>
 
     <edit-price-model
       :account-rate="accountRate"
@@ -105,7 +105,7 @@ import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
-import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
+import InstancesPanels from "@/components/ui/instancesPanels.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh"]);
