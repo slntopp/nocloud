@@ -75,11 +75,17 @@ const props = defineProps(["template"]);
 const { template } = toRefs(props);
 
 const os = computed(() => {
-  return template.value.config.configuration[
+  const os=template.value.config.configuration[
     Object.keys(template.value.config.configuration).find((k) =>
       k.includes("os")
     )
   ];
+
+  if(template.value.config.type==='cloud'){
+    return template.value.billingPlan.products[template.value.product].meta.os.find(({id})=>id===os).name
+  }
+
+  return os
 });
 
 const ovhType = computed(() => {
