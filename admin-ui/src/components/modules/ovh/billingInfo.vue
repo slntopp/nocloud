@@ -74,6 +74,7 @@ import {
   toRefs,
   computed,
   onMounted,
+  watch,
 } from "vue";
 import NocloudTable from "@/components/table.vue";
 import api from "@/api";
@@ -91,7 +92,7 @@ const { template, plans } = toRefs(props);
 
 const store = useStore();
 const rate = usePlnRate();
-const { toAccountPrice, fromAccountPrice, accountCurrency, accountRate } =
+const { toAccountPrice, fromAccountPrice, accountCurrency, accountRate, rates } =
   useInstancePrices(template.value);
 
 const pricesItems = ref([]);
@@ -107,12 +108,80 @@ const totalNewPrice = ref(0);
 const isBasePricesLoading = ref(false);
 const priceModelDialog = ref(false);
 
+onMounted(() => {
+  initPrices();
+  getBasePrices();
+});
+
 const accountTotalNewPrice = computed(() =>
   toAccountPrice(totalNewPrice.value)
 );
 
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
+const convertedBasePrices = computed(() => {
+  if (!rate.value) {
+    return basePrices.value;
+  }
+  const converted = {};
+  Object.keys(basePrices.value).forEach((key) => {
+    converted[key] = basePrices.value[key] * rate.value;
+  });
+
+  return converted;
+});
+
+const totalBasePrice = computed(() => {
+  return Object.keys(convertedBasePrices.value)
+    .reduce((acc, key) => acc + +convertedBasePrices.value[key], 0)
+    .toFixed(2);
+});
+
+
+const date = computed(() => {
+  return formatSecondsToDate(+template.value?.data?.next_payment_date);
+});
+
+
+const planCode = computed(() => template.value.config.planCode);
+const duration = computed(() => template.value.config.duration);
+const addons = computed(() => template.value.config.addons || []);
+const type = computed(() => template.value.config.type);
+const tarrif = computed(() => {
+  let key = "";
+  if (!duration.value) {
+    key = template.value.product;
+  } else {
+    key = [duration.value, planCode.value].join(" ");
+  }
+  return template.value.billingPlan.products[key];
+});
+
+const service = computed(() =>
+  store.getters["services/all"].find((s) => s.uuid === template.value.service)
+);
+
+const getBasePrices = async () => {
+  isBasePricesLoading.value = true;
+  try {
+    let meta = null;
+    if (type.value === "vps") {
+      meta = await getVpsPrices();
+    } else if (type.value === "dedicated") {
+      meta = await getDedicatedPrice();
+    } else if (type.value === "cloud") {
+      meta = await getCloudPrices();
+    }
+
+    basePrices.value = meta;
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", {
+      message: e.response?.data?.message || "Error during fetch base prices",
+    });
+  } finally {
+    isBasePricesLoading.value = false;
+  }
+};
 const setTotalNewPrice = () => {
   totalNewPrice.value = +pricesItems.value
     .reduce((acc, i) => +i.price + acc, 0)
@@ -142,24 +211,6 @@ const onUpdatePrice = (item, isAccount) => {
   }
   setTotalNewPrice();
 };
-
-const convertedBasePrices = computed(() => {
-  if (!rate.value) {
-    return basePrices.value;
-  }
-  const converted = {};
-  Object.keys(basePrices.value).forEach((key) => {
-    converted[key] = basePrices.value[key] * rate.value;
-  });
-
-  return converted;
-});
-
-const totalBasePrice = computed(() => {
-  return Object.keys(convertedBasePrices.value)
-    .reduce((acc, key) => acc + +convertedBasePrices.value[key], 0)
-    .toFixed(2);
-});
 
 const getVpsPrices = async () => {
   const { meta } = await api.servicesProviders.action({
@@ -223,6 +274,7 @@ const getDedicatedPrice = async () => {
 
   return prices;
 };
+
 const getCloudPrices = async () => {
   const fullSp = await api.servicesProviders.get(template.value.sp);
   const prices = {};
@@ -237,29 +289,6 @@ const getCloudPrices = async () => {
   prices[planCode.value] = meta.codes[tarrif.value?.meta?.priceCode];
   return prices;
 };
-const getPriceFromProduct = (product) => {
-  return product.prices
-    .find(
-      (p) =>
-        duration.value === p.duration &&
-        template.value.config.pricingMode === p.pricingMode
-    )
-    ?.price?.value.toFixed(2);
-};
-
-const getAddonKey = (key) => {
-  let keys = [];
-  if (template.value.config.type === "dedicated") {
-    keys = [duration.value, planCode.value, key];
-  } else {
-    keys = [duration.value, key];
-  }
-  return keys.join(" ");
-};
-
-const date = computed(() => {
-  return formatSecondsToDate(+template.value?.data?.next_payment_date);
-});
 
 const initPrices = () => {
   const productKey = [duration.value, planCode.value].join(
@@ -299,58 +328,47 @@ const initPrices = () => {
 
   pricesItems.value = pricesItems.value.map((i) => {
     i.period = getBillingPeriod(i.period);
+
+    return i;
+  });
+
+  setAccountsPrices()
+  setTotalNewPrice();
+};
+
+
+const getPriceFromProduct = (product) => {
+  return product.prices
+    .find(
+      (p) =>
+        duration.value === p.duration &&
+        template.value.config.pricingMode === p.pricingMode
+    )
+    ?.price?.value.toFixed(2);
+};
+
+const getAddonKey = (key) => {
+  let keys = [];
+  if (template.value.config.type === "dedicated") {
+    keys = [duration.value, planCode.value, key];
+  } else {
+    keys = [duration.value, key];
+  }
+  return keys.join(" ");
+};
+
+
+const setAccountsPrices = () => {
+  pricesItems.value = pricesItems.value.map((i) => {
     i.accountPrice = toAccountPrice(i.price);
 
     return i;
   });
-  setTotalNewPrice();
-};
+}
 
-const planCode = computed(() => template.value.config.planCode);
-const duration = computed(() => template.value.config.duration);
-const addons = computed(() => template.value.config.addons || []);
-const type = computed(() => template.value.config.type);
-const tarrif = computed(() => {
-  let key = "";
-  if (!duration.value) {
-    key = template.value.product;
-  } else {
-    key = [duration.value, planCode.value].join(" ");
-  }
-  return template.value.billingPlan.products[key];
-});
-
-const service = computed(() =>
-  store.getters["services/all"].find((s) => s.uuid === template.value.service)
-);
-
-const getBasePrices = async () => {
-  isBasePricesLoading.value = true;
-  try {
-    let meta = null;
-    if (type.value === "vps") {
-      meta = await getVpsPrices();
-    } else if (type.value === "dedicated") {
-      meta = await getDedicatedPrice();
-    } else if (type.value === "cloud") {
-      meta = await getCloudPrices();
-    }
-
-    basePrices.value = meta;
-  } catch (e) {
-    console.log(e);
-    store.commit("snackbar/showSnackbarError", {
-      message: e.response?.data?.message || "Error during fetch base prices",
-    });
-  } finally {
-    isBasePricesLoading.value = false;
-  }
-};
-
-onMounted(() => {
-  initPrices();
-  getBasePrices();
-});
+watch(rates, () => {
+  setAccountsPrices()
+})
 </script>
 
 <style scoped></style>
