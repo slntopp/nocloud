@@ -4,7 +4,7 @@ import useCurrency from "@/hooks/useCurrency";
 
 const useInstancePrices = (instance) => {
   const store = useStore();
-  const { convertFrom, convertTo, rates, defaultCurrency } = useCurrency();
+  const { convertFrom, convertTo, rates, defaultCurrency, } = useCurrency();
 
   const namespace = computed(() =>
     store.getters["namespaces/all"]?.find(
@@ -44,6 +44,7 @@ const useInstancePrices = (instance) => {
     account,
     accountCurrency,
     accountRate,
+    rates
   };
 };
 

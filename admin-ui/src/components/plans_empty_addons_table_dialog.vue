@@ -8,16 +8,8 @@
 
     <v-card color="background-light">
       <v-form ref="addonsForm" v-model="isValid">
-        <nocloud-table
-          table-name="empty-addons-prices"
-          class="pa-4"
-          item-key="id"
-          v-model="selected"
-          :show-expand="true"
-          :items="filteredAddons ?? []"
-          :headers="addonsHeaders"
-          :expanded.sync="expanded"
-        >
+        <nocloud-table table-name="empty-addons-prices" class="pa-4" item-key="id" v-model="selected" :show-expand="true"
+          :items="filteredAddons ?? []" :headers="addonsHeaders" :expanded.sync="expanded">
           <template v-slot:top>
             <v-toolbar flat color="background">
               <v-toolbar-title>Addons</v-toolbar-title>
@@ -36,41 +28,25 @@
           </template>
 
           <template v-slot:[`item.key`]="{ item }">
-            <v-text-field
-              dense
-              :value="item.key.split(`; product: ${product}`)[0]"
-              :rules="generalRule"
-              @input="setKey($event, item)"
-            />
+            <v-text-field dense :value="item.key.split(`; product: ${product}`)[0]" :rules="[rules.required]"
+              @input="setKey($event, item)" />
           </template>
 
           <template v-slot:[`item.title`]="{ item }">
-            <v-text-field dense v-model="item.title" :rules="generalRule" />
+            <v-text-field dense v-model="item.title" :rules="[rules.required]" />
           </template>
 
           <template v-slot:[`item.price`]="{ item }">
-            <v-text-field
-              dense
-              type="number"
-              :value="item.price"
-              :suffix="defaultCurrency"
-              :rules="generalRule"
-              @input="(value) => (item.price = parseFloat(value))"
-            />
+            <v-text-field dense type="number" :value="item.price" :suffix="defaultCurrency" :rules="[rules.price]"
+              @input="(value) => (item.price = parseFloat(value))" />
           </template>
 
           <template v-slot:[`item.auto`]="{ item }">
-            <v-switch
-              :input-value="getAutoEnable(item)"
-              @change="setAutoEnable(item, $event)"
-            />
+            <v-switch :input-value="getAutoEnable(item)" @change="setAutoEnable(item, $event)" />
           </template>
 
           <template v-slot:[`item.period`]="{ item }">
-            <date-field
-              :period="fullDate[item.id]"
-              @changeDate="(date) => setPeriod(date.value, item)"
-            />
+            <date-field :period="fullDate[item.id]" @changeDate="(date) => setPeriod(date.value, item)" />
           </template>
 
           <template v-slot:expanded-item="{ headers, item }">
@@ -105,6 +81,7 @@ const props = defineProps({
   product: { type: String, required: true },
   item: { type: Object, required: true },
   addons: { type: Array, required: true },
+  rules: { type: Object, },
 });
 const emits = defineEmits(["update:addons"]);
 
@@ -125,7 +102,6 @@ const addonsHeaders = [
   { text: "Auto", value: "auto" },
   { text: "Period", value: "period", width: 400 },
 ];
-const generalRule = [(v) => !!v || "This field is required!"];
 
 const filteredAddons = computed(() =>
   props.addons.filter(
