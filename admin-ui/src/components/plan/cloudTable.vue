@@ -10,12 +10,8 @@
         />
       </v-col>
       <template v-if="selectedRegion">
-        <v-col cols="1">
-          <v-btn @click="setEnabledToTab(true)">Enable all</v-btn>
-        </v-col>
-        <v-col cols="1">
-          <v-btn @click="setEnabledToTab(false)">Disable all</v-btn>
-        </v-col>
+          <v-btn class="mr-1" @click="setEnabledToTab(true)">Enable all</v-btn>
+          <v-btn  class="ml-1" @click="setEnabledToTab(false)">Disable all</v-btn>
       </template>
     </v-row>
     <v-tabs background-color="background-light" v-model="tab">
