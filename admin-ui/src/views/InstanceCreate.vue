@@ -95,7 +95,7 @@ export default {
   name: "instance-create",
   data: () => ({
     isEdit: false,
-    isCreateLoading:false,
+    isCreateLoading: false,
 
     typeItems: [],
     templates: [],
@@ -194,6 +194,15 @@ export default {
             this.instance;
         } else {
           this.service.instancesGroups[igIndex].instances.push(this.instance);
+        }
+
+        if (this.service.instancesGroups[igIndex].type === "ione") {
+          this.service.instancesGroups[igIndex].resources = {
+            ...(this.service.instancesGroups[igIndex].resources || {}),
+            ips_public: this.service.instancesGroups[igIndex].instances
+              .filter((i) => i.state?.state !== "DELETED")
+              .reduce((acc, i) => acc + +i?.resources.ips_public, 0),
+          };
         }
 
         const data = {
