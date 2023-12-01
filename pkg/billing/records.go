@@ -329,6 +329,8 @@ FOR t IN @@transactions // Iterate over Transactions
 FILTER !t.processed
 FILTER t.priority == @priority
     LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
+	
+	FILTER account != null
 
 	LET currency = account.currency != null ? account.currency : @currency
 	LET rate = PRODUCT(
