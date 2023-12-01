@@ -303,7 +303,8 @@ export default {
             (addons.reduce((acc, a) => acc + a.price, 0) || 0)
           );
         }
-        case "ione": {
+        case "ione":
+        case "cpanel": {
           const initialPrice =
             inst.billingPlan.products[inst.product]?.price ?? 0;
 
