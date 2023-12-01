@@ -88,7 +88,10 @@
             return-object
             :value="instance.config.configurations?.[os[0]?.type]"
             @change="
-              setValue('config.configurations.' + $event.type, $event.title)
+              setValue(
+                'config.configurations.' + $event.type,
+                $event.key?.split('$')?.[0]
+              )
             "
             :items="os"
             :rules="planRules"
@@ -100,7 +103,12 @@
             item-text="title"
             return-object
             :value="instance.config.configurations?.[type]"
-            @change="setValue('config.configurations.' + type, $event.title)"
+            @change="
+              setValue(
+                'config.configurations.' + $event.type,
+                $event.key?.split('$')?.[0]
+              )
+            "
             :items="addons.filter((a) => a.type === type)"
             :rules="planRules"
           />
@@ -198,7 +206,7 @@ const setValue = (key, value) => {
       );
       setValue("config.id", fullProduct.value?.meta?.keywebId);
     }
-    case 'data.existing':{
+    case "data.existing": {
       setValue("data.serviceId", undefined);
     }
   }
