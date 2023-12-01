@@ -351,7 +351,6 @@ export function getOvhPrice(instance) {
 export function getFullDate(period) {
   const date = new Date(period * 1000);
   const time = date.toUTCString().split(" ");
-
   return {
     day: `${date.getUTCDate() - 1}`,
     month: `${date.getUTCMonth()}`,
@@ -450,6 +449,8 @@ export const fetchMDIIcons = fetchMDIIconsHash();
 
 export function getBillingPeriod(period) {
   const fullPeriod = period && getFullDate(period);
+  fullPeriod.hours = +fullPeriod.time.split(":")?.[0];
+  fullPeriod.time = undefined;
   if (fullPeriod) {
     return Object.keys(fullPeriod)
       .filter((key) => +fullPeriod[key])
@@ -556,14 +557,12 @@ export function debounce(callback, wait = 100) {
   };
 }
 
-export function addToClipboard(text){
+export function addToClipboard(text) {
   if (navigator?.clipboard) {
-    navigator.clipboard
-        .writeText(text)
-        .catch((res) => {
-          console.error(res);
-        });
+    navigator.clipboard.writeText(text).catch((res) => {
+      console.error(res);
+    });
   } else {
-    alert('Clipboard is not supported!')
+    alert("Clipboard is not supported!");
   }
 }
