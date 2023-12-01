@@ -13,24 +13,24 @@
     </v-row>
 
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
-    <template v-else-if="series.length < 1">
-      <v-subheader v-if="balance.values.length > 1"> Balance: </v-subheader>
-      <v-sparkline
-        color="primary"
-        height="25vh"
-        line-width="1"
-        label-size="4"
-        :labels="balance.labels"
-        :value="balance.values"
-      />
-    </template>
-    <apexcharts
-      v-else
-      type="line"
-      height="250"
-      :options="chartOptions"
-      :series="series"
-    />
+<!--    <template v-else-if="series.length < 1">-->
+<!--      <v-subheader v-if="balance.values.length > 1"> Balance: </v-subheader>-->
+<!--      <v-sparkline-->
+<!--        color="primary"-->
+<!--        height="25vh"-->
+<!--        line-width="1"-->
+<!--        label-size="4"-->
+<!--        :labels="balance.labels"-->
+<!--        :value="balance.values"-->
+<!--      />-->
+<!--    </template>-->
+<!--    <apexcharts-->
+<!--      v-else-->
+<!--      type="line"-->
+<!--      height="250"-->
+<!--      :options="chartOptions"-->
+<!--      :series="series"-->
+<!--    />-->
 
     <reports-table
       table-name="transaction-table"
@@ -45,13 +45,12 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
-import apexcharts from "vue-apexcharts";
 
 import { mapGetters } from "vuex";
 import reportsTable from "@/components/reports_table.vue";
 export default {
   name: "transactions-view",
-  components: { reportsTable, apexcharts },
+  components: { reportsTable },
   mixins: [snackbar, search("transactions")],
   data: () => ({
     types: [],
@@ -94,7 +93,7 @@ export default {
     },
     selectTransaction(value) {
       this.series = [];
-      this.chartLoading = true;
+      // this.chartLoading = true;
       value.forEach(({ total, item, exec }) => {
         const name = item.slice(0, 8);
         const data = { data: [{ x: exec * 1000, y: total }], name, item };
