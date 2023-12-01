@@ -66,6 +66,9 @@
           {{ getInstance(value)?.title || value }}
         </router-link>
       </template>
+      <template v-slot:[`item.type`]="{ item }">
+        <span>{{getReportType(item)}}</span>
+      </template>
       <template v-slot:[`item.actions`]="{ item }">
         <div class="d-flex justify-center align-center">
           <v-btn
@@ -166,6 +169,7 @@ const requestOptions = computed(() => ({
 }));
 
 const whmcsApi = computed(() => store.getters["settings/whmcsApi"]);
+const transactionTypes = computed(() => store.getters["transactions/types"]);
 
 const getReportActions = (report) => {
   const actions = [];
@@ -175,6 +179,11 @@ const getReportActions = (report) => {
   }
   return actions;
 };
+
+const getReportType=(item)=>{
+  return transactionTypes.value.find(t=>t.key===item.type)?.title
+}
+
 const fetchReports = async () => {
   init();
   isFetchLoading.value = true;
