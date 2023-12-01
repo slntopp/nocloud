@@ -141,6 +141,9 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
+      params: {
+        showDeleted: true,
+      },
     });
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("accounts/fetch");
