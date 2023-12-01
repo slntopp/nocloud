@@ -20,7 +20,7 @@
         >
           Save
         </v-btn>
-        <v-btn style="background-color: #272727" @click="cancelSelectedCountry">
+        <v-btn color="primary" @click="cancelSelectedCountry">
           Cancel
         </v-btn>
       </div>
