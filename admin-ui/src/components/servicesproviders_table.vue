@@ -15,16 +15,16 @@
         {{ value }}
       </v-chip>
     </template>
-    <template v-slot:[`item.meta`]="{ item }">
-      <icon-title-preview :is-mdi="false" :instance="getShowcase(item)" />
-    </template>
   </nocloud-table>
 </template>
 
 <script>
 import noCloudTable from "@/components/table.vue";
-import {compareSearchValue, filterArrayByTitleAndUuid, getDeepObjectValue} from "@/functions";
-import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
+import {
+  compareSearchValue,
+  filterArrayByTitleAndUuid,
+  getDeepObjectValue,
+} from "@/functions";
 import search from "@/mixins/search";
 import { mapGetters } from "vuex";
 
@@ -32,7 +32,6 @@ const Headers = [
   { text: "Title", value: "titleLink" },
   { text: "Type", value: "type" },
   { text: "State", value: "state" },
-  { text: "Preview", value: "meta" },
   {
     text: "UUID",
     align: "start",
@@ -45,7 +44,6 @@ export default {
   name: "servicesProviders-table",
   mixins: [search("service-providers-table")],
   components: {
-    IconTitlePreview,
     "nocloud-table": noCloudTable,
   },
   props: {
@@ -84,9 +82,6 @@ export default {
       }
       return this.stateColorMap[state.toLowerCase()] || "";
     },
-    getShowcase(item) {
-      return Object.values(item.meta?.showcase ?? {})[0];
-    },
     getInstanceTypes() {
       const types = require.context(
         "@/components/modules/",
@@ -124,7 +119,7 @@ export default {
     filteredSp() {
       const sp = this.tableData.filter((sp) =>
         Object.keys(this.filter).every((key) => {
-          const data=getDeepObjectValue(sp,key)
+          const data = getDeepObjectValue(sp, key);
 
           return compareSearchValue(
             data,
@@ -140,7 +135,7 @@ export default {
     },
     searchFields() {
       return [
-        {  title: "Title", type: "input", key: "title" },
+        { title: "Title", type: "input", key: "title" },
         { items: this.allTypes, title: "Type", type: "select", key: "type" },
         { title: "Region", type: "input", key: "region" },
         {

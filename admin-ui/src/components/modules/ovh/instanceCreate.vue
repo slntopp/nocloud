@@ -405,7 +405,7 @@ export default {
       ].join(" ");
     },
     durationItems() {
-      const annotations = { P1M: "Monthly", P1Y: "Yearly", P1D: "Daily" };
+      const annotations = { P1M: "Monthly", P1Y: "Yearly", P1D: "Daily",P1H: "Hourly" };
 
       return [
         ...new Set(
