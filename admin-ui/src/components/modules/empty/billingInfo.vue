@@ -146,11 +146,11 @@ const filtredPlans = computed(() =>
 );
 
 const totalPrice = computed(() => {
-  return billingItems.value.reduce((acc, i) => acc + +i.price, 0);
+  return billingItems.value.reduce((acc, i) => acc + +i.price, 0)?.toFixed(2);
 });
 
 const totalAccountPrice = computed(() => {
-  return billingItems.value.reduce((acc, i) => acc + +i.accountPrice, 0);
+  return billingItems.value.reduce((acc, i) => acc + +i.accountPrice, 0)?.toFixed(2);
 });
 
 const billingPlan = computed(() => template.value.billingPlan);
