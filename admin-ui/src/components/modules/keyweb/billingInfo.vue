@@ -32,7 +32,7 @@
       </v-col>
     </v-row>
 
-    <instances-prices-panels>
+    <instances-panels title="Prices">
       <nocloud-table
         class="mb-5"
         :headers="billingHeaders"
@@ -43,6 +43,7 @@
       >
         <template v-slot:[`item.name`]="{ item }">
           <span v-html="item.name" />
+          <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
         </template>
         <template v-slot:[`item.price`]="{ item }">
           <div class="d-flex">
@@ -84,7 +85,7 @@
           </tr>
         </template>
       </nocloud-table>
-    </instances-prices-panels>
+    </instances-panels>
 
     <edit-price-model
       :account-rate="accountRate"
@@ -105,7 +106,7 @@ import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
-import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
+import InstancesPanels from "@/components/ui/instancesPanels.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh"]);
@@ -200,7 +201,7 @@ const getBillingItems = () => {
     accountPrice: toAccountPrice(product?.price),
   });
 
-  items.push(...addons.value);
+  items.push(...addons.value.map(a=>({...a,isAddon:true})));
 
   return items.map((i) => {
     i.period = getBillingPeriod(i.period);

@@ -28,7 +28,7 @@
       <v-text-field
         dense
         :value="item.key"
-        :rules="generalRule"
+        :rules="[rules.required]"
         @change="(value) => changeResource('key', value, item.id)"
       />
     </template>
@@ -37,8 +37,8 @@
       <v-text-field
         dense
         type="number"
+        :rules="[rules.price]"
         :value="item.value"
-        :rules="generalRule"
         @input="(value) => changeResource('value', value, item.id)"
       />
     </template>
@@ -47,7 +47,7 @@
       <v-text-field
         dense
         :value="item.title"
-        :rules="generalRule"
+        :rules="[rules.required]"
         @change="(value) => changeResource('title', value, item.id)"
       />
     </template>
@@ -61,12 +61,12 @@ import confirmDialog from "@/components/confirmDialog.vue";
 
 const props = defineProps({
   resources: { type: Array, required: true },
+  rules: { type: Object },
 });
 const emits = defineEmits(["update:resource"]);
-const { resources } = toRefs(props);
+const { resources,rules } = toRefs(props);
 
 const selected = ref([]);
-const generalRule = [(v) => !!v || "This field is required!"];
 
 const headers = [
   { text: "Key", value: "key" },

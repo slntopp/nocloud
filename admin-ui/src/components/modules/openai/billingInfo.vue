@@ -11,7 +11,7 @@
         />
       </v-col>
     </v-row>
-    <instances-prices-panels>
+    <instances-panels title="Prices">
       <nocloud-table
         class="mb-5"
         :headers="billingHeaders"
@@ -38,7 +38,7 @@
           />
         </template>
       </nocloud-table>
-    </instances-prices-panels>
+    </instances-panels>
     <v-dialog persistent :value="priceModelDialog" max-width="60%">
       <v-card class="pa-5">
         <v-card-title class="text-center">Change price model</v-card-title>
@@ -84,7 +84,7 @@ import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import api from "@/api";
-import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
+import InstancesPanels from "@/components/ui/instancesPanels.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh", "update"]);

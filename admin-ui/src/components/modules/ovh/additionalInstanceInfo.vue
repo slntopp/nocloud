@@ -13,7 +13,15 @@
         <instance-ip-menu :item="template" />
       </v-col>
       <v-col>
-        <v-text-field readonly :value="os" label="OS login" @click:append="addToClipboard(os)" append-icon="mdi-content-copy" />
+        <v-text-field readonly :value="os" label="OS"/>
+      </v-col>
+      <v-col>
+        <v-text-field
+          readonly
+          label="Login"
+          :value="template.state.meta.login"
+          @click:append="addToClipboard(template.data[ovhType + 'Name'])" append-icon="mdi-content-copy"
+        />
       </v-col>
       <v-col>
         <password-text-field
@@ -67,11 +75,17 @@ const props = defineProps(["template"]);
 const { template } = toRefs(props);
 
 const os = computed(() => {
-  return template.value.config.configuration[
+  const os=template.value.config.configuration[
     Object.keys(template.value.config.configuration).find((k) =>
       k.includes("os")
     )
   ];
+
+  if(template.value.config.type==='cloud'){
+    return template.value.billingPlan.products[template.value.product].meta.os.find(({id})=>id===os).name
+  }
+
+  return os
 });
 
 const ovhType = computed(() => {

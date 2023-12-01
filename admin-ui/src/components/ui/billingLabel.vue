@@ -35,7 +35,7 @@
         <confirm-dialog
           title="Do you want to renew server?"
           :text="renewTemplate"
-          :disabled="isDeleted"
+          :disabled="isRenewDisabled || isDeleted"
           :width="500"
           :success-disabled="isRenewDisabled"
           @confirm="sendRenew"
