@@ -170,6 +170,7 @@ init:
 				"@transactions": schema.TRANSACTIONS_COL,
 				"@accounts":     schema.ACCOUNTS_COL,
 				"accounts":      schema.ACCOUNTS_COL,
+				"@records":      schema.RECORDS_COL,
 				"priority":      record.Priority,
 				"now":           tick.Unix(),
 				"graph":         schema.BILLING_GRAPH.Name,
@@ -328,6 +329,8 @@ FOR t IN @@transactions // Iterate over Transactions
 FILTER !t.processed
 FILTER t.priority == @priority
     LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
+	
+	FILTER account != null
 
 	LET currency = account.currency != null ? account.currency : @currency
 	LET rate = PRODUCT(

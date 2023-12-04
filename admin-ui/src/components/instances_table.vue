@@ -194,7 +194,9 @@ export default {
       /instanceCreate\.vue$/
     );
     types.keys().forEach((key) => {
-      const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i);
+      const matched = key.match(
+        /\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i
+      );
       if (matched && matched.length > 1) {
         const type = matched[1];
         this.instancesTypes.push(type);
@@ -268,30 +270,61 @@ export default {
         case "ovh": {
           return getOvhPrice(inst);
         }
-        case "empty":
-        case "ione": {
+        case "empty": {
+          const initialPrice =
+            inst.billingPlan.products[inst.product]?.price ?? 0;
+          return inst.billingPlan.resources
+            .filter(({ key }) => inst.config?.addons?.find((a) => a === key))
+            .reduce((acc, r) => acc + +r?.price, initialPrice);
+        }
+        case "keyweb": {
+          const key = inst.product;
+          const tariff = inst.billingPlan.products[key];
+
+          const getAddonKey = (key, metaKey) =>
+            tariff.meta?.[metaKey].find(
+              (a) =>
+                key === a.type &&
+                a.key.startsWith(inst.config?.configurations[key])
+            )?.key;
+
+          const addons = Object.keys(inst.config?.configurations || {}).map(
+            (key) =>
+              inst.billingPlan?.resources?.find((r) => {
+                return (
+                  r.key === getAddonKey(key, "addons") ||
+                  r.key === getAddonKey(key, "os")
+                );
+              })
+          );
+
+          return (
+            (+tariff.price || 0) +
+            (addons.reduce((acc, a) => acc + a.price, 0) || 0)
+          );
+        }
+        case "ione":
+        case "cpanel": {
           const initialPrice =
             inst.billingPlan.products[inst.product]?.price ?? 0;
 
-          return +inst.billingPlan.resources
-            .reduce((prev, curr) => {
-              if (
-                curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`
-              ) {
-                return prev + (curr.price * inst.resources.drive_size) / 1024;
-              } else if (curr.key === "ram") {
-                return prev + (curr.price * inst.resources.ram) / 1024;
-              } else if (inst.resources[curr.key]) {
-                return prev + curr.price * inst.resources[curr.key];
-              }
-              return prev;
-            }, initialPrice)
-            ?.toFixed(2);
+          return +inst.billingPlan.resources.reduce((prev, curr) => {
+            if (
+              curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`
+            ) {
+              return prev + (curr.price * inst.resources.drive_size) / 1024;
+            } else if (curr.key === "ram") {
+              return prev + (curr.price * inst.resources.ram) / 1024;
+            } else if (inst.resources[curr.key]) {
+              return prev + curr.price * inst.resources[curr.key];
+            }
+            return prev;
+          }, initialPrice);
         }
       }
     },
     getNcuPrice(inst) {
-      const price = this.getPrice(inst);
+      const price = (this.getPrice(inst) || 0).toFixed(2);
       if (!price) {
         return "";
       }
@@ -598,7 +631,16 @@ export default {
         },
         {
           key: "state",
-          items: ["RUNNING", "STOPPED", "LCM_INIT","PENDING","SUSPENDED", "UNKNOWN","DELETED","ERROR"],
+          items: [
+            "RUNNING",
+            "STOPPED",
+            "LCM_INIT",
+            "PENDING",
+            "SUSPENDED",
+            "UNKNOWN",
+            "DELETED",
+            "ERROR",
+          ],
           type: "select",
           title: "State",
         },

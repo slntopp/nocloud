@@ -452,8 +452,8 @@ export default {
       return document.documentElement.clientWidth;
     },
     productsHide() {
-      const hidden = ["ovh", "goget", "acronis", "cpanel"];
-      return hidden.some((h) => this.plan.type.includes(h));
+      const hidden = ["ovh", "goget", "acronis", "cpanel","keyweb"];
+      return hidden.some((h) => this.plan.type?.includes(h));
     },
     filteredProducts() {
       return this.plan.products;

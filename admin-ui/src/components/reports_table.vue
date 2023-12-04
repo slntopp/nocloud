@@ -66,13 +66,27 @@
           {{ getInstance(value)?.title || value }}
         </router-link>
       </template>
+      <template v-slot:[`item.type`]="{ item }">
+        <span>{{ getReportType(item) }}</span>
+      </template>
       <template v-slot:[`item.actions`]="{ item }">
         <div class="d-flex justify-center align-center">
           <v-btn
             v-for="action in getReportActions(item)"
             :key="action.title"
-            @click="action.handler(item)"
+            @click="callAction(item, action.action)"
             small
+            :disabled="
+              !!runningActionName &&
+              (runningActionName !== action.action ||
+                runningActionReportUuid !== item.uuid)
+            "
+            :loading="
+              !!runningActionName &&
+              runningActionName === action.action &&
+              runningActionReportUuid === item.uuid
+            "
+            class="mx-1"
           >
             {{ action.title }}
           </v-btn>
@@ -119,6 +133,8 @@ const count = ref(10);
 const page = ref(1);
 const isFetchLoading = ref(false);
 const isCountLoading = ref(false);
+const runningActionName = ref("");
+const runningActionReportUuid = ref("");
 const fetchError = ref("");
 const options = ref({});
 const itemsPerPageOptions = ref([5, 10, 15, 25]);
@@ -166,15 +182,26 @@ const requestOptions = computed(() => ({
 }));
 
 const whmcsApi = computed(() => store.getters["settings/whmcsApi"]);
+const transactionTypes = computed(() => store.getters["transactions/types"]);
 
 const getReportActions = (report) => {
   const actions = [];
 
   if (report.type?.startsWith("invoice")) {
-    actions.push({ title: "Email", handler: sendEmail });
+    actions.push({ title: "Email", action: "email", handler: sendEmail });
+    actions.push({
+      title: "Invoice",
+      action: "invoice",
+      handler: downloadInvoice,
+    });
   }
   return actions;
 };
+
+const getReportType = (item) => {
+  return transactionTypes.value.find((t) => t.key === item.type)?.title;
+};
+
 const fetchReports = async () => {
   init();
   isFetchLoading.value = true;
@@ -240,6 +267,18 @@ const getAccount = (value) => accounts.value.find((s) => s.uuid === value);
 const getInstance = (value) => instances.value.find((s) => s.uuid === value);
 const getService = (value) => services.value.find((s) => s.uuid === value);
 
+const callAction = async (report, action) => {
+  runningActionName.value = action;
+  runningActionReportUuid.value = report.uuid;
+  try {
+    const actions = getReportActions(report);
+    await actions.find((a) => a.action === action).handler(report);
+  } finally {
+    runningActionName.value = "";
+    runningActionReportUuid.value = "";
+  }
+};
+
 const sendEmail = async (report) => {
   try {
     await fetch(
@@ -252,6 +291,21 @@ const sendEmail = async (report) => {
   } catch {
     store.commit("snackbar/showSnackbarError", {
       message: "Error while try resend email",
+    });
+  }
+};
+
+const downloadInvoice = async (report) => {
+  try {
+    const response = await fetch(
+      /https:\/\/(.+?\.?\/)/.exec(whmcsApi.value)[0] +
+        `modules/addons/nocloud/api/index.php?run=download_invoice&account=${report.account}&invoiceid=${report.transactionUuid}`
+    );
+    const data = await response.json();
+    window.open(data, "_blanc");
+  } catch {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Error while download invoice",
     });
   }
 };
