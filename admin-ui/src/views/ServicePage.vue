@@ -95,7 +95,7 @@ export default {
         this.found = !!this.service;
         document.title = `${this.serviceTitle} | NoCloud`;
       });
-      this.$store.dispatch("services/fetch");
+      this.$store.dispatch("services/fetch",{showDeleted:true});
     },
   },
   computed: {

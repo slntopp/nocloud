@@ -62,7 +62,7 @@ const reportsHeaders = [
 ];
 
 const fetchData = () => {
-  store.dispatch("services/fetch");
+  store.dispatch("services/fetch",{showDeleted:true});
 };
 
 onMounted(() => {
