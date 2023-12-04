@@ -302,7 +302,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("services/fetch");
+    this.$store.dispatch("services/fetch",{showDeleted:true});
     this.$store.dispatch("servicesProviders/fetch");
     this.getPlans();
   },
