@@ -29,6 +29,6 @@ const instances = computed(() =>
 );
 
 onMounted(async () => {
-  store.dispatch("services/fetch");
+  store.dispatch("services/fetch",{showDeleted:true});
 });
 </script>
