@@ -248,6 +248,7 @@ func (ctrl *ServicesController) Get(ctx context.Context, acc, key string) (*spb.
 		"service":     id,
 		"instances":   schema.INSTANCES_COL,
 		"sps":         schema.SERVICES_PROVIDERS_COL,
+		"bps":         schema.BILLING_PLANS_COL,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	})
 	if err != nil {
@@ -363,6 +364,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"@services":         schema.SERVICES_COL,
 		"instances":         schema.INSTANCES_COL,
+		"bps":               schema.BILLING_PLANS_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
 
