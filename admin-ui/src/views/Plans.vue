@@ -183,8 +183,8 @@ export default {
       this.linked = [];
       this.services.forEach((service) => {
         service.instancesGroups.forEach(({ instances, sp }) => {
-          instances.forEach(({ uuid, title, billingPlan }) => {
-            if (billingPlan.uuid === this.selected[0]?.uuid) {
+          instances.forEach(({ uuid, title, billingPlan,state }) => {
+            if (billingPlan.uuid === this.selected[0]?.uuid && state?.state!=='DELETED') {
               this.linked.push({
                 uuid,
                 title,
