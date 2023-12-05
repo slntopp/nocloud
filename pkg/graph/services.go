@@ -212,7 +212,21 @@ LET instances_groups = (
             FOR i IN 1 OUTBOUND group
             GRAPH @permissions
             FILTER IS_SAME_COLLECTION(@instances, i)
-                RETURN MERGE(i, { uuid: i._key, access: service.access }) )
+				LET bp = DOCUMENT(CONCAT(@bps, "/", i.billing_plan.uuid))
+                RETURN MERGE(i, { 
+                    uuid: i._key, 
+                    access: service.access, 
+                    billing_plan: {
+                        uuid: bp.uuid,
+                        title: bp.title,
+                        type: bp.type,
+                        kind: bp.kind,
+                        resources: bp.resources,
+                        products: {
+                            [i.product]: bp.products[i.product],
+                        }
+                    } 
+                }))
         LET sp = (
             FOR s IN 1 OUTBOUND group
             GRAPH @permissions
@@ -307,7 +321,20 @@ FOR service, e, path IN 0..@depth OUTBOUND @account
     			GRAPH @permissions_graph
     			FILTER IS_SAME_COLLECTION(@instances, i)
 				%s
-    				RETURN MERGE(i, { uuid: i._key }) )
+					LET bp = DOCUMENT(CONCAT(@bps, "/", i.billing_plan.uuid))
+					RETURN MERGE(i, { 
+						uuid: i._key, 
+						billing_plan: {
+							uuid: bp.uuid,
+							title: bp.title,
+							type: bp.type,
+							kind: bp.kind,
+							resources: bp.resources,
+							products: {
+								[i.product]: bp.products[i.product],
+							}
+						} 
+					}))
     		RETURN MERGE(group, { uuid: group._key, instances })
         )
 RETURN MERGE(service, {uuid:service._key, instances_groups, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key }})
