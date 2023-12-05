@@ -44,7 +44,7 @@
       <template v-slot:[`item.exec`]="{ value }">
         <span>{{ new Date(value * 1000).toLocaleString() }}</span>
       </template>
-      <template v-slot:[`item.paymentDate`]="{ value }">
+      <template v-slot:[`item.meta.payment_date`]="{ value }">
         <div class="d-flex justify-center align-center">
           {{ value ? new Date(value * 1000).toLocaleString() : "-" }}
         </div>
@@ -53,9 +53,9 @@
         <v-chip
           class="d-flex justify-center align-center"
           style="width: 75px"
-          :color="item.paymentDate ? 'success' : 'error'"
+          :color="item.meta.payment_date ? 'success' : 'error'"
         >
-          {{ item.paymentDate ? "Paid" : "Unpaid" }}
+          {{ item.meta.payment_date ? "Paid" : "Unpaid" }}
         </v-chip>
       </template>
       <template v-slot:[`item.service`]="{ value }">
@@ -68,7 +68,7 @@
           {{ getInstance(value)?.title || value }}
         </router-link>
       </template>
-      <template v-slot:[`item.type`]="{ item }">
+      <template v-slot:[`item.meta.transactionType`]="{ item }">
         <span>{{ getReportType(item) }}</span>
       </template>
       <template v-slot:[`item.actions`]="{ item }">
@@ -143,15 +143,19 @@ const itemsPerPageOptions = ref([5, 10, 15, 25]);
 
 const reportsHeaders = computed(() => {
   const headers = [
-    { text: "Duration", value: "duration" },
-    { text: "Executed date", value: "exec" },
-    { text: "Payment date", value: "paymentDate" },
-    { text: "Status", value: "status" },
+    { text: "Duration", value: "duration", sortable: false },
+    { text: "Executed date", value: "exec", sortable: false },
+    { text: "Payment date", value: "meta.payment_date" },
+    { text: "Status", value: "status", sortable: false },
     { text: "Total", value: "totalPreview" },
-    { text: "Total in default currency", value: "totalDefaultPreview" },
-    { text: "Product or resource", value: "item" },
-    { text: "Type", value: "type" },
-    { text: "Actions", value: "actions" },
+    {
+      text: "Total in default currency",
+      value: "totalDefaultPreview",
+      sortable: false,
+    },
+    { text: "Product or resource", value: "item", sortable: false },
+    { text: "Type", value: "meta.transactionType" },
+    { text: "Actions", value: "actions", sortable: false },
   ];
 
   if (!hideAccount.value) {
@@ -189,7 +193,7 @@ const transactionTypes = computed(() => store.getters["transactions/types"]);
 const getReportActions = (report) => {
   const actions = [];
 
-  if (report.type?.startsWith("invoice")) {
+  if (report.meta.transactionType?.startsWith("invoice")) {
     actions.push({ title: "Email", action: "email", handler: sendEmail });
     actions.push({
       title: "Invoice",
@@ -201,7 +205,8 @@ const getReportActions = (report) => {
 };
 
 const getReportType = (item) => {
-  return transactionTypes.value.find((t) => t.key === item.type)?.title;
+  return transactionTypes.value.find((t) => t.key === item.meta.transactionType)
+    ?.title;
 };
 
 const fetchReports = async () => {
@@ -226,8 +231,9 @@ const fetchReports = async () => {
         service: r.service,
         instance: r.instance,
         account: r.account,
-        type: r.meta?.transactionType,
-        paymentDate: r.meta?.payment_date,
+        meta: {
+          ...r.meta,
+        },
         totalDefault: -convertFrom(r.total, r.currency),
       };
     });
