@@ -224,12 +224,26 @@ FILTER IS_SAME_COLLECTION(@groups, group)
         FOR instance IN OUTBOUND group
         GRAPH @permissions
         FILTER IS_SAME_COLLECTION(@instances, instance)
-            RETURN MERGE(instance, { uuid: instance._key }) )
+			LET bp = DOCUMENT(CONCAT(@bps, "/", instance.billing_plan.uuid))
+			RETURN MERGE(instance, { 
+				uuid: instance._key, 
+				billing_plan: {
+					uuid: bp.uuid,
+					title: bp.title,
+					type: bp.type,
+					kind: bp.kind,
+					resources: bp.resources,
+					products: {
+						[instance.product]: bp.products[instance.product],
+					}
+				} 
+			}))
     RETURN MERGE(group, { uuid: group._key, instances })`
 
 func (ctrl *ServicesProvidersController) GetGroups(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error) {
 	bindVars := map[string]interface{}{
 		"groups":         schema.INSTANCES_GROUPS_COL,
+		"bps":            schema.BILLING_PLANS_COL,
 		"sp":             sp.DocumentMeta.ID,
 		"permissions":    schema.PERMISSIONS_GRAPH.Name,
 		"instances":      schema.INSTANCES_COL,
