@@ -449,6 +449,9 @@ export const fetchMDIIcons = fetchMDIIconsHash();
 
 export function getBillingPeriod(period) {
   const fullPeriod = period && getFullDate(period);
+  if(!fullPeriod){
+    return {}
+  }
   fullPeriod.hours = +fullPeriod.time.split(":")?.[0];
   fullPeriod.time = undefined;
   if (fullPeriod) {
