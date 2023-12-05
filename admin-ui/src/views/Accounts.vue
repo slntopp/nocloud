@@ -381,7 +381,7 @@ export default {
       type: "accounts/fetch",
     });
     this.$store.dispatch("currencies/fetch");
-    this.$store.dispatch("services/fetch");
+    this.$store.dispatch("services/fetch",{showDeleted:true});
   },
   watch: {
     defaultCurrency(newVal) {

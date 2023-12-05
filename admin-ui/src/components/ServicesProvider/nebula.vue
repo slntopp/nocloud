@@ -143,7 +143,7 @@ onMounted(async () => {
   isFetchLoading.value = true;
   try {
     await Promise.all([
-      store.dispatch("services/fetch"),
+      store.dispatch("services/fetch",{showDeleted:true}),
       store.dispatch("plans/fetch"),
     ]);
 

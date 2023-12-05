@@ -32,12 +32,10 @@
       :itemsPerPageOptions="itemsPerPageOptions"
     >
       <template v-slot:[`item.totalPreview`]="{ item }">
-        <v-chip :color="+item.total > 0 ? 'success' : 'error'">{{
-          `${item.total} ${item.currency}`
-        }}</v-chip>
+        <v-chip>{{ `${item.total} ${item.currency}` }}</v-chip>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
-        <v-chip :color="+item.totalDefault > 0 ? 'success' : 'error'">{{
+        <v-chip>{{
           item.totalDefault
             ? `${item.totalDefault} ${defaultCurrency}`
             : item.totalDefault
@@ -52,9 +50,13 @@
         </div>
       </template>
       <template v-slot:[`item.status`]="{ item }">
-        <div class="d-flex justify-center align-center">
+        <v-chip
+          class="d-flex justify-center align-center"
+          style="width: 75px"
+          :color="item.paymentDate ? 'success' : 'error'"
+        >
           {{ item.paymentDate ? "Paid" : "Unpaid" }}
-        </div>
+        </v-chip>
       </template>
       <template v-slot:[`item.service`]="{ value }">
         <router-link :to="{ name: 'Service', params: { serviceId: value } }">
