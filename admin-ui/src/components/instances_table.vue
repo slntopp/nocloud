@@ -636,6 +636,7 @@ export default {
             "STOPPED",
             "LCM_INIT",
             "PENDING",
+            "OPERATION",
             "SUSPENDED",
             "UNKNOWN",
             "DELETED",
