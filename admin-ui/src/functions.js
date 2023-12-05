@@ -269,25 +269,8 @@ export function getSecondsByDays(days) {
 
 export function getState(item) {
   if (!item.state) return "ERROR";
-  const state =
-    item.billingPlan.type === "ione"
-      ? item.state.meta?.lcm_state_str
-      : item.state.state;
 
-  switch (item.state.meta.state) {
-    case 1:
-      return "PENDING";
-    case 5:
-      return "SUSPENDED";
-    case "BUILD":
-      return "BUILD";
-  }
-  switch (state) {
-    case "LCM_INIT":
-      return "POWEROFF";
-    default:
-      return state?.replaceAll("_", " ") ?? "";
-  }
+  return item.state.state;
 }
 
 export function toKebabCase(str) {
@@ -449,8 +432,8 @@ export const fetchMDIIcons = fetchMDIIconsHash();
 
 export function getBillingPeriod(period) {
   const fullPeriod = period && getFullDate(period);
-  if(!fullPeriod){
-    return {}
+  if (!fullPeriod) {
+    return {};
   }
   fullPeriod.hours = +fullPeriod.time.split(":")?.[0];
   fullPeriod.time = undefined;

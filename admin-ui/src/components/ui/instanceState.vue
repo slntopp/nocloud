@@ -6,12 +6,13 @@
 
 <script setup>
 import { computed, toRefs } from "vue";
+import {getState} from "@/functions";
 
 const props = defineProps(["template", "small"]);
 const { template } = toRefs(props);
 
 const state = computed(() => {
-  return template.value.state?.state || 'ERROR';
+  return getState(template.value);
 });
 
 const isDetached = computed(() => {
