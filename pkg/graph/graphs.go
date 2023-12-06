@@ -258,7 +258,7 @@ func GetInstanceWithAccess(ctx context.Context, db driver.Database, id driver.Do
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 		"bps":         schema.BILLING_PLANS_COL,
 	}
-	c, err := db.Query(ctx, getWithAccessLevel, vars)
+	c, err := db.Query(ctx, getInstanceWithAccessLevel, vars)
 	if err != nil {
 		return o, err
 	}
