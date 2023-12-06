@@ -224,7 +224,10 @@ LET instances_groups = (
                         resources: bp.resources,
                         products: {
                             [i.product]: bp.products[i.product],
-                        }
+                        },
+						meta: bp.meta,
+						fee: bp.fee,
+						software: bp.software
                     } 
                 }))
         LET sp = (
@@ -333,7 +336,10 @@ FOR service, e, path IN 0..@depth OUTBOUND @account
 							resources: bp.resources,
 							products: {
 								[i.product]: bp.products[i.product],
-							}
+							},
+							meta: bp.meta,
+							fee: bp.fee,
+							software: bp.software
 						} 
 					}))
     		RETURN MERGE(group, { uuid: group._key, instances })
