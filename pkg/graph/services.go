@@ -217,7 +217,7 @@ LET instances_groups = (
                     uuid: i._key, 
                     access: service.access, 
                     billing_plan: {
-                        uuid: bp.uuid,
+                        uuid: bp._key,
                         title: bp.title,
                         type: bp.type,
                         kind: bp.kind,
@@ -329,7 +329,7 @@ FOR service, e, path IN 0..@depth OUTBOUND @account
 					RETURN MERGE(i, { 
 						uuid: i._key, 
 						billing_plan: {
-							uuid: bp.uuid,
+							uuid: bp._key,
 							title: bp.title,
 							type: bp.type,
 							kind: bp.kind,
