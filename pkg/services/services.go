@@ -173,24 +173,14 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				continue
 			}
 			if instance.BillingPlan != nil && instance.BillingPlan.Uuid != "" {
-				plan, ok := bp_cache[instance.BillingPlan.Uuid]
+				_, ok := bp_cache[instance.BillingPlan.Uuid]
 				if !ok {
-					plan, err = s.billing.GetPlan(ctx, instance.BillingPlan)
+					_, err := s.billing.GetPlan(ctx, instance.BillingPlan)
 					if err != nil {
 						log.Error("Error fetching BillingPlan", zap.Error(err))
 						return nil, err
 					}
 				}
-
-				if plan.GetProducts() != nil {
-					for key := range plan.GetProducts() {
-						if key != instance.GetProduct() {
-							delete(plan.Products, key)
-						}
-					}
-				}
-
-				instance.BillingPlan = plan
 
 				inst_ctrl := s.ctrl.IGController().Instances()
 				old_instance, _ := inst_ctrl.Get(ctx, instance.GetUuid())

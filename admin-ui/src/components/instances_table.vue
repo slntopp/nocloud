@@ -634,8 +634,8 @@ export default {
           items: [
             "RUNNING",
             "STOPPED",
-            "LCM_INIT",
             "PENDING",
+            "OPERATION",
             "SUSPENDED",
             "UNKNOWN",
             "DELETED",

@@ -2,34 +2,77 @@
   <div>
     <v-row>
       <v-col>
-        <v-text-field readonly label="price model" :value="template.billingPlan.title"
-          @click:append="priceModelDialog = true" append-icon="mdi-pencil" />
+        <v-text-field
+          readonly
+          label="price model"
+          :value="template.billingPlan.title"
+          @click:append="priceModelDialog = true"
+          append-icon="mdi-pencil"
+        />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Product name" :value="template.billingPlan.products[template.product]?.title ||
-          template.product
-          " append-icon="mdi-pencil" @click:append="changeTariffDialog = true" />
+        <v-text-field
+          readonly
+          label="Product name"
+          :value="
+            template.billingPlan.products[template.product]?.title ||
+            template.product
+          "
+          append-icon="mdi-pencil"
+          @click:append="changeTariffDialog = true"
+        />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Date (create)" :value="template.data.creation" />
+        <v-text-field
+          readonly
+          label="Date (create)"
+          :value="template.data.creation"
+        />
       </v-col>
 
-      <v-col v-if="template.billingPlan.title.toLowerCase() !== 'payg' ||
-        isMonitoringEmpty
-        ">
-        <v-text-field readonly label="Due to date/next payment" :value="date"
-          :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null" @click:append="changeDatesDialog = true" />
+      <v-col
+        v-if="
+          template.billingPlan.title.toLowerCase() !== 'payg' ||
+          isMonitoringEmpty
+        "
+      >
+        <v-text-field
+          readonly
+          label="Due to date/next payment"
+          :value="date"
+          :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
+          @click:append="changeDatesDialog = true"
+        />
       </v-col>
     </v-row>
     <instances-panels title="Prices">
-      <nocloud-table class="mb-5" :headers="billingHeaders" :items="billingItems" no-hide-uuid :show-select="false"
-        hide-default-footer>
+      <nocloud-table
+        class="mb-5"
+        :headers="billingHeaders"
+        :items="billingItems"
+        no-hide-uuid
+        :show-select="false"
+        hide-default-footer
+      >
         <template v-slot:[`item.price`]="{ item }">
           <div class="d-flex">
-            <v-text-field class="mr-2" :suffix="defaultCurrency" v-model="item.price" type="number"
-              @input="updatePrice(item, false)" append-icon="mdi-pencil" />
-            <v-text-field style="color: var(--v-primary-base)" class="ml-2" type="number" :suffix="accountCurrency"
-              v-model="item.accountPrice" @input="updatePrice(item, true)" append-icon="mdi-pencil" />
+            <v-text-field
+              class="mr-2"
+              :suffix="defaultCurrency"
+              v-model="item.price"
+              type="number"
+              @input="updatePrice(item, false)"
+              append-icon="mdi-pencil"
+            />
+            <v-text-field
+              style="color: var(--v-primary-base)"
+              class="ml-2"
+              type="number"
+              :suffix="accountCurrency"
+              v-model="item.accountPrice"
+              @input="updatePrice(item, true)"
+              append-icon="mdi-pencil"
+            />
           </div>
         </template>
         <template v-slot:[`item.quantity`]="{ item }">
@@ -55,22 +98,42 @@
             <td>
               <v-chip color="primary" outlined>
                 {{ totalPrice }}
-                {{ defaultCurrency }} /
-                {{ totalAccountPrice }} {{ accountCurrency }}
+                {{ defaultCurrency }} / {{ totalAccountPrice }}
+                {{ accountCurrency }}
               </v-chip>
             </td>
           </tr>
         </template>
       </nocloud-table>
     </instances-panels>
-    <change-ione-monitorings :template="template" :service="service" v-model="changeDatesDialog"
-      @refresh="emit('refresh')" v-if="template.billingPlan.title.toLowerCase() !== 'payg' || isMonitoringEmpty
-        " />
-    <change-ione-tarrif v-if="availableTarrifs?.length > 0" v-model="changeTariffDialog" @refresh="emit('refresh')"
-      :template="template" :service="service" :sp="sp" :available-tarrifs="availableTarrifs"
-      :billing-plan="billingPlan" />
-    <edit-price-model :account-rate="accountRate" :account-currency="accountCurrency" v-model="priceModelDialog"
-      :template="template" :plans="filteredPlans" @refresh="emit('refresh')" :service="service" />
+    <change-ione-monitorings
+      :template="template"
+      :service="service"
+      v-model="changeDatesDialog"
+      @refresh="emit('refresh')"
+      v-if="
+        template.billingPlan.title.toLowerCase() !== 'payg' || isMonitoringEmpty
+      "
+    />
+    <change-ione-tarrif
+      v-if="availableTarrifs?.length > 0"
+      v-model="changeTariffDialog"
+      @refresh="emit('refresh')"
+      :template="template"
+      :service="service"
+      :sp="sp"
+      :available-tarrifs="availableTarrifs"
+      :billing-plan="billingPlan"
+    />
+    <edit-price-model
+      :account-rate="accountRate"
+      :account-currency="accountCurrency"
+      v-model="priceModelDialog"
+      :template="template"
+      :plans="filteredPlans"
+      @refresh="emit('refresh')"
+      :service="service"
+    />
   </div>
 </template>
 
@@ -167,22 +230,30 @@ const totalAccountPrice = computed(() => toAccountPrice(totalPrice.value));
 const getBillingItems = () => {
   const items = [];
 
-  const price = billingPlan.value.products[template.value.product]?.price;
-  items.push({
-    name: template.value.product,
-    price,
-    accountPrice: toAccountPrice(price),
-    path: `billingPlan.products.${template.value.product}.price`,
-    quantity: 1,
-    unit: "pcs",
-    kind: billingPlan.value.products[template.value.product]?.kind,
-    period: billingPlan.value.products[template.value.product]?.period,
-  });
+  if (billingPlan.value.products[template.value.product]) {
+    const { price, kind, period } =
+      billingPlan.value.products[template.value.product];
+    items.push({
+      name: template.value.product,
+      price,
+      accountPrice: toAccountPrice(price),
+      path: `billingPlan.products.${template.value.product}.price`,
+      quantity: 1,
+      unit: "pcs",
+      kind,
+      period,
+    });
+  }
 
+  const gbAddons = ["ram"];
   Object.keys(template.value.resources).forEach((resourceKey) => {
-    const quantity = template.value.resources[resourceKey];
+    let quantity = template.value.resources[resourceKey];
     if (!quantity) {
       return;
+    }
+
+    if (gbAddons.includes(resourceKey)) {
+      quantity = quantity / 1024;
     }
 
     const addonIndex = billingPlan.value.resources.findIndex(

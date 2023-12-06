@@ -417,7 +417,10 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 		log.Error("Transaction has exec timestamp")
 		return nil, status.Error(codes.Internal, "Transaction has exec timestamp")
 	}
-	t.Exec = req.GetExec()
+	if req.GetExec() != 0 {
+		t.Exec = req.GetExec()
+	}
+	t.Total = req.GetTotal()
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 
@@ -427,7 +430,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 		return nil, status.Error(codes.Internal, "Failed to update transaction")
 	}
 
-	if t.GetPriority() == pb.Priority_URGENT {
+	if t.GetPriority() == pb.Priority_URGENT && t.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
 		currencyConf := MakeCurrencyConf(ctx, log)
