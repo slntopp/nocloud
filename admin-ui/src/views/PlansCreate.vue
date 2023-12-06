@@ -235,10 +235,6 @@ export default {
         message = "Validation failed!";
       }
 
-      if (!message) {
-        message = this.checkPlanPeriods(this.plan);
-      }
-
       if (message) {
         this.showSnackbarError({ message });
         return;
@@ -292,27 +288,6 @@ export default {
           this.isLoading = false;
           this.savePlanAction = "";
         });
-    },
-    checkPeriods(periods) {
-      const wrongPeriod = periods.find((p) => p.period === 0);
-
-      return (
-        wrongPeriod &&
-        `Period cannot be zero in an ${wrongPeriod.key || wrongPeriod.title
-        } config`
-      );
-    },
-    checkPlanPeriods(plan) {
-      if (
-        !Object.keys(plan.products).length &&
-        !Array.isArray(plan.resources)
-      ) {
-        return;
-      } else if (plan.products) {
-        return this.checkPeriods(Object.values(plan.products));
-      } else {
-        return this.checkPeriods(plan.resources);
-      }
     },
     setPeriod(date, id) {
       const period = getTimestamp(date);
