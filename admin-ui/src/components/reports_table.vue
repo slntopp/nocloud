@@ -224,9 +224,9 @@ const getReportType = (item) => {
 const fetchReports = async () => {
   init();
   isFetchLoading.value = true;
+  fetchError.value = "";
   try {
     const { records: result } = await api.reports.list(requestOptions.value);
-
     reports.value = result.map((r) => {
       return {
         total: -r.total.toFixed(2),
@@ -249,6 +249,8 @@ const fetchReports = async () => {
         totalDefault: -convertFrom(r.total, r.currency),
       };
     });
+  } catch (e) {
+    fetchError.value = e.message;
   } finally {
     isFetchLoading.value = false;
   }
