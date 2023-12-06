@@ -15,7 +15,6 @@
     show-expand
     :expanded.sync="expanded"
     no-hide-uuid
-    :itemsPerPageOptions="itemsPerPageOptions"
   >
     <template v-slot:[`item.ts`]="{ value }">
       {{ new Date(new Date(1970, 0, 1).setSeconds(value)).toLocaleString() }}
@@ -77,7 +76,6 @@ const isCountLoading = ref(false);
 const fetchError = ref("");
 const expanded = ref([]);
 const options = ref({});
-const itemsPerPageOptions = ref([5, 10, 15, 25]);
 const scopeItems = ref([]);
 const actionItems = ref([]);
 
