@@ -71,7 +71,7 @@
           </template>
           <template v-slot:[`item.group`]="{ item }">
             <div class="d-flex align-center">
-              <v-select v-if="productId !== item.id" :items="[...groups.values()]" :value="products[item.key].group"
+              <v-select v-if="productId !== item.id" :items="[...groups.values()]" :value="products[item.key]?.group"
                 @change="setGroup($event, item.id)" />
               <v-text-field v-else v-model="groupActionPayload" />
               <template v-if="productId !== item.id">
