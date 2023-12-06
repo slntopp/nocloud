@@ -29,7 +29,6 @@
       sort-desc
       @update:options="setOptions"
       no-hide-uuid
-      :itemsPerPageOptions="itemsPerPageOptions"
     >
       <template v-slot:[`item.totalPreview`]="{ item }">
         <v-chip>{{ `${item.total} ${item.currency}` }}</v-chip>
@@ -50,13 +49,11 @@
         </div>
       </template>
       <template v-slot:[`item.status`]="{ item }">
-        <v-chip
-          class="d-flex justify-center align-center"
-          style="width: 75px"
-          :color="item.meta.payment_date ? 'success' : 'error'"
-        >
-          {{ item.meta.payment_date ? "Paid" : "Unpaid" }}
-        </v-chip>
+        <div class="d-flex justify-center">
+          <v-chip :color="getStatusColor(item)">
+            {{ getStatus(item) }}
+          </v-chip>
+        </div>
       </template>
       <template v-slot:[`item.service`]="{ value }">
         <router-link :to="{ name: 'Service', params: { serviceId: value } }">
@@ -139,12 +136,11 @@ const runningActionName = ref("");
 const runningActionReportUuid = ref("");
 const fetchError = ref("");
 const options = ref({});
-const itemsPerPageOptions = ref([5, 10, 15, 25]);
 
 const reportsHeaders = computed(() => {
   const headers = [
     { text: "Duration", value: "duration", sortable: false },
-    { text: "Executed date", value: "exec", sortable: false },
+    { text: "Executed date", value: "exec" },
     { text: "Payment date", value: "meta.payment_date" },
     { text: "Status", value: "status", sortable: false },
     { text: "Total", value: "totalPreview" },
@@ -192,15 +188,31 @@ const transactionTypes = computed(() => store.getters["transactions/types"]);
 
 const getReportActions = (report) => {
   const actions = [];
-
-  if (report.meta.transactionType?.startsWith("invoice")) {
-    actions.push({ title: "Email", action: "email", handler: sendEmail });
-    actions.push({
-      title: "Invoice",
-      action: "invoice",
-      handler: downloadInvoice,
-    });
+  const status = getStatus(report);
+  switch (status) {
+    case "Paid": {
+      if (report.meta.transactionType?.startsWith("invoice")) {
+        actions.push({
+          title: "Invoice",
+          action: "invoice",
+          handler: downloadInvoice,
+        });
+      }
+      break;
+    }
+    case "Unpaid": {
+      if (report.meta.transactionType?.startsWith("invoice")) {
+        actions.push({
+          title: "Invoice",
+          action: "invoice",
+          handler: downloadInvoice,
+        });
+        actions.push({ title: "Email", action: "email", handler: sendEmail });
+      }
+      break;
+    }
   }
+
   return actions;
 };
 
@@ -274,6 +286,23 @@ const init = async () => {
 const getAccount = (value) => accounts.value.find((s) => s.uuid === value);
 const getInstance = (value) => instances.value.find((s) => s.uuid === value);
 const getService = (value) => services.value.find((s) => s.uuid === value);
+
+const getStatus = (item) => {
+  if (item.meta.status) {
+    return item.meta.status;
+  }
+  return item.meta.payment_date ? "Paid" : "Unpaid";
+};
+
+const getStatusColor = (item) => {
+  return {
+    Paid: "success",
+    Unpaid: "error",
+    Terminate: "blue-grey darken-2",
+    Draft: "blue",
+    Cancelled: "warning",
+  }[getStatus(item)];
+};
 
 const callAction = async (report, action) => {
   runningActionName.value = action;
