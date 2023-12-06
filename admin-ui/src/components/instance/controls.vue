@@ -537,6 +537,7 @@ export default {
       switch (type) {
         case "empty":
         case "openai":
+        case "cpanel":
         case "keyweb":
         case "ione": {
           return (item) => {
@@ -597,6 +598,7 @@ export default {
         case "ione":
         case "openai":
         case "keyweb":
+        case "cpanel":
         case "empty": {
           return this.template.product;
         }
