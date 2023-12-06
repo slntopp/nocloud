@@ -118,8 +118,9 @@ const move = async () => {
       });
       await api.services.up(service.value.uuid);
     }
+    
     let newIg = instancesGroups.value.find(
-        (ig) => ig.type === template.value.type
+        (ig) => ig.type === template.value.type && ig.sp===template.value.sp
     );
 
     if (!newIg) {
