@@ -181,14 +181,6 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
 
-	meta := map[string]*structpb.Value{}
-
-	trType, ok := t.Meta["transactionType"]
-
-	if ok {
-		meta["transactionType"] = trType
-	}
-
 	rec := s.records.Create(ctx, &pb.Record{
 		Start:     time.Now().Unix(),
 		End:       time.Now().Unix() + 1,
@@ -199,7 +191,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		Currency:  t.GetCurrency(),
 		Service:   t.GetService(),
 		Account:   t.GetAccount(),
-		Meta:      meta,
+		Meta:      t.GetMeta(),
 	})
 
 	if t.GetRecords() == nil {
@@ -526,7 +518,7 @@ LET rate = PRODUCT(
 LET total = transaction.total * rate
 
 FOR r in transaction.records
-	UPDATE r WITH {total: total, meta: {transaction: transaction._key, payment_date: @now}, exec: transaction.exec} in @@records
+	UPDATE r WITH {total: total, meta: {transaction: transaction._key, payment_date: @now, status: transaction.meta.status}, exec: transaction.exec} in @@records
 
 UPDATE transaction WITH {processed: true, proc: @now, currency: currency, total: total} IN @@transactions
 UPDATE account WITH { balance: account.balance - total } IN @@accounts
@@ -551,7 +543,7 @@ LET rate = PRODUCT(
 LET total = transaction.total * rate
 
 FOR r in transaction.records
-	UPDATE r WITH {total: total, meta: {transaction: transaction._key}} in @@records
+	UPDATE r WITH {total: total, meta: {transaction: transaction._key, status: transaction.meta.status}} in @@records
 
 UPDATE transaction WITH {currency: currency, total: total} IN @@transactions
 RETURN transaction
