@@ -78,25 +78,27 @@ func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) e
 		return errors.New("uuid is empty")
 	}
 
-	_, err := ctrl.col.RemoveDocument(ctx, plan.Uuid)
+	plan.Status = statuspb.NoCloudStatus_DEL
+
+	_, err := ctrl.col.UpdateDocument(ctx, plan.GetUuid(), plan)
 
 	if err != nil {
 		return err
 	}
 
-	db := ctrl.col.Database()
+	/*db := ctrl.col.Database()
 	bpId := driver.NewDocumentID(schema.BILLING_PLANS_COL, plan.GetUuid())
 	_, err = db.Query(ctx, deleteFromEdgeBillingBlans, map[string]interface{}{
 		"plan":                bpId,
 		"permissions":         schema.PERMISSIONS_GRAPH.Name,
 		"@services_providers": schema.SERVICES_PROVIDERS_COL,
 		"@sp_to_bp":           schema.SP2BP,
-	})
+	})*/
 
-	return err
+	return nil
 }
 
-const deleteFromEdgeBillingBlans = `
+/*const deleteFromEdgeBillingBlans = `
 LET sp2bp = (
     FOR node, edge IN INBOUND @plan GRAPH @permissions
         FILTER IS_SAME_COLLECTION(node, @@services_providers)
@@ -105,7 +107,7 @@ LET sp2bp = (
 
 FOR item IN sp2bp
     REMOVE item IN @@sp_to_bp
-`
+`*/
 
 func (ctrl *BillingPlansController) Get(ctx context.Context, plan *pb.Plan) (*BillingPlan, error) {
 	if plan.Uuid == "" {

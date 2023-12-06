@@ -128,6 +128,15 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, plan *pb.Plan) (*
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
+	get, err := s.plans.Get(ctx, plan)
+	if err != nil {
+		return nil, err
+	}
+
+	if get.GetStatus() == statuspb.NoCloudStatus_DEL {
+		return nil, status.Error(codes.Canceled, "Billing plan deleted")
+	}
+
 	res, err := s.plans.Update(ctx, plan)
 	if err != nil {
 		log.Error("Error updating plan", zap.Error(err))
@@ -151,7 +160,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
-	planId := driver.NewDocumentID(schema.BILLING_PLANS_COL, plan.GetUuid())
+	/*planId := driver.NewDocumentID(schema.BILLING_PLANS_COL, plan.GetUuid())
 
 	cursor, err := s.db.Query(ctx, getPlanInstances, map[string]interface{}{
 		"permissions":       schema.PERMISSIONS_GRAPH.Name,
@@ -167,7 +176,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 
 	if cursor.HasMore() {
 		return nil, status.Error(codes.DataLoss, "Сan't delete plan due to related instances")
-	}
+	}*/
 
 	err = s.plans.Delete(ctx, plan)
 	if err != nil {
@@ -239,6 +248,9 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 
 	result := make([]*pb.Plan, 0)
 	for _, plan := range plans {
+		if plan.GetStatus() == statuspb.NoCloudStatus_DEL && req.GetShowDeleted() {
+
+		}
 		if plan.Public {
 			result = append(result, plan.Plan)
 			continue
