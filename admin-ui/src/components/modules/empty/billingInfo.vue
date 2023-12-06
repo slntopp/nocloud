@@ -84,8 +84,8 @@
                 </nocloud-table>
               </v-card>
             </v-dialog>
-            <v-chip class="ml-1" v-if="addons.length">{{
-              addons.length
+            <v-chip class="ml-1" v-if="enabledAddonsCount>0">{{
+                enabledAddonsCount
             }}</v-chip>
           </div>
           <template v-slot:actions>
@@ -250,6 +250,10 @@ const addons = computed(() => {
       period: getBillingPeriod(period),
       accountPrice: toAccountPrice(price),
     })) || [];
+});
+
+const enabledAddonsCount = computed(() => {
+  return addons.value.filter(a=>a.enabled).length
 });
 
 const getBillingItems = () => {
