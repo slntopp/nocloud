@@ -1,13 +1,31 @@
 <template>
   <div class="pa-4">
-    <v-tabs class="rounded-t-lg" v-model="tabsIndex" background-color="background-light">
+    <v-tabs
+      class="rounded-t-lg"
+      v-model="tabsIndex"
+      background-color="background-light"
+    >
       <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
     </v-tabs>
 
-    <v-tabs-items v-model="tabsIndex" style="background: var(--v-background-light-base)" class="rounded-b-lg">
+    <v-tabs-items
+      v-model="tabsIndex"
+      style="background: var(--v-background-light-base)"
+      class="rounded-b-lg"
+    >
       <v-tab-item v-for="tab in tabs" :key="tab">
-        <nocloud-table table-name="plans-products" item-key="id" sort-by="sorter" ref="table" v-if="tab === 'Products'"
-          v-model="selected" :show-expand="true" :items="productsArray" :headers="headers" :expanded.sync="expanded">
+        <nocloud-table
+          table-name="plans-products"
+          item-key="id"
+          sort-by="sorter"
+          ref="table"
+          v-if="tab === 'Products'"
+          v-model="selected"
+          :show-expand="true"
+          :items="productsArray"
+          :headers="headers"
+          :expanded.sync="expanded"
+        >
           <template v-slot:top>
             <v-toolbar flat color="background">
               <v-toolbar-title>Actions</v-toolbar-title>
@@ -16,7 +34,13 @@
 
               <v-dialog width="90vw" v-model="isEditOpen">
                 <template v-slot:activator="{ on, attrs }">
-                  <v-btn :disabled="selected.length < 1" v-bind="attrs" v-on="on" class="mr-2" color="background-light">
+                  <v-btn
+                    :disabled="selected.length < 1"
+                    v-bind="attrs"
+                    v-on="on"
+                    class="mr-2"
+                    color="background-light"
+                  >
                     Edit
                   </v-btn>
                 </template>
@@ -26,13 +50,20 @@
                   <rich-editor v-model="newMeta.description" />
 
                   <v-row class="mt-5" justify="end">
-                    <v-btn class="mx-2" @click="isEditOpen = false">Close</v-btn>
+                    <v-btn class="mx-2" @click="isEditOpen = false"
+                      >Close</v-btn
+                    >
                     <v-btn @click="saveNewMeta" class="mx-2">Save</v-btn>
                   </v-row>
                 </v-card>
               </v-dialog>
 
-              <v-btn :disabled="selected.length < 1" class="mr-2" color="background-light" @click="copyProducts">
+              <v-btn
+                :disabled="selected.length < 1"
+                class="mr-2"
+                color="background-light"
+                @click="copyProducts"
+              >
                 Copy
               </v-btn>
 
@@ -48,31 +79,58 @@
           </template>
 
           <template v-slot:[`item.key`]="{ item }">
-            <v-text-field dense :value="item.key" :rules="[rules.required]"
-              @change="(value) => changeProduct('key', value, item.id)" />
+            <v-text-field
+              dense
+              :value="item.key"
+              :rules="[rules.required]"
+              @change="(value) => changeProduct('key', value, item.id)"
+            />
           </template>
           <template v-slot:[`item.title`]="{ item }">
-            <v-text-field dense :value="item.title" :rules="[rules.required]"
-              @change="(value) => changeProduct('title', value, item.id)" />
+            <v-text-field
+              dense
+              :value="item.title"
+              :rules="[rules.required]"
+              @change="(value) => changeProduct('title', value, item.id)"
+            />
           </template>
           <template v-slot:[`item.price`]="{ item }">
-            <v-text-field dense type="number" :suffix="defaultCurrency" :value="item.price" :rules="[rules.price]"
-              @change="(value) => changeProduct('price', value, item.id)" />
+            <v-text-field
+              dense
+              type="number"
+              :suffix="defaultCurrency"
+              :value="item.price"
+              :rules="[rules.price]"
+              @change="(value) => changeProduct('price', value, item.id)"
+            />
           </template>
           <template v-slot:[`item.period`]="{ item }">
-            <date-field :period="fullDate[item.id]" @changeDate="(value) => changeDate(value, item.id)" />
+            <date-field
+              :period="fullDate[item.id]"
+              @changeDate="(value) => changeDate(value, item.id)"
+            />
           </template>
           <template v-slot:[`item.public`]="{ item }">
-            <v-switch :input-value="item.public" @change="(value) => changeProduct('public', value, item.id)" />
+            <v-switch
+              :input-value="item.public"
+              @change="(value) => changeProduct('public', value, item.id)"
+            />
           </template>
           <template v-slot:[`item.sorter`]="{ item }">
-            <v-text-field type="number" :value="item.sorter"
-              @change="(value) => changeProduct('sorter', value, item.id)" />
+            <v-text-field
+              type="number"
+              :value="item.sorter"
+              @change="(value) => changeProduct('sorter', value, item.id)"
+            />
           </template>
           <template v-slot:[`item.group`]="{ item }">
             <div class="d-flex align-center">
-              <v-select v-if="productId !== item.id" :items="[...groups.values()]" :value="products[item.key]?.group"
-                @change="setGroup($event, item.id)" />
+              <v-select
+                v-if="productId !== item.id"
+                :items="[...groups.values()]"
+                :value="products[item.key]?.group"
+                @change="setGroup($event, item.id)"
+              />
               <v-text-field v-else v-model="groupActionPayload" />
               <template v-if="productId !== item.id">
                 <v-btn icon @click="setGroupAction('edit', products[item.key])">
@@ -93,52 +151,102 @@
             </div>
           </template>
           <template v-slot:[`item.kind`]="{ item }">
-            <v-radio-group row mandatory :value="item.kind" @change="(value) => changeProduct('kind', value, item.id)">
-              <v-radio v-for="(kind, i) of kinds" :style="{ marginRight: i === kinds.length - 1 ? 0 : 16 }" :key="kind"
-                :value="kind" :label="kind.toLowerCase()" />
+            <v-radio-group
+              row
+              mandatory
+              :value="item.kind"
+              @change="(value) => changeProduct('kind', value, item.id)"
+            >
+              <v-radio
+                v-for="(kind, i) of kinds"
+                :style="{ marginRight: i === kinds.length - 1 ? 0 : 16 }"
+                :key="kind"
+                :value="kind"
+                :label="kind.toLowerCase()"
+              />
             </v-radio-group>
           </template>
 
           <template v-slot:[`item.resources`]="{ item }">
-            <plans-empty-addons-table :rules="rules" :addons="resources" :product="item.key" :item="item" @update:addons="(value) => {
-              changeResource({ key: 'resources', value });
-              item.meta.addons = value.map(({ key }) => key);
-              item.meta.autoEnabled = value
-                .filter(({ auto }) => !!auto)
-                .map(({ key }) => key);
-            }
-              " />
+            <plans-empty-addons-table
+              :rules="rules"
+              :addons="resources"
+              :product="item.key"
+              :item="item"
+              @update:addons="
+                (value) => {
+                  changeResource({ key: 'resources', value });
+                  item.meta.addons = value
+                    .filter(
+                      ({ key }) => key.split('; product: ')[1] === item.key
+                    )
+                    .map(({ key }) => key);
+                  item.meta.autoEnabled = value
+                    .filter(({ auto }) => !!auto)
+                    .map(({ key }) => key);
+                }
+              "
+            />
           </template>
 
           <template v-slot:expanded-item="{ headers, item }">
             <td />
             <td :colspan="headers.length - 1">
-              <v-text-field dense class="pt-4" label="Image link" v-if="type === 'empty'" v-model="item.meta.image" />
+              <v-text-field
+                dense
+                class="pt-4"
+                label="Image link"
+                v-if="type === 'empty'"
+                v-model="item.meta.image"
+              />
 
               <v-subheader class="px-0"> Description: </v-subheader>
-              <rich-editor class="html-editor" v-model="item.meta.description" />
+              <rich-editor
+                class="html-editor"
+                v-model="item.meta.description"
+              />
 
               <template v-if="type === 'empty'">
-                <plans-empty-table :rules="rules" :resources="item.meta.resources ?? []" @update:resource="(value) => changeMeta(value, item.id, item.meta.resources)
-                  " />
+                <plans-empty-table
+                  :rules="rules"
+                  :resources="item.meta.resources ?? []"
+                  @update:resource="
+                    (value) => changeMeta(value, item.id, item.meta.resources)
+                  "
+                />
               </template>
 
               <template v-else>
                 <v-subheader class="px-0"> Amount of resources </v-subheader>
-                <json-editor :json="item.resources" @changeValue="(value) => changeProduct('amount', value, item.id)
-                  " />
+                <json-editor
+                  :json="item.resources"
+                  @changeValue="
+                    (value) => changeProduct('amount', value, item.id)
+                  "
+                />
               </template>
 
               <v-subheader class="px-0 pt-4">Installation price:</v-subheader>
-              <v-text-field dense type="number" style="width: 150px" :value="item.installationFee"
-                :suffix="defaultCurrency" @input="(value) => changeProduct('installationFee', +value, item.id)
-                  " />
+              <v-text-field
+                dense
+                type="number"
+                style="width: 150px"
+                :value="item.installationFee"
+                :suffix="defaultCurrency"
+                @input="
+                  (value) => changeProduct('installationFee', +value, item.id)
+                "
+              />
             </td>
           </template>
         </nocloud-table>
 
-        <plans-resources-table v-else-if="tab === 'Resources'" :rules="rules" :resources="resources"
-          @change:resource="changeResource" />
+        <plans-resources-table
+          v-else-if="tab === 'Resources'"
+          :rules="rules"
+          :resources="resources"
+          @change:resource="changeResource"
+        />
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -161,7 +269,7 @@ const props = defineProps({
   type: { type: String, required: true },
   products: { type: Object, required: true },
   resources: { type: Array, required: true },
-  rules: { type: Object }
+  rules: { type: Object },
 });
 const emits = defineEmits(["change:resource", "change:product", "change:meta"]);
 const { products, resources, rules } = toRefs(props);
@@ -414,8 +522,9 @@ watch(table, (value) => {
       const initY = e.dataTransfer.getData("text/y");
       const nextIndex = Math.round((e.clientY - initY) / height) + i;
 
-      allElements[i].style.cssText = `transform: translateY(${e.clientY - initY
-        }px)`;
+      allElements[i].style.cssText = `transform: translateY(${
+        e.clientY - initY
+      }px)`;
       allElements[i].setAttribute("data-i", nextIndex);
       e.preventDefault();
     });
