@@ -209,7 +209,7 @@ GRAPH @permissions SORT path.edges[0].level
 			kind: bp.kind,
 			resources: bp.resources,
 			products: {
-			    [i.product]: bp.products[i.product],
+			    [path.vertices[-1].product]: bp.products[path.vertices[-1].product],
             },
 			meta: bp.meta,
 			fee: bp.fee,
