@@ -235,7 +235,10 @@ FILTER IS_SAME_COLLECTION(@groups, group)
 					resources: bp.resources,
 					products: {
 						[instance.product]: bp.products[instance.product],
-					}
+					},
+					meta: bp.meta,
+					fee: bp.fee,
+					software: bp.software
 				} 
 			}))
     RETURN MERGE(group, { uuid: group._key, instances })`

@@ -141,7 +141,7 @@ const filteredAddons = computed(() =>
 );
 
 function addConfig() {
-  const addons = JSON.parse(JSON.stringify(props.addons ?? []));
+  const addons = JSON.parse(JSON.stringify(filteredAddons.value ?? []));
 
   addons.push({
     id: Math.random().toString(16).slice(2),
@@ -150,7 +150,7 @@ function addConfig() {
     price: 0,
     period: 0,
     kind: "PREPAID",
-    meta:{}
+    meta: {},
   });
 
   emits("update:addons", addons);
