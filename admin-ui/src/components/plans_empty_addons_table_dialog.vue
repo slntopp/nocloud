@@ -141,7 +141,7 @@ const filteredAddons = computed(() =>
 );
 
 function addConfig() {
-  const addons = JSON.parse(JSON.stringify(filteredAddons.value ?? []));
+  const addons = JSON.parse(JSON.stringify(props.addons ?? []));
 
   addons.push({
     id: Math.random().toString(16).slice(2),
