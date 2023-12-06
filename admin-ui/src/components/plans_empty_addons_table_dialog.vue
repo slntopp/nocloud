@@ -150,6 +150,7 @@ function addConfig() {
     price: 0,
     period: 0,
     kind: "PREPAID",
+    meta:{}
   });
 
   emits("update:addons", addons);
