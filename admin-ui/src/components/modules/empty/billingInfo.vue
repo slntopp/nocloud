@@ -233,16 +233,14 @@ onMounted(() => {
 });
 
 watch(accountRate, () => {
-  billingItems.value = billingItems.value.map((i) => {
+  billingItems.value = billingItems.value?.map((i) => {
     i.accountPrice = toAccountPrice(i.price);
     return i;
   });
 });
 
 const addons = computed(() => {
-  return billingPlan.value.products[template.value.product].meta.addons
-    .map((key) => billingPlan.value.resources.find((r) => r.key === key))
-    .map(({ price, title, kind, period, key }, index) => ({
+  return billingPlan.value.products[template.value.product].meta.addons?.map((key) => billingPlan.value.resources.find((r) => r.key === key))?.map(({ price, title, kind, period, key }, index) => ({
       name: title,
       price,
       enabled: !!template.value.config?.addons?.find((a) => a === key),
@@ -251,7 +249,7 @@ const addons = computed(() => {
       key,
       period: getBillingPeriod(period),
       accountPrice: toAccountPrice(price),
-    }));
+    })) || [];
 });
 
 const getBillingItems = () => {
@@ -303,7 +301,7 @@ const updatePrice = (item, isAccount) => {
 const changeAddons = () => {
   emit("update", {
     key: "config.addons",
-    value: addons.value.filter((a) => a.enabled).map((a) => a.key),
+    value: addons.value.filter((a) => a.enabled)?.map((a) => a.key),
   });
 };
 </script>
