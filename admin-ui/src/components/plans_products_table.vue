@@ -106,6 +106,7 @@
           </template>
           <template v-slot:[`item.period`]="{ item }">
             <date-field
+              v-if="!isOneTime(item)"
               :period="fullDate[item.id]"
               @changeDate="(value) => changeDate(value, item.id)"
             />
@@ -152,6 +153,7 @@
           </template>
           <template v-slot:[`item.kind`]="{ item }">
             <v-radio-group
+              :disabled="isOneTime(item)"
               row
               mandatory
               :value="item.kind"
@@ -165,6 +167,13 @@
                 :label="kind.toLowerCase()"
               />
             </v-radio-group>
+          </template>
+
+          <template v-slot:[`item.meta.oneTime`]="{ item }">
+            <v-switch
+              :input-value="item.meta?.oneTime"
+              @change="changeOneTime(item, $event)"
+            />
           </template>
 
           <template v-slot:[`item.resources`]="{ item }">
@@ -245,6 +254,7 @@
           v-else-if="tab === 'Resources'"
           :rules="rules"
           :resources="resources"
+          :type="type"
           @change:resource="changeResource"
         />
       </v-tab-item>
@@ -253,7 +263,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import dateField from "@/components/date.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
@@ -272,7 +282,7 @@ const props = defineProps({
   rules: { type: Object },
 });
 const emits = defineEmits(["change:resource", "change:product", "change:meta"]);
-const { products, resources, rules } = toRefs(props);
+const { products, resources, rules, type } = toRefs(props);
 
 const { defaultCurrency } = useCurrency();
 
@@ -291,25 +301,29 @@ const groupActionPayload = ref("");
 const kinds = ["POSTPAID", "PREPAID"];
 const tabs = ["Products", "Resources"];
 
-const headers = ref([
-  { text: "Key", value: "key" },
-  { text: "Title", value: "title" },
-  { text: "Price", value: "price", width: 150 },
-  { text: "Period", value: "period", width: 220 },
-  { text: "Kind", value: "kind", width: 228 },
-  { text: "Group", value: "group", width: 300 },
-  { text: "Public", value: "public" },
-  { text: "Sorter", value: "sorter" },
-]);
+const headers = computed(() =>
+  [
+    { text: "Key", value: "key" },
+    { text: "Title", value: "title" },
+    { text: "Price", value: "price", width: 150 },
+    ["ione", "cpanel", "empty"].includes(type.value) && {
+      text: "One time",
+      value: "meta.oneTime",
+    },
+    { text: "Period", value: "period", width: 220 },
+    { text: "Kind", value: "kind", width: 228 },
+    { text: "Group", value: "group", width: 300 },
+    { text: "Public", value: "public" },
+    { text: "Sorter", value: "sorter" },
+    ["empty"].includes(type.value) && {
+      text: "Addons",
+      value: "resources",
+    },
+  ].filter((a) => !!a)
+);
 
 const isEditOpen = ref(false);
 const newMeta = ref({ description: "" });
-
-if (props.type === "empty")
-  headers.value.push({
-    text: "Addons",
-    value: "resources",
-  });
 
 onMounted(() => {
   setProductsArray();
@@ -347,6 +361,18 @@ function changeMeta(data, id, resources) {
   }
 
   emits("change:meta", { key: "resources", value, id });
+}
+
+function changeOneTime(item, value) {
+  if (value) {
+    changeProduct("kind", "POSTPAID", item.id);
+    changeProduct("period", 0, item.id);
+  }
+  changeProduct("meta", { ...item.meta, oneTime: value }, item.id);
+}
+
+function isOneTime(item) {
+  return item.meta.oneTime;
 }
 
 const setProductsArray = () => {
