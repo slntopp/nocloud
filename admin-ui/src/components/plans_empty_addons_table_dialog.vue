@@ -63,6 +63,13 @@
             />
           </template>
 
+          <template v-slot:[`item.meta.oneTime`]="{ item }">
+            <v-switch
+              :input-value="item.meta?.oneTime"
+              @change="setOneTime(item, $event)"
+            />
+          </template>
+
           <template v-slot:[`item.auto`]="{ item }">
             <v-switch
               :input-value="getAutoEnable(item)"
@@ -72,6 +79,7 @@
 
           <template v-slot:[`item.period`]="{ item }">
             <date-field
+              v-if="!item.meta?.oneTime"
               :period="fullDate[item.id]"
               @changeDate="(date) => setPeriod(date.value, item)"
             />
@@ -131,6 +139,7 @@ const addonsHeaders = [
   { text: "Title", value: "title" },
   { text: "Price", value: "price" },
   { text: "Auto", value: "auto" },
+  { text: "One time", value: "meta.oneTime" },
   { text: "Period", value: "period", width: 400 },
 ];
 
@@ -172,6 +181,15 @@ function setKey(value, item) {
 
 function setAutoEnable(item, value) {
   item.auto = !!value;
+  emits("update:addons", JSON.parse(JSON.stringify(props.addons)));
+}
+
+function setOneTime(item, value) {
+  if (value) {
+    item.period = 0;
+    item.kind = "POSTPAID";
+  }
+  item.meta.oneTime = !!value;
   emits("update:addons", JSON.parse(JSON.stringify(props.addons)));
 }
 
