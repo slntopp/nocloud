@@ -412,7 +412,6 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 	if req.GetExec() != 0 {
 		t.Exec = req.GetExec()
 	}
-	t.Total = req.GetTotal()
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 
