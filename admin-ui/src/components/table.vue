@@ -303,7 +303,7 @@ export default {
     },
     filtersItems: { type: Object },
     filtersValues: { type: Object },
-    itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, -1] },
+    itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, 25,50] },
   },
   data() {
     return {

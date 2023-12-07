@@ -310,7 +310,7 @@ export default {
               addon.value = resource.price;
               addon.sell = true;
             }
-            if (addon.price.value === 0 && sell) addon.sell = true;
+            if (+addon.price.value === 0) addon.sell = true;
 
             return addon;
           })
@@ -678,7 +678,7 @@ export default {
             this.addons,
             planCode,
             this.addons[planCode].map((addon) => {
-              addon.sell = value;
+              addon.sell = value || +addon.price.value===0;
               return addon;
             })
           )

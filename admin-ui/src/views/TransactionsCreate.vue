@@ -89,8 +89,9 @@
                 type="number"
                 label="Amount"
                 :suffix="accountCurrency"
-                v-model="transaction.total"
-                :rules="amountRule"
+                v-model.number="transaction.total"
+                :rules="isInvoice ? [] : amountRule"
+                :disabled="isInvoice"
               />
             </v-col>
           </v-row>
@@ -155,14 +156,46 @@
             ></v-textarea>
           </v-row>
 
-          <v-row class="mx-5">
+          <v-row class="mx-5" v-if="!isInvoice">
             <v-textarea
               no-resize
               label="Items descriptions"
-              :rules="isInvoice ? generalRule : []"
               v-model="transaction.meta.description"
             ></v-textarea>
           </v-row>
+          <template v-else>
+            <div class="d-flex justify-space-between mt-3">
+              <v-subheader>Invoice items</v-subheader>
+              <v-btn @click="addInvoiceItem">Add</v-btn>
+            </div>
+            <v-card
+              outlined
+              class="pa-3 my-3"
+              color="background-light"
+              v-for="(item, index) in transaction.meta.items"
+              :key="index"
+            >
+              <div class="d-flex align-center">
+                <span>Item {{ index + 1 }}</span>
+                <v-btn class="ml-2" @click="deleteInvoiceItem(index)" icon>
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
+              </div>
+              <v-textarea
+                no-resize
+                label="Items description"
+                v-model="item.description"
+                :rules="generalRule"
+              />
+              <v-text-field
+                type="number"
+                label="Amount"
+                :rules="generalRule"
+                :suffix="accountCurrency"
+                v-model.number="item.amount"
+              />
+            </v-card>
+          </template>
           <v-expansion-panels class="mt-4">
             <v-expansion-panel>
               <v-expansion-panel-header color="background-light">
@@ -222,7 +255,7 @@ export default {
       service: "",
       total: "",
       exec: 0,
-      meta: { instances: [], description: "", transactionType: "" },
+      meta: { instances: [], description: "", transactionType: "", items: [] },
     },
     date: {
       title: "Date",
@@ -296,12 +329,13 @@ export default {
         });
         return;
       }
-
       this.isLoading = true;
       this.refreshData();
 
       try {
-        let total = this.transaction.total;
+        let total = this.isInvoice
+          ? this.transaction.meta.items.reduce((acc, i) => acc + i.amount, 0)
+          : this.transaction.total;
         const amountType = this.fullType.amount.value;
         if (amountType === null) {
           const balance = this.fullAccount.balance || 0;
@@ -324,11 +358,11 @@ export default {
             /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
               `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
                 this.transaction.account
-              }&total=${this.transaction.total}&type=${
+              }&type=${
                 this.transaction.meta.transactionType.split(" ")[1]
-              }&description=${
-                this.transaction.meta.description
-              }&send_email=${withEmail}&transaction=${transaction.uuid}`
+              }&items=${JSON.stringify(
+                this.transaction.meta.items
+              )}&send_email=${withEmail}&transaction=${transaction.uuid}`
           );
         }
 
@@ -369,6 +403,17 @@ export default {
         month.toString().length < 2 ? "0" + month : month
       }-${day.toString().length < 2 ? "0" + day : day}`;
       this.time.value = `${time}`;
+    },
+    addInvoiceItem() {
+      this.transaction.meta.items.push({ description: "", amount: 0 });
+    },
+    deleteInvoiceItem(index) {
+      if (!this.transaction.meta.items.length) {
+        return;
+      }
+      this.transaction.meta.items = this.transaction.meta.items.filter(
+        (_, i) => i !== index
+      );
     },
   },
   async created() {
@@ -490,8 +535,11 @@ export default {
       this.sendTransactionType();
       if (this.isInvoice) {
         this.transaction.service = undefined;
+        this.transaction.meta.description = undefined;
+        this.transaction.meta.items = [{ description: "", amount: 0 }];
         this.resetDate();
       } else if (this.isTransaction) {
+        this.transaction.meta.items = undefined;
         this.transaction.meta.note = undefined;
         this.initDate();
       }

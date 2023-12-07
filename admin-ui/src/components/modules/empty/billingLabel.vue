@@ -3,7 +3,7 @@
     :due-date="dueDate"
     :tariff-price="instancePrice"
     :template="template"
-    :addons-price="{}"
+    :addons-price="addonsPrice"
     :account="account"
     @update="emit('update', $event)"
   />
@@ -38,17 +38,19 @@ const dueDate = computed(() => {
 
 const instancePrice = computed(() => {
   const key = props.template.product;
-  const tarrif = props.template.billingPlan.products[key]?.price ?? 0;
 
-  return (
-    tarrif +
-    (props.template.config?.addons?.reduce(
-      (acc, a) =>
-        acc +
-        props.template.billingPlan?.resources?.find((r) => r.key === a)?.price,
-      0
-    ) || 0)
-  );
+  return props.template.billingPlan.products[key]?.price ?? 0;
+});
+
+const addonsPrice = computed(() => {
+  const addons = {};
+
+  props.template.config?.addons?.forEach((a) => {
+    const r = props.template.billingPlan?.resources?.find((r) => r.key === a);
+    addons[r?.title || a] = r?.price || 0;
+  });
+
+  return addons;
 });
 </script>
 

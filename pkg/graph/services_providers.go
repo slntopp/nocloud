@@ -228,14 +228,17 @@ FILTER IS_SAME_COLLECTION(@groups, group)
 			RETURN MERGE(instance, { 
 				uuid: instance._key, 
 				billing_plan: {
-					uuid: bp.uuid,
+					uuid: bp._key,
 					title: bp.title,
 					type: bp.type,
 					kind: bp.kind,
 					resources: bp.resources,
 					products: {
 						[instance.product]: bp.products[instance.product],
-					}
+					},
+					meta: bp.meta,
+					fee: bp.fee,
+					software: bp.software
 				} 
 			}))
     RETURN MERGE(group, { uuid: group._key, instances })`

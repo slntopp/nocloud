@@ -217,14 +217,17 @@ LET instances_groups = (
                     uuid: i._key, 
                     access: service.access, 
                     billing_plan: {
-                        uuid: bp.uuid,
+                        uuid: bp._key,
                         title: bp.title,
                         type: bp.type,
                         kind: bp.kind,
                         resources: bp.resources,
                         products: {
                             [i.product]: bp.products[i.product],
-                        }
+                        },
+						meta: bp.meta,
+						fee: bp.fee,
+						software: bp.software
                     } 
                 }))
         LET sp = (
@@ -326,14 +329,17 @@ FOR service, e, path IN 0..@depth OUTBOUND @account
 					RETURN MERGE(i, { 
 						uuid: i._key, 
 						billing_plan: {
-							uuid: bp.uuid,
+							uuid: bp._key,
 							title: bp.title,
 							type: bp.type,
 							kind: bp.kind,
 							resources: bp.resources,
 							products: {
 								[i.product]: bp.products[i.product],
-							}
+							},
+							meta: bp.meta,
+							fee: bp.fee,
+							software: bp.software
 						} 
 					}))
     		RETURN MERGE(group, { uuid: group._key, instances })

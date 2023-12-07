@@ -2,26 +2,52 @@
   <div>
     <v-row>
       <v-col>
-        <v-text-field readonly label="price model" :value="template.billingPlan.title"
-          @click:append="priceModelDialog = true" append-icon="mdi-pencil" />
+        <v-text-field
+          readonly
+          label="price model"
+          :value="template.billingPlan.title"
+          @click:append="priceModelDialog = true"
+          append-icon="mdi-pencil"
+        />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Product name" :value="billingPlan.products[template.product].title"
-          @click:append="priceModelDialog = true" append-icon="mdi-pencil" />
+        <v-text-field
+          readonly
+          label="Product name"
+          :value="billingPlan.products[template.product].title"
+          @click:append="priceModelDialog = true"
+          append-icon="mdi-pencil"
+        />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Date (create)" :value="template.data.creation" />
+        <v-text-field
+          readonly
+          label="Date (create)"
+          :value="template.data.creation"
+        />
       </v-col>
 
       <v-col>
-        <v-text-field readonly label="Start date" :value="template.data.start || '-'" />
+        <v-text-field
+          readonly
+          label="Start date"
+          :value="template.data.start || '-'"
+        />
       </v-col>
 
-      <v-col v-if="template.billingPlan.title.toLowerCase() !== 'payg' ||
-        isMonitoringsEmpty
-        ">
-        <v-text-field readonly label="Due to date/next payment" :value="date"
-          :append-icon="!isMonitoringsEmpty ? 'mdi-pencil' : null" @click:append="changeDatesDialog = true" />
+      <v-col
+        v-if="
+          template.billingPlan.title.toLowerCase() !== 'payg' ||
+          isMonitoringsEmpty
+        "
+      >
+        <v-text-field
+          readonly
+          label="Due to date/next payment"
+          :value="date"
+          :append-icon="!isMonitoringsEmpty ? 'mdi-pencil' : null"
+          @click:append="changeDatesDialog = true"
+        />
       </v-col>
     </v-row>
 
@@ -29,42 +55,73 @@
       <v-expansion-panel>
         <v-expansion-panel-header color="background-light">
           <div>
-            <span style="color: var(--v-primary-base)" class="text-h6">Prices
+            <span style="color: var(--v-primary-base)" class="text-h6"
+              >Prices
             </span>
-            <v-dialog max-width="60%">
+            <v-dialog v-if="addons?.length" max-width="60%">
               <template v-slot:activator="{ on, attrs }">
-                <v-btn class="ml-2" color="primary" v-bind="attrs" v-on="on">addons</v-btn>
+                <v-btn class="ml-2" color="primary" v-bind="attrs" v-on="on"
+                  >addons</v-btn
+                >
               </template>
               <v-card>
-                <nocloud-table :items="addons" :headers="addonsHeaders" no-hide-uuid :show-select="false"
-                  hide-default-footer>
+                <nocloud-table
+                  :items="addons"
+                  :headers="addonsHeaders"
+                  no-hide-uuid
+                  :show-select="false"
+                  hide-default-footer
+                >
                   <template v-slot:[`item.name`]="{ item }">
                     <span v-html="item.name" />
                   </template>
                   <template v-slot:[`item.enabled`]="{ item }">
-                    <v-switch @change="changeAddons" v-model="item.enabled"></v-switch>
+                    <v-switch
+                      @change="changeAddons"
+                      v-model="item.enabled"
+                    ></v-switch>
                   </template>
                 </nocloud-table>
               </v-card>
             </v-dialog>
+            <v-chip class="ml-1" v-if="enabledAddonsCount>0">{{
+                enabledAddonsCount
+            }}</v-chip>
           </div>
           <template v-slot:actions>
             <v-icon color="primary" x-large> $expand </v-icon>
           </template>
         </v-expansion-panel-header>
         <v-expansion-panel-content color="background-light">
-          <nocloud-table class="mb-5" :headers="billingHeaders" :items="billingItems" no-hide-uuid :show-select="false"
-            hide-default-footer>
+          <nocloud-table
+            class="mb-5"
+            :headers="billingHeaders"
+            :items="billingItems"
+            no-hide-uuid
+            :show-select="false"
+            hide-default-footer
+          >
             <template v-slot:[`item.name`]="{ item }">
               <span v-html="item.name" />
               <v-chip v-if="item.isAddon" small class="ml-1">Addon</v-chip>
             </template>
             <template v-slot:[`item.price`]="{ item }">
               <div class="d-flex">
-                <v-text-field class="mr-2" v-model="item.price" :suffix="defaultCurrency"
-                  @input="updatePrice(item, false)" append-icon="mdi-pencil" />
-                <v-text-field class="ml-2" :suffix="accountCurrency" style="color: var(--v-primary-base)"
-                  v-model="item.accountPrice" @input="updatePrice(item, true)" append-icon="mdi-pencil" />
+                <v-text-field
+                  class="mr-2"
+                  v-model="item.price"
+                  :suffix="defaultCurrency"
+                  @input="updatePrice(item, false)"
+                  append-icon="mdi-pencil"
+                />
+                <v-text-field
+                  class="ml-2"
+                  :suffix="accountCurrency"
+                  style="color: var(--v-primary-base)"
+                  v-model="item.accountPrice"
+                  @input="updatePrice(item, true)"
+                  append-icon="mdi-pencil"
+                />
               </div>
             </template>
             <template v-slot:body.append>
@@ -93,9 +150,21 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <change-monitorings :template="template" :service="service" v-model="changeDatesDialog" @refresh="emit('refresh')" />
-    <edit-price-model :account-rate="accountRate" :account-currency="accountCurrency" v-model="priceModelDialog"
-      :template="template" :plans="filtredPlans" @refresh="emit('refresh')" :service="service" />
+    <change-monitorings
+      :template="template"
+      :service="service"
+      v-model="changeDatesDialog"
+      @refresh="emit('refresh')"
+    />
+    <edit-price-model
+      :account-rate="accountRate"
+      :account-currency="accountCurrency"
+      v-model="priceModelDialog"
+      :template="template"
+      :plans="filtredPlans"
+      @refresh="emit('refresh')"
+      :service="service"
+    />
   </div>
 </template>
 
@@ -150,7 +219,9 @@ const totalPrice = computed(() => {
 });
 
 const totalAccountPrice = computed(() => {
-  return billingItems.value.reduce((acc, i) => acc + +i.accountPrice, 0)?.toFixed(2);
+  return billingItems.value
+    .reduce((acc, i) => acc + +i.accountPrice, 0)
+    ?.toFixed(2);
 });
 
 const billingPlan = computed(() => template.value.billingPlan);
@@ -162,25 +233,27 @@ onMounted(() => {
 });
 
 watch(accountRate, () => {
-  billingItems.value = billingItems.value.map((i) => {
+  billingItems.value = billingItems.value?.map((i) => {
     i.accountPrice = toAccountPrice(i.price);
     return i;
   });
 });
 
 const addons = computed(() => {
-  return billingPlan.value.resources.map(
-    ({ price, title, kind, period, key }, index) => ({
+  return billingPlan.value.products[template.value.product].meta.addons?.map((key) => billingPlan.value.resources.find((r) => r.key === key))?.map(({ price, title, kind, period, key }, index) => ({
       name: title,
       price,
       enabled: !!template.value.config?.addons?.find((a) => a === key),
       path: `billingPlan.resources.${index}.price`,
       kind,
       key,
-      period,
+      period: getBillingPeriod(period),
       accountPrice: toAccountPrice(price),
-    })
-  );
+    })) || [];
+});
+
+const enabledAddonsCount = computed(() => {
+  return addons.value.filter(a=>a.enabled).length
 });
 
 const getBillingItems = () => {
@@ -191,14 +264,17 @@ const getBillingItems = () => {
     price: product?.price,
     path: `billingPlan.products.${template.value.product}.price`,
     kind: product?.kind,
-    period: product?.period,
+    period: getBillingPeriod(product?.period),
     accountPrice: toAccountPrice(product?.price),
   });
 
-  items.push(...addons.value.filter((a) => a.enabled).map(a => ({ ...a, isAddon: true })));
+  items.push(
+    ...addons.value
+      .filter((a) => a.enabled)
+      .map((a) => ({ ...a, isAddon: true }))
+  );
 
   return items.map((i) => {
-    i.period = getBillingPeriod(i.period);
     return i;
   });
 };
@@ -229,7 +305,7 @@ const updatePrice = (item, isAccount) => {
 const changeAddons = () => {
   emit("update", {
     key: "config.addons",
-    value: addons.value.filter((a) => a.enabled).map((a) => a.key),
+    value: addons.value.filter((a) => a.enabled)?.map((a) => a.key),
   });
 };
 </script>
