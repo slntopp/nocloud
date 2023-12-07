@@ -1,19 +1,35 @@
 <template>
   <div class="controls">
-    <v-btn
-      class="ma-1"
-      v-for="btn in vmControlBtns"
-      :key="btn.action + btn.title"
-      :disabled="
-        btn.disabled ||
-        (!!runningActionName && runningActionName !== btn.action) ||
-        isDeleted
-      "
-      :loading="runningActionName === btn.action"
-      @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
-    >
-      {{ btn.title || btn.action }}
-    </v-btn>
+    <template v-for="btn in vmControlBtns">
+      <v-btn
+        v-if="!btn.component"
+        class="ma-1"
+        :key="btn.action + btn.title"
+        :disabled="
+          btn.disabled ||
+          (!!runningActionName && runningActionName !== btn.action) ||
+          isDeleted
+        "
+        :loading="runningActionName === btn.action"
+        @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
+      >
+        {{ btn.title || btn.action }}
+      </v-btn>
+      <component
+        v-else
+        :is="btn.component"
+        :key="btn.action + btn.title"
+        :disabled="
+          btn.disabled ||
+          (!!runningActionName && runningActionName !== btn.action) ||
+          isDeleted
+        "
+        :loading="runningActionName === btn.action"
+        :template="template"
+        @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
+      />
+    </template>
+
     <v-dialog style="height: 100%" v-if="isAnsibleActive && !isDeleted">
       <template v-slot:activator="{ on, attrs }">
         <v-btn class="ma-1" v-bind="attrs" v-on="on"> Playbook </v-btn>
@@ -363,6 +379,7 @@ export default {
             action: "change_state",
             data: { state: 3 },
             title: "start",
+            component: () => import("@/components/dialogs/emptyStart.vue"),
             disabled: this.emptyActions?.start,
           },
           {
