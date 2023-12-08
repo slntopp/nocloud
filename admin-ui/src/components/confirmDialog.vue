@@ -1,6 +1,9 @@
 <template>
   <div class="empty">
-    <div class="empty" @click.stop="() => !disabled && open()">
+    <div
+      :class="{ empty: true, flex: !!flex }"
+      @click.stop="() => !disabled && open()"
+    >
       <slot></slot>
     </div>
     <v-dialog persistent v-model="dialog" :max-width="width">
@@ -32,6 +35,7 @@ export default {
   props: {
     successDisabled: { type: Boolean, default: false },
     disabled: { type: Boolean, default: false },
+    flex: { type: Boolean, default: false },
     text: { type: String, default: null },
     title: { type: String, default: "Are you sure you want to do this?" },
     subtitle: { type: String, default: null },

@@ -431,6 +431,10 @@ function fetchMDIIconsHash() {
 export const fetchMDIIcons = fetchMDIIconsHash();
 
 export function getBillingPeriod(period) {
+  if(+period===0){
+    return "One time"
+  }
+
   const fullPeriod = period && getFullDate(period);
   if (!fullPeriod) {
     return {};
