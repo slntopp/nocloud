@@ -416,7 +416,11 @@ const loadSearchData = (name) => {
   if (!data.layouts) {
     return;
   }
-  layouts.value = data.layouts;
+
+  if (data.layouts.length) {
+    layouts.value = data.layouts;
+  }
+
   if (data?.current) {
     currentLayout.value = layouts.value.find((l) => l.id === data.current);
     filter.value = currentLayout.value.filter;
