@@ -18,6 +18,7 @@
           class="search__input"
           v-bind="searchName ? attrs : undefined"
           v-on="searchName ? on : undefined"
+          @keydown.enter="hideSearch"
           v-model="param"
         >
           <template v-if="!isResetAllHide" v-slot:append>
@@ -302,6 +303,13 @@ const newLayoutRules = ref([
 
 onMounted(() => {
   window.addEventListener("beforeunload", () => saveSearchData());
+
+  window.addEventListener("keydown", function (event) {
+    const { key } = event;
+    if (key === "Escape" && isOpen.value) {
+      hideSearch();
+    }
+  });
 });
 
 const theme = computed(() => store.getters["app/theme"]);
