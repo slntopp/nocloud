@@ -45,7 +45,7 @@
         />
       </v-col>
     </v-row>
-    <instances-prices-panels>
+    <instances-panels title="Prices">
       <nocloud-table
         class="mb-5"
         :headers="billingHeaders"
@@ -98,14 +98,14 @@
             <td>
               <v-chip color="primary" outlined>
                 {{ totalPrice }}
-                {{ defaultCurrency }} /
-                {{ totalAccountPrice }} {{ accountCurrency }}
+                {{ defaultCurrency }} / {{ totalAccountPrice }}
+                {{ accountCurrency }}
               </v-chip>
             </td>
           </tr>
         </template>
       </nocloud-table>
-    </instances-prices-panels>
+    </instances-panels>
     <change-ione-monitorings
       :template="template"
       :service="service"
@@ -154,7 +154,7 @@ import NocloudTable from "@/components/table.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
-import InstancesPricesPanels from "@/components/ui/instancesPricesPanels.vue";
+import InstancesPanels from "../../ui/instancesPanels.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -230,22 +230,30 @@ const totalAccountPrice = computed(() => toAccountPrice(totalPrice.value));
 const getBillingItems = () => {
   const items = [];
 
-  const price = billingPlan.value.products[template.value.product]?.price;
-  items.push({
-    name: template.value.product,
-    price,
-    accountPrice: toAccountPrice(price),
-    path: `billingPlan.products.${template.value.product}.price`,
-    quantity: 1,
-    unit: "pcs",
-    kind: billingPlan.value.products[template.value.product]?.kind,
-    period: billingPlan.value.products[template.value.product]?.period,
-  });
+  if (billingPlan.value.products[template.value.product]) {
+    const { price, kind, period } =
+      billingPlan.value.products[template.value.product];
+    items.push({
+      name: template.value.product,
+      price,
+      accountPrice: toAccountPrice(price),
+      path: `billingPlan.products.${template.value.product}.price`,
+      quantity: 1,
+      unit: "pcs",
+      kind,
+      period,
+    });
+  }
 
+  const gbAddons = ["ram"];
   Object.keys(template.value.resources).forEach((resourceKey) => {
-    const quantity = template.value.resources[resourceKey];
+    let quantity = template.value.resources[resourceKey];
     if (!quantity) {
       return;
+    }
+
+    if (gbAddons.includes(resourceKey)) {
+      quantity = quantity / 1024;
     }
 
     const addonIndex = billingPlan.value.resources.findIndex(

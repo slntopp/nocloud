@@ -73,6 +73,9 @@ export default {
           }
 
           try {
+            if (response.state) {
+              response.state = { state: response.state.state };
+            }
             this.$store.commit("services/updateInstance", {
               value: response,
               uuid: this.instance.service,
@@ -115,6 +118,10 @@ export default {
           component: () => import("@/components/instance/reports.vue"),
         },
         {
+          title: "Helpdesk",
+          component: () => import("@/components/instance/chats.vue"),
+        },
+        {
           title: "Template",
           component: () => import("@/components/instance/template.vue"),
         },
@@ -134,6 +141,9 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
+      params: {
+        showDeleted: true,
+      },
     });
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("accounts/fetch");

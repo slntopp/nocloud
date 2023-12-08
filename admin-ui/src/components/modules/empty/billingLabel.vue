@@ -1,9 +1,9 @@
 <template>
   <billing-label
     :due-date="dueDate"
-    :tariff-price="tariffPrice"
+    :tariff-price="instancePrice"
     :template="template"
-    :addons-price="{}"
+    :addons-price="addonsPrice"
     :account="account"
     @update="emit('update', $event)"
   />
@@ -24,10 +24,10 @@ const store = useStore();
 
 const account = computed(() => {
   const namespace = store.getters["namespaces/all"]?.find(
-    (n) => n.uuid === template.value.access.namespace
+    (n) => n.uuid === template.value?.access.namespace
   );
   const account = store.getters["accounts/all"].find(
-    (a) => a.uuid === namespace.access.namespace
+    (a) => a.uuid === namespace?.access.namespace
   );
   return account;
 });
@@ -36,10 +36,21 @@ const dueDate = computed(() => {
   return formatSecondsToDate(+props.template?.data?.next_payment_date);
 });
 
-const tariffPrice = computed(() => {
+const instancePrice = computed(() => {
   const key = props.template.product;
 
   return props.template.billingPlan.products[key]?.price ?? 0;
+});
+
+const addonsPrice = computed(() => {
+  const addons = {};
+
+  props.template.config?.addons?.forEach((a) => {
+    const r = props.template.billingPlan?.resources?.find((r) => r.key === a);
+    addons[r?.title || a] = r?.price || 0;
+  });
+
+  return addons;
 });
 </script>
 

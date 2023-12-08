@@ -6,12 +6,13 @@
 
 <script setup>
 import { computed, toRefs } from "vue";
+import {getState} from "@/functions";
 
 const props = defineProps(["template", "small"]);
 const { template } = toRefs(props);
 
 const state = computed(() => {
-  return template.value.state.state;
+  return getState(template.value);
 });
 
 const isDetached = computed(() => {
@@ -29,6 +30,7 @@ const chipColor = computed(() => {
     case "SUSPENDED":
       return "warning";
     case "UNKNOWN":
+    case "ERROR":
       return "error";
     case "OPERATION":
       return "yellow darken-2";

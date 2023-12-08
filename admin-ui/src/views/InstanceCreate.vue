@@ -80,7 +80,7 @@
         :is="templates[type] ?? templates.custom"
       />
       <v-row class="mx-5" justify="end">
-        <v-btn @click="save">Create</v-btn>
+        <v-btn :loading="isCreateLoading" @click="save">Create</v-btn>
       </v-row>
     </v-container>
   </v-form>
@@ -95,6 +95,7 @@ export default {
   name: "instance-create",
   data: () => ({
     isEdit: false,
+    isCreateLoading: false,
 
     typeItems: [],
     templates: [],
@@ -141,8 +142,11 @@ export default {
         return;
       }
 
-      this.isLoading = true;
+      if (typeof this.instance.billing_plan === "string") {
+        this.instance.billing_plan = { uuid: this.instance.billing_plan };
+      }
 
+      this.isCreateLoading = true;
       try {
         const namespaceUuid = this.namespaces.find(
           (n) => n.access.namespace == this.accountId
@@ -192,6 +196,15 @@ export default {
           this.service.instancesGroups[igIndex].instances.push(this.instance);
         }
 
+        if (this.service.instancesGroups[igIndex].type === "ione") {
+          this.service.instancesGroups[igIndex].resources = {
+            ...(this.service.instancesGroups[igIndex].resources || {}),
+            ips_public: this.service.instancesGroups[igIndex].instances
+              .filter((i) => i.state?.state !== "DELETED")
+              .reduce((acc, i) => acc + +i?.resources.ips_public, 0),
+          };
+        }
+
         const data = {
           namespace: namespaceUuid,
           service: this.service,
@@ -214,7 +227,7 @@ export default {
         };
         this.showSnackbarError(opts);
       } finally {
-        this.isLoading = false;
+        this.isCreateLoading = false;
       }
     },
   },
@@ -261,7 +274,7 @@ export default {
       return igs;
     },
     planRules() {
-      return this.plansVisible ? this.rules.req : [];
+      return this.rules.req;
     },
     isDataLoading() {
       return (

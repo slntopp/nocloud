@@ -82,7 +82,7 @@
             <v-text-field
               dense
               :value="item.key"
-              :rules="generalRule"
+              :rules="[rules.required]"
               @change="(value) => changeProduct('key', value, item.id)"
             />
           </template>
@@ -90,7 +90,7 @@
             <v-text-field
               dense
               :value="item.title"
-              :rules="generalRule"
+              :rules="[rules.required]"
               @change="(value) => changeProduct('title', value, item.id)"
             />
           </template>
@@ -100,12 +100,13 @@
               type="number"
               :suffix="defaultCurrency"
               :value="item.price"
-              :rules="generalRule"
+              :rules="[rules.price]"
               @change="(value) => changeProduct('price', value, item.id)"
             />
           </template>
           <template v-slot:[`item.period`]="{ item }">
             <date-field
+              v-if="!isOneTime(item)"
               :period="fullDate[item.id]"
               @changeDate="(value) => changeDate(value, item.id)"
             />
@@ -128,7 +129,7 @@
               <v-select
                 v-if="productId !== item.id"
                 :items="[...groups.values()]"
-                :value="products[item.key].group"
+                :value="products[item.key]?.group"
                 @change="setGroup($event, item.id)"
               />
               <v-text-field v-else v-model="groupActionPayload" />
@@ -152,6 +153,7 @@
           </template>
           <template v-slot:[`item.kind`]="{ item }">
             <v-radio-group
+              :disabled="isOneTime(item)"
               row
               mandatory
               :value="item.kind"
@@ -167,19 +169,33 @@
             </v-radio-group>
           </template>
 
-          <template v-slot:[`item.meta.addons`]="{ item }">
-            <v-dialog width="90vw">
-              <template v-slot:activator="{ on, attrs }">
-                <v-btn icon v-bind="attrs" v-on="on">
-                  <v-icon> mdi-menu-open </v-icon>
-                </v-btn>
-              </template>
+          <template v-slot:[`item.meta.oneTime`]="{ item }">
+            <v-switch
+              :input-value="item.meta?.oneTime"
+              @change="changeOneTime(item, $event)"
+            />
+          </template>
 
-              <plans-empty-addons-table
-                :product="item"
-                @update:addons="(value) => $set(item.meta, 'addons', value)"
-              />
-            </v-dialog>
+          <template v-slot:[`item.resources`]="{ item }">
+            <plans-empty-addons-table
+              :rules="rules"
+              :addons="resources"
+              :product="item.key"
+              :item="item"
+              @update:addons="
+                (value) => {
+                  changeResource({ key: 'resources', value });
+                  item.meta.addons = value
+                    .filter(
+                      ({ key }) => key.split('; product: ')[1] === item.key
+                    )
+                    .map(({ key }) => key);
+                  item.meta.autoEnabled = value
+                    .filter(({ auto }) => !!auto)
+                    .map(({ key }) => key);
+                }
+              "
+            />
           </template>
 
           <template v-slot:expanded-item="{ headers, item }">
@@ -201,6 +217,7 @@
 
               <template v-if="type === 'empty'">
                 <plans-empty-table
+                  :rules="rules"
                   :resources="item.meta.resources ?? []"
                   @update:resource="
                     (value) => changeMeta(value, item.id, item.meta.resources)
@@ -235,7 +252,9 @@
 
         <plans-resources-table
           v-else-if="tab === 'Resources'"
+          :rules="rules"
           :resources="resources"
+          :type="type"
           @change:resource="changeResource"
         />
       </v-tab-item>
@@ -244,13 +263,13 @@
 </template>
 
 <script setup>
-import { onMounted, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import dateField from "@/components/date.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
 import plansResourcesTable from "@/components/plans_resources_table.vue";
 import plansEmptyTable from "@/components/plans_empty_table.vue";
-import plansEmptyAddonsTable from "@/components/plans_empty_addons_table.vue";
+import plansEmptyAddonsTable from "@/components/plans_empty_addons_table_dialog.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { getFullDate } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
@@ -260,9 +279,10 @@ const props = defineProps({
   type: { type: String, required: true },
   products: { type: Object, required: true },
   resources: { type: Array, required: true },
+  rules: { type: Object },
 });
 const emits = defineEmits(["change:resource", "change:product", "change:meta"]);
-const { products, resources } = toRefs(props);
+const { products, resources, rules, type } = toRefs(props);
 
 const { defaultCurrency } = useCurrency();
 
@@ -278,29 +298,32 @@ const productId = ref("");
 const groupAction = ref("");
 const groupActionPayload = ref("");
 
-const generalRule = [(v) => !!v || "This field is required!"];
 const kinds = ["POSTPAID", "PREPAID"];
 const tabs = ["Products", "Resources"];
 
-const headers = ref([
-  { text: "Key", value: "key" },
-  { text: "Title", value: "title" },
-  { text: "Price", value: "price", width: 150 },
-  { text: "Period", value: "period", width: 220 },
-  { text: "Kind", value: "kind", width: 228 },
-  { text: "Group", value: "group", width: 300 },
-  { text: "Public", value: "public" },
-  { text: "Sorter", value: "sorter" },
-]);
+const headers = computed(() =>
+  [
+    { text: "Key", value: "key" },
+    { text: "Title", value: "title" },
+    { text: "Price", value: "price", width: 150 },
+    ["ione", "cpanel", "empty"].includes(type.value) && {
+      text: "One time",
+      value: "meta.oneTime",
+    },
+    { text: "Period", value: "period", width: 220 },
+    { text: "Kind", value: "kind", width: 228 },
+    { text: "Group", value: "group", width: 300 },
+    { text: "Public", value: "public" },
+    { text: "Sorter", value: "sorter" },
+    ["empty"].includes(type.value) && {
+      text: "Addons",
+      value: "resources",
+    },
+  ].filter((a) => !!a)
+);
 
 const isEditOpen = ref(false);
 const newMeta = ref({ description: "" });
-
-if (props.type === "empty")
-  headers.value.push({
-    text: "Addons",
-    value: "meta.addons",
-  });
 
 onMounted(() => {
   setProductsArray();
@@ -338,6 +361,18 @@ function changeMeta(data, id, resources) {
   }
 
   emits("change:meta", { key: "resources", value, id });
+}
+
+function changeOneTime(item, value) {
+  if (value) {
+    changeProduct("kind", "POSTPAID", item.id);
+    changeProduct("period", 0, item.id);
+  }
+  changeProduct("meta", { ...item.meta, oneTime: value }, item.id);
+}
+
+function isOneTime(item) {
+  return item.meta.oneTime;
 }
 
 const setProductsArray = () => {
@@ -471,11 +506,10 @@ function removeConfig() {
   );
   const result = {};
 
-  value.forEach((product, i) => {
+  value.forEach((product) => {
     const { key } = product;
 
     delete product.key;
-    product.sorter = i;
     result[key] = product;
   });
   changeProduct("products", result);

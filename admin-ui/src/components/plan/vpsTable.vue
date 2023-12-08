@@ -361,9 +361,10 @@ export default {
 
             const { configurations, addonFamilies } = catalog.plans.find(
               ({ planCode }) => planCode.includes(code)
-            );
-            const os = configurations[1].values;
-            const datacenter = configurations[0].values;
+            )
+            const os = configurations.find(c=>c.name==='vps_os')?.values;
+            const datacenter = configurations.find(c=>c.name==='vps_datacenter')?.values;
+           
             const addons = addonFamilies.reduce(
               (res, { addons }) => [...res, ...addons],
               []

@@ -90,7 +90,7 @@ const tabItems = computed(() => [
   },
   {
     component: AccountChats,
-    title: "chats",
+    title: "helpdesk",
   },
   {
     component: AccountsTemplate,

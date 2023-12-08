@@ -20,7 +20,6 @@
       sort-desc
       @update:options="onUpdateOptions"
       no-hide-uuid
-      :itemsPerPageOptions="itemsPerPageOptions"
     >
       <template v-slot:[`item.uuid`]="{ value }">
         <router-link :to="{ name: 'Instance', params: { instanceId: value } }">
@@ -52,7 +51,6 @@ const isFetchLoading = ref(false);
 const isCountLoading = ref(false);
 const fetchError = ref("");
 const options = ref({});
-const itemsPerPageOptions = ref([5, 10, 15, 25]);
 const durationFilter = ref({ to: "", from: "" });
 
 const reportsHeaders = [
@@ -62,7 +60,7 @@ const reportsHeaders = [
 ];
 
 const fetchData = () => {
-  store.dispatch("services/fetch");
+  store.dispatch("services/fetch",{showDeleted:true});
 };
 
 onMounted(() => {

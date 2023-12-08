@@ -99,7 +99,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 
 	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
 	var instance graph.Instance
-	instance, err := graph.GetWithAccess[graph.Instance](
+	instance, err := graph.GetInstanceWithAccess(
 		ctx, s.db,
 		instance_id,
 	)

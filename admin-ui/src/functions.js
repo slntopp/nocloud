@@ -268,26 +268,9 @@ export function getSecondsByDays(days) {
 }
 
 export function getState(item) {
-  if (!item.state) return "UNKNOWN";
-  const state =
-    item.billingPlan.type === "ione"
-      ? item.state.meta?.lcm_state_str
-      : item.state.state;
+  if (!item.state) return "ERROR";
 
-  switch (item.state.meta.state) {
-    case 1:
-      return "PENDING";
-    case 5:
-      return "SUSPENDED";
-    case "BUILD":
-      return "BUILD";
-  }
-  switch (state) {
-    case "LCM_INIT":
-      return "POWEROFF";
-    default:
-      return state?.replaceAll("_", " ") ?? "";
-  }
+  return item.state.state;
 }
 
 export function toKebabCase(str) {
@@ -351,7 +334,6 @@ export function getOvhPrice(instance) {
 export function getFullDate(period) {
   const date = new Date(period * 1000);
   const time = date.toUTCString().split(" ");
-
   return {
     day: `${date.getUTCDate() - 1}`,
     month: `${date.getUTCMonth()}`,
@@ -449,7 +431,16 @@ function fetchMDIIconsHash() {
 export const fetchMDIIcons = fetchMDIIconsHash();
 
 export function getBillingPeriod(period) {
+  if(+period===0){
+    return "One time"
+  }
+
   const fullPeriod = period && getFullDate(period);
+  if (!fullPeriod) {
+    return {};
+  }
+  fullPeriod.hours = +fullPeriod.time.split(":")?.[0];
+  fullPeriod.time = undefined;
   if (fullPeriod) {
     return Object.keys(fullPeriod)
       .filter((key) => +fullPeriod[key])
@@ -551,8 +542,17 @@ export function debounce(callback, wait = 100) {
   return (...args) => {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      console.log(args)
       callback(...args);
     }, wait);
   };
+}
+
+export function addToClipboard(text) {
+  if (navigator?.clipboard) {
+    navigator.clipboard.writeText(text).catch((res) => {
+      console.error(res);
+    });
+  } else {
+    alert("Clipboard is not supported!");
+  }
 }

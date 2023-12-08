@@ -72,17 +72,21 @@ export default {
       this.commit("services/setInstances", state.services);
     },
     updateInstance(state, { value, uuid, key = "state" }) {
-      const i = state.services.findIndex((el) => uuid === el.uuid);
-      const service = state.services[i];
+      const service = state.services.find((el) => uuid === el.uuid);
+      const igIndex = service.instancesGroups.findIndex(
+        (ig) => !!ig.instances.find((inst) => value.uuid === inst.uuid)
+      );
+      const instIndex = service.instancesGroups[igIndex].instances.findIndex(
+        (inst) => value.uuid === inst.uuid
+      );
+      const oldData =
+        service.instancesGroups[igIndex].instances[instIndex][key];
+      const newData = { ...oldData, ...value[key] };
 
-      service.instancesGroups.forEach((el, i, groups) => {
-        el.instances.forEach(({ uuid }, j) => {
-          if (uuid === value.uuid) {
-            groups[i].instances[j][key] = value[key];
-          }
-        });
-      });
-      this.commit("services/updateService", service);
+      if (JSON.stringify(oldData) !== JSON.stringify(newData)) {
+        service.instancesGroups[igIndex].instances[instIndex][key] = newData;
+        this.commit("services/updateService", service);
+      }
     },
     fetchByIdElem(state, data) {
       state.service = data;

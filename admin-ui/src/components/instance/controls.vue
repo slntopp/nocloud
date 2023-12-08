@@ -1,19 +1,35 @@
 <template>
   <div class="controls">
-    <v-btn
-      class="ma-1"
-      v-for="btn in vmControlBtns"
-      :key="btn.action + btn.title"
-      :disabled="
-        btn.disabled ||
-        (!!runningActionName && runningActionName !== btn.action) ||
-        isDeleted
-      "
-      :loading="runningActionName === btn.action"
-      @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
-    >
-      {{ btn.title || btn.action }}
-    </v-btn>
+    <template v-for="btn in vmControlBtns">
+      <v-btn
+        v-if="!btn.component"
+        class="ma-1"
+        :key="btn.action + btn.title"
+        :disabled="
+          btn.disabled ||
+          (!!runningActionName && runningActionName !== btn.action) ||
+          isDeleted
+        "
+        :loading="runningActionName === btn.action"
+        @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
+      >
+        {{ btn.title || btn.action }}
+      </v-btn>
+      <component
+        v-else
+        :is="btn.component"
+        :key="btn.action + btn.title"
+        :disabled="
+          btn.disabled ||
+          (!!runningActionName && runningActionName !== btn.action) ||
+          isDeleted
+        "
+        :loading="runningActionName === btn.action"
+        :template="template"
+        @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
+      />
+    </template>
+
     <v-dialog style="height: 100%" v-if="isAnsibleActive && !isDeleted">
       <template v-slot:activator="{ on, attrs }">
         <v-btn class="ma-1" v-bind="attrs" v-on="on"> Playbook </v-btn>
@@ -35,29 +51,43 @@
       </v-btn>
     </confirm-dialog>
 
-    <confirm-dialog
-      v-if="isBillingChange && !isDeleted"
-      text="Billing plan has changed, a new plan will be created"
-      @confirm="save"
-    >
-      <v-btn
-        class="ma-1"
-        :loading="isSaveLoading"
-        :color="isChanged ? 'primary' : ''"
-      >
-        Save
-      </v-btn>
-    </confirm-dialog>
-    <v-btn
-      v-else
-      :disabled="isDeleted"
-      @click="save"
-      class="ma-1"
-      :loading="isSaveLoading"
-      :color="isChanged ? 'primary' : ''"
-    >
-      Save
-    </v-btn>
+    <v-dialog persistent v-model="isBillingDialog" max-width="600px">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn
+          v-bind="isBillingChange && !isDeleted ? attrs : undefined"
+          v-on="isBillingChange && !isDeleted ? on : undefined"
+          :disabled="isDeleted"
+          @click="onSaveClick"
+          class="ma-1"
+          :loading="isSaveLoading"
+          :color="isChanged ? 'primary' : ''"
+        >
+          Save
+        </v-btn>
+      </template>
+      <v-card color="background-light">
+        <v-card-title
+          >Do you really want to change your current price model?</v-card-title
+        >
+        <v-card-subtitle class="mt-1"
+          >You can also create a new price model based on the current
+          one.</v-card-subtitle
+        >
+        <v-card-actions class="d-flex justify-end">
+          <v-btn
+            class="mr-2"
+            :loading="isLoading"
+            @click="isBillingDialog = false"
+          >
+            Close
+          </v-btn>
+          <v-btn class="mr-2" :loading="isLoading" @click="save(true)">
+            Create
+          </v-btn>
+          <v-btn :loading="isLoading" @click="save(false)"> Edit </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 <script>
@@ -83,6 +113,7 @@ export default {
     isSaveLoading: false,
     isLockLoading: false,
     runningActionName: "",
+    isBillingDialog: false,
   }),
   methods: {
     ...mapActions("actions", ["sendVmAction"]),
@@ -168,7 +199,16 @@ export default {
           this.isSaveLoading = false;
         });
     },
-    async save() {
+    onSaveClick() {
+      if (!this.isChanged) {
+        return;
+      }
+
+      if (!this.isBillingChange && !this.isDeleted) {
+        this.save();
+      }
+    },
+    async save(createNewPlan = false) {
       const tempService = JSON.parse(JSON.stringify(this.service));
       const instance = JSON.parse(JSON.stringify(this.copyTemplate));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
@@ -179,7 +219,8 @@ export default {
       ].instances.findIndex((i) => i.uuid === this.template.uuid);
 
       tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
-      if (this.isBillingChange) {
+
+      if (this.isBillingChange && createNewPlan) {
         const title = this.getPlanTitle(this.template);
         const billingPlan = {
           ...this.copyTemplate.billingPlan,
@@ -205,6 +246,36 @@ export default {
             message:
               e.response?.data?.message ||
               "Error during create individual plan",
+          });
+        }
+      } else if (this.isBillingChange) {
+        const title = this.getPlanTitle(this.template);
+        const ogPlan = this.$store.getters["plans/all"].find(
+          (p) => p.uuid === this.copyTemplate.billingPlan.uuid
+        );
+        const updatedPlan = {
+          ...ogPlan,
+          ...this.copyTemplate.billingPlan,
+          products: {
+            ...ogPlan.products,
+            ...this.copyTemplate.billingPlan.products,
+          },
+          resources: [
+            ...ogPlan.resources,
+            ...this.copyTemplate.billingPlan.resources,
+          ],
+          title,
+        };
+
+        this.isSaveLoading = true;
+        try {
+          const data = await api.plans.update(updatedPlan.uuid, updatedPlan);
+          tempService.instancesGroups[igIndex].instances[
+            instanceIndex
+          ].billingPlan = data;
+        } catch (e) {
+          this.$store.commit("snackbar/showSnackbarError", {
+            message: e.response?.data?.message || "Error during update plan",
           });
         }
       }
@@ -308,19 +379,47 @@ export default {
             action: "change_state",
             data: { state: 3 },
             title: "start",
-            disabled: this.emptyActions.start,
+            component: () => import("@/components/dialogs/emptyStart.vue"),
+            disabled: this.emptyActions?.start,
           },
           {
             action: "change_state",
             data: { state: 2 },
             title: "stop",
-            disabled: this.emptyActions.stop,
+            disabled: this.emptyActions?.stop,
           },
           {
             action: "change_state",
             data: { state: 6 },
             title: "suspend",
-            disabled: this.emptyActions.suspend,
+            disabled: this.emptyActions?.suspend,
+          },
+        ],
+        keyweb: [
+          {
+            action: "start",
+            title: "start",
+            disabled: !this.keywebActions?.start,
+          },
+          {
+            action: "stop",
+            title: "stop",
+            disabled: !this.keywebActions?.stop,
+          },
+          {
+            action: "reboot",
+            title: "reboot",
+            disabled: !this.keywebActions?.reboot,
+          },
+          {
+            action: "suspend",
+            title: "suspend",
+            disabled: !this.keywebActions?.suspend,
+          },
+          {
+            action: "unsuspend",
+            title: "unsuspend",
+            disabled: !this.keywebActions?.unsuspend,
           },
         ],
         opensrs: [{ action: "dns" }],
@@ -408,6 +507,45 @@ export default {
         start: this.template.state.state === "RUNNING",
       };
     },
+    keywebActions() {
+      if (!this.template?.state) return;
+
+      const state = this.template?.state.state;
+
+      switch (state) {
+        case "RUNNING": {
+          return {
+            stop: true,
+            reboot: true,
+            suspend: true,
+          };
+        }
+        case "STOPPED": {
+          return {
+            start: true,
+            reboot: true,
+            suspend: true,
+          };
+        }
+        case "DELETED":
+        case "PENDING":
+        case "OPERATION": {
+          return {};
+        }
+        case "SUSPENDED": {
+          return {
+            unsuspend: true,
+          };
+        }
+        default: {
+          return {
+            stop: true,
+            reboot: true,
+            suspend: true,
+          };
+        }
+      }
+    },
     getPlanTitle() {
       const type = this.template.type.includes("ovh")
         ? "ovh"
@@ -416,6 +554,8 @@ export default {
       switch (type) {
         case "empty":
         case "openai":
+        case "cpanel":
+        case "keyweb":
         case "ione": {
           return (item) => {
             let planTitle = `IND_${this.sp.title}_${
@@ -473,6 +613,9 @@ export default {
           );
         }
         case "ione":
+        case "openai":
+        case "keyweb":
+        case "cpanel":
         case "empty": {
           return this.template.product;
         }

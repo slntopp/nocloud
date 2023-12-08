@@ -70,6 +70,6 @@ const accountInstances = computed(() => {
   )
 })
 
-store.dispatch('services/fetch')
+store.dispatch('services/fetch',{showDeleted:true})
 store.dispatch('namespaces/fetch')
 </script>

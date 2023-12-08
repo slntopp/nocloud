@@ -92,21 +92,23 @@
       <template v-slot:footer.prepend>
         <div class="d-flex align-center mt-2">
           <v-select
-            style="width: 100px"
+            style="max-width: 80px"
             :items="fileTypes"
             label="File type"
             v-model="selectedFileType"
-            class="d-inline-block mx-2"
+            class="d-inline-block mx-1"
           />
           <download-template-button
-            class="mx-2"
+            class="mx-1"
+            small
+            title="Downlaod"
             :disabled="!selected.length || isPlansUploadLoading"
             name="selected_copy"
             :type="selectedFileType"
             :template="selected"
           />
           <v-file-input
-            class="file-input mx-2 mt-4"
+            class="file-input mx-1 mt-4"
             :label="`upload ${selectedFileType} price models...`"
             :accept="`.${selectedFileType}`"
             @change="onJsonInputChange"
@@ -119,6 +121,7 @@
             <v-btn
               :disabled="!uploadedPlans.length"
               :loading="isPlansUploadLoading"
+              small
               >Upload</v-btn
             >
           </confirm-dialog>
@@ -180,8 +183,8 @@ export default {
       this.linked = [];
       this.services.forEach((service) => {
         service.instancesGroups.forEach(({ instances, sp }) => {
-          instances.forEach(({ uuid, title, billingPlan }) => {
-            if (billingPlan.uuid === this.selected[0]?.uuid) {
+          instances.forEach(({ uuid, title, billingPlan,state }) => {
+            if (billingPlan.uuid === this.selected[0]?.uuid && state?.state!=='DELETED') {
               this.linked.push({
                 uuid,
                 title,
@@ -299,7 +302,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("services/fetch");
+    this.$store.dispatch("services/fetch",{showDeleted:true});
     this.$store.dispatch("servicesProviders/fetch");
     this.getPlans();
   },

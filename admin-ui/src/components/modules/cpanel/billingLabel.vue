@@ -10,7 +10,7 @@
 </template>
 
 <script setup>
-import { computed, ref, toRefs } from "vue";
+import { computed,  toRefs } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import { useStore } from "@/store";
 import billingLabel from "@/components/ui/billingLabel.vue";
@@ -24,16 +24,16 @@ const { template } = toRefs(props);
 
 const account = computed(() => {
   const namespace = store.getters["namespaces/all"]?.find(
-    (n) => n.uuid === template.value.access.namespace
+      (n) => n.uuid === template.value?.access.namespace
   );
   const account = store.getters["accounts/all"].find(
-    (a) => a.uuid === namespace.access.namespace
+      (a) => a.uuid === namespace?.access.namespace
   );
   return account;
 });
 
-const tariffPrice = ref(
-  template.value.billingPlan.products[template.value.product]?.price ?? 0
+const tariffPrice = computed(
+    ()=>template.value.billingPlan.products[template.value.resources.plan]?.price ?? 0
 );
 
 const dueDate = computed(() => {

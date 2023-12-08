@@ -248,7 +248,6 @@ export default {
       this.addons[planCode] = newAddons;
     },
     setValue(path, val) {
-      console.log(path, val);
       const data = JSON.parse(JSON.stringify(this.instance));
 
       if (path.includes("billing_plan")) {
@@ -406,7 +405,7 @@ export default {
       ].join(" ");
     },
     durationItems() {
-      const annotations = { P1M: "Monthly", P1Y: "Yearly", P1D: "Daily" };
+      const annotations = { P1M: "Monthly", P1Y: "Yearly", P1D: "Daily",P1H: "Hourly" };
 
       return [
         ...new Set(

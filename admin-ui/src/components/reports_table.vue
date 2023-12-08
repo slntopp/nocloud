@@ -29,15 +29,12 @@
       sort-desc
       @update:options="setOptions"
       no-hide-uuid
-      :itemsPerPageOptions="itemsPerPageOptions"
     >
       <template v-slot:[`item.totalPreview`]="{ item }">
-        <v-chip :color="+item.total > 0 ? 'success' : 'error'">{{
-          `${item.total} ${item.currency}`
-        }}</v-chip>
+        <v-chip>{{ `${item.total} ${item.currency}` }}</v-chip>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
-        <v-chip :color="+item.totalDefault > 0 ? 'success' : 'error'">{{
+        <v-chip>{{
           item.totalDefault
             ? `${item.totalDefault} ${defaultCurrency}`
             : item.totalDefault
@@ -46,14 +43,16 @@
       <template v-slot:[`item.exec`]="{ value }">
         <span>{{ new Date(value * 1000).toLocaleString() }}</span>
       </template>
-      <template v-slot:[`item.paymentDate`]="{ value }">
+      <template v-slot:[`item.meta.payment_date`]="{ value }">
         <div class="d-flex justify-center align-center">
           {{ value ? new Date(value * 1000).toLocaleString() : "-" }}
         </div>
       </template>
       <template v-slot:[`item.status`]="{ item }">
-        <div class="d-flex justify-center align-center">
-          {{ item.paymentDate ? "Paid" : "Unpaid" }}
+        <div class="d-flex justify-center">
+          <v-chip :color="getStatusColor(item)">
+            {{ getStatus(item) }}
+          </v-chip>
         </div>
       </template>
       <template v-slot:[`item.service`]="{ value }">
@@ -66,13 +65,27 @@
           {{ getInstance(value)?.title || value }}
         </router-link>
       </template>
+      <template v-slot:[`item.meta.transactionType`]="{ item }">
+        <span>{{ getReportType(item) }}</span>
+      </template>
       <template v-slot:[`item.actions`]="{ item }">
         <div class="d-flex justify-center align-center">
           <v-btn
             v-for="action in getReportActions(item)"
             :key="action.title"
-            @click="action.handler(item)"
+            @click="callAction(item, action.action)"
             small
+            :disabled="
+              !!runningActionName &&
+              (runningActionName !== action.action ||
+                runningActionReportUuid !== item.uuid)
+            "
+            :loading="
+              !!runningActionName &&
+              runningActionName === action.action &&
+              runningActionReportUuid === item.uuid
+            "
+            class="mx-1"
           >
             {{ action.title }}
           </v-btn>
@@ -119,21 +132,26 @@ const count = ref(10);
 const page = ref(1);
 const isFetchLoading = ref(false);
 const isCountLoading = ref(false);
+const runningActionName = ref("");
+const runningActionReportUuid = ref("");
 const fetchError = ref("");
 const options = ref({});
-const itemsPerPageOptions = ref([5, 10, 15, 25]);
 
 const reportsHeaders = computed(() => {
   const headers = [
-    { text: "Duration", value: "duration" },
+    { text: "Duration", value: "duration", sortable: false },
     { text: "Executed date", value: "exec" },
-    { text: "Payment date", value: "paymentDate" },
-    { text: "Status", value: "status" },
+    { text: "Payment date", value: "meta.payment_date" },
+    { text: "Status", value: "status", sortable: false },
     { text: "Total", value: "totalPreview" },
-    { text: "Total in default currency", value: "totalDefaultPreview" },
-    { text: "Product or resource", value: "item" },
-    { text: "Type", value: "type" },
-    { text: "Actions", value: "actions" },
+    {
+      text: "Total in default currency",
+      value: "totalDefaultPreview",
+      sortable: false,
+    },
+    { text: "Product or resource", value: "item", sortable: false },
+    { text: "Type", value: "meta.transactionType" },
+    { text: "Actions", value: "actions", sortable: false },
   ];
 
   if (!hideAccount.value) {
@@ -166,21 +184,49 @@ const requestOptions = computed(() => ({
 }));
 
 const whmcsApi = computed(() => store.getters["settings/whmcsApi"]);
+const transactionTypes = computed(() => store.getters["transactions/types"]);
 
 const getReportActions = (report) => {
   const actions = [];
-
-  if (report.type?.startsWith("invoice")) {
-    actions.push({ title: "Email", handler: sendEmail });
+  const status = getStatus(report);
+  switch (status) {
+    case "Paid": {
+      if (report.meta.transactionType?.startsWith("invoice")) {
+        actions.push({
+          title: "Invoice",
+          action: "invoice",
+          handler: downloadInvoice,
+        });
+      }
+      break;
+    }
+    case "Unpaid": {
+      if (report.meta.transactionType?.startsWith("invoice")) {
+        actions.push({
+          title: "Invoice",
+          action: "invoice",
+          handler: downloadInvoice,
+        });
+        actions.push({ title: "Email", action: "email", handler: sendEmail });
+      }
+      break;
+    }
   }
+
   return actions;
 };
+
+const getReportType = (item) => {
+  return transactionTypes.value.find((t) => t.key === item.meta.transactionType)
+    ?.title;
+};
+
 const fetchReports = async () => {
   init();
   isFetchLoading.value = true;
+  fetchError.value = "";
   try {
     const { records: result } = await api.reports.list(requestOptions.value);
-
     reports.value = result.map((r) => {
       return {
         total: -r.total.toFixed(2),
@@ -197,11 +243,14 @@ const fetchReports = async () => {
         service: r.service,
         instance: r.instance,
         account: r.account,
-        type: r.meta?.transactionType,
-        paymentDate: r.meta?.payment_date,
+        meta: {
+          ...r.meta,
+        },
         totalDefault: -convertFrom(r.total, r.currency),
       };
     });
+  } catch (e) {
+    fetchError.value = e.message;
   } finally {
     isFetchLoading.value = false;
   }
@@ -240,6 +289,35 @@ const getAccount = (value) => accounts.value.find((s) => s.uuid === value);
 const getInstance = (value) => instances.value.find((s) => s.uuid === value);
 const getService = (value) => services.value.find((s) => s.uuid === value);
 
+const getStatus = (item) => {
+  if (item.meta.status) {
+    return item.meta.status;
+  }
+  return item.meta.payment_date ? "Paid" : "Unpaid";
+};
+
+const getStatusColor = (item) => {
+  return {
+    Paid: "success",
+    Unpaid: "error",
+    Terminate: "blue-grey darken-2",
+    Draft: "blue",
+    Cancelled: "warning",
+  }[getStatus(item)];
+};
+
+const callAction = async (report, action) => {
+  runningActionName.value = action;
+  runningActionReportUuid.value = report.uuid;
+  try {
+    const actions = getReportActions(report);
+    await actions.find((a) => a.action === action).handler(report);
+  } finally {
+    runningActionName.value = "";
+    runningActionReportUuid.value = "";
+  }
+};
+
 const sendEmail = async (report) => {
   try {
     await fetch(
@@ -252,6 +330,21 @@ const sendEmail = async (report) => {
   } catch {
     store.commit("snackbar/showSnackbarError", {
       message: "Error while try resend email",
+    });
+  }
+};
+
+const downloadInvoice = async (report) => {
+  try {
+    const response = await fetch(
+      /https:\/\/(.+?\.?\/)/.exec(whmcsApi.value)[0] +
+        `modules/addons/nocloud/api/index.php?run=download_invoice&account=${report.account}&invoiceid=${report.transactionUuid}`
+    );
+    const data = await response.json();
+    window.open(data, "_blanc");
+  } catch {
+    store.commit("snackbar/showSnackbarError", {
+      message: "Error while download invoice",
     });
   }
 };

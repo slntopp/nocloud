@@ -45,7 +45,6 @@
       />
     </template>
     <template v-slot:[`item.address`]="{ item }">
-      <v-tooltip> </v-tooltip>
       <v-tooltip bottom>
         <template v-slot:activator="{ on, attrs }">
           <span v-bind="attrs" v-on="on">
@@ -55,9 +54,9 @@
         <span>{{ item.data?.address }}</span>
       </v-tooltip>
     </template>
-    <template v-slot:[`item.access.level`]="{ value }">
-      <v-chip :color="colorChip(value)">
-        {{ value }}
+    <template v-slot:[`item.access.level`]="{ item }">
+      <v-chip :color="item.access.color">
+        {{ item.access.level }}
       </v-chip>
     </template>
     <template v-slot:[`item.data.regular_payment`]="{ value, item }">
@@ -72,9 +71,6 @@
         :input-value="value"
       >
       </v-switch>
-    </template>
-    <template v-slot:[`item.namespace`]="{ item }">
-      {{ getNamespaceName(item.uuid) }}
     </template>
   </nocloud-table>
 </template>
@@ -187,8 +183,13 @@ export default {
     accounts() {
       return this.$store.getters["accounts/all"].map((a) => ({
         ...a,
+        access: {
+          ...a.access,
+          color: this.colorChip(a.access.level),
+        },
         balance: a.balance || 0,
         currency: a.currency || this.defaultCurrency,
+        namespace: this.getNamespaceName(a.uuid),
         data: {
           ...a.data,
           date_create: formatSecondsToDate(a.data?.date_create),

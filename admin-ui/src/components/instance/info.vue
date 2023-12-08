@@ -34,10 +34,13 @@
         </div>
       </v-col>
       <v-col>
-        <v-text-field readonly label="email" :value="account?.data?.email" />
-      </v-col>
-      <v-col v-if="template.state?.meta.networking?.public">
-        <instance-ip-menu :item="template" />
+        <v-text-field
+          readonly
+          label="email"
+          :value="account?.data?.email"
+          append-icon="mdi-content-copy"
+          @click:append="addToClipboard(account?.data?.email)"
+        />
       </v-col>
       <v-col>
         <v-text-field
@@ -75,7 +78,13 @@
           </v-text-field>
         </v-col>
         <v-col>
-          <v-text-field :value="template.uuid" readonly label="UUID" />
+          <v-text-field
+            :value="template.uuid"
+            readonly
+            label="UUID"
+            append-icon="mdi-content-copy"
+            @click:append="addToClipboard(template.uuid)"
+          />
         </v-col>
         <v-col>
           <route-text-field
@@ -133,7 +142,7 @@
         @update="updateCopy"
         :is="billingLabelComponent"
         v-if="Object.keys(copyInstance).length"
-        :template="copyInstance"
+        :template="template"
       />
     </div>
   </v-card>
@@ -144,11 +153,11 @@ import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import instanceActions from "@/components/instance/controls.vue";
 import JsonTextarea from "@/components/JsonTextarea.vue";
-import instanceIpMenu from "../ui/instanceIpMenu.vue";
 import { mapGetters } from "vuex";
 import RouteTextField from "@/components/ui/routeTextField.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import MoveInstance from "@/components/dialogs/moveInstance.vue";
+import { addToClipboard } from "@/functions";
 
 export default {
   name: "instance-info",
@@ -159,33 +168,16 @@ export default {
     nocloudTable,
     instanceActions,
     JsonTextarea,
-    instanceIpMenu,
   },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
   data: () => ({
-    copyed: null,
     templates: {},
     moveDialog: false,
     copyInstance: {},
   }),
   methods: {
-    addToClipboard(text, index) {
-      if (navigator?.clipboard) {
-        navigator.clipboard
-          .writeText(text)
-          .then(() => {
-            this.copyed = index;
-          })
-          .catch((res) => {
-            console.error(res);
-          });
-      } else {
-        this.showSnackbarError({
-          message: "Clipboard is not supported!",
-        });
-      }
-    },
+    addToClipboard,
     refreshInstance() {
       this.$store.dispatch("services/fetch", this.template.uuid);
       this.$store.dispatch("servicesProviders/fetch");
@@ -200,7 +192,7 @@ export default {
       } else {
         this.copyInstance[key] = value;
       }
-      this.copyInstance={...this.copyInstance}
+      this.copyInstance = { ...this.copyInstance };
     },
   },
   computed: {

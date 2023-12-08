@@ -118,7 +118,6 @@
       :column="column"
       :items="instances"
       :selected="selectedFilters"
-      :change-filters="changeFilters"
       @getHeaders="(value) => (headers = value)"
       @changeColumn="(value) => (column = value)"
     />
@@ -130,7 +129,7 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import instancesTable from "@/components/instances_table.vue";
-import { defaultFilterObject, getState } from "@/functions";
+import { defaultFilterObject } from "@/functions";
 
 export default {
   name: "instances-view",
@@ -169,7 +168,7 @@ export default {
             if (res.every(({ result }) => result)) {
               const ending = deletePromises.length === 1 ? "" : "s";
 
-              this.$store.dispatch("services/fetch");
+              this.$store.dispatch("services/fetch", { showDeleted: true });
               this.showSnackbarSuccess({
                 message: `Instance${ending} deleted successfully.`,
               });
@@ -199,53 +198,6 @@ export default {
           });
       }
     },
-    changeFilters() {
-      const instances = this.$store.getters["services/getInstances"];
-
-      this.filters = {};
-      this.selectedFilters = {};
-
-      instances.forEach((inst) => {
-        if (!this.types.includes(inst.type)) this.types.push(inst.type);
-
-        for (let i = 0; i < this.headers.length; i++) {
-          const el = this.headers[i];
-
-          if (!el.class) continue;
-          let filter = inst;
-
-          el.value.split(".").forEach((key) => {
-            filter = filter[key];
-          });
-
-          if (this.type !== "all" && inst.type !== this.type) continue;
-          switch (el.text) {
-            case "Service":
-              filter = this.getService(inst);
-              break;
-            case "Status":
-              filter = getState(inst).toLowerCase();
-              break;
-            case "OS":
-              filter = this.getOSName(inst.config.template_id, inst.sp);
-              break;
-            case "RAM":
-            case "Disk":
-              filter = filter / 1024;
-          }
-
-          if (filter === undefined) continue;
-          if (!this.filters[el.text]) {
-            this.selectedFilters[el.text] = [];
-            this.filters[el.text] = [];
-          }
-          if (!this.filters[el.text].includes(`${filter}`)) {
-            this.selectedFilters[el.text].push(`${filter}`);
-            this.filters[el.text].push(`${filter}`);
-          }
-        }
-      });
-    },
     getService({ service }) {
       return this.services.find(({ uuid }) => service === uuid)?.title ?? "";
     },
@@ -258,7 +210,7 @@ export default {
   created() {
     this.$store.dispatch("accounts/fetch", false);
     this.$store.dispatch("namespaces/fetch", false);
-    this.$store.dispatch("services/fetch", false);
+    this.$store.dispatch("services/fetch", { showDeleted: true });
     this.$store.dispatch("servicesProviders/fetch", false);
 
     const types = require.context(
@@ -279,6 +231,7 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
+      params: { showDeleted: true },
     });
     const icon = document.querySelector(".group-icon");
     icon.dispatchEvent(new Event("click"));

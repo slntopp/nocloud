@@ -15,11 +15,12 @@
         <instance-ip-menu type="private" :item="template" />
       </v-col>
       <v-col>
-        <v-text-field readonly :value="os" label="OS login" />
+        <v-text-field readonly :value="os" label="OS"/>
       </v-col>
       <v-col>
         <password-text-field
           :value="template.config.password"
+          copy
         />
       </v-col>
     </v-row>

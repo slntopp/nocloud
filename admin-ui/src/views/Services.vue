@@ -269,7 +269,7 @@ export default {
     },
     fetchServices() {
       this.$store
-        .dispatch("services/fetch")
+        .dispatch("services/fetch",{showDeleted:true})
         .then(() => {
           this.fetchError = "";
         })
@@ -324,14 +324,13 @@ export default {
           .then((res) => {
             if (res.every((el) => el.result)) {
               console.log("all ok");
-              this.$store.dispatch("services/fetch");
+              this.$store.dispatch("services/fetch",{showDeleted:true});
 
               const ending = deletePromices.length == 1 ? "" : "s";
               this.showSnackbar({
                 message: `Service${ending} deleted successfully.`,
               });
             } else {
-              console.log(this.showSnackbar);
               this.showSnackbarError({
                 message: `Can’t delete Services Provider: Has Services deployed.`,
               });

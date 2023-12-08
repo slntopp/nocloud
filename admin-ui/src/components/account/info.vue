@@ -64,7 +64,11 @@
         <v-text-field v-model="uuid" readonly label="UUID" />
       </v-col>
       <v-col cols="2">
-        <v-text-field v-model="title" label="name" style="width: 330px" />
+        <v-text-field v-model="title" label="name" style="width: 330px">
+          <template v-slot:append>
+            <login-in-account-icon :uuid="account.uuid" />
+          </template>
+        </v-text-field>
       </v-col>
       <v-col cols="2">
         <v-select
@@ -149,10 +153,16 @@ import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import InstancesTable from "@/components/instances_table.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
+import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 
 export default {
   name: "account-info",
-  components: { ConfirmDialog, InstancesTable, nocloudTable },
+  components: {
+    LoginInAccountIcon,
+    ConfirmDialog,
+    InstancesTable,
+    nocloudTable,
+  },
   mixins: [snackbar],
   props: ["account"],
   data: () => ({

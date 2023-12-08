@@ -13,27 +13,26 @@
     </v-row>
 
     <v-progress-linear indeterminate class="pt-1" v-if="chartLoading" />
-    <template v-else-if="series.length < 1">
-      <v-subheader v-if="balance.values.length > 1"> Balance: </v-subheader>
-      <v-sparkline
-        color="primary"
-        height="25vh"
-        line-width="1"
-        label-size="4"
-        :labels="balance.labels"
-        :value="balance.values"
-      />
-    </template>
-    <apexcharts
-      v-else
-      type="line"
-      height="250"
-      :options="chartOptions"
-      :series="series"
-    />
+    <!--    <template v-else-if="series.length < 1">-->
+    <!--      <v-subheader v-if="balance.values.length > 1"> Balance: </v-subheader>-->
+    <!--      <v-sparkline-->
+    <!--        color="primary"-->
+    <!--        height="25vh"-->
+    <!--        line-width="1"-->
+    <!--        label-size="4"-->
+    <!--        :labels="balance.labels"-->
+    <!--        :value="balance.values"-->
+    <!--      />-->
+    <!--    </template>-->
+    <!--    <apexcharts-->
+    <!--      v-else-->
+    <!--      type="line"-->
+    <!--      height="250"-->
+    <!--      :options="chartOptions"-->
+    <!--      :series="series"-->
+    <!--    />-->
 
     <reports-table
-      v-if="!isInitLoading"
       table-name="transaction-table"
       :filters="filters"
       :duration="duration"
@@ -46,24 +45,19 @@
 <script>
 import snackbar from "@/mixins/snackbar.js";
 import search from "@/mixins/search.js";
-import apexcharts from "vue-apexcharts";
 
 import { mapGetters } from "vuex";
 import reportsTable from "@/components/reports_table.vue";
 export default {
   name: "transactions-view",
-  components: { reportsTable, apexcharts },
+  components: { reportsTable },
   mixins: [snackbar, search("transactions")],
   data: () => ({
-    selectedAccounts: [],
-    selectedInstances: [],
-    selectedTypes: [],
     types: [],
     resources: [],
     products: [],
     series: [],
     chartLoading: false,
-    isInitLoading: true,
     chartOptions: {
       chart: { height: 250, type: "line" },
       dataLabels: { enabled: false },
@@ -99,7 +93,7 @@ export default {
     },
     selectTransaction(value) {
       this.series = [];
-      this.chartLoading = true;
+      // this.chartLoading = true;
       value.forEach(({ total, item, exec }) => {
         const name = item.slice(0, 8);
         const data = { data: [{ x: exec * 1000, y: total }], name, item };
@@ -146,21 +140,11 @@ export default {
       this.$store.dispatch("namespaces/fetch");
     },
   },
-  created() {
-    if (this.$route.query.account) {
-      this.selectedAccounts = [this.$route.query.account];
-    } else {
-      this.selectedAccounts = [];
-    }
-    this.isInitLoading = false;
-  },
   mounted() {
     this.fetchData();
     this.$store.commit("reloadBtn/setCallback", {
       event: async () => {
-        this.isInitLoading = true;
         this.fetchData();
-        setTimeout(() => (this.isInitLoading = false), 0);
       },
     });
   },
@@ -247,9 +231,6 @@ export default {
       let labels = [`0 ${this.defaultCurrency}`];
       let values = [0];
       let balance = 0;
-      if (!this.selectedAccounts) {
-        return { labels, values };
-      }
       this.transactions?.forEach((el, i, arr) => {
         values.push((balance -= el.total));
         labels.push(`${balance.toFixed(2)} ${this.defaultCurrency}`);
@@ -267,9 +248,18 @@ export default {
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
+    transactionTypes() {
+      return this.$store.getters["transactions/types"];
+    },
     searchFields() {
       return [
-        { key: "type", type: "select", items: this.types, title: "Type" },
+        {
+          key: "type",
+          type: "select",
+          items: this.transactionTypes,
+          item: { value: "key", title: "title" },
+          title: "Type",
+        },
         {
           key: "instance",
           type: "select",
@@ -310,14 +300,6 @@ export default {
     },
     searchFields() {
       this.$store.commit("appSearch/setFields", this.searchFields);
-    },
-    selectedAccounts: {
-      handler() {
-        this.selectedInstances = this.selectedInstances.filter((si) =>
-          this.instances.find((i) => i.uuid === si)
-        );
-      },
-      deep: true,
     },
   },
 };

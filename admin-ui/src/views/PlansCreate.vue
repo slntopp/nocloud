@@ -9,122 +9,114 @@
 
     <v-form v-model="isValid" ref="form">
       <v-row>
-        <v-col :cols="viewport > 1600 ? 6 : 12">
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Price model type</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-autocomplete
-                label="Type"
-                v-model="plan.type"
-                :items="types"
-                :rules="generalRule"
-              />
-              <v-text-field
-                label="Type name"
-                v-if="plan.type === 'custom'"
-                v-model="customTitle"
-                :rules="generalRule"
-              />
-            </v-col>
-          </v-row>
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Price model title</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                label="Title"
-                v-model="plan.title"
-                :rules="generalRule"
-              />
-            </v-col>
-          </v-row>
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Price model kind</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">
-                <v-radio-group row mandatory v-model="selectedKind">
-                  <v-radio
-                    v-for="item in kinds"
-                    :key="item"
-                    :value="item"
-                    :label="item.toLowerCase()"
-                  />
-                </v-radio-group>
-              </confirm-dialog>
-            </v-col>
-          </v-row>
-
-          <v-row align="center" v-if="plan.kind === 'STATIC'">
-            <v-col cols="3">
-              <v-subheader>Default tariff</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-autocomplete
-                label="Tariff"
-                v-model="plan.meta.product"
-                :items="Object.keys(plan.products)"
-              />
-            </v-col>
-          </v-row>
-
-          <v-row v-if="plan.kind === 'DYNAMIC'">
-            <v-col cols="3">
-              <v-subheader>Linked price model</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-autocomplete
-                clearable
-                @change="plan.meta.linkedPlan = $event ?? undefined"
-                label="Price model"
-                :value="plan.meta.linkedPlan"
-                :items="filteredPlans"
-              />
-            </v-col>
-          </v-row>
-
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Public</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-switch style="width: fit-content" v-model="plan.public" />
-            </v-col>
-          </v-row>
-          <v-row align="center" v-if="plan.type === 'empty'">
-            <v-col cols="3">
-              <v-subheader>Auto start</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-switch
-                style="width: fit-content"
-                v-model="plan.meta.auto_start"
-              />
-            </v-col>
-          </v-row>
+        <v-col cols="2" class="align-center d-flex">
+          <v-subheader>Price model type</v-subheader>
         </v-col>
-
-        <v-col :cols="viewport > 2560 ? 6 : 12">
-          <v-divider />
-        </v-col>
-
-        <v-col :cols="viewport > 2560 ? 6 : 12">
-          <component
-            v-if="!productsHide"
-            :is="template"
-            :type="plan.type"
-            :resources="plan.resources"
-            :products="filteredProducts"
-            @change:resource="(data) => changeConfig(data, 'resource')"
-            @change:product="(data) => changeConfig(data, 'product')"
-            @change:meta="(data) => changeMetaConfig(data, 'meta')"
+        <v-col cols="4">
+          <v-autocomplete
+            label="Type"
+            v-model="plan.type"
+            :items="types"
+            :rules="[rules.required]"
+          />
+          <v-text-field
+            label="Type name"
+            v-if="plan.type === 'custom'"
+            v-model="customTitle"
+            :rules="[rules.required]"
           />
         </v-col>
+        <v-col cols="2" class="align-center d-flex">
+          <v-subheader>Price model title</v-subheader>
+        </v-col>
+        <v-col cols="4" class="align-center d-flex">
+          <v-text-field
+            label="Title"
+            v-model="plan.title"
+            :rules="[rules.required]"
+          />
+        </v-col>
+        <v-col cols="2" class="align-center d-flex">
+          <v-subheader>Price model kind</v-subheader>
+        </v-col>
+        <v-col cols="4" class="align-center d-flex">
+          <v-radio-group row mandatory v-model="selectedKind">
+            <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">
+              <div class="d-flex">
+                <v-radio
+                  v-for="item in kinds"
+                  :key="item"
+                  :value="item"
+                  :label="item.toLowerCase()"
+                />
+              </div>
+            </confirm-dialog>
+          </v-radio-group>
+        </v-col>
+        <template v-if="plan.kind === 'STATIC'">
+          <v-col cols="2" class="align-center d-flex">
+            <v-subheader>Default tariff</v-subheader>
+          </v-col>
+          <v-col cols="4" class="align-center d-flex">
+            <v-autocomplete
+              label="Tariff"
+              v-model="plan.meta.product"
+              :items="Object.keys(plan.products)"
+            />
+          </v-col>
+        </template>
+
+        <template v-if="plan.kind === 'DYNAMIC'">
+          <v-col cols="2" class="align-center d-flex">
+            <v-subheader>Linked price model</v-subheader>
+          </v-col>
+          <v-col cols="4" class="align-center d-flex">
+            <v-autocomplete
+              clearable
+              @change="plan.meta.linkedPlan = $event ?? undefined"
+              label="Price model"
+              :value="plan.meta.linkedPlan"
+              :items="filteredPlans"
+            />
+          </v-col>
+        </template>
+
+        <v-col cols="2" class="align-center d-flex">
+          <v-subheader>Public</v-subheader>
+        </v-col>
+        <v-col cols="4" class="align-center d-flex">
+          <v-switch style="width: fit-content" v-model="plan.public" />
+        </v-col>
+        <template v-if="plan.type === 'empty'">
+          <v-col cols="2" class="align-center d-flex">
+            <v-subheader>Auto start</v-subheader>
+          </v-col>
+          <v-col cols="4" class="align-center d-flex">
+            <v-switch
+              style="width: fit-content"
+              v-model="plan.meta.auto_start"
+            />
+          </v-col>
+        </template>
       </v-row>
+
+      <v-col :cols="viewport > 2560 ? 6 : 12">
+        <v-divider />
+      </v-col>
+
+      <v-col :cols="viewport > 2560 ? 6 : 12">
+        <component
+          v-if="!productsHide"
+          :is="template"
+          :rules="rules"
+          :type="plan.type"
+          :resources="plan.resources"
+          :products="filteredProducts"
+          @change:resource="(data) => changeConfig(data, 'resource')"
+          @change:product="(data) => changeConfig(data, 'product')"
+          @change:meta="(data) => changeMetaConfig(data, 'meta')"
+        />
+      </v-col>
 
       <v-row>
         <v-col>
@@ -171,10 +163,20 @@
           one.</v-card-subtitle
         >
         <v-card-actions>
-          <v-btn class="mr-2" :loading="isLoading" @click="tryToSend('create')">
+          <v-btn
+            class="mr-2"
+            :loading="isLoading && savePlanAction === 'create'"
+            :disabled="isLoading && savePlanAction !== 'create'"
+            @click="tryToSend('create')"
+          >
             Create
           </v-btn>
-          <v-btn v-if="item" :loading="isLoading" @click="tryToSend('edit')">
+          <v-btn
+            v-if="item"
+            :loading="isLoading && savePlanAction === 'edit'"
+            :disabled="isLoading && savePlanAction !== 'edit'"
+            @click="tryToSend('edit')"
+          >
             Edit
           </v-btn>
         </v-card-actions>
@@ -217,13 +219,17 @@ export default {
       meta: {},
       fee: null,
     },
-    generalRule: [(v) => !!v || "This field is required!"],
+    rules: {
+      required: (v) => !!v || "This field is required!",
+      price: (v) => (v !== "" && +v >= 0) || "Wrong price",
+    },
 
     isDialogVisible: false,
     isVisible: true,
     isValid: false,
     isFeeValid: true,
     isLoading: false,
+    savePlanAction: "",
     isJson: true,
   }),
   methods: {
@@ -290,10 +296,6 @@ export default {
         message = "Validation failed!";
       }
 
-      if (!message) {
-        message = this.checkPlanPeriods(this.plan);
-      }
-
       if (message) {
         this.showSnackbarError({ message });
         return;
@@ -318,6 +320,7 @@ export default {
       }
 
       this.isLoading = true;
+      this.savePlanAction = action;
       this.plan.title = checkName(this.plan, this.plans);
 
       const id = this.$route.params?.planId;
@@ -344,29 +347,8 @@ export default {
         })
         .finally(() => {
           this.isLoading = false;
+          this.savePlanAction = "";
         });
-    },
-    checkPeriods(periods) {
-      const wrongPeriod = periods.find((p) => p.period === 0);
-
-      return (
-        wrongPeriod &&
-        `Period cannot be zero in an ${
-          wrongPeriod.key || wrongPeriod.title
-        } config`
-      );
-    },
-    checkPlanPeriods(plan) {
-      if (
-        !Object.keys(plan.products).length &&
-        !Array.isArray(plan.resources)
-      ) {
-        return;
-      } else if (plan.products) {
-        return this.checkPeriods(Object.values(plan.products));
-      } else {
-        return this.checkPeriods(plan.resources);
-      }
     },
     setPeriod(date, id) {
       const period = getTimestamp(date);
@@ -506,31 +488,11 @@ export default {
       return document.documentElement.clientWidth;
     },
     productsHide() {
-      const hidden = ["ovh", "goget", "acronis", "cpanel"];
-      return hidden.some((h) => this.plan.type.includes(h));
+      const hidden = ["ovh", "goget", "acronis", "cpanel", "keyweb"];
+      return hidden.some((h) => this.plan.type?.includes(h));
     },
     filteredProducts() {
-      if (!this.searchParam) {
-        return this.plan.products;
-      }
-
-      const filtered = {};
-      Object.keys(this.plan.products).forEach((key) => {
-        if (key === this.searchParam) {
-          filtered[key] = this.plan.products[key];
-          return;
-        }
-
-        if (
-          this.plan.products[key]?.title
-            .toLowerCase()
-            .startsWith(this.searchParam)
-        ) {
-          filtered[key] = this.plan.products[key];
-        }
-      });
-
-      return filtered;
+      return this.plan.products;
     },
     downloadedFileName() {
       return this.plan.title
