@@ -248,8 +248,8 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 
 	result := make([]*pb.Plan, 0)
 	for _, plan := range plans {
-		if plan.GetStatus() == statuspb.NoCloudStatus_DEL && req.GetShowDeleted() {
-
+		if plan.GetStatus() == statuspb.NoCloudStatus_DEL && !req.GetShowDeleted() {
+			continue
 		}
 		if plan.Public {
 			result = append(result, plan.Plan)
@@ -389,6 +389,7 @@ FOR inst in Instances
 	RETURN inst.billing_plan.uuid
 `
 
+/*
 const getPlanInstances = `
 LET igs = (
     FOR node IN 2 INBOUND @plan GRAPH @permissions
@@ -411,3 +412,4 @@ FOR inst in instances
 	FILTER inst.status != @status
 	RETURN inst
 `
+*/
