@@ -162,6 +162,20 @@ export default {
   mixins: [
     searchMixin({
       name: "instances-table",
+      defaultLayout: {
+        title: "Default",
+        filter: {
+          state: [
+            "RUNNING",
+            "STOPPED",
+            "PENDING",
+            "OPERATION",
+            "SUSPENDED",
+            "UNKNOWN",
+            "ERROR",
+          ],
+        },
+      },
     }),
   ],
   props: {
