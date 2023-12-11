@@ -17,7 +17,6 @@ package billing
 
 import (
 	"context"
-
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -198,7 +197,7 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 		return nil, status.Error(codes.Internal, "Error getting plan")
 	}
 
-	if p.Public {
+	if p.Public && p.GetStatus() != statuspb.NoCloudStatus_DEL {
 		return p.Plan, nil
 	}
 
@@ -213,6 +212,10 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
+	}
+
+	if p.GetStatus() == statuspb.NoCloudStatus_DEL {
+		return nil, status.Error(codes.NotFound, "Plan was deleted")
 	}
 
 	return p.Plan, nil
@@ -248,7 +251,8 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 
 	result := make([]*pb.Plan, 0)
 	for _, plan := range plans {
-		if plan.GetStatus() == statuspb.NoCloudStatus_DEL && !req.GetShowDeleted() {
+		if plan.GetStatus() == statuspb.NoCloudStatus_DEL && req.GetShowDeleted() && ok {
+			result = append(result, plan.Plan)
 			continue
 		}
 		if plan.Public {
