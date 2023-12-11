@@ -407,7 +407,7 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 
 	res = &sppb.ListResponse{Pool: make([]*sppb.ServicesProvider, len(r))}
 	for i, sp := range r {
-		if sp.GetStatus() != stpb.NoCloudStatus_DEL || (sp.GetStatus() == stpb.NoCloudStatus_DEL && req.ShowDeleted) {
+		if sp.GetStatus() != stpb.NoCloudStatus_DEL || (sp.GetStatus() == stpb.NoCloudStatus_DEL && req.ShowDeleted && isRoot) {
 			res.Pool[i] = sp.ServicesProvider
 		}
 	}
