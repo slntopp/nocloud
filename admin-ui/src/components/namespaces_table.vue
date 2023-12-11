@@ -36,7 +36,7 @@ import { mapGetters } from "vuex";
 
 export default {
   name: "namespaces-table",
-  mixins: [search("namespaces-table")],
+  mixins: [search({name:"namespaces-table"})],
   components: {
     "nocloud-table": noCloudTable,
   },

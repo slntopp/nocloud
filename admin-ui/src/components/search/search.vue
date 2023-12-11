@@ -18,6 +18,7 @@
           class="search__input"
           v-bind="searchName ? attrs : undefined"
           v-on="searchName ? on : undefined"
+          @keydown.enter="hideSearch"
           v-model="param"
         >
           <template v-if="!isResetAllHide" v-slot:append>
@@ -302,6 +303,13 @@ const newLayoutRules = ref([
 
 onMounted(() => {
   window.addEventListener("beforeunload", () => saveSearchData());
+
+  window.addEventListener("keydown", function (event) {
+    const { key } = event;
+    if (key === "Escape" && isOpen.value) {
+      hideSearch();
+    }
+  });
 });
 
 const theme = computed(() => store.getters["app/theme"]);
@@ -325,6 +333,9 @@ const currentLayout = computed({
 });
 const visibleLayout = computed(() => currentLayout.value || blankLayout.value);
 const searchName = computed(() => store.getters["appSearch/searchName"]);
+const defaultLayout = computed(
+  () => store.getters["appSearch/defaultLayout"] || { title: "Default" }
+);
 const param = computed({
   get: () => store.getters["appSearch/param"],
   set: (val) => store.commit("appSearch/setParam", val),
@@ -408,7 +419,11 @@ const loadSearchData = (name) => {
   if (!data.layouts) {
     return;
   }
-  layouts.value = data.layouts;
+
+  if (data.layouts.length) {
+    layouts.value = data.layouts;
+  }
+
   if (data?.current) {
     currentLayout.value = layouts.value.find((l) => l.id === data.current);
     filter.value = currentLayout.value.filter;
@@ -459,10 +474,13 @@ const setCurrentFieldsKeys = () => {
     return;
   }
   const newCurrentFields = [];
+  if (currentLayout.value?.filter) {
+    newCurrentFields.push(...Object.keys(currentLayout.value.filter));
+  }
   if (currentLayout.value?.fields) {
-    newCurrentFields.push(...currentLayout.value?.fields);
+    newCurrentFields.push(...currentLayout.value.fields);
   } else {
-    let i = 0;
+    let i = newCurrentFields.length;
     while (
       newCurrentFields.length < 5 &&
       newCurrentFields.length !== allFields.value.length
@@ -496,8 +514,8 @@ const changeFields = ({ key }, value) => {
 
 const addNewLayout = (data) => {
   layouts.value.push({
-    filter: {},
     ...data,
+    filter: data.filter || {},
     id: Date.now(),
   });
 };
@@ -581,7 +599,9 @@ watch(searchName, (value, oldValue) => {
     setTimeout(() => loadSearchData(value), 0);
   }
   if (layouts.value.length === 0) {
-    addNewLayout({ title: "Default" });
+    addNewLayout(JSON.parse(JSON.stringify(defaultLayout.value)));
+    setCurrentLayout(layouts.value[0]);
+    setPinned(layouts.value[0].id);
   }
 });
 watch(allFields, setCurrentFieldsKeys);

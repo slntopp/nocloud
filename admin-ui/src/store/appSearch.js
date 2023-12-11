@@ -6,6 +6,7 @@ export default {
     searchName: "",
     filter: {},
     param: "",
+    defaultLayout: null,
   },
   mutations: {
     setFields(state, fields) {
@@ -29,6 +30,9 @@ export default {
     setFilterValue(state, { key, value }) {
       state.filter[key] = value;
     },
+    setDefaultLayout(state,val){
+      state.defaultLayout=val
+    },
   },
   getters: {
     param(state) {
@@ -45,6 +49,9 @@ export default {
     },
     searchName(state) {
       return state.searchName;
+    },
+    defaultLayout(state) {
+      return state.defaultLayout;
     },
   },
 };

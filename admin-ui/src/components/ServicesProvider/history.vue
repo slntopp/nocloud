@@ -9,7 +9,7 @@ import search from "@/mixins/search";
 export default {
   props: ["template"],
   name: "sp-history",
-  mixins:[search('sp-history')],
+  mixins:[search({name:'sp-history'})],
   components: { historyTable },
 };
 </script>
