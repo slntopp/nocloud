@@ -18,10 +18,9 @@ package graph
 import (
 	"context"
 	"errors"
-	statuspb "github.com/slntopp/nocloud-proto/statuses"
-
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	statuspb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
@@ -95,7 +94,7 @@ func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) e
 		"@sp_to_bp":           schema.SP2BP,
 	})
 
-	return nil
+	return err
 }
 
 const deleteFromEdgeBillingBlans = `
