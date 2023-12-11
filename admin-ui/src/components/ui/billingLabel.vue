@@ -21,7 +21,7 @@
         class="d-flex justify-end align-start pa-0"
       >
         <v-switch
-            :disabled="isDeleted"
+          :disabled="isDeleted"
           hide-details
           dense
           :input-value="template.config.auto_renew"
@@ -108,7 +108,7 @@ const isRenewDisabled = computed(() => {
 });
 
 const isDeleted = computed(() => {
-  return template.value.state?.state==='DELETED'
+  return template.value.state?.state === "DELETED";
 });
 
 function sendRenew() {
@@ -124,7 +124,8 @@ function sendRenew() {
 }
 
 const addonsTemplate = Object.entries(addonsPrice.value).map(
-  ([key, value]) => `<li>${key}: ${value} ${currency.value?.code}</li>`
+  ([key, value]) =>
+    `<li>${key}: ${(value || 0).toFixed(2)} ${currency.value?.code}</li>`
 );
 
 const isLoading = computed(() => store.getters["actions/isSendActionLoading"]);
