@@ -159,7 +159,11 @@ export default {
     nocloudTable,
     instanceIpMenu,
   },
-  mixins: [searchMixin("instances-table")],
+  mixins: [
+    searchMixin({
+      name: "instances-table",
+    }),
+  ],
   props: {
     value: { type: Array, required: false },
     headers: { type: Array, default: null },

@@ -151,7 +151,7 @@ import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 export default {
   name: "plans-view",
   components: { DownloadTemplateButton, nocloudTable, confirmDialog },
-  mixins: [snackbar, search("billing-plans")],
+  mixins: [snackbar, search({name:"billing-plans"})],
   data: () => ({
     headers: [
       { text: "Title ", value: "title" },
