@@ -62,8 +62,9 @@
           >
             <v-list dense color="background-light">
               <v-subheader>LAYOUTS</v-subheader>
-              <v-list-item
-                dense
+              <v-card
+                style="box-shadow: none"
+                :class="{ 'pa-3': isLayoutModePreview }"
                 v-for="layout in layouts"
                 :key="layout.id"
                 :disabled="isLayoutModeAdd"
@@ -104,9 +105,9 @@
                     </template>
                   </v-text-field>
                 </v-list-item-content>
-              </v-list-item>
+              </v-card>
 
-              <v-list-item v-if="isLayoutModeAdd" dense>
+              <v-card v-if="isLayoutModeAdd" style="box-shadow: none">
                 <v-list-item-content>
                   <v-form ref="addNewLayoutForm" v-model="isNewLayoutValid">
                     <v-text-field
@@ -128,11 +129,11 @@
                     </v-text-field>
                   </v-form>
                 </v-list-item-content>
-              </v-list-item>
+              </v-card>
 
-              <v-list-item
+              <v-card
+                style="box-shadow: none"
                 :disabled="isLayoutModeAdd"
-                dense
                 @click="onAddClick"
               >
                 <v-list-item-content>
@@ -145,7 +146,7 @@
                     Add <v-icon small>mdi-plus</v-icon></v-btn
                   >
                 </v-list-item-content>
-              </v-list-item>
+              </v-card>
             </v-list>
           </v-col>
           <v-col cols="9" class="filter" v-if="allFields.length">
