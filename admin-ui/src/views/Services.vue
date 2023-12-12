@@ -253,7 +253,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
     this.$store.dispatch("namespaces/fetch");
     this.fetchServices();
   },

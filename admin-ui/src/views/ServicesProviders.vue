@@ -58,7 +58,7 @@ export default {
           .then((res) => {
             if (res.every((el) => el.result)) {
               console.log("all ok");
-              this.$store.dispatch("servicesProviders/fetch");
+              this.$store.dispatch("servicesProviders/fetch",{anonymously:false});
 
               const ending = deletePromices.length == 1 ? "" : "s";
               this.showSnackbar({
@@ -99,7 +99,7 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "servicesProviders/fetch",
-      params: false,
+      params: {anonymously:false},
     });
   },
 };

@@ -322,7 +322,7 @@ export default {
   },
   created() {
     this.$store.dispatch("services/fetch", { showDeleted: true });
-    this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
     this.getPlans();
   },
   mounted() {

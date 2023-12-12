@@ -122,7 +122,7 @@ export default {
   methods: {
     async fetchPrices() {
       this.isPricesLoading = true;
-      await this.$store.dispatch("servicesProviders/fetch");
+      await this.$store.dispatch("servicesProviders/fetch",{anonymously :true});
       const sp = this.sps.find(
         (sp) =>
           sp.type === "cpanel" && sp.meta.plans?.includes(this.template.uuid)

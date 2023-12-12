@@ -42,7 +42,7 @@ const Headers = [
 
 export default {
   name: "servicesProviders-table",
-  mixins: [search({name:"service-providers-table"})],
+  mixins: [search({ name: "service-providers-table" })],
   components: {
     "nocloud-table": noCloudTable,
   },
@@ -150,7 +150,9 @@ export default {
   created() {
     this.loading = true;
     this.$store
-      .dispatch("servicesProviders/fetch", false)
+      .dispatch("servicesProviders/fetch", {
+        anonymously: false,
+      })
       .then(({ pool }) => {
         pool.forEach((el) => {
           if (el.type === "ovh") {
