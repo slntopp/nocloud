@@ -63,7 +63,8 @@
             <v-list dense color="background-light">
               <v-subheader>LAYOUTS</v-subheader>
               <v-card
-                class="pa-3"
+                style="box-shadow: none"
+                :class="{ 'pa-3': isLayoutModePreview }"
                 v-for="layout in layouts"
                 :key="layout.id"
                 :disabled="isLayoutModeAdd"
@@ -106,7 +107,7 @@
                 </v-list-item-content>
               </v-card>
 
-              <v-card v-if="isLayoutModeAdd">
+              <v-card v-if="isLayoutModeAdd" style="box-shadow: none">
                 <v-list-item-content>
                   <v-form ref="addNewLayoutForm" v-model="isNewLayoutValid">
                     <v-text-field
