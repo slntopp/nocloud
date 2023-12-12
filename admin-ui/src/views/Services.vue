@@ -144,6 +144,16 @@ import {
 } from "@/functions";
 import { mapGetters } from "vuex";
 
+const stateColorMap = {
+  INIT: "orange darken-2",
+  SUS: "orange darken-2",
+  UP: "green darken-2",
+  DEL: "gray darken-2",
+  RUNNING: "green darken-2",
+  UNKNOWN: "red darken-2",
+  STOPPED: "orange darken-2",
+};
+
 export default {
   name: "Services-view",
   components: {
@@ -151,7 +161,18 @@ export default {
     serviceInstancesItem,
     confirmDialog,
   },
-  mixins: [snackbar, search({name:"services"})],
+  mixins: [
+    snackbar,
+    search({
+      name: "services",
+      defaultLayout: {
+        title: "Default",
+        filter: {
+          status: Object.keys(stateColorMap).filter((s) => s !== "DEL"),
+        },
+      },
+    }),
+  ],
   data: () => ({
     headers: [
       { text: "Title", value: "title" },
@@ -173,15 +194,7 @@ export default {
       READ: "gray",
       NONE: "error",
     },
-    stateColorMap: {
-      INIT: "orange darken-2",
-      SUS: "orange darken-2",
-      UP: "green darken-2",
-      DEL: "gray darken-2",
-      RUNNING: "green darken-2",
-      UNKNOWN: "red darken-2",
-      STOPPED: "orange darken-2",
-    },
+    stateColorMap,
   }),
   computed: {
     ...mapGetters("appSearch", { searchParam: "param", filter: "filter" }),
@@ -253,7 +266,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
+    this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
     this.$store.dispatch("namespaces/fetch");
     this.fetchServices();
   },
@@ -269,7 +282,7 @@ export default {
     },
     fetchServices() {
       this.$store
-        .dispatch("services/fetch",{showDeleted:true})
+        .dispatch("services/fetch", { showDeleted: true })
         .then(() => {
           this.fetchError = "";
         })
@@ -324,7 +337,7 @@ export default {
           .then((res) => {
             if (res.every((el) => el.result)) {
               console.log("all ok");
-              this.$store.dispatch("services/fetch",{showDeleted:true});
+              this.$store.dispatch("services/fetch", { showDeleted: true });
 
               const ending = deletePromices.length == 1 ? "" : "s";
               this.showSnackbar({
