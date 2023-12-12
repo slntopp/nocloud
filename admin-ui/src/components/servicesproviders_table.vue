@@ -11,7 +11,12 @@
     :footer-error="fetchError"
   >
     <template v-slot:[`item.state`]="{ value }">
-      <v-chip small :color="chipsColor(value)">
+      <v-chip small :color="getStateChipColor(value)">
+        {{ value }}
+      </v-chip>
+    </template>
+    <template v-slot:[`item.status`]="{ value }">
+      <v-chip small :color="getStatusChipColor(value)">
         {{ value }}
       </v-chip>
     </template>
@@ -41,12 +46,21 @@ const Headers = [
   },
 ];
 
+const statusMap = {
+  DEL: { title: "DELETED", color: "gray darken-2" },
+  UNSPECIFIED: { title: "ACTIVE", color: "green darken-2" },
+  UNKNOWN: {
+    title: "UNKNOWN",
+    color: "red darken-2",
+  },
+};
+
 export default {
   name: "servicesProviders-table",
   mixins: [
     search({
       name: "service-providers-table",
-      defaultLayout: { title: "Default", filter: { status: ["UNSPECIFIED"] } },
+      defaultLayout: { title: "Default", filter: { status: ["ACTIVE"] } },
     }),
   ],
   components: {
@@ -76,17 +90,24 @@ export default {
         deleted: "error",
         failure: "error",
       },
+      statusMap,
     };
   },
   methods: {
     handleSelect(item) {
       this.$emit("input", item);
     },
-    chipsColor(state) {
+    getStateChipColor(state) {
       if (!state) {
         return "gray";
       }
       return this.stateColorMap[state.toLowerCase()] || "";
+    },
+    getStatusChipColor(status) {
+      const statusKey = Object.keys(this.statusMap).find(
+        (key) => this.statusMap[key].title === status
+      );
+      return this.statusMap[statusKey]?.color;
     },
     getInstanceTypes() {
       const types = require.context(
@@ -113,7 +134,7 @@ export default {
         title: el.title,
         type: el.type,
         uuid: el.uuid,
-        status: el.status,
+        status: statusMap[el.status]?.title || statusMap.UNKNOWN.title,
         route: {
           name: "ServicesProvider",
           params: { uuid: el.uuid },
@@ -145,7 +166,9 @@ export default {
         { title: "Title", type: "input", key: "title" },
         { items: this.allTypes, title: "Type", type: "select", key: "type" },
         {
-          items: ["DEL", "UNSPECIFIED"],
+          items: Object.keys(this.statusMap).map(
+            (key) => this.statusMap[key].title
+          ),
           title: "Status",
           type: "select",
           key: "status",
