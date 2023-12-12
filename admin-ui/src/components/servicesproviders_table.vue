@@ -43,7 +43,12 @@ const Headers = [
 
 export default {
   name: "servicesProviders-table",
-  mixins: [search({ name: "service-providers-table" })],
+  mixins: [
+    search({
+      name: "service-providers-table",
+      defaultLayout: { title: "Default", filter: { status: ["UNSPECIFIED"] } },
+    }),
+  ],
   components: {
     "nocloud-table": noCloudTable,
   },
