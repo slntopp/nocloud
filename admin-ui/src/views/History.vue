@@ -17,7 +17,7 @@ import searchMixin from "@/mixins/search";
 export default {
   name: "all-history",
   components: { HistoryTable },
-  mixins: [searchMixin("history")],
+  mixins: [searchMixin({name:"history"})],
   data: () => ({
     account: null,
     uuid: null,

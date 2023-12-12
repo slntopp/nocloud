@@ -17,6 +17,7 @@ package services_providers
 
 import (
 	"context"
+	stpb "github.com/slntopp/nocloud-proto/statuses"
 	"time"
 
 	"github.com/slntopp/nocloud-proto/access"
@@ -107,6 +108,10 @@ start:
 		log.Debug("Got ServicesProviders", zap.Int("length", len(sp_pool)))
 
 		for _, sp := range sp_pool {
+			if sp.GetStatus() == stpb.NoCloudStatus_DEL {
+				continue
+			}
+
 			sp, err := s.ctrl.Get(ctx, sp.Uuid)
 			if err != nil {
 				log.Error("Coudln't get ServicesProvider", zap.String("sp", sp.Uuid), zap.Error(err))

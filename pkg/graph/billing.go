@@ -18,10 +18,9 @@ package graph
 import (
 	"context"
 	"errors"
-	statuspb "github.com/slntopp/nocloud-proto/statuses"
-
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	statuspb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
@@ -78,7 +77,9 @@ func (ctrl *BillingPlansController) Delete(ctx context.Context, plan *pb.Plan) e
 		return errors.New("uuid is empty")
 	}
 
-	_, err := ctrl.col.RemoveDocument(ctx, plan.Uuid)
+	plan.Status = statuspb.NoCloudStatus_DEL
+
+	_, err := ctrl.col.UpdateDocument(ctx, plan.GetUuid(), plan)
 
 	if err != nil {
 		return err

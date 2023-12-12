@@ -159,7 +159,25 @@ export default {
     nocloudTable,
     instanceIpMenu,
   },
-  mixins: [searchMixin("instances-table")],
+  mixins: [
+    searchMixin({
+      name: "instances-table",
+      defaultLayout: {
+        title: "Default",
+        filter: {
+          state: [
+            "RUNNING",
+            "STOPPED",
+            "PENDING",
+            "OPERATION",
+            "SUSPENDED",
+            "UNKNOWN",
+            "ERROR",
+          ],
+        },
+      },
+    }),
+  ],
   props: {
     value: { type: Array, required: false },
     headers: { type: Array, default: null },

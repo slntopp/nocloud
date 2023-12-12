@@ -65,7 +65,7 @@ func TestResolve(t *testing.T) {
 	}
 
 	defer func() {
-		ctrl.Delete(ctx, sp.Uuid)
+		ctrl.Delete(ctx, sp.ServicesProvider)
 	}()
 
 	sample_host := fmt.Sprintf("%s.proxy.nocloud.zone", sp.Uuid)

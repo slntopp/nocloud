@@ -151,7 +151,7 @@ export default {
     serviceInstancesItem,
     confirmDialog,
   },
-  mixins: [snackbar, search("services")],
+  mixins: [snackbar, search({name:"services"})],
   data: () => ({
     headers: [
       { text: "Title", value: "title" },

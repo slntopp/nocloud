@@ -17,7 +17,6 @@ package billing
 
 import (
 	"context"
-
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -128,6 +127,15 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, plan *pb.Plan) (*
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
+	get, err := s.plans.Get(ctx, plan)
+	if err != nil {
+		return nil, err
+	}
+
+	if get.GetStatus() == statuspb.NoCloudStatus_DEL {
+		return nil, status.Error(codes.Canceled, "Billing plan deleted")
+	}
+
 	res, err := s.plans.Update(ctx, plan)
 	if err != nil {
 		log.Error("Error updating plan", zap.Error(err))
@@ -151,7 +159,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
-	planId := driver.NewDocumentID(schema.BILLING_PLANS_COL, plan.GetUuid())
+	/*planId := driver.NewDocumentID(schema.BILLING_PLANS_COL, plan.GetUuid())
 
 	cursor, err := s.db.Query(ctx, getPlanInstances, map[string]interface{}{
 		"permissions":       schema.PERMISSIONS_GRAPH.Name,
@@ -167,7 +175,7 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 
 	if cursor.HasMore() {
 		return nil, status.Error(codes.DataLoss, "Сan't delete plan due to related instances")
-	}
+	}*/
 
 	err = s.plans.Delete(ctx, plan)
 	if err != nil {
@@ -189,7 +197,7 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 		return nil, status.Error(codes.Internal, "Error getting plan")
 	}
 
-	if p.Public {
+	if p.Public && p.GetStatus() != statuspb.NoCloudStatus_DEL {
 		return p.Plan, nil
 	}
 
@@ -204,6 +212,10 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
+	}
+
+	if p.GetStatus() == statuspb.NoCloudStatus_DEL {
+		return nil, status.Error(codes.NotFound, "Plan was deleted")
 	}
 
 	return p.Plan, nil
@@ -239,6 +251,10 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 
 	result := make([]*pb.Plan, 0)
 	for _, plan := range plans {
+		if plan.GetStatus() == statuspb.NoCloudStatus_DEL && req.GetShowDeleted() && ok {
+			result = append(result, plan.Plan)
+			continue
+		}
 		if plan.Public {
 			result = append(result, plan.Plan)
 			continue
@@ -377,6 +393,7 @@ FOR inst in Instances
 	RETURN inst.billing_plan.uuid
 `
 
+/*
 const getPlanInstances = `
 LET igs = (
     FOR node IN 2 INBOUND @plan GRAPH @permissions
@@ -399,3 +416,4 @@ FOR inst in instances
 	FILTER inst.status != @status
 	RETURN inst
 `
+*/

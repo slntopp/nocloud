@@ -151,7 +151,18 @@ import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 export default {
   name: "plans-view",
   components: { DownloadTemplateButton, nocloudTable, confirmDialog },
-  mixins: [snackbar, search("billing-plans")],
+  mixins: [
+    snackbar,
+    search({
+      name: "billing-plans",
+      defaultLayout: {
+        title: "Default",
+        filter: {
+          public: true,
+        },
+      },
+    }),
+  ],
   data: () => ({
     headers: [
       { text: "Title ", value: "title" },
@@ -183,8 +194,11 @@ export default {
       this.linked = [];
       this.services.forEach((service) => {
         service.instancesGroups.forEach(({ instances, sp }) => {
-          instances.forEach(({ uuid, title, billingPlan,state }) => {
-            if (billingPlan.uuid === this.selected[0]?.uuid && state?.state!=='DELETED') {
+          instances.forEach(({ uuid, title, billingPlan, state }) => {
+            if (
+              billingPlan.uuid === this.selected[0]?.uuid &&
+              state?.state !== "DELETED"
+            ) {
               this.linked.push({
                 uuid,
                 title,
@@ -302,7 +316,7 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("services/fetch",{showDeleted:true});
+    this.$store.dispatch("services/fetch", { showDeleted: true });
     this.$store.dispatch("servicesProviders/fetch");
     this.getPlans();
   },
