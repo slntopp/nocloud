@@ -159,6 +159,7 @@ export default {
         title: "Default",
         filter: {
           public: true,
+          status: ["UNSPECIFIED"],
         },
       },
     }),
@@ -169,6 +170,7 @@ export default {
       { text: "UUID ", value: "uuid" },
       { text: "Kind ", value: "kind" },
       { text: "Type ", value: "type" },
+      { text: "Status ", value: "status" },
       { text: "Public ", value: "public" },
       { text: "Linked instances count ", value: "instanceCount" },
     ],
@@ -237,7 +239,9 @@ export default {
       Promise.all(promises)
         .then(() => Promise.all(deletePromises))
         .then(() => {
-          this.$store.dispatch("plans/fetch");
+          this.$store.dispatch("plans/fetch", {
+            params: { showDeleted: true },
+          });
           this.showSnackbar({
             message: "Price model deleted successfully.",
           });
@@ -265,6 +269,7 @@ export default {
         .dispatch("plans/fetch", {
           withCount: true,
           params: {
+            showDeleted: true,
             anonymously: false,
           },
         })
@@ -325,6 +330,7 @@ export default {
       type: "plans/fetch",
       params: {
         params: {
+          showDeleted: true,
           anonymously: false,
         },
         withCount: true,
@@ -418,6 +424,12 @@ export default {
           type: "select",
         },
         { items: this.typeItems, title: "Type", key: "type", type: "select" },
+        {
+          items: ["DEL", "UNSPECIFIED"],
+          title: "Status",
+          key: "status",
+          type: "select",
+        },
         { title: "Public", key: "public", type: "logic-select" },
       ];
     },

@@ -289,6 +289,7 @@ const addons = computed(() => {
   return (
     billingPlan.value.products[template.value.product].meta.addons
       ?.map((key) => billingPlan.value.resources.find((r) => r.key === key))
+      ?.filter((a) => !!a)
       ?.map(({ price, title, kind, period, key }, index) => ({
         name: title,
         price,
