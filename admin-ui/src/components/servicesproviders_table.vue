@@ -32,6 +32,7 @@ const Headers = [
   { text: "Title", value: "titleLink" },
   { text: "Type", value: "type" },
   { text: "State", value: "state" },
+  { text: "Status", value: "status" },
   {
     text: "UUID",
     align: "start",
@@ -107,6 +108,7 @@ export default {
         title: el.title,
         type: el.type,
         uuid: el.uuid,
+        status: el.status,
         route: {
           name: "ServicesProvider",
           params: { uuid: el.uuid },
@@ -137,6 +139,12 @@ export default {
       return [
         { title: "Title", type: "input", key: "title" },
         { items: this.allTypes, title: "Type", type: "select", key: "type" },
+        {
+          items: ["DEL", "UNSPECIFIED"],
+          title: "Status",
+          type: "select",
+          key: "status",
+        },
         { title: "Region", type: "input", key: "region" },
         {
           items: Object.keys(this.stateColorMap).map((k) => k.toUpperCase()),
@@ -152,6 +160,7 @@ export default {
     this.$store
       .dispatch("servicesProviders/fetch", {
         anonymously: false,
+        showDeleted: true,
       })
       .then(({ pool }) => {
         pool.forEach((el) => {
