@@ -88,7 +88,11 @@
           {{ instanceCountMap[item.uuid] }}
         </template>
       </template>
-
+      <template v-slot:[`item.status`]="{ item }">
+        <v-chip small :color="getStatus(item).color">
+          {{ getStatus(item).title }}
+        </v-chip>
+      </template>
       <template v-slot:footer.prepend>
         <div class="d-flex align-center mt-2">
           <v-select
@@ -148,6 +152,15 @@ import {
 import { mapGetters } from "vuex";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
+const statusMap = {
+  DEL: { title: "DELETED", color: "gray darken-2" },
+  UNSPECIFIED: { title: "ACTIVE", color: "green darken-2" },
+  UNKNOWN: {
+    title: "UNKNOWN",
+    color: "red darken-2",
+  },
+};
+
 export default {
   name: "plans-view",
   components: { DownloadTemplateButton, nocloudTable, confirmDialog },
@@ -165,6 +178,7 @@ export default {
     }),
   ],
   data: () => ({
+    statusMap,
     headers: [
       { text: "Title ", value: "title" },
       { text: "UUID ", value: "uuid" },
@@ -319,10 +333,13 @@ export default {
         this.isPlansUploadLoading = false;
       }
     },
+    getStatus(item) {
+      return this.statusMap[item.status] || this.statusMap.UNKNOWN;
+    },
   },
   created() {
     this.$store.dispatch("services/fetch", { showDeleted: true });
-    this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
     this.getPlans();
   },
   mounted() {
@@ -425,7 +442,11 @@ export default {
         },
         { items: this.typeItems, title: "Type", key: "type", type: "select" },
         {
-          items: ["DEL", "UNSPECIFIED"],
+          items: Object.keys(this.statusMap).map((key) => ({
+            title: this.statusMap[key].title,
+            value: key,
+          })),
+          item: { value: "value", title: "title" },
           title: "Status",
           key: "status",
           type: "select",

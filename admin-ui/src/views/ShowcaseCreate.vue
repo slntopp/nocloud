@@ -205,7 +205,7 @@ onMounted(async () => {
   try {
     isLoading.value = true;
     await Promise.all([
-      store.dispatch("servicesProviders/fetch"),
+      store.dispatch("servicesProviders/fetch",{anonymously:true}),
       store.dispatch("plans/fetch"),
     ]);
   } catch (e) {

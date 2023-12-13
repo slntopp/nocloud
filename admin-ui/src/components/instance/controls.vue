@@ -190,7 +190,7 @@ export default {
           });
 
           this.$store.dispatch("services/fetch", this.template.uuid);
-          this.$store.dispatch("servicesProviders/fetch");
+          this.$store.dispatch("servicesProviders/fetch",{anonymously :true});
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -289,7 +289,7 @@ export default {
           });
 
           this.$store.dispatch("services/fetch", this.template.uuid);
-          this.$store.dispatch("servicesProviders/fetch");
+          this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
