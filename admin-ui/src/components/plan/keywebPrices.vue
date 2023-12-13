@@ -173,7 +173,7 @@ const osHeaders = ref([
 onMounted(async () => {
   isLoading.value = true;
   try {
-    await store.dispatch("servicesProviders/fetch", false);
+    await store.dispatch("servicesProviders/fetch", {anonymously:false});
     const spUuid = sps.value.find((sp) =>
       sp.meta?.plans?.includes(props.template.uuid)
     ).uuid;

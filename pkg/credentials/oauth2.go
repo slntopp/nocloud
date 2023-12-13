@@ -17,11 +17,11 @@ var cfg map[string]oauth2_config.OAuth2Config
 
 func init() {
 	config, err := oauth2_config.Config()
-	if err != nil {
-		return
+	if err != nil || config == nil {
+		cfg = map[string]oauth2_config.OAuth2Config{}
+	} else {
+		cfg = config
 	}
-
-	cfg = config
 }
 
 type OAuth2Credentials struct {
@@ -47,7 +47,11 @@ func NewOAuth2Credentials(data []string, credType string) (Credentials, error) {
 
 	oauth2TypeValue := oauth2Type[1]
 
-	oauth2TypeConfig := cfg[oauth2TypeValue]
+	oauth2TypeConfig, ok := cfg[oauth2TypeValue]
+
+	if !ok {
+		return nil, fmt.Errorf("auth type is not presented. type: %s", oauth2TypeValue)
+	}
 
 	var req *http.Request
 
@@ -136,7 +140,11 @@ func (cred *OAuth2Credentials) Authorize(args ...string) bool {
 
 	oauth2TypeValue := oauth2Type[1]
 
-	oauth2TypeConfig := cfg[oauth2TypeValue]
+	oauth2TypeConfig, ok := cfg[oauth2TypeValue]
+	if !ok {
+		cred.log.Error("Auth type is not presented", zap.String("type", oauth2TypeValue))
+		return false
+	}
 
 	var req *http.Request
 

@@ -85,6 +85,9 @@
               @click.stop="openMove(group.uuid)"
               >mdi-arrow-up-bold</v-icon
             >
+            <v-icon @click.stop="deleteIg(i)" class="instance-group-button"
+              >mdi-delete</v-icon
+            >
           </v-expansion-panel-header>
           <v-expansion-panel-content>
             <v-row>
@@ -360,6 +363,29 @@ export default {
     openMove(uuid) {
       this.changeIGDialog = true;
       this.igUUID = uuid;
+    },
+    deleteIg(index) {
+      const template = JSON.parse(JSON.stringify(this.service));
+      template.instancesGroups = template.instancesGroups.filter(
+        (_, ind) => ind !== index
+      );
+
+      api.services
+        ._update(template)
+        .then(() => {
+          this.showSnackbarSuccess({
+            message: "Service edited successfully",
+          });
+          this.$store.dispatch('reloadBtn/onclick')
+        })
+        .catch((err) => {
+          this.showSnackbarError({
+            message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
+          });
+        })
+        .finally(() => {
+          this.isLoading = false;
+        });
     },
   },
   created() {

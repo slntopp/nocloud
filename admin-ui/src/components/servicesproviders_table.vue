@@ -11,7 +11,12 @@
     :footer-error="fetchError"
   >
     <template v-slot:[`item.state`]="{ value }">
-      <v-chip small :color="chipsColor(value)">
+      <v-chip small :color="getStateChipColor(value)">
+        {{ value }}
+      </v-chip>
+    </template>
+    <template v-slot:[`item.status`]="{ value }">
+      <v-chip small :color="getStatusChipColor(value)">
         {{ value }}
       </v-chip>
     </template>
@@ -32,6 +37,7 @@ const Headers = [
   { text: "Title", value: "titleLink" },
   { text: "Type", value: "type" },
   { text: "State", value: "state" },
+  { text: "Status", value: "status" },
   {
     text: "UUID",
     align: "start",
@@ -40,9 +46,23 @@ const Headers = [
   },
 ];
 
+const statusMap = {
+  DEL: { title: "DELETED", color: "gray darken-2" },
+  UNSPECIFIED: { title: "ACTIVE", color: "green darken-2" },
+  UNKNOWN: {
+    title: "UNKNOWN",
+    color: "red darken-2",
+  },
+};
+
 export default {
   name: "servicesProviders-table",
-  mixins: [search("service-providers-table")],
+  mixins: [
+    search({
+      name: "service-providers-table",
+      defaultLayout: { title: "Default", filter: { status: ["ACTIVE"] } },
+    }),
+  ],
   components: {
     "nocloud-table": noCloudTable,
   },
@@ -70,17 +90,24 @@ export default {
         deleted: "error",
         failure: "error",
       },
+      statusMap,
     };
   },
   methods: {
     handleSelect(item) {
       this.$emit("input", item);
     },
-    chipsColor(state) {
+    getStateChipColor(state) {
       if (!state) {
         return "gray";
       }
       return this.stateColorMap[state.toLowerCase()] || "";
+    },
+    getStatusChipColor(status) {
+      const statusKey = Object.keys(this.statusMap).find(
+        (key) => this.statusMap[key].title === status
+      );
+      return this.statusMap[statusKey]?.color;
     },
     getInstanceTypes() {
       const types = require.context(
@@ -107,6 +134,7 @@ export default {
         title: el.title,
         type: el.type,
         uuid: el.uuid,
+        status: statusMap[el.status]?.title || statusMap.UNKNOWN.title,
         route: {
           name: "ServicesProvider",
           params: { uuid: el.uuid },
@@ -137,6 +165,14 @@ export default {
       return [
         { title: "Title", type: "input", key: "title" },
         { items: this.allTypes, title: "Type", type: "select", key: "type" },
+        {
+          items: Object.keys(this.statusMap).map(
+            (key) => this.statusMap[key].title
+          ),
+          title: "Status",
+          type: "select",
+          key: "status",
+        },
         { title: "Region", type: "input", key: "region" },
         {
           items: Object.keys(this.stateColorMap).map((k) => k.toUpperCase()),
@@ -150,7 +186,10 @@ export default {
   created() {
     this.loading = true;
     this.$store
-      .dispatch("servicesProviders/fetch", false)
+      .dispatch("servicesProviders/fetch", {
+        anonymously: false,
+        showDeleted: true,
+      })
       .then(({ pool }) => {
         pool.forEach((el) => {
           if (el.type === "ovh") {

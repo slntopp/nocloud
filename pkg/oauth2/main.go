@@ -1,7 +1,6 @@
 package oauth2
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/rs/cors"
@@ -55,28 +54,6 @@ func (s *OAuth2Server) registerOAuthHandlers() {
 
 func (s *OAuth2Server) Start(port string, corsAllowed []string) {
 	s.registerOAuthHandlers()
-
-	s.router.HandleFunc("/oauth", func(writer http.ResponseWriter, request *http.Request) {
-		cfg, err := config.Config()
-		if err != nil {
-			s.log.Error("Failed to read config", zap.Error(err))
-			return
-		}
-
-		var resp []string
-
-		for key := range cfg {
-			resp = append(resp, key)
-		}
-
-		marshal, err := json.Marshal(resp)
-		if err != nil {
-			s.log.Error("Failed to marshal config", zap.Error(err))
-			return
-		}
-
-		writer.Write(marshal)
-	})
 
 	handler := cors.New(cors.Options{
 		AllowedOrigins:   corsAllowed,

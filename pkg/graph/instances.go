@@ -221,6 +221,11 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		}
 	}
 
+	equalNotes := reflect.DeepEqual(inst.GetAdminNotes(), oldInst.GetAdminNotes())
+	if !equalNotes {
+		mask.AdminNotes = inst.GetAdminNotes()
+	}
+
 	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
 	if err != nil {
 		log.Error("Failed to update Instance", zap.Error(err))

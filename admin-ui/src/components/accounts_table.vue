@@ -91,7 +91,7 @@ import search from "@/mixins/search";
 
 export default {
   name: "accounts-table",
-  mixins: [search("accounts-table")],
+  mixins: [search({name:"accounts-table"})],
   components: {
     LoginInAccountIcon,
     "nocloud-table": noCloudTable,
