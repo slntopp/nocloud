@@ -373,15 +373,13 @@ export default {
     getPeriod(inst) {
       if (inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC") {
         return "PayG";
-      } else if (inst.resources.period) {
+      } else if (inst.resources.period && inst.type !== "ovh") {
         const text = inst.resources.period > 1 ? "months" : "month";
 
         return `${inst.resources.period} ${text}`;
       }
-
       const period =
         inst.type === "ovh" ? inst.config.duration : this.getIonePeriod(inst);
-
       switch (period) {
         case "P1H":
           return "hourly";
