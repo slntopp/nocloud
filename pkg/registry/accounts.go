@@ -482,7 +482,7 @@ func (s *AccountsServiceServer) StandartCreate(ctx context.Context, request *acc
 
 	ns, err := s.ns_ctrl.Get(ctx, stdSettings.Namespace)
 	if err != nil {
-		log.Debug("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
+		log.Debug("Error getting namespace", zap.Error(err), zap.String("namespace", stdSettings.Namespace))
 		return nil, err
 	}
 
