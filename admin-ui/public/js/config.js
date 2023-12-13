@@ -7,9 +7,9 @@ globalThis.colors = {
     primary: "#5272F2",
   },
   dark: {
-    background: "#000033",
-    "background-dark": "#000020",
-    "background-light": "#0c0c3c", //old #202033
+    background: "#1A1C2A",
+    "background-dark": "#1A1C2A",
+    "background-light": "#28293B", //old #202033
     accent: "#FF00FF",
     primary: "#FF00FF",
   },

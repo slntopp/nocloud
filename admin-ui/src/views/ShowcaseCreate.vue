@@ -3,14 +3,28 @@
     <h1 class="page__title" v-if="!isEdit">Create showcase</h1>
     <v-form ref="showcaseForm" align="center">
       <v-row>
-        <v-col cols="6">
+        <v-col cols="4">
           <v-text-field
             :rules="[requiredRule]"
             v-model="showcase.newTitle"
+            label="Name"
+          />
+        </v-col>
+        <v-col cols="4">
+          <v-text-field
+            :rules="[requiredRule]"
+            @input="setTitle"
+            :value="showcase.promo?.[currentLang]?.title || ''"
             label="Title"
           />
         </v-col>
-        <v-col cols="6" style="display: flex; gap: 30px; justify-content: flex-end">
+        <v-col cols="1">
+          <v-autocomplete :items="langs" v-model="currentLang"></v-autocomplete>
+        </v-col>
+        <v-col
+          cols="3"
+          style="display: flex; gap: 30px; justify-content: flex-end"
+        >
           <v-switch label="Is primary" v-model="showcase.primary" />
           <v-switch label="Enabled" v-model="showcase.public" />
         </v-col>
@@ -42,7 +56,12 @@
             <v-icon
               style="flex: 0 0 auto; margin: 0 auto 0 10px"
               color="error"
-              v-if="!(i === showcase.items.length - 1 || item.servicesProvider === '')"
+              v-if="
+                !(
+                  i === showcase.items.length - 1 ||
+                  item.servicesProvider === ''
+                )
+              "
               @click="removeItem(i)"
             >
               mdi-close-circle
@@ -119,15 +138,20 @@ const showcase = ref({
   title: "",
   newTitle: "",
   icon: "",
-  items: [{
-    plan: "",
-    servicesProvider: "",
-    locations: [],
-  }],
+  items: [
+    {
+      plan: "",
+      servicesProvider: "",
+      locations: [],
+    },
+  ],
   promo: {},
   locations: [],
-  public: true
+  public: true,
 });
+
+const currentLang = ref("en");
+const langs = ["en", "ru", "pl"];
 
 const isLoading = ref(false);
 const defaultLocation = ref("");
@@ -140,25 +164,29 @@ const plans = computed(() => {
   const allPlans = store.getters["plans/all"];
 
   return showcase.value.items.reduce((result, { servicesProvider }, i) => {
-    const { meta } = serviceProviders.value.find(
-      ({ uuid }) => uuid === servicesProvider
-    ) ?? {};
+    const { meta } =
+      serviceProviders.value.find(({ uuid }) => uuid === servicesProvider) ??
+      {};
 
-    return { ...result, [i]: allPlans.filter(({ uuid }) => meta?.plans?.includes(uuid)) };
+    return {
+      ...result,
+      [i]: allPlans.filter(({ uuid }) => meta?.plans?.includes(uuid)),
+    };
   }, {});
 });
 
 const locations = computed(() =>
   showcase.value.items.reduce((result, { servicesProvider }, i) => {
-    const { uuid, locations = [] } = serviceProviders.value.find(
-      (sp) => sp.uuid === servicesProvider
-    ) ?? {};
+    const { uuid, locations = [] } =
+      serviceProviders.value.find((sp) => sp.uuid === servicesProvider) ?? {};
 
     return {
       ...result,
       [i]: locations.map((location) => ({
-        ...location, sp: uuid, id: getNewLocationKey(location)
-      }))
+        ...location,
+        sp: uuid,
+        id: getNewLocationKey(location),
+      })),
     };
   }, {})
 );
@@ -167,8 +195,8 @@ const filteredLocations = computed(() => {
   const result = {};
 
   Object.entries(locations.value).forEach(([i, value]) => {
-    const plan = plans.value[i].find(({ uuid }) =>
-      uuid === showcase.value.items[i].plan
+    const plan = plans.value[i].find(
+      ({ uuid }) => uuid === showcase.value.items[i].plan
     );
 
     if (!plan) return;
@@ -183,10 +211,12 @@ const allLocations = computed(() =>
     (result, [i, locations]) => [
       ...result,
       ...locations.filter(({ id }) =>
-        showcase.value.items[i].locations
-          .find((location) => id === (location.id ?? location))
-      )
-    ], []
+        showcase.value.items[i].locations.find(
+          (location) => id === (location.id ?? location)
+        )
+      ),
+    ],
+    []
   )
 );
 
@@ -205,7 +235,7 @@ onMounted(async () => {
   try {
     isLoading.value = true;
     await Promise.all([
-      store.dispatch("servicesProviders/fetch",{anonymously:true}),
+      store.dispatch("servicesProviders/fetch", { anonymously: true }),
       store.dispatch("plans/fetch"),
     ]);
   } catch (e) {
@@ -227,16 +257,18 @@ const save = async () => {
     Object.entries(filteredLocations.value).forEach(([i, value]) => {
       if (value.length < 1) return;
       const item = data.items[i];
-      const locs = value.filter(({ id }) =>
-        item.locations.find((location) => (location.id ?? location) === id)
-      ).map((location) => ({
-        ...location,
-        sp: undefined,
-        id: location.id.replace(
-          data.title.replaceAll(' ', '_'),
-          data.newTitle.replaceAll(' ', '_')
+      const locs = value
+        .filter(({ id }) =>
+          item.locations.find((location) => (location.id ?? location) === id)
         )
-      }));
+        .map((location) => ({
+          ...location,
+          sp: undefined,
+          id: location.id.replace(
+            data.title.replaceAll(" ", "_"),
+            data.newTitle.replaceAll(" ", "_")
+          ),
+        }));
 
       locs.forEach((location) => {
         if (!data.locations.find(({ id }) => id === location.id)) {
@@ -275,27 +307,40 @@ const getNewLocationKey = (l) => {
   return `${showcase.value.title.replaceAll(" ", `_`)}-${l.id}`;
 };
 
-const addItem = () => {
-  if (showcase.value.items.at(-1).servicesProvider !== '') {
-    showcase.value.items.push({ plan: '', servicesProvider: '', locations: [] });
+const setTitle = (value) => {
+  if (!showcase.value.promo[currentLang.value]) {
+    showcase.value.promo[currentLang.value] = {};
   }
-}
+
+  showcase.value.promo[currentLang.value].title = value;
+};
+
+const addItem = () => {
+  if (showcase.value.items.at(-1).servicesProvider !== "") {
+    showcase.value.items.push({
+      plan: "",
+      servicesProvider: "",
+      locations: [],
+    });
+  }
+};
 
 const removeItem = (i) => {
   showcase.value.items.splice(i, 1);
-}
+};
 
 const getPlanTitle = (uuid) => {
-  const plans = store.getters['plans/all'] ?? [];
+  const plans = store.getters["plans/all"] ?? [];
 
   return plans.find((plan) => plan.uuid === uuid)?.title ?? uuid;
-}
+};
 
 const getProviderTitle = (uuid) => {
-  return serviceProviders.value.find((provider) =>
-    provider.uuid === uuid
-  )?. title ?? uuid;
-}
+  return (
+    serviceProviders.value.find((provider) => provider.uuid === uuid)?.title ??
+    uuid
+  );
+};
 </script>
 
 <style scoped lang="scss">
