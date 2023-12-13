@@ -474,7 +474,7 @@ func (s *AccountsServiceServer) StandartCreate(ctx context.Context, request *acc
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
 
 	var stdSettings StandartSettings
-	if scErr := sc.Fetch(accountPostCreateSettingsKey, &stdSettings, standartSettings); scErr != nil {
+	if scErr := sc.Fetch(standarkKey, &stdSettings, standartSettings); scErr != nil {
 		log.Warn("Cannot fetch settings", zap.Error(scErr))
 	}
 
