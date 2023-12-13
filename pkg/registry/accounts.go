@@ -621,8 +621,8 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 }
 
 func (s *AccountsServiceServer) AddNote(ctx context.Context, request *notes.AddNoteRequest) (*notes.NoteResponse, error) {
-	log := s.log.Named("UpdateAccount")
-	log.Debug("Update request received", zap.Any("request", request), zap.Any("context", ctx))
+	log := s.log.Named("AddNote")
+	log.Debug("AddNote request received", zap.Any("request", request), zap.Any("context", ctx))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -647,8 +647,9 @@ func (s *AccountsServiceServer) AddNote(ctx context.Context, request *notes.AddN
 	}
 
 	acc.AdminNotes = append(acc.GetAdminNotes(), &notes.AdminNote{
-		Admin: requestor,
-		Msg:   request.GetMsg(),
+		Admin:   requestor,
+		Msg:     request.GetMsg(),
+		Created: time.Now().Unix(),
 	})
 
 	patch := map[string]any{
@@ -664,9 +665,56 @@ func (s *AccountsServiceServer) AddNote(ctx context.Context, request *notes.AddN
 	return &notes.NoteResponse{Result: true}, nil
 }
 
+func (s *AccountsServiceServer) PatchNote(ctx context.Context, request *notes.PatchNoteRequest) (*notes.NoteResponse, error) {
+	log := s.log.Named("PatchNote")
+	log.Debug("PatchNote request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	if err != nil {
+		log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if acc.Access == nil {
+		log.Warn("Error Access is nil")
+		return nil, status.Error(codes.PermissionDenied, "Error Access is nil")
+	}
+
+	if requestor == request.GetUuid() {
+		acc.Access.Level = access.Level_ROOT
+	}
+
+	if acc.Access.Level < access.Level_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	note := acc.GetAdminNotes()[request.GetIndex()]
+	if (note.GetAdmin() == requestor) || (note.GetAdmin() != requestor && acc.Access.GetLevel() == access.Level_ROOT) {
+		note.Admin = requestor
+		note.Msg = request.GetMsg()
+		note.Updated = time.Now().Unix()
+
+		patch := map[string]any{
+			"admin_notes": acc.GetAdminNotes(),
+		}
+
+		err = s.ctrl.Update(ctx, acc, patch)
+		if err != nil {
+			log.Error("Failed to patch note", zap.Error(err))
+			return nil, err
+		}
+		return &notes.NoteResponse{Result: true}, nil
+	}
+
+	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+}
+
 func (s *AccountsServiceServer) RemoveNote(ctx context.Context, request *notes.RemoveNoteRequest) (*notes.NoteResponse, error) {
-	log := s.log.Named("UpdateAccount")
-	log.Debug("Update request received", zap.Any("request", request), zap.Any("context", ctx))
+	log := s.log.Named("RemoveNote")
+	log.Debug("RemoveNote request received", zap.Any("request", request), zap.Any("context", ctx))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
