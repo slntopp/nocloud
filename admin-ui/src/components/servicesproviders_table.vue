@@ -47,8 +47,8 @@ const Headers = [
 ];
 
 const statusMap = {
-  DEL: { title: "DELETED", color: "gray darken-2" },
-  UNSPECIFIED: { title: "ACTIVE", color: "green darken-2" },
+  DEL: { title: "DELETED", color: "blue-grey darken-2" },
+  UNSPECIFIED: { title: "ACTIVE", color: "success" },
   UNKNOWN: {
     title: "UNKNOWN",
     color: "red darken-2",
