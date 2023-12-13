@@ -51,10 +51,13 @@ type AccountPostCreateSettings struct {
 	CreateNamespace bool `json:"create-ns"`
 }
 
-const standarkKey = "standart"
+const standarkKey = "signup"
 
-type StandartSettings struct {
-	Namespace string `json:"namespace"`
+type SignUpSettings struct {
+	Namespace      string   `json:"namespace"`
+	AllowedTypes   []string `json:"allowed_types"`
+	Enabled        bool     `json:"enabled"`
+	EnabledAccount bool     `json:"enabled_account"`
 }
 
 var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
@@ -63,8 +66,8 @@ var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
 	Level:       access.Level_ADMIN,
 }
 
-var standartSettings = &sc.Setting[StandartSettings]{
-	Value:       StandartSettings{Namespace: schema.ROOT_NAMESPACE_KEY},
+var standartSettings = &sc.Setting[SignUpSettings]{
+	Value:       SignUpSettings{Namespace: schema.ROOT_NAMESPACE_KEY},
 	Description: "Standart Credentials Settings",
 	Level:       access.Level_ADMIN,
 }

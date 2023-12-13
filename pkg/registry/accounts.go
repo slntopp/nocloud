@@ -17,6 +17,7 @@ package registry
 
 import (
 	"context"
+	"fmt"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/notes"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
@@ -101,7 +102,7 @@ func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.Se
 		s.log.Warn("Cannot fetch settings", zap.Error(scErr))
 	}
 
-	var stdSettings StandartSettings
+	var stdSettings SignUpSettings
 	if scErr := sc.Fetch(standarkKey, &stdSettings, standartSettings); scErr != nil {
 		s.log.Warn("Cannot fetch standart settings", zap.Error(scErr))
 	}
@@ -469,13 +470,17 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	return res, nil
 }
 
-func (s *AccountsServiceServer) StandartCreate(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
-	log := s.log.Named("CreateAccount")
+func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
+	log := s.log.Named("SignUp")
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	var stdSettings StandartSettings
+	var stdSettings SignUpSettings
 	if scErr := sc.Fetch(standarkKey, &stdSettings, standartSettings); scErr != nil {
 		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	if !stdSettings.Enabled {
+		return nil, status.Error(codes.Unavailable, "SignUp is disabled")
 	}
 
 	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
@@ -498,14 +503,27 @@ func (s *AccountsServiceServer) StandartCreate(ctx context.Context, request *acc
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	if !slices.Contains(stdSettings.AllowedTypes, cred.Type()) {
+		return nil, status.Error(codes.Unavailable, fmt.Sprintf("Such auth type not allowed. Type: %s", cred.Type()))
+	}
+
 	if cred.Find(ctx, s.db) {
 		return nil, status.Error(codes.AlreadyExists, "Such username also exists")
+	}
+
+	var accStatus accountspb.AccountStatus
+
+	if stdSettings.EnabledAccount {
+		accStatus = accountspb.AccountStatus_ACTIVE
+	} else {
+		accStatus = accountspb.AccountStatus_LOCK
 	}
 
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
 		Currency: &request.Currency,
 		Data:     request.GetData(),
+		Status:   accStatus,
 	}
 
 	acc, err := s.ctrl.Create(ctx, creationAccount)
