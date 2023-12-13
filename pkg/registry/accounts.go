@@ -103,7 +103,7 @@ func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.Se
 	}
 
 	var stdSettings SignUpSettings
-	if scErr := sc.Fetch(standarkKey, &stdSettings, standartSettings); scErr != nil {
+	if scErr := sc.Fetch(signupKey, &stdSettings, standartSettings); scErr != nil {
 		s.log.Warn("Cannot fetch standart settings", zap.Error(scErr))
 	}
 }
@@ -475,7 +475,7 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
 
 	var stdSettings SignUpSettings
-	if scErr := sc.Fetch(standarkKey, &stdSettings, standartSettings); scErr != nil {
+	if scErr := sc.Fetch(signupKey, &stdSettings, standartSettings); scErr != nil {
 		log.Warn("Cannot fetch settings", zap.Error(scErr))
 	}
 
