@@ -478,9 +478,9 @@ func (s *AccountsServiceServer) StandartCreate(ctx context.Context, request *acc
 		log.Warn("Cannot fetch settings", zap.Error(scErr))
 	}
 
-	outgoingContext := metadata.AppendToOutgoingContext(ctx, nocloud.NOCLOUD_ACCOUNT_CLAIM, schema.ROOT_ACCOUNT_KEY)
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 
-	ns, err := s.ns_ctrl.Get(outgoingContext, stdSettings.Namespace)
+	ns, err := s.ns_ctrl.Get(ctx, stdSettings.Namespace)
 	if err != nil {
 		log.Debug("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
 		return nil, err
