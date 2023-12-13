@@ -399,7 +399,7 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, req *pb.Transfer
 }
 
 func (s *InstancesServer) AddNote(ctx context.Context, req *notes.AddNoteRequest) (*notes.NoteResponse, error) {
-	log := s.log.Named("invoke")
+	log := s.log.Named("AddNote")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
@@ -421,8 +421,9 @@ func (s *InstancesServer) AddNote(ctx context.Context, req *notes.AddNoteRequest
 
 	newInstance := &pb.Instance{
 		AdminNotes: append(instance.AdminNotes, &notes.AdminNote{
-			Admin: requestor,
-			Msg:   req.GetMsg(),
+			Admin:   requestor,
+			Msg:     req.GetMsg(),
+			Created: time.Now().Unix(),
 		}),
 	}
 
@@ -434,8 +435,63 @@ func (s *InstancesServer) AddNote(ctx context.Context, req *notes.AddNoteRequest
 	return &notes.NoteResponse{Result: true}, nil
 }
 
+func (s *InstancesServer) PatchNote(ctx context.Context, req *notes.PatchNoteRequest) (*notes.NoteResponse, error) {
+	log := s.log.Named("Patch")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
+	var instance graph.Instance
+	instance, err := graph.GetInstanceWithAccess(
+		ctx, s.db,
+		instance_id,
+	)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if instance.GetAccess().GetLevel() != accesspb.Level_ROOT {
+		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ROOT)
+
+	note := instance.GetAdminNotes()[req.GetIndex()]
+
+	if requestor == note.GetAdmin() || ok {
+		var clone = make([]*notes.AdminNote, len(instance.GetAdminNotes()))
+
+		for key, val := range instance.GetAdminNotes() {
+			if key == int(req.GetIndex()) {
+				clone[key] = &notes.AdminNote{
+					Admin:   requestor,
+					Msg:     req.GetMsg(),
+					Created: val.GetCreated(),
+					Updated: time.Now().Unix(),
+				}
+			} else {
+				clone[key] = val
+			}
+		}
+
+		newInstance := &pb.Instance{
+			AdminNotes: clone,
+		}
+		err = s.ctrl.Update(ctx, "", instance.Instance, newInstance)
+		if err != nil {
+			return nil, err
+		}
+
+		return &notes.NoteResponse{Result: true}, nil
+	}
+
+	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
+}
+
 func (s *InstancesServer) RemoveNote(ctx context.Context, req *notes.RemoveNoteRequest) (*notes.NoteResponse, error) {
-	log := s.log.Named("invoke")
+	log := s.log.Named("Remove")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
