@@ -406,6 +406,15 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
 	}
 
+	cred, err := credentials.MakeCredentials(request.Auth, log)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if cred.Find(ctx, s.db) {
+		return nil, status.Error(codes.AlreadyExists, "Such username also exists")
+	}
+
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
 		Currency: &request.Currency,
@@ -447,10 +456,81 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 
 	col, _ = s.db.Collection(ctx, schema.CREDENTIALS_EDGE_COL)
+	err = s.ctrl.SetCredentials(ctx, acc, col, cred, roles.OWNER)
+	if err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
+func (s *AccountsServiceServer) StandartCreate(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
+	log := s.log.Named("CreateAccount")
+	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	ns, err := s.ns_ctrl.Get(ctx, request.Namespace)
+	if err != nil {
+		log.Debug("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
+		return nil, err
+	}
+
+	ok, access_lvl := graph.AccessLevel(ctx, s.db, schema.ROOT_ACCOUNT_KEY, ns.ID)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "No Access")
+	} else if access_lvl < access.Level_MGMT {
+		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
+	}
+
 	cred, err := credentials.MakeCredentials(request.Auth, log)
 	if err != nil {
-		return res, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	if cred.Find(ctx, s.db) {
+		return nil, status.Error(codes.AlreadyExists, "Such username also exists")
+	}
+
+	creationAccount := accountspb.Account{
+		Title:    request.Title,
+		Currency: &request.Currency,
+		Data:     request.GetData(),
+	}
+
+	acc, err := s.ctrl.Create(ctx, creationAccount)
+	if err != nil {
+		log.Debug("Error creating account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while creating account")
+	}
+	res := &accountspb.CreateResponse{Uuid: acc.Key}
+
+	if request.Access != nil && access.Level(*request.Access) < access_lvl {
+		access_lvl = access.Level(*request.Access)
+	}
+
+	var settings AccountPostCreateSettings
+	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
+		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	if settings.CreateNamespace {
+		personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, acc.GetUuid())
+
+		createdNs, err := s.ns_ctrl.Create(personal_ctx, acc.GetTitle())
+		if err != nil {
+			log.Warn("Cannot create a namespace for new Account", zap.String("account", acc.GetUuid()), zap.Error(err))
+		} else {
+			res.Namespace = createdNs.ID.Key()
+		}
+	}
+
+	col, _ := s.db.Collection(ctx, schema.NS2ACC)
+	err = acc.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
+	if err != nil {
+		log.Debug("Error linking to namespace")
+		return res, err
+	}
+
+	col, _ = s.db.Collection(ctx, schema.CREDENTIALS_EDGE_COL)
 
 	err = s.ctrl.SetCredentials(ctx, acc, col, cred, roles.OWNER)
 	if err != nil {
