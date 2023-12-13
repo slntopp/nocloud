@@ -18,7 +18,9 @@ package instances
 import (
 	"context"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	"github.com/slntopp/nocloud-proto/notes"
 	"github.com/slntopp/nocloud-proto/states"
+	"slices"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -394,4 +396,80 @@ func (s *InstancesServer) TransferInstance(ctx context.Context, req *pb.Transfer
 		Result: true,
 		Meta:   nil,
 	}, nil
+}
+
+func (s *InstancesServer) AddNote(ctx context.Context, req *notes.AddNoteRequest) (*notes.NoteResponse, error) {
+	log := s.log.Named("invoke")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
+	var instance graph.Instance
+	instance, err := graph.GetInstanceWithAccess(
+		ctx, s.db,
+		instance_id,
+	)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if instance.GetAccess().GetLevel() != accesspb.Level_ROOT {
+		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	newInstance := &pb.Instance{
+		AdminNotes: append(instance.AdminNotes, &notes.AdminNote{
+			Admin: requestor,
+			Msg:   req.GetMsg(),
+		}),
+	}
+
+	err = s.ctrl.Update(ctx, "", instance.Instance, newInstance)
+	if err != nil {
+		return nil, err
+	}
+
+	return &notes.NoteResponse{Result: true}, nil
+}
+
+func (s *InstancesServer) RemoveNote(ctx context.Context, req *notes.RemoveNoteRequest) (*notes.NoteResponse, error) {
+	log := s.log.Named("invoke")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
+	var instance graph.Instance
+	instance, err := graph.GetInstanceWithAccess(
+		ctx, s.db,
+		instance_id,
+	)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if instance.GetAccess().GetLevel() != accesspb.Level_ROOT {
+		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ROOT)
+
+	note := instance.GetAdminNotes()[req.GetIndex()]
+
+	if requestor == note.GetAdmin() || ok {
+		newInstance := &pb.Instance{
+			AdminNotes: slices.Delete(instance.GetAdminNotes(), int(req.GetIndex()), int(req.GetIndex()+1)),
+		}
+		err = s.ctrl.Update(ctx, "", instance.Instance, newInstance)
+		if err != nil {
+			return nil, err
+		}
+
+		return &notes.NoteResponse{Result: true}, nil
+	}
+
+	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
 }

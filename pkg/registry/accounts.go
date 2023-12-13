@@ -18,7 +18,9 @@ package registry
 import (
 	"context"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	"github.com/slntopp/nocloud-proto/notes"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
+	"slices"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -616,4 +618,93 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 	}
 
 	return &accountspb.DeleteResponse{Result: true}, nil
+}
+
+func (s *AccountsServiceServer) AddNote(ctx context.Context, request *notes.AddNoteRequest) (*notes.NoteResponse, error) {
+	log := s.log.Named("UpdateAccount")
+	log.Debug("Update request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	if err != nil {
+		log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if acc.Access == nil {
+		log.Warn("Error Access is nil")
+		return nil, status.Error(codes.PermissionDenied, "Error Access is nil")
+	}
+
+	if requestor == request.GetUuid() {
+		acc.Access.Level = access.Level_ROOT
+	}
+
+	if acc.Access.Level < access.Level_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	acc.AdminNotes = append(acc.GetAdminNotes(), &notes.AdminNote{
+		Admin: requestor,
+		Msg:   request.GetMsg(),
+	})
+
+	patch := map[string]any{
+		"admin_notes": acc.GetAdminNotes(),
+	}
+
+	err = s.ctrl.Update(ctx, acc, patch)
+	if err != nil {
+		log.Error("Failed to add note", zap.Error(err))
+		return nil, err
+	}
+
+	return &notes.NoteResponse{Result: true}, nil
+}
+
+func (s *AccountsServiceServer) RemoveNote(ctx context.Context, request *notes.RemoveNoteRequest) (*notes.NoteResponse, error) {
+	log := s.log.Named("UpdateAccount")
+	log.Debug("Update request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	if err != nil {
+		log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if acc.Access == nil {
+		log.Warn("Error Access is nil")
+		return nil, status.Error(codes.PermissionDenied, "Error Access is nil")
+	}
+
+	if requestor == request.GetUuid() {
+		acc.Access.Level = access.Level_ROOT
+	}
+
+	if acc.Access.Level < access.Level_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	note := acc.GetAdminNotes()[request.GetIndex()]
+	if (note.GetAdmin() == requestor) || (note.GetAdmin() != requestor && acc.Access.GetLevel() == access.Level_ROOT) {
+		acc.AdminNotes = slices.Delete(acc.AdminNotes, int(request.GetIndex()), int(request.GetIndex()+1))
+
+		patch := map[string]any{
+			"admin_notes": acc.GetAdminNotes(),
+		}
+
+		err = s.ctrl.Update(ctx, acc, patch)
+		if err != nil {
+			log.Error("Failed to remove note", zap.Error(err))
+			return nil, err
+		}
+		return &notes.NoteResponse{Result: true}, nil
+	}
+
+	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account notes")
 }

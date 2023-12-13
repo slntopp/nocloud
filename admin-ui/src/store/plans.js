@@ -53,6 +53,7 @@ export default {
       { commit, dispatch },
       options = { params: { anonymously: false }, withCount: false }
     ) {
+      console.log(options)
       if (!options?.silent) {
         commit("setPlans", []);
         commit("setLoading", true);

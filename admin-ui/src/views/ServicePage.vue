@@ -95,7 +95,7 @@ export default {
         this.found = !!this.service;
         document.title = `${this.serviceTitle} | NoCloud`;
       });
-      this.$store.dispatch("services/fetch",{showDeleted:true});
+      this.$store.dispatch("services/fetch", { showDeleted: true });
     },
   },
   computed: {
@@ -131,8 +131,7 @@ export default {
   mounted() {
     document.title = `${this.serviceTitle} | NoCloud`;
     this.$store.commit("reloadBtn/setCallback", {
-      type: "services/fetchById",
-      params: this.serviceId,
+      event: () => this.fetchService(),
     });
 
     this.$store.dispatch("accounts/fetch");
