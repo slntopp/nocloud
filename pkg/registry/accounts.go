@@ -100,6 +100,11 @@ func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.Se
 	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
 		s.log.Warn("Cannot fetch settings", zap.Error(scErr))
 	}
+
+	var stdSettings StandartSettings
+	if scErr := sc.Fetch(standarkKey, &stdSettings, standartSettings); scErr != nil {
+		s.log.Warn("Cannot fetch standart settings", zap.Error(scErr))
+	}
 }
 
 const getOwnServices = `
@@ -468,7 +473,12 @@ func (s *AccountsServiceServer) StandartCreate(ctx context.Context, request *acc
 	log := s.log.Named("CreateAccount")
 	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
 
-	ns, err := s.ns_ctrl.Get(ctx, request.Namespace)
+	var stdSettings StandartSettings
+	if scErr := sc.Fetch(accountPostCreateSettingsKey, &stdSettings, standartSettings); scErr != nil {
+		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	ns, err := s.ns_ctrl.Get(ctx, stdSettings.Namespace)
 	if err != nil {
 		log.Debug("Error getting namespace", zap.Error(err), zap.String("namespace", request.Namespace))
 		return nil, err

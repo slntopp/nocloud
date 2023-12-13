@@ -19,6 +19,7 @@ import (
 	"github.com/slntopp/nocloud-proto/access"
 	accountspb "github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 )
 
@@ -50,8 +51,20 @@ type AccountPostCreateSettings struct {
 	CreateNamespace bool `json:"create-ns"`
 }
 
+const standarkKey = "standart"
+
+type StandartSettings struct {
+	Namespace string `json:"namespace"`
+}
+
 var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
 	Value:       AccountPostCreateSettings{CreateNamespace: true},
 	Description: "Post Account Creation Actions",
+	Level:       access.Level_ADMIN,
+}
+
+var standartSettings = &sc.Setting[StandartSettings]{
+	Value:       StandartSettings{Namespace: schema.ROOT_NAMESPACE_KEY},
+	Description: "Standart Credentials Settings",
 	Level:       access.Level_ADMIN,
 }
