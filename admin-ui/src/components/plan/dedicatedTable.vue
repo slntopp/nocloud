@@ -1,8 +1,21 @@
 <template>
   <div>
     <v-row class="my-3" v-if="!isPlansLoading">
-      <v-btn class="ml-3" @click="setEnabledToTab(true)">Enable all</v-btn>
-      <v-btn class="ml-3" @click="setEnabledToTab(false)">Disable all</v-btn>
+      <v-btn :loading="isRefreshLoading" class="ml-3" @click="refreshApiPlans"
+        >Refresh plans</v-btn
+      >
+      <v-btn class="ml-3" @click="setEnabledToPlans(true)"
+        >Enable all plans</v-btn
+      >
+      <v-btn class="ml-3" @click="setEnabledToPlans(false)"
+        >Disable all plans</v-btn
+      >
+      <v-btn class="ml-3" @click="setEnabledToAddons(true)"
+        >Enable all addons</v-btn
+      >
+      <v-btn class="ml-3" @click="setEnabledToAddons(false)"
+        >Disable all addons</v-btn
+      >
     </v-row>
     <nocloud-table
       table-name="dedicated-prices"
@@ -14,7 +27,6 @@
       :items="filteredPlans"
       :headers="headers"
       :loading="isPlansLoading"
-      :footer-error="fetchError"
     >
       <template v-slot:[`item.title`]="{ item }">
         <v-text-field dense style="width: 200px" v-model="item.title" />
@@ -249,11 +261,7 @@ export default {
       },
     ],
 
-    fetchError: "",
-    isAddonsLoading: false,
-    isConfigurationsLoading: false,
-    isCpuLoading: false,
-
+    isRefreshLoading: false,
     planGroups: [],
     newplanGroup: { mode: "none", name: "", planId: "" },
 
@@ -299,6 +307,7 @@ export default {
             group: productName.split(/[\W0-9]/)[0],
             basePrice: price.value,
             public: false,
+            meta: {},
             id,
           });
         });
@@ -306,49 +315,105 @@ export default {
 
       return result;
     },
-    async fetchPlans() {
+    async refreshApiPlans() {
       try {
-        const {
-          meta: { plans },
-        } = await api.servicesProviders.action({
-          action: "get_baremetal_plans",
-          uuid: this.sp.uuid,
+        this.isRefreshLoading = true;
+        let plans = await this.fetchPlans();
+
+        const allAddons = await Promise.allSettled(
+          plans.map(async (p) => ({
+            planId: p.id,
+            data: await this.fetchAddonsToPlan(p),
+          }))
+        );
+
+        const allConfigurations = await Promise.allSettled(
+          plans.map(async (p) => ({
+            planId: p.id,
+            data: await this.fetchConfigurationToPlan(p),
+          }))
+        );
+
+        plans.forEach((p) => {
+          p.meta.addons = allAddons.find(
+            (result) => result.value.planId === p.id
+          ).value.data;
+          const { os, datacenter } = allConfigurations.find(
+            (result) => result.value.planId === p.id
+          ).value.data;
+          p.meta.os = os;
+          p.meta.datacenter = datacenter;
         });
 
-        const products = this.getApiProducts(plans);
+        //for all cpu needs os,datacenters,addons ^
+        const allCpus = await Promise.allSettled(
+          plans.map(async (p) => ({
+            planId: p.id,
+            data: await this.fetchCpuToPlan(p),
+          }))
+        );
 
-        const newPlans = [];
-        products.forEach((plan) => {
-          const planIndex = this.plans.findIndex((p) => p.id === plan.id);
-          newPlans.push({
-            meta: {},
+        allCpus.forEach((result) => {
+          if (result.status === "rejected") {
+            return;
+          }
+          const { planId, data } = result.value;
+          const planIndex = plans.findIndex((p) => p.id === planId);
+          plans[planIndex].cpu = data;
+        });
+
+        this.plans = plans.map((plan) => {
+          const realPlan = this.plans.find((real) => real.id === plan.id);
+          if (!realPlan) {
+            return plan;
+          }
+
+          const { os, datacenter, cpu } = plan.meta;
+
+          const addons = plan.meta.addons.map((addon) => {
+            const realAddon = realPlan.meta?.addons?.find(
+              ({ id }) => id === addon.id
+            );
+            if (!realAddon) {
+              return addon;
+            }
+            const { price, public: Public } = realAddon;
+            return { ...addon, public: Public, price };
+          });
+
+          return {
             ...plan,
-            ...(this.plans[planIndex] || {}),
+            ...realPlan,
+            cpu: plan.cpu || realPlan.cpu,
             apiName: plan.apiName,
             basePrice: plan.basePrice,
-          });
+            meta: {
+              addons,
+              os,
+              datacenter,
+              cpu,
+            },
+          };
         });
-
-        this.plans = newPlans;
-        this.fetchError = "";
       } catch (err) {
-        this.fetchError = err.response?.data?.message ?? err.message ?? err;
-        throw err;
+        this.$store.commit("snackbar/showSnackbarError", {
+          message: err.response?.data?.message ?? err.message ?? err,
+        });
       } finally {
-        this.$emit("changeLoading");
+        this.isRefreshLoading = false;
       }
     },
-    async fetchAddons() {
-      try {
-        this.isAddonsLoading = true;
-        await Promise.allSettled(
-          this.plans.map((p) => this.fetchAddonsToPlan(p))
-        );
-      } finally {
-        this.isAddonsLoading = false;
-      }
+    async fetchPlans() {
+      const {
+        meta: { plans },
+      } = await api.servicesProviders.action({
+        action: "get_baremetal_plans",
+        uuid: this.sp.uuid,
+      });
+
+      return this.getApiProducts(plans);
     },
-    async fetchAddonsToPlan({ planCode, duration, id }) {
+    async fetchAddonsToPlan({ planCode, duration }) {
       const {
         meta: { options },
       } = await api.post(`/sp/${this.sp.uuid}/invoke`, {
@@ -364,41 +429,11 @@ export default {
       } = options;
       const plans = [...bandwidth, ...memory, ...storage, ...vrack, ...sys];
 
-      const newAddons = this.getApiProducts(plans, planCode).filter(
+      return this.getApiProducts(plans, planCode).filter(
         (p) => p.duration === duration
       );
-
-      const planIndex = this.plans.findIndex((p) => p.id === id);
-
-      const addons = newAddons.map((a) => {
-        const realAddon = this.plans[planIndex].meta.addons.find(
-          ({ id }) => id === a.id
-        );
-        if (realAddon) {
-          const {
-            basePrice,
-            apiName,
-            public: Public,
-          } = newAddons.find((newAddon) => newAddon.id === a.id);
-          return { ...a, basePrice, public: Public, apiName };
-        }
-
-        return a;
-      });
-
-      this.$set(this.plans[planIndex].meta, "addons", addons);
     },
-    async fetchConfigurations() {
-      try {
-        this.isConfigurationsLoading = true;
-        await Promise.allSettled(
-          this.plans.map((p) => this.fetchConfigurationToPlan(p))
-        );
-      } finally {
-        this.isConfigurationsLoading = false;
-      }
-    },
-    async fetchConfigurationToPlan({ planCode, duration, id }) {
+    async fetchConfigurationToPlan({ planCode, duration }) {
       const {
         meta: { requiredConfiguration },
       } = await api.post(`/sp/${this.sp.uuid}/invoke`, {
@@ -410,8 +445,6 @@ export default {
         },
       });
 
-      const planIndex = this.plans.findIndex((p) => p.id === id);
-
       const datacenter =
         requiredConfiguration.find((el) => el.label.includes("datacenter"))
           ?.allowedValues ?? [];
@@ -420,25 +453,10 @@ export default {
         requiredConfiguration.find((el) => el.label.includes("os"))
           ?.allowedValues ?? [];
 
-      if (!os.length || !datacenter.length) {
-        this.plans = this.plans.filter((_, index) => planIndex !== index);
-        return;
-      }
-
-      this.$set(this.plans[planIndex].meta, "os", os);
-      this.$set(this.plans[planIndex].meta, "datacenter", datacenter);
-    },
-    async fetchCpus() {
-      try {
-        this.isCpuLoading = true;
-        await Promise.allSettled(this.plans.map((p) => this.fetchCpuToPlan(p)));
-        this.setCpuGroups();
-      } finally {
-        this.isCpuLoading = false;
-      }
+      return { os, datacenter };
     },
     async fetchCpuToPlan(plan) {
-      const { planCode, duration, id } = plan;
+      const { planCode, duration } = plan;
       const addons = plan.meta.addons
         ?.filter(
           (a, index, arr) =>
@@ -466,15 +484,11 @@ export default {
         },
       });
 
-      const planIndex = this.plans.findIndex((p) => p.id === id);
-      meta.order.details.forEach((d) => {
-        if (
+      return meta.order.details.find(
+        (d) =>
           d.description.toLowerCase().includes("intel") ||
           d.description.toLowerCase().includes("amd")
-        ) {
-          this.$set(this.plans[planIndex], "cpu", d.description);
-        }
-      });
+      )?.description;
     },
     setPlanGroups() {
       const groups = [];
@@ -519,7 +533,7 @@ export default {
 
         p.meta.addons = (p.meta.addons || [])
           .filter((addon) => addon.public)
-          ?.map((el) => ({ id: el.planCode, title: el.title }));
+          ?.map((el) => ({ id: el.id, title: el.title }));
 
         plan.products[p.id] = {
           kind: "PREPAID",
@@ -529,7 +543,7 @@ export default {
           group: p.group,
           period: this.getPeriod(p.duration),
           sorter: Object.keys(plan.products).length,
-          installation_fee: p.installation_fee.value,
+          installation_fee: p.installation_fee?.value,
           meta: {
             ...p.meta,
             basePrice: p.basePrice,
@@ -538,7 +552,6 @@ export default {
           },
         };
       });
-      console.log(plan);
     },
     getPayment(duration) {
       switch (duration) {
@@ -632,7 +645,22 @@ export default {
         };
       });
     },
-    setEnabledToTab(value) {
+    setEnabledToPlans(value) {
+      this.plans = this.plans.map((p) => {
+        return {
+          ...p,
+          meta: {
+            ...p.meta,
+            addons: p.meta.addons?.map((a) => ({
+              ...a,
+              public: value && a.basePrice === 0,
+            })),
+          },
+          public: value,
+        };
+      });
+    },
+    setEnabledToAddons(value) {
       this.plans = this.plans.map((p) => {
         return {
           ...p,
@@ -643,26 +671,23 @@ export default {
               public: value,
             })),
           },
-          public: value,
         };
       });
     },
   },
   created() {
-    this.$emit("changeLoading");
-
     this.plans = Object.keys(this.template.products || {}).map((key) => {
       const product = this.template.products[key];
 
       const [duration, planCode] = key.split(" ");
 
-      const addons = (product.meta?.addons || []).map(({ id }) => ({
-        ...(this.template.resources.find(
-          ({ key }) => key === this.getAddonId({ duration, planCode }, id)
-        ) || {}),
-        id: this.getAddonId({ duration, planCode }, id),
-        duration,
-      }));
+      const addons = (product.meta?.addons || []).map(({ id }) => {
+        return {
+          ...(this.template.resources.find(({ key }) => key === id) || {}),
+          id,
+          duration,
+        };
+      });
 
       return {
         ...product,
@@ -671,6 +696,12 @@ export default {
         cpu: product.meta.cpu,
         apiName: product.meta.apiName,
         basePrice: product.meta.basePrice,
+        installation_fee: {
+          price: {
+            value: +this.convertPrice(product.installationFee),
+          },
+          value: product.installationFee,
+        },
         id: key,
         meta: {
           ...product.meta,
@@ -678,16 +709,6 @@ export default {
         },
       };
     });
-  },
-  async mounted() {
-    try {
-      await this.fetchPlans();
-      await this.fetchAddons();
-      await this.fetchConfigurations();
-      await this.fetchCpus();
-    } catch (e) {
-      console.log(e);
-    }
   },
   computed: {
     ...mapGetters("currencies", { rates: "rates", defaultCurrency: "default" }),
