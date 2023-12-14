@@ -221,11 +221,6 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		}
 	}
 
-	equalNotes := reflect.DeepEqual(inst.GetAdminNotes(), oldInst.GetAdminNotes())
-	if !equalNotes {
-		mask.AdminNotes = inst.GetAdminNotes()
-	}
-
 	_, err = ctrl.col.UpdateDocument(ctx, oldInst.Uuid, mask)
 	if err != nil {
 		log.Error("Failed to update Instance", zap.Error(err))
@@ -254,6 +249,19 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	}
 
 	nocloud.Log(log, event)
+
+	return nil
+}
+
+func (ctrl *InstancesController) UpdateNotes(ctx context.Context, inst *pb.Instance) error {
+	log := ctrl.log.Named("UpdateNotes")
+	log.Debug("Updating Instance", zap.Any("instance", inst))
+
+	_, err := ctrl.col.UpdateDocument(ctx, inst.Uuid, inst)
+	if err != nil {
+		log.Error("Failed to update Instance", zap.Error(err))
+		return err
+	}
 
 	return nil
 }

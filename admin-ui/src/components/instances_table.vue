@@ -317,8 +317,8 @@ export default {
             ) || [];
 
           return (
-            (+tariff.price || 0) +
-            (addons.reduce((acc, a) => acc + a.price, 0) || 0)
+            (+tariff?.price || 0) +
+            (addons.reduce((acc, a) => acc + a?.price, 0) || 0)
           );
         }
         case "ione":
@@ -330,11 +330,11 @@ export default {
             if (
               curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`
             ) {
-              return prev + (curr.price * inst.resources.drive_size) / 1024;
+              return prev + (curr?.price * inst.resources.drive_size) / 1024;
             } else if (curr.key === "ram") {
-              return prev + (curr.price * inst.resources.ram) / 1024;
+              return prev + (curr?.price * inst.resources.ram) / 1024;
             } else if (inst.resources[curr.key]) {
-              return prev + curr.price * inst.resources[curr.key];
+              return prev + curr?.price * inst.resources[curr.key];
             }
             return prev;
           }, initialPrice);

@@ -419,20 +419,21 @@ func (s *InstancesServer) AddNote(ctx context.Context, req *notes.AddNoteRequest
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	newInstance := &pb.Instance{
-		AdminNotes: append(instance.AdminNotes, &notes.AdminNote{
-			Admin:   requestor,
-			Msg:     req.GetMsg(),
-			Created: time.Now().Unix(),
-		}),
-	}
+	instance.AdminNotes = append(instance.AdminNotes, &notes.AdminNote{
+		Admin:   requestor,
+		Msg:     req.GetMsg(),
+		Created: time.Now().Unix(),
+	})
 
-	err = s.ctrl.Update(ctx, "", instance.Instance, newInstance)
+	err = s.ctrl.UpdateNotes(ctx, instance.Instance)
 	if err != nil {
 		return nil, err
 	}
 
-	return &notes.NoteResponse{Result: true}, nil
+	return &notes.NoteResponse{
+		Result:     true,
+		AdminNotes: instance.GetAdminNotes(),
+	}, nil
 }
 
 func (s *InstancesServer) PatchNote(ctx context.Context, req *notes.PatchNoteRequest) (*notes.NoteResponse, error) {
@@ -461,30 +462,20 @@ func (s *InstancesServer) PatchNote(ctx context.Context, req *notes.PatchNoteReq
 	note := instance.GetAdminNotes()[req.GetIndex()]
 
 	if requestor == note.GetAdmin() || ok {
-		var clone = make([]*notes.AdminNote, len(instance.GetAdminNotes()))
 
-		for key, val := range instance.GetAdminNotes() {
-			if key == int(req.GetIndex()) {
-				clone[key] = &notes.AdminNote{
-					Admin:   requestor,
-					Msg:     req.GetMsg(),
-					Created: val.GetCreated(),
-					Updated: time.Now().Unix(),
-				}
-			} else {
-				clone[key] = val
-			}
-		}
+		note.Admin = requestor
+		note.Msg = req.GetMsg()
+		note.Updated = time.Now().Unix()
 
-		newInstance := &pb.Instance{
-			AdminNotes: clone,
-		}
-		err = s.ctrl.Update(ctx, "", instance.Instance, newInstance)
+		err = s.ctrl.UpdateNotes(ctx, instance.Instance)
 		if err != nil {
 			return nil, err
 		}
 
-		return &notes.NoteResponse{Result: true}, nil
+		return &notes.NoteResponse{
+			Result:     true,
+			AdminNotes: instance.GetAdminNotes(),
+		}, nil
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
@@ -516,15 +507,17 @@ func (s *InstancesServer) RemoveNote(ctx context.Context, req *notes.RemoveNoteR
 	note := instance.GetAdminNotes()[req.GetIndex()]
 
 	if requestor == note.GetAdmin() || ok {
-		newInstance := &pb.Instance{
-			AdminNotes: slices.Delete(instance.GetAdminNotes(), int(req.GetIndex()), int(req.GetIndex()+1)),
-		}
-		err = s.ctrl.Update(ctx, "", instance.Instance, newInstance)
+		instance.AdminNotes = slices.Delete(instance.GetAdminNotes(), int(req.GetIndex()), int(req.GetIndex()+1))
+
+		err = s.ctrl.UpdateNotes(ctx, instance.Instance)
 		if err != nil {
 			return nil, err
 		}
 
-		return &notes.NoteResponse{Result: true}, nil
+		return &notes.NoteResponse{
+			Result:     true,
+			AdminNotes: instance.GetAdminNotes(),
+		}, nil
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
