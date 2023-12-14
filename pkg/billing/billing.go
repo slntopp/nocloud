@@ -127,12 +127,12 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, plan *pb.Plan) (*
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
-	get, err := s.plans.Get(ctx, plan)
+	pbStatus, err := s.plans.CheckStatus(ctx, plan)
 	if err != nil {
 		return nil, err
 	}
 
-	if get.GetStatus() == statuspb.NoCloudStatus_DEL {
+	if pbStatus == statuspb.NoCloudStatus_DEL {
 		return nil, status.Error(codes.Canceled, "Billing plan deleted")
 	}
 
