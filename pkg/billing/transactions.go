@@ -421,6 +421,11 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 		return nil, status.Error(codes.Internal, "Failed to update transaction")
 	}
 
+	s.db.Query(ctx, updateRecordsMeta, map[string]interface{}{
+		"@records":       schema.RECORDS_COL,
+		"transactionKey": t.String(),
+	})
+
 	if t.GetPriority() == pb.Priority_URGENT && t.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
@@ -546,6 +551,12 @@ FOR r in transaction.records
 
 UPDATE transaction WITH {currency: currency, total: total} IN @@transactions
 RETURN transaction
+`
+
+const updateRecordsMeta = `
+LET transaction = DOCUMENT(@transactionKey)
+FOR r in transaction.records
+	UPDATE r WITH {meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
 `
 
 const reprocessTransactions = `
