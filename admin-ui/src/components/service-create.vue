@@ -496,7 +496,7 @@ export default {
     });
 
     this.$store.dispatch("namespaces/fetch");
-    this.$store.dispatch("servicesProviders/fetch", false);
+    this.$store.dispatch("servicesProviders/fetch", {anonymously:false});
 
     const types = require.context(
       "@/components/modules/",

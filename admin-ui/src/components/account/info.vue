@@ -302,7 +302,7 @@ export default {
     this.keys = this.account.data?.ssh_keys || [];
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("services/fetch", { showDeleted: true });
-    this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
   },
   computed: {
     namespaces() {

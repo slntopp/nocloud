@@ -47,12 +47,12 @@ const isLoading = computed(() => store.getters["showcases/isLoading"]);
 
 onMounted(() => {
   fetchShowcases();
-  store.commit("reloadBtn/setCallback", { event: fetchShowcases});
+  store.commit("reloadBtn/setCallback", { event: fetchShowcases });
 });
 
 const fetchShowcases = async () => {
   try {
-    await store.dispatch("showcases/fetch", false);
+    await store.dispatch("showcases/fetch", { anonymously: false });
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during fetch info",

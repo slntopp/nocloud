@@ -15,7 +15,6 @@
       <v-select
         v-else
         flat
-        dark
         v-model="selectedRegion"
         :items="allRegions"
         label="regions"

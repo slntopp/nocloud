@@ -287,7 +287,7 @@ export default {
     },
   },
   async created() {
-    this.$store.dispatch("servicesProviders/fetch", false);
+    this.$store.dispatch("servicesProviders/fetch", {anonymously:false});
 
     const types = require.context(
       "@/components/modules/",

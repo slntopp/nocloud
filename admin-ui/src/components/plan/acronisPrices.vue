@@ -49,7 +49,7 @@ const headers = ref([
 onMounted(async () => {
   isLoading.value = true;
   try {
-    await store.dispatch("servicesProviders/fetch", false);
+    await store.dispatch("servicesProviders/fetch", {anonymously:false});
     const spUuid = sps.value.find((sp) => sp.type === props.template.type).uuid;
     await store.dispatch("servicesProviders/fetchById", spUuid);
     sp.value = sps.value.find((sp) => sp.uuid === spUuid);

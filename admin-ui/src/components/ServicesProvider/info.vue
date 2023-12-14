@@ -60,7 +60,7 @@
       <!-- Date -->
       <v-row>
         <v-col cols="12" lg="6" class="mt-5 mb-5">
-          <v-alert dark type="info" color="background ">
+          <v-alert type="info" color="primary">
             <span class="mr-2 text-h6">Last Monitored:</span>
             <template v-if="provider.state && template.state.meta.ts">
               {{

@@ -211,7 +211,7 @@ export default {
     this.$store.dispatch("accounts/fetch", false);
     this.$store.dispatch("namespaces/fetch", false);
     this.$store.dispatch("services/fetch", { showDeleted: true });
-    this.$store.dispatch("servicesProviders/fetch", false);
+    this.$store.dispatch("servicesProviders/fetch", {anonymously:false});
 
     const types = require.context(
       "@/components/modules/",

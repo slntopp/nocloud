@@ -50,8 +50,28 @@ type AccountPostCreateSettings struct {
 	CreateNamespace bool `json:"create-ns"`
 }
 
+const signupKey = "signup"
+
+type SignUpSettings struct {
+	Namespace      string   `json:"namespace"`
+	AllowedTypes   []string `json:"allowed_types"`
+	Enabled        bool     `json:"enabled"`
+	EnabledAccount bool     `json:"enabled_account"`
+}
+
 var defaultSettings = &sc.Setting[AccountPostCreateSettings]{
 	Value:       AccountPostCreateSettings{CreateNamespace: true},
 	Description: "Post Account Creation Actions",
+	Level:       access.Level_ADMIN,
+}
+
+var standartSettings = &sc.Setting[SignUpSettings]{
+	Value: SignUpSettings{
+		Namespace:      "",
+		AllowedTypes:   []string{},
+		Enabled:        false,
+		EnabledAccount: false,
+	},
+	Description: "Signup Settings",
 	Level:       access.Level_ADMIN,
 }
