@@ -423,8 +423,9 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 
 	_, err = s.db.Query(ctx, updateRecordsMeta, map[string]interface{}{
 		"@records":       schema.RECORDS_COL,
-		"transactionKey": t.String(),
+		"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid).String(),
 	})
+
 	if err != nil {
 		log.Error("Failed to update record", zap.Error(err))
 		return nil, err
