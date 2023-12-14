@@ -421,6 +421,16 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 		return nil, status.Error(codes.Internal, "Failed to update transaction")
 	}
 
+	_, err = s.db.Query(ctx, updateRecordsMeta, map[string]interface{}{
+		"@records":       schema.RECORDS_COL,
+		"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid).String(),
+	})
+
+	if err != nil {
+		log.Error("Failed to update record", zap.Error(err))
+		return nil, err
+	}
+
 	if t.GetPriority() == pb.Priority_URGENT && t.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
@@ -517,7 +527,7 @@ LET rate = PRODUCT(
 LET total = transaction.total * rate
 
 FOR r in transaction.records
-	UPDATE r WITH {total: total, currency: currency, meta: {transaction: transaction._key, payment_date: @now, status: transaction.meta.status == null ? "" : transaction.meta.status}, exec: transaction.exec} in @@records
+	UPDATE r WITH {total: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key, payment_date: @now}), exec: transaction.exec} in @@records
 
 UPDATE transaction WITH {processed: true, proc: @now, currency: currency, total: total} IN @@transactions
 UPDATE account WITH { balance: account.balance - total } IN @@accounts
@@ -542,10 +552,16 @@ LET rate = PRODUCT(
 LET total = transaction.total * rate
 
 FOR r in transaction.records
-	UPDATE r WITH {total: total, currency: currency, meta: {transaction: transaction._key, status: transaction.meta.status == null ? "" : transaction.meta.status}} in @@records
+	UPDATE r WITH {total: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
 
 UPDATE transaction WITH {currency: currency, total: total} IN @@transactions
 RETURN transaction
+`
+
+const updateRecordsMeta = `
+LET transaction = DOCUMENT(@transactionKey)
+FOR r in transaction.records
+	UPDATE r WITH {meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
 `
 
 const reprocessTransactions = `
