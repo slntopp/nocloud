@@ -430,7 +430,10 @@ func (s *InstancesServer) AddNote(ctx context.Context, req *notes.AddNoteRequest
 		return nil, err
 	}
 
-	return &notes.NoteResponse{Result: true}, nil
+	return &notes.NoteResponse{
+		Result:     true,
+		AdminNotes: instance.GetAdminNotes(),
+	}, nil
 }
 
 func (s *InstancesServer) PatchNote(ctx context.Context, req *notes.PatchNoteRequest) (*notes.NoteResponse, error) {
@@ -469,7 +472,10 @@ func (s *InstancesServer) PatchNote(ctx context.Context, req *notes.PatchNoteReq
 			return nil, err
 		}
 
-		return &notes.NoteResponse{Result: true}, nil
+		return &notes.NoteResponse{
+			Result:     true,
+			AdminNotes: instance.GetAdminNotes(),
+		}, nil
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
@@ -508,7 +514,10 @@ func (s *InstancesServer) RemoveNote(ctx context.Context, req *notes.RemoveNoteR
 			return nil, err
 		}
 
-		return &notes.NoteResponse{Result: true}, nil
+		return &notes.NoteResponse{
+			Result:     true,
+			AdminNotes: instance.GetAdminNotes(),
+		}, nil
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
