@@ -1,36 +1,20 @@
 <template>
   <div>
-    <v-menu :value="true" :close-on-content-click="false">
-      <template v-slot:activator="{ on, attrs }">
-        <v-icon class="group-icon" v-bind="attrs" v-on="on">mdi-filter</v-icon>
-      </template>
-
-      <v-list dense>
-        <v-list-item dense v-for="item of filters[column]" :key="item">
-          <v-checkbox
-            dense
-            v-model="selected[column]"
-            :value="item"
-            :label="item"
-            @change="selected = Object.assign({}, selected)"
-          />
-        </v-list-item>
-      </v-list>
-    </v-menu>
     <v-row class="my-3" v-if="!isPlansLoading">
-      <v-btn
-        class="ml-3"
-        :loading="isAddonsLoading && setToAllValue === true"
-        :disabled="isAddonsLoading && setToAllValue !== true"
-        @click="setEnabledToTab(true)"
-        >Enable all</v-btn
+      <v-btn :loading="isRefreshLoading" class="ml-3" @click="refreshApiPlans"
+        >Refresh plans</v-btn
       >
-      <v-btn
-        class="ml-3"
-        :loading="isAddonsLoading && setToAllValue === false"
-        :disabled="isAddonsLoading && setToAllValue !== false"
-        @click="setEnabledToTab(false)"
-        >Disable all</v-btn
+      <v-btn class="ml-3" @click="setEnabledToPlans(true)"
+        >Enable all plans</v-btn
+      >
+      <v-btn class="ml-3" @click="setEnabledToPlans(false)"
+        >Disable all plans</v-btn
+      >
+      <v-btn class="ml-3" @click="setEnabledToAddons(true)"
+        >Enable all addons</v-btn
+      >
+      <v-btn class="ml-3" @click="setEnabledToAddons(false)"
+        >Disable all addons</v-btn
       >
     </v-row>
     <nocloud-table
@@ -43,76 +27,122 @@
       :items="filteredPlans"
       :headers="headers"
       :loading="isPlansLoading"
-      :footer-error="fetchError"
     >
-      <template v-slot:[`item.name`]="{ item }">
-        <v-text-field dense style="width: 200px" v-model="item.name" />
+      <template v-slot:[`item.title`]="{ item }">
+        <v-text-field dense style="width: 200px" v-model="item.title" />
       </template>
 
       <template v-slot:[`item.group`]="{ item }">
         <template
-          v-if="newGroup.mode === 'edit' && newGroup.planId === item.id"
+          v-if="newplanGroup.mode === 'edit' && newplanGroup.planId === item.id"
         >
           <v-text-field
             dense
             class="d-inline-block mr-1"
             style="width: 200px"
-            v-model="newGroup.name"
+            v-model="newplanGroup.name"
           />
-          <v-icon @click="editGroup(item.group)">mdi-content-save</v-icon>
-          <v-icon @click="newGroup.mode = 'none'">mdi-close</v-icon>
+          <v-icon @click="editPlanGroup(item.group)">mdi-content-save</v-icon>
+          <v-icon @click="newplanGroup.mode = 'none'">mdi-close</v-icon>
         </template>
 
         <template
-          v-if="newGroup.mode === 'create' && newGroup.planId === item.id"
+          v-if="
+            newplanGroup.mode === 'create' && newplanGroup.planId === item.id
+          "
         >
           <v-text-field
             dense
             class="d-inline-block mr-1"
             style="width: 200px"
-            v-model="newGroup.name"
+            v-model="newplanGroup.name"
           />
-          <v-icon @click="createGroup(item)">mdi-content-save</v-icon>
-          <v-icon @click="newGroup.mode = 'none'">mdi-close</v-icon>
+          <v-icon @click="createPlanGroup(item)">mdi-content-save</v-icon>
+          <v-icon @click="newplanGroup.mode = 'none'">mdi-close</v-icon>
         </template>
 
-        <template v-if="newGroup.mode === 'none'">
-          <v-select
+        <template v-if="newplanGroup.mode === 'none'">
+          <v-autocomplete
             dense
             class="d-inline-block"
             style="width: 200px"
             v-model="item.group"
-            :items="groups"
+            :items="planGroups"
           />
-          <v-icon @click="changeMode('create', item)">mdi-plus</v-icon>
-          <v-icon @click="changeMode('edit', item)">mdi-pencil</v-icon>
-          <v-icon v-if="groups.length > 1" @click="deleteGroup(item.group)"
+          <v-icon @click="changePlanMode('create', item)">mdi-plus</v-icon>
+          <v-icon @click="changePlanMode('edit', item)">mdi-pencil</v-icon>
+          <v-icon
+            v-if="planGroups.length > 1"
+            @click="deletePlanGroup(item.group)"
             >mdi-delete</v-icon
           >
         </template>
 
-        <template v-else-if="newGroup.planId !== item.id">{{
+        <template v-else-if="newplanGroup.planId !== item.id">{{
           item.group
         }}</template>
       </template>
 
-      <template v-slot:[`item.margin`]="{ item }">
-        {{ getMargin(item, false) }}
+      <template v-slot:[`item.cpu`]="{ item }">
+        <template
+          v-if="newcpuGroup.mode === 'edit' && newcpuGroup.planId === item.id"
+        >
+          <v-text-field
+            dense
+            class="d-inline-block mr-1"
+            style="width: 200px"
+            v-model="newcpuGroup.name"
+          />
+          <v-icon @click="editCpuGroup(item.cpu)">mdi-content-save</v-icon>
+          <v-icon @click="newcpuGroup.mode = 'none'">mdi-close</v-icon>
+        </template>
+
+        <template
+          v-if="newcpuGroup.mode === 'create' && newcpuGroup.planId === item.id"
+        >
+          <v-text-field
+            dense
+            class="d-inline-block mr-1"
+            style="width: 200px"
+            v-model="newcpuGroup.name"
+          />
+          <v-icon @click="createCpuGroup(item)">mdi-content-save</v-icon>
+          <v-icon @click="newcpuGroup.mode = 'none'">mdi-close</v-icon>
+        </template>
+
+        <template v-if="newcpuGroup.mode === 'none'">
+          <v-autocomplete
+            dense
+            class="d-inline-block"
+            style="width: 200px"
+            v-model="item.cpu"
+            :items="cpuGroups"
+          />
+          <v-icon @click="changeCpuMode('create', item)">mdi-plus</v-icon>
+          <v-icon @click="changeCpuMode('edit', item)">mdi-pencil</v-icon>
+          <v-icon v-if="planGroups.length > 1" @click="deleteCpuGroup(item.cpu)"
+            >mdi-delete</v-icon
+          >
+        </template>
+
+        <template v-else-if="newcpuGroup.planId !== item.id">{{
+          item.cpu
+        }}</template>
       </template>
 
       <template v-slot:[`item.duration`]="{ value }">
         {{ getPayment(value) }}
       </template>
 
-      <template v-slot:[`item.price.value`]="{ value }">
+      <template v-slot:[`item.basePrice`]="{ value }">
         {{ value }} {{ defaultCurrency }}
       </template>
 
-      <template v-slot:[`item.value`]="{ item }">
+      <template v-slot:[`item.price`]="{ item }">
         <v-text-field
           dense
           style="min-width: 200px"
-          v-model="item.value"
+          v-model="item.price"
           :suffix="defaultCurrency"
         />
       </template>
@@ -141,13 +171,7 @@
       <template v-slot:[`item.addons`]="{ item }">
         <v-dialog width="90vw">
           <template v-slot:activator="{ on, attrs }">
-            <v-btn
-              icon
-              v-bind="attrs"
-              v-on="on"
-              :disabled="isAddonsLoading"
-              @click="fetchAddonsToOne(item)"
-            >
+            <v-btn icon v-bind="attrs" v-on="on">
               <v-icon> mdi-menu-open </v-icon>
             </v-btn>
           </template>
@@ -157,49 +181,41 @@
             class="pa-4"
             item-key="id"
             :show-select="false"
-            :items="getAddons(item)"
+            :items="item.meta?.addons"
             :headers="addonsHeaders"
-            :loading="isAddonsLoading"
           >
-            <template v-slot:[`item.margin`]="{ item }">
-              {{ getMargin(item, false) }}
-            </template>
             <template v-slot:[`item.duration`]="{ value }">
               {{ getPayment(value) }}
             </template>
-            <template v-slot:[`item.price.value`]="{ value }">
+            <template v-slot:[`item.basePrice`]="{ value }">
               {{ value }} {{ defaultCurrency }}
             </template>
-            <template v-slot:[`item.value`]="{ item }">
+            <template v-slot:[`item.price`]="{ item }">
               <v-text-field
                 dense
                 style="width: 200px"
                 :suffix="defaultCurrency"
-                v-model="item.value"
+                v-model="item.price"
               />
             </template>
-            <template v-slot:[`item.sell`]="{ item }">
-              <v-switch v-model="item.sell" />
+            <template v-slot:[`item.public`]="{ item }">
+              <v-switch v-model="item.public" />
             </template>
           </nocloud-table>
         </v-dialog>
       </template>
-      <template v-slot:[`item.sell`]="{ item }">
-        <v-switch
-          :loading="isAddonsLoading && fetchAddonsItemId === item.id"
-          :disabled="isAddonsLoading && fetchAddonsItemId !== item.id"
-          v-model="item.sell"
-          @change="fetchAddonsToOne(item)"
-        />
+      <template v-slot:[`item.public`]="{ item }">
+        <v-switch v-model="item.public" />
       </template>
     </nocloud-table>
   </div>
 </template>
 
 <script>
-import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
+import { mapGetters } from "vuex";
 import { getMarginedValue } from "@/functions";
+import api from "@/api";
 
 export default {
   name: "dedicated-table",
@@ -212,333 +228,331 @@ export default {
   },
   data: () => ({
     plans: [],
-    addons: {},
     headers: [
-      { text: "Name", value: "name" },
+      { text: "Name", value: "title" },
       { text: "API name", value: "apiName" },
-      { text: "Group", value: "group", sortable: false, class: "groupable" },
-      { text: "Margin", value: "margin", sortable: false, class: "groupable" },
+      { text: "Group", value: "group" },
+      { text: "Cpu", value: "cpu" },
       {
         text: "Payment",
         value: "duration",
-        sortable: false,
-        class: "groupable",
       },
-      { text: "Income price", value: "price.value" },
-      { text: "Sale price", value: "value" },
-      { text: "Addons", value: "addons", sortable: false },
+      { text: "Income price", value: "price" },
+      { text: "Sale price", value: "basePrice" },
+      { text: "Addons", value: "addons" },
       {
         text: "Sell",
-        value: "sell",
-        sortable: false,
-        class: "groupable",
+        value: "public",
         width: 100,
       },
     ],
     addonsHeaders: [
-      { text: "Addon", value: "name" },
-      { text: "Margin", value: "margin", sortable: false, class: "groupable" },
+      { text: "Addon", value: "title" },
       {
         text: "Payment",
         value: "duration",
-        sortable: false,
-        class: "groupable",
       },
-      { text: "Income price", value: "price.value" },
-      { text: "Sale price", value: "value" },
+      { text: "Income price", value: "price" },
+      { text: "Sale price", value: "basePrice" },
       {
         text: "Sell",
-        value: "sell",
-        sortable: false,
-        class: "groupable",
+        value: "public",
         width: 100,
       },
     ],
 
-    filters: { Sell: ["true", "false"], Payment: ["monthly", "yearly"] },
-    selected: { Sell: ["true", "false"], Payment: ["monthly", "yearly"] },
+    isRefreshLoading: false,
+    planGroups: [],
+    newplanGroup: { mode: "none", name: "", planId: "" },
 
-    column: "",
-    fetchError: "",
-    isAddonsLoading: false,
-    fetchAddonsItemId: "",
-    setToAllValue: null,
+    cpuGroups: [],
+    newcpuGroup: { mode: "none", name: "", planId: "" },
 
-    groups: [],
-    newGroup: { mode: "none", name: "", planId: "" },
     usedFee: {},
   }),
   methods: {
-    getAddons({ planCode, duration }) {
-      return this.addons[planCode]?.filter((a) => a.duration === duration);
-    },
-    async fetchAddons({ planCode, sell }) {
-      if (this.addons[planCode]) {
-        this.addons[planCode].forEach(({ price }, i) => {
-          if (price.value !== 0) return;
-          this.addons[planCode][i].sell = sell;
-        });
-        return;
-      }
-
-      try {
-        const {
-          meta: { options },
-        } = await api.post(`/sp/${this.sp.uuid}/invoke`, {
-          method: "get_baremetal_options",
-          params: { planCode },
-        });
-        const {
-          bandwidth = [],
-          memory = [],
-          storage = [],
-          vrack = [],
-          ["system-storage"]: sys = [],
-        } = options;
-        const plans = [...bandwidth, ...memory, ...storage, ...vrack, ...sys];
-        const value = this.setPlans({ plans }, planCode);
-        this.setFee(value);
-        this.$set(
-          this.addons,
-          planCode,
-          value.map((addon) => {
-            const resource = this.template.resources.find(
-              (el) => addon.id === el.key
-            );
-
-            if (resource) {
-              addon.value = resource.price;
-              addon.sell = true;
-            }
-            if (+addon.price.value === 0) addon.sell = true;
-
-            return addon;
-          })
-        );
-      } catch (err) {
-        console.error(err);
-      }
-    },
-    async fetchAddonsToOne(tariff) {
-      this.isAddonsLoading = true;
-      this.fetchAddonsItemId = tariff.id;
-      try {
-        await this.fetchAddons(tariff);
-      } finally {
-        this.fetchAddonsItemId = "";
-        this.isAddonsLoading = false;
-      }
-    },
-    async changePlan(plan) {
-      if (!this.plans.every(({ group }) => this.groups.includes(group))) {
-        this.$store.commit("snackbar/showSnackbarError", {
-          message: "You must select a group for the tariff!",
-        });
-        return "error";
-      }
-
-      plan.products = {};
-
-      const sp = this.$store.getters["servicesProviders/all"];
-      const { uuid } = sp.find((el) => el.type === "ovh");
-
-      plan.resources = this.template.resources;
-
-      const enabledPlans = this.plans.filter((el) => el.sell);
-      const configurations = await Promise.all(
-        enabledPlans.map((el) =>
-          api.post(`/sp/${uuid}/invoke`, {
-            method: "get_required_configuration",
-            params: {
-              planCode: el.planCode,
-              duration: el.duration,
-              pricingMode: el.duration === "P1M" ? "default" : "upfront12",
-            },
-          })
-        )
-      );
-
-      for (let i = 0; i < configurations.length; i++) {
-        const {
-          meta: { requiredConfiguration },
-        } = configurations[i];
-        const el = enabledPlans[i];
-
-        const addons = this.getAddons(el)
-          ? this.getAddons(el)
-              .filter((addon) => addon.sell)
-              ?.map((el) => ({ id: el.planCode, title: el.name }))
-          : this.template.products[el.id]?.meta.addons;
-
-        const datacenter =
-          requiredConfiguration.find((el) => el.label.includes("datacenter"))
-            ?.allowedValues ?? [];
-
-        const os =
-          requiredConfiguration.find((el) => el.label.includes("os"))
-            ?.allowedValues ?? [];
-
-        plan.products[el.id] = {
-          kind: "PREPAID",
-          title: el.name,
-          price: el.value,
-          group: el.group,
-          period: this.getPeriod(el.duration),
-          sorter: Object.keys(plan.products).length,
-          installation_fee: el.installation_fee.value,
-          meta: { addons, datacenter, os },
-        };
-      }
-      Object.values(this.addons).forEach((planCodeAddons) => {
-        planCodeAddons.forEach((el) => {
-          if (el.sell) {
-            const resource = {
-              key: el.id,
-              kind: "PREPAID",
-              title: el.name,
-              price: el.value,
-              period: this.getPeriod(el.duration),
-              except: false,
-              on: [],
-            };
-            const existedIndex = plan.resources.findIndex(
-              (res) => res.key === resource.key
-            );
-            if (existedIndex !== -1) {
-              plan.resources[existedIndex] = resource;
-            } else {
-              plan.resources.push(resource);
-            }
-          }
-        });
-      });
-    },
-    changeIcon() {
-      setTimeout(() => {
-        const headers = document.querySelectorAll(".groupable");
-
-        headers.forEach(({ firstChild, children }) => {
-          if (!children[1]?.className.includes("group-icon")) {
-            const element = document.querySelector(".group-icon");
-            const icon = element.cloneNode(true);
-
-            firstChild.after(icon);
-            icon.style = "display: inline-flex";
-
-            icon.addEventListener("click", () => {
-              const menu = document.querySelector(".v-menu__content");
-              const { x, y } = icon.getBoundingClientRect();
-
-              if (menu.className.includes("menuable__content__active")) return;
-
-              this.column = firstChild.textContent.trim();
-              if (this.column === "Group") {
-                this.filters.Group = this.groups;
-                this.selected.Group = this.groups;
-              }
-
-              element.dispatchEvent(new Event("click"));
-
-              setTimeout(() => {
-                const width = document.documentElement.offsetWidth;
-                const menuWidth = menu.offsetWidth;
-                let marginLeft = 20;
-
-                if (width < menuWidth + x)
-                  marginLeft = width - (menuWidth + x) - 35;
-                const marginTop = marginLeft < 20 ? 20 : 0;
-
-                menu.style.left = `${x + marginLeft + window.scrollX}px`;
-                menu.style.top = `${y + marginTop + window.scrollY}px`;
-              }, 100);
-            });
-          }
-        });
-      }, 100);
-    },
-    getTarrifId({ duration, planCode }) {
-      return `${duration} ${planCode}`;
-    },
-    getAddonId({ duration, planCode, tariff }) {
-      return `${duration} ${tariff} ${planCode}`;
-    },
-    setPlans({ plans }, tariff = null) {
+    getApiProducts(plans, tariffPlanCode = null) {
       const result = [];
 
       plans.forEach(({ prices, planCode, productName }) => {
         prices.forEach(({ pricingMode, price, duration }) => {
           const isMonthly = duration === "P1M" && pricingMode === "default";
           const isYearly = duration === "P1Y" && pricingMode === "upfront12";
+          if (!isMonthly && !isYearly) return;
 
-          if (isMonthly || isYearly) {
-            const newPrice = this.convertPrice(price.value);
+          const newPrice = this.convertPrice(price.value);
 
-            const id = tariff
-              ? this.getAddonId({ planCode, duration, tariff })
-              : this.getTarrifId({ planCode, duration });
+          const id = tariffPlanCode
+            ? this.getAddonId({ planCode, duration }, tariffPlanCode)
+            : this.getTariffId({ planCode, duration });
 
-            const installation = prices.find(
-              (price) =>
-                price.capacities.includes("installation") &&
-                price.pricingMode === pricingMode
-            );
+          const installation = prices.find(
+            (price) =>
+              price.capacities.includes("installation") &&
+              price.pricingMode === pricingMode
+          );
 
-            result.push({
-              planCode,
-              duration,
-              installation_fee: {
-                price: { value: +this.convertPrice(installation.price.value) },
-                value: installation.price.value,
+          result.push({
+            planCode,
+            duration,
+            installation_fee: {
+              price: {
+                value: +this.convertPrice(installation.price.value),
               },
-              price: { value: newPrice },
-              name: productName,
-              apiName: productName,
-              group: productName.split(/[\W0-9]/)[0],
-              value: price.value,
-              sell: false,
-              id,
-            });
-          }
+              value: installation.price.value,
+            },
+            price: newPrice,
+            title: productName,
+            apiName: `${productName} (${planCode})`,
+            group: productName.split(/[\W0-9]/)[0],
+            basePrice: price.value,
+            public: false,
+            meta: {},
+            id,
+          });
         });
       });
 
       return result;
     },
-    changeFilters(plan, filters) {
-      filters.forEach((text) => {
-        if (!this.filters[text]) this.filters[text] = [];
-        if (!this.selected[text]) this.selected[text] = [];
+    async refreshApiPlans() {
+      try {
+        this.isRefreshLoading = true;
+        let plans = await this.fetchPlans();
 
-        const { value } = this.headers.find((el) => el.text === text);
-        const filter = `${plan[value]}`;
+        const allAddons = await Promise.allSettled(
+          plans.map(async (p) => ({
+            planId: p.id,
+            data: await this.fetchAddonsToPlan(p),
+          }))
+        );
 
-        if (!this.filters[text].includes(filter)) {
-          this.filters[text].push(filter);
-        }
-        if (!this.selected[text].includes(filter)) {
-          this.selected[text].push(filter);
-        }
-      });
-    },
-    setFee(values) {
-      this.filters.Margin = ["manual"];
-      this.selected.Margin = ["manual"];
-      this.usedFee = JSON.parse(JSON.stringify(this.fee));
+        const allConfigurations = await Promise.allSettled(
+          plans.map(async (p) => ({
+            planId: p.id,
+            data: await this.fetchConfigurationToPlan(p),
+          }))
+        );
 
-      if (!values) {
-        this.setFee(this.plans);
-        Object.values(this.addons).forEach((el) => {
-          this.setFee(el);
+        plans.forEach((p) => {
+          p.meta.addons = allAddons.find(
+            (result) => result.value.planId === p.id
+          ).value.data;
+          const { os, datacenter } = allConfigurations.find(
+            (result) => result.value.planId === p.id
+          ).value.data;
+          p.meta.os = os;
+          p.meta.datacenter = datacenter;
         });
-      }
-      values?.forEach((plan, i, arr) => {
-        if (arr[i].installation_fee) {
-          const price = arr[i].installation_fee.price.value;
 
-          arr[i].installation_fee.value = getMarginedValue(this.fee, price);
-        }
-        arr[i].value = getMarginedValue(this.fee, plan.price.value);
-        this.getMargin(arr[i]);
+        //for all cpu needs os,datacenters,addons ^
+        const allCpus = await Promise.allSettled(
+          plans.map(async (p) => ({
+            planId: p.id,
+            data: await this.fetchCpuToPlan(p),
+          }))
+        );
+
+        allCpus.forEach((result) => {
+          if (result.status === "rejected") {
+            return;
+          }
+          const { planId, data } = result.value;
+          const planIndex = plans.findIndex((p) => p.id === planId);
+          plans[planIndex].cpu = data;
+        });
+
+        this.plans = plans.map((plan) => {
+          const realPlan = this.plans.find((real) => real.id === plan.id);
+          if (!realPlan) {
+            return plan;
+          }
+
+          const { os, datacenter, cpu } = plan.meta;
+
+          const addons = plan.meta.addons.map((addon) => {
+            const realAddon = realPlan.meta?.addons?.find(
+              ({ id }) => id === addon.id
+            );
+            if (!realAddon) {
+              return addon;
+            }
+            const { price, public: Public } = realAddon;
+            return { ...addon, public: Public, price };
+          });
+
+          return {
+            ...plan,
+            ...realPlan,
+            cpu: plan.cpu || realPlan.cpu,
+            apiName: plan.apiName,
+            basePrice: plan.basePrice,
+            meta: {
+              addons,
+              os,
+              datacenter,
+              cpu,
+            },
+          };
+        });
+      } catch (err) {
+        this.$store.commit("snackbar/showSnackbarError", {
+          message: err.response?.data?.message ?? err.message ?? err,
+        });
+      } finally {
+        this.isRefreshLoading = false;
+      }
+    },
+    async fetchPlans() {
+      const {
+        meta: { plans },
+      } = await api.servicesProviders.action({
+        action: "get_baremetal_plans",
+        uuid: this.sp.uuid,
+      });
+
+      return this.getApiProducts(plans);
+    },
+    async fetchAddonsToPlan({ planCode, duration }) {
+      const {
+        meta: { options },
+      } = await api.post(`/sp/${this.sp.uuid}/invoke`, {
+        method: "get_baremetal_options",
+        params: { planCode },
+      });
+      const {
+        bandwidth = [],
+        memory = [],
+        storage = [],
+        vrack = [],
+        ["system-storage"]: sys = [],
+      } = options;
+      const plans = [...bandwidth, ...memory, ...storage, ...vrack, ...sys];
+
+      return this.getApiProducts(plans, planCode).filter(
+        (p) => p.duration === duration
+      );
+    },
+    async fetchConfigurationToPlan({ planCode, duration }) {
+      const {
+        meta: { requiredConfiguration },
+      } = await api.post(`/sp/${this.sp.uuid}/invoke`, {
+        method: "get_required_configuration",
+        params: {
+          planCode: planCode,
+          duration: duration,
+          pricingMode: duration === "P1M" ? "default" : "upfront12",
+        },
+      });
+
+      const datacenter =
+        requiredConfiguration.find((el) => el.label.includes("datacenter"))
+          ?.allowedValues ?? [];
+
+      const os =
+        requiredConfiguration.find((el) => el.label.includes("os"))
+          ?.allowedValues ?? [];
+
+      return { os, datacenter };
+    },
+    async fetchCpuToPlan(plan) {
+      const { planCode, duration } = plan;
+      const addons = plan.meta.addons
+        ?.filter(
+          (a, index, arr) =>
+            +a.basePrice === 0 &&
+            index ===
+              arr.findIndex((dublicate) =>
+                dublicate.planCode.startsWith(a.planCode.split("-")?.[0])
+              )
+        )
+        ?.map((a) => a.planCode);
+      const configuration = {
+        dedicated_datacenter: plan.meta.datacenter[0],
+        dedicated_os: plan.meta.os[0],
+      };
+
+      const { meta } = await api.servicesProviders.action({
+        uuid: this.sp.uuid,
+        action: "checkout_baremetal",
+        params: {
+          configuration,
+          addons,
+          planCode,
+          duration,
+          pricingMode: duration === "P1M" ? "default" : "upfront12",
+        },
+      });
+
+      return meta.order.details.find(
+        (d) =>
+          d.description.toLowerCase().includes("intel") ||
+          d.description.toLowerCase().includes("amd")
+      )?.description;
+    },
+    setPlanGroups() {
+      const groups = [];
+
+      this.plans.forEach((plan, i) => {
+        const title = plan.title?.toUpperCase();
+        const group = plan?.group || title.split(/[\W0-9]/)[0];
+
+        this.plans[i].group = group;
+
+        if (!groups.includes(group)) groups.push(group);
+      });
+
+      this.planGroups = groups;
+    },
+    setCpuGroups() {
+      const groups = [];
+
+      this.plans.forEach((plan) => {
+        if (!groups.includes(plan.cpu)) groups.push(plan.cpu);
+      });
+
+      this.cpuGroups = groups;
+    },
+    async changePlan(plan) {
+      plan.products = {};
+      plan.resources = [];
+
+      this.plans.forEach((p) => {
+        p.meta.addons?.forEach((a) => {
+          plan.resources.push({
+            key: a.id,
+            kind: "PREPAID",
+            title: a.title,
+            price: a.price,
+            public: a.public,
+            period: this.getPeriod(a.duration),
+            except: false,
+            meta: { ...a.meta, basePrice: a.basePrice },
+            on: [],
+          });
+        });
+
+        const addons = (p.meta.addons = (p.meta.addons || [])
+          .filter((addon) => addon.public)
+          ?.map((el) => ({ id: el.planCode, title: el.title })));
+
+        plan.products[p.id] = {
+          kind: "PREPAID",
+          title: p.title,
+          public: p.public,
+          price: p.price,
+          group: p.group,
+          period: this.getPeriod(p.duration),
+          sorter: Object.keys(plan.products).length,
+          installation_fee: p.installation_fee?.value,
+          meta: {
+            ...p.meta,
+            basePrice: p.basePrice,
+            apiName: p.apiName,
+            cpu: p.cpu,
+            addons,
+          },
+        };
       });
     },
     getPayment(duration) {
@@ -549,205 +563,175 @@ export default {
           return "yearly";
       }
     },
-    getMargin({ value, price }, filter = true) {
-      if (!this.usedFee.ranges) {
-        if (filter) this.changeFilters({ margin: "none" }, ["Margin"]);
-        return "none";
-      }
-
-      const range = this.usedFee.ranges.find(
-        ({ from, to }) => from <= price.value && to >= price.value
-      );
-      const n = Math.pow(10, this.usedFee.precision);
-      let percent = range?.factor / 100 + 1;
-      let margin;
-      let round;
-
-      switch (this.usedFee.round) {
-        case 1:
-          round = "floor";
-          break;
-        case 2:
-          round = "round";
-          break;
-        case 3:
-          round = "ceil";
-      }
-      if (this.usedFee.round === "NONE") round = "round";
-      else if (typeof this.usedFee.round === "string") {
-        round = this.usedFee.round.toLowerCase();
-      }
-
-      // value = Math[round](value * n) / n;
-
-      if (value === Math[round](price.value * percent * n) / n) {
-        margin = "ranged";
-      } else if (this.usedFee.default <= 0) {
-        margin = "none";
-      } else {
-        percent = this.usedFee.default / 100 + 1;
-      }
-
-      switch (value) {
-        case Math[round](price.value * n) / n:
-          margin = "none";
-          break;
-        case Math[round](price.value * percent * n) / n:
-          if (!margin) margin = "fixed";
-          break;
-        default:
-          margin = "manual";
-      }
-
-      if (filter) this.changeFilters({ margin }, ["Margin"]);
-      return margin;
+    getTariffId({ duration, planCode }) {
+      return `${duration} ${planCode}`;
     },
-    editGroup(group) {
-      const i = this.groups.indexOf(group);
-
-      this.groups.splice(i, 1, this.newGroup.name);
-      this.plans.forEach((plan, index) => {
-        if (plan.group !== group) return;
-        this.plans[index].group = this.newGroup.name;
-      });
-
-      this.changeMode("none", { id: -1, group: "" });
-    },
-    createGroup(plan) {
-      this.groups.push(this.newGroup.name);
-      plan.group = this.newGroup.name;
-
-      this.changeMode("none", { id: -1, group: "" });
-    },
-    deleteGroup(group) {
-      this.groups = this.groups.filter((el) => el !== group);
-      this.plans.forEach((plan, i) => {
-        if (plan.group !== group) return;
-        this.plans[i].group = this.groups[0];
-      });
-    },
-    changeMode(mode, { id, group }) {
-      this.newGroup.mode = mode;
-      this.newGroup.planId = id;
-      this.newGroup.name = group;
-    },
-    applyFilter(values) {
-      return values.filter((plan) => {
-        const result = [];
-
-        Object.entries(this.selected).forEach(([key, filters]) => {
-          const { value } = this.headers.find(({ text }) => text === key);
-          let filter = `${plan[value]}`;
-
-          switch (key) {
-            case "Payment":
-              filter = this.getPayment(plan[value]);
-              break;
-            case "Margin":
-              filter = this.getMargin(plan, false);
-          }
-
-          if (filters.includes(filter)) result.push(true);
-          else result.push(false);
-        });
-
-        return result.every((el) => el);
-      });
+    getAddonId({ duration, planCode }, name) {
+      return `${duration} ${planCode} ${name}`;
     },
     convertPrice(price) {
       return (price * this.plnRate).toFixed(2);
     },
-    async setEnabledToTab(value) {
-      this.plans = this.plans.map((p) => {
-        const { planCode, duration } = p;
-        const inFilter = !!this.filteredPlans.find(
-          (fp) => fp.planCode === planCode && duration === fp.duration
-        );
-        if (inFilter) {
-          p.sell = value;
-        }
 
-        return p;
+    createPlanGroup(plan) {
+      this.createGroup({ type: "plan", path: "group" }, plan);
+    },
+    deletePlanGroup(group) {
+      this.deleteGroup({ type: "plan", path: "group" }, group);
+    },
+    changePlanMode(mode, { id, group }) {
+      this.changeGroupMode({ type: "plan" }, mode, { id, group });
+    },
+    editPlanGroup(group) {
+      this.editGroup({ type: "plan", path: "group" }, group);
+    },
+
+    createCpuGroup(plan) {
+      this.createGroup({ type: "cpu", path: "cpu" }, plan);
+    },
+    deleteCpuGroup(group) {
+      this.deleteGroup({ type: "cpu", path: "cpu" }, group);
+    },
+    changeCpuMode(mode, { id, group }) {
+      this.changeGroupMode({ type: "cpu" }, mode, { id, group });
+    },
+    editCpuGroup(group) {
+      this.editGroup({ type: "cpu", path: "cpu" }, group);
+    },
+
+    createGroup({ type, path }, plan) {
+      const name = this[`new${type}Group`].name;
+      this[`${type}Groups`].push(name);
+      plan[path] = name;
+
+      this.changeGroupMode({ type }, "none", { id: -1, group: "" });
+    },
+    deleteGroup({ type, path }, group) {
+      this[`${type}Groups`] = this[`${type}Groups`].filter(
+        (el) => el !== group
+      );
+      this.plans.forEach((plan, i) => {
+        if (plan[path] !== group) return;
+        this.plans[i][path] = this[`${type}Groups`][0];
       });
-      this.setToAllValue = value;
-      this.isAddonsLoading = true;
-      try {
-        await Promise.all(this.filteredPlans.map((p) => this.fetchAddons(p)));
-        this.filteredPlans.forEach(({ planCode }) =>
-          this.$set(
-            this.addons,
-            planCode,
-            this.addons[planCode].map((addon) => {
-              addon.sell = value || +addon.price.value===0;
-              return addon;
-            })
-          )
-        );
-      } finally {
-        this.setToAllValue = null;
-        this.isAddonsLoading = false;
-      }
+    },
+    editGroup({ type, path }, group) {
+      const name = this[`new${type}Group`].name;
+      const i = this[`${type}Groups`].indexOf(group);
+
+      this[`${type}Groups`].splice(i, 1, name);
+      this.plans.forEach((plan, index) => {
+        if (plan[path] !== group) return;
+        this.plans[index][path] = name;
+      });
+
+      this.changeGroupMode({ type }, "none", { id: -1, group: "" });
+    },
+    changeGroupMode({ type }, mode, { id, group }) {
+      this[`new${type}Group`].mode = mode;
+      this[`new${type}Group`].planId = id;
+      this[`new${type}Group`].name = group;
+    },
+    setFee() {
+      this.plans = this.plans.map((p) => {
+        return {
+          ...p,
+          meta: {
+            ...p.meta,
+            addons: p.meta.addons?.map((a) => ({
+              ...a,
+              price: getMarginedValue(this.fee, a.basePrice),
+            })),
+          },
+          price: getMarginedValue(this.fee, p.basePrice),
+        };
+      });
+    },
+    setEnabledToPlans(value) {
+      this.plans = this.plans.map((p) => {
+        return {
+          ...p,
+          meta: {
+            ...p.meta,
+            addons: p.meta.addons?.map((a) => ({
+              ...a,
+              public: value && a.basePrice === 0,
+            })),
+          },
+          public: value,
+        };
+      });
+    },
+    setEnabledToAddons(value) {
+      this.plans = this.plans.map((p) => {
+        return {
+          ...p,
+          meta: {
+            ...p.meta,
+            addons: p.meta.addons?.map((a) => ({
+              ...a,
+              public: value,
+            })),
+          },
+        };
+      });
     },
   },
   created() {
-    this.$emit("changeLoading");
+    this.plans = Object.keys(this.template.products || {}).map((key) => {
+      const product = this.template.products[key];
 
-    api.servicesProviders
-      .action({
-        action: "get_baremetal_plans",
-        uuid: this.sp.uuid,
-      })
-      .then(({ meta }) => {
-        this.plans = this.setPlans(meta);
-        this.groups = [];
-        this.plans.forEach((plan, i) => {
-          const product = this.template.products[plan.id];
-          const title = (product?.title ?? plan.name).toUpperCase();
-          const group = product?.group || title.split(/[\W0-9]/)[0];
+      const [duration, planCode] = key.split(" ");
 
-          if (product) {
-            this.plans[i].name = product.title;
-            this.plans[i].value = product.price;
-            this.plans[i].sell = true;
-            this.plans[i].isBeenSell = true;
-          } else {
-            this.plans[i].name = title;
+      const addons = this.template.resources
+        .map((a) => {
+          const [addonDuration, id, addonPlanCode] = a.key.split(" ");
+
+          if (duration !== addonDuration || planCode !== addonPlanCode) {
+            return;
           }
-          this.plans[i].group = group;
 
-          if (!this.groups.includes(group)) this.groups.push(group);
-        });
+          return {
+            ...a,
+            id: a.key,
+            meta: { ...a.meta },
+            planCode: id,
+            duration,
+            basePrice: a.meta.basePrice,
+          };
+        })
+        .filter((a) => !!a);
 
-        this.fetchError = "";
-        this.changeIcon();
-      })
-      .catch((err) => {
-        this.fetchError = err.response?.data?.message ?? err.message ?? err;
-        console.error(err);
-      })
-      .finally(() => {
-        this.$emit("changeLoading");
-      });
-  },
-  mounted() {
-    const icon = document.querySelector(".group-icon");
-
-    icon.dispatchEvent(new Event("click"));
+      return {
+        ...product,
+        duration,
+        planCode,
+        cpu: product.meta.cpu,
+        apiName: product.meta.apiName,
+        basePrice: product.meta.basePrice,
+        installation_fee: {
+          price: {
+            value: +this.convertPrice(product.installationFee),
+          },
+          value: product.installationFee,
+        },
+        id: key,
+        meta: {
+          ...product.meta,
+          addons,
+        },
+      };
+    });
   },
   computed: {
+    ...mapGetters("currencies", { rates: "rates", defaultCurrency: "default" }),
     sp() {
       return this.$store.getters["servicesProviders/all"].find(
         (sp) => sp.type === "ovh"
       );
     },
     filteredPlans() {
-      return this.applyFilter(this.plans);
-    },
-    defaultCurrency() {
-      return this.$store.getters["currencies/default"];
-    },
-    rates() {
-      return this.$store.getters["currencies/rates"];
+      return this.plans;
     },
     plnRate() {
       if (this.defaultCurrency === "PLN") {
@@ -760,10 +744,8 @@ export default {
   },
   watch: {
     plans() {
-      this.$emit("changeFee", this.template.fee ?? {});
-      setTimeout(() => {
-        this.setFee(this.plans);
-      });
+      this.setPlanGroups();
+      this.setCpuGroups();
     },
   },
 };

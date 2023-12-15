@@ -255,15 +255,18 @@ export default {
         const title = plan?.title.split(" ");
 
         title.pop();
-        this.flavors[val] = Object.keys(plan.products).map((el) => {
-          const [duration, code] = el.split(" ");
-          return {
-            code,
-            duration,
-            title: plan.products[el].title,
-            key: el,
-          };
-        });
+        this.flavors[val] = Object.keys(plan.products)
+          .map((el) => {
+            const [duration, code] = el.split(" ");
+            return {
+              public: !!plan.products[el].public,
+              code,
+              duration,
+              title: plan.products[el].title,
+              key: el,
+            };
+          })
+          .filter((el) => el.public && this.ovhType === "dedicated");
 
         data.plan = val;
         val = { ...plan, title: title.join(" ") };
@@ -405,7 +408,12 @@ export default {
       ].join(" ");
     },
     durationItems() {
-      const annotations = { P1M: "Monthly", P1Y: "Yearly", P1D: "Daily",P1H: "Hourly" };
+      const annotations = {
+        P1M: "Monthly",
+        P1Y: "Yearly",
+        P1D: "Daily",
+        P1H: "Hourly",
+      };
 
       return [
         ...new Set(

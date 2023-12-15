@@ -405,10 +405,10 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 		return nil, status.Error(codes.Internal, "Error reading ServicesProviders from DB")
 	}
 
-	res = &sppb.ListResponse{Pool: make([]*sppb.ServicesProvider, len(r))}
+	res = &sppb.ListResponse{Pool: []*sppb.ServicesProvider{}}
 	for i, sp := range r {
 		if sp.GetStatus() != stpb.NoCloudStatus_DEL || (sp.GetStatus() == stpb.NoCloudStatus_DEL && req.ShowDeleted && isRoot) {
-			res.Pool[i] = sp.ServicesProvider
+			res.Pool = append(res.Pool, r[i].ServicesProvider)
 		}
 	}
 

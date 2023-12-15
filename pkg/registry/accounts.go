@@ -772,7 +772,7 @@ func (s *AccountsServiceServer) AddNote(ctx context.Context, request *notes.AddN
 		return nil, err
 	}
 
-	return &notes.NoteResponse{Result: true}, nil
+	return &notes.NoteResponse{Result: true, AdminNotes: acc.GetAdminNotes()}, nil
 }
 
 func (s *AccountsServiceServer) PatchNote(ctx context.Context, request *notes.PatchNoteRequest) (*notes.NoteResponse, error) {
@@ -816,7 +816,7 @@ func (s *AccountsServiceServer) PatchNote(ctx context.Context, request *notes.Pa
 			log.Error("Failed to patch note", zap.Error(err))
 			return nil, err
 		}
-		return &notes.NoteResponse{Result: true}, nil
+		return &notes.NoteResponse{Result: true, AdminNotes: acc.GetAdminNotes()}, nil
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
@@ -861,7 +861,7 @@ func (s *AccountsServiceServer) RemoveNote(ctx context.Context, request *notes.R
 			log.Error("Failed to remove note", zap.Error(err))
 			return nil, err
 		}
-		return &notes.NoteResponse{Result: true}, nil
+		return &notes.NoteResponse{Result: true, AdminNotes: acc.GetAdminNotes()}, nil
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account notes")

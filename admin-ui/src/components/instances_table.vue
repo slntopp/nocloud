@@ -379,7 +379,9 @@ export default {
         return `${inst.resources.period} ${text}`;
       }
       const period =
-        inst.type === "ovh" ? inst.config.duration : this.getIonePeriod(inst);
+        inst.type === "ovh"
+          ? inst.config.duration
+          : this.getInstancePeriod(inst);
       switch (period) {
         case "P1H":
           return "hourly";
@@ -397,15 +399,16 @@ export default {
           return "unknown";
       }
     },
-    getIonePeriod(inst) {
+    getInstancePeriod(inst) {
       const value = new Set();
       const day = 3600 * 24;
       const month = day * 30;
       const year = day * 365;
 
       Object.values(inst.billingPlan.products ?? {}).forEach(({ period }) => {
-        if (inst.billingPlan.kind === "DYNAMIC") value.add("P1H");
-        if (inst.billingPlan.kind !== "STATIC") return;
+        if (inst.billingPlan.kind === "DYNAMIC" && inst.type === "ione")
+          value.add("P1H");
+        if (inst.billingPlan.kind !== "STATIC" && inst.type === "ione") return;
 
         if (+period === day) value.add("P1D");
         if (+period === month) value.add("P1M");
