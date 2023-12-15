@@ -42,12 +42,13 @@ import AccountsEvents from "@/components/account/events.vue";
 import AccountsHistory from "@/components/account/history.vue";
 import AccountReport from "@/components/account/reports.vue";
 import AccountChats from "@/components/account/chats.vue";
+import AccountNotes from "@/components/account/notes.vue";
 
-const store = useStore()
-const route = useRoute()
+const store = useStore();
+const route = useRoute();
 
-const selectedTab = ref(0)
-const navTitles = ref(config.navTitles ?? {})
+const selectedTab = ref(0);
+const navTitles = ref(config.navTitles ?? {});
 
 function navTitle(title) {
   if (title && navTitles.value[title]) {
@@ -58,23 +59,27 @@ function navTitle(title) {
 }
 
 const account = computed(() =>
-  store.getters["accounts/all"].find(({ uuid }) =>
-    uuid === route.params?.accountId
+  store.getters["accounts/all"].find(
+    ({ uuid }) => uuid === route.params?.accountId
   )
-)
+);
 
 const accountTitle = computed(() => {
   return account.value?.title ?? "not found";
-})
+});
 
 const accountLoading = computed(() => {
   return store.getters["accounts/isLoading"];
-})
+});
 
 const tabItems = computed(() => [
   {
     component: AccountsInfo,
     title: "info",
+  },
+  {
+    component: AccountNotes,
+    title: "notes",
   },
   {
     component: AccountsEvents,
@@ -96,7 +101,7 @@ const tabItems = computed(() => [
     component: AccountsTemplate,
     title: "template",
   },
-])
+]);
 
 onMounted(() => {
   store.commit("reloadBtn/setCallback", {
@@ -104,7 +109,7 @@ onMounted(() => {
     params: route.params?.accountId,
   });
   selectedTab.value = route.query.tab || 0;
-})
+});
 
 store.dispatch("accounts/fetchById", route.params?.accountId).then(() => {
   document.title = `${accountTitle.value} | NoCloud`;
@@ -112,7 +117,7 @@ store.dispatch("accounts/fetchById", route.params?.accountId).then(() => {
 </script>
 
 <script>
-export default { name: "account-view" }
+export default { name: "account-view" };
 </script>
 
 <style scoped lang="scss">
