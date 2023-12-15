@@ -266,7 +266,7 @@ export default {
               key: el,
             };
           })
-          .filter((el) => el.public);
+          .filter((el) => el.public && this.ovhType === "dedicated");
 
         data.plan = val;
         val = { ...plan, title: title.join(" ") };
