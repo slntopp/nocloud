@@ -183,3 +183,15 @@ func (ctrl *BillingPlansController) List(ctx context.Context, spUuid string) ([]
 
 	return r, nil
 }
+
+func (ctrl *BillingPlansController) CheckStatus(ctx context.Context, plan *pb.Plan) (statuspb.NoCloudStatus, error) {
+	var planFromDb pb.Plan
+
+	_, err := ctrl.col.ReadDocument(ctx, plan.Uuid, &planFromDb)
+	if err != nil {
+
+		return statuspb.NoCloudStatus_UNSPECIFIED, err
+	}
+
+	return planFromDb.Status, nil
+}
