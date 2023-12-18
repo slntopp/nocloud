@@ -175,15 +175,16 @@ init:
 				}
 
 				_, err = s.db.Query(ctx, processUrgentTransactions, map[string]interface{}{
-					"tr":         doc.ID,
-					"@accounts":  schema.ACCOUNTS_COL,
-					"accounts":   schema.ACCOUNTS_COL,
-					"@records":   schema.RECORDS_COL,
-					"priority":   record.Priority,
-					"now":        tick.Unix(),
-					"graph":      schema.BILLING_GRAPH.Name,
-					"currencies": schema.CUR_COL,
-					"currency":   currencyConf.Currency,
+					"tr":            doc.ID,
+					"@transactions": schema.TRANSACTIONS_COL,
+					"@accounts":     schema.ACCOUNTS_COL,
+					"accounts":      schema.ACCOUNTS_COL,
+					"@records":      schema.RECORDS_COL,
+					"priority":      record.Priority,
+					"now":           tick.Unix(),
+					"graph":         schema.BILLING_GRAPH.Name,
+					"currencies":    schema.CUR_COL,
+					"currency":      currencyConf.Currency,
 				})
 				if err != nil {
 					log.Error("Error Process Transactions", zap.Error(err))
