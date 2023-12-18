@@ -338,8 +338,6 @@ LET t = DOCUMENT(@tr)
 
 LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
 
-FILTER account != null
-
 LET currency = account.currency != null ? account.currency : @currency
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND SHORTEST_PATH
