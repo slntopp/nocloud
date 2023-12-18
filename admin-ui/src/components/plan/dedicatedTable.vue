@@ -283,7 +283,7 @@ export default {
           const newPrice = this.convertPrice(price.value);
 
           const id = tariffPlanCode
-            ? this.getAddonId({ planCode, duration }, tariffPlanCode)
+            ? this.getAddonId({ planCode: tariffPlanCode, duration }, planCode)
             : this.getTariffId({ planCode, duration });
 
           const installation = prices.find(
@@ -685,7 +685,7 @@ export default {
 
       const addons = this.template.resources
         .map((a) => {
-          const [addonDuration, id, addonPlanCode] = a.key.split(" ");
+          const [addonDuration, addonPlanCode, id] = a.key.split(" ");
 
           if (duration !== addonDuration || planCode !== addonPlanCode) {
             return;
