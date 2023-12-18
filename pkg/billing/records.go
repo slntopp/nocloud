@@ -180,7 +180,6 @@ init:
 					"@accounts":     schema.ACCOUNTS_COL,
 					"accounts":      schema.ACCOUNTS_COL,
 					"@records":      schema.RECORDS_COL,
-					"priority":      record.Priority,
 					"now":           tick.Unix(),
 					"graph":         schema.BILLING_GRAPH.Name,
 					"currencies":    schema.CUR_COL,
