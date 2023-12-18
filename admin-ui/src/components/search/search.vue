@@ -84,7 +84,9 @@
                       <span>
                         {{ layout.title }}
                       </span>
-                      <v-icon v-if="isPinned(layout)" small>mdi-pin</v-icon>
+                      <v-icon v-if="isPinned(layout)" small color="primary"
+                        >mdi-pin</v-icon
+                      >
                     </div>
                   </v-list-item-title>
                   <v-text-field
@@ -94,9 +96,14 @@
                     class="pa-0 ma-0"
                   >
                     <template v-slot:append>
-                      <v-btn @click="setPinned(layout.id)" small icon>
+                      <v-btn
+                        @click="setPinned(layout.id)"
+                        small
+                        icon
+                        :color="isPinned(layout) ? 'primary' : undefined"
+                      >
                         <v-icon small>{{
-                          isPinned(layout) ? "mdi-pin-off" : "mdi-pin"
+                          isPinned(layout) ? "mdi-pin" : "mdi-pin-off"
                         }}</v-icon>
                       </v-btn>
                       <v-btn @click="deleteLayout(layout.id)" small icon>
