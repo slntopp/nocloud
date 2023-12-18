@@ -527,13 +527,14 @@ export default {
             public: a.public,
             period: this.getPeriod(a.duration),
             except: false,
+            meta: { ...a.meta, basePrice: a.basePrice },
             on: [],
           });
         });
 
-        p.meta.addons = (p.meta.addons || [])
+        const addons = (p.meta.addons = (p.meta.addons || [])
           .filter((addon) => addon.public)
-          ?.map((el) => ({ id: el.id, title: el.title }));
+          ?.map((el) => ({ id: el.planCode, title: el.title })));
 
         plan.products[p.id] = {
           kind: "PREPAID",
@@ -549,6 +550,7 @@ export default {
             basePrice: p.basePrice,
             apiName: p.apiName,
             cpu: p.cpu,
+            addons,
           },
         };
       });
@@ -681,13 +683,24 @@ export default {
 
       const [duration, planCode] = key.split(" ");
 
-      const addons = (product.meta?.addons || []).map(({ id }) => {
-        return {
-          ...(this.template.resources.find(({ key }) => key === id) || {}),
-          id,
-          duration,
-        };
-      });
+      const addons = this.template.resources
+        .map((a) => {
+          const [addonDuration, id, addonPlanCode] = a.key.split(" ");
+
+          if (duration !== addonDuration || planCode !== addonPlanCode) {
+            return;
+          }
+
+          return {
+            ...a,
+            id: a.key,
+            meta: { ...a.meta },
+            planCode: id,
+            duration,
+            basePrice: a.meta.basePrice,
+          };
+        })
+        .filter((a) => !!a);
 
       return {
         ...product,

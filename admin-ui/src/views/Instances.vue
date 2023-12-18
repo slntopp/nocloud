@@ -250,7 +250,7 @@ export default {
       return this.$store.getters["services/getInstances"];
     },
     sp() {
-      return this.$store.getters["servicesProviders/all"];
+      return this.$store.getters["servicesProviders/all"].filter(sp=>!!sp.type);
     },
     service() {
       return this.services.find(

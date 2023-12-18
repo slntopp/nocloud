@@ -68,7 +68,7 @@ RETURN {
 	instance: doc.title, 
 	product: doc.product, 
 	next_payment_date: doc.data.next_payment_date,
-	ip: doc.state.meta.networking.public[0],
+	ips: doc.state.meta.networking.public,
 	price: price * rate
 }
 `
@@ -78,7 +78,7 @@ type EventInfo struct {
 	Service         string  `json:"service"`
 	Instance        string  `json:"instance"`
 	Product         string  `json:"product,omitempty"`
-	Ip              string  `json:"ip,omitempty"`
+	Ips             []any   `json:"ips,omitempty"`
 	NextPaymentDate float64 `json:"next_payment_date,omitempty"`
 	Price           float64 `json:"price,omitempty"`
 }
@@ -118,8 +118,9 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 	if eventInfo.Product != "" {
 		event.Data["product"] = structpb.NewStringValue(eventInfo.Product)
 	}
-	if eventInfo.Ip != "" {
-		event.Data["ip"] = structpb.NewStringValue(eventInfo.Ip)
+	if eventInfo.Ips != nil {
+		listValue, _ := structpb.NewList(eventInfo.Ips)
+		event.Data["ips"] = structpb.NewListValue(listValue)
 	}
 	if eventInfo.NextPaymentDate != 0 {
 		event.Data["next_payment_date"] = structpb.NewNumberValue(eventInfo.NextPaymentDate)
