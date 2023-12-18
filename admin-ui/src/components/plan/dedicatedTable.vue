@@ -2,7 +2,10 @@
   <div>
     <v-row class="my-3" v-if="!isPlansLoading">
       <v-btn :loading="isRefreshLoading" class="ml-3" @click="refreshApiPlans"
-        >Refresh plans</v-btn
+        >Fetch plans</v-btn
+      >
+      <v-btn :disabled="!this.newPlans" class="ml-3" @click="setRefreshedPlans"
+        >Set api plans</v-btn
       >
       <v-btn class="ml-3" @click="setEnabledToPlans(true)"
         >Enable all plans</v-btn
@@ -228,6 +231,7 @@ export default {
   },
   data: () => ({
     plans: [],
+    newPlans: null,
     headers: [
       { text: "Name", value: "title" },
       { text: "API name", value: "apiName" },
@@ -283,7 +287,7 @@ export default {
           const newPrice = this.convertPrice(price.value);
 
           const id = tariffPlanCode
-            ? this.getAddonId({ planCode, duration }, tariffPlanCode)
+            ? this.getAddonId({ planCode: tariffPlanCode, duration }, planCode)
             : this.getTariffId({ planCode, duration });
 
           const installation = prices.find(
@@ -316,6 +320,7 @@ export default {
       return result;
     },
     async refreshApiPlans() {
+      this.newPlans = null;
       try {
         this.isRefreshLoading = true;
         let plans = await this.fetchPlans();
@@ -362,7 +367,7 @@ export default {
           plans[planIndex].cpu = data;
         });
 
-        this.plans = plans.map((plan) => {
+        this.newPlans = plans.map((plan) => {
           const realPlan = this.plans.find((real) => real.id === plan.id);
           if (!realPlan) {
             return plan;
@@ -396,12 +401,16 @@ export default {
           };
         });
       } catch (err) {
+        this.newPlans = null;
         this.$store.commit("snackbar/showSnackbarError", {
           message: err.response?.data?.message ?? err.message ?? err,
         });
       } finally {
         this.isRefreshLoading = false;
       }
+    },
+    setRefreshedPlans() {
+      this.plans = JSON.parse(JSON.stringify(this.newPlans));
     },
     async fetchPlans() {
       const {
@@ -676,6 +685,9 @@ export default {
         };
       });
     },
+  },
+  mounted() {
+    this.refreshApiPlans();
   },
   created() {
     this.plans = Object.keys(this.template.products || {}).map((key) => {

@@ -24,10 +24,10 @@ const store = useStore();
 
 const account = computed(() => {
   const namespace = store.getters["namespaces/all"]?.find(
-      (n) => n.uuid === template.value?.access.namespace
+    (n) => n.uuid === template.value?.access.namespace
   );
   const account = store.getters["accounts/all"].find(
-      (a) => a.uuid === namespace?.access.namespace
+    (a) => a.uuid === namespace?.access.namespace
   );
   return account;
 });
@@ -42,24 +42,30 @@ const tariffPrice = computed(() => {
 
   return props.template.billingPlan.products[key]?.price ?? 0;
 });
+
+const getAddonKey = (key) => {
+  let keys = [];
+  if (template.value.config.type === "dedicated") {
+    keys = [
+      template.value.config.duration,
+      template.value.config.planCode,
+      key,
+    ];
+  } else {
+    keys = [template.value.config.duration, key];
+  }
+  return keys.join(" ");
+};
+
 const addonsPrice = ref(
   props.template.config.addons?.reduce((res, addon) => {
+    const addonKey = getAddonKey(addon);
     const { price } =
       props.template.billingPlan.resources?.find(
-        ({ key }) => key === `${props.template.config.duration} ${addon}`
+        ({ key }) => key === addonKey
       ) ?? {};
-    let key = "";
 
-    if (addon.includes("ram")) return res;
-    if (addon.includes("raid")) return res;
-    if (addon.includes("vrack")) key = "Vrack";
-    if (addon.includes("bandwidth")) key = "Traffic";
-    if (addon.includes("additional")) key = "Additional drive";
-    if (addon.includes("snapshot")) key = "Snapshot";
-    if (addon.includes("backup")) key = "Backup";
-    if (addon.includes("windows")) key = "Windows";
-
-    return { ...res, [key]: +price || 0 };
+    return { ...res, [addonKey]: +price || 0 };
   }, {})
 );
 </script>
