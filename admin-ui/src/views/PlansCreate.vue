@@ -9,10 +9,10 @@
 
     <v-form v-model="isValid" ref="form">
       <v-row>
-        <v-col cols="2" class="align-center d-flex">
+        <v-col cols="1" class="align-center d-flex">
           <v-subheader>Price model type</v-subheader>
         </v-col>
-        <v-col cols="4">
+        <v-col cols="3">
           <v-autocomplete
             label="Type"
             v-model="plan.type"
@@ -26,20 +26,20 @@
             :rules="[rules.required]"
           />
         </v-col>
-        <v-col cols="2" class="align-center d-flex">
+        <v-col cols="1" class="align-center d-flex">
           <v-subheader>Price model title</v-subheader>
         </v-col>
-        <v-col cols="4" class="align-center d-flex">
+        <v-col cols="3" class="align-center d-flex">
           <v-text-field
             label="Title"
             v-model="plan.title"
             :rules="[rules.required]"
           />
         </v-col>
-        <v-col cols="2" class="align-center d-flex">
+        <v-col cols="1" class="align-center d-flex">
           <v-subheader>Price model kind</v-subheader>
         </v-col>
-        <v-col cols="4" class="align-center d-flex">
+        <v-col cols="3" class="align-center d-flex">
           <v-radio-group row mandatory v-model="selectedKind">
             <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">
               <div class="d-flex">
@@ -54,10 +54,10 @@
           </v-radio-group>
         </v-col>
         <template v-if="plan.kind === 'STATIC'">
-          <v-col cols="2" class="align-center d-flex">
+          <v-col cols="1" class="align-center d-flex">
             <v-subheader>Default tariff</v-subheader>
           </v-col>
-          <v-col cols="4" class="align-center d-flex">
+          <v-col cols="3" class="align-center d-flex">
             <v-autocomplete
               label="Tariff"
               v-model="plan.meta.product"
@@ -67,10 +67,10 @@
         </template>
 
         <template v-if="plan.kind === 'DYNAMIC'">
-          <v-col cols="2" class="align-center d-flex">
+          <v-col cols="1" class="align-center d-flex">
             <v-subheader>Linked price model</v-subheader>
           </v-col>
-          <v-col cols="4" class="align-center d-flex">
+          <v-col cols="3" class="align-center d-flex">
             <v-autocomplete
               clearable
               @change="plan.meta.linkedPlan = $event ?? undefined"
@@ -81,17 +81,17 @@
           </v-col>
         </template>
 
-        <v-col cols="2" class="align-center d-flex">
+        <v-col cols="1" class="align-center d-flex">
           <v-subheader>Public</v-subheader>
         </v-col>
-        <v-col cols="4" class="align-center d-flex">
+        <v-col cols="1" class="align-center d-flex">
           <v-switch style="width: fit-content" v-model="plan.public" />
         </v-col>
         <template v-if="plan.type === 'empty'">
-          <v-col cols="2" class="align-center d-flex">
+          <v-col cols="1" class="align-center d-flex">
             <v-subheader>Auto start</v-subheader>
           </v-col>
-          <v-col cols="4" class="align-center d-flex">
+          <v-col cols="1" class="align-center d-flex">
             <v-switch
               style="width: fit-content"
               v-model="plan.meta.auto_start"

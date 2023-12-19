@@ -150,7 +150,7 @@ init:
 		}
 		if record.Priority != pb.Priority_NORMAL {
 			tick := time.Now()
-			_, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
+			cur, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
 				"@transactions": schema.TRANSACTIONS_COL,
 				"@instances":    schema.INSTANCES_COL,
 				"@services":     schema.SERVICES_COL,
@@ -166,19 +166,28 @@ init:
 			if err != nil {
 				log.Error("Error Generating Transactions", zap.Error(err))
 			}
-			_, err = s.db.Query(ctx, processUrgentTransactions, map[string]interface{}{
-				"@transactions": schema.TRANSACTIONS_COL,
-				"@accounts":     schema.ACCOUNTS_COL,
-				"accounts":      schema.ACCOUNTS_COL,
-				"@records":      schema.RECORDS_COL,
-				"priority":      record.Priority,
-				"now":           tick.Unix(),
-				"graph":         schema.BILLING_GRAPH.Name,
-				"currencies":    schema.CUR_COL,
-				"currency":      currencyConf.Currency,
-			})
-			if err != nil {
-				log.Error("Error Process Transactions", zap.Error(err))
+			var tr pb.Transaction
+
+			if cur.HasMore() {
+				doc, err := cur.ReadDocument(ctx, &tr)
+				if err != nil {
+					return
+				}
+
+				_, err = s.db.Query(ctx, processUrgentTransactions, map[string]interface{}{
+					"tr":            doc.ID,
+					"@transactions": schema.TRANSACTIONS_COL,
+					"@accounts":     schema.ACCOUNTS_COL,
+					"accounts":      schema.ACCOUNTS_COL,
+					"@records":      schema.RECORDS_COL,
+					"now":           tick.Unix(),
+					"graph":         schema.BILLING_GRAPH.Name,
+					"currencies":    schema.CUR_COL,
+					"currency":      currencyConf.Currency,
+				})
+				if err != nil {
+					log.Error("Error Process Transactions", zap.Error(err))
+				}
 			}
 		}
 	}
@@ -325,32 +334,29 @@ FOR service IN @@services // Iterate over Services
 `
 
 const processUrgentTransactions = `
-FOR t IN @@transactions // Iterate over Transactions
-FILTER !t.processed
-FILTER t.priority == @priority
-    LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
-	
-	FILTER account != null
+LET t = DOCUMENT(@tr) 
 
-	LET currency = account.currency != null ? account.currency : @currency
-	LET rate = PRODUCT(
-		FOR vertex, edge IN OUTBOUND SHORTEST_PATH
-		DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency))) TO
-		DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
-			RETURN edge.rate
-	)
-	LET total = t.total * rate
+LET account = DOCUMENT(CONCAT(@accounts, "/", t.account))
 
-	FOR r in t.records
-		UPDATE r WITH {meta: {transaction: t._key, payment_date: @now}} in @@records
+LET currency = account.currency != null ? account.currency : @currency
+LET rate = PRODUCT(
+	FOR vertex, edge IN OUTBOUND SHORTEST_PATH
+	DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency))) TO
+	DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+	RETURN edge.rate
+)
+LET total = t.total * rate
 
-    UPDATE account WITH { balance: account.balance - t.total * rate} IN @@accounts
-    UPDATE t WITH { 
-		processed: true, 
-		proc: @now,
-		total: total,
-		currency: currency
-	} IN @@transactions
+FOR r in t.records
+UPDATE r WITH {meta: {transaction: t._key, payment_date: @now}} in @@records
+
+UPDATE account WITH { balance: account.balance - t.total * rate} IN @@accounts
+UPDATE t WITH { 
+	processed: true, 
+	proc: @now,
+	total: total,
+	currency: currency
+} IN @@transactions
 `
 
 func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transaction) (*pb.Records, error) {
