@@ -271,13 +271,12 @@ export default {
 
     cpuGroups: [],
     newcpuGroup: { mode: "none", name: "", planId: "" },
-
-    usedFee: {},
   }),
   methods: {
     setRefreshedPlans() {
       this.plans = JSON.parse(JSON.stringify(this.newPlans));
       this.newPlans = null;
+      this.setFee();
     },
     getProductDescription(products, code) {
       return products.find((p) => p.name === code)?.description;
@@ -468,6 +467,8 @@ export default {
       plan.products = {};
       plan.resources = [];
 
+      this.$emit("changeFee", this.fee);
+
       this.plans.forEach((p) => {
         p.meta.addons?.forEach((a) => {
           plan.resources.push({
@@ -632,6 +633,8 @@ export default {
     this.refreshApiPlans();
   },
   created() {
+    this.$emit("changeFee", this.template.fee);
+
     this.plans = Object.keys(this.template.products || {}).map((key) => {
       const product = this.template.products[key];
 
