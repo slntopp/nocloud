@@ -181,7 +181,43 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
 
-	rec := s.records.Create(ctx, &pb.Record{
+	var baseRec, prevRec string
+
+	if t.Base != nil {
+		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
+			"transactionKey": t.GetBase(),
+		})
+		if err != nil {
+			log.Error("Failed get base record", zap.Error(err))
+			return nil, err
+		}
+		if query.HasMore() {
+			_, err := query.ReadDocument(ctx, &baseRec)
+			if err != nil {
+				log.Error("Failed read base record", zap.Error(err))
+				return nil, err
+			}
+		}
+	}
+
+	if t.Previous != nil {
+		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
+			"transactionKey": t.GetPrevious(),
+		})
+		if err != nil {
+			log.Error("Failed get base record", zap.Error(err))
+			return nil, err
+		}
+		if query.HasMore() {
+			_, err := query.ReadDocument(ctx, &prevRec)
+			if err != nil {
+				log.Error("Failed read base record", zap.Error(err))
+				return nil, err
+			}
+		}
+	}
+
+	recBody := &pb.Record{
 		Start:     time.Now().Unix(),
 		End:       time.Now().Unix() + 1,
 		Exec:      time.Now().Unix(),
@@ -192,7 +228,17 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		Service:   t.GetService(),
 		Account:   t.GetAccount(),
 		Meta:      t.GetMeta(),
-	})
+	}
+
+	if baseRec != "" {
+		recBody.Base = &baseRec
+	}
+
+	if prevRec != "" {
+		recBody.Base = &prevRec
+	}
+
+	rec := s.records.Create(ctx, recBody)
 
 	if t.GetRecords() == nil {
 		t.Records = []string{}
@@ -562,6 +608,11 @@ const updateRecordsMeta = `
 LET transaction = DOCUMENT(@transactionKey)
 FOR r in transaction.records
 	UPDATE r WITH {meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
+`
+
+const getTransactionRecord = `
+LET transaction = DOCUMENT(@transactionKey)
+RETURN transaction.records[0]
 `
 
 const reprocessTransactions = `
