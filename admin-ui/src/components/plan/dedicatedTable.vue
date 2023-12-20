@@ -290,7 +290,7 @@ export default {
             catalog: { plans, addons, products },
           },
         } = await api.servicesProviders.action({
-          action: "test_baremetal_catalog",
+          action: "get_baremetal_plans",
           uuid: this.sp.uuid,
         });
 
