@@ -8,7 +8,7 @@ import search from "@/mixins/search";
 
 export default {
   props: ["template"],
-  mixins: [search("service-history")],
+  mixins: [search({name:"service-history"})],
   name: "service-history",
   components: { historyTable },
 };

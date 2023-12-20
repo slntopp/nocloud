@@ -88,7 +88,11 @@
           {{ instanceCountMap[item.uuid] }}
         </template>
       </template>
-
+      <template v-slot:[`item.status`]="{ item }">
+        <v-chip small :color="getStatus(item).color">
+          {{ getStatus(item).title }}
+        </v-chip>
+      </template>
       <template v-slot:footer.prepend>
         <div class="d-flex align-center mt-2">
           <v-select
@@ -148,16 +152,39 @@ import {
 import { mapGetters } from "vuex";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
+const statusMap = {
+  DEL: { title: "DELETED", color: "blue-grey darken-2" },
+  UNSPECIFIED: { title: "ACTIVE", color: "success" },
+  UNKNOWN: {
+    title: "UNKNOWN",
+    color: "red darken-2",
+  },
+};
+
 export default {
   name: "plans-view",
   components: { DownloadTemplateButton, nocloudTable, confirmDialog },
-  mixins: [snackbar, search("billing-plans")],
+  mixins: [
+    snackbar,
+    search({
+      name: "billing-plans",
+      defaultLayout: {
+        title: "Default",
+        filter: {
+          public: true,
+          status: ["UNSPECIFIED"],
+        },
+      },
+    }),
+  ],
   data: () => ({
+    statusMap,
     headers: [
       { text: "Title ", value: "title" },
       { text: "UUID ", value: "uuid" },
       { text: "Kind ", value: "kind" },
       { text: "Type ", value: "type" },
+      { text: "Status ", value: "status" },
       { text: "Public ", value: "public" },
       { text: "Linked instances count ", value: "instanceCount" },
     ],
@@ -183,8 +210,11 @@ export default {
       this.linked = [];
       this.services.forEach((service) => {
         service.instancesGroups.forEach(({ instances, sp }) => {
-          instances.forEach(({ uuid, title, billingPlan,state }) => {
-            if (billingPlan.uuid === this.selected[0]?.uuid && state?.state!=='DELETED') {
+          instances.forEach(({ uuid, title, billingPlan, state }) => {
+            if (
+              billingPlan.uuid === this.selected[0]?.uuid &&
+              state?.state !== "DELETED"
+            ) {
               this.linked.push({
                 uuid,
                 title,
@@ -223,7 +253,9 @@ export default {
       Promise.all(promises)
         .then(() => Promise.all(deletePromises))
         .then(() => {
-          this.$store.dispatch("plans/fetch");
+          this.$store.dispatch("plans/fetch", {
+            params: { showDeleted: true },
+          });
           this.showSnackbar({
             message: "Price model deleted successfully.",
           });
@@ -251,6 +283,7 @@ export default {
         .dispatch("plans/fetch", {
           withCount: true,
           params: {
+            showDeleted: true,
             anonymously: false,
           },
         })
@@ -300,10 +333,13 @@ export default {
         this.isPlansUploadLoading = false;
       }
     },
+    getStatus(item) {
+      return this.statusMap[item.status] || this.statusMap.UNKNOWN;
+    },
   },
   created() {
-    this.$store.dispatch("services/fetch",{showDeleted:true});
-    this.$store.dispatch("servicesProviders/fetch");
+    this.$store.dispatch("services/fetch", { showDeleted: true });
+    this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
     this.getPlans();
   },
   mounted() {
@@ -311,6 +347,7 @@ export default {
       type: "plans/fetch",
       params: {
         params: {
+          showDeleted: true,
           anonymously: false,
         },
         withCount: true,
@@ -404,6 +441,16 @@ export default {
           type: "select",
         },
         { items: this.typeItems, title: "Type", key: "type", type: "select" },
+        {
+          items: Object.keys(this.statusMap).map((key) => ({
+            title: this.statusMap[key].title,
+            value: key,
+          })),
+          item: { value: "value", title: "title" },
+          title: "Status",
+          key: "status",
+          type: "select",
+        },
         { title: "Public", key: "public", type: "logic-select" },
       ];
     },

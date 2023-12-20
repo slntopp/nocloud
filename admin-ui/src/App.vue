@@ -329,9 +329,13 @@
         <v-btn
           outlined
           color="success"
-          style="position: absolute; top: 70px; right: 25px; z-index: 100"
-          @mouseenter="overlay.isVisible = true"
-          @mouseleave="hiddenOverlay"
+          :style="{
+            position: 'absolute',
+            top: `${overlay.y + 80}px`,
+            right: `30px`,
+            zIndex: 100,
+            visibility: 'hidden'
+          }"
         >
           {{ overlay.buttonTitle }}
         </v-btn>
@@ -339,7 +343,7 @@
     </instances-table-modal>
 
     <v-main>
-      <router-view :style="(overlay.uuid) ? 'padding-top: 55px !important' : null" />
+      <router-view />
     </v-main>
     <app-snackbar />
   </v-app>
@@ -378,6 +382,8 @@ export default {
       isVisible: false,
       buttonTitle: "",
       uuid: "",
+      x: 0,
+      y: 0
     },
   }),
   methods: {
@@ -473,7 +479,7 @@ export default {
   },
   created() {
     window.addEventListener("message", ({ data, origin, source }) => {
-      if (origin.includes("localhost") || !data) return;
+      if (origin.includes("localhost:8081") || !data) return;
       if (data === "ready") return;
       if (data.type === "get-user") {
         const setting = "plugin-chats-overlay";
@@ -481,10 +487,15 @@ export default {
         api.settings.get([setting]).then((res) => {
           const { title } = JSON.parse(res[setting]);
 
-          this.overlay.buttonTitle = title;
+          setTimeout(() => { source.postMessage(title, "*") }, 300)
           this.overlay.uuid = data.value.uuid;
         });
         return;
+      }
+      if (data.type === "click-on-button") {
+        this.overlay.x = data.value.x
+        this.overlay.y = data.value.y
+        this.overlay.isVisible = !this.overlay.isVisible
       }
       if (data.type === "open-user") {
         window.open(`/admin/accounts/${data.value.uuid}`, "_blank");

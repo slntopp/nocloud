@@ -2,7 +2,6 @@ package config
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/spf13/viper"
 	"os"
 )
@@ -14,11 +13,6 @@ func init() {
 	viper.SetDefault("CONFIG_LOCATION", "oauth2_config.json")
 
 	CONFIG_LOCATION = viper.GetString("CONFIG_LOCATION")
-
-	_, err := os.ReadFile(CONFIG_LOCATION)
-	if err != nil {
-		panic(fmt.Errorf("couldn't read config. Location: %s. Error: %v", CONFIG_LOCATION, err))
-	}
 }
 
 type OAuth2Config struct {

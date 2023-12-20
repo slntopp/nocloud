@@ -51,7 +51,7 @@ import reportsTable from "@/components/reports_table.vue";
 export default {
   name: "transactions-view",
   components: { reportsTable },
-  mixins: [snackbar, search("transactions")],
+  mixins: [snackbar, search({name:"transactions"})],
   data: () => ({
     types: [],
     resources: [],

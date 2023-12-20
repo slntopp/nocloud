@@ -17,8 +17,11 @@ package registry
 
 import (
 	"context"
+	"fmt"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	"github.com/slntopp/nocloud-proto/notes"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
+	"slices"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -97,6 +100,11 @@ func (s *AccountsServiceServer) SetupSettingsClient(settingsClient settingspb.Se
 	var settings AccountPostCreateSettings
 	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
 		s.log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	var stdSettings SignUpSettings
+	if scErr := sc.Fetch(signupKey, &stdSettings, standartSettings); scErr != nil {
+		s.log.Warn("Cannot fetch standart settings", zap.Error(scErr))
 	}
 }
 
@@ -404,6 +412,15 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
 	}
 
+	cred, err := credentials.MakeCredentials(request.Auth, log)
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if cred.Find(ctx, s.db) {
+		return nil, status.Error(codes.AlreadyExists, "Such username also exists")
+	}
+
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
 		Currency: &request.Currency,
@@ -445,10 +462,105 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 	}
 
 	col, _ = s.db.Collection(ctx, schema.CREDENTIALS_EDGE_COL)
+	err = s.ctrl.SetCredentials(ctx, acc, col, cred, roles.OWNER)
+	if err != nil {
+		return res, err
+	}
+
+	return res, nil
+}
+
+func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.CreateRequest) (*accountspb.CreateResponse, error) {
+	log := s.log.Named("SignUp")
+	log.Debug("Create request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	var stdSettings SignUpSettings
+	if scErr := sc.Fetch(signupKey, &stdSettings, standartSettings); scErr != nil {
+		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	if !stdSettings.Enabled {
+		return nil, status.Error(codes.Unavailable, "SignUp is disabled")
+	}
+
+	ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+
+	ns, err := s.ns_ctrl.Get(ctx, stdSettings.Namespace)
+	if err != nil {
+		log.Debug("Error getting namespace", zap.Error(err), zap.String("namespace", stdSettings.Namespace))
+		return nil, err
+	}
+
+	ok, access_lvl := graph.AccessLevel(ctx, s.db, schema.ROOT_ACCOUNT_KEY, ns.ID)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "No Access")
+	} else if access_lvl < access.Level_MGMT {
+		return nil, status.Error(codes.PermissionDenied, "No Enough Rights")
+	}
+
 	cred, err := credentials.MakeCredentials(request.Auth, log)
 	if err != nil {
-		return res, status.Error(codes.Internal, err.Error())
+		return nil, status.Error(codes.Internal, err.Error())
 	}
+
+	if !slices.Contains(stdSettings.AllowedTypes, cred.Type()) {
+		return nil, status.Error(codes.Unavailable, fmt.Sprintf("Such auth type not allowed. Type: %s", cred.Type()))
+	}
+
+	if cred.Find(ctx, s.db) {
+		return nil, status.Error(codes.AlreadyExists, "Such username also exists")
+	}
+
+	var accStatus accountspb.AccountStatus
+
+	if stdSettings.EnabledAccount {
+		accStatus = accountspb.AccountStatus_ACTIVE
+	} else {
+		accStatus = accountspb.AccountStatus_LOCK
+	}
+
+	creationAccount := accountspb.Account{
+		Title:    request.Title,
+		Currency: &request.Currency,
+		Data:     request.GetData(),
+		Status:   accStatus,
+	}
+
+	acc, err := s.ctrl.Create(ctx, creationAccount)
+	if err != nil {
+		log.Debug("Error creating account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error while creating account")
+	}
+	res := &accountspb.CreateResponse{Uuid: acc.Key}
+
+	if request.Access != nil && access.Level(*request.Access) < access_lvl {
+		access_lvl = access.Level(*request.Access)
+	}
+
+	var settings AccountPostCreateSettings
+	if scErr := sc.Fetch(accountPostCreateSettingsKey, &settings, defaultSettings); scErr != nil {
+		log.Warn("Cannot fetch settings", zap.Error(scErr))
+	}
+
+	if settings.CreateNamespace {
+		personal_ctx := context.WithValue(ctx, nocloud.NoCloudAccount, acc.GetUuid())
+
+		createdNs, err := s.ns_ctrl.Create(personal_ctx, acc.GetTitle())
+		if err != nil {
+			log.Warn("Cannot create a namespace for new Account", zap.String("account", acc.GetUuid()), zap.Error(err))
+		} else {
+			res.Namespace = createdNs.ID.Key()
+		}
+	}
+
+	col, _ := s.db.Collection(ctx, schema.NS2ACC)
+	err = acc.JoinNamespace(ctx, col, ns, access_lvl, roles.OWNER)
+	if err != nil {
+		log.Debug("Error linking to namespace")
+		return res, err
+	}
+
+	col, _ = s.db.Collection(ctx, schema.CREDENTIALS_EDGE_COL)
 
 	err = s.ctrl.SetCredentials(ctx, acc, col, cred, roles.OWNER)
 	if err != nil {
@@ -616,4 +728,141 @@ func (s *AccountsServiceServer) Delete(ctx context.Context, request *accountspb.
 	}
 
 	return &accountspb.DeleteResponse{Result: true}, nil
+}
+
+func (s *AccountsServiceServer) AddNote(ctx context.Context, request *notes.AddNoteRequest) (*notes.NoteResponse, error) {
+	log := s.log.Named("AddNote")
+	log.Debug("AddNote request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	if err != nil {
+		log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if acc.Access == nil {
+		log.Warn("Error Access is nil")
+		return nil, status.Error(codes.PermissionDenied, "Error Access is nil")
+	}
+
+	if requestor == request.GetUuid() {
+		acc.Access.Level = access.Level_ROOT
+	}
+
+	if acc.Access.Level < access.Level_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	acc.AdminNotes = append(acc.GetAdminNotes(), &notes.AdminNote{
+		Admin:   requestor,
+		Msg:     request.GetMsg(),
+		Created: time.Now().Unix(),
+	})
+
+	patch := map[string]any{
+		"admin_notes": acc.GetAdminNotes(),
+	}
+
+	err = s.ctrl.Update(ctx, acc, patch)
+	if err != nil {
+		log.Error("Failed to add note", zap.Error(err))
+		return nil, err
+	}
+
+	return &notes.NoteResponse{Result: true, AdminNotes: acc.GetAdminNotes()}, nil
+}
+
+func (s *AccountsServiceServer) PatchNote(ctx context.Context, request *notes.PatchNoteRequest) (*notes.NoteResponse, error) {
+	log := s.log.Named("PatchNote")
+	log.Debug("PatchNote request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	if err != nil {
+		log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if acc.Access == nil {
+		log.Warn("Error Access is nil")
+		return nil, status.Error(codes.PermissionDenied, "Error Access is nil")
+	}
+
+	if requestor == request.GetUuid() {
+		acc.Access.Level = access.Level_ROOT
+	}
+
+	if acc.Access.Level < access.Level_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	note := acc.GetAdminNotes()[request.GetIndex()]
+	if (note.GetAdmin() == requestor) || (note.GetAdmin() != requestor && acc.Access.GetLevel() == access.Level_ROOT) {
+		note.Admin = requestor
+		note.Msg = request.GetMsg()
+		note.Updated = time.Now().Unix()
+
+		patch := map[string]any{
+			"admin_notes": acc.GetAdminNotes(),
+		}
+
+		err = s.ctrl.Update(ctx, acc, patch)
+		if err != nil {
+			log.Error("Failed to patch note", zap.Error(err))
+			return nil, err
+		}
+		return &notes.NoteResponse{Result: true, AdminNotes: acc.GetAdminNotes()}, nil
+	}
+
+	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+}
+
+func (s *AccountsServiceServer) RemoveNote(ctx context.Context, request *notes.RemoveNoteRequest) (*notes.NoteResponse, error) {
+	log := s.log.Named("RemoveNote")
+	log.Debug("RemoveNote request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, request.GetUuid()))
+	if err != nil {
+		log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if acc.Access == nil {
+		log.Warn("Error Access is nil")
+		return nil, status.Error(codes.PermissionDenied, "Error Access is nil")
+	}
+
+	if requestor == request.GetUuid() {
+		acc.Access.Level = access.Level_ROOT
+	}
+
+	if acc.Access.Level < access.Level_ADMIN {
+		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account")
+	}
+
+	note := acc.GetAdminNotes()[request.GetIndex()]
+	if (note.GetAdmin() == requestor) || (note.GetAdmin() != requestor && acc.Access.GetLevel() == access.Level_ROOT) {
+		acc.AdminNotes = slices.Delete(acc.AdminNotes, int(request.GetIndex()), int(request.GetIndex()+1))
+
+		patch := map[string]any{
+			"admin_notes": acc.GetAdminNotes(),
+		}
+
+		err = s.ctrl.Update(ctx, acc, patch)
+		if err != nil {
+			log.Error("Failed to remove note", zap.Error(err))
+			return nil, err
+		}
+		return &notes.NoteResponse{Result: true, AdminNotes: acc.GetAdminNotes()}, nil
+	}
+
+	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Account notes")
 }

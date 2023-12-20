@@ -110,6 +110,10 @@ export default {
             component: () => import("@/components/instance/snapshots.vue"),
           },
         {
+          title: "Notes",
+          component: () => import("@/components/instance/notes.vue"),
+        },
+        {
           title: "Event log",
           component: () => import("@/components/instance/history.vue"),
         },
@@ -147,7 +151,7 @@ export default {
     });
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("accounts/fetch");
-    this.$store.dispatch("servicesProviders/fetch", false);
+    this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
     this.$store.dispatch("plans/fetch");
 
     this.initSocket();

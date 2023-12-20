@@ -190,7 +190,7 @@ export default {
           });
 
           this.$store.dispatch("services/fetch", this.template.uuid);
-          this.$store.dispatch("servicesProviders/fetch");
+          this.$store.dispatch("servicesProviders/fetch",{anonymously :true});
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -289,7 +289,7 @@ export default {
           });
 
           this.$store.dispatch("services/fetch", this.template.uuid);
-          this.$store.dispatch("servicesProviders/fetch");
+          this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -421,6 +421,11 @@ export default {
             title: "unsuspend",
             disabled: !this.keywebActions?.unsuspend,
           },
+          {
+            action: "vnc",
+            title: "Console",
+            disabled: !this.keywebActions?.vnc,
+          },
         ],
         opensrs: [{ action: "dns" }],
         cpanel: [{ action: "session" }],
@@ -518,6 +523,7 @@ export default {
             stop: true,
             reboot: true,
             suspend: true,
+            vnc:true
           };
         }
         case "STOPPED": {

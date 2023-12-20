@@ -18,6 +18,7 @@
           class="search__input"
           v-bind="searchName ? attrs : undefined"
           v-on="searchName ? on : undefined"
+          @keydown.enter="hideSearch"
           v-model="param"
         >
           <template v-if="!isResetAllHide" v-slot:append>
@@ -61,8 +62,9 @@
           >
             <v-list dense color="background-light">
               <v-subheader>LAYOUTS</v-subheader>
-              <v-list-item
-                dense
+              <v-card
+                style="box-shadow: none"
+                :class="{ 'pa-3': isLayoutModePreview }"
                 v-for="layout in layouts"
                 :key="layout.id"
                 :disabled="isLayoutModeAdd"
@@ -82,7 +84,9 @@
                       <span>
                         {{ layout.title }}
                       </span>
-                      <v-icon v-if="isPinned(layout)" small>mdi-pin</v-icon>
+                      <v-icon v-if="isPinned(layout)" small color="primary"
+                        >mdi-pin</v-icon
+                      >
                     </div>
                   </v-list-item-title>
                   <v-text-field
@@ -92,9 +96,14 @@
                     class="pa-0 ma-0"
                   >
                     <template v-slot:append>
-                      <v-btn @click="setPinned(layout.id)" small icon>
+                      <v-btn
+                        @click="setPinned(layout.id)"
+                        small
+                        icon
+                        :color="isPinned(layout) ? 'primary' : undefined"
+                      >
                         <v-icon small>{{
-                          isPinned(layout) ? "mdi-pin-off" : "mdi-pin"
+                          isPinned(layout) ? "mdi-pin" : "mdi-pin-off"
                         }}</v-icon>
                       </v-btn>
                       <v-btn @click="deleteLayout(layout.id)" small icon>
@@ -103,9 +112,9 @@
                     </template>
                   </v-text-field>
                 </v-list-item-content>
-              </v-list-item>
+              </v-card>
 
-              <v-list-item v-if="isLayoutModeAdd" dense>
+              <v-card v-if="isLayoutModeAdd" style="box-shadow: none">
                 <v-list-item-content>
                   <v-form ref="addNewLayoutForm" v-model="isNewLayoutValid">
                     <v-text-field
@@ -127,11 +136,11 @@
                     </v-text-field>
                   </v-form>
                 </v-list-item-content>
-              </v-list-item>
+              </v-card>
 
-              <v-list-item
+              <v-card
+                style="box-shadow: none"
                 :disabled="isLayoutModeAdd"
-                dense
                 @click="onAddClick"
               >
                 <v-list-item-content>
@@ -144,7 +153,7 @@
                     Add <v-icon small>mdi-plus</v-icon></v-btn
                   >
                 </v-list-item-content>
-              </v-list-item>
+              </v-card>
             </v-list>
           </v-col>
           <v-col cols="9" class="filter" v-if="allFields.length">
@@ -302,6 +311,13 @@ const newLayoutRules = ref([
 
 onMounted(() => {
   window.addEventListener("beforeunload", () => saveSearchData());
+
+  window.addEventListener("keydown", function (event) {
+    const { key } = event;
+    if (key === "Escape" && isOpen.value) {
+      hideSearch();
+    }
+  });
 });
 
 const theme = computed(() => store.getters["app/theme"]);
@@ -325,6 +341,9 @@ const currentLayout = computed({
 });
 const visibleLayout = computed(() => currentLayout.value || blankLayout.value);
 const searchName = computed(() => store.getters["appSearch/searchName"]);
+const defaultLayout = computed(
+  () => store.getters["appSearch/defaultLayout"] || { title: "Default" }
+);
 const param = computed({
   get: () => store.getters["appSearch/param"],
   set: (val) => store.commit("appSearch/setParam", val),
@@ -408,18 +427,27 @@ const loadSearchData = (name) => {
   if (!data.layouts) {
     return;
   }
-  layouts.value = data.layouts;
+
+  if (data.layouts.length) {
+    layouts.value = data.layouts;
+  }
+
   if (data?.current) {
     currentLayout.value = layouts.value.find((l) => l.id === data.current);
     filter.value = currentLayout.value.filter;
-  } else {
-    const localKey = `${key}-local`;
-    filter.value = JSON.parse(localStorage.getItem(localKey) || `{}`);
   }
 
   pinnedLayout.value = data?.pinned;
   if (pinnedLayout.value && !currentLayout.value) {
     currentLayout.value = layouts.value.find((l) => isPinned(l));
+  }
+
+  const localKey = `${key}-local`;
+  const local = JSON.parse(localStorage.getItem(localKey) || `{}`);
+  if (!data?.current && Object.keys(local).length > 0) {
+    filter.value = local;
+    blankLayout.value.filter = local;
+    currentLayout.value = null;
   }
 };
 
@@ -459,10 +487,13 @@ const setCurrentFieldsKeys = () => {
     return;
   }
   const newCurrentFields = [];
+  if (currentLayout.value?.filter) {
+    newCurrentFields.push(...Object.keys(currentLayout.value.filter));
+  }
   if (currentLayout.value?.fields) {
-    newCurrentFields.push(...currentLayout.value?.fields);
+    newCurrentFields.push(...currentLayout.value.fields);
   } else {
-    let i = 0;
+    let i = newCurrentFields.length;
     while (
       newCurrentFields.length < 5 &&
       newCurrentFields.length !== allFields.value.length
@@ -496,8 +527,8 @@ const changeFields = ({ key }, value) => {
 
 const addNewLayout = (data) => {
   layouts.value.push({
-    filter: {},
     ...data,
+    filter: data.filter || {},
     id: Date.now(),
   });
 };
@@ -578,10 +609,13 @@ watch(searchName, (value, oldValue) => {
 
   layouts.value = [];
   if (value) {
-    setTimeout(() => loadSearchData(value), 0);
+    loadSearchData(value);
   }
+
   if (layouts.value.length === 0) {
-    addNewLayout({ title: "Default" });
+    addNewLayout(JSON.parse(JSON.stringify(defaultLayout.value)));
+    setCurrentLayout(layouts.value[0]);
+    setPinned(layouts.value[0].id);
   }
 });
 watch(allFields, setCurrentFieldsKeys);

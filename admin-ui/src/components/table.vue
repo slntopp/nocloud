@@ -659,6 +659,6 @@ export default {
 
 .sortable-drag {
   color: salmon;
-  background-color: rgb(13, 16, 60);
+  background-color: var(--v-background-light-base);
 }
 </style>

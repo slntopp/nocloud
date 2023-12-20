@@ -74,9 +74,10 @@ func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *pb.Serv
 	return err
 }
 
-func (ctrl *ServicesProvidersController) Delete(ctx context.Context, id string) (err error) {
-	ctrl.log.Debug("Deleting ServicesProvider Document", zap.Any("uuid", id))
-	_, err = ctrl.col.RemoveDocument(ctx, id)
+func (ctrl *ServicesProvidersController) Delete(ctx context.Context, sp *pb.ServicesProvider) (err error) {
+	ctrl.log.Debug("Deleting ServicesProvider Document", zap.Any("uuid", sp.GetUuid()))
+	sp.Status = stpb.NoCloudStatus_DEL
+	_, err = ctrl.col.UpdateDocument(ctx, sp.GetUuid(), sp)
 	return err
 }
 

@@ -159,7 +159,25 @@ export default {
     nocloudTable,
     instanceIpMenu,
   },
-  mixins: [searchMixin("instances-table")],
+  mixins: [
+    searchMixin({
+      name: "instances-table",
+      defaultLayout: {
+        title: "Default",
+        filter: {
+          state: [
+            "RUNNING",
+            "STOPPED",
+            "PENDING",
+            "OPERATION",
+            "SUSPENDED",
+            "UNKNOWN",
+            "ERROR",
+          ],
+        },
+      },
+    }),
+  ],
   props: {
     value: { type: Array, required: false },
     headers: { type: Array, default: null },
@@ -275,7 +293,7 @@ export default {
             inst.billingPlan.products[inst.product]?.price ?? 0;
           return inst.billingPlan.resources
             .filter(({ key }) => inst.config?.addons?.find((a) => a === key))
-            .reduce((acc, r) => acc + +r?.price, initialPrice);
+            ?.reduce((acc, r) => acc + +r?.price, initialPrice);
         }
         case "keyweb": {
           const key = inst.product;
@@ -288,19 +306,19 @@ export default {
                 a.key.startsWith(inst.config?.configurations[key])
             )?.key;
 
-          const addons = Object.keys(inst.config?.configurations || {}).map(
-            (key) =>
+          const addons =
+            Object.keys(inst.config?.configurations || {}).map((key) =>
               inst.billingPlan?.resources?.find((r) => {
                 return (
                   r.key === getAddonKey(key, "addons") ||
                   r.key === getAddonKey(key, "os")
                 );
               })
-          );
+            ) || [];
 
           return (
-            (+tariff.price || 0) +
-            (addons.reduce((acc, a) => acc + a.price, 0) || 0)
+            (+tariff?.price || 0) +
+            (addons.reduce((acc, a) => acc + a?.price, 0) || 0)
           );
         }
         case "ione":
@@ -308,15 +326,15 @@ export default {
           const initialPrice =
             inst.billingPlan.products[inst.product]?.price ?? 0;
 
-          return +inst.billingPlan.resources.reduce((prev, curr) => {
+          return +inst.billingPlan.resources?.reduce((prev, curr) => {
             if (
               curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`
             ) {
-              return prev + (curr.price * inst.resources.drive_size) / 1024;
+              return prev + (curr?.price * inst.resources.drive_size) / 1024;
             } else if (curr.key === "ram") {
-              return prev + (curr.price * inst.resources.ram) / 1024;
+              return prev + (curr?.price * inst.resources.ram) / 1024;
             } else if (inst.resources[curr.key]) {
-              return prev + curr.price * inst.resources[curr.key];
+              return prev + curr?.price * inst.resources[curr.key];
             }
             return prev;
           }, initialPrice);
@@ -355,15 +373,15 @@ export default {
     getPeriod(inst) {
       if (inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC") {
         return "PayG";
-      } else if (inst.resources.period) {
+      } else if (inst.resources.period && inst.type !== "ovh") {
         const text = inst.resources.period > 1 ? "months" : "month";
 
         return `${inst.resources.period} ${text}`;
       }
-
       const period =
-        inst.type === "ovh" ? inst.config.duration : this.getIonePeriod(inst);
-
+        inst.type === "ovh"
+          ? inst.config.duration
+          : this.getInstancePeriod(inst);
       switch (period) {
         case "P1H":
           return "hourly";
@@ -381,15 +399,16 @@ export default {
           return "unknown";
       }
     },
-    getIonePeriod(inst) {
+    getInstancePeriod(inst) {
       const value = new Set();
       const day = 3600 * 24;
       const month = day * 30;
       const year = day * 365;
 
       Object.values(inst.billingPlan.products ?? {}).forEach(({ period }) => {
-        if (inst.billingPlan.kind === "DYNAMIC") value.add("P1H");
-        if (inst.billingPlan.kind !== "STATIC") return;
+        if (inst.billingPlan.kind === "DYNAMIC" && inst.type === "ione")
+          value.add("P1H");
+        if (inst.billingPlan.kind !== "STATIC" && inst.type === "ione") return;
 
         if (+period === day) value.add("P1D");
         if (+period === month) value.add("P1M");

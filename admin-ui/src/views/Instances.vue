@@ -211,7 +211,7 @@ export default {
     this.$store.dispatch("accounts/fetch", false);
     this.$store.dispatch("namespaces/fetch", false);
     this.$store.dispatch("services/fetch", { showDeleted: true });
-    this.$store.dispatch("servicesProviders/fetch", false);
+    this.$store.dispatch("servicesProviders/fetch", {anonymously:false});
 
     const types = require.context(
       "@/components/modules/",
@@ -250,7 +250,7 @@ export default {
       return this.$store.getters["services/getInstances"];
     },
     sp() {
-      return this.$store.getters["servicesProviders/all"];
+      return this.$store.getters["servicesProviders/all"].filter(sp=>!!sp.type);
     },
     service() {
       return this.services.find(

@@ -1,6 +1,12 @@
 <template>
   <div>
     <v-row class="my-4" v-if="!isPlansLoading" align="center">
+      <v-btn class="ml-3" @click="refreshPlans" :loading="isRefreshLoading"
+        >Fetch plans</v-btn
+      >
+      <v-btn class="ml-3" :disabled="!newPlans" @click="setRefreshedPlans"
+        >Set api plans</v-btn
+      >
       <v-btn class="ml-3" @click="setSellToTab(true)">Enable all</v-btn>
       <v-btn class="ml-3" @click="setSellToTab(false)">Disable all</v-btn>
     </v-row>
@@ -75,9 +81,6 @@
 
             <template v-else-if="planId !== item.id">{{ item.group }}</template>
           </template>
-          <template v-slot:[`item.margin`]="{ item }">
-            {{ getMargin(item, false) }}
-          </template>
           <template v-slot:[`item.duration`]="{ value }">
             {{ getPayment(value) }}
           </template>
@@ -93,7 +96,7 @@
             />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
-            <v-switch v-model="item.sell" />
+            <v-switch v-model="item.public" />
           </template>
           <template v-slot:expanded-item="{ headers, item }">
             <template v-if="item.windows">
@@ -128,9 +131,6 @@
           :loading="isPlansLoading"
           :footer-error="fetchError"
         >
-          <template v-slot:[`item.margin`]="{ item }">
-            {{ getMargin(item, false) }}
-          </template>
           <template v-slot:[`item.duration`]="{ value }">
             {{ getPayment(value) }}
           </template>
@@ -146,7 +146,7 @@
             />
           </template>
           <template v-slot:[`item.sell`]="{ item }">
-            <v-switch v-model="item.sell" />
+            <v-switch v-model="item.public" />
           </template>
         </nocloud-table>
 
@@ -217,7 +217,6 @@ export default {
       { text: "Name", value: "name" },
       { text: "API name", value: "apiName" },
       { text: "Group", value: "group" },
-      { text: "Margin", value: "margin" },
       {
         text: "Payment",
         value: "duration",
@@ -256,6 +255,10 @@ export default {
     planId: -1,
     tabsIndex: 0,
     usedFee: {},
+
+    newPlans: null,
+    newAddons: null,
+    isRefreshLoading: false,
   }),
   methods: {
     changeImage(value) {
@@ -271,80 +274,48 @@ export default {
     },
     changePlan(plan) {
       this.plans.forEach((el) => {
-        if (el.sell) {
-          const [, , cpu, ram, disk] = el.planCode.split("-");
-          const meta = {
-            addons: el.addons,
-            datacenter: el.datacenter,
-            os: el.os.filter((item) => this.images.includes(item)),
-          };
+        const [, , cpu, ram, disk] = el.planCode.split("-");
+        const meta = {
+          addons: el.addons,
+          datacenter: el.datacenter,
+          os: el.os.filter((item) => this.images.includes(item)),
+          hidedOs: el.os.filter((item) => !this.images.includes(item)),
+        };
 
-          if (el.windows) meta.windows = el.windows.value;
-          plan.products[el.id] = {
-            kind: "PREPAID",
-            title: el.name,
-            price: el.value,
-            group: el.group,
-            period: this.getPeriod(el.duration),
-            resources: { cpu: +cpu, ram: ram * 1024, disk: disk * 1024 },
-            sorter: Object.keys(plan.products).length,
-            installation_fee: el.installation_fee,
-            meta,
-          };
-        }
+        if (el.windows) meta.windows = el.windows.value;
+        plan.products[el.id] = {
+          kind: "PREPAID",
+          title: el.name,
+          price: el.value,
+          public: el.public,
+          group: el.group,
+          period: this.getPeriod(el.duration),
+          resources: { cpu: +cpu, ram: ram * 1024, disk: disk * 1024 },
+          meta: {
+            ...meta,
+            basePrice: el.price.value,
+            apiName: el.apiName,
+          },
+          sorter: Object.keys(plan.products).length,
+          installation_fee: el.installation_fee,
+        };
       });
 
       this.addons.forEach((el) => {
-        if (el.sell) {
-          plan.resources.push({
-            key: el.id,
-            kind: "PREPAID",
-            title: el.name,
-            price: el.value,
-            period: this.getPeriod(el.duration),
-            except: false,
-            on: [],
-          });
-        }
-      });
-    },
-    changeIcon() {
-      setTimeout(() => {
-        const headers = document.querySelectorAll(".groupable");
-
-        headers.forEach(({ firstChild, childNodes }) => {
-          if (!childNodes[1]?.className?.includes("group-icon")) {
-            const element = document.querySelector(".group-icon");
-            const icon = element.cloneNode(true);
-
-            firstChild.after(icon);
-            icon.style = "display: inline-flex";
-
-            icon.addEventListener("click", () => {
-              const menu = document.querySelector(".v-menu__content");
-              const { x, y } = icon.getBoundingClientRect();
-
-              if (menu.className.includes("menuable__content__active")) return;
-
-              this.column = firstChild.textContent.trim();
-              element.dispatchEvent(new Event("click"));
-
-              setTimeout(() => {
-                const width = document.documentElement.offsetWidth;
-                const menuWidth = menu.offsetWidth;
-                let marginLeft = 20;
-
-                if (width < menuWidth + x)
-                  marginLeft = width - (menuWidth + x) - 35;
-                const marginTop = marginLeft < 20 ? 20 : 0;
-
-                menu.style.left = `${x + marginLeft + window.scrollX}px`;
-                menu.style.top = `${y + marginTop + window.scrollY}px`;
-              }, 0);
-            });
-          }
+        plan.resources.push({
+          key: el.id,
+          public: el.public,
+          kind: "PREPAID",
+          title: el.name,
+          price: el.value,
+          period: this.getPeriod(el.duration),
+          except: false,
+          meta: {
+            basePrice: el.price.value,
+          },
+          on: [],
         });
-      }, 100);
+      });
     },
     changePlans({ plans, windows, catalog }) {
       const result = [];
@@ -355,16 +326,21 @@ export default {
           const isYearly = duration === "P1Y" && pricingMode === "upfront12";
 
           if (isMonthly || isYearly) {
+            const id = `${duration} ${planCode}`;
+            const realProduct = this.plans.find((p) => p.id === id) || {};
+
             const code = planCode.split("-").slice(1).join("-");
             const option = windows.find((el) => el.planCode.includes(code));
             const newPrice = this.convertPrice(price.value);
 
             const { configurations, addonFamilies } = catalog.plans.find(
               ({ planCode }) => planCode.includes(code)
-            )
-            const os = configurations.find(c=>c.name==='vps_os')?.values;
-            const datacenter = configurations.find(c=>c.name==='vps_datacenter')?.values;
-           
+            );
+            const os = configurations.find((c) => c.name === "vps_os")?.values;
+            const datacenter = configurations.find(
+              (c) => c.name === "vps_datacenter"
+            )?.values;
+
             const addons = addonFamilies.reduce(
               (res, { addons }) => [...res, ...addons],
               []
@@ -398,20 +374,22 @@ export default {
               ...plan,
               planCode,
               duration,
-              installation_fee: installation.price.value,
+              installation_fee:
+                realProduct.installation_fee || installation.price.value,
               price: { value: newPrice },
-              name: productName,
+              name: realProduct.name || productName,
               apiName: productName,
-              group: productName.replace(/VPS[\W0-9]/, "").split(/[\W0-9]/)[0],
-              value: price.value,
-              sell: false,
-              id: `${duration} ${planCode}`,
+              group:
+                realProduct.group ||
+                productName.replace(/VPS[\W0-9]/, "").split(/[\W0-9]/)[0],
+              value: realProduct.value || newPrice,
+              public: !!realProduct.public,
+              id,
             });
           }
         });
       });
-      this.plans = result;
-      this.plans.sort((a, b) => {
+      result.sort((a, b) => {
         const resA = a.planCode.split("-");
         const resB = b.planCode.split("-");
 
@@ -422,6 +400,8 @@ export default {
         if (isCpuEqual) return resA.at(-2) - resB.at(-2);
         return resA.at(-3) - resB.at(-3);
       });
+
+      return result;
     },
     changeAddons({ backup, disk, snapshot }) {
       const result = [];
@@ -433,22 +413,25 @@ export default {
             const isYearly = duration === "P1Y" && pricingMode === "upfront12";
 
             if (isMonthly || isYearly) {
+              const id = `${duration} ${planCode}`;
+              const realAddon = this.addons.find((a) => a.id === id) || {};
+
               const newPrice = this.convertPrice(price.value);
 
               result.push({
                 price: { value: newPrice },
                 duration,
                 name: productName,
-                value: price.value,
-                sell: false,
-                id: `${duration} ${planCode}`,
+                value: realAddon.value || price.value,
+                public: !!realAddon.public,
+                id,
               });
             }
           });
         });
       });
 
-      this.addons = result;
+      return result;
     },
     setFee() {
       const windows = [];
@@ -461,8 +444,6 @@ export default {
       [this.plans, this.addons, windows].forEach((el) => {
         el.forEach((plan, i, arr) => {
           arr[i].value = getMarginedValue(this.fee, plan.price.value);
-
-          this.getMargin(arr[i]);
         });
       });
     },
@@ -473,57 +454,6 @@ export default {
         case "P1Y":
           return "yearly";
       }
-    },
-    getMargin({ value, price }) {
-      if (!this.usedFee.ranges) {
-        return "none";
-      }
-
-      const range = this.usedFee.ranges.find(
-        ({ from, to }) => from <= price.value && to >= price.value
-      );
-      const n = Math.pow(10, this.usedFee.precision);
-      let percent = range?.factor / 100 + 1;
-      let margin;
-      let round;
-
-      switch (this.usedFee.round) {
-        case 1:
-          round = "floor";
-          break;
-        case 2:
-          round = "round";
-          break;
-        case 3:
-          round = "ceil";
-      }
-      if (this.usedFee.round === "NONE") round = "round";
-      else if (typeof this.usedFee.round === "string") {
-        round = this.usedFee.round.toLowerCase();
-      }
-
-      // value = Math[round](value * n) / n;
-
-      if (value === Math[round](price.value * percent * n) / n) {
-        margin = "ranged";
-      } else if (this.usedFee.default <= 0) {
-        margin = "none";
-      } else {
-        percent = this.usedFee.default / 100 + 1;
-      }
-
-      switch (value) {
-        case Math[round](price.value * n) / n:
-          margin = "none";
-          break;
-        case Math[round](price.value * percent * n) / n:
-          if (!margin) margin = "fixed";
-          break;
-        default:
-          margin = "manual";
-      }
-
-      return margin;
     },
     editGroup(group) {
       const i = this.groups.indexOf(group);
@@ -577,38 +507,104 @@ export default {
     },
     setSellToValue(value, status) {
       value = value.map((p) => {
-        p.sell = status;
+        p.public = status;
         return p;
       });
     },
     convertPrice(price) {
       return (price * this.plnRate).toFixed(2);
     },
+    async refreshPlans() {
+      try {
+        this.isRefreshLoading = true;
+        const { meta } = await api.servicesProviders.action({
+          action: "get_plans",
+          uuid: this.sp.uuid,
+        });
+
+        this.newPlans = this.changePlans(meta);
+        this.newAddons = this.changeAddons(meta);
+
+        if (!this.plans?.length || !this.addons?.length) {
+          this.setRefreshedPlans();
+        }
+      } catch (err) {
+        this.newPlans = null;
+        this.newAddons = null;
+        this.$store.commit("snackbar/showSnackbarError", {
+          message: err.response?.data?.message ?? err.message ?? err,
+        });
+      } finally {
+        this.isRefreshLoading = false;
+      }
+    },
+    setRefreshedPlans() {
+      this.addons = JSON.parse(JSON.stringify(this.newAddons));
+      this.plans = JSON.parse(JSON.stringify(this.newPlans));
+      this.newPlans = null;
+      this.newAddons = null;
+
+      this.setGroups();
+    },
+    setGroups() {
+      this.groups = [];
+      this.plans.forEach((plan) => {
+        const group = plan?.group || plan?.name?.split(/[\W0-9]/)[0];
+        if (!this.groups.includes(group)) this.groups.push(group);
+      });
+    },
   },
   created() {
-    this.$emit("changeLoading");
+    const newImages = [];
+    this.plans = Object.keys(this.template.products || {}).map((key) => {
+      const [duration, planCode] = key.split(" ");
+      const product = this.template.products[key];
 
-    api.servicesProviders
-      .action({ action: "get_plans", uuid: this.sp.uuid })
-      .then(({ meta }) => {
-        this.changePlans(meta);
-        this.changeAddons(meta);
+      const { meta } = product;
 
-        this.fetchError = "";
-        this.changeIcon();
-      })
-      .catch((err) => {
-        this.fetchError = err.response?.data?.message ?? err.message ?? err;
-        console.error(err);
-      })
-      .finally(() => {
-        this.$emit("changeLoading");
-      });
+      const enabledOs = meta.os || [];
+      newImages.push(...enabledOs);
+      const os = enabledOs.concat(...(meta.hidedOs || []));
+
+      const { apiName, addons, datacenter, basePrice } = meta;
+
+      return {
+        ...product,
+        duration,
+        planCode,
+        price: { value: basePrice },
+        value: product.price,
+        datacenter,
+        addons,
+        installation_fee: product.installationFee,
+        os,
+        name: product.title,
+        apiName,
+        id: key,
+      };
+    });
+
+    this.addons = this.template.resources.map((r) => {
+      const { key } = r;
+      const [duration, planCode] = key.split(" ");
+
+      return {
+        ...r,
+        duration,
+        planCode,
+        price: { value: r.meta.basePrice },
+        value: r.price,
+        name: r.title,
+        id: key,
+      };
+    });
+
+    this.images = [...new Set(newImages)];
   },
   mounted() {
-    const icon = document.querySelector(".group-icon");
+    this.$emit("changeFee", this.template.fee);
 
-    icon.dispatchEvent(new Event("click"));
+    this.refreshPlans();
   },
   computed: {
     defaultCurrency() {
@@ -627,11 +623,9 @@ export default {
     },
     allImages() {
       const imagesSet = new Set();
-      this.plans
-        .filter((p) => !!p.sell)
-        .map((p) => {
-          p.os.forEach((os) => imagesSet.add(os));
-        });
+      this.plans.forEach((p) => {
+        p.os.forEach((os) => imagesSet.add(os));
+      });
 
       const imagesArr = [...imagesSet.values()];
       imagesArr.sort();
@@ -639,52 +633,8 @@ export default {
     },
   },
   watch: {
-    tabsIndex(value) {
-      if (value > 1) return;
-      this.changeIcon();
-
-      const items = [this.plans, this.addons];
-
-      items[value].forEach((el) => this.getMargin(el));
-      this.$emit("changeFee", Object.assign({}, this.fee));
-    },
-    addons() {
-      this.$emit("changeFee", this.template.fee ?? {});
-      setTimeout(() => {
-        this.setFee();
-
-        this.template.resources.forEach(({ key, price }) => {
-          const addon = this.addons.find((el) => el.id === key);
-
-          addon.value = price;
-          addon.sell = true;
-        });
-
-        this.groups = [];
-        const imagesSet = new Set();
-        this.plans.forEach((plan, i) => {
-          const product = this.template.products[plan.id];
-          const winKey = Object.keys(product?.meta || {}).find((el) =>
-            el.includes("windows")
-          );
-          const title = (product?.title ?? plan.name).replace(/VPS[\W0-9]/, "");
-          const group = product?.group || title.split(/[\W0-9]/)[0];
-
-          if (product) {
-            this.plans[i].name = product.title;
-            this.plans[i].value = product.price;
-            product.meta.os?.forEach((os) => imagesSet.add(os));
-
-            this.plans[i].group = group;
-            this.plans[i].sell = true;
-
-            if (winKey) this.plans[i].windows.value = product.meta[winKey];
-          }
-          if (!this.groups.includes(group)) this.groups.push(group);
-        });
-
-        this.images = [...imagesSet.values()];
-      });
+    plans() {
+      this.setGroups();
     },
   },
 };

@@ -30,12 +30,12 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }, anonymously) {
+    fetch({ commit }, params) {
       commit("setServicesProviders", []);
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
         api.servicesProviders
-          .list(anonymously)
+          .list(params)
           .then((response) => {
             commit("setServicesProviders", response.pool);
             resolve(response);

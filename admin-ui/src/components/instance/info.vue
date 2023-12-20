@@ -180,7 +180,7 @@ export default {
     addToClipboard,
     refreshInstance() {
       this.$store.dispatch("services/fetch", this.template.uuid);
-      this.$store.dispatch("servicesProviders/fetch");
+      this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
     },
     updateCopy({ key, value }) {
       const keys = key.split(".");
