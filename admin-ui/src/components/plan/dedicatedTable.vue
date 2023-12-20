@@ -2,7 +2,10 @@
   <div>
     <v-row class="my-3" v-if="!isPlansLoading">
       <v-btn :loading="isRefreshLoading" class="ml-3" @click="refreshApiPlans"
-        >Refresh plans</v-btn
+        >Fetch plans</v-btn
+      >
+      <v-btn :disabled="!this.newPlans" class="ml-3" @click="setRefreshedPlans"
+        >Set api plans</v-btn
       >
       <v-btn class="ml-3" @click="setEnabledToPlans(true)"
         >Enable all plans</v-btn
@@ -228,6 +231,7 @@ export default {
   },
   data: () => ({
     plans: [],
+    newPlans: null,
     headers: [
       { text: "Name", value: "title" },
       { text: "API name", value: "apiName" },
@@ -267,228 +271,174 @@ export default {
 
     cpuGroups: [],
     newcpuGroup: { mode: "none", name: "", planId: "" },
-
-    usedFee: {},
   }),
   methods: {
-    getApiProducts(plans, tariffPlanCode = null) {
-      const result = [];
-
-      plans.forEach(({ prices, planCode, productName }) => {
-        prices.forEach(({ pricingMode, price, duration }) => {
-          const isMonthly = duration === "P1M" && pricingMode === "default";
-          const isYearly = duration === "P1Y" && pricingMode === "upfront12";
-          if (!isMonthly && !isYearly) return;
-
-          const newPrice = this.convertPrice(price.value);
-
-          const id = tariffPlanCode
-            ? this.getAddonId({ planCode, duration }, tariffPlanCode)
-            : this.getTariffId({ planCode, duration });
-
-          const installation = prices.find(
-            (price) =>
-              price.capacities.includes("installation") &&
-              price.pricingMode === pricingMode
-          );
-
-          result.push({
-            planCode,
-            duration,
-            installation_fee: {
-              price: {
-                value: +this.convertPrice(installation.price.value),
-              },
-              value: installation.price.value,
-            },
-            price: newPrice,
-            title: productName,
-            apiName: `${productName} (${planCode})`,
-            group: productName.split(/[\W0-9]/)[0],
-            basePrice: price.value,
-            public: false,
-            meta: {},
-            id,
-          });
-        });
-      });
-
-      return result;
+    setRefreshedPlans() {
+      this.plans = JSON.parse(JSON.stringify(this.newPlans));
+      this.newPlans = null;
+      this.setFee();
+    },
+    getProductDescription(products, code) {
+      return products.find((p) => p.name === code)?.description;
     },
     async refreshApiPlans() {
       try {
         this.isRefreshLoading = true;
-        let plans = await this.fetchPlans();
 
-        const allAddons = await Promise.allSettled(
-          plans.map(async (p) => ({
-            planId: p.id,
-            data: await this.fetchAddonsToPlan(p),
-          }))
-        );
-
-        const allConfigurations = await Promise.allSettled(
-          plans.map(async (p) => ({
-            planId: p.id,
-            data: await this.fetchConfigurationToPlan(p),
-          }))
-        );
-
-        plans.forEach((p) => {
-          p.meta.addons = allAddons.find(
-            (result) => result.value.planId === p.id
-          ).value.data;
-          const { os, datacenter } = allConfigurations.find(
-            (result) => result.value.planId === p.id
-          ).value.data;
-          p.meta.os = os;
-          p.meta.datacenter = datacenter;
+        const {
+          meta: {
+            catalog: { plans, addons, products },
+          },
+        } = await api.servicesProviders.action({
+          action: "get_baremetal_plans",
+          uuid: this.sp.uuid,
         });
 
-        //for all cpu needs os,datacenters,addons ^
-        const allCpus = await Promise.allSettled(
-          plans.map(async (p) => ({
-            planId: p.id,
-            data: await this.fetchCpuToPlan(p),
-          }))
-        );
+        const newPlans = [];
+        plans.map((plan) => {
+          const { planCode, invoiceName } = plan;
 
-        allCpus.forEach((result) => {
-          if (result.status === "rejected") {
-            return;
-          }
-          const { planId, data } = result.value;
-          const planIndex = plans.findIndex((p) => p.id === planId);
-          plans[planIndex].cpu = data;
-        });
-
-        this.plans = plans.map((plan) => {
-          const realPlan = this.plans.find((real) => real.id === plan.id);
-          if (!realPlan) {
-            return plan;
-          }
-
-          const { os, datacenter, cpu } = plan.meta;
-
-          const addons = plan.meta.addons.map((addon) => {
-            const realAddon = realPlan.meta?.addons?.find(
-              ({ id }) => id === addon.id
-            );
-            if (!realAddon) {
-              return addon;
-            }
-            const { price, public: Public } = realAddon;
-            return { ...addon, public: Public, price };
-          });
-
-          return {
-            ...plan,
-            ...realPlan,
-            cpu: plan.cpu || realPlan.cpu,
-            apiName: plan.apiName,
-            basePrice: plan.basePrice,
-            meta: {
-              addons,
-              os,
-              datacenter,
-              cpu,
-            },
+          const allowedDurations = { default: "P1M", upfront12: "P1Y" };
+          const allowedCapacities = ["installation", "renew"];
+          const allowedAddonTypes = [
+            "vrack",
+            "storage",
+            "system-storage",
+            "bandwidth",
+            "memory",
+          ];
+          const configurationsMap = {
+            dedicated_datacenter: "datacenter",
+            dedicated_os: "os",
           };
+
+          const prices = plan.pricings.reduce((acc, pricing) => {
+            const capacity = pricing.capacities[0];
+            const { mode } = pricing;
+            if (
+              allowedDurations[mode] &&
+              allowedCapacities.includes(capacity)
+            ) {
+              const tariff = this.getTariffId({
+                planCode,
+                duration: allowedDurations[mode],
+              });
+              if (!acc[tariff]) {
+                acc[tariff] = {};
+              }
+              acc[tariff][capacity] = pricing.price / 10 ** 9;
+            }
+
+            return acc;
+          }, {});
+          Object.keys(prices).forEach((tariffId) => {
+            const realPlan =
+              this.plans.find((real) => real.id === tariffId) || {};
+            const duration = tariffId.split(" ")[0];
+            const mode = Object.keys(allowedDurations).find(
+              (a) => allowedDurations[a] === duration
+            );
+
+            const tariffConfigurations = {};
+            const tariffAddons = [];
+
+            plan.configurations.forEach((configuration) => {
+              const configurationKey = configurationsMap[configuration.name];
+              if (configurationKey) {
+                tariffConfigurations[configurationKey] = configuration.values;
+              }
+            });
+
+            plan.addonFamilies.forEach((addonsTyped) => {
+              if (allowedAddonTypes.includes(addonsTyped.name)) {
+                addonsTyped.addons.forEach((addon) => {
+                  const addonInfo = addons.find((a) => a.planCode === addon);
+                  let basePrice = addonInfo?.pricings?.find(
+                    (p) => p.mode === mode && p.capacities[0] === "renew"
+                  )?.price;
+                  if (!basePrice && basePrice !== 0) {
+                    return;
+                  }
+
+                  const addonId = this.getAddonId(
+                    { duration, planCode },
+                    addon
+                  );
+
+                  const realAddon =
+                    this.template.resources?.find(
+                      ({ key }) => key === addonId
+                    ) || {};
+
+                  basePrice = this.convertPrice(basePrice / 10 ** 9);
+                  const apiName = this.getProductDescription(
+                    products,
+                    addonInfo.product
+                  );
+
+                  tariffAddons.push({
+                    duration,
+                    planCode: addon,
+                    title: realAddon.title || apiName,
+                    price: realAddon.price || basePrice,
+                    group: realAddon.group || apiName.split(/[\W0-9]/)[0],
+                    id: addonId,
+                    basePrice,
+                    apiName,
+                    public: realAddon.public,
+                    meta: {},
+                  });
+                });
+              }
+            });
+
+            const cpu = this.getProductDescription(products, planCode);
+
+            const basePrice = this.convertPrice(prices[tariffId].renew);
+            const installationPrice = this.convertPrice(
+              prices[tariffId].installation
+            );
+            const apiName = `${invoiceName} (${planCode})`;
+
+            newPlans.push({
+              planCode,
+              id: tariffId,
+              basePrice,
+              apiName,
+              duration,
+              price: realPlan.price || basePrice,
+              title: realPlan.title || apiName,
+              group: realPlan.group || apiName.split(/[\W0-9]/)[0],
+              meta: {
+                addons: tariffAddons,
+                os: tariffConfigurations.os,
+                datacenter: tariffConfigurations.datacenter,
+              },
+              installation_fee: {
+                price: {
+                  value: +installationPrice,
+                },
+                value: installationPrice,
+              },
+              public: realPlan.public,
+              cpu: realPlan.cpu || cpu,
+            });
+          });
         });
+
+        this.newPlans = newPlans;
+
+        if (!this.plans?.length) {
+          this.setRefreshedPlans();
+        }
       } catch (err) {
+        this.newPlans = null;
         this.$store.commit("snackbar/showSnackbarError", {
           message: err.response?.data?.message ?? err.message ?? err,
         });
       } finally {
         this.isRefreshLoading = false;
       }
-    },
-    async fetchPlans() {
-      const {
-        meta: { plans },
-      } = await api.servicesProviders.action({
-        action: "get_baremetal_plans",
-        uuid: this.sp.uuid,
-      });
-
-      return this.getApiProducts(plans);
-    },
-    async fetchAddonsToPlan({ planCode, duration }) {
-      const {
-        meta: { options },
-      } = await api.post(`/sp/${this.sp.uuid}/invoke`, {
-        method: "get_baremetal_options",
-        params: { planCode },
-      });
-      const {
-        bandwidth = [],
-        memory = [],
-        storage = [],
-        vrack = [],
-        ["system-storage"]: sys = [],
-      } = options;
-      const plans = [...bandwidth, ...memory, ...storage, ...vrack, ...sys];
-
-      return this.getApiProducts(plans, planCode).filter(
-        (p) => p.duration === duration
-      );
-    },
-    async fetchConfigurationToPlan({ planCode, duration }) {
-      const {
-        meta: { requiredConfiguration },
-      } = await api.post(`/sp/${this.sp.uuid}/invoke`, {
-        method: "get_required_configuration",
-        params: {
-          planCode: planCode,
-          duration: duration,
-          pricingMode: duration === "P1M" ? "default" : "upfront12",
-        },
-      });
-
-      const datacenter =
-        requiredConfiguration.find((el) => el.label.includes("datacenter"))
-          ?.allowedValues ?? [];
-
-      const os =
-        requiredConfiguration.find((el) => el.label.includes("os"))
-          ?.allowedValues ?? [];
-
-      return { os, datacenter };
-    },
-    async fetchCpuToPlan(plan) {
-      const { planCode, duration } = plan;
-      const addons = plan.meta.addons
-        ?.filter(
-          (a, index, arr) =>
-            +a.basePrice === 0 &&
-            index ===
-              arr.findIndex((dublicate) =>
-                dublicate.planCode.startsWith(a.planCode.split("-")?.[0])
-              )
-        )
-        ?.map((a) => a.planCode);
-      const configuration = {
-        dedicated_datacenter: plan.meta.datacenter[0],
-        dedicated_os: plan.meta.os[0],
-      };
-
-      const { meta } = await api.servicesProviders.action({
-        uuid: this.sp.uuid,
-        action: "checkout_baremetal",
-        params: {
-          configuration,
-          addons,
-          planCode,
-          duration,
-          pricingMode: duration === "P1M" ? "default" : "upfront12",
-        },
-      });
-
-      return meta.order.details.find(
-        (d) =>
-          d.description.toLowerCase().includes("intel") ||
-          d.description.toLowerCase().includes("amd")
-      )?.description;
     },
     setPlanGroups() {
       const groups = [];
@@ -517,6 +467,8 @@ export default {
       plan.products = {};
       plan.resources = [];
 
+      this.$emit("changeFee", this.fee);
+
       this.plans.forEach((p) => {
         p.meta.addons?.forEach((a) => {
           plan.resources.push({
@@ -532,9 +484,9 @@ export default {
           });
         });
 
-        const addons = (p.meta.addons = (p.meta.addons || [])
+        const addons = (p.meta.addons || [])
           .filter((addon) => addon.public)
-          ?.map((el) => ({ id: el.planCode, title: el.title })));
+          ?.map((el) => ({ id: el.planCode, title: el.title }));
 
         plan.products[p.id] = {
           kind: "PREPAID",
@@ -655,7 +607,7 @@ export default {
             ...p.meta,
             addons: p.meta.addons?.map((a) => ({
               ...a,
-              public: value && a.basePrice === 0,
+              public: value && +a.basePrice === 0,
             })),
           },
           public: value,
@@ -677,19 +629,28 @@ export default {
       });
     },
   },
+  mounted() {
+    this.refreshApiPlans();
+  },
   created() {
+    this.$emit("changeFee", this.template.fee);
+
     this.plans = Object.keys(this.template.products || {}).map((key) => {
       const product = this.template.products[key];
 
       const [duration, planCode] = key.split(" ");
 
       const addons = this.template.resources
-        .map((a) => {
-          const [addonDuration, id, addonPlanCode] = a.key.split(" ");
+        .filter((a) => {
+          const [addonDuration, addonPlanCode] = a.key.split(" ");
 
-          if (duration !== addonDuration || planCode !== addonPlanCode) {
-            return;
+          if (addonDuration === duration && addonPlanCode === planCode) {
+            return true;
           }
+          return false;
+        })
+        .map((a) => {
+          const id = a.key.split(" ")[1];
 
           return {
             ...a,
@@ -699,8 +660,7 @@ export default {
             duration,
             basePrice: a.meta.basePrice,
           };
-        })
-        .filter((a) => !!a);
+        });
 
       return {
         ...product,

@@ -3,6 +3,10 @@ services:
   proxy:
     image: traefik:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
     labels:
       - traefik.enable=true
       - traefik.http.routers.traefik.entrypoints=https
@@ -20,11 +24,15 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./letsencrypt/:/etc/traefik/acme/
     networks:
-      - proxy
+      proxy:
 
   health:
     image: ghcr.io/slntopp/nocloud/health:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
     labels:
       - traefik.enable=true
       - traefik.http.routers.health.rule=Host(`api.${BASE_DOMAIN}`)
@@ -35,16 +43,23 @@ services:
       - traefik.http.services.health.loadbalancer.server.port=8000
       - traefik.http.services.health.loadbalancer.server.scheme=h2c
     environment:
-      LOG_LEVEL: -1
+      LOG_LEVEL: 0
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
       PROBABLES: registry:8000,billing:8000,services-registry:8000,sp-registry:8000,settings:8000,dns-mgmt:8000,edge:8000
+      REDIS_HOST: redis_settings:6379
     networks:
       - proxy
       - grpc-internal
+      - redis
+
   web:
     image: ghcr.io/slntopp/nocloud/apiserver-web:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
     depends_on:
       - proxy
     labels:
@@ -59,23 +74,55 @@ services:
 
       - traefik.http.routers.web_ui.rule=Host(`api.${BASE_DOMAIN}`)&&PathPrefix(`/admin`)
       - traefik.http.routers.web_ui.entrypoints=https
-      - traefik.http.routers.web_ui.service=web_ui@docker
-      - traefik.http.routers.web_ui.middlewares=web_ui_stripprefix
       - traefik.http.routers.web_ui.tls=true
       - traefik.http.routers.web_ui.tls.certresolver=letsencrypt
+      - traefik.http.routers.web_ui.service=web_ui@docker
+      - traefik.http.routers.web_ui.middlewares=web_ui_stripprefix
       - traefik.http.middlewares.web_ui_stripprefix.stripprefix.prefixes=/admin
       - traefik.http.services.web_ui.loadbalancer.server.port=8080
+
+      - "traefik.http.middlewares.web_cors.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,DELETE,PATCH,HEAD"
+      - "traefik.http.middlewares.web_cors.headers.accesscontrolalloworiginlist=https://*.${BASE_DOMAIN}"
+      - "traefik.http.middlewares.web_cors.headers.accesscontrolmaxage=100"
+      - "traefik.http.middlewares.web_cors.headers.accesscontrolallowcredentials=true"
+      - "traefik.http.middlewares.web_cors.headers.addvaryheader=false"
     environment:
-      LOG_LEVEL: -1
+      LOG_LEVEL: 0
       WITH_BLOCK: "true"
       APISERVER_HOST: "api.${BASE_DOMAIN}:8000"
       INSECURE: "false"
-      CORS_ALLOWED: "https://app.${BASE_DOMAIN}, https://*"
+      CORS_ALLOWED: "https://app.${BASE_DOMAIN},https://*"
     networks:
       - proxy
 
+  app:
+    image: ghcr.io/support-pl/nocloud-app:latest
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+    depends_on:
+      - proxy
+    labels:
+      - nocloud.update=true
+      - traefik.enable=true
+      - traefik.http.routers.app.entrypoints=https
+      - traefik.http.routers.app.rule=Host(`app.${BASE_DOMAIN}`)
+      - traefik.http.routers.app.tls=true
+      - traefik.http.routers.app.tls.certresolver=letsencrypt
+      - traefik.http.services.app.loadbalancer.server.port=8080
+    environment:
+      BASE_URL: "https://api.${BASE_DOMAIN}/"
+    networks:
+      proxy:
+    volumes:
+      - ./app_config/config.json:/dist/config.json
+#      - ./app_config/logo.png:/dist/logo.png
+
+
   # iproxy:
-  #   image: ghcr.io/slntopp/nocloud/proxy:dev-socket-proxy
+  #   image: ghcr.io/slntopp/nocloud/proxy:latest
   #   restart: always
   #   labels:
   #     - traefik.enable=true
@@ -100,6 +147,10 @@ services:
   registry:
     image: ghcr.io/slntopp/nocloud/registry:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
     labels:
       - traefik.enable=true
       - traefik.http.routers.registry.rule=Host(`api.${BASE_DOMAIN}`)
@@ -110,24 +161,31 @@ services:
       - traefik.http.services.registry.loadbalancer.server.port=8000
       - traefik.http.services.registry.loadbalancer.server.scheme=h2c
     environment:
-      LOG_LEVEL: -1
+      LOG_LEVEL: 0
       PORT: 8000
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       NOCLOUD_ROOT_PASSWORD: "${NOCLOUD_ROOT_PASS}"
       SIGNING_KEY: "${SIGNING_KEY}"
       SETTINGS_HOST: settings:8000
+      REDIS_HOST: redis_settings:6379
     depends_on:
       - db
     networks:
       - proxy
       - arangodb
       - grpc-internal
+      - redis
     links:
       - db
+
   services-registry:
     image: ghcr.io/slntopp/nocloud/services-registry:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
     labels:
       - traefik.enable=true
       - traefik.http.routers.services.rule=Host(`api.${BASE_DOMAIN}`)
@@ -145,8 +203,9 @@ services:
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
       BILLING_HOST: billing:8000
-      DRIVERS: driver-ione:8080
+      DRIVERS: driver-ione:8080 driver-virtual:8080
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      REDIS_HOST: redis_settings:6379
     depends_on:
       - db
       - billing
@@ -156,30 +215,37 @@ services:
       - arangodb
       - grpc-internal
       - mq
+      - redis
     links:
       - db
       - billing
+
   sp-registry:
     image: ghcr.io/slntopp/nocloud/sp-registry:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
     labels:
       - traefik.enable=true
       - traefik.http.routers.services_providers.rule=Host(`api.${BASE_DOMAIN}`)
-      - traefik.http.routers.services_providers.rule=PathPrefix("/nocloud.services_providers.")
+      - traefik.http.routers.services_providers.rule=PathPrefix("/nocloud.services_providers.", "/nocloud.showcases.")
       - traefik.http.routers.services_providers.tls=true
       - traefik.http.routers.services_providers.tls.certresolver=letsencrypt
       - traefik.http.routers.services_providers.entrypoints=grpc
       - traefik.http.services.services_providers.loadbalancer.server.port=8000
       - traefik.http.services.services_providers.loadbalancer.server.scheme=h2c
     environment:
-      LOG_LEVEL: -1
+      LOG_LEVEL: 0
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
-      DRIVERS: driver-ione:8080
+      DRIVERS: driver-ione:8080 driver-virtual:8080
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      REDIS_HOST: redis_settings:6379
     depends_on:
       - db
       - driver-ione
@@ -188,11 +254,17 @@ services:
       - arangodb
       - grpc-internal
       - mq
+      - redis
     links:
       - db
+
   edge:
     image: ghcr.io/slntopp/nocloud/edge:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
     labels:
       - traefik.enable=true
       - traefik.http.routers.edge.rule=Host(`api.${BASE_DOMAIN}`)
@@ -203,19 +275,25 @@ services:
       - traefik.http.services.edge.loadbalancer.server.port=8000
       - traefik.http.services.edge.loadbalancer.server.scheme=h2c
     environment:
-      LOG_LEVEL: -1
+      LOG_LEVEL: 0
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      REDIS_HOST: redis_settings:6379
     networks:
       - proxy
       - mq
+      - redis
     links:
       - db
 
   dns-mgmt:
     image: ghcr.io/slntopp/nocloud/dns-mgmt:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
     labels:
       - traefik.enable=true
       - traefik.http.routers.dns.rule=Host(`api.${BASE_DOMAIN}`)
@@ -230,13 +308,18 @@ services:
       - grpc-internal
       - redis
     environment:
-      LOG_LEVEL: -1
+      LOG_LEVEL: 0
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
       REDIS_HOST: redis_settings:6379
+
   settings:
     image: ghcr.io/slntopp/nocloud/settings:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
     labels:
       - traefik.enable=true
       - traefik.http.routers.settings.rule=Host(`api.${BASE_DOMAIN}`)
@@ -253,10 +336,11 @@ services:
       - grpc-internal
       - redis
     environment:
-      LOG_LEVEL: -1
+      LOG_LEVEL: 0
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
       REDIS_HOST: redis_settings:6379
+
   redis_settings:
     image: redis
     restart: always
@@ -269,6 +353,10 @@ services:
   billing:
     image: ghcr.io/slntopp/nocloud/billing:latest
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
     labels:
       - traefik.enable=true
       - traefik.http.routers.billing.rule=Host(`api.${BASE_DOMAIN}`)
@@ -286,14 +374,16 @@ services:
       - arangodb
       - grpc-internal
       - mq
+      - redis
     environment:
-      LOG_LEVEL: -1
+      LOG_LEVEL: 0
       PORT: 8000
       SIGNING_KEY: "${SIGNING_KEY}"
       DB_HOST: db:8529
       DB_CRED: "${DB_USER}:${DB_PASS}"
       SETTINGS_HOST: settings:8000
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      REDIS_HOST: redis_settings:6379
     links:
       - db
 
@@ -306,7 +396,6 @@ services:
       - traefik.http.routers.db.rule=Host(`db.${BASE_DOMAIN}`)
       - traefik.http.routers.db.tls=true
       - traefik.http.routers.db.tls.certresolver=letsencrypt
-
       - traefik.http.services.db.loadbalancer.server.port=8529
     environment:
       ARANGO_ROOT_PASSWORD: "${DB_PASS}"
@@ -324,7 +413,6 @@ services:
       - traefik.http.routers.rabbitmq.rule=Host(`rbmq.${BASE_DOMAIN}`)
       - traefik.http.routers.rabbitmq.tls=true
       - traefik.http.routers.rabbitmq.tls.certresolver=letsencrypt
-
       - traefik.http.services.rabbitmq.loadbalancer.server.port=15672
     networks:
       - mq
@@ -334,9 +422,13 @@ services:
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASS}"
 
   driver-ione:
-    container_name: driver
-    restart: always
     image: ghcr.io/slntopp/nocloud-driver-ione:latest
+    container_name: driver
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+    restart: always
     networks:
       - grpc-internal
       - mq
@@ -344,7 +436,25 @@ services:
       DRIVER_TYPE_KEY: ione
       SIGNING_KEY: "${SIGNING_KEY}"
       RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
-      LOG_LEVEL: -1
+      LOG_LEVEL: 0
+
+  driver-virtual:
+    container_name: driver-virtual
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+    image: ghcr.io/slntopp/nocloud-driver-virtual:latest
+    networks:
+      grpc-internal:
+      mq:
+      redis:
+    environment:
+      LOG_LEVEL: 0
+      DRIVER_TYPE_KEY: empty
+      RABBITMQ_CONN: amqp://${RABBITMQ_USER}:${RABBITMQ_PASS}@rabbitmq:5672/
+      REDIS_HOST: redis_settings:6379
 
 networks:
   proxy:

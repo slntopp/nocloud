@@ -141,7 +141,7 @@
             <v-autocomplete
               :label="key"
               item-text="title"
-              item-value="id"
+              return-object
               :items="addon"
               :value="getAddonValue(addon)"
               @change="(value) => setValue('config.addons', value)"
@@ -230,18 +230,30 @@ export default {
         "traffic",
         "ram",
         "softraid",
+        "vrack",
+        "storage",
+        "system-storage",
+        "bandwidth",
+        "memory",
       ];
-
       addons?.forEach((addon) => {
         const addonId = addon.id || addon;
         const key = alowwed.find((a) => addonId.includes(a));
-        if (key) {
-          newAddons[key] = !newAddons[key]?.length
-            ? [{ title: addon?.title || addon, id: addonId }]
-            : [
-                ...newAddons[key],
-                { title: addon?.title || addon, id: addonId },
-              ];
+
+        const addonKey =
+          this.ovhType === "vps"
+            ? [this.instance.config.duration, addonId].join(" ")
+            : `${this.instance.config.duration} ${planCode} ${addonId}`;
+
+        const realAddon = this.instance.billing_plan.resources.find(
+          (a) => a.key === addonKey
+        );
+
+        if (key && realAddon?.public) {
+          if (!newAddons[key]) {
+            newAddons[key] = [];
+          }
+          newAddons[key].push({ ...realAddon, type: key, id: addonId });
         }
       });
 
@@ -266,7 +278,7 @@ export default {
               key: el,
             };
           })
-          .filter((el) => el.public && this.ovhType === "dedicated");
+          .filter((el) => el.public);
 
         data.plan = val;
         val = { ...plan, title: title.join(" ") };
@@ -295,7 +307,6 @@ export default {
         this.regions[val] = product.meta.datacenter;
 
         this.setAddons(product.meta.addons, val);
-
         let savedResources = {
           ips_private: 0,
           ips_public: 1,
@@ -334,13 +345,15 @@ export default {
       if (path.includes("addons")) {
         let { addons } = data.config;
 
+        addons = (addons || []).filter((a) => !a.includes(val.type));
+
         if (this.ovhType === "dedicated") {
           const dedicatedKeys = ["ram", "softraid"];
-          const newAddonKey = dedicatedKeys.find((key) => val.includes(key));
+          const newAddonKey = dedicatedKeys.find((key) => val.id.includes(key));
           addons = addons.filter((a) => !a.includes(newAddonKey));
 
           const resources = {};
-          for (let addonKey of [...addons, val]) {
+          for (let addonKey of [...addons, val.id]) {
             if (addonKey.includes("ram")) {
               resources.ram = parseInt(addonKey?.split("-")[1] ?? 0);
             }
@@ -363,7 +376,7 @@ export default {
           });
         }
 
-        val = [...addons, val];
+        val = [...addons, val.id];
       }
 
       this.$emit("set-value", { value: val, key: path });
@@ -459,11 +472,10 @@ export default {
   },
   watch: {
     ovhType() {
-      for (const key of Object.keys(this.instance.config.configuration)) {
-        this.setValue("config.configuration." + key, undefined);
-      }
-      this.setValue("data", { existing: false });
+      const title = this.instance.title;
+      this.$emit("set-instance", getDefaultInstance());
       this.setValue("config.type", this.ovhType);
+      this.setValue("title", title);
     },
   },
 };
