@@ -324,6 +324,26 @@ export default {
       this.plan.title = checkName(this.plan, this.plans);
 
       const id = this.$route.params?.planId;
+
+      //quick periodKind fix
+      const periodMap = {
+        2592000: "CALENDAR_MONTH",
+        31536000: "CALENDAR_YEAR",
+      };
+
+      Object.keys(this.plan.products || {}).forEach((key) => {
+        this.plan.products[key].periodKind = periodMap[
+          this.plan.products[key].period
+        ]
+          ? periodMap[this.plan.products[key].period]
+          : "DEFAULT";
+      });
+
+      this.plan.resources = this.plan.resources.map((r) => {
+        r.periodKind = periodMap[r.period] ? periodMap[r.period] : "DEFAULT";
+        return r;
+      });
+
       const request =
         action === "edit"
           ? api.plans.update(id, this.plan)
