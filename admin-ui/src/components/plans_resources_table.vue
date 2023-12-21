@@ -58,7 +58,7 @@
           type="number"
           :value="item.min"
           :rules="minRules"
-          @input="changeResource('min', $event, item.id)"
+          @input="changeResource('min', !!$event ? $event : undefined, item.id)"
         />
       </template>
       <template v-slot:[`item.max`]="{ item }">
@@ -67,7 +67,7 @@
           type="number"
           :value="item.max"
           :rules="maxRules"
-          @input="changeResource('max', $event, item.id)"
+          @input="changeResource('max', !!$event ? $event : undefined, item.id)"
         />
       </template>
       <template v-slot:[`item.period`]="{ item }">
