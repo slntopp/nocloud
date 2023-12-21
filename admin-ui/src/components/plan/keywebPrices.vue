@@ -421,10 +421,7 @@ const save = async () => {
       title: t.name,
       meta: {
         addons: enabledAddons.map((a) => a.key),
-        os: enabledOs.map((a) => ({
-          key: a.key,
-          type: a.type,
-        })),
+        os: enabledOs.map((a) => a.key),
         keywebId: t.id,
       },
     };
