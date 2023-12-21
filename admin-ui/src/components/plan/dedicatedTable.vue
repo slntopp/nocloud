@@ -451,9 +451,6 @@ export default {
             );
             const apiName = `${invoiceName} (${planCode})`;
 
-            if (realPlan.title.startsWith("Scale")) {
-              console.log(realPlan);
-            }
             newPlans.push({
               planCode,
               id: tariffId,
