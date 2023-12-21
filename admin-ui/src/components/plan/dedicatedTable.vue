@@ -328,7 +328,6 @@ export default {
     setRefreshedPlans() {
       this.plans = JSON.parse(JSON.stringify(this.newPlans));
       this.newPlans = null;
-      this.setFee();
     },
     getProductDescription(products, code) {
       return products.find((p) => p.name === code)?.description;
@@ -378,7 +377,7 @@ export default {
               if (!acc[tariff]) {
                 acc[tariff] = {};
               }
-              acc[tariff][capacity] = pricing.price / 10 ** 9;
+              acc[tariff][capacity] = pricing.price / 10 ** 8;
             }
 
             return acc;
@@ -422,7 +421,7 @@ export default {
                       ({ key }) => key === addonId
                     ) || {};
 
-                  basePrice = this.convertPrice(basePrice / 10 ** 9);
+                  basePrice = this.convertPrice(basePrice / 10 ** 8);
                   const apiName = this.getProductDescription(
                     products,
                     addonInfo.product
@@ -452,6 +451,9 @@ export default {
             );
             const apiName = `${invoiceName} (${planCode})`;
 
+            if (realPlan.title.startsWith("Scale")) {
+              console.log(realPlan);
+            }
             newPlans.push({
               planCode,
               id: tariffId,
