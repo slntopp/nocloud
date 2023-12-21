@@ -233,7 +233,6 @@ export default {
     addons: [],
     addonsHeaders: [
       { text: "Addon", value: "name" },
-      { text: "Margin", value: "margin" },
       {
         text: "Payment",
         value: "duration",
