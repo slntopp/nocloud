@@ -29,7 +29,7 @@
         <v-text-field
           dense
           :value="item.key"
-          :rules="[rules.required]"
+          :rules="requiredRules"
           @change="changeResource('key', $event, item.id)"
         />
       </template>
@@ -37,7 +37,7 @@
         <v-text-field
           dense
           :value="item.title"
-          :rules="[rules.required]"
+          :rules="requiredRules"
           @change="changeResource('title', $event, item.id)"
         />
       </template>
@@ -48,7 +48,7 @@
           type="number"
           :suffix="defaultCurrency"
           :value="item.price"
-          :rules="[rules.price]"
+          :rules="priceRules"
           @input="changeResource('price', $event, item.id)"
         />
       </template>
@@ -126,7 +126,7 @@
             class="d-inline-block mr-4"
             :value="item.on"
             :items="states"
-            :rules="[rules.required]"
+            :rules="requiredRules"
             @change="changeResource('on', $event, item.id)"
           />
           <v-switch
@@ -160,12 +160,11 @@ import RichEditor from "@/components/ui/richEditor.vue";
 
 const props = defineProps({
   resources: { type: Array, required: true },
-  rules: { type: Object },
   type: { type: String, required: true },
   defaultVirtual: { type: Boolean, default: true },
 });
 const emits = defineEmits(["change:resource"]);
-const { resources, rules, type, defaultVirtual } = toRefs(props);
+const { resources, type, defaultVirtual } = toRefs(props);
 
 const { defaultCurrency } = useCurrency();
 
@@ -175,6 +174,8 @@ const expanded = ref([]);
 
 const minRules = ref([(val) => !val || +val > 0 || "Wrong minimum count"]);
 const maxRules = ref([(val) => !val || +val > 0 || "Wrong max count"]);
+const requiredRules = ref([(v) => !!v || "This field is required!"]);
+const priceRules = ref([(v) => (v !== "" && +v >= 0) || "Wrong price"]);
 
 const kinds = ["POSTPAID", "PREPAID"];
 
