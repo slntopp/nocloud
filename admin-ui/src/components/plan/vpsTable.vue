@@ -41,6 +41,34 @@
           <template v-slot:[`item.name`]="{ item }">
             <v-text-field dense style="width: 200px" v-model="item.name" />
           </template>
+
+          <template v-slot:[`item.addons`]="{ item }">
+            <v-dialog width="90vw">
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn icon v-bind="attrs" v-on="on">
+                  <v-icon> mdi-menu-open </v-icon>
+                </v-btn>
+              </template>
+              <nocloud-table
+                table-name="vps-external-addons"
+                :items="getExternalAddons(item)"
+                :headers="externalAddonsHeaders"
+                :show-select="false"
+              >
+                <template v-slot:[`item.sell`]="{ item: addon }">
+                  <v-switch
+                    :input-value="addon.sell"
+                    @change="changeExternalAddonSell(item, addon, $event)"
+                  />
+                </template>
+
+                <template v-slot:[`item.period`]="{ value }">
+                  {{getBillingPeriod(value)}}
+                </template>
+              </nocloud-table>
+            </v-dialog>
+          </template>
+
           <template v-slot:[`item.group`]="{ item }">
             <template v-if="mode === 'edit' && planId === item.id">
               <v-text-field
@@ -125,17 +153,57 @@
         <nocloud-table
           table-name="vps-addons"
           v-else-if="tab === 'Addons'"
-          :show-select="false"
+          v-model="selectedAddons"
           :items="addons"
+          item-key="id"
           :headers="addonsHeaders"
           :loading="isPlansLoading"
           :footer-error="fetchError"
         >
-          <template v-slot:[`item.duration`]="{ value }">
-            {{ getPayment(value) }}
+          <template v-slot:top>
+            <v-toolbar flat color="background">
+              <v-toolbar-title>Actions</v-toolbar-title>
+              <v-divider inset vertical class="mx-4" />
+              <v-spacer />
+
+              <v-btn class="mr-2" color="background-light" @click="addAddon">
+                Create
+              </v-btn>
+              <v-btn
+                @click="removeAddons"
+                color="background-light"
+                :disabled="selectedAddons.length < 1"
+                >Delete</v-btn
+              >
+            </v-toolbar>
           </template>
-          <template v-slot:[`item.price.value`]="{ value }">
-            {{ value }} {{ defaultCurrency }}
+          <template v-slot:[`item.duration`]="{ item }">
+            <date-field
+              v-if="item.virtual"
+              :period="item.fullDate"
+              @changeDate="item.period = getTimestamp($event.value)"
+            />
+            <template v-else>
+              {{ getPayment(item.duration) }}
+            </template>
+          </template>
+          <template v-slot:[`item.price.value`]="{ item }">
+            {{ item.price?.value }}
+            {{ item.price?.value ? defaultCurrency : "" }}
+          </template>
+          <template v-slot:[`item.key`]="{ item }">
+            <v-text-field
+              dense
+              :disabled="!item.virtual"
+              style="width: 200px"
+              v-model="item.key"
+            />
+          </template>
+          <template v-slot:[`item.name`]="{ item }">
+            <v-text-field dense style="width: 200px" v-model="item.name" />
+          </template>
+          <template v-slot:[`item.type`]="{ item }">
+            {{ item.virtual ? "External" : "Internal" }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
@@ -148,8 +216,31 @@
           <template v-slot:[`item.sell`]="{ item }">
             <v-switch v-model="item.public" />
           </template>
+          <template v-slot:[`item.min`]="{ item }">
+            <v-text-field dense type="number" v-model="item.min" />
+          </template>
+          <template v-slot:[`item.max`]="{ item }">
+            <v-text-field dense type="number" v-model="item.max" />
+          </template>
+          <template v-slot:[`item.kind`]="{ item }">
+            <v-radio-group
+              :disabled="!item.virtual"
+              row
+              mandatory
+              v-model="item.kind"
+            >
+              <v-radio
+                v-for="kind of ['PREPAID', 'POSTPAID']"
+                :key="kind"
+                :value="kind"
+                :label="kind.toLowerCase()"
+              />
+            </v-radio-group>
+          </template>
+          <template v-slot:[`item.autoEnable`]="{ item }">
+            <v-switch v-model="item.autoEnable" />
+          </template>
         </nocloud-table>
-
         <div class="os-tab__card" v-else-if="tab === 'OS'">
           <template v-if="allImages.length">
             <v-card
@@ -193,11 +284,12 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
-import { getMarginedValue } from "@/functions";
+import {getBillingPeriod, getFullDate, getMarginedValue, getTimestamp} from "@/functions";
+import DateField from "@/components/date.vue";
 
 export default {
   name: "vps-table",
-  components: { nocloudTable },
+  components: { DateField, nocloudTable },
   props: {
     fee: { type: Object, required: true },
     template: { type: Object, required: true },
@@ -223,6 +315,7 @@ export default {
       },
       { text: "Income price", value: "price.value" },
       { text: "Sale price", value: "value" },
+      { text: "Addons", value: "addons" },
       {
         text: "Sell",
         value: "sell",
@@ -230,14 +323,36 @@ export default {
       },
     ],
 
+    selectedAddons: [],
     addons: [],
     addonsHeaders: [
+      { text: "Key", value: "key" },
       { text: "Addon", value: "name" },
+      { text: "Api name", value: "apiName" },
       {
         text: "Payment",
         value: "duration",
       },
       { text: "Income price", value: "price.value" },
+      { text: "Sale price", value: "value" },
+      { text: "Kind", value: "kind" },
+      { text: "Type", value: "type" },
+      { text: "Min count", value: "min" },
+      { text: "Max count", value: "max" },
+      { text: "Auto enable", value: "autoEnable" },
+      {
+        text: "Sell",
+        value: "sell",
+        width: 100,
+      },
+    ],
+
+    externalAddonsHeaders: [
+      { text: "Name", value: "name" },
+      {
+        text: "Payment",
+        value: "period",
+      },
       { text: "Sale price", value: "value" },
       {
         text: "Sell",
@@ -260,6 +375,8 @@ export default {
     isRefreshLoading: false,
   }),
   methods: {
+    getBillingPeriod,
+    getTimestamp,
     changeImage(value) {
       const i = this.images.indexOf(value);
 
@@ -302,15 +419,20 @@ export default {
 
       this.addons.forEach((el) => {
         plan.resources.push({
-          key: el.id,
+          key: el.virtual ? el.key : el.id,
           public: el.public,
-          kind: "PREPAID",
+          kind: el.kind,
+          min: el.min || undefined,
+          max: el.max || undefined,
           title: el.name,
           price: el.value,
-          period: this.getPeriod(el.duration),
+          virtual: el.virtual,
+          period: el.virtual ? el.period : this.getPeriod(el.duration),
           except: false,
           meta: {
-            basePrice: el.price.value,
+            basePrice: el.price?.value,
+            autoEnable: el.autoEnable,
+            apiName: el.apiName,
           },
           on: [],
         });
@@ -418,8 +540,13 @@ export default {
               const newPrice = this.convertPrice(price.value);
 
               result.push({
+                kind: "PREPAID",
+                autoEnable: false,
+                min: undefined,
+                max: undefined,
                 price: { value: newPrice },
                 duration,
+                apiName: productName,
                 name: productName,
                 value: realAddon.value || price.value,
                 public: !!realAddon.public,
@@ -539,6 +666,7 @@ export default {
     },
     setRefreshedPlans() {
       this.addons = JSON.parse(JSON.stringify(this.newAddons));
+      this.addCustomAddonsToPlan();
       this.plans = JSON.parse(JSON.stringify(this.newPlans));
       this.newPlans = null;
       this.newAddons = null;
@@ -551,6 +679,55 @@ export default {
         const group = plan?.group || plan?.name?.split(/[\W0-9]/)[0];
         if (!this.groups.includes(group)) this.groups.push(group);
       });
+    },
+    addAddon() {
+      this.addons.push({
+        key: "",
+        kind: "POSTPAID",
+        value: 0,
+        period: 0,
+        virtual: true,
+        public: true,
+        max: undefined,
+        min: undefined,
+        id: Math.random().toString(16).slice(2),
+      });
+    },
+    removeAddons() {
+      if (this.selectedAddons.some((a) => !a.virtual)) {
+        return this.$store.commit("snackbar/showSnackbarError", {
+          message: "You cant delete internal plans",
+        });
+      }
+      this.addons = this.addons.filter(
+        (a) => !this.selectedAddons.find((sa) => sa.key === a.key)
+      );
+    },
+    addCustomAddonsToPlan() {
+      this.addons.push(
+        ...this.template.resources
+          .filter((r) => r.virtual)
+          .map((r) => ({
+            ...r,
+            fullDate: getFullDate(r.period),
+            autoEnable: r.meta.autoEnable,
+            value: r.price,
+            id: r.key,
+            name: r.title,
+          }))
+      );
+    },
+    getExternalAddons(item) {
+      return this.addons
+        .filter((a) => a.virtual && a.public)
+        .map((a) => ({ ...a, sell: item.addons.includes(a.id) }));
+    },
+    changeExternalAddonSell(item, addon, value) {
+      if (value) {
+        item.addons.push(addon.id);
+      } else {
+        item.addons = item.addons.filter((a) => a !== addon.id);
+      }
     },
   },
   created() {
@@ -583,21 +760,24 @@ export default {
       };
     });
 
-    this.addons = this.template.resources.map((r) => {
-      const { key } = r;
-      const [duration, planCode] = key.split(" ");
+    this.addons = this.template.resources
+      .filter((r) => !r.virtual)
+      .map((r) => {
+        const { key } = r;
+        const [duration, planCode] = key.split(" ");
 
-      return {
-        ...r,
-        duration,
-        planCode,
-        price: { value: r.meta.basePrice },
-        value: r.price,
-        name: r.title,
-        id: key,
-      };
-    });
+        return {
+          ...r,
+          duration,
+          planCode,
+          price: { value: r.meta.basePrice },
+          value: r.price,
+          name: r.title,
+          id: key,
+        };
+      });
 
+    this.addCustomAddonsToPlan();
     this.images = [...new Set(newImages)];
   },
   mounted() {
@@ -622,8 +802,8 @@ export default {
     },
     allImages() {
       const imagesSet = new Set();
-      this.plans.forEach((p) => {
-        p.os.forEach((os) => imagesSet.add(os));
+      this.plans?.forEach((p) => {
+        p.os?.forEach((os) => imagesSet.add(os));
       });
 
       const imagesArr = [...imagesSet.values()];
