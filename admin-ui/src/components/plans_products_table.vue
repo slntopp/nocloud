@@ -177,24 +177,12 @@
           </template>
 
           <template v-slot:[`item.resources`]="{ item }">
-            <plans-empty-addons-table
+            <product-addons-dialog
               :rules="rules"
-              :addons="resources"
+              :addons="resources.filter((r) => r.public && r.virtual)"
               :product="item.key"
               :item="item"
-              @update:addons="
-                (value) => {
-                  changeResource({ key: 'resources', value });
-                  item.meta.addons = value
-                    .filter(
-                      ({ key }) => key.split('; product: ')[1] === item.key
-                    )
-                    .map(({ key }) => key);
-                  item.meta.autoEnabled = value
-                    .filter(({ auto }) => !!auto)
-                    .map(({ key }) => key);
-                }
-              "
+              @update:addons="(value) => (item.meta.addons = value)"
             />
           </template>
 
@@ -253,9 +241,19 @@
         <plans-resources-table
           v-else-if="tab === 'Resources'"
           :rules="rules"
-          :resources="resources"
+          :resources="resources.filter((v) => v.virtual === false)"
+          :default-virtual="false"
           :type="type"
-          @change:resource="changeResource"
+          @change:resource="changeResource(false, $event)"
+        />
+
+        <plans-resources-table
+          v-else-if="tab === 'Addons'"
+          :rules="rules"
+          :default-virtual="true"
+          :resources="resources.filter((v) => v.virtual === true)"
+          :type="type"
+          @change:resource="changeResource(true, $event)"
         />
       </v-tab-item>
     </v-tabs-items>
@@ -269,7 +267,7 @@ import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
 import plansResourcesTable from "@/components/plans_resources_table.vue";
 import plansEmptyTable from "@/components/plans_empty_table.vue";
-import plansEmptyAddonsTable from "@/components/plans_empty_addons_table_dialog.vue";
+import productAddonsDialog from "@/components/product_addons_dialog.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { getFullDate } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
@@ -299,28 +297,34 @@ const groupAction = ref("");
 const groupActionPayload = ref("");
 
 const kinds = ["POSTPAID", "PREPAID"];
-const tabs = ["Products", "Resources"];
 
-const headers = computed(() =>
-  [
-    { text: "Key", value: "key" },
-    { text: "Title", value: "title" },
-    { text: "Price", value: "price", width: 150 },
-    ["ione", "cpanel", "empty"].includes(type.value) && {
-      text: "One time",
-      value: "meta.oneTime",
-    },
-    { text: "Period", value: "period", width: 220 },
-    { text: "Kind", value: "kind", width: 228 },
-    { text: "Group", value: "group", width: 300 },
-    { text: "Public", value: "public" },
-    { text: "Sorter", value: "sorter" },
-    ["empty"].includes(type.value) && {
-      text: "Addons",
-      value: "resources",
-    },
-  ].filter((a) => !!a)
-);
+const tabs = computed(() => {
+  const tabs = ["Products", "Resources"];
+  if (["ione", "cpanel"].includes(type.value)) {
+    tabs.push("Addons");
+  }
+
+  return tabs;
+});
+
+const headers = computed(() => [
+  { text: "Key", value: "key" },
+  { text: "Title", value: "title" },
+  { text: "Price", value: "price", width: 150 },
+  {
+    text: "One time",
+    value: "meta.oneTime",
+  },
+  { text: "Period", value: "period", width: 220 },
+  { text: "Kind", value: "kind", width: 228 },
+  { text: "Group", value: "group", width: 300 },
+  { text: "Public", value: "public" },
+  { text: "Sorter", value: "sorter" },
+  {
+    text: "Addons",
+    value: "resources",
+  },
+]);
 
 const isEditOpen = ref(false);
 const newMeta = ref({ description: "" });
@@ -340,7 +344,13 @@ function changeProduct(key, value, id) {
   emits("change:product", { key, value, id });
 }
 
-function changeResource(data) {
+function changeResource(virtual, data) {
+  if (data.key === "resources") {
+    data.value = [
+      ...resources.value.filter((r) => r.virtual !== virtual),
+      ...data.value,
+    ];
+  }
   emits("change:resource", data);
 }
 
