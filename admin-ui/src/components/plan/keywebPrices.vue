@@ -326,7 +326,7 @@ onMounted(async () => {
                 price: a.price,
                 virtual: true,
                 key: a.key,
-                sell: !!realProducts[duration].meta.addons?.includes(a.key),
+                sell: !!realProducts[duration]?.meta.addons?.includes(a.key),
                 type: "Custom",
               }))
           ),
@@ -342,6 +342,7 @@ onMounted(async () => {
 
     tariffs.value = products;
   } catch (e) {
+    console.log(e);
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during fetch keyweb prices",
     });
