@@ -236,18 +236,18 @@ export default {
         "bandwidth",
         "memory",
       ];
-      addons?.forEach((addon) => {
-        const addonId = addon.id || addon;
-        const key = alowwed.find((a) => addonId.includes(a));
-
-        const addonKey =
-          this.ovhType === "vps"
-            ? [this.instance.config.duration, addonId].join(" ")
-            : `${this.instance.config.duration} ${planCode} ${addonId}`;
+      addons?.forEach((addonKey) => {
+        const key = alowwed.find((a) => addonKey.includes(a));
 
         const realAddon = this.instance.billing_plan.resources.find(
           (a) => a.key === addonKey
         );
+
+        const addonId =
+          this.ovhType === "vps"
+            ? addonKey.split(" ")[1]
+            : addonKey.split(" ")[2];
+
 
         if (key && realAddon?.public) {
           if (!newAddons[key]) {
