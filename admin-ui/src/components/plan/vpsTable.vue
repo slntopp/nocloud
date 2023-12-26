@@ -63,7 +63,7 @@
                 </template>
 
                 <template v-slot:[`item.period`]="{ value }">
-                  {{getBillingPeriod(value)}}
+                  {{ getBillingPeriod(value) }}
                 </template>
               </nocloud-table>
             </v-dialog>
@@ -284,7 +284,12 @@
 <script>
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
-import {getBillingPeriod, getFullDate, getMarginedValue, getTimestamp} from "@/functions";
+import {
+  getBillingPeriod,
+  getFullDate,
+  getMarginedValue,
+  getTimestamp,
+} from "@/functions";
 import DateField from "@/components/date.vue";
 
 export default {
@@ -392,7 +397,7 @@ export default {
       this.plans.forEach((el) => {
         const [, , cpu, ram, disk] = el.planCode.split("-");
         const meta = {
-          addons: el.addons,
+          addons: el.addons.map((a) => [el.duration, a].join(" ")),
           datacenter: el.datacenter,
           os: el.os.filter((item) => this.images.includes(item)),
           hidedOs: el.os.filter((item) => !this.images.includes(item)),
@@ -751,7 +756,7 @@ export default {
         price: { value: basePrice },
         value: product.price,
         datacenter,
-        addons,
+        addons: addons.map((a) => a.split(" ")[1]),
         installation_fee: product.installationFee,
         os,
         name: product.title,
