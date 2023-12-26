@@ -155,10 +155,12 @@ const fullProduct = computed(() => billingPlan.value?.products[product.value]);
 
 const addons = computed(() => {
   const addons = [];
-  fullProduct.value?.meta.addons?.forEach((a) => {
+  fullProduct.value?.meta.addons?.forEach((addonKey) => {
+    const addon = billingPlan.value.resources.find((r) => r.key === addonKey);
     addons.push({
-      ...a,
-      ...billingPlan.value.resources.find((r) => r.key === a.key),
+      title: addon.title,
+      type: addon.meta.type,
+      key: addon.key,
     });
   });
 
@@ -169,15 +171,17 @@ const addonsTypes = computed(() => {
 });
 
 const os = computed(() => {
-  const os = [];
-  fullProduct.value?.meta.os?.forEach((a) => {
-    os.push({
-      ...a,
-      ...billingPlan.value.resources.find((r) => r.key === a.key),
+  const oss = [];
+  fullProduct.value?.meta.os?.forEach((osKey) => {
+    const os = billingPlan.value.resources.find((r) => r.key === osKey);
+    oss.push({
+      title: os.title,
+      type: os.meta.type,
+      key: os.key,
     });
   });
 
-  return os;
+  return oss;
 });
 
 const products = computed(() => {
