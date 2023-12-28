@@ -196,6 +196,29 @@ GRAPH @permissions SORT path.edges[0].level
 	})
 `
 
+const getInstanceWithAccessLevel = `
+FOR path IN OUTBOUND K_SHORTEST_PATHS @account TO @node
+GRAPH @permissions SORT path.edges[0].level
+	LET bp = DOCUMENT(CONCAT(@bps, "/", path.vertices[-1].billing_plan.uuid))
+    RETURN MERGE(path.vertices[-1], {
+        uuid: path.vertices[-1]._key,
+        billing_plan: {
+			uuid: bp._key,
+			title: bp.title,
+			type: bp.type,
+			kind: bp.kind,
+			resources: bp.resources,
+			products: {
+			    [path.vertices[-1].product]: bp.products[path.vertices[-1].product],
+            },
+			meta: bp.meta,
+			fee: bp.fee,
+			software: bp.software
+        },
+	    access: {level: path.edges[0].level ? : 0, role: path.edges[0].role ? : "none", namespace: path.vertices[-2]._key }
+	})
+`
+
 func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id driver.DocumentID) (T, error) {
 	var o T
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -207,6 +230,35 @@ func GetWithAccess[T Accessible](ctx context.Context, db driver.Database, id dri
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	}
 	c, err := db.Query(ctx, getWithAccessLevel, vars)
+	if err != nil {
+		return o, err
+	}
+	defer c.Close()
+
+	meta, err := c.ReadDocument(ctx, &o)
+	if err != nil {
+		return o, err
+	}
+
+	if requestor_id.String() == meta.ID.String() {
+		o.GetAccess().Level = access.Level_ROOT
+	}
+
+	return o, nil
+}
+
+func GetInstanceWithAccess(ctx context.Context, db driver.Database, id driver.DocumentID) (Instance, error) {
+	var o Instance
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	requestor_id := driver.NewDocumentID(schema.ACCOUNTS_COL, requestor)
+
+	vars := map[string]interface{}{
+		"account":     requestor_id,
+		"node":        id,
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"bps":         schema.BILLING_PLANS_COL,
+	}
+	c, err := db.Query(ctx, getInstanceWithAccessLevel, vars)
 	if err != nil {
 		return o, err
 	}
