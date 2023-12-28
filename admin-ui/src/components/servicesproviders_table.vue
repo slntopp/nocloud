@@ -113,12 +113,12 @@ export default {
       const types = require.context(
         "@/components/modules/",
         true,
-        /serviceCreate\.vue$/
+        /instanceCreate\.vue$/
       );
 
       types.keys().forEach((key) => {
         const matched = key.match(
-          /\.\/([A-Za-z0-9-_,\s]*)\/serviceCreate\.vue/i
+          /\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i
         );
         if (matched && matched.length > 1) {
           this.allTypes.push(matched[1]);
