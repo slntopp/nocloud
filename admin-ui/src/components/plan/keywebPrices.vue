@@ -22,71 +22,46 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <v-tabs
-      class="rounded-t-lg"
-      v-model="tabsIndex"
-      background-color="background-light"
-    >
-      <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
-    </v-tabs>
+    <div>
+      <div class="mt-4" v-if="!isLoading">
+        <v-btn class="mx-1" @click="setSellToAllTariffs(true)"
+          >Enable all</v-btn
+        >
+        <v-btn class="mx-1" @click="setSellToAllTariffs(false)"
+          >Disable all</v-btn
+        >
+      </div>
+      <nocloud-table
+        :headers="headers"
+        table-name="keyweb-prices"
+        class="pa-4"
+        :loading="isLoading"
+        item-key="text"
+        :show-select="false"
+        :items="tariffs"
+      >
+        <template v-slot:[`item.price`]="{ item }">
+          <v-text-field v-model.number="item.price" type="number" />
+        </template>
+        <template v-slot:[`item.name`]="{ item }">
+          <v-text-field v-model="item.name" />
+        </template>
+        <template v-slot:[`item.sell`]="{ item }">
+          <v-switch v-model.number="item.sell" />
+        </template>
 
-    <v-tabs-items
-      v-model="tabsIndex"
-      style="background: var(--v-background-light-base)"
-      class="rounded-b-lg"
-    >
-      <v-tab-item v-for="tab in tabs" :key="tab">
-        <v-progress-linear v-if="isLoading" indeterminate class="pt-1" />
-
-        <div v-if="tab === 'Tariffs'">
-          <div class="mt-4" v-if="!isLoading">
-            <v-btn class="mx-1" @click="setSellToAllTariffs(true)"
-              >Enable all</v-btn
-            >
-            <v-btn class="mx-1" @click="setSellToAllTariffs(false)"
-              >Disable all</v-btn
-            >
-          </div>
-          <nocloud-table
-            :headers="headers"
-            table-name="keyweb-prices"
-            class="pa-4"
-            item-key="text"
-            :show-select="false"
-            :items="tariffs"
-          >
-            <template v-slot:[`item.price`]="{ item }">
-              <v-text-field v-model.number="item.price" type="number" />
-            </template>
-            <template v-slot:[`item.name`]="{ item }">
-              <v-text-field v-model="item.name" />
-            </template>
-            <template v-slot:[`item.sell`]="{ item }">
-              <v-switch v-model.number="item.sell" />
-            </template>
-
-            <template v-slot:[`item.os`]="{ item }">
-              <v-btn icon @click="openOs(item)">
-                <v-icon> mdi-menu-open </v-icon>
-              </v-btn>
-            </template>
-            <template v-slot:[`item.addons`]="{ item }">
-              <v-btn icon @click="openAddons(item)">
-                <v-icon> mdi-menu-open </v-icon>
-              </v-btn>
-            </template>
-          </nocloud-table>
-        </div>
-
-        <plans-resources-table
-          v-show="tab === 'Addons'"
-          :default-virtual="true"
-          @change:resource="changeCustomAddons($event)"
-          :resources="customAddonsResources"
-          type="ovh dedicated"
-        />
-      </v-tab-item>
-    </v-tabs-items>
+        <template v-slot:[`item.os`]="{ item }">
+          <v-btn icon @click="openOs(item)">
+            <v-icon> mdi-menu-open </v-icon>
+          </v-btn>
+        </template>
+        <template v-slot:[`item.addons`]="{ item }">
+          <v-btn icon @click="openAddons(item)">
+            <v-icon> mdi-menu-open </v-icon>
+          </v-btn>
+        </template>
+      </nocloud-table>
+    </div>
 
     <v-dialog max-width="70vw" v-model="isAddonsOpen">
       <v-card color="background-light">
@@ -158,9 +133,8 @@ import { useStore } from "@/store";
 import api from "@/api";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
-import { getBillingPeriod, getMarginedValue, getTimestamp } from "@/functions";
+import { getMarginedValue } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
-import plansResourcesTable from "@/components/plans_resources_table.vue";
 
 const props = defineProps(["template"]);
 
@@ -175,9 +149,6 @@ const isValid = ref(false);
 const selectedTariff = ref({});
 const tariffs = ref([]);
 const fee = ref({});
-const tabsIndex = ref(0);
-const tabs = ["Tariffs", "Addons"];
-const customAddonsResources = ref([]);
 
 const headers = ref([
   { text: "Key", value: "key" },
@@ -211,10 +182,6 @@ const osHeaders = ref([
 onMounted(async () => {
   isLoading.value = true;
   try {
-    customAddonsResources.value = [
-      ...props.template.resources.filter((p) => p.virtual),
-    ];
-
     await store.dispatch("servicesProviders/fetch", { anonymously: false });
     const spUuid = sps.value.find((sp) =>
       sp.meta?.plans?.includes(props.template.uuid)
@@ -315,21 +282,7 @@ onMounted(async () => {
           key: keys[duration],
           duration: duration,
           os: getTariffAddons("os", duration),
-          addons: getTariffAddons("backup", duration).concat(
-            customAddonsResources.value
-              .filter((a) => a.public)
-              .map((a) => ({
-                baseName: a.title,
-                basePrice: null,
-                duration: getBillingPeriod(a.period),
-                name: a.title,
-                price: a.price,
-                virtual: true,
-                key: a.key,
-                sell: !!realProducts[duration]?.meta.addons?.includes(a.key),
-                type: "Custom",
-              }))
-          ),
+          addons: getTariffAddons("backup", duration),
           price: realProducts[duration]?.price || basePrice,
           basePrice,
           sell: !!realProducts[duration],
@@ -389,8 +342,6 @@ const save = async () => {
   const products = {};
   const resources = [];
 
-  resources.push(...customAddonsResources.value);
-
   const enabledTariffs = tariffs.value.filter((t) => t.sell);
 
   enabledTariffs.forEach((t) => {
@@ -446,24 +397,6 @@ const save = async () => {
 
 const changeFee = (value) => {
   fee.value = JSON.parse(JSON.stringify(value));
-};
-
-const changeCustomAddons = ({ key, value, id }) => {
-  if (key === "resources") {
-    customAddonsResources.value = value;
-    return;
-  }
-
-  customAddonsResources.value = customAddonsResources.value.map((c) => {
-    if (c.id === id) {
-      if (key === "date") {
-        c.period = getTimestamp(value);
-      } else {
-        c[key] = value;
-      }
-    }
-    return c;
-  });
 };
 
 const setFee = () => {

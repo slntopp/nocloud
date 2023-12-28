@@ -22,91 +22,43 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <v-tabs
-      class="rounded-t-lg"
-      v-model="tabsIndex"
-      background-color="background-light"
-    >
-      <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
-    </v-tabs>
+    <div class="mt-4" v-if="!isPricesLoading">
+      <v-btn class="mx-1" @click="setSellToAllTariffs(true)">Enable all</v-btn>
+      <v-btn class="mx-1" @click="setSellToAllTariffs(false)"
+        >Disable all</v-btn
+      >
+    </div>
 
-    <v-tabs-items
-      v-model="tabsIndex"
-      style="background: var(--v-background-light-base)"
-      class="rounded-b-lg"
-    >
-      <v-tab-item v-for="tab in tabs" :key="tab">
-        <v-progress-linear v-if="isPricesLoading" indeterminate class="pt-1" />
-
-        <div v-if="tab === 'Tariffs'">
-          <div class="mt-4" v-if="!isPricesLoading">
-            <v-btn class="mx-1" @click="setSellToAllTariffs(true)"
-              >Enable all</v-btn
-            >
-            <v-btn class="mx-1" @click="setSellToAllTariffs(false)"
-              >Disable all</v-btn
-            >
-          </div>
-
-          <nocloud-table
-            table-name="cpanel-prices"
-            class="pa-4"
-            item-key="key"
-            :show-select="false"
-            :items="prices"
-            :headers="headers"
-          >
-            <template v-slot:[`item.addons`]="{ item }">
-              <v-dialog width="90vw">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-btn icon v-bind="attrs" v-on="on">
-                    <v-icon> mdi-menu-open </v-icon>
-                  </v-btn>
-                </template>
-
-                <nocloud-table
-                  table-name="cpanel-addons-prices"
-                  class="pa-4"
-                  item-key="id"
-                  :show-select="false"
-                  :items="item.addons.filter((a) => a.public)"
-                  :headers="addonsHeaders"
-                >
-                  <template v-slot:[`item.sell`]="{ item: addon }">
-                    <v-switch v-model="addon.sell" />
-                  </template>
-                </nocloud-table>
-              </v-dialog>
-            </template>
-            <template v-slot:[`item.enabled`]="{ item }">
-              <v-switch v-model="item.enabled" />
-            </template>
-            <template v-slot:[`item.name`]="{ item }">
-              <v-text-field v-model="item.name" />
-            </template>
-            <template v-slot:[`item.price`]="{ item }">
-              <v-text-field type="number" v-model.number="item.price" />
-            </template>
-            <template v-slot:[`item.sorter`]="{ item }">
-              <v-text-field type="number" v-model.number="item.sorter" />
-            </template>
-            <template v-slot:[`item.period`]="{ item }">
-              <date-field
-                :period="item.period"
-                @changeDate="item.period = $event"
-              />
-            </template>
-          </nocloud-table>
-        </div>
-        <plans-resources-table
-          v-show="tab === 'Addons'"
-          :default-virtual="true"
-          @change:resource="changeCustomAddons($event)"
-          :resources="customAddonsResources"
-          type="ovh dedicated"
-        />
-      </v-tab-item>
-    </v-tabs-items>
+    <div>
+      <nocloud-table
+        :loading="isPricesLoading"
+        table-name="cpanel-prices"
+        class="pa-4"
+        item-key="key"
+        :show-select="false"
+        :items="prices"
+        :headers="headers"
+      >
+        <template v-slot:[`item.enabled`]="{ item }">
+          <v-switch v-model="item.enabled" />
+        </template>
+        <template v-slot:[`item.name`]="{ item }">
+          <v-text-field v-model="item.name" />
+        </template>
+        <template v-slot:[`item.price`]="{ item }">
+          <v-text-field type="number" v-model.number="item.price" />
+        </template>
+        <template v-slot:[`item.sorter`]="{ item }">
+          <v-text-field type="number" v-model.number="item.sorter" />
+        </template>
+        <template v-slot:[`item.period`]="{ item }">
+          <date-field
+            :period="item.period"
+            @changeDate="item.period = $event"
+          />
+        </template>
+      </nocloud-table>
+    </div>
     <v-card-actions class="d-flex justify-end">
       <v-btn
         :loading="isSaveLoading"
@@ -123,15 +75,13 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import nocloudTable from "@/components/table.vue";
 import DateField from "@/components/date.vue";
-import { getBillingPeriod, getMarginedValue, getTimestamp } from "@/functions";
+import { getMarginedValue, getTimestamp } from "@/functions";
 import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
-import plansResourcesTable from "@/components/plans_resources_table.vue";
 
 export default {
   name: "plan-prices",
   components: {
-    plansResourcesTable,
     ConfirmDialog,
     PlanOpensrs,
     DateField,
@@ -177,27 +127,10 @@ export default {
       { text: "lve_cpu", value: "lve_cpu" },
       { text: "lve_pmem", value: "lve_pmem" },
       { text: "Sorter", value: "sorter" },
-      { text: "Addons", value: "addons" },
       { text: "Period", value: "period", width: 220 },
       { text: "Price", value: "price", width: 150 },
       { text: "Enabled", value: "enabled" },
     ],
-    addonsHeaders: [
-      { text: "Title", value: "title" },
-      {
-        text: "Period",
-        value: "period",
-      },
-      { text: "Price", value: "price" },
-      {
-        text: "Sell",
-        value: "sell",
-        width: 100,
-      },
-    ],
-    tabs: ["Tariffs", "Addons"],
-    tabsIndex: 0,
-    customAddonsResources: [],
   }),
   methods: {
     async fetchPrices() {
@@ -239,30 +172,9 @@ export default {
           time: time.at(-2),
         };
 
-        price.addons = JSON.parse(
-          JSON.stringify(this.customAddonsResources)
-        ).map((a) => ({ ...a, sell: product?.meta?.addons?.includes(a.key) }));
-
         return price;
       });
       this.isPricesLoading = false;
-    },
-    changeCustomAddons({ key, value, id }) {
-      if (key === "resources") {
-        this.customAddonsResources = value;
-        return;
-      }
-
-      this.customAddonsResources = this.customAddonsResources.map((c) => {
-        if (c.id === id) {
-          if (key === "date") {
-            c.period = getTimestamp(value);
-          } else {
-            c[key] = value;
-          }
-        }
-        return c;
-      });
     },
     changeFee(value) {
       this.fee = JSON.parse(JSON.stringify(value));
@@ -281,8 +193,6 @@ export default {
       const products = {};
       const resources = [];
 
-      resources.push(...this.customAddonsResources);
-
       this.prices
         .filter((p) => p.enabled)
         .forEach((item) => {
@@ -292,11 +202,6 @@ export default {
             price: item.price,
             period: getTimestamp(item.period),
             sorter: item.sorter,
-            meta: {
-              addons: item.addons
-                .filter((a) => a.sell && a.public)
-                .map((a) => a.key),
-            },
             resources: {
               model: item.key,
               bandwidth: item.BWLIMIT || undefined,
@@ -324,9 +229,6 @@ export default {
     },
   },
   mounted() {
-    this.customAddonsResources = this.template.resources
-      .filter((r) => r.virtual)
-      .map((a) => ({ ...a, period: getBillingPeriod(a.period) }));
     this.fetchPrices();
     this.products = this.template.products;
   },
