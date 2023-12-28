@@ -276,7 +276,7 @@ export default {
       this.plans.forEach((el) => {
         const [, , cpu, ram, disk] = el.planCode.split("-");
         const meta = {
-          addons: el.addons,
+          addons: el.addons.map((a) => [el.duration, a].join(" ")),
           datacenter: el.datacenter,
           os: el.os.filter((item) => this.images.includes(item)),
           hidedOs: el.os.filter((item) => !this.images.includes(item)),

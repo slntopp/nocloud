@@ -25,37 +25,45 @@
     <div class="mt-4" v-if="!isPricesLoading">
       <v-btn class="mx-1" @click="setSellToAllTariffs(true)">Enable all</v-btn>
       <v-btn class="mx-1" @click="setSellToAllTariffs(false)"
-      >Disable all</v-btn
+        >Disable all</v-btn
       >
     </div>
 
-    <nocloud-table
-      table-name="cpanel-prices"
-      class="pa-4"
-      item-key="key"
-      :show-select="false"
-      :items="prices"
-      :headers="headers"
-      :loading="isPricesLoading"
-    >
-      <template v-slot:[`item.enabled`]="{ item }">
-        <v-switch v-model="item.enabled" />
-      </template>
-      <template v-slot:[`item.name`]="{ item }">
-        <v-text-field v-model="item.name" />
-      </template>
-      <template v-slot:[`item.price`]="{ item }">
-        <v-text-field type="number" v-model.number="item.price" />
-      </template>
-      <template v-slot:[`item.sorter`]="{ item }">
-        <v-text-field type="number" v-model.number="item.sorter" />
-      </template>
-      <template v-slot:[`item.period`]="{ item }">
-        <date-field :period="item.period" @changeDate="item.period = $event" />
-      </template>
-    </nocloud-table>
+    <div>
+      <nocloud-table
+        :loading="isPricesLoading"
+        table-name="cpanel-prices"
+        class="pa-4"
+        item-key="key"
+        :show-select="false"
+        :items="prices"
+        :headers="headers"
+      >
+        <template v-slot:[`item.enabled`]="{ item }">
+          <v-switch v-model="item.enabled" />
+        </template>
+        <template v-slot:[`item.name`]="{ item }">
+          <v-text-field v-model="item.name" />
+        </template>
+        <template v-slot:[`item.price`]="{ item }">
+          <v-text-field type="number" v-model.number="item.price" />
+        </template>
+        <template v-slot:[`item.sorter`]="{ item }">
+          <v-text-field type="number" v-model.number="item.sorter" />
+        </template>
+        <template v-slot:[`item.period`]="{ item }">
+          <date-field
+            :period="item.period"
+            @changeDate="item.period = $event"
+          />
+        </template>
+      </nocloud-table>
+    </div>
     <v-card-actions class="d-flex justify-end">
-      <v-btn :loading="isSaveLoading" :disabled="isPricesLoading" @click="savePrices"
+      <v-btn
+        :loading="isSaveLoading"
+        :disabled="isPricesLoading"
+        @click="savePrices"
         >save</v-btn
       >
     </v-card-actions>
@@ -73,7 +81,12 @@ import ConfirmDialog from "@/components/confirmDialog.vue";
 
 export default {
   name: "plan-prices",
-  components: { ConfirmDialog, PlanOpensrs, DateField, nocloudTable },
+  components: {
+    ConfirmDialog,
+    PlanOpensrs,
+    DateField,
+    nocloudTable,
+  },
   mixins: [snackbar],
   props: { template: { type: Object, required: true } },
   data: () => ({
@@ -122,7 +135,9 @@ export default {
   methods: {
     async fetchPrices() {
       this.isPricesLoading = true;
-      await this.$store.dispatch("servicesProviders/fetch",{anonymously :true});
+      await this.$store.dispatch("servicesProviders/fetch", {
+        anonymously: true,
+      });
       const sp = this.sps.find(
         (sp) =>
           sp.type === "cpanel" && sp.meta.plans?.includes(this.template.uuid)
@@ -169,13 +184,15 @@ export default {
         t.price = getMarginedValue(this.fee, t.price);
       });
     },
-    setSellToAllTariffs(value){
+    setSellToAllTariffs(value) {
       this.prices.forEach((t) => {
         t.enabled = value;
       });
     },
     async savePrices() {
       const products = {};
+      const resources = [];
+
       this.prices
         .filter((p) => p.enabled)
         .forEach((item) => {
@@ -201,10 +218,10 @@ export default {
         await api.plans.update(this.template.uuid, {
           ...this.template,
           products,
+          resources,
         });
         this.showSnackbarSuccess({ message: "Plan save successfully" });
       } catch (e) {
-        console.log(e);
         this.showSnackbarError({ message: "Error on save plan" });
       } finally {
         this.isSaveLoading = false;
