@@ -40,7 +40,12 @@
           <v-subheader>Price model kind</v-subheader>
         </v-col>
         <v-col cols="3" class="align-center d-flex">
-          <v-radio-group row mandatory v-model="selectedKind">
+          <v-radio-group
+            :disabled="allowedKinds.length === 1"
+            row
+            mandatory
+            v-model="selectedKind"
+          >
             <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">
               <div class="d-flex">
                 <v-radio
@@ -508,7 +513,7 @@ export default {
       return document.documentElement.clientWidth;
     },
     productsHide() {
-      const hidden = ["ovh", "goget", "acronis", "cpanel", "keyweb",'openai'];
+      const hidden = ["ovh", "goget", "acronis", "cpanel", "keyweb", "openai"];
       return hidden.some((h) => this.plan.type?.includes(h));
     },
     filteredProducts() {
@@ -518,6 +523,31 @@ export default {
       return this.plan.title
         ? this.plan.title.replaceAll(" ", "_")
         : "unknown_price_model";
+    },
+    allowedKinds() {
+      const allowed = [];
+
+      switch (this.plan.type) {
+        case "openai": {
+          allowed.push("DYNAMIC");
+          break;
+        }
+        case "keyweb":
+        case "ovh vps":
+        case "ovh dedicated":
+        case "ovh cloud":
+        case "opensrs":
+        case "empty":
+        case "cpanel": {
+          allowed.push("STATIC");
+          break;
+        }
+        default: {
+          allowed.push("DYNAMIC", "STATIC");
+        }
+      }
+
+      return allowed;
     },
   },
   watch: {
@@ -533,6 +563,12 @@ export default {
     "plan.type"(newVal) {
       if (!this.isEdit) {
         this.plan.meta.auto_start = newVal === "empty" ? false : undefined;
+      }
+    },
+    allowedKinds(newVal) {
+      if (!newVal.includes(this.plan.type)) {
+        this.plan.kind = newVal[0];
+        this.selectedKind=this.plan.kind
       }
     },
   },
