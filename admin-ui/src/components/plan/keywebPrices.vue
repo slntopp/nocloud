@@ -22,43 +22,47 @@
       </v-expansion-panel>
     </v-expansion-panels>
 
-    <div class="mt-4" v-if="!isLoading">
-      <v-btn class="mx-1" @click="setSellToAllTariffs(true)">Enable all</v-btn>
-      <v-btn class="mx-1" @click="setSellToAllTariffs(false)"
-        >Disable all</v-btn
+    <div>
+      <div class="mt-4" v-if="!isLoading">
+        <v-btn class="mx-1" @click="setSellToAllTariffs(true)"
+          >Enable all</v-btn
+        >
+        <v-btn class="mx-1" @click="setSellToAllTariffs(false)"
+          >Disable all</v-btn
+        >
+      </div>
+      <nocloud-table
+        :headers="headers"
+        table-name="keyweb-prices"
+        class="pa-4"
+        :loading="isLoading"
+        item-key="text"
+        :show-select="false"
+        :items="tariffs"
       >
+        <template v-slot:[`item.price`]="{ item }">
+          <v-text-field v-model.number="item.price" type="number" />
+        </template>
+        <template v-slot:[`item.name`]="{ item }">
+          <v-text-field v-model="item.name" />
+        </template>
+        <template v-slot:[`item.sell`]="{ item }">
+          <v-switch v-model.number="item.sell" />
+        </template>
+
+        <template v-slot:[`item.os`]="{ item }">
+          <v-btn icon @click="openOs(item)">
+            <v-icon> mdi-menu-open </v-icon>
+          </v-btn>
+        </template>
+        <template v-slot:[`item.addons`]="{ item }">
+          <v-btn icon @click="openAddons(item)">
+            <v-icon> mdi-menu-open </v-icon>
+          </v-btn>
+        </template>
+      </nocloud-table>
     </div>
 
-    <nocloud-table
-      :loading="isLoading"
-      :headers="headers"
-      table-text="cpanel-prices"
-      class="pa-4"
-      item-key="text"
-      :show-select="false"
-      :items="tariffs"
-    >
-      <template v-slot:[`item.price`]="{ item }">
-        <v-text-field v-model.number="item.price" type="number" />
-      </template>
-      <template v-slot:[`item.name`]="{ item }">
-        <v-text-field v-model="item.name" />
-      </template>
-      <template v-slot:[`item.sell`]="{ item }">
-        <v-switch v-model.number="item.sell" />
-      </template>
-
-      <template v-slot:[`item.os`]="{ item }">
-        <v-btn icon @click="openOs(item)">
-          <v-icon> mdi-menu-open </v-icon>
-        </v-btn>
-      </template>
-      <template v-slot:[`item.addons`]="{ item }">
-        <v-btn icon @click="openAddons(item)">
-          <v-icon> mdi-menu-open </v-icon>
-        </v-btn>
-      </template>
-    </nocloud-table>
     <v-dialog max-width="70vw" v-model="isAddonsOpen">
       <v-card color="background-light">
         <v-card-title
@@ -74,13 +78,17 @@
           :headers="addonsHeaders"
         >
           <template v-slot:[`item.name`]="{ item }">
-            <v-text-field v-model="item.name" />
+            <v-text-field :disabled="item.virtual" v-model="item.name" />
           </template>
           <template v-slot:[`item.price`]="{ item }">
-            <v-text-field v-model.number="item.price" type="number" />
+            <v-text-field
+              :disabled="item.virtual"
+              v-model.number="item.price"
+              type="number"
+            />
           </template>
-          <template v-slot:[`item.sell`]="{ item }">
-            <v-switch v-model.number="item.sell" />
+          <template v-slot:[`item.sell`]="{ item: addon }">
+            <v-switch v-model="addon.sell" />
           </template>
         </nocloud-table>
       </v-card>
@@ -111,6 +119,7 @@
         </nocloud-table>
       </v-card>
     </v-dialog>
+
     <v-card-actions class="d-flex justify-end">
       <v-btn @click="save" :loading="isSaveLoading">save</v-btn>
     </v-card-actions>
@@ -173,7 +182,7 @@ const osHeaders = ref([
 onMounted(async () => {
   isLoading.value = true;
   try {
-    await store.dispatch("servicesProviders/fetch", {anonymously:false});
+    await store.dispatch("servicesProviders/fetch", { anonymously: false });
     const spUuid = sps.value.find((sp) =>
       sp.meta?.plans?.includes(props.template.uuid)
     ).uuid;
@@ -245,8 +254,9 @@ onMounted(async () => {
         return addonsValues[subKey]
           .filter((a) => a.duration === duration)
           .map((a) => {
+            a.key = a.baseName + "$" + keys[duration];
             const realAddon = props.template.resources.find(
-              (r) => r.key === a.baseName + "$" + keys[duration]
+              (r) => r.key === a.key
             );
             if (realAddon) {
               a.price = realAddon?.price;
@@ -285,6 +295,7 @@ onMounted(async () => {
 
     tariffs.value = products;
   } catch (e) {
+    console.log(e);
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during fetch keyweb prices",
     });
@@ -330,6 +341,7 @@ const setSellToAllTariffs = (value) => {
 const save = async () => {
   const products = {};
   const resources = [];
+
   const enabledTariffs = tariffs.value.filter((t) => t.sell);
 
   enabledTariffs.forEach((t) => {
@@ -339,11 +351,17 @@ const save = async () => {
     const enabledAddons = t.addons.filter((a) => a.sell);
     const enabledOs = t.os.filter((os) => os.sell);
     enabledOs.concat(enabledAddons).forEach((r) => {
+      if (r.virtual) {
+        return;
+      }
       resources.push({
-        key: r.baseName + "$" + t.key,
+        key: r.key,
         kind,
         price: r.price,
         title: r.name,
+        meta: {
+          type: r.type,
+        },
         period,
       });
     });
@@ -354,11 +372,8 @@ const save = async () => {
       price: t.price,
       title: t.name,
       meta: {
-        addons: enabledAddons.map((a) => ({
-          key: a.baseName + "$" + t.key,
-          type: a.type,
-        })),
-        os: enabledOs.map((a) => ({ key: a.baseName + "$" + t.key, type: a.type })),
+        addons: enabledAddons.map((a) => a.key),
+        os: enabledOs.map((a) => a.key),
         keywebId: t.id,
       },
     };

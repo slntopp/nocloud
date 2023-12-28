@@ -142,6 +142,8 @@ export default {
         return;
       }
 
+      this.instance.config.auto_start =
+        this.instance.billing_plan.meta.auto_start;
       if (typeof this.instance.billing_plan === "string") {
         this.instance.billing_plan = { uuid: this.instance.billing_plan };
       }
@@ -287,7 +289,7 @@ export default {
     },
   },
   async created() {
-    this.$store.dispatch("servicesProviders/fetch", {anonymously:false});
+    this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
 
     const types = require.context(
       "@/components/modules/",

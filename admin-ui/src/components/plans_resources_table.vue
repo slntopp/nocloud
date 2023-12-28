@@ -18,7 +18,7 @@
           <v-btn class="mr-2" color="background-light" @click="addConfig">
             Create
           </v-btn>
-          <confirm-dialog @confirm="removeConfig">
+          <confirm-dialog @confirm="removeConfig" :disabled="selected.length < 1">
             <v-btn color="background-light" :disabled="selected.length < 1"
               >Delete</v-btn
             >
@@ -29,25 +29,52 @@
         <v-text-field
           dense
           :value="item.key"
-          :rules="[rules.required]"
-          @change="(value) => changeResource('key', value, item.id)"
+          :rules="requiredRules"
+          @change="changeResource('key', $event, item.id)"
         />
       </template>
+      <template v-slot:[`item.title`]="{ item }">
+        <v-text-field
+          dense
+          :value="item.title"
+          :rules="requiredRules"
+          @change="changeResource('title', $event, item.id)"
+        />
+      </template>
+
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field
           dense
           type="number"
           :suffix="defaultCurrency"
           :value="item.price"
-          :rules="[rules.price]"
-          @input="(value) => changeResource('price', value, item.id)"
+          :rules="priceRules"
+          @input="changeResource('price', $event, item.id)"
+        />
+      </template>
+      <template v-slot:[`item.min`]="{ item }">
+        <v-text-field
+          dense
+          type="number"
+          :value="item.min"
+          :rules="minRules"
+          @input="changeResource('min', !!$event ? $event : undefined, item.id)"
+        />
+      </template>
+      <template v-slot:[`item.max`]="{ item }">
+        <v-text-field
+          dense
+          type="number"
+          :value="item.max"
+          :rules="maxRules"
+          @input="changeResource('max', !!$event ? $event : undefined, item.id)"
         />
       </template>
       <template v-slot:[`item.period`]="{ item }">
         <date-field
           v-if="!isOneTimePayment(item)"
           :period="fullDates[item.id]"
-          @changeDate="(value) => changeDate(value, item.id)"
+          @changeDate="changeDate($event, item.id)"
         />
       </template>
 
@@ -58,13 +85,27 @@
         />
       </template>
 
+      <template v-slot:[`item.meta.autoEnable`]="{ item }">
+        <v-switch
+          :input-value="item.meta?.autoEnable"
+          @change="changeMeta('autoEnable', $event, item)"
+        />
+      </template>
+
+      <template v-slot:[`item.public`]="{ item }">
+        <v-switch
+          :input-value="item.public"
+          @change="changeResource('public', $event, item.id)"
+        />
+      </template>
+
       <template v-slot:[`item.kind`]="{ item }">
         <v-radio-group
           :disabled="isOneTimePayment(item)"
           row
           mandatory
           :value="item.kind"
-          @change="(value) => changeResource('kind', value, item.id)"
+          @change="changeResource('kind', $event, item.id)"
         >
           <v-radio
             v-for="(kind, i) of kinds"
@@ -85,14 +126,22 @@
             class="d-inline-block mr-4"
             :value="item.on"
             :items="states"
-            :rules="[rules.required]"
-            @change="(value) => changeResource('on', value, item.id)"
+            :rules="requiredRules"
+            @change="changeResource('on', $event, item.id)"
           />
           <v-switch
             label="Except"
             class="d-inline-block"
             :value="item.except"
-            @change="(value) => changeResource('except', value, item.id)"
+            @change="changeResource('except', $event, item.id)"
+          />
+
+          <v-subheader class="px-0">Description</v-subheader>
+
+          <rich-editor
+            class="html-editor"
+            :value="item.meta?.description"
+            @input="changeMeta('description', $event, item)"
           />
         </td>
       </template>
@@ -107,20 +156,26 @@ import dateField from "@/components/date.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { getFullDate } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
+import RichEditor from "@/components/ui/richEditor.vue";
 
 const props = defineProps({
   resources: { type: Array, required: true },
-  rules: { type: Object },
   type: { type: String, required: true },
+  defaultVirtual: { type: Boolean, default: true },
 });
 const emits = defineEmits(["change:resource"]);
-const { resources, rules, type } = toRefs(props);
+const { resources, type, defaultVirtual } = toRefs(props);
 
 const { defaultCurrency } = useCurrency();
 
 const fullDates = ref({});
 const selected = ref([]);
 const expanded = ref([]);
+
+const minRules = ref([(val) => !val || +val > 0 || "Wrong minimum count"]);
+const maxRules = ref([(val) => !val || +val > 0 || "Wrong max count"]);
+const requiredRules = ref([(v) => !!v || "This field is required!"]);
+const priceRules = ref([(v) => (v !== "" && +v >= 0) || "Wrong price"]);
 
 const kinds = ["POSTPAID", "PREPAID"];
 
@@ -136,18 +191,31 @@ const states = [
 ];
 const headers = computed(() => [
   { text: "Key", value: "key" },
+  { text: "Title", value: "title" },
   { text: "Price", value: "price" },
   ["ione", "cpanel", "empty"].includes(type.value) && {
     text: "One time",
     value: "meta.oneTime",
   },
-  { text: "Period", value: "period" },
+  { text: "Period", value: "period", width: 165 },
+  { text: "Min count", value: "min" },
+  { text: "Max count", value: "max" },
+  { text: "Auto enable", value: "meta.autoEnable" },
   { text: "Kind", value: "kind", width: 228 },
+  { text: "Public", value: "public" },
 ]);
 
 function changeDate({ value }, id) {
   fullDates.value[id] = value;
   emits("change:resource", { key: "date", value, id });
+}
+
+function changeMeta(key, value, item) {
+  emits("change:resource", {
+    key: "meta",
+    value: { ...(item?.meta || {}), [key]: value },
+    id: item.id,
+  });
 }
 
 function isOneTimePayment(item) {
@@ -159,11 +227,7 @@ function changeOneTime(item, value) {
     emits("change:resource", { key: "kind", value: "POSTPAID", id: item.id });
     emits("change:resource", { key: "period", value: "0", id: item.id });
   }
-  emits("change:resource", {
-    key: "meta",
-    value: { ...(item?.meta || {}), oneTime: value },
-    id: item.id,
-  });
+  changeMeta("oneTime", value, item);
 }
 
 function changeResource(key, value, id) {
@@ -180,6 +244,10 @@ function addConfig() {
     period: 0,
     except: false,
     on: [],
+    virtual: defaultVirtual.value,
+    public: true,
+    max: undefined,
+    min: undefined,
     meta: {},
     id: Math.random().toString(16).slice(2),
   });
