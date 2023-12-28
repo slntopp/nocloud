@@ -40,7 +40,12 @@
           <v-subheader>Price model kind</v-subheader>
         </v-col>
         <v-col cols="3" class="align-center d-flex">
-          <v-radio-group row mandatory v-model="selectedKind">
+          <v-radio-group
+            :disabled="allowedKinds.length === 1"
+            row
+            mandatory
+            v-model="selectedKind"
+          >
             <confirm-dialog @cancel="changePlan(true)" @confirm="changePlan">
               <div class="d-flex">
                 <v-radio
@@ -326,6 +331,26 @@ export default {
       this.plan.title = checkName(this.plan, this.plans);
 
       const id = this.$route.params?.planId;
+
+      //quick periodKind fix
+      const periodMap = {
+        2592000: "CALENDAR_MONTH",
+        31536000: "CALENDAR_YEAR",
+      };
+
+      Object.keys(this.plan.products || {}).forEach((key) => {
+        this.plan.products[key].periodKind = periodMap[
+          this.plan.products[key].period
+        ]
+          ? periodMap[this.plan.products[key].period]
+          : "DEFAULT";
+      });
+
+      this.plan.resources = this.plan.resources.map((r) => {
+        r.periodKind = periodMap[r.period] ? periodMap[r.period] : "DEFAULT";
+        return r;
+      });
+
       const request =
         action === "edit"
           ? api.plans.update(id, this.plan)
@@ -490,7 +515,7 @@ export default {
       return document.documentElement.clientWidth;
     },
     productsHide() {
-      const hidden = ["ovh", "goget", "acronis", "cpanel", "keyweb"];
+      const hidden = ["ovh", "goget", "acronis", "cpanel", "keyweb", "openai"];
       return hidden.some((h) => this.plan.type?.includes(h));
     },
     filteredProducts() {
@@ -501,6 +526,31 @@ export default {
         ? this.plan.title.replaceAll(" ", "_")
         : "unknown_price_model";
     },
+    allowedKinds() {
+      const allowed = [];
+
+      switch (this.plan.type) {
+        case "openai": {
+          allowed.push("DYNAMIC");
+          break;
+        }
+        case "keyweb":
+        case "ovh vps":
+        case "ovh dedicated":
+        case "ovh cloud":
+        case "opensrs":
+        case "empty":
+        case "cpanel": {
+          allowed.push("STATIC");
+          break;
+        }
+        default: {
+          allowed.push("DYNAMIC", "STATIC");
+        }
+      }
+
+      return allowed;
+    },
   },
   watch: {
     "plan.kind"() {
@@ -510,6 +560,12 @@ export default {
         } else {
           this.plan.resources = [];
         }
+      }
+    },
+    allowedKinds(newVal) {
+      if (!newVal.includes(this.plan.type)) {
+        this.plan.kind = newVal[0];
+        this.selectedKind=this.plan.kind
       }
     },
   },

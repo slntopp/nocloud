@@ -18,7 +18,7 @@
           <v-btn class="mr-2" color="background-light" @click="addConfig">
             Create
           </v-btn>
-          <confirm-dialog @confirm="removeConfig">
+          <confirm-dialog @confirm="removeConfig" :disabled="selected.length < 1">
             <v-btn color="background-light" :disabled="selected.length < 1"
               >Delete</v-btn
             >

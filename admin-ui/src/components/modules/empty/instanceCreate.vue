@@ -79,7 +79,12 @@ const getDefaultInstance = () => ({
 export default {
   name: "instance-empty-create",
   props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
-  data: () => ({ bilingPlan: null, products: [], product: [] ,requiredRule:[(val)=>!!val || 'Field required']}),
+  data: () => ({
+    bilingPlan: null,
+    products: [],
+    product: [],
+    requiredRule: [(val) => !!val || "Field required"],
+  }),
   mounted() {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
@@ -111,7 +116,12 @@ export default {
       return this.bilingPlan?.products[this.product]?.meta.addons || [];
     },
     autoEnabled() {
-      return this.bilingPlan?.products[this.product]?.meta.autoEnabled || [];
+      return (
+        this.addons.filter((key) => {
+          return this.bilingPlan?.resources.find((r) => r.key === key)?.meta
+            ?.autoEnable;
+        }) || []
+      );
     },
   },
   watch: {
