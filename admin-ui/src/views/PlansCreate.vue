@@ -87,7 +87,7 @@
         <v-col cols="1" class="align-center d-flex">
           <v-switch style="width: fit-content" v-model="plan.public" />
         </v-col>
-        <template v-if="plan.type === 'empty'">
+        <template>
           <v-col cols="1" class="align-center d-flex">
             <v-subheader>Auto start</v-subheader>
           </v-col>
@@ -216,7 +216,9 @@ export default {
       public: true,
       resources: [],
       products: {},
-      meta: {},
+      meta: {
+        auto_start: true,
+      },
       fee: null,
     },
     rules: {
@@ -508,11 +510,6 @@ export default {
         } else {
           this.plan.resources = [];
         }
-      }
-    },
-    "plan.type"(newVal) {
-      if (!this.isEdit) {
-        this.plan.meta.auto_start = newVal === "empty" ? false : undefined;
       }
     },
   },

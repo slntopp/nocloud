@@ -190,7 +190,9 @@ export default {
           });
 
           this.$store.dispatch("services/fetch", this.template.uuid);
-          this.$store.dispatch("servicesProviders/fetch",{anonymously :true});
+          this.$store.dispatch("servicesProviders/fetch", {
+            anonymously: true,
+          });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -208,9 +210,12 @@ export default {
         this.save();
       }
     },
-    async save(createNewPlan = false) {
+    async save(createNewPlan = false, instance) {
+      if (!instance) {
+        instance = JSON.parse(JSON.stringify(this.copyTemplate));
+      }
+
       const tempService = JSON.parse(JSON.stringify(this.service));
-      const instance = JSON.parse(JSON.stringify(this.copyTemplate));
       const igIndex = tempService.instancesGroups.findIndex((ig) =>
         ig.instances.find((i) => i.uuid === this.template.uuid)
       );
@@ -289,7 +294,9 @@ export default {
           });
 
           this.$store.dispatch("services/fetch", this.template.uuid);
-          this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
+          this.$store.dispatch("servicesProviders/fetch", {
+            anonymously: true,
+          });
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -297,6 +304,25 @@ export default {
         .finally(() => {
           this.isSaveLoading = false;
         });
+    },
+    async startInstance() {
+      try {
+        await this.save(
+          false,
+          JSON.parse(
+            JSON.stringify({
+              ...this.template,
+              config: { ...this.template.config, auto_start: true },
+            })
+          )
+        );
+
+        await api.services.up(this.template.service);
+      } catch (e) {
+        this.$store.commit("snackbar/showSnackbarError", {
+          message: e.response?.data?.message || "Error during start instance",
+        });
+      }
     },
     async sendAction(btn) {
       this.runningActionName = btn.action;
@@ -325,11 +351,18 @@ export default {
         { action: "resume", disabled: this.ovhActions?.resume },
         { action: "suspend", disabled: this.ovhActions?.suspend },
         { action: "reboot", disabled: this.ovhActions?.reboot },
+        { action: "start", disabled: this.ovhActions?.start },
       ];
     },
     vmControlBtns() {
       const types = {
         ione: [
+          {
+            action: "start",
+            type: "method",
+            method: this.startInstance,
+            disabled: this.ioneActions?.start,
+          },
           { action: "poweroff", disabled: this.ioneActions?.poweroff },
           { action: "resume", disabled: this.ioneActions?.resume },
           { action: "suspend", disabled: this.ioneActions?.suspend },
@@ -348,6 +381,18 @@ export default {
               },
         ],
         "ovh dedicated": [
+          {
+            action: "start",
+            type: "method",
+            method: this.startInstance,
+            disabled: this.template.config.auto_start,
+          },
+          {
+            action: "start",
+            type: "method",
+            method: this.startInstance,
+            disabled: this.ovhActions?.start,
+          },
           { action: "poweroff", disabled: true },
           { action: "resume", disabled: true },
           { action: "suspend", disabled: true },
@@ -397,8 +442,15 @@ export default {
         ],
         keyweb: [
           {
-            action: "start",
+            action: "auto_start",
+            type: "method",
             title: "start",
+            method: this.startInstance,
+            disabled: !this.keywebActions?.auto_start,
+          },
+          {
+            action: "start",
+            title: "resume",
             disabled: !this.keywebActions?.start,
           },
           {
@@ -428,7 +480,15 @@ export default {
           },
         ],
         opensrs: [{ action: "dns" }],
-        cpanel: [{ action: "session" }],
+        cpanel: [
+          {
+            action: "start",
+            type: "method",
+            method: this.startInstance,
+            disabled: this.template.config.auto_start,
+          },
+          { action: "session" },
+        ],
       };
 
       return (
@@ -436,15 +496,21 @@ export default {
       );
     },
     ioneActions() {
-      if (!this.template?.state) return;
-      if (this.template.state.meta.state === 1 || this.isDetached)
+      if (
+        !this.template?.state ||
+        !this.template.config.auto_start ||
+        this.template.state?.meta?.state === 1 ||
+        this.isDetached
+      ) {
         return {
+          start: this.template.config.auto_start,
           resume: true,
           poweroff: true,
           reboot: true,
           suspend: true,
           vnc: true,
         };
+      }
       return {
         poweroff:
           this.template.state.meta.state === 5 ||
@@ -472,12 +538,14 @@ export default {
           this.template.state.meta.state === 5 ||
           this.template.state.meta.lcm_state === 21 ||
           this.template.state.meta.lcm_state === 6,
+        start: true,
       };
     },
     ovhActions() {
       if (!this.template?.state) return;
       if (this.template.state.state === "PENDING")
         return {
+          start: this.template.config.auto_start,
           poweroff: true,
           reboot: true,
           resume: true,
@@ -498,6 +566,7 @@ export default {
           this.template.state.state !== "STOPPED",
         suspend: this.template.state.state === "SUSPENDED",
         vnc: this.template.state.state !== "RUNNING",
+        start: this.template.config.auto_start,
       };
     },
     emptyActions() {
@@ -523,7 +592,7 @@ export default {
             stop: true,
             reboot: true,
             suspend: true,
-            vnc:true
+            vnc: true,
           };
         }
         case "STOPPED": {
@@ -536,7 +605,9 @@ export default {
         case "DELETED":
         case "PENDING":
         case "OPERATION": {
-          return {};
+          return {
+            auto_start: this.template.auto_start,
+          };
         }
         case "SUSPENDED": {
           return {

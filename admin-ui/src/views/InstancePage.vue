@@ -41,7 +41,6 @@ export default {
   data: () => ({
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
-    instanceTitle: "",
   }),
   mixins: [snackbar],
   methods: {
@@ -131,16 +130,19 @@ export default {
         },
       ].filter((el) => !!el);
     },
+    instanceTitle() {
+      if (this.instanceLoading) {
+        return "...";
+      }
+
+      if (!this.instance) {
+        return "Not found";
+      }
+      return this.instance.title;
+    },
   },
   created() {
-    this.$store.dispatch("services/fetch", { showDeleted: true }).then(() => {
-      if (!this.instance) {
-        this.instanceTitle = "Not found";
-      } else {
-        this.instanceTitle = this.instance.title;
-      }
-      document.title = `${this.instanceTitle} | NoCloud`;
-    });
+    this.$store.dispatch("services/fetch", { showDeleted: true });
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
@@ -165,6 +167,9 @@ export default {
         this.initSocket();
         this.$store.dispatch("plans/fetchItem", this.instance.billingPlan.uuid);
       }
+    },
+    instanceTitle(newVal) {
+      document.title = `${newVal} | NoCloud`;
     },
   },
 };
