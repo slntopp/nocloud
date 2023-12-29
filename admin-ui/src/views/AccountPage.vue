@@ -11,7 +11,12 @@
       background-color="background-light"
       v-model="selectedTab"
     >
-      <v-tab v-for="tab in tabItems" :key="tab.title">{{ tab.title }}</v-tab>
+      <v-tab v-for="tab in tabItems" :key="tab.title"
+        >{{ tab.title }}
+        <v-chip class="ml-1" small v-if="tab.title === 'notes'">{{
+          account.adminNotes?.length || 0
+        }}</v-chip>
+      </v-tab>
     </v-tabs>
     <v-tabs-items
       class="rounded-b-lg"
