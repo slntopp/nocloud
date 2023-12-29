@@ -220,7 +220,9 @@ export default {
           products,
           resources,
         });
-        this.showSnackbarSuccess({ message: "Plan save successfully" });
+        this.showSnackbarSuccess({
+          message: "Price model edited successfully",
+        });
       } catch (e) {
         this.showSnackbarError({ message: "Error on save plan" });
       } finally {
