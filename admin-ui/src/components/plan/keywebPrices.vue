@@ -36,10 +36,18 @@
         table-name="keyweb-prices"
         class="pa-4"
         :loading="isLoading"
-        item-key="text"
+        item-key="key"
         :show-select="false"
+        :expanded.sync="expanded"
+        show-expand
         :items="tariffs"
       >
+        <template v-slot:expanded-item="{ headers, item }">
+          <td :colspan="headers.length">
+            <rich-editor v-model="item.description" />
+          </td>
+        </template>
+
         <template v-slot:[`item.price`]="{ item }">
           <v-text-field v-model.number="item.price" type="number" />
         </template>
@@ -135,6 +143,7 @@ import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { getMarginedValue } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
+import RichEditor from "@/components/ui/richEditor.vue";
 
 const props = defineProps(["template"]);
 
@@ -149,6 +158,7 @@ const isValid = ref(false);
 const selectedTariff = ref({});
 const tariffs = ref([]);
 const fee = ref({});
+const expanded = ref([]);
 
 const headers = ref([
   { text: "Key", value: "key" },
@@ -285,6 +295,7 @@ onMounted(async () => {
           addons: getTariffAddons("backup", duration),
           price: realProducts[duration]?.price || basePrice,
           basePrice,
+          description: realProducts[duration]?.meta?.description,
           sell: !!realProducts[duration],
         };
       };
@@ -359,7 +370,7 @@ const save = async () => {
         kind,
         price: r.price,
         title: r.name,
-        public:true,
+        public: true,
         meta: {
           type: r.type,
         },
@@ -372,11 +383,12 @@ const save = async () => {
       period,
       price: t.price,
       title: t.name,
-      public:true,
+      public: true,
       meta: {
         addons: enabledAddons.map((a) => a.key),
         os: enabledOs.map((a) => a.key),
         keywebId: t.id,
+        description: t.description,
       },
     };
   });
