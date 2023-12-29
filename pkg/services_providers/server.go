@@ -18,6 +18,7 @@ package services_providers
 import (
 	"context"
 	"fmt"
+	stpb "github.com/slntopp/nocloud-proto/statuses"
 	"time"
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
@@ -265,7 +266,7 @@ func (s *ServicesProviderServer) Delete(ctx context.Context, req *sppb.DeleteReq
 		return nil, status.Error(codes.Internal, "Error deleting edges")
 	}
 
-	err = s.ctrl.Delete(ctx, sp.GetUuid())
+	err = s.ctrl.Delete(ctx, sp.ServicesProvider)
 	if err != nil {
 		log.Error("Error deleting ServicesProvider", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error deleting ServicesProvider")
@@ -295,6 +296,11 @@ func (s *ServicesProviderServer) Update(ctx context.Context, req *sppb.ServicesP
 	if err != nil {
 		log.Error("Error getting ServicesProvider from DB", zap.Error(err))
 		return nil, status.Error(codes.NotFound, "ServicesProvider not Found in DB")
+	}
+
+	if oldSp.GetStatus() == stpb.NoCloudStatus_DEL {
+		log.Error("Error updating ServicesProvider. SP is Deleted")
+		return nil, status.Error(codes.Canceled, "ServicesProvider is Deleted")
 	}
 
 	sp := &graph.ServicesProvider{ServicesProvider: oldSp.ServicesProvider}
@@ -365,6 +371,11 @@ func (s *ServicesProviderServer) Get(ctx context.Context, request *sppb.GetReque
 		acc = *ns.Access
 	}
 
+	if acc.Level != access.Level_ROOT && r.GetStatus() == stpb.NoCloudStatus_DEL {
+		log.Debug("Error getting ServicesProvider")
+		return nil, status.Error(codes.PermissionDenied, "Not enough rights")
+	}
+
 	if acc.Level < access.Level_ROOT {
 		r.Secrets = nil
 	}
@@ -394,9 +405,11 @@ func (s *ServicesProviderServer) List(ctx context.Context, req *sppb.ListRequest
 		return nil, status.Error(codes.Internal, "Error reading ServicesProviders from DB")
 	}
 
-	res = &sppb.ListResponse{Pool: make([]*sppb.ServicesProvider, len(r))}
+	res = &sppb.ListResponse{Pool: []*sppb.ServicesProvider{}}
 	for i, sp := range r {
-		res.Pool[i] = sp.ServicesProvider
+		if sp.GetStatus() != stpb.NoCloudStatus_DEL || (sp.GetStatus() == stpb.NoCloudStatus_DEL && req.ShowDeleted && isRoot) {
+			res.Pool = append(res.Pool, r[i].ServicesProvider)
+		}
 	}
 
 	return res, nil

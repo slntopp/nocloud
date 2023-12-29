@@ -212,7 +212,24 @@ LET instances_groups = (
             FOR i IN 1 OUTBOUND group
             GRAPH @permissions
             FILTER IS_SAME_COLLECTION(@instances, i)
-                RETURN MERGE(i, { uuid: i._key, access: service.access }) )
+				LET bp = DOCUMENT(CONCAT(@bps, "/", i.billing_plan.uuid))
+                RETURN MERGE(i, { 
+                    uuid: i._key, 
+                    access: service.access, 
+                    billing_plan: {
+                        uuid: bp._key,
+                        title: bp.title,
+                        type: bp.type,
+                        kind: bp.kind,
+                        resources: bp.resources,
+                        products: {
+                            [i.product]: bp.products[i.product],
+                        },
+						meta: bp.meta,
+						fee: bp.fee,
+						software: bp.software
+                    } 
+                }))
         LET sp = (
             FOR s IN 1 OUTBOUND group
             GRAPH @permissions
@@ -234,6 +251,7 @@ func (ctrl *ServicesController) Get(ctx context.Context, acc, key string) (*spb.
 		"service":     id,
 		"instances":   schema.INSTANCES_COL,
 		"sps":         schema.SERVICES_PROVIDERS_COL,
+		"bps":         schema.BILLING_PLANS_COL,
 		"permissions": schema.PERMISSIONS_GRAPH.Name,
 	})
 	if err != nil {
@@ -307,7 +325,23 @@ FOR service, e, path IN 0..@depth OUTBOUND @account
     			GRAPH @permissions_graph
     			FILTER IS_SAME_COLLECTION(@instances, i)
 				%s
-    				RETURN MERGE(i, { uuid: i._key }) )
+					LET bp = DOCUMENT(CONCAT(@bps, "/", i.billing_plan.uuid))
+					RETURN MERGE(i, { 
+						uuid: i._key, 
+						billing_plan: {
+							uuid: bp._key,
+							title: bp.title,
+							type: bp.type,
+							kind: bp.kind,
+							resources: bp.resources,
+							products: {
+								[i.product]: bp.products[i.product],
+							},
+							meta: bp.meta,
+							fee: bp.fee,
+							software: bp.software
+						} 
+					}))
     		RETURN MERGE(group, { uuid: group._key, instances })
         )
 RETURN MERGE(service, {uuid:service._key, instances_groups, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key }})
@@ -336,6 +370,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"@services":         schema.SERVICES_COL,
 		"instances":         schema.INSTANCES_COL,
+		"bps":               schema.BILLING_PLANS_COL,
 	}
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
 

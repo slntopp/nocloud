@@ -74,9 +74,10 @@ func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *pb.Serv
 	return err
 }
 
-func (ctrl *ServicesProvidersController) Delete(ctx context.Context, id string) (err error) {
-	ctrl.log.Debug("Deleting ServicesProvider Document", zap.Any("uuid", id))
-	_, err = ctrl.col.RemoveDocument(ctx, id)
+func (ctrl *ServicesProvidersController) Delete(ctx context.Context, sp *pb.ServicesProvider) (err error) {
+	ctrl.log.Debug("Deleting ServicesProvider Document", zap.Any("uuid", sp.GetUuid()))
+	sp.Status = stpb.NoCloudStatus_DEL
+	_, err = ctrl.col.UpdateDocument(ctx, sp.GetUuid(), sp)
 	return err
 }
 
@@ -224,12 +225,29 @@ FILTER IS_SAME_COLLECTION(@groups, group)
         FOR instance IN OUTBOUND group
         GRAPH @permissions
         FILTER IS_SAME_COLLECTION(@instances, instance)
-            RETURN MERGE(instance, { uuid: instance._key }) )
+			LET bp = DOCUMENT(CONCAT(@bps, "/", instance.billing_plan.uuid))
+			RETURN MERGE(instance, { 
+				uuid: instance._key, 
+				billing_plan: {
+					uuid: bp._key,
+					title: bp.title,
+					type: bp.type,
+					kind: bp.kind,
+					resources: bp.resources,
+					products: {
+						[instance.product]: bp.products[instance.product],
+					},
+					meta: bp.meta,
+					fee: bp.fee,
+					software: bp.software
+				} 
+			}))
     RETURN MERGE(group, { uuid: group._key, instances })`
 
 func (ctrl *ServicesProvidersController) GetGroups(ctx context.Context, sp *ServicesProvider) ([]*ipb.InstancesGroup, error) {
 	bindVars := map[string]interface{}{
 		"groups":         schema.INSTANCES_GROUPS_COL,
+		"bps":            schema.BILLING_PLANS_COL,
 		"sp":             sp.DocumentMeta.ID,
 		"permissions":    schema.PERMISSIONS_GRAPH.Name,
 		"instances":      schema.INSTANCES_COL,
