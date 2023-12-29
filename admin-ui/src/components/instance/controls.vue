@@ -351,7 +351,12 @@ export default {
         { action: "resume", disabled: this.ovhActions?.resume },
         { action: "suspend", disabled: this.ovhActions?.suspend },
         { action: "reboot", disabled: this.ovhActions?.reboot },
-        { action: "start", disabled: this.ovhActions?.start },
+        {
+          action: "start",
+          type: "method",
+          method: this.startInstance,
+          disabled: this.ovhActions?.start,
+        },
       ];
     },
     vmControlBtns() {
