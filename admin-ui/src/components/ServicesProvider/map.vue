@@ -20,9 +20,7 @@
         >
           Save
         </v-btn>
-        <v-btn color="primary" @click="cancelSelectedCountry">
-          Cancel
-        </v-btn>
+        <v-btn color="primary" @click="cancelSelectedCountry"> Cancel </v-btn>
       </div>
       <!-- end byn -->
     </template>
@@ -316,7 +314,7 @@ export default {
 
       setTimeout(() => {
         const marker = {
-          id: this.selected,
+          id: this.selected + Date.now(),
           type: this.type || this.item.type,
           title: " ",
           extra: { country: target.id },
