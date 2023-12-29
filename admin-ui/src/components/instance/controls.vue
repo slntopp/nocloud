@@ -345,20 +345,6 @@ export default {
     type() {
       return this.template.billingPlan.type;
     },
-    ovhButtons() {
-      return [
-        { action: "poweroff", disabled: this.ovhActions?.poweroff },
-        { action: "resume", disabled: this.ovhActions?.resume },
-        { action: "suspend", disabled: this.ovhActions?.suspend },
-        { action: "reboot", disabled: this.ovhActions?.reboot },
-        {
-          action: "start",
-          type: "method",
-          method: this.startInstance,
-          disabled: this.ovhActions?.start,
-        },
-      ];
-    },
     vmControlBtns() {
       const types = {
         ione: [
@@ -390,12 +376,6 @@ export default {
             action: "start",
             type: "method",
             method: this.startInstance,
-            disabled: this.template.config.auto_start,
-          },
-          {
-            action: "start",
-            type: "method",
-            method: this.startInstance,
             disabled: this.ovhActions?.start,
           },
           { action: "poweroff", disabled: true },
@@ -409,15 +389,48 @@ export default {
           },
         ],
         "ovh cloud": [
-          ...this.ovhButtons,
           {
-            action: "vnc",
+            action: "stop_vm",
+            title: "poweroff",
+            disabled: this.ovhActions?.poweroff,
+          },
+          {
+            action: "resume_vm",
+            title: "resume",
+            disabled: this.ovhActions?.resume,
+          },
+          {
+            action: "suspend_vm",
+            title: "suspend",
+            disabled: this.ovhActions?.suspend,
+          },
+          {
+            action: "reboot_vm",
+            title: "reboot",
+            disabled: this.ovhActions?.reboot,
+          },
+          {
+            action: "start_vm",
+            title: "poweron",
+            disabled: this.ovhActions?.resume,
+          },
+          {
+            action: "start_vnc_vm",
             title: "Console",
             disabled: this.ovhActions?.reboot,
           },
         ],
         "ovh vps": [
-          ...this.ovhButtons,
+          { action: "poweroff", disabled: this.ovhActions?.poweroff },
+          { action: "resume", disabled: this.ovhActions?.resume },
+          { action: "suspend", disabled: this.ovhActions?.suspend },
+          { action: "reboot", disabled: this.ovhActions?.reboot },
+          {
+            action: "start",
+            type: "method",
+            method: this.startInstance,
+            disabled: this.ovhActions?.start,
+          },
           {
             action: "vnc",
             title: "Console",
