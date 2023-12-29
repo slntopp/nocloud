@@ -161,14 +161,11 @@ watch(accountRate, () => {
 });
 
 const addons = computed(() => {
-  return Object.keys(props.template.config?.configurations || {})
-    .map((key) => {
-      const resIndex = props.template.billingPlan?.resources?.findIndex((r) => {
-        return (
-          r.key === getAddonKey(key, "addons") ||
-          r.key === getAddonKey(key, "os")
-        );
-      });
+  return Object.values(props.template.config?.configurations || {})
+    .map((val) => {
+      const resIndex = props.template.billingPlan?.resources?.findIndex(
+        (r) => r.key === [val, template.value.product].join("$")
+      );
       if (resIndex !== -1) {
         const res = props.template.billingPlan?.resources[resIndex];
         return {
@@ -183,13 +180,6 @@ const addons = computed(() => {
     })
     .filter((a) => !!a);
 });
-
-const getAddonKey = (key, metaKey) =>
-  billingPlan.value.products[template.value.product]?.meta?.[metaKey].find(
-    (a) =>
-      key === a.type &&
-      a.key.startsWith(props.template.config?.configurations[key])
-  )?.key;
 
 const getBillingItems = () => {
   const items = [];
