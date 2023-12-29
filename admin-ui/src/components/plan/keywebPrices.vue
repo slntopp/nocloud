@@ -359,6 +359,7 @@ const save = async () => {
         kind,
         price: r.price,
         title: r.name,
+        public:true,
         meta: {
           type: r.type,
         },
@@ -371,6 +372,7 @@ const save = async () => {
       period,
       price: t.price,
       title: t.name,
+      public:true,
       meta: {
         addons: enabledAddons.map((a) => a.key),
         os: enabledOs.map((a) => a.key),
@@ -385,6 +387,9 @@ const save = async () => {
       ...props.template,
       products,
       resources,
+    });
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "Price model edited successfully",
     });
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
