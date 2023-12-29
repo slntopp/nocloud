@@ -55,6 +55,12 @@ export default {
         rules: [],
         type: "secrets",
       },
+      api_url: {
+        label: "Api url",
+        subheader: "Api url",
+        rules: [],
+        type: "secrets",
+      },
       bot_account_uuid: {
         label: "Bot account uuid",
         subheader: "Bot account uuid",

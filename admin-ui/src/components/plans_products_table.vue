@@ -250,7 +250,6 @@
         <plans-resources-table
           v-else-if="tab === 'Addons'"
           :rules="rules"
-          :default-virtual="true"
           :resources="resources.filter((v) => v.virtual === true)"
           :type="type"
           @change:resource="changeResource(true, $event)"
@@ -299,32 +298,33 @@ const groupActionPayload = ref("");
 const kinds = ["POSTPAID", "PREPAID"];
 
 const tabs = computed(() => {
-  const tabs = ["Products", "Resources"];
-  if (["ione", "cpanel"].includes(type.value)) {
-    tabs.push("Addons");
+  if (type.value === "empty") {
+    return ["Products", "Resources", "Addons"];
   }
 
-  return tabs;
+  return ["Products", "Resources"];
 });
 
-const headers = computed(() => [
-  { text: "Key", value: "key" },
-  { text: "Title", value: "title" },
-  { text: "Price", value: "price", width: 150 },
-  {
-    text: "One time",
-    value: "meta.oneTime",
-  },
-  { text: "Period", value: "period", width: 220 },
-  { text: "Kind", value: "kind", width: 228 },
-  { text: "Group", value: "group", width: 300 },
-  { text: "Public", value: "public" },
-  { text: "Sorter", value: "sorter" },
-  {
-    text: "Addons",
-    value: "resources",
-  },
-]);
+const headers = computed(() =>
+  [
+    { text: "Key", value: "key" },
+    { text: "Title", value: "title" },
+    { text: "Price", value: "price", width: 150 },
+    {
+      text: "One time",
+      value: "meta.oneTime",
+    },
+    { text: "Period", value: "period", width: 220 },
+    { text: "Kind", value: "kind", width: 228 },
+    { text: "Group", value: "group", width: 300 },
+    { text: "Public", value: "public" },
+    { text: "Sorter", value: "sorter" },
+    type.value === "empty" && {
+      text: "Addons",
+      value: "resources",
+    },
+  ].filter((f) => !!f)
+);
 
 const isEditOpen = ref(false);
 const newMeta = ref({ description: "" });

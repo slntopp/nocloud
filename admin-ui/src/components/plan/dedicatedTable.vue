@@ -20,6 +20,7 @@
         >Disable all addons</v-btn
       >
     </v-row>
+
     <nocloud-table
       table-name="dedicated-prices"
       sort-by="isBeenSell"
@@ -184,25 +185,30 @@
             class="pa-4"
             item-key="id"
             :show-select="false"
-            :items="item.meta?.addons"
+            :items="getPlanAddons(item)"
             :headers="addonsHeaders"
           >
-            <template v-slot:[`item.duration`]="{ value }">
-              {{ getPayment(value) }}
+            <template v-slot:[`item.duration`]="{ item }">
+              {{ getPayment(item.duration) || getBillingPeriod(item.period) }}
             </template>
             <template v-slot:[`item.basePrice`]="{ value }">
-              {{ value }} {{ defaultCurrency }}
+              {{ value }} {{ value ? defaultCurrency : "" }}
             </template>
             <template v-slot:[`item.price`]="{ item }">
+              <span v-if="item.virtual">{{ item.price }}</span>
               <v-text-field
+                v-else
                 dense
                 style="width: 200px"
                 :suffix="defaultCurrency"
                 v-model="item.price"
               />
             </template>
-            <template v-slot:[`item.public`]="{ item }">
-              <v-switch v-model="item.public" />
+            <template v-slot:[`item.public`]="{ item: addon }">
+              <v-switch
+                :input-value="addon.public"
+                @change="changeAddonPublic(item, addon, $event)"
+              />
             </template>
           </nocloud-table>
         </v-dialog>
@@ -217,7 +223,7 @@
 <script>
 import nocloudTable from "@/components/table.vue";
 import { mapGetters } from "vuex";
-import { getMarginedValue } from "@/functions";
+import { getBillingPeriod, getMarginedValue } from "@/functions";
 import api from "@/api";
 
 export default {
@@ -273,10 +279,10 @@ export default {
     newcpuGroup: { mode: "none", name: "", planId: "" },
   }),
   methods: {
+    getBillingPeriod,
     setRefreshedPlans() {
       this.plans = JSON.parse(JSON.stringify(this.newPlans));
       this.newPlans = null;
-      this.setFee();
     },
     getProductDescription(products, code) {
       return products.find((p) => p.name === code)?.description;
@@ -326,7 +332,7 @@ export default {
               if (!acc[tariff]) {
                 acc[tariff] = {};
               }
-              acc[tariff][capacity] = pricing.price / 10 ** 9;
+              acc[tariff][capacity] = pricing.price / 10 ** 8;
             }
 
             return acc;
@@ -370,7 +376,7 @@ export default {
                       ({ key }) => key === addonId
                     ) || {};
 
-                  basePrice = this.convertPrice(basePrice / 10 ** 9);
+                  basePrice = this.convertPrice(basePrice / 10 ** 8);
                   const apiName = this.getProductDescription(
                     products,
                     addonInfo.product
@@ -471,6 +477,10 @@ export default {
 
       this.plans.forEach((p) => {
         p.meta.addons?.forEach((a) => {
+          if (a.virtual) {
+            return;
+          }
+
           plan.resources.push({
             key: a.id,
             kind: "PREPAID",
@@ -486,7 +496,7 @@ export default {
 
         const addons = (p.meta.addons || [])
           .filter((addon) => addon.public)
-          ?.map((el) => ({ id: el.planCode, title: el.title }));
+          ?.map((el) => el.id);
 
         plan.products[p.id] = {
           kind: "PREPAID",
@@ -628,6 +638,26 @@ export default {
         };
       });
     },
+    getPlanAddons(item) {
+      return item.meta?.addons || [];
+    },
+    changeAddonPublic(plan, addon, value) {
+      if (!addon.virtual) {
+        addon.public = value;
+        plan.meta.addons = plan.meta.addons.map((a) =>
+          a.id === addon.id ? addon : a
+        );
+      } else {
+        if (value) {
+          plan.meta.addons.push({ ...addon, public: true });
+        } else {
+          plan.meta.addons = plan.meta.addons.filter((a) => a.id !== addon.id);
+        }
+      }
+
+      const planIndex = this.plans.findIndex((p) => p.id === plan.id);
+      this.$set(this.plans, planIndex, plan);
+    },
   },
   mounted() {
     this.refreshApiPlans();
@@ -642,6 +672,10 @@ export default {
 
       const addons = this.template.resources
         .filter((a) => {
+          if (a.virtual && product.meta.addons.includes(a.key)) {
+            return true;
+          }
+
           const [addonDuration, addonPlanCode] = a.key.split(" ");
 
           if (addonDuration === duration && addonPlanCode === planCode) {
@@ -657,7 +691,7 @@ export default {
             id: a.key,
             meta: { ...a.meta },
             planCode: id,
-            duration,
+            duration: a.virtual ? null : duration,
             basePrice: a.meta.basePrice,
           };
         });
