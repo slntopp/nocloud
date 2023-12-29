@@ -70,6 +70,10 @@ const save = async () => {
       products: {},
       resources: JSON.parse(JSON.stringify(resources.value)),
     });
+
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "Price model edited successfully",
+    });
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during save prices",
