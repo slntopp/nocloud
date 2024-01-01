@@ -39,22 +39,14 @@ const dueDate = computed(() => {
 const instancePrice = computed(() => {
   const key = props.template.product;
   const tariff = props.template.billingPlan.products[key];
-
-  const getAddonKey = (key, metaKey) =>
-    tariff.meta?.[metaKey].find(
-      (a) =>
-        key === a.type &&
-        a.key.startsWith(props.template.config?.configurations[key])
-    )?.key;
+  const getAddonKey = (addon) =>
+    [props.template.config?.configurations[addon], key].join("$");
 
   const addons = Object.keys(props.template.config?.configurations || {}).map(
     (key) =>
-      props.template.billingPlan?.resources?.find((r) => {
-        return (
-          r.key === getAddonKey(key, "addons") ||
-          r.key === getAddonKey(key, "os")
-        );
-      })
+      props.template.billingPlan?.resources?.find(
+        (r) => r.key === getAddonKey(key)
+      )
   );
 
   return (

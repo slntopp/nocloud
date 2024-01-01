@@ -1,6 +1,6 @@
 <template>
   <div class="pa-5">
-    <nocloud-table :headers="headers" :items="resources" :show-select="false">
+    <nocloud-table table-name="openai-prices_table" :headers="headers" :items="resources" :show-select="false">
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field type="number" dense v-model.number="item.price" />
       </template>
@@ -69,6 +69,10 @@ const save = async () => {
       ...props.template,
       products: {},
       resources: JSON.parse(JSON.stringify(resources.value)),
+    });
+
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: "Price model edited successfully",
     });
   } catch (e) {
     store.commit("snackbar/showSnackbarError", {

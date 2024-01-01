@@ -11,7 +11,12 @@
       background-color="background-light"
       v-model="tabsIndex"
     >
-      <v-tab v-for="tab of tabs" :key="tab.title">{{ tab.title }}</v-tab>
+      <v-tab v-for="tab of tabs" :key="tab.title"
+        >{{ tab.title }}
+        <v-chip class="ml-1" small v-if="tab.title === 'notes'">{{
+          instance.adminNotes?.length || 0
+        }}</v-chip></v-tab
+      >
     </v-tabs>
     <v-tabs-items
       class="rounded-b-lg"
@@ -109,7 +114,7 @@ export default {
             component: () => import("@/components/instance/snapshots.vue"),
           },
         {
-          title: "Notes",
+          title: "notes",
           component: () => import("@/components/instance/notes.vue"),
         },
         {
