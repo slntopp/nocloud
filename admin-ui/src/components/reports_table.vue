@@ -217,8 +217,16 @@ const getReportActions = (report) => {
 };
 
 const getReportType = (item) => {
-  return transactionTypes.value.find((t) => t.key === item.meta.transactionType)
-    ?.title;
+  const { transactionType: type } = item.meta;
+
+  if (!type) {
+    return "Unknown";
+  }
+
+  return (
+    transactionTypes.value.find((t) => t.key === type)?.title ||
+    type.charAt(0).toUpperCase() + type.slice(1)
+  );
 };
 
 const fetchReports = async () => {
