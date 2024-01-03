@@ -26,7 +26,9 @@
         "
         :loading="runningActionName === btn.action"
         :template="template"
-        @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
+        @click="
+          btn.type === 'method' ? btn.method($event) : sendAction(btn, $event)
+        "
       />
     </template>
 
@@ -97,7 +99,6 @@ import ConfirmDialog from "@/components/confirmDialog.vue";
 import { getTodayFullDate } from "@/functions";
 import { mapActions, mapGetters } from "vuex";
 import PluginIframe from "@/components/plugin/iframe.vue";
-import { is } from "date-fns/locale";
 
 export default {
   name: "instance-actions",
@@ -305,14 +306,18 @@ export default {
           this.isSaveLoading = false;
         });
     },
-    async startInstance() {
+    async startInstance(instance) {
+      if (!instance) {
+        instance = JSON.parse(JSON.stringify(this.template));
+      }
+
       try {
         await this.save(
           false,
           JSON.parse(
             JSON.stringify({
-              ...this.template,
-              config: { ...this.template.config, auto_start: true },
+              ...instance,
+              config: { ...instance.config, auto_start: true },
             })
           )
         );
@@ -324,13 +329,13 @@ export default {
         });
       }
     },
-    async sendAction(btn) {
+    async sendAction(btn, data) {
       this.runningActionName = btn.action;
       try {
         await this.sendVmAction({
           action: btn.action,
           template: { ...this.template, type: this.type },
-          params: btn.data,
+          params: btn.data || data,
         });
       } finally {
         this.runningActionName = "";
@@ -338,9 +343,6 @@ export default {
     },
   },
   computed: {
-    is() {
-      return is;
-    },
     ...mapGetters("actions", ["isSendActionLoading"]),
     type() {
       return this.template.billingPlan.type;
@@ -351,6 +353,7 @@ export default {
           {
             action: "start",
             type: "method",
+            component: () => import("@/components/dialogs/startInstance.vue"),
             method: this.startInstance,
             disabled: this.ioneActions?.start,
           },
@@ -375,6 +378,7 @@ export default {
           {
             action: "start",
             type: "method",
+            component: () => import("@/components/dialogs/startInstance.vue"),
             method: this.startInstance,
             disabled: this.ovhActions?.start,
           },
@@ -407,6 +411,7 @@ export default {
           {
             action: "reboot_vm",
             title: "reboot",
+            component: () => import("@/components/dialogs/rebootInstance.vue"),
             disabled: this.ovhActions?.reboot,
           },
           {
@@ -429,6 +434,7 @@ export default {
             action: "start",
             type: "method",
             method: this.startInstance,
+            component: () => import("@/components/dialogs/startInstance.vue"),
             disabled: this.ovhActions?.start,
           },
           {
@@ -442,7 +448,7 @@ export default {
             action: "change_state",
             data: { state: 3 },
             title: "start",
-            component: () => import("@/components/dialogs/emptyStart.vue"),
+            component: () => import("@/components/dialogs/startInstance.vue"),
             disabled: this.emptyActions?.start,
           },
           {
@@ -463,6 +469,7 @@ export default {
             action: "auto_start",
             type: "method",
             title: "start",
+            component: () => import("@/components/dialogs/startInstance.vue"),
             method: this.startInstance,
             disabled: !this.keywebActions?.auto_start,
           },
@@ -502,6 +509,7 @@ export default {
           {
             action: "start",
             type: "method",
+            component: () => import("@/components/dialogs/startInstance.vue"),
             method: this.startInstance,
             disabled: this.template.config.auto_start,
           },
@@ -611,6 +619,7 @@ export default {
             reboot: true,
             suspend: true,
             vnc: true,
+            auto_start: !this.template.config.auto_start,
           };
         }
         case "STOPPED": {
@@ -624,11 +633,12 @@ export default {
         case "PENDING":
         case "OPERATION": {
           return {
-            auto_start: this.template.auto_start,
+            auto_start: !this.template.config.auto_start,
           };
         }
         case "SUSPENDED": {
           return {
+            auto_start: !this.template.config.auto_start,
             unsuspend: true,
           };
         }
