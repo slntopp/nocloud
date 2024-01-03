@@ -26,7 +26,9 @@
         "
         :loading="runningActionName === btn.action"
         :template="template"
-        @click="btn.type === 'method' ? btn.method($event) : sendAction(btn)"
+        @click="
+          btn.type === 'method' ? btn.method($event) : sendAction(btn, $event)
+        "
       />
     </template>
 
@@ -327,13 +329,13 @@ export default {
         });
       }
     },
-    async sendAction(btn) {
+    async sendAction(btn, data) {
       this.runningActionName = btn.action;
       try {
         await this.sendVmAction({
           action: btn.action,
           template: { ...this.template, type: this.type },
-          params: btn.data,
+          params: btn.data || data,
         });
       } finally {
         this.runningActionName = "";
@@ -409,6 +411,7 @@ export default {
           {
             action: "reboot_vm",
             title: "reboot",
+            component: () => import("@/components/dialogs/rebootInstance.vue"),
             disabled: this.ovhActions?.reboot,
           },
           {
