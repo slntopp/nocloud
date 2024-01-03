@@ -41,35 +41,47 @@ const service = computed(() =>
 );
 
 const start = async (notSkip) => {
-  isModalOpen.value=false
-  if (notSkip) {
-    const tempService = JSON.parse(JSON.stringify(service.value));
-    const instance = JSON.parse(JSON.stringify(template.value));
-    const igIndex = tempService.instancesGroups.findIndex((ig) =>
-      ig.instances.find((i) => i.uuid === template.value.uuid)
-    );
-    const instanceIndex = tempService.instancesGroups[
-      igIndex
-    ].instances.findIndex((i) => i.uuid === template.value.uuid);
+  isModalOpen.value = false;
 
-    const skipped = [];
-    skipped.push(template.value.product);
-    skipped.push(...(template.value?.config?.addons || []));
+  if (!notSkip) {
+    return emit("click");
+  }
 
-    instance.config = { ...instance.config, skip_next_payment: skipped };
+  const tempService = JSON.parse(JSON.stringify(service.value));
+  const instance = JSON.parse(JSON.stringify(template.value));
+  const igIndex = tempService.instancesGroups.findIndex((ig) =>
+    ig.instances.find((i) => i.uuid === template.value.uuid)
+  );
+  const instanceIndex = tempService.instancesGroups[
+    igIndex
+  ].instances.findIndex((i) => i.uuid === template.value.uuid);
 
-    tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
-
-    try {
-      isInstanceSaveLoading.value = true;
-      await api.services._update(tempService);
-    } catch (err) {
-      store.commit("snackbar/showSnackbarError", { message: err });
-    } finally {
-      isInstanceSaveLoading.value = false;
+  const skipped = [];
+  skipped.push(template.value.product);
+  switch (template.value.type) {
+    case "keyweb": {
+      skipped.push(
+        ...Object.values(template.value?.config?.configurations || {})
+      );
+      break;
+    }
+    default: {
+      skipped.push(...(template.value?.config?.addons || []));
     }
   }
-  emit("click");
+  instance.config = { ...instance.config, skip_next_payment: skipped };
+
+  tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
+
+  try {
+    isInstanceSaveLoading.value = true;
+    await api.services._update(tempService);
+    emit("click", instance);
+  } catch (err) {
+    store.commit("snackbar/showSnackbarError", { message: err });
+  } finally {
+    isInstanceSaveLoading.value = false;
+  }
 };
 </script>
 
