@@ -235,7 +235,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 	}
 
 	if prevRec != "" {
-		recBody.Base = &prevRec
+		recBody.Previous = &prevRec
 	}
 
 	rec := s.records.Create(ctx, recBody)
