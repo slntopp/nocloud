@@ -185,7 +185,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 
 	if t.Base != nil {
 		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": t.GetBase(),
+			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
 		})
 		if err != nil {
 			log.Error("Failed get base record", zap.Error(err))
@@ -202,7 +202,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 
 	if t.Previous != nil {
 		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": t.GetPrevious(),
+			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
 		})
 		if err != nil {
 			log.Error("Failed get base record", zap.Error(err))
