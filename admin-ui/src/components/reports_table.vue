@@ -108,6 +108,7 @@ import { useStore } from "@/store";
 import DatePicker from "@/components/ui/datePicker.vue";
 import useCurrency from "@/hooks/useCurrency";
 import { debounce } from "@/functions";
+import { useRouter } from "vue-router/composables";
 
 const props = defineProps({
   filters: { type: Object },
@@ -125,6 +126,7 @@ const { filters, hideInstance, hideService, hideAccount, duration, showDates } =
 const emit = defineEmits(["input:unique", "input:duration"]);
 
 const store = useStore();
+const router = useRouter();
 const { rates, convertFrom, defaultCurrency } = useCurrency();
 
 const reports = ref([]);
@@ -211,6 +213,14 @@ const getReportActions = (report) => {
       }
       break;
     }
+  }
+
+  if (report.meta.transactionType?.startsWith("invoice")) {
+    actions.push({
+      title: "Open",
+      action: "open",
+      handler: openInvoice,
+    });
   }
 
   return actions;
@@ -355,6 +365,14 @@ const downloadInvoice = async (report) => {
       message: "Error while download invoice",
     });
   }
+};
+
+const openInvoice = (report) => {
+  console.log(report);
+  router.push({
+    name: "Transaction edit",
+    params: { uuid: report.meta.transaction },
+  });
 };
 
 watch(rates, () => {
