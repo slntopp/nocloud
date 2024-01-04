@@ -29,17 +29,29 @@
         </v-btn>
       </div>
       <div class="d-flex justify-end mt-3 align-center">
-        <v-switch
-          :loading="isChangeRegularPaymentLoading"
-          :input-value="
-            account.data?.regular_payment === undefined
-              ? true
-              : account.data?.regular_payment
-          "
-          @change="changeRegularPayment"
-          label="Invoice based"
-          class="mr-4"
-        />
+        <v-dialog v-model="isChangeRegularPaymentOpen" max-width="500">
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              :disabled="isChangeRegularPaymentLoading"
+              :loading="isChangeRegularPaymentLoading"
+              class="ma-1"
+              v-bind="attrs"
+              v-on="on"
+            >
+              Invoice based
+            </v-btn>
+          </template>
+          <v-card color="background-light pa-5">
+            <v-card-actions class="d-flex justify-center">
+              <v-btn class="mr-2" @click="changeRegularPayment(false)">
+                Disable to all
+              </v-btn>
+              <v-btn class="mr-2" @click="changeRegularPayment(true)">
+                Enable to all</v-btn
+              >
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
         <confirm-dialog
           v-for="button in stateButtons"
           :key="button.title"
@@ -182,6 +194,7 @@ export default {
     isEditLoading: false,
     statusChangeValue: "",
     isChangeRegularPaymentLoading: false,
+    isChangeRegularPaymentOpen: false,
   }),
   methods: {
     navTitle(title) {
@@ -277,15 +290,38 @@ export default {
     },
     async changeRegularPayment(value) {
       this.isChangeRegularPaymentLoading = true;
+      this.isChangeRegularPaymentOpen = false;
       try {
-        await this.updateAccount({
-          ...this.account,
-          data: {
-            ...this.account.data,
-            regular_payment: value,
-          },
+        const services = [];
+
+        this.accountInstances.forEach((instance) => {
+          const tempService =
+            services.find((s) => s.uuid === instance.service) ||
+            JSON.parse(
+              JSON.stringify(
+                this.services.find((s) => s.uuid === instance.service)
+              )
+            );
+          const igIndex = tempService.instancesGroups.findIndex((ig) =>
+            ig.instances.find((i) => i.uuid === instance.uuid)
+          );
+          const instanceIndex = tempService.instancesGroups[
+            igIndex
+          ].instances.findIndex((i) => i.uuid === instance.uuid);
+
+          instance.config.regular_payment = value;
+
+          tempService.instancesGroups[igIndex].instances[instanceIndex] =
+            instance;
+
+          const sIndex = services.findIndex((s) => s.uuid === instance.service);
+          if (sIndex !== -1) {
+            services[sIndex] = tempService;
+          } else {
+            services.push(tempService);
+          }
         });
-        this.$set(this.account.data, "regular_payment", value);
+        await Promise.all(services.map((s) => api.services._update(s)));
       } catch {
         this.showSnackbarError({
           message: "Error while change invoice based",
@@ -302,7 +338,7 @@ export default {
     this.keys = this.account.data?.ssh_keys || [];
     this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("services/fetch", { showDeleted: true });
-    this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
+    this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
   },
   computed: {
     namespaces() {
