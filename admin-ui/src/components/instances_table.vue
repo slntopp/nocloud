@@ -134,6 +134,17 @@
       <template v-if="!item.state?.meta.networking?.public">-</template>
       <instance-ip-menu v-else :item="item" ui="span" />
     </template>
+
+    <template v-slot:[`item.config.regular_payment`]="{ item }">
+      <v-switch
+        hide-details
+        dense
+        :disabled="isChangeRegularPaymentLoading"
+        :input-value="item.config.regular_payment"
+        @change="changeRegularPayment(item, $event)"
+        label="Invoice based"
+      />
+    </template>
   </nocloud-table>
 </template>
 
@@ -150,6 +161,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import searchMixin from "@/mixins/search";
 import InstanceState from "@/components/ui/instanceState.vue";
 import { mapGetters } from "vuex";
+import api from "@/api";
 
 export default {
   name: "instances-table",
@@ -204,6 +216,7 @@ export default {
       "date",
     ],
     instancesTypes: [],
+    isChangeRegularPaymentLoading: false,
   }),
   mounted() {
     const types = require.context(
@@ -470,6 +483,28 @@ export default {
     getSearchKeyItems(key) {
       return [...new Set(this.items.map((i) => this.getValue(key, i)))];
     },
+    async changeRegularPayment(instance, value) {
+      this.isChangeRegularPaymentLoading = true;
+      try {
+        const tempService = JSON.parse(
+          JSON.stringify(this.services.find((s) => s.uuid === instance.service))
+        );
+        const igIndex = tempService.instancesGroups.findIndex((ig) =>
+          ig.instances.find((i) => i.uuid === instance.uuid)
+        );
+        const instanceIndex = tempService.instancesGroups[
+          igIndex
+        ].instances.findIndex((i) => i.uuid === instance.uuid);
+
+        instance.config.regular_payment = value;
+
+        tempService.instancesGroups[igIndex].instances[instanceIndex] =
+          instance;
+        await api.services._update(tempService);
+      } finally {
+        this.isChangeRegularPaymentLoading = false;
+      }
+    },
   },
   computed: {
     ...mapGetters("appSearch", { searchParam: "param", filter: "filter" }),
@@ -573,6 +608,7 @@ export default {
         { text: "Domain", value: "resources.domain" },
         { text: "DCV", value: "resources.dcv" },
         { text: "Approver email", value: "resources.approver_email" },
+        { text: "Invoice based", value: "config.regular_payment" },
       ];
       return headers;
     },
