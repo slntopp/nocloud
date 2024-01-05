@@ -610,11 +610,6 @@ FOR r in transaction.records
 	UPDATE r WITH {meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
 `
 
-const getTransactionRecord = `
-LET transaction = DOCUMENT(@transactionKey)
-RETURN transaction.records[0]
-`
-
 const reprocessTransactions = `
 LET account = UNSET(DOCUMENT(@account), "balance")
 LET currency = account.currency != null ? account.currency : @currency
