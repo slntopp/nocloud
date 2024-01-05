@@ -10,6 +10,7 @@
             </v-col>
             <v-col cols="9">
               <v-select
+                :disabled="isEdit"
                 item-value="id"
                 item-text="title"
                 label="Type"
@@ -35,6 +36,7 @@
             </v-col>
             <v-col cols="9">
               <v-autocomplete
+                :disabled="isEdit"
                 :filter="defaultFilterObject"
                 label="Account"
                 v-model="transaction.account"
@@ -304,10 +306,11 @@ export default {
       },
     ],
     typeId: 4,
+    isEdit: false,
   }),
   methods: {
     defaultFilterObject,
-    sendTransactionType() {
+    setTransactionType() {
       let amount = "";
 
       if (this.fullType.amount.value === null) {
@@ -333,42 +336,11 @@ export default {
       this.refreshData();
 
       try {
-        let total = this.isInvoice
-          ? this.transaction.meta.items.reduce((acc, i) => acc + i.amount, 0)
-          : this.transaction.total;
-        const amountType = this.fullType.amount.value;
-        if (amountType === null) {
-          const balance = this.fullAccount.balance || 0;
-          const difference = Math.abs(total - balance);
-          total = (balance > total ? +difference : -difference).toFixed(2);
+        if (this.isEdit) {
+          await this.editTransaction(withEmail);
         } else {
-          total = Math.abs(total);
-          total = amountType ? total : -total;
+          await this.createTransaction(withEmail);
         }
-
-        const transaction = await api.transactions.create({
-          ...this.transaction,
-          account: this.transaction.account,
-          total,
-          currency: this.accountCurrency,
-        });
-
-        if (this.transaction.meta.transactionType.startsWith("invoice")) {
-          await fetch(
-            /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
-              `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
-                this.transaction.account
-              }&type=${
-                this.transaction.meta.transactionType.split(" ")[1]
-              }&items=${JSON.stringify(
-                this.transaction.meta.items
-              )}&send_email=${withEmail}&transaction=${transaction.uuid}`
-          );
-        }
-
-        this.showSnackbarSuccess({
-          message: "Transaction created successfully",
-        });
 
         this.$router.push({ name: "Transactions" });
       } catch (err) {
@@ -378,6 +350,60 @@ export default {
       } finally {
         this.isLoading = false;
       }
+    },
+    async editTransaction(withEmail) {
+      await fetch(
+        /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
+          `modules/addons/nocloud/api/index.php?run=update_invoice&account=${
+            this.transaction.account
+          }&type=${
+            this.transaction.meta.transactionType.split(" ")[1]
+          }&items=${JSON.stringify(
+            this.transaction.meta.items
+          )}&send_email=${withEmail}&transaction=${this.transaction.uuid}`
+      );
+
+      this.showSnackbarSuccess({
+        message: "Transaction edited successfully",
+      });
+    },
+    async createTransaction(withEmail) {
+      let total = this.isInvoice
+        ? this.transaction.meta.items.reduce((acc, i) => acc + i.amount, 0)
+        : this.transaction.total;
+      const amountType = this.fullType.amount.value;
+      if (amountType === null) {
+        const balance = this.fullAccount.balance || 0;
+        const difference = Math.abs(total - balance);
+        total = (balance > total ? +difference : -difference).toFixed(2);
+      } else {
+        total = Math.abs(total);
+        total = amountType ? total : -total;
+      }
+
+      const transaction = await api.transactions.create({
+        ...this.transaction,
+        account: this.transaction.account,
+        total,
+        currency: this.accountCurrency,
+      });
+
+      if (this.transaction.meta.transactionType.startsWith("invoice")) {
+        await fetch(
+          /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
+            `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
+              this.transaction.account
+            }&type=${
+              this.transaction.meta.transactionType.split(" ")[1]
+            }&items=${JSON.stringify(
+              this.transaction.meta.items
+            )}&send_email=${withEmail}&transaction=${transaction.uuid}`
+        );
+      }
+
+      this.showSnackbarSuccess({
+        message: "Transaction created successfully",
+      });
     },
     refreshData() {
       this.transaction.service =
@@ -422,29 +448,44 @@ export default {
     }
 
     this.initDate();
-    this.sendTransactionType();
+    this.setTransactionType();
+
+    if (this.$route.params.uuid) {
+      try {
+        const { pool } = await api.transactions.get(this.$route.params.uuid);
+        this.transaction = pool[0];
+        this.isEdit = true;
+        this.typeId =
+          this.types.find(
+            (t) =>
+              this.transaction.meta.transactionType.startsWith(t.value) &&
+              t.amount.value === !!this.transaction.total
+          )?.id || 2;
+      } catch {
+        this.$router.back();
+      }
+    }
 
     if (this.accounts.length < 2) {
       this.$store.dispatch("accounts/fetch");
     }
 
-    await Promise.all([
-      this.$store.dispatch("namespaces/fetch"),
-      this.$store.dispatch("services/fetch"),
-    ])
-      .then(() => {
-        this.fetchError = "";
-      })
-      .catch((err) => {
-        let fetchError = "Can't reach the server";
-        if (err.response) {
-          fetchError += `: [ERROR]: ${err.response.data.message}`;
-        } else {
-          fetchError += `: [ERROR]: ${err.toJSON().message}`;
-        }
+    try {
+      await Promise.all([
+        this.$store.dispatch("namespaces/fetch"),
+        this.$store.dispatch("services/fetch"),
+      ]);
+      this.fetchError = "";
+    } catch (err) {
+      let fetchError = "Can't reach the server";
+      if (err.response) {
+        fetchError += `: [ERROR]: ${err.response.data.message}`;
+      } else {
+        fetchError += `: [ERROR]: ${err.toJSON().message}`;
+      }
 
-        this.showSnackbarError({ message: fetchError });
-      });
+      this.showSnackbarError({ message: fetchError });
+    }
   },
   computed: {
     namespaces() {
@@ -532,11 +573,13 @@ export default {
       this.transaction.meta.instances = [];
     },
     typeId() {
-      this.sendTransactionType();
+      this.setTransactionType();
       if (this.isInvoice) {
         this.transaction.service = undefined;
         this.transaction.meta.description = undefined;
-        this.transaction.meta.items = [{ description: "", amount: 0 }];
+        if (!this.isEdit) {
+          this.transaction.meta.items = [{ description: "", amount: 0 }];
+        }
         this.resetDate();
       } else if (this.isTransaction) {
         this.transaction.meta.items = undefined;

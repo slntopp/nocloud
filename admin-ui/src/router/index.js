@@ -292,6 +292,14 @@ const routes = [
     },
   },
   {
+    path: "/transactions/:uuid",
+    name: "Transaction edit",
+    component: () => import("../views/TransactionsCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
     path: "/currencies",
     name: "Currencies",
     component: () => import("../views/Currencies.vue"),
