@@ -48,6 +48,8 @@ func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, 
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
 	}
 
+	tr.Uuid = uuid
+
 	return &pb.Transactions{
 		Pool: []*pb.Transaction{
 			tr,
