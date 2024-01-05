@@ -55,6 +55,7 @@ const (
 const (
 	BILLING_PLANS_COL = "BillingPlans"
 	TRANSACTIONS_COL  = "Transactions"
+	INVOICES_COL      = "Invoices"
 	RECORDS_COL       = "Records"
 )
 
