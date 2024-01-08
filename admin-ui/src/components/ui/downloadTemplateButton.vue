@@ -1,6 +1,6 @@
 <template>
   <v-btn class="mr-2" @click="downloadFile" :disabled="disabled" :small="small">
-    {{ title || `Download ${isJson ? "JSON" : "YAML"}` }}
+    {{ title || `Download ${fullType}` }}
   </v-btn>
 </template>
 
@@ -18,12 +18,22 @@ const props = defineProps({
 });
 const { name, template, type, disabled, small, title } = toRefs(props);
 
+const emit = defineEmits("click:xlsx");
+
 const isJson = computed(() => {
   return type.value === "JSON";
+});
+const fullType = computed(() => {
+  return type.value?.toUpperCase();
 });
 
 const downloadFile = () => {
   const params = [template.value, name.value];
+
+  if (type.value === "xlsx".toUpperCase()) {
+    return emit("click:xlsx");
+  }
+
   if (isJson.value) {
     downloadJSONFile(...params);
   } else {

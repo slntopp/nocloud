@@ -103,9 +103,10 @@
             class="d-inline-block mx-1"
           />
           <download-template-button
+            @click:xlsx="downloadXlsx"
             class="mx-1"
             small
-            title="Downlaod"
+            title="Download"
             :disabled="!selected.length || isPlansUploadLoading"
             name="selected_copy"
             :type="selectedFileType"
@@ -143,7 +144,7 @@ import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import {
   compareSearchValue,
-  defaultFilterObject,
+  downloadPlanXlsx,
   filterArrayByTitleAndUuid,
   getDeepObjectValue,
   readJSONFile,
@@ -199,13 +200,12 @@ export default {
     copyed: -1,
     fetchError: "",
 
-    fileTypes: ["JSON", "YAML"],
+    fileTypes: ["JSON", "YAML", "XLSX"],
     selectedFileType: "JSON",
     isPlansUploadLoading: false,
     uploadedPlans: [],
   }),
   methods: {
-    defaultFilterObject,
     changePlan() {
       this.linked = [];
       this.services.forEach((service) => {
@@ -335,6 +335,9 @@ export default {
     },
     getStatus(item) {
       return this.statusMap[item.status] || this.statusMap.UNKNOWN;
+    },
+    downloadXlsx() {
+      return downloadPlanXlsx(this.selected);
     },
   },
   created() {
