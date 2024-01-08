@@ -30,7 +30,7 @@ func NewAddonsServer(logger *zap.Logger, db driver.Database) *AddonsServer {
 		log:    log,
 		db:     db,
 		addons: graph.NewAddonsController(log, db),
-		nss:    graph.NewNamespacesController(log.Named("PlansController"), db),
+		nss:    graph.NewNamespacesController(log.Named("NamespacesController"), db),
 	}
 }
 
@@ -39,7 +39,7 @@ func (s *AddonsServer) Create(ctx context.Context, req *pb.Addon) (*pb.Addon, er
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
 	addon, err := s.addons.Create(ctx, req)
@@ -56,7 +56,7 @@ func (s *AddonsServer) Update(ctx context.Context, req *pb.Addon) (*pb.Addon, er
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
 	addon, err := s.addons.Update(ctx, req)
@@ -80,7 +80,7 @@ func (s *AddonsServer) Get(ctx context.Context, req *pb.Addon) (*pb.Addon, error
 	}
 
 	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) && !addon.GetPublic() {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
 	return addon, nil
@@ -115,7 +115,7 @@ func (s *AddonsServer) Delete(ctx context.Context, req *pb.Addon) (*pb.Addon, er
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
 	err := s.addons.Delete(ctx, req.GetUuid())

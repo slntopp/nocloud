@@ -39,7 +39,7 @@ func (s *DescriptionsServer) Create(ctx context.Context, req *pb.Description) (*
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
 	}
 
 	description, err := s.descriptions.Create(ctx, req)
@@ -56,7 +56,7 @@ func (s *DescriptionsServer) Update(ctx context.Context, req *pb.Description) (*
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
 	}
 
 	description, err := s.descriptions.Update(ctx, req)
@@ -97,7 +97,7 @@ func (s *DescriptionsServer) Delete(ctx context.Context, req *pb.Description) (*
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Descriptions")
 	}
 
 	err := s.descriptions.Delete(ctx, req.GetUuid())
