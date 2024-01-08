@@ -48,10 +48,10 @@ func (c *AddonsController) Update(ctx context.Context, addon *pb.Addon) (*pb.Add
 	return addon, nil
 }
 
-func (c *AddonsController) Delete(ctx context.Context, addon *pb.Addon) error {
+func (c *AddonsController) Delete(ctx context.Context, uuid string) error {
 	log := c.log.Named("Update")
 
-	_, err := c.col.RemoveDocument(ctx, addon.GetUuid())
+	_, err := c.col.RemoveDocument(ctx, uuid)
 	if err != nil {
 		log.Error("Failed to update document", zap.Error(err))
 		return err

@@ -13,28 +13,28 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type AddonsServer struct {
-	pb.UnimplementedAddonsServiceServer
+type DescriptionsServer struct {
+	pb.UnimplementedDescriptionsServiceServer
 
 	log *zap.Logger
 
 	db driver.Database
 
-	addons *graph.AddonsController
-	nss    graph.NamespacesController
+	descriptions *graph.DescriptionsController
+	nss          graph.NamespacesController
 }
 
-func NewAddonsServer(logger *zap.Logger, db driver.Database) *AddonsServer {
-	log := logger.Named("AddonsServer")
-	return &AddonsServer{
-		log:    log,
-		db:     db,
-		addons: graph.NewAddonsController(log, db),
-		nss:    graph.NewNamespacesController(log.Named("PlansController"), db),
+func NewDescriptionsServer(logger *zap.Logger, db driver.Database) *DescriptionsServer {
+	log := logger.Named("DescriptionsServer")
+	return &DescriptionsServer{
+		log:          log,
+		db:           db,
+		descriptions: graph.NewDescriptionsController(log, db),
+		nss:          graph.NewNamespacesController(log.Named("DescriptionsCtrl"), db),
 	}
 }
 
-func (s *AddonsServer) Create(ctx context.Context, req *pb.Addon) (*pb.Addon, error) {
+func (s *DescriptionsServer) Create(ctx context.Context, req *pb.Description) (*pb.Description, error) {
 	log := s.log.Named("Create")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
@@ -42,16 +42,16 @@ func (s *AddonsServer) Create(ctx context.Context, req *pb.Addon) (*pb.Addon, er
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
-	addon, err := s.addons.Create(ctx, req)
+	description, err := s.descriptions.Create(ctx, req)
 	if err != nil {
 		log.Error("Failed to create document", zap.Error(err))
 		return nil, err
 	}
 
-	return addon, nil
+	return description, nil
 }
 
-func (s *AddonsServer) Update(ctx context.Context, req *pb.Addon) (*pb.Addon, error) {
+func (s *DescriptionsServer) Update(ctx context.Context, req *pb.Description) (*pb.Description, error) {
 	log := s.log.Named("Update")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
@@ -59,58 +59,40 @@ func (s *AddonsServer) Update(ctx context.Context, req *pb.Addon) (*pb.Addon, er
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
-	addon, err := s.addons.Update(ctx, req)
+	description, err := s.descriptions.Update(ctx, req)
 	if err != nil {
 		log.Error("Failed to update document", zap.Error(err))
 		return nil, err
 	}
 
-	return addon, nil
+	return description, nil
 }
 
-func (s *AddonsServer) Get(ctx context.Context, req *pb.Addon) (*pb.Addon, error) {
+func (s *DescriptionsServer) Get(ctx context.Context, req *pb.Description) (*pb.Description, error) {
 	log := s.log.Named("Get")
 
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	addon, err := s.addons.Get(ctx, req.GetUuid())
+	description, err := s.descriptions.Get(ctx, req.GetUuid())
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) && !addon.GetPublic() {
-		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
-	}
-
-	return addon, nil
+	return description, nil
 }
 
-func (s *AddonsServer) List(ctx context.Context, req *pb.ListAddonsRequest) (*pb.ListAddonsResponse, error) {
+func (s *DescriptionsServer) List(ctx context.Context, req *pb.ListDescriptionsRequest) (*pb.ListDescriptionsResponse, error) {
 	log := s.log.Named("List")
 
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	addons, err := s.addons.List(ctx, req.GetGroup())
+	descriptions, err := s.descriptions.List(ctx)
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
-	if graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
-		return &pb.ListAddonsResponse{Addons: addons}, nil
-	}
 
-	var filteredAddons []*pb.Addon
-
-	for _, val := range filteredAddons {
-		if val.GetPublic() {
-			filteredAddons = append(filteredAddons, val)
-		}
-	}
-	return &pb.ListAddonsResponse{Addons: filteredAddons}, nil
+	return &pb.ListDescriptionsResponse{Descriptions: descriptions}, nil
 }
 
-func (s *AddonsServer) Delete(ctx context.Context, req *pb.Addon) (*pb.Addon, error) {
+func (s *DescriptionsServer) Delete(ctx context.Context, req *pb.Description) (*pb.Description, error) {
 	log := s.log.Named("Create")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
@@ -118,7 +100,7 @@ func (s *AddonsServer) Delete(ctx context.Context, req *pb.Addon) (*pb.Addon, er
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage BillingPlans")
 	}
 
-	err := s.addons.Delete(ctx, req.GetUuid())
+	err := s.descriptions.Delete(ctx, req.GetUuid())
 	if err != nil {
 		log.Error("Failed to create document", zap.Error(err))
 		return nil, err
