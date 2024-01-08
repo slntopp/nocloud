@@ -368,7 +368,6 @@ const downloadInvoice = async (report) => {
 };
 
 const openInvoice = (report) => {
-  console.log(report);
   router.push({
     name: "Transaction edit",
     params: { uuid: report.meta.transaction },

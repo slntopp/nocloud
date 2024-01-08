@@ -198,6 +198,57 @@
               />
             </v-card>
           </template>
+          <v-expansion-panels v-if="history.length" class="mt-4">
+            <v-expansion-panel>
+              <v-expansion-panel-header color="background-light">
+                <span class="text-h6">History</span>
+                <template v-slot:actions>
+                  <v-icon x-large> $expand </v-icon>
+                </template>
+              </v-expansion-panel-header>
+              <v-expansion-panel-content color="background-light">
+                <v-expansion-panels class="mt-4">
+                  <v-expansion-panel v-for="item in history" :key="item.uuid">
+                    <v-expansion-panel-header color="background-light">
+                      <span
+                        >{{ item.meta.description }}
+                        {{ new Date(item.exec * 1000).toLocaleString() }}</span
+                      >
+                      <template v-slot:actions>
+                        <v-icon x-large> $expand </v-icon>
+                      </template>
+                    </v-expansion-panel-header>
+                    <v-expansion-panel-content color="background-light">
+                      <v-card
+                        outlined
+                        class="pa-3 my-3"
+                        color="background-light"
+                        v-for="(product, index) in item.meta.items"
+                        :key="index"
+                      >
+                        <div class="d-flex align-center">
+                          <span>Item {{ index + 1 }}</span>
+                        </div>
+                        <v-textarea
+                          no-resize
+                          label="Items description"
+                          :value="product.description"
+                          readonly
+                        />
+                        <v-text-field
+                          type="number"
+                          label="Amount"
+                          :suffix="accountCurrency"
+                          :value="product.amount"
+                          readonly
+                        />
+                      </v-card>
+                    </v-expansion-panel-content>
+                  </v-expansion-panel>
+                </v-expansion-panels>
+              </v-expansion-panel-content>
+            </v-expansion-panel>
+          </v-expansion-panels>
           <v-expansion-panels class="mt-4">
             <v-expansion-panel>
               <v-expansion-panel-header color="background-light">
@@ -307,6 +358,7 @@ export default {
     ],
     typeId: 4,
     isEdit: false,
+    history: [],
   }),
   methods: {
     defaultFilterObject,
@@ -461,7 +513,12 @@ export default {
               this.transaction.meta.transactionType.startsWith(t.value) &&
               t.amount.value === !!this.transaction.total
           )?.id || 2;
-      } catch {
+
+        const { records = [] } = await api.reports.list({
+          filters: { base: [this.$route.params.uuid] },
+        });
+        this.history = records;
+      } catch (err) {
         this.$router.back();
       }
     }
