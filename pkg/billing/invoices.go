@@ -214,7 +214,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, req *pb.Invoic
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
-	t, err := s.transactions.Get(ctx, req.GetUuid())
+	t, err := s.invoices.Get(ctx, req.GetUuid())
 	if err != nil {
 		return nil, err
 	}
@@ -235,20 +235,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, req *pb.Invoic
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 
-	_, err = s.transactions.Update(ctx, t)
+	_, err = s.invoices.Update(ctx, t)
 	if err != nil {
 		log.Error("Failed to update transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update transaction")
-	}
-
-	_, err = s.db.Query(ctx, updateRecordsMeta, map[string]interface{}{
-		"@records":       schema.RECORDS_COL,
-		"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid).String(),
-	})
-
-	if err != nil {
-		log.Error("Failed to update record", zap.Error(err))
-		return nil, err
 	}
 
 	return t, nil
