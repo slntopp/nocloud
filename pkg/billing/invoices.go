@@ -7,14 +7,12 @@ import (
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	epb "github.com/slntopp/nocloud-proto/events"
-	"github.com/slntopp/nocloud-proto/registry/accounts"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/structpb"
 	"time"
 )
 
@@ -25,13 +23,13 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, req *pb.GetInvoi
 
 	acc := requestor
 
-	query := `FOR t IN @@transactions`
+	query := `FOR t IN @@invoices`
 	vars := map[string]interface{}{
-		"@transactions": schema.TRANSACTIONS_COL,
+		"@invoices": schema.INVOICES_COL,
 	}
 
 	if req.GetUuid() != "" {
-		return s._HandleGetSingleTransaction(ctx, acc, req.GetUuid())
+		return s._HandleGetSingleInvoice(ctx, acc, req.GetUuid())
 	}
 
 	if req.Account != nil {
@@ -60,17 +58,6 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, req *pb.GetInvoi
 			query += ` && t.service == @service`
 		}
 		vars["service"] = service
-	}
-
-	if req.Type != nil {
-		transactionType := req.GetType()
-
-		if req.Account == nil && req.Service == nil {
-			query += ` FILTER t.meta.type == @type`
-		} else {
-			query += ` && t.meta.type == @type`
-		}
-		vars["type"] = transactionType
 	}
 
 	if req.Field != nil && req.Sort != nil {
@@ -109,9 +96,9 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, req *pb.GetInvoi
 	}
 	defer cursor.Close()
 
-	var transactions []*pb.Transaction
+	var transactions []*pb.Invoice
 	for {
-		transaction := &pb.Transaction{}
+		transaction := &pb.Invoice{}
 		meta, err := cursor.ReadDocument(ctx, transaction)
 		if err != nil {
 			if driver.IsNoMoreDocuments(err) {
@@ -125,7 +112,7 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, req *pb.GetInvoi
 	}
 
 	log.Debug("Transactions retrieved", zap.Any("transactions", transactions))
-	return &pb.Transactions{Pool: transactions}, nil
+	return &pb.Invoices{Pool: transactions}, nil
 }
 
 func (s *BillingServiceServer) CreateInvoice(ctx context.Context, t *pb.Invoice) (*pb.Invoice, error) {
@@ -139,79 +126,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, t *pb.Invoice)
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
-	if t.Meta == nil {
-		t.Meta = map[string]*structpb.Value{}
-		t.Meta["type"] = structpb.NewStringValue("transaction")
-	}
-
-	var baseRec, prevRec string
-
-	if t.Base != nil {
-		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
-		})
-		if err != nil {
-			log.Error("Failed get base record", zap.Error(err))
-			return nil, err
-		}
-		if query.HasMore() {
-			_, err := query.ReadDocument(ctx, &baseRec)
-			if err != nil {
-				log.Error("Failed read base record", zap.Error(err))
-				return nil, err
-			}
-		}
-	}
-
-	if t.Previous != nil {
-		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
-		})
-		if err != nil {
-			log.Error("Failed get base record", zap.Error(err))
-			return nil, err
-		}
-		if query.HasMore() {
-			_, err := query.ReadDocument(ctx, &prevRec)
-			if err != nil {
-				log.Error("Failed read base record", zap.Error(err))
-				return nil, err
-			}
-		}
-	}
-
-	recBody := &pb.Record{
-		Start:     time.Now().Unix(),
-		End:       time.Now().Unix() + 1,
-		Exec:      time.Now().Unix(),
-		Processed: true,
-		Priority:  t.GetPriority(),
-		Total:     t.GetTotal(),
-		Currency:  t.GetCurrency(),
-		Service:   t.GetService(),
-		Account:   t.GetAccount(),
-		Meta:      t.GetMeta(),
-	}
-
-	if baseRec != "" {
-		recBody.Base = &baseRec
-	}
-
-	if prevRec != "" {
-		recBody.Previous = &prevRec
-	}
-
-	rec := s.records.Create(ctx, recBody)
-
-	if t.GetRecords() == nil {
-		t.Records = []string{}
-	}
-
-	t.Records = append(t.Records, rec.Key())
-
 	t.Created = time.Now().Unix()
 
-	r, err := s.transactions.Create(ctx, t)
+	r, err := s.invoices.Create(ctx, t)
 	if err != nil {
 		log.Error("Failed to create transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
@@ -220,105 +137,10 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, t *pb.Invoice)
 	eventsClient.Publish(ctx, &epb.Event{
 		Type: "email",
 		Uuid: t.GetAccount(),
-		Key:  "transaction_created",
+		Key:  "invoice_created",
 	})
 
-	if r.Transaction.Priority == pb.Priority_URGENT && r.Transaction.GetExec() != 0 {
-		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
-		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
-		suspConf := MakeSuspendConf(ctx, log)
-
-		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
-			"@accounts":      schema.ACCOUNTS_COL,
-			"@transactions":  schema.TRANSACTIONS_COL,
-			"@records":       schema.RECORDS_COL,
-			"accountKey":     acc.String(),
-			"transactionKey": transaction.String(),
-			"currency":       currencyConf.Currency,
-			"currencies":     schema.CUR_COL,
-			"now":            time.Now().Unix(),
-			"graph":          schema.BILLING_GRAPH.Name,
-		})
-		if err != nil {
-			log.Error("Failed to process transaction", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: r.Transaction.Account, Public: false})
-
-		if err != nil {
-			log.Error("Failed to get account", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		var cur pb.Currency
-
-		if dbAcc.Currency == nil {
-			cur = pb.Currency_NCU
-		} else {
-			cur = *dbAcc.Currency
-		}
-
-		var rate float64 = 1
-
-		if cur != pb.Currency(currencyConf.Currency) {
-			rate, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
-
-			if err != nil {
-				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		var balance = 0.0
-		if dbAcc.Balance != nil {
-			balance = *dbAcc.Balance
-		}
-
-		balance = balance * rate
-
-		var isSuspended = false
-
-		if dbAcc.Suspended != nil {
-			isSuspended = *dbAcc.Suspended
-		}
-
-		if !isSuspended && balance < suspConf.Limit {
-			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: r.Transaction.Account})
-			if err != nil {
-				log.Error("Failed to suspend account", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		} else if isSuspended && balance > suspConf.Limit {
-			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: r.Transaction.Account})
-			if err != nil {
-				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-	} else {
-		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, r.Transaction.Account)
-		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, r.Transaction.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
-
-		_, err := s.db.Query(ctx, updateTransactionWithCurrency, map[string]interface{}{
-			"@transactions":  schema.TRANSACTIONS_COL,
-			"@records":       schema.RECORDS_COL,
-			"accountKey":     acc.String(),
-			"transactionKey": transaction.String(),
-			"currency":       currencyConf.Currency,
-			"currencies":     schema.CUR_COL,
-			"graph":          schema.BILLING_GRAPH.Name,
-		})
-		if err != nil {
-			log.Error("Failed to process transaction", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-	}
-
-	return r.Transaction, nil
+	return r, nil
 }
 
 func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, req *pb.GetInvoicesCountRequest) (*pb.GetInvoicesCountResponse, error) {
@@ -328,9 +150,9 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, req *pb.Get
 
 	acc := requestor
 
-	query := `FOR t IN @@transactions`
+	query := `FOR t IN @@invoices`
 	vars := map[string]interface{}{
-		"@transactions": schema.TRANSACTIONS_COL,
+		"@invoices": schema.INVOICES_COL,
 	}
 
 	if req.Account != nil {
@@ -361,17 +183,6 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, req *pb.Get
 		vars["service"] = service
 	}
 
-	if req.Type != nil {
-		transactionType := req.GetType()
-
-		if req.Account == nil && req.Service == nil {
-			query += ` FILTER t.meta.type == @type`
-		} else {
-			query += ` && t.meta.type == @type`
-		}
-		vars["type"] = transactionType
-	}
-
 	query += ` RETURN t`
 
 	log.Debug("Ready to retrieve transactions", zap.String("query", query), zap.Any("vars", vars))
@@ -387,7 +198,7 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, req *pb.Get
 
 	log.Info("transactions count", zap.Int64("count", cursor.Count()))
 
-	return &pb.GetTransactionsCountResponse{
+	return &pb.GetInvoicesCountResponse{
 		Total: uint64(cursor.Count()),
 	}, nil
 }
@@ -440,81 +251,24 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, req *pb.Invoic
 		return nil, err
 	}
 
-	if t.GetPriority() == pb.Priority_URGENT && t.GetExec() != 0 {
-		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
-		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
-		currencyConf := MakeCurrencyConf(ctx, log)
-		suspConf := MakeSuspendConf(ctx, log)
+	return t, nil
+}
 
-		_, err := s.db.Query(ctx, processUrgentTransaction, map[string]interface{}{
-			"@accounts":      schema.ACCOUNTS_COL,
-			"@transactions":  schema.TRANSACTIONS_COL,
-			"@records":       schema.RECORDS_COL,
-			"accountKey":     acc.String(),
-			"transactionKey": transaction.String(),
-			"currency":       currencyConf.Currency,
-			"currencies":     schema.CUR_COL,
-			"now":            time.Now().Unix(),
-			"graph":          schema.BILLING_GRAPH.Name,
-		})
-		if err != nil {
-			log.Error("Failed to process transaction", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		dbAcc, err := accClient.Get(ctx, &accounts.GetRequest{Uuid: t.Account, Public: false})
-
-		if err != nil {
-			log.Error("Failed to get account", zap.String("err", err.Error()))
-			return nil, status.Error(codes.Internal, err.Error())
-		}
-
-		var cur pb.Currency
-
-		if dbAcc.Currency == nil {
-			cur = pb.Currency_NCU
-		} else {
-			cur = *dbAcc.Currency
-		}
-
-		var rate float64 = 1
-
-		if cur != pb.Currency(currencyConf.Currency) {
-			rate, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
-
-			if err != nil {
-				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
-
-		var balance = 0.0
-		if dbAcc.Balance != nil {
-			balance = *dbAcc.Balance
-		}
-
-		balance = balance * rate
-
-		var isSuspended = false
-
-		if dbAcc.Suspended != nil {
-			isSuspended = *dbAcc.Suspended
-		}
-
-		if !isSuspended && balance < suspConf.Limit {
-			_, err := accClient.Suspend(ctx, &accounts.SuspendRequest{Uuid: t.Account})
-			if err != nil {
-				log.Error("Failed to suspend account", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		} else if isSuspended && balance > suspConf.Limit {
-			_, err := accClient.Unsuspend(ctx, &accounts.UnsuspendRequest{Uuid: t.Account})
-			if err != nil {
-				log.Error("Failed to unsuspend account", zap.String("err", err.Error()))
-				return nil, status.Error(codes.Internal, err.Error())
-			}
-		}
+func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*pb.Invoices, error) {
+	tr, err := s.invoices.Get(ctx, uuid)
+	if err != nil {
+		return nil, status.Error(codes.NotFound, "Transaction doesn't exist")
 	}
 
-	return &pb.UpdateTransactionResponse{Result: true}, nil
+	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
+
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
+	}
+
+	return &pb.Invoices{
+		Pool: []*pb.Invoice{
+			tr,
+		},
+	}, nil
 }

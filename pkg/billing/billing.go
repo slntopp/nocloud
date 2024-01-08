@@ -45,6 +45,7 @@ type BillingServiceServer struct {
 	nss          graph.NamespacesController
 	plans        graph.BillingPlansController
 	transactions graph.TransactionsController
+	invoices     graph.InvoicesController
 	records      graph.RecordsController
 	currencies   graph.CurrencyController
 	accounts     graph.AccountsController
@@ -66,6 +67,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 		records:      graph.NewRecordsController(log.Named("RecordsController"), db),
 		currencies:   graph.NewCurrencyController(log.Named("CurrenciesController"), db),
 		accounts:     graph.NewAccountsController(log.Named("AccountsController"), db),
+		invoices:     graph.NewInvoicesController(log.Named("InvoicesController"), db),
 		db:           db,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
