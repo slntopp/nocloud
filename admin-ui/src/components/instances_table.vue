@@ -134,6 +134,17 @@
       <template v-if="!item.state?.meta.networking?.public">-</template>
       <instance-ip-menu v-else :item="item" ui="span" />
     </template>
+
+    <template v-slot:[`item.config.regular_payment`]="{ item }">
+      <v-switch
+        hide-details
+        dense
+        :disabled="isChangeRegularPaymentLoading"
+        :input-value="item.config.regular_payment"
+        @change="changeRegularPayment(item, $event)"
+        label="Invoice based"
+      />
+    </template>
   </nocloud-table>
 </template>
 
@@ -150,6 +161,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import searchMixin from "@/mixins/search";
 import InstanceState from "@/components/ui/instanceState.vue";
 import { mapGetters } from "vuex";
+import api from "@/api";
 
 export default {
   name: "instances-table",
@@ -204,6 +216,7 @@ export default {
       "date",
     ],
     instancesTypes: [],
+    isChangeRegularPaymentLoading: false,
   }),
   mounted() {
     const types = require.context(
@@ -267,11 +280,11 @@ export default {
     getAccount({ access }) {
       const {
         access: { namespace },
-      } = this.namespaces.find(({ uuid }) => uuid === access.namespace) ?? {
+      } = this.namespaces?.find(({ uuid }) => uuid === access.namespace) ?? {
         access: {},
       };
 
-      return this.accounts.find(({ uuid }) => uuid === namespace) ?? {};
+      return this.accounts?.find(({ uuid }) => uuid === namespace) ?? {};
     },
     getEmail(inst) {
       const account = this.getAccount(inst);
@@ -300,7 +313,7 @@ export default {
           const tariff = inst.billingPlan.products[key];
 
           const getAddonKey = (key, metaKey) =>
-            tariff.meta?.[metaKey].find(
+            tariff.meta?.[metaKey]?.find(
               (a) =>
                 key === a.type &&
                 a.key.startsWith(inst.config?.configurations[key])
@@ -366,7 +379,7 @@ export default {
       if (this.defaultCurrency === currency) {
         return 1;
       }
-      return this.rates.find(
+      return this.rates?.find(
         (r) => r.to === currency && r.from === this.defaultCurrency
       )?.rate;
     },
@@ -428,15 +441,15 @@ export default {
     },
     getService({ service }) {
       return (
-        this.services.find(({ uuid }) => service === uuid)?.title ?? service
+        this.services?.find(({ uuid }) => service === uuid)?.title ?? service
       );
     },
     getServiceProvider({ sp }) {
-      return this.sp.find(({ uuid }) => uuid === sp)?.title;
+      return this.sp?.find(({ uuid }) => uuid === sp)?.title;
     },
     getOSName(id, sp) {
       if (!id) return;
-      return this.sp.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
+      return this.sp?.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
         ?.name;
     },
     getTariff(item) {
@@ -454,7 +467,7 @@ export default {
       return billingPlan.products[key]?.title;
     },
     getNamespace(id) {
-      return this.namespaces.find((n) => n.uuid === id)?.title;
+      return this.namespaces?.find((n) => n.uuid === id)?.title;
     },
     getValue(key, item) {
       return this.headersGetters[key](item);
@@ -469,6 +482,30 @@ export default {
     },
     getSearchKeyItems(key) {
       return [...new Set(this.items.map((i) => this.getValue(key, i)))];
+    },
+    async changeRegularPayment(instance, value) {
+      this.isChangeRegularPaymentLoading = true;
+      try {
+        const tempService = JSON.parse(
+          JSON.stringify(
+            this.services?.find((s) => s.uuid === instance.service)
+          )
+        );
+        const igIndex = tempService.instancesGroups.findIndex((ig) =>
+          ig.instances?.find((i) => i.uuid === instance.uuid)
+        );
+        const instanceIndex = tempService.instancesGroups[
+          igIndex
+        ].instances.findIndex((i) => i.uuid === instance.uuid);
+
+        instance.config.regular_payment = value;
+
+        tempService.instancesGroups[igIndex].instances[instanceIndex] =
+          instance;
+        await api.services._update(tempService);
+      } finally {
+        this.isChangeRegularPaymentLoading = false;
+      }
     },
   },
   computed: {
@@ -488,7 +525,7 @@ export default {
           return compareSearchValue(
             value,
             this.filter[key],
-            this.searchFields.find((f) => f.key === key)
+            this.searchFields?.find((f) => f.key === key)
           );
         });
       });
@@ -573,6 +610,7 @@ export default {
         { text: "Domain", value: "resources.domain" },
         { text: "DCV", value: "resources.dcv" },
         { text: "Approver email", value: "resources.approver_email" },
+        { text: "Invoice based", value: "config.regular_payment" },
       ];
       return headers;
     },
