@@ -86,8 +86,12 @@
               runningActionReportUuid === item.uuid
             "
             class="mx-1"
+            :icon="action.icon"
           >
-            {{ action.title }}
+            <span v-if="!action.icon">
+              {{ action.title }}
+            </span>
+            <v-icon v-else>{{ action.icon }}</v-icon>
           </v-btn>
         </div>
       </template>
@@ -195,7 +199,7 @@ const getReportActions = (report) => {
     case "Paid": {
       if (report.meta.transactionType?.startsWith("invoice")) {
         actions.push({
-          title: "Invoice",
+          icon: "mdi-login",
           action: "invoice",
           handler: downloadInvoice,
         });
@@ -205,7 +209,7 @@ const getReportActions = (report) => {
     case "Unpaid": {
       if (report.meta.transactionType?.startsWith("invoice")) {
         actions.push({
-          title: "Invoice",
+          icon: "mdi-login",
           action: "invoice",
           handler: downloadInvoice,
         });
