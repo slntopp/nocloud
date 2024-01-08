@@ -50,16 +50,21 @@ export default {
     page(state) {
       return +state.page;
     },
-    types(){
+    types() {
       return [
-        {key:'transaction top-up',title:'Top-up transaction'},
-        {key:'transaction payment',title:'Debit transaction'},
-        {key:'system',title:'Debit transaction (System)'},
-        {key:'transaction account-balance',title:'Set balance transaction'},
-        {key:'invoice top-up',title:'Top-up invoice'},
-        {key:'invoice payment',title:'Payment invoice'},
-      ]
-    }
+        { key: "transaction top-up", title: "Top-up transaction" },
+        { key: "transaction payment", title: "Debit transaction" },
+        { key: "system", title: "Debit transaction (System)" },
+        {
+          key: "transaction account-balance",
+          title: "Set balance transaction",
+        },
+        { key: "invoice top-up", title: "Top-up invoice" },
+        { key: "invoice payment", title: "Payment invoice" },
+        { key: "invoice for service", title: "Invoice for service" },
+        { key: "correct", title: "Correction" },
+      ];
+    },
   },
   mutations: {
     setTransactions(state, transactions) {

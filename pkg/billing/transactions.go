@@ -48,6 +48,8 @@ func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, 
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
 	}
 
+	tr.Uuid = uuid
+
 	return &pb.Transactions{
 		Pool: []*pb.Transaction{
 			tr,
@@ -181,11 +183,11 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
 
-	var baseRec, prevRec string
+	/*var baseRec, prevRec string
 
 	if t.Base != nil {
 		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": t.GetBase(),
+			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
 		})
 		if err != nil {
 			log.Error("Failed get base record", zap.Error(err))
@@ -202,7 +204,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 
 	if t.Previous != nil {
 		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
-			"transactionKey": t.GetPrevious(),
+			"transactionKey": driver.NewDocumentID(schema.TRANSACTIONS_COL, t.GetBase()),
 		})
 		if err != nil {
 			log.Error("Failed get base record", zap.Error(err))
@@ -215,7 +217,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 				return nil, err
 			}
 		}
-	}
+	}*/
 
 	recBody := &pb.Record{
 		Start:     time.Now().Unix(),
@@ -230,12 +232,12 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		Meta:      t.GetMeta(),
 	}
 
-	if baseRec != "" {
-		recBody.Base = &baseRec
+	if t.GetBase() != "" {
+		recBody.Base = t.Base
 	}
 
-	if prevRec != "" {
-		recBody.Base = &prevRec
+	if t.GetPrevious() != "" {
+		recBody.Previous = t.Previous
 	}
 
 	rec := s.records.Create(ctx, recBody)
@@ -608,11 +610,6 @@ const updateRecordsMeta = `
 LET transaction = DOCUMENT(@transactionKey)
 FOR r in transaction.records
 	UPDATE r WITH {meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
-`
-
-const getTransactionRecord = `
-LET transaction = DOCUMENT(@transactionKey)
-RETURN transaction.records[0]
 `
 
 const reprocessTransactions = `
