@@ -142,7 +142,6 @@
         :disabled="isChangeRegularPaymentLoading"
         :input-value="item.config.regular_payment"
         @change="changeRegularPayment(item, $event)"
-        label="Invoice based"
       />
     </template>
   </nocloud-table>
