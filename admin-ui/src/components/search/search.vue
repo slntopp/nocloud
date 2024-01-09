@@ -631,7 +631,7 @@ watch(searchName, (value, oldValue) => {
     loadSearchData(value);
   }
 
-  if (layouts.value.length === 0) {
+  if (layouts.value.length === 0 && value) {
     addNewLayout(JSON.parse(JSON.stringify(defaultLayout.value)));
     setCurrentLayout(layouts.value[0]);
     setPinned(layouts.value[0].id);
