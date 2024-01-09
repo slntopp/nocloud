@@ -136,14 +136,15 @@
     </template>
 
     <template v-slot:[`item.config.regular_payment`]="{ item }">
-      <v-switch
-        hide-details
-        dense
-        :disabled="isChangeRegularPaymentLoading"
-        :input-value="item.config.regular_payment"
-        @change="changeRegularPayment(item, $event)"
-        label="Invoice based"
-      />
+      <div class="d-flex justify-center align-center regular_payment">
+        <v-switch
+          dense
+          hide-details
+          :disabled="isChangeRegularPaymentLoading"
+          :input-value="item.config.regular_payment"
+          @change="changeRegularPayment(item, $event)"
+        />
+      </div>
     </template>
   </nocloud-table>
 </template>
@@ -756,3 +757,9 @@ export default {
   },
 };
 </script>
+
+<style>
+.regular_payment .v-input {
+  margin-top: 0px !important;
+}
+</style>
