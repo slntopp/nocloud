@@ -133,42 +133,44 @@
       v-slot:[`footer.page-text`]="{ pageStart, pageStop, itemsLength }"
     >
       <div class="d-flex align-center">
-        <v-dialog
-          @click:outside="changeFiltres"
-          max-width="60%"
-          v-model="settingsDialog"
-          width="500"
-        >
-          <template v-slot:activator="{ on, attrs }">
-            <v-icon v-bind="attrs" v-on="on" size="23" class="mr-1"
-              >mdi-cog-outline</v-icon
-            >
-          </template>
-          <v-card
-            color="background-light"
-            style="overflow: hidden"
-            max-width="100%"
+        <div v-if="tableName">
+          <v-dialog
+            @click:outside="changeFiltres"
+            max-width="60%"
+            v-model="settingsDialog"
+            width="500"
           >
-            <v-card-title>Table settings</v-card-title>
-            <v-row class="pa-5">
-              <v-col
-                v-for="header in headers.filter((h) => h.text)"
-                :key="header.value"
-                cols="4"
+            <template v-slot:activator="{ on, attrs }">
+              <v-icon v-bind="attrs" v-on="on" size="23" class="mr-1"
+                >mdi-cog-outline</v-icon
               >
-                <v-checkbox
-                  @click.stop
-                  :label="header.text"
-                  v-model="filter"
-                  :value="header.value"
-                />
-              </v-col>
-            </v-row>
-          </v-card>
-        </v-dialog>
-        <v-icon @click="resetFilter" size="23" class="mr-1s"
-          >mdi-filter-remove</v-icon
-        >
+            </template>
+            <v-card
+              color="background-light"
+              style="overflow: hidden"
+              max-width="100%"
+            >
+              <v-card-title>Table settings</v-card-title>
+              <v-row class="pa-5">
+                <v-col
+                  v-for="header in headers.filter((h) => h.text)"
+                  :key="header.value"
+                  cols="4"
+                >
+                  <v-checkbox
+                    @click.stop
+                    :label="header.text"
+                    v-model="filter"
+                    :value="header.value"
+                  />
+                </v-col>
+              </v-row>
+            </v-card>
+          </v-dialog>
+          <v-icon @click="resetFilter" size="23" class="mr-1s"
+            >mdi-filter-remove</v-icon
+          >
+        </div>
         <span class="ml-3">
           {{ pageStart }}-{{ pageStop }} of {{ itemsLength }}
         </span>
@@ -303,7 +305,7 @@ export default {
     },
     filtersItems: { type: Object },
     filtersValues: { type: Object },
-    itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, 25,50] },
+    itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, 25, 50] },
   },
   data() {
     return {

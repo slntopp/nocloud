@@ -280,11 +280,11 @@ export default {
     getAccount({ access }) {
       const {
         access: { namespace },
-      } = this.namespaces.find(({ uuid }) => uuid === access.namespace) ?? {
+      } = this.namespaces?.find(({ uuid }) => uuid === access.namespace) ?? {
         access: {},
       };
 
-      return this.accounts.find(({ uuid }) => uuid === namespace) ?? {};
+      return this.accounts?.find(({ uuid }) => uuid === namespace) ?? {};
     },
     getEmail(inst) {
       const account = this.getAccount(inst);
@@ -313,7 +313,7 @@ export default {
           const tariff = inst.billingPlan.products[key];
 
           const getAddonKey = (key, metaKey) =>
-            tariff.meta?.[metaKey].find(
+            tariff.meta?.[metaKey]?.find(
               (a) =>
                 key === a.type &&
                 a.key.startsWith(inst.config?.configurations[key])
@@ -379,7 +379,7 @@ export default {
       if (this.defaultCurrency === currency) {
         return 1;
       }
-      return this.rates.find(
+      return this.rates?.find(
         (r) => r.to === currency && r.from === this.defaultCurrency
       )?.rate;
     },
@@ -441,15 +441,15 @@ export default {
     },
     getService({ service }) {
       return (
-        this.services.find(({ uuid }) => service === uuid)?.title ?? service
+        this.services?.find(({ uuid }) => service === uuid)?.title ?? service
       );
     },
     getServiceProvider({ sp }) {
-      return this.sp.find(({ uuid }) => uuid === sp)?.title;
+      return this.sp?.find(({ uuid }) => uuid === sp)?.title;
     },
     getOSName(id, sp) {
       if (!id) return;
-      return this.sp.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
+      return this.sp?.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
         ?.name;
     },
     getTariff(item) {
@@ -467,7 +467,7 @@ export default {
       return billingPlan.products[key]?.title;
     },
     getNamespace(id) {
-      return this.namespaces.find((n) => n.uuid === id)?.title;
+      return this.namespaces?.find((n) => n.uuid === id)?.title;
     },
     getValue(key, item) {
       return this.headersGetters[key](item);
@@ -487,10 +487,12 @@ export default {
       this.isChangeRegularPaymentLoading = true;
       try {
         const tempService = JSON.parse(
-          JSON.stringify(this.services.find((s) => s.uuid === instance.service))
+          JSON.stringify(
+            this.services?.find((s) => s.uuid === instance.service)
+          )
         );
         const igIndex = tempService.instancesGroups.findIndex((ig) =>
-          ig.instances.find((i) => i.uuid === instance.uuid)
+          ig.instances?.find((i) => i.uuid === instance.uuid)
         );
         const instanceIndex = tempService.instancesGroups[
           igIndex
@@ -523,7 +525,7 @@ export default {
           return compareSearchValue(
             value,
             this.filter[key],
-            this.searchFields.find((f) => f.key === key)
+            this.searchFields?.find((f) => f.key === key)
           );
         });
       });

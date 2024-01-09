@@ -138,21 +138,16 @@
           </v-btn>
           <download-template-button
             :template="plan"
-            :type="isJson ? 'JSON' : 'YAML'"
+            :type="selectedFileType"
+            @click:xlsx="downloadPlanXlsx([plan])"
             :name="downloadedFileName"
           />
-          <v-switch
-            class="d-inline-block mr-2"
-            style="margin-top: 5px; padding-top: 0"
-            v-model="isJson"
-            :label="!isJson ? 'YAML' : 'JSON'"
-          />
-          <v-file-input
-            class="file-input"
-            v-if="!isEdit"
-            :label="`upload ${isJson ? 'json' : 'yaml'} price model...`"
-            :accept="isJson ? '.json' : '.yaml'"
-            @change="onJsonInputChange"
+          <v-select
+            style="max-width: 80px"
+            :items="fileTypes"
+            label="File type"
+            v-model="selectedFileType"
+            class="d-inline-block mx-1"
           />
         </v-col>
       </v-row>
@@ -196,7 +191,7 @@ import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
-import { readJSONFile, readYAMLFile, getTimestamp } from "@/functions.js";
+import { downloadPlanXlsx, getTimestamp } from "@/functions.js";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 
 export default {
@@ -237,9 +232,11 @@ export default {
     isFeeValid: true,
     isLoading: false,
     savePlanAction: "",
-    isJson: true,
+    selectedFileType: "JSON",
+    fileTypes: ["JSON", "YAML", "XLSX"],
   }),
   methods: {
+    downloadPlanXlsx,
     changeConfig({ key, value, id }, type) {
       try {
         value = JSON.parse(value);
@@ -448,21 +445,6 @@ export default {
 
       this.getItem(res);
     },
-    onJsonInputChange(file) {
-      if (this.isJson) {
-        readJSONFile(file)
-          .then((res) => this.setPlan(res))
-          .catch(({ message }) => {
-            this.showSnackbarError({ message });
-          });
-      } else {
-        readYAMLFile(file)
-          .then((res) => this.setPlan(res))
-          .catch(({ message }) => {
-            this.showSnackbarError({ message });
-          });
-      }
-    },
   },
   created() {
     this.$store.dispatch("plans/fetch", { silent: true }).catch((err) => {
@@ -565,7 +547,7 @@ export default {
     allowedKinds(newVal) {
       if (!newVal.includes(this.plan.type)) {
         this.plan.kind = newVal[0];
-        this.selectedKind=this.plan.kind
+        this.selectedKind = this.plan.kind;
       }
     },
   },
