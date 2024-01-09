@@ -511,11 +511,6 @@ const setCurrentFieldsKeys = () => {
     }
   }
 
-  console.log(
-    newCurrentFields,
-    JSON.parse(JSON.stringify(currentLayout.value))
-  );
-
   currentFieldsKeys.value = [
     ...new Set(
       newCurrentFields.filter(
@@ -628,7 +623,36 @@ watch(searchName, (value, oldValue) => {
     setPinned(layouts.value[0].id);
   }
 });
-watch(allFields, setCurrentFieldsKeys);
+watch(allFields, (fields) => {
+  if (fields?.length) {
+    layouts.value = layouts.value.map((layout) => {
+      Object.keys(layout.filter || {}).map((key) => {
+        const filterValue = layout.filter[key];
+        const field = fields.find((f) => f.key === key);
+
+        if (Array.isArray(filterValue) && field && field.items?.length) {
+          const { items, item: options } = field;
+          const correctFilter = [];
+          filterValue.forEach((value) => {
+            if (
+              items.find((item) => (item[options?.value] || item) === value)
+            ) {
+              correctFilter.push(value);
+            }
+          });
+
+          if (correctFilter.length !== filterValue.length) {
+            layout.filter[key] = correctFilter;
+          }
+        }
+      });
+
+      return layout;
+    });
+  }
+
+  setCurrentFieldsKeys();
+});
 watch(visibleLayout, (_, prevLayout) => {
   if (prevLayout?.id === blankLayout.value.id) {
     blankLayout.value.filter = { ...filter.value };
