@@ -429,7 +429,12 @@ const loadSearchData = (name) => {
   }
 
   if (data.layouts.length) {
-    layouts.value = data.layouts;
+    layouts.value = data.layouts.map((l) => {
+      if (l.filter?.filter && typeof l.filter.filter === "object") {
+        return { ...l, filter: { ...l.filter.filter } };
+      }
+      return l;
+    });
   }
 
   if (data?.current) {
@@ -505,6 +510,11 @@ const setCurrentFieldsKeys = () => {
       i++;
     }
   }
+
+  console.log(
+    newCurrentFields,
+    JSON.parse(JSON.stringify(currentLayout.value))
+  );
 
   currentFieldsKeys.value = [
     ...new Set(
