@@ -1,30 +1,35 @@
 <template>
-  <v-dialog v-model="isModalOpen" max-width="500">
-    <template v-slot:activator="{ on, attrs }">
-      <v-btn
-        :disabled="disabled"
-        :loading="loading || isInstanceSaveLoading"
-        class="ma-1"
-        v-bind="attrs"
-        v-on="on"
-      >
-        Start
-      </v-btn>
-    </template>
-    <v-card color="background-light">
-      <v-card-title>Make a payment now (balance will be debited)?</v-card-title>
-      <v-card-actions class="d-flex justify-end">
-        <v-btn class="mr-2" @click="start(true)"> No </v-btn>
-        <v-btn class="mr-2" @click="start(false)"> Yes </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  <instance-control-btn hint="Start">
+    <v-dialog v-model="isModalOpen" max-width="500">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn
+          :disabled="disabled"
+          :loading="loading || isInstanceSaveLoading"
+          class="ma-1"
+          v-bind="attrs"
+          v-on="on"
+        >
+          <v-icon>mdi-power</v-icon>
+        </v-btn>
+      </template>
+      <v-card color="background-light">
+        <v-card-title
+          >Make a payment now (balance will be debited)?</v-card-title
+        >
+        <v-card-actions class="d-flex justify-end">
+          <v-btn class="mr-2" @click="start(true)"> No </v-btn>
+          <v-btn class="mr-2" @click="start(false)"> Yes </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </instance-control-btn>
 </template>
 
 <script setup>
 import { toRefs, ref, computed } from "vue";
 import api from "@/api";
 import { useStore } from "@/store";
+import InstanceControlBtn from "@/components/ui/instanceControlBtn.vue";
 
 const props = defineProps(["disabled", "loading", "template"]);
 const emit = defineEmits(["click"]);
