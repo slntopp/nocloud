@@ -1,5 +1,5 @@
 <template>
-  <div style="width: 50vw">
+  <div class="search_container">
     <v-menu
       @input="setLayoutMode('preview')"
       content-class="search"
@@ -753,5 +753,20 @@ export default {
 
 .search__input .v-input__prepend-inner {
   margin-right: unset !important;
+}
+</style>
+
+<style scoped lang="scss">
+.search_container {
+  width: 50vw;
+  min-width: 100pxpx;
+
+  @media (max-width: 1100px) {
+    width: 40vw;
+  }
+
+  @media (max-width: 900px) {
+    width: 30vw;
+  }
 }
 </style>
