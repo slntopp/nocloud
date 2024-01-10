@@ -16,15 +16,25 @@
           dence
           rounded
           class="search__input"
-          v-bind="searchName ? attrs : undefined"
-          v-on="searchName ? on : undefined"
           @keydown.enter="hideSearch"
           v-model="param"
         >
-          <template v-if="!isResetAllHide" v-slot:append>
-            <v-btn icon x-small @click="resetAll">
-              <v-icon small>mdi-close</v-icon>
-            </v-btn>
+          <template v-slot:append>
+            <div class="d-flex">
+              <v-btn v-if="!isResetAllHide" icon small @click="resetAll">
+                <v-icon size="23">mdi-close</v-icon>
+              </v-btn>
+              <v-btn
+                v-if="searchName"
+                icon
+                small
+                @click="isOpen ? hideSearch() : showSearch()"
+              >
+                <v-icon size="30">
+                  {{ !isOpen ? "mdi-chevron-down" : "mdi-chevron-up" }}
+                </v-icon>
+              </v-btn>
+            </div>
           </template>
           <template v-slot:prepend-inner>
             <v-chip
@@ -429,7 +439,12 @@ const loadSearchData = (name) => {
   }
 
   if (data.layouts.length) {
-    layouts.value = data.layouts;
+    layouts.value = data.layouts.map((l) => {
+      if (l.filter?.filter && typeof l.filter.filter === "object") {
+        return { ...l, filter: { ...l.filter.filter } };
+      }
+      return l;
+    });
   }
 
   if (data?.current) {
@@ -469,6 +484,10 @@ const saveFilter = () => {
 
 const hideSearch = () => {
   isOpen.value = false;
+};
+
+const showSearch = () => {
+  isOpen.value = true;
 };
 
 const resetFilter = () => {
@@ -612,13 +631,42 @@ watch(searchName, (value, oldValue) => {
     loadSearchData(value);
   }
 
-  if (layouts.value.length === 0) {
+  if (layouts.value.length === 0 && value) {
     addNewLayout(JSON.parse(JSON.stringify(defaultLayout.value)));
     setCurrentLayout(layouts.value[0]);
     setPinned(layouts.value[0].id);
   }
 });
-watch(allFields, setCurrentFieldsKeys);
+watch(allFields, (fields) => {
+  if (fields?.length) {
+    layouts.value = layouts.value.map((layout) => {
+      Object.keys(layout.filter || {}).map((key) => {
+        const filterValue = layout.filter[key];
+        const field = fields.find((f) => f.key === key);
+
+        if (Array.isArray(filterValue) && field && field.items?.length) {
+          const { items, item: options } = field;
+          const correctFilter = [];
+          filterValue.forEach((value) => {
+            if (
+              items.find((item) => (item[options?.value] || item) === value)
+            ) {
+              correctFilter.push(value);
+            }
+          });
+
+          if (correctFilter.length !== filterValue.length) {
+            layout.filter[key] = correctFilter;
+          }
+        }
+      });
+
+      return layout;
+    });
+  }
+
+  setCurrentFieldsKeys();
+});
 watch(visibleLayout, (_, prevLayout) => {
   if (prevLayout?.id === blankLayout.value.id) {
     blankLayout.value.filter = { ...filter.value };
