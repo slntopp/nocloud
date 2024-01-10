@@ -20,7 +20,7 @@
           v-model="param"
         >
           <template v-slot:append>
-            <div class="d-flex">
+            <div class="d-flex" style="margin-top: 2px">
               <v-btn v-if="!isResetAllHide" icon small @click="resetAll">
                 <v-icon size="23">mdi-close</v-icon>
               </v-btn>
@@ -748,7 +748,7 @@ export default {
 }
 
 .search__input .v-input__append-inner {
-  margin-top: 6px;
+  margin-top: 0px;
 }
 
 .search__input .v-input__prepend-inner {
