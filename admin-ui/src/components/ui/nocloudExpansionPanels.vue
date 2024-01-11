@@ -16,7 +16,7 @@
 
 <script>
 export default {
-  name: "instancesPricesPanels",
+  name: "nocloudExpansionPanels",
   props: ['title']
 };
 </script>
