@@ -39,7 +39,7 @@ const isSaveLoading = ref(false);
 
 const headers = ref([
   { text: "Key", value: "name" },
-  { text: "Name", value: "usage_name" },
+  { text: "Title", value: "usage_name" },
   { text: "Edition", value: "edition" },
   { text: "Required", value: "mandatory" },
   { text: "Price", value: "price" },
@@ -49,7 +49,7 @@ const headers = ref([
 onMounted(async () => {
   isLoading.value = true;
   try {
-    await store.dispatch("servicesProviders/fetch", {anonymously:false});
+    await store.dispatch("servicesProviders/fetch", { anonymously: false });
     const spUuid = sps.value.find((sp) => sp.type === props.template.type).uuid;
     await store.dispatch("servicesProviders/fetchById", spUuid);
     sp.value = sps.value.find((sp) => sp.uuid === spUuid);
