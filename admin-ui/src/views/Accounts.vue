@@ -9,7 +9,7 @@
         v-model="createMenuVisible"
       >
         <template v-slot:activator="{ on, attrs }">
-          <v-btn color="background-light" class="mr-2" v-bind="attrs" v-on="on">
+          <v-btn color="background-light" class="mr-2 mt-2" v-bind="attrs" v-on="on">
             create
           </v-btn>
         </template>
@@ -107,7 +107,7 @@
       >
         <v-btn
           color="background-light"
-          class="mr-2"
+          class="mr-2 mt-2"
           :disabled="
             selected.length < 1 ||
             changeInvoiceBasedAction === false ||
@@ -124,7 +124,7 @@
       >
         <v-btn
           color="background-light"
-          class="mr-2"
+          class="mr-2 mt-2"
           :disabled="
             selected.length < 1 ||
             changeInvoiceBasedAction === true ||
@@ -147,7 +147,7 @@
       >
         <v-btn
           color="background-light"
-          class="mr-2"
+          class="mr-2 mt-2"
           :disabled="
             selected.length < 1 ||
             (!!changeAccountStatusAction &&
