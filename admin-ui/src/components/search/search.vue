@@ -1,5 +1,5 @@
 <template>
-  <div style="width: 50vw">
+  <div class="search_container">
     <v-menu
       @input="setLayoutMode('preview')"
       content-class="search"
@@ -20,7 +20,7 @@
           v-model="param"
         >
           <template v-slot:append>
-            <div class="d-flex">
+            <div class="d-flex" style="margin-top: 2px">
               <v-btn v-if="!isResetAllHide" icon small @click="resetAll">
                 <v-icon size="23">mdi-close</v-icon>
               </v-btn>
@@ -748,10 +748,25 @@ export default {
 }
 
 .search__input .v-input__append-inner {
-  margin-top: 6px;
+  margin-top: 0px;
 }
 
 .search__input .v-input__prepend-inner {
   margin-right: unset !important;
+}
+</style>
+
+<style scoped lang="scss">
+.search_container {
+  width: 50vw;
+  min-width: 100pxpx;
+
+  @media (max-width: 1100px) {
+    width: 40vw;
+  }
+
+  @media (max-width: 900px) {
+    width: 30vw;
+  }
 }
 </style>
