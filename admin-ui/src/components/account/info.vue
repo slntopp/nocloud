@@ -28,7 +28,7 @@
           Create instance
         </v-btn>
       </div>
-      <div class="d-flex justify-end mt-3 align-center">
+      <div class="d-flex justify-end mt-1 align-center">
         <v-dialog v-model="isChangeRegularPaymentOpen" max-width="500">
           <template v-slot:activator="{ on, attrs }">
             <v-btn
@@ -92,7 +92,7 @@
         />
       </v-col>
     </v-row>
-    <v-card-title class="px-0">Instances:</v-card-title>
+    <v-card-title class="px-0 instances-panel">Instances:</v-card-title>
 
     <instances-table :items="accountInstances" :show-select="false" />
 
@@ -407,5 +407,12 @@ export default {
   font-family: "Quicksand", sans-serif;
   line-height: 1em;
   margin-bottom: 10px;
+}
+
+.instances-panel{
+
+  @media (max-width: 1300px) {
+    margin-top: 25px;
+  }
 }
 </style>

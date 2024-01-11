@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 
+	statepb "github.com/slntopp/nocloud-proto/states"
 	stpb "github.com/slntopp/nocloud-proto/statuses"
 
 	"github.com/arangodb/go-driver"
@@ -77,6 +78,9 @@ func (ctrl *ServicesProvidersController) Update(ctx context.Context, sp *pb.Serv
 func (ctrl *ServicesProvidersController) Delete(ctx context.Context, sp *pb.ServicesProvider) (err error) {
 	ctrl.log.Debug("Deleting ServicesProvider Document", zap.Any("uuid", sp.GetUuid()))
 	sp.Status = stpb.NoCloudStatus_DEL
+	sp.State = &statepb.State{
+		State: statepb.NoCloudState_DELETED,
+	}
 	_, err = ctrl.col.UpdateDocument(ctx, sp.GetUuid(), sp)
 	return err
 }

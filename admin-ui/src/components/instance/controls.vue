@@ -371,7 +371,6 @@ export default {
         ione: [
           {
             action: "start",
-            icon: "mdi-power",
             type: "method",
             component: () => import("@/components/dialogs/startInstance.vue"),
             method: this.startInstance,
@@ -425,31 +424,35 @@ export default {
             method: this.startInstance,
             disabled: this.ovhActions?.start,
           },
-          { action: "poweroff", disabled: true },
-          { action: "resume", disabled: true },
-          { action: "suspend", disabled: true },
-          { action: "reboot", disabled: true },
+          { action: "poweroff", disabled: true, icon: "mdi-stop" },
+          { action: "resume", disabled: true, icon: "mdi-play" },
+          { action: "suspend", disabled: true, icon: "mdi-power-sleep" },
+          { action: "reboot", disabled: true, icon: "mdi-restart" },
           {
             action: "open_ipmi",
             title: "console",
             disabled: this.ovhActions?.reboot,
+            icon: "mdi-console",
           },
         ],
         "ovh cloud": [
           {
             action: "stop_vm",
             title: "poweroff",
+            icon: "mdi-stop",
             disabled: this.ovhActions?.poweroff,
           },
           {
             action: "resume_vm",
             title: "resume",
+            icon: "mdi-play",
             disabled: this.ovhActions?.resume,
           },
           {
             action: "suspend_vm",
             title: "suspend",
             disabled: this.ovhActions?.suspend,
+            icon: "mdi-power-sleep",
           },
           {
             action: "reboot_vm",
@@ -460,19 +463,17 @@ export default {
           {
             action: "start_vm",
             title: "poweron",
+            icon: "mdi-power",
             disabled: this.ovhActions?.resume,
           },
           {
             action: "start_vnc_vm",
             title: "Console",
             disabled: this.ovhActions?.reboot,
+            icon: "mdi-console",
           },
         ],
         "ovh vps": [
-          { action: "poweroff", disabled: this.ovhActions?.poweroff },
-          { action: "resume", disabled: this.ovhActions?.resume },
-          { action: "suspend", disabled: this.ovhActions?.suspend },
-          { action: "reboot", disabled: this.ovhActions?.reboot },
           {
             action: "start",
             type: "method",
@@ -481,9 +482,30 @@ export default {
             disabled: this.ovhActions?.start,
           },
           {
+            action: "poweroff",
+            disabled: this.ovhActions?.poweroff,
+            icon: "mdi-stop",
+          },
+          {
+            action: "resume",
+            disabled: this.ovhActions?.resume,
+            icon: "mdi-play",
+          },
+          {
+            action: "suspend",
+            disabled: this.ovhActions?.suspend,
+            icon: "mdi-power-sleep",
+          },
+          {
+            action: "reboot",
+            disabled: this.ovhActions?.reboot,
+            icon: "mdi-restart",
+          },
+          {
             action: "vnc",
             title: "Console",
             disabled: this.ovhActions?.reboot,
+            icon: "mdi-console",
           },
         ],
         empty: [
@@ -498,12 +520,14 @@ export default {
             action: "change_state",
             data: { state: 2 },
             title: "stop",
+            icon: "mdi-stop",
             disabled: this.emptyActions?.stop,
           },
           {
             action: "change_state",
             data: { state: 6 },
             title: "suspend",
+            icon: "mdi-power-sleep",
             disabled: this.emptyActions?.suspend,
           },
         ],
@@ -519,35 +543,41 @@ export default {
           {
             action: "start",
             title: "resume",
+            icon: "mdi-play",
             disabled: !this.keywebActions?.start,
           },
           {
             action: "stop",
             title: "stop",
+            icon: "mdi-stop",
             disabled: !this.keywebActions?.stop,
           },
           {
             action: "reboot",
             title: "reboot",
+            icon: "mdi-restart",
             disabled: !this.keywebActions?.reboot,
           },
           {
             action: "suspend",
             title: "suspend",
             disabled: !this.keywebActions?.suspend,
+            icon: "mdi-power-sleep",
           },
           {
             action: "unsuspend",
             title: "unsuspend",
             disabled: !this.keywebActions?.unsuspend,
+            icon: "mdi-weather-sunny",
           },
           {
             action: "vnc",
             title: "Console",
+            icon: "mdi-console",
             disabled: !this.keywebActions?.vnc,
           },
         ],
-        opensrs: [{ action: "dns" }],
+        opensrs: [{ action: "dns", icon: "mdi-dns" }],
         cpanel: [
           {
             action: "start",
@@ -556,7 +586,7 @@ export default {
             method: this.startInstance,
             disabled: this.template.config.auto_start,
           },
-          { action: "session" },
+          { action: "session", icon: "mdi-console" },
         ],
       };
 

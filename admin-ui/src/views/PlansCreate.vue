@@ -546,7 +546,9 @@ export default {
     },
     allowedKinds(newVal) {
       if (!newVal.includes(this.plan.type)) {
-        this.plan.kind = newVal[0];
+        if (!this.isEdit) {
+          this.plan.kind = newVal[0];
+        }
         this.selectedKind = this.plan.kind;
       }
     },
