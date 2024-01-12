@@ -4,6 +4,7 @@
     style="cursor: pointer"
     v-if="balance !== undefined"
     :color="colorChip"
+    :small="small"
   >
     {{ title }}{{ balance }}
     {{ (!hideCurrency && (currency || defaultCurrency)) || "" }}
@@ -21,6 +22,7 @@ export default {
     currency: {},
     hideCurrency: {},
     logedInUser: { type: Boolean, default: false },
+    small: { type: Boolean, default: false },
   },
   mounted() {
     if (!this.balance) {
