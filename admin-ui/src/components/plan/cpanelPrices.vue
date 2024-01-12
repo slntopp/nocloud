@@ -97,7 +97,7 @@ export default {
     isValid: false,
     isSaveLoading: false,
     headers: [
-      { text: "name", value: "name", width: "220px" },
+      { text: "Title", value: "name", width: "220px" },
       { text: "BWLIMIT", value: "BWLIMIT" },
       { text: "CGI", value: "CGI" },
       { text: "CPMOD", value: "CPMOD" },
