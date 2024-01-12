@@ -20,7 +20,7 @@
 
     <v-divider class="mx-4"></v-divider>
 
-    <v-card-text>
+    <v-card-text class="pt-0">
       <slot></slot>
     </v-card-text>
   </v-card>
