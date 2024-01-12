@@ -239,8 +239,8 @@ export default {
     plans: [],
     newPlans: null,
     headers: [
-      { text: "Name", value: "title" },
-      { text: "API name", value: "apiName" },
+      { text: "Title", value: "title" },
+      { text: "API title", value: "apiName" },
       { text: "Group", value: "group" },
       { text: "Cpu", value: "cpu" },
       {

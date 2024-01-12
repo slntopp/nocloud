@@ -80,18 +80,6 @@
             </v-list-item-content>
           </v-list-item>
 
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Namespaces' }">
-            <v-list-item-icon>
-              <v-icon>mdi-form-textbox</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{
-                navTitle("Groups (NameSpaces)")
-              }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
           <v-list-item v-bind="listItemBind" :to="{ name: 'Instances' }">
             <v-list-item-icon>
               <v-icon>mdi-server</v-icon>
@@ -99,21 +87,6 @@
 
             <v-list-item-content>
               <v-list-item-title>{{ navTitle("Instances") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item
-            v-bind="listItemBind"
-            :to="{ name: 'ServicesProviders' }"
-          >
-            <v-list-item-icon>
-              <v-icon>mdi-database-marker</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{
-                navTitle("Services Providers")
-              }}</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
 
@@ -228,6 +201,33 @@
             </v-list-item-content>
           </v-list-item>
 
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Namespaces' }">
+            <v-list-item-icon>
+              <v-icon>mdi-form-textbox</v-icon>
+            </v-list-item-icon>
+
+            <v-list-item-content>
+              <v-list-item-title>{{
+                  navTitle("Groups (NameSpaces)")
+                }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+
+          <v-list-item
+              v-bind="listItemBind"
+              :to="{ name: 'ServicesProviders' }"
+          >
+            <v-list-item-icon>
+              <v-icon>mdi-database-marker</v-icon>
+            </v-list-item-icon>
+
+            <v-list-item-content>
+              <v-list-item-title>{{
+                  navTitle("Services Providers")
+                }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+
           <v-list-item
             v-bind="listItemBind"
             :to="{ name: 'Services' }"
@@ -265,13 +265,13 @@
           </v-col>
           <v-col class="d-flex justify-start">
             <v-btn
-                v-if="btnStates.visible"
-                :disabled="btnStates.disabled"
-                color="background-light"
-                fab
-                small
-                :loading="btnLoading"
-                @click="() => this.$store.dispatch('reloadBtn/onclick')"
+              v-if="btnStates.visible"
+              :disabled="btnStates.disabled"
+              color="background-light"
+              fab
+              small
+              :loading="btnLoading"
+              @click="() => this.$store.dispatch('reloadBtn/onclick')"
             >
               <v-icon>mdi-reload</v-icon>
             </v-btn>
@@ -279,7 +279,7 @@
         </template>
         <v-col class="d-flex justify-end align-center">
           <languages v-if="false" />
-          <themes/>
+          <themes />
           <v-menu v-if="isLoggedIn" offset-y transition="slide-y-transition">
             <template v-slot:activator="{ on, attrs }">
               <v-btn
@@ -334,7 +334,7 @@
             top: `${overlay.y + 80}px`,
             right: `30px`,
             zIndex: 100,
-            visibility: 'hidden'
+            visibility: 'hidden',
           }"
         >
           {{ overlay.buttonTitle }}
@@ -383,7 +383,7 @@ export default {
       buttonTitle: "",
       uuid: "",
       x: 0,
-      y: 0
+      y: 0,
     },
   }),
   methods: {
@@ -430,12 +430,12 @@ export default {
         });
     },
     hoverOverlay() {
-      clearTimeout(this.overlay.timeoutId)
+      clearTimeout(this.overlay.timeoutId);
     },
     hiddenOverlay() {
       this.overlay.timeoutId = setTimeout(() => {
         this.overlay.isVisible = false;
-      }, 100)
+      }, 100);
     },
   },
   computed: {
@@ -487,15 +487,17 @@ export default {
         api.settings.get([setting]).then((res) => {
           const { title } = JSON.parse(res[setting]);
 
-          setTimeout(() => { source.postMessage(title, "*") }, 300)
+          setTimeout(() => {
+            source.postMessage(title, "*");
+          }, 300);
           this.overlay.uuid = data.value.uuid;
         });
         return;
       }
       if (data.type === "click-on-button") {
-        this.overlay.x = data.value.x
-        this.overlay.y = data.value.y
-        this.overlay.isVisible = !this.overlay.isVisible
+        this.overlay.x = data.value.x;
+        this.overlay.y = data.value.y;
+        this.overlay.isVisible = !this.overlay.isVisible;
       }
       if (data.type === "open-user") {
         window.open(`/admin/accounts/${data.value.uuid}`, "_blank");

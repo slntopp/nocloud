@@ -10,8 +10,8 @@
         />
       </v-col>
       <template v-if="selectedRegion">
-          <v-btn class="mr-1" @click="setEnabledToTab(true)">Enable all</v-btn>
-          <v-btn  class="ml-1" @click="setEnabledToTab(false)">Disable all</v-btn>
+        <v-btn class="mr-1" @click="setEnabledToTab(true)">Enable all</v-btn>
+        <v-btn class="ml-1" @click="setEnabledToTab(false)">Disable all</v-btn>
       </template>
     </v-row>
     <v-tabs background-color="background-light" v-model="tab">
@@ -142,7 +142,7 @@ const isImagesLoading = ref(false);
 const isRegionsLoading = ref(false);
 
 const pricesHeaders = ref([
-  { text: "Name", value: "name" },
+  { text: "Title", value: "name" },
   { text: "API Name", value: "apiName" },
   { text: "Os type", value: "osType" },
   { text: "Disk", value: "disk" },
@@ -160,13 +160,13 @@ const pricesHeaders = ref([
 ]);
 
 const capabilitiesHeaders = ref([
-  { text: "Name", value: "name" },
+  { text: "Title", value: "name" },
   { text: "Enabled", value: "enabled" },
 ]);
 
 const imagesHeaders = ref([
   { text: "ID", value: "id" },
-  { text: "Name", value: "name" },
+  { text: "Title", value: "name" },
   { text: "Type", value: "type" },
   { text: "Size", value: "size" },
   { text: "Сreation date", value: "creationDate" },

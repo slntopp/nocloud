@@ -84,7 +84,7 @@ import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import api from "@/api";
-import InstancesPanels from "@/components/ui/instancesPanels.vue";
+import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh", "update"]);
