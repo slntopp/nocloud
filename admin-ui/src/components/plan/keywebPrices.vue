@@ -162,7 +162,7 @@ const expanded = ref([]);
 
 const headers = ref([
   { text: "Key", value: "key" },
-  { text: "Name", value: "name", width: "250" },
+  { text: "Title", value: "name", width: "250" },
   { text: "Duration", value: "duration" },
   { text: "Os", value: "os", width: "50" },
   { text: "Addons", value: "addons", width: "50" },
@@ -172,8 +172,8 @@ const headers = ref([
 ]);
 
 const addonsHeaders = ref([
-  { text: "Base name", value: "baseName" },
-  { text: "Name", value: "name", width: "250" },
+  { text: "Base title", value: "baseName" },
+  { text: "Title", value: "name", width: "250" },
   { text: "Duration", value: "duration" },
   { text: "Base price", value: "basePrice", width: "75" },
   { text: "Price", value: "price", width: "200" },
@@ -181,8 +181,8 @@ const addonsHeaders = ref([
 ]);
 
 const osHeaders = ref([
-  { text: "Base name", value: "baseName" },
-  { text: "Name", value: "name", width: "250" },
+  { text: "Base title", value: "baseName" },
+  { text: "Title", value: "name", width: "250" },
   { text: "Duration", value: "duration" },
   { text: "Base price", value: "basePrice", width: "75" },
   { text: "Price", value: "price", width: "200" },
