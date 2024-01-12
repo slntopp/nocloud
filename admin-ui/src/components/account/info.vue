@@ -107,13 +107,13 @@
     >
       <v-row>
         <v-col lg="3" md="4" sm="6">
-          <v-text-field readonly :value="account.data.email" label="Email" />
+          <v-text-field readonly :value="account.data?.email" label="Email" />
         </v-col>
 
         <v-col lg="1" md="2" sm="4">
           <v-text-field
             readonly
-            :value="formatSecondsToDate(account.data.date_create || 0)"
+            :value="formatSecondsToDate(account.data?.date_create || 0)"
             label="Date of create"
           />
         </v-col>
@@ -121,19 +121,19 @@
         <v-col lg="1" md="2" sm="4">
           <v-text-field
             readonly
-            :value="account.data.country"
+            :value="account.data?.country"
             label="Country"
           />
         </v-col>
 
         <v-col lg="1" md="2" sm="4">
-          <v-text-field readonly :value="account.data.city" label="City" />
+          <v-text-field readonly :value="account.data?.city" label="City" />
         </v-col>
 
         <v-col lg="1" md="2" sm="4">
           <v-text-field
             readonly
-            :value="account.data.address"
+            :value="account.data?.address"
             label="Address"
           />
         </v-col>
@@ -141,7 +141,7 @@
         <v-col lg="1" md="2" sm="4">
           <v-text-field
             readonly
-            :value="account.data.whmcs_id"
+            :value="account.data?.whmcs_id"
             label="WHMCS id"
           />
         </v-col>
