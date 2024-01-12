@@ -250,8 +250,8 @@ export default {
             valueB = this.getValue(key, valueB);
           } else {
             key.split(".").forEach((subkey) => {
-              valueA = valueA[subkey];
-              valueB = valueB[subkey];
+              valueA = valueA?.[subkey];
+              valueB = valueB?.[subkey];
             });
           }
 
