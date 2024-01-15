@@ -633,15 +633,17 @@ export default {
   directives: {
     "sortable-table": {
       inserted: (el, binding) => {
-        el.querySelectorAll("th").forEach((draggableEl) => {
-          // Need a class watcher because sorting v-data-table rows asc/desc removes the sortHandle class
-          watchClass(draggableEl, "sortHandle");
-          draggableEl.classList.add("sortHandle");
-        });
-        Sortable.create(
-          el.querySelector("tr"),
-          binding.value ? { ...binding.value, handle: ".sortHandle" } : {}
-        );
+        setTimeout(() => {
+          el.querySelectorAll("th").forEach((draggableEl) => {
+            // Need a class watcher because sorting v-data-table rows asc/desc removes the sortHandle class
+            watchClass(draggableEl, "sortHandle");
+            draggableEl.classList.add("sortHandle");
+          });
+          Sortable.create(
+            el.querySelector("tr"),
+            binding.value ? { ...binding.value, handle: ".sortHandle" } : {}
+          );
+        }, 0);
       },
     },
   },

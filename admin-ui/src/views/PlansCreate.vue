@@ -126,14 +126,40 @@
           <v-btn class="mr-2" v-if="isEdit" @click="isDialogVisible = true">
             Save
           </v-btn>
-          <v-btn
-            v-else
-            class="mr-2"
-            :loading="isLoading"
-            @click="tryToSend('create')"
-          >
-            Create
-          </v-btn>
+
+          <v-dialog persistent v-else :max-width="600" v-model="isSetSpDialog">
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn v-bind="attrs" v-on="on" class="mr-2" :loading="isLoading">
+                Create
+              </v-btn>
+            </template>
+
+            <v-card color="background-light">
+              <v-card-title>Connect plan to sp</v-card-title>
+              <v-card-subtitle
+                >You can also connect plan later.</v-card-subtitle
+              >
+
+              <nocloud-table
+                :items="typedSp"
+                :headers="spHeaders"
+                single-select
+                v-model="selectedSp"
+              />
+
+              <v-card-actions class="d-flex justify-end">
+                <v-btn @click="tryToSend('create')"> No </v-btn>
+                <v-btn
+                  :disabled="!selectedSp"
+                  @click="tryToSend('create', true)"
+                  class="mr-2"
+                >
+                  Connect
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
           <download-template-button
             :template="plan"
             :type="selectedFileType"
@@ -192,11 +218,13 @@ import JsonEditor from "@/components/JsonEditor.vue";
 import { downloadPlanXlsx, getTimestamp } from "@/functions.js";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
+import NocloudTable from "@/components/table.vue";
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
   components: {
+    NocloudTable,
     PlanWikiIcon,
     DownloadTemplateButton,
     confirmDialog,
@@ -234,6 +262,10 @@ export default {
     savePlanAction: "",
     selectedFileType: "JSON",
     fileTypes: ["JSON", "YAML", "XLSX"],
+
+    isSetSpDialog: false,
+    selectedSp: null,
+    spHeaders: [{ text: "Title", value: "title" }],
   }),
   methods: {
     downloadPlanXlsx,
@@ -292,7 +324,7 @@ export default {
       this.$set(product.meta, key, value);
       this.plan.meta = Object.assign({}, this.plan.meta);
     },
-    tryToSend(action) {
+    tryToSend(action, bindPlan = false) {
       let message = "";
 
       if (!this.isValid || !this.isFeeValid) {
@@ -324,6 +356,7 @@ export default {
       }
 
       this.isLoading = true;
+      this.isSetSpDialog = false;
       this.savePlanAction = action;
       this.plan.title = checkName(this.plan, this.plans);
 
@@ -354,6 +387,13 @@ export default {
           : api.plans.create(this.plan);
 
       request
+        .then((data) => {
+          if (bindPlan) {
+            return api.servicesProviders.bindPlan(this.selectedSp[0].uuid, [
+              data.uuid,
+            ]);
+          }
+        })
         .then(() => {
           this.showSnackbarSuccess({
             message:
@@ -421,6 +461,8 @@ export default {
       this.showSnackbarError({ message });
       console.error(err);
     });
+
+    this.$store.dispatch("servicesProviders/fetch");
 
     if (this.isEdit) {
       this.plan.resources = this.item.resources;
@@ -500,6 +542,11 @@ export default {
       }
 
       return allowed;
+    },
+    typedSp() {
+      return this.$store.getters["servicesProviders/all"].filter(
+        (sp) => sp.type == this.plan.type.split(" ")[0]
+      );
     },
   },
   watch: {

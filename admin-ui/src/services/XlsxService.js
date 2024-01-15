@@ -22,6 +22,9 @@ export default class XlsxService {
           }
           let subIndex = headers.findIndex((h) => h.key === key);
 
+          if (Array.isArray(item[key])) {
+            item[key] = item[key].join(", ");
+          }
           items[index][subIndex] = item[key];
         });
       });
