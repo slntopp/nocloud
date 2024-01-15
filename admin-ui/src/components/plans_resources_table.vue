@@ -18,7 +18,10 @@
           <v-btn class="mr-2" color="background-light" @click="addConfig">
             Create
           </v-btn>
-          <confirm-dialog @confirm="removeConfig" :disabled="selected.length < 1">
+          <confirm-dialog
+            @confirm="removeConfig"
+            :disabled="selected.length < 1"
+          >
             <v-btn color="background-light" :disabled="selected.length < 1"
               >Delete</v-btn
             >
@@ -190,9 +193,9 @@ const states = [
   "OPERATION",
 ];
 const headers = computed(() => [
-  { text: "Key", value: "key" },
-  { text: "Title", value: "title" },
-  { text: "Price", value: "price" },
+  { text: "Key", value: "key", width: 100 },
+  { text: "Title", value: "title", width: 250 },
+  { text: "Price", value: "price", width: 150 },
   ["ione", "cpanel", "empty"].includes(type.value) && {
     text: "One time",
     value: "meta.oneTime",

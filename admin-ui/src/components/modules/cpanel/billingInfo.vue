@@ -113,7 +113,7 @@
 import { defineProps, toRefs, computed, ref, onMounted, watch } from "vue";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import NocloudTable from "@/components/table.vue";
-import InstancesPricesPanels from "@/components/ui/instancesPanels.vue";
+import InstancesPricesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import { useStore } from "@/store";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";

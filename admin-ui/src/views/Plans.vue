@@ -1,64 +1,68 @@
 <template>
   <div class="pa-4">
-    <v-btn class="mr-2" :to="{ name: 'Plans create' }"> Create </v-btn>
+    <div class="d-flex align-center">
+      <v-btn class="mr-2" :to="{ name: 'Plans create' }"> Create </v-btn>
 
-    <confirm-dialog
-      v-if="linked.length !== 1"
-      :disabled="isDeleteDisabled"
-      @confirm="deleteSelectedPlan"
-    >
-      <v-btn
-        class="mr-2"
+      <confirm-dialog
+        v-if="linked.length !== 1"
         :disabled="isDeleteDisabled"
-        :loading="isDeleteLoading"
+        @confirm="deleteSelectedPlan"
       >
-        Delete
-      </v-btn>
-    </confirm-dialog>
-
-    <confirm-dialog
-      v-else
-      title="You can't delete a price model while there are instances using it!"
-      subtitle="To delete price model, select the price model that these instances will use."
-      :width="625"
-      :success-disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
-      @confirm="deleteSelectedPlan"
-    >
-      <v-btn
-        class="mr-2"
-        :disabled="selected.length < 1"
-        :loading="isDeleteLoading"
-      >
-        Delete
-      </v-btn>
-      <template #actions>
-        <nocloud-table
-          table-name="linked-plans"
-          :show-select="false"
-          :items="linked"
-          :headers="linkedHeaders"
+        <v-btn
+          class="mr-2"
+          :disabled="isDeleteDisabled"
+          :loading="isDeleteLoading"
         >
-          <template v-slot:[`item.title`]="{ item }">
-            <router-link
-              :to="{ name: 'Service', params: { serviceId: item.service } }"
-            >
-              {{ item.title }}
-            </router-link>
-          </template>
-          <template v-slot:[`item.plan`]="{ item }">
-            <v-select
-              dense
-              placeholder="none"
-              item-text="title"
-              item-value="uuid"
-              style="max-width: 200px"
-              v-model="item.plan"
-              :items="availablePlans"
-            />
-          </template>
-        </nocloud-table>
-      </template>
-    </confirm-dialog>
+          Delete
+        </v-btn>
+      </confirm-dialog>
+
+      <confirm-dialog
+        v-else
+        title="You can't delete a price model while there are instances using it!"
+        subtitle="To delete price model, select the price model that these instances will use."
+        :width="625"
+        :success-disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
+        @confirm="deleteSelectedPlan"
+      >
+        <v-btn
+          class="mr-2"
+          :disabled="selected.length < 1"
+          :loading="isDeleteLoading"
+        >
+          Delete
+        </v-btn>
+        <template #actions>
+          <nocloud-table
+            table-name="linked-plans"
+            :show-select="false"
+            :items="linked"
+            :headers="linkedHeaders"
+          >
+            <template v-slot:[`item.title`]="{ item }">
+              <router-link
+                :to="{ name: 'Service', params: { serviceId: item.service } }"
+              >
+                {{ item.title }}
+              </router-link>
+            </template>
+            <template v-slot:[`item.plan`]="{ item }">
+              <v-select
+                dense
+                placeholder="none"
+                item-text="title"
+                item-value="uuid"
+                style="max-width: 200px"
+                v-model="item.plan"
+                :items="availablePlans"
+              />
+            </template>
+          </nocloud-table>
+        </template>
+      </confirm-dialog>
+
+      <v-switch label="Hide individual" v-model="isIndividualHide" />
+    </div>
 
     <nocloud-table
       table-name="plans"
@@ -204,6 +208,8 @@ export default {
     selectedFileType: "JSON",
     isPlansUploadLoading: false,
     uploadedPlans: [],
+
+    isIndividualHide: true,
   }),
   methods: {
     changePlan() {
@@ -380,17 +386,19 @@ export default {
       );
     },
     filtredPlans() {
-      const plans = this.plans.filter((p) =>
-        Object.keys(this.filter).every((key) => {
-          const data = getDeepObjectValue(p, key);
+      const plans = this.plans
+        .filter((p) => p?.meta?.isIndividual != this.isIndividualHide)
+        .filter((p) =>
+          Object.keys(this.filter).every((key) => {
+            const data = getDeepObjectValue(p, key);
 
-          return compareSearchValue(
-            data,
-            this.filter[key],
-            this.searchFields.find((f) => f.key === key)
-          );
-        })
-      );
+            return compareSearchValue(
+              data,
+              this.filter[key],
+              this.searchFields.find((f) => f.key === key)
+            );
+          })
+        );
 
       if (this.searchParam) {
         return filterArrayByTitleAndUuid(plans, this.searchParam);

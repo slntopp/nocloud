@@ -5,6 +5,7 @@
         navTitle("Price Models")
       }}</router-link>
       / {{ planTitle }}
+      <plan-wiki-icon />
     </h1>
     <v-tabs
       class="rounded-t-lg"
@@ -34,9 +35,11 @@
 
 <script>
 import config from "@/config.js";
+import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
 
 export default {
   name: "plan-view",
+  components: { PlanWikiIcon },
   data: () => ({
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},

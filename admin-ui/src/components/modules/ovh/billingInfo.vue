@@ -126,7 +126,7 @@ import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import usePlnRate from "@/hooks/usePlnRate";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import useInstancePrices from "@/hooks/useInstancePrices";
-import InstancesPanels from "@/components/ui/instancesPanels.vue";
+import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);

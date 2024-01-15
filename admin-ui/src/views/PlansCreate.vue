@@ -1,10 +1,8 @@
 <template>
   <div class="pa-4">
-    <div class="d-flex">
-      <h1 class="page__title" v-if="!item">Create price model</h1>
-      <v-icon class="mx-3" large color="light" @click="openPlanWiki">
-        mdi-information-outline
-      </v-icon>
+    <div class="d-flex" v-if="!item">
+      <h1 class="page__title">Create price model</h1>
+      <plan-wiki-icon />
     </div>
 
     <v-form v-model="isValid" ref="form">
@@ -193,11 +191,13 @@ import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
 import { downloadPlanXlsx, getTimestamp } from "@/functions.js";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
+import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
   components: {
+    PlanWikiIcon,
     DownloadTemplateButton,
     confirmDialog,
     planOpensrs,
@@ -412,38 +412,6 @@ export default {
             : "STATIC");
       }
       this.plan.kind = this.selectedKind;
-    },
-    openPlanWiki() {
-      window.open(
-        "https://github.com/slntopp/nocloud/wiki/Billing-Plans",
-        "_blank"
-      );
-    },
-    setPlan(res) {
-      const requiredKeys = [
-        "resources",
-        "products",
-        "title",
-        "public",
-        "type",
-        "kind",
-      ];
-
-      for (const key of requiredKeys) {
-        if (res[key] === undefined) {
-          throw new Error("JSON need keys:" + requiredKeys.join(", "));
-        }
-      }
-
-      if (!this.types.includes(res.type)) {
-        throw new Error(`Type ${res.type} not exists!`);
-      }
-
-      if (!this.kinds.includes(res.kind)) {
-        throw new Error(`Kind ${res.kind} not exists!`);
-      }
-
-      this.getItem(res);
     },
   },
   created() {

@@ -543,6 +543,7 @@ export default {
         "account.data.email",
         "price",
         "accountPrice",
+        "access",
         "state.meta.networking.public",
       ];
 

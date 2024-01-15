@@ -255,6 +255,10 @@ export default {
               ? this.copyTemplate.billingPlan.products[this.product]
               : undefined,
           },
+          meta: {
+            ...(this.copyTemplate.billingPlan.meta || {}),
+            isIndividual: true,
+          },
           public: false,
         };
         delete billingPlan.uuid;
