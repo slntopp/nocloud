@@ -1,6 +1,6 @@
 <template>
   <widget title="Transactions" :loading="isLoading" class="pa-0 ma-0">
-    <div style="color: #fff">
+    <v-card color="background-light" flat>
       <div class="d-flex justify-end">
         <v-btn-toggle class="mt-2" dense v-model="period" borderless>
           <v-btn x-small :value="item" :key="item" v-for="item in periods">
@@ -32,8 +32,7 @@
             <div class="d-flex align-center justify-space-between">
               <span>{{ formatSecondsToDate(report.exec, true) }}</span>
               <router-link
-                  target="_blank"
-
+                target="_blank"
                 :to="{
                   name: 'Account',
                   params: { accountId: report.account },
@@ -51,7 +50,7 @@
           </v-list-item-content>
         </v-list-item>
       </v-list>
-    </div>
+    </v-card>
   </widget>
 </template>
 
