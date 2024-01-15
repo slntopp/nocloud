@@ -43,7 +43,11 @@
               >
                 {{ account.title }}
               </router-link>
-              <balance-display small :value="account.balance" />
+              <balance-display
+                small
+                :currency="account.currency"
+                :value="account.balance"
+              />
             </div>
           </v-list-item-content>
         </v-list-item>

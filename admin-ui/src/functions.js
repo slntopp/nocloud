@@ -575,12 +575,18 @@ export function downloadPlanXlsx(plans) {
         case "ovh vps": {
           headers.push({ title: "Base price", key: "basePrice" });
           headers.push({ title: "API name", key: "apiName" });
+          headers.push({ title: "Region", key: "datacenter" });
           break;
         }
         case "ovh dedicated": {
           headers.push({ title: "Base price", key: "basePrice" });
           headers.push({ title: "API name", key: "apiName" });
           headers.push({ title: "CPU", key: "cpu" });
+          headers.push({ title: "Region", key: "datacenter" });
+          break;
+        }
+        case "ovh cloud": {
+          headers.push({ title: "Region", key: "datacenter" });
           break;
         }
       }

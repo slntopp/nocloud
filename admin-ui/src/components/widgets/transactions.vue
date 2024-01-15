@@ -44,6 +44,7 @@
               <balance-display
                 class="ml-3"
                 small
+                :currency="report.currency"
                 :value="report.total.toFixed(2)"
               />
             </div>
