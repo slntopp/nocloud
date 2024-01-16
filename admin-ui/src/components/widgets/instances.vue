@@ -1,6 +1,6 @@
 <template>
   <widget title="Instances" :loading="isLoading" class="pa-0 ma-0">
-    <div style="color: #fff">
+    <v-card color="background-light" flat>
       <div class="d-flex justify-end">
         <v-btn-toggle class="mt-2" dense v-model="period" borderless>
           <v-btn x-small :value="item" :key="item" v-for="item in periods">
@@ -48,7 +48,7 @@
           </v-list-item-content>
         </v-list-item>
       </v-list>
-    </div>
+    </v-card>
   </widget>
 </template>
 

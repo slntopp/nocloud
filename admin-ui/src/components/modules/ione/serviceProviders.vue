@@ -199,7 +199,7 @@ export default {
         subheader: "Public IPs Pool ID",
         rules: [
           (value) => !!value || value === 0 || "Field is required",
-          (value) => !!Number(value) || "Field must be number",
+          (value) => value == 0 || !!Number(value) || "Field must be number",
         ],
         label: "pip",
         bind: {
@@ -211,7 +211,7 @@ export default {
         subheader: "Private Networks Template ID",
         rules: [
           (value) => !!value || value === 0 || "Field is required",
-          (value) => !!Number(value) || "Field must be number",
+          (value) => value == 0 || !!Number(value) || "Field must be number",
         ],
         label: "pvp",
         bind: {

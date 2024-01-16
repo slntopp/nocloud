@@ -68,46 +68,48 @@
       </confirm-dialog>
     </instance-control-btn>
 
-    <instance-control-btn hint="Save">
-      <v-dialog persistent v-model="isBillingDialog" max-width="600px">
-        <template v-slot:activator="{ on, attrs }">
-          <v-btn
-            v-bind="isBillingChange && !isDeleted ? attrs : undefined"
-            v-on="isBillingChange && !isDeleted ? on : undefined"
-            :disabled="isDeleted"
-            @click="onSaveClick"
-            class="ma-1"
-            :loading="isSaveLoading"
-            :color="isChanged ? 'primary' : ''"
-          >
-            <v-icon> mdi-content-save </v-icon>
-          </v-btn>
-        </template>
-        <v-card color="background-light">
-          <v-card-title
-            >Do you really want to change your current price
-            model?</v-card-title
-          >
-          <v-card-subtitle class="mt-1"
-            >You can also create a new price model based on the current
-            one.</v-card-subtitle
-          >
-          <v-card-actions class="d-flex justify-end">
+    <div class="save_button">
+      <instance-control-btn top hint="Save">
+        <v-dialog persistent v-model="isBillingDialog" max-width="600px">
+          <template v-slot:activator="{ on, attrs }">
             <v-btn
-              class="mr-2"
-              :loading="isLoading"
-              @click="isBillingDialog = false"
+              v-bind="isBillingChange && !isDeleted ? attrs : undefined"
+              v-on="isBillingChange && !isDeleted ? on : undefined"
+              :disabled="isDeleted"
+              @click="onSaveClick"
+              class="ma-1"
+              :loading="isSaveLoading"
+              :color="isChanged ? 'primary' : ''"
             >
-              Close
+              <v-icon> mdi-content-save </v-icon>
             </v-btn>
-            <v-btn class="mr-2" :loading="isLoading" @click="save(true)">
-              Create
-            </v-btn>
-            <v-btn :loading="isLoading" @click="save(false)"> Edit </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
-    </instance-control-btn>
+          </template>
+          <v-card color="background-light">
+            <v-card-title
+              >Do you really want to change your current price
+              model?</v-card-title
+            >
+            <v-card-subtitle class="mt-1"
+              >You can also create a new price model based on the current
+              one.</v-card-subtitle
+            >
+            <v-card-actions class="d-flex justify-end">
+              <v-btn
+                class="mr-2"
+                :loading="isLoading"
+                @click="isBillingDialog = false"
+              >
+                Close
+              </v-btn>
+              <v-btn class="mr-2" :loading="isLoading" @click="save(true)">
+                Create
+              </v-btn>
+              <v-btn :loading="isLoading" @click="save(false)"> Edit </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </instance-control-btn>
+    </div>
   </div>
 </template>
 <script>
@@ -835,5 +837,13 @@ export default {
 .controls {
   max-width: calc(100% - 450px);
   min-width: 60%;
+}
+</style>
+
+<style>
+.save_button {
+  position: fixed;
+  top: 140px;
+  right: 40px;
 }
 </style>
