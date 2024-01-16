@@ -71,7 +71,7 @@
                   />
 
                   <v-card-actions class="justify-end">
-                    <v-btn @click.stop="saveAndClose(marker.id)"> Save </v-btn>
+                    <v-btn @click.stop="saveAndClose(marker.id)"> Edit </v-btn>
                   </v-card-actions>
                 </v-card>
               </v-dialog>
@@ -261,10 +261,9 @@ export default {
       this.markersSave = JSON.parse(JSON.stringify(this.markers));
     },
     saveAndClose(id) {
-      if (this.$refs["edit-dialog." + id]?.[0]) {
-        this.$refs["edit-dialog." + id][0].isActive = false;
+      if (this.$refs["edit-dialog." + id]) {
+        this.$refs["edit-dialog." + id].isActive = false;
       }
-      this.saveCountry();
     },
     cancelSelectedCountry() {
       this.changeLocations();

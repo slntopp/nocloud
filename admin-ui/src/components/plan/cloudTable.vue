@@ -348,6 +348,7 @@ const changePlan = (plan) => {
           gpu_name: item.gpu.model,
           gpu_count: item.gpu.number,
         },
+        public: true,
         meta: {
           priceCode: item.priceCode,
           ...item.meta,
