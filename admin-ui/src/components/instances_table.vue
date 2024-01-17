@@ -255,9 +255,9 @@ export default {
             });
           }
 
-          if (typeof valueA === "string") {
+          if (typeof valueA === "string" && typeof valueB === "string") {
             return valueA.toLowerCase().localeCompare(valueB.toLowerCase());
-          } else if (typeof valueA === "number") {
+          } else if (typeof valueA === "number" && typeof valueB === "number") {
             return valueA - valueB;
           } else {
             return valueA > valueB;

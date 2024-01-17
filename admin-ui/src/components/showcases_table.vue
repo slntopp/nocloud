@@ -9,7 +9,11 @@
     :loading="loading"
   >
     <template v-slot:[`item.preview`]="{ item }">
-      <icon-title-preview :is-mdi="false" :icon="item.icon" :title="item.title" />
+      <icon-title-preview
+        :is-mdi="false"
+        :icon="item.icon"
+        :title="item.title"
+      />
     </template>
 
     <template v-slot:[`item.title`]="{ item }">
@@ -22,6 +26,8 @@
       <v-skeleton-loader v-if="updatedShowcase === item.uuid" type="text" />
       <v-text-field
         v-else
+        dense
+        hide-details
         style="max-width: 50px"
         type="number"
         :disabled="!!updatedShowcase"
@@ -31,13 +37,17 @@
     </template>
 
     <template v-slot:[`item.public`]="{ item }">
-      <v-skeleton-loader v-if="updatedShowcase === item.uuid" type="text" />
-      <v-switch
-        v-else
-        :readonly="!!updatedShowcase"
-        :input-value="item.public"
-        @change="updateShowcase(item, { key: 'public', value: $event })"
-      />
+      <div class="d-flex justify-center align-center change_public">
+        <v-skeleton-loader v-if="updatedShowcase === item.uuid" type="text" />
+        <v-switch
+          v-else
+          dense
+          hide-details
+          :readonly="!!updatedShowcase"
+          :input-value="item.public"
+          @change="updateShowcase(item, { key: 'public', value: $event })"
+        />
+      </div>
     </template>
   </nocloud-table>
 </template>
@@ -82,4 +92,8 @@ const updateShowcase = async (item, { key, value }) => {
 };
 </script>
 
-<style scoped></style>
+<style>
+.change_public .v-input {
+  margin-top: 0px !important;
+}
+</style>

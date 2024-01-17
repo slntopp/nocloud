@@ -21,28 +21,6 @@
       <v-row>
         <v-col cols="6">
           <v-autocomplete
-            @change="(newVal) => changeOS(newVal)"
-            label="template"
-            :rules="requiredRule"
-            :items="getOsNames"
-            :value="selectedTemplate?.name"
-          >
-          </v-autocomplete>
-        </v-col>
-        <v-col cols="6">
-          <v-text-field
-            @change="(newVal) => setValue('config.password', newVal)"
-            label="password"
-            :rules="requiredRule"
-            :value="instance.config?.password"
-          >
-          </v-text-field>
-        </v-col>
-      </v-row>
-
-      <v-row>
-        <v-col cols="6">
-          <v-autocomplete
             :filter="defaultFilterObject"
             label="price model"
             item-text="title"
@@ -61,6 +39,26 @@
             :items="products"
             @change="setProduct"
           />
+        </v-col>
+
+        <v-col cols="6">
+          <v-autocomplete
+            @change="(newVal) => changeOS(newVal)"
+            label="template"
+            :rules="requiredRule"
+            :items="osNames"
+            :value="selectedTemplate?.name"
+          >
+          </v-autocomplete>
+        </v-col>
+        <v-col cols="6">
+          <v-text-field
+            @change="(newVal) => setValue('config.password', newVal)"
+            label="password"
+            :rules="requiredRule"
+            :value="instance.config?.password"
+          >
+          </v-text-field>
         </v-col>
 
         <v-col cols="6">
@@ -194,7 +192,7 @@ export default {
     changeOS(newVal) {
       let osId = null;
 
-      for (const [key, value] of Object.entries(this.getOsTemplates)) {
+      for (const [key, value] of Object.entries(this.osTemplates)) {
         if (value.name === newVal) {
           osId = key;
           break;
@@ -226,19 +224,27 @@ export default {
     },
   },
   computed: {
-    getOsTemplates() {
+    osTemplates() {
       const sp = this.$store.getters["servicesProviders/all"].filter(
         (el) => el.uuid === this.spUuid
       )[0];
 
       if (!sp) return {};
 
-      return sp.publicData.templates;
-    },
-    getOsNames() {
-      if (!this.getOsTemplates) return [];
+      const osTemplates = {};
 
-      return Object.values(this.getOsTemplates).map((os) => os.name);
+      Object.keys(sp.publicData.templates || {}).forEach((key) => {
+        if (!this.instance?.billing_plan?.meta?.hidedOs?.includes(key)) {
+          osTemplates[key] = sp.publicData.templates[key];
+        }
+      });
+
+      return osTemplates;
+    },
+    osNames() {
+      if (!this.osTemplates) return [];
+
+      return Object.values(this.osTemplates).map((os) => os.name);
     },
     driveTypes() {
       return this.instance.billing_plan?.resources
@@ -264,7 +270,7 @@ export default {
       };
     },
     selectedTemplate() {
-      return this.getOsTemplates[this.instance.config.template_id];
+      return this.osTemplates[this.instance.config.template_id];
     },
     driveSizeRule() {
       return (val) =>

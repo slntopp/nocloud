@@ -417,22 +417,43 @@ export default {
     sortTheHeadersAndUpdateTheKey(evt) {
       const originalHeaders = JSON.parse(JSON.stringify(this.filtredHeaders));
       this.filtredHeaders = [];
-      let oldIndex = evt.oldIndex - 1;
-      let newIndex = evt.newIndex - 1;
+      let oldIndex = evt.oldIndex;
+      let newIndex = evt.newIndex;
+
       if (this.showExpand) {
         oldIndex--;
         newIndex--;
       }
+
+      if (this.showSelect) {
+        oldIndex--;
+        newIndex--;
+      }
+
       for (const header of originalHeaders) {
         if (header) {
           this.filtredHeaders.push(header);
         }
       }
+
+      if (newIndex === 0) {
+        this.filtredHeaders = [
+          this.filtredHeaders[oldIndex],
+          ...this.filtredHeaders,
+        ];
+      } else {
+        this.filtredHeaders.splice(
+          oldIndex > newIndex ? newIndex : newIndex + 1,
+          0,
+          this.filtredHeaders[oldIndex]
+        );
+      }
+
       this.filtredHeaders.splice(
-        newIndex,
-        0,
-        this.filtredHeaders.splice(oldIndex, 1)[0]
+        oldIndex > newIndex ? oldIndex + 1 : oldIndex,
+        1
       );
+
       this.table = this.filtredHeaders;
       this.anIncreasingNumber += 1;
     },
