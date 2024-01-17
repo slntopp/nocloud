@@ -21,7 +21,7 @@
         class="d-flex justify-end align-start pa-0"
       >
         <v-switch
-          :disabled="isDeleted"
+          :disabled="isDeleted || isRenewDisabled"
           hide-details
           dense
           :input-value="template.config.auto_renew"
@@ -73,14 +73,16 @@ import confirmDialog from "@/components/confirmDialog.vue";
 import InstanceState from "@/components/ui/instanceState.vue";
 import useCurrency from "@/hooks/useCurrency";
 
-const props = defineProps([
-  "template",
-  "dueDate",
-  "addonsPrice",
-  "tariffPrice",
-  "account",
-]);
-const { template, addonsPrice, tariffPrice, dueDate, account } = toRefs(props);
+const props = defineProps({
+  template: {},
+  dueDate: {},
+  addonsPrice: {},
+  tariffPrice: {},
+  account: {},
+  renewDisabled: { type: Boolean, default: false },
+});
+const { template, addonsPrice, tariffPrice, dueDate, account, renewDisabled } =
+  toRefs(props);
 
 const emit = defineEmits(["update"]);
 
@@ -103,7 +105,9 @@ const price = computed(() => {
 
 const isRenewDisabled = computed(() => {
   return (
-    (account.value?.balance || 0) < price.value || template.value.data.blocked
+    (account.value?.balance || 0) < price.value ||
+    template.value.data.blocked ||
+    renewDisabled.value
   );
 });
 
