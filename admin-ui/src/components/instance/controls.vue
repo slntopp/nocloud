@@ -48,6 +48,14 @@
       </v-dialog>
     </instance-control-btn>
 
+    <instance-control-btn hint="Renewal invoice">
+      <confirm-dialog @confirm="sendInvoice">
+        <v-btn class="ma-1" :loading="isInvoiceLoading">
+          <v-icon>mdi-invoice-text-outline</v-icon>
+        </v-btn>
+      </confirm-dialog>
+    </instance-control-btn>
+
     <instance-control-btn
       :hint="template.data.lock ? 'User unlock' : 'User lock'"
     >
@@ -62,7 +70,7 @@
 
     <instance-control-btn hint="Terminate">
       <confirm-dialog :disabled="isDeleted" @confirm="deleteInstance">
-        <v-btn class="ma-1" :disabled="isDeleted" :loading="isLoading">
+        <v-btn class="ma-1" :disabled="isDeleted" :loading="isDeleteLoading">
           <v-icon> mdi-delete </v-icon>
         </v-btn>
       </confirm-dialog>
@@ -96,15 +104,21 @@
             <v-card-actions class="d-flex justify-end">
               <v-btn
                 class="mr-2"
-                :loading="isLoading"
+                :loading="isDeleteLoading"
                 @click="isBillingDialog = false"
               >
                 Close
               </v-btn>
-              <v-btn class="mr-2" :loading="isLoading" @click="save(true)">
+              <v-btn
+                class="mr-2"
+                :loading="isDeleteLoading"
+                @click="save(true)"
+              >
                 Create
               </v-btn>
-              <v-btn :loading="isLoading" @click="save(false)"> Edit </v-btn>
+              <v-btn :loading="isDeleteLoading" @click="save(false)">
+                Edit
+              </v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -131,8 +145,9 @@ export default {
     sp: { type: Object },
   },
   data: () => ({
-    isLoading: false,
+    isDeleteLoading: false,
     isSaveLoading: false,
+    isInvoiceLoading: false,
     isLockLoading: false,
     runningActionName: "",
     isBillingDialog: false,
@@ -140,7 +155,7 @@ export default {
   methods: {
     ...mapActions("actions", ["sendVmAction"]),
     async deleteInstance() {
-      this.isLoading = true;
+      this.isDeleteLoading = true;
       try {
         await api.delete(`/instances/${this.template.uuid}`);
         if (this.template.type === "ione") {
@@ -168,7 +183,7 @@ export default {
           message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
         });
       } finally {
-        this.isLoading = false;
+        this.isDeleteLoading = false;
       }
     },
     async attachInstance(detach = false) {
@@ -364,6 +379,22 @@ export default {
         });
       } finally {
         this.runningActionName = "";
+      }
+    },
+    async sendInvoice() {
+      this.isInvoiceLoading = true;
+      try {
+        await fetch(
+          /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
+            `modules/addons/nocloud/api/index.php?run=create_renewal_invoice&account=${this.account.uuid}&instance=${this.template.uuid}`
+        );
+      } catch (e) {
+        this.$store.commit("snackbar/showSnackbarError", {
+          message:
+            e.response?.data?.message || "Error during create renewal invoice",
+        });
+      } finally {
+        this.isInvoiceLoading = false;
       }
     },
   },
@@ -828,6 +859,19 @@ export default {
     },
     isDeleted() {
       return this.template.state?.state === "DELETED";
+    },
+    namespace() {
+      return this.$store.getters["namespaces/all"].find(
+        (n) => n.uuid === this.template.access.namespace
+      );
+    },
+    account() {
+      return this.$store.getters["accounts/all"].find(
+        (a) => a.uuid === this.namespace.access.namespace
+      );
+    },
+    whmcsApi() {
+      return this.$store.getters["settings/whmcsApi"];
     },
   },
 };

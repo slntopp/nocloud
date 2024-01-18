@@ -14,7 +14,7 @@
       <v-tab v-for="tab of tabs" :key="tab.title"
         >{{ tab.title }}
         <v-chip class="ml-1" small v-if="tab.title === 'notes'">{{
-          instance.adminNotes?.length || 0
+          instance?.adminNotes?.length || 0
         }}</v-chip></v-tab
       >
     </v-tabs>
