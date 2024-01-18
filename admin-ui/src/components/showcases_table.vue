@@ -10,7 +10,7 @@
   >
     <template v-slot:[`item.preview`]="{ item }">
       <icon-title-preview
-        :is-mdi="false"
+        type="nocloud"
         :icon="item.icon"
         :title="item.title"
       />
