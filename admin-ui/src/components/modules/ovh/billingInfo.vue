@@ -5,8 +5,10 @@
         <v-text-field
           readonly
           label="price model"
-          append-icon="mdi-pencil"
-          @click:append="priceModelDialog = true"
+          :append-icon="isPriceModelCanBeChange ? 'mdi-pencil' : undefined"
+          @click:append="
+            isPriceModelCanBeChange ? (priceModelDialog = true) : undefined
+          "
           :value="template.billingPlan.title"
         />
       </v-col>
@@ -15,8 +17,10 @@
           readonly
           label="Product name"
           :value="tarrif.title"
-          append-icon="mdi-pencil"
-          @click:append="priceModelDialog = true"
+          :append-icon="isPriceModelCanBeChange ? 'mdi-pencil' : undefined"
+          @click:append="
+            isPriceModelCanBeChange ? (priceModelDialog = true) : undefined
+          "
         />
       </v-col>
       <v-col>
@@ -98,6 +102,7 @@
     </instances-panels>
 
     <edit-price-model
+      v-if="isPriceModelCanBeChange"
       @refresh="emit('refresh')"
       :template="template"
       :plans="plans"
@@ -201,6 +206,8 @@ const tarrif = computed(() => {
 const service = computed(() =>
   store.getters["services/all"].find((s) => s.uuid === template.value.service)
 );
+
+const isPriceModelCanBeChange = computed(() => ["cloud"].includes(type.value));
 
 const getBasePrices = async () => {
   isBasePricesLoading.value = true;
