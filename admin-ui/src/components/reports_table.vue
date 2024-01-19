@@ -41,11 +41,11 @@
         }}</v-chip>
       </template>
       <template v-slot:[`item.exec`]="{ value }">
-        <span>{{ new Date(value * 1000).toLocaleString() }}</span>
+        <span>{{ formatSecondsToDate(value, true) }}</span>
       </template>
       <template v-slot:[`item.meta.payment_date`]="{ value }">
         <div class="d-flex justify-center align-center">
-          {{ value ? new Date(value * 1000).toLocaleString() : "-" }}
+          {{ value ? formatSecondsToDate(value, true) : "-" }}
         </div>
       </template>
       <template v-slot:[`item.status`]="{ item }">
@@ -111,7 +111,7 @@ import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import DatePicker from "@/components/ui/datePicker.vue";
 import useCurrency from "@/hooks/useCurrency";
-import { debounce } from "@/functions";
+import { debounce, formatSecondsToDate } from "@/functions";
 import { useRouter } from "vue-router/composables";
 
 const props = defineProps({
@@ -254,9 +254,10 @@ const fetchReports = async () => {
         total: -r.total.toFixed(2),
         start: r.start,
         end: r.end,
-        duration: `${new Date(r.start * 1000).toLocaleString()} - ${new Date(
-          r.end * 1000
-        ).toLocaleString()}`,
+        duration: `${formatSecondsToDate(
+          r.start,
+          true
+        )} - ${formatSecondsToDate(r.end, true)}`,
         exec: r.exec,
         transactionUuid: r.meta?.transaction,
         currency: r.currency,
