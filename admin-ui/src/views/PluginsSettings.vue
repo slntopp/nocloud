@@ -21,12 +21,12 @@
             <v-icon class="ml-3">{{ `mdi-${item.icon}` }}</v-icon>
           </template>
           <template v-slot:item="{ item }">
-            <icon-title-preview :icon="item" :title="item" is-mdi />
+            <icon-title-preview :icon="item" :title="item" type="mdi" />
           </template>
         </v-autocomplete>
       </template>
       <template v-slot:[`item.preview`]="{ item }">
-        <icon-title-preview :title="item.title" :icon="item.icon" />
+        <icon-title-preview :title="item.title" :icon="item.icon" type="mdi" />
       </template>
       <template v-slot:footer.prepend>
         <v-btn @click="addPlugin" class="mx-2">Add</v-btn>

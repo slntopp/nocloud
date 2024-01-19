@@ -6,6 +6,7 @@
     :addons-price="addonsPrice"
     :account="account"
     @update="emit('update', $event)"
+    :renew-disabled="isRenewDisabled"
   />
 </template>
 
@@ -67,6 +68,10 @@ const addonsPrice = ref(
 
     return { ...res, [addonKey]: +price || 0 };
   }, {})
+);
+
+const isRenewDisabled = computed(
+  () => template.value.billingPlan.type === "ovh cloud"
 );
 </script>
 

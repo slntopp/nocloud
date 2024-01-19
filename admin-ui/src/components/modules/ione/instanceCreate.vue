@@ -34,7 +34,8 @@
         <v-col cols="6">
           <v-autocomplete
             label="product"
-            :rules="requiredRule"
+            :disabled="isDynamicPlan"
+            :rules="!isDynamicPlan ? requiredRule : []"
             :value="instance.product"
             :items="products"
             @change="setProduct"
@@ -277,6 +278,9 @@ export default {
         (+val >= +this.driveSizeConfig.minDisk &&
           +val <= +this.driveSizeConfig.maxDisk) ||
         "Bad drive size";
+    },
+    isDynamicPlan() {
+      return this.instance.billing_plan?.kind === "DYNAMIC";
     },
   },
   watch: {

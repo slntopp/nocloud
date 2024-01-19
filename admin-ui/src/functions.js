@@ -287,10 +287,12 @@ export function toPascalCase(text) {
   );
 }
 
-export function formatSecondsToDate(timestamp, withTime, sep = "-") {
-  if (!timestamp || !+timestamp) return "-";
+export function formatSecondsToDate(timestamp, withTime, sep = ".") {
+  if (!timestamp || !+timestamp) return;
   const date = new Date(timestamp * 1000);
-  const time = date.toUTCString().split(" ")[4];
+  const time = date
+    .toLocaleString(undefined, { hourCycle: "h24" })
+    .split(" ")[1];
 
   const year = date.toUTCString().split(" ")[3];
   let month = date.getUTCMonth() + 1;
@@ -299,7 +301,7 @@ export function formatSecondsToDate(timestamp, withTime, sep = "-") {
   if (`${month}`.length < 2) month = `0${month}`;
   if (`${day}`.length < 2) day = `0${day}`;
 
-  let result = `${year}${sep}${month}${sep}${day}`;
+  let result = `${day}${sep}${month}${sep}${year}`;
 
   if (withTime) result += ` ${time}`;
   return result;
