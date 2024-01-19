@@ -154,6 +154,7 @@ import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
 import {
   compareSearchValue,
+  formatSecondsToDate,
   getDeepObjectValue,
   getOvhPrice,
   getState,
@@ -264,19 +265,6 @@ export default {
           }
         }
       });
-    },
-    date(timestamp) {
-      if (!timestamp) return "PayG";
-      const date = new Date(timestamp * 1000);
-
-      const year = date.toUTCString().split(" ")[3];
-      let month = date.getUTCMonth() + 1;
-      let day = date.getUTCDate();
-
-      if (`${month}`.length < 2) month = `0${month}`;
-      if (`${day}`.length < 2) day = `0${day}`;
-
-      return `${year}-${month}-${day}`;
     },
     getAccount({ access }) {
       const {
@@ -433,11 +421,11 @@ export default {
       return value.size > 1 ? "PH" : value.keys().next().value;
     },
     getCreationDate(inst) {
-      return inst.data.creation ?? "unknown";
+      return formatSecondsToDate(inst.data.creation) ?? "unknown";
     },
     getExpirationDate(inst) {
       if (inst.data.next_payment_date)
-        return this.date(inst.data.next_payment_date);
+        return formatSecondsToDate(inst.data.next_payment_date);
       return "-";
     },
     getService({ service }) {
