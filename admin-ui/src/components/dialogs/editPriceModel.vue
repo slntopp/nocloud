@@ -54,6 +54,39 @@
         </v-col>
       </v-row>
 
+      <v-row align="center">
+        <v-col cols="2">
+          <v-text-field
+            :value="fullProduct?.resources?.cpu"
+            readonly
+            label="CPU"
+          />
+        </v-col>
+        <v-col cols="4">
+          <v-text-field
+            :value="fullProduct?.resources?.ram"
+            readonly
+            label="RAM"
+          />
+        </v-col>
+
+        <v-col>
+          <v-text-field
+            :value="fullProduct?.resources?.drive_type"
+            readonly
+            label="Drive type"
+          />
+        </v-col>
+
+        <v-col>
+          <v-text-field
+            :value="fullProduct?.resources?.drive_size"
+            readonly
+            label="Drive size"
+          />
+        </v-col>
+      </v-row>
+
       <v-row justify="end">
         <v-btn class="mx-3" @click="cancel">Cancel</v-btn>
         <v-btn
@@ -115,9 +148,19 @@ const tariffs = computed(() => {
 });
 
 const filteredTariffs = computed(() => {
-  return tariffs.value.filter(
+  const filtred = tariffs.value.filter(
     (t) => billingPeriods.value[t.key] === selectedPeriod.value
   );
+
+  if (template.value?.config?.type === "cloud") {
+    return filtred.filter(
+      (p) =>
+        p.meta.region ===
+        template.value.billingPlan.products[originalProduct.value]?.meta.region
+    );
+  }
+
+  return filtred;
 });
 
 const billingPeriods = computed(() => {
@@ -243,6 +286,7 @@ const changePM = () => {
   }
 
   isChangePMLoading.value = true;
+
   api.services
     ._update(tempService)
     .then(() => {
@@ -261,7 +305,7 @@ const cancel = () => {
 
 const setDefaultPlan = () => {
   setPlan();
-  setProduct()
+  setProduct();
   selectedPeriod.value = billingPeriods.value[originalProduct.value];
 };
 
