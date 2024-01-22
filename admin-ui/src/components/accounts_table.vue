@@ -44,6 +44,11 @@
         :value="item.balance"
       />
     </template>
+
+    <template v-slot:[`item.data.date_create`]="{ value }">
+      {{formatSecondsToDate(value)}}
+    </template>
+
     <template v-slot:[`item.address`]="{ item }">
       <v-tooltip bottom>
         <template v-slot:activator="{ on, attrs }">
@@ -140,6 +145,7 @@ export default {
     };
   },
   methods: {
+    formatSecondsToDate,
     handleSelect(item) {
       this.$emit("input", item);
     },
@@ -192,7 +198,6 @@ export default {
         namespace: this.getNamespaceName(a.uuid),
         data: {
           ...a.data,
-          date_create: formatSecondsToDate(a.data?.date_create),
           regular_payment:
             a.data?.regular_payment === undefined ||
             a.data?.regular_payment === true,

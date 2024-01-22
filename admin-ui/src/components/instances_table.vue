@@ -75,11 +75,11 @@
     </template>
 
     <template v-slot:[`item.date`]="{ item }">
-      {{ getValue("date", item) }}
+      {{ formatSecondsToDate(getValue("date", item)) || "Unknown" }}
     </template>
 
     <template v-slot:[`item.dueDate`]="{ item }">
-      {{ getValue("dueDate", item) }}
+      {{ formatSecondsToDate(getValue("dueDate", item)) || "Unknown" }}
     </template>
 
     <template v-slot:[`item.service`]="{ item, value }">
@@ -237,6 +237,7 @@ export default {
     });
   },
   methods: {
+    formatSecondsToDate,
     sortInstances(items, sortBy, sortDesc) {
       return items.sort((a, b) => {
         for (let i = 0; i < sortBy.length; i++) {
@@ -421,12 +422,11 @@ export default {
       return value.size > 1 ? "PH" : value.keys().next().value;
     },
     getCreationDate(inst) {
-      return formatSecondsToDate(inst.data.creation) ?? "unknown";
+      return inst.data.creation;
     },
     getExpirationDate(inst) {
-      if (inst.data.next_payment_date)
-        return formatSecondsToDate(inst.data.next_payment_date);
-      return "-";
+      if (inst.data.next_payment_date) return inst.data.next_payment_date;
+      return 0;
     },
     getService({ service }) {
       return (
