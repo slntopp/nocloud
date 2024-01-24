@@ -31,7 +31,7 @@
         <v-text-field
           readonly
           label="Start date"
-          :value="template.data.start || '-'"
+          :value="formatSecondsToDate(template.data.start) || '-'"
         />
       </v-col>
 
