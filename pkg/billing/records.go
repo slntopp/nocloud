@@ -307,6 +307,10 @@ FOR service IN @@services // Iterate over Services
         FILTER record.priority == @priority
         FILTER !record.processed
         FILTER record.instance IN instances
+
+		LET bp = DOCUMENT(CONCAT(@billing_plans, "/", instance.billing_plan.uuid))
+		LET item = record.product == null ? LAST(FOR res in bp.resources FILTER res.key == record.resource return res) : bp.products[record.product]
+
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND SHORTEST_PATH
 			// Cast to NCU if currency is not specified
@@ -314,10 +318,12 @@ FOR service IN @@services // Iterate over Services
 			DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
 				RETURN edge.rate
 		)
-        LET total = record.total * rate
+        LET cost = record.total * rate * item.price
+        
+		LET total = record.total * rate
             UPDATE record._key WITH { 
 				processed: true, 
-				total: total,
+				cost: cost,
 				currency: currency,
 				service: service._key,
 				account: account._key
@@ -334,7 +340,7 @@ FOR service IN @@services // Iterate over Services
 		priority: @priority,
         service: service._key,
         records: records[*]._key,
-        total: SUM(records[*].total),
+        total: SUM(records[*].cost),
 		meta: {type: "transaction"},
     } IN @@transactions RETURN NEW
 `
