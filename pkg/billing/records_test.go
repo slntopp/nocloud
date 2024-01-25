@@ -95,6 +95,7 @@ func TestConsumeMock_NotNormal(t *testing.T) {
 		"graph":         schema.BILLING_GRAPH.Name,
 		"currencies":    schema.CUR_COL,
 		"currency":      conf.Currency,
+		"billing_plans": schema.BILLING_PLANS_COL,
 	}).Return(cursor2, nil)
 	cursor2.On("HasMore").Return(true)
 	docId := driver.NewDocumentID(schema.TRANSACTIONS_COL, uuid.New().String())

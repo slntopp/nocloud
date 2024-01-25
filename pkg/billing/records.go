@@ -166,6 +166,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 			"graph":         schema.BILLING_GRAPH.Name,
 			"currencies":    schema.CUR_COL,
 			"currency":      currencyConf.Currency,
+			"billing_plans": schema.BILLING_PLANS_COL,
 		})
 		if err != nil {
 			log.Error("Error Generating Transactions", zap.Error(err))
