@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-redis/redis/v8"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"net"
 
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -41,6 +42,7 @@ var (
 	port string
 	log  *zap.Logger
 
+	RabbitMQConn string
 	redisHost    string
 	arangodbHost string
 	arangodbCred string
@@ -66,6 +68,9 @@ func init() {
 	arangodbCred = viper.GetString("DB_CRED")
 	redisHost = viper.GetString("REDIS_HOST")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
+
+	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
+	RabbitMQConn = viper.GetString("RABBITMQ_CONN")
 }
 
 func main() {
@@ -114,7 +119,13 @@ func main() {
 	log.Info("Registering BillingService Server")
 	pb.RegisterBillingServiceServer(s, server)
 
-	records := billing.NewRecordsServiceServer(log, db)
+	conn, err := amqp.Dial(RabbitMQConn)
+	if err != nil {
+		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer conn.Close()
+
+	records := billing.NewRecordsServiceServer(log, conn, db)
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
 

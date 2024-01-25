@@ -18,12 +18,8 @@ package billing
 
 import (
 	"context"
-	"fmt"
 	"github.com/Pallinder/go-randomdata"
 	"github.com/arangodb/go-driver"
-	"github.com/go-redis/redis/v8"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	ipb "github.com/slntopp/nocloud-proto/instances"
@@ -31,14 +27,9 @@ import (
 	srvpb "github.com/slntopp/nocloud-proto/services"
 	nograph "github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/auth"
-	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"net"
 	"testing"
 	"time"
 )
@@ -54,6 +45,7 @@ var (
 	billingServer *BillingServiceServer
 )
 
+/*
 func init() {
 
 	viper.AutomaticEnv()
@@ -107,7 +99,7 @@ func init() {
 	go s.Serve(lis)
 
 }
-
+*/
 func TestGenerateTransactions(t *testing.T) {
 	testCases := []struct {
 		Rounding       string

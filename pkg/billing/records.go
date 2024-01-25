@@ -22,7 +22,6 @@ import (
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,36 +39,37 @@ var (
 	RabbitMQConn string
 )
 
-func init() {
-	viper.AutomaticEnv()
-	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
-	RabbitMQConn = viper.GetString("RABBITMQ_CONN")
+type RecordsController interface {
+	CheckOverlapping(ctx context.Context, r *pb.Record) (ok bool)
+	Create(ctx context.Context, r *pb.Record) driver.DocumentID
+	Get(ctx context.Context, tr string) (res []*pb.Record, err error)
+	GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error)
+	GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*pb.GetRecordsReportsResponse, error)
+	GetInstancesReportsCount(ctx context.Context) (int64, error)
+	GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error)
+	GetUnique(ctx context.Context) (map[string]interface{}, error)
 }
 
 type RecordsServiceServer struct {
 	pb.UnimplementedRecordsServiceServer
 	log     *zap.Logger
 	rbmq    *amqp.Connection
-	records graph.RecordsController
+	records RecordsController
 
 	db driver.Database
 
 	ConsumerStatus *healthpb.RoutineStatus
 }
 
-func NewRecordsServiceServer(logger *zap.Logger, db driver.Database) *RecordsServiceServer {
+func NewRecordsServiceServer(logger *zap.Logger, conn *amqp.Connection, db driver.Database) *RecordsServiceServer {
 	log := logger.Named("RecordsService")
-	rbmq, err := amqp.Dial(RabbitMQConn)
-	if err != nil {
-		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
-	}
 
 	records := graph.NewRecordsController(log, db)
 
 	return &RecordsServiceServer{
 		log:     log,
-		rbmq:    rbmq,
-		records: records,
+		rbmq:    conn,
+		records: &records,
 
 		db: db,
 		ConsumerStatus: &healthpb.RoutineStatus{
@@ -119,78 +119,84 @@ init:
 			}
 			continue
 		}
-		if record.Total == 0 {
-			log.Warn("Got zero record, skipping", zap.Any("record", &record))
-			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery with 0 Records", zap.Error(err))
-			}
-			continue
+		err := s.ProcessRecord(ctx, &record, currencyConf, time.Now().Unix())
+		if err != nil {
+			log.Error("Failed to process record", zap.Error(err))
 		}
-
-		isSkip, err := s.checkRecord(ctx, &record, log)
-
-		if isSkip && err == nil {
-			log.Info("Skip prepaid record for suspended account", zap.Any("record", &record))
-			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery after skipped prepaid record for suspended account", zap.Error(err))
-			}
-			continue
-		}
-
-		if record.GetMeta() == nil {
-			record.Meta = map[string]*structpb.Value{}
-		}
-
-		record.Meta["transactionType"] = structpb.NewStringValue("system")
-
-		s.records.Create(ctx, &record)
-		s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
 		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
 		}
-		if record.Priority != pb.Priority_NORMAL {
-			tick := time.Now()
-			cur, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
+		continue
+	}
+}
+
+func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Record, currencyConf CurrencyConf, now int64) error {
+	log := s.log.Named("Process record")
+
+	if record.Total == 0 {
+		log.Warn("Got zero record, skipping", zap.Any("record", &record))
+		return nil
+	}
+
+	isSkip, err := s.checkRecord(ctx, record, log)
+
+	if isSkip && err == nil {
+		log.Info("Skip prepaid record for suspended account", zap.Any("record", &record))
+		return nil
+	}
+
+	if record.GetMeta() == nil {
+		record.Meta = map[string]*structpb.Value{}
+	}
+
+	record.Meta["transactionType"] = structpb.NewStringValue("system")
+
+	s.records.Create(ctx, record)
+	s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
+	if record.Priority != pb.Priority_NORMAL {
+		cur, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
+			"@transactions": schema.TRANSACTIONS_COL,
+			"@instances":    schema.INSTANCES_COL,
+			"@services":     schema.SERVICES_COL,
+			"@records":      schema.RECORDS_COL,
+			"@accounts":     schema.ACCOUNTS_COL,
+			"permissions":   schema.PERMISSIONS_GRAPH.Name,
+			"priority":      record.Priority,
+			"now":           now,
+			"graph":         schema.BILLING_GRAPH.Name,
+			"currencies":    schema.CUR_COL,
+			"currency":      currencyConf.Currency,
+		})
+		if err != nil {
+			log.Error("Error Generating Transactions", zap.Error(err))
+			return err
+		}
+		var tr pb.Transaction
+
+		if cur.HasMore() {
+			doc, err := cur.ReadDocument(ctx, &tr)
+			if err != nil {
+				return err
+			}
+
+			_, err = s.db.Query(ctx, processUrgentTransactions, map[string]interface{}{
+				"tr":            doc.ID,
 				"@transactions": schema.TRANSACTIONS_COL,
-				"@instances":    schema.INSTANCES_COL,
-				"@services":     schema.SERVICES_COL,
-				"@records":      schema.RECORDS_COL,
 				"@accounts":     schema.ACCOUNTS_COL,
-				"permissions":   schema.PERMISSIONS_GRAPH.Name,
-				"priority":      record.Priority,
-				"now":           tick.Unix(),
+				"accounts":      schema.ACCOUNTS_COL,
+				"@records":      schema.RECORDS_COL,
+				"now":           now,
 				"graph":         schema.BILLING_GRAPH.Name,
 				"currencies":    schema.CUR_COL,
 				"currency":      currencyConf.Currency,
 			})
 			if err != nil {
-				log.Error("Error Generating Transactions", zap.Error(err))
-			}
-			var tr pb.Transaction
-
-			if cur.HasMore() {
-				doc, err := cur.ReadDocument(ctx, &tr)
-				if err != nil {
-					return
-				}
-
-				_, err = s.db.Query(ctx, processUrgentTransactions, map[string]interface{}{
-					"tr":            doc.ID,
-					"@transactions": schema.TRANSACTIONS_COL,
-					"@accounts":     schema.ACCOUNTS_COL,
-					"accounts":      schema.ACCOUNTS_COL,
-					"@records":      schema.RECORDS_COL,
-					"now":           tick.Unix(),
-					"graph":         schema.BILLING_GRAPH.Name,
-					"currencies":    schema.CUR_COL,
-					"currency":      currencyConf.Currency,
-				})
-				if err != nil {
-					log.Error("Error Process Transactions", zap.Error(err))
-				}
+				log.Error("Error Process Transactions", zap.Error(err))
+				return err
 			}
 		}
 	}
+	return nil
 }
 
 func (s *RecordsServiceServer) checkRecord(ctx context.Context, rec *pb.Record, log *zap.Logger) (bool, error) {

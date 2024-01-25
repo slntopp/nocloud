@@ -1,141 +1,158 @@
 package billing
 
 import (
+	"context"
+	"github.com/arangodb/go-driver"
+	"github.com/google/uuid"
 	pb "github.com/slntopp/nocloud-proto/billing"
-	"slices"
+	driver_mocks "github.com/slntopp/nocloud/mocks/github.com/arangodb/go-driver"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 	"testing"
+	"time"
 )
 
-func TestConsume(t *testing.T) {
-	testCases := []struct {
-		Record   pb.Record
-		Plan     pb.Plan
-		Expected float64
-	}{
-		{
-			Record: pb.Record{
-				Resource: "ip",
-				Total:    1,
-			},
-			Plan: pb.Plan{
-				Resources: []*pb.ResourceConf{
-					{
-						Key:    "ram",
-						Price:  50,
-						Period: 3600,
-					},
-					{
-						Key:    "cpu",
-						Price:  50,
-						Period: 3600,
-					},
-					{
-						Key:    "ip",
-						Price:  100,
-						Period: 7200,
-					},
-				},
-			},
-			Expected: 100,
-		},
-		{
-			Record: pb.Record{
-				Resource: "cpu",
-				Total:    2,
-			},
-			Plan: pb.Plan{
-				Resources: []*pb.ResourceConf{
-					{
-						Key:    "ram",
-						Price:  36,
-						Period: 3600,
-					},
-					{
-						Key:    "cpu",
-						Price:  72,
-						Period: 3600,
-					},
-					{
-						Key:    "ip",
-						Price:  100,
-						Period: 7200,
-					},
-				},
-			},
-			Expected: 144,
-		},
-		{
-			Record: pb.Record{
-				Product: "S",
-				Total:   1,
-			},
-			Plan: pb.Plan{
-				Resources: []*pb.ResourceConf{
-					{
-						Key:    "ram",
-						Price:  36,
-						Period: 3600,
-					},
-					{
-						Key:    "cpu",
-						Price:  72,
-						Period: 3600,
-					},
-					{
-						Key:    "ip",
-						Price:  100,
-						Period: 7200,
-					},
-				},
-				Products: map[string]*pb.Product{
-					"M": {
-						Price: 260,
-					},
-					"S": {
-						Price: 130,
-					},
-					"L": {
-						Price: 360,
-					},
-				},
-			},
-			Expected: 130,
-		},
+func TestConsumeMock(t *testing.T) {
+	ctx := context.TODO()
+
+	db := driver_mocks.NewMockDatabase(t)
+	col := driver_mocks.NewMockCollection(t)
+	cursor := driver_mocks.NewMockCursor(t)
+
+	db.On("CollectionExists", ctx, "Records").Return(true, nil)
+	db.On("Collection", ctx, "Records").Return(col, nil)
+	ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
+
+	now := time.Now().Unix()
+
+	var record = pb.Record{
+		Start:    now,
+		End:      now + 24*60*60,
+		Exec:     now,
+		Priority: pb.Priority_NORMAL,
+		Instance: uuid.New().String(),
+		Resource: uuid.New().String(),
+		Total:    1,
+		Currency: pb.Currency_NCU,
 	}
 
-	for i, tc := range testCases {
-		rec := tc.Record
-		plan := tc.Plan
-
-		if rec.GetResource() == "" {
-			product, ok := plan.GetProducts()[rec.GetProduct()]
-			if !ok {
-				t.Errorf("Billing plan has no product from record. Index %d", i)
-				continue
-			}
-			rec.Total = rec.GetTotal() * product.GetPrice()
-			if rec.GetTotal() != tc.Expected {
-				t.Errorf("Wrong total. Index %d. Got %f, expected %f", i, rec.GetTotal(), tc.Expected)
-			}
-		} else {
-			resources := plan.GetResources()
-
-			if !slices.ContainsFunc(resources, func(conf *pb.ResourceConf) bool {
-				return conf.GetKey() == rec.GetResource()
-			}) {
-				t.Errorf("Billling plan has no resource. Index %d", i)
-				continue
-			}
-
-			for _, res := range resources {
-				if res.GetKey() == rec.GetResource() {
-					rec.Total = rec.GetTotal() * res.GetPrice()
-					if rec.GetTotal() != tc.Expected {
-						t.Errorf("Wrong total. Index %d. Got %f, expected %f", i, rec.GetTotal(), tc.Expected)
-					}
-					break
-				}
-			}
-		}
+	conf := CurrencyConf{
+		Currency: int32(pb.Currency_NCU),
 	}
+
+	db.On("Query", ctx, checkOverlap, map[string]interface{}{
+		"record":   &record,
+		"@records": schema.RECORDS_COL,
+	}).Return(cursor, nil)
+	cursor.On("Close").Return(nil)
+
+	cursor.On("ReadDocument", ctx, mock.Anything).Return(driver.DocumentMeta{}, nil)
+
+	err := ctrl.ProcessRecord(ctx, &record, conf, now)
+	assert.Nil(t, err)
 }
+
+func TestConsumeMock_NotNormal(t *testing.T) {
+	ctx := context.TODO()
+
+	db := driver_mocks.NewMockDatabase(t)
+	col := driver_mocks.NewMockCollection(t)
+	cursor2 := driver_mocks.NewMockCursor(t)
+
+	db.On("CollectionExists", ctx, "Records").Return(true, nil)
+	db.On("Collection", ctx, "Records").Return(col, nil)
+	ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
+
+	now := time.Now().Unix()
+
+	var record = pb.Record{
+		Start:    now,
+		End:      now + 24*60*60,
+		Exec:     now,
+		Priority: pb.Priority_ADDITIONAL,
+		Instance: uuid.New().String(),
+		Resource: uuid.New().String(),
+		Total:    1,
+		Currency: pb.Currency_NCU,
+	}
+
+	conf := CurrencyConf{
+		Currency: int32(pb.Currency_NCU),
+	}
+
+	col.On("CreateDocument", ctx, &record).Return(driver.DocumentMeta{}, nil)
+	db.On("Query", ctx, generateUrgentTransactions, map[string]interface{}{
+		"@transactions": schema.TRANSACTIONS_COL,
+		"@instances":    schema.INSTANCES_COL,
+		"@services":     schema.SERVICES_COL,
+		"@records":      schema.RECORDS_COL,
+		"@accounts":     schema.ACCOUNTS_COL,
+		"permissions":   schema.PERMISSIONS_GRAPH.Name,
+		"priority":      record.Priority,
+		"now":           now,
+		"graph":         schema.BILLING_GRAPH.Name,
+		"currencies":    schema.CUR_COL,
+		"currency":      conf.Currency,
+	}).Return(cursor2, nil)
+	cursor2.On("HasMore").Return(true)
+	docId := driver.NewDocumentID(schema.TRANSACTIONS_COL, uuid.New().String())
+	cursor2.On("ReadDocument", ctx, mock.Anything).Return(driver.DocumentMeta{
+		ID: docId,
+	}, nil)
+	db.On("Query", ctx, processUrgentTransactions, map[string]interface{}{
+		"tr":            docId,
+		"@transactions": schema.TRANSACTIONS_COL,
+		"@accounts":     schema.ACCOUNTS_COL,
+		"accounts":      schema.ACCOUNTS_COL,
+		"@records":      schema.RECORDS_COL,
+		"now":           now,
+		"graph":         schema.BILLING_GRAPH.Name,
+		"currencies":    schema.CUR_COL,
+		"currency":      conf.Currency,
+	}).Return(driver_mocks.NewMockCursor(t), nil)
+
+	err := ctrl.ProcessRecord(ctx, &record, conf, now)
+	assert.Nil(t, err)
+}
+
+func TestConsumeMock_ZeroTotal(t *testing.T) {
+	ctx := context.TODO()
+
+	db := driver_mocks.NewMockDatabase(t)
+	col := driver_mocks.NewMockCollection(t)
+
+	db.On("CollectionExists", ctx, "Records").Return(true, nil)
+	db.On("Collection", ctx, "Records").Return(col, nil)
+	ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
+
+	now := time.Now().Unix()
+
+	var record = pb.Record{
+		Start:    now,
+		End:      now + 24*60*60,
+		Exec:     now,
+		Priority: pb.Priority_ADDITIONAL,
+		Instance: uuid.New().String(),
+		Resource: uuid.New().String(),
+		Total:    0,
+		Currency: pb.Currency_NCU,
+	}
+
+	conf := CurrencyConf{
+		Currency: int32(pb.Currency_NCU),
+	}
+
+	err := ctrl.ProcessRecord(ctx, &record, conf, now)
+	assert.Nil(t, err)
+}
+
+const checkOverlap = `
+let n = @record
+RETURN COUNT(FOR r IN @@records
+FILTER r.instance == n.instance
+FILTER r.resource == n.resource
+FILTER (n.start < r.end && n.start >= r.start) || (n.start <= r.start && r.start > n.end)
+    RETURN r) == 0
+`
