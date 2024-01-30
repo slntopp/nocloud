@@ -306,10 +306,13 @@ export default {
             ...ogPlan.products,
             ...this.copyTemplate.billingPlan.products,
           },
-          resources: [
-            ...ogPlan.resources,
-            ...this.copyTemplate.billingPlan.resources,
-          ],
+          resources:
+            this.type === "opensrs"
+              ? { ...this.copyTemplate.billingPlan.resources }
+              : [
+                  ...ogPlan.resources,
+                  ...this.copyTemplate.billingPlan.resources,
+                ],
           title,
         };
 
@@ -771,6 +774,7 @@ export default {
         case "openai":
         case "cpanel":
         case "keyweb":
+        case "opensrs":
         case "ione": {
           return (item) => {
             let planTitle = `IND_${this.sp.title}_${

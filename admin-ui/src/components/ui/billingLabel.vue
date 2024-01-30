@@ -21,7 +21,7 @@
         class="d-flex justify-end align-start pa-0"
       >
         <v-switch
-          :disabled="isDeleted || isRenewDisabled"
+          :disabled="isAutoRenewDisabled"
           hide-details
           dense
           :input-value="template.config.auto_renew"
@@ -35,14 +35,14 @@
         <confirm-dialog
           title="Do you want to renew server?"
           :text="renewTemplate"
-          :disabled="isRenewDisabled || isDeleted"
+          :disabled="isDeleted"
           :width="500"
           :success-disabled="isRenewDisabled"
           @confirm="sendRenew"
         >
           <v-btn
             color="primary"
-            :disabled="isRenewDisabled || isDeleted"
+            :disabled="isRenewDisabled"
             :loading="isLoading"
           >
             Renew
@@ -105,10 +105,12 @@ const price = computed(() => {
 
 const isRenewDisabled = computed(() => {
   return (
-    (account.value?.balance || 0) < price.value ||
-    template.value.data.blocked ||
-    renewDisabled.value
+    (account.value?.balance || 0) < price.value || isAutoRenewDisabled.value
   );
+});
+
+const isAutoRenewDisabled = computed(() => {
+  return template.value.data.blocked || renewDisabled.value || isDeleted.value;
 });
 
 const isDeleted = computed(() => {
