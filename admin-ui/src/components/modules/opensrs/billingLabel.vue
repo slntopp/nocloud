@@ -14,6 +14,7 @@
 import { computed, ref, toRefs } from "vue";
 import { useStore } from "@/store";
 import billingLabel from "@/components/ui/billingLabel.vue";
+import {formatSecondsToDate} from "@/functions";
 
 const props = defineProps(["template"]);
 const emit = defineEmits(["update"]);
@@ -34,7 +35,7 @@ const account = computed(() => {
 
 const tariffPrice = ref(template.value.billingPlan.resources[0]?.price ?? 0);
 
-const dueDate = computed(() => template.value.data.expiry.expiredate);
+const dueDate = computed(() => formatSecondsToDate(template.value.data.expiry.expiredate));
 </script>
 
 <style scoped></style>
