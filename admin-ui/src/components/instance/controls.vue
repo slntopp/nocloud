@@ -226,10 +226,7 @@ export default {
             message: `Instance ${lock ? "lock" : "unlock"} successfully`,
           });
 
-          this.$store.dispatch("services/fetch", this.template.uuid);
-          this.$store.dispatch("servicesProviders/fetch", {
-            anonymously: true,
-          });
+          this.$emit("refresh");
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -337,10 +334,7 @@ export default {
             message: "Instance saved successfully",
           });
 
-          this.$store.dispatch("services/fetch", this.template.uuid);
-          this.$store.dispatch("servicesProviders/fetch", {
-            anonymously: true,
-          });
+          this.$emit("refresh");
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -371,6 +365,29 @@ export default {
           message: e.response?.data?.message || "Error during start instance",
         });
       }
+    },
+    async rebuildVps(os) {
+      await this.sendAction(
+        this.vmControlBtns.find((a) => a.action === "rebuild"),
+        { imageId: os.id }
+      );
+
+      const tempService = JSON.parse(JSON.stringify(this.service));
+      const instance = JSON.parse(JSON.stringify(this.template));
+      const igIndex = tempService.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === this.template.uuid)
+      );
+      const instanceIndex = tempService.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === this.template.uuid);
+
+      instance.config.configuration = {
+        ...instance.config.configuration,
+        vps_os: os.name,
+      };
+      tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
+      await api.services._update(tempService);
+      this.$emit("refresh");
     },
     async sendAction(btn, data) {
       this.runningActionName = btn.action;
@@ -542,6 +559,14 @@ export default {
             icon: "mdi-restart",
           },
           {
+            action: "rebuild",
+            type: "method",
+            method: this.rebuildVps,
+            component: () => import("@/components/dialogs/rebuildVps.vue"),
+            disabled: this.ovhActions?.rebuild,
+            icon: "mdi-account-convert",
+          },
+          {
             action: "vnc",
             title: "Console",
             disabled: this.ovhActions?.reboot,
@@ -690,16 +715,20 @@ export default {
           resume: true,
           suspend: true,
           vnc: true,
+          rebuild: true,
         };
+      const isRebootDisabled =
+        this.template.state.state === "SUSPENDED" ||
+        this.template.state.meta.state === "BUILD" ||
+        this.template.state.state === "STOPPED";
+
       return {
         poweroff:
           this.template.state.state === "SUSPENDED" ||
           (this.template.state.state !== "RUNNING" &&
             this.template.state.state === "STOPPED"),
-        reboot:
-          this.template.state.state === "SUSPENDED" ||
-          this.template.state.meta.state === "BUILD" ||
-          this.template.state.state === "STOPPED",
+        reboot: isRebootDisabled,
+        rebuild: isRebootDisabled,
         resume:
           this.template.state.state === "RUNNING" &&
           this.template.state.state !== "STOPPED",
