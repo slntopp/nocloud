@@ -3,6 +3,7 @@ module github.com/slntopp/nocloud
 go 1.21
 
 require (
+	connectrpc.com/connect v1.14.0
 	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/arangodb/go-driver v1.6.1
 	github.com/go-redis/redis/v8 v8.11.5
@@ -30,7 +31,6 @@ require (
 require (
 	cloud.google.com/go/compute v1.23.3 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
-	connectrpc.com/connect v1.14.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
