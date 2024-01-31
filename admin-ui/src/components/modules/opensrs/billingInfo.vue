@@ -38,7 +38,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="template.data.expiry.expiredate"
+          :value="formatSecondsToDate(template.data.expiry.expiredate)"
         />
       </v-col>
     </v-row>
@@ -89,13 +89,13 @@
             </td>
             <td></td>
             <td>
-             <div class="d-flex justify-end">
-               <v-chip color="primary" outlined>
-                 {{ totalPrice }}
-                 {{ defaultCurrency }} / {{ totalAccountPrice }}
-                 {{ accountCurrency }}
-               </v-chip>
-             </div>
+              <div class="d-flex justify-end">
+                <v-chip color="primary" outlined>
+                  {{ totalPrice }}
+                  {{ defaultCurrency }} / {{ totalAccountPrice }}
+                  {{ accountCurrency }}
+                </v-chip>
+              </div>
             </td>
           </tr>
         </template>
