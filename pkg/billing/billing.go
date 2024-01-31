@@ -16,6 +16,7 @@ limitations under the License.
 package billing
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -38,8 +39,6 @@ type Routine struct {
 }
 
 type BillingServiceServer struct {
-	pb.UnimplementedBillingServiceServer
-
 	log *zap.Logger
 
 	nss          graph.NamespacesController
@@ -92,9 +91,10 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 	}
 }
 
-func (s *BillingServiceServer) CreatePlan(ctx context.Context, plan *pb.Plan) (*pb.Plan, error) {
+func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Request[pb.Plan]) (*connect.Response[pb.Plan], error) {
 	log := s.log.Named("CreatePlan")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	plan := req.Msg
 	log.Debug("request", zap.Any("plan", plan), zap.String("requestor", requestor))
 
 	ns, err := s.nss.Get(ctx, schema.ROOT_NAMESPACE_KEY)
@@ -112,12 +112,15 @@ func (s *BillingServiceServer) CreatePlan(ctx context.Context, plan *pb.Plan) (*
 		return nil, status.Error(codes.Internal, "Error creating plan")
 	}
 
-	return res.Plan, nil
+	resp := connect.NewResponse(res.Plan)
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) UpdatePlan(ctx context.Context, plan *pb.Plan) (*pb.Plan, error) {
+func (s *BillingServiceServer) UpdatePlan(ctx context.Context, req *connect.Request[pb.Plan]) (*connect.Response[pb.Plan], error) {
 	log := s.log.Named("UpdatePlan")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	plan := req.Msg
 	log.Debug("request", zap.Any("plan", plan), zap.String("requestor", requestor))
 
 	ns, err := s.nss.Get(ctx, schema.ROOT_NAMESPACE_KEY)
@@ -144,12 +147,15 @@ func (s *BillingServiceServer) UpdatePlan(ctx context.Context, plan *pb.Plan) (*
 		return nil, status.Error(codes.Internal, "Error updating plan")
 	}
 
-	return res.Plan, nil
+	resp := connect.NewResponse(res.Plan)
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*pb.Plan, error) {
+func (s *BillingServiceServer) DeletePlan(ctx context.Context, req *connect.Request[pb.Plan]) (*connect.Response[pb.Plan], error) {
 	log := s.log.Named("DeletePlan")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	plan := req.Msg
 	log.Debug("request", zap.Any("plan", plan), zap.String("requestor", requestor))
 
 	ns, err := s.nss.Get(ctx, schema.ROOT_NAMESPACE_KEY)
@@ -185,12 +191,15 @@ func (s *BillingServiceServer) DeletePlan(ctx context.Context, plan *pb.Plan) (*
 		return nil, status.Error(codes.Internal, "Error deleting plan")
 	}
 
-	return plan, nil
+	resp := connect.NewResponse(plan)
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.Plan, error) {
+func (s *BillingServiceServer) GetPlan(ctx context.Context, req *connect.Request[pb.Plan]) (*connect.Response[pb.Plan], error) {
 	log := s.log.Named("GetPlan")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	plan := req.Msg
 	log.Debug("request", zap.Any("plan", plan), zap.String("requestor", requestor))
 
 	p, err := s.plans.Get(ctx, plan)
@@ -199,15 +208,17 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 		return nil, status.Error(codes.Internal, "Error getting plan")
 	}
 
+	resp := connect.NewResponse(p.Plan)
+
 	if p.Public && p.GetStatus() != statuspb.NoCloudStatus_DEL {
-		return p.Plan, nil
+		return resp, nil
 	}
 
 	namespaceId := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, namespaceId, access.Level_ROOT)
 
 	if ok {
-		return p.Plan, nil
+		return resp, nil
 	}
 
 	ok = graph.HasAccess(ctx, s.db, requestor, p.ID, access.Level_READ)
@@ -220,7 +231,7 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, plan *pb.Plan) (*pb.
 		return nil, status.Error(codes.NotFound, "Plan was deleted")
 	}
 
-	return p.Plan, nil
+	return resp, nil
 }
 
 var getDefaultCurrencyQuery = `
@@ -233,8 +244,10 @@ LET cur = LAST(
 RETURN cur.to == 0 ? cur.from : cur.to
 `
 
-func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListRequest) (*pb.ListResponse, error) {
+func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request[pb.ListRequest]) (*connect.Response[pb.ListResponse], error) {
 	log := s.log.Named("ListPlans")
+
+	req := r.Msg
 
 	var requestor string
 	if !req.Anonymously {
@@ -326,11 +339,15 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 		}
 	}
 
-	return &pb.ListResponse{Pool: result}, nil
+	resp := connect.NewResponse(&pb.ListResponse{Pool: result})
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, req *pb.ListPlansInstancesRequest) (*pb.ListPlansInstancesResponse, error) {
+func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, r *connect.Request[pb.ListPlansInstancesRequest]) (*connect.Response[pb.ListPlansInstancesResponse], error) {
 	log := s.log.Named("ListPlans")
+
+	req := r.Msg
 
 	var requestor string
 	if !req.Anonymously {
@@ -386,7 +403,9 @@ func (s *BillingServiceServer) ListPlansInstances(ctx context.Context, req *pb.L
 		result[plan.GetUuid()] = structpb.NewNumberValue(float64(planInstancesCount[plan.GetUuid()]))
 	}
 
-	return &pb.ListPlansInstancesResponse{Plans: result}, nil
+	resp := connect.NewResponse(&pb.ListPlansInstancesResponse{Plans: result})
+
+	return resp, nil
 }
 
 const getInstancesBillingPlans = `

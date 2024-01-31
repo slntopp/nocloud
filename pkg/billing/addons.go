@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -14,8 +15,6 @@ import (
 )
 
 type AddonsServer struct {
-	pb.UnimplementedAddonsServiceServer
-
 	log *zap.Logger
 
 	db driver.Database
@@ -34,9 +33,11 @@ func NewAddonsServer(logger *zap.Logger, db driver.Database) *AddonsServer {
 	}
 }
 
-func (s *AddonsServer) Create(ctx context.Context, req *pb.Addon) (*pb.Addon, error) {
+func (s *AddonsServer) Create(ctx context.Context, r *connect.Request[pb.Addon]) (*connect.Response[pb.Addon], error) {
 	log := s.log.Named("Create")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	req := r.Msg
 
 	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
@@ -48,12 +49,16 @@ func (s *AddonsServer) Create(ctx context.Context, req *pb.Addon) (*pb.Addon, er
 		return nil, err
 	}
 
-	return addon, nil
+	resp := connect.NewResponse(addon)
+
+	return resp, nil
 }
 
-func (s *AddonsServer) Update(ctx context.Context, req *pb.Addon) (*pb.Addon, error) {
+func (s *AddonsServer) Update(ctx context.Context, r *connect.Request[pb.Addon]) (*connect.Response[pb.Addon], error) {
 	log := s.log.Named("Update")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	req := r.Msg
 
 	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
@@ -65,13 +70,17 @@ func (s *AddonsServer) Update(ctx context.Context, req *pb.Addon) (*pb.Addon, er
 		return nil, err
 	}
 
-	return addon, nil
+	resp := connect.NewResponse(addon)
+
+	return resp, nil
 }
 
-func (s *AddonsServer) Get(ctx context.Context, req *pb.Addon) (*pb.Addon, error) {
+func (s *AddonsServer) Get(ctx context.Context, r *connect.Request[pb.Addon]) (*connect.Response[pb.Addon], error) {
 	log := s.log.Named("Get")
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	req := r.Msg
 
 	addon, err := s.addons.Get(ctx, req.GetUuid())
 	if err != nil {
@@ -83,13 +92,17 @@ func (s *AddonsServer) Get(ctx context.Context, req *pb.Addon) (*pb.Addon, error
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
-	return addon, nil
+	resp := connect.NewResponse(addon)
+
+	return resp, nil
 }
 
-func (s *AddonsServer) List(ctx context.Context, req *pb.ListAddonsRequest) (*pb.ListAddonsResponse, error) {
+func (s *AddonsServer) List(ctx context.Context, r *connect.Request[pb.ListAddonsRequest]) (*connect.Response[pb.ListAddonsResponse], error) {
 	log := s.log.Named("List")
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	req := r.Msg
 
 	addons, err := s.addons.List(ctx, req.GetGroup())
 	if err != nil {
@@ -97,7 +110,8 @@ func (s *AddonsServer) List(ctx context.Context, req *pb.ListAddonsRequest) (*pb
 		return nil, err
 	}
 	if graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
-		return &pb.ListAddonsResponse{Addons: addons}, nil
+		resp := connect.NewResponse(&pb.ListAddonsResponse{Addons: addons})
+		return resp, nil
 	}
 
 	var filteredAddons []*pb.Addon
@@ -107,12 +121,15 @@ func (s *AddonsServer) List(ctx context.Context, req *pb.ListAddonsRequest) (*pb
 			filteredAddons = append(filteredAddons, val)
 		}
 	}
-	return &pb.ListAddonsResponse{Addons: filteredAddons}, nil
+	resp := connect.NewResponse(&pb.ListAddonsResponse{Addons: filteredAddons})
+	return resp, nil
 }
 
-func (s *AddonsServer) Delete(ctx context.Context, req *pb.Addon) (*pb.Addon, error) {
+func (s *AddonsServer) Delete(ctx context.Context, r *connect.Request[pb.Addon]) (*connect.Response[pb.Addon], error) {
 	log := s.log.Named("Create")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	req := r.Msg
 
 	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")

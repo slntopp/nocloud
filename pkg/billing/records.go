@@ -16,6 +16,7 @@ limitations under the License.
 package billing
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"google.golang.org/protobuf/types/known/structpb"
 	"time"
@@ -44,14 +45,13 @@ type RecordsController interface {
 	Create(ctx context.Context, r *pb.Record) driver.DocumentID
 	Get(ctx context.Context, tr string) (res []*pb.Record, err error)
 	GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error)
-	GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*pb.GetRecordsReportsResponse, error)
+	GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*connect.Response[pb.GetRecordsReportsResponse], error)
 	GetInstancesReportsCount(ctx context.Context) (int64, error)
 	GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error)
 	GetUnique(ctx context.Context) (map[string]interface{}, error)
 }
 
 type RecordsServiceServer struct {
-	pb.UnimplementedRecordsServiceServer
 	log     *zap.Logger
 	rbmq    *amqp.Connection
 	records RecordsController
@@ -372,10 +372,10 @@ UPDATE t WITH {
 } IN @@transactions
 `
 
-func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transaction) (*pb.Records, error) {
+func (s *BillingServiceServer) GetRecords(ctx context.Context, r *connect.Request[pb.Transaction]) (*connect.Response[pb.Records], error) {
 	log := s.log.Named("GetRecords")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
+	req := r.Msg
 	if req.Uuid == "" {
 		log.Error("Request has no UUID", zap.String("requestor", requestor))
 		return nil, status.Error(codes.InvalidArgument, "Request has no UUID")
@@ -401,15 +401,15 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transacti
 
 	log.Debug("Records found", zap.String("transaction", tr.Uuid), zap.Any("records", pool))
 
-	return &pb.Records{
-		Pool: pool,
-	}, nil
+	resp := connect.NewResponse(&pb.Records{Pool: pool})
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) (*pb.GetInstancesReportResponse, error) {
+func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, r *connect.Request[pb.GetInstancesReportRequest]) (*connect.Response[pb.GetInstancesReportResponse], error) {
 	log := s.log.Named("GetRecords")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
+	req := r.Msg
 	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
@@ -420,12 +420,12 @@ func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, req *pb.
 		log.Error("Failed to get reports", zap.Error(err))
 	}
 
-	return &pb.GetInstancesReportResponse{
-		Reports: reports,
-	}, nil
+	resp := connect.NewResponse(&pb.GetInstancesReportResponse{Reports: reports})
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) GetInstancesReportsCount(ctx context.Context, req *pb.GetInstancesReportsCountRequest) (*pb.GetReportsCountResponse, error) {
+func (s *BillingServiceServer) GetInstancesReportsCount(ctx context.Context, r *connect.Request[pb.GetInstancesReportsCountRequest]) (*connect.Response[pb.GetReportsCountResponse], error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
@@ -437,12 +437,16 @@ func (s *BillingServiceServer) GetInstancesReportsCount(ctx context.Context, req
 	if err != nil {
 		return nil, err
 	}
-	return &pb.GetReportsCountResponse{Total: res}, nil
+
+	resp := connect.NewResponse(&pb.GetReportsCountResponse{Total: res})
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*pb.GetRecordsReportsResponse, error) {
+func (s *BillingServiceServer) GetRecordsReports(ctx context.Context, r *connect.Request[pb.GetRecordsReportsRequest]) (*connect.Response[pb.GetRecordsReportsResponse], error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
+	req := r.Msg
 	if req.Account != nil || req.Service != nil {
 		if req.Account != nil {
 			acc := *req.Account
@@ -469,9 +473,9 @@ func (s *BillingServiceServer) GetRecordsReports(ctx context.Context, req *pb.Ge
 	return s.records.GetRecordsReports(ctx, req)
 }
 
-func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (*pb.GetReportsCountResponse, error) {
+func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, r *connect.Request[pb.GetRecordsReportsCountRequest]) (*connect.Response[pb.GetReportsCountResponse], error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
+	req := r.Msg
 	if req.Account != nil || req.Service != nil {
 		if req.Account != nil {
 			acc := *req.Account
@@ -514,8 +518,7 @@ func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, req *
 		return nil, err
 	}
 
-	return &pb.GetReportsCountResponse{
-		Total:  res,
-		Unique: value,
-	}, nil
+	resp := connect.NewResponse(&pb.GetReportsCountResponse{Total: res, Unique: value})
+
+	return resp, nil
 }

@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
 	"github.com/arangodb/go-driver"
@@ -16,9 +17,11 @@ import (
 	"time"
 )
 
-func (s *BillingServiceServer) GetInvoices(ctx context.Context, req *pb.GetInvoicesRequest) (*pb.Invoices, error) {
+func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
 	log := s.log.Named("GetTransactions")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
 	acc := requestor
@@ -112,12 +115,15 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, req *pb.GetInvoi
 	}
 
 	log.Debug("Transactions retrieved", zap.Any("transactions", transactions))
-	return &pb.Invoices{Pool: transactions}, nil
+	resp := connect.NewResponse(&pb.Invoices{Pool: transactions})
+	return resp, nil
 }
 
-func (s *BillingServiceServer) CreateInvoice(ctx context.Context, t *pb.Invoice) (*pb.Invoice, error) {
+func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("CreateTransaction")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	t := req.Msg
 	log.Debug("Request received", zap.Any("transaction", t), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
@@ -140,12 +146,15 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, t *pb.Invoice)
 		Key:  "invoice_created",
 	})
 
-	return r, nil
+	resp := connect.NewResponse(r)
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, req *pb.GetInvoicesCountRequest) (*pb.GetInvoicesCountResponse, error) {
+func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.Request[pb.GetInvoicesCountRequest]) (*connect.Response[pb.GetInvoicesCountResponse], error) {
 	log := s.log.Named("GetTransactionsCount")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
 	acc := requestor
@@ -198,14 +207,17 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, req *pb.Get
 
 	log.Info("transactions count", zap.Int64("count", cursor.Count()))
 
-	return &pb.GetInvoicesCountResponse{
+	resp := connect.NewResponse(&pb.GetInvoicesCountResponse{
 		Total: uint64(cursor.Count()),
-	}, nil
+	})
+
+	return resp, nil
 }
 
-func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, req *pb.Invoice) (*pb.Invoice, error) {
+func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("UpdateTransaction")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := r.Msg
 	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
@@ -241,10 +253,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, req *pb.Invoic
 		return nil, status.Error(codes.Internal, "Failed to update transaction")
 	}
 
-	return t, nil
+	return connect.NewResponse(t), nil
 }
 
-func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*pb.Invoices, error) {
+func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {
 	tr, err := s.invoices.Get(ctx, uuid)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "Transaction doesn't exist")
@@ -256,9 +268,7 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
 	}
 
-	return &pb.Invoices{
-		Pool: []*pb.Invoice{
-			tr,
-		},
-	}, nil
+	resp := connect.NewResponse(&pb.Invoices{Pool: []*pb.Invoice{tr}})
+
+	return resp, nil
 }
