@@ -16,25 +16,27 @@ limitations under the License.
 package main
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
-	"github.com/go-redis/redis/v8"
-	amqp "github.com/rabbitmq/amqp091-go"
-	"net"
+	"github.com/rs/cors"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
+	"net/http"
 
-	pb "github.com/slntopp/nocloud-proto/billing"
-	healthpb "github.com/slntopp/nocloud-proto/health"
+	cc "github.com/slntopp/nocloud-proto/billing/billingconnect"
 	billing "github.com/slntopp/nocloud/pkg/billing"
 	"github.com/slntopp/nocloud/pkg/nocloud"
-	"github.com/slntopp/nocloud/pkg/nocloud/auth"
+	auth "github.com/slntopp/nocloud/pkg/nocloud/connect_auth"
 	"github.com/slntopp/nocloud/pkg/nocloud/connectdb"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+
+	"connectrpc.com/grpchealth"
+	"github.com/go-redis/redis/v8"
+	"github.com/gorilla/mux"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
-
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -82,29 +84,27 @@ func main() {
 	db := connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
 	log.Info("DB connection established")
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
-	if err != nil {
-		log.Fatal("Failed to listen", zap.String("address", port), zap.Error(err))
-	}
-
 	rdb := redis.NewClient(&redis.Options{
 		Addr: redisHost,
 		DB:   0,
 	})
 
-	auth.SetContext(log, rdb, SIGNING_KEY)
-	s := grpc.NewServer(
-		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
-			grpc_zap.UnaryServerInterceptor(log),
-			grpc.UnaryServerInterceptor(auth.JWT_AUTH_INTERCEPTOR),
-		)),
-	)
+	authInterceptor := auth.NewInterceptor(log, rdb, SIGNING_KEY)
+	interceptors := connect.WithInterceptors(authInterceptor)
+
+	router := mux.NewRouter()
+	router.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Debug("Request", zap.String("method", r.Method), zap.String("path", r.URL.Path))
+			h.ServeHTTP(w, r)
+		})
+	})
 
 	server := billing.NewBillingServiceServer(log, db)
 	currencies := billing.NewCurrencyServiceServer(log, db)
 	log.Info("Starting Currencies Service")
 
-	token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+	token, err := authInterceptor.MakeToken(schema.ROOT_ACCOUNT_KEY)
 	if err != nil {
 		log.Fatal("Can't generate token", zap.Error(err))
 	}
@@ -117,7 +117,8 @@ func main() {
 	go server.SuspendAccountsRoutine(ctx)
 
 	log.Info("Registering BillingService Server")
-	pb.RegisterBillingServiceServer(s, server)
+	path, handler := cc.NewBillingServiceHandler(server, interceptors)
+	router.PathPrefix(path).Handler(handler)
 
 	conn, err := amqp.Dial(RabbitMQConn)
 	if err != nil {
@@ -129,15 +130,38 @@ func main() {
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
 
-	log.Info("Registering RecordsService Server")
-	pb.RegisterRecordsServiceServer(s, records)
-
 	log.Info("Registering CurrencyService Server")
-	pb.RegisterCurrencyServiceServer(s, currencies)
+	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
+	router.PathPrefix(path).Handler(handler)
 
-	log.Info("Registering Internal HealthProbe Server")
-	healthpb.RegisterInternalProbeServiceServer(s, NewHealthServer(log, server, records, currencies))
+	addons := billing.NewAddonsServer(log, db)
+	log.Info("Registering AddonsService Server")
+	path, handler = cc.NewAddonsServiceHandler(addons, interceptors)
+	router.PathPrefix(path).Handler(handler)
 
-	log.Info(fmt.Sprintf("Serving gRPC on 0.0.0.0:%v", port), zap.Skip())
-	log.Fatal("Failed to serve gRPC", zap.Error(s.Serve(lis)))
+	descriptions := billing.NewDescriptionsServer(log, db)
+	log.Info("Registering descriptionsService Server")
+	path, handler = cc.NewDescriptionsServiceHandler(descriptions, interceptors)
+	router.PathPrefix(path).Handler(handler)
+
+	checker := grpchealth.NewStaticChecker()
+	path, handler = grpchealth.NewHandler(checker)
+	router.PathPrefix(path).Handler(handler)
+
+	host := fmt.Sprintf("0.0.0.0:%s", port)
+
+	handler = cors.New(cors.Options{
+		AllowedOrigins:      []string{"*"},
+		AllowedMethods:      []string{"GET", "POST", "OPTIONS", "PUT", "DELETE"},
+		AllowedHeaders:      []string{"*", "Connect-Protocol-Version"},
+		AllowCredentials:    true,
+		AllowPrivateNetwork: true,
+	}).Handler(h2c.NewHandler(router, &http2.Server{}))
+
+	log.Info("Serving", zap.String("host", host))
+	err = http.ListenAndServe(host, handler)
+	if err != nil {
+		log.Fatal("Failed to start server", zap.Error(err))
+	}
+
 }
