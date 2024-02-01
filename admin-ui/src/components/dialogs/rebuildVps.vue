@@ -27,7 +27,9 @@
         </v-row>
         <v-card-actions class="d-flex justify-end mt-5">
           <v-btn class="mr-2" @click="isModalOpen = false"> cancel </v-btn>
-          <v-btn class="mr-2" @click="rebuild"> rebuild </v-btn>
+          <v-btn class="mr-2" @click="rebuild" :disabled="!selectedOs">
+            rebuild
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -60,6 +62,12 @@ onMounted(async () => {
       action: "images",
     });
     images.value = meta.images;
+    const os = images.value.find(
+      (os) => os.name === template.value.config.configuration.vps_os
+    );
+    if (os) {
+      selectedOs.value = os;
+    }
   } catch (err) {
     store.commit("snackbar/showSnackbarError", { message: err });
   } finally {
