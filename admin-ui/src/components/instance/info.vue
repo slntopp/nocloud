@@ -3,6 +3,7 @@
     <v-row>
       <v-col>
         <instance-actions
+          @refresh="refreshInstance"
           :sp="sp"
           :copy-template="copyInstance"
           :template="template"
@@ -180,7 +181,7 @@ export default {
     addToClipboard,
     refreshInstance() {
       this.$store.dispatch("services/fetch", this.template.uuid);
-      this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
+      this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
     },
     updateCopy({ key, value }) {
       const keys = key.split(".");
