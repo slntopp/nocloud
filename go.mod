@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	connectrpc.com/connect v1.14.0
+	connectrpc.com/grpchealth v1.3.0
 	github.com/Pallinder/go-randomdata v1.2.0
 	github.com/arangodb/go-driver v1.6.1
 	github.com/go-redis/redis/v8 v8.11.5
