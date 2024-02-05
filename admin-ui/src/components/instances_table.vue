@@ -425,6 +425,7 @@ export default {
       return inst.data.creation;
     },
     getExpirationDate(inst) {
+      if (inst.data.expiry?.expiredate) return inst.data.expiry?.expiredate;
       if (inst.data.next_payment_date) return inst.data.next_payment_date;
       return 0;
     },
