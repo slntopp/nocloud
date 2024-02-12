@@ -113,34 +113,32 @@
         </v-col>
       </v-row>
 
-      <v-expansion-panels
+      <nocloud-expansion-panels
+        title="Description"
+        class="mb-5"
         v-if="template.billingPlan.products[template.product]"
-        class="mb-15"
       >
-        <v-expansion-panel>
-          <v-expansion-panel-header color="background-light">
-            <div>
-              <span style="color: var(--v-primary-base)" class="text-h6"
-                >Description
-              </span>
-              <v-btn @click="goToPlan" small>edit</v-btn>
-            </div>
-            <template v-slot:actions>
-              <v-icon color="primary" x-large> $expand </v-icon>
-            </template>
-          </v-expansion-panel-header>
-          <v-expansion-panel-content color="background-light">
-            <rich-editor
-              class="pa-5"
-              disabled
-              :value="
+        <rich-editor
+          class="pa-5"
+          disabled
+          :value="
+            template.billingPlan.products[template.product].meta?.description
+          "
+        />
+        <div class="d-flex justify-end align-center">
+          <v-btn
+            class="mx-2"
+            @click="
+              addToClipboard(
                 template.billingPlan.products[template.product].meta
-                  ?.description
-              "
-            />
-          </v-expansion-panel-content>
-        </v-expansion-panel>
-      </v-expansion-panels>
+                  ?.description || ''
+              )
+            "
+            >copy</v-btn
+          >
+          <v-btn class="mx-2" @click="goToPlan">edit</v-btn>
+        </div>
+      </nocloud-expansion-panels>
 
       <component
         :is="additionalInstanceInfoComponent"
@@ -190,10 +188,12 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import MoveInstance from "@/components/dialogs/moveInstance.vue";
 import { addToClipboard } from "@/functions";
 import RichEditor from "@/components/ui/richEditor.vue";
+import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 
 export default {
   name: "instance-info",
   components: {
+    NocloudExpansionPanels,
     RichEditor,
     MoveInstance,
     LoginInAccountIcon,
