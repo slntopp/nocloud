@@ -49,9 +49,9 @@ const periods = ref(["day", "week", "month"]);
 const typesMap = ref(new Map());
 
 const options = computed(() => ({
-  labels: [...Object.keys(typesMap.value)].map(
-    (key) => `${key} - ${typesMap.value[key]}`
-  ),
+  labels: [...Object.keys(typesMap.value)]
+    .filter((key) => typesMap.value[key] != 0)
+    .map((key) => `${key} - ${typesMap.value[key]}`),
   theme: {
     palette: "palette8",
   },
