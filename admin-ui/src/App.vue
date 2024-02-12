@@ -208,14 +208,14 @@
 
             <v-list-item-content>
               <v-list-item-title>{{
-                  navTitle("Groups (NameSpaces)")
-                }}</v-list-item-title>
+                navTitle("Groups (NameSpaces)")
+              }}</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
 
           <v-list-item
-              v-bind="listItemBind"
-              :to="{ name: 'ServicesProviders' }"
+            v-bind="listItemBind"
+            :to="{ name: 'ServicesProviders' }"
           >
             <v-list-item-icon>
               <v-icon>mdi-database-marker</v-icon>
@@ -223,8 +223,8 @@
 
             <v-list-item-content>
               <v-list-item-title>{{
-                  navTitle("Services Providers")
-                }}</v-list-item-title>
+                navTitle("Services Providers")
+              }}</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
 
@@ -415,7 +415,7 @@ export default {
               if (this.isMouseOnMenu) {
                 this.isMenuMinimize = false;
               }
-            }, 500);
+            }, 5000);
           }
         });
       document
@@ -425,7 +425,7 @@ export default {
             this.isMouseOnMenu = false;
             setTimeout(() => {
               this.isMenuMinimize = true;
-            }, 500);
+            }, 1000);
           }
         });
     },
