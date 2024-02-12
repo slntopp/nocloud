@@ -554,7 +554,9 @@ export default {
     }
   },
   mounted() {
-    this.onResize();
+    this.isMenuMinimize =
+      +localStorage.getItem("nocloud-menu-minimize") === 0 ? false : true;
+
     window.addEventListener("resize", this.onResize, { passive: true });
 
     this.configureHoverOnMenu();
@@ -566,6 +568,9 @@ export default {
         this.$store.dispatch("currencies/fetch");
         this.$store.dispatch("settings/fetch");
       }
+    },
+    isMenuMinimize(newValue) {
+      localStorage.setItem("nocloud-menu-minimize", +newValue);
     },
   },
 };
