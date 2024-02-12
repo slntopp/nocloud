@@ -112,6 +112,36 @@
           <v-text-field readonly :value="type" label="Type" />
         </v-col>
       </v-row>
+
+      <v-expansion-panels
+        v-if="template.billingPlan.products[template.product]"
+        class="mb-15"
+      >
+        <v-expansion-panel>
+          <v-expansion-panel-header color="background-light">
+            <div>
+              <span style="color: var(--v-primary-base)" class="text-h6"
+                >Description
+              </span>
+              <v-btn @click="goToPlan" small>edit</v-btn>
+            </div>
+            <template v-slot:actions>
+              <v-icon color="primary" x-large> $expand </v-icon>
+            </template>
+          </v-expansion-panel-header>
+          <v-expansion-panel-content color="background-light">
+            <rich-editor
+              class="pa-5"
+              disabled
+              :value="
+                template.billingPlan.products[template.product].meta
+                  ?.description
+              "
+            />
+          </v-expansion-panel-content>
+        </v-expansion-panel>
+      </v-expansion-panels>
+
       <component
         :is="additionalInstanceInfoComponent"
         :sp="sp"
@@ -159,10 +189,12 @@ import RouteTextField from "@/components/ui/routeTextField.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import MoveInstance from "@/components/dialogs/moveInstance.vue";
 import { addToClipboard } from "@/functions";
+import RichEditor from "@/components/ui/richEditor.vue";
 
 export default {
   name: "instance-info",
   components: {
+    RichEditor,
     MoveInstance,
     LoginInAccountIcon,
     RouteTextField,
@@ -194,6 +226,12 @@ export default {
         this.copyInstance[key] = value;
       }
       this.copyInstance = { ...this.copyInstance };
+    },
+    goToPlan() {
+      this.$router.push({
+        name: "Plan",
+        params: { planId: this.template.billingPlan.uuid },
+      });
     },
   },
   computed: {
