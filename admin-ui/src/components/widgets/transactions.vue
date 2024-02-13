@@ -2,7 +2,13 @@
   <widget title="Transactions" :loading="isLoading" class="pa-0 ma-0">
     <v-card color="background-light" flat>
       <div class="d-flex justify-end">
-        <v-btn-toggle class="mt-2" dense v-model="period" borderless>
+        <v-btn-toggle
+          class="mt-2"
+          dense
+          :value="period"
+          @change="period = $event || period"
+          borderless
+        >
           <v-btn x-small :value="item" :key="item" v-for="item in periods">
             {{ item }}
           </v-btn>

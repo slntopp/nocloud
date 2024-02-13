@@ -614,3 +614,62 @@ export function downloadPlanXlsx(plans) {
     })
   );
 }
+
+export function getInstancePrice(inst) {
+  switch (inst.type) {
+    case "goget": {
+      const key = `${inst.resources.period} ${inst.resources.id}`;
+
+      return inst.billingPlan.products[key]?.price ?? 0;
+    }
+    case "ovh": {
+      return getOvhPrice(inst);
+    }
+    case "empty": {
+      const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
+      return inst.billingPlan.resources
+        .filter(({ key }) => inst.config?.addons?.find((a) => a === key))
+        ?.reduce((acc, r) => acc + +r?.price, initialPrice);
+    }
+    case "keyweb": {
+      const key = inst.product;
+      const tariff = inst.billingPlan.products[key];
+
+      const getAddonKey = (key, metaKey) =>
+        tariff.meta?.[metaKey]?.find(
+          (a) =>
+            key === a.type && a.key.startsWith(inst.config?.configurations[key])
+        )?.key;
+
+      const addons =
+        Object.keys(inst.config?.configurations || {}).map((key) =>
+          inst.billingPlan?.resources?.find((r) => {
+            return (
+              r.key === getAddonKey(key, "addons") ||
+              r.key === getAddonKey(key, "os")
+            );
+          })
+        ) || [];
+
+      return (
+        (+tariff?.price || 0) +
+        (addons.reduce((acc, a) => acc + a?.price, 0) || 0)
+      );
+    }
+    case "ione":
+    case "cpanel": {
+      const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
+
+      return +inst.billingPlan.resources?.reduce((prev, curr) => {
+        if (curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`) {
+          return prev + (curr?.price * inst.resources.drive_size) / 1024;
+        } else if (curr.key === "ram") {
+          return prev + (curr?.price * inst.resources.ram) / 1024;
+        } else if (inst.resources[curr.key]) {
+          return prev + curr?.price * inst.resources[curr.key];
+        }
+        return prev;
+      }, initialPrice);
+    }
+  }
+}

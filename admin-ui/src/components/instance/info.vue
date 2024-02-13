@@ -112,6 +112,34 @@
           <v-text-field readonly :value="type" label="Type" />
         </v-col>
       </v-row>
+
+      <nocloud-expansion-panels
+        title="Description"
+        class="mb-5"
+        v-if="template.billingPlan.products[template.product]"
+      >
+        <rich-editor
+          class="pa-5"
+          disabled
+          :value="
+            template.billingPlan.products[template.product].meta?.description
+          "
+        />
+        <div class="d-flex justify-end align-center">
+          <v-btn
+            class="mx-2"
+            @click="
+              addToClipboard(
+                template.billingPlan.products[template.product].meta
+                  ?.description || ''
+              )
+            "
+            >copy</v-btn
+          >
+          <v-btn class="mx-2" @click="goToPlan">edit</v-btn>
+        </div>
+      </nocloud-expansion-panels>
+
       <component
         :is="additionalInstanceInfoComponent"
         :sp="sp"
@@ -159,10 +187,14 @@ import RouteTextField from "@/components/ui/routeTextField.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import MoveInstance from "@/components/dialogs/moveInstance.vue";
 import { addToClipboard } from "@/functions";
+import RichEditor from "@/components/ui/richEditor.vue";
+import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 
 export default {
   name: "instance-info",
   components: {
+    NocloudExpansionPanels,
+    RichEditor,
     MoveInstance,
     LoginInAccountIcon,
     RouteTextField,
@@ -194,6 +226,12 @@ export default {
         this.copyInstance[key] = value;
       }
       this.copyInstance = { ...this.copyInstance };
+    },
+    goToPlan() {
+      this.$router.push({
+        name: "Plan",
+        params: { planId: this.template.billingPlan.uuid },
+      });
     },
   },
   computed: {

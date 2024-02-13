@@ -5,6 +5,7 @@
     color="background-light"
     class="flex-grow-1 rounded-lg"
     :min-width="width >= 450 ? 350 : 200"
+    :min-height="400"
     :style="{ width: width < 1375 ? '100%' : 'auto' }"
     :loading="loading"
   >
