@@ -1,4 +1,5 @@
 import yaml from "yaml";
+import XlsxService from "@/services/XlsxService";
 
 export function isObject(item) {
   return item && typeof item === "object" && !Array.isArray(item);
@@ -286,10 +287,12 @@ export function toPascalCase(text) {
   );
 }
 
-export function formatSecondsToDate(timestamp, withTime, sep = "-") {
-  if (!timestamp || !+timestamp) return "-";
+export function formatSecondsToDate(timestamp, withTime, sep = ".") {
+  if (!timestamp || !+timestamp) return;
   const date = new Date(timestamp * 1000);
-  const time = date.toUTCString().split(" ")[4];
+  const time = date
+    .toLocaleString(undefined, { hourCycle: "h24" })
+    .split(" ")[1];
 
   const year = date.toUTCString().split(" ")[3];
   let month = date.getUTCMonth() + 1;
@@ -298,7 +301,7 @@ export function formatSecondsToDate(timestamp, withTime, sep = "-") {
   if (`${month}`.length < 2) month = `0${month}`;
   if (`${day}`.length < 2) day = `0${day}`;
 
-  let result = `${year}${sep}${month}${sep}${day}`;
+  let result = `${day}${sep}${month}${sep}${year}`;
 
   if (withTime) result += ` ${time}`;
   return result;
@@ -431,8 +434,8 @@ function fetchMDIIconsHash() {
 export const fetchMDIIcons = fetchMDIIconsHash();
 
 export function getBillingPeriod(period) {
-  if(+period===0){
-    return "One time"
+  if (+period === 0) {
+    return "One time";
   }
 
   const fullPeriod = period && getFullDate(period);
@@ -554,5 +557,119 @@ export function addToClipboard(text) {
     });
   } else {
     alert("Clipboard is not supported!");
+  }
+}
+
+export function downloadPlanXlsx(plans) {
+  const baseHeaders = [
+    { title: "Title", key: "title" },
+    { title: "Price", key: "price" },
+    { title: "Period", key: "period" },
+    { title: "Kind", key: "kind" },
+    { title: "Group", key: "group" },
+  ];
+
+  return XlsxService.downloadXlsx(
+    "Plans " + getTodayFullDate(),
+    plans.map((plan) => {
+      const headers = [...baseHeaders];
+      switch (plan.type) {
+        case "ovh vps": {
+          headers.push({ title: "Base price", key: "basePrice" });
+          headers.push({ title: "API name", key: "apiName" });
+          headers.push({ title: "Region", key: "datacenter" });
+          break;
+        }
+        case "ovh dedicated": {
+          headers.push({ title: "Base price", key: "basePrice" });
+          headers.push({ title: "API name", key: "apiName" });
+          headers.push({ title: "CPU", key: "cpu" });
+          headers.push({ title: "Region", key: "datacenter" });
+          break;
+        }
+        case "ovh cloud": {
+          headers.push({ title: "Region", key: "datacenter" });
+          break;
+        }
+      }
+
+      return {
+        name: plan.title,
+        headers,
+        items: Object.values(plan.products)
+          .map((product) => {
+            const result = {};
+            product = { ...product, ...product.meta };
+
+            Object.keys(product).forEach((key) => {
+              if (headers.findIndex((a) => a.key === key) !== -1) {
+                result[key] = product[key];
+              }
+            });
+
+            return result;
+          })
+          .map((p) => ({ ...p, period: getBillingPeriod(p.period) })),
+      };
+    })
+  );
+}
+
+export function getInstancePrice(inst) {
+  switch (inst.type) {
+    case "goget": {
+      const key = `${inst.resources.period} ${inst.resources.id}`;
+
+      return inst.billingPlan.products[key]?.price ?? 0;
+    }
+    case "ovh": {
+      return getOvhPrice(inst);
+    }
+    case "empty": {
+      const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
+      return inst.billingPlan.resources
+        .filter(({ key }) => inst.config?.addons?.find((a) => a === key))
+        ?.reduce((acc, r) => acc + +r?.price, initialPrice);
+    }
+    case "keyweb": {
+      const key = inst.product;
+      const tariff = inst.billingPlan.products[key];
+
+      const getAddonKey = (key, metaKey) =>
+        tariff.meta?.[metaKey]?.find(
+          (a) =>
+            key === a.type && a.key.startsWith(inst.config?.configurations[key])
+        )?.key;
+
+      const addons =
+        Object.keys(inst.config?.configurations || {}).map((key) =>
+          inst.billingPlan?.resources?.find((r) => {
+            return (
+              r.key === getAddonKey(key, "addons") ||
+              r.key === getAddonKey(key, "os")
+            );
+          })
+        ) || [];
+
+      return (
+        (+tariff?.price || 0) +
+        (addons.reduce((acc, a) => acc + a?.price, 0) || 0)
+      );
+    }
+    case "ione":
+    case "cpanel": {
+      const initialPrice = inst.billingPlan.products[inst.product]?.price ?? 0;
+
+      return +inst.billingPlan.resources?.reduce((prev, curr) => {
+        if (curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`) {
+          return prev + (curr?.price * inst.resources.drive_size) / 1024;
+        } else if (curr.key === "ram") {
+          return prev + (curr?.price * inst.resources.ram) / 1024;
+        } else if (inst.resources[curr.key]) {
+          return prev + curr?.price * inst.resources[curr.key];
+        }
+        return prev;
+      }, initialPrice);
+    }
   }
 }

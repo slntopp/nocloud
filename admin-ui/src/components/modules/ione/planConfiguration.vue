@@ -18,6 +18,39 @@
         />
       </v-col>
     </v-row>
+    <div class="os-tab__card mb-5" v-if="templateOs.length">
+      <v-card
+        outlined
+        class="pt-4 pl-4 d-flex"
+        style="gap: 10px"
+        color="background"
+        v-for="item of templateOs"
+        :key="item.id"
+      >
+        <v-chip
+          close
+          :color="!hidedOs?.includes(item.id) ? 'info' : 'error'"
+          :close-icon="
+            hidedOs?.includes(item.id) ? 'mdi-close-circle' : 'mdi-plus-circle'
+          "
+          @click:close="changeOsState(item)"
+        >
+          <span>
+            {{ item.name }}
+          </span>
+        </v-chip>
+      </v-card>
+    </div>
+    <v-card
+      v-else
+      outlined
+      class="pt-4 pl-4 d-flex mb-5"
+      style="gap: 10px"
+      color="background"
+    >
+      <v-card-title>No os in binded service provider</v-card-title>
+    </v-card>
+
     <v-btn :loading="isSaveLoading" @click="save">Save</v-btn>
   </v-card>
 </template>
@@ -37,13 +70,25 @@ export default {
   mixins: [snackbar],
   data: () => ({
     meta: {},
+    hidedOs: [],
     isSaveLoading: false,
   }),
   methods: {
     async save() {
       this.isSaveLoading = true;
       try {
-        const data = { ...this.template, meta: this.meta };
+        const data = {
+          ...this.template,
+          meta: {
+            ...this.meta,
+            hidedOs: this.hidedOs.filter((osId) => {
+              const indexOfExistedOs = this.templateOs.findIndex(
+                (os) => os.id === osId
+              );
+              return indexOfExistedOs !== -1;
+            }),
+          },
+        };
         await api.plans.update(this.template.uuid, data);
         this.showSnackbarSuccess({
           message: "Configuration edited successfully",
@@ -54,9 +99,31 @@ export default {
         this.isSaveLoading = false;
       }
     },
+    changeOsState(item) {
+      if (this.hidedOs.includes(item.id)) {
+        const index = this.hidedOs.findIndex((i) => item.id === i);
+        this.hidedOs.splice(index, 1);
+      } else {
+        this.hidedOs.push(item.id);
+      }
+    },
+  },
+  computed: {
+    sp() {
+      return this.$store.getters["servicesProviders/all"].find((sp) =>
+        sp.meta.plans?.includes(this.template.uuid)
+      );
+    },
+    templateOs() {
+      return Object.keys(this.sp?.publicData?.templates || {}).map((key) => ({
+        ...this.sp?.publicData?.templates[key],
+        id: key,
+      }));
+    },
   },
   mounted() {
     this.meta = this.template.meta;
+    this.hidedOs = this.template.meta?.hidedOs || [];
   },
   watch: {
     "template.meta"(newVal) {
@@ -66,4 +133,11 @@ export default {
 };
 </script>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.os-tab__card {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--v-background-base);
+  padding-bottom: 16px;
+}
+</style>

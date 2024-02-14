@@ -186,7 +186,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		t.Meta["type"] = structpb.NewStringValue("transaction")
 	}
 
-	var baseRec, prevRec string
+	/*var baseRec, prevRec string
 
 	if t.Base != nil {
 		query, err := s.db.Query(ctx, getTransactionRecord, map[string]interface{}{
@@ -220,7 +220,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 				return nil, err
 			}
 		}
-	}
+	}*/
 
 	recBody := &pb.Record{
 		Start:     time.Now().Unix(),
@@ -235,12 +235,12 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		Meta:      t.GetMeta(),
 	}
 
-	if baseRec != "" {
-		recBody.Base = &baseRec
+	if t.GetBase() != "" {
+		recBody.Base = t.Base
 	}
 
-	if prevRec != "" {
-		recBody.Previous = &prevRec
+	if t.GetPrevious() != "" {
+		recBody.Previous = t.Previous
 	}
 
 	rec := s.records.Create(ctx, recBody)
@@ -486,7 +486,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 		return nil, err
 	}
 
-	if t.GetPriority() == pb.Priority_URGENT && t.GetExec() != 0 {
+	if t.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
 		currencyConf := MakeCurrencyConf(ctx, log)
@@ -619,11 +619,6 @@ const updateRecordsMeta = `
 LET transaction = DOCUMENT(@transactionKey)
 FOR r in transaction.records
 	UPDATE r WITH {meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
-`
-
-const getTransactionRecord = `
-LET transaction = DOCUMENT(@transactionKey)
-RETURN transaction.records[0]
 `
 
 const reprocessTransactions = `

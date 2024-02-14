@@ -1,10 +1,8 @@
 <template>
   <div class="pa-4">
-    <div class="d-flex">
-      <h1 class="page__title" v-if="!item">Create price model</h1>
-      <v-icon class="mx-3" large color="light" @click="openPlanWiki">
-        mdi-information-outline
-      </v-icon>
+    <div class="d-flex" v-if="!item">
+      <h1 class="page__title">Create price model</h1>
+      <plan-wiki-icon />
     </div>
 
     <v-form v-model="isValid" ref="form">
@@ -128,31 +126,52 @@
           <v-btn class="mr-2" v-if="isEdit" @click="isDialogVisible = true">
             Save
           </v-btn>
-          <v-btn
-            v-else
-            class="mr-2"
-            :loading="isLoading"
-            @click="tryToSend('create')"
-          >
-            Create
-          </v-btn>
+
+          <v-dialog persistent v-else :max-width="600" v-model="isSetSpDialog">
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn v-bind="attrs" v-on="on" class="mr-2" :loading="isLoading">
+                Create
+              </v-btn>
+            </template>
+
+            <v-card color="background-light">
+              <v-card-title>Connect plan to sp</v-card-title>
+              <v-card-subtitle
+                >You can also connect plan later.</v-card-subtitle
+              >
+
+              <nocloud-table
+                :items="typedSp"
+                :headers="spHeaders"
+                single-select
+                v-model="selectedSp"
+              />
+
+              <v-card-actions class="d-flex justify-end">
+                <v-btn @click="tryToSend('create')"> No </v-btn>
+                <v-btn
+                  :disabled="!selectedSp"
+                  @click="tryToSend('create', true)"
+                  class="mr-2"
+                >
+                  Connect
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+
           <download-template-button
             :template="plan"
-            :type="isJson ? 'JSON' : 'YAML'"
+            :type="selectedFileType"
+            @click:xlsx="downloadPlanXlsx([plan])"
             :name="downloadedFileName"
           />
-          <v-switch
-            class="d-inline-block mr-2"
-            style="margin-top: 5px; padding-top: 0"
-            v-model="isJson"
-            :label="!isJson ? 'YAML' : 'JSON'"
-          />
-          <v-file-input
-            class="file-input"
-            v-if="!isEdit"
-            :label="`upload ${isJson ? 'json' : 'yaml'} price model...`"
-            :accept="isJson ? '.json' : '.yaml'"
-            @change="onJsonInputChange"
+          <v-select
+            style="max-width: 80px"
+            :items="fileTypes"
+            label="File type"
+            v-model="selectedFileType"
+            class="d-inline-block mx-1"
           />
         </v-col>
       </v-row>
@@ -196,13 +215,17 @@ import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import JsonEditor from "@/components/JsonEditor.vue";
-import { readJSONFile, readYAMLFile, getTimestamp } from "@/functions.js";
+import { downloadPlanXlsx, getTimestamp } from "@/functions.js";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
+import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
+import NocloudTable from "@/components/table.vue";
 
 export default {
   name: "plansCreate-view",
   mixins: [snackbar],
   components: {
+    NocloudTable,
+    PlanWikiIcon,
     DownloadTemplateButton,
     confirmDialog,
     planOpensrs,
@@ -237,9 +260,15 @@ export default {
     isFeeValid: true,
     isLoading: false,
     savePlanAction: "",
-    isJson: true,
+    selectedFileType: "JSON",
+    fileTypes: ["JSON", "YAML", "XLSX"],
+
+    isSetSpDialog: false,
+    selectedSp: null,
+    spHeaders: [{ text: "Title", value: "title" }],
   }),
   methods: {
+    downloadPlanXlsx,
     changeConfig({ key, value, id }, type) {
       try {
         value = JSON.parse(value);
@@ -295,7 +324,7 @@ export default {
       this.$set(product.meta, key, value);
       this.plan.meta = Object.assign({}, this.plan.meta);
     },
-    tryToSend(action) {
+    tryToSend(action, bindPlan = false) {
       let message = "";
 
       if (!this.isValid || !this.isFeeValid) {
@@ -327,6 +356,7 @@ export default {
       }
 
       this.isLoading = true;
+      this.isSetSpDialog = false;
       this.savePlanAction = action;
       this.plan.title = checkName(this.plan, this.plans);
 
@@ -357,6 +387,13 @@ export default {
           : api.plans.create(this.plan);
 
       request
+        .then((data) => {
+          if (bindPlan) {
+            return api.servicesProviders.bindPlan(this.selectedSp[0].uuid, [
+              data.uuid,
+            ]);
+          }
+        })
         .then(() => {
           this.showSnackbarSuccess({
             message:
@@ -416,53 +453,6 @@ export default {
       }
       this.plan.kind = this.selectedKind;
     },
-    openPlanWiki() {
-      window.open(
-        "https://github.com/slntopp/nocloud/wiki/Billing-Plans",
-        "_blank"
-      );
-    },
-    setPlan(res) {
-      const requiredKeys = [
-        "resources",
-        "products",
-        "title",
-        "public",
-        "type",
-        "kind",
-      ];
-
-      for (const key of requiredKeys) {
-        if (res[key] === undefined) {
-          throw new Error("JSON need keys:" + requiredKeys.join(", "));
-        }
-      }
-
-      if (!this.types.includes(res.type)) {
-        throw new Error(`Type ${res.type} not exists!`);
-      }
-
-      if (!this.kinds.includes(res.kind)) {
-        throw new Error(`Kind ${res.kind} not exists!`);
-      }
-
-      this.getItem(res);
-    },
-    onJsonInputChange(file) {
-      if (this.isJson) {
-        readJSONFile(file)
-          .then((res) => this.setPlan(res))
-          .catch(({ message }) => {
-            this.showSnackbarError({ message });
-          });
-      } else {
-        readYAMLFile(file)
-          .then((res) => this.setPlan(res))
-          .catch(({ message }) => {
-            this.showSnackbarError({ message });
-          });
-      }
-    },
   },
   created() {
     this.$store.dispatch("plans/fetch", { silent: true }).catch((err) => {
@@ -471,6 +461,8 @@ export default {
       this.showSnackbarError({ message });
       console.error(err);
     });
+
+    this.$store.dispatch("servicesProviders/fetch");
 
     if (this.isEdit) {
       this.plan.resources = this.item.resources;
@@ -551,6 +543,11 @@ export default {
 
       return allowed;
     },
+    typedSp() {
+      return this.$store.getters["servicesProviders/all"].filter(
+        (sp) => sp.type == this.plan.type.split(" ")[0]
+      );
+    },
   },
   watch: {
     "plan.kind"() {
@@ -564,8 +561,10 @@ export default {
     },
     allowedKinds(newVal) {
       if (!newVal.includes(this.plan.type)) {
-        this.plan.kind = newVal[0];
-        this.selectedKind=this.plan.kind
+        if (!this.isEdit) {
+          this.plan.kind = newVal[0];
+        }
+        this.selectedKind = this.plan.kind;
       }
     },
   },

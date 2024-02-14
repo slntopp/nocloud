@@ -1,20 +1,21 @@
 <template>
   <div class="controls">
     <template v-for="btn in vmControlBtns">
-      <v-btn
+      <instance-control-btn
         v-if="!btn.component"
-        class="ma-1"
+        :hint="btn.title || btn.action"
         :key="btn.action + btn.title"
-        :disabled="
-          btn.disabled ||
-          (!!runningActionName && runningActionName !== btn.action) ||
-          isDeleted
-        "
-        :loading="runningActionName === btn.action"
-        @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
       >
-        {{ btn.title || btn.action }}
-      </v-btn>
+        <v-btn
+          class="ma-1"
+          :loading="runningActionName === btn.action"
+          @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
+        >
+          <v-icon>
+            {{ btn.icon }}
+          </v-icon>
+        </v-btn>
+      </instance-control-btn>
       <component
         v-else
         :is="btn.component"
@@ -32,64 +33,97 @@
       />
     </template>
 
-    <v-dialog style="height: 100%" v-if="isAnsibleActive && !isDeleted">
-      <template v-slot:activator="{ on, attrs }">
-        <v-btn class="ma-1" v-bind="attrs" v-on="on"> Playbook </v-btn>
-      </template>
-      <plugin-iframe
-        style="height: 80vh"
-        :params="{ instances: [template] }"
-        :url="ansiblePlaybookUrl"
-      />
-    </v-dialog>
-    <confirm-dialog @confirm="lockInstance" :disabled="isDeleted">
-      <v-btn :loading="isLockLoading" class="ma-1" :disabled="isDeleted">
-        {{ template.data.lock ? "User unlock" : "User lock" }}
-      </v-btn>
-    </confirm-dialog>
-    <confirm-dialog :disabled="isDeleted" @confirm="deleteInstance">
-      <v-btn class="ma-1" :disabled="isDeleted" :loading="isLoading">
-        Terminate
-      </v-btn>
-    </confirm-dialog>
+    <instance-control-btn hint="Playbook">
+      <v-dialog style="height: 100%" v-if="isAnsibleActive && !isDeleted">
+        <template v-slot:activator="{ on, attrs }">
+          <v-btn class="ma-1" v-bind="attrs" v-on="on">
+            <v-icon>mdi-book</v-icon>
+          </v-btn>
+        </template>
+        <plugin-iframe
+          style="height: 80vh"
+          :params="{ instances: [template] }"
+          :url="ansiblePlaybookUrl"
+        />
+      </v-dialog>
+    </instance-control-btn>
 
-    <v-dialog persistent v-model="isBillingDialog" max-width="600px">
-      <template v-slot:activator="{ on, attrs }">
-        <v-btn
-          v-bind="isBillingChange && !isDeleted ? attrs : undefined"
-          v-on="isBillingChange && !isDeleted ? on : undefined"
-          :disabled="isDeleted"
-          @click="onSaveClick"
-          class="ma-1"
-          :loading="isSaveLoading"
-          :color="isChanged ? 'primary' : ''"
-        >
-          Save
+    <instance-control-btn hint="Renewal invoice">
+      <confirm-dialog @confirm="sendInvoice">
+        <v-btn class="ma-1" :loading="isInvoiceLoading">
+          <v-icon>mdi-invoice-text-outline</v-icon>
         </v-btn>
-      </template>
-      <v-card color="background-light">
-        <v-card-title
-          >Do you really want to change your current price model?</v-card-title
-        >
-        <v-card-subtitle class="mt-1"
-          >You can also create a new price model based on the current
-          one.</v-card-subtitle
-        >
-        <v-card-actions class="d-flex justify-end">
-          <v-btn
-            class="mr-2"
-            :loading="isLoading"
-            @click="isBillingDialog = false"
-          >
-            Close
-          </v-btn>
-          <v-btn class="mr-2" :loading="isLoading" @click="save(true)">
-            Create
-          </v-btn>
-          <v-btn :loading="isLoading" @click="save(false)"> Edit </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+      </confirm-dialog>
+    </instance-control-btn>
+
+    <instance-control-btn
+      :hint="template.data.lock ? 'User unlock' : 'User lock'"
+    >
+      <confirm-dialog @confirm="lockInstance" :disabled="isDeleted">
+        <v-btn :loading="isLockLoading" class="ma-1" :disabled="isDeleted">
+          <v-icon>
+            {{ template.data.lock ? "mdi-lock-off" : "mdi-lock" }}
+          </v-icon>
+        </v-btn>
+      </confirm-dialog>
+    </instance-control-btn>
+
+    <instance-control-btn hint="Terminate">
+      <confirm-dialog :disabled="isDeleted" @confirm="deleteInstance">
+        <v-btn class="ma-1" :disabled="isDeleted" :loading="isDeleteLoading">
+          <v-icon> mdi-delete </v-icon>
+        </v-btn>
+      </confirm-dialog>
+    </instance-control-btn>
+
+    <div class="save_button">
+      <instance-control-btn top hint="Save">
+        <v-dialog persistent v-model="isBillingDialog" max-width="600px">
+          <template v-slot:activator="{ on, attrs }">
+            <v-btn
+              v-bind="isBillingChange && !isDeleted ? attrs : undefined"
+              v-on="isBillingChange && !isDeleted ? on : undefined"
+              :disabled="isDeleted"
+              @click="onSaveClick"
+              class="ma-1"
+              :loading="isSaveLoading"
+              :color="isChanged ? 'primary' : ''"
+            >
+              <v-icon> mdi-content-save </v-icon>
+            </v-btn>
+          </template>
+          <v-card color="background-light">
+            <v-card-title
+              >Do you really want to change your current price
+              model?</v-card-title
+            >
+            <v-card-subtitle class="mt-1"
+              >You can also create a new price model based on the current
+              one.</v-card-subtitle
+            >
+            <v-card-actions class="d-flex justify-end">
+              <v-btn
+                class="mr-2"
+                :loading="isDeleteLoading"
+                @click="isBillingDialog = false"
+              >
+                Close
+              </v-btn>
+              <v-btn
+                class="mr-2"
+                :loading="isDeleteLoading"
+                @click="save(true)"
+              >
+                Create
+              </v-btn>
+              <v-btn :loading="isDeleteLoading" @click="save(false)">
+                Edit
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </instance-control-btn>
+    </div>
   </div>
 </template>
 <script>
@@ -99,10 +133,11 @@ import ConfirmDialog from "@/components/confirmDialog.vue";
 import { getTodayFullDate } from "@/functions";
 import { mapActions, mapGetters } from "vuex";
 import PluginIframe from "@/components/plugin/iframe.vue";
+import InstanceControlBtn from "@/components/ui/instanceControlBtn.vue";
 
 export default {
   name: "instance-actions",
-  components: { PluginIframe, ConfirmDialog },
+  components: { InstanceControlBtn, PluginIframe, ConfirmDialog },
   mixins: [snackbar],
   props: {
     template: { type: Object, required: true },
@@ -110,8 +145,9 @@ export default {
     sp: { type: Object },
   },
   data: () => ({
-    isLoading: false,
+    isDeleteLoading: false,
     isSaveLoading: false,
+    isInvoiceLoading: false,
     isLockLoading: false,
     runningActionName: "",
     isBillingDialog: false,
@@ -119,7 +155,7 @@ export default {
   methods: {
     ...mapActions("actions", ["sendVmAction"]),
     async deleteInstance() {
-      this.isLoading = true;
+      this.isDeleteLoading = true;
       try {
         await api.delete(`/instances/${this.template.uuid}`);
         if (this.template.type === "ione") {
@@ -147,7 +183,7 @@ export default {
           message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
         });
       } finally {
-        this.isLoading = false;
+        this.isDeleteLoading = false;
       }
     },
     async attachInstance(detach = false) {
@@ -190,10 +226,7 @@ export default {
             message: `Instance ${lock ? "lock" : "unlock"} successfully`,
           });
 
-          this.$store.dispatch("services/fetch", this.template.uuid);
-          this.$store.dispatch("servicesProviders/fetch", {
-            anonymously: true,
-          });
+          this.$emit("refresh");
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -236,6 +269,10 @@ export default {
               ? this.copyTemplate.billingPlan.products[this.product]
               : undefined,
           },
+          meta: {
+            ...(this.copyTemplate.billingPlan.meta || {}),
+            isIndividual: true,
+          },
           public: false,
         };
         delete billingPlan.uuid;
@@ -266,10 +303,13 @@ export default {
             ...ogPlan.products,
             ...this.copyTemplate.billingPlan.products,
           },
-          resources: [
-            ...ogPlan.resources,
-            ...this.copyTemplate.billingPlan.resources,
-          ],
+          resources:
+            this.type === "opensrs"
+              ? { ...this.copyTemplate.billingPlan.resources }
+              : [
+                  ...ogPlan.resources,
+                  ...this.copyTemplate.billingPlan.resources,
+                ],
           title,
         };
 
@@ -294,10 +334,7 @@ export default {
             message: "Instance saved successfully",
           });
 
-          this.$store.dispatch("services/fetch", this.template.uuid);
-          this.$store.dispatch("servicesProviders/fetch", {
-            anonymously: true,
-          });
+          this.$emit("refresh");
         })
         .catch((err) => {
           this.showSnackbarError({ message: err });
@@ -329,6 +366,29 @@ export default {
         });
       }
     },
+    async rebuildVps(os) {
+      await this.sendAction(
+        this.vmControlBtns.find((a) => a.action === "rebuild"),
+        { imageId: os.id }
+      );
+
+      const tempService = JSON.parse(JSON.stringify(this.service));
+      const instance = JSON.parse(JSON.stringify(this.template));
+      const igIndex = tempService.instancesGroups.findIndex((ig) =>
+        ig.instances.find((i) => i.uuid === this.template.uuid)
+      );
+      const instanceIndex = tempService.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === this.template.uuid);
+
+      instance.config.configuration = {
+        ...instance.config.configuration,
+        vps_os: os.name,
+      };
+      tempService.instancesGroups[igIndex].instances[instanceIndex] = instance;
+      await api.services._update(tempService);
+      this.$emit("refresh");
+    },
     async sendAction(btn, data) {
       this.runningActionName = btn.action;
       try {
@@ -339,6 +399,22 @@ export default {
         });
       } finally {
         this.runningActionName = "";
+      }
+    },
+    async sendInvoice() {
+      this.isInvoiceLoading = true;
+      try {
+        await fetch(
+          /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
+            `modules/addons/nocloud/api/index.php?run=create_renewal_invoice&account=${this.account.uuid}&instance=${this.template.uuid}`
+        );
+      } catch (e) {
+        this.$store.commit("snackbar/showSnackbarError", {
+          message:
+            e.response?.data?.message || "Error during create renewal invoice",
+        });
+      } finally {
+        this.isInvoiceLoading = false;
       }
     },
   },
@@ -357,19 +433,42 @@ export default {
             method: this.startInstance,
             disabled: this.ioneActions?.start,
           },
-          { action: "poweroff", disabled: this.ioneActions?.poweroff },
-          { action: "resume", disabled: this.ioneActions?.resume },
-          { action: "suspend", disabled: this.ioneActions?.suspend },
-          { action: "reboot", disabled: this.ioneActions?.reboot },
+          {
+            action: "poweroff",
+            disabled: this.ioneActions?.poweroff,
+            icon: "mdi-stop",
+          },
+          {
+            action: "resume",
+            disabled: this.ioneActions?.resume,
+            icon: "mdi-play",
+          },
+          {
+            action: "suspend",
+            disabled: this.ioneActions?.suspend,
+            icon: "mdi-power-sleep",
+          },
+          {
+            action: "reboot",
+            disabled: this.ioneActions?.reboot,
+            icon: "mdi-restart",
+          },
           {
             action: "vnc",
             title: "Console", //not reqired, use 'action' for a name if not found
             disabled: this.ioneActions?.vnc,
+            icon: "mdi-console",
           },
           this.isDetached
-            ? { action: "attach", type: "method", method: this.attachInstance }
+            ? {
+                action: "attach",
+                type: "method",
+                icon: "mdi-paperclip",
+                method: this.attachInstance,
+              }
             : {
                 action: "detach",
+                icon: "mdi-paperclip-off",
                 type: "method",
                 method: () => this.attachInstance(true),
               },
@@ -382,31 +481,35 @@ export default {
             method: this.startInstance,
             disabled: this.ovhActions?.start,
           },
-          { action: "poweroff", disabled: true },
-          { action: "resume", disabled: true },
-          { action: "suspend", disabled: true },
-          { action: "reboot", disabled: true },
+          { action: "poweroff", disabled: true, icon: "mdi-stop" },
+          { action: "resume", disabled: true, icon: "mdi-play" },
+          { action: "suspend", disabled: true, icon: "mdi-power-sleep" },
+          { action: "reboot", disabled: true, icon: "mdi-restart" },
           {
             action: "open_ipmi",
             title: "console",
             disabled: this.ovhActions?.reboot,
+            icon: "mdi-console",
           },
         ],
         "ovh cloud": [
           {
             action: "stop_vm",
             title: "poweroff",
+            icon: "mdi-stop",
             disabled: this.ovhActions?.poweroff,
           },
           {
             action: "resume_vm",
             title: "resume",
+            icon: "mdi-play",
             disabled: this.ovhActions?.resume,
           },
           {
             action: "suspend_vm",
             title: "suspend",
             disabled: this.ovhActions?.suspend,
+            icon: "mdi-power-sleep",
           },
           {
             action: "reboot_vm",
@@ -417,19 +520,17 @@ export default {
           {
             action: "start_vm",
             title: "poweron",
+            icon: "mdi-power",
             disabled: this.ovhActions?.resume,
           },
           {
             action: "start_vnc_vm",
             title: "Console",
             disabled: this.ovhActions?.reboot,
+            icon: "mdi-console",
           },
         ],
         "ovh vps": [
-          { action: "poweroff", disabled: this.ovhActions?.poweroff },
-          { action: "resume", disabled: this.ovhActions?.resume },
-          { action: "suspend", disabled: this.ovhActions?.suspend },
-          { action: "reboot", disabled: this.ovhActions?.reboot },
           {
             action: "start",
             type: "method",
@@ -438,9 +539,38 @@ export default {
             disabled: this.ovhActions?.start,
           },
           {
+            action: "poweroff",
+            disabled: this.ovhActions?.poweroff,
+            icon: "mdi-stop",
+          },
+          {
+            action: "resume",
+            disabled: this.ovhActions?.resume,
+            icon: "mdi-play",
+          },
+          {
+            action: "suspend",
+            disabled: this.ovhActions?.suspend,
+            icon: "mdi-power-sleep",
+          },
+          {
+            action: "reboot",
+            disabled: this.ovhActions?.reboot,
+            icon: "mdi-restart",
+          },
+          {
+            action: "rebuild",
+            type: "method",
+            method: this.rebuildVps,
+            component: () => import("@/components/dialogs/rebuildVps.vue"),
+            disabled: this.ovhActions?.rebuild,
+            icon: "mdi-account-convert",
+          },
+          {
             action: "vnc",
             title: "Console",
             disabled: this.ovhActions?.reboot,
+            icon: "mdi-console",
           },
         ],
         empty: [
@@ -455,12 +585,14 @@ export default {
             action: "change_state",
             data: { state: 2 },
             title: "stop",
+            icon: "mdi-stop",
             disabled: this.emptyActions?.stop,
           },
           {
             action: "change_state",
             data: { state: 6 },
             title: "suspend",
+            icon: "mdi-power-sleep",
             disabled: this.emptyActions?.suspend,
           },
         ],
@@ -476,35 +608,41 @@ export default {
           {
             action: "start",
             title: "resume",
+            icon: "mdi-play",
             disabled: !this.keywebActions?.start,
           },
           {
             action: "stop",
             title: "stop",
+            icon: "mdi-stop",
             disabled: !this.keywebActions?.stop,
           },
           {
             action: "reboot",
             title: "reboot",
+            icon: "mdi-restart",
             disabled: !this.keywebActions?.reboot,
           },
           {
             action: "suspend",
             title: "suspend",
             disabled: !this.keywebActions?.suspend,
+            icon: "mdi-power-sleep",
           },
           {
             action: "unsuspend",
             title: "unsuspend",
             disabled: !this.keywebActions?.unsuspend,
+            icon: "mdi-weather-sunny",
           },
           {
             action: "vnc",
             title: "Console",
+            icon: "mdi-console",
             disabled: !this.keywebActions?.vnc,
           },
         ],
-        opensrs: [{ action: "dns" }],
+        opensrs: [{ action: "dns", icon: "mdi-dns" }],
         cpanel: [
           {
             action: "start",
@@ -513,7 +651,7 @@ export default {
             method: this.startInstance,
             disabled: this.template.config.auto_start,
           },
-          { action: "session" },
+          { action: "session", icon: "mdi-console" },
         ],
       };
 
@@ -577,16 +715,20 @@ export default {
           resume: true,
           suspend: true,
           vnc: true,
+          rebuild: true,
         };
+      const isRebootDisabled =
+        this.template.state.state === "SUSPENDED" ||
+        this.template.state.meta.state === "BUILD" ||
+        this.template.state.state === "STOPPED";
+
       return {
         poweroff:
           this.template.state.state === "SUSPENDED" ||
           (this.template.state.state !== "RUNNING" &&
             this.template.state.state === "STOPPED"),
-        reboot:
-          this.template.state.state === "SUSPENDED" ||
-          this.template.state.meta.state === "BUILD" ||
-          this.template.state.state === "STOPPED",
+        reboot: isRebootDisabled,
+        rebuild: isRebootDisabled,
         resume:
           this.template.state.state === "RUNNING" &&
           this.template.state.state !== "STOPPED",
@@ -661,6 +803,7 @@ export default {
         case "openai":
         case "cpanel":
         case "keyweb":
+        case "opensrs":
         case "ione": {
           return (item) => {
             let planTitle = `IND_${this.sp.title}_${
@@ -750,6 +893,19 @@ export default {
     isDeleted() {
       return this.template.state?.state === "DELETED";
     },
+    namespace() {
+      return this.$store.getters["namespaces/all"].find(
+        (n) => n.uuid === this.template.access.namespace
+      );
+    },
+    account() {
+      return this.$store.getters["accounts/all"].find(
+        (a) => a.uuid === this.namespace.access.namespace
+      );
+    },
+    whmcsApi() {
+      return this.$store.getters["settings/whmcsApi"];
+    },
   },
 };
 </script>
@@ -758,5 +914,13 @@ export default {
 .controls {
   max-width: calc(100% - 450px);
   min-width: 60%;
+}
+</style>
+
+<style>
+.save_button {
+  position: fixed;
+  top: 140px;
+  right: 40px;
 }
 </style>

@@ -5,6 +5,7 @@
     color="background-light"
     class="flex-grow-1 rounded-lg"
     :min-width="width >= 450 ? 350 : 200"
+    :min-height="400"
     :style="{ width: width < 1375 ? '100%' : 'auto' }"
     :loading="loading"
   >
@@ -20,7 +21,7 @@
 
     <v-divider class="mx-4"></v-divider>
 
-    <v-card-text>
+    <v-card-text class="pt-0">
       <slot></slot>
     </v-card-text>
   </v-card>

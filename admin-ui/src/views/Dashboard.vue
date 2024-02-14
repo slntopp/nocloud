@@ -1,18 +1,10 @@
 <template>
-  <div
-    class="widgets align-start gg-15px pa-4"
-    :class="{
-      'd-grid': width < 1375,
-      'd-flex': width >= 1375,
-    }"
-  >
+  <div class="widgets align-start gg-15px pa-4 d-flex flex-wrap">
     <component
       v-for="widget of widgets"
       :key="widget"
       :is="widget"
-      :class="{
-        'grid-row': widget === 'ServicesWidget' && width >= 1010,
-      }"
+      style="width: 33%"
     />
   </div>
 </template>
@@ -21,6 +13,11 @@
 import HealthWidget from "@/components/widgets/health";
 import ServicesWidget from "@/components/widgets/services";
 import RoutinesWidget from "@/components/widgets/routines";
+import AccountsWidget from "@/components/widgets/accounts";
+import TransactionsWidget from "@/components/widgets/transactions";
+import InstancesWidget from "@/components/widgets/instances";
+import InstancesTypesWidget from "@/components/widgets/instances-types.vue";
+import InstancesPricesWidget from "@/components/widgets/instances-prices.vue";
 
 export default {
   name: "dashboard-view",
@@ -28,20 +25,34 @@ export default {
     HealthWidget,
     ServicesWidget,
     RoutinesWidget,
+    AccountsWidget,
+    TransactionsWidget,
+    InstancesWidget,
+    InstancesTypesWidget,
+    InstancesPricesWidget,
   },
   data: () => ({
-    widgets: ["HealthWidget", "ServicesWidget", "RoutinesWidget"],
+    widgets: [
+      "AccountsWidget",
+      "InstancesWidget",
+      "TransactionsWidget",
+      "InstancesTypesWidget",
+      "InstancesPricesWidget",
+      "ServicesWidget",
+      "RoutinesWidget",
+      "HealthWidget",
+    ],
   }),
   computed: {
     width() {
       return document.documentElement.clientWidth;
     },
   },
-  mounted(){
+  mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      event:()=>this.$router.go(),
+      event: () => this.$router.go(),
     });
-  }
+  },
 };
 </script>
 

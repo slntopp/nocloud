@@ -75,11 +75,11 @@
     </template>
 
     <template v-slot:[`item.date`]="{ item }">
-      {{ getValue("date", item) }}
+      {{ formatSecondsToDate(getValue("date", item)) || "Unknown" }}
     </template>
 
     <template v-slot:[`item.dueDate`]="{ item }">
-      {{ getValue("dueDate", item) }}
+      {{ formatSecondsToDate(getValue("dueDate", item)) || "Unknown" }}
     </template>
 
     <template v-slot:[`item.service`]="{ item, value }">
@@ -136,14 +136,15 @@
     </template>
 
     <template v-slot:[`item.config.regular_payment`]="{ item }">
-      <v-switch
-        hide-details
-        dense
-        :disabled="isChangeRegularPaymentLoading"
-        :input-value="item.config.regular_payment"
-        @change="changeRegularPayment(item, $event)"
-        label="Invoice based"
-      />
+      <div class="d-flex justify-center align-center regular_payment">
+        <v-switch
+          dense
+          hide-details
+          :disabled="isChangeRegularPaymentLoading"
+          :input-value="item.config.regular_payment"
+          @change="changeRegularPayment(item, $event)"
+        />
+      </div>
     </template>
   </nocloud-table>
 </template>
@@ -153,8 +154,9 @@ import nocloudTable from "@/components/table.vue";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
 import {
   compareSearchValue,
+  formatSecondsToDate,
   getDeepObjectValue,
-  getOvhPrice,
+  getInstancePrice,
   getState,
 } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
@@ -235,6 +237,7 @@ export default {
     });
   },
   methods: {
+    formatSecondsToDate,
     sortInstances(items, sortBy, sortDesc) {
       return items.sort((a, b) => {
         for (let i = 0; i < sortBy.length; i++) {
@@ -249,14 +252,14 @@ export default {
             valueB = this.getValue(key, valueB);
           } else {
             key.split(".").forEach((subkey) => {
-              valueA = valueA[subkey];
-              valueB = valueB[subkey];
+              valueA = valueA?.[subkey];
+              valueB = valueB?.[subkey];
             });
           }
 
-          if (typeof valueA === "string") {
+          if (typeof valueA === "string" && typeof valueB === "string") {
             return valueA.toLowerCase().localeCompare(valueB.toLowerCase());
-          } else if (typeof valueA === "number") {
+          } else if (typeof valueA === "number" && typeof valueB === "number") {
             return valueA - valueB;
           } else {
             return valueA > valueB;
@@ -264,27 +267,14 @@ export default {
         }
       });
     },
-    date(timestamp) {
-      if (!timestamp) return "PayG";
-      const date = new Date(timestamp * 1000);
-
-      const year = date.toUTCString().split(" ")[3];
-      let month = date.getUTCMonth() + 1;
-      let day = date.getUTCDate();
-
-      if (`${month}`.length < 2) month = `0${month}`;
-      if (`${day}`.length < 2) day = `0${day}`;
-
-      return `${year}-${month}-${day}`;
-    },
     getAccount({ access }) {
       const {
         access: { namespace },
-      } = this.namespaces.find(({ uuid }) => uuid === access.namespace) ?? {
+      } = this.namespaces?.find(({ uuid }) => uuid === access.namespace) ?? {
         access: {},
       };
 
-      return this.accounts.find(({ uuid }) => uuid === namespace) ?? {};
+      return this.accounts?.find(({ uuid }) => uuid === namespace) ?? {};
     },
     getEmail(inst) {
       const account = this.getAccount(inst);
@@ -292,67 +282,7 @@ export default {
       return account?.data?.email ?? "-";
     },
     getPrice(inst) {
-      switch (inst.type) {
-        case "goget": {
-          const key = `${inst.resources.period} ${inst.resources.id}`;
-
-          return inst.billingPlan.products[key]?.price ?? 0;
-        }
-        case "ovh": {
-          return getOvhPrice(inst);
-        }
-        case "empty": {
-          const initialPrice =
-            inst.billingPlan.products[inst.product]?.price ?? 0;
-          return inst.billingPlan.resources
-            .filter(({ key }) => inst.config?.addons?.find((a) => a === key))
-            ?.reduce((acc, r) => acc + +r?.price, initialPrice);
-        }
-        case "keyweb": {
-          const key = inst.product;
-          const tariff = inst.billingPlan.products[key];
-
-          const getAddonKey = (key, metaKey) =>
-            tariff.meta?.[metaKey].find(
-              (a) =>
-                key === a.type &&
-                a.key.startsWith(inst.config?.configurations[key])
-            )?.key;
-
-          const addons =
-            Object.keys(inst.config?.configurations || {}).map((key) =>
-              inst.billingPlan?.resources?.find((r) => {
-                return (
-                  r.key === getAddonKey(key, "addons") ||
-                  r.key === getAddonKey(key, "os")
-                );
-              })
-            ) || [];
-
-          return (
-            (+tariff?.price || 0) +
-            (addons.reduce((acc, a) => acc + a?.price, 0) || 0)
-          );
-        }
-        case "ione":
-        case "cpanel": {
-          const initialPrice =
-            inst.billingPlan.products[inst.product]?.price ?? 0;
-
-          return +inst.billingPlan.resources?.reduce((prev, curr) => {
-            if (
-              curr.key === `drive_${inst.resources.drive_type?.toLowerCase()}`
-            ) {
-              return prev + (curr?.price * inst.resources.drive_size) / 1024;
-            } else if (curr.key === "ram") {
-              return prev + (curr?.price * inst.resources.ram) / 1024;
-            } else if (inst.resources[curr.key]) {
-              return prev + curr?.price * inst.resources[curr.key];
-            }
-            return prev;
-          }, initialPrice);
-        }
-      }
+      return getInstancePrice(inst);
     },
     getNcuPrice(inst) {
       const price = (this.getPrice(inst) || 0).toFixed(2);
@@ -379,7 +309,7 @@ export default {
       if (this.defaultCurrency === currency) {
         return 1;
       }
-      return this.rates.find(
+      return this.rates?.find(
         (r) => r.to === currency && r.from === this.defaultCurrency
       )?.rate;
     },
@@ -432,24 +362,24 @@ export default {
       return value.size > 1 ? "PH" : value.keys().next().value;
     },
     getCreationDate(inst) {
-      return inst.data.creation ?? "unknown";
+      return inst.data.creation;
     },
     getExpirationDate(inst) {
-      if (inst.data.next_payment_date)
-        return this.date(inst.data.next_payment_date);
-      return "-";
+      if (inst.data.expiry?.expiredate) return inst.data.expiry?.expiredate;
+      if (inst.data.next_payment_date) return inst.data.next_payment_date;
+      return 0;
     },
     getService({ service }) {
       return (
-        this.services.find(({ uuid }) => service === uuid)?.title ?? service
+        this.services?.find(({ uuid }) => service === uuid)?.title ?? service
       );
     },
     getServiceProvider({ sp }) {
-      return this.sp.find(({ uuid }) => uuid === sp)?.title;
+      return this.sp?.find(({ uuid }) => uuid === sp)?.title;
     },
     getOSName(id, sp) {
       if (!id) return;
-      return this.sp.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
+      return this.sp?.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
         ?.name;
     },
     getTariff(item) {
@@ -467,7 +397,7 @@ export default {
       return billingPlan.products[key]?.title;
     },
     getNamespace(id) {
-      return this.namespaces.find((n) => n.uuid === id)?.title;
+      return this.namespaces?.find((n) => n.uuid === id)?.title;
     },
     getValue(key, item) {
       return this.headersGetters[key](item);
@@ -487,10 +417,12 @@ export default {
       this.isChangeRegularPaymentLoading = true;
       try {
         const tempService = JSON.parse(
-          JSON.stringify(this.services.find((s) => s.uuid === instance.service))
+          JSON.stringify(
+            this.services?.find((s) => s.uuid === instance.service)
+          )
         );
         const igIndex = tempService.instancesGroups.findIndex((ig) =>
-          ig.instances.find((i) => i.uuid === instance.uuid)
+          ig.instances?.find((i) => i.uuid === instance.uuid)
         );
         const instanceIndex = tempService.instancesGroups[
           igIndex
@@ -523,7 +455,7 @@ export default {
           return compareSearchValue(
             value,
             this.filter[key],
-            this.searchFields.find((f) => f.key === key)
+            this.searchFields?.find((f) => f.key === key)
           );
         });
       });
@@ -540,6 +472,7 @@ export default {
         "account.data.email",
         "price",
         "accountPrice",
+        "access",
         "state.meta.networking.public",
       ];
 
@@ -754,3 +687,9 @@ export default {
   },
 };
 </script>
+
+<style>
+.regular_payment .v-input {
+  margin-top: 0px !important;
+}
+</style>

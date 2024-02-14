@@ -5,6 +5,7 @@
     :addons-price="addonsPrice"
     :tariff-price="tariffPrice"
     :due-date="dueDate"
+    :renew-disabled="isRenewDisabled"
     @update="emit('update', $event)"
   />
 </template>
@@ -24,10 +25,10 @@ const { template } = toRefs(props);
 
 const account = computed(() => {
   const namespace = store.getters["namespaces/all"]?.find(
-      (n) => n.uuid === template.value?.access.namespace
+    (n) => n.uuid === template.value?.access.namespace
   );
   const account = store.getters["accounts/all"].find(
-      (a) => a.uuid === namespace?.access.namespace
+    (a) => a.uuid === namespace?.access.namespace
   );
   return account;
 });
@@ -68,6 +69,10 @@ const addonsPrice = ref(
 const dueDate = computed(() => {
   return formatSecondsToDate(+template.value?.data?.next_payment_date);
 });
+
+const isRenewDisabled = computed(
+  () => template.value.billingPlan.kind === "DYNAMIC"
+);
 </script>
 
 <style scoped></style>

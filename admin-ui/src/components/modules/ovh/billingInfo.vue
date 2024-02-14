@@ -5,8 +5,10 @@
         <v-text-field
           readonly
           label="price model"
-          append-icon="mdi-pencil"
-          @click:append="priceModelDialog = true"
+          :append-icon="isPriceModelCanBeChange ? 'mdi-pencil' : undefined"
+          @click:append="
+            isPriceModelCanBeChange ? (priceModelDialog = true) : undefined
+          "
           :value="template.billingPlan.title"
         />
       </v-col>
@@ -15,15 +17,17 @@
           readonly
           label="Product name"
           :value="tarrif.title"
-          append-icon="mdi-pencil"
-          @click:append="priceModelDialog = true"
+          :append-icon="isPriceModelCanBeChange ? 'mdi-pencil' : undefined"
+          @click:append="
+            isPriceModelCanBeChange ? (priceModelDialog = true) : undefined
+          "
         />
       </v-col>
       <v-col>
         <v-text-field
           readonly
           label="Date (create)"
-          :value="template.data.creation"
+          :value="formatSecondsToDate(template.data.creation)"
         />
       </v-col>
       <v-col>
@@ -98,6 +102,7 @@
     </instances-panels>
 
     <edit-price-model
+      v-if="isPriceModelCanBeChange"
       @refresh="emit('refresh')"
       :template="template"
       :plans="plans"
@@ -126,7 +131,7 @@ import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import usePlnRate from "@/hooks/usePlnRate";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import useInstancePrices from "@/hooks/useInstancePrices";
-import InstancesPanels from "@/components/ui/instancesPanels.vue";
+import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 
 const props = defineProps(["template", "plans"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -201,6 +206,8 @@ const tarrif = computed(() => {
 const service = computed(() =>
   store.getters["services/all"].find((s) => s.uuid === template.value.service)
 );
+
+const isPriceModelCanBeChange = computed(() => ["cloud"].includes(type.value));
 
 const getBasePrices = async () => {
   isBasePricesLoading.value = true;

@@ -133,42 +133,44 @@
       v-slot:[`footer.page-text`]="{ pageStart, pageStop, itemsLength }"
     >
       <div class="d-flex align-center">
-        <v-dialog
-          @click:outside="changeFiltres"
-          max-width="60%"
-          v-model="settingsDialog"
-          width="500"
-        >
-          <template v-slot:activator="{ on, attrs }">
-            <v-icon v-bind="attrs" v-on="on" size="23" class="mr-1"
-              >mdi-cog-outline</v-icon
-            >
-          </template>
-          <v-card
-            color="background-light"
-            style="overflow: hidden"
-            max-width="100%"
+        <div v-if="tableName">
+          <v-dialog
+            @click:outside="changeFiltres"
+            max-width="60%"
+            v-model="settingsDialog"
+            width="500"
           >
-            <v-card-title>Table settings</v-card-title>
-            <v-row class="pa-5">
-              <v-col
-                v-for="header in headers.filter((h) => h.text)"
-                :key="header.value"
-                cols="4"
+            <template v-slot:activator="{ on, attrs }">
+              <v-icon v-bind="attrs" v-on="on" size="23" class="mr-1"
+                >mdi-cog-outline</v-icon
               >
-                <v-checkbox
-                  @click.stop
-                  :label="header.text"
-                  v-model="filter"
-                  :value="header.value"
-                />
-              </v-col>
-            </v-row>
-          </v-card>
-        </v-dialog>
-        <v-icon @click="resetFilter" size="23" class="mr-1s"
-          >mdi-filter-remove</v-icon
-        >
+            </template>
+            <v-card
+              color="background-light"
+              style="overflow: hidden"
+              max-width="100%"
+            >
+              <v-card-title>Table settings</v-card-title>
+              <v-row class="pa-5">
+                <v-col
+                  v-for="header in headers.filter((h) => h.text)"
+                  :key="header.value"
+                  cols="4"
+                >
+                  <v-checkbox
+                    @click.stop
+                    :label="header.text"
+                    v-model="filter"
+                    :value="header.value"
+                  />
+                </v-col>
+              </v-row>
+            </v-card>
+          </v-dialog>
+          <v-icon @click="resetFilter" size="23" class="mr-1s"
+            >mdi-filter-remove</v-icon
+          >
+        </div>
         <span class="ml-3">
           {{ pageStart }}-{{ pageStop }} of {{ itemsLength }}
         </span>
@@ -303,7 +305,7 @@ export default {
     },
     filtersItems: { type: Object },
     filtersValues: { type: Object },
-    itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, 25,50] },
+    itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, 25, 50] },
   },
   data() {
     return {
@@ -415,22 +417,43 @@ export default {
     sortTheHeadersAndUpdateTheKey(evt) {
       const originalHeaders = JSON.parse(JSON.stringify(this.filtredHeaders));
       this.filtredHeaders = [];
-      let oldIndex = evt.oldIndex - 1;
-      let newIndex = evt.newIndex - 1;
+      let oldIndex = evt.oldIndex;
+      let newIndex = evt.newIndex;
+
       if (this.showExpand) {
         oldIndex--;
         newIndex--;
       }
+
+      if (this.showSelect) {
+        oldIndex--;
+        newIndex--;
+      }
+
       for (const header of originalHeaders) {
         if (header) {
           this.filtredHeaders.push(header);
         }
       }
+
+      if (newIndex === 0) {
+        this.filtredHeaders = [
+          this.filtredHeaders[oldIndex],
+          ...this.filtredHeaders,
+        ];
+      } else {
+        this.filtredHeaders.splice(
+          oldIndex > newIndex ? newIndex : newIndex + 1,
+          0,
+          this.filtredHeaders[oldIndex]
+        );
+      }
+
       this.filtredHeaders.splice(
-        newIndex,
-        0,
-        this.filtredHeaders.splice(oldIndex, 1)[0]
+        oldIndex > newIndex ? oldIndex + 1 : oldIndex,
+        1
       );
+
       this.table = this.filtredHeaders;
       this.anIncreasingNumber += 1;
     },
@@ -631,15 +654,17 @@ export default {
   directives: {
     "sortable-table": {
       inserted: (el, binding) => {
-        el.querySelectorAll("th").forEach((draggableEl) => {
-          // Need a class watcher because sorting v-data-table rows asc/desc removes the sortHandle class
-          watchClass(draggableEl, "sortHandle");
-          draggableEl.classList.add("sortHandle");
-        });
-        Sortable.create(
-          el.querySelector("tr"),
-          binding.value ? { ...binding.value, handle: ".sortHandle" } : {}
-        );
+        setTimeout(() => {
+          el.querySelectorAll("th").forEach((draggableEl) => {
+            // Need a class watcher because sorting v-data-table rows asc/desc removes the sortHandle class
+            watchClass(draggableEl, "sortHandle");
+            draggableEl.classList.add("sortHandle");
+          });
+          Sortable.create(
+            el.querySelector("tr"),
+            binding.value ? { ...binding.value, handle: ".sortHandle" } : {}
+          );
+        }, 0);
       },
     },
   },

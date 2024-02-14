@@ -1,64 +1,68 @@
 <template>
   <div class="pa-4">
-    <v-btn class="mr-2" :to="{ name: 'Plans create' }"> Create </v-btn>
+    <div class="d-flex align-center">
+      <v-btn class="mr-2" :to="{ name: 'Plans create' }"> Create </v-btn>
 
-    <confirm-dialog
-      v-if="linked.length !== 1"
-      :disabled="isDeleteDisabled"
-      @confirm="deleteSelectedPlan"
-    >
-      <v-btn
-        class="mr-2"
+      <confirm-dialog
+        v-if="linked.length !== 1"
         :disabled="isDeleteDisabled"
-        :loading="isDeleteLoading"
+        @confirm="deleteSelectedPlan"
       >
-        Delete
-      </v-btn>
-    </confirm-dialog>
-
-    <confirm-dialog
-      v-else
-      title="You can't delete a price model while there are instances using it!"
-      subtitle="To delete price model, select the price model that these instances will use."
-      :width="625"
-      :success-disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
-      @confirm="deleteSelectedPlan"
-    >
-      <v-btn
-        class="mr-2"
-        :disabled="selected.length < 1"
-        :loading="isDeleteLoading"
-      >
-        Delete
-      </v-btn>
-      <template #actions>
-        <nocloud-table
-          table-name="linked-plans"
-          :show-select="false"
-          :items="linked"
-          :headers="linkedHeaders"
+        <v-btn
+          class="mr-2"
+          :disabled="isDeleteDisabled"
+          :loading="isDeleteLoading"
         >
-          <template v-slot:[`item.title`]="{ item }">
-            <router-link
-              :to="{ name: 'Service', params: { serviceId: item.service } }"
-            >
-              {{ item.title }}
-            </router-link>
-          </template>
-          <template v-slot:[`item.plan`]="{ item }">
-            <v-select
-              dense
-              placeholder="none"
-              item-text="title"
-              item-value="uuid"
-              style="max-width: 200px"
-              v-model="item.plan"
-              :items="availablePlans"
-            />
-          </template>
-        </nocloud-table>
-      </template>
-    </confirm-dialog>
+          Delete
+        </v-btn>
+      </confirm-dialog>
+
+      <confirm-dialog
+        v-else
+        title="You can't delete a price model while there are instances using it!"
+        subtitle="To delete price model, select the price model that these instances will use."
+        :width="625"
+        :success-disabled="linked.some(({ plan }) => plan === selected[0].uuid)"
+        @confirm="deleteSelectedPlan"
+      >
+        <v-btn
+          class="mr-2"
+          :disabled="selected.length < 1"
+          :loading="isDeleteLoading"
+        >
+          Delete
+        </v-btn>
+        <template #actions>
+          <nocloud-table
+            table-name="linked-plans"
+            :show-select="false"
+            :items="linked"
+            :headers="linkedHeaders"
+          >
+            <template v-slot:[`item.title`]="{ item }">
+              <router-link
+                :to="{ name: 'Service', params: { serviceId: item.service } }"
+              >
+                {{ item.title }}
+              </router-link>
+            </template>
+            <template v-slot:[`item.plan`]="{ item }">
+              <v-select
+                dense
+                placeholder="none"
+                item-text="title"
+                item-value="uuid"
+                style="max-width: 200px"
+                v-model="item.plan"
+                :items="availablePlans"
+              />
+            </template>
+          </nocloud-table>
+        </template>
+      </confirm-dialog>
+
+      <v-switch label="Hide individual" v-model="isIndividualHide" />
+    </div>
 
     <nocloud-table
       table-name="plans"
@@ -103,9 +107,10 @@
             class="d-inline-block mx-1"
           />
           <download-template-button
+            @click:xlsx="downloadXlsx"
             class="mx-1"
             small
-            title="Downlaod"
+            title="Download"
             :disabled="!selected.length || isPlansUploadLoading"
             name="selected_copy"
             :type="selectedFileType"
@@ -143,7 +148,7 @@ import nocloudTable from "@/components/table.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import {
   compareSearchValue,
-  defaultFilterObject,
+  downloadPlanXlsx,
   filterArrayByTitleAndUuid,
   getDeepObjectValue,
   readJSONFile,
@@ -199,13 +204,14 @@ export default {
     copyed: -1,
     fetchError: "",
 
-    fileTypes: ["JSON", "YAML"],
+    fileTypes: ["JSON", "YAML", "XLSX"],
     selectedFileType: "JSON",
     isPlansUploadLoading: false,
     uploadedPlans: [],
+
+    isIndividualHide: true,
   }),
   methods: {
-    defaultFilterObject,
     changePlan() {
       this.linked = [];
       this.services.forEach((service) => {
@@ -336,6 +342,9 @@ export default {
     getStatus(item) {
       return this.statusMap[item.status] || this.statusMap.UNKNOWN;
     },
+    downloadXlsx() {
+      return downloadPlanXlsx(this.selected);
+    },
   },
   created() {
     this.$store.dispatch("services/fetch", { showDeleted: true });
@@ -377,17 +386,19 @@ export default {
       );
     },
     filtredPlans() {
-      const plans = this.plans.filter((p) =>
-        Object.keys(this.filter).every((key) => {
-          const data = getDeepObjectValue(p, key);
+      const plans = this.plans
+        .filter((p) => p?.meta?.isIndividual != this.isIndividualHide)
+        .filter((p) =>
+          Object.keys(this.filter).every((key) => {
+            const data = getDeepObjectValue(p, key);
 
-          return compareSearchValue(
-            data,
-            this.filter[key],
-            this.searchFields.find((f) => f.key === key)
-          );
-        })
-      );
+            return compareSearchValue(
+              data,
+              this.filter[key],
+              this.searchFields.find((f) => f.key === key)
+            );
+          })
+        );
 
       if (this.searchParam) {
         return filterArrayByTitleAndUuid(plans, this.searchParam);

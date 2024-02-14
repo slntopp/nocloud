@@ -214,8 +214,8 @@ export default {
     plans: [],
     headers: [
       { text: "", value: "data-table-expand" },
-      { text: "Name", value: "name" },
-      { text: "API name", value: "apiName" },
+      { text: "Title", value: "name" },
+      { text: "API title", value: "apiName" },
       { text: "Group", value: "group" },
       {
         text: "Payment",

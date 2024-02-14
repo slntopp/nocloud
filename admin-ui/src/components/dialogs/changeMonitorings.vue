@@ -44,7 +44,6 @@
 <script setup>
 import { onMounted, toRefs, ref } from "vue";
 import api from "@/api";
-import { formatSecondsToDate } from "@/functions";
 import { useStore } from "@/store";
 import DatePicker from "@/components/ui/datePicker.vue";
 
@@ -59,6 +58,20 @@ const isChangeAll = ref(true);
 const nextPaymentDates = ref({});
 const newAllDate = ref();
 
+function formatDate(timestamp) {
+  const date = new Date(timestamp * 1000);
+
+  const year = date.toUTCString().split(" ")[3];
+  let month = date.getUTCMonth() + 1;
+  let day = date.getUTCDate();
+
+  if (`${month}`.length < 2) month = `0${month}`;
+  if (`${day}`.length < 2) day = `0${day}`;
+
+  let result = `${year}-${month}-${day}`;
+  return result;
+}
+
 const setNextPaymentDate = () => {
   const data = JSON.parse(JSON.stringify(template.value.data));
 
@@ -70,8 +83,7 @@ const setNextPaymentDate = () => {
         .replace("_next_payment_date", "")
         .replace("next_payment_date", "product");
       let value = +data[key];
-
-      value = formatSecondsToDate(value);
+      value = formatDate(value);
       monitorings[key] = {
         value: value,
         firstValue: value,

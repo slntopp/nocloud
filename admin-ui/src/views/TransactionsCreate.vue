@@ -166,38 +166,38 @@
             ></v-textarea>
           </v-row>
           <template v-else>
-            <div class="d-flex justify-space-between mt-3">
-              <v-subheader>Invoice items</v-subheader>
-              <v-btn @click="addInvoiceItem">Add</v-btn>
-            </div>
-            <v-card
-              outlined
-              class="pa-3 my-3"
-              color="background-light"
-              v-for="(item, index) in transaction.meta.items"
-              :key="index"
-            >
-              <div class="d-flex align-center">
-                <span>Item {{ index + 1 }}</span>
-                <v-btn class="ml-2" @click="deleteInvoiceItem(index)" icon>
-                  <v-icon>mdi-delete</v-icon>
-                </v-btn>
+            <div class="mt-2">
+              <div class="d-flex justify-space-between">
+                <v-subheader>Invoice items</v-subheader>
+                <v-btn @click="addInvoiceItem">Add</v-btn>
               </div>
-              <v-textarea
-                no-resize
-                label="Items description"
-                v-model="item.description"
-                :rules="generalRule"
+              <invoice-items-table
+                show-delete
+                :account="fullAccount"
+                :items="transaction.meta.items"
+                @click:delete="deleteInvoiceItem($event)"
               />
-              <v-text-field
-                type="number"
-                label="Amount"
-                :rules="generalRule"
-                :suffix="accountCurrency"
-                v-model.number="item.amount"
-              />
-            </v-card>
+            </div>
           </template>
+          <v-expansion-panels v-if="history.length" class="mt-4">
+            <v-expansion-panel>
+              <v-expansion-panel-header color="background-light">
+                <span class="text-h6">History</span>
+                <template v-slot:actions>
+                  <v-icon x-large> $expand </v-icon>
+                </template>
+              </v-expansion-panel-header>
+              <v-expansion-panel-content color="background-light">
+                <invoice-items-table
+                  sort-by="date"
+                  :account="fullAccount"
+                  :items="historyItems"
+                  readonly
+                  show-date
+                />
+              </v-expansion-panel-content>
+            </v-expansion-panel>
+          </v-expansion-panels>
           <v-expansion-panels class="mt-4">
             <v-expansion-panel>
               <v-expansion-panel-header color="background-light">
@@ -245,9 +245,10 @@ import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import JsonEditor from "@/components/JsonEditor.vue";
 import { defaultFilterObject } from "@/functions";
+import InvoiceItemsTable from "@/components/invoiceItemsTable.vue";
 
 export default {
-  components: { JsonEditor },
+  components: { InvoiceItemsTable, JsonEditor },
   name: "transactionsCreate-view",
   mixins: [snackbar],
   data: () => ({
@@ -307,6 +308,7 @@ export default {
     ],
     typeId: 4,
     isEdit: false,
+    history: [],
   }),
   methods: {
     defaultFilterObject,
@@ -461,7 +463,12 @@ export default {
               this.transaction.meta.transactionType.startsWith(t.value) &&
               t.amount.value === !!this.transaction.total
           )?.id || 2;
-      } catch {
+
+        const { records = [] } = await api.reports.list({
+          filters: { base: [this.$route.params.uuid] },
+        });
+        this.history = records;
+      } catch (err) {
         this.$router.back();
       }
     }
@@ -566,6 +573,20 @@ export default {
     },
     isPublishWithEmailAvailble() {
       return this.isInvoice;
+    },
+    historyItems() {
+      const items = [];
+      this.history.forEach((historyItem) => {
+        historyItem.meta.items?.forEach((i, index) =>
+          items.push({
+            ...i,
+            title: "Item " + (index + 1),
+            date: new Date(historyItem.exec * 1000).toLocaleString(),
+          })
+        );
+      });
+
+      return items;
     },
   },
   watch: {

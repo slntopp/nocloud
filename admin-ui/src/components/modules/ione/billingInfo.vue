@@ -15,8 +15,10 @@
           readonly
           label="Product name"
           :value="
-            template.billingPlan.products[template.product]?.title ||
-            template.product
+            !isDynamicPlan
+              ? template.billingPlan.products[template.product]?.title ||
+                template.product
+              : '-'
           "
           append-icon="mdi-pencil"
           @click:append="changeTariffDialog = true"
@@ -26,20 +28,15 @@
         <v-text-field
           readonly
           label="Date (create)"
-          :value="template.data.creation"
+          :value="formatSecondsToDate(template.data.creation)"
         />
       </v-col>
 
-      <v-col
-        v-if="
-          template.billingPlan.title.toLowerCase() !== 'payg' ||
-          isMonitoringEmpty
-        "
-      >
+      <v-col v-if="!isMonitoringEmpty">
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="date"
+          :value="!isDynamicPlan ? date : 'PAYG'"
           :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
           @click:append="changeDatesDialog = true"
         />
@@ -154,7 +151,7 @@ import NocloudTable from "@/components/table.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
-import InstancesPanels from "../../ui/instancesPanels.vue";
+import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh", "update"]);
@@ -187,6 +184,7 @@ const date = computed(() =>
 );
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const isMonitoringEmpty = computed(() => date.value === "-");
+const isDynamicPlan = computed(() => fullPlan.value?.kind === "DYNAMIC");
 const fullPlan = computed(() =>
   plans.value.find((p) => p.uuid === template.value.billingPlan.uuid)
 );

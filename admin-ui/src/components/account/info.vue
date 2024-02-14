@@ -1,6 +1,14 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <div style="position: absolute; top: 0; right: 25px; max-width: 45%">
+    <div
+      style="
+        position: absolute;
+        top: 0;
+        right: 25px;
+        max-width: 45%;
+        z-index: 100;
+      "
+    >
       <div>
         <v-chip class="ma-1" color="primary" outlined
           >Balance: {{ account.balance?.toFixed(2) || 0 }}
@@ -28,7 +36,7 @@
           Create instance
         </v-btn>
       </div>
-      <div class="d-flex justify-end mt-3 align-center">
+      <div class="d-flex justify-end mt-1 align-center">
         <v-dialog v-model="isChangeRegularPaymentOpen" max-width="500">
           <template v-slot:activator="{ on, attrs }">
             <v-btn
@@ -92,7 +100,55 @@
         />
       </v-col>
     </v-row>
-    <v-card-title class="px-0">Instances:</v-card-title>
+
+    <nocloud-expansion-panels
+      class="account-additional"
+      title="Additional info"
+    >
+      <v-row>
+        <v-col lg="3" md="4" sm="6">
+          <v-text-field readonly :value="account.data?.email" label="Email" />
+        </v-col>
+
+        <v-col lg="1" md="2" sm="4">
+          <v-text-field
+            readonly
+            :value="formatSecondsToDate(account.data?.date_create || 0)"
+            label="Date of create"
+          />
+        </v-col>
+
+        <v-col lg="1" md="2" sm="4">
+          <v-text-field
+            readonly
+            :value="account.data?.country"
+            label="Country"
+          />
+        </v-col>
+
+        <v-col lg="1" md="2" sm="4">
+          <v-text-field readonly :value="account.data?.city" label="City" />
+        </v-col>
+
+        <v-col lg="1" md="2" sm="4">
+          <v-text-field
+            readonly
+            :value="account.data?.address"
+            label="Address"
+          />
+        </v-col>
+
+        <v-col lg="1" md="2" sm="4">
+          <v-text-field
+            readonly
+            :value="account.data?.whmcs_id"
+            label="WHMCS id"
+          />
+        </v-col>
+      </v-row>
+    </nocloud-expansion-panels>
+
+    <v-card-title class="px-0 instances-panel">Instances:</v-card-title>
 
     <instances-table :items="accountInstances" :show-select="false" />
 
@@ -145,7 +201,6 @@
 
     <nocloud-table
       table-name="account-info"
-      class="mt-4"
       item-key="value"
       v-model="selected"
       :items="keys"
@@ -166,10 +221,13 @@ import nocloudTable from "@/components/table.vue";
 import InstancesTable from "@/components/instances_table.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
+import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
+import { formatSecondsToDate } from "@/functions";
 
 export default {
   name: "account-info",
   components: {
+    NocloudExpansionPanels,
     LoginInAccountIcon,
     ConfirmDialog,
     InstancesTable,
@@ -197,6 +255,7 @@ export default {
     isChangeRegularPaymentOpen: false,
   }),
   methods: {
+    formatSecondsToDate,
     navTitle(title) {
       if (title && this.navTitles[title]) {
         return this.navTitles[title];
@@ -407,5 +466,20 @@ export default {
   font-family: "Quicksand", sans-serif;
   line-height: 1em;
   margin-bottom: 10px;
+}
+
+.instances-panel {
+  @media (max-width: 1300px) {
+    margin-top: 25px;
+  }
+}
+
+.account-additional {
+  @media (max-width: 1600px) {
+    margin-top: 50px;
+  }
+  @media (max-width: 1250px) {
+    margin-top: 100px;
+  }
 }
 </style>
