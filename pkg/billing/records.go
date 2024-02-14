@@ -157,6 +157,7 @@ func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Rec
 		cur, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
 			"@transactions": schema.TRANSACTIONS_COL,
 			"@instances":    schema.INSTANCES_COL,
+			"instances":     schema.INSTANCES_COL,
 			"@services":     schema.SERVICES_COL,
 			"@records":      schema.RECORDS_COL,
 			"@accounts":     schema.ACCOUNTS_COL,
@@ -309,6 +310,7 @@ FOR service IN @@services // Iterate over Services
         FILTER !record.processed
         FILTER record.instance IN instances
 
+        LET inst = DOCUMENT(CONCAT(@instances, "/", record.instance))
 		LET bp = DOCUMENT(CONCAT(@billing_plans, "/", instance.billing_plan.uuid))
 		LET item = record.product == null ? LAST(FOR res in bp.resources FILTER res.key == record.resource return res) : bp.products[record.product]
 
