@@ -65,23 +65,23 @@ func (i *interceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 		case "/nocloud.health.InternalProbeService/Service":
 			return next(ctx, req)
 		case "/nocloud.health.HealthService/Probe":
-			probe := req.Any().(connect.Request[healthpb.ProbeRequest])
-			if probe.Msg.GetProbeType() == "PING" {
+			probe := req.Any().(*healthpb.ProbeRequest)
+			if probe.GetProbeType() == "PING" {
 				return next(ctx, req)
 			}
 		case "/nocloud.services_providers.ServicesProvidersService/List":
-			probe := req.Any().(connect.Request[sppb.ListRequest])
-			if probe.Msg.GetAnonymously() {
+			probe := req.Any().(*sppb.ListRequest)
+			if probe.GetAnonymously() {
 				return next(ctx, req)
 			}
 		case "/nocloud.services_providers.ShowcasesService/List":
-			probe := req.Any().(connect.Request[sppb.ListRequest])
-			if probe.Msg.GetAnonymously() {
+			probe := req.Any().(*sppb.ListRequest)
+			if probe.GetAnonymously() {
 				return next(ctx, req)
 			}
 		case "/nocloud.billing.BillingService/ListPlans":
-			probe := req.Any().(connect.Request[billpb.ListRequest])
-			if probe.Msg.GetAnonymously() {
+			probe := req.Any().(*billpb.ListRequest)
+			if probe.GetAnonymously() {
 				return next(ctx, req)
 			}
 		case "/nocloud.billing.CurrencyService/GetCurrencies":
