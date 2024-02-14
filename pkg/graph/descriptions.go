@@ -3,7 +3,7 @@ package graph
 import (
 	"context"
 	"github.com/arangodb/go-driver"
-	pb "github.com/slntopp/nocloud-proto/billing"
+	pb "github.com/slntopp/nocloud-proto/billing/descriptions"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )

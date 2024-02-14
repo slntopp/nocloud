@@ -5,7 +5,7 @@ import (
 	"context"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
-	pb "github.com/slntopp/nocloud-proto/billing"
+	pb "github.com/slntopp/nocloud-proto/billing/descriptions"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"

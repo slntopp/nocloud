@@ -21,6 +21,7 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	statuspb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -117,7 +118,7 @@ func (s *BillingServiceServer) migrate() {
 			desc, ok := res.GetMeta()["description"]
 
 			if res.GetDescriptionId() == "" && ok {
-				create, err := s.descriptions.Create(ctx, &pb.Description{
+				create, err := s.descriptions.Create(ctx, &dpb.Description{
 					Text: desc.GetStringValue(),
 				})
 				if err != nil {
@@ -137,7 +138,7 @@ func (s *BillingServiceServer) migrate() {
 			desc, ok := prod.GetMeta()["description"]
 
 			if prod.GetDescriptionId() == "" && ok {
-				create, err := s.descriptions.Create(ctx, &pb.Description{
+				create, err := s.descriptions.Create(ctx, &dpb.Description{
 					Text: desc.GetStringValue(),
 				})
 				if err != nil {
