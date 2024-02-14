@@ -311,8 +311,8 @@ FOR service IN @@services // Iterate over Services
         FILTER record.instance IN instances
 
         LET inst = DOCUMENT(CONCAT(@instances, "/", record.instance))
-		LET bp = DOCUMENT(CONCAT(@billing_plans, "/", instance.billing_plan.uuid))
-		LET resources = bp.resources == null ? [] || bp.resources
+		LET bp = DOCUMENT(CONCAT(@billing_plans, "/", inst.billing_plan.uuid))
+		LET resources = bp.resources == null ? [] : bp.resources
 		LET item = record.product == null ? LAST(FOR res in resources FILTER res.key == record.resource return res) : bp.products[record.product]
 
 		LET rate = PRODUCT(
@@ -323,8 +323,6 @@ FOR service IN @@services // Iterate over Services
 				RETURN edge.rate
 		)
         LET cost = record.total * rate * item.price
-        
-		LET total = record.total * rate
             UPDATE record._key WITH { 
 				processed: true, 
 				cost: cost,
