@@ -48,6 +48,7 @@ type BillingServiceServer struct {
 	records      graph.RecordsController
 	currencies   graph.CurrencyController
 	accounts     graph.AccountsController
+	descriptions *graph.DescriptionsController
 
 	db driver.Database
 
@@ -58,7 +59,7 @@ type BillingServiceServer struct {
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingServiceServer {
 	log := logger.Named("BillingService")
-	return &BillingServiceServer{
+	s := &BillingServiceServer{
 		log:          log,
 		nss:          graph.NewNamespacesController(log, db),
 		plans:        graph.NewBillingPlansController(log.Named("PlansController"), db),
@@ -67,6 +68,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 		currencies:   graph.NewCurrencyController(log.Named("CurrenciesController"), db),
 		accounts:     graph.NewAccountsController(log.Named("AccountsController"), db),
 		invoices:     graph.NewInvoicesController(log.Named("InvoicesController"), db),
+		descriptions: graph.NewDescriptionsController(log, db),
 		db:           db,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
@@ -89,6 +91,74 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 			},
 		},
 	}
+
+	s.migrate()
+
+	return s
+}
+
+func (s *BillingServiceServer) migrate() {
+	ctx := context.Background()
+	log := s.log.Named("migrate")
+	plans, err := s.plans.List(ctx, "")
+	if err != nil {
+		log.Error("failed to list plans", zap.Error(err))
+		return
+	}
+
+	for _, plan := range plans {
+		shouldUpdate := false
+
+		for _, res := range plan.GetResources() {
+			if res.GetMeta() == nil {
+				continue
+			}
+
+			desc, ok := res.GetMeta()["description"]
+
+			if res.GetDescriptionId() == "" && ok {
+				create, err := s.descriptions.Create(ctx, &pb.Description{
+					Text: desc.GetStringValue(),
+				})
+				if err != nil {
+					log.Error("failed to create description", zap.Error(err))
+					return
+				}
+				res.DescriptionId = create.GetUuid()
+				shouldUpdate = true
+			}
+		}
+
+		for _, prod := range plan.GetProducts() {
+			if prod.GetMeta() == nil {
+				continue
+			}
+
+			desc, ok := prod.GetMeta()["description"]
+
+			if prod.GetDescriptionId() == "" && ok {
+				create, err := s.descriptions.Create(ctx, &pb.Description{
+					Text: desc.GetStringValue(),
+				})
+				if err != nil {
+					log.Error("failed to create description", zap.Error(err))
+					return
+				}
+				prod.DescriptionId = create.GetUuid()
+				shouldUpdate = true
+			}
+		}
+
+		if shouldUpdate {
+			_, err := s.plans.Update(ctx, plan.Plan)
+			if err != nil {
+				log.Error("Failed to update plan")
+				return
+			}
+		}
+	}
+	log.Info("Finished migration")
+	return
 }
 
 func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Request[pb.Plan]) (*connect.Response[pb.Plan], error) {

@@ -76,7 +76,7 @@ func (c *DescriptionsController) Get(ctx context.Context, uuid string) (*pb.Desc
 func (c *DescriptionsController) List(ctx context.Context) ([]*pb.Description, error) {
 	log := c.log.Named("Get")
 
-	query := "LET descs = (FOR d in @@descriptions RETURN d)"
+	query := "LET descs = (FOR d in @@descriptions RETURN d) RETURN descs"
 	vars := map[string]any{
 		"@descriptions": schema.DESCRIPTIONS_COL,
 	}
