@@ -158,7 +158,6 @@ func (s *BillingServiceServer) migrate() {
 		}
 	}
 	log.Info("Finished migration")
-	return
 }
 
 func (s *BillingServiceServer) CreatePlan(ctx context.Context, req *connect.Request[pb.Plan]) (*connect.Response[pb.Plan], error) {
