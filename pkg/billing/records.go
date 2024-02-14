@@ -312,7 +312,8 @@ FOR service IN @@services // Iterate over Services
 
         LET inst = DOCUMENT(CONCAT(@instances, "/", record.instance))
 		LET bp = DOCUMENT(CONCAT(@billing_plans, "/", instance.billing_plan.uuid))
-		LET item = record.product == null ? LAST(FOR res in bp.resources FILTER res.key == record.resource return res) : bp.products[record.product]
+		LET resources = bp.resources == null ? [] || bp.resources
+		LET item = record.product == null ? LAST(FOR res in resources FILTER res.key == record.resource return res) : bp.products[record.product]
 
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND SHORTEST_PATH
