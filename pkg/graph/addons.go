@@ -77,7 +77,7 @@ func (c *AddonsController) Get(ctx context.Context, uuid string) (*pb.Addon, err
 func (c *AddonsController) List(ctx context.Context, group string) ([]*pb.Addon, error) {
 	log := c.log.Named("Get")
 
-	query := "LET adds = (FOR a in @@addons %s RETURN a) RETURN adds"
+	query := "LET adds = (FOR a in @@addons %s RETURN merge(a, {uuid: a._key})) RETURN adds"
 	vars := map[string]any{
 		"@addons": schema.ADDONS_COL,
 	}
