@@ -39,7 +39,7 @@ func (s *AddonsServer) Create(ctx context.Context, r *connect.Request[pb.Addon])
 
 	req := r.Msg
 
-	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
@@ -60,7 +60,7 @@ func (s *AddonsServer) Update(ctx context.Context, r *connect.Request[pb.Addon])
 
 	req := r.Msg
 
-	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
@@ -88,7 +88,7 @@ func (s *AddonsServer) Get(ctx context.Context, r *connect.Request[pb.Addon]) (*
 		return nil, err
 	}
 
-	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) && !addon.GetPublic() {
+	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) && !addon.GetPublic() {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
@@ -109,7 +109,7 @@ func (s *AddonsServer) List(ctx context.Context, r *connect.Request[pb.ListAddon
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
-	if graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
+	if graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		resp := connect.NewResponse(&pb.ListAddonsResponse{Addons: addons})
 		return resp, nil
 	}
@@ -131,7 +131,7 @@ func (s *AddonsServer) Delete(ctx context.Context, r *connect.Request[pb.Addon])
 
 	req := r.Msg
 
-	if !graph.HasAccess(ctx, s.db, requestor, schema.ROOT_NAMESPACE_KEY, access.Level_ADMIN) {
+	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
 
