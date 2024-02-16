@@ -347,6 +347,30 @@ const routes = [
       requireLogin: true,
     },
   },
+  {
+    path: "/addons",
+    name: "Addons",
+    component: () => import("../views/Addons.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/addons/create",
+    name: "Addon create",
+    component: () => import("../views/AddonCreate.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
+  {
+    path: "/addons/:title",
+    name: "Addon page",
+    component: () => import("../views/AddonPage.vue"),
+    meta: {
+      requireLogin: true,
+    },
+  },
 ];
 
 const router = new VueRouter({
