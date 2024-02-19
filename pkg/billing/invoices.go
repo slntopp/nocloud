@@ -88,7 +88,7 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 			vars["count"] = limit
 		}
 	}
-	query += ` RETURN t`
+	query += ` RETURN merge(t, {uuid: t._key})`
 
 	log.Debug("Ready to retrieve transactions", zap.String("query", query), zap.Any("vars", vars))
 

@@ -65,11 +65,13 @@ func (c *AddonsController) Get(ctx context.Context, uuid string) (*pb.Addon, err
 
 	var addon pb.Addon
 
-	_, err := c.col.ReadDocument(ctx, uuid, &addon)
+	meta, err := c.col.ReadDocument(ctx, uuid, &addon)
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
+
+	addon.Uuid = meta.Key
 
 	return &addon, nil
 }

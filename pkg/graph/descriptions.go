@@ -64,11 +64,13 @@ func (c *DescriptionsController) Get(ctx context.Context, uuid string) (*pb.Desc
 
 	var description pb.Description
 
-	_, err := c.col.ReadDocument(ctx, uuid, &description)
+	meta, err := c.col.ReadDocument(ctx, uuid, &description)
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
+
+	description.Uuid = meta.Key
 
 	return &description, nil
 }
