@@ -4,20 +4,15 @@ export default {
   namespaced: true,
   state: {
     addons: [],
+    one: null,
     loading: false,
   },
   mutations: {
     setAddons(state, addons) {
       state.addons = addons;
     },
-    pushAddon(state, addon) {
-      const index = state.addons.findIndex((a) => a.uuid === addon.uuid);
-
-      if (index !== -1) {
-        state.addons[index] = addon;
-      } else {
-        state.addons.push(addon);
-      }
+    setOne(state, addon) {
+      state.one = addon;
     },
     setLoading(state, data) {
       state.loading = data;
@@ -42,27 +37,30 @@ export default {
           });
       });
     },
-    // fetchById({ commit }, id) {
-    //     commit("setLoading", true);
-    //     return new Promise((resolve, reject) => {
-    //         api.accounts
-    //             .get(id)
-    //             .then((response) => {
-    //                 commit("pushAccount", response);
-    //                 resolve(response);
-    //             })
-    //             .catch((error) => {
-    //                 reject(error);
-    //             })
-    //             .finally(() => {
-    //                 commit("setLoading", false);
-    //             });
-    //     });
-    // },
+    fetchById({ commit }, id) {
+      commit("setLoading", true);
+      return new Promise((resolve, reject) => {
+        api
+          .get(`addons/${id}`)
+          .then((response) => {
+            commit("setOne", response);
+            resolve(response);
+          })
+          .catch((error) => {
+            reject(error);
+          })
+          .finally(() => {
+            commit("setLoading", false);
+          });
+      });
+    },
   },
   getters: {
     all(state) {
       return state.addons;
+    },
+    one(state) {
+      return state.one;
     },
     isLoading(state) {
       return state.loading;
