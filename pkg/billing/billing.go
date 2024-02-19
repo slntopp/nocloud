@@ -336,11 +336,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 
 	result := make([]*pb.Plan, 0)
 	for _, plan := range plans {
-		if plan.GetStatus() == statuspb.NoCloudStatus_DEL && req.GetShowDeleted() && ok {
-			result = append(result, plan.Plan)
-			continue
-		}
-		if plan.Public {
+		if plan.Public && (plan.GetStatus() != statuspb.NoCloudStatus_DEL || req.GetShowDeleted()) {
 			result = append(result, plan.Plan)
 			continue
 		}
@@ -348,6 +344,9 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 			continue
 		}
 		if !ok {
+			continue
+		}
+		if !(plan.GetStatus() == statuspb.NoCloudStatus_DEL && req.GetShowDeleted()) {
 			continue
 		}
 
