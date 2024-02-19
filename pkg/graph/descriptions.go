@@ -38,7 +38,7 @@ func (c *DescriptionsController) Create(ctx context.Context, description *pb.Des
 func (c *DescriptionsController) Update(ctx context.Context, description *pb.Description) (*pb.Description, error) {
 	log := c.log.Named("Update")
 
-	_, err := c.col.UpdateDocument(ctx, description.GetUuid(), description)
+	_, err := c.col.ReplaceDocument(ctx, description.GetUuid(), description)
 	if err != nil {
 		log.Error("Failed to update document", zap.Error(err))
 		return nil, err

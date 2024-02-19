@@ -39,7 +39,7 @@ func (c *AddonsController) Create(ctx context.Context, addon *pb.Addon) (*pb.Add
 func (c *AddonsController) Update(ctx context.Context, addon *pb.Addon) (*pb.Addon, error) {
 	log := c.log.Named("Update")
 
-	_, err := c.col.UpdateDocument(ctx, addon.GetUuid(), addon)
+	_, err := c.col.ReplaceDocument(ctx, addon.GetUuid(), addon)
 	if err != nil {
 		log.Error("Failed to update document", zap.Error(err))
 		return nil, err
