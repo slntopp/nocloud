@@ -1,24 +1,33 @@
 <template>
   <div class="pa-4">
     <div class="d-flex mb-5" v-if="!isEdit">
-      <h1 class="page__title">Create addon group</h1>
+      <h1 class="page__title">Create addon</h1>
     </div>
     <v-form v-model="isValid" ref="addonCreateForm">
       <v-row>
-        <v-col cols="3" class="align-center d-flex">
-          <v-subheader>Group title</v-subheader>
+        <v-col cols="1" class="align-center d-flex">
+          <v-subheader>Title</v-subheader>
         </v-col>
         <v-col cols="3" class="align-center d-flex">
           <v-text-field
             label="Title"
-            v-model="group.title"
+            v-model="newAddon.title"
             :rules="[rules.required]"
           />
+        </v-col>
+        <v-col cols="1" class="align-center d-flex">
+          <v-subheader>Group</v-subheader>
+        </v-col>
+        <v-col cols="3" class="align-center d-flex">
+          <v-text-field label="Group" v-model="newAddon.group" />
+        </v-col>
+        <v-col cols="2" class="align-center d-flex">
+          <v-switch label="Public" v-model="newAddon.public" />
         </v-col>
       </v-row>
       <v-divider />
       <v-row class="my-3 d-flex align-center">
-        <v-subheader>Addons</v-subheader>
+        <v-subheader>Prices</v-subheader>
         <v-btn @click="addAddon" class="mx-1">Add</v-btn>
         <v-btn
           @click="deleteSelected"
@@ -30,16 +39,11 @@
       <nocloud-table
         show-select
         v-model="selected"
-        sort-by="uuid"
+        sort-by="id"
+        item-key="id"
         :headers="headers"
-        :items="group.addons"
+        :items="newAddon.periods"
       >
-        <template v-slot:[`item.public`]="{ item }">
-          <v-switch v-model="item.public" />
-        </template>
-        <template v-slot:[`item.title`]="{ item }">
-          <v-text-field :rules="[rules.required]" v-model="item.title" />
-        </template>
         <template v-slot:[`item.price`]="{ item }">
           <v-text-field
             :rules="[rules.required]"
@@ -68,52 +72,54 @@
 </template>
 
 <script setup>
-import { ref, toRefs, watch } from "vue";
+import { onMounted, ref, toRefs, watch } from "vue";
 import NocloudTable from "@/components/table.vue";
 import dateField from "@/components/date.vue";
 import { useStore } from "@/store";
-import { getTimestamp } from "@/functions";
 import api from "@/api";
 import { useRouter } from "vue-router/composables";
+import { getFullDate, getTimestamp } from "@/functions";
 
 const props = defineProps({
-  addonGroup: {},
+  addon: {},
   isEdit: { type: Boolean, default: false },
 });
-const { addonGroup, isEdit } = toRefs(props);
+const { addon, isEdit } = toRefs(props);
 
 const store = useStore();
 const router = useRouter();
 
-const group = ref({ title: "", addons: [] });
+const newAddon = ref({ title: "", periods: [], group: "", public: true });
 const isSaveLoading = ref(false);
 const isValid = ref(false);
 const selected = ref([]);
 const addonCreateForm = ref(null);
 
 const headers = ref([
-  { text: "Title", value: "title", sortable: false },
-  { text: "Price", value: "price", sortable: false },
   { text: "Period", value: "period", sortable: false },
-  { text: "Public", value: "public", sortable: false },
+  { text: "Price", value: "price", sortable: false },
 ]);
 
 const rules = ref({ required: (v) => !!v || "This field is required!" });
 
+onMounted(() => {
+  if (isEdit.value) {
+    setAddon(addon.value);
+  }
+});
+
 const addAddon = () => {
-  group.value.addons.push({
-    title: "",
+  newAddon.value.periods.push({
     price: 0,
     period: null,
-    public: true,
-    uuid: group.value.addons.length + 1,
+    id: newAddon.value.periods.length + 1,
   });
 };
 
 const deleteSelected = () => {
-  group.value.addons = group.value.addons
-    .filter((a) => !selected.value.find((s) => s.uuid === a.uuid))
-    .map((a, ind) => ({ ...a, uuid: ind }));
+  newAddon.value.periods = newAddon.value.periods
+    .filter((a) => !selected.value.find((s) => s.id === a.id))
+    .map((a, ind) => ({ ...a, id: ind }));
   selected.value = [];
 };
 
@@ -124,15 +130,20 @@ const saveGroup = async () => {
   isSaveLoading.value = true;
 
   try {
-    const addons = group.value.addons.map((a) => ({
-      ...a,
-      group: group.value.title,
-      period: getTimestamp(a.period),
-      uuid: undefined,
-    }));
+    const dto = {
+      ...newAddon.value,
+      periods: newAddon.value.periods.reduce((acc, a) => {
+        acc[getTimestamp(a.period)] = a.price;
+        return acc;
+      }, {}),
+    };
 
-    await Promise.all(addons.map((a) => api.put("/addons", a)));
-    router.push({ name: "Addons" });
+    if (!isEdit.value) {
+      await api.put("/addons", dto);
+      router.push({ name: "Addons" });
+    } else {
+      await api.patch("/addons/" + dto.uuid, dto);
+    }
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
@@ -140,8 +151,19 @@ const saveGroup = async () => {
   }
 };
 
-watch(addonGroup, () => {
-  group.value = { ...addonGroup.value };
+const setAddon = (val) => {
+  newAddon.value = {
+    ...val,
+    periods: Object.keys(val.periods).map((key, ind) => ({
+      period: getFullDate(key),
+      price: val.periods[key],
+      id: ind,
+    })),
+  };
+};
+
+watch(addon, (val) => {
+  setAddon(val);
 });
 </script>
 

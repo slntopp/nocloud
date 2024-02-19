@@ -1,46 +1,63 @@
 <template>
-  <nocloud-table
-    table-name="addons-products"
-    :loading="isPlansLoading"
-    :headers="planHeaders"
-    :items="items"
-    show-expand
-    item-key="id"
-    :show-select="false"
-    :expanded.sync="expanded"
-
-  >
-    <template v-slot:expanded-item="{ headers, item }">
-      <td :colspan="headers.length" style="padding: 0">
-        <nocloud-table
-          :server-items-length="-1"
-          hide-default-footer
-          :show-select="false"
-          :headers="productHeaders"
-          :items="item.children"
-        >
-          <template v-slot:[`item.enabled`]="{ item }">
-            <v-switch v-model="item.enabled"></v-switch>
-          </template>
-        </nocloud-table>
-      </td>
-    </template>
-  </nocloud-table>
+  <v-card>
+    <nocloud-table
+      table-name="addons-products-table"
+      :loading="isPlansLoading"
+      :headers="planHeaders"
+      :items="items"
+      show-expand
+      item-key="id"
+      :show-select="false"
+      :expanded.sync="expanded"
+    >
+      <template v-slot:[`item.enabled`]="{ item }">
+        <v-skeleton-loader v-if="updatingPlanUuid === item.uuid" type="text" />
+        <v-switch
+          v-else
+          dense
+          hide-details
+          :disabled="!!updatingPlanUuid"
+          :input-value="item.enabled"
+          @change="changePlanAddons(item, $event)"
+        />
+      </template>
+      <template v-slot:expanded-item="{ headers, item }">
+        <td :colspan="headers.length" style="padding: 0">
+          <nocloud-table
+            :server-items-length="-1"
+            hide-default-footer
+            :show-select="false"
+            :headers="productHeaders"
+            :items="item.children"
+          >
+          </nocloud-table>
+        </td>
+      </template>
+    </nocloud-table>
+  </v-card>
 </template>
 
 <script setup>
 import { useStore } from "@/store";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, toRefs } from "vue";
 import NocloudTable from "@/components/table.vue";
+import api from "@/api";
+
+const props = defineProps({
+  addon: {},
+});
+const { addon } = toRefs(props);
 
 const store = useStore();
 
-const planHeaders = ref([{ text: "Name", value: "name" }]);
-const productHeaders = ref([
+const expanded = ref([]);
+const updatingPlanUuid = ref("");
+
+const planHeaders = ref([
   { text: "Name", value: "name" },
   { text: "Enabled", value: "enabled" },
 ]);
-const expanded = ref([]);
+const productHeaders = ref([{ text: "Name", value: "name" }]);
 
 onMounted(() => {
   store.dispatch("plans/fetch");
@@ -55,9 +72,34 @@ const items = computed(() => {
       id: key,
       name: plan.products[key].title,
     }));
-    return { id: plan.uuid, name: plan.title, children };
+    return {
+      id: plan.uuid,
+      name: plan.title,
+      enabled: plan.addons.includes(addon.value.uuid),
+      children,
+    };
   });
 });
+
+const changePlanAddons = async (item, val) => {
+  try {
+    const plan = plans.value.find((p) => p.uuid === item.id);
+
+    updatingPlanUuid.value = plan.uuid;
+    if (val) {
+      plan.addons.push(addon.value.uuid);
+    } else {
+      plan.addons = plan.addons.filter(
+        (addonId) => addonId !== addon.value.uuid
+      );
+    }
+    await api.plans.update(plan.uuid, plan);
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", { message: e.message });
+  } finally {
+    updatingPlanUuid.value = "";
+  }
+};
 </script>
 
 <script>

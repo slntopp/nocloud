@@ -364,7 +364,7 @@ const routes = [
     },
   },
   {
-    path: "/addons/:title",
+    path: "/addons/:uuid",
     name: "Addon page",
     component: () => import("../views/AddonPage.vue"),
     meta: {

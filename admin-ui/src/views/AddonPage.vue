@@ -2,9 +2,9 @@
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
       <router-link :to="{ name: 'Accounts' }">{{
-        navTitle("Accounts")
+        navTitle("Addons")
       }}</router-link>
-      / {{ groupTitle }}
+      / {{ addonTitle || "Not found" }}
     </h1>
     <v-tabs
       class="rounded-t-lg"
@@ -19,11 +19,11 @@
       v-model="selectedTab"
     >
       <v-tab-item v-for="(tab, index) in tabItems" :key="tab.title">
-        <v-progress-linear indeterminate class="pt-2" v-if="addonsLoading" />
+        <v-progress-linear indeterminate class="pt-2" v-if="isAddonLoading" />
         <component
-          v-if="addonGroup && index === selectedTab"
+          v-if="addon && index === selectedTab"
           :is="tab.component"
-          :addon-group="addonGroup"
+          :addon="addon"
           is-edit
         />
       </v-tab-item>
@@ -36,7 +36,6 @@ import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router/composables";
 import { useStore } from "@/store";
 import config from "@/config.js";
-import { getFullDate } from "@/functions";
 
 import AddonCreate from "@/views/AddonCreate.vue";
 import AddonProducts from "@/components/addons/products.vue";
@@ -47,24 +46,22 @@ const route = useRoute();
 const selectedTab = ref(0);
 const navTitles = ref(config.navTitles ?? {});
 
-function navTitle(title) {
-  if (title && navTitles.value[title]) {
-    return navTitles.value[title];
-  }
+const addon = computed(() => store.getters["addons/one"]);
+const addonTitle = computed(() => addon.value?.title);
 
-  return title;
-}
+onMounted(() => {
+  store.commit("reloadBtn/setCallback", {
+    type: "addons/fetchById",
+    params: route.params?.uuid,
+  });
+  selectedTab.value = route.query.tab || 0;
 
-const addonGroup = computed(() => {
-  const addons = store.getters["addons/all"]
-    .filter(({ group }) => group === groupTitle.value)?.map((a) => ({ ...a, period: getFullDate(a.period) }));
-
-  return { addons, title: groupTitle.value };
+  store
+    .dispatch("addons/fetchById", route.params.uuid)
+    .then(() => (document.title = `${addonTitle.value} | NoCloud`));
 });
 
-const groupTitle = computed(() => route.params.title);
-
-const addonsLoading = computed(() => {
+const isAddonLoading = computed(() => {
   return store.getters["addons/isLoading"];
 });
 
@@ -79,16 +76,13 @@ const tabItems = computed(() => [
   },
 ]);
 
-onMounted(() => {
-  store.commit("reloadBtn/setCallback", {
-    type: "addons/fetch",
-  });
-  selectedTab.value = route.query.tab || 0;
-});
+function navTitle(title) {
+  if (title && navTitles.value[title]) {
+    return navTitles.value[title];
+  }
 
-store.dispatch("addons/fetch").then(() => {
-  document.title = `${groupTitle.value} | NoCloud`;
-});
+  return title;
+}
 </script>
 
 <script>
