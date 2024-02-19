@@ -2,8 +2,17 @@
   <div class="pa-4">
     <div class="d-flex align-center mb-5">
       <v-btn class="mr-2" :to="{ name: 'Addon create' }"> Create </v-btn>
+      <v-btn
+        class="mr-2"
+        :loading="isDeleteLoading"
+        :disabled="!selectedAddons.length"
+        @click="deleteSelectedAddons"
+      >
+        Delete
+      </v-btn>
     </div>
     <nocloud-table
+      v-model="selectedAddons"
       :loading="isLoading"
       :items="addons"
       :headers="headers"
@@ -44,6 +53,8 @@ import api from "@/api";
 const store = useStore();
 
 const updatingAddonUuid = ref("");
+const selectedAddons = ref([]);
+const isDeleteLoading = ref(false);
 
 const headers = ref([
   { text: "UUID", value: "uuid" },
@@ -53,11 +64,15 @@ const headers = ref([
 ]);
 
 onMounted(() => {
-  store.dispatch("addons/fetch");
+  fetchAddons();
 });
 
 const isLoading = computed(() => store.getters["addons/isLoading"]);
 const addons = computed(() => store.getters["addons/all"]);
+
+const fetchAddons = () => {
+  store.dispatch("addons/fetch");
+};
 
 const updateAddon = async (item, { key, value }) => {
   try {
@@ -68,6 +83,20 @@ const updateAddon = async (item, { key, value }) => {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
     updatingAddonUuid.value = "";
+  }
+};
+
+const deleteSelectedAddons = async () => {
+  try {
+    isDeleteLoading.value = true;
+    await Promise.all(
+      selectedAddons.value.map((addon) => api.delete("/addons/" + addon.uuid))
+    );
+    fetchAddons();
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", { message: e.message });
+  } finally {
+    isDeleteLoading.value = false;
   }
 };
 </script>
