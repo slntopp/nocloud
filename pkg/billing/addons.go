@@ -141,5 +141,5 @@ func (s *AddonsServer) Delete(ctx context.Context, r *connect.Request[pb.Addon])
 		return nil, err
 	}
 
-	return nil, nil
+	return connect.NewResponse(req), nil
 }

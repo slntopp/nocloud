@@ -105,5 +105,5 @@ func (s *DescriptionsServer) Delete(ctx context.Context, r *connect.Request[pb.D
 		return nil, err
 	}
 
-	return nil, nil
+	return connect.NewResponse(r.Msg), nil
 }
