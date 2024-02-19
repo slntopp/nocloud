@@ -25,6 +25,9 @@
           <v-switch label="Public" v-model="newAddon.public" />
         </v-col>
       </v-row>
+      <nocloud-expansion-panels title="Description" class="mb-5">
+        <rich-editor class="pa-5" v-model="newAddon.description" />
+      </nocloud-expansion-panels>
       <v-divider />
       <v-row class="my-3 d-flex align-center">
         <v-subheader>Prices</v-subheader>
@@ -79,6 +82,8 @@ import { useStore } from "@/store";
 import api from "@/api";
 import { useRouter } from "vue-router/composables";
 import { getFullDate, getTimestamp } from "@/functions";
+import RichEditor from "@/components/ui/richEditor.vue";
+import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 
 const props = defineProps({
   addon: {},
@@ -89,7 +94,13 @@ const { addon, isEdit } = toRefs(props);
 const store = useStore();
 const router = useRouter();
 
-const newAddon = ref({ title: "", periods: [], group: "", public: true });
+const newAddon = ref({
+  title: "",
+  periods: [],
+  group: "",
+  public: true,
+  description: "",
+});
 const isSaveLoading = ref(false);
 const isValid = ref(false);
 const selected = ref([]);
@@ -132,6 +143,7 @@ const saveGroup = async () => {
   try {
     const dto = {
       ...newAddon.value,
+      description: undefined,
       periods: newAddon.value.periods.reduce((acc, a) => {
         acc[getTimestamp(a.period)] = a.price;
         return acc;
@@ -139,9 +151,16 @@ const saveGroup = async () => {
     };
 
     if (!isEdit.value) {
+      const description = await api.put("/descs", {
+        text: newAddon.value.description,
+      });
+      dto.descriptionId = description.uuid;
       await api.put("/addons", dto);
       router.push({ name: "Addons" });
     } else {
+      await api.patch("/descs/" + newAddon.value.descriptionId, {
+        text: newAddon.value.description,
+      });
       await api.patch("/addons/" + dto.uuid, dto);
     }
   } catch (e) {

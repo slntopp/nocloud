@@ -39,6 +39,7 @@ import config from "@/config.js";
 
 import AddonCreate from "@/views/AddonCreate.vue";
 import AddonProducts from "@/components/addons/products.vue";
+import api from "@/api";
 
 const store = useStore();
 const route = useRoute();
@@ -49,16 +50,22 @@ const navTitles = ref(config.navTitles ?? {});
 const addon = computed(() => store.getters["addons/one"]);
 const addonTitle = computed(() => addon.value?.title);
 
-onMounted(() => {
+onMounted(async () => {
   store.commit("reloadBtn/setCallback", {
     type: "addons/fetchById",
     params: route.params?.uuid,
   });
   selectedTab.value = route.query.tab || 0;
 
-  store
-    .dispatch("addons/fetchById", route.params.uuid)
-    .then(() => (document.title = `${addonTitle.value} | NoCloud`));
+  try {
+    await store.dispatch("addons/fetchById", route.params.uuid);
+    document.title = `${addonTitle.value} | NoCloud`;
+
+    const desc = await api.get("/descs/" + addon.value.descriptionId);
+    store.commit("addons/setOne", { ...addon.value, description: desc.text });
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", { message: e.message });
+  }
 });
 
 const isAddonLoading = computed(() => {
