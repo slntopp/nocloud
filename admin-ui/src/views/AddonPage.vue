@@ -1,7 +1,7 @@
 <template>
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
-      <router-link :to="{ name: 'Accounts' }">{{
+      <router-link :to="{ name: 'Addons' }">{{
         navTitle("Addons")
       }}</router-link>
       / {{ addonTitle || "Not found" }}

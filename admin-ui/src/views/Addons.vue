@@ -25,18 +25,14 @@
       </template>
 
       <template v-slot:[`item.public`]="{ item }">
-        <div class="d-flex justify-center align-center change_public">
-          <v-skeleton-loader
-            v-if="updatingAddonUuid === item.uuid"
-            type="text"
-          />
+        <div class="change_public">
           <v-switch
-            v-else
-            dense
-            hide-details
-            :disabled="!!updatingAddonUuid"
-            :input-value="item.public"
-            @change="updateAddon(item, { key: 'public', value: $event })"
+              :loading="updatingAddonUuid === item.uuid"
+              dense
+              hide-details
+              :disabled="!!updatingAddonUuid"
+              :input-value="item.public"
+              @change="updateAddon(item, { key: 'public', value: $event })"
           />
         </div>
       </template>
@@ -104,4 +100,9 @@ const deleteSelectedAddons = async () => {
 <script>
 export default { name: "AddonsView" };
 </script>
-<style scoped></style>
+
+<style>
+.change_public .v-input {
+  margin-top: 0px !important;
+}
+</style>
