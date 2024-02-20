@@ -25,13 +25,9 @@
       </template>
 
       <template v-slot:[`item.public`]="{ item }">
-        <div class="d-flex justify-center align-center change_public">
-          <v-skeleton-loader
-            v-if="updatingAddonUuid === item.uuid"
-            type="text"
-          />
+        <div class="change_public">
           <v-switch
-            v-else
+            :loading="updatingAddonUuid === item.uuid"
             dense
             hide-details
             :disabled="!!updatingAddonUuid"
@@ -68,7 +64,15 @@ onMounted(() => {
 });
 
 const isLoading = computed(() => store.getters["addons/isLoading"]);
-const addons = computed(() => store.getters["addons/all"]);
+const searchParam = computed(() => store.getters["appSearch/param"]);
+const addons = computed(() =>
+  store.getters["addons/all"].filter(
+    (a) =>
+      !searchParam.value ||
+      a.title.toLowerCase().includes(searchParam.value.toLowerCase()) ||
+      a.group.toLowerCase().includes(searchParam.value.toLowerCase())
+  )
+);
 
 const fetchAddons = () => {
   store.dispatch("addons/fetch");
@@ -104,4 +108,9 @@ const deleteSelectedAddons = async () => {
 <script>
 export default { name: "AddonsView" };
 </script>
-<style scoped></style>
+
+<style>
+.change_public .v-input {
+  margin-top: 0px !important;
+}
+</style>

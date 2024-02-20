@@ -1,10 +1,10 @@
 <template>
   <div class="pa-4 h-100">
     <h1 class="page__title mb-5">
-      <router-link :to="{ name: 'Addons' }">{{
-        navTitle("Addons")
+      <router-link :to="{ name: 'Invoices' }">{{
+        navTitle("Invoices")
       }}</router-link>
-      / {{ addonTitle || "Not found" }}
+      / {{ invoiceTitle || "Not found" }}
     </h1>
     <v-tabs
       class="rounded-t-lg"
@@ -19,11 +19,11 @@
       v-model="selectedTab"
     >
       <v-tab-item v-for="(tab, index) in tabItems" :key="tab.title">
-        <v-progress-linear indeterminate class="pt-2" v-if="isAddonLoading" />
+        <v-progress-linear indeterminate class="pt-2" v-if="isInvoiceLoading" />
         <component
-          v-if="addon && index === selectedTab"
+          v-if="invoice && index === selectedTab"
           :is="tab.component"
-          :addon="addon"
+          :invoice="invoice"
           is-edit
         />
       </v-tab-item>
@@ -36,11 +36,8 @@ import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router/composables";
 import { useStore } from "@/store";
 import config from "@/config.js";
-
-import AddonCreate from "@/views/AddonCreate.vue";
-import AddonProducts from "@/components/addons/products.vue";
-import api from "@/api";
-import AddonTemplate from "@/components/addons/template.vue";
+import InvoiceCreate from "@/views/InvoiceCreate.vue";
+import InvoiceTemplate from "@/components/invoice/template.vue";
 
 const store = useStore();
 const route = useRoute();
@@ -48,42 +45,35 @@ const route = useRoute();
 const selectedTab = ref(0);
 const navTitles = ref(config.navTitles ?? {});
 
-const addon = computed(() => store.getters["addons/one"]);
-const addonTitle = computed(() => addon.value?.title);
+const invoice = computed(() => store.getters["invoices/one"]);
+const invoiceTitle = computed(() => "#" + invoice.value?.uuid);
 
 onMounted(async () => {
   store.commit("reloadBtn/setCallback", {
-    type: "addons/fetchById",
+    type: "invoices/fetchById",
     params: route.params?.uuid,
   });
   selectedTab.value = route.query.tab || 0;
 
   try {
-    await store.dispatch("addons/fetchById", route.params.uuid);
-    document.title = `${addonTitle.value} | NoCloud`;
-
-    const desc = await api.get("/descs/" + addon.value.descriptionId);
-    store.commit("addons/setOne", { ...addon.value, description: desc.text });
+    await store.dispatch("invoices/fetchById", route.params.uuid);
+    document.title = `${invoiceTitle.value} | NoCloud`;
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   }
 });
 
-const isAddonLoading = computed(() => {
-  return store.getters["addons/isLoading"];
+const isInvoiceLoading = computed(() => {
+  return store.getters["invoices/isLoading"];
 });
 
 const tabItems = computed(() => [
   {
-    component: AddonCreate,
+    component: InvoiceCreate,
     title: "info",
   },
   {
-    component: AddonProducts,
-    title: "products",
-  },
-  {
-    component: AddonTemplate,
+    component: InvoiceTemplate,
     title: "template",
   },
 ]);
@@ -98,7 +88,7 @@ function navTitle(title) {
 </script>
 
 <script>
-export default { name: "addon-view" };
+export default { name: "invoice-view" };
 </script>
 
 <style scoped lang="scss">

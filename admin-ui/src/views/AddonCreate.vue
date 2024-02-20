@@ -186,4 +186,14 @@ watch(addon, (val) => {
 });
 </script>
 
-<style scoped></style>
+<style scoped lang="scss">
+.page__title {
+  color: var(--v-primary-base);
+  font-weight: 400;
+  font-size: 32px;
+  font-family: "Quicksand", sans-serif;
+  line-height: 1em;
+  margin-bottom: 10px;
+}
+</style>
+
