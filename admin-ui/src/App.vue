@@ -120,9 +120,7 @@
             </v-list-item-icon>
 
             <v-list-item-content>
-              <v-list-item-title>{{
-                  navTitle("Addons")
-                }}</v-list-item-title>
+              <v-list-item-title>{{ navTitle("Addons") }}</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
 
@@ -135,6 +133,16 @@
               <v-list-item-title>{{
                 navTitle("Transactions")
               }}</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Invoices' }">
+            <v-list-item-icon>
+              <v-icon>mdi-abacus</v-icon>
+            </v-list-item-icon>
+
+            <v-list-item-content>
+              <v-list-item-title>{{ navTitle("Invoices") }}</v-list-item-title>
             </v-list-item-content>
           </v-list-item>
 

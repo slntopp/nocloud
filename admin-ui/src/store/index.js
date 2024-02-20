@@ -21,6 +21,7 @@ import snackbar from "./snackbar";
 import actions from "./actions";
 import showcases from "./showcases";
 import addons from "./addons";
+import invoices from "./invoices";
 
 Vue.use(Vuex);
 
@@ -48,6 +49,7 @@ const store = new Vuex.Store({
     actions,
     showcases,
     addons,
+    invoices
   },
 });
 
