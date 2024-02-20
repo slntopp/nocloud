@@ -40,6 +40,7 @@ import config from "@/config.js";
 import AddonCreate from "@/views/AddonCreate.vue";
 import AddonProducts from "@/components/addons/products.vue";
 import api from "@/api";
+import AddonTemplate from "@/components/addons/template.vue";
 
 const store = useStore();
 const route = useRoute();
@@ -80,6 +81,10 @@ const tabItems = computed(() => [
   {
     component: AddonProducts,
     title: "products",
+  },
+  {
+    component: AddonTemplate,
+    title: "template",
   },
 ]);
 
