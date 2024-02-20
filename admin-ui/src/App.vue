@@ -116,7 +116,7 @@
 
           <v-list-item v-bind="listItemBind" :to="{ name: 'Addons' }">
             <v-list-item-icon>
-              <v-icon>mdi-script-text</v-icon>
+              <v-icon>mdi-tab-plus</v-icon>
             </v-list-item-icon>
 
             <v-list-item-content>
@@ -138,7 +138,7 @@
 
           <v-list-item v-bind="listItemBind" :to="{ name: 'Invoices' }">
             <v-list-item-icon>
-              <v-icon>mdi-abacus</v-icon>
+              <v-icon>mdi-invoice-list</v-icon>
             </v-list-item-icon>
 
             <v-list-item-content>
