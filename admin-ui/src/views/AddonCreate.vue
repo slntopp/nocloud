@@ -31,9 +31,9 @@
       <v-divider />
       <v-row class="my-3 d-flex align-center">
         <v-subheader>Prices</v-subheader>
-        <v-btn @click="addAddon" class="mx-1">Add</v-btn>
+        <v-btn @click="addPeriod" class="mx-1">Add</v-btn>
         <v-btn
-          @click="deleteSelected"
+          @click="deleteSelectedPeriods"
           :disabled="selected.length === 0"
           class="mx-1"
           >Delete</v-btn
@@ -52,6 +52,7 @@
             :rules="[rules.required]"
             v-model.number="item.price"
             type="number"
+            :suffix="defaultCurrency"
           />
         </template>
         <template v-slot:[`item.period`]="{ item }">
@@ -65,7 +66,7 @@
       <v-divider />
       <v-row class="mt-3">
         <v-col>
-          <v-btn :loading="isSaveLoading" @click="saveGroup" class="mr-2">
+          <v-btn :loading="isSaveLoading" @click="saveAddon" class="mr-2">
             Save
           </v-btn>
         </v-col>
@@ -75,7 +76,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, toRefs, watch } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import NocloudTable from "@/components/table.vue";
 import dateField from "@/components/date.vue";
 import { useStore } from "@/store";
@@ -116,10 +117,14 @@ const rules = ref({ required: (v) => !!v || "This field is required!" });
 onMounted(() => {
   if (isEdit.value) {
     setAddon(addon.value);
+  } else {
+    addPeriod();
   }
 });
 
-const addAddon = () => {
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
+
+const addPeriod = () => {
   newAddon.value.periods.push({
     price: 0,
     period: null,
@@ -127,14 +132,14 @@ const addAddon = () => {
   });
 };
 
-const deleteSelected = () => {
+const deleteSelectedPeriods = () => {
   newAddon.value.periods = newAddon.value.periods
     .filter((a) => !selected.value.find((s) => s.id === a.id))
     .map((a, ind) => ({ ...a, id: ind }));
   selected.value = [];
 };
 
-const saveGroup = async () => {
+const saveAddon = async () => {
   if (!(await addonCreateForm.value.validate())) {
     return;
   }
@@ -196,4 +201,3 @@ watch(addon, (val) => {
   margin-bottom: 10px;
 }
 </style>
-
