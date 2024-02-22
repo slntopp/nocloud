@@ -256,6 +256,26 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	return connect.NewResponse(t), nil
 }
 
+func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
+	log := s.log.Named("UpdateTransaction")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	req := r.Msg
+	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	t, err := s.invoices.Get(ctx, req.GetUuid())
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(t), nil
+}
+
 func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {
 	tr, err := s.invoices.Get(ctx, uuid)
 	if err != nil {
