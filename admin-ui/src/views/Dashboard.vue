@@ -16,6 +16,8 @@ import RoutinesWidget from "@/components/widgets/routines";
 import AccountsWidget from "@/components/widgets/accounts";
 import TransactionsWidget from "@/components/widgets/transactions";
 import InstancesWidget from "@/components/widgets/instances";
+import InstancesTypesWidget from "@/components/widgets/instances-types.vue";
+import InstancesPricesWidget from "@/components/widgets/instances-prices.vue";
 
 export default {
   name: "dashboard-view",
@@ -26,12 +28,16 @@ export default {
     AccountsWidget,
     TransactionsWidget,
     InstancesWidget,
+    InstancesTypesWidget,
+    InstancesPricesWidget,
   },
   data: () => ({
     widgets: [
       "AccountsWidget",
       "InstancesWidget",
       "TransactionsWidget",
+      "InstancesTypesWidget",
+      "InstancesPricesWidget",
       "ServicesWidget",
       "RoutinesWidget",
       "HealthWidget",

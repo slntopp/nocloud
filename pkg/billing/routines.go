@@ -253,14 +253,14 @@ let candidates = (
 
 let local = (
     for acc in candidates
-        filter acc.suspend['limit'] && (acc.balance > acc.suspend['limit'])
+        filter acc.suspend['limit'] && (acc.balance >= acc.suspend['limit'])
         return acc
 )
     
 let global = (
     for acc in candidates
-        filter acc.balance > conf['limit']
-        filter acc.balance > acc.suspend['limit']
+        filter acc.balance >= conf['limit']
+        filter acc.balance >= acc.suspend['limit']
         return acc
 )
 
@@ -288,22 +288,22 @@ LET global = (
     FOR acc IN candidates
         FILTER now_matching
         FILTER conf.is_enabled
-        FILTER acc.balance <= conf['limit']
-        FILTER (acc.balance - acc.suspend_conf['limit']) <= 0
+        FILTER acc.balance < conf['limit']
+        FILTER (acc.balance - acc.suspend_conf['limit']) < 0
         RETURN acc
 )
 
 LET extra = (
     FOR acc IN candidates
         FILTER conf.is_extra_enabled
-        FILTER acc.balance <= conf.extra_limit
+        FILTER acc.balance < conf.extra_limit
         RETURN acc
 )
 
 LET local = (
     FOR acc IN candidates
 		FILTER now_matching
-        FILTER acc.balance <= acc.suspend_conf['limit']
+        FILTER acc.balance < acc.suspend_conf['limit']
         RETURN acc
 )
 
