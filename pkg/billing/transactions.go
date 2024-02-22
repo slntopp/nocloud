@@ -479,7 +479,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 		return nil, err
 	}
 
-	if t.GetPriority() == pb.Priority_URGENT && t.GetExec() != 0 {
+	if t.GetExec() != 0 {
 		acc := driver.NewDocumentID(schema.ACCOUNTS_COL, t.Account)
 		transaction := driver.NewDocumentID(schema.TRANSACTIONS_COL, t.Uuid)
 		currencyConf := MakeCurrencyConf(ctx, log)
