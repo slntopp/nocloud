@@ -200,7 +200,8 @@
               <v-subheader class="px-0"> Description: </v-subheader>
               <rich-editor
                 class="html-editor"
-                v-model="item.meta.description"
+                @input="changeProduct('description', $event, item.id)"
+                :value="item.description"
               />
 
               <template v-if="type === 'empty'">
@@ -208,7 +209,7 @@
                   :rules="rules"
                   :resources="item.meta.resources ?? []"
                   @update:resource="
-                    (value) => changeMeta(value, item.id, item.meta.resources)
+                    changeMeta($event, item.id, item.meta.resources)
                   "
                 />
               </template>
@@ -217,9 +218,7 @@
                 <v-subheader class="px-0"> Amount of resources </v-subheader>
                 <json-editor
                   :json="item.resources"
-                  @changeValue="
-                    (value) => changeProduct('amount', value, item.id)
-                  "
+                  @changeValue="changeProduct('amount', $event, item.id)"
                 />
               </template>
 
@@ -230,9 +229,7 @@
                 style="width: 150px"
                 :value="item.installationFee"
                 :suffix="defaultCurrency"
-                @input="
-                  (value) => changeProduct('installationFee', +value, item.id)
-                "
+                @input="changeProduct('installationFee', +$event, item.id)"
               />
             </td>
           </template>
@@ -464,7 +461,7 @@ const copyProducts = () => {
   selected.value = [];
 };
 
-const saveNewMeta = () => {
+const saveNewMeta = async () => {
   setProductsArray();
 
   const newProducts = {};
@@ -473,12 +470,13 @@ const saveNewMeta = () => {
     delete product.key;
     newProducts[key] = product;
   }
+
   for (const product of selected.value) {
     const key = product.key;
     delete product.key;
     newProducts[key] = {
       ...product,
-      meta: { ...product.meta, ...newMeta.value },
+      description: newMeta.value.description,
     };
   }
 

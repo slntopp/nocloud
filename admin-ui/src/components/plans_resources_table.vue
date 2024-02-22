@@ -143,8 +143,8 @@
 
           <rich-editor
             class="html-editor"
-            :value="item.meta?.description"
-            @input="changeMeta('description', $event, item)"
+            :value="item?.description"
+            @input="changeResource('description', $event, item)"
           />
         </td>
       </template>

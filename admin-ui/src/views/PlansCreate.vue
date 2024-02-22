@@ -307,8 +307,8 @@ export default {
         case "amount":
           key = "resources";
       }
-
       if (product) product[key] = value;
+      else if (type === "resource") this.$set(id, key, value);
     },
     changeMetaConfig({ key, value, id }) {
       try {
@@ -324,41 +324,34 @@ export default {
       this.$set(product.meta, key, value);
       this.plan.meta = Object.assign({}, this.plan.meta);
     },
-    tryToSend(action, bindPlan = false) {
-      let message = "";
+    checkName({ title, uuid }, obj, num = 2) {
+      const value = obj.find((el) => el.title === title && el.uuid !== uuid);
+      const oldTitle = title.split(" ");
 
+      if (oldTitle.length > 1 && num !== 2) {
+        oldTitle[oldTitle.length - 1] = num;
+      } else oldTitle.push(num);
+
+      const plan = { title: oldTitle.join(" "), uuid };
+
+      if (value) return this.checkName(plan, obj, num + 1);
+      else return title;
+    },
+    async tryToSend(action, bindPlan = false) {
       if (!this.isValid || !this.isFeeValid) {
         this.$refs.form.validate();
-        message = "Validation failed!";
+        return this.showSnackbarError({ message: "Validation failed!" });
       }
 
-      if (message) {
-        this.showSnackbarError({ message });
-        return;
-      }
       if (action === "create") delete this.plan.uuid;
       if (this.plan.type === "custom") {
         this.plan.type = this.customTitle;
       }
 
-      function checkName({ title, uuid }, obj, num = 2) {
-        const value = obj.find((el) => el.title === title && el.uuid !== uuid);
-        const oldTitle = title.split(" ");
-
-        if (oldTitle.length > 1 && num !== 2) {
-          oldTitle[oldTitle.length - 1] = num;
-        } else oldTitle.push(num);
-
-        const plan = { title: oldTitle.join(" "), uuid };
-
-        if (value) return checkName(plan, obj, num + 1);
-        else return title;
-      }
-
       this.isLoading = true;
       this.isSetSpDialog = false;
       this.savePlanAction = action;
-      this.plan.title = checkName(this.plan, this.plans);
+      this.plan.title = this.checkName(this.plan, this.plans);
 
       const id = this.$route.params?.planId;
 
@@ -381,38 +374,74 @@ export default {
         return r;
       });
 
-      const request =
-        action === "edit"
-          ? api.plans.update(id, this.plan)
-          : api.plans.create(this.plan);
+      try {
+        //update or create descriptions
+        const descriptionPromises = [
+          ...this.plan.resources.map((resource, index) =>
+            this.updateOrCreateDescription(resource, "resources", index)
+          ),
+          ...Object.keys(this.plan.products).map((key) =>
+            this.updateOrCreateDescription(
+              this.plan.products[key],
+              "products",
+              key
+            )
+          ),
+        ];
 
-      request
-        .then((data) => {
-          if (bindPlan) {
-            return api.servicesProviders.bindPlan(this.selectedSp[0].uuid, [
-              data.uuid,
-            ]);
-          }
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message:
-              action === "edit"
-                ? "Price model edited successfully"
-                : "Price model created successfully",
-          });
-          if (action !== "edit") {
-            this.$router.push({ name: "Plans" });
-          }
-          this.isDialogVisible = false;
-        })
-        .catch((err) => {
-          this.showSnackbarError({ message: err });
-        })
-        .finally(() => {
-          this.isLoading = false;
-          this.savePlanAction = "";
+        const descriptions = await Promise.all(descriptionPromises);
+        descriptions.forEach(({ descriptionId, type, id }) => {
+          this.plan[type][id].descriptionId = descriptionId;
         });
+
+        const request =
+          action === "edit"
+            ? api.plans.update(id, this.plan)
+            : api.plans.create(this.plan);
+
+        const data = await request;
+        if (bindPlan) {
+          await api.servicesProviders.bindPlan(this.selectedSp[0].uuid, [
+            data.uuid,
+          ]);
+        }
+
+        const message =
+          action === "edit"
+            ? "Price model edited successfully"
+            : "Price model created successfully";
+        this.showSnackbarSuccess({ message });
+
+        if (action !== "edit") {
+          this.$router.push({ name: "Plans" });
+        }
+        this.isDialogVisible = false;
+      } catch (err) {
+        this.showSnackbarError({ message: err });
+      } finally {
+        this.isLoading = false;
+        this.savePlanAction = "";
+      }
+    },
+    async updateOrCreateDescription(item, type, id) {
+      const { descriptionId, description } = item;
+      if (descriptionId) {
+        await api.patch("/descs/" + descriptionId, {
+          text: description,
+        });
+        return {
+          descriptionId,
+          type,
+          id,
+        };
+      }
+
+      const data = await api.put("/descs", { text: description });
+      return {
+        descriptionId: data.uuid,
+        type,
+        id,
+      };
     },
     setPeriod(date, id) {
       const period = getTimestamp(date);
