@@ -21,14 +21,14 @@
           @change="changePlanAddons(item, $event)"
         />
       </template>
-      <template v-slot:expanded-item="{ headers, item }">
+      <template v-slot:expanded-item="{ headers, item: plan }">
         <td :colspan="headers.length" style="padding: 0">
           <nocloud-table
             :server-items-length="-1"
             hide-default-footer
             :show-select="false"
             :headers="productHeaders"
-            :items="item.children"
+            :items="plan.children"
           >
             <template v-slot:[`item.enabled`]="{ item }">
               <v-skeleton-loader v-if="updatingId === item.id" type="text" />
@@ -36,7 +36,7 @@
                 v-else
                 dense
                 hide-details
-                :disabled="!!updatingId"
+                :disabled="!!updatingId || plan.enabled"
                 :input-value="item.enabled"
                 @change="changeProductAddons(item, $event)"
               />
@@ -139,7 +139,7 @@ const changeProductAddons = async (item, val) => {
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
-    setTimeout(() => (updatingId.value = ""), 440000);
+    updatingId.value = "";
   }
 };
 </script>
