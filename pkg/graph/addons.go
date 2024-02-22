@@ -109,6 +109,8 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 
 	query += " RETURN merge(a, {uuid: a._key})) RETURN adds"
 
+	log.Debug("Query", zap.String("q", query))
+
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {
 		log.Error("Failed to get documents", zap.Error(err))
@@ -137,6 +139,8 @@ func (c *AddonsController) Count(ctx context.Context, group string) ([]*pb.Addon
 		query += " FILTER a.group == @group"
 		vars["group"] = group
 	}
+
+	log.Debug("Query", zap.String("q", query))
 
 	query += " RETURN merge(a, {uuid: a._key})) RETURN adds"
 

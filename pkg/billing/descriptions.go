@@ -82,13 +82,25 @@ func (s *DescriptionsServer) Get(ctx context.Context, r *connect.Request[pb.Desc
 func (s *DescriptionsServer) List(ctx context.Context, r *connect.Request[pb.ListDescriptionsRequest]) (*connect.Response[pb.ListDescriptionsResponse], error) {
 	log := s.log.Named("List")
 
-	descriptions, err := s.descriptions.List(ctx)
+	descriptions, err := s.descriptions.List(ctx, r.Msg)
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
 
 	return connect.NewResponse(&pb.ListDescriptionsResponse{Descriptions: descriptions}), nil
+}
+
+func (s *DescriptionsServer) Count(ctx context.Context, r *connect.Request[pb.CountDescriptionsRequest]) (*connect.Response[pb.CountDescriptionsResponse], error) {
+	log := s.log.Named("List")
+
+	descriptions, err := s.descriptions.Count(ctx)
+	if err != nil {
+		log.Error("Failed to get document", zap.Error(err))
+		return nil, err
+	}
+
+	return connect.NewResponse(&pb.CountDescriptionsResponse{Total: int64(len(descriptions))}), nil
 }
 
 func (s *DescriptionsServer) Delete(ctx context.Context, r *connect.Request[pb.Description]) (*connect.Response[pb.Description], error) {
