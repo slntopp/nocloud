@@ -426,7 +426,7 @@ export default {
     async updateOrCreateDescription(item, type, id) {
       const { descriptionId, description } = item;
       if (descriptionId) {
-        await api.patch("/descs/" + descriptionId, {
+        await api.patch("/billing/descs/" + descriptionId, {
           text: description,
         });
         return {
@@ -436,7 +436,7 @@ export default {
         };
       }
 
-      const data = await api.put("/descs", { text: description });
+      const data = await api.put("/billing/descs", { text: description });
       return {
         descriptionId: data.uuid,
         type,

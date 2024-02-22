@@ -83,7 +83,7 @@ export default {
             .filter((item) => !!item.descriptionId)
             .map(async (item) => ({
               ...item,
-              data: await api.get("descs/" + item.descriptionId),
+              data: await api.get("/billing/descs/" + item.descriptionId),
             }))
         );
 

@@ -226,7 +226,7 @@ export default {
       const { descriptionId } =
         this.template.billingPlan.products[this.template.product];
       if (descriptionId) {
-        const { text } = await api.get("descs/" + descriptionId);
+        const { text } = await api.get("/billing/descs/" + descriptionId);
         this.productDescription = text;
       }
     },
