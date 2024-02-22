@@ -36,6 +36,7 @@
 <script>
 import config from "@/config.js";
 import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
+import api from "@/api";
 
 export default {
   name: "plan-view",
@@ -43,6 +44,8 @@ export default {
   data: () => ({
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
+    plan: null,
+    isDescriptionsLoading: false,
   }),
   methods: {
     navTitle(title) {
@@ -52,16 +55,55 @@ export default {
 
       return title;
     },
+    async fetchPlan() {
+      this.isDescriptionsLoading = true;
+      const id = this.$route.params?.planId;
+
+      try {
+        await this.$store.dispatch("plans/fetchItem", id);
+        this.plan = this.$store.getters["plans/one"];
+        document.title = `${this.planTitle} | NoCloud`;
+
+        console.log(this.plan);
+        const descriptionPromises = [
+          ...this.plan.resources.map((resource, index) => ({
+            id: index,
+            type: "resources",
+            descriptionId: resource.descriptionId,
+          })),
+          ...Object.keys(this.plan.products).map((key) => ({
+            id: key,
+            type: "products",
+            descriptionId: this.plan.products[key].descriptionId,
+          })),
+        ];
+
+        const descriptions = await Promise.all(
+          descriptionPromises
+            .filter((item) => !!item.descriptionId)
+            .map(async (item) => ({
+              ...item,
+              data: await api.get("/billing/descs/" + item.descriptionId),
+            }))
+        );
+
+        descriptions.forEach(({ type, id, data }) => {
+          this.plan[type][id].description = data.text;
+        });
+        console.log(this.plan);
+      } finally {
+        this.isDescriptionsLoading = false;
+      }
+    },
   },
   computed: {
-    plan() {
-      return this.$store.getters["plans/one"];
-    },
     planTitle() {
-      return this?.plan.title ?? "not found";
+      return this.plan?.title ?? "not found";
     },
     planLoading() {
-      return this.$store.getters["plans/isLoading"];
+      return (
+        this.$store.getters["plans/isLoading"] || this.isDescriptionsLoading
+      );
     },
     tabs() {
       return [
@@ -86,15 +128,11 @@ export default {
     },
   },
   created() {
-    const id = this.$route.params?.planId;
-    this.$store.dispatch("plans/fetchItem", id).then(() => {
-      document.title = `${this.planTitle} | NoCloud`;
-    });
+    this.fetchPlan();
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      type: "plans/fetchItem",
-      params: this.$route.params?.planId,
+      event: this.fetchPlan(),
     });
   },
   watch: {

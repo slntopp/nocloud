@@ -9,20 +9,20 @@
     :headers="headers"
     :loading="loading"
   >
-    <template v-slot:[`item.account`]="{ item }">
+    <template v-slot:[`item.account`]="{ value }">
       <router-link
-        :to="{ name: 'Account', params: { accountId: item.account } }"
+        :to="{ name: 'Account', params: { accountId: value } }"
       >
-        {{ account(item.account) }}
+        {{ account(value) }}
       </router-link>
     </template>
 
-    <template v-slot:[`item.service`]="{ item }">
-      <template v-if="item.service">
+    <template v-slot:[`item.instance`]="{ value }">
+      <template v-if="value">
         <router-link
-          :to="{ name: 'Service', params: { serviceId: item.service } }"
+          :to="{ name: 'Instance', params: { instanceId: value } }"
         >
-          {{ service(item.service) }}
+          {{ instance(value) }}
         </router-link>
       </template>
       <template v-else>-</template>
@@ -67,7 +67,7 @@ export default {
     headers: [
       { text: "UUID ", value: "uuid" },
       { text: "Account ", value: "account" },
-      { text: "Service ", value: "service" },
+      { text: "Instance ", value: "instance" },
       { text: "Amount ", value: "total" },
       { text: "Proceed date ", value: "proc" },
       { text: "Executed date ", value: "exec" },
@@ -81,12 +81,12 @@ export default {
     account(uuid) {
       return this.accounts.find((acc) => acc.uuid === uuid)?.title;
     },
-    service(uuid) {
-      const service = this.$store.getters["services/all"].find(
-        (serv) => serv.uuid === uuid
+    instance(uuid) {
+      const instance = this.$store.getters["services/getInstances"].find(
+        (inst) => inst.uuid === uuid
       );
 
-      return service?.title;
+      return instance?.title;
     },
   },
   computed: {

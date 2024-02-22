@@ -11,25 +11,36 @@
       :expanded.sync="expanded"
     >
       <template v-slot:[`item.enabled`]="{ item }">
-        <v-skeleton-loader v-if="updatingPlanUuid === item.uuid" type="text" />
+        <v-skeleton-loader v-if="updatingId === item.id" type="text" />
         <v-switch
           v-else
           dense
           hide-details
-          :disabled="!!updatingPlanUuid"
+          :disabled="!!updatingId"
           :input-value="item.enabled"
           @change="changePlanAddons(item, $event)"
         />
       </template>
-      <template v-slot:expanded-item="{ headers, item }">
+      <template v-slot:expanded-item="{ headers, item: plan }">
         <td :colspan="headers.length" style="padding: 0">
           <nocloud-table
             :server-items-length="-1"
             hide-default-footer
             :show-select="false"
             :headers="productHeaders"
-            :items="item.children"
+            :items="plan.children"
           >
+            <template v-slot:[`item.enabled`]="{ item }">
+              <v-skeleton-loader v-if="updatingId === item.id" type="text" />
+              <v-switch
+                v-else
+                dense
+                hide-details
+                :disabled="!!updatingId || plan.enabled"
+                :input-value="item.enabled"
+                @change="changeProductAddons(item, $event)"
+              />
+            </template>
           </nocloud-table>
         </td>
       </template>
@@ -51,13 +62,16 @@ const { addon } = toRefs(props);
 const store = useStore();
 
 const expanded = ref([]);
-const updatingPlanUuid = ref("");
+const updatingId = ref("");
 
 const planHeaders = ref([
   { text: "Name", value: "name" },
   { text: "Enabled", value: "enabled" },
 ]);
-const productHeaders = ref([{ text: "Name", value: "name" }]);
+const productHeaders = ref([
+  { text: "Name", value: "name" },
+  { text: "Enabled", value: "enabled" },
+]);
 
 onMounted(() => {
   store.dispatch("plans/fetch");
@@ -71,6 +85,10 @@ const items = computed(() => {
     const children = Object.keys(plan.products).map((key) => ({
       id: key,
       name: plan.products[key].title,
+      plan: plan.uuid,
+      enabled:
+        plan.addons.includes(addon.value.uuid) ||
+        plan.products[key].addons?.includes(addon.value.uuid),
     }));
     return {
       id: plan.uuid,
@@ -85,7 +103,7 @@ const changePlanAddons = async (item, val) => {
   try {
     const plan = plans.value.find((p) => p.uuid === item.id);
 
-    updatingPlanUuid.value = plan.uuid;
+    updatingId.value = plan.uuid;
     if (val) {
       plan.addons.push(addon.value.uuid);
     } else {
@@ -97,7 +115,31 @@ const changePlanAddons = async (item, val) => {
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
-    updatingPlanUuid.value = "";
+    updatingId.value = "";
+  }
+};
+
+const changeProductAddons = async (item, val) => {
+  try {
+    const plan = plans.value.find((p) => p.uuid === item.plan);
+    const product = plan.products[item.id];
+
+    updatingId.value = item.id;
+
+    if (val) {
+      product.addons.push(addon.value.uuid);
+    } else {
+      product.addons = plan.addons.filter(
+        (addonId) => addonId !== addon.value.uuid
+      );
+    }
+
+    plan.products[item.id] = product;
+    await api.plans.update(plan.uuid, plan);
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", { message: e.message });
+  } finally {
+    updatingId.value = "";
   }
 };
 </script>

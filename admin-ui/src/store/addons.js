@@ -24,7 +24,7 @@ export default {
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
         api
-          .get("/addons")
+          .get("/billing/addons")
           .then((response) => {
             commit("setAddons", response.addons);
             resolve(response);
@@ -41,7 +41,7 @@ export default {
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
         api
-          .get(`addons/${id}`)
+          .get(`/billing/addons/${id}`)
           .then((response) => {
             commit("setOne", response);
             resolve(response);

@@ -116,24 +116,11 @@
       <nocloud-expansion-panels
         title="Description"
         class="mb-5"
-        v-if="template.billingPlan.products[template.product]"
+        v-if="productDescription"
       >
-        <rich-editor
-          class="pa-5"
-          disabled
-          :value="
-            template.billingPlan.products[template.product].meta?.description
-          "
-        />
+        <rich-editor class="pa-5" disabled :value="productDescription" />
         <div class="d-flex justify-end align-center">
-          <v-btn
-            class="mx-2"
-            @click="
-              addToClipboard(
-                template.billingPlan.products[template.product].meta
-                  ?.description || ''
-              )
-            "
+          <v-btn class="mx-2" @click="addToClipboard(productDescription)"
             >copy</v-btn
           >
           <v-btn class="mx-2" @click="goToPlan">edit</v-btn>
@@ -189,6 +176,7 @@ import MoveInstance from "@/components/dialogs/moveInstance.vue";
 import { addToClipboard } from "@/functions";
 import RichEditor from "@/components/ui/richEditor.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
+import api from "@/api";
 
 export default {
   name: "instance-info",
@@ -208,6 +196,7 @@ export default {
     templates: {},
     moveDialog: false,
     copyInstance: {},
+    productDescription: null,
   }),
   methods: {
     addToClipboard,
@@ -232,6 +221,14 @@ export default {
         name: "Plan",
         params: { planId: this.template.billingPlan.uuid },
       });
+    },
+    async fetchProductDescription() {
+      const { descriptionId } =
+        this.template.billingPlan.products[this.template.product];
+      if (descriptionId) {
+        const { text } = await api.get("/billing/descs/" + descriptionId);
+        this.productDescription = text;
+      }
     },
   },
   computed: {
@@ -303,6 +300,8 @@ export default {
     }
 
     this.copyInstance = JSON.parse(JSON.stringify(this.template));
+
+    this.fetchProductDescription();
   },
   watch: {
     template: {

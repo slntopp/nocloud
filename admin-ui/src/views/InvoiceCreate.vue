@@ -30,6 +30,7 @@
             </v-col>
             <v-col cols="9">
               <v-autocomplete
+                @change="onChangeAccount"
                 :disabled="isEdit"
                 :filter="defaultFilterObject"
                 label="Account"
@@ -40,6 +41,27 @@
                 item-value="uuid"
                 :items="accounts"
                 :loading="isAccountsLoading"
+              />
+            </v-col>
+          </v-row>
+
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Instance</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-autocomplete
+                :disabled="isEdit"
+                :filter="defaultFilterObject"
+                label="Instance"
+                v-model="newInvoice.instance"
+                return-object
+                :rules="requiredRule"
+                item-text="title"
+                item-value="uuid"
+                :items="instances"
+                @change="onChangeInstance"
+                :loading="isInstancesLoading"
               />
             </v-col>
           </v-row>
@@ -74,10 +96,9 @@
               <v-btn @click="addInvoiceItem">Add</v-btn>
             </div>
             <invoice-items-table
-              :instances="instances"
               show-delete
               :account="newInvoice.account"
-              :items="newInvoice.meta.items"
+              :items="newInvoice.items"
               @click:delete="deleteInvoiceItem"
             />
           </div>
@@ -134,10 +155,11 @@ const router = useRouter();
 
 const newInvoice = ref({
   account: null,
+  instance: null,
   total: 0,
+  items: [{ amount: null, title: "" }],
   meta: {
     note: "",
-    items: [{ amount: null, type: "default", title: "" }],
     type: "payment",
   },
 });
@@ -164,7 +186,6 @@ onMounted(async () => {
       ...invoice.value,
       meta: {
         ...invoice.value.meta,
-        items: invoice.value.meta.items.map((i) => ({ ...i, type: "default" })),
       },
     };
   }
@@ -187,6 +208,7 @@ const isAccountsLoading = computed(() => store.getters["accounts/isLoading"]);
 
 const namespaces = computed(() => store.getters["namespaces/all"]);
 
+const isInstancesLoading = computed(() => store.getters["services/isLoading"]);
 const services = computed(() => store.getters["services/all"]);
 const instances = computed(() => {
   if (!newInvoice.value.account) {
@@ -215,7 +237,7 @@ const accountCurrency = computed(
     newInvoice.value.account?.currency || store.getters["currencies/default"]
 );
 const amount = computed(() =>
-  newInvoice.value.meta.items.reduce((acc, i) => acc + i.amount, 0)
+  newInvoice.value.items.reduce((acc, i) => acc + i.amount, 0)
 );
 
 const saveInvoice = async (withEmail = false) => {
@@ -229,13 +251,12 @@ const saveInvoice = async (withEmail = false) => {
     const data = {
       total: convertPrice(amount.value),
       account: newInvoice.value.account.uuid,
-      meta: {
-        ...newInvoice.value.meta,
-        items: newInvoice.value.meta.items.map((item) => ({
-          title: item.title,
-          amount: convertPrice(item.amount),
-        })),
-      },
+      instance: newInvoice.value.instance.uuid,
+      items: newInvoice.value.items.map((item) => ({
+        title: item.title,
+        amount: convertPrice(item.amount),
+      })),
+      meta: newInvoice.value.meta,
     };
     if (!isEdit.value) {
       await api.put("/billing/invoices", data);
@@ -260,16 +281,26 @@ const convertPrice = (price) => {
 };
 
 const addInvoiceItem = () => {
-  newInvoice.value.meta.items.push({ title: "", amount: 0, type: "default" });
+  newInvoice.value.items.push({ title: "", amount: 0 });
 };
 
 const deleteInvoiceItem = (index) => {
-  if (!newInvoice.value.meta.items.length) {
+  if (!newInvoice.value.items.length) {
     return;
   }
-  newInvoice.value.meta.items = newInvoice.value.meta.items.filter(
-    (_, i) => i !== index
-  );
+  newInvoice.value.items = newInvoice.value.items.filter((_, i) => i !== index);
+};
+
+const onChangeAccount = () => {
+  newInvoice.value.instance = null;
+};
+
+const onChangeInstance = () => {
+  const product =
+    newInvoice.value.instance.billingPlan.products[
+      newInvoice.value.instance.product
+    ];
+  newInvoice.value.items = [{ amount: product.price, title: product.title }];
 };
 </script>
 
