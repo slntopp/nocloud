@@ -42,11 +42,12 @@ func (ctrl *InvoicesController) Create(ctx context.Context, tx *pb.Invoice) (*pb
 
 func (ctrl *InvoicesController) Get(ctx context.Context, uuid string) (*pb.Invoice, error) {
 	var tx pb.Invoice
-	_, err := ctrl.col.ReadDocument(ctx, uuid, &tx)
+	meta, err := ctrl.col.ReadDocument(ctx, uuid, &tx)
 	if err != nil {
 		ctrl.log.Error("Failed to read transaction", zap.Error(err))
 		return nil, err
 	}
+	tx.Uuid = meta.Key
 	return &tx, nil
 }
 
