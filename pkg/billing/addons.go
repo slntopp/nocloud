@@ -104,7 +104,7 @@ func (s *AddonsServer) List(ctx context.Context, r *connect.Request[pb.ListAddon
 
 	req := r.Msg
 
-	addons, err := s.addons.List(ctx, req.GetGroup())
+	addons, err := s.addons.List(ctx, req)
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
@@ -116,12 +116,40 @@ func (s *AddonsServer) List(ctx context.Context, r *connect.Request[pb.ListAddon
 
 	var filteredAddons []*pb.Addon
 
-	for _, val := range filteredAddons {
+	for _, val := range addons {
 		if val.GetPublic() {
 			filteredAddons = append(filteredAddons, val)
 		}
 	}
 	resp := connect.NewResponse(&pb.ListAddonsResponse{Addons: filteredAddons})
+	return resp, nil
+}
+
+func (s *AddonsServer) Count(ctx context.Context, r *connect.Request[pb.CountAddonsRequest]) (*connect.Response[pb.CountAddonsResponse], error) {
+	log := s.log.Named("List")
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	req := r.Msg
+
+	addons, err := s.addons.Count(ctx, req.GetGroup())
+	if err != nil {
+		log.Error("Failed to get document", zap.Error(err))
+		return nil, err
+	}
+	if graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		resp := connect.NewResponse(&pb.CountAddonsResponse{Total: int64(len(addons))})
+		return resp, nil
+	}
+
+	var filteredAddons []*pb.Addon
+
+	for _, val := range addons {
+		if val.GetPublic() {
+			filteredAddons = append(filteredAddons, val)
+		}
+	}
+	resp := connect.NewResponse(&pb.CountAddonsResponse{Total: int64(len(filteredAddons))})
 	return resp, nil
 }
 

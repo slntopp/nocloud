@@ -76,20 +76,69 @@ func (c *AddonsController) Get(ctx context.Context, uuid string) (*pb.Addon, err
 	return &addon, nil
 }
 
-func (c *AddonsController) List(ctx context.Context, group string) ([]*pb.Addon, error) {
+func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) ([]*pb.Addon, error) {
 	log := c.log.Named("Get")
 
-	query := "LET adds = (FOR a in @@addons %s RETURN merge(a, {uuid: a._key})) RETURN adds"
+	query := "LET adds = (FOR a in @@addons "
+	vars := map[string]any{
+		"@addons": schema.ADDONS_COL,
+	}
+
+	if req.GetGroup() != "" {
+		query += " FILTER a.group == @group"
+		vars["group"] = req.GetGroup()
+	}
+
+	if req.Field != nil && req.Sort != nil {
+		subQuery := ` SORT a.%s %s`
+		field, sort := req.GetField(), req.GetSort()
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	if req.Page != nil && req.Limit != nil {
+		if req.GetLimit() != 0 {
+			limit, page := req.GetLimit(), req.GetPage()
+			offset := (page - 1) * limit
+
+			query += ` LIMIT @offset, @count`
+			vars["offset"] = offset
+			vars["count"] = limit
+		}
+	}
+
+	query += " RETURN merge(a, {uuid: a._key})) RETURN adds"
+
+	cur, err := c.col.Database().Query(ctx, query, vars)
+	if err != nil {
+		log.Error("Failed to get documents", zap.Error(err))
+		return nil, err
+	}
+
+	var addons []*pb.Addon
+	_, err = cur.ReadDocument(ctx, &addons)
+	if err != nil {
+		log.Error("Failed to read documents", zap.Error(err))
+		return nil, err
+	}
+
+	return addons, nil
+}
+
+func (c *AddonsController) Count(ctx context.Context, group string) ([]*pb.Addon, error) {
+	log := c.log.Named("Get")
+
+	query := "LET adds = (FOR a in @@addons "
 	vars := map[string]any{
 		"@addons": schema.ADDONS_COL,
 	}
 
 	if group != "" {
-		query = fmt.Sprintf(query, "FILTER a.group == @group")
+		query += " FILTER a.group == @group"
 		vars["group"] = group
-	} else {
-		query = fmt.Sprintf(query, "")
 	}
+
+	query += " RETURN merge(a, {uuid: a._key})) RETURN adds"
 
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {
