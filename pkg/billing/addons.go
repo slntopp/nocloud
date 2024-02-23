@@ -141,8 +141,19 @@ func (s *AddonsServer) Count(ctx context.Context, r *connect.Request[pb.CountAdd
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err
 	}
+
+	unique, err := s.addons.GetUnique(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	value, err := structpb.NewValue(unique)
+	if err != nil {
+		return nil, err
+	}
+
 	if graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
-		resp := connect.NewResponse(&pb.CountAddonsResponse{Total: int64(len(addons))})
+		resp := connect.NewResponse(&pb.CountAddonsResponse{Total: int64(len(addons)), Unique: value})
 		return resp, nil
 	}
 
@@ -152,18 +163,6 @@ func (s *AddonsServer) Count(ctx context.Context, r *connect.Request[pb.CountAdd
 		if val.GetPublic() {
 			filteredAddons = append(filteredAddons, val)
 		}
-	}
-
-	unique, err := s.addons.GetUnique(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	log.Debug("Unique", zap.Any("unique", unique))
-
-	value, err := structpb.NewValue(unique)
-	if err != nil {
-		return nil, err
 	}
 
 	resp := connect.NewResponse(&pb.CountAddonsResponse{Total: int64(len(filteredAddons)), Unique: value})
