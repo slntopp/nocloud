@@ -3,7 +3,7 @@
     <h1 class="page__title">Create invoice</h1>
     <v-form v-model="isValid" ref="invoiceForm">
       <v-row>
-        <v-col lg="6" cols="12">
+        <v-col cols="6">
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Type</v-subheader>
@@ -21,9 +21,23 @@
             </v-col>
           </v-row>
         </v-col>
+        <v-col v-if="isEdit" cols="6">
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Created date</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-text-field
+                  :value="formatSecondsToDate(newInvoice.created, true) || '-'"
+                  readonly
+                  disabled
+              />
+            </v-col>
+          </v-row>
+        </v-col>
       </v-row>
       <v-row>
-        <v-col lg="6" cols="12">
+        <v-col cols="6">
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Account</v-subheader>
@@ -110,6 +124,40 @@
             />
           </nocloud-expansion-panels>
         </v-col>
+        <v-col cols="6" v-if="isEdit">
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Executed date</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-text-field
+                :value="formatSecondsToDate(newInvoice.exec, true) || '-'"
+                readonly
+                disabled
+              />
+            </v-col>
+          </v-row>
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Proceed date</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-text-field
+                :value="formatSecondsToDate(newInvoice.proc, true) || '-'"
+                readonly
+                disabled
+              />
+            </v-col>
+          </v-row>
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Status</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-chip>{{ newInvoice.status }}</v-chip>
+            </v-col>
+          </v-row>
+        </v-col>
       </v-row>
 
       <v-row justify="start" class="mb-4">
@@ -136,7 +184,7 @@
 
 <script setup>
 import JsonEditor from "@/components/JsonEditor.vue";
-import { defaultFilterObject } from "@/functions";
+import { defaultFilterObject, formatSecondsToDate } from "@/functions";
 import { computed, onMounted, ref, toRefs } from "vue";
 import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
