@@ -179,13 +179,13 @@ LET groups = (
 )
 
 RETURN {
-	groups: groups
+	groups: UNIQUE(groups)
 }
 `
 
 func (c *AddonsController) GetUnique(ctx context.Context) (map[string]any, error) {
 	cur, err := c.col.Database().Query(ctx, uniqueAddonQuery, map[string]interface{}{
-		"@records": schema.RECORDS_COL,
+		"@addons": schema.ADDONS_COL,
 	})
 	if err != nil {
 		return nil, err
