@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
+	"time"
 )
 
 type AddonsServer struct {
@@ -43,6 +44,8 @@ func (s *AddonsServer) Create(ctx context.Context, r *connect.Request[pb.Addon])
 	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
+
+	req.Created = time.Now().Unix()
 
 	addon, err := s.addons.Create(ctx, req)
 	if err != nil {

@@ -63,6 +63,30 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 		vars["service"] = service
 	}
 
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			if key == "exec" || key == "total" || key == "proc" || key == "created" {
+				values := value.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] >= %f`, key, from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
+				}
+			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+				vars[key] = values
+			}
+		}
+	}
+
 	if req.Field != nil && req.Sort != nil {
 		subQuery := ` SORT t.%s %s`
 		field, sort := req.GetField(), req.GetSort()
@@ -162,6 +186,30 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 	query := `FOR t IN @@invoices`
 	vars := map[string]interface{}{
 		"@invoices": schema.INVOICES_COL,
+	}
+
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			if key == "exec" || key == "total" || key == "proc" || key == "created" {
+				values := value.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] >= %f`, key, from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					query += fmt.Sprintf(` FILTER record["%s"] <= %f`, key, to)
+				}
+			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER record["%s"] in @%s`, key, key)
+				vars[key] = values
+			}
+		}
 	}
 
 	if req.Account != nil {
