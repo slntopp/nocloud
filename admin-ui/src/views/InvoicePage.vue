@@ -46,7 +46,9 @@ const selectedTab = ref(0);
 const navTitles = ref(config.navTitles ?? {});
 
 const invoice = computed(() => store.getters["invoices/one"]);
-const invoiceTitle = computed(() => "#" + invoice.value?.uuid);
+const invoiceTitle = computed(() =>
+  isInvoiceLoading.value ? "..." : "#" + invoice.value?.uuid
+);
 
 onMounted(async () => {
   store.commit("reloadBtn/setCallback", {

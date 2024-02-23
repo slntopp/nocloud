@@ -19,40 +19,24 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }) {
+    async fetch({ commit }) {
       commit("setInvoices", []);
       commit("setLoading", true);
-      return new Promise((resolve, reject) => {
-        api
-          .get("/billing/invoices")
-          .then((response) => {
-            commit("setInvoices", response.pool);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+      try {
+        const response = await api.post("/billing/invoices");
+        commit("setInvoices", response.pool);
+      } finally {
+        commit("setLoading", false);
+      }
     },
-    fetchById({ commit }, id) {
+    async fetchById({ commit }, id) {
       commit("setLoading", true);
-      return new Promise((resolve, reject) => {
-        api
-          .get(`/billing/invoices/${id}`)
-          .then((response) => {
-            commit("setOne", response);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+      try {
+        const response = await api.get(`/billing/invoices/${id}`);
+        commit("setOne", response);
+      } finally {
+        commit("setLoading", false);
+      }
     },
   },
   getters: {
