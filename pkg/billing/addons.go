@@ -132,7 +132,7 @@ func (s *AddonsServer) Count(ctx context.Context, r *connect.Request[pb.CountAdd
 
 	req := r.Msg
 
-	addons, err := s.addons.Count(ctx, req.GetGroup())
+	addons, err := s.addons.Count(ctx, req)
 	if err != nil {
 		log.Error("Failed to get document", zap.Error(err))
 		return nil, err

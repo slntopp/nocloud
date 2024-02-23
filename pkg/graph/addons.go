@@ -84,9 +84,15 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 		"@addons": schema.ADDONS_COL,
 	}
 
-	if req.GetGroup() != "" {
-		query += " FILTER a.group == @group"
-		vars["group"] = req.GetGroup()
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER a["%s"] in @%s`, key, key)
+			vars[key] = values
+		}
 	}
 
 	if req.Field != nil && req.Sort != nil {
@@ -127,7 +133,7 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 	return addons, nil
 }
 
-func (c *AddonsController) Count(ctx context.Context, group string) ([]*pb.Addon, error) {
+func (c *AddonsController) Count(ctx context.Context, req *pb.CountAddonsRequest) ([]*pb.Addon, error) {
 	log := c.log.Named("Get")
 
 	query := "LET adds = (FOR a in @@addons "
@@ -135,9 +141,15 @@ func (c *AddonsController) Count(ctx context.Context, group string) ([]*pb.Addon
 		"@addons": schema.ADDONS_COL,
 	}
 
-	if group != "" {
-		query += " FILTER a.group == @group"
-		vars["group"] = group
+	if req.GetFilters() != nil {
+		for key, value := range req.GetFilters() {
+			values := value.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER a["%s"] in @%s`, key, key)
+			vars[key] = values
+		}
 	}
 
 	log.Debug("Query", zap.String("q", query))
