@@ -55,10 +55,8 @@ const requestOptions = computed(() => ({
     options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
 }));
 
-const searchParam = computed(() => store.getters["appSearch/param"]);
 const filter = computed(() => ({
   ...store.getters["appSearch/filter"],
-  title: searchParam.value || store.getters["appSearch/filter"]?.title,
 }));
 const searchFields = computed(() => {
   return [
@@ -129,7 +127,7 @@ const fetchAddons = async () => {
   }
 };
 
-const fetchAddonsDebounced = debounce(fetchAddons,500);
+const fetchAddonsDebounced = debounce(fetchAddons, 100);
 
 watch(
   searchFields,
