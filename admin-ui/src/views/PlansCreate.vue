@@ -114,6 +114,7 @@
           :rules="rules"
           :type="plan.type"
           :resources="plan.resources"
+          :addons="plan.addons"
           :products="filteredProducts"
           @change:resource="(data) => changeConfig(data, 'resource')"
           @change:product="(data) => changeConfig(data, 'product')"
