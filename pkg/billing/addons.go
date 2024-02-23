@@ -159,6 +159,8 @@ func (s *AddonsServer) Count(ctx context.Context, r *connect.Request[pb.CountAdd
 		return nil, err
 	}
 
+	log.Debug("Unique", zap.Any("unique", unique))
+
 	value, err := structpb.NewValue(unique)
 	if err != nil {
 		return nil, err
