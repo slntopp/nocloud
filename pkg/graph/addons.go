@@ -87,7 +87,7 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
 			if key == "title" {
-				query += fmt.Sprintf(` FILTER a.title LIKE "%s""`, "%"+value.GetStringValue()+"%")
+				query += fmt.Sprintf(` FILTER a.title LIKE "%s"`, "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -148,7 +148,7 @@ func (c *AddonsController) Count(ctx context.Context, req *pb.CountAddonsRequest
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
 			if key == "title" {
-				query += fmt.Sprintf(` FILTER a.title LIKE %s`, "%"+value.GetStringValue()+"%")
+				query += fmt.Sprintf(` FILTER a.title LIKE "%s"`, "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -160,9 +160,9 @@ func (c *AddonsController) Count(ctx context.Context, req *pb.CountAddonsRequest
 		}
 	}
 
-	log.Debug("Query", zap.String("q", query))
-
 	query += " RETURN merge(a, {uuid: a._key})) RETURN adds"
+
+	log.Debug("Query", zap.String("q", query))
 
 	cur, err := c.col.Database().Query(ctx, query, vars)
 	if err != nil {
