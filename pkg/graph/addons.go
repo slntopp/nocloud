@@ -87,7 +87,7 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
 			if key == "title" {
-				query += fmt.Sprintf(` FILTER a.title LIKE %s`, "%"+value.GetStringValue()+"%")
+				query += fmt.Sprintf(` FILTER a.title LIKE "%s""`, "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
