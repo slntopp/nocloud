@@ -216,10 +216,10 @@ const instances = computed(() => {
   }
 
   const namespace = namespaces.value.find(
-    (n) => n.access.namespace === newInvoice.value.account.uuid
+    (n) => n.access.namespace === newInvoice.value.account?.uuid
   );
   const servicesByAccount = services.value.filter(
-    (s) => s.access.namespace === namespace.uuid
+    (s) => s.access.namespace === namespace?.uuid
   );
   const instances = [];
 

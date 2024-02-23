@@ -19,40 +19,28 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }) {
+    async fetch({ commit }, options) {
       commit("setAddons", []);
       commit("setLoading", true);
-      return new Promise((resolve, reject) => {
-        api
-          .get("/billing/addons")
-          .then((response) => {
-            commit("setAddons", response.addons);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+      try {
+        const response = await api.post("/billing/addons", options);
+
+        commit("setAddons", response.addons);
+      } finally {
+        commit("setLoading", false);
+      }
     },
-    fetchById({ commit }, id) {
+    async count(_, options) {
+      return api.post("/billing/count/addons", options);
+    },
+    async fetchById({ commit }, id) {
       commit("setLoading", true);
-      return new Promise((resolve, reject) => {
-        api
-          .get(`/billing/addons/${id}`)
-          .then((response) => {
-            commit("setOne", response);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+      try {
+        const response = await api.get(`/billing/addons/${id}`);
+        commit("setOne", response);
+      } finally {
+        commit("setLoading", false);
+      }
     },
   },
   getters: {
