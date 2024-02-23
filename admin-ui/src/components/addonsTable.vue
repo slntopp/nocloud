@@ -2,11 +2,17 @@
   <nocloud-table
     v-model="value"
     @input="emit('input', value)"
+    @update:options="emit('update:options', $event)"
     :loading="loading"
     :items="items"
     :headers="headers"
     :show-select="showSelect"
     :table-name="tableName"
+    :server-items-length="serverItemsLength"
+    :server-side-page="serveSidePage"
+    :sort-desc="sortDesc"
+    :sort-by="sortBy"
+    :footer-error="fetchError"
   >
     <template v-slot:[`item.title`]="{ item }">
       <router-link :to="{ name: 'Addon page', params: { uuid: item.uuid } }">
@@ -17,6 +23,7 @@
     <template v-slot:[`item.public`]="{ item }">
       <div class="change_public">
         <v-switch
+          :readonly="!editable"
           :loading="updatingAddonUuid === item.uuid"
           dense
           hide-details
@@ -41,10 +48,26 @@ const props = defineProps({
   value: {},
   tableName: { type: String, default: "addons-table" },
   showSelect: { type: Boolean, default: false },
+  sortBy: {},
+  sortDesc: {},
+  serverItemsLength: {},
+  serveSidePage: {},
+  fetchError: {},
+  editable: { type: Boolean, default: false },
 });
-const { loading, items, showSelect, tableName, value } = toRefs(props);
+const {
+  loading,
+  items,
+  showSelect,
+  tableName,
+  value,
+  sortBy,
+  sortDesc,
+  serverItemsLength,
+  serveSidePage,
+} = toRefs(props);
 
-const emit = defineEmits(["input"]);
+const emit = defineEmits(["input", "update:options"]);
 
 const store = useStore();
 

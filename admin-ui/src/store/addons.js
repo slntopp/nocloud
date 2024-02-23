@@ -30,16 +30,8 @@ export default {
         commit("setLoading", false);
       }
     },
-    async count({ commit }, options) {
-      commit("setAddons", []);
-      commit("setLoading", true);
-      try {
-        const response = await api.post("/billing/count/addons", options);
-
-        commit("setCount", response.count);
-      } finally {
-        commit("setLoading", false);
-      }
+    async count(_, options) {
+      return api.post("/billing/count/addons", options);
     },
     async fetchById({ commit }, id) {
       commit("setLoading", true);
