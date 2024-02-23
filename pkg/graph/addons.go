@@ -86,12 +86,16 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			values := value.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
+			if key == "title" {
+				query += fmt.Sprintf(` FILTER a.title LIKE %s`, "%"+key+"%")
+			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER a["%s"] in @%s`, key, key)
+				vars[key] = values
 			}
-			query += fmt.Sprintf(` FILTER a["%s"] in @%s`, key, key)
-			vars[key] = values
 		}
 	}
 
@@ -143,12 +147,16 @@ func (c *AddonsController) Count(ctx context.Context, req *pb.CountAddonsRequest
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			values := value.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
+			if key == "title" {
+				query += fmt.Sprintf(` FILTER a.title LIKE %s`, "%"+key+"%")
+			} else {
+				values := value.GetListValue().AsSlice()
+				if len(values) == 0 {
+					continue
+				}
+				query += fmt.Sprintf(` FILTER a["%s"] in @%s`, key, key)
+				vars[key] = values
 			}
-			query += fmt.Sprintf(` FILTER a["%s"] in @%s`, key, key)
-			vars[key] = values
 		}
 	}
 
