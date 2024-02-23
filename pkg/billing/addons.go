@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type AddonsServer struct {
@@ -149,7 +150,18 @@ func (s *AddonsServer) Count(ctx context.Context, r *connect.Request[pb.CountAdd
 			filteredAddons = append(filteredAddons, val)
 		}
 	}
-	resp := connect.NewResponse(&pb.CountAddonsResponse{Total: int64(len(filteredAddons))})
+
+	unique, err := s.addons.GetUnique(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	value, err := structpb.NewValue(unique)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := connect.NewResponse(&pb.CountAddonsResponse{Total: int64(len(filteredAddons)), Unique: value})
 	return resp, nil
 }
 

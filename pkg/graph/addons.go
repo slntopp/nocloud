@@ -171,3 +171,32 @@ func (c *AddonsController) Count(ctx context.Context, req *pb.CountAddonsRequest
 
 	return addons, nil
 }
+
+const uniqueAddonQuery = `
+LET groups = (
+	FOR a in @@addons
+		RETURN a.group
+)
+
+RETURN {
+	groups: groups
+}
+`
+
+func (c *AddonsController) GetUnique(ctx context.Context) (map[string]any, error) {
+	cur, err := c.col.Database().Query(ctx, uniqueAddonQuery, map[string]interface{}{
+		"@records": schema.RECORDS_COL,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var result = map[string]any{}
+
+	_, err = cur.ReadDocument(ctx, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
