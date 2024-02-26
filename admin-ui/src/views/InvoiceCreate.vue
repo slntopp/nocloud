@@ -155,6 +155,7 @@
           class="mx-3"
           color="background-light"
           :loading="isSaveLoading"
+          :disabled="isSaveDisabled"
           @click="saveInvoice(false)"
         >
           Publish
@@ -164,18 +165,37 @@
           color="background-light"
           :loading="isSaveLoading"
           @click="saveInvoice(true)"
+          :disabled="isEmailDisabled"
         >
           Publish + email
         </v-btn>
 
-        <v-btn
-          class="mx-4"
-          color="background-light"
-          :loading="isSendEmailLoading"
-          @click="sendEmail"
-        >
-          email
-        </v-btn>
+        <template v-if="isEdit">
+          <v-btn
+            class="mx-4"
+            color="background-light"
+            :loading="isSendEmailLoading"
+            @click="sendEmail"
+            :disabled="isEmailDisabled"
+          >
+            email
+          </v-btn>
+
+          <v-btn
+            v-for="btn in changeStatusBtns"
+            class="mx-4"
+            :key="btn.status"
+            :loading="isStatusChangeLoading && btn.status === newStatus"
+            :disabled="
+              (isStatusChangeLoading && btn.status !== newStatus) ||
+              btn.disabled.includes(newInvoice.status)
+            "
+            color="background-light"
+            @click="changeInvoiceStatus(btn.status)"
+          >
+            {{ btn.title }}
+          </v-btn>
+        </template>
       </v-row>
     </v-form>
   </div>
@@ -217,6 +237,8 @@ const isValid = ref(false);
 const invoiceForm = ref(null);
 const isSaveLoading = ref(false);
 const isSendEmailLoading = ref(false);
+const isStatusChangeLoading = ref(false);
+const newStatus = ref("");
 
 const types = [
   {
@@ -227,6 +249,11 @@ const types = [
     id: "top-up",
     title: "Top-up invoice (with balance change)",
   },
+];
+
+const changeStatusBtns = [
+  { title: "cancel", status: "CANCELED", disabled: ["CANCELED", "TERMINATED"] },
+  { title: "terminate", status: "TERMINATED", disabled: ["TERMINATED"] },
 ];
 
 onMounted(async () => {
@@ -284,6 +311,14 @@ const accountCurrency = computed(
 );
 const amount = computed(() =>
   newInvoice.value.items.reduce((acc, i) => acc + +i.amount, 0)
+);
+
+const isEmailDisabled = computed(() =>
+  ["TERMINATED", "CANCELED"].includes(newInvoice.value.status)
+);
+
+const isSaveDisabled = computed(() =>
+  ["TERMINATED"].includes(newInvoice.value.status)
 );
 
 const saveInvoice = async (withEmail = false) => {
@@ -378,6 +413,23 @@ const sendEmail = async () => {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
     isSendEmailLoading.value = false;
+  }
+};
+
+const changeInvoiceStatus = async (status) => {
+  isStatusChangeLoading.value = true;
+  newStatus.value = status;
+  try {
+    await api.patch("/billing/invoices/" + invoice.value.uuid, {
+      ...invoice.value,
+      status,
+    });
+    newInvoice.value.status = status;
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", { message: e.message });
+  } finally {
+    isStatusChangeLoading.value = false;
+    newStatus.value = "";
   }
 };
 
