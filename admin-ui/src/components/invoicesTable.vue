@@ -15,15 +15,6 @@
       </router-link>
     </template>
 
-    <template v-slot:[`item.instance`]="{ value }">
-      <template v-if="value">
-        <router-link :to="{ name: 'Instance', params: { instanceId: value } }">
-          {{ instance(value) }}
-        </router-link>
-      </template>
-      <template v-else>-</template>
-    </template>
-
     <template v-slot:[`item.total`]="{ item }">
       <balance abs :currency="item.currency" :value="-item.total" />
     </template>
@@ -63,7 +54,6 @@ export default {
     headers: [
       { text: "UUID ", value: "uuid" },
       { text: "Account ", value: "account" },
-      { text: "Instance ", value: "instance" },
       { text: "Amount ", value: "total" },
       { text: "Payment date ", value: "proc" },
       { text: "Executed date ", value: "exec" },
@@ -76,13 +66,6 @@ export default {
     formatSecondsToDate,
     account(uuid) {
       return this.accounts.find((acc) => acc.uuid === uuid)?.title;
-    },
-    instance(uuid) {
-      const instance = this.$store.getters["services/getInstances"].find(
-        (inst) => inst.uuid === uuid
-      );
-
-      return instance?.title;
     },
   },
   computed: {

@@ -28,9 +28,9 @@
             </v-col>
             <v-col cols="9">
               <v-text-field
-                  :value="formatSecondsToDate(newInvoice.created, true) || '-'"
-                  readonly
-                  disabled
+                :value="formatSecondsToDate(newInvoice.created, true) || '-'"
+                readonly
+                disabled
               />
             </v-col>
           </v-row>
@@ -61,16 +61,16 @@
 
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Instance</v-subheader>
+              <v-subheader>Instances</v-subheader>
             </v-col>
             <v-col cols="9">
               <v-autocomplete
                 :disabled="isEdit"
                 :filter="defaultFilterObject"
-                label="Instance"
-                v-model="newInvoice.instance"
+                label="Instances"
+                v-model="selectedInstances"
                 return-object
-                :rules="requiredRule"
+                multiple
                 item-text="title"
                 item-value="uuid"
                 :items="instances"
@@ -113,6 +113,7 @@
               show-delete
               :account="newInvoice.account"
               :items="newInvoice.items"
+              :instances="instances"
               @click:delete="deleteInvoiceItem"
             />
           </div>
@@ -185,7 +186,7 @@
 <script setup>
 import JsonEditor from "@/components/JsonEditor.vue";
 import { defaultFilterObject, formatSecondsToDate } from "@/functions";
-import { computed, onMounted, ref, toRefs } from "vue";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import InvoiceItemsTable from "@/components/invoiceItemsTable.vue";
@@ -201,9 +202,10 @@ const { invoice, isEdit } = toRefs(props);
 const store = useStore();
 const router = useRouter();
 
+const selectedInstances = ref([]);
+
 const newInvoice = ref({
   account: null,
-  instance: null,
   total: 0,
   items: [{ amount: null, title: "" }],
   meta: {
@@ -232,9 +234,6 @@ onMounted(async () => {
   if (isEdit.value) {
     newInvoice.value = {
       ...invoice.value,
-      meta: {
-        ...invoice.value.meta,
-      },
     };
   }
 
@@ -299,9 +298,8 @@ const saveInvoice = async (withEmail = false) => {
     const data = {
       total: convertPrice(amount.value),
       account: newInvoice.value.account.uuid,
-      instance: newInvoice.value.instance.uuid,
       items: newInvoice.value.items.map((item) => ({
-        title: item.title,
+        ...item,
         amount: convertPrice(item.amount),
       })),
       meta: newInvoice.value.meta,
@@ -329,7 +327,7 @@ const convertPrice = (price) => {
 };
 
 const addInvoiceItem = () => {
-  newInvoice.value.items.push({ title: "", amount: 0 });
+  newInvoice.value.items.push({ title: "", amount: 0, instance: "" });
 };
 
 const deleteInvoiceItem = (index) => {
@@ -340,16 +338,48 @@ const deleteInvoiceItem = (index) => {
 };
 
 const onChangeAccount = () => {
-  newInvoice.value.instance = null;
+  selectedInstances.value = null;
 };
 
 const onChangeInstance = () => {
-  const product =
-    newInvoice.value.instance.billingPlan.products[
-      newInvoice.value.instance.product
-    ];
-  newInvoice.value.items = [{ amount: product.price, title: product.title }];
+  if (!selectedInstances.value || !selectedInstances.value.length) {
+    return;
+  }
+  const newItems = [];
+
+  selectedInstances.value.forEach((instance) => {
+    const { price: productPrice, title: productTitle } =
+      instance.billingPlan.products[instance.product];
+
+    const existedProduct = newInvoice.value.items.find(
+      (item) =>
+        item.title.includes(productTitle) && item.instance === instance.uuid
+    );
+
+    if (existedProduct) {
+      newItems.push(existedProduct);
+    } else {
+      newItems.push({
+        amount: productPrice,
+        title: productTitle,
+        instance: instance.uuid,
+      });
+    }
+  });
+
+  newInvoice.value.items = newItems;
 };
+
+watch(instances, (instances) => {
+  if (isEdit.value) {
+    const instancesUuid = [
+      ...new Set(invoice.value.items.map((item) => item.instance)),
+    ];
+    selectedInstances.value = instances.filter((instance) =>
+      instancesUuid.includes(instance.uuid)
+    );
+  }
+});
 </script>
 
 <style scoped>

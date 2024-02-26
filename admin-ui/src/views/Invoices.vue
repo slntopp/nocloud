@@ -26,7 +26,6 @@ const invoices = computed(() => store.getters["invoices/all"]);
 const fetchInvoices = () => {
   store.dispatch("invoices/fetch");
   store.dispatch("accounts/fetch");
-  store.dispatch("services/fetch");
 };
 </script>
 
