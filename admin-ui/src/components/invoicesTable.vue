@@ -25,7 +25,7 @@
     </template>
 
     <template v-slot:[`item.total`]="{ item }">
-      <balance :currency="item.currency" :value="-item.total" />
+      <balance abs :currency="item.currency" :value="-item.total" />
     </template>
     <template v-slot:[`item.proc`]="{ item }">
       {{ formatSecondsToDate(item.proc, true) }}
