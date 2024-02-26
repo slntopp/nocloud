@@ -46,7 +46,7 @@
     </template>
 
     <template v-slot:[`item.data.date_create`]="{ value }">
-      {{formatSecondsToDate(value)}}
+      {{ formatSecondsToDate(value) }}
     </template>
 
     <template v-slot:[`item.address`]="{ item }">
@@ -96,7 +96,7 @@ import search from "@/mixins/search";
 
 export default {
   name: "accounts-table",
-  mixins: [search({name:"accounts-table"})],
+  mixins: [search({ name: "accounts-table" })],
   components: {
     LoginInAccountIcon,
     "nocloud-table": noCloudTable,
@@ -111,6 +111,7 @@ export default {
       type: Boolean,
       default: false,
     },
+    notFiltered: { type: Boolean, default: false },
     namespace: {
       type: String,
     },
@@ -205,6 +206,10 @@ export default {
       }));
     },
     filteredAccounts() {
+      if (this.notFiltered) {
+        return this.accounts;
+      }
+
       const filter = { ...this.filter };
 
       const accounts = this.accounts.filter((a) => {
