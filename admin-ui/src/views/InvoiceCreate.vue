@@ -20,24 +20,6 @@
               </v-select>
             </v-col>
           </v-row>
-        </v-col>
-        <v-col v-if="isEdit" cols="6">
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Created date</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                :value="formatSecondsToDate(newInvoice.created, true) || '-'"
-                readonly
-                disabled
-              />
-            </v-col>
-          </v-row>
-        </v-col>
-      </v-row>
-      <v-row>
-        <v-col cols="6">
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Account</v-subheader>
@@ -58,7 +40,6 @@
               />
             </v-col>
           </v-row>
-
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Instances</v-subheader>
@@ -79,7 +60,6 @@
               />
             </v-col>
           </v-row>
-
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Amount</v-subheader>
@@ -95,37 +75,20 @@
               />
             </v-col>
           </v-row>
-
-          <v-row class="mx-5">
-            <v-textarea
-              no-resize
-              label="Admin note"
-              v-model="newInvoice.meta.note"
-            ></v-textarea>
-          </v-row>
-
-          <div class="mt-2">
-            <div class="d-flex justify-space-between">
-              <v-subheader>Invoice items</v-subheader>
-              <v-btn @click="addInvoiceItem">Add</v-btn>
-            </div>
-            <invoice-items-table
-              show-delete
-              :account="newInvoice.account"
-              :items="newInvoice.items"
-              :instances="instances"
-              @click:delete="deleteInvoiceItem"
-            />
-          </div>
-
-          <nocloud-expansion-panels class="mt-4" title="Meta">
-            <json-editor
-              :json="newInvoice.meta"
-              @changeValue="(data) => (newInvoice.meta = data)"
-            />
-          </nocloud-expansion-panels>
         </v-col>
-        <v-col cols="6" v-if="isEdit">
+        <v-col v-if="isEdit" cols="6">
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Created date</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-text-field
+                :value="formatSecondsToDate(newInvoice.created, true) || '-'"
+                readonly
+                disabled
+              />
+            </v-col>
+          </v-row>
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Executed date</v-subheader>
@@ -160,8 +123,34 @@
           </v-row>
         </v-col>
       </v-row>
+      <v-textarea
+        no-resize
+        label="Admin note"
+        v-model="newInvoice.meta.note"
+      ></v-textarea>
 
-      <v-row justify="start" class="mb-4">
+      <div class="mt-2">
+        <div class="d-flex justify-space-between">
+          <v-subheader>Invoice items</v-subheader>
+          <v-btn @click="addInvoiceItem">Add</v-btn>
+        </div>
+        <invoice-items-table
+          show-delete
+          :account="newInvoice.account"
+          :items="newInvoice.items"
+          :instances="instances"
+          @click:delete="deleteInvoiceItem"
+        />
+      </div>
+
+      <nocloud-expansion-panels class="mt-4" title="Meta">
+        <json-editor
+          :json="newInvoice.meta"
+          @changeValue="(data) => (newInvoice.meta = data)"
+        />
+      </nocloud-expansion-panels>
+
+      <v-row justify="start" class="mt-4 mb-4">
         <v-btn
           class="mx-3"
           color="background-light"
