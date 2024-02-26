@@ -2,6 +2,11 @@ package billing
 
 import (
 	"context"
+	"github.com/slntopp/nocloud-proto/access"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -36,6 +41,11 @@ func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, req *pb.Get
 }
 
 func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, req *pb.CreateExchangeRateRequest) (*pb.CreateExchangeRateResponse, error) {
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
+	}
+
 	err := s.ctrl.CreateExchangeRate(ctx, req.From, req.To, req.Rate)
 	if err != nil {
 		return &pb.CreateExchangeRateResponse{}, err
@@ -56,11 +66,21 @@ func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, req *pb.
 }
 
 func (s *CurrencyServiceServer) UpdateExchangeRate(ctx context.Context, req *pb.UpdateExchangeRateRequest) (*pb.UpdateExchangeRateResponse, error) {
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
+	}
+
 	err := s.ctrl.UpdateExchangeRate(ctx, req.From, req.To, req.Rate)
 	return &pb.UpdateExchangeRateResponse{}, err
 }
 
 func (s *CurrencyServiceServer) DeleteExchangeRate(ctx context.Context, req *pb.DeleteExchangeRateRequest) (*pb.DeleteExchangeRateResponse, error) {
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
+	}
+
 	err := s.ctrl.DeleteExchangeRate(ctx, req.From, req.To)
 	return &pb.DeleteExchangeRateResponse{}, err
 }
