@@ -10,26 +10,13 @@
     :loading="loading"
   >
     <template v-slot:[`item.account`]="{ value }">
-      <router-link
-        :to="{ name: 'Account', params: { accountId: value } }"
-      >
+      <router-link :to="{ name: 'Account', params: { accountId: value } }">
         {{ account(value) }}
       </router-link>
     </template>
 
-    <template v-slot:[`item.instance`]="{ value }">
-      <template v-if="value">
-        <router-link
-          :to="{ name: 'Instance', params: { instanceId: value } }"
-        >
-          {{ instance(value) }}
-        </router-link>
-      </template>
-      <template v-else>-</template>
-    </template>
-
     <template v-slot:[`item.total`]="{ item }">
-      <balance :currency="item.currency" :value="-item.total" />
+      <balance abs :currency="item.currency" :value="-item.total" />
     </template>
     <template v-slot:[`item.proc`]="{ item }">
       {{ formatSecondsToDate(item.proc, true) }}
@@ -67,9 +54,8 @@ export default {
     headers: [
       { text: "UUID ", value: "uuid" },
       { text: "Account ", value: "account" },
-      { text: "Instance ", value: "instance" },
       { text: "Amount ", value: "total" },
-      { text: "Proceed date ", value: "proc" },
+      { text: "Payment date ", value: "proc" },
       { text: "Executed date ", value: "exec" },
       { text: "Created date ", value: "created" },
       { text: "Status ", value: "status" },
@@ -80,13 +66,6 @@ export default {
     formatSecondsToDate,
     account(uuid) {
       return this.accounts.find((acc) => acc.uuid === uuid)?.title;
-    },
-    instance(uuid) {
-      const instance = this.$store.getters["services/getInstances"].find(
-        (inst) => inst.uuid === uuid
-      );
-
-      return instance?.title;
     },
   },
   computed: {
