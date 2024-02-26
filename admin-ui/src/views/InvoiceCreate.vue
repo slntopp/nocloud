@@ -285,7 +285,7 @@ const accountCurrency = computed(
     newInvoice.value.account?.currency || store.getters["currencies/default"]
 );
 const amount = computed(() =>
-  newInvoice.value.items.reduce((acc, i) => acc + i.amount, 0)
+  newInvoice.value.items.reduce((acc, i) => acc + +i.amount, 0)
 );
 
 const saveInvoice = async (withEmail = false) => {
