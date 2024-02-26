@@ -2,9 +2,10 @@
   <nocloud-table
     :table-name="tableName"
     class="mt-4"
+    :value="value"
+    @input="emit('input', $event)"
     sort-by="created"
     sort-desc
-    :show-select="false"
     :items="invoices"
     :headers="headers"
     :loading="isLoading"
@@ -50,8 +51,11 @@ import { useStore } from "@/store";
 
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
+  value: {},
 });
 const { tableName } = toRefs(props);
+
+const emit = defineEmits(["input"]);
 
 const count = ref(10);
 const page = ref(1);
@@ -82,7 +86,7 @@ const requestOptions = computed(() => ({
   filters: filter.value,
   page: page.value,
   limit: options.value.itemsPerPage,
-  field: options.value?.[0],
+  field: options.value.sortBy?.[0],
   sort:
     options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
 }));

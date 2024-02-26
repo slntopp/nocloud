@@ -50,7 +50,7 @@ const requestOptions = computed(() => ({
   filters: filter.value,
   page: page.value,
   limit: options.value.itemsPerPage,
-  field: options.value?.[0],
+  field: options.value.sortBy?.[0],
   sort:
     options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
 }));
