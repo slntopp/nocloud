@@ -53,7 +53,7 @@ const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
   value: {},
 });
-const { tableName } = toRefs(props);
+const { tableName, value } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -134,4 +134,9 @@ const fetchInvoicesDebounce = debounce(fetchInvoices, 100);
 
 watch(filter, fetchInvoicesDebounce, { deep: true });
 watch(options, fetchInvoicesDebounce);
+watch(value, (newValue) => {
+  if (newValue?.length === 0) {
+    fetchInvoicesDebounce();
+  }
+});
 </script>
