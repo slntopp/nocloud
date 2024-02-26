@@ -15,16 +15,15 @@ import InvoicesTable from "@/components/invoicesTable.vue";
 const store = useStore();
 
 onMounted(() => {
-  fetchInvoices();
+  fetch();
 
-  store.commit("reloadBtn/setCallback", { event: fetchInvoices });
+  store.commit("reloadBtn/setCallback", { event: fetch });
 });
 
 const isLoading = computed(() => store.getters["invoices/isLoading"]);
 const invoices = computed(() => store.getters["invoices/all"]);
 
-const fetchInvoices = () => {
-  store.dispatch("invoices/fetch");
+const fetch = () => {
   store.dispatch("accounts/fetch");
 };
 </script>

@@ -19,15 +19,18 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit }) {
+    async fetch({ commit }, params) {
       commit("setInvoices", []);
       commit("setLoading", true);
       try {
-        const response = await api.post("/billing/invoices");
+        const response = await api.post("/billing/invoices", params);
         commit("setInvoices", response.pool);
       } finally {
         commit("setLoading", false);
       }
+    },
+    async count(_, params) {
+      return api.post("/billing/count/invoices", params);
     },
     async fetchById({ commit }, id) {
       commit("setLoading", true);
