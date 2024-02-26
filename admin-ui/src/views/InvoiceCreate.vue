@@ -139,7 +139,7 @@
           </v-row>
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Proceed date</v-subheader>
+              <v-subheader>Payment date</v-subheader>
             </v-col>
             <v-col cols="9">
               <v-text-field

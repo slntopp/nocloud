@@ -10,18 +10,14 @@
     :loading="loading"
   >
     <template v-slot:[`item.account`]="{ value }">
-      <router-link
-        :to="{ name: 'Account', params: { accountId: value } }"
-      >
+      <router-link :to="{ name: 'Account', params: { accountId: value } }">
         {{ account(value) }}
       </router-link>
     </template>
 
     <template v-slot:[`item.instance`]="{ value }">
       <template v-if="value">
-        <router-link
-          :to="{ name: 'Instance', params: { instanceId: value } }"
-        >
+        <router-link :to="{ name: 'Instance', params: { instanceId: value } }">
           {{ instance(value) }}
         </router-link>
       </template>
@@ -69,7 +65,7 @@ export default {
       { text: "Account ", value: "account" },
       { text: "Instance ", value: "instance" },
       { text: "Amount ", value: "total" },
-      { text: "Proceed date ", value: "proc" },
+      { text: "Payment date ", value: "proc" },
       { text: "Executed date ", value: "exec" },
       { text: "Created date ", value: "created" },
       { text: "Status ", value: "status" },
