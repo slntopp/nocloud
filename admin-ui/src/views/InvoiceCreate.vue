@@ -167,6 +167,15 @@
         >
           Publish + email
         </v-btn>
+
+        <v-btn
+          class="mx-4"
+          color="background-light"
+          :loading="isSendEmailLoading"
+          @click="sendEmail"
+        >
+          email
+        </v-btn>
       </v-row>
     </v-form>
   </div>
@@ -207,6 +216,7 @@ const requiredRule = ref([(val) => !!val || "Field required"]);
 const isValid = ref(false);
 const invoiceForm = ref(null);
 const isSaveLoading = ref(false);
+const isSendEmailLoading = ref(false);
 
 const types = [
   {
@@ -357,6 +367,18 @@ const onChangeInstance = () => {
   });
 
   newInvoice.value.items = newItems;
+};
+
+const sendEmail = async () => {
+  isSendEmailLoading.value = true;
+  try {
+    console.log(newInvoice.value.account);
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", { message: e.message });
+  } finally {
+    isSendEmailLoading.value = false;
+  }
 };
 
 watch(instances, (instances) => {
