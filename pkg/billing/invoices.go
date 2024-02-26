@@ -294,6 +294,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
+	t.Status = req.GetStatus()
 
 	_, err = s.invoices.Update(ctx, t)
 	if err != nil {
