@@ -121,13 +121,19 @@ func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacesp
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
+	var reqLevel access.Level
+
 	if request.Access == nil {
-		level = level - 1
+		reqLevel = level - 1
 	} else {
-		level = access.Level(*request.Access)
+		reqLevel = access.Level(*request.Access)
 	}
 
-	err = s.ctrl.Join(ctx, acc, ns, level, roles.DEFAULT)
+	if reqLevel > level {
+		return nil, status.Error(codes.PermissionDenied, "Cannot select higher level")
+	}
+
+	err = s.ctrl.Join(ctx, acc, ns, reqLevel, roles.DEFAULT)
 	if err != nil {
 		s.log.Debug("Error while joining account", zap.Error(err))
 		return nil, status.Error(codes.Internal, fmt.Sprintf("Error while joining account. %s", err.Error()))
@@ -155,13 +161,19 @@ func (s *NamespacesServiceServer) Link(ctx context.Context, request *namespacesp
 		return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Namespace")
 	}
 
+	var reqLevel access.Level
+
 	if request.Access == nil {
-		level = level - 1
+		reqLevel = level - 1
 	} else {
-		level = access.Level(*request.Access)
+		reqLevel = access.Level(*request.Access)
 	}
 
-	err = s.ctrl.Link(ctx, acc, ns, level, roles.DEFAULT)
+	if reqLevel > level {
+		return nil, status.Error(codes.PermissionDenied, "Cannot select higher level")
+	}
+
+	err = s.ctrl.Link(ctx, acc, ns, reqLevel, roles.DEFAULT)
 	if err != nil {
 		s.log.Debug("Error while linking account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error while linking account to namespace")

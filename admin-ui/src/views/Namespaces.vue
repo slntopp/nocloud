@@ -56,24 +56,29 @@
         <v-card color="background-light">
           <v-card-title class=""> Select Accounts (join) </v-card-title>
 
-          <v-card-text>
-            <accounts-table v-model="joinAccount.selected" single-select>
-            </accounts-table>
+          <v-card-text style="max-height: 60vh">
+            <accounts-table
+              not-filtered
+              v-model="joinAccount.selected"
+              single-select
+            />
+          </v-card-text>
+          <v-row class="pa-5">
             <v-select
-              class="mt-5"
+              class="mx-4"
               label="access level"
+              item-value="id"
+              item-text="title"
               v-model="joinAccount.data.access"
-              :items="joinAccount.accessLevels"
-            >
-            </v-select>
+              :items="accessLevels"
+            />
             <v-select
+              class="mx-4"
               label="role"
               v-model="joinAccount.data.role"
-              :items="['default', 'owner']"
-            >
-            </v-select>
-          </v-card-text>
-
+              :items="accessRoles"
+            />
+          </v-row>
           <v-divider></v-divider>
 
           <v-card-actions>
@@ -106,9 +111,27 @@
         <v-card color="background-light">
           <v-card-title class=""> Select Accounts (link) </v-card-title>
 
-          <v-card-text>
-            <accounts-table v-model="linkAccount.selected"> </accounts-table>
+          <v-card-text style="max-height: 60vh">
+            <accounts-table not-filtered v-model="linkAccount.selected">
+            </accounts-table>
           </v-card-text>
+
+          <v-row class="pa-5">
+            <v-select
+              class="mx-4"
+              label="access level"
+              item-value="id"
+              item-text="title"
+              v-model="linkAccount.data.access"
+              :items="accessLevels"
+            />
+            <v-select
+              class="mx-4"
+              label="role"
+              v-model="linkAccount.data.role"
+              :items="accessRoles"
+            />
+          </v-row>
 
           <v-divider></v-divider>
 
@@ -160,13 +183,26 @@ export default {
       linkAccount: {
         modalVisible: false,
         selected: [],
+        data: {
+          access: 0,
+          role: "default",
+        },
       },
+
+      accessLevels: [
+        { id: undefined, title: "DEFAULT" },
+        { id: 0, title: "NONE" },
+        { id: 1, title: "READ" },
+        { id: 2, title: "MGMT" },
+        { id: 3, title: "ADMIN" },
+        { id: 4, title: "ROOT" },
+      ],
+      accessRoles: ["default", "owner"],
       joinAccount: {
         modalVisible: false,
         selected: [],
-        accessLevels: [0, 1, 2, 3],
         data: {
-          access: 1,
+          access: 0,
           role: "default",
         },
       },
@@ -214,7 +250,11 @@ export default {
       if (this.selected.length > 0) {
         const namespace = this.selected[0];
         const linkPromices = this.linkAccount.selected.map((account) =>
-          api.namespaces.link(namespace.uuid, account.uuid)
+          api.namespaces.link(namespace.uuid, {
+            account: account.uuid,
+            role: this.linkAccount.data.role,
+            access: this.linkAccount.data.access,
+          })
         );
         this.linkAccount.loading = true;
         Promise.all(linkPromices)
