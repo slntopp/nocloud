@@ -158,7 +158,7 @@
         @update="updateCopy"
         :is="billingLabelComponent"
         v-if="Object.keys(copyInstance).length"
-        :template="template"
+        :template="copyInstance"
       />
     </div>
   </v-card>
