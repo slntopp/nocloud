@@ -5,6 +5,7 @@ export default {
   state: {
     accounts: [],
     loading: false,
+    isAccountsFetched: false,
   },
   mutations: {
     setAccounts(state, accounts) {
@@ -22,9 +23,17 @@ export default {
     setLoading(state, data) {
       state.loading = data;
     },
+    setIsFetched(state, val) {
+      state.isAccountsFetched = val;
+    },
   },
   actions: {
-    fetch({ commit }) {
+    fetch({ commit, state }, cache = true) {
+      console.log(cache,state.isAccountsFetched)
+      if (cache && state.isAccountsFetched) {
+        return;
+      }
+
       commit("setAccounts", []);
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
@@ -39,6 +48,7 @@ export default {
           })
           .finally(() => {
             commit("setLoading", false);
+            commit("setIsFetched", true);
           });
       });
     },
