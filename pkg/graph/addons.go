@@ -88,6 +88,8 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 		for key, value := range req.GetFilters() {
 			if key == "title" {
 				query += fmt.Sprintf(` FILTER a.title LIKE "%s"`, "%"+value.GetStringValue()+"%")
+			} else if key == "system" {
+				query += fmt.Sprintf(` FILTER a.system == "%t"`, value.GetBoolValue())
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -149,6 +151,8 @@ func (c *AddonsController) Count(ctx context.Context, req *pb.CountAddonsRequest
 		for key, value := range req.GetFilters() {
 			if key == "title" {
 				query += fmt.Sprintf(` FILTER a.title LIKE "%s"`, "%"+value.GetStringValue()+"%")
+			} else if key == "system" {
+				query += fmt.Sprintf(` FILTER a.system == "%t"`, value.GetBoolValue())
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {

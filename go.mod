@@ -16,7 +16,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/rs/cors v1.10.1
-	github.com/slntopp/nocloud-proto v0.0.0-20240226092013-eca456fd7dc6
+	github.com/slntopp/nocloud-proto v0.0.0-20240229111738-ab0b930da2e5
 	github.com/spf13/viper v1.18.2
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.8.4
@@ -41,7 +41,6 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240116215550-a9fa1716bcac // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240125205218-1f4bbc51befe // indirect
