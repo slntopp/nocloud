@@ -119,7 +119,7 @@ func (ctrl *AccountsController) Update(ctx context.Context, acc Account, patch m
 
 // Grant account access to namespace
 func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level access.Level, role string) error {
-	_, err := edge.CreateDocument(ctx, Access{
+	a := Access{
 		From:  acc.ID,
 		To:    ns.ID,
 		Level: level,
@@ -127,13 +127,19 @@ func (acc *Account) LinkNamespace(ctx context.Context, edge driver.Collection, n
 		DocumentMeta: driver.DocumentMeta{
 			Key: acc.Key + "-" + ns.Key,
 		},
-	})
+	}
+
+	if _, err := edge.UpdateDocument(ctx, a.DocumentMeta.Key, a); err == nil {
+		return nil
+	}
+
+	_, err := edge.CreateDocument(ctx, a)
 	return err
 }
 
 // Grant namespace access to account
 func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, ns Namespace, level access.Level, role string) error {
-	_, err := edge.CreateDocument(ctx, Access{
+	a := Access{
 		From:  ns.ID,
 		To:    acc.ID,
 		Level: level,
@@ -141,7 +147,13 @@ func (acc *Account) JoinNamespace(ctx context.Context, edge driver.Collection, n
 		DocumentMeta: driver.DocumentMeta{
 			Key: ns.Key + "-" + acc.Key,
 		},
-	})
+	}
+
+	if _, err := edge.UpdateDocument(ctx, a.DocumentMeta.Key, a); err == nil {
+		return nil
+	}
+
+	_, err := edge.CreateDocument(ctx, a)
 	return err
 }
 

@@ -9,7 +9,12 @@
         v-model="createMenuVisible"
       >
         <template v-slot:activator="{ on, attrs }">
-          <v-btn color="background-light" class="mr-2 mt-2" v-bind="attrs" v-on="on">
+          <v-btn
+            color="background-light"
+            class="mr-2 mt-2"
+            v-bind="attrs"
+            v-on="on"
+          >
             create
           </v-btn>
         </template>
@@ -379,9 +384,10 @@ export default {
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "accounts/fetch",
+      params: false,
     });
     this.$store.dispatch("currencies/fetch");
-    this.$store.dispatch("services/fetch",{showDeleted:true});
+    this.$store.dispatch("services/fetch", { showDeleted: true });
   },
   watch: {
     defaultCurrency(newVal) {
