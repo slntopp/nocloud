@@ -193,14 +193,14 @@ const states = [
   "OPERATION",
 ];
 const headers = computed(() => [
-  { text: "Key", value: "key", width: 100 },
+  { text: "Key", value: "key", width: 250 },
   { text: "Title", value: "title", width: 250 },
   { text: "Price", value: "price", width: 150 },
   ["ione", "cpanel", "empty"].includes(type.value) && {
     text: "One time",
     value: "meta.oneTime",
   },
-  { text: "Period", value: "period", width: 165 },
+  { text: "Period", value: "period", width: 220 },
   { text: "Min count", value: "min" },
   { text: "Max count", value: "max" },
   { text: "Auto enable", value: "meta.autoEnable" },
