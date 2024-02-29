@@ -89,7 +89,7 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 			if key == "title" {
 				query += fmt.Sprintf(` FILTER a.title LIKE "%s"`, "%"+value.GetStringValue()+"%")
 			} else if key == "system" {
-				query += fmt.Sprintf(` FILTER a.system == "%t"`, value.GetBoolValue())
+				query += fmt.Sprintf(` FILTER a.system == %t`, value.GetBoolValue())
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
@@ -152,7 +152,7 @@ func (c *AddonsController) Count(ctx context.Context, req *pb.CountAddonsRequest
 			if key == "title" {
 				query += fmt.Sprintf(` FILTER a.title LIKE "%s"`, "%"+value.GetStringValue()+"%")
 			} else if key == "system" {
-				query += fmt.Sprintf(` FILTER a.system == "%t"`, value.GetBoolValue())
+				query += fmt.Sprintf(` FILTER a.system == %t`, value.GetBoolValue())
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
