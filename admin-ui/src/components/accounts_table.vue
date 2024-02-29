@@ -60,11 +60,11 @@
       </v-tooltip>
     </template>
     <template v-slot:[`item.access.level`]="{ item }">
-      <v-chip :color="item.access.color">
+      <v-chip :color="colorChip(item.access.level)">
         {{ item.access.level }}
       </v-chip>
     </template>
-    <template v-slot:[`item.data.regular_payment`]="{ value, item }">
+    <template v-slot:[`item.data.regular_payment`]="{ item }">
       <v-switch
         :disabled="
           !!changeRegularPaymentUuid && changeRegularPaymentUuid !== item.uuid
@@ -73,7 +73,10 @@
           !!changeRegularPaymentUuid && changeRegularPaymentUuid === item.uuid
         "
         @change="changeRegularPayment(item, $event)"
-        :input-value="value"
+        :input-value="
+          item.data?.regular_payment === undefined ||
+          item.data?.regular_payment === true
+        "
       >
       </v-switch>
     </template>
@@ -188,22 +191,7 @@ export default {
       filter: "filter",
     }),
     accounts() {
-      return this.$store.getters["accounts/all"].map((a) => ({
-        ...a,
-        access: {
-          ...a.access,
-          color: this.colorChip(a.access.level),
-        },
-        balance: a.balance || 0,
-        currency: a.currency || this.defaultCurrency,
-        namespace: this.getNamespaceName(a.uuid),
-        data: {
-          ...a.data,
-          regular_payment:
-            a.data?.regular_payment === undefined ||
-            a.data?.regular_payment === true,
-        },
-      }));
+      return this.$store.getters["accounts/all"];
     },
     filteredAccounts() {
       if (this.notFiltered) {
@@ -211,9 +199,10 @@ export default {
       }
 
       const filter = { ...this.filter };
+      const filterKeys = Object.keys(filter).filter((key) => !!filter[key]);
 
       const accounts = this.accounts.filter((a) => {
-        return Object.keys(filter).every((key) => {
+        return filterKeys.every((key) => {
           let data;
           if (key === "namespace") {
             data = this.getNamespaceName(a.uuid);
@@ -221,11 +210,7 @@ export default {
             data = getDeepObjectValue(a, key);
           }
 
-          return compareSearchValue(
-            data,
-            filter[key],
-            this.searchFields.find((f) => f.key === key)
-          );
+          return compareSearchValue(data, filter[key], this.searchFields[key]);
         });
       });
 
@@ -245,51 +230,43 @@ export default {
       return this.$store.getters["currencies/default"];
     },
     searchFields() {
-      return [
-        {
+      return {
+        title: {
           title: "Title",
-          key: "title",
           type: "input",
         },
-        {
+        status: {
           title: "Status",
-          key: "status",
           type: "select",
           items: [...new Set(this.accounts.map((a) => a.status))],
         },
-        { title: "Balance", key: "balance", type: "number-range" },
-        { title: "Email", key: "data.email", type: "input" },
-        { title: "Created date", key: "data.date_create", type: "date" },
-        { title: "Country", key: "data.country", type: "input" },
-        { title: "Address", key: "data.address", type: "input" },
-        {
+        balance: { title: "Balance", type: "number-range" },
+        "data.email": { title: "Email", type: "input" },
+        "data.date_create": { title: "Created date", type: "date" },
+        "data.country": { title: "Country", type: "input" },
+        "data.address": { title: "Address", type: "input" },
+        currency: {
           title: "Client currency",
-          key: "currency",
           type: "select",
           items: this.$store.getters["currencies/all"].filter(
             (c) => c !== "NCU"
           ),
         },
-        {
+        "access.level": {
           title: "Access level",
-          key: "access.level",
           type: "select",
           items: Object.keys(this.levelColorMap),
         },
-        {
+        "data.regular_payment": {
           title: "Invoice based",
-          key: "data.regular_payment",
           type: "logic-select",
         },
-        {
+        namespace: {
           title: "Group(NameSpace)",
-          key: "namespace",
           type: "select",
-          items: [
-            ...new Set(this.accounts.map((a) => this.getNamespaceName(a.uuid))),
-          ],
+          items: [...new Set(this.namespaces.map((n) => n.title))],
         },
-      ];
+      };
     },
   },
   created() {
@@ -318,7 +295,13 @@ export default {
       this.fetchError = "";
     },
     searchFields() {
-      this.$store.commit("appSearch/setFields", this.searchFields);
+      this.$store.commit(
+        "appSearch/setFields",
+        Object.keys(this.searchFields).map((key) => ({
+          ...this.searchFields[key],
+          key,
+        }))
+      );
     },
     value() {
       this.selected = this.value;
