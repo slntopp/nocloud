@@ -9,9 +9,7 @@
           hide-details
           dense
           :input-value="template.config.regular_payment"
-          @change="
-            emit('update', { key: 'config.regular_payment', value: !!$event })
-          "
+          @change="updateInvoiceBased"
           :disabled="isDeleted"
           label="Invoice based"
         />
@@ -105,12 +103,14 @@ const price = computed(() => {
 
 const isRenewDisabled = computed(() => {
   return (
-    (account.value?.balance || 0) < price.value || isAutoRenewDisabled.value
+    isDeleted.value ||
+    template.value.data.blocked ||
+    (account.value?.balance || 0) < price.value
   );
 });
 
 const isAutoRenewDisabled = computed(() => {
-  return template.value.data.blocked || renewDisabled.value || isDeleted.value;
+  return renewDisabled.value || template.value.config.regular_payment;
 });
 
 const isDeleted = computed(() => {
@@ -160,6 +160,13 @@ const renewTemplate = `
         </div>
       </div>
     `.trim();
+
+const updateInvoiceBased = (value) => {
+  if (template.value.config.auto_renew && value) {
+    emit("update", { key: "config.auto_renew", value: false });
+  }
+  emit("update", { key: "config.regular_payment", value: !!value });
+};
 </script>
 
 <style scoped></style>

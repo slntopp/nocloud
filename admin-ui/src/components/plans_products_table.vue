@@ -307,7 +307,7 @@ const tabs = computed(() => {
 
 const headers = computed(() =>
   [
-    { text: "Key", value: "key", width: 100 },
+    { text: "Key", value: "key", width: 250 },
     { text: "Title", value: "title", width: 250 },
     { text: "Price", value: "price", width: 150 },
     {
