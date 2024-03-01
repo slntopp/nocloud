@@ -22,7 +22,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20220101234140-673ab2c3ae75
 	github.com/wI2L/jsondiff v0.4.0
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 	golang.org/x/crypto v0.20.0
 	golang.org/x/net v0.21.0
 	golang.org/x/oauth2 v0.17.0
