@@ -1,4 +1,9 @@
-import api from "@/api.js";
+import { createPromiseClient } from "@connectrpc/connect";
+import { AddonsService } from "nocloud-proto/proto/es/billing/billing_connect";
+import {
+  CountAddonsRequest,
+  ListAddonsRequest,
+} from "nocloud-proto/proto/es/billing/addons/addons_pb";
 
 export default {
   namespaced: true,
@@ -19,24 +24,25 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit }, options) {
+    async fetch({ commit, getters }, options) {
       commit("setAddons", []);
       commit("setLoading", true);
       try {
-        const response = await api.post("/billing/addons", options);
-
+        const response = await getters.addonsClient.list(
+          ListAddonsRequest.fromJson(options)
+        );
         commit("setAddons", response.addons);
       } finally {
         commit("setLoading", false);
       }
     },
-    async count(_, options) {
-      return api.post("/billing/count/addons", options);
+    async count({ getters }, options) {
+      return getters.addonsClient.count(CountAddonsRequest.fromJson(options));
     },
-    async fetchById({ commit }, id) {
+    async fetchById({ commit, getters }, id) {
       commit("setLoading", true);
       try {
-        const response = await api.get(`/billing/addons/${id}`);
+        const response = await getters.addonsClient.get({ uuid: id });
         commit("setOne", response);
       } finally {
         commit("setLoading", false);
@@ -44,6 +50,9 @@ export default {
     },
   },
   getters: {
+    addonsClient(state, getters, rootState, rootGetters) {
+      return createPromiseClient(AddonsService, rootGetters["app/transport"]);
+    },
     all(state) {
       return state.addons;
     },

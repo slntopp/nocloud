@@ -38,7 +38,6 @@
 
 <script setup>
 import NocloudTable from "@/components/table.vue";
-import api from "@/api";
 import { ref, toRefs } from "vue";
 import { useStore } from "@/store";
 
@@ -82,9 +81,14 @@ const updatingAddonUuid = ref(false);
 const updateAddon = async (item, { key, value }) => {
   try {
     updatingAddonUuid.value = item.uuid;
-    await api.patch("/addons/" + item.uuid, { ...item, [key]: value });
+    console.log(item);
+    await store.getters["addons/addonsClient"].update({
+      ...item,
+      [key]: value,
+    });
     item.public = value;
   } catch (e) {
+    console.log(e);
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
     updatingAddonUuid.value = "";

@@ -13,6 +13,7 @@
     </div>
 
     <addons-table
+      editable
       show-select
       :fetchError="fetchError"
       :loading="isLoading"
@@ -30,7 +31,6 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { useStore } from "@/store";
-import api from "@/api";
 import { debounce } from "@/functions";
 import AddonsTable from "@/components/addonsTable.vue";
 
@@ -53,6 +53,10 @@ const requestOptions = computed(() => ({
   field: options.value.sortBy?.[0],
   sort:
     options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
+}));
+
+const countOptions = computed(() => ({
+  filters: filter.value,
 }));
 
 const filter = computed(() => ({
@@ -82,7 +86,7 @@ const deleteSelectedAddons = async () => {
     isDeleteLoading.value = true;
     await Promise.all(
       selectedAddons.value.map((addon) =>
-        api.delete("/billing/addons/" + addon.uuid)
+        store.getters["addons/addonsClient"].delete(addon)
       )
     );
     fetchAddonsDebounced();
@@ -103,11 +107,10 @@ const setOptions = (newOptions) => {
 const init = async () => {
   isCountLoading.value = true;
   try {
-    const { total, unique } = await store.dispatch(
-      "addons/count",
-      requestOptions.value
-    );
-    count.value = +total;
+    const data = await store.dispatch("addons/count", countOptions.value);
+    const { unique, total } = data.toJson();
+
+    count.value = Number(total);
     allAddonsGroups.value = unique.groups;
   } finally {
     isCountLoading.value = false;

@@ -45,7 +45,6 @@
 </template>
 
 <script>
-import api from "@/api.js";
 import yaml from "yaml";
 import snackbar from "@/mixins/snackbar.js";
 import JsonTextarea from "@/components/JsonTextarea.vue";
@@ -87,8 +86,8 @@ export default {
           : yaml.parse(this.tree);
 
       this.isLoading = true;
-      api
-        .patch("/addons/" + this.addon.uuid, request)
+      this.$store.getters["addons/addonsClient"]
+        .update(request)
         .then(() => {
           this.showSnackbarSuccess({
             message: "Addon edited successfully",

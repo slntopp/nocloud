@@ -160,13 +160,13 @@ const saveAddon = async () => {
         text: newAddon.value.description,
       });
       dto.descriptionId = description.uuid;
-      await api.put("/billing/addons", dto);
+      await store.getters["addons/addonsClient"].create(dto);
       router.push({ name: "Addons" });
     } else {
       await api.patch("/billing/descs/" + newAddon.value.descriptionId, {
         text: newAddon.value.description,
       });
-      await api.patch("/billing/addons/" + dto.uuid, dto);
+      await store.getters["addons/addonsClient"].update(dto);
     }
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
