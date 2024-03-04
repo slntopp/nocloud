@@ -429,20 +429,18 @@ func ListWithAccessAndFilters[T Accessible](
 		insert += fmt.Sprintf("SORT node.%s %s\n", field, sort)
 	}
 
-	if filters != nil {
-		for key, val := range filters {
-			if key == "search_param" && collectionName == schema.ACCOUNTS_COL {
-				insert += fmt.Sprintf(` FILTER node.title LIKE "%s" || node.data.email LIKE "%s"`, "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
-			} else if key == "namespace" && collectionName == schema.ACCOUNTS_COL {
-				insert += fmt.Sprintf(` FILTER path.vertices[-2]._key == "%s"`, "%"+val.GetStringValue()+"%")
-			} else {
-				values := val.GetListValue().AsSlice()
-				if len(values) == 0 {
-					continue
-				}
-				insert += fmt.Sprintf(` FILTER node["%s"] in @%s`, key, key)
-				bindVars[key] = values
+	for key, val := range filters {
+		if key == "search_param" && collectionName == schema.ACCOUNTS_COL {
+			insert += fmt.Sprintf(` FILTER node.title LIKE "%s" || node.data.email LIKE "%s"`, "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
+		} else if key == "namespace" && collectionName == schema.ACCOUNTS_COL {
+			insert += fmt.Sprintf(` FILTER path.vertices[-2]._key == "%s"`, "%"+val.GetStringValue()+"%")
+		} else {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
 			}
+			insert += fmt.Sprintf(` FILTER node["%s"] in @%s`, key, key)
+			bindVars[key] = values
 		}
 	}
 
