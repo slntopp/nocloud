@@ -22,13 +22,15 @@
 <script setup>
 import { onMounted, ref, toRefs } from "vue";
 import AddonsTable from "@/components/addonsTable.vue";
-import api from "@/api";
+import { useStore } from "@/store";
 
 const props = defineProps({
   addons: { type: Array, required: true },
 });
 
 const { addons } = toRefs(props);
+
+const store = useStore();
 
 const productAddons = ref([]);
 const isAddonsLoading = ref(false);
@@ -38,7 +40,9 @@ onMounted(async () => {
   try {
     isAddonsLoading.value = true;
     const data = await Promise.all(
-      addons.value.map((uuid) => api.get("/billing/addons/" + uuid))
+      addons.value.map((uuid) =>
+        store.getters["addons/addonsClient"].get({ uuid })
+      )
     );
     productAddons.value = data;
   } finally {
