@@ -17,8 +17,7 @@ export default {
     },
     transport(state, getters, rootState, rootGetters) {
       const transport = createConnectTransport({
-        // baseUrl: new URL("").href,
-        baseUrl: "https://api.nocloud.ione-cloud.net/",
+        baseUrl: window.location.origin,
         useBinaryFormat: false,
         interceptors: [
           (next) => async (req) => {
