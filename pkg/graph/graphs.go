@@ -447,7 +447,9 @@ func ListWithAccessAndFilters[T Accessible](
 	}
 
 	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
-	c, err := db.Query(ctx, listObjectsWithFiltersOfKind, bindVars)
+	q := fmt.Sprintf(listObjectsWithFiltersOfKind, insert)
+	log.Debug("Query", zap.String("q", q))
+	c, err := db.Query(ctx, q, bindVars)
 	if err != nil {
 		return nil, err
 	}
