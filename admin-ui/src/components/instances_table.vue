@@ -445,19 +445,21 @@ export default {
     },
     instances() {
       const instances = this.items.filter((i) => {
-        return Object.keys(this.filter || {}).every((key) => {
-          let value;
-          if (this.headersGetters[key]) {
-            value = this.getValue(key, i);
-          } else {
-            value = getDeepObjectValue(i, key);
-          }
-          return compareSearchValue(
-            value,
-            this.filter[key],
-            this.searchFields?.find((f) => f.key === key)
-          );
-        });
+        return Object.keys(this.filter || {})
+          .filter((key) => !!this.filter[key])
+          .every((key) => {
+            let value;
+            if (this.headersGetters[key]) {
+              value = this.getValue(key, i);
+            } else {
+              value = getDeepObjectValue(i, key);
+            }
+            return compareSearchValue(
+              value,
+              this.filter[key],
+              this.searchFields?.find((f) => f.key === key)
+            );
+          });
       });
 
       const searchParam = this.searchParam?.toLowerCase();
@@ -486,7 +488,7 @@ export default {
           );
         }
         const searchKeysFull = searchKeys.concat(dynamicKeys);
-        return searchKeysFull.some((key) => {
+        return searchKeysFull.find((key) => {
           let tempItem = item;
           if (this.headersGetters[key]) {
             tempItem = this.getValue(key, tempItem);
