@@ -278,15 +278,20 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 		depth = 4
 	}
 
-	pool, err := graph.ListWithAccess[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, depth)
+	page := request.GetPage()
+	limit := request.GetLimit()
+
+	offset := (page - 1) * limit
+
+	pool, err := graph.ListWithAccessAndFilters[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")
 	}
 	log.Debug("List result", zap.Any("pool", pool))
 
-	result := make([]*accountspb.Account, len(pool))
-	for i, acc := range pool {
+	result := make([]*accountspb.Account, len(pool.Result))
+	for i, acc := range pool.Result {
 		if acc.Access.Level < access.Level_ROOT {
 			acc.Account.SuspendConf = nil
 		}
@@ -294,7 +299,10 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	}
 	log.Debug("Convert result", zap.Any("pool", result))
 
-	return &accountspb.ListResponse{Pool: result}, nil
+	return &accountspb.ListResponse{
+		Pool:  result,
+		Count: int64(pool.Count),
+	}, nil
 }
 
 func (s *AccountsServiceServer) Token(ctx context.Context, request *accountspb.TokenRequest) (*accountspb.TokenResponse, error) {

@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/protobuf/types/known/structpb"
 	"strings"
 
 	"github.com/arangodb/go-driver"
@@ -376,4 +377,85 @@ func ListWithAccess[T Accessible](
 	}
 
 	return list, nil
+}
+
+const listObjectsWithFiltersOfKind = `
+LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
+GRAPH @permissions_graph
+OPTIONS {order: "bfs", uniqueVertices: "global"}
+FILTER IS_SAME_COLLECTION(@@kind, node)
+// FILTER edge.level > 0 // TODO: ensure all edges have level
+%s
+    LET perm = path.edges[0]
+	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+)
+
+RETURN { 
+	result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
+	count: LENGTH(list)
+}
+`
+
+type ListQueryResult[T Accessible] struct {
+	Result []T `json:"result"`
+	Count  int `json:"count"`
+}
+
+func ListWithAccessAndFilters[T Accessible](
+	ctx context.Context,
+	log *zap.Logger,
+	db driver.Database,
+	fromDocument driver.DocumentID,
+	collectionName string,
+	depth int32,
+	offset, limit uint64,
+	field, sort string,
+	filters map[string]*structpb.Value,
+) (*ListQueryResult[T], error) {
+	var result ListQueryResult[T]
+
+	bindVars := map[string]interface{}{
+		"depth":             depth,
+		"from":              fromDocument,
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"@kind":             collectionName,
+		"offset":            offset,
+		"limit":             limit,
+	}
+
+	var insert string
+
+	if field != "" && sort != "" {
+		insert += fmt.Sprintf("SORT node.%s %s\n", field, sort)
+	}
+
+	for key, val := range filters {
+		if key == "search_param" && collectionName == schema.ACCOUNTS_COL {
+			insert += fmt.Sprintf(` FILTER node.title LIKE "%s" || node.data.email LIKE "%s"`, "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
+		} else if key == "namespace" && collectionName == schema.ACCOUNTS_COL {
+			insert += fmt.Sprintf(` FILTER path.vertices[-2]._key == "%s"`, "%"+val.GetStringValue()+"%")
+		} else {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += fmt.Sprintf(` FILTER node["%s"] in @%s`, key, key)
+			bindVars[key] = values
+		}
+	}
+
+	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
+	q := fmt.Sprintf(listObjectsWithFiltersOfKind, insert)
+	log.Debug("Query", zap.String("q", q))
+	c, err := db.Query(ctx, q, bindVars)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = c.ReadDocument(ctx, &result)
+	if err != nil {
+		log.Warn("Could not append entity to query results", zap.Error(err))
+	}
+
+	return &result, nil
 }
