@@ -1,47 +1,50 @@
 <template>
   <nocloud-table
-      table-name="accounts"
-      :headers="headers"
-      :items="filteredAccounts"
-      :value="selected"
-      :loading="loading"
-      :single-select="singleSelect"
-      :footer-error="fetchError"
-      @input="handleSelect"
+    table-name="accounts"
+    :headers="headers"
+    :items="accounts"
+    :value="selected"
+    :loading="loading"
+    :single-select="singleSelect"
+    :footer-error="fetchError"
+    @input="handleSelect"
+    :server-items-length="total"
+    :server-side-page="options.page"
+    @update:options="setOptions"
   >
     <template v-slot:[`item.title`]="{ item }">
       <div class="d-flex justify-space-between">
         <router-link
-            :to="{ name: 'Account', params: { accountId: item.uuid } }"
+          :to="{ name: 'Account', params: { accountId: item.uuid } }"
         >
           {{ item.title }}
         </router-link>
         <div>
           <v-icon
-              @click="
+            @click="
               $router.push({
                 name: 'Account',
                 params: { accountId: item.uuid },
                 query: { tab: 2 },
               })
             "
-              class="ml-5"
-          >mdi-calendar-multiple</v-icon
+            class="ml-5"
+            >mdi-calendar-multiple</v-icon
           >
           <login-in-account-icon
-              class="ml-5"
-              v-if="['ROOT', 'ADMIN'].includes(item.access.level)"
-              :uuid="item.uuid"
+            class="ml-5"
+            v-if="['ROOT', 'ADMIN'].includes(item.access.level)"
+            :uuid="item.uuid"
           />
         </div>
       </div>
     </template>
     <template v-slot:[`item.balance`]="{ item }">
       <balance
-          :hide-currency="true"
-          :currency="item.currency"
-          @click="goToBalance(item.uuid)"
-          :value="item.balance"
+        :hide-currency="true"
+        :currency="item.currency"
+        @click="goToBalance(item.uuid)"
+        :value="item.balance"
       />
     </template>
 
@@ -66,14 +69,14 @@
     </template>
     <template v-slot:[`item.data.regular_payment`]="{ value, item }">
       <v-switch
-          :disabled="
+        :disabled="
           !!changeRegularPaymentUuid && changeRegularPaymentUuid !== item.uuid
         "
-          :loading="
+        :loading="
           !!changeRegularPaymentUuid && changeRegularPaymentUuid === item.uuid
         "
-          @change="changeRegularPayment(item, $event)"
-          :input-value="value"
+        @change="changeRegularPayment(item, $event)"
+        :input-value="value"
       >
       </v-switch>
     </template>
@@ -81,19 +84,14 @@
 </template>
 
 <script setup>
-import nocloudTable from "@/components/table.vue";
 import Balance from "./balance.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
-import {
-  compareSearchValue,
-  filterByKeysAndParam,
-  formatSecondsToDate,
-  getDeepObjectValue,
-} from "@/functions";
+import { formatSecondsToDate } from "@/functions";
 import api from "@/api";
 import { toRefs, ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
 import { useRouter } from "vue-router/composables";
+import NocloudTable from "@/components/table.vue";
 
 const props = defineProps({
   value: {
@@ -109,7 +107,7 @@ const props = defineProps({
     type: String,
   },
 });
-const { value, singleSelect, notFiltered } = toRefs(props);
+const { value, singleSelect } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -119,6 +117,7 @@ const router = useRouter();
 const selected = ref([]);
 const loading = ref(false);
 const fetchError = ref("");
+const options = ref({});
 const changeRegularPaymentUuid = ref("");
 const headers = ref([
   { text: "Title", value: "title" },
@@ -145,26 +144,9 @@ const levelColorMap = ref({
 onMounted(() => {
   loading.value = true;
   store.dispatch("namespaces/fetch");
-  store
-      .dispatch("accounts/fetch")
-      .then(() => {
-        fetchError.value = "";
-      })
-      .finally(() => {
-        loading.value = false;
-      })
-      .catch((err) => {
-        console.error(err.toJSON());
-        fetchError.value = "Can't reach the server";
-        if (err.response && err.response.data.message) {
-          fetchError.value += `: [ERROR]: ${err.response.data.message}`;
-        } else {
-          fetchError.value += `: [ERROR]: ${err.toJSON().message}`;
-        }
-      });
 });
 
-const searchParam = computed(() => store.getters["appSearch/param"]);
+// const searchParam = computed(() => store.getters["appSearch/param"]);
 const filter = computed(() => store.getters["appSearch/filter"]);
 const accounts = computed(() => {
   return store.getters["accounts/all"].map((a) => ({
@@ -179,42 +161,21 @@ const accounts = computed(() => {
     data: {
       ...a.data,
       regular_payment:
-          a.data?.regular_payment === undefined ||
-          a.data?.regular_payment === true,
+        a.data?.regular_payment === undefined ||
+        a.data?.regular_payment === true,
     },
   }));
 });
-const filteredAccounts = computed(() => {
-  if (notFiltered.value) {
-    return accounts.value;
-  }
+const total = computed(() => store.getters["accounts/total"]);
 
-  const filtred = accounts.value.filter((a) => {
-    return Object.keys(filter.value).every((key) => {
-      let data;
-      if (key === "namespace") {
-        data = getNamespaceName(a.uuid);
-      } else {
-        data = getDeepObjectValue(a, key);
-      }
+const requestOptions = computed(() => ({
+  // filters: JSON.stringify(filter.value),
+  page: options.value.page,
+  limit: options.value.itemsPerPage,
+  field: options.value.sortBy[0],
+  sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
+}));
 
-      return compareSearchValue(
-          data,
-          filter.value[key],
-          searchFields.value.find((f) => f.key === key)
-      );
-    });
-  });
-
-  if (searchParam.value) {
-    return filterByKeysAndParam(
-        filtred,
-        ["title", "uuid", "data.email"],
-        searchParam.value
-    );
-  }
-  return filtred;
-});
 const namespaces = computed(() => store.getters["namespaces/all"]);
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const searchFields = computed(() => [
@@ -227,7 +188,7 @@ const searchFields = computed(() => [
     title: "Status",
     key: "status",
     type: "select",
-    items: [...new Set(accounts.value.map((a) => a.status))],
+    items: ["ACTIVE", "LOCK", "PERMANENT_LOCK"],
   },
   { title: "Balance", key: "balance", type: "number-range" },
   { title: "Email", key: "data.email", type: "input" },
@@ -255,17 +216,40 @@ const searchFields = computed(() => [
     title: "Group(NameSpace)",
     key: "namespace",
     type: "select",
-    items: [...new Set(accounts.value.map((a) => getNamespaceName(a.uuid)))],
+    item: { value: "uuid", title: "title" },
+    items: namespaces.value,
   },
 ]);
+
+const setOptions = (newOptions) => {
+  if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
+    options.value = newOptions;
+  }
+};
+
+const fetchAccounts = async () => {
+  loading.value = true;
+  try {
+    await store.dispatch("accounts/fetch", requestOptions.value);
+  } catch (err) {
+    fetchError.value = "Can't reach the server";
+    if (err.response && err.response.data.message) {
+      fetchError.value += `: [ERROR]: ${err.response.data.message}`;
+    } else {
+      fetchError.value += `: [ERROR]: ${err.toJSON().message}`;
+    }
+  } finally {
+    loading.value = false;
+  }
+};
 
 const handleSelect = (item) => {
   emit("input", item);
 };
 const getNamespaceName = (uuid) => {
   return (
-      namespaces.value.find(({ access }) => access.namespace === uuid)?.title ??
-      ""
+    namespaces.value.find(({ access }) => access.namespace === uuid)?.title ??
+    ""
   );
 };
 
@@ -304,6 +288,9 @@ watch(searchFields, () => {
 watch(value, () => {
   selected.value = value.value;
 });
+
+watch(filter, fetchAccounts, { deep: true });
+watch(options, fetchAccounts);
 </script>
 
 <script>
