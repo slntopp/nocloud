@@ -317,7 +317,7 @@ export default {
           this.relatedPlans = this.relatedPlans.filter(
             (rp) => this.selected.findIndex((s) => s.uuid === rp.uuid) === -1
           );
-          this.selected=[]
+          this.selected = [];
           this.showSnackbarSuccess({
             message: `Price model${ending} deleted successfully.`,
           });
@@ -364,7 +364,9 @@ export default {
 
       return this.$store.getters["plans/all"].filter(
         (plan) =>
-          plan.type.includes(this.provider.type) && !plans.includes(plan.uuid)
+          plan.type.includes(this.provider.type) &&
+          !plans.includes(plan.uuid) &&
+          plan.status !== "DELETED"
       );
     },
     isPlanLoading() {

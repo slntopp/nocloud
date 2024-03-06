@@ -310,10 +310,13 @@ export default {
     async onJsonInputChange(file) {
       this.uploadedPlans = [];
       try {
-        if (this.isJson) {
-          this.uploadedPlans.push(...(await readJSONFile(file)));
+        const data = this.isJson
+          ? await readJSONFile(file)
+          : await readYAMLFile(file);
+        if (Array.isArray(data)) {
+          this.uploadedPlans.push(...data);
         } else {
-          this.uploadedPlans.push(...(await readYAMLFile(file)));
+          this.uploadedPlans.push(data);
         }
       } catch (err) {
         this.uploadedPlans = [];

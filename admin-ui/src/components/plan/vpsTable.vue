@@ -575,7 +575,7 @@ export default {
         price: { value: basePrice },
         value: product.price,
         datacenter,
-        addons,
+        addons:addons?.map(a=>a.split(' '))[1],
         installation_fee: product.installationFee,
         os,
         name: product.title,
@@ -587,7 +587,6 @@ export default {
     this.addons = this.template.resources.map((r) => {
       const { key } = r;
       const [duration, planCode] = key.split(" ");
-
       return {
         ...r,
         duration,
