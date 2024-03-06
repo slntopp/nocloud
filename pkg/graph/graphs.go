@@ -440,7 +440,7 @@ func ListWithAccessAndFilters[T Accessible](
 				continue
 			}
 			if split[1] == "address" || split[1] == "country" || split[1] == "email" {
-				insert += fmt.Sprintf(` node.data["%s"] LIKE "%s"`, split[1], "%"+val.GetStringValue()+"%")
+				insert += fmt.Sprintf(` FILTER node.data["%s"] LIKE "%s"`, split[1], "%"+val.GetStringValue()+"%")
 			} else if split[1] == "date_create" {
 				values := val.GetStructValue().AsMap()
 				if val, ok := values["from"]; ok {
