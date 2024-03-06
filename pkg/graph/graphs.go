@@ -453,6 +453,13 @@ func ListWithAccessAndFilters[T Accessible](
 					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %f`, key, to)
 				}
 			}
+		} else if strings.HasPrefix(key, "access") {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += fmt.Sprintf(` FILTER node.access["%s"] in @%s`, key, key)
+			bindVars[key] = values
 		} else if key == "balance" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
