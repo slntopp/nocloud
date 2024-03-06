@@ -454,12 +454,16 @@ func ListWithAccessAndFilters[T Accessible](
 				}
 			}
 		} else if strings.HasPrefix(key, "access") {
+			split := strings.Split(key, ".")
+			if len(split) != 2 {
+				continue
+			}
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
 				continue
 			}
-			insert += fmt.Sprintf(` FILTER node.access["%s"] in @%s`, key, key)
-			bindVars[key] = values
+			insert += fmt.Sprintf(` FILTER node.access["%s"] in @%s`, split[1], split[1])
+			bindVars[split[1]] = values
 		} else if key == "balance" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
