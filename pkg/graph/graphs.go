@@ -444,13 +444,13 @@ func ListWithAccessAndFilters[T Accessible](
 			} else if split[1] == "date_create" {
 				values := val.GetStructValue().AsMap()
 				if val, ok := values["from"]; ok {
-					from := val.(string)
-					insert += fmt.Sprintf(` FILTER node.data["%s"] >= %s`, key, from)
+					from := val.(float64)
+					insert += fmt.Sprintf(` FILTER node.data["%s"] >= %f`, key, from)
 				}
 
 				if val, ok := values["to"]; ok {
-					to := val.(string)
-					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %s`, key, to)
+					to := val.(float64)
+					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %f`, key, to)
 				}
 			}
 		} else if key == "balance" {
