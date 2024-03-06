@@ -385,8 +385,8 @@ GRAPH @permissions_graph
 OPTIONS {order: "bfs", uniqueVertices: "global"}
 FILTER IS_SAME_COLLECTION(@@kind, node)
 // FILTER edge.level > 0 // TODO: ensure all edges have level
-%s
     LET perm = path.edges[0]
+%s
 	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
 )
 
@@ -453,18 +453,13 @@ func ListWithAccessAndFilters[T Accessible](
 					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %f`, key, to)
 				}
 			}
-		} else if strings.HasPrefix(key, "access") {
-			split := strings.Split(key, ".")
-			log.Debug("Split", zap.Any("split", split))
-			if len(split) != 2 {
-				continue
-			}
+		} else if key == "access.level" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
 				continue
 			}
-			insert += fmt.Sprintf(` FILTER node.access["%s"] in @%s`, split[1], split[1])
-			bindVars[split[1]] = values
+			insert += fmt.Sprintf(` FILTER perm.level in @%s`, key)
+			bindVars[key] = values
 		} else if key == "balance" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
