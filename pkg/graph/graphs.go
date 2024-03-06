@@ -455,6 +455,7 @@ func ListWithAccessAndFilters[T Accessible](
 			}
 		} else if strings.HasPrefix(key, "access") {
 			split := strings.Split(key, ".")
+			log.Debug("Split", zap.Any("split", split))
 			if len(split) != 2 {
 				continue
 			}
