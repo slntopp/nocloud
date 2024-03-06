@@ -458,8 +458,8 @@ func ListWithAccessAndFilters[T Accessible](
 			if len(values) == 0 {
 				continue
 			}
-			insert += fmt.Sprintf(` FILTER perm.level in @%s`, key)
-			bindVars[key] = values
+			insert += fmt.Sprintf(` FILTER perm.level in @level`)
+			bindVars["level"] = values
 		} else if key == "balance" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
