@@ -434,6 +434,36 @@ func ListWithAccessAndFilters[T Accessible](
 			insert += fmt.Sprintf(` FILTER node.title LIKE "%s" || node.data.email LIKE "%s"`, "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
 		} else if key == "namespace" && collectionName == schema.ACCOUNTS_COL {
 			insert += fmt.Sprintf(` FILTER path.vertices[-2]._key == "%s"`, "%"+val.GetStringValue()+"%")
+		} else if strings.HasPrefix(key, "data") {
+			split := strings.Split(key, ".")
+			if len(split) != 2 {
+				continue
+			}
+			if split[1] == "address" || split[1] == "country" || split[1] == "email" {
+				insert += fmt.Sprintf(` node.data["%s"] LIKE "%s"`, split[1], "%"+val.GetStringValue()+"%")
+			} else if split[1] == "date_create" {
+				values := val.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(string)
+					insert += fmt.Sprintf(` FILTER node.data["%s"] >= %s`, key, from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(string)
+					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %s`, key, to)
+				}
+			}
+		} else if key == "balance" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := val.(float64)
+				insert += fmt.Sprintf(` FILTER node["%s"] >= %f`, key, from)
+			}
+
+			if val, ok := values["to"]; ok {
+				to := val.(float64)
+				insert += fmt.Sprintf(` FILTER node["%s"] <= %f`, key, to)
+			}
 		} else {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
