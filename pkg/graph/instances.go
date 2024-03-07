@@ -75,6 +75,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	// ensure status is INIT
 	i.Uuid = ""
 	i.Status = spb.NoCloudStatus_INIT
+	i.Created = time.Now().Unix()
 
 	err := hasher.SetHash(i.ProtoReflect())
 	if err != nil {

@@ -153,14 +153,14 @@ import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
 
-const props = defineProps(["template", "plans", "service", "sp"]);
+const props = defineProps(["template", "plans", "service", "sp", "account"]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, service, sp, plans } = toRefs(props);
+const { template, service, sp, plans, account } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
-  useInstancePrices(template.value);
+  useInstancePrices(template.value, account.value);
 
 const changeDatesDialog = ref(false);
 const changeTariffDialog = ref(false);

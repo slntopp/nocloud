@@ -141,6 +141,7 @@ export default {
   mixins: [snackbar],
   props: {
     template: { type: Object, required: true },
+    account: { type: Object, required: true },
     copyTemplate: { type: Object },
     sp: { type: Object },
   },
@@ -896,11 +897,6 @@ export default {
     namespace() {
       return this.$store.getters["namespaces/all"].find(
         (n) => n.uuid === this.template.access.namespace
-      );
-    },
-    account() {
-      return this.$store.getters["accounts/all"].find(
-        (a) => a.uuid === this.namespace.access.namespace
       );
     },
     whmcsApi() {
