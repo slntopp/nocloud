@@ -108,6 +108,10 @@ watch(
     instancesForPeriod.value.forEach((inst) => {
       const key = inst?.type;
       const price = Math.round(+getInstancePrice(inst)) || 0;
+      if(!price){
+        return
+      }
+
       if (map[key]) {
         map[key] = +map[key] + price;
       } else {

@@ -432,7 +432,7 @@ export default {
       return this.account.status !== "ACTIVE";
     },
     stateButtons() {
-      const status = this.account.status.toLowerCase();
+      const status = this.account.status?.toLowerCase();
       const permanentLock = {
         title: "Permanent lock",
         newStatusValue: "PERMANENT_LOCK",

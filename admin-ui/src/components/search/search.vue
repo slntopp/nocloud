@@ -174,6 +174,14 @@
             >
               <v-col class="d-flex align-center">
                 <component
+                  v-if="currentFields[fieldKey].custom"
+                  :is="currentFields[fieldKey].component"
+                  v-bind="currentFields[fieldKey]"
+                  :disabled="isFieldsDisabled"
+                  v-model="localFilter[fieldKey]"
+                />
+                <component
+                  v-else
                   clearable
                   :disabled="isFieldsDisabled"
                   dense

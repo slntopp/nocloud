@@ -115,20 +115,19 @@ import {
 } from "vue";
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
-import { useStore } from "@/store";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 
-const props = defineProps(["template", "plans", "service", "sp"]);
+const props = defineProps(["template", "plans", "service", "sp", "account"]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template } = toRefs(props);
+const { template, account } = toRefs(props);
 
 const { convertTo, defaultCurrency } = useCurrency();
-const store = useStore();
 const { accountCurrency, toAccountPrice, fromAccountPrice } = useInstancePrices(
-  template.value
+  template.value,
+  account.value
 );
 
 const billingItems = ref([]);
@@ -164,16 +163,6 @@ const totalPrice = computed(() =>
   )
 );
 const totalAccountPrice = computed(() => toAccountPrice(totalPrice.value));
-
-const account = computed(() => {
-  const namespace = store.getters["namespaces/all"]?.find(
-    (n) => n.uuid === template.value?.access.namespace
-  );
-  const account = store.getters["accounts/all"].find(
-    (a) => a.uuid === namespace?.access.namespace
-  );
-  return account;
-});
 
 const price = computed(() => {
   return convertTo(

@@ -20,25 +20,13 @@
 
 <script setup>
 import { computed, toRefs } from "vue";
-import { useStore } from "@/store";
 import InstanceState from "@/components/ui/instanceState.vue";
 import useCurrency from "@/hooks/useCurrency";
 
-const props = defineProps(["template"]);
-const { template } = toRefs(props);
+const props = defineProps(["template", "account"]);
+const { template, account } = toRefs(props);
 
-const store = useStore();
 const { convertFrom } = useCurrency();
-
-const account = computed(() => {
-  const namespace = store.getters["namespaces/all"]?.find(
-      (n) => n.uuid === template.value?.access.namespace
-  );
-  const account = store.getters["accounts/all"].find(
-      (a) => a.uuid === namespace?.access.namespace
-  );
-  return account;
-});
 
 const accountCurrency = computed(() => {
   return account.value.currency;
