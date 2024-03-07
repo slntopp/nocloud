@@ -103,9 +103,6 @@ const props = defineProps({
     default: false,
   },
   notFiltered: { type: Boolean, default: false },
-  namespace: {
-    type: String,
-  },
 });
 const { value, singleSelect } = toRefs(props);
 
@@ -131,7 +128,6 @@ const headers = ref([
   { text: "Client currency", value: "currency" },
   { text: "Access level", value: "access.level" },
   { text: "Invoice based", value: "data.regular_payment" },
-  { text: "Group(NameSpace)", value: "namespace" },
 ]);
 const levelColorMap = ref({
   ROOT: "info",
@@ -143,8 +139,6 @@ const levelColorMap = ref({
 
 onMounted(() => {
   loading.value = true;
-  store.dispatch("namespaces/fetch");
-
   store.commit("reloadBtn/setCallback", {
     event: fetchAccounts,
   });
@@ -194,7 +188,6 @@ const accounts = computed(() => {
     },
     balance: a.balance || 0,
     currency: a.currency || defaultCurrency.value,
-    namespace: getNamespaceName(a.uuid),
     data: {
       ...a.data,
       regular_payment:
@@ -220,7 +213,6 @@ const requestOptions = computed(() => ({
   sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
 }));
 
-const namespaces = computed(() => store.getters["namespaces/all"]);
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
 const searchFields = computed(() => [
   {
@@ -267,13 +259,6 @@ const searchFields = computed(() => [
     key: "data.regular_payment",
     type: "logic-select",
   },
-  {
-    title: "Group(NameSpace)",
-    key: "namespace",
-    type: "select",
-    item: { value: "uuid", title: "title" },
-    items: namespaces.value,
-  },
 ]);
 
 const setOptions = (newOptions) => {
@@ -303,13 +288,6 @@ const fetchAccountsDebounce = debounce(fetchAccounts);
 const handleSelect = (item) => {
   emit("input", item);
 };
-const getNamespaceName = (uuid) => {
-  return (
-    namespaces.value.find(({ access }) => access.namespace === uuid)?.title ??
-    ""
-  );
-};
-
 const colorChip = (level) => {
   return levelColorMap.value[level];
 };
