@@ -86,7 +86,7 @@
 <script setup>
 import Balance from "./balance.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
-import { formatSecondsToDate } from "@/functions";
+import { debounce, formatSecondsToDate } from "@/functions";
 import api from "@/api";
 import { toRefs, ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
@@ -144,10 +144,47 @@ const levelColorMap = ref({
 onMounted(() => {
   loading.value = true;
   store.dispatch("namespaces/fetch");
+
+  store.commit("reloadBtn/setCallback", {
+    event: fetchAccounts,
+  });
 });
 
-// const searchParam = computed(() => store.getters["appSearch/param"]);
-const filter = computed(() => store.getters["appSearch/filter"]);
+const searchParam = computed(() => store.getters["appSearch/param"]);
+const filter = computed(() => {
+  const filter = store.getters["appSearch/filter"];
+  const total = {};
+  if (filter.total?.to) {
+    total.to = +filter.total.to;
+  }
+  if (filter.total?.from) {
+    total.from = +filter.total.from;
+  }
+
+  const dates = {};
+  const dateKeys = ["data.date_create"];
+  dateKeys.forEach((key) => {
+    if (!filter[key]) {
+      return;
+    }
+    dates[key] = {};
+
+    if (filter[key][0]) {
+      dates[key].from = new Date(filter[key][0]).getTime() / 1000;
+    }
+    if (filter[key][1]) {
+      dates[key].to = new Date(filter[key][1]).getTime() / 1000;
+    }
+  });
+
+  return {
+    ...filter,
+    ...dates,
+    title: undefined,
+    search_param: filter.title || searchParam.value || undefined,
+    balance: Object.keys(total).length ? total : undefined,
+  };
+});
 const accounts = computed(() => {
   return store.getters["accounts/all"].map((a) => ({
     ...a,
@@ -169,7 +206,14 @@ const accounts = computed(() => {
 const total = computed(() => store.getters["accounts/total"]);
 
 const requestOptions = computed(() => ({
-  // filters: JSON.stringify(filter.value),
+  filters: {
+    ...filter.value,
+    balance: filter.value?.balance && {
+      from: filter.value?.balance.from && +filter.value?.balance.from,
+      to: filter.value?.balance.to && +filter.value?.balance.to,
+    },
+    search_param: searchParam.value || undefined,
+  },
   page: options.value.page,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
@@ -188,7 +232,12 @@ const searchFields = computed(() => [
     title: "Status",
     key: "status",
     type: "select",
-    items: ["ACTIVE", "LOCK", "PERMANENT_LOCK"],
+    item: { value: "uuid", title: "title" },
+    items: [
+      { title: "ACTIVE", uuid: 0 },
+      { title: "LOCK", uuid: 1 },
+      { title: "PERMANENT_LOCK", uuid: 2 },
+    ],
   },
   { title: "Balance", key: "balance", type: "number-range" },
   { title: "Email", key: "data.email", type: "input" },
@@ -205,7 +254,13 @@ const searchFields = computed(() => [
     title: "Access level",
     key: "access.level",
     type: "select",
-    items: Object.keys(levelColorMap.value),
+    item: { value: "id", title: "title" },
+    items: [
+      { id: 0, title: "NONE" },
+      { id: 1, title: "READ" },
+      { id: 2, title: "MGMT" },
+      { id: 3, title: "ADMIN" },
+    ],
   },
   {
     title: "Invoice based",
@@ -242,6 +297,8 @@ const fetchAccounts = async () => {
     loading.value = false;
   }
 };
+
+const fetchAccountsDebounce = debounce(fetchAccounts);
 
 const handleSelect = (item) => {
   emit("input", item);
@@ -289,8 +346,8 @@ watch(value, () => {
   selected.value = value.value;
 });
 
-watch(filter, fetchAccounts, { deep: true });
-watch(options, fetchAccounts);
+watch(filter, fetchAccountsDebounce, { deep: true });
+watch(options, fetchAccountsDebounce);
 </script>
 
 <script>
