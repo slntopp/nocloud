@@ -96,17 +96,6 @@
       </router-link>
     </template>
 
-    <template v-slot:[`item.access.namespace`]="{ item }">
-      <router-link
-        :to="{
-          name: 'NamespacePage',
-          params: { namespaceId: item.access.namespace },
-        }"
-      >
-        {{ getValue("access.namespace", item) }}
-      </router-link>
-    </template>
-
     <template v-slot:[`item.billingPlan.title`]="{ item, value }">
       <router-link
         :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
@@ -400,9 +389,6 @@ export default {
 
       return billingPlan.products[key]?.title;
     },
-    getNamespace(id) {
-      return this.namespaces?.find((n) => n.uuid === id)?.title;
-    },
     getValue(key, item) {
       return this.headersGetters[key](item);
     },
@@ -519,10 +505,6 @@ export default {
         { text: "Title", value: "title" },
         { text: "Service", value: "service" },
         { text: "Account", value: "access" },
-        {
-          text: "Group (NameSpace)",
-          value: "access.namespace",
-        },
         { text: "Due date", value: "dueDate" },
         { text: "Status", value: "state" },
         { text: "Tariff", value: "product" },
@@ -560,7 +542,6 @@ export default {
         date: this.getCreationDate,
         dueDate: this.getExpirationDate,
         sp: this.getServiceProvider,
-        "access.namespace": (item) => this.getNamespace(item.access.namespace),
         "resources.ram": (item) =>
           +(item?.resources?.ram / 1024).toFixed(2) || 0,
         "resources.drive_size": (item) =>
@@ -606,12 +587,6 @@ export default {
           type: "select",
           title: "Account",
           items: this.isAccountsLoading ? [] : this.getSearchKeyItems("access"),
-        },
-        {
-          key: "access.namespace",
-          items: this.getSearchKeyItems("access.namespace"),
-          type: "select",
-          title: "Namespace",
         },
         {
           key: "product",
