@@ -38,6 +38,7 @@
             <div class="d-flex align-center justify-space-between">
               <span>{{ formatSecondsToDate(report.exec, true) }}</span>
               <router-link
+                v-if="!isAccountsLoading"
                 target="_blank"
                 :to="{
                   name: 'Account',
@@ -46,6 +47,7 @@
               >
                 {{ getAccount(report.account)?.title }}
               </router-link>
+              <v-skeleton-loader type="text" v-else />
 
               <balance-display
                 class="ml-3"
@@ -63,7 +65,7 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { computed, onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import api from "@/api";
 import {
   endOfDay,
@@ -74,18 +76,17 @@ import {
   startOfWeek,
 } from "date-fns";
 import { formatSecondsToDate } from "../../functions";
-import { useStore } from "@/store";
 import BalanceDisplay from "@/components/balance.vue";
 
-const store = useStore();
-
 const isLoading = ref(false);
+const isAccountsLoading = ref(false);
 const period = ref("day");
 const periods = ref(["day", "week", "month"]);
 
 const fiveLast = ref([]);
 const totalCount = ref(0);
 const dates = ref({});
+const accounts = ref({});
 
 onMounted(async () => {
   isLoading.value = true;
@@ -153,11 +154,25 @@ const getCountForPeriod = (period) => {
   });
 };
 
-const accounts = computed(() => store.getters["accounts/all"]);
-
 const getAccount = (uuid) => {
-  return accounts.value.find((ac) => ac.uuid === uuid);
+  return accounts.value[uuid];
 };
+
+watch(fiveLast, () => {
+  fiveLast.value.forEach(async ({ account: uuid }) => {
+    isAccountsLoading.value = true;
+    try {
+      if (!accounts.value[uuid]) {
+        accounts.value[uuid] = api.accounts.get(uuid);
+        accounts.value[uuid] = await accounts.value[uuid];
+      }
+    } finally {
+      isAccountsLoading.value = Object.values(accounts.value).some(
+        (acc) => acc instanceof Promise
+      );
+    }
+  });
+});
 </script>
 
 <script>

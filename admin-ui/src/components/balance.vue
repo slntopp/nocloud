@@ -25,18 +25,6 @@ export default {
     small: { type: Boolean, default: false },
     abs: { type: Boolean, default: false },
   },
-  mounted() {
-    if (!this.balance) {
-      this.$store
-        .dispatch("accounts/fetch")
-        .catch((err) => console.error(err.toJSON()));
-    }
-    if (this.defaultCurrency === "") {
-      this.$store
-        .dispatch("currencies/fetch")
-        .catch((err) => console.error(err.toJSON()));
-    }
-  },
   computed: {
     balance() {
       if (this.logedInUser) {

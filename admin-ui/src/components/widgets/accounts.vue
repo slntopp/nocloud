@@ -2,7 +2,13 @@
   <widget title="Accounts" :loading="isLoading" class="pa-0 ma-0">
     <v-card color="background-light" flat>
       <div class="d-flex justify-end">
-        <v-btn-toggle class="mt-2" dense :value="period" @change="period=$event || period" borderless>
+        <v-btn-toggle
+          class="mt-2"
+          dense
+          :value="period"
+          @change="period = $event || period"
+          borderless
+        >
           <v-btn x-small :value="item" :key="item" v-for="item in periods">
             {{ item }}
           </v-btn>
@@ -13,22 +19,22 @@
         <v-card-subtitle class="ma-0 my-2 pa-0"
           >Created in last {{ period }}</v-card-subtitle
         >
-        <v-card-subtitle class="ma-0 pa-0">
-          {{ countForPeriod }}
+        <v-card-subtitle v-if="!isCountForPeriodLoading" class="ma-0 pa-0">
+          {{ countsForPeriod[period] }}
         </v-card-subtitle>
       </div>
 
       <div class="d-flex justify-space-between align-center mb-2">
         <v-card-subtitle class="ma-0 my-2 pa-0">Total created</v-card-subtitle>
-        <v-card-subtitle class="ma-0 pa-0">
-          {{ accounts.length }}
+        <v-card-subtitle v-if="accountsCount" class="ma-0 pa-0">
+          {{ accountsCount }}
         </v-card-subtitle>
       </div>
 
       <v-divider></v-divider>
       <v-list dense color="transparent">
         <v-list-item
-          v-for="account in lastAccounts"
+          v-for="account in lastFiveAccounts"
           :key="account.uuid"
           class="px-0"
         >
@@ -58,8 +64,7 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { computed, onMounted, ref } from "vue";
-import { useStore } from "@/store";
+import { onMounted, ref, watch } from "vue";
 import {
   endOfDay,
   endOfMonth,
@@ -69,37 +74,38 @@ import {
   startOfWeek,
 } from "date-fns";
 import BalanceDisplay from "@/components/balance.vue";
-
-const store = useStore();
+import api from "@/api";
 
 const isLoading = ref(false);
-const period = ref("day");
+const isCountForPeriodLoading = ref(false);
+const period = ref();
 const periods = ref(["day", "week", "month"]);
 
 onMounted(async () => {
+  period.value = "day";
+
   isLoading.value = true;
   try {
-    await store.dispatch("accounts/fetch");
-  } catch (e) {
-    console.log(e);
+    const { pool, count } = await api.post("accounts", {
+      page: 1,
+      limit: 5,
+      field: "data.date_create",
+      sort: "DESC",
+    });
+    lastFiveAccounts.value = pool;
+    accountsCount.value = count;
   } finally {
     isLoading.value = false;
   }
 });
 
-const accounts = computed(() => store.getters["accounts/all"]);
+const countsForPeriod = ref({});
+const lastFiveAccounts = ref([]);
+const accountsCount = ref();
 
-const lastAccounts = computed(() => {
-  const sorted = [...accounts.value].sort(
-    (a, b) => +(b.data?.date_create || 0) - (a.data?.date_create || 0)
-  );
-
-  return sorted.slice(0, 5);
-});
-const countForPeriod = computed(() => {
+const getCountForPeriod = async (period) => {
   const dates = { from: null, to: null };
-
-  switch (period.value) {
+  switch (period) {
     case "day": {
       dates.from = startOfDay(new Date());
       dates.to = endOfDay(new Date());
@@ -117,14 +123,28 @@ const countForPeriod = computed(() => {
     }
   }
 
-  dates.from = dates.from.getTime() / 1000;
-  dates.to = dates.to.getTime() / 1000;
+  dates.from = Math.floor(dates.from.getTime() / 1000);
+  dates.to = Math.floor(dates.to.getTime() / 1000);
 
-  return accounts.value.filter((ac) => {
-    const createDate = +ac.data?.date_create || 0;
+  try {
+    isCountForPeriodLoading.value = true;
+    const { count } = await api.post("accounts", {
+      limit: 0,
+      page: 1,
+      filters: {
+        "data.date_create": dates,
+      },
+    });
+    countsForPeriod.value[period] = count;
+  } finally {
+    isCountForPeriodLoading.value = false;
+  }
+};
 
-    return dates.from <= createDate && dates.to >= createDate;
-  }).length;
+watch(period, () => {
+  if (!countsForPeriod.value[period.value]) {
+    getCountForPeriod(period.value);
+  }
 });
 </script>
 
