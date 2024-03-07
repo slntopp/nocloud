@@ -300,6 +300,7 @@ import DatePicker from "@/components/ui/datePicker.vue";
 import LogickSelect from "@/components/ui/logickSelect.vue";
 import FromToNumberField from "@/components/ui/fromToNumberField.vue";
 import FilterTags from "@/components/search/filterTags.vue";
+import { debounce } from "@/functions";
 
 const store = useStore();
 
@@ -364,7 +365,7 @@ const defaultLayout = computed(
 );
 const param = computed({
   get: () => store.getters["appSearch/param"],
-  set: (val) => store.commit("appSearch/setParam", val),
+  set: debounce((val) => store.commit("appSearch/setParam", val), 300),
 });
 const filter = computed({
   get: () => store.getters["appSearch/filter"],
