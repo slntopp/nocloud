@@ -173,8 +173,8 @@
         @update="updateCopy"
         :is="billingLabelComponent"
         v-if="Object.keys(copyInstance).length"
-        :template="template"
         :account="account"
+        :template="copyInstance"
       />
     </div>
   </v-card>
@@ -218,8 +218,7 @@ export default {
   methods: {
     addToClipboard,
     refreshInstance() {
-      this.$store.dispatch("services/fetch", this.template.uuid);
-      this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
+      this.$store.dispatch('reloadBtn/onclick')
     },
     updateCopy({ key, value }) {
       const keys = key.split(".");
