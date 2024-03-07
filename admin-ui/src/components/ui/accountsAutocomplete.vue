@@ -46,6 +46,8 @@ const isInitLoading = ref(false);
 
 onMounted(() => {
   fetchAccount();
+
+  updateAccounts("");
 });
 
 const updateAccounts = async (value) => {
