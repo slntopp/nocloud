@@ -25,7 +25,8 @@
     >
       <v-tab-item v-for="tab of tabs" :key="tab.title">
         <v-progress-linear indeterminate class="pt-2" v-if="isLoading" />
-        <component v-else
+        <component
+          v-else
           :is="tab.component"
           :template="instance"
           :account="account"
@@ -164,10 +165,11 @@ export default {
       this.isLoading = true;
       await Promise.all([
         this.$store.dispatch("namespaces/fetch"),
-        this.$store.dispatch("servicesProviders/fetch", { anonymously: false }),
-        this.$store.dispatch("plans/fetch"),
         this.$store.dispatch("services/fetch", { showDeleted: true }),
       ]);
+
+      this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
+      this.$store.dispatch("plans/fetch");
 
       this.account = await api.accounts.get(this.namespace.access.namespace);
     } catch (err) {
