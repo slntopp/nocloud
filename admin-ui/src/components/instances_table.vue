@@ -34,10 +34,12 @@
 
     <template v-slot:[`item.access`]="{ item }">
       <router-link
+        v-if="!isAccountsLoading"
         :to="{ name: 'Account', params: { accountId: getAccount(item)?.uuid } }"
       >
         {{ getValue("access", item) }}
       </router-link>
+      <v-skeleton-loader type="text" v-else />
     </template>
 
     <template v-slot:[`item.email`]="{ item }">
@@ -217,8 +219,10 @@ export default {
       "period",
       "date",
     ],
+    accounts: {},
     instancesTypes: [],
     isChangeRegularPaymentLoading: false,
+    isAccountsLoading: false,
   }),
   mounted() {
     const types = require.context(
@@ -274,7 +278,7 @@ export default {
         access: {},
       };
 
-      return this.accounts?.find(({ uuid }) => uuid === namespace) ?? {};
+      return this.accounts?.[namespace] ?? {};
     },
     getEmail(inst) {
       const account = this.getAccount(inst);
@@ -452,6 +456,7 @@ export default {
           } else {
             value = getDeepObjectValue(i, key);
           }
+
           return compareSearchValue(
             value,
             this.filter[key],
@@ -506,9 +511,6 @@ export default {
     },
     namespaces() {
       return this.$store.getters["namespaces/all"];
-    },
-    accounts() {
-      return this.$store.getters["accounts/all"];
     },
     instancesHeaders() {
       if (this.headers) return this.headers;
@@ -602,8 +604,8 @@ export default {
         {
           key: "access",
           type: "select",
-          items: this.getSearchKeyItems("access"),
           title: "Account",
+          items: this.isAccountsLoading ? [] : this.getSearchKeyItems("access"),
         },
         {
           key: "access.namespace",
@@ -675,6 +677,30 @@ export default {
     },
   },
   watch: {
+    items() {
+      this.items.forEach(async ({ access }) => {
+        const {
+          access: { namespace: uuid },
+        } = this.namespaces?.find(({ uuid }) => uuid === access.namespace) ?? {
+          access: {},
+        };
+        if (!uuid) {
+          return;
+        }
+
+        this.isAccountsLoading = true;
+        try {
+          if (!this.accounts[uuid]) {
+            this.accounts[uuid] = api.accounts.get(uuid);
+            this.accounts[uuid] = await this.accounts[uuid];
+          }
+        } finally {
+          this.isAccountsLoading = Object.values(this.accounts).some(
+            (acc) => acc instanceof Promise
+          );
+        }
+      });
+    },
     instances() {
       this.fetchError = "";
     },
