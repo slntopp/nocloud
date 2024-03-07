@@ -6,6 +6,7 @@ export default {
     accounts: [],
     total: 0,
     loading: false,
+    one: {},
   },
   mutations: {
     setAccounts(state, accounts) {
@@ -13,6 +14,9 @@ export default {
     },
     setTotal(state, total) {
       state.total = +total;
+    },
+    setOne(state, account) {
+      state.one = account;
     },
     pushAccount(state, account) {
       const index = state.accounts.findIndex((a) => a.uuid === account.uuid);
@@ -33,7 +37,7 @@ export default {
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
         api
-          .get("accounts", { params })
+          .post("accounts", params)
           .then((response) => {
             commit("setAccounts", response.pool);
             commit("setTotal", response.count);
@@ -53,7 +57,7 @@ export default {
         api.accounts
           .get(id)
           .then((response) => {
-            commit("pushAccount", response);
+            commit("setOne", response);
             resolve(response);
           })
           .catch((error) => {
@@ -68,6 +72,9 @@ export default {
   getters: {
     all(state) {
       return state.accounts;
+    },
+    one(state) {
+      return state.one;
     },
     total(state) {
       return state.total;
