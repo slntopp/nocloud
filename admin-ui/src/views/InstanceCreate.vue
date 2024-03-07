@@ -3,14 +3,13 @@
     <v-container>
       <v-row justify="start">
         <v-col cols="4" md="3" lg="2">
-          <v-autocomplete
-            :filter="defaultFilterObject"
+          <accounts-autocomplete
             label="account"
-            item-text="title"
-            item-value="uuid"
-            :items="accounts"
-            v-model="accountId"
+            v-model="account"
             :rules="rules.req"
+            fetch-value
+            :loading="isLoading"
+            return-object
           />
         </v-col>
         <v-col v-if="servicesByAccount.length > 2" cols="4" md="3" lg="2">
@@ -22,6 +21,7 @@
             return-object
             v-model="service"
             :rules="rules.req"
+            :loading="isLoading"
           />
         </v-col>
         <v-col cols="4" md="3" lg="2">
@@ -41,6 +41,7 @@
             v-model="serviceProviderId"
             :items="servicesProviders"
             :rules="rules.req"
+            :loading="isLoading"
           />
         </v-col>
         <v-col v-if="type === 'custom'" cols="4" md="3" lg="2">
@@ -61,12 +62,13 @@
             v-model="instanceGroupTitle"
             label="instanceGroup"
             :rules="rules.req"
+            :loading="isLoading"
           />
         </v-col>
       </v-row>
       <component
         :is-edit="isEdit || this.$route.params.instanceId"
-        v-if="isDataLoading"
+        v-if="isInstanceControlsShowed"
         @set-value="setValue"
         :instance-group="instanceGroup"
         @set-instance-group="instanceGroup = $event"
@@ -74,7 +76,7 @@
         @set-meta="meta = $event"
         :instance="instance"
         :plans="plans"
-        :account-id="accountId"
+        :account-id="account?.uuid"
         :plan-rules="planRules"
         :sp-uuid="serviceProviderId"
         :is="templates[type] ?? templates.custom"
@@ -90,9 +92,11 @@
 import snackbar from "@/mixins/snackbar.js";
 import api from "@/api";
 import { defaultFilterObject } from "@/functions";
+import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 
 export default {
   name: "instance-create",
+  components: { AccountsAutocomplete },
   data: () => ({
     isEdit: false,
     isCreateLoading: false,
@@ -103,10 +107,12 @@ export default {
     customTypeName: null,
     instance: {},
     service: {},
-    accountId: null,
+    account: null,
     instanceGroup: {},
     instanceGroupTitle: "",
     serviceProviderId: null,
+
+    isLoading: true,
 
     meta: {},
 
@@ -151,7 +157,7 @@ export default {
       this.isCreateLoading = true;
       try {
         const namespaceUuid = this.namespaces.find(
-          (n) => n.access.namespace == this.accountId
+          (n) => n.access.namespace == this.account?.uuid
         )?.uuid;
 
         if (!this.service) {
@@ -159,7 +165,7 @@ export default {
             namespace: namespaceUuid,
             service: {
               version: "1",
-              title: this.accounts.find((a) => a.uuid === this.accountId).title,
+              title: this.account.title,
               context: {},
               instancesGroups: [],
             },
@@ -174,8 +180,7 @@ export default {
           this.service.instancesGroups.push({
             title:
               this.instanceGroupTitle ||
-              this.accounts.find((ac) => ac.uuid === this.accountId).title +
-                new Date().getTime(),
+              this.account.title + new Date().getTime(),
             type: this.customTypeName || this.type,
             instances: [],
             sp: this.serviceProviderId,
@@ -246,12 +251,9 @@ export default {
       return this.services.filter(
         (s) =>
           s.access.namespace ===
-          this.namespaces.find((n) => n.access.namespace === this.accountId)
+          this.namespaces.find((n) => n.access.namespace === this.account?.uuid)
             ?.uuid
       );
-    },
-    accounts() {
-      return this.$store.getters["accounts/all"];
     },
     namespaces() {
       return this.$store.getters["namespaces/all"];
@@ -278,19 +280,18 @@ export default {
     planRules() {
       return this.rules.req;
     },
-    isDataLoading() {
+    isInstanceControlsShowed() {
       return (
         this.type &&
         this.serviceProviderId &&
         (!(this.isEdit || this.$route.params.instanceId) ||
           ((this.isEdit || this.$route.params.instanceId) &&
-            this.plans.list.length))
+            this.plans.list.length)) &&
+        !this.isLoading
       );
     },
   },
   async created() {
-    this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
-
     const types = require.context(
       "@/components/modules/",
       true,
@@ -308,41 +309,49 @@ export default {
       }
     });
 
-    await Promise.all([
-      this.$store.dispatch("accounts/fetch"),
-      this.$store.dispatch("namespaces/fetch"),
-      this.$store.dispatch("services/fetch"),
-    ]);
-    const instanceId = this.$route.params.instanceId;
-    if (instanceId) {
-      this.services.forEach((s) => {
-        s.instancesGroups.forEach((ig) => {
-          this.isEdit = true;
-          const instance = ig.instances.find((i) => i.uuid === instanceId);
-          if (instance) {
-            this.type = ig.type;
-            this.service = s;
-            this.serviceProviderId = ig.sp;
-            this.instanceGroupTitle = ig.title;
-            this.instance = instance;
-          }
+    try {
+      this.isLoading = true;
+      await Promise.all([
+        this.$store.dispatch("namespaces/fetch"),
+        this.$store.dispatch("services/fetch"),
+        this.$store.dispatch("servicesProviders/fetch", { anonymously: false }),
+      ]);
+      const instanceId = this.$route.params.instanceId;
+      if (instanceId) {
+        this.services.forEach((s) => {
+          s.instancesGroups.forEach((ig) => {
+            this.isEdit = true;
+            const instance = ig.instances.find((i) => i.uuid === instanceId);
+            if (instance) {
+              this.type = ig.type;
+              this.service = s;
+              this.serviceProviderId = ig.sp;
+              this.instanceGroupTitle = ig.title;
+              this.instance = instance;
+            }
+          });
         });
-      });
-      return;
-    }
-
-    let { type, serviceId, accountId, serviceProviderId } = this.$route.params;
-
-    if (type) {
-      this.service = this.services.find((s) => s.uuid === serviceId);
-      if (!this.typeItems.includes(type)) {
-        this.customTypeName = type;
-        type = "custom";
+        return;
       }
-      this.type = type;
-      this.serviceProviderId = serviceProviderId;
+
+      let { type, serviceId, accountId, serviceProviderId } =
+        this.$route.params;
+
+      if (type) {
+        this.service = this.services.find((s) => s.uuid === serviceId);
+        if (!this.typeItems.includes(type)) {
+          this.customTypeName = type;
+          type = "custom";
+        }
+        this.type = type;
+        this.serviceProviderId = serviceProviderId;
+      }
+      if (accountId) {
+        this.account = await api.accounts.get(accountId);
+      }
+    } finally {
+      this.isLoading = false;
     }
-    this.accountId = accountId;
   },
   watch: {
     serviceProviderId(sp_uuid) {
@@ -364,7 +373,7 @@ export default {
         (ig) => ig.title === newVal
       );
     },
-    accountId() {
+    account() {
       this.service = this.servicesByAccount?.[0];
     },
     type() {

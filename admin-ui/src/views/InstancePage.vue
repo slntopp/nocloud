@@ -24,11 +24,11 @@
       v-model="tabsIndex"
     >
       <v-tab-item v-for="tab of tabs" :key="tab.title">
-        <v-progress-linear indeterminate class="pt-2" v-if="instanceLoading" />
-        <component
-          v-else-if="instance"
+        <v-progress-linear indeterminate class="pt-2" v-if="isLoading" />
+        <component v-else
           :is="tab.component"
           :template="instance"
+          :account="account"
         />
       </v-tab-item>
     </v-tabs-items>
@@ -38,6 +38,8 @@
 <script>
 import config from "@/config.js";
 import snackbar from "@/mixins/snackbar";
+import api from "@/api";
+import { mapGetters } from "vuex";
 
 let socket;
 
@@ -46,6 +48,8 @@ export default {
   data: () => ({
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
+    isLoading: false,
+    account: null,
   }),
   mixins: [snackbar],
   methods: {
@@ -92,15 +96,13 @@ export default {
     },
   },
   computed: {
+    ...mapGetters("namespaces", { namespaces: "all" }),
     instance() {
       const id = this.$route.params?.instanceId;
 
       return this.$store.getters["services/getInstances"].find(
         ({ uuid }) => uuid === id
       );
-    },
-    instanceLoading() {
-      return this.$store.getters["services/isLoading"];
     },
     tabs() {
       return [
@@ -135,8 +137,13 @@ export default {
         },
       ].filter((el) => !!el);
     },
+    namespace() {
+      return this.namespaces?.find(
+        (n) => n.uuid == this.instance?.access.namespace
+      );
+    },
     instanceTitle() {
-      if (this.instanceLoading) {
+      if (this.isLoading) {
         return "...";
       }
 
@@ -146,20 +153,30 @@ export default {
       return this.instance.title;
     },
   },
-  created() {
-    this.$store.dispatch("services/fetch", { showDeleted: true });
-  },
-  mounted() {
+  async mounted() {
     this.$store.commit("reloadBtn/setCallback", {
       type: "services/fetch",
       params: {
         showDeleted: true,
       },
     });
-    this.$store.dispatch("namespaces/fetch");
-    this.$store.dispatch("accounts/fetch");
-    this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
-    this.$store.dispatch("plans/fetch");
+    try {
+      this.isLoading = true;
+      await Promise.all([
+        this.$store.dispatch("namespaces/fetch"),
+        this.$store.dispatch("servicesProviders/fetch", { anonymously: false }),
+        this.$store.dispatch("plans/fetch"),
+        this.$store.dispatch("services/fetch", { showDeleted: true }),
+      ]);
+
+      this.account = await api.accounts.get(this.namespace.access.namespace);
+    } catch (err) {
+      this.$store.commit("snackbar/showSnackbarError", {
+        message: err.message,
+      });
+    } finally {
+      this.isLoading = false;
+    }
 
     this.initSocket();
   },
