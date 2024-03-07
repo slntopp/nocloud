@@ -239,7 +239,7 @@ export default {
         .then(() => {
           this.newAccount.title = "";
           this.createMenuVisible = false;
-          this.$store.dispatch("accounts/fetch");
+          this.$store.dispatch("reloadBtn/onclick");
 
           this.setDefaultAccount();
         })
@@ -316,7 +316,7 @@ export default {
         );
 
         if (accounts.length) {
-          await this.$store.dispatch("accounts/fetch");
+          await this.$store.dispatch("reloadBtn/onclick");
         }
       } catch (e) {
         this.showSnackbarError({
@@ -342,7 +342,7 @@ export default {
             return api.accounts.update(el.uuid, el);
           })
         );
-        this.$store.dispatch("accounts/fetch");
+        this.$store.dispatch("reloadBtn/onclick");
         this.showSnackbarSuccess({ message: "Success" });
       } finally {
         this.changeInvoiceBasedAction = undefined;
@@ -382,10 +382,6 @@ export default {
     },
   },
   mounted() {
-    this.$store.commit("reloadBtn/setCallback", {
-      type: "accounts/fetch",
-      params: false,
-    });
     this.$store.dispatch("currencies/fetch");
     this.$store.dispatch("services/fetch", { showDeleted: true });
   },

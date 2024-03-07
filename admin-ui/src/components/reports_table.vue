@@ -96,9 +96,13 @@
         </div>
       </template>
       <template v-slot:[`item.account`]="{ value }">
-        <router-link :to="{ name: 'Account', params: { accountId: value } }">
+        <router-link
+          v-if="!isAccountsLoading"
+          :to="{ name: 'Account', params: { accountId: value } }"
+        >
           {{ getAccount(value)?.title || value }}
         </router-link>
+        <v-skeleton-loader type="text" v-else />
       </template>
     </nocloud-table>
   </v-card>
@@ -142,6 +146,8 @@ const runningActionName = ref("");
 const runningActionReportUuid = ref("");
 const fetchError = ref("");
 const options = ref({});
+const accounts = ref({});
+const isAccountsLoading = ref(false);
 
 const reportsHeaders = computed(() => {
   const headers = [
@@ -175,7 +181,6 @@ const reportsHeaders = computed(() => {
 
 const instances = computed(() => store.getters["services/getInstances"]);
 const services = computed(() => store.getters["services/all"]);
-const accounts = computed(() => store.getters["accounts/all"]);
 
 const isLoading = computed(() => {
   return isFetchLoading.value || isCountLoading.value;
@@ -308,7 +313,7 @@ const init = async () => {
   }
 };
 
-const getAccount = (value) => accounts.value.find((s) => s.uuid === value);
+const getAccount = (value) => accounts.value[value];
 const getInstance = (value) => instances.value.find((s) => s.uuid === value);
 const getService = (value) => services.value.find((s) => s.uuid === value);
 
@@ -388,4 +393,20 @@ watch(rates, () => {
 
 watch(filters, fetchReportsDebounced, { deep: true });
 watch(options, fetchReportsDebounced);
+
+watch(reports, () => {
+  reports.value.forEach(async ({ account: uuid }) => {
+    isAccountsLoading.value = true;
+    try {
+      if (!accounts.value[uuid]) {
+        accounts.value[uuid] = api.accounts.get(uuid);
+        accounts.value[uuid] = await accounts.value[uuid];
+      }
+    } finally {
+      isAccountsLoading.value = Object.values(accounts.value).some(
+        (acc) => acc instanceof Promise
+      );
+    }
+  });
+});
 </script>

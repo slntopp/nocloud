@@ -133,15 +133,15 @@ import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 
-const props = defineProps(["template", "plans"]);
+const props = defineProps(["template", "plans", "account"]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, plans } = toRefs(props);
+const { template, plans, account } = toRefs(props);
 
 const store = useStore();
 const rate = usePlnRate();
 const { toAccountPrice, fromAccountPrice, accountCurrency, accountRate } =
-  useInstancePrices(template.value);
+  useInstancePrices(template.value, account.value);
 
 const pricesItems = ref([]);
 const basePrices = ref({});
