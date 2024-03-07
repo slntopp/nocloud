@@ -1,38 +1,35 @@
 <template>
   <v-dialog
-      :persistent="isMoveLoading"
-      @input="emit('input', $event)"
-      width="50%"
-      :value="value"
+    :persistent="isMoveLoading"
+    @input="emit('input', $event)"
+    width="50%"
+    :value="value"
   >
     <v-card class="pa-5">
       <v-card-title>Move instance</v-card-title>
-      <v-autocomplete
-          label="Account"
-          :items="filtredAccounts"
-          item-text="title"
-          item-value="uuid"
-          return-object
-          v-model="selectedAccount"
+      <accounts-autocomplete
+        label="Account"
+        return-object
+        v-model="selectedAccount"
       />
       <v-autocomplete
-          v-if="accountsServices?.length > 1"
-          :items="accountsServices"
-          item-text="title"
-          item-value="uuid"
-          label="Service"
-          return-object
-          v-model="selectedService"
+        v-if="accountsServices?.length > 1"
+        :items="accountsServices"
+        item-text="title"
+        item-value="uuid"
+        label="Service"
+        return-object
+        v-model="selectedService"
       />
       <v-card-actions class="d-flex justify-end">
         <v-btn @click="emit('input', false)" :disabled="isMoveLoading"
-        >Close
+          >Close
         </v-btn>
         <v-btn
-            :loading="isMoveLoading"
-            @click="move"
-            :disabled="!selectedAccount"
-        >Move
+          :loading="isMoveLoading"
+          @click="move"
+          :disabled="!selectedAccount"
+          >Move
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -43,6 +40,7 @@
 import { computed, defineEmits, defineProps, ref, toRefs } from "vue";
 import api from "@/api";
 import { useStore } from "@/store";
+import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 
 const props = defineProps([
   "value",
@@ -52,8 +50,7 @@ const props = defineProps([
   "services",
   "template",
 ]);
-const { namespaces, account, services, value, accounts, template } =
-    toRefs(props);
+const { namespaces, services, value, template } = toRefs(props);
 const emit = defineEmits(["refresh", "input"]);
 
 const store = useStore();
@@ -63,12 +60,9 @@ const selectedService = ref("");
 const isMoveLoading = ref(false);
 const newIg = ref({});
 
-const filtredAccounts = computed(() =>
-    accounts.value.filter((a) => a?.uuid !== account.value?.uuid)
-);
 const namespace = computed(() => {
   return namespaces.value?.find(
-      (n) => n.access.namespace == selectedAccount.value?.uuid
+    (n) => n.access.namespace == selectedAccount.value?.uuid
   );
 });
 
@@ -78,15 +72,15 @@ const accountsServices = computed(() => {
   }
 
   return services.value?.filter(
-      (s) => s.access.namespace == namespace.value?.uuid
+    (s) => s.access.namespace == namespace.value?.uuid
   );
 });
 
 const servicesInstanceGroups = computed(() => {
   return (
-      service.value?.instancesGroups.filter(
-          (ig) => ig.type === template.value.type
-      ) || []
+    service.value?.instancesGroups.filter(
+      (ig) => ig.type === template.value.type
+    ) || []
   );
 });
 
@@ -98,7 +92,7 @@ const instancesGroups = computed(() => {
 });
 
 const service = computed(
-    () => selectedService.value || accountsServices.value?.[0]
+  () => selectedService.value || accountsServices.value?.[0]
 );
 
 const move = async () => {
@@ -107,7 +101,7 @@ const move = async () => {
     if (!service.value) {
       selectedService.value = await api.services.create({
         namespace: namespaces.value.find(
-            (n) => n.access.namespace == selectedAccount.value.uuid
+          (n) => n.access.namespace == selectedAccount.value.uuid
         )?.uuid,
         service: {
           version: "1",
@@ -118,9 +112,9 @@ const move = async () => {
       });
       await api.services.up(service.value.uuid);
     }
-    
+
     let newIg = instancesGroups.value.find(
-        (ig) => ig.type === template.value.type && ig.sp===template.value.sp
+      (ig) => ig.type === template.value.type && ig.sp === template.value.sp
     );
 
     if (!newIg) {
@@ -134,7 +128,7 @@ const move = async () => {
       const data = await api.services._update(newService);
 
       newIg = data.instancesGroups.find(
-          (ig) => ig.type === template.value.type
+        (ig) => ig.type === template.value.type
       );
     }
 

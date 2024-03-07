@@ -35,15 +35,12 @@
               <v-subheader>Account</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-autocomplete
-                :disabled="isEdit"
-                :filter="defaultFilterObject"
-                label="Account"
-                v-model="transaction.account"
-                item-text="title"
-                item-value="uuid"
-                :items="accounts"
+              <accounts-autocomplete
                 :rules="generalRule"
+                :disabled="isEdit"
+                label="Account"
+                return-object
+                v-model="transaction.account"
               />
             </v-col>
           </v-row>
@@ -246,9 +243,10 @@ import snackbar from "@/mixins/snackbar.js";
 import JsonEditor from "@/components/JsonEditor.vue";
 import { defaultFilterObject } from "@/functions";
 import InvoiceItemsTable from "@/components/invoiceItemsTable.vue";
+import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 
 export default {
-  components: { InvoiceItemsTable, JsonEditor },
+  components: { AccountsAutocomplete, InvoiceItemsTable, JsonEditor },
   name: "transactionsCreate-view",
   mixins: [snackbar],
   data: () => ({
@@ -357,7 +355,7 @@ export default {
       await fetch(
         /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
           `modules/addons/nocloud/api/index.php?run=update_invoice&account=${
-            this.transaction.account
+            this.transaction.account.uuid
           }&type=${
             this.transaction.meta.transactionType.split(" ")[1]
           }&items=${JSON.stringify(
@@ -385,7 +383,7 @@ export default {
 
       const transaction = await api.transactions.create({
         ...this.transaction,
-        account: this.transaction.account,
+        account: this.transaction.account.uuid,
         total,
         currency: this.accountCurrency,
       });
@@ -394,7 +392,7 @@ export default {
         await fetch(
           /https:\/\/(.+?\.?\/)/.exec(this.whmcsApi)[0] +
             `modules/addons/nocloud/api/index.php?run=create_invoice&account=${
-              this.transaction.account
+              this.transaction.account.uuid
             }&type=${
               this.transaction.meta.transactionType.split(" ")[1]
             }&items=${JSON.stringify(
@@ -446,7 +444,7 @@ export default {
   },
   async created() {
     if (this.$route.params.account) {
-      this.transaction.account = this.$route.params.account;
+      this.transaction.account.uuid = this.$route.params.account;
     }
 
     this.initDate();
@@ -473,10 +471,6 @@ export default {
       }
     }
 
-    if (this.accounts.length < 2) {
-      this.$store.dispatch("accounts/fetch");
-    }
-
     try {
       await Promise.all([
         this.$store.dispatch("namespaces/fetch"),
@@ -498,17 +492,11 @@ export default {
     namespaces() {
       return this.$store.getters["namespaces/all"];
     },
-    accounts() {
-      return this.$store.getters["accounts/all"];
-    },
     services() {
       return this.$store.getters["services/all"];
     },
     whmcsApi() {
       return this.$store.getters["settings/whmcsApi"];
-    },
-    fullAccount() {
-      return this.accounts.find((a) => a.uuid === this.transaction.account);
     },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
@@ -517,9 +505,9 @@ export default {
       return this.fullAccount?.currency || this.defaultCurrency;
     },
     servicesByAccount() {
-      if (this.fullAccount) {
+      if (this.transaction.account) {
         const namespace = this.namespaces.find(
-          (n) => n.access.namespace === this.transaction.account
+          (n) => n.access.namespace === this.transaction.account.uuid
         );
         return this.services.filter(
           (s) => s.access.namespace === namespace?.uuid
