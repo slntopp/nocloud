@@ -134,8 +134,6 @@ export default {
       event: () => this.fetchService(),
     });
 
-    this.$store.dispatch("accounts/fetch");
-
     const url = `${/^(.*?)\/admin/
       .exec(window.location.href)[1]
       .replace("https", "wss")}/services/${this.serviceId}/stream`;

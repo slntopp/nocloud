@@ -215,14 +215,14 @@ import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import api from "@/api";
 
-const props = defineProps(["template", "plans", "service", "sp"]);
+const props = defineProps(["template", "plans", "service", "sp", "account"]);
 const emit = defineEmits(["refresh"]);
 
-const { template, plans, service } = toRefs(props);
+const { template, plans, service, account } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
-  useInstancePrices(template.value);
+  useInstancePrices(template.value, account.value);
 
 const changeDatesDialog = ref(false);
 const priceModelDialog = ref(false);

@@ -63,11 +63,7 @@ function navTitle(title) {
   return title;
 }
 
-const account = computed(() =>
-  store.getters["accounts/all"].find(
-    ({ uuid }) => uuid === route.params?.accountId
-  )
-);
+const account = computed(() => store.getters["accounts/one"]);
 
 const accountTitle = computed(() => {
   return account.value?.title ?? "not found";

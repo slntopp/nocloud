@@ -28,9 +28,10 @@
       >
         <div class="d-flex justify-space-between mb-3">
           <div class="d-flex">
-            <v-chip class="mx-1" color="primary">{{
-              note.admin?.title || note.admin.uuid
+            <v-chip class="mx-1" color="primary" v-if="!isAccountsLoading">{{
+              getAccount(note.admin)?.title || note.admin
             }}</v-chip>
+            <v-skeleton-loader type="chip" v-else />
 
             <v-chip class="mx-1">Created at: {{ note.created }}</v-chip>
             <v-chip class="mx-1">Updated at: {{ note.updated }}</v-chip>
@@ -86,6 +87,7 @@ import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import { EditorContainer } from "nocloud-ui";
 import { formatSecondsToDate } from "@/functions";
+import api from "@/api";
 
 const props = defineProps(["template", "onUpdate", "onAdd", "onDelete"]);
 const { template, onAdd, onUpdate, onDelete } = toRefs(props);
@@ -100,25 +102,25 @@ const isRemoveLoading = ref(false);
 const removedNoteIndex = ref("");
 const isEditMode = ref(false);
 const isEditLoading = ref(false);
+const accounts = ref([]);
 const editedNoteIndex = ref("");
+const isAccountsLoading = ref(false);
 
 onMounted(() => {
   setNotes();
 });
 
-const accounts = computed(() => store.getters["accounts/all"]);
 const currentUserUuid = computed(() => store.getters["auth/userdata"]?.uuid);
 const filteredNotes = computed(() =>
   notes.value.map((n) => ({
     ...n,
-    admin: getAccount(n.admin) || { uuid: n.admin },
     created: formatSecondsToDate(n.created, true),
     updated: formatSecondsToDate(+n.updated || n.created, true),
   }))
 );
 
 const getAccount = (uuid) => {
-  return accounts.value.find((a) => a.uuid === uuid);
+  return accounts.value[uuid];
 };
 
 const setNotes = (data) => {
@@ -213,6 +215,26 @@ watch(
   template,
   () => {
     setNotes();
+  },
+  { deep: true }
+);
+
+watch(
+  notes,
+  () => {
+    notes.value.forEach(async ({ admin: uuid }) => {
+      isAccountsLoading.value = true;
+      try {
+        if (!accounts.value[uuid]) {
+          accounts.value[uuid] = api.accounts.get(uuid);
+          accounts.value[uuid] = await accounts.value[uuid];
+        }
+      } finally {
+        isAccountsLoading.value = Object.values(accounts.value).some(
+          (acc) => acc instanceof Promise
+        );
+      }
+    });
   },
   { deep: true }
 );

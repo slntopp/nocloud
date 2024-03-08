@@ -34,10 +34,12 @@
 
     <template v-slot:[`item.access`]="{ item }">
       <router-link
+        v-if="!isAccountsLoading"
         :to="{ name: 'Account', params: { accountId: getAccount(item)?.uuid } }"
       >
         {{ getValue("access", item) }}
       </router-link>
+      <v-skeleton-loader type="text" v-else />
     </template>
 
     <template v-slot:[`item.email`]="{ item }">
@@ -91,17 +93,6 @@
     <template v-slot:[`item.sp`]="{ item, value }">
       <router-link :to="{ name: 'ServicesProvider', params: { uuid: value } }">
         {{ getValue("sp", item) }}
-      </router-link>
-    </template>
-
-    <template v-slot:[`item.access.namespace`]="{ item }">
-      <router-link
-        :to="{
-          name: 'NamespacePage',
-          params: { namespaceId: item.access.namespace },
-        }"
-      >
-        {{ getValue("access.namespace", item) }}
       </router-link>
     </template>
 
@@ -217,8 +208,10 @@ export default {
       "period",
       "date",
     ],
+    accounts: {},
     instancesTypes: [],
     isChangeRegularPaymentLoading: false,
+    isAccountsLoading: false,
   }),
   mounted() {
     const types = require.context(
@@ -274,7 +267,7 @@ export default {
         access: {},
       };
 
-      return this.accounts?.find(({ uuid }) => uuid === namespace) ?? {};
+      return this.accounts?.[namespace] ?? {};
     },
     getEmail(inst) {
       const account = this.getAccount(inst);
@@ -396,9 +389,6 @@ export default {
 
       return billingPlan.products[key]?.title;
     },
-    getNamespace(id) {
-      return this.namespaces?.find((n) => n.uuid === id)?.title;
-    },
     getValue(key, item) {
       return this.headersGetters[key](item);
     },
@@ -509,9 +499,6 @@ export default {
     namespaces() {
       return this.$store.getters["namespaces/all"];
     },
-    accounts() {
-      return this.$store.getters["accounts/all"];
-    },
     instancesHeaders() {
       if (this.headers) return this.headers;
       const headers = [
@@ -519,10 +506,6 @@ export default {
         { text: "Title", value: "title" },
         { text: "Service", value: "service" },
         { text: "Account", value: "access" },
-        {
-          text: "Group (NameSpace)",
-          value: "access.namespace",
-        },
         { text: "Due date", value: "dueDate" },
         { text: "Status", value: "state" },
         { text: "Tariff", value: "product" },
@@ -560,7 +543,6 @@ export default {
         date: this.getCreationDate,
         dueDate: this.getExpirationDate,
         sp: this.getServiceProvider,
-        "access.namespace": (item) => this.getNamespace(item.access.namespace),
         "resources.ram": (item) =>
           +(item?.resources?.ram / 1024).toFixed(2) || 0,
         "resources.drive_size": (item) =>
@@ -604,14 +586,8 @@ export default {
         {
           key: "access",
           type: "select",
-          items: this.getSearchKeyItems("access"),
           title: "Account",
-        },
-        {
-          key: "access.namespace",
-          items: this.getSearchKeyItems("access.namespace"),
-          type: "select",
-          title: "Namespace",
+          items: this.isAccountsLoading ? [] : this.getSearchKeyItems("access"),
         },
         {
           key: "product",
@@ -677,6 +653,30 @@ export default {
     },
   },
   watch: {
+    items() {
+      this.items.forEach(async ({ access }) => {
+        const {
+          access: { namespace: uuid },
+        } = this.namespaces?.find(({ uuid }) => uuid === access.namespace) ?? {
+          access: {},
+        };
+        if (!uuid) {
+          return;
+        }
+
+        this.isAccountsLoading = true;
+        try {
+          if (!this.accounts[uuid]) {
+            this.accounts[uuid] = api.accounts.get(uuid);
+            this.accounts[uuid] = await this.accounts[uuid];
+          }
+        } finally {
+          this.isAccountsLoading = Object.values(this.accounts).some(
+            (acc) => acc instanceof Promise
+          );
+        }
+      });
+    },
     instances() {
       this.fetchError = "";
     },

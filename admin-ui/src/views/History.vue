@@ -13,11 +13,12 @@
 import HistoryTable from "@/components/historyTable.vue";
 import { mapGetters } from "vuex";
 import searchMixin from "@/mixins/search";
+import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 
 export default {
   name: "all-history",
   components: { HistoryTable },
-  mixins: [searchMixin({name:"history"})],
+  mixins: [searchMixin({ name: "history" })],
   data: () => ({
     account: null,
     uuid: null,
@@ -28,9 +29,8 @@ export default {
 
     this.isVariantsLoading = true;
     await Promise.all([
-      this.$store.dispatch("accounts/fetch"),
       this.$store.dispatch("services/fetch", { showDeleted: true }),
-      this.$store.dispatch("servicesProviders/fetch",{anonymously:false}),
+      this.$store.dispatch("servicesProviders/fetch", { anonymously: false }),
     ]);
     this.isVariantsLoading = false;
 
@@ -44,17 +44,17 @@ export default {
         single: true,
       },
       {
-        items: this.accounts,
-        title: "Accounts",
         type: "select",
-        single: true,
-        item: { value: "uuid", title: "title" },
         key: "account",
+        custom: true,
+        component: AccountsAutocomplete,
+        label: "Accounts",
+        clearable: true,
+        fetchValue: true,
       },
     ]);
   },
   computed: {
-    ...mapGetters("accounts", { accounts: "all" }),
     ...mapGetters("appSearch", { filter: "filter" }),
     instances() {
       return this.$store.getters["services/getInstances"];
@@ -64,9 +64,6 @@ export default {
     },
     services() {
       return this.$store.getters["services/all"];
-    },
-    accounts() {
-      return this.$store.getters["accounts/all"];
     },
   },
   watch: {

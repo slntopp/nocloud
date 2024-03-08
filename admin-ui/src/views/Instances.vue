@@ -27,15 +27,11 @@
 
       <v-card class="pa-4">
         <v-form ref="form" v-model="newInstance.isValid">
-          <v-autocomplete
-            :filter="defaultFilterObject"
+          <accounts-autocomplete
             dense
-            item-text="title"
-            item-value="uuid"
             label="account"
             style="width: 300px"
             v-model="newInstance.account"
-            :items="accounts"
             :rules="rules.req"
           />
           <v-autocomplete
@@ -130,10 +126,11 @@ import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
 import instancesTable from "@/components/instances_table.vue";
 import { defaultFilterObject } from "@/functions";
+import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 
 export default {
   name: "instances-view",
-  components: { confirmDialog, instancesTable },
+  components: { AccountsAutocomplete, confirmDialog, instancesTable },
   mixins: [snackbar],
   data: () => ({
     allTypes: [],
@@ -208,10 +205,9 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("accounts/fetch", false);
     this.$store.dispatch("namespaces/fetch", false);
     this.$store.dispatch("services/fetch", { showDeleted: true });
-    this.$store.dispatch("servicesProviders/fetch", {anonymously:false});
+    this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
 
     const types = require.context(
       "@/components/modules/",
@@ -240,9 +236,6 @@ export default {
     services() {
       return this.$store.getters["services/all"];
     },
-    accounts() {
-      return this.$store.getters["accounts/all"];
-    },
     namespaces() {
       return this.$store.getters["namespaces/all"];
     },
@@ -250,7 +243,9 @@ export default {
       return this.$store.getters["services/getInstances"];
     },
     sp() {
-      return this.$store.getters["servicesProviders/all"].filter(sp=>!!sp.type);
+      return this.$store.getters["servicesProviders/all"].filter(
+        (sp) => !!sp.type
+      );
     },
     service() {
       return this.services.find(

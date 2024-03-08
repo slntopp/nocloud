@@ -10,21 +10,12 @@
 <script setup>
 import PluginIframe from "@/components/plugin/iframe.vue";
 import { computed, toRefs } from "vue";
-import { useStore } from "@/store";
 
-const props = defineProps(["template"]);
-const { template } = toRefs(props);
-
-const store = useStore();
+const props = defineProps(["template", "account"]);
+const { account } = toRefs(props);
 
 const accountId = computed(() => {
-  const namespace = store.getters["namespaces/all"]?.find(
-    (n) => n.uuid === template.value?.access.namespace
-  );
-  const account = store.getters["accounts/all"].find(
-    (a) => a.uuid === namespace?.access.namespace
-  );
-  return account?.uuid;
+  return account.value?.uuid;
 });
 </script>
 

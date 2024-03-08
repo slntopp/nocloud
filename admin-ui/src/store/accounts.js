@@ -4,12 +4,19 @@ export default {
   namespaced: true,
   state: {
     accounts: [],
+    total: 0,
     loading: false,
-    isAccountsFetched: false,
+    one: {},
   },
   mutations: {
     setAccounts(state, accounts) {
       state.accounts = accounts;
+    },
+    setTotal(state, total) {
+      state.total = +total;
+    },
+    setOne(state, account) {
+      state.one = account;
     },
     pushAccount(state, account) {
       const index = state.accounts.findIndex((a) => a.uuid === account.uuid);
@@ -23,24 +30,17 @@ export default {
     setLoading(state, data) {
       state.loading = data;
     },
-    setIsFetched(state, val) {
-      state.isAccountsFetched = val;
-    },
   },
   actions: {
-    fetch({ commit, state }, cache = true) {
-      console.log(cache,state.isAccountsFetched)
-      if (cache && state.isAccountsFetched) {
-        return;
-      }
-
+    fetch({ commit }, params) {
       commit("setAccounts", []);
       commit("setLoading", true);
       return new Promise((resolve, reject) => {
-        api.accounts
-          .list()
+        api
+          .post("accounts", params)
           .then((response) => {
             commit("setAccounts", response.pool);
+            commit("setTotal", response.count);
             resolve(response);
           })
           .catch((error) => {
@@ -48,7 +48,6 @@ export default {
           })
           .finally(() => {
             commit("setLoading", false);
-            commit("setIsFetched", true);
           });
       });
     },
@@ -58,7 +57,7 @@ export default {
         api.accounts
           .get(id)
           .then((response) => {
-            commit("pushAccount", response);
+            commit("setOne", response);
             resolve(response);
           })
           .catch((error) => {
@@ -73,6 +72,12 @@ export default {
   getters: {
     all(state) {
       return state.accounts;
+    },
+    one(state) {
+      return state.one;
+    },
+    total(state) {
+      return state.total;
     },
     isLoading(state) {
       return state.loading;

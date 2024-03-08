@@ -124,7 +124,6 @@ export default {
     },
   },
   created() {
-    this.$store.dispatch("accounts/fetch");
     this.$store.dispatch("servicesProviders/fetchById", this.uuid).then(() => {
       const items = this.$store.getters["servicesProviders/all"];
       this.item = items.find((el) => el.uuid == this.uuid);

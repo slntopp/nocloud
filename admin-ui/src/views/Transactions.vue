@@ -48,10 +48,11 @@ import search from "@/mixins/search.js";
 
 import { mapGetters } from "vuex";
 import reportsTable from "@/components/reports_table.vue";
+import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 export default {
   name: "transactions-view",
   components: { reportsTable },
-  mixins: [snackbar, search({name:"transactions"})],
+  mixins: [snackbar, search({ name: "transactions" })],
   data: () => ({
     types: [],
     resources: [],
@@ -135,7 +136,6 @@ export default {
       this.products = products;
     },
     fetchData() {
-      this.$store.dispatch("accounts/fetch");
       this.$store.dispatch("services/fetch", { showDeleted: true });
       this.$store.dispatch("namespaces/fetch");
     },
@@ -159,9 +159,6 @@ export default {
     },
     namespaces() {
       return this.$store.getters["namespaces/all"];
-    },
-    accounts() {
-      return this.$store.getters["accounts/all"];
     },
     services() {
       return this.$store.getters["services/all"];
@@ -270,9 +267,12 @@ export default {
         {
           key: "account",
           type: "select",
-          item: { value: "uuid", title: "title" },
-          items: this.accounts,
-          title: "Accounts",
+          custom: true,
+          component: AccountsAutocomplete,
+          label: "Accounts",
+          multiple: true,
+          clearable: true,
+          fetchValue:true
         },
         {
           key: "product",

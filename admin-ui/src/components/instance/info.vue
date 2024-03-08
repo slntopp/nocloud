@@ -5,6 +5,7 @@
         <instance-actions
           @refresh="refreshInstance"
           :sp="sp"
+          :account="account"
           :copy-template="copyInstance"
           :template="template"
         />
@@ -143,6 +144,7 @@
       <component
         :is="additionalInstanceInfoComponent"
         :sp="sp"
+        :account="account"
         :template="template"
       />
       <v-card-title class="primary--text">Billing info</v-card-title>
@@ -153,6 +155,7 @@
         :service="service"
         :plans="plans"
         :sp="sp"
+        :account="account"
         @refresh="refreshInstance"
       />
     </template>
@@ -161,7 +164,6 @@
       :account="account"
       :services="services"
       :namespaces="namespaces"
-      :accounts="accounts"
       :template="template"
       v-model="moveDialog"
     />
@@ -171,6 +173,7 @@
         @update="updateCopy"
         :is="billingLabelComponent"
         v-if="Object.keys(copyInstance).length"
+        :account="account"
         :template="copyInstance"
       />
     </div>
@@ -203,7 +206,10 @@ export default {
     JsonTextarea,
   },
   mixins: [snackbar],
-  props: { template: { type: Object, required: true } },
+  props: {
+    template: { type: Object, required: true },
+    account: { type: Object, required: true },
+  },
   data: () => ({
     templates: {},
     moveDialog: false,
@@ -235,7 +241,6 @@ export default {
   },
   computed: {
     ...mapGetters("namespaces", { namespaces: "all" }),
-    ...mapGetters("accounts", { accounts: "all" }),
     ...mapGetters("services", { services: "all" }),
     ...mapGetters("plans", { plans: "all" }),
     ...mapGetters("servicesProviders", { servicesProviders: "all" }),
@@ -246,14 +251,6 @@ export default {
     },
     service() {
       return this.services?.find((s) => s?.uuid == this.template.service);
-    },
-    account() {
-      if (!this.namespace) {
-        return;
-      }
-      return this.accounts?.find(
-        (a) => a?.uuid == this.namespace.access.namespace
-      );
     },
     sp() {
       return this.servicesProviders?.find((sp) => sp?.uuid == this.template.sp);

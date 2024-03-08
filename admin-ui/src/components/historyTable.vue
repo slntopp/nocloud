@@ -20,9 +20,13 @@
       {{ new Date(new Date(1970, 0, 1).setSeconds(value)).toLocaleString() }}
     </template>
     <template v-slot:[`item.requestor`]="{ value }">
-      <router-link :to="{ name: 'Account', params: { accountId: value } }">
+      <router-link
+        v-if="!isAccountsLoading"
+        :to="{ name: 'Account', params: { accountId: value } }"
+      >
         {{ getAccount(value)?.title }}
       </router-link>
+      <v-skeleton-loader type="text" v-else />
     </template>
     <template v-slot:[`item.uuid`]="{ item }">
       <router-link
@@ -78,6 +82,8 @@ const expanded = ref([]);
 const options = ref({});
 const scopeItems = ref([]);
 const actionItems = ref([]);
+const isAccountsLoading = ref(false);
+const accounts = ref({});
 
 const store = useStore();
 
@@ -206,7 +212,7 @@ const init = async () => {
 };
 
 const getAccount = (uuid) => {
-  return accounts.value.find((acc) => acc.uuid === uuid) || uuid;
+  return accounts.value[uuid] || uuid;
 };
 
 const getInstance = (uuid) => {
@@ -252,7 +258,6 @@ const searchFields = computed(() => {
   ];
 });
 
-const accounts = computed(() => store.getters["accounts/all"]);
 const services = computed(() => store.getters["services/all"]);
 const sps = computed(() => store.getters["servicesProviders/all"]);
 const instances = computed(() => store.getters["services/getInstances"]);
@@ -269,4 +274,19 @@ watch(accountId, () => updateProps());
 watch(uuid, () => updateProps());
 watch(filter, fetchLogsDebounced, { deep: true });
 watch(options, fetchLogsDebounced);
+watch(logs, () => {
+  logs.value.forEach(async ({ requestor: uuid }) => {
+    isAccountsLoading.value = true;
+    try {
+      if (!accounts.value[uuid]) {
+        accounts.value[uuid] = api.accounts.get(uuid);
+        accounts.value[uuid] = await accounts.value[uuid];
+      }
+    } finally {
+      isAccountsLoading.value = Object.values(accounts.value).some(
+        (acc) => acc instanceof Promise
+      );
+    }
+  });
+});
 </script>

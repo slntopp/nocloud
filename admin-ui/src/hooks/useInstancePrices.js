@@ -1,27 +1,10 @@
 import { computed } from "vue";
-import { useStore } from "@/store";
 import useCurrency from "@/hooks/useCurrency";
 
-const useInstancePrices = (instance) => {
-  const store = useStore();
-  const { convertFrom, convertTo, rates, defaultCurrency, } = useCurrency();
+const useInstancePrices = (instance, account) => {
+  const { convertFrom, convertTo, rates, defaultCurrency } = useCurrency();
 
-  const namespace = computed(() =>
-    store.getters["namespaces/all"]?.find(
-      (n) => n.uuid === instance.access.namespace
-    )
-  );
-
-  const account = computed(() => {
-    if (!namespace.value) {
-      return;
-    }
-    return store.getters["accounts/all"]?.find(
-      (a) => a?.uuid === namespace.value.access.namespace
-    );
-  });
-
-  const accountCurrency = computed(() => account.value?.currency);
+  const accountCurrency = computed(() => account?.currency);
   const accountRate = computed(() => {
     if (defaultCurrency.value === accountCurrency.value) {
       return 1;
@@ -44,7 +27,7 @@ const useInstancePrices = (instance) => {
     account,
     accountCurrency,
     accountRate,
-    rates
+    rates,
   };
 };
 
