@@ -52,13 +52,13 @@ const invoiceTitle = computed(() =>
 
 onMounted(async () => {
   store.commit("reloadBtn/setCallback", {
-    type: "invoices/fetchById",
+    type: "invoices/get",
     params: route.params?.uuid,
   });
   selectedTab.value = route.query.tab || 0;
 
   try {
-    await store.dispatch("invoices/fetchById", route.params.uuid);
+    await store.dispatch("invoices/get", route.params.uuid);
     document.title = `${invoiceTitle.value} | NoCloud`;
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });

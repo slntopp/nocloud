@@ -45,11 +45,11 @@
 </template>
 
 <script>
-import api from "@/api.js";
 import yaml from "yaml";
 import snackbar from "@/mixins/snackbar.js";
 import JsonTextarea from "@/components/JsonTextarea.vue";
 import YamlEditor from "@/components/YamlEditor.vue";
+import { Invoice } from "nocloud-proto/proto/es/billing/billing_pb";
 
 export default {
   name: "invoice-template",
@@ -87,8 +87,10 @@ export default {
           : yaml.parse(this.tree);
 
       this.isLoading = true;
-      api
-        .patch("/billing/invoices/" + this.invoice.uuid, request)
+      this.$store.getters["invoices/invoicesClient"]
+        .updateInvoice(
+          Invoice.fromJson({ ...request, uuid: this.invoice.uuid })
+        )
         .then(() => {
           this.showSnackbarSuccess({
             message: "Invoice edited successfully",

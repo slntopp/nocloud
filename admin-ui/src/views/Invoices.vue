@@ -28,10 +28,9 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, ref } from "vue";
 import { useStore } from "@/store";
 import InvoicesTable from "@/components/invoicesTable.vue";
-import api from "@/api";
 
 const selectedInvoices = ref([]);
 const isCancelLoading = ref(false);
@@ -39,22 +38,12 @@ const isTerminateLoading = ref(false);
 
 const store = useStore();
 
-onMounted(() => {
-  fetch();
-
-  store.commit("reloadBtn/setCallback", { event: fetch });
-});
-
 const isBtnDisabled = computed(
   () => isCancelLoading.value || isTerminateLoading.value
 );
 
 const isLoading = computed(() => store.getters["invoices/isLoading"]);
 const invoices = computed(() => store.getters["invoices/all"]);
-
-const fetch = () => {
-  store.dispatch("accounts/fetch");
-};
 
 const cancelInvoices = async () => {
   try {
@@ -89,7 +78,7 @@ const terminateInvoices = async () => {
 };
 
 const changeInvoiceStatus = async (invoice, status) => {
-  return api.patch("/billing/invoices/" + invoice.uuid, {
+  return store.getters["invoices/invoicesClient"].updateInvoice({
     ...invoice,
     status,
   });

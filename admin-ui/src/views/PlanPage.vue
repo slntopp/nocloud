@@ -36,7 +36,6 @@
 <script>
 import config from "@/config.js";
 import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
-import api from "@/api";
 
 export default {
   name: "plan-view",
@@ -83,7 +82,10 @@ export default {
             .filter((item) => !!item.descriptionId)
             .map(async (item) => ({
               ...item,
-              data: await api.get("/billing/descs/" + item.descriptionId),
+              data: await this.$store.dispatch(
+                "descriptions/get",
+                item.descriptionId
+              ),
             }))
         );
 

@@ -1,4 +1,9 @@
-import api from "@/api.js";
+import { createPromiseClient } from "@connectrpc/connect";
+import { BillingService } from "nocloud-proto/proto/es/billing/billing_connect";
+import {
+  GetInvoicesCountRequest,
+  GetInvoicesRequest,
+} from "nocloud-proto/proto/es/billing/billing_pb";
 
 export default {
   namespaced: true,
@@ -19,24 +24,28 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit }, params) {
+    async fetch({ commit, getters }, params) {
       commit("setInvoices", []);
       commit("setLoading", true);
       try {
-        const response = await api.post("/billing/invoices", params);
+        const response = await getters["invoicesClient"].getInvoices(
+          GetInvoicesRequest.fromJson(params)
+        );
         commit("setInvoices", response.pool);
       } finally {
         commit("setLoading", false);
       }
     },
-    async count(_, params) {
-      return api.post("/billing/count/invoices", params);
+    count({ getters }, params) {
+      return getters["invoicesClient"].getInvoicesCount(
+        GetInvoicesCountRequest.fromJson(params)
+      );
     },
-    async fetchById({ commit }, id) {
+    async get({ commit, getters }, uuid) {
       commit("setLoading", true);
       try {
-        const response = await api.get(`/billing/invoices/${id}`);
-        commit("setOne", response);
+        const response = await getters["invoicesClient"].getInvoice({ uuid });
+        commit("setOne", response.toJson());
       } finally {
         commit("setLoading", false);
       }
@@ -51,6 +60,9 @@ export default {
     },
     isLoading(state) {
       return state.loading;
+    },
+    invoicesClient(state, getters, rootState, rootGetters) {
+      return createPromiseClient(BillingService, rootGetters["app/transport"]);
     },
   },
 };
