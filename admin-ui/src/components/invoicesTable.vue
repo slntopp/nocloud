@@ -32,7 +32,7 @@
       {{ formatSecondsToDate(item.created, true) }}
     </template>
     <template v-slot:[`item.status`]="{ item }">
-      <v-chip>{{ item.status }}</v-chip>
+      <v-chip>{{ BillingStatus[item.status] }}</v-chip>
     </template>
     <template v-slot:[`item.actions`]="{ item }">
       <v-btn icon :to="{ name: 'Invoice page', params: { uuid: item.uuid } }">
@@ -48,6 +48,7 @@ import balance from "@/components/balance.vue";
 import { debounce, formatSecondsToDate } from "../functions";
 import { ref, computed, watch, toRefs } from "vue";
 import { useStore } from "@/store";
+import { BillingStatus } from "nocloud-proto/proto/es/billing/billing_pb";
 
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
@@ -82,13 +83,16 @@ const isLoading = computed(() => isFetchLoading.value || isCountLoading.value);
 
 const filter = computed(() => store.getters["appSearch/filter"]);
 
-const requestOptions = computed(() => ({
+const listOptions = computed(() => ({
   filters: filter.value,
   page: page.value,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy?.[0],
   sort:
     options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
+}));
+const countOptions = computed(() => ({
+  filters: filter.value,
 }));
 
 const account = (uuid) => {
@@ -109,9 +113,9 @@ const init = async () => {
   try {
     const { total } = await store.dispatch(
       "invoices/count",
-      requestOptions.value
+      countOptions.value
     );
-    count.value = +total;
+    count.value = Number(total);
   } finally {
     isCountLoading.value = false;
   }
@@ -122,7 +126,7 @@ const fetchInvoices = async () => {
   isFetchLoading.value = true;
   fetchError.value = "";
   try {
-    await store.dispatch("invoices/fetch", requestOptions.value);
+    await store.dispatch("invoices/fetch", listOptions.value);
   } catch (e) {
     fetchError.value = e.message;
   } finally {

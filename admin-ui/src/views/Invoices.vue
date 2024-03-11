@@ -31,7 +31,6 @@
 import { computed, onMounted, ref } from "vue";
 import { useStore } from "@/store";
 import InvoicesTable from "@/components/invoicesTable.vue";
-import api from "@/api";
 
 const selectedInvoices = ref([]);
 const isCancelLoading = ref(false);
@@ -89,7 +88,7 @@ const terminateInvoices = async () => {
 };
 
 const changeInvoiceStatus = async (invoice, status) => {
-  return api.patch("/billing/invoices/" + invoice.uuid, {
+  return store.getters["invoices/invoicesClient"].updateInvoice({
     ...invoice,
     status,
   });

@@ -118,7 +118,7 @@
               <v-subheader>Status</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-chip>{{ newInvoice.status }}</v-chip>
+              <v-chip>{{ BillingStatus[invoice.status] }}</v-chip>
             </v-col>
           </v-row>
         </v-col>
@@ -208,8 +208,11 @@ import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import InvoiceItemsTable from "@/components/invoiceItemsTable.vue";
-import api from "@/api";
 import { useRouter } from "vue-router/composables";
+import {
+  BillingStatus,
+  Invoice,
+} from "nocloud-proto/proto/es/billing/billing_pb";
 
 const props = defineProps({
   invoice: {},
@@ -310,7 +313,7 @@ const accountCurrency = computed(
     newInvoice.value.account?.currency || store.getters["currencies/default"]
 );
 const amount = computed(() =>
-  newInvoice.value.items.reduce((acc, i) => acc + +i.amount, 0)
+  newInvoice.value.items.reduce((acc, i) => acc + Number(i.amount), 0)
 );
 
 const isEmailDisabled = computed(() =>
@@ -339,10 +342,17 @@ const saveInvoice = async (withEmail = false) => {
       meta: newInvoice.value.meta,
     };
     if (!isEdit.value) {
-      await api.put("/billing/invoices", data);
+      await store.getters["invoices/invoicesClient"].createInvoice(
+        Invoice.fromJson(data)
+      );
       router.push({ name: "Invoices" });
     } else {
-      await api.patch("/billing/invoices/" + invoice.value.uuid, data);
+      await store.getters["invoices/invoicesClient"].updateInvoice(
+        Invoice.fromJson({
+          ...data,
+          uuid: invoice.value.uuid,
+        })
+      );
       store.commit("snackbar/showSnackbarSuccess", {
         message: "Invoice successfully saved",
       });
@@ -420,7 +430,7 @@ const changeInvoiceStatus = async (status) => {
   isStatusChangeLoading.value = true;
   newStatus.value = status;
   try {
-    await api.patch("/billing/invoices/" + invoice.value.uuid, {
+    await store.getters["invoices/invoicesClient"].updateInvoice({
       ...invoice.value,
       status,
     });
