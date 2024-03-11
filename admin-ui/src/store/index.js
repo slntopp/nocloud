@@ -22,6 +22,7 @@ import actions from "./actions";
 import showcases from "./showcases";
 import addons from "./addons";
 import invoices from "./invoices";
+import descriptions from "./descriptions";
 
 Vue.use(Vuex);
 
@@ -49,7 +50,8 @@ const store = new Vuex.Store({
     actions,
     showcases,
     addons,
-    invoices
+    invoices,
+    descriptions,
   },
 });
 

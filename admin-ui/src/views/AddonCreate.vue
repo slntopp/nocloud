@@ -80,7 +80,6 @@ import { computed, onMounted, ref, toRefs, watch } from "vue";
 import NocloudTable from "@/components/table.vue";
 import dateField from "@/components/date.vue";
 import { useStore } from "@/store";
-import api from "@/api";
 import { useRouter } from "vue-router/composables";
 import { getFullDate, getTimestamp } from "@/functions";
 import RichEditor from "@/components/ui/richEditor.vue";
@@ -156,14 +155,15 @@ const saveAddon = async () => {
     };
 
     if (!isEdit.value) {
-      const description = await api.put("/billing/descs", {
+      const description = await store.dispatch("descriptions/create", {
         text: newAddon.value.description,
       });
       dto.descriptionId = description.uuid;
       await store.getters["addons/addonsClient"].create(dto);
       router.push({ name: "Addons" });
     } else {
-      await api.patch("/billing/descs/" + newAddon.value.descriptionId, {
+      await store.dispatch("descriptions/update", {
+        uuid: newAddon.value.descriptionId,
         text: newAddon.value.description,
       });
       await store.getters["addons/addonsClient"].update(dto);

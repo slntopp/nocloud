@@ -5,7 +5,6 @@
         <instance-actions
           @refresh="refreshInstance"
           :sp="sp"
-          :account="account"
           :copy-template="copyInstance"
           :template="template"
         />
@@ -131,7 +130,6 @@
       <component
         :is="additionalInstanceInfoComponent"
         :sp="sp"
-        :account="account"
         :template="template"
       />
       <v-card-title class="primary--text">Billing info</v-card-title>
@@ -142,7 +140,6 @@
         :service="service"
         :plans="plans"
         :sp="sp"
-        :account="account"
         @refresh="refreshInstance"
       />
     </template>
@@ -151,6 +148,7 @@
       :account="account"
       :services="services"
       :namespaces="namespaces"
+      :accounts="accounts"
       :template="template"
       v-model="moveDialog"
     />
@@ -160,8 +158,7 @@
         @update="updateCopy"
         :is="billingLabelComponent"
         v-if="Object.keys(copyInstance).length"
-        :account="account"
-        :template="copyInstance"
+        :template="template"
       />
     </div>
   </v-card>
@@ -179,7 +176,6 @@ import MoveInstance from "@/components/dialogs/moveInstance.vue";
 import { addToClipboard } from "@/functions";
 import RichEditor from "@/components/ui/richEditor.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
-import api from "@/api";
 
 export default {
   name: "instance-info",
@@ -194,10 +190,7 @@ export default {
     JsonTextarea,
   },
   mixins: [snackbar],
-  props: {
-    template: { type: Object, required: true },
-    account: { type: Object, required: true },
-  },
+  props: { template: { type: Object, required: true } },
   data: () => ({
     templates: {},
     moveDialog: false,
@@ -207,7 +200,8 @@ export default {
   methods: {
     addToClipboard,
     refreshInstance() {
-      this.$store.dispatch('reloadBtn/onclick')
+      this.$store.dispatch("services/fetch", this.template.uuid);
+      this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
     },
     updateCopy({ key, value }) {
       const keys = key.split(".");
@@ -231,13 +225,17 @@ export default {
       const { descriptionId } =
         this.template.billingPlan.products[this.template.product];
       if (descriptionId) {
-        const { text } = await api.get("/billing/descs/" + descriptionId);
+        const { text } = await this.$store.dispatch(
+          "descriptions/get",
+          descriptionId
+        );
         this.productDescription = text;
       }
     },
   },
   computed: {
     ...mapGetters("namespaces", { namespaces: "all" }),
+    ...mapGetters("accounts", { accounts: "all" }),
     ...mapGetters("services", { services: "all" }),
     ...mapGetters("plans", { plans: "all" }),
     ...mapGetters("servicesProviders", { servicesProviders: "all" }),
@@ -248,6 +246,14 @@ export default {
     },
     service() {
       return this.services?.find((s) => s?.uuid == this.template.service);
+    },
+    account() {
+      if (!this.namespace) {
+        return;
+      }
+      return this.accounts?.find(
+        (a) => a?.uuid == this.namespace.access.namespace
+      );
     },
     sp() {
       return this.servicesProviders?.find((sp) => sp?.uuid == this.template.sp);
