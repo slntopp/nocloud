@@ -25,18 +25,15 @@
               <v-subheader>Account</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-autocomplete
+              <accounts-autocomplete
+                :loading="isEdit && !newInvoice.account"
                 @change="onChangeAccount"
                 :disabled="isEdit"
-                :filter="defaultFilterObject"
                 label="Account"
                 v-model="newInvoice.account"
+                fetch-value
                 return-object
                 :rules="requiredRule"
-                item-text="title"
-                item-value="uuid"
-                :items="accounts"
-                :loading="isAccountsLoading"
               />
             </v-col>
           </v-row>
@@ -213,6 +210,7 @@ import {
   BillingStatus,
   Invoice,
 } from "nocloud-proto/proto/es/billing/billing_pb";
+import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 
 const props = defineProps({
   invoice: {},
@@ -267,20 +265,16 @@ onMounted(async () => {
   }
 
   await Promise.all([
-    store.dispatch("accounts/fetch"),
     store.dispatch("services/fetch"),
     store.dispatch("namespaces/fetch"),
   ]);
 
-  if (isEdit.value) {
-    newInvoice.value.account = accounts.value.find(
-      (a) => a.uuid === invoice.value.account
-    );
-  }
+  // if (isEdit.value) {
+  //   newInvoice.value.account = accounts.value.find(
+  //     (a) => a.uuid === invoice.value.account
+  //   );
+  // }
 });
-
-const accounts = computed(() => store.getters["accounts/all"]);
-const isAccountsLoading = computed(() => store.getters["accounts/isLoading"]);
 
 const namespaces = computed(() => store.getters["namespaces/all"]);
 

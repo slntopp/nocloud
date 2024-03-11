@@ -14,9 +14,13 @@
     @update:options="setOptions"
   >
     <template v-slot:[`item.account`]="{ value }">
-      <router-link :to="{ name: 'Account', params: { accountId: value } }">
+      <router-link
+        v-if="!isAccountsLoading"
+        :to="{ name: 'Account', params: { accountId: value } }"
+      >
         {{ account(value) }}
       </router-link>
+      <v-skeleton-loader type="text" v-else />
     </template>
 
     <template v-slot:[`item.total`]="{ item }">
@@ -46,9 +50,10 @@
 import nocloudTable from "@/components/table.vue";
 import balance from "@/components/balance.vue";
 import { debounce, formatSecondsToDate } from "../functions";
-import { ref, computed, watch, toRefs } from "vue";
+import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
 import { BillingStatus } from "nocloud-proto/proto/es/billing/billing_pb";
+import api from "@/api";
 
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
@@ -65,6 +70,9 @@ const isCountLoading = ref(true);
 const options = ref({});
 const fetchError = ref("");
 
+const isAccountsLoading = ref(false);
+const accounts = ref({});
+
 const store = useStore();
 
 const headers = ref([
@@ -77,6 +85,15 @@ const headers = ref([
   { text: "Status ", value: "status" },
   { text: "Actions ", value: "actions" },
 ]);
+
+onMounted(() => {
+  store.commit("reloadBtn/setCallback", {
+    event: () => {
+      accounts.value = [];
+      fetchInvoices();
+    },
+  });
+});
 
 const invoices = computed(() => store.getters["invoices/all"]);
 const isLoading = computed(() => isFetchLoading.value || isCountLoading.value);
@@ -96,10 +113,8 @@ const countOptions = computed(() => ({
 }));
 
 const account = (uuid) => {
-  return accounts.value.find((acc) => acc.uuid === uuid)?.title;
+  return accounts.value[uuid]?.title;
 };
-
-const accounts = computed(() => store.getters["accounts/all"]);
 
 const setOptions = (newOptions) => {
   page.value = newOptions.page;
@@ -142,5 +157,21 @@ watch(value, (newValue) => {
   if (newValue?.length === 0) {
     fetchInvoicesDebounce();
   }
+});
+
+watch(invoices, () => {
+  invoices.value.forEach(async ({ account: uuid }) => {
+    isAccountsLoading.value = true;
+    try {
+      if (!accounts.value[uuid]) {
+        accounts.value[uuid] = api.accounts.get(uuid);
+        accounts.value[uuid] = await accounts.value[uuid];
+      }
+    } finally {
+      isAccountsLoading.value = Object.values(accounts.value).some(
+        (acc) => acc instanceof Promise
+      );
+    }
+  });
 });
 </script>

@@ -36,7 +36,7 @@ const props = defineProps({
   dense: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
 });
-const { value, fetchValue, multiple, loading } = toRefs(props);
+const { value, fetchValue, multiple, loading, returnObject } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -101,11 +101,18 @@ const fetchAccount = async () => {
   if (fetchValue.value && value.value) {
     isInitLoading.value = true;
     try {
-      allAccounts.value = await Promise.all([
-        ...(Array.isArray(value.value)
-          ? value.value.map((uuid) => api.accounts.get(uuid))
-          : [api.accounts.get(value.value?.uuid || value.value)]),
-      ]);
+      if (Array.isArray(value.value)) {
+        allAccounts.value = await Promise.all([
+          ...value.value.map((uuid) => api.accounts.get(uuid)),
+        ]);
+      } else {
+        allAccounts.value = [
+          await api.accounts.get(value.value?.uuid || value.value),
+        ];
+        if (returnObject.value) {
+          emit("input", allAccounts.value[0]);
+        }
+      }
     } finally {
       isInitLoading.value = false;
     }
