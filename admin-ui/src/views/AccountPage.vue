@@ -26,7 +26,7 @@
       <v-tab-item v-for="(tab, index) in tabItems" :key="tab.title">
         <v-progress-linear indeterminate class="pt-2" v-if="accountLoading" />
         <component
-          v-if="account && index === selectedTab"
+          v-else-if="account && index === selectedTab && !isAccountNotFound"
           :is="tab.component"
           :account="account"
         />
@@ -53,6 +53,7 @@ const store = useStore();
 const route = useRoute();
 
 const selectedTab = ref(0);
+const isAccountNotFound = ref(false);
 const navTitles = ref(config.navTitles ?? {});
 
 function navTitle(title) {
@@ -66,7 +67,7 @@ function navTitle(title) {
 const account = computed(() => store.getters["accounts/one"]);
 
 const accountTitle = computed(() => {
-  return account.value?.title ?? "not found";
+  return !isAccountNotFound.value ? account.value?.title : "not found";
 });
 
 const accountLoading = computed(() => {
@@ -106,15 +107,22 @@ const tabItems = computed(() => [
 
 onMounted(() => {
   store.commit("reloadBtn/setCallback", {
-    type: "accounts/fetchById",
-    params: route.params?.accountId,
+    event: fetchAccount,
   });
   selectedTab.value = route.query.tab || 0;
+
+  fetchAccount();
 });
 
-store.dispatch("accounts/fetchById", route.params?.accountId).then(() => {
-  document.title = `${accountTitle.value} | NoCloud`;
-});
+const fetchAccount = async () => {
+  try {
+    await store.dispatch("accounts/fetchById", route.params?.accountId);
+  } catch {
+    isAccountNotFound.value = true;
+  } finally {
+    document.title = `${accountTitle.value} | NoCloud`;
+  }
+};
 </script>
 
 <script>
