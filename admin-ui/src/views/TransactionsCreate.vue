@@ -36,6 +36,7 @@
             </v-col>
             <v-col cols="9">
               <accounts-autocomplete
+                fetch-value
                 :rules="generalRule"
                 :disabled="isEdit"
                 label="Account"
@@ -252,7 +253,7 @@ export default {
   data: () => ({
     transaction: {
       priority: 1,
-      account: "",
+      account: {},
       service: "",
       total: "",
       exec: 0,
