@@ -16,7 +16,7 @@
     "babel-helper-vue-jsx-merge-props": "^2.0.3",
     "babel-preset-es2015": "^6.24.1",
     "core-js": "^3.32.1",
-    "date-fns": "^2.29.3",
+    "date-fns": "^3.4.0",
     "file-saver": "^2.0.5",
     "glob-parent": "^6.0.2",
     "jodit-vue": "^2.6.0",
