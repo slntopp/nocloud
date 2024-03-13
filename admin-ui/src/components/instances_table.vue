@@ -146,6 +146,7 @@ import instanceIpMenu from "./ui/instanceIpMenu.vue";
 import {
   compareSearchValue,
   formatSecondsToDate,
+  getBillingPeriod,
   getDeepObjectValue,
   getInstancePrice,
   getState,
@@ -311,48 +312,13 @@ export default {
         return "PayG";
       } else if (inst.resources.period && inst.type !== "ovh") {
         const text = inst.resources.period > 1 ? "months" : "month";
-
         return `${inst.resources.period} ${text}`;
       }
-      const period =
-        inst.type === "ovh"
-          ? inst.config.duration
-          : this.getInstancePeriod(inst);
-      switch (period) {
-        case "P1H":
-          return "hourly";
-        case "P1D":
-          return "daily";
-        case "P1M":
-          return "monthly";
-        case "P1Y":
-          return "yearly";
-        case "P2Y":
-          return "2-yearly";
-        case "PH":
-          return "hybrid";
-        default:
-          return "unknown";
-      }
-    },
-    getInstancePeriod(inst) {
-      const value = new Set();
-      const day = 3600 * 24;
-      const month = day * 30;
-      const year = day * 365;
+      const period = getBillingPeriod(
+        Object.values(inst.billingPlan.products || {})[0]?.period || 0
+      );
 
-      Object.values(inst.billingPlan.products ?? {}).forEach(({ period }) => {
-        if (inst.billingPlan.kind === "DYNAMIC" && inst.type === "ione")
-          value.add("P1H");
-        if (inst.billingPlan.kind !== "STATIC" && inst.type === "ione") return;
-
-        if (+period === day) value.add("P1D");
-        if (+period === month) value.add("P1M");
-        if (+period === year) value.add("P1Y");
-        if (+period === year * 2) value.add("P2Y");
-      });
-
-      return value.size > 1 ? "PH" : value.keys().next().value;
+      return period || "Unknown";
     },
     getCreationDate(inst) {
       return inst.data.creation;
