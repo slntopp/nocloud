@@ -81,7 +81,7 @@
     </template>
 
     <template v-slot:[`item.dueDate`]="{ item }">
-      {{ formatSecondsToDate(getValue("dueDate", item)) || "Unknown" }}
+      {{ getValue("dueDate", item) || "Unknown" }}
     </template>
 
     <template v-slot:[`item.service`]="{ item, value }">
@@ -150,6 +150,7 @@ import {
   getDeepObjectValue,
   getInstancePrice,
   getState,
+  isInstancePayg,
 } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import searchMixin from "@/mixins/search";
@@ -308,7 +309,7 @@ export default {
       )?.rate;
     },
     getPeriod(inst) {
-      if (inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC") {
+      if (isInstancePayg(inst)) {
         return "PayG";
       } else if (inst.resources.period && inst.type !== "ovh") {
         const text = inst.resources.period > 1 ? "months" : "month";
@@ -324,9 +325,10 @@ export default {
       return inst.data.creation;
     },
     getExpirationDate(inst) {
-      if (inst.data.expiry?.expiredate) return inst.data.expiry?.expiredate;
-      if (inst.data.next_payment_date) return inst.data.next_payment_date;
-      return 0;
+      if (isInstancePayg(inst) || inst.type === "openai") return "PayG";
+      return formatSecondsToDate(
+        inst.data.expiry?.expiredate || inst.data.next_payment_date || 0
+      );
     },
     getService({ service }) {
       return (
