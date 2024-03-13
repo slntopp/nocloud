@@ -427,6 +427,32 @@ export default {
         this.isChangeRegularPaymentLoading = false;
       }
     },
+    fetchAccounts() {
+      this.items.forEach(async ({ access }) => {
+        const {
+          access: { namespace: uuid },
+        } = this.namespaces?.find(({ uuid }) => uuid === access.namespace) ?? {
+          access: {},
+        };
+        if (!uuid) {
+          return;
+        }
+
+        this.isAccountsLoading = true;
+        try {
+          if (!this.accounts[uuid]) {
+            this.accounts[uuid] = api.accounts.get(uuid);
+            this.accounts[uuid] = await this.accounts[uuid];
+          }
+        } catch {
+          this.accounts[uuid] = undefined;
+        } finally {
+          this.isAccountsLoading = Object.values(this.accounts).some(
+            (acc) => acc instanceof Promise
+          );
+        }
+      });
+    },
   },
   computed: {
     ...mapGetters("appSearch", { searchParam: "param", filter: "filter" }),
@@ -654,28 +680,10 @@ export default {
   },
   watch: {
     items() {
-      this.items.forEach(async ({ access }) => {
-        const {
-          access: { namespace: uuid },
-        } = this.namespaces?.find(({ uuid }) => uuid === access.namespace) ?? {
-          access: {},
-        };
-        if (!uuid) {
-          return;
-        }
-
-        this.isAccountsLoading = true;
-        try {
-          if (!this.accounts[uuid]) {
-            this.accounts[uuid] = api.accounts.get(uuid);
-            this.accounts[uuid] = await this.accounts[uuid];
-          }
-        } finally {
-          this.isAccountsLoading = Object.values(this.accounts).some(
-            (acc) => acc instanceof Promise
-          );
-        }
-      });
+      this.fetchAccounts();
+    },
+    namespaces() {
+      this.fetchAccounts();
     },
     instances() {
       this.fetchError = "";

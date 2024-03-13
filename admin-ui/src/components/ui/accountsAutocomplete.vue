@@ -1,21 +1,21 @@
 <template>
   <v-autocomplete
-    placeholder="Start typing..."
-    :items="allAccounts"
-    :filter="accountsFilter"
-    :value="value"
-    @input="emit('input', $event)"
-    item-text="title"
-    item-value="uuid"
-    :rules="rules"
-    :disabled="disabled"
-    :label="label"
-    :return-object="returnObject"
-    @update:search-input="onSearchInput"
-    :loading="isLoading || isInitLoading || loading"
-    :multiple="multiple"
-    :clearable="clearable"
-    :dense="dense"
+      placeholder="Start typing..."
+      :items="allAccounts"
+      :filter="accountsFilter"
+      :value="value"
+      @input="emit('input', $event)"
+      item-text="title"
+      item-value="uuid"
+      :rules="rules"
+      :disabled="disabled"
+      :label="label"
+      :return-object="returnObject"
+      @update:search-input="onSearchInput"
+      :loading="isLoading || isInitLoading || loading"
+      :multiple="multiple"
+      :clearable="clearable"
+      :dense="dense"
   />
 </template>
 
@@ -36,7 +36,7 @@ const props = defineProps({
   dense: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
 });
-const { value, fetchValue, multiple, loading } = toRefs(props);
+const { value, fetchValue, multiple, loading, returnObject } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -87,11 +87,11 @@ const onSearchInput = async (e) => {
   isLoading.value = true;
 
   allAccounts.value = allAccounts.value.filter(
-    (account) =>
-      value.value?.includes?.(account) ||
-      value.value?.includes?.(account.uuid) ||
-      value.value === account ||
-      value.value?.uuid === account.uuid
+      (account) =>
+          value.value?.includes?.(account) ||
+          value.value?.includes?.(account.uuid) ||
+          value.value === account ||
+          value.value?.uuid === account.uuid
   );
 
   updateAccountsDebounce(e);
@@ -101,11 +101,18 @@ const fetchAccount = async () => {
   if (fetchValue.value && value.value) {
     isInitLoading.value = true;
     try {
-      allAccounts.value = await Promise.all([
-        ...(Array.isArray(value.value)
-          ? value.value.map((uuid) => api.accounts.get(uuid))
-          : [api.accounts.get(value.value?.uuid || value.value)]),
-      ]);
+      if (Array.isArray(value.value)) {
+        allAccounts.value = await Promise.all([
+          ...value.value.map((uuid) => api.accounts.get(uuid)),
+        ]);
+      } else {
+        allAccounts.value = [
+          await api.accounts.get(value.value?.uuid || value.value),
+        ];
+        if (returnObject.value) {
+          emit("input", allAccounts.value[0]);
+        }
+      }
     } finally {
       isInitLoading.value = false;
     }

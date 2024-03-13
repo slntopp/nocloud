@@ -36,6 +36,7 @@
             </v-col>
             <v-col cols="9">
               <accounts-autocomplete
+                fetch-value
                 :rules="generalRule"
                 :disabled="isEdit"
                 label="Account"
@@ -170,7 +171,7 @@
               </div>
               <invoice-items-table
                 show-delete
-                :account="fullAccount"
+                :account="transaction.account"
                 :items="transaction.meta.items"
                 @click:delete="deleteInvoiceItem($event)"
               />
@@ -187,7 +188,7 @@
               <v-expansion-panel-content color="background-light">
                 <invoice-items-table
                   sort-by="date"
-                  :account="fullAccount"
+                  :account="transaction.account"
                   :items="historyItems"
                   readonly
                   show-date
@@ -252,7 +253,7 @@ export default {
   data: () => ({
     transaction: {
       priority: 1,
-      account: "",
+      account: {},
       service: "",
       total: "",
       exec: 0,
@@ -373,7 +374,7 @@ export default {
         : this.transaction.total;
       const amountType = this.fullType.amount.value;
       if (amountType === null) {
-        const balance = this.fullAccount.balance || 0;
+        const balance = this.transaction.account.balance || 0;
         const difference = Math.abs(total - balance);
         total = (balance > total ? +difference : -difference).toFixed(2);
       } else {
@@ -502,7 +503,7 @@ export default {
       return this.$store.getters["currencies/default"];
     },
     accountCurrency() {
-      return this.fullAccount?.currency || this.defaultCurrency;
+      return this.transaction.account?.currency || this.defaultCurrency;
     },
     servicesByAccount() {
       if (this.transaction.account) {

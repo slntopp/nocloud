@@ -282,6 +282,8 @@ watch(logs, () => {
         accounts.value[uuid] = api.accounts.get(uuid);
         accounts.value[uuid] = await accounts.value[uuid];
       }
+    } catch {
+      accounts.value[uuid] = undefined;
     } finally {
       isAccountsLoading.value = Object.values(accounts.value).some(
         (acc) => acc instanceof Promise
