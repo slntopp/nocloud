@@ -679,3 +679,7 @@ export function getInstancePrice(inst) {
     }
   }
 }
+
+export function isInstancePayg(inst){
+  return inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC"
+}
