@@ -161,7 +161,7 @@ const requiredRule = ref((val) => !!val || "Required field");
 const serviceProviders = computed(() => store.getters["servicesProviders/all"]);
 
 const plans = computed(() => {
-  const allPlans = store.getters["plans/all"];
+  const allPlans = store.getters["plans/all"].filter((p) => p.status !== "DEL");
 
   return showcase.value.items.reduce((result, { servicesProvider }, i) => {
     const { meta } =
