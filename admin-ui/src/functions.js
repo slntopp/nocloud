@@ -510,19 +510,21 @@ export function compareSearchValue(data, searchValue, field) {
         return true;
       }
 
-      data = new Date(data).toLocaleString();
+      if (typeof data === "number") data = new Date(data * 1000);
+      data = new Date(data).getTime();
       const [first, second] = searchValue;
       if (first && second) {
         const min = (
-          new Date(first).getDate() > new Date(second)
+          new Date(first).getTime() > new Date(second).getTime()
             ? new Date(second)
             : new Date(first)
-        )?.toLocaleString();
+        )?.getTime();
         const max = (
-          new Date(first).getDate() < new Date(second)
+          new Date(first).getTime() < new Date(second).getTime()
             ? new Date(second)
             : new Date(first)
-        )?.toLocaleString();
+        )?.getTime();
+
         return data && min <= data && max >= data;
       } else {
         return data && data === new Date(first).toLocaleString();
@@ -680,6 +682,6 @@ export function getInstancePrice(inst) {
   }
 }
 
-export function isInstancePayg(inst){
-  return inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC"
+export function isInstancePayg(inst) {
+  return inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC";
 }
