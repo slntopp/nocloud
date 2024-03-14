@@ -75,6 +75,11 @@ const searchFields = computed(() => {
       title: "Group",
       type: "select",
     },
+    {
+      key: "system",
+      title: "System",
+      type: "logic-select",
+    },
   ];
 });
 
