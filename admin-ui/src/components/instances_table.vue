@@ -81,7 +81,7 @@
     </template>
 
     <template v-slot:[`item.dueDate`]="{ item }">
-      {{ getValue("dueDate", item) || "Unknown" }}
+      {{ formatSecondsToDate(getValue("dueDate", item)) || "PayG" }}
     </template>
 
     <template v-slot:[`item.service`]="{ item, value }">
@@ -325,10 +325,8 @@ export default {
       return inst.data.creation;
     },
     getExpirationDate(inst) {
-      if (isInstancePayg(inst) || inst.type === "openai") return "PayG";
-      return formatSecondsToDate(
-        inst.data.expiry?.expiredate || inst.data.next_payment_date || 0
-      );
+      if (isInstancePayg(inst) || inst.type === "openai") return 0;
+      return inst.data.expiry?.expiredate || inst.data.next_payment_date || 0;
     },
     getService({ service }) {
       return (
