@@ -81,7 +81,7 @@
     </template>
 
     <template v-slot:[`item.dueDate`]="{ item }">
-      {{ formatSecondsToDate(getValue("dueDate", item)) || "Unknown" }}
+      {{ getValue("dueDate", item) || "Unknown" }}
     </template>
 
     <template v-slot:[`item.service`]="{ item, value }">
@@ -146,9 +146,11 @@ import instanceIpMenu from "./ui/instanceIpMenu.vue";
 import {
   compareSearchValue,
   formatSecondsToDate,
+  getBillingPeriod,
   getDeepObjectValue,
   getInstancePrice,
   getState,
+  isInstancePayg,
 } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import searchMixin from "@/mixins/search";
@@ -307,60 +309,26 @@ export default {
       )?.rate;
     },
     getPeriod(inst) {
-      if (inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC") {
+      if (isInstancePayg(inst)) {
         return "PayG";
       } else if (inst.resources.period && inst.type !== "ovh") {
         const text = inst.resources.period > 1 ? "months" : "month";
-
         return `${inst.resources.period} ${text}`;
       }
-      const period =
-        inst.type === "ovh"
-          ? inst.config.duration
-          : this.getInstancePeriod(inst);
-      switch (period) {
-        case "P1H":
-          return "hourly";
-        case "P1D":
-          return "daily";
-        case "P1M":
-          return "monthly";
-        case "P1Y":
-          return "yearly";
-        case "P2Y":
-          return "2-yearly";
-        case "PH":
-          return "hybrid";
-        default:
-          return "unknown";
-      }
-    },
-    getInstancePeriod(inst) {
-      const value = new Set();
-      const day = 3600 * 24;
-      const month = day * 30;
-      const year = day * 365;
+      const period = getBillingPeriod(
+        Object.values(inst.billingPlan.products || {})[0]?.period || 0
+      );
 
-      Object.values(inst.billingPlan.products ?? {}).forEach(({ period }) => {
-        if (inst.billingPlan.kind === "DYNAMIC" && inst.type === "ione")
-          value.add("P1H");
-        if (inst.billingPlan.kind !== "STATIC" && inst.type === "ione") return;
-
-        if (+period === day) value.add("P1D");
-        if (+period === month) value.add("P1M");
-        if (+period === year) value.add("P1Y");
-        if (+period === year * 2) value.add("P2Y");
-      });
-
-      return value.size > 1 ? "PH" : value.keys().next().value;
+      return period || "Unknown";
     },
     getCreationDate(inst) {
       return inst.data.creation;
     },
     getExpirationDate(inst) {
-      if (inst.data.expiry?.expiredate) return inst.data.expiry?.expiredate;
-      if (inst.data.next_payment_date) return inst.data.next_payment_date;
-      return 0;
+      if (isInstancePayg(inst) || inst.type === "openai") return "PayG";
+      return formatSecondsToDate(
+        inst.data.expiry?.expiredate || inst.data.next_payment_date || 0
+      );
     },
     getService({ service }) {
       return (

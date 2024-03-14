@@ -445,10 +445,16 @@ export function getBillingPeriod(period) {
   fullPeriod.hours = +fullPeriod.time.split(":")?.[0];
   fullPeriod.time = undefined;
   if (fullPeriod) {
-    return Object.keys(fullPeriod)
+    const period = Object.keys(fullPeriod)
       .filter((key) => +fullPeriod[key])
-      .map((key) => `${fullPeriod[key]} (${key})`)
+      .map((key) => `${fullPeriod[key]} ${key}s`)
       .join(", ");
+    const beautifulAnnotations = {
+      "30 days": "Monthly",
+      "1 days": "Daily",
+      "1 years": "Yearly",
+    };
+    return beautifulAnnotations[period] || period;
   }
 }
 
@@ -672,4 +678,8 @@ export function getInstancePrice(inst) {
       }, initialPrice);
     }
   }
+}
+
+export function isInstancePayg(inst){
+  return inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC"
 }
