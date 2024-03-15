@@ -95,7 +95,9 @@ export default {
   async mounted() {
     this.isSpLoading = true;
     try {
-      await this.$store.dispatch("servicesProviders/fetch",{anonymously:true});
+      await this.$store.dispatch("servicesProviders/fetch", {
+        anonymously: true,
+      });
     } finally {
       this.isSpLoading = false;
     }
@@ -116,33 +118,32 @@ export default {
         this.isCreateLoading = true;
       }
 
-      const result = await this.$refs.table.changePlan(newPlan);
+      try {
+        const result = await this.$refs.table.changePlan(newPlan);
 
-      if (result === "error") return;
-      if (!isEdit) delete newPlan.uuid;
-      const request = isEdit
-        ? api.plans.update(newPlan.uuid, newPlan)
-        : api.plans.create(newPlan);
+        if (result === "error") return;
+        if (!isEdit) delete newPlan.uuid;
+        const request = isEdit
+          ? api.plans.update(newPlan.uuid, newPlan)
+          : api.plans.create(newPlan);
 
-      request
-        .then(() => {
-          this.showSnackbarSuccess({
-            message: isEdit
-              ? "Price model edited successfully"
-              : "Price model created successfully",
-          });
-        })
-        .catch((err) => {
-          const message = err.response?.data?.message ?? err.message ?? err;
+        await request;
 
-          this.showSnackbarError({ message });
-          console.error(err);
-        })
-        .finally(() => {
-          this.isCreateLoading = false;
-          this.isEditLoading = false;
-          this.isDialogVisible = false;
+        this.showSnackbarSuccess({
+          message: isEdit
+            ? "Price model edited successfully"
+            : "Price model created successfully",
         });
+      } catch (err) {
+        const message = err.response?.data?.message ?? err.message ?? err;
+
+        this.showSnackbarError({ message });
+        console.error(err);
+      } finally {
+        this.isCreateLoading = false;
+        this.isEditLoading = false;
+        this.isDialogVisible = false;
+      }
     },
     testConfig() {
       const { testConfig } = this.$refs.table;
@@ -172,8 +173,8 @@ export default {
       this.$refs.table.setFee();
     },
     changeFee(value) {
-      this.fee = JSON.parse(JSON.stringify(value))
-    }
+      this.fee = JSON.parse(JSON.stringify(value));
+    },
   },
   computed: {
     tableComponent() {
