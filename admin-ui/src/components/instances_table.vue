@@ -81,7 +81,11 @@
     </template>
 
     <template v-slot:[`item.dueDate`]="{ item }">
-      {{ formatSecondsToDate(getValue("dueDate", item)) || "PayG" }}
+      {{
+        typeof getExpirationDate(item) === "number"
+          ? formatSecondsToDate(getExpirationDate(item))
+          : getExpirationDate(item)
+      }}
     </template>
 
     <template v-slot:[`item.service`]="{ item, value }">
@@ -255,6 +259,8 @@ export default {
           if (typeof valueA === "string" && typeof valueB === "string") {
             return valueA.toLowerCase().localeCompare(valueB.toLowerCase());
           } else if (typeof valueA === "number" && typeof valueB === "number") {
+            valueA = valueA || 0;
+            valueB = valueB || 0;
             return valueA - valueB;
           } else {
             return valueA > valueB;
@@ -325,8 +331,11 @@ export default {
       return inst.data.creation;
     },
     getExpirationDate(inst) {
-      if (isInstancePayg(inst) || inst.type === "openai") return 0;
-      return inst.data.expiry?.expiredate || inst.data.next_payment_date || 0;
+      if (isInstancePayg(inst)) return "PayG";
+      if (this.getPeriod(inst) === "One time") return "One time";
+      return (
+        inst.data.expiry?.expiredate || inst.data.next_payment_date || "Unknown"
+      );
     },
     getService({ service }) {
       return (
@@ -533,7 +542,7 @@ export default {
         accountPrice: this.getAccountPrice,
         period: this.getPeriod,
         date: this.getCreationDate,
-        dueDate: this.getExpirationDate,
+        dueDate: (item) => +this.getExpirationDate(item),
         sp: this.getServiceProvider,
         "resources.ram": (item) =>
           +(item?.resources?.ram / 1024).toFixed(2) || 0,
