@@ -43,6 +43,7 @@ export default {
   data: () => ({
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
+    planTitle: "Not found",
   }),
   methods: {
     navTitle(title) {
@@ -56,9 +57,6 @@ export default {
   computed: {
     plan() {
       return this.$store.getters["plans/one"];
-    },
-    planTitle() {
-      return this?.plan.title ?? "not found";
     },
     planLoading() {
       return this.$store.getters["plans/isLoading"];
@@ -88,6 +86,7 @@ export default {
   created() {
     const id = this.$route.params?.planId;
     this.$store.dispatch("plans/fetchItem", id).then(() => {
+      this.planTitle = this.plan.title || this.planTitle;
       document.title = `${this.planTitle} | NoCloud`;
     });
   },
