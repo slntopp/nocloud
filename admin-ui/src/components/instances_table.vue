@@ -177,6 +177,7 @@ export default {
         title: "Default",
         filter: {
           state: [
+            "INIT",
             "RUNNING",
             "STOPPED",
             "PENDING",
@@ -599,6 +600,7 @@ export default {
         {
           key: "state",
           items: [
+            "INIT",
             "RUNNING",
             "STOPPED",
             "PENDING",
