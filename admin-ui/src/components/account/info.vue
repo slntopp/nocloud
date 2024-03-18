@@ -2,80 +2,91 @@
   <v-card elevation="0" color="background-light" class="pa-4">
     <div
       style="
-        position: absolute;
-        top: 0;
-        right: 25px;
-        max-width: 45%;
         z-index: 100;
+        position: fixed;
+        top: 140px;
+        right: 40px;
+        max-width: 25%;
       "
     >
-      <div>
+      <div class="d-flex justify-end mt-1 align-center flex-wrap">
+        <hint-btn hint="Create transaction/invoice">
+          <v-btn
+            class="ma-1"
+            :disabled="isLocked"
+            :to="{
+              name: 'Transactions create',
+              params: { account: account.uuid },
+            }"
+          >
+            <v-icon>mdi-invoice-text-outline</v-icon>
+          </v-btn>
+        </hint-btn>
+
+        <hint-btn hint="Create instance">
+          <v-btn
+            class="ma-1"
+            :disabled="isLocked"
+            :to="{
+              name: 'Instance create',
+              params: {
+                accountId: account.uuid,
+              },
+            }"
+          >
+            <v-icon>mdi-server</v-icon>
+          </v-btn>
+        </hint-btn>
+        <hint-btn hint="Invoice based">
+          <v-dialog v-model="isChangeRegularPaymentOpen" max-width="500">
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                :disabled="isChangeRegularPaymentLoading"
+                :loading="isChangeRegularPaymentLoading"
+                class="ma-1"
+                v-bind="attrs"
+                v-on="on"
+              >
+                <v-icon>mdi-invoice-check-outline</v-icon>
+              </v-btn>
+            </template>
+            <v-card color="background-light pa-5">
+              <v-card-actions class="d-flex justify-center">
+                <v-btn class="mr-2" @click="changeRegularPayment(false)">
+                  Disable to all
+                </v-btn>
+                <v-btn class="mr-2" @click="changeRegularPayment(true)">
+                  Enable to all</v-btn
+                >
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+        </hint-btn>
+
+        <hint-btn
+          v-for="button in stateButtons"
+          :key="button.title"
+          :hint="button.hint"
+        >
+          <confirm-dialog
+            @confirm="
+              button.method
+                ? button.method()
+                : changeStatus(button.newStatusValue)
+            "
+          >
+            <v-btn
+              :loading="button.newStatusValue === statusChangeValue"
+              class="mr-2"
+            >
+              <v-icon>{{ button.icon }}</v-icon>
+            </v-btn>
+          </confirm-dialog>
+        </hint-btn>
         <v-chip class="ma-1" color="primary" outlined
           >Balance: {{ account.balance?.toFixed(2) || 0 }}
           {{ account.currency }}</v-chip
         >
-        <v-btn
-          class="ma-1"
-          :disabled="isLocked"
-          :to="{
-            name: 'Transactions create',
-            params: { account: account.uuid },
-          }"
-          >Create transaction/invoice</v-btn
-        >
-        <v-btn
-          :disabled="isLocked"
-          class="ma-1"
-          :to="{
-            name: 'Instance create',
-            params: {
-              accountId: account.uuid,
-            },
-          }"
-        >
-          Create instance
-        </v-btn>
-      </div>
-      <div class="d-flex justify-end mt-1 align-center">
-        <v-dialog v-model="isChangeRegularPaymentOpen" max-width="500">
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn
-              :disabled="isChangeRegularPaymentLoading"
-              :loading="isChangeRegularPaymentLoading"
-              class="ma-1"
-              v-bind="attrs"
-              v-on="on"
-            >
-              Invoice based
-            </v-btn>
-          </template>
-          <v-card color="background-light pa-5">
-            <v-card-actions class="d-flex justify-center">
-              <v-btn class="mr-2" @click="changeRegularPayment(false)">
-                Disable to all
-              </v-btn>
-              <v-btn class="mr-2" @click="changeRegularPayment(true)">
-                Enable to all</v-btn
-              >
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-        <confirm-dialog
-          v-for="button in stateButtons"
-          :key="button.title"
-          @confirm="
-            button.method
-              ? button.method()
-              : changeStatus(button.newStatusValue)
-          "
-        >
-          <v-btn
-            :loading="button.newStatusValue === statusChangeValue"
-            class="mr-2"
-          >
-            {{ button.title }}
-          </v-btn>
-        </confirm-dialog>
       </div>
     </div>
 
@@ -222,6 +233,7 @@ import InstancesTable from "@/components/instances_table.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
+import hintBtn from "@/components/ui/hintBtn.vue";
 import { formatSecondsToDate } from "@/functions";
 
 export default {
@@ -232,6 +244,7 @@ export default {
     ConfirmDialog,
     InstancesTable,
     nocloudTable,
+    hintBtn,
   },
   mixins: [snackbar],
   props: ["account"],
@@ -434,18 +447,26 @@ export default {
     stateButtons() {
       const status = this.account.status?.toLowerCase();
       const permanentLock = {
-        title: "Delete user",
+        hint: "Delete user",
+        icon: "mdi-delete",
         newStatusValue: "PERMANENT_LOCK",
         method: this.permanentLock,
       };
 
       switch (status) {
         case "lock": {
-          return [{ title: "Unlock", newStatusValue: "ACTIVE" }, permanentLock];
+          return [
+            {
+              hint: "Unlock access",
+              newStatusValue: "ACTIVE",
+              icon: "md-lock-off",
+            },
+            permanentLock,
+          ];
         }
         case "active": {
           return [
-            { title: "Block access", newStatusValue: "LOCK" },
+            { hint: "Block access", icon: "mdi-lock", newStatusValue: "LOCK" },
             permanentLock,
           ];
         }
