@@ -373,8 +373,8 @@ export default {
     changeStateButtons() {
       return [
         { title: "Unlock", value: "ACTIVE" },
-        { title: "Lock", value: "LOCK" },
-        { title: "PERMANENT LOCK", value: "PERMANENT_LOCK" },
+        { title: "Block access", value: "LOCK" },
+        { title: "Delete user", value: "PERMANENT_LOCK" },
       ];
     },
     whmcsApi() {
