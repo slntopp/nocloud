@@ -39,7 +39,7 @@
 <script setup>
 import { toRefs, ref, onMounted } from "vue";
 import { useStore } from "@/store";
-import InstanceControlBtn from "@/components/ui/instanceControlBtn.vue";
+import InstanceControlBtn from "@/components/ui/btnWithHint.vue";
 import api from "@/api";
 
 const props = defineProps(["disabled", "loading", "template"]);

@@ -27,7 +27,7 @@
 
 <script setup>
 import { toRefs, ref } from "vue";
-import InstanceControlBtn from "@/components/ui/instanceControlBtn.vue";
+import InstanceControlBtn from "@/components/ui/btnWithHint.vue";
 
 const props = defineProps(["disabled", "loading", "template"]);
 const emit = defineEmits(["click"]);

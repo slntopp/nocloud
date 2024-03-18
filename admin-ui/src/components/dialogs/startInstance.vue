@@ -29,7 +29,7 @@
 import { toRefs, ref, computed } from "vue";
 import api from "@/api";
 import { useStore } from "@/store";
-import InstanceControlBtn from "@/components/ui/instanceControlBtn.vue";
+import InstanceControlBtn from "@/components/ui/btnWithHint.vue";
 
 const props = defineProps(["disabled", "loading", "template"]);
 const emit = defineEmits(["click"]);

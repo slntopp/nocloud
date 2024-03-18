@@ -133,7 +133,7 @@ import ConfirmDialog from "@/components/confirmDialog.vue";
 import { getTodayFullDate } from "@/functions";
 import { mapActions, mapGetters } from "vuex";
 import PluginIframe from "@/components/plugin/iframe.vue";
-import InstanceControlBtn from "@/components/ui/instanceControlBtn.vue";
+import InstanceControlBtn from "@/components/ui/btnWithHint.vue";
 
 export default {
   name: "instance-actions",
