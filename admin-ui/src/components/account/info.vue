@@ -6,7 +6,6 @@
         position: fixed;
         top: 140px;
         right: 40px;
-        max-width: 25%;
       "
     >
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
