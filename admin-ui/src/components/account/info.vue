@@ -434,7 +434,7 @@ export default {
     stateButtons() {
       const status = this.account.status?.toLowerCase();
       const permanentLock = {
-        title: "Permanent lock",
+        title: "Delete user",
         newStatusValue: "PERMANENT_LOCK",
         method: this.permanentLock,
       };
@@ -444,7 +444,10 @@ export default {
           return [{ title: "Unlock", newStatusValue: "ACTIVE" }, permanentLock];
         }
         case "active": {
-          return [{ title: "Lock", newStatusValue: "LOCK" }, permanentLock];
+          return [
+            { title: "Block access", newStatusValue: "LOCK" },
+            permanentLock,
+          ];
         }
         default: {
           return [];
