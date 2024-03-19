@@ -69,7 +69,7 @@
           </v-col>
         </template>
 
-        <template v-if="plan.kind === 'DYNAMIC'">
+        <template v-else>
           <v-col cols="1" class="align-center d-flex">
             <v-subheader>Linked price model</v-subheader>
           </v-col>
@@ -83,6 +83,13 @@
             />
           </v-col>
         </template>
+
+        <v-col cols="1" class="align-center d-flex">
+          <v-subheader>Invoice prefix</v-subheader>
+        </v-col>
+        <v-col cols="3" class="align-center d-flex">
+          <v-text-field label="Invoice prefix" v-model="plan.meta.prefix" />
+        </v-col>
 
         <v-col cols="1" class="align-center d-flex">
           <v-subheader>Public</v-subheader>
