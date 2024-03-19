@@ -197,6 +197,7 @@ export default {
     showSelect: { type: Boolean, default: true },
     openInNewTab: { type: Boolean, default: false },
     items: { type: Array, default: () => [] },
+    noSearch: { type: Boolean, default: false },
   },
   data: () => ({
     fetchError: "",
@@ -436,6 +437,10 @@ export default {
       return this.$store.getters["services/all"];
     },
     instances() {
+      if (this.noSearch) {
+        return this.items;
+      }
+
       const instances = this.items.filter((i) => {
         return Object.keys(this.filter || {})
           .filter((key) => !!this.filter[key])
@@ -668,7 +673,9 @@ export default {
     searchFields: {
       deep: true,
       handler() {
-        this.$store.commit("appSearch/setFields", this.searchFields);
+        if (!this.noSearch) {
+          this.$store.commit("appSearch/setFields", this.searchFields);
+        }
       },
     },
   },
