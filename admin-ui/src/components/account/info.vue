@@ -1,13 +1,6 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <div
-      style="
-        z-index: 100;
-        position: fixed;
-        top: 140px;
-        right: 40px;
-      "
-    >
+    <div style="z-index: 100; position: relative; top: -25px; right: 40px">
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
         <hint-btn hint="Create transaction/invoice">
           <v-btn
