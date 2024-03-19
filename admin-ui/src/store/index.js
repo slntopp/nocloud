@@ -20,6 +20,7 @@ import plugins from "./plugins";
 import snackbar from "./snackbar";
 import actions from "./actions";
 import showcases from "./showcases";
+import chats from "./chats";
 
 Vue.use(Vuex);
 
@@ -46,6 +47,7 @@ const store = new Vuex.Store({
     snackbar,
     actions,
     showcases,
+    chats,
   },
 });
 

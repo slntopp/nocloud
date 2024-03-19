@@ -18,6 +18,7 @@ import TransactionsWidget from "@/components/widgets/transactions";
 import InstancesWidget from "@/components/widgets/instances";
 import InstancesTypesWidget from "@/components/widgets/instances-types.vue";
 import InstancesPricesWidget from "@/components/widgets/instances-prices.vue";
+import ChatsWidget from "@/components/widgets/chats.vue";
 
 export default {
   name: "dashboard-view",
@@ -30,9 +31,11 @@ export default {
     InstancesWidget,
     InstancesTypesWidget,
     InstancesPricesWidget,
+    ChatsWidget,
   },
   data: () => ({
     widgets: [
+      "ChatsWidget",
       "AccountsWidget",
       "InstancesWidget",
       "TransactionsWidget",

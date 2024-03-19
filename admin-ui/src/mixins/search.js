@@ -5,8 +5,10 @@ const searchMixin = ({name,defaultLayout}) => ({
     this.$store.commit("appSearch/setDefaultLayout", null);
   },
   mounted() {
-    this.$store.commit("appSearch/setSearchName", name);
-    this.$store.commit("appSearch/setDefaultLayout", defaultLayout);
+    if(!this.noSearch){
+      this.$store.commit("appSearch/setSearchName", name);
+      this.$store.commit("appSearch/setDefaultLayout", defaultLayout);
+    }
   },
 });
 
