@@ -1,6 +1,12 @@
 <template>
   <div class="pa-4 h-100 w-100">
-    <plugin-iframe class="h-100 w-100" v-if="$route.query.url" :url="url" />
+    <plugin-iframe
+      :redirect="redirect"
+      class="h-100 w-100"
+      v-if="$route.query.url"
+      :url="url"
+      :params="params"
+    />
   </div>
 </template>
 
@@ -13,6 +19,9 @@ export default {
   computed: {
     url() {
       return this.$route.params.url || this.$route.query.url;
+    },
+    params() {
+      return this.$route.params.params;
     },
   },
 };
