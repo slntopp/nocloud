@@ -53,11 +53,52 @@ export default {
 
       return title;
     },
+    async fetchPlan() {
+      this.isDescriptionsLoading = true;
+      const id = this.$route.params?.planId;
+
+      try {
+        await this.$store.dispatch("plans/fetchItem", id);
+        this.plan = this.$store.getters["plans/one"];
+        this.planTitle = this.plan.title;
+
+        document.title = `${this.planTitle} | NoCloud`;
+
+        console.log(this.plan);
+        const descriptionPromises = [
+          ...this.plan.resources.map((resource, index) => ({
+            id: index,
+            type: "resources",
+            descriptionId: resource.descriptionId,
+          })),
+          ...Object.keys(this.plan.products).map((key) => ({
+            id: key,
+            type: "products",
+            descriptionId: this.plan.products[key].descriptionId,
+          })),
+        ];
+
+        const descriptions = await Promise.all(
+          descriptionPromises
+            .filter((item) => !!item.descriptionId)
+            .map(async (item) => ({
+              ...item,
+              data: await this.$store.dispatch(
+                "descriptions/get",
+                item.descriptionId
+              ),
+            }))
+        );
+
+        descriptions.forEach(({ type, id, data }) => {
+          this.plan[type][id].description = data.text;
+        });
+      } finally {
+        this.isDescriptionsLoading = false;
+      }
+    },
   },
   computed: {
-    plan() {
-      return this.$store.getters["plans/one"];
-    },
     planLoading() {
       return this.$store.getters["plans/isLoading"];
     },
