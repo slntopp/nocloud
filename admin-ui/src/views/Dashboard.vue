@@ -35,6 +35,7 @@ export default {
   },
   data: () => ({
     widgets: [
+      "ChatsWidget",
       "AccountsWidget",
       "InstancesWidget",
       "TransactionsWidget",
@@ -43,7 +44,6 @@ export default {
       "ServicesWidget",
       "RoutinesWidget",
       "HealthWidget",
-      "ChatsWidget",
     ],
   }),
   computed: {
