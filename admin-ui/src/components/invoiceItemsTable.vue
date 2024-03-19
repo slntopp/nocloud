@@ -9,7 +9,6 @@
     <template v-slot:[`item.amount`]="{ item }">
       <v-text-field
         type="number"
-        label="Amount"
         :rules="!readonly ? generalRule : []"
         :readonly="readonly"
         :suffix="accountCurrency"
@@ -17,18 +16,12 @@
       />
     </template>
 
-    <template v-slot:[`item.title`]="{ index, item }">
-      <span>{{ item.title || `Item ${index + 1}` }}</span>
+    <template v-slot:[`item.title`]="{ item }">
+      <v-text-field :rules="generalRule" v-model="item.title" />
     </template>
 
-    <template v-slot:[`item.description`]="{ item }">
-      <v-text-field
-        :readonly="readonly"
-        :rules="!readonly ? generalRule : []"
-        no-resize
-        label="Items description"
-        v-model="item.description"
-      />
+    <template v-slot:[`item.instance`]="{ item }">
+      <v-text-field readonly disabled :value="getInstance(item.instance)" />
     </template>
 
     <template v-slot:[`item.actions`]="{ index }">
@@ -53,8 +46,9 @@ const props = defineProps({
   showDate: { type: Boolean, default: false },
   readonly: { type: Boolean, default: false },
   sortBy: {},
+  instances: {},
 });
-const { items, account, showDelete, showDate, readonly, sortBy } =
+const { items, account, showDelete, showDate, readonly, sortBy, instances } =
   toRefs(props);
 
 const emit = defineEmits("click:delete");
@@ -66,15 +60,24 @@ const generalRule = ref([(v) => !!v || "This field is required!"]);
 const headers = computed(() =>
   [
     showDate.value && { text: "Date", value: "date" },
-    { text: "Title", value: "title" },
-    { text: "Description", value: "description" },
-    { text: "Amount", value: "amount" },
-    showDelete.value && { text: "Actions", value: "actions" },
+    { text: "Instance", value: "instance", sortable: false, width: 200 },
+    { text: "Title", value: "title", sortable: false },
+    { text: "Amount", value: "amount", sortable: false, width: 200 },
+    showDelete.value && {
+      text: "Actions",
+      value: "actions",
+      sortable: false,
+      width: 50,
+    },
   ].filter((c) => !!c)
 );
 const accountCurrency = computed(
   () => account.value?.currency || store.getters["currencies/default"]
 );
+
+const getInstance = (uuid) => {
+  return instances.value?.find((i) => i.uuid === uuid)?.title;
+};
 </script>
 
 <style scoped></style>
