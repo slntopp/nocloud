@@ -17,7 +17,7 @@ export default {
     },
     transport(state, getters, rootState, rootGetters) {
       const transport = createConnectTransport({
-        baseUrl: new URL("").href,
+        baseUrl: window.location.origin,
         useBinaryFormat: true,
         interceptors: [
           (next) => async (req) => {
