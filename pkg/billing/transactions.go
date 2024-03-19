@@ -16,7 +16,6 @@ limitations under the License.
 package billing
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
 	"time"
@@ -37,7 +36,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, acc, uuid string) (*connect.Response[pb.Transactions], error) {
+func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, acc, uuid string) (*pb.Transactions, error) {
 	tr, err := s.transactions.Get(ctx, uuid)
 	if err != nil {
 		return nil, status.Error(codes.NotFound, "Transaction doesn't exist")
@@ -49,16 +48,18 @@ func (s *BillingServiceServer) _HandleGetSingleTransaction(ctx context.Context, 
 		return nil, status.Error(codes.PermissionDenied, "Not enoguh Access Rights")
 	}
 
-	resp := connect.NewResponse(&pb.Transactions{Pool: []*pb.Transaction{tr}})
+	tr.Uuid = uuid
 
-	return resp, nil
+	return &pb.Transactions{
+		Pool: []*pb.Transaction{
+			tr,
+		},
+	}, nil
 }
 
-func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.Request[pb.GetTransactionsRequest]) (*connect.Response[pb.Transactions], error) {
+func (s *BillingServiceServer) GetTransactions(ctx context.Context, req *pb.GetTransactionsRequest) (*pb.Transactions, error) {
 	log := s.log.Named("GetTransactions")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	req := r.Msg
-
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
 	acc := requestor
@@ -163,16 +164,12 @@ func (s *BillingServiceServer) GetTransactions(ctx context.Context, r *connect.R
 	}
 
 	log.Debug("Transactions retrieved", zap.Any("transactions", transactions))
-
-	resp := connect.NewResponse(&pb.Transactions{Pool: transactions})
-
-	return resp, nil
+	return &pb.Transactions{Pool: transactions}, nil
 }
 
-func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *connect.Request[pb.Transaction]) (*connect.Response[pb.Transaction], error) {
+func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Transaction) (*pb.Transaction, error) {
 	log := s.log.Named("CreateTransaction")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	t := req.Msg
 	log.Debug("Request received", zap.Any("transaction", t), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
@@ -228,12 +225,11 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		Exec:      time.Now().Unix(),
 		Processed: true,
 		Priority:  t.GetPriority(),
-		Total:     1,
+		Total:     t.GetTotal(),
 		Currency:  t.GetCurrency(),
 		Service:   t.GetService(),
 		Account:   t.GetAccount(),
 		Meta:      t.GetMeta(),
-		Cost:      t.GetTotal(),
 	}
 
 	if t.GetBase() != "" {
@@ -361,15 +357,12 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		}
 	}
 
-	resp := connect.NewResponse(r.Transaction)
-
-	return resp, nil
+	return r.Transaction, nil
 }
 
-func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, r *connect.Request[pb.GetTransactionsCountRequest]) (*connect.Response[pb.GetTransactionsCountResponse], error) {
+func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, req *pb.GetTransactionsCountRequest) (*pb.GetTransactionsCountResponse, error) {
 	log := s.log.Named("GetTransactionsCount")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
 	acc := requestor
@@ -433,15 +426,14 @@ func (s *BillingServiceServer) GetTransactionsCount(ctx context.Context, r *conn
 
 	log.Info("transactions count", zap.Int64("count", cursor.Count()))
 
-	resp := connect.NewResponse(&pb.GetTransactionsCountResponse{Total: uint64(cursor.Count())})
-
-	return resp, nil
+	return &pb.GetTransactionsCountResponse{
+		Total: uint64(cursor.Count()),
+	}, nil
 }
 
-func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect.Request[pb.Transaction]) (*connect.Response[pb.UpdateTransactionResponse], error) {
+func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Transaction) (*pb.UpdateTransactionResponse, error) {
 	log := s.log.Named("UpdateTransaction")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	req := r.Msg
 	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
@@ -563,9 +555,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 		}
 	}
 
-	resp := connect.NewResponse(&pb.UpdateTransactionResponse{Result: true})
-
-	return resp, nil
+	return &pb.UpdateTransactionResponse{Result: true}, nil
 }
 
 const processUrgentTransaction = `
@@ -585,7 +575,7 @@ LET rate = PRODUCT(
 LET total = transaction.total * rate
 
 FOR r in transaction.records
-	UPDATE r WITH {cost: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key, payment_date: @now}), exec: transaction.exec} in @@records
+	UPDATE r WITH {total: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key, payment_date: @now}), exec: transaction.exec} in @@records
 
 UPDATE transaction WITH {processed: true, proc: @now, currency: currency, total: total} IN @@transactions
 UPDATE account WITH { balance: account.balance - total } IN @@accounts
@@ -610,7 +600,7 @@ LET rate = PRODUCT(
 LET total = transaction.total * rate
 
 FOR r in transaction.records
-	UPDATE r WITH {cost: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
+	UPDATE r WITH {total: total, currency: currency, meta: MERGE(transaction.meta, {transaction: transaction._key})} in @@records
 
 UPDATE transaction WITH {currency: currency, total: total} IN @@transactions
 RETURN transaction
@@ -645,11 +635,9 @@ FOR t IN transactions
     RETURN t
 `
 
-func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request[pb.ReprocessTransactionsRequest]) (*connect.Response[pb.Transactions], error) {
+func (s *BillingServiceServer) Reprocess(ctx context.Context, req *pb.ReprocessTransactionsRequest) (*pb.Transactions, error) {
 	log := s.log.Named("Reprocess")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-
-	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
 
 	currencyConf := MakeCurrencyConf(ctx, log)
@@ -692,6 +680,5 @@ func (s *BillingServiceServer) Reprocess(ctx context.Context, r *connect.Request
 	}
 
 	log.Debug("Transactions retrieved", zap.Any("transactions", transactions))
-	resp := connect.NewResponse(&pb.Transactions{Pool: transactions})
-	return resp, nil
+	return &pb.Transactions{Pool: transactions}, nil
 }

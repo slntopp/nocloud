@@ -44,8 +44,6 @@ export default {
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
     planTitle: "Not found",
-    plan: null,
-    isDescriptionsLoading: false,
   }),
   methods: {
     navTitle(title) {
@@ -102,9 +100,7 @@ export default {
   },
   computed: {
     planLoading() {
-      return (
-        this.$store.getters["plans/isLoading"] || this.isDescriptionsLoading
-      );
+      return this.$store.getters["plans/isLoading"];
     },
     tabs() {
       return [
@@ -134,11 +130,11 @@ export default {
       this.planTitle = this.plan.title || this.planTitle;
       document.title = `${this.planTitle} | NoCloud`;
     });
-    this.fetchPlan();
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      event: this.fetchPlan(),
+      type: "plans/fetchItem",
+      params: this.$route.params?.planId,
     });
   },
   watch: {
