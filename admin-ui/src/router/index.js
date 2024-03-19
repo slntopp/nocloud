@@ -115,6 +115,23 @@ const routes = [
     },
   },
   {
+    path: "/chat/:uuid",
+    name: "Chat",
+    redirect: (to) => {
+      return {
+        name: "Plugin",
+        params: {
+          title: "Chats",
+          url: "/cc.ui/",
+          params: {
+            redirect: `dashboard/${to.params.uuid}`,
+          },
+        },
+        query: { url: "/cc.ui/" },
+      };
+    },
+  },
+  {
     path: "/settings",
     name: "Settings",
     component: () => import("../views/Settings.vue"),

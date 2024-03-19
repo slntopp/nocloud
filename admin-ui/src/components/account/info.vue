@@ -1,13 +1,6 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <div
-      style="
-        z-index: 100;
-        position: fixed;
-        top: 140px;
-        right: 40px;
-      "
-    >
+    <div style="z-index: 100; position: relative; top: -25px; right: 40px">
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
         <hint-btn hint="Create transaction/invoice">
           <v-btn
@@ -158,9 +151,16 @@
       </v-row>
     </nocloud-expansion-panels>
 
-    <v-card-title class="px-0 instances-panel">Instances:</v-card-title>
-
-    <instances-table :items="accountInstances" :show-select="false" />
+    <div class="d-flex align-center">
+      <v-card-title class="px-0 instances-panel">Instances:</v-card-title>
+      <v-switch
+        class="ml-3 mt-5"
+        dense
+        label="Show deleted"
+        v-model="showDeletedInstances"
+      />
+    </div>
+    <instances-table :items="accountInstances" no-search :show-select="false" />
 
     <v-card-title class="px-0">SSH keys:</v-card-title>
 
@@ -265,6 +265,7 @@ export default {
     statusChangeValue: "",
     isChangeRegularPaymentLoading: false,
     isChangeRegularPaymentOpen: false,
+    showDeletedInstances: false,
   }),
   methods: {
     formatSecondsToDate,
@@ -433,9 +434,15 @@ export default {
       );
     },
     accountInstances() {
-      return this.instances.filter(
+      const instances = this.instances.filter(
         (i) => i.access.namespace === this.accountNamespace?.uuid
       );
+
+      if (this.showDeletedInstances) {
+        return instances;
+      }
+
+      return instances.filter((inst) => inst.state.state !== "DELETED");
     },
     isCurrencyReadonly() {
       return this.account.currency && this.account.currency !== "NCU";

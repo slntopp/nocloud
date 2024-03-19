@@ -175,7 +175,13 @@
             </v-list-item-icon>
 
             <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Chats") }}</v-list-item-title>
+              <v-list-item-title
+                >{{ navTitle("Chats") }}
+                <v-chip color="red" class="pa-2" v-if="unreadChatsCount" x-small>
+                  {{ unreadChatsCount }}
+                </v-chip>
+              </v-list-item-title
+              >
             </v-list-item-content>
           </v-list-item>
 
@@ -385,6 +391,7 @@ export default {
       x: 0,
       y: 0,
     },
+    unreadChatsCount: 0,
   }),
   methods: {
     logoutHandler() {
@@ -551,6 +558,11 @@ export default {
 
     if (this.isLoggedIn) {
       this.$store.dispatch("auth/fetchUserData");
+      this.$store.dispatch("chats/fetch").then(() => {
+        this.unreadChatsCount = this.$store.getters["chats/all"].filter(
+          (chat) => chat.meta.unread > 0
+        ).length;
+      });
     }
   },
   mounted() {
