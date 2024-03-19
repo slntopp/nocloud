@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="isOpen" width="90vw">
+  <v-dialog persistent v-model="isOpen" width="90vw">
     <template v-slot:activator="{ on, attrs }">
       <v-btn icon v-bind="attrs" v-on="on">
         <v-icon> mdi-menu-open </v-icon>
@@ -7,11 +7,33 @@
     </template>
 
     <v-card color="background-light">
-      <addons-table
-        :items="productAddons"
-        :loading="isAddonsLoading"
-        table-name="product-addons-table"
-      />
+      <nocloud-table
+        table-name="empty-addons-prices"
+        class="pa-4"
+        item-key="id"
+        :show-select="false"
+        :items="addons ?? []"
+        :headers="addonsHeaders"
+      >
+        <template v-slot:top>
+          <v-toolbar flat color="background">
+            <v-toolbar-title>Addons</v-toolbar-title>
+            <v-divider inset vertical class="mx-4" />
+            <v-spacer />
+          </v-toolbar>
+        </template>
+
+        <template v-slot:[`item.period`]="{ item }">
+          <span>{{ getBillingPeriod(item.period) }}</span>
+        </template>
+
+        <template v-slot:[`item.sell`]="{ item }">
+          <v-switch
+            :input-value="isSell(item)"
+            @change="changeIsSell(item, $event)"
+          />
+        </template>
+      </nocloud-table>
       <div class="d-flex justify-end mt-3 pa-2">
         <v-btn @click="isOpen = false">Close</v-btn>
       </div>
@@ -20,33 +42,42 @@
 </template>
 
 <script setup>
-import { onMounted, ref, toRefs } from "vue";
-import AddonsTable from "@/components/addonsTable.vue";
-import { useStore } from "@/store";
+import { ref, toRefs } from "vue";
+import nocloudTable from "@/components/table.vue";
+import { getBillingPeriod } from "../functions";
 
 const props = defineProps({
+  product: { type: String, required: true },
+  item: { type: Object, required: true },
   addons: { type: Array, required: true },
+  rules: { type: Object },
 });
 
-const { addons } = toRefs(props);
+const { addons, item } = toRefs(props);
+const emits = defineEmits(["update:addons"]);
+//
+// const store = useStore();
 
-const store = useStore();
-
-const productAddons = ref([]);
-const isAddonsLoading = ref(false);
 const isOpen = ref(false);
 
-onMounted(async () => {
-  try {
-    isAddonsLoading.value = true;
-    const data = await Promise.all(
-      addons.value.map((uuid) =>
-        store.getters["addons/addonsClient"].get({ uuid })
-      )
-    );
-    productAddons.value = data;
-  } finally {
-    isAddonsLoading.value = false;
-  }
-});
+const addonsHeaders = [
+  { text: "Key", value: "key" },
+  { text: "Title", value: "title" },
+  { text: "Price", value: "price" },
+  { text: "Period", value: "period" },
+  { text: "Sell", value: "sell" },
+];
+
+const isSell = (addon) => {
+  return item.value?.meta?.addons?.includes(addon.key);
+};
+
+const changeIsSell = (addon, value) => {
+  emits(
+    "update:addons",
+    addons.value
+      .filter((a) => (addon.key === a.key ? value : isSell(a)))
+      .map((a) => a.key)
+  );
+};
 </script>

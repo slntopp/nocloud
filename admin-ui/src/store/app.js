@@ -1,5 +1,5 @@
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { useStore } from "@/store/index";
+import { useStore } from "./index";
 
 export default {
   namespaced: true,

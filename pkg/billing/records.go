@@ -16,13 +16,13 @@ limitations under the License.
 package billing
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"google.golang.org/protobuf/types/known/structpb"
 	"time"
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -40,36 +40,36 @@ var (
 	RabbitMQConn string
 )
 
-type RecordsController interface {
-	CheckOverlapping(ctx context.Context, r *pb.Record) (ok bool)
-	Create(ctx context.Context, r *pb.Record) driver.DocumentID
-	Get(ctx context.Context, tr string) (res []*pb.Record, err error)
-	GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) ([]*pb.InstanceReport, error)
-	GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*connect.Response[pb.GetRecordsReportsResponse], error)
-	GetInstancesReportsCount(ctx context.Context) (int64, error)
-	GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (int64, error)
-	GetUnique(ctx context.Context) (map[string]interface{}, error)
+func init() {
+	viper.AutomaticEnv()
+	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
+	RabbitMQConn = viper.GetString("RABBITMQ_CONN")
 }
 
 type RecordsServiceServer struct {
+	pb.UnimplementedRecordsServiceServer
 	log     *zap.Logger
 	rbmq    *amqp.Connection
-	records RecordsController
+	records graph.RecordsController
 
 	db driver.Database
 
 	ConsumerStatus *healthpb.RoutineStatus
 }
 
-func NewRecordsServiceServer(logger *zap.Logger, conn *amqp.Connection, db driver.Database) *RecordsServiceServer {
+func NewRecordsServiceServer(logger *zap.Logger, db driver.Database) *RecordsServiceServer {
 	log := logger.Named("RecordsService")
+	rbmq, err := amqp.Dial(RabbitMQConn)
+	if err != nil {
+		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
+	}
 
 	records := graph.NewRecordsController(log, db)
 
 	return &RecordsServiceServer{
 		log:     log,
-		rbmq:    conn,
-		records: &records,
+		rbmq:    rbmq,
+		records: records,
 
 		db: db,
 		ConsumerStatus: &healthpb.RoutineStatus{
@@ -119,86 +119,78 @@ init:
 			}
 			continue
 		}
-		err := s.ProcessRecord(ctx, &record, currencyConf, time.Now().Unix())
-		if err != nil {
-			log.Error("Failed to process record", zap.Error(err))
-		}
-		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
-		}
-		continue
-	}
-}
-
-func (s *RecordsServiceServer) ProcessRecord(ctx context.Context, record *pb.Record, currencyConf CurrencyConf, now int64) error {
-	log := s.log.Named("Process record")
-
-	if record.Total == 0 {
-		log.Warn("Got zero record, skipping", zap.Any("record", &record))
-		return nil
-	}
-
-	isSkip, err := s.checkRecord(ctx, record, log)
-
-	if isSkip && err == nil {
-		log.Info("Skip prepaid record for suspended account", zap.Any("record", &record))
-		return nil
-	}
-
-	if record.GetMeta() == nil {
-		record.Meta = map[string]*structpb.Value{}
-	}
-
-	record.Meta["transactionType"] = structpb.NewStringValue("system")
-
-	s.records.Create(ctx, record)
-	s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
-	if record.Priority != pb.Priority_NORMAL {
-		cur, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
-			"@transactions": schema.TRANSACTIONS_COL,
-			"@instances":    schema.INSTANCES_COL,
-			"instances":     schema.INSTANCES_COL,
-			"@services":     schema.SERVICES_COL,
-			"@records":      schema.RECORDS_COL,
-			"@accounts":     schema.ACCOUNTS_COL,
-			"permissions":   schema.PERMISSIONS_GRAPH.Name,
-			"priority":      record.Priority,
-			"now":           now,
-			"graph":         schema.BILLING_GRAPH.Name,
-			"currencies":    schema.CUR_COL,
-			"currency":      currencyConf.Currency,
-			"billing_plans": schema.BILLING_PLANS_COL,
-		})
-		if err != nil {
-			log.Error("Error Generating Transactions", zap.Error(err))
-			return err
-		}
-		var tr pb.Transaction
-
-		if cur.HasMore() {
-			doc, err := cur.ReadDocument(ctx, &tr)
-			if err != nil {
-				return err
+		if record.Total == 0 {
+			log.Warn("Got zero record, skipping", zap.Any("record", &record))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery with 0 Records", zap.Error(err))
 			}
+			continue
+		}
 
-			_, err = s.db.Query(ctx, processUrgentTransactions, map[string]interface{}{
-				"tr":            doc.ID,
+		isSkip, err := s.checkRecord(ctx, &record, log)
+
+		if isSkip && err == nil {
+			log.Info("Skip prepaid record for suspended account", zap.Any("record", &record))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery after skipped prepaid record for suspended account", zap.Error(err))
+			}
+			continue
+		}
+
+		if record.GetMeta() == nil {
+			record.Meta = map[string]*structpb.Value{}
+		}
+
+		record.Meta["transactionType"] = structpb.NewStringValue("system")
+
+		s.records.Create(ctx, &record)
+		s.ConsumerStatus.LastExecution = time.Now().Format("2006-01-02T15:04:05Z07:00")
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery", zap.Error(err))
+		}
+		if record.Priority != pb.Priority_NORMAL {
+			tick := time.Now()
+			cur, err := s.db.Query(ctx, generateUrgentTransactions, map[string]interface{}{
 				"@transactions": schema.TRANSACTIONS_COL,
-				"@accounts":     schema.ACCOUNTS_COL,
-				"accounts":      schema.ACCOUNTS_COL,
+				"@instances":    schema.INSTANCES_COL,
+				"@services":     schema.SERVICES_COL,
 				"@records":      schema.RECORDS_COL,
-				"now":           now,
+				"@accounts":     schema.ACCOUNTS_COL,
+				"permissions":   schema.PERMISSIONS_GRAPH.Name,
+				"priority":      record.Priority,
+				"now":           tick.Unix(),
 				"graph":         schema.BILLING_GRAPH.Name,
 				"currencies":    schema.CUR_COL,
 				"currency":      currencyConf.Currency,
 			})
 			if err != nil {
-				log.Error("Error Process Transactions", zap.Error(err))
-				return err
+				log.Error("Error Generating Transactions", zap.Error(err))
+			}
+			var tr pb.Transaction
+
+			if cur.HasMore() {
+				doc, err := cur.ReadDocument(ctx, &tr)
+				if err != nil {
+					return
+				}
+
+				_, err = s.db.Query(ctx, processUrgentTransactions, map[string]interface{}{
+					"tr":            doc.ID,
+					"@transactions": schema.TRANSACTIONS_COL,
+					"@accounts":     schema.ACCOUNTS_COL,
+					"accounts":      schema.ACCOUNTS_COL,
+					"@records":      schema.RECORDS_COL,
+					"now":           tick.Unix(),
+					"graph":         schema.BILLING_GRAPH.Name,
+					"currencies":    schema.CUR_COL,
+					"currency":      currencyConf.Currency,
+				})
+				if err != nil {
+					log.Error("Error Process Transactions", zap.Error(err))
+				}
 			}
 		}
 	}
-	return nil
 }
 
 func (s *RecordsServiceServer) checkRecord(ctx context.Context, rec *pb.Record, log *zap.Logger) (bool, error) {
@@ -309,12 +301,6 @@ FOR service IN @@services // Iterate over Services
         FILTER record.priority == @priority
         FILTER !record.processed
         FILTER record.instance IN instances
-
-        LET inst = DOCUMENT(CONCAT(@instances, "/", record.instance))
-		LET bp = DOCUMENT(CONCAT(@billing_plans, "/", inst.billing_plan.uuid))
-		LET resources = bp.resources == null ? [] : bp.resources
-		LET item = record.product == null ? LAST(FOR res in resources FILTER res.key == record.resource return res) : bp.products[record.product]
-
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND SHORTEST_PATH
 			// Cast to NCU if currency is not specified
@@ -322,10 +308,10 @@ FOR service IN @@services // Iterate over Services
 			DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
 				RETURN edge.rate
 		)
-        LET cost = record.total * rate * item.price
+        LET total = record.total * rate
             UPDATE record._key WITH { 
 				processed: true, 
-				cost: cost,
+				total: total,
 				currency: currency,
 				service: service._key,
 				account: account._key
@@ -342,7 +328,7 @@ FOR service IN @@services // Iterate over Services
 		priority: @priority,
         service: service._key,
         records: records[*]._key,
-        total: SUM(records[*].cost),
+        total: SUM(records[*].total),
 		meta: {type: "transaction"},
     } IN @@transactions RETURN NEW
 `
@@ -373,10 +359,10 @@ UPDATE t WITH {
 } IN @@transactions
 `
 
-func (s *BillingServiceServer) GetRecords(ctx context.Context, r *connect.Request[pb.Transaction]) (*connect.Response[pb.Records], error) {
+func (s *BillingServiceServer) GetRecords(ctx context.Context, req *pb.Transaction) (*pb.Records, error) {
 	log := s.log.Named("GetRecords")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	req := r.Msg
+
 	if req.Uuid == "" {
 		log.Error("Request has no UUID", zap.String("requestor", requestor))
 		return nil, status.Error(codes.InvalidArgument, "Request has no UUID")
@@ -402,15 +388,15 @@ func (s *BillingServiceServer) GetRecords(ctx context.Context, r *connect.Reques
 
 	log.Debug("Records found", zap.String("transaction", tr.Uuid), zap.Any("records", pool))
 
-	resp := connect.NewResponse(&pb.Records{Pool: pool})
-
-	return resp, nil
+	return &pb.Records{
+		Pool: pool,
+	}, nil
 }
 
-func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, r *connect.Request[pb.GetInstancesReportRequest]) (*connect.Response[pb.GetInstancesReportResponse], error) {
+func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, req *pb.GetInstancesReportRequest) (*pb.GetInstancesReportResponse, error) {
 	log := s.log.Named("GetRecords")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	req := r.Msg
+
 	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
 	if !ok {
 		return nil, status.Error(codes.PermissionDenied, "Permission denied")
@@ -421,12 +407,12 @@ func (s *BillingServiceServer) GetInstancesReports(ctx context.Context, r *conne
 		log.Error("Failed to get reports", zap.Error(err))
 	}
 
-	resp := connect.NewResponse(&pb.GetInstancesReportResponse{Reports: reports})
-
-	return resp, nil
+	return &pb.GetInstancesReportResponse{
+		Reports: reports,
+	}, nil
 }
 
-func (s *BillingServiceServer) GetInstancesReportsCount(ctx context.Context, r *connect.Request[pb.GetInstancesReportsCountRequest]) (*connect.Response[pb.GetReportsCountResponse], error) {
+func (s *BillingServiceServer) GetInstancesReportsCount(ctx context.Context, req *pb.GetInstancesReportsCountRequest) (*pb.GetReportsCountResponse, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ROOT)
@@ -438,16 +424,12 @@ func (s *BillingServiceServer) GetInstancesReportsCount(ctx context.Context, r *
 	if err != nil {
 		return nil, err
 	}
-
-	resp := connect.NewResponse(&pb.GetReportsCountResponse{Total: res})
-
-	return resp, nil
+	return &pb.GetReportsCountResponse{Total: res}, nil
 }
 
-func (s *BillingServiceServer) GetRecordsReports(ctx context.Context, r *connect.Request[pb.GetRecordsReportsRequest]) (*connect.Response[pb.GetRecordsReportsResponse], error) {
+func (s *BillingServiceServer) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*pb.GetRecordsReportsResponse, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	req := r.Msg
 	if req.Account != nil || req.Service != nil {
 		if req.Account != nil {
 			acc := *req.Account
@@ -474,9 +456,9 @@ func (s *BillingServiceServer) GetRecordsReports(ctx context.Context, r *connect
 	return s.records.GetRecordsReports(ctx, req)
 }
 
-func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, r *connect.Request[pb.GetRecordsReportsCountRequest]) (*connect.Response[pb.GetReportsCountResponse], error) {
+func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, req *pb.GetRecordsReportsCountRequest) (*pb.GetReportsCountResponse, error) {
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	req := r.Msg
+
 	if req.Account != nil || req.Service != nil {
 		if req.Account != nil {
 			acc := *req.Account
@@ -519,7 +501,8 @@ func (s *BillingServiceServer) GetRecordsReportsCount(ctx context.Context, r *co
 		return nil, err
 	}
 
-	resp := connect.NewResponse(&pb.GetReportsCountResponse{Total: res, Unique: value})
-
-	return resp, nil
+	return &pb.GetReportsCountResponse{
+		Total:  res,
+		Unique: value,
+	}, nil
 }
