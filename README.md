@@ -43,8 +43,8 @@ Read through the `docker-compose.yml` to see configuration options.
 
 Now you can navigate to Admin UI at [`http://api.nocloud.local/admin`](http://api.nocloud.local/admin).
 
-> **Note: Debug Log**
-All NoCloud containers(so except ArangoDB) have multiple Log Levels.  
+> [!NOTE]
+All NoCloud containers have multiple Log Levels.  
 Add `LOG_LEVEL` to environment to change log level  
 `LOG_LEVEL` variates from -1(debug) to 5(Fatal)  
 See `zap` reference for that  
@@ -157,7 +157,8 @@ mv #nocloud-version-darwin-arch/nocloud /usr/local/bin
 
 You're good to go!
 
-Then see usage [usage](#usage)
+> [!TIP]
+> Then see usage [usage](#usage)
 
 ### Windows
 
