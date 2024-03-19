@@ -44,6 +44,7 @@ export default {
     tabsIndex: 0,
     navTitles: config.navTitles ?? {},
     planTitle: "Not found",
+    plan: {},
   }),
   methods: {
     navTitle(title) {
@@ -136,6 +137,8 @@ export default {
       type: "plans/fetchItem",
       params: this.$route.params?.planId,
     });
+
+    this.fetchPlan()
   },
   watch: {
     plan() {
