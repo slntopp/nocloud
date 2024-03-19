@@ -62,6 +62,8 @@ export default {
       try {
         await this.$store.dispatch("plans/fetchItem", id);
         this.plan = this.$store.getters["plans/one"];
+        this.planTitle = this.plan.title;
+
         document.title = `${this.planTitle} | NoCloud`;
 
         console.log(this.plan);
@@ -93,18 +95,12 @@ export default {
         descriptions.forEach(({ type, id, data }) => {
           this.plan[type][id].description = data.text;
         });
-        console.log(this.plan);
       } finally {
         this.isDescriptionsLoading = false;
       }
     },
   },
   computed: {
-    plan() {
-      return this.$store.getters["plans/one"];
-    planTitle() {
-      return this.plan?.title ?? "not found";
-    },
     planLoading() {
       return (
         this.$store.getters["plans/isLoading"] || this.isDescriptionsLoading
