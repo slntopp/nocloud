@@ -37,7 +37,7 @@
 </template>
 
 <script setup>
-import { toRefs, ref, onMounted } from "vue";
+import { toRefs, ref, onMounted, watch } from "vue";
 import { useStore } from "@/store";
 import InstanceControlBtn from "@/components/ui/hintBtn.vue";
 import api from "@/api";
@@ -53,6 +53,7 @@ const isModalOpen = ref(false);
 const images = ref([]);
 const isImagesLoading = ref(false);
 const selectedOs = ref();
+const fetchError = ref("");
 
 onMounted(async () => {
   isImagesLoading.value = true;
@@ -69,7 +70,7 @@ onMounted(async () => {
       selectedOs.value = os;
     }
   } catch (err) {
-    store.commit("snackbar/showSnackbarError", { message: err });
+    fetchError.value = err;
   } finally {
     isImagesLoading.value = false;
   }
@@ -79,6 +80,12 @@ const rebuild = async () => {
   isModalOpen.value = false;
   emit("click", selectedOs.value);
 };
+
+watch(isModalOpen, (value) => {
+  if (value && fetchError.value) {
+    store.commit("snackbar/showSnackbarError", { message: fetchError.value });
+  }
+});
 </script>
 
 <style scoped></style>

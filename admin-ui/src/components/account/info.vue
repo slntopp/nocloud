@@ -160,7 +160,11 @@
         v-model="showDeletedInstances"
       />
     </div>
-    <instances-table :items="accountInstances" no-search :show-select="false" />
+    <instances-table
+      :items="filteredInstances"
+      no-search
+      :show-select="false"
+    />
 
     <v-card-title class="px-0">SSH keys:</v-card-title>
 
@@ -366,7 +370,7 @@ export default {
       try {
         const services = [];
 
-        this.accountInstances.forEach((instance) => {
+        this.accountsByInstance.forEach((instance) => {
           const tempService =
             services.find((s) => s.uuid === instance.service) ||
             JSON.parse(
@@ -433,16 +437,19 @@ export default {
         (n) => n.access.namespace === this.account?.uuid
       );
     },
-    accountInstances() {
-      const instances = this.instances.filter(
+    accountsByInstance() {
+      return this.instances.filter(
         (i) => i.access.namespace === this.accountNamespace?.uuid
       );
-
+    },
+    filteredInstances() {
       if (this.showDeletedInstances) {
-        return instances;
+        return this.accountsByInstance;
       }
 
-      return instances.filter((inst) => inst.state.state !== "DELETED");
+      return this.accountsByInstance.filter(
+        (inst) => inst.state?.state !== "DELETED"
+      );
     },
     isCurrencyReadonly() {
       return this.account.currency && this.account.currency !== "NCU";
