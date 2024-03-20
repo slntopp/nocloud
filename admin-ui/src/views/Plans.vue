@@ -95,6 +95,22 @@
           "
         />
       </template>
+      <template v-slot:[`item.public`]="{ item }">
+        <v-skeleton-loader v-if="updatedPlanUuid === item.uuid" type="text" />
+        <v-switch
+          v-else
+          dense
+          hide-details
+          :readonly="!!updatedPlanUuid"
+          :input-value="item.public"
+          @change="
+            updatePlan(item, {
+              key: 'public',
+              value: $event,
+            })
+          "
+        />
+      </template>
       <template v-slot:[`item.kind`]="{ value }">
         {{ value.toLowerCase() }}
       </template>
@@ -372,7 +388,7 @@ export default {
         this.updatedPlanUuid = item.uuid;
         const data = { ...item, [key]: value };
         await api.plans.update(data.uuid, data);
-        item[key] = value;
+        this.$set(item, key, value);
       } catch {
         this.showSnackbarError({
           message: "Error during update plan",
