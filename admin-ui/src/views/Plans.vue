@@ -79,6 +79,38 @@
           {{ item.title }}
         </router-link>
       </template>
+      <template v-slot:[`item.meta.auto_start`]="{ item }">
+        <v-skeleton-loader v-if="updatedPlanUuid === item.uuid" type="text" />
+        <v-switch
+          v-else
+          dense
+          hide-details
+          :readonly="!!updatedPlanUuid"
+          :input-value="item.meta.auto_start"
+          @change="
+            updatePlan(item, {
+              key: 'meta',
+              value: { ...item.meta, auto_start: $event },
+            })
+          "
+        />
+      </template>
+      <template v-slot:[`item.public`]="{ item }">
+        <v-skeleton-loader v-if="updatedPlanUuid === item.uuid" type="text" />
+        <v-switch
+          v-else
+          dense
+          hide-details
+          :readonly="!!updatedPlanUuid"
+          :input-value="item.public"
+          @change="
+            updatePlan(item, {
+              key: 'public',
+              value: $event,
+            })
+          "
+        />
+      </template>
       <template v-slot:[`item.kind`]="{ value }">
         {{ value.toLowerCase() }}
       </template>
@@ -191,6 +223,7 @@ export default {
       { text: "Type ", value: "type" },
       { text: "Status ", value: "status" },
       { text: "Public ", value: "public" },
+      { text: "Auto start ", value: "meta.auto_start" },
       { text: "Linked instances count ", value: "instanceCount" },
     ],
     linkedHeaders: [
@@ -210,6 +243,8 @@ export default {
     uploadedPlans: [],
 
     isIndividualHide: true,
+
+    updatedPlanUuid: "",
   }),
   methods: {
     changePlan() {
@@ -347,6 +382,20 @@ export default {
     },
     downloadXlsx() {
       return downloadPlanXlsx(this.selected);
+    },
+    async updatePlan(item, { key, value }) {
+      try {
+        this.updatedPlanUuid = item.uuid;
+        const data = { ...item, [key]: value };
+        await api.plans.update(data.uuid, data);
+        this.$set(item, key, value);
+      } catch {
+        this.showSnackbarError({
+          message: "Error during update plan",
+        });
+      } finally {
+        this.updatedPlanUuid = "";
+      }
     },
   },
   created() {
