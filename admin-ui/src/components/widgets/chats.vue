@@ -32,56 +32,71 @@
       </div>
 
       <v-divider></v-divider>
-      <v-list dense color="transparent">
-        <v-list-item
-          v-for="chat in lastActivityChats"
-          :key="chat.uuid"
-          class="px-0"
-        >
-          <v-list-item-content class="ma-0 pa-0">
-            <div class="chats_list-item">
-              <router-link
-                target="_blank"
-                :to="{
-                  name: 'Chat',
-                  params: { uuid: chat.uuid },
-                }"
-              >
-                {{ chat.topic }}
-              </router-link>
+      <v-card
+        v-for="chat in lastActivityChats"
+        :key="chat.uuid"
+        dense
+        color="transparent"
+        class="d-flex justify-space-between pa-3"
+      >
+        <div class="d-flex flex-column">
+          <div>
+            <span>Topic: </span>
+            <router-link
+              target="_blank"
+              :to="{
+                name: 'Chat',
+                params: { uuid: chat.uuid },
+              }"
+            >
+              {{
+                chat.topic.length > 15
+                  ? chat.topic.slice(0, 30) + "..."
+                  : chat.topic
+              }}
+            </router-link>
+          </div>
 
-              <router-link
-                v-if="!isAccountsLoading"
-                target="_blank"
-                :to="{
-                  name: 'Account',
-                  params: { accountId: chat.owner },
-                }"
-              >
-                {{ accounts[chat.owner]?.title }}
-              </router-link>
-              <v-skeleton-loader type="text" v-else />
-
-              <router-link
-                target="_blank"
-                :to="{
-                  name: 'Chat',
-                  params: { uuid: chat.uuid },
-                }"
-              >
-                Department:{{ chat.department || "none" }}
-              </router-link>
-            </div>
-          </v-list-item-content>
-        </v-list-item>
-      </v-list>
+          <div>
+            <span>Account: </span>
+            <router-link
+              v-if="!isAccountsLoading"
+              target="_blank"
+              :to="{
+                name: 'Account',
+                params: { accountId: chat.owner },
+              }"
+            >
+              {{ accounts[chat.owner]?.title }}
+            </router-link>
+            <v-skeleton-loader type="text" v-else />
+          </div>
+        </div>
+        <div class="d-flex flex-column">
+          <span class="d-flex justify-end">
+            {{
+              formatSecondsToDate(
+                Number(
+                  chat.meta.lastMessage?.edited ||
+                    chat.meta.lastMessage?.created ||
+                    chat.created
+                ) / 1000,
+                true
+              )
+            }}
+          </span>
+          <span class="d-flex justify-end">
+            {{ chat.department || "none" }}
+          </span>
+        </div>
+      </v-card>
     </v-card>
   </widget>
 </template>
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useStore } from "@/store";
 import {
   endOfDay,
@@ -92,6 +107,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import api from "@/api";
+import { formatSecondsToDate } from "@/functions";
 
 const store = useStore();
 
@@ -100,11 +116,12 @@ const periods = ref(["day", "week", "month"]);
 const accounts = ref({});
 const isAccountsLoading = ref(false);
 
+onMounted(() => fetchAccounts());
+
 const chats = computed(() => store.getters["chats/all"]);
 const isLoading = computed(() => store.getters["chats/loading"]);
 
 const lastActivityChats = computed(() => {
-  console.log([...chats.value]);
   const sorted = [...chats.value].sort(
     (a, b) =>
       (Number(b.meta?.lastMessage?.sent || b.created) || 0) -
@@ -144,7 +161,7 @@ const countForPeriod = computed(() => {
   }).length;
 });
 
-watch(lastActivityChats, () => {
+const fetchAccounts = () => {
   lastActivityChats.value.forEach(async ({ owner: uuid }) => {
     isAccountsLoading.value = true;
     try {
@@ -160,7 +177,9 @@ watch(lastActivityChats, () => {
       );
     }
   });
-});
+};
+
+watch(lastActivityChats, fetchAccounts);
 </script>
 
 <script>
@@ -168,10 +187,3 @@ export default {
   name: "chats-widget",
 };
 </script>
-
-<style scoped>
-.chats_list-item {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-}
-</style>
