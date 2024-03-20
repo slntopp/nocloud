@@ -108,6 +108,7 @@ import {
 } from "date-fns";
 import api from "@/api";
 import { formatSecondsToDate } from "@/functions";
+import { Status as ChatStatus } from "core-chatting/plugin/src/connect/cc/cc_pb";
 
 const store = useStore();
 
@@ -122,11 +123,13 @@ const chats = computed(() => store.getters["chats/all"]);
 const isLoading = computed(() => store.getters["chats/loading"]);
 
 const lastActivityChats = computed(() => {
-  const sorted = [...chats.value].sort(
-    (a, b) =>
-      (Number(b.meta?.lastMessage?.sent || b.created) || 0) -
-      (Number(a.meta?.lastMessage?.sent || a.created) || 0)
-  );
+  const sorted = [...chats.value]
+    .filter((chat) => [ChatStatus.NEW, ChatStatus.OPEN].includes(chat.status))
+    .sort(
+      (a, b) =>
+        (Number(b.meta?.lastMessage?.sent || b.created) || 0) -
+        (Number(a.meta?.lastMessage?.sent || a.created) || 0)
+    );
 
   return sorted.slice(0, 5);
 });
