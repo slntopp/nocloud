@@ -81,7 +81,7 @@ const periods = ref(["day", "week", "month"]);
 onMounted(async () => {
   isLoading.value = true;
   try {
-    await store.dispatch("services/fetch");
+    await store.dispatch("services/fetch", { showDeleted: true });
   } catch (e) {
     console.log(e);
   } finally {
