@@ -510,6 +510,7 @@ export default {
             basePrice: p.basePrice,
             apiName: p.apiName,
             cpu: p.cpu,
+            baseInstallationFee: p.installation_fee?.price?.value,
             addons,
           },
         };
@@ -602,6 +603,10 @@ export default {
               ...a,
               price: getMarginedValue(this.fee, a.basePrice),
             })),
+          },
+          installation_fee: {
+            ...p.installation_fee,
+            value: getMarginedValue(this.fee, p.installation_fee.price.value),
           },
           price: getMarginedValue(this.fee, p.basePrice),
         };
@@ -703,7 +708,7 @@ export default {
         basePrice: product.meta.basePrice,
         installation_fee: {
           price: {
-            value: +this.convertPrice(product.installationFee),
+            value: product.meta.baseInstallationFee,
           },
           value: product.installationFee,
         },
