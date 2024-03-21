@@ -77,7 +77,7 @@
     </template>
 
     <template v-slot:[`item.date`]="{ item }">
-      {{ formatSecondsToDate(getValue("date", item)) || "Unknown" }}
+      {{ formatSecondsToDate(getValue("date", item), true) || "Unknown" }}
     </template>
 
     <template v-slot:[`item.dueDate`]="{ item }">
@@ -330,7 +330,7 @@ export default {
       return period || "Unknown";
     },
     getCreationDate(inst) {
-      return inst.data.creation;
+      return +inst.created;
     },
     getExpirationDate(inst) {
       if (isInstancePayg(inst)) return "PayG";
@@ -522,7 +522,7 @@ export default {
         { text: "Account price", value: "accountPrice" },
         { text: "Period", value: "period" },
         { text: "Email", value: "email" },
-        { text: "Date", value: "date" },
+        { text: "Created date", value: "date" },
         { text: "UUID", value: "uuid" },
         { text: "Price model", value: "billingPlan.title" },
         { text: "IP", value: "state.meta.networking" },

@@ -23,7 +23,7 @@
         <v-text-field
           readonly
           label="Date (create)"
-          :value="formatSecondsToDate(template.data.creation)"
+          :value="formatSecondsToDate(template.created,true)"
         />
       </v-col>
 
