@@ -27,11 +27,15 @@
         <v-text-field
           readonly
           label="Date (create)"
-          :value="formatSecondsToDate(template.data.creation)"
+          :value="formatSecondsToDate(template.created, true)"
         />
       </v-col>
       <v-col>
-        <v-text-field readonly label="Due to date/next payment" :value="date" />
+        <v-text-field
+          readonly
+          label="Due to date/next payment"
+          :value="dueDate"
+        />
       </v-col>
     </v-row>
 
@@ -185,8 +189,8 @@ const totalBasePrice = computed(() => {
     .toFixed(2);
 });
 
-const date = computed(() => {
-  return formatSecondsToDate(+template.value?.data?.next_payment_date);
+const dueDate = computed(() => {
+  return formatSecondsToDate(+template.value?.data?.next_payment_date, true);
 });
 
 const planCode = computed(() => template.value.config.planCode);

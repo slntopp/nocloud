@@ -7,7 +7,7 @@
           label="price model"
           :value="template.billingPlan.title"
           append-icon="mdi-pencil"
-          @click:append="priceModelDialog=true"
+          @click:append="priceModelDialog = true"
         />
       </v-col>
       <v-col>
@@ -24,7 +24,7 @@
         <v-text-field
           readonly
           label="Date (create)"
-          :value="formatSecondsToDate(template.data.creation)"
+          :value="formatSecondsToDate(template.created, true)"
         />
       </v-col>
 
@@ -37,7 +37,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="date"
+          :value="dueDate"
           :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
           @click:append="changeDatesDialog = true"
         />
@@ -164,10 +164,10 @@ watch(accountRate, () => {
   });
 });
 
-const date = computed(() =>
-  formatSecondsToDate(+template.value?.data?.next_payment_date)
+const dueDate = computed(() =>
+  formatSecondsToDate(+template.value?.data?.next_payment_date, true)
 );
-const isMonitoringEmpty = computed(() => date.value === "-");
+const isMonitoringEmpty = computed(() => dueDate.value === "-");
 
 const getBillingItems = () => {
   const items = [];
