@@ -30,7 +30,7 @@
         <v-text-field
           readonly
           label="Date (create)"
-          :value="formatSecondsToDate(template.data.creation)"
+          :value="formatSecondsToDate(template.created, true)"
         />
       </v-col>
 
@@ -38,7 +38,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="formatSecondsToDate(template.data.expiry.expiredate)"
+          :value="formatSecondsToDate(template.data.expiry.expiredate, true)"
         />
       </v-col>
     </v-row>

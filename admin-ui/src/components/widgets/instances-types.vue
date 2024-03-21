@@ -62,10 +62,7 @@ const isLoading = computed(() => store.getters["services/isLoading"]);
 const instances = computed(() =>
   store.getters["services/getInstances"].map((inst) => ({
     ...inst,
-    data: {
-      ...(inst?.data || {}),
-      creation: new Date(inst.data?.creation || 0).getTime() / 1000,
-    },
+    created: new Date(+inst.created || 0).getTime(),
   }))
 );
 
@@ -94,7 +91,7 @@ const instancesForPeriod = computed(() => {
   dates.to = dates.to.getTime() / 1000;
 
   return instances.value.filter((ac) => {
-    const createDate = +ac.data?.creation || 0;
+    const createDate = +ac.created || 0;
 
     return dates.from <= createDate && dates.to >= createDate;
   });

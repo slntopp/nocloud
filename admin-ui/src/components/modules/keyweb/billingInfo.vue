@@ -23,12 +23,16 @@
         <v-text-field
           readonly
           label="Date (create)"
-          :value="formatSecondsToDate(template.data.creation)"
+          :value="formatSecondsToDate(template.created, true)"
         />
       </v-col>
 
       <v-col v-if="template.billingPlan.title.toLowerCase() !== 'payg'">
-        <v-text-field readonly label="Due to date/next payment" :value="date" />
+        <v-text-field
+          readonly
+          label="Due to date/next payment"
+          :value="dueDate"
+        />
       </v-col>
     </v-row>
 
@@ -127,8 +131,8 @@ const billingHeaders = ref([
 ]);
 const billingItems = ref([]);
 
-const date = computed(() =>
-  formatSecondsToDate(template.value?.data?.next_payment_date)
+const dueDate = computed(() =>
+  formatSecondsToDate(template.value?.data?.next_payment_date, true)
 );
 
 const filtredPlans = computed(() =>
