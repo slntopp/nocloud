@@ -22,7 +22,6 @@
     </v-row>
 
     <nocloud-table
-      table-name="dedicated-prices"
       sort-by="isBeenSell"
       sort-desc
       item-key="id"
@@ -181,7 +180,6 @@
           </template>
 
           <nocloud-table
-            table-name="dedicated-addons-prices"
             class="pa-4"
             item-key="id"
             :show-select="false"
@@ -247,8 +245,8 @@ export default {
         text: "Payment",
         value: "duration",
       },
-      { text: "Income price", value: "price" },
-      { text: "Sale price", value: "basePrice" },
+      { text: "Income price", value: "basePrice" },
+      { text: "Sale price", value: "price" },
       { text: "Addons", value: "addons" },
       {
         text: "Sell",
@@ -262,8 +260,8 @@ export default {
         text: "Payment",
         value: "duration",
       },
-      { text: "Income price", value: "price" },
-      { text: "Sale price", value: "basePrice" },
+      { text: "Income price", value: "basePrice" },
+      { text: "Sale price", value: "price" },
       {
         text: "Sell",
         value: "public",
