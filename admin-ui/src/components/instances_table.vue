@@ -83,7 +83,7 @@
     <template v-slot:[`item.dueDate`]="{ item }">
       {{
         typeof getExpirationDate(item) === "number"
-          ? formatSecondsToDate(getExpirationDate(item))
+          ? formatSecondsToDate(getExpirationDate(item), true)
           : getExpirationDate(item)
       }}
     </template>

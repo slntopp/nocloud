@@ -44,7 +44,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="date"
+          :value="dueDate"
           :append-icon="!isMonitoringsEmpty ? 'mdi-pencil' : null"
           @click:append="changeDatesDialog = true"
         />
@@ -246,10 +246,10 @@ const addonsHeaders = ref([
 ]);
 const billingItems = ref([]);
 
-const date = computed(() =>
-  formatSecondsToDate(template.value?.data?.next_payment_date)
+const dueDate = computed(() =>
+  formatSecondsToDate(template.value?.data?.next_payment_date,true)
 );
-const isMonitoringsEmpty = computed(() => date.value === "-");
+const isMonitoringsEmpty = computed(() => dueDate.value === "-");
 
 const filtredPlans = computed(() =>
   plans.value.filter((p) => p.type === "empty")
