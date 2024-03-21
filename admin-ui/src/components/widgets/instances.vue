@@ -92,17 +92,12 @@ onMounted(async () => {
 const instances = computed(() =>
   store.getters["services/getInstances"].map((i) => ({
     ...i,
-    data: {
-      ...(i?.data || {}),
-      creation: new Date(i.data?.creation || 0).getTime() / 1000,
-    },
+    created: new Date(+i.created || 0).getTime(),
   }))
 );
 
 const lastInstances = computed(() => {
-  const sorted = [...instances.value].sort(
-    (a, b) => +(b.data?.creation || 0) - (a.data?.creation || 0)
-  );
+  const sorted = [...instances.value].sort((a, b) => b.created - a.created);
 
   return sorted.slice(0, 5);
 });
@@ -131,7 +126,7 @@ const countForPeriod = computed(() => {
   dates.to = dates.to.getTime() / 1000;
 
   return instances.value.filter((ac) => {
-    const createDate = +ac.data?.creation || 0;
+    const createDate = +ac.created || 0;
 
     return dates.from <= createDate && dates.to >= createDate;
   }).length;

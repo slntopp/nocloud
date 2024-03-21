@@ -62,10 +62,7 @@ const isLoading = computed(() => store.getters["services/isLoading"]);
 const instances = computed(() =>
   store.getters["services/getInstances"].map((inst) => ({
     ...inst,
-    data: {
-      ...(inst?.data || {}),
-      creation: new Date(inst.data?.creation || 0).getTime() / 1000,
-    },
+    created: new Date(+inst.creation || 0).getTime(),
   }))
 );
 
