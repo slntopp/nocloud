@@ -4,13 +4,26 @@
       <v-col>
         <v-text-field
           readonly
-          label="price model"
-          :append-icon="isPriceModelCanBeChange ? 'mdi-pencil' : undefined"
-          @click:append="
-            isPriceModelCanBeChange ? (priceModelDialog = true) : undefined
-          "
+          label="Price model"
           :value="template.billingPlan.title"
-        />
+        >
+          <template v-slot:append>
+            <v-icon
+              v-if="isPriceModelCanBeChange"
+              @click="priceModelDialog = true"
+              >mdi-pencil</v-icon
+            >
+            <v-icon
+              @click="
+                $router.push({
+                  name: 'Plan',
+                  params: { planId: template.billingPlan.uuid },
+                })
+              "
+              >mdi-login</v-icon
+            >
+          </template>
+        </v-text-field>
       </v-col>
       <v-col>
         <v-text-field

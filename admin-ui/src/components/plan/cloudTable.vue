@@ -153,7 +153,7 @@ const pricesHeaders = ref([
   { text: "VCPUS", value: "vcpus" },
   { text: "GPU", value: "gpu.model" },
   { text: "Type", value: "type" },
-  { text: "Income price", value: "price" },
+  { text: "Incoming price", value: "price" },
   { text: "Sale price", value: "endPrice" },
   { text: "Enabled", value: "enabled" },
 ]);

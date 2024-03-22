@@ -1,7 +1,7 @@
 <template>
   <v-menu bottom nudge-top="20" nudge-left="15" transition="slide-y-transition" :close-on-content-click="false">
     <template v-slot:activator="{ on, attrs }">
-      <v-text-field :label="`ips_${type}`" v-if="props.ui !== 'span'" v-bind="attrs" v-on="on" readonly :value="ip"
+      <v-text-field :label="`IPs_${type}`" v-if="props.ui !== 'span'" v-bind="attrs" v-on="on" readonly :value="ip"
         :append-icon="ip ? 'mdi-content-copy' : ''" @click:append="addToClipboard(ip)">
       </v-text-field>
       <span v-else v-bind="attrs" v-on="on">{{ ip }}</span>
