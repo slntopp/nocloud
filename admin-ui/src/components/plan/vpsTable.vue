@@ -219,7 +219,7 @@ export default {
         text: "Payment",
         value: "duration",
       },
-      { text: "Income price", value: "price.value" },
+      { text: "Incoming price", value: "price.value" },
       { text: "Sale price", value: "value" },
       {
         text: "Sell",
@@ -236,7 +236,7 @@ export default {
         text: "Payment",
         value: "duration",
       },
-      { text: "Income price", value: "price.value" },
+      { text: "Incoming price", value: "price.value" },
       { text: "Sale price", value: "value" },
       {
         text: "Sell",
