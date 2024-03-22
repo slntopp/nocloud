@@ -127,6 +127,7 @@ const headers = ref([
   { text: "Address", value: "address" },
   { text: "Client currency", value: "currency" },
   { text: "Access level", value: "access.level" },
+  { text: "WHMCS ID", value: "data.whmcs_id" },
   { text: "Invoice based", value: "data.regular_payment" },
 ]);
 const levelColorMap = ref({
@@ -205,7 +206,7 @@ const requestOptions = computed(() => ({
       from: filter.value?.balance.from && +filter.value?.balance.from,
       to: filter.value?.balance.to && +filter.value?.balance.to,
     },
-    search_param: searchParam.value || undefined,
+    search_param: searchParam.value || filter.value.search_param || undefined,
   },
   page: options.value.page,
   limit: options.value.itemsPerPage,
@@ -236,6 +237,7 @@ const searchFields = computed(() => [
   { title: "Created date", key: "data.date_create", type: "date" },
   { title: "Country", key: "data.country", type: "input" },
   { title: "Address", key: "data.address", type: "input" },
+  { title: "WHMCS ID", key: "data.whmcs_id", type: "input" },
   {
     title: "Client currency",
     key: "currency",

@@ -93,7 +93,7 @@ export default {
     ],
     pricesHeaders: [
       { text: "Period", value: "period" },
-      { text: "Income price", value: "price" },
+      { text: "Incoming price", value: "price" },
       { text: "Sale price", value: "value" },
       { text: "Sell", value: "sell", width: 100 },
     ],

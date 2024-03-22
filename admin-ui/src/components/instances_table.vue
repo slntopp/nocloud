@@ -510,7 +510,7 @@ export default {
       if (this.headers) return this.headers;
       const headers = [
         { text: "ID", value: "id" },
-        { text: "Title", value: "title" },
+        { text: "Name", value: "title" },
         { text: "Service", value: "service" },
         { text: "Account", value: "access" },
         { text: "Due date", value: "dueDate" },

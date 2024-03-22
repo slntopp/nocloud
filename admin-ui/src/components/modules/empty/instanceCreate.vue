@@ -10,7 +10,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('title', newVal)"
-            label="title"
+            label="Name"
             :value="instance.title"
           >
           </v-text-field>
@@ -19,7 +19,7 @@
       <v-row>
         <v-col cols="6">
           <v-autocomplete
-            label="price model"
+            label="Price model"
             item-text="title"
             item-value="uuid"
             :value="instance.billing_plan"
@@ -30,7 +30,7 @@
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            label="product"
+            label="Product"
             :rules="requiredRule"
             :value="instance.product"
             v-if="products.length > 0"
@@ -53,7 +53,7 @@
 
         <v-col cols="6" v-if="addons.length">
           <v-autocomplete
-            label="addons"
+            label="Addons"
             :value="instance.config.addons"
             :items="addons"
             multiple
