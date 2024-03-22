@@ -127,6 +127,7 @@ const headers = ref([
   { text: "Address", value: "address" },
   { text: "Client currency", value: "currency" },
   { text: "Access level", value: "access.level" },
+  { text: "WHMCS ID", value: "data.whmcs_id" },
   { text: "Invoice based", value: "data.regular_payment" },
 ]);
 const levelColorMap = ref({
@@ -236,6 +237,7 @@ const searchFields = computed(() => [
   { title: "Created date", key: "data.date_create", type: "date" },
   { title: "Country", key: "data.country", type: "input" },
   { title: "Address", key: "data.address", type: "input" },
+  { title: "WHMCS ID", key: "data.whmcs_id", type: "input" },
   {
     title: "Client currency",
     key: "currency",
