@@ -4,11 +4,22 @@
       <v-col>
         <v-text-field
           readonly
-          label="price model"
+          label="Price model"
           :value="template.billingPlan.title"
-          @click:append="priceModelDialog = true"
-          append-icon="mdi-pencil"
-        />
+        >
+          <template v-slot:append>
+            <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
+            <v-icon
+              @click="
+                $router.push({
+                  name: 'Plan',
+                  params: { planId: template.billingPlan.uuid },
+                })
+              "
+              >mdi-login</v-icon
+            >
+          </template>
+        </v-text-field>
       </v-col>
       <v-col>
         <v-text-field
@@ -23,7 +34,7 @@
         <v-text-field
           readonly
           label="Date (create)"
-          :value="formatSecondsToDate(template.created,true)"
+          :value="formatSecondsToDate(template.created, true)"
         />
       </v-col>
 
@@ -247,7 +258,7 @@ const addonsHeaders = ref([
 const billingItems = ref([]);
 
 const dueDate = computed(() =>
-  formatSecondsToDate(template.value?.data?.next_payment_date,true)
+  formatSecondsToDate(template.value?.data?.next_payment_date, true)
 );
 const isMonitoringsEmpty = computed(() => dueDate.value === "-");
 

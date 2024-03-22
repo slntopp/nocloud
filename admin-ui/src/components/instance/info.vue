@@ -38,7 +38,7 @@
       <v-col>
         <v-text-field
           readonly
-          label="email"
+          label="Email"
           :value="account?.data?.email"
           append-icon="mdi-content-copy"
           @click:append="addToClipboard(account?.data?.email)"
@@ -47,7 +47,7 @@
       <v-col>
         <v-text-field
           readonly
-          label="balance"
+          label="Balance"
           :value="account?.balance?.toFixed(2) || 0"
         />
       </v-col>
@@ -65,7 +65,7 @@
           <v-text-field
             v-model="copyInstance.title"
             ref="instance-title"
-            label="Instance title"
+            label="Instance name"
           >
             <template v-slot:append>
               <v-icon class="mr-2" @click="$refs['instance-title'].focus()"
@@ -103,11 +103,7 @@
           />
         </v-col>
         <v-col>
-          <route-text-field
-            :to="{ name: 'Plan', params: { planId: plan?.uuid } }"
-            :value="plan?.title"
-            label="Billing plan"
-          />
+          <v-text-field label="Location" readonly />
         </v-col>
         <v-col>
           <v-text-field readonly :value="type" label="Type" />
@@ -218,7 +214,7 @@ export default {
   methods: {
     addToClipboard,
     refreshInstance() {
-      this.$store.dispatch('reloadBtn/onclick')
+      this.$store.dispatch("reloadBtn/onclick");
     },
     updateCopy({ key, value }) {
       const keys = key.split(".");

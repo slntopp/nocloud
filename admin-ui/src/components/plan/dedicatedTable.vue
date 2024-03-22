@@ -245,7 +245,7 @@ export default {
         text: "Payment",
         value: "duration",
       },
-      { text: "Income price", value: "basePrice" },
+      { text: "Incoming price", value: "basePrice" },
       { text: "Sale price", value: "price" },
       { text: "Addons", value: "addons" },
       {
@@ -260,7 +260,7 @@ export default {
         text: "Payment",
         value: "duration",
       },
-      { text: "Income price", value: "basePrice" },
+      { text: "Incoming price", value: "basePrice" },
       { text: "Sale price", value: "price" },
       {
         text: "Sell",
