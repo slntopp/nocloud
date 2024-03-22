@@ -205,7 +205,7 @@ const requestOptions = computed(() => ({
       from: filter.value?.balance.from && +filter.value?.balance.from,
       to: filter.value?.balance.to && +filter.value?.balance.to,
     },
-    search_param: searchParam.value || undefined,
+    search_param: searchParam.value || filter.value.search_param || undefined,
   },
   page: options.value.page,
   limit: options.value.itemsPerPage,
