@@ -2,19 +2,6 @@
   <v-card elevation="0" color="background-light" class="pa-4">
     <div style="z-index: 0; position: relative; top: -25px; right: 40px">
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
-        <hint-btn hint="Create transaction/invoice">
-          <v-btn
-            class="ma-1"
-            :disabled="isLocked"
-            :to="{
-              name: 'Transactions create',
-              params: { account: account.uuid },
-            }"
-          >
-            <v-icon>mdi-invoice-text-outline</v-icon>
-          </v-btn>
-        </hint-btn>
-
         <hint-btn hint="Create instance">
           <v-btn
             class="ma-1"
@@ -75,10 +62,12 @@
             </v-btn>
           </confirm-dialog>
         </hint-btn>
-        <v-chip class="ma-1" color="primary" outlined
-          >Balance: {{ account.balance?.toFixed(2) || 0 }}
-          {{ account.currency }}</v-chip
-        >
+        <hint-btn hint="Create transaction/invoice">
+          <v-chip @click="openTransaction" class="ma-1" color="primary" outlined
+            >Balance: {{ account.balance?.toFixed(2) || 0 }}
+            {{ account.currency }}</v-chip
+          >
+        </hint-btn>
       </div>
     </div>
 
@@ -405,6 +394,12 @@ export default {
       } finally {
         this.isChangeRegularPaymentLoading = false;
       }
+    },
+    openTransaction() {
+      this.$router.push({
+        name: "Transactions create",
+        params: { account: this.account.uuid },
+      });
     },
   },
   mounted() {
