@@ -1,7 +1,10 @@
 <template>
   <components
     :is="VDataTable"
-    v-sortable-table="{ onEnd: sortTheHeadersAndUpdateTheKey }"
+    v-sortable-table="{
+      onEnd: sortTheHeadersAndUpdateTheKey,
+      disabled: !tableName,
+    }"
     :item-key="itemKey"
     class="elevation-0 background-light rounded-lg"
     :loading="loading"
@@ -654,6 +657,10 @@ export default {
   directives: {
     "sortable-table": {
       inserted: (el, binding) => {
+        if (binding.value.disabled) {
+          return;
+        }
+
         setTimeout(() => {
           el.querySelectorAll("th").forEach((draggableEl) => {
             // Need a class watcher because sorting v-data-table rows asc/desc removes the sortHandle class

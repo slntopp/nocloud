@@ -486,16 +486,16 @@ export default {
   },
   created() {
     window.addEventListener("message", ({ data, origin, source }) => {
-      if (origin.includes("localhost:8081") || !data) return;
+      if (origin.includes("localhost") || !data) return;
       if (data === "ready") return;
-      if (data.type === "get-user") {
+      if (data.type === "send-user") {
         const setting = "plugin-chats-overlay";
 
         api.settings.get([setting]).then((res) => {
           const { title } = JSON.parse(res[setting]);
 
           setTimeout(() => {
-            source.postMessage(title, "*");
+            source.postMessage({ type: 'button-title', value: title }, "*");
           }, 300);
           this.overlay.uuid = data.value.uuid;
         });

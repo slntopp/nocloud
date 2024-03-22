@@ -28,7 +28,6 @@
 
         <nocloud-table
           item-key="id"
-          table-name="vps-tarrifs"
           v-else-if="tab === 'Tariffs'"
           :show-expand="true"
           :show-select="false"
@@ -123,7 +122,6 @@
         </nocloud-table>
 
         <nocloud-table
-          table-name="vps-addons"
           v-else-if="tab === 'Addons'"
           :show-select="false"
           :items="addons"
