@@ -10,7 +10,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('title', newVal)"
-            label="title"
+            label="Name"
             :value="instance.title"
             :rules="requiredRule"
           >
@@ -22,7 +22,7 @@
         <v-col cols="6">
           <v-autocomplete
             :filter="defaultFilterObject"
-            label="price model"
+            label="Price model"
             item-text="title"
             item-value="uuid"
             :value="instance.billing_plan"
@@ -33,7 +33,7 @@
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            label="product"
+            label="Product"
             :disabled="isDynamicPlan"
             :rules="!isDynamicPlan ? requiredRule : []"
             :value="instance.product"
@@ -45,7 +45,7 @@
         <v-col cols="6">
           <v-autocomplete
             @change="(newVal) => changeOS(newVal)"
-            label="template"
+            label="Template"
             :rules="requiredRule"
             :items="osNames"
             :value="selectedTemplate?.name"
@@ -55,7 +55,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('config.password', newVal)"
-            label="password"
+            label="Password"
             :rules="requiredRule"
             :value="instance.config?.password"
           >
@@ -65,7 +65,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('resources.cpu', +newVal)"
-            label="cpu"
+            label="CPU"
             :value="instance.resources.cpu"
             type="number"
             :rules="requiredRule"
@@ -76,7 +76,7 @@
           <v-text-field
             :rules="requiredRule"
             @change="(newVal) => setValue('resources.ram', +newVal)"
-            label="ram"
+            label="RAM"
             :value="instance.resources.ram"
             type="number"
           >
@@ -87,7 +87,7 @@
             :items="driveTypes"
             :rules="requiredRule"
             @change="(newVal) => setValue('resources.drive_type', newVal)"
-            label="drive type"
+            label="Drive type"
             :value="instance.resources.drive_type"
           >
           </v-select>
@@ -97,7 +97,7 @@
             @change="
               (newVal) => setValue('resources.drive_size', +newVal * 1024)
             "
-            :label="`drive size (minimum ${driveSizeConfig?.minDisk} GB, maximum ${driveSizeConfig?.maxDisk} GB)`"
+            :label="`Drive size (minimum ${driveSizeConfig?.minDisk} GB, maximum ${driveSizeConfig?.maxDisk} GB)`"
             :rules="[driveSizeRule]"
             :value="instance.resources.drive_size / 1024"
             type="number"
@@ -107,7 +107,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('resources.ips_public', +newVal)"
-            label="ips public"
+            label="IPs public"
             :value="instance.resources.ips_public"
             type="number"
           >
@@ -116,7 +116,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('resources.ips_private', +newVal)"
-            label="ips private"
+            label="IPs private"
             :value="instance.resources.ips_private"
             type="number"
           >
@@ -130,14 +130,14 @@
         <template v-if="existing">
           <v-col>
             <v-text-field
-              label="Vm name"
+              label="VM name"
               :value="instance.data?.vm_name"
               @change="(newVal) => setValue('data.vm_name', newVal)"
             />
           </v-col>
           <v-col>
             <v-text-field
-              label="Vm id"
+              label="VM id"
               :value="instance.data?.vm_id"
               @change="(newVal) => setValue('data.vm_id', newVal)"
             />

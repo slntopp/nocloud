@@ -25,7 +25,7 @@ const props = defineProps({
     type: String,
     default: "",
   },
-  label: { type: String, default: "Pass" },
+  label: { type: String, default: "Password" },
   copy: { type: Boolean, default: false },
 });
 const { value, label } = toRefs(props);
