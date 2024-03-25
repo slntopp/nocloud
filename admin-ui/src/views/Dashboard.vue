@@ -10,9 +10,6 @@
 </template>
 
 <script>
-import HealthWidget from "@/components/widgets/health";
-import ServicesWidget from "@/components/widgets/services";
-import RoutinesWidget from "@/components/widgets/routines";
 import AccountsWidget from "@/components/widgets/accounts";
 import TransactionsWidget from "@/components/widgets/transactions";
 import InstancesWidget from "@/components/widgets/instances";
@@ -23,9 +20,6 @@ import ChatsWidget from "@/components/widgets/chats.vue";
 export default {
   name: "dashboard-view",
   components: {
-    HealthWidget,
-    ServicesWidget,
-    RoutinesWidget,
     AccountsWidget,
     TransactionsWidget,
     InstancesWidget,
@@ -41,9 +35,6 @@ export default {
       "TransactionsWidget",
       "InstancesTypesWidget",
       "InstancesPricesWidget",
-      "ServicesWidget",
-      "RoutinesWidget",
-      "HealthWidget",
     ],
   }),
   computed: {

@@ -152,6 +152,16 @@
         </template>
       </template>
     </nocloud-table>
+
+    <div class="widgets align-start mt-4 d-flex flex-wrap">
+      <component
+        class="mx-3"
+        v-for="widget of widgets"
+        :key="widget"
+        :is="widget"
+        style="width: 30%"
+      />
+    </div>
   </div>
 </template>
 
@@ -163,6 +173,9 @@ import noCloudTable from "@/components/table.vue";
 import PluginIframe from "@/components/plugin/iframe.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
 import { filterArrayIncludes } from "@/functions";
+import RoutinesWidget from "@/components/widgets/routines";
+import HealthWidget from "@/components/widgets/health";
+import ServicesWidget from "@/components/widgets/services";
 
 const headers = [
   { text: "Key", value: "key" },
@@ -201,7 +214,10 @@ export default {
   components: {
     "nocloud-table": noCloudTable,
     ConfirmDialog,
-    PluginIframe
+    PluginIframe,
+    ServicesWidget,
+    HealthWidget,
+    RoutinesWidget,
   },
   mixins: [snackbar],
   data: () => ({
@@ -221,6 +237,8 @@ export default {
     },
     fetchError: "",
     sortBy: "description",
+
+    widgets: ["ServicesWidget", "HealthWidget", "RoutinesWidget"],
   }),
   computed: {
     ...mapGetters("settings", {
