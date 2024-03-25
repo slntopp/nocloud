@@ -132,9 +132,11 @@
 
         <v-col lg="1" md="2" sm="4">
           <v-text-field
+            append-icon="mdi-login"
             readonly
             :value="account.data?.whmcs_id"
             label="WHMCS id"
+            @click:append="goToWhmcs"
           />
         </v-col>
       </v-row>
@@ -400,6 +402,18 @@ export default {
         name: "Transactions create",
         params: { account: this.account.uuid },
       });
+    },
+    goToWhmcs() {
+      if (!this.account.data?.whmcs_id) {
+        return;
+      }
+      const url = /https:\/\/(.+?\.?\/)/.exec(
+        this.$store.getters["settings/whmcsApi"]
+      )[0];
+      window.open(
+        `${url}admin/clientssummary.php?userid=${this.account.data?.whmcs_id}`,
+        "_blank"
+      );
     },
   },
   mounted() {

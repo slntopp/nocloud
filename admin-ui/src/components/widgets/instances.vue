@@ -5,8 +5,10 @@
         <v-btn-toggle
           class="mt-2"
           dense
-          :value="period"
-          @change="period = $event || period"
+          :value="data.period"
+          @change="
+            emit('update:key', { key: 'period', value: $event || data.period })
+          "
           borderless
         >
           <v-btn x-small :value="item" :key="item" v-for="item in periods">
@@ -17,7 +19,7 @@
 
       <div class="d-flex justify-space-between align-center">
         <v-card-subtitle class="ma-0 my-2 pa-0"
-          >Created in last {{ period }}</v-card-subtitle
+          >Created in last {{ data.period }}</v-card-subtitle
         >
         <v-card-subtitle class="ma-0 pa-0">
           {{ countForPeriod }}
@@ -60,7 +62,7 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, toRefs } from "vue";
 import { useStore } from "@/store";
 import {
   endOfDay,
@@ -72,10 +74,14 @@ import {
 } from "date-fns";
 import InstanceState from "@/components/ui/instanceState.vue";
 
+const props = defineProps(["data"]);
+const { data } = toRefs(props);
+
+const emit = defineEmits(["update", "update:key"]);
+
 const store = useStore();
 
 const isLoading = ref(false);
-const period = ref("day");
 const periods = ref(["day", "week", "month"]);
 
 onMounted(async () => {
@@ -101,10 +107,15 @@ const lastInstances = computed(() => {
 
   return sorted.slice(0, 5);
 });
+
 const countForPeriod = computed(() => {
+  if (!data.value.period) {
+    return 0;
+  }
+
   const dates = { from: null, to: null };
 
-  switch (period.value) {
+  switch (data.value.period) {
     case "day": {
       dates.from = startOfDay(new Date());
       dates.to = endOfDay(new Date());
@@ -131,6 +142,14 @@ const countForPeriod = computed(() => {
     return dates.from <= createDate && dates.to >= createDate;
   }).length;
 });
+
+const setDefaultData = () => {
+  if (Object.keys(data.value || {}).length === 0) {
+    emit("update", { period: "week" });
+  }
+};
+
+setDefaultData();
 </script>
 
 <script>
