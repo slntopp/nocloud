@@ -5,8 +5,10 @@
         <v-btn-toggle
           class="mt-2"
           dense
-          :value="period"
-          @change="period = $event || period"
+          :value="data.period"
+          @change="
+            emit('update:key', { key: 'period', value: $event || data.period })
+          "
           borderless
         >
           <v-btn x-small :value="item" :key="item" v-for="item in periods">
@@ -29,7 +31,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, ref, toRefs, watch } from "vue";
 import widget from "@/components/widgets/widget.vue";
 import apexchart from "vue-apexcharts";
 import { useStore } from "@/store";
@@ -43,9 +45,13 @@ import {
 } from "date-fns";
 import { getInstancePrice } from "@/functions";
 
+const props = defineProps(["data"]);
+const { data } = toRefs(props);
+
+const emit = defineEmits(["update", "update:key"]);
+
 const store = useStore();
 
-const period = ref("day");
 const periods = ref(["day", "week", "month"]);
 const typesMap = ref(new Map());
 
@@ -78,9 +84,13 @@ const instances = computed(() =>
 );
 
 const instancesForPeriod = computed(() => {
+  if (!data.value.period) {
+    return [];
+  }
+
   const dates = { from: null, to: null };
 
-  switch (period.value) {
+  switch (data.value.period) {
     case "day": {
       dates.from = startOfDay(new Date());
       dates.to = endOfDay(new Date());
@@ -107,6 +117,14 @@ const instancesForPeriod = computed(() => {
     return dates.from <= createDate && dates.to >= createDate;
   });
 });
+
+const setDefaultData = () => {
+  if (Object.keys(data.value || {}).length === 0) {
+    emit("update", { period: "week" });
+  }
+};
+
+setDefaultData();
 
 watch(
   instancesForPeriod,
