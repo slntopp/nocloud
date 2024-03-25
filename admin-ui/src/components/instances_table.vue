@@ -77,13 +77,13 @@
     </template>
 
     <template v-slot:[`item.date`]="{ item }">
-      {{ formatSecondsToDate(getValue("date", item), true) || "Unknown" }}
+      {{ formatSecondsToDate(getValue("date", item)) || "Unknown" }}
     </template>
 
     <template v-slot:[`item.dueDate`]="{ item }">
       {{
         typeof getExpirationDate(item) === "number"
-          ? formatSecondsToDate(getExpirationDate(item), true)
+          ? formatSecondsToDate(getExpirationDate(item))
           : getExpirationDate(item)
       }}
     </template>
