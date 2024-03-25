@@ -9,44 +9,37 @@
   </div>
 </template>
 
-<script>
+<script setup>
 import AccountsWidget from "@/components/widgets/accounts";
 import TransactionsWidget from "@/components/widgets/transactions";
 import InstancesWidget from "@/components/widgets/instances";
 import InstancesTypesWidget from "@/components/widgets/instances-types.vue";
 import InstancesPricesWidget from "@/components/widgets/instances-prices.vue";
 import ChatsWidget from "@/components/widgets/chats.vue";
+import { onMounted } from "vue";
+import { useStore } from "@/store/";
 
+const store = useStore();
+
+const widgets = [
+  ChatsWidget,
+  AccountsWidget,
+  InstancesWidget,
+  TransactionsWidget,
+  InstancesTypesWidget,
+  InstancesPricesWidget,
+];
+
+onMounted(() => {
+  store.commit("reloadBtn/setCallback", {
+    event: () => this.$router.go(),
+  });
+});
+</script>
+
+<script>
 export default {
   name: "dashboard-view",
-  components: {
-    AccountsWidget,
-    TransactionsWidget,
-    InstancesWidget,
-    InstancesTypesWidget,
-    InstancesPricesWidget,
-    ChatsWidget,
-  },
-  data: () => ({
-    widgets: [
-      "ChatsWidget",
-      "AccountsWidget",
-      "InstancesWidget",
-      "TransactionsWidget",
-      "InstancesTypesWidget",
-      "InstancesPricesWidget",
-    ],
-  }),
-  computed: {
-    width() {
-      return document.documentElement.clientWidth;
-    },
-  },
-  mounted() {
-    this.$store.commit("reloadBtn/setCallback", {
-      event: () => this.$router.go(),
-    });
-  },
 };
 </script>
 
