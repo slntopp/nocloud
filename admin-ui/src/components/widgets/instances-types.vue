@@ -1,5 +1,5 @@
 <template>
-  <widget title="Instances count" :loading="isLoading" class="pa-0 ma-0">
+  <widget title="New orders count" :loading="isLoading" class="pa-0 ma-0">
     <v-card color="background-light" flat>
       <div class="d-flex justify-end">
         <v-btn-toggle

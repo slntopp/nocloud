@@ -1,5 +1,5 @@
 <template>
-  <widget title="Instances prices" :loading="isLoading" class="pa-0 ma-0">
+  <widget title="Income new orders" :loading="isLoading" class="pa-0 ma-0">
     <v-card color="background-light" flat>
       <div class="d-flex justify-end">
         <v-btn-toggle
@@ -52,7 +52,7 @@ const typesMap = ref(new Map());
 const options = computed(() => ({
   labels: [...Object.keys(typesMap.value)]
     .filter((key) => typesMap.value[key] != 0)
-    .map((key) => `${key} - ${typesMap.value[key]}`),
+    .map((key) => `${key} - ${typesMap.value[key]} ${defaultCurrency.value}`),
   theme: {
     palette: "palette8",
   },
@@ -67,6 +67,8 @@ const options = computed(() => ({
 const series = computed(() => [...Object.values(typesMap.value)]);
 
 const isLoading = computed(() => store.getters["services/isLoading"]);
+
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const instances = computed(() =>
   store.getters["services/getInstances"].map((i) => ({
