@@ -1,5 +1,5 @@
 <template>
-  <v-icon @click="onLogin"> mdi-login </v-icon>
+  <v-icon @click="onLogin"> mdi-account-arrow-right-outline </v-icon>
 </template>
 
 <script setup>
