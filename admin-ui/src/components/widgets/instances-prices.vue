@@ -19,6 +19,7 @@
         type="donut"
         :options="options"
         :series="series"
+        height="300px"
       ></apexchart>
       <div v-else class="d-flex justify-center align-center">
         <v-card-title>Instances not found</v-card-title>
@@ -54,6 +55,13 @@ const options = computed(() => ({
     .map((key) => `${key} - ${typesMap.value[key]}`),
   theme: {
     palette: "palette8",
+  },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: "0%",
+      },
+    },
   },
 }));
 const series = computed(() => [...Object.values(typesMap.value)]);

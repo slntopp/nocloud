@@ -38,6 +38,7 @@
         dense
         color="transparent"
         class="d-flex justify-space-between pa-3"
+        style="margin: 3px"
       >
         <div class="d-flex flex-column">
           <div>
@@ -57,7 +58,7 @@
             </router-link>
           </div>
 
-          <div>
+          <div class="d-flex">
             <span>Account: </span>
             <router-link
               v-if="!isAccountsLoading"
