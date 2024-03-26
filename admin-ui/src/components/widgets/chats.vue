@@ -53,7 +53,7 @@
               }"
             >
               {{
-                chat.topic.length > 15
+                chat.topic.length > 27
                   ? chat.topic.slice(0, 30) + "..."
                   : chat.topic
               }}
@@ -138,7 +138,7 @@ const lastActivityChats = computed(() => {
         (Number(a.meta?.lastMessage?.sent || a.created) || 0)
     );
 
-  return sorted.slice(0, 5);
+  return sorted.slice(0, 3);
 });
 
 const countForPeriod = computed(() => {

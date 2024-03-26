@@ -102,9 +102,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  notFiltered: { type: Boolean, default: false },
+  noSearch: { type: Boolean, default: false },
+  customSearchParam: { type: String, default: "" },
 });
-const { value, singleSelect } = toRefs(props);
+const { value, singleSelect, customSearchParam, noSearch } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -200,14 +201,17 @@ const accounts = computed(() => {
 const total = computed(() => store.getters["accounts/total"]);
 
 const requestOptions = computed(() => ({
-  filters: {
-    ...filter.value,
-    balance: filter.value?.balance && {
-      from: filter.value?.balance.from && +filter.value?.balance.from,
-      to: filter.value?.balance.to && +filter.value?.balance.to,
-    },
-    search_param: searchParam.value || filter.value.search_param || undefined,
-  },
+  filters: !noSearch.value
+    ? {
+        ...filter.value,
+        balance: filter.value?.balance && {
+          from: filter.value?.balance.from && +filter.value?.balance.from,
+          to: filter.value?.balance.to && +filter.value?.balance.to,
+        },
+        search_param:
+          searchParam.value || filter.value.search_param || undefined,
+      }
+    : { search_param: customSearchParam.value || undefined },
   page: options.value.page,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
@@ -319,7 +323,9 @@ watch(accounts, () => {
 });
 
 watch(searchFields, () => {
-  store.commit("appSearch/setFields", searchFields.value);
+  if (!noSearch.value) {
+    store.commit("appSearch/setFields", searchFields.value);
+  }
 });
 
 watch(value, () => {
@@ -328,6 +334,7 @@ watch(value, () => {
 
 watch(filter, fetchAccountsDebounce, { deep: true });
 watch(options, fetchAccountsDebounce);
+watch(customSearchParam, fetchAccountsDebounce);
 </script>
 
 <script>
