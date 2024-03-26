@@ -5,16 +5,19 @@ export default {
   namespaced: true,
   state: {
     theme: "dark",
+    chatClicks: 0
   },
   mutations: {
     setTheme(state, theme = "dark") {
       state.theme = theme;
     },
+    setChatClicks(state, value) {
+      state.chatClicks += value;
+    }
   },
   getters: {
-    theme(state) {
-      return state.theme;
-    },
+    theme: (state) => state.theme,
+    chatClicks: (state) => state.chatClicks,
     transport(state, getters, rootState, rootGetters) {
       const transport = createConnectTransport({
         baseUrl: window.location.origin,
