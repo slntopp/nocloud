@@ -50,6 +50,11 @@
                 }"
               >
                 {{ instance.title }}
+                {{
+                  instance.title.length > 20
+                    ? instance.title.slice(0, 17) + "..."
+                    : instance.title
+                }}
               </router-link>
               <instance-state small :template="instance" />
             </div>

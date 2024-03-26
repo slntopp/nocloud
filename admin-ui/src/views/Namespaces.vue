@@ -57,10 +57,12 @@
           <v-card-title class=""> Select Accounts (join) </v-card-title>
 
           <v-card-text style="max-height: 60vh">
+            <v-text-field v-model="joinAccount.search" label="search..." />
             <accounts-table
-              not-filtered
+              no-search
               v-model="joinAccount.selected"
               single-select
+              :custom-search-param="joinAccount.search"
             />
           </v-card-text>
           <v-row class="pa-5">
@@ -112,7 +114,13 @@
           <v-card-title class=""> Select Accounts (link) </v-card-title>
 
           <v-card-text style="max-height: 60vh">
-            <accounts-table not-filtered v-model="linkAccount.selected">
+            <v-text-field v-model="linkAccount.search" label="search..." />
+
+            <accounts-table
+              no-search
+              :custom-search-param="linkAccount.search"
+              v-model="linkAccount.selected"
+            >
             </accounts-table>
           </v-card-text>
 
@@ -187,6 +195,7 @@ export default {
           access: 0,
           role: "default",
         },
+        search: "",
       },
 
       accessLevels: [
@@ -205,6 +214,7 @@ export default {
           access: 0,
           role: "default",
         },
+        search: "",
       },
     };
   },
