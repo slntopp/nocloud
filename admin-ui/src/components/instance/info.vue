@@ -103,7 +103,11 @@
           />
         </v-col>
         <v-col>
-          <v-text-field label="Location" readonly />
+          <v-text-field
+            label="Location"
+            :value="template.config?.location || 'Unknown'"
+            readonly
+          />
         </v-col>
         <v-col>
           <v-text-field readonly :value="type" label="Type" />

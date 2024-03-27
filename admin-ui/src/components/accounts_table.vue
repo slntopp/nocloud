@@ -20,19 +20,8 @@
           {{ item.title }}
         </router-link>
         <div>
-          <v-icon
-            @click="
-              $router.push({
-                name: 'Account',
-                params: { accountId: item.uuid },
-                query: { tab: 2 },
-              })
-            "
-            class="ml-5"
-            >mdi-calendar-multiple</v-icon
-          >
+          <whmcs-btn :account="item" />
           <login-in-account-icon
-            class="ml-5"
             v-if="['ROOT', 'ADMIN'].includes(item.access.level)"
             :uuid="item.uuid"
           />
@@ -92,6 +81,7 @@ import { toRefs, ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
 import { useRouter } from "vue-router/composables";
 import NocloudTable from "@/components/table.vue";
+import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 
 const props = defineProps({
   value: {
