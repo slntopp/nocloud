@@ -252,7 +252,7 @@ export default {
       resources: [],
       products: {},
       meta: {
-        auto_start: true,
+        auto_start: false,
       },
       fee: null,
     },
