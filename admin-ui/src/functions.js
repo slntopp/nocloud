@@ -335,16 +335,34 @@ export function getOvhPrice(instance) {
 }
 
 export function getFullDate(period) {
-  const date = new Date(period * 1000);
-  const time = date.toUTCString().split(" ");
-  return {
-    day: `${date.getUTCDate() - 1}`,
-    month: `${date.getUTCMonth()}`,
-    year: `${date.getUTCFullYear() - 1970}`,
-    quarter: "0",
-    week: "0",
-    time: time.at(-2),
+  const dayEqualent = 86400;
+  const result = {
+    day: 0,
+    year: 0,
+    month: 0,
+    quarter: 0,
+    week: 0,
+    time: "",
   };
+
+  result.day = Math.floor(period / dayEqualent);
+  period -= result.day * dayEqualent;
+
+  result.year = Math.floor(result.day / 360);
+  result.day -= result.year * 365;
+
+  result.quarter = Math.floor(result.day / 90);
+  result.day -= result.quarter * 90;
+
+  result.month = Math.floor(result.day / 30);
+  result.day -= result.month * 30;
+
+  result.week = Math.floor(result.day / 7);
+  result.day -= result.week * 7;
+
+  result.time = new Date(period * 1000).toUTCString().split(" ").at(-2);
+
+  return result;
 }
 
 export function getTodayFullDate() {
@@ -450,9 +468,10 @@ export function getBillingPeriod(period) {
       .map((key) => `${fullPeriod[key]} ${key}s`)
       .join(", ");
     const beautifulAnnotations = {
-      "30 days": "Monthly",
+      "1 months": "Monthly",
       "1 days": "Daily",
       "1 years": "Yearly",
+      "1 hourss": "Hourly",
     };
     return beautifulAnnotations[period] || period;
   }
@@ -683,5 +702,8 @@ export function getInstancePrice(inst) {
 }
 
 export function isInstancePayg(inst) {
-  return inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC" || inst.type === "openai";
+  return (
+    (inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC") ||
+    inst.type === "openai"
+  );
 }
