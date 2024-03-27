@@ -362,7 +362,12 @@ export default {
       }
 
       function checkName({ title, uuid }, obj, num = 2) {
-        const value = obj.find((el) => el.title === title && el.uuid !== uuid);
+        const value = obj.find(
+          (el) =>
+            el.title === title &&
+            el.uuid !== uuid &&
+            el.status !== "DEL"
+        );
         const oldTitle = title.split(" ");
 
         if (oldTitle.length > 1 && num !== 2) {
