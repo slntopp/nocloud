@@ -132,12 +132,14 @@
 
         <v-col lg="1" md="2" sm="4">
           <v-text-field
-            append-icon="mdi-login"
             readonly
             :value="account.data?.whmcs_id"
             label="WHMCS id"
-            @click:append="goToWhmcs"
-          />
+          >
+            <template v-slot:append>
+              <whmcs-btn :account="account" />
+            </template>
+          </v-text-field>
         </v-col>
       </v-row>
     </nocloud-expansion-panels>
@@ -229,6 +231,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import hintBtn from "@/components/ui/hintBtn.vue";
 import { formatSecondsToDate } from "@/functions";
+import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 
 export default {
   name: "account-info",
@@ -239,6 +242,7 @@ export default {
     InstancesTable,
     nocloudTable,
     hintBtn,
+    whmcsBtn,
   },
   mixins: [snackbar],
   props: ["account"],
@@ -402,18 +406,6 @@ export default {
         name: "Transactions create",
         params: { account: this.account.uuid },
       });
-    },
-    goToWhmcs() {
-      if (!this.account.data?.whmcs_id) {
-        return;
-      }
-      const url = /https:\/\/(.+?\.?\/)/.exec(
-        this.$store.getters["settings/whmcsApi"]
-      )[0];
-      window.open(
-        `${url}admin/clientssummary.php?userid=${this.account.data?.whmcs_id}`,
-        "_blank"
-      );
     },
   },
   mounted() {

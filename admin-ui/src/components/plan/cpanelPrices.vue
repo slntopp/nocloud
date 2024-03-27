@@ -78,6 +78,7 @@ import DateField from "@/components/date.vue";
 import { getMarginedValue, getTimestamp } from "@/functions";
 import PlanOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
+import { getFullDate } from "@/functions";
 
 export default {
   name: "plan-prices",
@@ -160,17 +161,8 @@ export default {
         price.period = product?.period || 3600 * 24 * 30;
         price.sorter = product?.sorter || 0;
         price.enabled = !!product;
-        const date = new Date(price.period * 1000);
-        const time = date.toUTCString().split(" ");
 
-        price.period = {
-          day: `${date.getUTCDate() - 1}`,
-          month: `${date.getUTCMonth()}`,
-          year: `${date.getUTCFullYear() - 1970}`,
-          quarter: "0",
-          week: "0",
-          time: time.at(-2),
-        };
+        price.period = getFullDate(price.period);
 
         return price;
       });

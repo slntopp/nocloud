@@ -154,6 +154,22 @@ export default {
         this.instance.billing_plan = { uuid: this.instance.billing_plan };
       }
 
+      const fullSp = this.servicesProviders.find(
+        (sp) => sp.uuid === this.serviceProviderId
+      );
+
+      if (this.instance.type === "ovh") {
+        this.instance.config.location = fullSp.locations.find(
+          ({ id }) =>
+            id ===
+            this.instance.config.configuration[
+              `${this.instance.config.type}_datacenter`
+            ]
+        )?.title;
+      } else {
+        this.instance.config.location = fullSp.locations[0]?.title;
+      }
+
       this.isCreateLoading = true;
       try {
         const namespaceUuid = this.namespaces.find(
