@@ -87,6 +87,7 @@
           hide-details
           :readonly="!!updatedPlanUuid"
           :input-value="item.meta.auto_start"
+          :disabled="isDeleted(item)"
           @change="
             updatePlan(item, {
               key: 'meta',
@@ -103,6 +104,7 @@
           hide-details
           :readonly="!!updatedPlanUuid"
           :input-value="item.public"
+          :disabled="isDeleted(item)"
           @change="
             updatePlan(item, {
               key: 'public',
@@ -396,6 +398,9 @@ export default {
       } finally {
         this.updatedPlanUuid = "";
       }
+    },
+    isDeleted(plan) {
+      return plan.status === "DEL";
     },
   },
   created() {

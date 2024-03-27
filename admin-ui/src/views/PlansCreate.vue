@@ -7,37 +7,33 @@
 
     <v-form v-model="isValid" ref="form">
       <v-row>
-        <v-col cols="1" class="align-center d-flex">
+        <v-col cols="3" class="align-center d-flex">
           <v-subheader>Price model type</v-subheader>
-        </v-col>
-        <v-col cols="3">
-          <v-autocomplete
-            label="Type"
-            v-model="plan.type"
-            :items="types"
-            :rules="[rules.required]"
-          />
-          <v-text-field
-            label="Type name"
-            v-if="plan.type === 'custom'"
-            v-model="customTitle"
-            :rules="[rules.required]"
-          />
-        </v-col>
-        <v-col cols="1" class="align-center d-flex">
-          <v-subheader>Price model title</v-subheader>
+          <div>
+            <v-autocomplete
+              label="Type"
+              v-model="plan.type"
+              :items="types"
+              :rules="[rules.required]"
+            />
+            <v-text-field
+              label="Type name"
+              v-if="plan.type === 'custom'"
+              v-model="customTitle"
+              :rules="[rules.required]"
+            />
+          </div>
         </v-col>
         <v-col cols="3" class="align-center d-flex">
+          <v-subheader>Price model title</v-subheader>
           <v-text-field
             label="Title"
             v-model="plan.title"
             :rules="[rules.required]"
           />
         </v-col>
-        <v-col cols="1" class="align-center d-flex">
-          <v-subheader>Price model kind</v-subheader>
-        </v-col>
         <v-col cols="3" class="align-center d-flex">
+          <v-subheader>Price model kind</v-subheader>
           <v-radio-group
             :disabled="allowedKinds.length === 1"
             row
@@ -57,10 +53,8 @@
           </v-radio-group>
         </v-col>
         <template v-if="plan.kind === 'STATIC'">
-          <v-col cols="1" class="align-center d-flex">
-            <v-subheader>Default tariff</v-subheader>
-          </v-col>
           <v-col cols="3" class="align-center d-flex">
+            <v-subheader>Default tariff</v-subheader>
             <v-autocomplete
               label="Tariff"
               v-model="plan.meta.product"
@@ -70,10 +64,8 @@
         </template>
 
         <template v-else>
-          <v-col cols="1" class="align-center d-flex">
-            <v-subheader>Linked price model</v-subheader>
-          </v-col>
           <v-col cols="3" class="align-center d-flex">
+            <v-subheader>Linked price model</v-subheader>
             <v-autocomplete
               clearable
               @change="plan.meta.linkedPlan = $event ?? undefined"
@@ -84,30 +76,39 @@
           </v-col>
         </template>
 
-        <v-col cols="1" class="align-center d-flex">
-          <v-subheader>Invoice prefix</v-subheader>
-        </v-col>
         <v-col cols="3" class="align-center d-flex">
+          <v-subheader>Invoice prefix</v-subheader>
           <v-text-field label="Invoice prefix" v-model="plan.meta.prefix" />
         </v-col>
 
         <v-col cols="1" class="align-center d-flex">
           <v-subheader>Public</v-subheader>
-        </v-col>
-        <v-col cols="1" class="align-center d-flex">
           <v-switch style="width: fit-content" v-model="plan.public" />
         </v-col>
-        <template>
-          <v-col cols="1" class="align-center d-flex">
-            <v-subheader>Auto start</v-subheader>
-          </v-col>
-          <v-col cols="1" class="align-center d-flex">
-            <v-switch
-              style="width: fit-content"
-              v-model="plan.meta.auto_start"
-            />
-          </v-col>
-        </template>
+        <v-col cols="2" class="align-center d-flex">
+          <v-subheader
+            >Auto start
+            <v-tooltip :bottom="!top" :top="top">
+              <template v-slot:activator="{ on, attrs }">
+                <div class="d-inline-block" v-bind="attrs" v-on="on">
+                  <v-icon class="ml-2"> mdi-help-circle-outline </v-icon>
+                </div>
+              </template>
+              <v-list-item-title>
+                Run ALWAYS and immediately after receiving an
+                order</v-list-item-title
+              >
+            </v-tooltip>
+          </v-subheader>
+          <v-switch style="width: fit-content" v-model="plan.meta.auto_start" />
+        </v-col>
+        <v-col cols="2" class="align-center d-flex">
+          <v-subheader> After payment setup </v-subheader>
+          <v-switch
+            style="width: fit-content"
+            v-model="plan.meta.after_payment_setup"
+          />
+        </v-col>
       </v-row>
 
       <v-col :cols="viewport > 2560 ? 6 : 12">
@@ -130,7 +131,12 @@
 
       <v-row>
         <v-col>
-          <v-btn class="mr-2" v-if="isEdit" @click="isDialogVisible = true">
+          <v-btn
+            class="mr-2"
+            v-if="isEdit"
+            @click="isDialogVisible = true"
+            :disabled="isDeleted"
+          >
             Save
           </v-btn>
 
@@ -252,7 +258,8 @@ export default {
       resources: [],
       products: {},
       meta: {
-        auto_start: true,
+        auto_start: false,
+        after_payment_setup: false,
       },
       fee: null,
     },
@@ -349,7 +356,9 @@ export default {
       }
 
       function checkName({ title, uuid }, obj, num = 2) {
-        const value = obj.find((el) => el.title === title && el.uuid !== uuid);
+        const value = obj.find(
+          (el) => el.title === title && el.uuid !== uuid && el.status !== "DEL"
+        );
         const oldTitle = title.split(" ");
 
         if (oldTitle.length > 1 && num !== 2) {
@@ -554,6 +563,9 @@ export default {
       return this.$store.getters["servicesProviders/all"].filter(
         (sp) => sp.type == this.plan.type.split(" ")[0]
       );
+    },
+    isDeleted() {
+      return this.plan.status === "DEL";
     },
   },
   watch: {
