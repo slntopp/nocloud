@@ -99,7 +99,20 @@
         </v-col>
         <template>
           <v-col cols="1" class="align-center d-flex">
-            <v-subheader>Auto start</v-subheader>
+            <v-subheader
+              >Auto start
+              <v-tooltip :bottom="!top" :top="top">
+                <template v-slot:activator="{ on, attrs }">
+                  <div class="d-inline-block" v-bind="attrs" v-on="on">
+                    <v-icon> mdi-help-circle-outline </v-icon>
+                  </div>
+                </template>
+                <v-list-item-title>
+                  Run ALWAYS and immediately after receiving an
+                  order</v-list-item-title
+                >
+              </v-tooltip>
+            </v-subheader>
           </v-col>
           <v-col cols="1" class="align-center d-flex">
             <v-switch
