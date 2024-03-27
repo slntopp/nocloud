@@ -131,7 +131,12 @@
 
       <v-row>
         <v-col>
-          <v-btn class="mr-2" v-if="isEdit" @click="isDialogVisible = true">
+          <v-btn
+            class="mr-2"
+            v-if="isEdit"
+            @click="isDialogVisible = true"
+            :disabled="isDeleted"
+          >
             Save
           </v-btn>
 
@@ -558,6 +563,9 @@ export default {
       return this.$store.getters["servicesProviders/all"].filter(
         (sp) => sp.type == this.plan.type.split(" ")[0]
       );
+    },
+    isDeleted() {
+      return this.plan.status === "DEL";
     },
   },
   watch: {
