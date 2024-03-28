@@ -159,12 +159,12 @@ export default {
       );
 
       if (this.instance.type === "ovh") {
-        this.instance.config.location = fullSp.locations.find(
-          ({ id }) =>
-            id ===
+        this.instance.config.location = fullSp.locations.find(({ id }) =>
+          id.startsWith(
             this.instance.config.configuration[
               `${this.instance.config.type}_datacenter`
             ]
+          )
         )?.title;
       } else {
         this.instance.config.location = fullSp.locations[0]?.title;
