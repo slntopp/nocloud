@@ -100,6 +100,10 @@
       </router-link>
     </template>
 
+    <template v-slot:[`item.location`]="{ item }">
+      {{ getValue("location", item) }}
+    </template>
+
     <template v-slot:[`item.billingPlan.title`]="{ item, value }">
       <router-link
         :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
@@ -347,6 +351,9 @@ export default {
     getServiceProvider({ sp }) {
       return this.sp?.find(({ uuid }) => uuid === sp)?.title;
     },
+    getLocation(instance) {
+      return instance.config.location || "Unknown";
+    },
     getOSName(id, sp) {
       if (!id) return;
       return this.sp?.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
@@ -517,6 +524,7 @@ export default {
         { text: "Status", value: "state" },
         { text: "Tariff", value: "product" },
         { text: "Service provider", value: "sp" },
+        { text: "Location", value: "location" },
         { text: "Type", value: "type" },
         { text: "NCU price", value: "price" },
         { text: "Account price", value: "accountPrice" },
@@ -550,6 +558,7 @@ export default {
         date: this.getCreationDate,
         dueDate: (item) => +this.getExpirationDate(item),
         sp: this.getServiceProvider,
+        location: this.getLocation,
         "resources.ram": (item) =>
           +(item?.resources?.ram / 1024).toFixed(2) || 0,
         "resources.drive_size": (item) =>
@@ -589,6 +598,12 @@ export default {
           items: this.getSearchKeyItems("sp"),
           type: "select",
           title: "Service provider",
+        },
+        {
+          key: "location",
+          items: this.getSearchKeyItems("location"),
+          type: "select",
+          title: "Location",
         },
         {
           key: "access",
