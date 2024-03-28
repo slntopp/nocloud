@@ -159,7 +159,7 @@ import { defaultFilterObject } from "@/functions";
 const getDefaultInstance = () => ({
   title: "instance",
   config: {
-    auto_renew: true,
+    auto_renew: false,
     type: "vps",
     planCode: null,
     configuration: {
