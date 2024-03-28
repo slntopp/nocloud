@@ -2,10 +2,11 @@
   <div>
     <v-row>
       <v-col>
-        <v-text-field
+        <route-text-field
           readonly
-          label="price model"
+          label="Price model"
           :value="template.billingPlan.title"
+          :to="{ name: 'Plan', params: { planId: template.billingPlan.uuid } }"
         />
       </v-col>
 
@@ -30,7 +31,7 @@
         <v-text-field
           readonly
           label="Date (create)"
-          :value="formatSecondsToDate(template.data.creation)"
+          :value="formatSecondsToDate(template.created, true)"
         />
       </v-col>
 
@@ -38,7 +39,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="formatSecondsToDate(template.data.expiry.expiredate)"
+          :value="formatSecondsToDate(template.data.expiry.expiredate, true)"
         />
       </v-col>
     </v-row>
@@ -116,6 +117,7 @@ import {
 import { formatSecondsToDate, getBillingPeriod } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
+import routeTextField from "@/components/ui/routeTextField.vue";
 import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 

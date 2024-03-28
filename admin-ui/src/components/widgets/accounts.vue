@@ -5,8 +5,10 @@
         <v-btn-toggle
           class="mt-2"
           dense
-          :value="period"
-          @change="period = $event || period"
+          :value="data.period"
+          @change="
+            $emit('update:key', { key: 'period', value: $event || data.period })
+          "
           borderless
         >
           <v-btn x-small :value="item" :key="item" v-for="item in periods">
@@ -17,10 +19,10 @@
 
       <div class="d-flex justify-space-between align-center">
         <v-card-subtitle class="ma-0 my-2 pa-0"
-          >Created in last {{ period }}</v-card-subtitle
+          >Created in last {{ data.period }}</v-card-subtitle
         >
         <v-card-subtitle v-if="!isCountForPeriodLoading" class="ma-0 pa-0">
-          {{ countsForPeriod[period] }}
+          {{ countsForPeriod[data.period] }}
         </v-card-subtitle>
       </div>
 
@@ -64,7 +66,7 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref, toRefs, watch } from "vue";
 import {
   endOfDay,
   endOfMonth,
@@ -76,14 +78,16 @@ import {
 import BalanceDisplay from "@/components/balance.vue";
 import api from "@/api";
 
+const props = defineProps(["data"]);
+const { data } = toRefs(props);
+
+const emit = defineEmits(["update", "update:key"]);
+
 const isLoading = ref(false);
 const isCountForPeriodLoading = ref(false);
-const period = ref();
 const periods = ref(["day", "week", "month"]);
 
 onMounted(async () => {
-  period.value = "day";
-
   isLoading.value = true;
   try {
     const { pool, count } = await api.post("accounts", {
@@ -141,11 +145,22 @@ const getCountForPeriod = async (period) => {
   }
 };
 
-watch(period, () => {
-  if (!countsForPeriod.value[period.value]) {
-    getCountForPeriod(period.value);
+const setDefaultData = () => {
+  if (Object.keys(data.value || {}).length === 0) {
+    emit("update", { period: "week" });
   }
-});
+};
+
+setDefaultData();
+
+watch(
+  () => data.value.period,
+  () => {
+    if (!countsForPeriod.value[data.value.period]) {
+      getCountForPeriod(data.value.period);
+    }
+  }
+);
 </script>
 
 <script>

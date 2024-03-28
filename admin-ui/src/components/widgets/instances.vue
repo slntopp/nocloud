@@ -5,8 +5,10 @@
         <v-btn-toggle
           class="mt-2"
           dense
-          :value="period"
-          @change="period = $event || period"
+          :value="data.period"
+          @change="
+            emit('update:key', { key: 'period', value: $event || data.period })
+          "
           borderless
         >
           <v-btn x-small :value="item" :key="item" v-for="item in periods">
@@ -17,7 +19,7 @@
 
       <div class="d-flex justify-space-between align-center">
         <v-card-subtitle class="ma-0 my-2 pa-0"
-          >Created in last {{ period }}</v-card-subtitle
+          >Created in last {{ data.period }}</v-card-subtitle
         >
         <v-card-subtitle class="ma-0 pa-0">
           {{ countForPeriod }}
@@ -48,6 +50,11 @@
                 }"
               >
                 {{ instance.title }}
+                {{
+                  instance.title.length > 20
+                    ? instance.title.slice(0, 17) + "..."
+                    : instance.title
+                }}
               </router-link>
               <instance-state small :template="instance" />
             </div>
@@ -60,7 +67,7 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, toRefs } from "vue";
 import { useStore } from "@/store";
 import {
   endOfDay,
@@ -72,16 +79,20 @@ import {
 } from "date-fns";
 import InstanceState from "@/components/ui/instanceState.vue";
 
+const props = defineProps(["data"]);
+const { data } = toRefs(props);
+
+const emit = defineEmits(["update", "update:key"]);
+
 const store = useStore();
 
 const isLoading = ref(false);
-const period = ref("day");
 const periods = ref(["day", "week", "month"]);
 
 onMounted(async () => {
   isLoading.value = true;
   try {
-    await store.dispatch("services/fetch");
+    await store.dispatch("services/fetch", { showDeleted: true });
   } catch (e) {
     console.log(e);
   } finally {
@@ -92,24 +103,24 @@ onMounted(async () => {
 const instances = computed(() =>
   store.getters["services/getInstances"].map((i) => ({
     ...i,
-    data: {
-      ...(i?.data || {}),
-      creation: new Date(i.data?.creation || 0).getTime() / 1000,
-    },
+    created: new Date(+i.created || 0).getTime(),
   }))
 );
 
 const lastInstances = computed(() => {
-  const sorted = [...instances.value].sort(
-    (a, b) => +(b.data?.creation || 0) - (a.data?.creation || 0)
-  );
+  const sorted = [...instances.value].sort((a, b) => b.created - a.created);
 
   return sorted.slice(0, 5);
 });
+
 const countForPeriod = computed(() => {
+  if (!data.value.period) {
+    return 0;
+  }
+
   const dates = { from: null, to: null };
 
-  switch (period.value) {
+  switch (data.value.period) {
     case "day": {
       dates.from = startOfDay(new Date());
       dates.to = endOfDay(new Date());
@@ -131,11 +142,19 @@ const countForPeriod = computed(() => {
   dates.to = dates.to.getTime() / 1000;
 
   return instances.value.filter((ac) => {
-    const createDate = +ac.data?.creation || 0;
+    const createDate = +ac.created || 0;
 
     return dates.from <= createDate && dates.to >= createDate;
   }).length;
 });
+
+const setDefaultData = () => {
+  if (Object.keys(data.value || {}).length === 0) {
+    emit("update", { period: "week" });
+  }
+};
+
+setDefaultData();
 </script>
 
 <script>

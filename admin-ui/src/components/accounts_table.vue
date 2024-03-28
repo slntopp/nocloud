@@ -20,19 +20,8 @@
           {{ item.title }}
         </router-link>
         <div>
-          <v-icon
-            @click="
-              $router.push({
-                name: 'Account',
-                params: { accountId: item.uuid },
-                query: { tab: 2 },
-              })
-            "
-            class="ml-5"
-            >mdi-calendar-multiple</v-icon
-          >
+          <whmcs-btn :account="item" />
           <login-in-account-icon
-            class="ml-5"
             v-if="['ROOT', 'ADMIN'].includes(item.access.level)"
             :uuid="item.uuid"
           />
@@ -92,6 +81,7 @@ import { toRefs, ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
 import { useRouter } from "vue-router/composables";
 import NocloudTable from "@/components/table.vue";
+import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 
 const props = defineProps({
   value: {
@@ -102,9 +92,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  notFiltered: { type: Boolean, default: false },
+  noSearch: { type: Boolean, default: false },
+  customSearchParam: { type: String, default: "" },
 });
-const { value, singleSelect } = toRefs(props);
+const { value, singleSelect, customSearchParam, noSearch } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -127,6 +118,7 @@ const headers = ref([
   { text: "Address", value: "address" },
   { text: "Client currency", value: "currency" },
   { text: "Access level", value: "access.level" },
+  { text: "WHMCS ID", value: "data.whmcs_id" },
   { text: "Invoice based", value: "data.regular_payment" },
 ]);
 const levelColorMap = ref({
@@ -199,14 +191,17 @@ const accounts = computed(() => {
 const total = computed(() => store.getters["accounts/total"]);
 
 const requestOptions = computed(() => ({
-  filters: {
-    ...filter.value,
-    balance: filter.value?.balance && {
-      from: filter.value?.balance.from && +filter.value?.balance.from,
-      to: filter.value?.balance.to && +filter.value?.balance.to,
-    },
-    search_param: searchParam.value || undefined,
-  },
+  filters: !noSearch.value
+    ? {
+        ...filter.value,
+        balance: filter.value?.balance && {
+          from: filter.value?.balance.from && +filter.value?.balance.from,
+          to: filter.value?.balance.to && +filter.value?.balance.to,
+        },
+        search_param:
+          searchParam.value || filter.value.search_param || undefined,
+      }
+    : { search_param: customSearchParam.value || undefined },
   page: options.value.page,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy[0],
@@ -236,6 +231,7 @@ const searchFields = computed(() => [
   { title: "Created date", key: "data.date_create", type: "date" },
   { title: "Country", key: "data.country", type: "input" },
   { title: "Address", key: "data.address", type: "input" },
+  { title: "WHMCS ID", key: "data.whmcs_id", type: "input" },
   {
     title: "Client currency",
     key: "currency",
@@ -317,7 +313,9 @@ watch(accounts, () => {
 });
 
 watch(searchFields, () => {
-  store.commit("appSearch/setFields", searchFields.value);
+  if (!noSearch.value) {
+    store.commit("appSearch/setFields", searchFields.value);
+  }
 });
 
 watch(value, () => {
@@ -326,6 +324,7 @@ watch(value, () => {
 
 watch(filter, fetchAccountsDebounce, { deep: true });
 watch(options, fetchAccountsDebounce);
+watch(customSearchParam, fetchAccountsDebounce);
 </script>
 
 <script>

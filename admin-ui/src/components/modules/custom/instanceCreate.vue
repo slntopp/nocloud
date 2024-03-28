@@ -10,7 +10,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('title', newVal)"
-            label="title"
+            label="Name"
             :value="instance.title"
           >
           </v-text-field>
@@ -21,7 +21,7 @@
         <v-col><h3>Config:</h3></v-col>
         <v-col cols="12">
           <json-editor
-            label="config"
+            label="Config"
             :json="instance.config"
             @changeValue="(newVal) => setValue('config', newVal)"
           />
@@ -30,7 +30,7 @@
         <v-col><h3>Resources:</h3></v-col>
         <v-col cols="12">
           <json-editor
-            label="resources"
+            label="Resources"
             :json="instance.resources"
             @changeValue="(newVal) => setValue('resources', newVal)"
           />
@@ -40,7 +40,7 @@
       <v-row>
         <v-col lg="6" cols="12">
           <v-autocomplete
-            label="price model"
+            label="Price model"
             item-text="title"
             item-value="uuid"
             :value="instance.plan"

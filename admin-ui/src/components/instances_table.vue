@@ -330,7 +330,7 @@ export default {
       return period || "Unknown";
     },
     getCreationDate(inst) {
-      return inst.data.creation;
+      return +inst.created;
     },
     getExpirationDate(inst) {
       if (isInstancePayg(inst)) return "PayG";
@@ -510,7 +510,7 @@ export default {
       if (this.headers) return this.headers;
       const headers = [
         { text: "ID", value: "id" },
-        { text: "Title", value: "title" },
+        { text: "Name", value: "title" },
         { text: "Service", value: "service" },
         { text: "Account", value: "access" },
         { text: "Due date", value: "dueDate" },
@@ -522,7 +522,7 @@ export default {
         { text: "Account price", value: "accountPrice" },
         { text: "Period", value: "period" },
         { text: "Email", value: "email" },
-        { text: "Date", value: "date" },
+        { text: "Created date", value: "date" },
         { text: "UUID", value: "uuid" },
         { text: "Price model", value: "billingPlan.title" },
         { text: "IP", value: "state.meta.networking" },

@@ -5,8 +5,10 @@
         <v-btn-toggle
           class="mt-2"
           dense
-          :value="period"
-          @change="period = $event || period"
+          :value="data.period"
+          @change="
+            emit('update:key', { key: 'period', value: $event || data.period })
+          "
           borderless
         >
           <v-btn x-small :value="item" :key="item" v-for="item in periods">
@@ -17,10 +19,10 @@
 
       <div class="d-flex justify-space-between align-center">
         <v-card-subtitle class="ma-0 my-2 pa-0"
-          >Created in last {{ period }}</v-card-subtitle
+          >Created in last {{ data.period }}</v-card-subtitle
         >
         <v-card-subtitle class="ma-0 pa-0">
-          {{ dates[period] }}
+          {{ dates[data.period] }}
         </v-card-subtitle>
       </div>
 
@@ -65,7 +67,7 @@
 
 <script setup>
 import widget from "@/components/widgets/widget.vue";
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref, toRefs, watch } from "vue";
 import api from "@/api";
 import {
   endOfDay,
@@ -78,9 +80,13 @@ import {
 import { formatSecondsToDate } from "../../functions";
 import BalanceDisplay from "@/components/balance.vue";
 
+const props = defineProps(["data"]);
+const { data } = toRefs(props);
+
+const emit = defineEmits(["update", "update:key"]);
+
 const isLoading = ref(false);
 const isAccountsLoading = ref(false);
-const period = ref("day");
 const periods = ref(["day", "week", "month"]);
 
 const fiveLast = ref([]);
@@ -157,6 +163,14 @@ const getCountForPeriod = (period) => {
 const getAccount = (uuid) => {
   return accounts.value[uuid];
 };
+
+const setDefaultData = () => {
+  if (Object.keys(data.value || {}).length === 0) {
+    emit("update", { period: "week" });
+  }
+};
+
+setDefaultData();
 
 watch(fiveLast, () => {
   fiveLast.value.forEach(async ({ account: uuid }) => {

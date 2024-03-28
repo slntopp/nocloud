@@ -26,7 +26,6 @@
           sort-by="enabled"
           sort-desc
           item-key="uniqueId"
-          table-name="cloud-flavors"
           :show-select="false"
           :loading="isFlavoursLoading"
           :headers="pricesHeaders"
@@ -154,8 +153,8 @@ const pricesHeaders = ref([
   { text: "VCPUS", value: "vcpus" },
   { text: "GPU", value: "gpu.model" },
   { text: "Type", value: "type" },
-  { text: "Base price", value: "price" },
-  { text: "End price", value: "endPrice" },
+  { text: "Incoming price", value: "price" },
+  { text: "Sale price", value: "endPrice" },
   { text: "Enabled", value: "enabled" },
 ]);
 

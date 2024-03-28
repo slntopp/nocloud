@@ -4,11 +4,22 @@
       <v-col>
         <v-text-field
           readonly
-          label="price model"
+          label="Price model"
           :value="template.billingPlan.title"
-          @click:append="priceModelDialog = true"
-          append-icon="mdi-pencil"
-        />
+        >
+          <template v-slot:append>
+            <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
+            <v-icon
+              @click="
+                $router.push({
+                  name: 'Plan',
+                  params: { planId: template.billingPlan.uuid },
+                })
+              "
+              >mdi-login</v-icon
+            >
+          </template>
+        </v-text-field>
       </v-col>
       <v-col>
         <v-text-field
@@ -28,7 +39,7 @@
         <v-text-field
           readonly
           label="Date (create)"
-          :value="formatSecondsToDate(template.data.creation)"
+          :value="formatSecondsToDate(template.created, true)"
         />
       </v-col>
 
@@ -36,7 +47,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="!isDynamicPlan ? date : 'PAYG'"
+          :value="!isDynamicPlan ? dueDate : 'PAYG'"
           :append-icon="!isMonitoringEmpty ? 'mdi-pencil' : null"
           @click:append="changeDatesDialog = true"
         />
@@ -179,11 +190,11 @@ onMounted(() => {
   billingItems.value = getBillingItems();
 });
 
-const date = computed(() =>
-  formatSecondsToDate(+template.value?.data?.next_payment_date)
+const dueDate = computed(() =>
+  formatSecondsToDate(+template.value?.data?.next_payment_date, true)
 );
 const defaultCurrency = computed(() => store.getters["currencies/default"]);
-const isMonitoringEmpty = computed(() => date.value === "-");
+const isMonitoringEmpty = computed(() => dueDate.value === "-");
 const isDynamicPlan = computed(() => fullPlan.value?.kind === "DYNAMIC");
 const fullPlan = computed(() =>
   plans.value.find((p) => p.uuid === template.value.billingPlan.uuid)

@@ -33,7 +33,6 @@
       </div>
       <nocloud-table
         :headers="headers"
-        table-name="keyweb-prices"
         class="pa-4"
         :loading="isLoading"
         item-key="key"
@@ -166,8 +165,8 @@ const headers = ref([
   { text: "Duration", value: "duration" },
   { text: "Os", value: "os", width: "50" },
   { text: "Addons", value: "addons", width: "50" },
-  { text: "Base price", value: "basePrice", width: "75" },
-  { text: "Price", value: "price", width: "200" },
+  { text: "Incoming price", value: "basePrice", width: "75" },
+  { text: "Sale price", value: "price", width: "200" },
   { text: "Sell", value: "sell", width: "100" },
 ]);
 
@@ -175,8 +174,8 @@ const addonsHeaders = ref([
   { text: "Base title", value: "baseName" },
   { text: "Title", value: "name", width: "250" },
   { text: "Duration", value: "duration" },
-  { text: "Base price", value: "basePrice", width: "75" },
-  { text: "Price", value: "price", width: "200" },
+  { text: "Incoming price", value: "basePrice", width: "75" },
+  { text: "Sale price", value: "price", width: "200" },
   { text: "Sell", value: "sell", width: "100" },
 ]);
 
@@ -184,8 +183,8 @@ const osHeaders = ref([
   { text: "Base title", value: "baseName" },
   { text: "Title", value: "name", width: "250" },
   { text: "Duration", value: "duration" },
-  { text: "Base price", value: "basePrice", width: "75" },
-  { text: "Price", value: "price", width: "200" },
+  { text: "Incoming price", value: "basePrice", width: "75" },
+  { text: "Sale price", value: "price", width: "200" },
   { text: "Sell", value: "sell", width: "100" },
 ]);
 

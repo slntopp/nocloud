@@ -9,7 +9,7 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            label="title"
+            label="Name"
             :value="instance.title"
             :rules="rules.req"
             @change="(value) => setValue('title', value)"
@@ -18,7 +18,7 @@
         <v-col cols="6">
           <v-autocomplete
             :filter="defaultFilterObject"
-            label="type"
+            label="ype"
             :items="ovhTypes"
             :rules="rules.req"
             v-model="ovhType"
@@ -32,7 +32,7 @@
         <v-col cols="6">
           <v-autocomplete
             :filter="defaultFilterObject"
-            label="price model"
+            label="Price model"
             item-text="title"
             item-value="uuid"
             :value="instance.billing_plan"
@@ -43,7 +43,7 @@
         </v-col>
         <v-col cols="6" v-if="instance.products?.length > 0">
           <v-autocomplete
-            label="product"
+            label="Product"
             :value="instance.productTitle"
             :items="instance.products"
             @change="(value) => setValue('product', value)"
@@ -55,13 +55,13 @@
             :value="instance.config?.duration"
             item-value="value"
             item-text="title"
-            label="payment:"
+            label="Payment:"
             @change="(value) => setValue('config.duration', value)"
           />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            label="tariff"
+            label="Tariff"
             item-text="title"
             item-value="code"
             :value="instance.config?.planCode"
@@ -73,7 +73,7 @@
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            label="region"
+            label="Region"
             :value="instance.config?.configuration[`${ovhType}_datacenter`]"
             :items="regions[instance.config?.planCode]"
             :rules="rules.req"
@@ -247,7 +247,6 @@ export default {
           this.ovhType === "vps"
             ? addonKey.split(" ")[1]
             : addonKey.split(" ")[2];
-
 
         if (key && realAddon?.public) {
           if (!newAddons[key]) {

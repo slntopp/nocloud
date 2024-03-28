@@ -28,7 +28,6 @@
 
         <nocloud-table
           item-key="id"
-          table-name="vps-tarrifs"
           v-else-if="tab === 'Tariffs'"
           :show-expand="true"
           :show-select="false"
@@ -123,7 +122,6 @@
         </nocloud-table>
 
         <nocloud-table
-          table-name="vps-addons"
           v-else-if="tab === 'Addons'"
           :show-select="false"
           :items="addons"
@@ -221,7 +219,7 @@ export default {
         text: "Payment",
         value: "duration",
       },
-      { text: "Income price", value: "price.value" },
+      { text: "Incoming price", value: "price.value" },
       { text: "Sale price", value: "value" },
       {
         text: "Sell",
@@ -238,7 +236,7 @@ export default {
         text: "Payment",
         value: "duration",
       },
-      { text: "Income price", value: "price.value" },
+      { text: "Incoming price", value: "price.value" },
       { text: "Sale price", value: "value" },
       {
         text: "Sell",
@@ -290,7 +288,7 @@ export default {
           public: el.public,
           group: el.group,
           period: this.getPeriod(el.duration),
-          resources: { cpu: +cpu, ram: ram * 1024, disk: disk * 1024 },
+          resources: { cpu: +cpu, ram: ram * 1024, drive_size: disk * 1024 },
           meta: {
             ...meta,
             basePrice: el.price.value,
@@ -575,7 +573,7 @@ export default {
         price: { value: basePrice },
         value: product.price,
         datacenter,
-        addons:addons?.map(a=>a.split(' '))[1],
+        addons: addons?.map((a) => a.split(" "))[1],
         installation_fee: product.installationFee,
         os,
         name: product.title,

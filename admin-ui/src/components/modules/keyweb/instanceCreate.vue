@@ -10,7 +10,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('title', newVal)"
-            label="title"
+            label="Name"
             :rules="rules.req"
             :value="instance.title"
           >
@@ -19,7 +19,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('config.username', newVal)"
-            label="username"
+            label="Username"
             :rules="rules.req"
             :value="instance.config?.username"
           />
@@ -27,7 +27,7 @@
         <v-col cols="6">
           <v-text-field
             @change="(newVal) => setValue('config.password', newVal)"
-            label="password"
+            label="Password"
             :rules="rules.req"
             :value="instance.config?.password"
           />
@@ -36,14 +36,14 @@
           <v-text-field
             :rules="rules.req"
             @change="(newVal) => setValue('config.hostname', newVal)"
-            label="hostname"
+            label="Hostname"
             :value="instance.hostname?.password"
           />
         </v-col>
         <v-col cols="6">
           <v-autocomplete
             :filter="defaultFilterObject"
-            label="price model"
+            label="Price model"
             item-text="title"
             item-value="uuid"
             :value="instance.billing_plan"
@@ -54,7 +54,7 @@
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            label="product"
+            label="Product"
             :value="instance.product"
             :rules="rules.req"
             :items="products"
@@ -83,7 +83,7 @@
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            label="os"
+            label="OS"
             item-text="title"
             return-object
             :value="instance.config.configurations?.[os[0]?.type]"
@@ -99,7 +99,7 @@
         </v-col>
         <v-col cols="6" v-for="type in addonsTypes" :key="type">
           <v-autocomplete
-            :label="type"
+            :label="Type"
             item-text="title"
             return-object
             :value="instance.config.configurations?.[type]"

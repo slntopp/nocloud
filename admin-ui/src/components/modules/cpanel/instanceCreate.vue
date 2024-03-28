@@ -9,7 +9,7 @@
       <v-row>
         <v-col cols="6">
           <v-text-field
-            label="title"
+            label="Name"
             :value="instance.title"
             :rules="rules.req"
             @change="setValue('title', $event)"
@@ -22,14 +22,14 @@
             @change="setValue('billingPlan', $event)"
             item-text="title"
             return-object
-            label="price model"
+            label="Price model"
             :rules="planRules"
             item-value="uuid"
           ></v-select>
         </v-col>
         <v-col cols="6">
           <v-autocomplete
-            label="product"
+            label="Product"
             :items="products"
             item-text="title"
             item-value="key"
@@ -40,7 +40,7 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            label="domain"
+            label="Domain"
             :rules="rules.req"
             :value="instance.config.domain"
             @change="setValue('config.domain', $event)"
@@ -48,7 +48,7 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            label="email"
+            label="Email"
             :rules="rules.req"
             :value="instance.config.email"
             @change="setValue('config.email', $event)"
@@ -56,7 +56,7 @@
         </v-col>
         <v-col cols="6">
           <v-text-field
-            label="password"
+            label="Password"
             :rules="rules.req"
             :value="instance.config.password"
             @change="setValue('config.password', $event)"

@@ -169,7 +169,7 @@
 
           <v-subheader>SYSTEM</v-subheader>
 
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Chats' }">
+          <v-list-item v-bind="listItemBind" :to="{ name: 'Chats' }" @click="chatClick">
             <v-list-item-icon>
               <v-icon>mdi-chat</v-icon>
             </v-list-item-icon>
@@ -357,6 +357,9 @@
 </template>
 
 <script>
+import { reactive, ref } from "vue";
+import { mapGetters } from "vuex";
+import useLoginClient from "@/hooks/useLoginInClient.js"
 import api from "@/api.js";
 import config from "@/config.js";
 import balance from "@/components/balance.vue";
@@ -364,7 +367,6 @@ import languages from "@/components/languages.vue";
 import appSearch from "@/components/search/search.vue";
 import AppSnackbar from "@/components/snackbar.vue";
 import instancesTableModal from "@/components/instances_table_modal.vue";
-import { mapGetters } from "vuex";
 import Themes from "@/components/themes.vue";
 
 export default {
@@ -377,22 +379,27 @@ export default {
     languages,
     instancesTableModal,
   },
-  data: () => ({
-    isMenuMinimize: true,
-    isMouseOnMenu: false,
-    easterEgg: false,
-    config,
-    navTitles: config.navTitles ?? {},
-    overlay: {
-      timeoutId: null,
-      isVisible: false,
-      buttonTitle: "",
-      uuid: "",
-      x: 0,
-      y: 0,
-    },
-    unreadChatsCount: 0,
-  }),
+  setup() {
+    const { loginHandler } = useLoginClient()
+
+    return {
+      isMenuMinimize: ref(true),
+      isMouseOnMenu: ref(false),
+      easterEgg: ref(false),
+      config,
+      navTitles: ref(config.navTitles ?? {}),
+      overlay: reactive({
+        timeoutId: null,
+        isVisible: false,
+        buttonTitle: "",
+        uuid: "",
+        x: 0,
+        y: 0,
+      }),
+      unreadChatsCount: ref(0),
+      loginHandler
+    }
+  },
   methods: {
     logoutHandler() {
       this.$store.dispatch("auth/logout");
@@ -444,6 +451,9 @@ export default {
         this.overlay.isVisible = false;
       }, 100);
     },
+    chatClick() {
+      this.$store.commit("app/setChatClicks", 1)
+    },
   },
   computed: {
     ...mapGetters("app", ["theme"]),
@@ -486,16 +496,16 @@ export default {
   },
   created() {
     window.addEventListener("message", ({ data, origin, source }) => {
-      if (origin.includes("localhost:8081") || !data) return;
+      if (origin.includes("localhost") || !data) return;
       if (data === "ready") return;
-      if (data.type === "get-user") {
+      if (data.type === "send-user") {
         const setting = "plugin-chats-overlay";
 
         api.settings.get([setting]).then((res) => {
           const { title } = JSON.parse(res[setting]);
 
           setTimeout(() => {
-            source.postMessage(title, "*");
+            source.postMessage({ type: 'button-title', value: title }, "*");
           }, 300);
           this.overlay.uuid = data.value.uuid;
         });
@@ -508,6 +518,10 @@ export default {
       }
       if (data.type === "open-user") {
         window.open(`/admin/accounts/${data.value.uuid}`, "_blank");
+        return;
+      }
+      if (data.type === "open-chat") {
+        this.loginHandler({ accountUuid: this.userdata.uuid, chatId: data.value.uuid });
         return;
       }
       if (data.type === "get-theme") {

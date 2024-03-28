@@ -1,20 +1,7 @@
 <template>
   <v-card elevation="0" color="background-light" class="pa-4">
-    <div style="z-index: 100; position: relative; top: -25px; right: 40px">
+    <div style="z-index: 0; position: relative; top: -25px; right: 40px">
       <div class="d-flex justify-end mt-1 align-center flex-wrap">
-        <hint-btn hint="Create transaction/invoice">
-          <v-btn
-            class="ma-1"
-            :disabled="isLocked"
-            :to="{
-              name: 'Transactions create',
-              params: { account: account.uuid },
-            }"
-          >
-            <v-icon>mdi-invoice-text-outline</v-icon>
-          </v-btn>
-        </hint-btn>
-
         <hint-btn hint="Create instance">
           <v-btn
             class="ma-1"
@@ -75,10 +62,12 @@
             </v-btn>
           </confirm-dialog>
         </hint-btn>
-        <v-chip class="ma-1" color="primary" outlined
-          >Balance: {{ account.balance?.toFixed(2) || 0 }}
-          {{ account.currency }}</v-chip
-        >
+        <hint-btn hint="Create transaction/invoice">
+          <v-chip @click="openTransaction" class="ma-1" color="primary" outlined
+            >Balance: {{ account.balance?.toFixed(2) || 0 }}
+            {{ account.currency }}</v-chip
+          >
+        </hint-btn>
       </div>
     </div>
 
@@ -146,7 +135,11 @@
             readonly
             :value="account.data?.whmcs_id"
             label="WHMCS id"
-          />
+          >
+            <template v-slot:append>
+              <whmcs-btn :account="account" />
+            </template>
+          </v-text-field>
         </v-col>
       </v-row>
     </nocloud-expansion-panels>
@@ -160,7 +153,11 @@
         v-model="showDeletedInstances"
       />
     </div>
-    <instances-table :items="accountInstances" no-search :show-select="false" />
+    <instances-table
+      :items="filteredInstances"
+      no-search
+      :show-select="false"
+    />
 
     <v-card-title class="px-0">SSH keys:</v-card-title>
 
@@ -234,6 +231,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import hintBtn from "@/components/ui/hintBtn.vue";
 import { formatSecondsToDate } from "@/functions";
+import whmcsBtn from "@/components/ui/whmcsBtn.vue";
 
 export default {
   name: "account-info",
@@ -244,6 +242,7 @@ export default {
     InstancesTable,
     nocloudTable,
     hintBtn,
+    whmcsBtn,
   },
   mixins: [snackbar],
   props: ["account"],
@@ -366,7 +365,7 @@ export default {
       try {
         const services = [];
 
-        this.accountInstances.forEach((instance) => {
+        this.accountsByInstance.forEach((instance) => {
           const tempService =
             services.find((s) => s.uuid === instance.service) ||
             JSON.parse(
@@ -402,6 +401,12 @@ export default {
         this.isChangeRegularPaymentLoading = false;
       }
     },
+    openTransaction() {
+      this.$router.push({
+        name: "Transactions create",
+        params: { account: this.account.uuid },
+      });
+    },
   },
   mounted() {
     this.title = this.account.title;
@@ -433,16 +438,19 @@ export default {
         (n) => n.access.namespace === this.account?.uuid
       );
     },
-    accountInstances() {
-      const instances = this.instances.filter(
+    accountsByInstance() {
+      return this.instances.filter(
         (i) => i.access.namespace === this.accountNamespace?.uuid
       );
-
+    },
+    filteredInstances() {
       if (this.showDeletedInstances) {
-        return instances;
+        return this.accountsByInstance;
       }
 
-      return instances.filter((inst) => inst.state.state !== "DELETED");
+      return this.accountsByInstance.filter(
+        (inst) => inst.state?.state !== "DELETED"
+      );
     },
     isCurrencyReadonly() {
       return this.account.currency && this.account.currency !== "NCU";

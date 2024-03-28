@@ -22,7 +22,6 @@
     </v-row>
 
     <nocloud-table
-      table-name="dedicated-prices"
       sort-by="isBeenSell"
       sort-desc
       item-key="id"
@@ -181,7 +180,6 @@
           </template>
 
           <nocloud-table
-            table-name="dedicated-addons-prices"
             class="pa-4"
             item-key="id"
             :show-select="false"
@@ -247,8 +245,8 @@ export default {
         text: "Payment",
         value: "duration",
       },
-      { text: "Income price", value: "price" },
-      { text: "Sale price", value: "basePrice" },
+      { text: "Incoming price", value: "basePrice" },
+      { text: "Sale price", value: "price" },
       { text: "Addons", value: "addons" },
       {
         text: "Sell",
@@ -262,8 +260,8 @@ export default {
         text: "Payment",
         value: "duration",
       },
-      { text: "Income price", value: "price" },
-      { text: "Sale price", value: "basePrice" },
+      { text: "Incoming price", value: "basePrice" },
+      { text: "Sale price", value: "price" },
       {
         text: "Sell",
         value: "public",
@@ -512,6 +510,7 @@ export default {
             basePrice: p.basePrice,
             apiName: p.apiName,
             cpu: p.cpu,
+            baseInstallationFee: p.installation_fee?.price?.value,
             addons,
           },
         };
@@ -604,6 +603,10 @@ export default {
               ...a,
               price: getMarginedValue(this.fee, a.basePrice),
             })),
+          },
+          installation_fee: {
+            ...p.installation_fee,
+            value: getMarginedValue(this.fee, p.installation_fee.price.value),
           },
           price: getMarginedValue(this.fee, p.basePrice),
         };
@@ -705,7 +708,7 @@ export default {
         basePrice: product.meta.basePrice,
         installation_fee: {
           price: {
-            value: +this.convertPrice(product.installationFee),
+            value: product.meta.baseInstallationFee,
           },
           value: product.installationFee,
         },

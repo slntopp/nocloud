@@ -4,11 +4,22 @@
       <v-col cols="4">
         <v-text-field
           readonly
-          label="price model"
+          label="Price model"
           :value="template.billingPlan.title"
-          @click:append="priceModelDialog = true"
-          append-icon="mdi-pencil"
-        />
+        >
+          <template v-slot:append>
+            <v-icon @click="priceModelDialog = true">mdi-pencil</v-icon>
+            <v-icon
+              @click="
+                $router.push({
+                  name: 'Plan',
+                  params: { planId: template.billingPlan.uuid },
+                })
+              "
+              >mdi-login</v-icon
+            >
+          </template>
+        </v-text-field>
       </v-col>
     </v-row>
     <instances-panels title="Prices">
