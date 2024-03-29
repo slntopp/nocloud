@@ -145,6 +145,17 @@
         />
       </div>
     </template>
+
+    <template v-slot:[`item.config.auto_renew`]="{ item }">
+      <div class="d-flex justify-center align-center regular_payment">
+        <v-switch
+          dense
+          hide-details
+          readonly
+          :input-value="item.config.auto_renew"
+        />
+      </div>
+    </template>
   </nocloud-table>
 </template>
 
@@ -542,6 +553,7 @@ export default {
         { text: "DCV", value: "resources.dcv" },
         { text: "Approver email", value: "resources.approver_email" },
         { text: "Invoice based", value: "config.regular_payment" },
+        { text: "Auto renew", value: "config.auto_renew" },
       ];
       return headers;
     },
