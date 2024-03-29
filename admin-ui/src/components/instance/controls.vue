@@ -463,12 +463,14 @@ export default {
           this.isDetached
             ? {
                 action: "attach",
+                title: "Show in user app",
                 type: "method",
                 icon: "mdi-paperclip",
                 method: this.attachInstance,
               }
             : {
                 action: "detach",
+                title: "Hide in user app",
                 icon: "mdi-paperclip-off",
                 type: "method",
                 method: () => this.attachInstance(true),
