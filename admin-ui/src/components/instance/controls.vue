@@ -424,6 +424,25 @@ export default {
     type() {
       return this.template.billingPlan.type;
     },
+    baseVmControls() {
+      return [
+        this.isDetached
+          ? {
+              action: "attach",
+              title: "Show in user app",
+              type: "method",
+              icon: "mdi-paperclip",
+              method: this.attachInstance,
+            }
+          : {
+              action: "detach",
+              title: "Hide in user app",
+              icon: "mdi-paperclip-off",
+              type: "method",
+              method: () => this.attachInstance(true),
+            },
+      ];
+    },
     vmControlBtns() {
       const types = {
         ione: [
@@ -460,21 +479,7 @@ export default {
             disabled: this.ioneActions?.vnc,
             icon: "mdi-console",
           },
-          this.isDetached
-            ? {
-                action: "attach",
-                title: "Show in user app",
-                type: "method",
-                icon: "mdi-paperclip",
-                method: this.attachInstance,
-              }
-            : {
-                action: "detach",
-                title: "Hide in user app",
-                icon: "mdi-paperclip-off",
-                type: "method",
-                method: () => this.attachInstance(true),
-              },
+          ...this.baseVmControls,
         ],
         "ovh dedicated": [
           {
@@ -494,6 +499,7 @@ export default {
             disabled: this.ovhActions?.reboot,
             icon: "mdi-console",
           },
+          ...this.baseVmControls,
         ],
         "ovh cloud": [
           {
@@ -532,6 +538,7 @@ export default {
             disabled: this.ovhActions?.reboot,
             icon: "mdi-console",
           },
+          ...this.baseVmControls,
         ],
         "ovh vps": [
           {
@@ -575,6 +582,7 @@ export default {
             disabled: this.ovhActions?.reboot,
             icon: "mdi-console",
           },
+          ...this.baseVmControls,
         ],
         empty: [
           {
@@ -598,6 +606,7 @@ export default {
             icon: "mdi-power-sleep",
             disabled: this.emptyActions?.suspend,
           },
+          ...this.baseVmControls,
         ],
         keyweb: [
           {
@@ -644,8 +653,9 @@ export default {
             icon: "mdi-console",
             disabled: !this.keywebActions?.vnc,
           },
+          ...this.baseVmControls,
         ],
-        opensrs: [{ action: "dns", icon: "mdi-dns" }],
+        opensrs: [{ action: "dns", icon: "mdi-dns", ...this.baseVmControls }],
         cpanel: [
           {
             action: "start",
@@ -655,6 +665,7 @@ export default {
             disabled: this.template.config.auto_start,
           },
           { action: "session", icon: "mdi-console" },
+          ...this.baseVmControls,
         ],
       };
 
