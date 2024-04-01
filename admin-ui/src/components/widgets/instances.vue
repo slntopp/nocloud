@@ -49,10 +49,9 @@
                   params: { instanceId: instance.uuid },
                 }"
               >
-                {{ instance.title }}
                 {{
-                  instance.title.length > 20
-                    ? instance.title.slice(0, 17) + "..."
+                  instance.title.length > 30
+                    ? instance.title.slice(0, 27) + "..."
                     : instance.title
                 }}
               </router-link>
