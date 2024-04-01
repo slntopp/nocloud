@@ -36,4 +36,3 @@ globalThis.dark = true;
 // globalThis.dark = false
 
 // globalThis.logoSrc = '/img/logo.svg'
-// globalThis.timeZone = 'Europe/Warsaw';

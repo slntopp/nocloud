@@ -10,6 +10,5 @@ export default {
 			whiteText: global?.dye?.aside?.whiteText,
 		}
 	},
-	navTitles: global.navTitles ?? {},
-	timeZone: global.timeZone
+	navTitles: global.navTitles ?? {}
 }
