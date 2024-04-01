@@ -86,7 +86,7 @@
               runningActionReportUuid === item.uuid
             "
             class="mx-1"
-            :icon="action.icon"
+            :icon="!!action.icon"
           >
             <span v-if="!action.icon">
               {{ action.title }}
