@@ -17,7 +17,7 @@
     no-hide-uuid
   >
     <template v-slot:[`item.ts`]="{ value }">
-      {{ new Date(new Date(1970, 0, 1).setSeconds(value)).toLocaleString() }}
+      {{ formatSecondsToDate(value, true) }}
     </template>
     <template v-slot:[`item.requestor`]="{ value }">
       <router-link
@@ -61,7 +61,7 @@ import { toRefs, ref, computed, watch } from "vue";
 import nocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";
-import { debounce } from "@/functions";
+import { debounce, formatSecondsToDate } from "@/functions";
 
 const props = defineProps({
   tableName: {},
