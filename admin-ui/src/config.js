@@ -11,4 +11,5 @@ export default {
 		}
 	},
 	navTitles: global.navTitles ?? {},
+	timeZone: global.timeZone
 }

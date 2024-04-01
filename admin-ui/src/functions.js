@@ -1,5 +1,6 @@
 import yaml from "yaml";
 import XlsxService from "@/services/XlsxService";
+import config from "@/config.js";
 
 export function isObject(item) {
   return item && typeof item === "object" && !Array.isArray(item);
@@ -290,8 +291,9 @@ export function toPascalCase(text) {
 export function formatSecondsToDate(timestamp, withTime, sep = ".") {
   if (!timestamp || !+timestamp) return;
   const date = new Date(timestamp * 1000);
+  console.log(config.timeZone);
   const time = date
-    .toLocaleString(undefined, { hourCycle: "h24" })
+    .toLocaleString(undefined, { hourCycle: "h24" ,timeZone:config.timeZone})
     .split(" ")[1];
 
   const year = date.toUTCString().split(" ")[3];
