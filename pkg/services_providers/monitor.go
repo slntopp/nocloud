@@ -17,9 +17,11 @@ package services_providers
 
 import (
 	"context"
-	stpb "github.com/slntopp/nocloud-proto/statuses"
 	"time"
 
+	stpb "github.com/slntopp/nocloud-proto/statuses"
+
+	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
@@ -84,6 +86,15 @@ func (s *ServicesProviderServer) MonitoringRoutineState() Routine {
 	return s.monitoring
 }
 
+const getAccsBalance = `
+FOR node, edge, path IN 3
+    INBOUND @ig
+    GRAPH @permissions
+    FILTER path.edges[*].role == ["owner","owner","owner"]
+    FILTER IS_SAME_COLLECTION(node, @@accounts)
+    RETURN node.balance
+`
+
 func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
 	log := s.log.Named("MonitoringRoutine")
 
@@ -125,6 +136,30 @@ start:
 					return
 				}
 
+				var balance = make(map[string]float64, len(igroups))
+
+				for _, group := range igroups {
+					cur, err := s.db.Query(ctx, getAccsBalance, map[string]any{
+						"ig":          driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, group.GetUuid()),
+						"permissions": schema.PERMISSIONS_GRAPH.Name,
+						"@accounts":   schema.ACCOUNTS_COL,
+					})
+					if err != nil {
+						log.Error("Failed to get cursor", zap.Error(err))
+						continue
+					}
+
+					var result float64
+
+					_, err = cur.ReadDocument(ctx, &result)
+					if err != nil {
+						log.Error("Failed to get balance", zap.Error(err))
+						continue
+					}
+					balance[group.GetUuid()] = result
+					cur.Close()
+				}
+
 				log.Debug("Got InstancesGroups", zap.Int("length", len(igroups)))
 
 				client, ok := s.drivers[sp.GetType()]
@@ -133,19 +168,11 @@ start:
 					return
 				}
 
-				_, err = client.SuspendMonitoring(ctx, &driverpb.MonitoringRequest{
-					Groups:           igroups,
-					ServicesProvider: sp.ServicesProvider,
-					Scheduled:        true,
-				})
-				if err != nil {
-					log.Error("Error Suspend Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
-				}
-
 				_, err = client.Monitoring(ctx, &driverpb.MonitoringRequest{
 					Groups:           igroups,
 					ServicesProvider: sp.ServicesProvider,
 					Scheduled:        true,
+					Balance:          balance,
 				})
 				if err != nil {
 					log.Error("Error Monitoring ServicesProvider", zap.String("sp", sp.GetUuid()), zap.Error(err))
