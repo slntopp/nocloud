@@ -92,7 +92,7 @@ FOR node, edge, path IN 3
     GRAPH @permissions
     FILTER path.edges[*].role == ["owner","owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@accounts)
-    RETURN node.balance
+    RETURN node.balance == null ? 0 : node.balance
 `
 
 func (s *ServicesProviderServer) MonitoringRoutine(ctx context.Context) {
