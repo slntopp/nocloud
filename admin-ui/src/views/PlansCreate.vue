@@ -109,6 +109,11 @@
             v-model="plan.meta.after_payment_setup"
           />
         </v-col>
+
+        <v-col v-if="plan.type === 'ione'" cols="2" class="align-center d-flex">
+          <v-subheader> High CPU </v-subheader>
+          <v-switch style="width: fit-content" v-model="plan.meta.highCPU" />
+        </v-col>
       </v-row>
 
       <v-col :cols="viewport > 2560 ? 6 : 12">
@@ -265,7 +270,7 @@ export default {
     },
     rules: {
       required: (v) => !!v || "This field is required!",
-      price: (v) => (v !== "" && +v >= 0) || "Wrong price",
+      price: (v) => (v !== "" && Math.abs(+v) >= 0) || "Wrong price",
     },
 
     isDialogVisible: false,
