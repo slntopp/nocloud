@@ -270,7 +270,7 @@ export default {
     },
     rules: {
       required: (v) => !!v || "This field is required!",
-      price: (v) => (v !== "" && +v >= 0) || "Wrong price",
+      price: (v) => (v !== "" && Math.abs(+v) >= 0) || "Wrong price",
     },
 
     isDialogVisible: false,
