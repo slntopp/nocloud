@@ -145,7 +145,7 @@ start:
 						"@accounts":   schema.ACCOUNTS_COL,
 					})
 					if err != nil {
-						log.Error("Failed to get cursor", zap.Error(err))
+						log.Error("Failed to get cursor", zap.Error(err), zap.String("uuid", group.GetUuid()))
 						continue
 					}
 
@@ -153,7 +153,7 @@ start:
 
 					_, err = cur.ReadDocument(ctx, &result)
 					if err != nil {
-						log.Error("Failed to get balance", zap.Error(err))
+						log.Error("Failed to get balance", zap.Error(err), zap.String("uuid", group.GetUuid()))
 						continue
 					}
 					balance[group.GetUuid()] = result
