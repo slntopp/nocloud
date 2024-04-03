@@ -134,8 +134,7 @@ onMounted(() => {
 const tariffs = computed(() => {
   const tariffs = [];
   Object.keys(plan.value?.products || {}).forEach((key) => {
-    if (plan.value.products[key]?.price > instanceTariffPrice.value)
-      tariffs.push({ ...plan.value.products[key], key });
+    tariffs.push({ ...plan.value.products[key], key });
   });
 
   if (plan.value?.uuid === template.value.billingPlan.uuid) {
@@ -199,39 +198,9 @@ const originalProduct = computed(() => {
 });
 
 const availablePlans = computed(() => {
-  const availablePlans = [];
-
-  const copyPlans = JSON.parse(JSON.stringify(plans.value)).filter(
-    (p) => p.type === template.value.type
+  return JSON.parse(JSON.stringify(plans.value)).filter(
+    (p) => p.type === template.value.type && p.status !== "DEL"
   );
-
-  copyPlans.forEach((p) => {
-    const keys = Object.keys(p.products).filter(
-      (key) => p.products[key]?.price > instanceTariffPrice.value
-    );
-    if (keys.length > 0) {
-      availablePlans.push(p);
-    }
-  });
-
-  availablePlans.push(template.value.billingPlan);
-
-  return availablePlans;
-});
-
-const instanceTariffPrice = computed(() => {
-  switch (template.value.type) {
-    case "ovh": {
-      return template.value.billingPlan.products[
-        template.value.config.duration + " " + template.value.config.planCode
-      ]?.price;
-    }
-    default: {
-      return (
-        template.value.billingPlan.products[template.value.product]?.price || 0
-      );
-    }
-  }
 });
 
 const isChangeBtnDisabled = computed(() => {
