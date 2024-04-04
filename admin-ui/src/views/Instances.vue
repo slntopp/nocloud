@@ -62,24 +62,12 @@
             v-model="newInstance.customTitle"
             :rules="rules.req"
           />
-          <v-autocomplete
-            dense
-            :filter="defaultFilterObject"
-            label="service provider"
-            style="width: 300px"
-            item-text="title"
-            item-value="uuid"
-            :items="typedServiceProviders"
-            v-model="newInstance.serviceProviderId"
-            :rules="rules.req"
-          />
 
           <v-btn
             :to="{
               name: 'Instance create',
               params: {
                 serviceId,
-                serviceProviderId: newInstance.serviceProviderId,
                 accountId: newInstance.account,
                 type:
                   newInstance.type === 'custom'
@@ -142,7 +130,6 @@ export default {
       service: [],
       type: "",
       customTitle: "",
-      serviceProviderId: "",
       account: "",
     },
     rules: {
