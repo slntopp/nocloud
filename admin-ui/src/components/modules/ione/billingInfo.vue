@@ -42,6 +42,25 @@
           :value="formatSecondsToDate(template.created, true)"
         />
       </v-col>
+      <v-col>
+        <!-- <v-text-field
+          label="Date (create)"
+          type="datetime-local"
+          :value="formatSecondsToDateTime(template.created, true)"
+        /> -->
+
+        <date-picker
+          label="Date (create)"
+          :value="formatSecondsToDateString(template.created, false, '-')"
+          :placeholder="formatSecondsToDate(template.created, true)"
+          @input="
+            emit('update', {
+              key: 'created',
+              value: formatDateToTimestamp($event),
+            })
+          "
+        />
+      </v-col>
 
       <v-col v-if="!isMonitoringEmpty">
         <v-text-field
@@ -155,7 +174,12 @@ import {
   onMounted,
   watch,
 } from "vue";
-import { formatSecondsToDate, getBillingPeriod } from "@/functions";
+import {
+  formatSecondsToDate,
+  getBillingPeriod,
+  formatSecondsToDateString,
+  formatDateToTimestamp,
+} from "@/functions";
 import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
@@ -163,6 +187,7 @@ import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
+import DatePicker from "../../ui/datePicker.vue";
 
 const props = defineProps(["template", "plans", "service", "sp", "account"]);
 const emit = defineEmits(["refresh", "update"]);

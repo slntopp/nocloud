@@ -9,7 +9,7 @@
         v-bind="attrs"
         v-on="on"
         prepend-inner-icon="mdi-calendar"
-        :value="value"
+        :value="placeholder || value"
         readonly
         :dense="dense"
         clearable
@@ -40,6 +40,7 @@ const props = defineProps({
   dense: { type: Boolean, default: false },
   range: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
+  placeholder: {},
 });
 const { value, min, label, dense } = toRefs(props);
 
