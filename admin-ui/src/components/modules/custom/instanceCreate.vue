@@ -44,7 +44,7 @@
             item-text="title"
             item-value="uuid"
             :value="instance.plan"
-            :items="plans.list"
+            :items="plans"
             :rules="planRules"
             @change="(newVal) => setValue('billing_plan', newVal)"
           />

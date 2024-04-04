@@ -18,7 +18,7 @@
         <v-col cols="6">
           <v-autocomplete
             :filter="defaultFilterObject"
-            label="ype"
+            label="Type"
             :items="ovhTypes"
             :rules="rules.req"
             v-model="ovhType"
@@ -208,7 +208,7 @@ export default {
     addProducts(instance) {
       const { plan, billing_plan } = instance;
       const { products } =
-        this.plans.list.find((el) => el.uuid === plan.uuid) || {};
+        this.plans.find((el) => el.uuid === plan.uuid) || {};
 
       if (billing_plan.kind === "STATIC") {
         instance.products = [];
@@ -262,7 +262,7 @@ export default {
       const data = JSON.parse(JSON.stringify(this.instance));
 
       if (path.includes("billing_plan")) {
-        const plan = this.plans.list.find(({ uuid }) => val === uuid);
+        const plan = this.plans.find(({ uuid }) => val === uuid);
         const title = plan?.title.split(" ");
 
         title.pop();
@@ -401,7 +401,7 @@ export default {
   },
   computed: {
     filtredPlans() {
-      return this.plans?.list?.filter((p) => p.type.includes(this.ovhType));
+      return this.plans?.filter((p) => p.type.includes(this.ovhType));
     },
     tariffs() {
       const tariffs = this.flavors[this.instance?.billing_plan?.uuid];
