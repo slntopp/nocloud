@@ -17,7 +17,7 @@
         </v-col>
         <v-col cols="6">
           <v-select
-            :items="plans.list"
+            :items="plans"
             :value="billingPlanId"
             @change="setValue('billingPlan', $event)"
             item-text="title"
@@ -91,7 +91,7 @@ export default {
     if (!this.isEdit) {
       this.$emit("set-instance", getDefaultInstance());
     } else {
-      const plan = this.plans.list.find(
+      const plan = this.plans.find(
         (p) => p.uuid == this.instance.billing_plan
       );
       this.setValue("billingPlan", plan);
@@ -103,7 +103,7 @@ export default {
       return this.instance.billing_plan || this.instance.billingPlan.uuid;
     },
     products() {
-      const plan = this.plans.list.find((p) => p.uuid == this.billingPlanId);
+      const plan = this.plans.find((p) => p.uuid == this.billingPlanId);
       return Object.keys(plan?.products || {}).map((key) => ({
         ...plan.products[key],
         key,
