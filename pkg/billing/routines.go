@@ -337,6 +337,12 @@ FOR service IN @@services // Iterate over Services
         FILTER record.exec <= @now
         FILTER !record.processed
         FILTER record.instance IN instances
+
+		LET inst = DOCUMENT(CONCAT(@instances, "/", record.instance))
+		LET bp = DOCUMENT(CONCAT(@billing_plans, "/", inst.billing_plan.uuid))
+		LET resources = bp.resources == null ? [] : bp.resources
+		LET item = record.product == null ? LAST(FOR res in resources FILTER res.key == record.resource return res) : bp.products[record.product]
+
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND
 			SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency)))
@@ -345,10 +351,10 @@ FOR service IN @@services // Iterate over Services
 			FILTER edge
 				RETURN edge.rate
 		)
-        LET total = record.total * rate
+        LET cost = record.total * rate * item.price
             UPDATE record._key WITH { 
 				processed: true, 
-				total: total,
+				cost: cost,
 				currency: currency,
 				service: service._key,
 				account: account._key
@@ -364,7 +370,7 @@ FOR service IN @@services // Iterate over Services
         account: account._key,
         service: service._key,
         records: records[*]._key,
-        total: SUM(records[*].total), // Calculate Total
+        total: SUM(records[*].cost), // Calculate Total
 		meta: {type: "transaction"},
     } IN @@transactions RETURN NEW
 `
