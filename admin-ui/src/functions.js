@@ -1,5 +1,6 @@
 import yaml from "yaml";
 import XlsxService from "@/services/XlsxService";
+import store from "@/store";
 
 export function isObject(item) {
   return item && typeof item === "object" && !Array.isArray(item);
@@ -291,7 +292,10 @@ export function formatSecondsToDate(timestamp, withTime, sep = ".") {
   if (!timestamp || !Number(timestamp)) return;
   const date = new Date(Number(timestamp) * 1000);
   const time = date
-    .toLocaleString(undefined, { hourCycle: "h24" })
+    .toLocaleString(undefined, {
+      hourCycle: "h24",
+      timeZone: store.getters["settings/timeZone"],
+    })
     .split(" ")[1];
 
   const year = date.toUTCString().split(" ")[3];
@@ -348,11 +352,14 @@ export function getFullDate(period) {
   result.day = Math.floor(period / dayEqualent);
   period -= result.day * dayEqualent;
 
+  if (result.day === 90) {
+    result.day = 0;
+    result.quarter = 1;
+    return result;
+  }
+
   result.year = Math.floor(result.day / 360);
   result.day -= result.year * 365;
-
-  result.quarter = Math.floor(result.day / 90);
-  result.day -= result.quarter * 90;
 
   result.month = Math.floor(result.day / 30);
   result.day -= result.month * 30;
@@ -471,6 +478,7 @@ export function getBillingPeriod(period) {
       "1 months": "Monthly",
       "1 days": "Daily",
       "1 years": "Yearly",
+      "1 quarters": "Quarter",
       "1 hourss": "Hourly",
     };
     return beautifulAnnotations[period] || period;
