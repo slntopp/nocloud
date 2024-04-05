@@ -192,6 +192,10 @@
 import api from "@/api.js";
 import nocloudTable from "@/components/table.vue";
 import { getMarginedValue } from "@/functions";
+import {
+  Addon,
+  ListAddonsRequest,
+} from "nocloud-proto/proto/es/billing/addons/addons_pb";
 
 export default {
   name: "vps-table",
@@ -270,15 +274,49 @@ export default {
         return "You must select a group for the tariff!";
       }
     },
-    changePlan(plan) {
+    async changePlan(plan) {
+      plan.resources = [];
+      plan.products = {};
+
+      const allAddons = (
+        await Promise.all(
+          this.addons.map((addon) => {
+            const data = Addon.fromJson({
+              system: true,
+              title: addon.name,
+              group: this.template.uuid,
+              periods: { [this.getPeriod(addon.duration)]: addon.value },
+              public: addon.public,
+              meta: {
+                basePrice: addon.price.value,
+                key: addon.id,
+              },
+            });
+            if (addon.uuid) {
+              data.uuid = addon.uuid;
+              return this.addonsClient.update(data);
+            }
+
+            return this.addonsClient.create(data);
+          })
+        )
+      ).map((a) => a.toJson());
+
       this.plans.forEach((el) => {
         const [, , cpu, ram, disk] = el.planCode.split("-");
         const meta = {
-          addons: el.addons.map((a) => [el.duration, a].join(" ")),
           datacenter: el.datacenter,
           os: el.os.filter((item) => this.images.includes(item)),
           hidedOs: el.os.filter((item) => !this.images.includes(item)),
         };
+        const addons = el.addons
+          .map(
+            (key) =>
+              allAddons.find(
+                (addon) => [el.duration, key].join(" ") === addon.meta.key
+              )?.uuid
+          )
+          .filter((a) => !!a);
 
         if (el.windows) meta.windows = el.windows.value;
         plan.products[el.id] = {
@@ -287,6 +325,7 @@ export default {
           price: el.value,
           public: el.public,
           group: el.group,
+          addons,
           period: this.getPeriod(el.duration),
           resources: { cpu: +cpu, ram: ram * 1024, drive_size: disk * 1024 },
           meta: {
@@ -297,22 +336,6 @@ export default {
           sorter: Object.keys(plan.products).length,
           installation_fee: el.installation_fee,
         };
-      });
-
-      this.addons.forEach((el) => {
-        plan.resources.push({
-          key: el.id,
-          public: el.public,
-          kind: "PREPAID",
-          title: el.name,
-          price: el.value,
-          period: this.getPeriod(el.duration),
-          except: false,
-          meta: {
-            basePrice: el.price.value,
-          },
-          on: [],
-        });
       });
     },
     changePlans({ plans, windows, catalog }) {
@@ -552,8 +575,28 @@ export default {
       });
     },
   },
-  created() {
+  async created() {
     const newImages = [];
+    const { addons = [] } = (
+      await this.addonsClient.list(
+        ListAddonsRequest.fromJson({ filters: { group: this.template.uuid } })
+      )
+    ).toJson();
+    this.addons = addons.map((addon) => {
+      const { key, basePrice } = addon.meta;
+      const [duration, planCode] = key.split(" ");
+      return {
+        ...addon,
+        duration,
+        planCode,
+        price: { value: basePrice },
+        value: Object.values(addon.periods)[0],
+        name: addon.title,
+        id: key,
+        uuid: addon.uuid,
+      };
+    });
+
     this.plans = Object.keys(this.template.products || {}).map((key) => {
       const [duration, planCode] = key.split(" ");
       const product = this.template.products[key];
@@ -564,7 +607,7 @@ export default {
       newImages.push(...enabledOs);
       const os = enabledOs.concat(...(meta.hidedOs || []));
 
-      const { apiName, addons, datacenter, basePrice } = meta;
+      const { apiName, datacenter, basePrice } = meta;
 
       return {
         ...product,
@@ -573,25 +616,16 @@ export default {
         price: { value: basePrice },
         value: product.price,
         datacenter,
-        addons: addons?.map((a) => a.split(" "))[1],
+        addons: product.addons?.map(
+          (uuid) =>
+            this.addons
+              .find((addon) => addon.uuid === uuid)
+              ?.meta.key.split(" ")[1]
+        ),
         installation_fee: product.installationFee,
         os,
         name: product.title,
         apiName,
-        id: key,
-      };
-    });
-
-    this.addons = this.template.resources.map((r) => {
-      const { key } = r;
-      const [duration, planCode] = key.split(" ");
-      return {
-        ...r,
-        duration,
-        planCode,
-        price: { value: r.meta.basePrice },
-        value: r.price,
-        name: r.title,
         id: key,
       };
     });
@@ -627,6 +661,9 @@ export default {
       const imagesArr = [...imagesSet.values()];
       imagesArr.sort();
       return imagesArr;
+    },
+    addonsClient() {
+      return this.$store.getters["addons/addonsClient"];
     },
   },
   watch: {

@@ -16,6 +16,7 @@ limitations under the License.
 package graph
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
 	"github.com/arangodb/go-driver"
@@ -183,7 +184,7 @@ func (ctrl *RecordsController) GetInstancesReports(ctx context.Context, req *pb.
 	return res, nil
 }
 
-func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*pb.GetRecordsReportsResponse, error) {
+func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.GetRecordsReportsRequest) (*connect.Response[pb.GetRecordsReportsResponse], error) {
 	query := "LET records = ( FOR record in @@records FILTER record.processed"
 	params := map[string]interface{}{
 		"@records": schema.RECORDS_COL,
@@ -275,7 +276,7 @@ func (ctrl *RecordsController) GetRecordsReports(ctx context.Context, req *pb.Ge
 		return nil, err
 	}
 
-	return &res, nil
+	return connect.NewResponse(&res), nil
 }
 
 const reportsCountQuery = `RETURN LENGTH(@@instances)`

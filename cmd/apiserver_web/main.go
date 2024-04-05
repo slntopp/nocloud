@@ -225,6 +225,28 @@ func main() {
 		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
 	}
 
+	log.Info("Registering BillingService Gateway")
+	err = billingpb.RegisterAddonsServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
+	if err != nil {
+		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
+	}
+
+	log.Info("Registering BillingService Gateway")
+	err = billingpb.RegisterDescriptionsServiceHandlerFromEndpoint(
+		context.Background(),
+		gwmux,
+		apiserver,
+		opts,
+	)
+	if err != nil {
+		log.Fatal("Failed to register BillingService gateway", zap.Error(err))
+	}
+
 	// CurrencyService
 	log.Info("Registering CurrencyService Gateway")
 	err = billingpb.RegisterCurrencyServiceHandlerFromEndpoint(

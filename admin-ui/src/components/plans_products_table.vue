@@ -176,14 +176,8 @@
             />
           </template>
 
-          <template v-slot:[`item.resources`]="{ item }">
-            <product-addons-dialog
-              :rules="rules"
-              :addons="resources.filter((r) => r.public && r.virtual)"
-              :product="item.key"
-              :item="item"
-              @update:addons="(value) => (item.meta.addons = value)"
-            />
+          <template v-slot:[`item.addons`]="{ item }">
+            <product-addons-dialog :addons="item.addons" />
           </template>
 
           <template v-slot:expanded-item="{ headers, item }">
@@ -200,7 +194,8 @@
               <v-subheader class="px-0"> Description: </v-subheader>
               <rich-editor
                 class="html-editor"
-                v-model="item.meta.description"
+                @input="changeProduct('description', $event, item.id)"
+                :value="item.description"
               />
 
               <template v-if="type === 'empty'">
@@ -208,7 +203,7 @@
                   :rules="rules"
                   :resources="item.meta.resources ?? []"
                   @update:resource="
-                    (value) => changeMeta(value, item.id, item.meta.resources)
+                    changeMeta($event, item.id, item.meta.resources)
                   "
                 />
               </template>
@@ -217,9 +212,7 @@
                 <v-subheader class="px-0"> Amount of resources </v-subheader>
                 <json-editor
                   :json="item.resources"
-                  @changeValue="
-                    (value) => changeProduct('amount', value, item.id)
-                  "
+                  @changeValue="changeProduct('amount', $event, item.id)"
                 />
               </template>
 
@@ -230,9 +223,7 @@
                 style="width: 150px"
                 :value="item.installationFee"
                 :suffix="defaultCurrency"
-                @input="
-                  (value) => changeProduct('installationFee', +value, item.id)
-                "
+                @input="changeProduct('installationFee', +$event, item.id)"
               />
             </td>
           </template>
@@ -247,13 +238,7 @@
           @change:resource="changeResource(false, $event)"
         />
 
-        <plans-resources-table
-          v-else-if="tab === 'Addons'"
-          :rules="rules"
-          :resources="resources.filter((v) => v.virtual === true)"
-          :type="type"
-          @change:resource="changeResource(true, $event)"
-        />
+        <plan-addons-table v-else-if="tab === 'Addons'" :addons="addons" />
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -266,6 +251,7 @@ import JsonEditor from "@/components/JsonEditor.vue";
 import nocloudTable from "@/components/table.vue";
 import plansResourcesTable from "@/components/plans_resources_table.vue";
 import plansEmptyTable from "@/components/plans_empty_table.vue";
+import planAddonsTable from "@/components/planAddonsTable.vue";
 import productAddonsDialog from "@/components/product_addons_dialog.vue";
 import confirmDialog from "@/components/confirmDialog.vue";
 import { getFullDate } from "@/functions";
@@ -273,6 +259,7 @@ import useCurrency from "@/hooks/useCurrency";
 import RichEditor from "@/components/ui/richEditor.vue";
 
 const props = defineProps({
+  addons: { type: Array, required: true },
   type: { type: String, required: true },
   products: { type: Object, required: true },
   resources: { type: Array, required: true },
@@ -298,11 +285,7 @@ const groupActionPayload = ref("");
 const kinds = ["POSTPAID", "PREPAID"];
 
 const tabs = computed(() => {
-  if (type.value === "empty") {
-    return ["Products", "Resources", "Addons"];
-  }
-
-  return ["Products", "Resources"];
+  return ["Products", "Resources", "Addons"];
 });
 
 const headers = computed(() =>
@@ -319,9 +302,9 @@ const headers = computed(() =>
     { text: "Group", value: "group", width: 300 },
     { text: "Public", value: "public" },
     { text: "Sorter", value: "sorter" },
-    type.value === "empty" && {
+    {
       text: "Addons",
-      value: "resources",
+      value: "addons",
     },
   ].filter((f) => !!f)
 );
@@ -464,7 +447,7 @@ const copyProducts = () => {
   selected.value = [];
 };
 
-const saveNewMeta = () => {
+const saveNewMeta = async () => {
   setProductsArray();
 
   const newProducts = {};
@@ -473,12 +456,13 @@ const saveNewMeta = () => {
     delete product.key;
     newProducts[key] = product;
   }
+
   for (const product of selected.value) {
     const key = product.key;
     delete product.key;
     newProducts[key] = {
       ...product,
-      meta: { ...product.meta, ...newMeta.value },
+      description: newMeta.value.description,
     };
   }
 
