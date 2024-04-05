@@ -1,0 +1,17 @@
+with-expecter: true
+outpkg: "{{.PackageName}}_mocks"
+packages:
+  github.com/slntopp/nocloud/pkg/billing:
+    interfaces:
+      RecordsController:
+  # Foreign Packages
+  github.com/go-redis/redis/v8:
+    interfaces:
+      UniversalClient:
+      Cmdable:
+
+  github.com/arangodb/go-driver:
+    interfaces:
+      Database:
+      Collection:
+      Cursor:

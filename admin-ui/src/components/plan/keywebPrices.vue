@@ -135,7 +135,7 @@
 
 <script setup>
 import nocloudTable from "@/components/table.vue";
-import { ref, defineProps, onMounted, computed } from "vue";
+import { ref, defineProps, onMounted, computed, toRefs } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
 import planOpensrs from "@/components/plan/opensrs/planOpensrs.vue";
@@ -143,8 +143,13 @@ import confirmDialog from "@/components/confirmDialog.vue";
 import { getMarginedValue } from "@/functions";
 import useCurrency from "@/hooks/useCurrency";
 import RichEditor from "@/components/ui/richEditor.vue";
+import {
+  Addon,
+  ListAddonsRequest,
+} from "nocloud-proto/proto/es/billing/addons/addons_pb";
 
 const props = defineProps(["template"]);
+const { template } = toRefs(props);
 
 const store = useStore();
 const { convertFrom } = useCurrency();
@@ -191,6 +196,11 @@ const osHeaders = ref([
 onMounted(async () => {
   isLoading.value = true;
   try {
+    const addonsPromise = addonsClient.value.list(
+      ListAddonsRequest.fromJson({
+        filters: { group: template.value.uuid },
+      })
+    );
     await store.dispatch("servicesProviders/fetch", { anonymously: false });
     const spUuid = sps.value.find((sp) =>
       sp.meta?.plans?.includes(props.template.uuid)
@@ -200,6 +210,9 @@ onMounted(async () => {
       action: "list_products",
       uuid: spUuid,
     });
+
+    const { addons = [] } = (await addonsPromise).toJson();
+    console.log(addons);
     const products = [];
     meta.products.forEach((p) => {
       const data = {
@@ -261,19 +274,21 @@ onMounted(async () => {
 
       const getTariffAddons = (subKey, duration) => {
         return addonsValues[subKey]
-          .filter((a) => a.duration === duration)
-          .map((a) => {
-            a.key = a.baseName + "$" + keys[duration];
-            const realAddon = props.template.resources.find(
-              (r) => r.key === a.key
+          .filter((addon) => addon.duration === duration)
+          .map((addon) => {
+            addon.key = addon.baseName + "$" + keys[duration];
+            const realAddon = addons.find(
+              (realAddon) => realAddon.meta?.key === addon.key
             );
+
             if (realAddon) {
-              a.price = realAddon?.price;
-              a.name = realAddon?.title;
-              a.sell = true;
+              addon.price = Object.values(realAddon.periods)[0];
+              addon.name = realAddon.title;
+              addon.sell = realAddon.public;
+              addon.uuid = realAddon.uuid;
             }
 
-            return a;
+            return addon;
           });
       };
 
@@ -315,6 +330,7 @@ onMounted(async () => {
 });
 
 const sps = computed(() => store.getters["servicesProviders/all"]);
+const addonsClient = computed(() => store.getters["addons/addonsClient"]);
 
 const openOs = (item) => {
   isOsOpen.value = true;
@@ -352,48 +368,51 @@ const save = async () => {
   const products = {};
   const resources = [];
 
-  const enabledTariffs = tariffs.value.filter((t) => t.sell);
-
-  enabledTariffs.forEach((t) => {
-    const period = t.duration === "monthly" ? 3600 * 24 * 30 : 3600 * 24 * 365;
-    const kind = "PREPAID";
-
-    const enabledAddons = t.addons.filter((a) => a.sell);
-    const enabledOs = t.os.filter((os) => os.sell);
-    enabledOs.concat(enabledAddons).forEach((r) => {
-      if (r.virtual) {
-        return;
-      }
-      resources.push({
-        key: r.key,
-        kind,
-        price: r.price,
-        title: r.name,
-        public: true,
-        meta: {
-          type: r.type,
-        },
-        period,
-      });
-    });
-
-    products[t.key] = {
-      kind,
-      period,
-      price: t.price,
-      title: t.name,
-      public: true,
-      meta: {
-        addons: enabledAddons.map((a) => a.key),
-        os: enabledOs.map((a) => a.key),
-        keywebId: t.id,
-        description: t.description,
-      },
-    };
-  });
-
   isSaveLoading.value = true;
   try {
+    await Promise.all(
+      tariffs.value.map(async (t) => {
+        const period =
+          t.duration === "monthly" ? 3600 * 24 * 30 : 3600 * 24 * 365;
+        const kind = "PREPAID";
+
+        const addons = await Promise.all(
+          t.os.concat(t.addons).map(async (addon) => {
+            const data = Addon.fromJson({
+              group: template.value.uuid,
+              title: addon.name,
+              public: addon.sell,
+              system: true,
+              meta: {
+                type: addon.type,
+                key: addon.key,
+              },
+              periods: { [period]: addon.price },
+            });
+            if (addon.uuid) {
+              data.uuid = addon.uuid;
+              return addonsClient.value.update(data);
+            }
+
+            return addonsClient.value.create(data);
+          })
+        );
+
+        products[t.key] = {
+          kind,
+          period,
+          price: t.price,
+          title: t.name,
+          public: t.sell,
+          addons: addons.map((a) => a.uuid),
+          meta: {
+            keywebId: t.id,
+            description: t.description,
+          },
+        };
+      })
+    );
+
     await api.plans.update(props.template.uuid, {
       ...props.template,
       products,
@@ -403,6 +422,7 @@ const save = async () => {
       message: "Price model edited successfully",
     });
   } catch (e) {
+    console.log(e);
     store.commit("snackbar/showSnackbarError", {
       message: e.response?.data?.message || "Error during save prices",
     });

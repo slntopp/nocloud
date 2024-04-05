@@ -289,8 +289,8 @@ export function toPascalCase(text) {
 }
 
 export function formatSecondsToDate(timestamp, withTime, sep = ".") {
-  if (!timestamp || !+timestamp) return;
-  const date = new Date(timestamp * 1000);
+  if (!timestamp || !Number(timestamp)) return;
+  const date = new Date(Number(timestamp) * 1000);
   const time = date
     .toLocaleString(undefined, {
       hourCycle: "h24",
