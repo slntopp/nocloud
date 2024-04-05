@@ -66,7 +66,6 @@ export default {
 
         document.title = `${this.planTitle} | NoCloud`;
 
-        console.log(this.plan);
         const descriptionPromises = [
           ...this.plan.resources.map((resource, index) => ({
             id: index,
@@ -112,7 +111,7 @@ export default {
           title: "Info",
           component: () => import("@/views/PlansCreate.vue"),
         },
-        this.plan.type === "ione" && {
+        this.plan?.type === "ione" && {
           title: "Configuration",
           component: () =>
             import("@/components/modules/ione/planConfiguration.vue"),
@@ -143,12 +142,12 @@ export default {
 
       if (
         !pricesComponents.includes(
-          `./${this.plan.type.split(" ")[0]}Prices.vue`
+          `./${this.plan?.type.split(" ")[0]}Prices.vue`
         )
       )
         return;
       if (this.tabs.find(({ title }) => title === "Prices")) return;
-      const type = this.plan.type.split(" ")[0];
+      const type = this.plan?.type.split(" ")[0];
 
       this.tabs.splice(this.tabs.length - 1, 0, {
         title: "Prices",

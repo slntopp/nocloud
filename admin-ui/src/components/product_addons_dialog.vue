@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="isOpen" width="90vw">
+  <v-dialog width="90vw">
     <template v-slot:activator="{ on, attrs }">
       <v-btn icon v-bind="attrs" v-on="on">
         <v-icon> mdi-menu-open </v-icon>

@@ -88,7 +88,7 @@
         <v-col cols="2" class="align-center d-flex">
           <v-subheader
             >Auto start
-            <v-tooltip :bottom="!top" :top="top">
+            <v-tooltip>
               <template v-slot:activator="{ on, attrs }">
                 <div class="d-inline-block" v-bind="attrs" v-on="on">
                   <v-icon class="ml-2"> mdi-help-circle-outline </v-icon>
