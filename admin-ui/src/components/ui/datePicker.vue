@@ -8,14 +8,15 @@
       <v-text-field
         v-bind="attrs"
         v-on="on"
-        prepend-inner-icon="mdi-calendar"
+        :prepend-inner-icon="!editIcon ? 'mdi-calendar' : undefined"
         :value="placeholder || value"
         readonly
         :dense="dense"
-        clearable
+        :clearable="clearable"
         @input="emits('input', $event)"
         :label="label"
         :disabled="disabled"
+        :append-icon="editIcon ? 'mdi-pencil' : undefined"
       />
     </template>
     <v-date-picker
@@ -36,10 +37,11 @@ const props = defineProps({
   value: {},
   min: {},
   label: {},
-  clearable: { type: Boolean, default: false },
   dense: { type: Boolean, default: false },
   range: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
+  clearable: { type: Boolean, default: true },
+  editIcon: { type: Boolean, default: false },
   placeholder: {},
 });
 const { value, min, label, dense } = toRefs(props);
