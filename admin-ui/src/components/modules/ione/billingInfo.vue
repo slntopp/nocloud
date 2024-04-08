@@ -43,16 +43,12 @@
         />
       </v-col>
       <v-col>
-        <!-- <v-text-field
-          label="Date (create)"
-          type="datetime-local"
-          :value="formatSecondsToDateTime(template.created, true)"
-        /> -->
-
         <date-picker
+          edit-icon
           label="Date (create)"
           :value="formatSecondsToDateString(template.created, false, '-')"
           :placeholder="formatSecondsToDate(template.created, true)"
+          :clearable="false"
           @input="
             emit('update', {
               key: 'created',
