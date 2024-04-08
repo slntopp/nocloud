@@ -151,7 +151,7 @@
       <component
         @update="updateCopy"
         :is="billingInfoComponent"
-        :template="template"
+        :template="copyInstance"
         :service="service"
         :plans="plans"
         :sp="sp"
