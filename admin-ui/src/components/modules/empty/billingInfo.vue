@@ -31,10 +31,18 @@
         />
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
+        <date-picker
+          edit-icon
           label="Date (create)"
-          :value="formatSecondsToDate(template.created, true)"
+          :value="formatSecondsToDateString(template.created, false, '-')"
+          :placeholder="formatSecondsToDate(template.created, true)"
+          :clearable="false"
+          @input="
+            emit('update', {
+              key: 'created',
+              value: formatDateToTimestamp($event),
+            })
+          "
         />
       </v-col>
 
@@ -218,13 +226,19 @@
 
 <script setup>
 import { computed, defineProps, toRefs, ref, watch, onMounted } from "vue";
-import { formatSecondsToDate, getBillingPeriod } from "@/functions";
+import {
+  getBillingPeriod,
+  formatDateToTimestamp,
+  formatSecondsToDate,
+  formatSecondsToDateString,
+} from "@/functions";
 import ChangeMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import api from "@/api";
+import DatePicker from "../../ui/datePicker.vue";
 
 const props = defineProps(["template", "plans", "service", "sp", "account"]);
 const emit = defineEmits(["refresh"]);
