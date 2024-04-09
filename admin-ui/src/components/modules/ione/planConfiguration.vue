@@ -3,18 +3,34 @@
     <v-row>
       <v-col>
         <v-text-field
-          label="Minimum disk size"
+          label="Minimum HDD size"
           type="number"
           suffix="GB"
-          v-model="meta.minDisk"
+          v-model="meta.minDiskSize.HDD"
         />
       </v-col>
       <v-col>
         <v-text-field
-          label="Maximum disk size"
+          label="Maximum HDD size"
           type="number"
           suffix="GB"
-          v-model="meta.maxDisk"
+          v-model="meta.maxDiskSize.HDD"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          label="Minimum SSD size"
+          type="number"
+          suffix="GB"
+          v-model="meta.minDiskSize.SSD"
+        />
+      </v-col>
+      <v-col>
+        <v-text-field
+          label="Maximum SSD size"
+          type="number"
+          suffix="GB"
+          v-model="meta.maxDiskSize.SSD"
         />
       </v-col>
     </v-row>
@@ -69,7 +85,7 @@ export default {
   },
   mixins: [snackbar],
   data: () => ({
-    meta: {},
+    meta: { minDiskSize: {}, maxDiskSize: {} },
     hidedOs: [],
     isSaveLoading: false,
   }),
@@ -123,11 +139,23 @@ export default {
   },
   mounted() {
     this.meta = this.template.meta;
+    if (!this.meta.minDiskSize) {
+      this.meta.minDiskSize = {}
+    }
+    if (!this.meta.maxDiskSize) {
+      this.meta.maxDiskSize = {}
+    }
     this.hidedOs = this.template.meta?.hidedOs || [];
   },
   watch: {
     "template.meta"(newVal) {
       this.meta = newVal;
+      if (!this.meta.minDiskSize) {
+        this.meta.minDiskSize = {}
+      }
+      if (!this.meta.maxDiskSize) {
+        this.meta.maxDiskSize = {}
+      }
     },
   },
 };
