@@ -1,7 +1,7 @@
 <template>
   <div>
     <v-row>
-      <v-col cols="4">
+      <v-col cols="2">
         <v-text-field
           readonly
           label="Price model"
@@ -20,6 +20,21 @@
             >
           </template>
         </v-text-field>
+      </v-col>
+      <v-col cols="2">
+        <date-picker
+          edit-icon
+          label="Date (create)"
+          :value="formatSecondsToDateString(template.created, false, '-')"
+          :placeholder="formatSecondsToDate(template.created, true)"
+          :clearable="false"
+          @input="
+            emit('update', {
+              key: 'created',
+              value: formatDateToTimestamp($event),
+            })
+          "
+        />
       </v-col>
     </v-row>
     <instances-panels title="Prices">
@@ -95,7 +110,13 @@ import NocloudTable from "@/components/table.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import api from "@/api";
+import {
+  formatDateToTimestamp,
+  formatSecondsToDate,
+  formatSecondsToDateString,
+} from "@/functions";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
+import DatePicker from "../../ui/datePicker.vue";
 
 const props = defineProps(["template", "plans", "service", "sp", "account"]);
 const emit = defineEmits(["refresh", "update"]);
