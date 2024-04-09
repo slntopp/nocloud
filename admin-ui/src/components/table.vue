@@ -92,32 +92,6 @@
       v-slot:[`header.${header?.value}`]
     >
       {{ header.text }}
-      <v-menu
-        v-if="header?.customFilter"
-        :key="header?.value"
-        :close-on-content-click="false"
-      >
-        <template v-slot:activator="{ on, attrs }">
-          <v-icon v-bind="attrs" v-on="on" class="mx-2" @click.stop small
-            >mdi-filter</v-icon
-          >
-        </template>
-        <v-list dense>
-          <v-list-item
-            dense
-            v-for="item of filtersItems[header.value]"
-            :key="item"
-          >
-            <v-checkbox
-              dense
-              :value="item"
-              :label="item"
-              :input-value="filtersValues[header.value]"
-              @change="setCustomFilter(header.value, $event)"
-            />
-          </v-list-item>
-        </v-list>
-      </v-menu>
     </template>
 
     <template v-if="!showSelect" v-slot:[`item.data-table-select`]>
@@ -170,9 +144,6 @@
               </v-row>
             </v-card>
           </v-dialog>
-          <v-icon @click="resetFilter" size="23" class="mr-1s"
-            >mdi-filter-remove</v-icon
-          >
         </div>
         <span class="ml-3">
           {{ pageStart }}-{{ pageStop }} of {{ itemsLength }}
@@ -302,12 +273,6 @@ export default {
       default: false,
     },
     serverSidePage: Number,
-    defaultFiltres: {
-      type: Array,
-      defaullt: () => [],
-    },
-    filtersItems: { type: Object },
-    filtersValues: { type: Object },
     itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, 25, 50] },
   },
   data() {
@@ -376,46 +341,6 @@ export default {
       allColumnsSetting[this.tableName] = this.columns;
 
       localStorage.setItem("columns", JSON.stringify(allColumnsSetting));
-    },
-    setCustomFilter(key, val) {
-      this.$emit("input:filter", { key, value: val });
-    },
-    resetFilter() {
-      Object.keys(this.filtersValues).forEach((key) => {
-        this.setCustomFilter(key, []);
-      });
-    },
-    saveFilterValues(filters) {
-      const columnJson = localStorage.getItem("filters");
-      const tableFiltres = {};
-
-      Object.keys(filters).map((key) => {
-        if (filters[key].length) {
-          tableFiltres[key] = filters[key];
-        }
-      });
-
-      const allFiltres = columnJson
-        ? JSON.parse(columnJson)
-        : { [this.tableName]: {} };
-      allFiltres[this.tableName] = tableFiltres;
-
-      localStorage.setItem("filters", JSON.stringify(allFiltres));
-    },
-    synchronizeFilterValues() {
-      const allFilters = JSON.parse(localStorage.getItem("filters") || "{}");
-      if (allFilters[this.tableName]) {
-        const valuesMap = allFilters[this.tableName];
-
-        Object.keys(valuesMap).forEach((key) => {
-          if (
-            this.filtersValues[key] != undefined &&
-            valuesMap[key].length > 0
-          ) {
-            this.setCustomFilter(key, valuesMap[key], false);
-          }
-        });
-      }
     },
     sortTheHeadersAndUpdateTheKey(evt) {
       const originalHeaders = JSON.parse(JSON.stringify(this.filtredHeaders));
@@ -535,19 +460,6 @@ export default {
     saveTableData() {
       this.saveColumnPosition(this.filtredHeaders);
 
-      if (this.filtersValues) {
-        const filters = {};
-
-        //check is filterble column availble
-        for (const key of Object.keys(this.filtersValues)) {
-          if (this.columns[key]) {
-            filters[key] = this.filtersValues[key];
-          }
-        }
-
-        this.saveFilterValues(filters);
-      }
-
       const url = localStorage.getItem("url");
 
       if (this.$route.path.includes(url)) return;
@@ -643,7 +555,6 @@ export default {
       }, 100);
 
     this.configureColumns();
-    this.synchronizeFilterValues();
   },
   watch: {
     page(value) {
