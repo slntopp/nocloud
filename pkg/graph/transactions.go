@@ -73,7 +73,7 @@ func (ctrl *TransactionsController) Get(ctx context.Context, uuid string) (*pb.T
 func (ctrl *TransactionsController) Update(ctx context.Context, tx *pb.Transaction) (*pb.Transaction, error) {
 	_, err := ctrl.col.UpdateDocument(ctx, tx.GetUuid(), tx)
 	if err != nil {
-		ctrl.log.Error("Failed to update transaction", zap.Error(err))
+		ctrl.log.Error("Failed to update transaction", zap.Error(err), zap.Any("tx", tx))
 		return nil, err
 	}
 	return tx, nil
