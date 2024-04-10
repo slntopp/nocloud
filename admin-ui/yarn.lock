@@ -3027,9 +3027,9 @@ copy-webpack-plugin@^9.0.1:
     schema-utils "^3.1.1"
     serialize-javascript "^6.0.0"
 
-"core-chatting@https://github.com/slntopp/core-chatting#df363c934d5f9822fac1328220f6bee95f3c7cd1":
+"core-chatting@https://github.com/slntopp/core-chatting#acf112c489fe91a8ba99a5995baee6ab36d2f06e":
   version "0.0.0"
-  resolved "https://github.com/slntopp/core-chatting#df363c934d5f9822fac1328220f6bee95f3c7cd1"
+  resolved "https://github.com/slntopp/core-chatting#acf112c489fe91a8ba99a5995baee6ab36d2f06e"
 
 core-js-compat@^3.25.1, core-js-compat@^3.8.3:
   version "3.30.2"
