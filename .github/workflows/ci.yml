@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - dev
+      - dev-pl
       - staging
 
     paths-ignore:
