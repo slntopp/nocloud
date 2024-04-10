@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - dev
+      - dev-pl
       - staging
 
     paths-ignore:
@@ -50,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Wait for tests to succeed
-        uses: lewagon/wait-on-check-action@v1.3.3
+        uses: lewagon/wait-on-check-action@v1.3.4
         with:
           ref: ${{ github.ref }}
           check-name: checks

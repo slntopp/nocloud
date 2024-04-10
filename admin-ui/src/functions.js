@@ -311,6 +311,27 @@ export function formatSecondsToDate(timestamp, withTime, sep = ".") {
   return result;
 }
 
+export function formatDateToTimestamp(strDate) {
+  const datum = Date.parse(strDate);
+  return datum / 1000;
+}
+
+export function formatSecondsToDateString(timestamp) {
+  if (!timestamp || !+timestamp) return;
+  const date = new Date(timestamp * 1000);
+
+  const year = date.toUTCString().split(" ")[3];
+  let month = date.getUTCMonth() + 1;
+  let day = date.getUTCDate();
+
+  if (`${month}`.length < 2) month = `0${month}`;
+  if (`${day}`.length < 2) day = `0${day}`;
+
+  let result = `${year}-${month}-${day}`;
+
+  return result;
+}
+
 export function getTimestamp({ day, month, year, quarter, week, time }) {
   let seconds = 0;
 
