@@ -98,12 +98,54 @@
       <div></div>
     </template>
 
-    <template v-if="footerError.length > 0" v-slot:footer>
-      <v-toolbar class="mt-2" color="error" dark flat>
+    <template v-slot:footer>
+      <v-toolbar
+        v-if="footerError.length > 0"
+        class="mt-2"
+        color="error"
+        dark
+        flat
+      >
         <v-toolbar-title class="subheading">
           {{ footerError }}
         </v-toolbar-title>
       </v-toolbar>
+    </template>
+
+    <template v-slot:body.append v-if="isEdit">
+      <tr>
+        <td />
+        <td v-for="(header, index) in filtredHeaders" :key="index">
+          <component
+            v-if="header.editable"
+            :is="getEditComponent(header)"
+            v-bind="getEditComponentProps(header)"
+            @input="changeEditableValue(header, $event)"
+            :value="editableValues[header.value]"
+          />
+        </td>
+      </tr>
+    </template>
+
+    <template v-slot:[`footer.prepend`] v-if="editable">
+      <div
+        class="d-flex justify-end align-center"
+        style="width: calc(100% - 450px)"
+      >
+        <v-btn
+          :disabled="value.length < 1 && !isEdit"
+          class="mx-1"
+          @click="isEdit = !isEdit"
+          >{{ isEdit ? "Cancel" : "Edit" }}</v-btn
+        >
+        <v-btn
+          :disabled="value.length < 1"
+          @click="saveEditableValues"
+          class="mx-1"
+          v-if="isEdit"
+          >Save</v-btn
+        >
+      </div>
     </template>
 
     <template
@@ -156,6 +198,9 @@
 <script>
 import { VDataTable } from "vuetify/lib";
 import Sortable from "sortablejs";
+import { VSelect, VTextField } from "vuetify/lib";
+import DatePicker from "@/components/ui/datePicker";
+import { formatSecondsToDateString } from "@/functions";
 
 function watchClass(targetNode, classToWatch) {
   let lastClassState = targetNode.classList.contains(classToWatch);
@@ -197,6 +242,7 @@ export default {
     sortDesc: { type: Boolean },
     customSort: { type: Function },
     loading: Boolean,
+    editable: Boolean,
     items: {
       type: Array,
       default: () => [],
@@ -290,6 +336,8 @@ export default {
       tableSortBy: "title",
       tableSortDesc: false,
       settingsDialog: false,
+      isEdit: false,
+      editableValues: {},
     };
   },
   methods: {
@@ -414,7 +462,7 @@ export default {
         }
       }
 
-      this.filtredHeaders = tempHeaders;
+      this.filtredHeaders = tempHeaders.filter((h) => !!h);
 
       this.table = tempHeaders;
       this.anIncreasingNumber += 1;
@@ -535,6 +583,55 @@ export default {
         this.tableSortBy = this.sortBy;
         this.tableSortDesc = !!this.sortDesc;
       }
+    },
+    getEditComponent(header) {
+      switch (header.editable.type) {
+        case "date":
+          return DatePicker;
+        case "logic-select":
+          return VSelect;
+        default:
+          return VTextField;
+      }
+    },
+    getEditComponentProps(header) {
+      const baseProps = { ...header.editable, dense: true };
+      switch (header.editable.type) {
+        case "date": {
+          if (!this.editableValues[header.value]) {
+            this.changeEditableValue(
+              header,
+              formatSecondsToDateString(Date.now() / 1000)
+            );
+          }
+          return {
+            ...baseProps,
+            clearable: false,
+          };
+        }
+
+        case "logic-select": {
+          if (!this.editableValues[header.value]) {
+            this.changeEditableValue(header, "False");
+          }
+
+          return {
+            ...baseProps,
+            items: ["True", "False"],
+          };
+        }
+
+        default:
+          return baseProps;
+      }
+    },
+    changeEditableValue(header, value) {
+      this.editableValues = { ...this.editableValues, [header.value]: value };
+    },
+    saveEditableValues() {
+      this.isEdit = false;
+      this.$emit("update:edit-values", this.editableValues);
+      this.editableValues = {};
     },
   },
   beforeDestroy() {
