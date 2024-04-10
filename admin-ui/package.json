@@ -20,7 +20,7 @@
     "babel-preset-es2015": "^6.24.1",
     "core-chatting": "https://github.com/slntopp/core-chatting#acf112c489fe91a8ba99a5995baee6ab36d2f06e",
     "core-js": "^3.32.1",
-    "date-fns": "^2.29.3",
+    "date-fns": "^3.6.0",
     "file-saver": "^2.0.5",
     "glob-parent": "^6.0.2",
     "jodit-vue": "^2.6.0",
