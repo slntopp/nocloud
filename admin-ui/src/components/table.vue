@@ -92,44 +92,60 @@
       v-slot:[`header.${header?.value}`]
     >
       {{ header.text }}
-      <v-menu
-        v-if="header?.customFilter"
-        :key="header?.value"
-        :close-on-content-click="false"
-      >
-        <template v-slot:activator="{ on, attrs }">
-          <v-icon v-bind="attrs" v-on="on" class="mx-2" @click.stop small
-            >mdi-filter</v-icon
-          >
-        </template>
-        <v-list dense>
-          <v-list-item
-            dense
-            v-for="item of filtersItems[header.value]"
-            :key="item"
-          >
-            <v-checkbox
-              dense
-              :value="item"
-              :label="item"
-              :input-value="filtersValues[header.value]"
-              @change="setCustomFilter(header.value, $event)"
-            />
-          </v-list-item>
-        </v-list>
-      </v-menu>
     </template>
 
     <template v-if="!showSelect" v-slot:[`item.data-table-select`]>
       <div></div>
     </template>
 
-    <template v-if="footerError.length > 0" v-slot:footer>
-      <v-toolbar class="mt-2" color="error" dark flat>
+    <template v-slot:footer>
+      <v-toolbar
+        v-if="footerError.length > 0"
+        class="mt-2"
+        color="error"
+        dark
+        flat
+      >
         <v-toolbar-title class="subheading">
           {{ footerError }}
         </v-toolbar-title>
       </v-toolbar>
+    </template>
+
+    <template v-slot:body.append v-if="isEdit">
+      <tr>
+        <td />
+        <td v-for="(header, index) in filtredHeaders" :key="index">
+          <component
+            v-if="header.editable"
+            :is="getEditComponent(header)"
+            v-bind="getEditComponentProps(header)"
+            @input="changeEditableValue(header, $event)"
+            :value="editableValues[header.value]"
+          />
+        </td>
+      </tr>
+    </template>
+
+    <template v-slot:[`footer.prepend`] v-if="editable">
+      <div
+        class="d-flex justify-end align-center"
+        style="width: calc(100% - 450px)"
+      >
+        <v-btn
+          :disabled="value.length < 1 && !isEdit"
+          class="mx-1"
+          @click="isEdit = !isEdit"
+          >{{ isEdit ? "Cancel" : "Edit" }}</v-btn
+        >
+        <v-btn
+          :disabled="value.length < 1"
+          @click="saveEditableValues"
+          class="mx-1"
+          v-if="isEdit"
+          >Save</v-btn
+        >
+      </div>
     </template>
 
     <template
@@ -170,9 +186,6 @@
               </v-row>
             </v-card>
           </v-dialog>
-          <v-icon @click="resetFilter" size="23" class="mr-1s"
-            >mdi-filter-remove</v-icon
-          >
         </div>
         <span class="ml-3">
           {{ pageStart }}-{{ pageStop }} of {{ itemsLength }}
@@ -185,6 +198,9 @@
 <script>
 import { VDataTable } from "vuetify/lib";
 import Sortable from "sortablejs";
+import { VSelect, VTextField } from "vuetify/lib";
+import DatePicker from "@/components/ui/datePicker";
+import { formatSecondsToDateString } from "@/functions";
 
 function watchClass(targetNode, classToWatch) {
   let lastClassState = targetNode.classList.contains(classToWatch);
@@ -226,6 +242,7 @@ export default {
     sortDesc: { type: Boolean },
     customSort: { type: Function },
     loading: Boolean,
+    editable: Boolean,
     items: {
       type: Array,
       default: () => [],
@@ -302,12 +319,6 @@ export default {
       default: false,
     },
     serverSidePage: Number,
-    defaultFiltres: {
-      type: Array,
-      defaullt: () => [],
-    },
-    filtersItems: { type: Object },
-    filtersValues: { type: Object },
     itemsPerPageOptions: { type: Array, default: () => [5, 10, 15, 25, 50] },
   },
   data() {
@@ -325,6 +336,8 @@ export default {
       tableSortBy: "title",
       tableSortDesc: false,
       settingsDialog: false,
+      isEdit: false,
+      editableValues: {},
     };
   },
   methods: {
@@ -376,46 +389,6 @@ export default {
       allColumnsSetting[this.tableName] = this.columns;
 
       localStorage.setItem("columns", JSON.stringify(allColumnsSetting));
-    },
-    setCustomFilter(key, val) {
-      this.$emit("input:filter", { key, value: val });
-    },
-    resetFilter() {
-      Object.keys(this.filtersValues).forEach((key) => {
-        this.setCustomFilter(key, []);
-      });
-    },
-    saveFilterValues(filters) {
-      const columnJson = localStorage.getItem("filters");
-      const tableFiltres = {};
-
-      Object.keys(filters).map((key) => {
-        if (filters[key].length) {
-          tableFiltres[key] = filters[key];
-        }
-      });
-
-      const allFiltres = columnJson
-        ? JSON.parse(columnJson)
-        : { [this.tableName]: {} };
-      allFiltres[this.tableName] = tableFiltres;
-
-      localStorage.setItem("filters", JSON.stringify(allFiltres));
-    },
-    synchronizeFilterValues() {
-      const allFilters = JSON.parse(localStorage.getItem("filters") || "{}");
-      if (allFilters[this.tableName]) {
-        const valuesMap = allFilters[this.tableName];
-
-        Object.keys(valuesMap).forEach((key) => {
-          if (
-            this.filtersValues[key] != undefined &&
-            valuesMap[key].length > 0
-          ) {
-            this.setCustomFilter(key, valuesMap[key], false);
-          }
-        });
-      }
     },
     sortTheHeadersAndUpdateTheKey(evt) {
       const originalHeaders = JSON.parse(JSON.stringify(this.filtredHeaders));
@@ -489,7 +462,7 @@ export default {
         }
       }
 
-      this.filtredHeaders = tempHeaders;
+      this.filtredHeaders = tempHeaders.filter((h) => !!h);
 
       this.table = tempHeaders;
       this.anIncreasingNumber += 1;
@@ -534,19 +507,6 @@ export default {
     },
     saveTableData() {
       this.saveColumnPosition(this.filtredHeaders);
-
-      if (this.filtersValues) {
-        const filters = {};
-
-        //check is filterble column availble
-        for (const key of Object.keys(this.filtersValues)) {
-          if (this.columns[key]) {
-            filters[key] = this.filtersValues[key];
-          }
-        }
-
-        this.saveFilterValues(filters);
-      }
 
       const url = localStorage.getItem("url");
 
@@ -624,6 +584,55 @@ export default {
         this.tableSortDesc = !!this.sortDesc;
       }
     },
+    getEditComponent(header) {
+      switch (header.editable.type) {
+        case "date":
+          return DatePicker;
+        case "logic-select":
+          return VSelect;
+        default:
+          return VTextField;
+      }
+    },
+    getEditComponentProps(header) {
+      const baseProps = { ...header.editable, dense: true };
+      switch (header.editable.type) {
+        case "date": {
+          if (!this.editableValues[header.value]) {
+            this.changeEditableValue(
+              header,
+              formatSecondsToDateString(Date.now() / 1000)
+            );
+          }
+          return {
+            ...baseProps,
+            clearable: false,
+          };
+        }
+
+        case "logic-select": {
+          if (!this.editableValues[header.value]) {
+            this.changeEditableValue(header, "False");
+          }
+
+          return {
+            ...baseProps,
+            items: ["True", "False"],
+          };
+        }
+
+        default:
+          return baseProps;
+      }
+    },
+    changeEditableValue(header, value) {
+      this.editableValues = { ...this.editableValues, [header.value]: value };
+    },
+    saveEditableValues() {
+      this.isEdit = false;
+      this.$emit("update:edit-values", this.editableValues);
+      this.editableValues = {};
+    },
   },
   beforeDestroy() {
     this.saveTableData();
@@ -643,7 +652,6 @@ export default {
       }, 100);
 
     this.configureColumns();
-    this.synchronizeFilterValues();
   },
   watch: {
     page(value) {

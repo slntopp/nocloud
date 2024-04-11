@@ -175,6 +175,10 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 		mask.Product = inst.Product
 	}
 
+	if inst.GetCreated() != oldInst.GetCreated() {
+		mask.Created = inst.GetCreated()
+	}
+
 	equalPlans := reflect.DeepEqual(inst.GetBillingPlan(), oldInst.GetBillingPlan())
 
 	if !equalPlans {

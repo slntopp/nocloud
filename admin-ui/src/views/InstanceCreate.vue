@@ -40,8 +40,9 @@
             item-text="title"
             v-model="serviceProviderId"
             :items="servicesProviders"
-            :rules="rules.req"
             :loading="isLoading"
+            readonly
+            disabled
           />
         </v-col>
         <v-col v-if="type === 'custom'" cols="4" md="3" lg="2">
@@ -116,11 +117,6 @@ export default {
 
     meta: {},
 
-    plans: {
-      list: [],
-      products: [],
-    },
-
     formValid: false,
     rules: {
       req: [(v) => !!v || "required field"],
@@ -159,12 +155,12 @@ export default {
       );
 
       if (this.instance.type === "ovh") {
-        this.instance.config.location = fullSp.locations.find(
-          ({ id }) =>
-            id ===
+        this.instance.config.location = fullSp.locations.find(({ id }) =>
+          id.startsWith(
             this.instance.config.configuration[
               `${this.instance.config.type}_datacenter`
             ]
+          )
         )?.title;
       } else {
         this.instance.config.location = fullSp.locations[0]?.title;
@@ -277,14 +273,14 @@ export default {
     serviceInstanceGroups() {
       if (
         !this.service ||
-        !this.service.instancesGroups ||
+        !this.service?.instancesGroups ||
         !this.type ||
         !this.serviceProviderId
       ) {
         return [];
       }
 
-      return this.service.instancesGroups.filter(
+      return this.service?.instancesGroups.filter(
         (ig) => ig.type === this.type && ig.sp === this.serviceProviderId
       );
     },
@@ -293,16 +289,28 @@ export default {
 
       return igs;
     },
+    allPlans() {
+      return this.$store.getters["plans/all"] || [];
+    },
+    plans() {
+      return this.allPlans
+        .map((plan) => ({
+          ...plan,
+          sp: this.servicesProviders.find((sp) =>
+            sp.meta.plans?.includes(plan.uuid)
+          )?.uuid,
+        }))
+        .filter((plan) => !!plan.sp);
+    },
     planRules() {
       return this.rules.req;
     },
     isInstanceControlsShowed() {
       return (
         this.type &&
-        this.serviceProviderId &&
         (!(this.isEdit || this.$route.params.instanceId) ||
-          ((this.isEdit || this.$route.params.instanceId) &&
-            this.plans.list.length)) &&
+          this.isEdit ||
+          this.$route.params.instanceId) &&
         !this.isLoading
       );
     },
@@ -331,6 +339,7 @@ export default {
         this.$store.dispatch("namespaces/fetch"),
         this.$store.dispatch("services/fetch"),
         this.$store.dispatch("servicesProviders/fetch", { anonymously: false }),
+        this.$store.dispatch("plans/fetch"),
       ]);
       const instanceId = this.$route.params.instanceId;
       if (instanceId) {
@@ -372,17 +381,13 @@ export default {
   watch: {
     serviceProviderId(sp_uuid) {
       if (!sp_uuid) return;
-      this.plans.list = [];
-      api.plans.list({ sp_uuid, anonymously: false }).then((res) => {
-        res.pool.forEach((plan) => {
-          const end = plan.uuid.length > 8 ? "..." : "";
-          const title = `${plan.title} (${plan.uuid.slice(0, 8)}${end})`;
-          this.plans.list.push({ ...plan, title });
-        });
-      });
-      this.instanceGroupTitle = this.service.instancesGroups.find(
+      this.instanceGroupTitle = this.service?.instancesGroups.find(
         (ig) => ig.sp === sp_uuid
       )?.title;
+    },
+    "instance.billing_plan"(plan) {
+      this.serviceProviderId =
+        plan.sp || this.plans.find((p) => p.uuid === plan)?.sp;
     },
     instanceGroupTitle(newVal) {
       this.instanceGroup = this.serviceInstanceGroups.find(
@@ -402,7 +407,7 @@ export default {
       }
       this.isEdit = false;
     },
-    ["plans.list"](newVal) {
+    ["plans"](newVal) {
       if (newVal && this.instance?.billingPlan?.uuid) {
         this.instance.billing_plan = this.instance?.billingPlan?.uuid;
         delete this.instance.billingPlan;

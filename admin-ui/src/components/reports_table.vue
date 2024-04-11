@@ -69,7 +69,7 @@
         <span>{{ getReportType(item) }}</span>
       </template>
       <template v-slot:[`item.actions`]="{ item }">
-        <div class="d-flex justify-center align-center">
+        <div class="d-flex justify-start align-center">
           <v-btn
             v-for="action in getReportActions(item)"
             :key="action.title"
@@ -86,7 +86,7 @@
               runningActionReportUuid === item.uuid
             "
             class="mx-1"
-            :icon="action.icon"
+            :icon="!!action.icon"
           >
             <span v-if="!action.icon">
               {{ action.title }}
@@ -204,7 +204,7 @@ const getReportActions = (report) => {
     case "Paid": {
       if (report.meta.transactionType?.startsWith("invoice")) {
         actions.push({
-          icon: "mdi-login",
+          icon: "mdi-alpha-w-box",
           action: "invoice",
           handler: downloadInvoice,
         });
@@ -214,7 +214,7 @@ const getReportActions = (report) => {
     case "Unpaid": {
       if (report.meta.transactionType?.startsWith("invoice")) {
         actions.push({
-          icon: "mdi-login",
+          icon: "mdi-alpha-w-box",
           action: "invoice",
           handler: downloadInvoice,
         });

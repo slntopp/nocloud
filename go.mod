@@ -6,7 +6,7 @@ require (
 	connectrpc.com/connect v1.14.0
 	connectrpc.com/grpchealth v1.3.0
 	github.com/Pallinder/go-randomdata v1.2.0
-	github.com/arangodb/go-driver v1.6.1
+	github.com/arangodb/go-driver v1.6.2
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/google/uuid v1.6.0
@@ -16,7 +16,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
 	github.com/rabbitmq/amqp091-go v1.9.0
 	github.com/rs/cors v1.10.1
-	github.com/slntopp/nocloud-proto v0.0.0-20240305153514-8bf2c5421d6f
+	github.com/slntopp/nocloud-proto v0.0.0-20240402190728-1f4ca760fb28
 	github.com/spf13/viper v1.18.2
 	github.com/stoewer/go-strcase v1.3.0
 	github.com/stretchr/testify v1.8.4

@@ -10,5 +10,5 @@ export default {
 			whiteText: global?.dye?.aside?.whiteText,
 		}
 	},
-	navTitles: global.navTitles ?? {},
+	navTitles: global.navTitles ?? {}
 }

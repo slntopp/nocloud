@@ -2,6 +2,7 @@
   <nocloud-table
     table-name="instances"
     class="mt-4"
+    editable
     :value="value"
     :items="instances"
     :headers="instancesHeaders"
@@ -9,6 +10,7 @@
     :custom-sort="sortInstances"
     :footer-error="fetchError"
     @input="(value) => $emit('input', value)"
+    @update:edit-values="updateEditValues"
     :default-filtres="defaultFiltres"
     :show-select="showSelect"
   >
@@ -100,6 +102,10 @@
       </router-link>
     </template>
 
+    <template v-slot:[`item.location`]="{ item }">
+      {{ getValue("location", item) }}
+    </template>
+
     <template v-slot:[`item.billingPlan.title`]="{ item, value }">
       <router-link
         :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
@@ -141,6 +147,17 @@
         />
       </div>
     </template>
+
+    <template v-slot:[`item.config.auto_renew`]="{ item }">
+      <div class="d-flex justify-center align-center regular_payment">
+        <v-switch
+          dense
+          hide-details
+          readonly
+          :input-value="item.config.auto_renew"
+        />
+      </div>
+    </template>
   </nocloud-table>
 </template>
 
@@ -155,6 +172,7 @@ import {
   getInstancePrice,
   getState,
   isInstancePayg,
+  formatDateToTimestamp,
 } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import searchMixin from "@/mixins/search";
@@ -196,6 +214,7 @@ export default {
     selected: { type: Object, default: null },
     showSelect: { type: Boolean, default: true },
     openInNewTab: { type: Boolean, default: false },
+    editable: { type: Boolean, default: false },
     items: { type: Array, default: () => [] },
     noSearch: { type: Boolean, default: false },
   },
@@ -347,6 +366,9 @@ export default {
     getServiceProvider({ sp }) {
       return this.sp?.find(({ uuid }) => uuid === sp)?.title;
     },
+    getLocation(instance) {
+      return instance.config.location || "Unknown";
+    },
     getOSName(id, sp) {
       if (!id) return;
       return this.sp?.find(({ uuid }) => uuid === sp)?.publicData.templates[id]
@@ -402,6 +424,52 @@ export default {
         await api.services._update(tempService);
       } finally {
         this.isChangeRegularPaymentLoading = false;
+      }
+    },
+    async updateEditValues(values) {
+      try {
+        const promises = this.value.map((instance) => {
+          const tempService = JSON.parse(
+            JSON.stringify(
+              this.services?.find((s) => s.uuid === instance.service)
+            )
+          );
+          const igIndex = tempService.instancesGroups.findIndex((ig) =>
+            ig.instances?.find((i) => i.uuid === instance.uuid)
+          );
+          const instanceIndex = tempService.instancesGroups[
+            igIndex
+          ].instances.findIndex((i) => i.uuid === instance.uuid);
+
+          instance.config.regular_payment =
+            values["config.regular_payment"] === "True";
+          instance.created = formatDateToTimestamp(values["date"]);
+          if (["ione", "empty"].includes(instance.type)) {
+            Object.keys(instance.data).forEach((nextPaymentDateKey) => {
+              if (nextPaymentDateKey.endsWith("next_payment_date")) {
+                const lastMonitoringKey = nextPaymentDateKey.replace(
+                  "next_payment_date",
+                  "last_monitoring"
+                );
+                instance.data[nextPaymentDateKey] = formatDateToTimestamp(
+                  values.dueDate
+                );
+                instance.data[lastMonitoringKey] =
+                  instance.data[lastMonitoringKey] +
+                  (formatDateToTimestamp(values.dueDate) -
+                    instance.data[lastMonitoringKey]);
+              }
+            });
+          }
+
+          tempService.instancesGroups[igIndex].instances[instanceIndex] =
+            instance;
+
+          return api.services._update(tempService);
+        });
+        await Promise.all(promises);
+      } catch (e) {
+        console.log("error while save", e);
       }
     },
     fetchAccounts() {
@@ -513,16 +581,17 @@ export default {
         { text: "Name", value: "title" },
         { text: "Service", value: "service" },
         { text: "Account", value: "access" },
-        { text: "Due date", value: "dueDate" },
+        { text: "Due date", value: "dueDate", editable: { type: "date" } },
         { text: "Status", value: "state" },
         { text: "Tariff", value: "product" },
         { text: "Service provider", value: "sp" },
+        { text: "Location", value: "location" },
         { text: "Type", value: "type" },
         { text: "NCU price", value: "price" },
         { text: "Account price", value: "accountPrice" },
         { text: "Period", value: "period" },
         { text: "Email", value: "email" },
-        { text: "Created date", value: "date" },
+        { text: "Created date", value: "date", editable: { type: "date" } },
         { text: "UUID", value: "uuid" },
         { text: "Price model", value: "billingPlan.title" },
         { text: "IP", value: "state.meta.networking" },
@@ -533,7 +602,12 @@ export default {
         { text: "Domain", value: "resources.domain" },
         { text: "DCV", value: "resources.dcv" },
         { text: "Approver email", value: "resources.approver_email" },
-        { text: "Invoice based", value: "config.regular_payment" },
+        {
+          text: "Invoice based",
+          value: "config.regular_payment",
+          editable: { type: "logic-select" },
+        },
+        { text: "Auto renew", value: "config.auto_renew" },
       ];
       return headers;
     },
@@ -550,6 +624,7 @@ export default {
         date: this.getCreationDate,
         dueDate: (item) => +this.getExpirationDate(item),
         sp: this.getServiceProvider,
+        location: this.getLocation,
         "resources.ram": (item) =>
           +(item?.resources?.ram / 1024).toFixed(2) || 0,
         "resources.drive_size": (item) =>
@@ -589,6 +664,12 @@ export default {
           items: this.getSearchKeyItems("sp"),
           type: "select",
           title: "Service provider",
+        },
+        {
+          key: "location",
+          items: this.getSearchKeyItems("location"),
+          type: "select",
+          title: "Location",
         },
         {
           key: "access",

@@ -26,7 +26,7 @@
             item-text="title"
             item-value="uuid"
             :value="instance.billing_plan"
-            :items="plans.list"
+            :items="plans"
             :rules="planRules"
             @change="changeBilling"
           />
@@ -203,7 +203,7 @@ export default {
       this.setValue("config.template_id", +osId);
     },
     changeBilling(val) {
-      this.bilingPlan = this.plans.list.find((p) => p.uuid === val);
+      this.bilingPlan = this.plans.find((p) => p.uuid === val);
       if (this.bilingPlan) {
         this.products = Object.keys(this.bilingPlan.products);
       }
@@ -284,7 +284,7 @@ export default {
     },
   },
   watch: {
-    "plans.list"() {
+    "plans"() {
       this.changeBilling(this.instance.billing_plan);
     },
     existing() {

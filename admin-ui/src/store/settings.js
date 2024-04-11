@@ -90,9 +90,10 @@ export default {
       return state.loading;
     },
     whmcsApi(state) {
-      return JSON.parse(
-        state.values["whmcs"] || "{}"
-      ).api;
+      return JSON.parse(state.values["whmcs"] || "{}").api;
+    },
+    timeZone(state) {
+      return JSON.parse(state.values["timezone"] || "{}").timeZone;
     },
   },
 };

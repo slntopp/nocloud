@@ -1,6 +1,6 @@
 <template>
   <v-chip :small="small" :color="chipColor">
-    {{ state }} {{ isDetached ? "(Detached)" : "" }}
+    {{ state }} {{ isDetached ? "(Hided)" : "" }}
   </v-chip>
 </template>
 
