@@ -177,7 +177,10 @@
           </template>
 
           <template v-slot:[`item.addons`]="{ item }">
-            <product-addons-dialog :addons="item.addons" />
+            <product-addons-dialog
+              @change:addons="changeProductAddons(item, $event)"
+              :addons="item.addons"
+            />
           </template>
 
           <template v-slot:expanded-item="{ headers, item }">
@@ -238,7 +241,11 @@
           @change:resource="changeResource(false, $event)"
         />
 
-        <plan-addons-table v-else-if="tab === 'Addons'" :addons="addons" />
+        <plan-addons-table
+          @change:addons="emits('change:addons', $event)"
+          v-else-if="tab === 'Addons'"
+          :addons="addons"
+        />
       </v-tab-item>
     </v-tabs-items>
   </div>
@@ -265,7 +272,12 @@ const props = defineProps({
   resources: { type: Array, required: true },
   rules: { type: Object },
 });
-const emits = defineEmits(["change:resource", "change:product", "change:meta"]);
+const emits = defineEmits([
+  "change:resource",
+  "change:product",
+  "change:meta",
+  "change:addons",
+]);
 const { products, resources, rules, type } = toRefs(props);
 
 const { defaultCurrency } = useCurrency();
@@ -362,6 +374,10 @@ function changeOneTime(item, value) {
     changeProduct("period", 0, item.id);
   }
   changeProduct("meta", { ...item.meta, oneTime: value }, item.id);
+}
+
+function changeProductAddons(item, value) {
+  changeProduct("addons", value, item.id);
 }
 
 function isOneTime(item) {
