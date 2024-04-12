@@ -24,6 +24,11 @@ const (
 )
 
 const (
+	DEFAULT_CURRENCY_ID   = 0
+	DEFAULT_CURRENCY_NAME = "NCU"
+)
+
+const (
 	NAMESPACES_COL = "Namespaces"
 	NS2ACC         = NAMESPACES_COL + "2" + ACCOUNTS_COL
 

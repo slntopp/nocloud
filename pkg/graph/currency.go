@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"strconv"
 
 	"github.com/arangodb/go-driver"
@@ -13,20 +14,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const DEFAULT_CURRENCY_ID = 0
-const DEFAULT_CURRENCY_NAME = "NCU"
-
 type Currency struct {
 	*pb.Currency
 	driver.DocumentMeta
-}
-
-var currencies = []*pb.Currency{
-	{Id: DEFAULT_CURRENCY_ID, Name: DEFAULT_CURRENCY_NAME},
-	{Id: 1, Name: "USD"},
-	{Id: 2, Name: "EUR"},
-	{Id: 3, Name: "BYN"},
-	{Id: 4, Name: "PLN"},
 }
 
 type CurrencyController struct {
@@ -47,8 +37,9 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 	if err != nil {
 		panic(err)
 	}
-	// Fill database with known currencies
-	for _, currency := range currencies {
+
+	// Ensure default currencies exists
+	for _, currency := range migrations.LEGACY_CURRENCIES {
 		key := fmt.Sprintf("%d", currency.GetId())
 		exists, _ := col.DocumentExists(ctx, key)
 		if !exists {

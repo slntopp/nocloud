@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"github.com/go-redis/redis/v8"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"testing"
 
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -48,7 +49,7 @@ func TestConvert(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(list) != len(currencies) {
+	if len(list) != len(migrations.LEGACY_CURRENCIES) {
 		t.Error("Default currencies haven't been created")
 	}
 

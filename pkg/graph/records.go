@@ -141,7 +141,7 @@ func (ctrl *RecordsController) GetInstancesReports(ctx context.Context, req *pb.
 		params["to"] = req.GetTo()
 	}
 
-	params["def_currency"] = &pb.Currency{Id: DEFAULT_CURRENCY_ID, Name: DEFAULT_CURRENCY_NAME}
+	params["def_currency"] = &pb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Name: schema.DEFAULT_CURRENCY_NAME}
 	query += " RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : @def_currency}) FOR r in reports"
 
 	if req.Field != nil && req.Sort != nil {
