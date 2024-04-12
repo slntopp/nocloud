@@ -13,12 +13,17 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var currencies []pb.Currency = []pb.Currency{
-	pb.Currency_NCU,
-	pb.Currency_USD,
-	pb.Currency_EUR,
-	pb.Currency_BYN,
-	pb.Currency_PLN,
+type Currency struct {
+	*pb.Currency
+	driver.DocumentMeta
+}
+
+var currencies []*pb.Currency = []*pb.Currency{
+	{Id: 0, Name: "NCU"},
+	{Id: 1, Name: "USD"},
+	{Id: 2, Name: "EUR"},
+	{Id: 3, Name: "BYN"},
+	{Id: 4, Name: "PLN"},
 }
 
 type CurrencyController struct {
@@ -37,12 +42,10 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 
 	// Fill database with known currencies
 	for _, currency := range currencies {
-		key := fmt.Sprintf("%d", currency)
+		key := fmt.Sprintf("%d", currency.GetId())
 		exists, _ := col.DocumentExists(ctx, key)
 		if !exists {
-			col.CreateDocument(ctx, map[string]string{
-				"_key": key,
-			})
+			col.CreateDocument(ctx, Currency{Currency: currency, DocumentMeta: driver.DocumentMeta{Key: key}})
 		}
 	}
 
@@ -60,9 +63,9 @@ FOR CURRENCY in @@currencies
 	return CURRENCY
 `
 
-func (c *CurrencyController) GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, error) {
+func (c *CurrencyController) GetExchangeRateDirect(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, error) {
 	edge := map[string]interface{}{}
-	_, err := c.edges.ReadDocument(ctx, fmt.Sprintf("%d-%d", from, to), &edge)
+	_, err := c.edges.ReadDocument(ctx, fmt.Sprintf("%d-%d", from.GetId(), to.GetId()), &edge)
 	if err != nil {
 		return 0, err
 	}
@@ -82,14 +85,14 @@ LET rates = (
 RETURN { len: LENGTH(rates), rate: PRODUCT(rates) }
 `
 
-func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) (float64, error) {
-	if from == to {
+func (c *CurrencyController) GetExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) (float64, error) {
+	if from.GetId() == to.GetId() {
 		return 1, nil
 	}
 
 	cursor, err := c.db.Query(ctx, getExchangeRateQuery, map[string]interface{}{
-		"from":    fmt.Sprintf("%s/%d", schema.CUR_COL, from),
-		"to":      fmt.Sprintf("%s/%d", schema.CUR_COL, to),
+		"from":    fmt.Sprintf("%s/%d", schema.CUR_COL, from.GetId()),
+		"to":      fmt.Sprintf("%s/%d", schema.CUR_COL, to.GetId()),
 		"billing": schema.BILLING_GRAPH.Name,
 	})
 	if err != nil {
@@ -108,19 +111,19 @@ func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Curren
 	}
 
 	if res.Len == 0 {
-		return 0, fmt.Errorf("no path or direct connection between %s and %s", from.String(), to.String())
+		return 0, fmt.Errorf("no path or direct connection between %s and %s", from.GetName(), to.GetName())
 	}
 
 	return res.Rate, nil
 }
 
-func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate float64) error {
+func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate float64) error {
 	edge := map[string]interface{}{
-		"_key":  fmt.Sprintf("%d-%d", from, to),
-		"_from": fmt.Sprintf("%s/%d", schema.CUR_COL, from),
-		"_to":   fmt.Sprintf("%s/%d", schema.CUR_COL, to),
-		"from":  from,
-		"to":    to,
+		"_key":  fmt.Sprintf("%d-%d", from.GetId(), to.GetId()),
+		"_from": fmt.Sprintf("%s/%d", schema.CUR_COL, from.GetId()),
+		"_to":   fmt.Sprintf("%s/%d", schema.CUR_COL, to.GetId()),
+		"from":  from.GetId(),
+		"to":    to.GetId(),
 		"rate":  rate,
 	}
 	_, err := c.edges.CreateDocument(ctx, &edge)
@@ -128,8 +131,8 @@ func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Cur
 	return err
 }
 
-func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate float64) error {
-	key := fmt.Sprintf("%d-%d", from, to)
+func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency, rate float64) error {
+	key := fmt.Sprintf("%d-%d", from.GetId(), to.GetId())
 
 	edge := map[string]interface{}{
 		"rate": rate,
@@ -139,17 +142,17 @@ func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Cur
 	return err
 }
 
-func (c *CurrencyController) DeleteExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) error {
-	key := fmt.Sprintf("%d-%d", from, to)
+func (c *CurrencyController) DeleteExchangeRate(ctx context.Context, from *pb.Currency, to *pb.Currency) error {
+	key := fmt.Sprintf("%d-%d", from.GetId(), to.GetId())
 
 	_, err := c.edges.RemoveDocument(ctx, key)
 
 	return err
 }
 
-func (c *CurrencyController) Convert(ctx context.Context, from pb.Currency, to pb.Currency, amount float64) (float64, error) {
+func (c *CurrencyController) Convert(ctx context.Context, from *pb.Currency, to *pb.Currency, amount float64) (float64, error) {
 
-	if from == to {
+	if from.GetId() == to.GetId() {
 		return amount, nil
 	}
 
@@ -161,8 +164,8 @@ func (c *CurrencyController) Convert(ctx context.Context, from pb.Currency, to p
 	return amount * rate, nil
 }
 
-func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]pb.Currency, error) {
-	currencies := []pb.Currency{}
+func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]*pb.Currency, error) {
+	currencies := []*pb.Currency{}
 
 	cursor, err := c.db.Query(ctx, getCurrenciesQuery, map[string]interface{}{
 		"@currencies": schema.CUR_COL,
@@ -173,8 +176,11 @@ func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]pb.Currency, 
 	defer cursor.Close()
 
 	for cursor.HasMore() {
-		doc := &driver.DocumentMeta{}
-		cursor.ReadDocument(ctx, doc)
+		doc := Currency{}
+		_, err := cursor.ReadDocument(ctx, doc)
+		if err != nil {
+			return currencies, err
+		}
 
 		// specify bitsize to parse int32 exactly
 		id, err := strconv.ParseInt(doc.Key, 10, 32)
@@ -182,7 +188,10 @@ func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]pb.Currency, 
 			return currencies, err
 		}
 
-		currencies = append(currencies, pb.Currency(int32(id)))
+		currencies = append(currencies, &pb.Currency{
+			Id:   id,
+			Name: doc.Currency.Name,
+		})
 	}
 
 	return currencies, nil

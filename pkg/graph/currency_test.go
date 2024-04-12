@@ -53,8 +53,8 @@ func TestConvert(t *testing.T) {
 	}
 
 	testRate := 2.0
-	c.CreateExchangeRate(ctx, pb.Currency_USD, pb.Currency_BYN, testRate)
-	c.CreateExchangeRate(ctx, pb.Currency_EUR, pb.Currency_BYN, testRate)
+	c.CreateExchangeRate(ctx, &pb.Currency{Id: 1}, &pb.Currency{Id: 3}, testRate)
+	c.CreateExchangeRate(ctx, &pb.Currency{Id: 2}, &pb.Currency{Id: 3}, testRate)
 	rates, err := c.GetExchangeRates(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +63,7 @@ func TestConvert(t *testing.T) {
 		t.Error("Didn't fetch all exchange rates")
 	}
 
-	rate, err := c.GetExchangeRateDirect(ctx, pb.Currency_USD, pb.Currency_BYN)
+	rate, err := c.GetExchangeRateDirect(ctx, &pb.Currency{Id: 1}, &pb.Currency{Id: 3})
 	if err != nil {
 		t.Error(err)
 	}
@@ -71,7 +71,7 @@ func TestConvert(t *testing.T) {
 		t.Error("Wrong exchange rate")
 	}
 
-	amount, err := c.Convert(ctx, pb.Currency_USD, pb.Currency_BYN, 1.0)
+	amount, err := c.Convert(ctx, &pb.Currency{Id: 1}, &pb.Currency{Id: 3}, 1.0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -80,7 +80,7 @@ func TestConvert(t *testing.T) {
 		t.Errorf("Wrong conversion. Wanted %f. Got = %f", wanted, amount)
 	}
 
-	err = c.DeleteExchangeRate(ctx, pb.Currency_USD, pb.Currency_BYN)
+	err = c.DeleteExchangeRate(ctx, &pb.Currency{Id: 1}, &pb.Currency{Id: 3})
 	if err != nil {
 		t.Error(err)
 	}
