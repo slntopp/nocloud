@@ -21,7 +21,7 @@ type Currency struct {
 	driver.DocumentMeta
 }
 
-var currencies []*pb.Currency = []*pb.Currency{
+var currencies = []*pb.Currency{
 	{Id: DEFAULT_CURRENCY_ID, Name: DEFAULT_CURRENCY_NAME},
 	{Id: 1, Name: "USD"},
 	{Id: 2, Name: "EUR"},
@@ -140,8 +140,8 @@ func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from *pb.Cu
 		"_key":  fmt.Sprintf("%d-%d", from.GetId(), to.GetId()),
 		"_from": fmt.Sprintf("%s/%d", schema.CUR_COL, from.GetId()),
 		"_to":   fmt.Sprintf("%s/%d", schema.CUR_COL, to.GetId()),
-		"from":  from.GetId(),
-		"to":    to.GetId(),
+		"from":  from,
+		"to":    to,
 		"rate":  rate,
 	}
 	_, err := c.edges.CreateDocument(ctx, &edge)
