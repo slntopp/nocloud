@@ -308,11 +308,11 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, req *connect.Request
 var getDefaultCurrencyQuery = `
 LET cur = LAST(
     FOR i IN Currencies2Currencies
-    FILTER (i.to == 0 || i.from == 0) && i.rate == 1
+    FILTER (i.to.id == 0 || i.from.id == 0) && i.rate == 1
         RETURN i
 )
 
-RETURN cur.to == 0 ? cur.from : cur.to
+RETURN cur.to.id == 0 ? cur.from : cur.to
 `
 
 func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request[pb.ListRequest]) (*connect.Response[pb.ListResponse], error) {
