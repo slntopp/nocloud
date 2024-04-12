@@ -33,11 +33,14 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 	col := GetEnsureCollection(log, ctx, db, schema.CUR_COL)
 	edges := GraphGetEdgeEnsure(log, ctx, graph, schema.CUR2CUR, schema.CUR_COL, schema.CUR_COL)
 
+	log.Info("Creating Currency controller")
+
 	_, _, err := col.EnsureHashIndex(ctx, []string{"name"}, &driver.EnsureHashIndexOptions{Unique: true})
 	if err != nil {
 		panic(err)
 	}
 
+	log.Info("Creating default currencies")
 	// Ensure default currencies exists
 	for _, currency := range migrations.LEGACY_CURRENCIES {
 		key := fmt.Sprintf("%d", currency.GetId())
@@ -46,6 +49,7 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 			col.CreateDocument(ctx, Currency{Currency: currency, DocumentMeta: driver.DocumentMeta{Key: key}})
 		}
 	}
+	log.Info("Default currencies ensured")
 
 	ctrl := CurrencyController{
 		log:   log,
@@ -54,6 +58,8 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 		edges: edges,
 		db:    db,
 	}
+
+	log.Info("Migrating old currency template to dynamic")
 
 	ctrl.migrateToDynamic()
 	return ctrl
@@ -73,6 +79,7 @@ const migrateToDynamicEdges = `
 `
 
 func (c *CurrencyController) migrateToDynamic() {
+	c.log.Info("Migrating currency to dynamic")
 	namesMap := map[string]string{}
 	for _, val := range migrations.LEGACY_CURRENCIES {
 		namesMap[fmt.Sprintf("%d", val.GetId())] = val.GetName()

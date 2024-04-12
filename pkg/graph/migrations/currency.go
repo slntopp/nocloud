@@ -26,6 +26,7 @@ const numericToObjectCurrency = `
 
 func UpdateNumericCurrencyToDynamic(log *zap.Logger, col driver.Collection) {
 	colName := col.Name()
+	log.Info("Migrating currency to dynamic for collection: " + colName)
 	namesMap := map[string]string{}
 	for _, val := range LEGACY_CURRENCIES {
 		namesMap[fmt.Sprintf("%d", val.GetId())] = val.GetName()

@@ -52,6 +52,8 @@ func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsContr
 	ctx := context.TODO()
 	log := logger.Named("AccountsController")
 
+	log.Info("Creating Accounts controller")
+
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.ACCOUNTS_COL)
 
