@@ -452,10 +452,6 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 
 	t, err := s.transactions.Get(ctx, req.GetUuid())
 	if err != nil {
-		return nil, err
-	}
-
-	if err != nil {
 		log.Error("Failed to get transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get transaction")
 	}
