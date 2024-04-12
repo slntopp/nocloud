@@ -31,6 +31,19 @@ func NewCurrencyServiceServer(log *zap.Logger, db driver.Database) *CurrencyServ
 	}
 }
 
+func (s *CurrencyServiceServer) CreateCurrency(ctx context.Context, r *connect.Request[pb.CreateCurrencyRequest]) (*connect.Response[pb.CreateCurrencyResponse], error) {
+	req := r.Msg
+	if req.Currency == nil {
+		return nil, status.Error(codes.InvalidArgument, "no currency provided")
+	}
+	err := s.ctrl.CreateCurrency(ctx, req.Currency)
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&pb.CreateCurrencyResponse{}), nil
+}
+
 func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, r *connect.Request[pb.GetExchangeRateRequest]) (*connect.Response[pb.GetExchangeRateResponse], error) {
 	req := r.Msg
 	rate, err := s.ctrl.GetExchangeRate(ctx, req.From, req.To)
