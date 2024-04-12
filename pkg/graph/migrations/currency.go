@@ -25,16 +25,17 @@ const numericToObjectCurrency = `
 `
 
 func UpdateNumericCurrencyToDynamic(log *zap.Logger, col driver.Collection) {
+	colName := col.Name()
 	namesMap := map[string]string{}
 	for _, val := range LEGACY_CURRENCIES {
 		namesMap[fmt.Sprintf("%d", val.GetId())] = val.GetName()
 	}
 	_, err := col.Database().Query(context.TODO(), numericToObjectCurrency, map[string]interface{}{
-		"@collection": col.Name(),
+		"@collection": colName,
 		"names":       namesMap,
 	})
 	if err != nil {
-		log.Fatal("Error migrating currency", zap.Error(err), zap.String("collection", col.Name()))
+		log.Fatal("Error migrating currency", zap.Error(err), zap.String("collection", colName))
 	}
-	log.Info("Migrated currency", zap.String("collection", col.Name()))
+	log.Info("Migrated currency", zap.String("collection", colName))
 }

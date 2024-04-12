@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
-	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"go.uber.org/zap"
 )
@@ -56,8 +56,8 @@ var (
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
 			Currency: &pb.Currency{
-				Id:   graph.DEFAULT_CURRENCY_ID,
-				Name: graph.DEFAULT_CURRENCY_NAME,
+				Id:   schema.DEFAULT_CURRENCY_ID,
+				Name: schema.DEFAULT_CURRENCY_NAME,
 			},
 		},
 		Description: "Default currency for platform",
