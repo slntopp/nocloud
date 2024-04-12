@@ -229,15 +229,16 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 	log.Debug("Retrieving account", zap.String("uuid", requested))
 	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, requested))
 
+	if err != nil || acc.Access == nil {
+		log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
 	if acc.Account == nil {
 		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if err != nil || acc.Access == nil {
-		log.Debug("Error getting account", zap.Any("error", err))
-		return nil, status.Error(codes.NotFound, "Account not found")
-	}
 	log.Debug("Retrieved account", zap.Any("account", acc))
 
 	// Provide public information without access check
