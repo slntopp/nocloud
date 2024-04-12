@@ -86,6 +86,7 @@ func TestConsumeMock_NotNormal(t *testing.T) {
 	db.On("Query", ctx, generateUrgentTransactions, map[string]interface{}{
 		"@transactions": schema.TRANSACTIONS_COL,
 		"@instances":    schema.INSTANCES_COL,
+		"instances":     schema.INSTANCES_COL,
 		"@services":     schema.SERVICES_COL,
 		"@records":      schema.RECORDS_COL,
 		"@accounts":     schema.ACCOUNTS_COL,
