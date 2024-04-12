@@ -431,7 +431,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
-		Currency: &request.Currency,
+		Currency: request.Currency,
 		Data:     request.GetData(),
 	}
 
@@ -529,7 +529,7 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
-		Currency: &request.Currency,
+		Currency: request.Currency,
 		Data:     request.GetData(),
 		Status:   accStatus,
 	}
