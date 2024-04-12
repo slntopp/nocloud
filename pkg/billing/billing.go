@@ -31,6 +31,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
+	"strconv"
 )
 
 type Routine struct {
@@ -362,24 +363,32 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 
 		cur := acc.Account.GetCurrency()
 
-		defaultCur := pb.Currency_NCU
-
+		dbCur := graph.Currency{}
 		queryContext := driver.WithQueryCount(ctx)
 		res, err := s.db.Query(queryContext, getDefaultCurrencyQuery, map[string]interface{}{})
 		if err != nil {
 			return nil, err
 		}
 		if res.Count() != 0 {
-			_, err = res.ReadDocument(ctx, &defaultCur)
+			_, err = res.ReadDocument(ctx, &dbCur)
 			if err != nil {
 				log.Error("Failed to get default cur", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Failed to get default cur")
 			}
 		}
 
+		id, err := strconv.ParseInt(dbCur.Key, 10, 32)
+		if err != nil {
+			log.Error("Failed to parse int", zap.Error(err))
+		}
+		defaultCur := &pb.Currency{
+			Id:   id,
+			Name: dbCur.Name,
+		}
+
 		var rate float64
 
-		if cur == defaultCur {
+		if cur.GetId() == defaultCur.GetId() {
 			rate = 1
 		} else {
 			rate, err = s.currencies.GetExchangeRateDirect(ctx, defaultCur, cur)

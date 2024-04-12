@@ -2,9 +2,9 @@ package billing
 
 import (
 	"context"
+	"github.com/slntopp/nocloud/pkg/graph"
 
 	"github.com/slntopp/nocloud-proto/access"
-	pb "github.com/slntopp/nocloud-proto/billing"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"go.uber.org/zap"
 )
@@ -55,7 +55,7 @@ var (
 	}
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
-			Currency: int32(pb.Currency_NCU),
+			Currency: int32(graph.DEFAULT_CURRENCY_ID),
 		},
 		Description: "Default currency for platform",
 		Level:       access.Level_ADMIN,

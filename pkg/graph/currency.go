@@ -13,13 +13,16 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const DEFAULT_CURRENCY_ID = 0
+const DEFAULT_CURRENCY_NAME = "NCU"
+
 type Currency struct {
 	*pb.Currency
 	driver.DocumentMeta
 }
 
 var currencies []*pb.Currency = []*pb.Currency{
-	{Id: 0, Name: "NCU"},
+	{Id: DEFAULT_CURRENCY_ID, Name: DEFAULT_CURRENCY_NAME},
 	{Id: 1, Name: "USD"},
 	{Id: 2, Name: "EUR"},
 	{Id: 3, Name: "BYN"},
