@@ -111,6 +111,9 @@ func (ctrl *AccountsController) Exists(ctx context.Context, id string) (bool, er
 
 func (ctrl *AccountsController) Create(ctx context.Context, acc pb.Account) (Account, error) {
 	meta, err := ctrl.col.CreateDocument(ctx, &acc)
+	if err != nil {
+		return Account{}, err
+	}
 	acc.Uuid = meta.ID.Key()
 	return Account{&acc, meta}, err
 }
