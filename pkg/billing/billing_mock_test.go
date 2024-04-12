@@ -93,6 +93,9 @@ func newBillingServiceServerFixture(t *testing.T) *billingServiceServerFixture {
 	f.mocks.db.On("Collection", mock.Anything, schema.INVOICES_COL).Return(f.mocks.invCol, nil)
 	f.mocks.db.On("Collection", mock.Anything, schema.DESCRIPTIONS_COL).Return(f.mocks.descrCol, nil)
 
+	// Ensure currencies ensuring index on name
+	f.mocks.curCol.On("EnsureHashIndex", mock.Anything, []string{"name"}, &driver.EnsureHashIndexOptions{Unique: true}).Return(driver.Index(nil), true, nil)
+
 	// locked for 5 currencies
 	f.mocks.curCol.On("DocumentExists", mock.Anything, mock.Anything).Return(true, nil).Times(5)
 
