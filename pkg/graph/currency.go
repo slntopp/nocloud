@@ -35,11 +35,6 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 
 	log.Info("Creating Currency controller")
 
-	_, _, err := col.EnsureHashIndex(ctx, []string{"name"}, &driver.EnsureHashIndexOptions{Unique: true})
-	if err != nil {
-		panic(err)
-	}
-
 	log.Info("Creating default currencies")
 	// Ensure default currencies exists
 	for _, currency := range migrations.LEGACY_CURRENCIES {
@@ -60,8 +55,15 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 	}
 
 	log.Info("Migrating old currency template to dynamic")
-
 	ctrl.migrateToDynamic()
+
+	log.Info("Ensuring hash index on currency name")
+	_, _, err := col.EnsureHashIndex(ctx, []string{"name"}, &driver.EnsureHashIndexOptions{Unique: true})
+	if err != nil {
+		panic(err)
+	}
+
+	log.Info("Currency controller was created")
 	return ctrl
 }
 
@@ -72,8 +74,8 @@ const migrateToDynamicVertex = `
 `
 const migrateToDynamicEdges = `
 	FOR edge IN @@collection
-		LET from_doc = DOCUMENT(@cur_collection, edge._from)
-        LET to_doc = DOCUMENT(@cur_collection, edge._to)
+		LET from_doc = DOCUMENT(@@cur_collection, edge._from)
+        LET to_doc = DOCUMENT(@@cur_collection, edge._to)
         FILTER from_doc != null && to_doc != null
 		UPDATE edge WITH { from: from_doc, to: to_doc } IN @@collection
 `
