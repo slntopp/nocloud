@@ -2,9 +2,9 @@ package billing
 
 import (
 	"context"
-	"github.com/slntopp/nocloud/pkg/graph"
-
 	"github.com/slntopp/nocloud-proto/access"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/graph"
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 	"go.uber.org/zap"
 )
@@ -22,7 +22,7 @@ type RoutineConf struct {
 }
 
 type CurrencyConf struct {
-	Currency int32 `json:"currency"` // Default currency for platform
+	Currency *pb.Currency `json:"currency"` // Default currency for platform
 }
 
 type RoundingConf struct {
@@ -55,7 +55,10 @@ var (
 	}
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
-			Currency: int32(graph.DEFAULT_CURRENCY_ID),
+			Currency: &pb.Currency{
+				Id:   graph.DEFAULT_CURRENCY_ID,
+				Name: graph.DEFAULT_CURRENCY_NAME,
+			},
 		},
 		Description: "Default currency for platform",
 		Level:       access.Level_ADMIN,
