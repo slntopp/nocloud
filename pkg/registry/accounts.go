@@ -624,7 +624,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	}
 
 	if request.Currency != nil {
-		if acc.GetCurrency() != request.GetCurrency() {
+		if acc.GetCurrency().GetId() != request.GetCurrency().GetId() {
 			log.Debug("Currency patch detected")
 			patch["currency"] = request.GetCurrency()
 		}
