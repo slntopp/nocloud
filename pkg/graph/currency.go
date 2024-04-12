@@ -40,6 +40,10 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 	col := GetEnsureCollection(log, ctx, db, schema.CUR_COL)
 	edges := GraphGetEdgeEnsure(log, ctx, graph, schema.CUR2CUR, schema.CUR_COL, schema.CUR_COL)
 
+	_, _, err := col.EnsureHashIndex(ctx, []string{"name"}, &driver.EnsureHashIndexOptions{Unique: true})
+	if err != nil {
+		panic(err)
+	}
 	// Fill database with known currencies
 	for _, currency := range currencies {
 		key := fmt.Sprintf("%d", currency.GetId())
@@ -56,6 +60,17 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 		edges: edges,
 		db:    db,
 	}
+}
+
+func (c *CurrencyController) CreateCurrency(ctx context.Context, currency *pb.Currency) error {
+	key := fmt.Sprintf("%d", currency.GetId())
+	_, err := c.col.CreateDocument(ctx, Currency{
+		Currency: currency,
+		DocumentMeta: driver.DocumentMeta{
+			Key: key,
+		},
+	})
+	return err
 }
 
 const getCurrenciesQuery = `
