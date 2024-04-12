@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -64,6 +65,8 @@ func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsContr
 	GraphGetEdgeEnsure(log, ctx, graph, schema.CREDENTIALS_EDGE_COL, schema.ACCOUNTS_COL, schema.CREDENTIALS_COL)
 
 	nsController := NewNamespacesController(log, col.Database())
+
+	migrations.UpdateNumericCurrencyToDynamic(log, col)
 
 	return AccountsController{log: log, col: col, cred: cred, ns_ctrl: nsController}
 }

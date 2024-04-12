@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
@@ -40,6 +41,9 @@ func NewRecordsController(logger *zap.Logger, db driver.Database) RecordsControl
 	ctx := context.TODO()
 	log := logger.Named("RecordsController")
 	col := GetEnsureCollection(log, ctx, db, schema.RECORDS_COL)
+
+	migrations.UpdateNumericCurrencyToDynamic(log, col)
+
 	return RecordsController{
 		log: log, col: col, db: db,
 	}
