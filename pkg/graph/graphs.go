@@ -19,8 +19,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"google.golang.org/protobuf/types/known/structpb"
 	"strings"
+
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -431,7 +432,7 @@ func ListWithAccessAndFilters[T Accessible](
 
 	for key, val := range filters {
 		if key == "search_param" && collectionName == schema.ACCOUNTS_COL {
-			insert += fmt.Sprintf(` FILTER node.title LIKE "%s" || node.data.email LIKE "%s"`, "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
+			insert += fmt.Sprintf(` FILTER node.title LIKE "%s" || node.data.email LIKE "%s" || "FILTER node._key LIKE "%s"`, "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
 		} else if key == "namespace" && collectionName == schema.ACCOUNTS_COL {
 			insert += fmt.Sprintf(` FILTER path.vertices[-2]._key == "%s"`, "%"+val.GetStringValue()+"%")
 		} else if strings.HasPrefix(key, "data") {
@@ -452,6 +453,8 @@ func ListWithAccessAndFilters[T Accessible](
 					to := val.(float64)
 					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %f`, key, to)
 				}
+			} else if split[1] == "whmcs_id" {
+				insert += fmt.Sprintf(` FILTER node.data["%s"] == %d`, split[1], int(val.GetNumberValue()))
 			}
 		} else if key == "access.level" {
 			values := val.GetListValue().AsSlice()
