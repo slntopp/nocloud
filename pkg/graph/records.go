@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
@@ -40,6 +41,11 @@ func NewRecordsController(logger *zap.Logger, db driver.Database) RecordsControl
 	ctx := context.TODO()
 	log := logger.Named("RecordsController")
 	col := GetEnsureCollection(log, ctx, db, schema.RECORDS_COL)
+
+	log.Info("Creating Records controller")
+
+	migrations.UpdateNumericCurrencyToDynamic(log, col)
+
 	return RecordsController{
 		log: log, col: col, db: db,
 	}
@@ -141,7 +147,8 @@ func (ctrl *RecordsController) GetInstancesReports(ctx context.Context, req *pb.
 		params["to"] = req.GetTo()
 	}
 
-	query += " RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : 0}) FOR r in reports"
+	params["def_currency"] = &pb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Name: schema.DEFAULT_CURRENCY_NAME}
+	query += " RETURN record) RETURN {uuid: i._key, total: SUM(records[*].total), currency: FIRST(records).currency ? FIRST(records).currency : @def_currency}) FOR r in reports"
 
 	if req.Field != nil && req.Sort != nil {
 		subQuery := ` SORT r.%s %s`

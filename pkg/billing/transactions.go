@@ -295,18 +295,18 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		var cur pb.Currency
+		var cur *pb.Currency
 
 		if dbAcc.Currency == nil {
-			cur = pb.Currency_NCU
+			cur = currencyConf.Currency
 		} else {
-			cur = *dbAcc.Currency
+			cur = dbAcc.Currency
 		}
 
 		var rate float64 = 1
 
-		if cur != pb.Currency(currencyConf.Currency) {
-			rate, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
+		if cur.GetId() != currencyConf.Currency.GetId() {
+			rate, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
 
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
@@ -452,10 +452,6 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 
 	t, err := s.transactions.Get(ctx, req.GetUuid())
 	if err != nil {
-		return nil, err
-	}
-
-	if err != nil {
 		log.Error("Failed to get transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get transaction")
 	}
@@ -516,18 +512,18 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 			return nil, status.Error(codes.Internal, err.Error())
 		}
 
-		var cur pb.Currency
+		var cur *pb.Currency
 
 		if dbAcc.Currency == nil {
-			cur = pb.Currency_NCU
+			cur = currencyConf.Currency
 		} else {
-			cur = *dbAcc.Currency
+			cur = dbAcc.Currency
 		}
 
 		var rate float64 = 1
 
-		if cur != pb.Currency(currencyConf.Currency) {
-			rate, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
+		if cur.GetId() != currencyConf.Currency.GetId() {
+			rate, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
 
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
@@ -575,8 +571,8 @@ LET transaction = DOCUMENT(@transactionKey)
 LET currency = account.currency != null ? account.currency : @currency
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
-	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency)))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency.id)))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate
@@ -600,8 +596,8 @@ LET transaction = DOCUMENT(@transactionKey)
 LET currency = account.currency != null ? account.currency : @currency
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
-	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency)))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(transaction.currency.id)))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate
@@ -632,8 +628,8 @@ FILTER t.exec <= @now
 FILTER t.account == account._key
 	LET rate = PRODUCT(
 		FOR vertex, edge IN OUTBOUND
-		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency)))
-		TO DOCUMENT(CONCAT(@currencies, "/", currency))
+		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency.id)))
+		TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 		GRAPH @graph
 		FILTER edge
 			RETURN edge.rate
