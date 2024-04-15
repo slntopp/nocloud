@@ -88,7 +88,7 @@
         <v-col cols="2" class="align-center d-flex">
           <v-subheader
             >Auto start
-            <v-tooltip :bottom="!top" :top="top">
+            <v-tooltip>
               <template v-slot:activator="{ on, attrs }">
                 <div class="d-inline-block" v-bind="attrs" v-on="on">
                   <v-icon class="ml-2"> mdi-help-circle-outline </v-icon>
@@ -132,6 +132,7 @@
           @change:resource="(data) => changeConfig(data, 'resource')"
           @change:product="(data) => changeConfig(data, 'product')"
           @change:meta="(data) => changeMetaConfig(data, 'meta')"
+          @change:addons="(data) => changeAddons(data)"
         />
       </v-col>
 
@@ -343,6 +344,9 @@ export default {
 
       this.$set(product.meta, key, value);
       this.plan.meta = Object.assign({}, this.plan.meta);
+    },
+    changeAddons(val) {
+      this.plan.addons = val;
     },
     checkName({ title, uuid }, obj, num = 2) {
       const value = obj.find(
