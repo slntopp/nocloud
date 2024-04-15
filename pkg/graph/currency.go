@@ -232,7 +232,10 @@ func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]*pb.Currency,
 	defer cursor.Close()
 
 	for cursor.HasMore() {
-		doc := Currency{}
+		doc := struct {
+			driver.DocumentMeta
+			Name string `json:"name"`
+		}{}
 		_, err := cursor.ReadDocument(ctx, &doc)
 		if err != nil {
 			return currencies, err
@@ -246,7 +249,7 @@ func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]*pb.Currency,
 
 		currencies = append(currencies, &pb.Currency{
 			Id:   id,
-			Name: doc.Currency.Name,
+			Name: doc.Name,
 		})
 	}
 
