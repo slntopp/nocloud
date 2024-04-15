@@ -363,7 +363,10 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 
 		cur := acc.Account.GetCurrency()
 
-		dbCur := graph.Currency{}
+		dbCur := struct {
+			Id   string `json:"id"`
+			Name string `json:"name"`
+		}{}
 		queryContext := driver.WithQueryCount(ctx)
 		res, err := s.db.Query(queryContext, getDefaultCurrencyQuery, map[string]interface{}{})
 		if err != nil {
@@ -377,7 +380,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 			}
 		}
 
-		id, err := strconv.ParseInt(dbCur.Key, 10, 32)
+		id, err := strconv.ParseInt(dbCur.Id, 10, 32)
 		if err != nil {
 			log.Error("Failed to parse int", zap.Error(err))
 		}
