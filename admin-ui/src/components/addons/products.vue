@@ -77,11 +77,18 @@ onMounted(() => {
   store.dispatch("plans/fetch");
 });
 
-const plans = computed(() => store.getters["plans/all"]);
 const isPlansLoading = computed(() => store.getters["plans/isLoading"]);
+const searchParam = computed(() => store.getters["appSearch/param"]);
+
+const plans = computed(() => store.getters["plans/all"]);
+const filtredPlans = computed(() =>
+  searchParam.value
+    ? plans.value.filter((plan) => plan.title.startsWith(searchParam.value))
+    : plans.value
+);
 
 const items = computed(() => {
-  return plans.value.map((plan) => {
+  return filtredPlans.value.map((plan) => {
     const children = Object.keys(plan.products).map((key) => ({
       id: key,
       name: plan.products[key].title,

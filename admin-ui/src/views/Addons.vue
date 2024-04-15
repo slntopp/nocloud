@@ -13,78 +13,32 @@
     </div>
 
     <addons-table
+      :refetch="refetch"
       editable
       show-select
-      :fetchError="fetchError"
-      :loading="isLoading"
       v-model="selectedAddons"
-      :items="addons"
-      :server-items-length="count"
-      :server-side-page="page"
       sort-by="exec"
       sort-desc
-      @update:options="setOptions"
     />
   </div>
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
-import { useStore } from "@/store";
-import { debounce } from "@/functions";
+import { onMounted, ref } from "vue";
 import AddonsTable from "@/components/addonsTable.vue";
+import { useStore } from "@/store";
 
 const store = useStore();
 
 const selectedAddons = ref([]);
 const isDeleteLoading = ref(false);
-const count = ref(10);
-const page = ref(1);
-const isFetchLoading = ref(true);
-const isCountLoading = ref(true);
-const options = ref({});
-const fetchError = ref("");
-const allAddonsGroups = ref([]);
+const refetch = ref(false);
 
-const requestOptions = computed(() => ({
-  filters: filter.value,
-  page: page.value,
-  limit: options.value.itemsPerPage,
-  field: options.value.sortBy?.[0],
-  sort:
-    options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
-}));
-
-const countOptions = computed(() => ({
-  filters: filter.value,
-}));
-
-const filter = computed(() => ({
-  ...store.getters["appSearch/filter"],
-}));
-const searchFields = computed(() => {
-  return [
-    {
-      key: "title",
-      title: "Title",
-      type: "input",
-    },
-    {
-      key: "group",
-      items: allAddonsGroups.value,
-      title: "Group",
-      type: "select",
-    },
-    {
-      key: "system",
-      title: "System",
-      type: "logic-select",
-    },
-  ];
+onMounted(() => {
+  store.commit("reloadBtn/setCallback", {
+    event: () => (refetch.value = !refetch.value),
+  });
 });
-
-const isLoading = computed(() => store.getters["addons/isLoading"]);
-const addons = computed(() => store.getters["addons/all"]);
 
 const deleteSelectedAddons = async () => {
   try {
@@ -94,67 +48,19 @@ const deleteSelectedAddons = async () => {
         store.getters["addons/addonsClient"].delete(addon)
       )
     );
-    fetchAddonsDebounced();
+    selectedAddons.value = [];
+    refetch.value = !refetch.value;
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
     isDeleteLoading.value = false;
   }
 };
-
-const setOptions = (newOptions) => {
-  page.value = newOptions.page;
-  if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
-    options.value = newOptions;
-  }
-};
-
-const init = async () => {
-  isCountLoading.value = true;
-  try {
-    const data = await store.dispatch("addons/count", countOptions.value);
-    const { unique, total } = data.toJson();
-
-    count.value = Number(total);
-    allAddonsGroups.value = unique.groups;
-  } finally {
-    isCountLoading.value = false;
-  }
-};
-
-const fetchAddons = async () => {
-  init();
-  isFetchLoading.value = true;
-  fetchError.value = "";
-  try {
-    await store.dispatch("addons/fetch", requestOptions.value);
-  } catch (e) {
-    fetchError.value = e.message;
-  } finally {
-    isFetchLoading.value = false;
-  }
-};
-
-const fetchAddonsDebounced = debounce(fetchAddons, 100);
-
-watch(
-  searchFields,
-  (value) => {
-    store.commit("appSearch/setFields", value);
-  },
-  { deep: true }
-);
-
-watch(filter, fetchAddonsDebounced, { deep: true });
-watch(options, fetchAddonsDebounced);
 </script>
 
 <script>
-import searchMixin from "@/mixins/search";
-
 export default {
-  name: "AddonsView",
-  mixins: [searchMixin({ name: "addons-table" })],
+  name: "addons-view",
 };
 </script>
 

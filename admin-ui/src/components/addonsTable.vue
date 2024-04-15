@@ -1,15 +1,15 @@
 <template>
   <nocloud-table
-    v-model="value"
-    @input="emit('input', value)"
-    @update:options="emit('update:options', $event)"
-    :loading="loading"
-    :items="items"
+    :value="value"
+    @input="emit('input', $event)"
+    @update:options="setOptions"
+    :loading="isLoading"
+    :items="addons"
     :headers="headers"
     :show-select="showSelect"
     :table-name="tableName"
-    :server-items-length="serverItemsLength"
-    :server-side-page="serveSidePage"
+    :server-items-length="count"
+    :server-side-page="page"
     :sort-desc="sortDesc"
     :sort-by="sortBy"
     :footer-error="fetchError"
@@ -38,33 +38,21 @@
 
 <script setup>
 import NocloudTable from "@/components/table.vue";
-import { ref, toRefs } from "vue";
+import { computed, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
+import { debounce } from "@/functions";
 
 const props = defineProps({
-  loading: { type: Boolean, default: false },
-  items: {},
   value: {},
   tableName: { type: String, default: "addons-table" },
   showSelect: { type: Boolean, default: false },
   sortBy: {},
   sortDesc: {},
-  serverItemsLength: {},
-  serveSidePage: {},
-  fetchError: {},
   editable: { type: Boolean, default: false },
+  refetch: { type: Boolean, default: false },
 });
-const {
-  loading,
-  items,
-  showSelect,
-  tableName,
-  value,
-  sortBy,
-  sortDesc,
-  serverItemsLength,
-  serveSidePage,
-} = toRefs(props);
+const { showSelect, tableName, value, sortBy, sortDesc, refetch } =
+  toRefs(props);
 
 const emit = defineEmits(["input", "update:options"]);
 
@@ -77,11 +65,92 @@ const headers = ref([
   { text: "Public", value: "public" },
 ]);
 const updatingAddonUuid = ref(false);
+const isFetchLoading = ref(true);
+const isCountLoading = ref(true);
+const options = ref({});
+const fetchError = ref("");
+const allAddonsGroups = ref([]);
+const page = ref(1);
+const count = ref(10);
+
+const isLoading = computed(() => store.getters["addons/isLoading"]);
+const addons = computed(() => store.getters["addons/all"]);
+
+const requestOptions = computed(() => ({
+  filters: filter.value,
+  page: page.value,
+  limit: options.value.itemsPerPage,
+  field: options.value.sortBy?.[0],
+  sort:
+    options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
+}));
+
+const countOptions = computed(() => ({
+  filters: filter.value,
+}));
+
+const filter = computed(() => ({
+  ...store.getters["appSearch/filter"],
+}));
+const searchFields = computed(() => {
+  return [
+    {
+      key: "title",
+      title: "Title",
+      type: "input",
+    },
+    {
+      key: "group",
+      items: allAddonsGroups.value,
+      title: "Group",
+      type: "select",
+    },
+    {
+      key: "system",
+      title: "System",
+      type: "logic-select",
+    },
+  ];
+});
+
+const setOptions = (newOptions) => {
+  page.value = newOptions.page;
+  if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
+    options.value = newOptions;
+  }
+};
+
+const init = async () => {
+  isCountLoading.value = true;
+  try {
+    const data = await store.dispatch("addons/count", countOptions.value);
+    const { unique, total } = data.toJson();
+
+    count.value = Number(total);
+    allAddonsGroups.value = unique.groups;
+  } finally {
+    isCountLoading.value = false;
+  }
+};
+
+const fetchAddons = async () => {
+  init();
+  isFetchLoading.value = true;
+  fetchError.value = "";
+  try {
+    await store.dispatch("addons/fetch", requestOptions.value);
+  } catch (e) {
+    fetchError.value = e.message;
+  } finally {
+    isFetchLoading.value = false;
+  }
+};
+
+const fetchAddonsDebounced = debounce(fetchAddons, 100);
 
 const updateAddon = async (item, { key, value }) => {
   try {
     updatingAddonUuid.value = item.uuid;
-    console.log(item);
     await store.getters["addons/addonsClient"].update({
       ...item,
       [key]: value,
@@ -93,6 +162,27 @@ const updateAddon = async (item, { key, value }) => {
   } finally {
     updatingAddonUuid.value = "";
   }
+};
+
+watch(
+  searchFields,
+  (value) => {
+    store.commit("appSearch/setFields", value);
+  },
+  { deep: true }
+);
+
+watch(filter, fetchAddonsDebounced, { deep: true });
+watch(options, fetchAddonsDebounced);
+watch(refetch, fetchAddonsDebounced);
+</script>
+
+<script>
+import searchMixin from "@/mixins/search";
+
+export default {
+  name: "AddonsView",
+  mixins: [searchMixin({ name: "addons-table" })],
 };
 </script>
 
