@@ -233,7 +233,7 @@ func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]*pb.Currency,
 
 	for cursor.HasMore() {
 		doc := Currency{}
-		_, err := cursor.ReadDocument(ctx, doc)
+		_, err := cursor.ReadDocument(ctx, &doc)
 		if err != nil {
 			return currencies, err
 		}
