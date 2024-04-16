@@ -273,7 +273,7 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 	defer cursor.Close()
 
 	type currency struct {
-		Id   int64  `json:"id"`
+		Id   string `json:"id"`
 		Name string `json:"name"`
 	}
 	for cursor.HasMore() {
@@ -288,13 +288,21 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 			return nil, err
 		}
 
+		idFrom, err := strconv.ParseInt(resp.From.Id, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		idTo, err := strconv.ParseInt(resp.To.Id, 10, 32)
+		if err != nil {
+			return nil, err
+		}
 		rates = append(rates, &pb.GetExchangeRateResponse{
 			From: &pb.Currency{
-				Id:   resp.From.Id,
+				Id:   idFrom,
 				Name: resp.From.Name,
 			},
 			To: &pb.Currency{
-				Id:   resp.To.Id,
+				Id:   idTo,
 				Name: resp.To.Name,
 			},
 			Rate: resp.Rate,
