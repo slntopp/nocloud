@@ -45,11 +45,11 @@ func TestConsumeMock(t *testing.T) {
 		Instance: uuid.New().String(),
 		Resource: uuid.New().String(),
 		Total:    1,
-		Currency: &pb.Currency{Id: 0, Name: "NCU"},
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	conf := CurrencyConf{
-		Currency: &pb.Currency{Id: 0, Name: "NCU"},
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	db.On("Query", ctx, checkOverlap, map[string]interface{}{
@@ -86,11 +86,11 @@ func TestConsumeMock_NotNormal(t *testing.T) {
 		Instance: uuid.New().String(),
 		Resource: uuid.New().String(),
 		Total:    1,
-		Currency: &pb.Currency{Id: 0, Name: "NCU"},
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	conf := CurrencyConf{
-		Currency: &pb.Currency{Id: 0, Name: "NCU"},
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	col.On("CreateDocument", ctx, &record).Return(driver.DocumentMeta{}, nil)
@@ -151,11 +151,11 @@ func TestConsumeMock_ZeroTotal(t *testing.T) {
 		Instance: uuid.New().String(),
 		Resource: uuid.New().String(),
 		Total:    0,
-		Currency: &pb.Currency{Id: 0, Name: "NCU"},
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	conf := CurrencyConf{
-		Currency: &pb.Currency{Id: 0, Name: "NCU"},
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	err := ctrl.ProcessRecord(ctx, &record, conf, now)
