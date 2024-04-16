@@ -143,10 +143,10 @@ import useInstancePrices from "@/hooks/useInstancePrices";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import DatePicker from "../../ui/datePicker.vue";
 
-const props = defineProps(["template", "plans", "service", "sp"]);
+const props = defineProps(["template", "plans", "service", "sp", "addons"]);
 const emit = defineEmits(["refresh"]);
 
-const { template, plans } = toRefs(props);
+const { template, plans, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -204,6 +204,20 @@ const getBillingItems = () => {
     kind: product?.kind,
     period: getBillingPeriod(product?.period),
     accountPrice: toAccountPrice(product?.price),
+  });
+
+  addons.value.forEach((addon) => {
+    const { title, periods } = addon;
+    const { period, kind } = billingPlan.value.products[template.value.product];
+    items.push({
+      name: title,
+      price: periods[period],
+      accountPrice: toAccountPrice(periods[period]),
+      quantity: 1,
+      isAddon: true,
+      kind,
+      period,
+    });
   });
 
   return items.map((i) => {
