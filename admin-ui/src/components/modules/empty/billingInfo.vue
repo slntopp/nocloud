@@ -240,10 +240,17 @@ import { useStore } from "@/store";
 import api from "@/api";
 import DatePicker from "../../ui/datePicker.vue";
 
-const props = defineProps(["template", "plans", "service", "sp", "account"]);
+const props = defineProps([
+  "template",
+  "plans",
+  "service",
+  "sp",
+  "account",
+  "addons",
+]);
 const emit = defineEmits(["refresh"]);
 
-const { template, plans, service, account } = toRefs(props);
+const { template, plans, service, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -310,23 +317,23 @@ watch(accountRate, () => {
   });
 });
 
-const addons = computed(() => {
-  return (
-    billingPlan.value.products[template.value.product].meta.addons
-      ?.map((key) => billingPlan.value.resources.find((r) => r.key === key))
-      ?.filter((a) => !!a)
-      ?.map(({ price, title, kind, period, key }, index) => ({
-        name: title,
-        price,
-        enabled: !!template.value.config?.addons?.find((a) => a === key),
-        path: `billingPlan.resources.${index}.price`,
-        kind,
-        key,
-        period: getBillingPeriod(period),
-        accountPrice: toAccountPrice(price),
-      })) || []
-  );
-});
+// const addons = computed(() => {
+//   return (
+//     billingPlan.value.products[template.value.product].meta.addons
+//       ?.map((key) => billingPlan.value.resources.find((r) => r.key === key))
+//       ?.filter((a) => !!a)
+//       ?.map(({ price, title, kind, period, key }, index) => ({
+//         name: title,
+//         price,
+//         enabled: !!template.value.config?.addons?.find((a) => a === key),
+//         path: `billingPlan.resources.${index}.price`,
+//         kind,
+//         key,
+//         period: getBillingPeriod(period),
+//         accountPrice: toAccountPrice(price),
+//       })) || []
+//   );
+// });
 
 const enabledAddonsCount = computed(() => {
   return addons.value.filter((a) => a.enabled).length;
@@ -350,11 +357,19 @@ const getBillingItems = () => {
     accountPrice: toAccountPrice(product?.price),
   });
 
-  items.push(
-    ...addons.value
-      .filter((a) => a.enabled)
-      .map((a) => ({ ...a, isAddon: true }))
-  );
+  addons.value.forEach((addon) => {
+    const { title, periods } = addon;
+    const { period, kind } = billingPlan.value.products[template.value.product];
+    items.push({
+      name: title,
+      price: periods[period],
+      accountPrice: toAccountPrice(periods[period]),
+      quantity: 1,
+      isAddon: true,
+      kind,
+      period,
+    });
+  });
 
   return items.map((i) => {
     return i;
