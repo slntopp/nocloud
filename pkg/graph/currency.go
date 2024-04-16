@@ -272,17 +272,41 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 	}
 	defer cursor.Close()
 
+	type currency struct {
+		Id   string `json:"id"`
+		Name string `json:"name"`
+	}
 	for cursor.HasMore() {
-		obj := &struct {
+		resp := struct {
 			driver.DocumentMeta
-			*pb.GetExchangeRateResponse
+			From currency `json:"from"`
+			To   currency `json:"to"`
+			Rate float64  `json:"rate"`
 		}{}
-		_, err := cursor.ReadDocument(ctx, obj)
+		_, err := cursor.ReadDocument(ctx, &resp)
 		if err != nil {
 			return nil, err
 		}
 
-		rates = append(rates, obj.GetExchangeRateResponse)
+		idFrom, err := strconv.ParseInt(resp.From.Id, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		idTo, err := strconv.ParseInt(resp.To.Id, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		rates = append(rates, &pb.GetExchangeRateResponse{
+			From: &pb.Currency{
+				Id:   idFrom,
+				Name: resp.From.Name,
+			},
+			To: &pb.Currency{
+				Id:   idTo,
+				Name: resp.To.Name,
+			},
+			Rate: resp.Rate,
+		})
 	}
 
 	return rates, nil
