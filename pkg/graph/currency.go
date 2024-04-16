@@ -57,8 +57,8 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 	log.Info("Migrating old currency template to dynamic")
 	ctrl.migrateToDynamic()
 
-	log.Info("Ensuring hash index on currency name")
-	_, _, err := col.EnsureHashIndex(ctx, []string{"name"}, &driver.EnsureHashIndexOptions{Unique: true})
+	log.Info("Ensuring hash index on currency title")
+	_, _, err := col.EnsureHashIndex(ctx, []string{"title"}, &driver.EnsureHashIndexOptions{Unique: true})
 	if err != nil {
 		panic(err)
 	}
@@ -69,8 +69,9 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 
 const migrateToDynamicVertex = `
 	FOR el IN @@collection
-		FILTER el.id == null || el.name == null || el.name == ""
-		UPDATE el WITH { id: el._key, name: @names[el._key] } IN @@collection
+		FILTER el.id == null || el.title == null || el.title == ""
+		UPDATE el WITH { id: el._key, title: @names[el._key], name: null } IN @@collection
+        OPTIONS { keepNull: false }
 `
 const migrateToDynamicEdges = `
 	FOR edge IN @@collection
@@ -84,7 +85,7 @@ func (c *CurrencyController) migrateToDynamic() {
 	c.log.Info("Migrating currency to dynamic")
 	namesMap := map[string]string{}
 	for _, val := range migrations.LEGACY_CURRENCIES {
-		namesMap[fmt.Sprintf("%d", val.GetId())] = val.GetName()
+		namesMap[fmt.Sprintf("%d", val.GetId())] = val.GetTitle()
 	}
 	_, err := c.col.Database().Query(context.TODO(), migrateToDynamicVertex, map[string]interface{}{
 		"@collection": c.col.Name(),
@@ -167,7 +168,7 @@ func (c *CurrencyController) GetExchangeRate(ctx context.Context, from *pb.Curre
 	}
 
 	if res.Len == 0 {
-		return 0, fmt.Errorf("no path or direct connection between %s and %s", from.GetName(), to.GetName())
+		return 0, fmt.Errorf("no path or direct connection between %s and %s", from.GetTitle(), to.GetTitle())
 	}
 
 	return res.Rate, nil
@@ -234,7 +235,7 @@ func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]*pb.Currency,
 	for cursor.HasMore() {
 		doc := struct {
 			driver.DocumentMeta
-			Name string `json:"name"`
+			Title string `json:"title"`
 		}{}
 		_, err := cursor.ReadDocument(ctx, &doc)
 		if err != nil {
@@ -248,8 +249,8 @@ func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]*pb.Currency,
 		}
 
 		currencies = append(currencies, &pb.Currency{
-			Id:   id,
-			Name: doc.Name,
+			Id:    id,
+			Title: doc.Title,
 		})
 	}
 
@@ -273,8 +274,8 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 	defer cursor.Close()
 
 	type currency struct {
-		Id   string `json:"id"`
-		Name string `json:"name"`
+		Id    string `json:"id"`
+		Title string `json:"title"`
 	}
 	for cursor.HasMore() {
 		resp := struct {
@@ -298,12 +299,12 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 		}
 		rates = append(rates, &pb.GetExchangeRateResponse{
 			From: &pb.Currency{
-				Id:   idFrom,
-				Name: resp.From.Name,
+				Id:    idFrom,
+				Title: resp.From.Title,
 			},
 			To: &pb.Currency{
-				Id:   idTo,
-				Name: resp.To.Name,
+				Id:    idTo,
+				Title: resp.To.Title,
 			},
 			Rate: resp.Rate,
 		})

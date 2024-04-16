@@ -56,8 +56,8 @@ var (
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
 			Currency: &pb.Currency{
-				Id:   schema.DEFAULT_CURRENCY_ID,
-				Name: schema.DEFAULT_CURRENCY_NAME,
+				Id:    schema.DEFAULT_CURRENCY_ID,
+				Title: schema.DEFAULT_CURRENCY_NAME,
 			},
 		},
 		Description: "Default currency for platform",
