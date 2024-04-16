@@ -5,6 +5,7 @@
         <instance-actions
           @refresh="refreshInstance"
           :sp="sp"
+          :account="account"
           :copy-template="copyInstance"
           :template="template"
         />
@@ -116,11 +117,24 @@
       <nocloud-expansion-panels
         title="Description"
         class="mb-5"
-        v-if="productDescription"
+        v-if="template.billingPlan.products[template.product]"
       >
-        <rich-editor class="pa-5" disabled :value="productDescription" />
+        <rich-editor
+          class="pa-5"
+          disabled
+          :value="
+            template.billingPlan.products[template.product].meta?.description
+          "
+        />
         <div class="d-flex justify-end align-center">
-          <v-btn class="mx-2" @click="addToClipboard(productDescription)"
+          <v-btn
+            class="mx-2"
+            @click="
+              addToClipboard(
+                template.billingPlan.products[template.product].meta
+                  ?.description || ''
+              )
+            "
             >copy</v-btn
           >
           <v-btn class="mx-2" @click="goToPlan">edit</v-btn>
@@ -130,6 +144,7 @@
       <component
         :is="additionalInstanceInfoComponent"
         :sp="sp"
+        :account="account"
         :template="template"
       />
       <v-card-title class="primary--text">Billing info</v-card-title>
@@ -140,6 +155,8 @@
         :service="service"
         :plans="plans"
         :sp="sp"
+        :addons="addons"
+        :account="account"
         @refresh="refreshInstance"
       />
     </template>
@@ -148,7 +165,6 @@
       :account="account"
       :services="services"
       :namespaces="namespaces"
-      :accounts="accounts"
       :template="template"
       v-model="moveDialog"
     />
@@ -158,7 +174,9 @@
         @update="updateCopy"
         :is="billingLabelComponent"
         v-if="Object.keys(copyInstance).length"
-        :template="template"
+        :account="account"
+        :addons="addons"
+        :template="copyInstance"
       />
     </div>
   </v-card>
@@ -190,12 +208,15 @@ export default {
     JsonTextarea,
   },
   mixins: [snackbar],
-  props: { template: { type: Object, required: true } },
+  props: {
+    template: { type: Object, required: true },
+    account: { type: Object, required: true },
+    addons: { type: Array, required: true },
+  },
   data: () => ({
     templates: {},
     moveDialog: false,
     copyInstance: {},
-    productDescription: null,
   }),
   methods: {
     addToClipboard,
@@ -220,21 +241,9 @@ export default {
         params: { planId: this.template.billingPlan.uuid },
       });
     },
-    async fetchProductDescription() {
-      const { descriptionId } =
-        this.template.billingPlan.products[this.template.product];
-      if (descriptionId) {
-        const { text } = await this.$store.dispatch(
-          "descriptions/get",
-          descriptionId
-        );
-        this.productDescription = text;
-      }
-    },
   },
   computed: {
     ...mapGetters("namespaces", { namespaces: "all" }),
-    ...mapGetters("accounts", { accounts: "all" }),
     ...mapGetters("services", { services: "all" }),
     ...mapGetters("plans", { plans: "all" }),
     ...mapGetters("servicesProviders", { servicesProviders: "all" }),
@@ -245,14 +254,6 @@ export default {
     },
     service() {
       return this.services?.find((s) => s?.uuid == this.template.service);
-    },
-    account() {
-      if (!this.namespace) {
-        return;
-      }
-      return this.accounts?.find(
-        (a) => a?.uuid == this.namespace.access.namespace
-      );
     },
     sp() {
       return this.servicesProviders?.find((sp) => sp?.uuid == this.template.sp);
@@ -301,8 +302,6 @@ export default {
     }
 
     this.copyInstance = JSON.parse(JSON.stringify(this.template));
-
-    this.fetchProductDescription();
   },
   watch: {
     template: {
