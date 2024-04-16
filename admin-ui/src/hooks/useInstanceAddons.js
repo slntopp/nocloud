@@ -10,11 +10,13 @@ const useInstanceAddons = (instance, setValue) => {
 
   const setTariffAddons = () => {
     const addons = [];
-    if (instance.value.product) {
+    if (instance.value.billing_plan) {
       instance.value.billing_plan.addons.forEach((key) => addons.push(key));
-      instance.value.billing_plan.products[
-        instance.value.product
-      ].addons.forEach((key) => addons.push(key));
+      if (instance.value.product) {
+        instance.value.billing_plan.products[
+          instance.value.product
+        ].addons.forEach((key) => addons.push(key));
+      }
     }
     tarrifAddons.value = addons;
   };
