@@ -36,13 +36,6 @@
         />
       </v-col>
       <v-col>
-        <v-text-field
-          readonly
-          label="Date (create)"
-          :value="formatSecondsToDate(template.created, true)"
-        />
-      </v-col>
-      <v-col>
         <date-picker
           edit-icon
           label="Date (create)"
