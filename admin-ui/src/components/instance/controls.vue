@@ -48,7 +48,9 @@
       </v-dialog>
     </instance-control-btn>
 
-    <instance-control-btn hint="Renewal invoice">
+    <instance-control-btn
+      :hint="isPending ? 'CREATE INVOICE' : 'Renewal invoice'"
+    >
       <confirm-dialog @confirm="sendInvoice">
         <v-btn class="ma-1" :loading="isInvoiceLoading">
           <v-icon>mdi-invoice-text-outline</v-icon>
@@ -906,6 +908,9 @@ export default {
     },
     isDeleted() {
       return this.template.state?.state === "DELETED";
+    },
+    isPending() {
+      return this.template.state.state === "PENDING";
     },
     namespace() {
       return this.$store.getters["namespaces/all"].find(
