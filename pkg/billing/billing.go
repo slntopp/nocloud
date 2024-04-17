@@ -385,7 +385,7 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 			log.Error("Failed to parse int", zap.Error(err))
 		}
 		defaultCur := &pb.Currency{
-			Id:    id,
+			Id:    int32(id),
 			Title: dbCur.Title,
 		}
 
