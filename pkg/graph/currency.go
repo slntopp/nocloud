@@ -249,7 +249,7 @@ func (c *CurrencyController) GetCurrencies(ctx context.Context) ([]*pb.Currency,
 		}
 
 		currencies = append(currencies, &pb.Currency{
-			Id:    id,
+			Id:    int32(id),
 			Title: doc.Title,
 		})
 	}
@@ -299,11 +299,11 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 		}
 		rates = append(rates, &pb.GetExchangeRateResponse{
 			From: &pb.Currency{
-				Id:    idFrom,
+				Id:    int32(idFrom),
 				Title: resp.From.Title,
 			},
 			To: &pb.Currency{
-				Id:    idTo,
+				Id:    int32(idTo),
 				Title: resp.To.Title,
 			},
 			Rate: resp.Rate,
