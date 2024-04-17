@@ -345,8 +345,8 @@ FOR service IN @@services // Iterate over Services
 
 		LET rate = PRODUCT(
 			FOR vertex, edge IN OUTBOUND
-			SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency)))
-			TO DOCUMENT(CONCAT(@currencies, "/", currency))
+			SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency.id)))
+			TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 			GRAPH @graph
 			FILTER edge
 				RETURN edge.rate
@@ -386,8 +386,8 @@ FILTER !t.processed
 	LET currency = account.currency != null ? account.currency : @currency
 	LET rate = PRODUCT(
 		FOR vertex, edge IN OUTBOUND
-		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency)))
-		TO DOCUMENT(CONCAT(@currencies, "/", currency))
+		SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency.id)))
+		TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 		GRAPH @graph
 		FILTER edge
 			RETURN edge.rate
