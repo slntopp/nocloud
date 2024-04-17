@@ -194,6 +194,7 @@ const requestOptions = computed(() => ({
   filters: !noSearch.value
     ? {
         ...filter.value,
+        "data.whmcs_id": +filter.value["data.whmcs_id"] || undefined,
         balance: filter.value?.balance && {
           from: filter.value?.balance.from && +filter.value?.balance.from,
           to: filter.value?.balance.to && +filter.value?.balance.to,
