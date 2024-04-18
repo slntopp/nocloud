@@ -368,6 +368,9 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	}
 	showDeleted := request.GetShowDeleted() == "true"
 
+	limit, page := request.GetLimit(), request.GetPage()
+	offset := (page - 1) * limit
+
 	var query, instQuery string
 	bindVars := map[string]interface{}{
 		"depth":             depth,
@@ -376,6 +379,8 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		"@services":         schema.SERVICES_COL,
 		"instances":         schema.INSTANCES_COL,
 		"bps":               schema.BILLING_PLANS_COL,
+		"offset":            offset,
+		"limit":             limit,
 	}
 
 	if request.Field != nil && request.Sort != nil {
@@ -383,17 +388,6 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		field, sort := request.GetField(), request.GetSort()
 
 		query += fmt.Sprintf(subQuery, field, sort)
-	}
-
-	if request.Page != nil && request.Limit != nil {
-		if request.GetLimit() != 0 {
-			limit, page := request.GetLimit(), request.GetPage()
-			offset := (page - 1) * limit
-
-			query += ` LIMIT @offset, @count`
-			bindVars["offset"] = offset
-			bindVars["count"] = limit
-		}
 	}
 
 	for key, val := range request.GetFilters() {
