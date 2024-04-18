@@ -15,8 +15,21 @@ import (
 )
 
 type Currency struct {
-	*pb.Currency
+	Id    string `json:"id"`
+	Title string `json:"title"`
 	driver.DocumentMeta
+}
+
+func CurrencyFromPb(currency *pb.Currency) Currency {
+	key := fmt.Sprintf("%d", currency.GetId())
+	return Currency{
+		Id:    key,
+		Title: currency.GetTitle(),
+		DocumentMeta: driver.DocumentMeta{
+			Key: key,
+			ID:  driver.NewDocumentID(schema.CUR_COL, key),
+		},
+	}
 }
 
 type CurrencyController struct {
@@ -41,7 +54,7 @@ func NewCurrencyController(log *zap.Logger, db driver.Database) CurrencyControll
 		key := fmt.Sprintf("%d", currency.GetId())
 		exists, _ := col.DocumentExists(ctx, key)
 		if !exists {
-			col.CreateDocument(ctx, Currency{Currency: currency, DocumentMeta: driver.DocumentMeta{Key: key}})
+			col.CreateDocument(ctx, CurrencyFromPb(currency))
 		}
 	}
 	log.Info("Default currencies ensured")
@@ -105,13 +118,7 @@ func (c *CurrencyController) migrateToDynamic() {
 }
 
 func (c *CurrencyController) CreateCurrency(ctx context.Context, currency *pb.Currency) error {
-	key := fmt.Sprintf("%d", currency.GetId())
-	_, err := c.col.CreateDocument(ctx, Currency{
-		Currency: currency,
-		DocumentMeta: driver.DocumentMeta{
-			Key: key,
-		},
-	})
+	_, err := c.col.CreateDocument(ctx, CurrencyFromPb(currency))
 	return err
 }
 
@@ -179,8 +186,8 @@ func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from *pb.Cu
 		"_key":  fmt.Sprintf("%d-%d", from.GetId(), to.GetId()),
 		"_from": fmt.Sprintf("%s/%d", schema.CUR_COL, from.GetId()),
 		"_to":   fmt.Sprintf("%s/%d", schema.CUR_COL, to.GetId()),
-		"from":  from,
-		"to":    to,
+		"from":  CurrencyFromPb(from),
+		"to":    CurrencyFromPb(to),
 		"rate":  rate,
 	}
 	_, err := c.edges.CreateDocument(ctx, &edge)
@@ -273,15 +280,11 @@ func (c *CurrencyController) GetExchangeRates(ctx context.Context) ([]*pb.GetExc
 	}
 	defer cursor.Close()
 
-	type currency struct {
-		Id    string `json:"id"`
-		Title string `json:"title"`
-	}
 	for cursor.HasMore() {
 		resp := struct {
 			driver.DocumentMeta
-			From currency `json:"from"`
-			To   currency `json:"to"`
+			From Currency `json:"from"`
+			To   Currency `json:"to"`
 			Rate float64  `json:"rate"`
 		}{}
 		_, err := cursor.ReadDocument(ctx, &resp)
