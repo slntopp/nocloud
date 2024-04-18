@@ -85,13 +85,28 @@ func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacesp
 		depth = 10
 	}
 
-	pool, err := s.ctrl.List(ctx, acc, depth)
+	page := request.GetPage()
+	limit := request.GetLimit()
+
+	offset := (page - 1) * limit
+
+	pool, err := s.ctrl.List(ctx, acc, depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
 	if err != nil {
 		s.log.Debug("Error listing namespaces", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing namespaces")
 	}
 
-	return &namespacespb.ListResponse{Pool: pool}, nil
+	result := make([]*namespacespb.Namespace, len(pool.Result))
+	for i, ns := range pool.Result {
+		result[i] = ns.Namespace
+	}
+	log.Debug("Convert result", zap.Any("pool", result))
+
+	return &namespacespb.ListResponse{
+		Pool:  result,
+		Count: int64(pool.Count),
+	}, nil
+
 }
 
 func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
