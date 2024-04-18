@@ -11,7 +11,7 @@
           outlined
           v-for="price in pricesPerToken"
           :key="price.name"
-          >{{ price.name }} : {{ price.price }} {{ accountCurrency }}</v-chip
+          >{{ price.name }} : {{ price.price }} {{ accountCurrency?.title }}</v-chip
         >
       </v-col>
     </v-row>

@@ -11,7 +11,7 @@
         type="number"
         :rules="!readonly ? generalRule : []"
         :readonly="readonly"
-        :suffix="accountCurrency"
+        :suffix="accountCurrency?.title"
         v-model.number="item.amount"
       />
     </template>

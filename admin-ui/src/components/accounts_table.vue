@@ -179,7 +179,7 @@ const accounts = computed(() => {
       color: colorChip(a.access.level),
     },
     balance: a.balance || 0,
-    currency: a.currency || defaultCurrency.value,
+    currency: a.currency?.title || defaultCurrency.value?.title,
     data: {
       ...a.data,
       regular_payment:

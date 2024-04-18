@@ -84,13 +84,13 @@
             {{ getPayment(value) }}
           </template>
           <template v-slot:[`item.price.value`]="{ value }">
-            {{ value }} {{ defaultCurrency }}
+            {{ value }} {{ defaultCurrency?.title }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
               dense
               style="width: 200px"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               v-model="item.value"
             />
           </template>
@@ -103,7 +103,7 @@
               <td :colspan="headers.length - 4">{{ item.windows.name }}</td>
               <td>
                 {{ item.windows.price.value }}
-                {{ defaultCurrency }}
+                {{ defaultCurrency?.title }}
               </td>
               <td>
                 <v-text-field
@@ -133,13 +133,13 @@
             {{ getPayment(value) }}
           </template>
           <template v-slot:[`item.price.value`]="{ value }">
-            {{ value }} {{ defaultCurrency }}
+            {{ value }} {{ defaultCurrency?.title }}
           </template>
           <template v-slot:[`item.value`]="{ item }">
             <v-text-field
               dense
               style="width: 200px"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               v-model="item.value"
             />
           </template>
@@ -645,11 +645,11 @@ export default {
       return this.$store.getters["currencies/rates"];
     },
     plnRate() {
-      if (this.defaultCurrency === "PLN") {
+      if (this.defaultCurrency?.title === "PLN") {
         return 1;
       }
       return this.rates.find(
-        (r) => r.to === this.defaultCurrency && r.from === "PLN"
+        (r) => r.to?.title === this.defaultCurrency?.title && r.from?.title === "PLN"
       )?.rate;
     },
     allImages() {

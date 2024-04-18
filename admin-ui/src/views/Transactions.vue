@@ -225,12 +225,12 @@ export default {
     },
     balance() {
       const dates = [];
-      let labels = [`0 ${this.defaultCurrency}`];
+      let labels = [`0 ${this.defaultCurrency?.title}`];
       let values = [0];
       let balance = 0;
       this.transactions?.forEach((el, i, arr) => {
         values.push((balance -= el.total));
-        labels.push(`${balance.toFixed(2)} ${this.defaultCurrency}`);
+        labels.push(`${balance.toFixed(2)} ${this.defaultCurrency?.title}`);
         dates.push(
           el.proc - arr[i - 1]?.proc || arr[i + 1]?.proc - el.proc || el.proc
         );

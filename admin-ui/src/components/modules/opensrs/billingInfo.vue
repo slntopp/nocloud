@@ -65,7 +65,7 @@
           <div class="d-flex">
             <v-text-field
               class="mr-2"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               v-model="item.price"
               type="number"
               @input="updatePrice(item, false)"
@@ -75,7 +75,7 @@
               style="color: var(--v-primary-base)"
               class="ml-2"
               type="number"
-              :suffix="accountCurrency"
+              :suffix="accountCurrency?.title"
               v-model="item.accountPrice"
               @input="updatePrice(item, true)"
               append-icon="mdi-pencil"
@@ -84,9 +84,9 @@
         </template>
         <template v-slot:[`item.total`]="{ item }">
           {{ totalPrices[item.name] }}
-          {{ defaultCurrency }} /
+          {{ defaultCurrency?.title }} /
           {{ totalAccountPrices[item.name] }}
-          {{ accountCurrency }}
+          {{ accountCurrency?.title }}
         </template>
         <template v-slot:body.append>
           <tr>
@@ -101,8 +101,8 @@
               <div class="d-flex justify-end">
                 <v-chip color="primary" outlined>
                   {{ totalPrice }}
-                  {{ defaultCurrency }} / {{ totalAccountPrice }}
-                  {{ accountCurrency }}
+                  {{ defaultCurrency?.title }} / {{ totalAccountPrice }}
+                  {{ accountCurrency?.title }}
                 </v-chip>
               </div>
             </td>

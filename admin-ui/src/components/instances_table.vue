@@ -311,7 +311,7 @@ export default {
       if (!price) {
         return "";
       }
-      return price + " " + this.defaultCurrency;
+      return price + " " + this.defaultCurrency?.title;
     },
     getAccountPrice(inst) {
       const price = this.getPrice(inst);
@@ -324,15 +324,15 @@ export default {
       return (
         (price * this.getRate(accountCurrency)).toFixed(2) +
         " " +
-        accountCurrency
+        accountCurrency.title
       );
     },
     getRate(currency) {
-      if (this.defaultCurrency === currency) {
+      if (this.defaultCurrency?.title === currency?.title) {
         return 1;
       }
       return this.rates?.find(
-        (r) => r.to === currency && r.from === this.defaultCurrency
+        (r) => r.to.title === currency?.title && r.from.title === this.defaultCurrency?.title
       )?.rate;
     },
     getPeriod(inst) {

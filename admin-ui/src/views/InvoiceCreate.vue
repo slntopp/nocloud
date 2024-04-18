@@ -65,7 +65,7 @@
               <v-text-field
                 type="number"
                 label="Amount"
-                :suffix="accountCurrency"
+                :suffix="accountCurrency?.title"
                 :value="amount"
                 disabled
                 readonly
