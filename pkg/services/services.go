@@ -809,7 +809,7 @@ func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (res
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
 	}
 
-	return &pb.Services{Pool: r}, nil
+	return &pb.Services{Pool: r.Result, Count: int64(r.Count)}, nil
 }
 
 func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {
