@@ -169,7 +169,11 @@
 
           <v-subheader>SYSTEM</v-subheader>
 
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Chats' }" @click="chatClick">
+          <v-list-item
+            v-bind="listItemBind"
+            :to="{ name: 'Chats' }"
+            @click="chatClick"
+          >
             <v-list-item-icon>
               <v-icon>mdi-chat</v-icon>
             </v-list-item-icon>
@@ -177,11 +181,15 @@
             <v-list-item-content>
               <v-list-item-title
                 >{{ navTitle("Chats") }}
-                <v-chip color="red" class="pa-2" v-if="unreadChatsCount" x-small>
+                <v-chip
+                  color="red"
+                  class="pa-2"
+                  v-if="unreadChatsCount"
+                  x-small
+                >
                   {{ unreadChatsCount }}
                 </v-chip>
-              </v-list-item-title
-              >
+              </v-list-item-title>
             </v-list-item-content>
           </v-list-item>
 
@@ -359,7 +367,7 @@
 <script>
 import { reactive, ref } from "vue";
 import { mapGetters } from "vuex";
-import useLoginClient from "@/hooks/useLoginInClient.js"
+import useLoginClient from "@/hooks/useLoginInClient.js";
 import api from "@/api.js";
 import config from "@/config.js";
 import balance from "@/components/balance.vue";
@@ -380,7 +388,7 @@ export default {
     instancesTableModal,
   },
   setup() {
-    const { loginHandler } = useLoginClient()
+    const { loginHandler } = useLoginClient();
 
     return {
       isMenuMinimize: ref(true),
@@ -396,9 +404,8 @@ export default {
         x: 0,
         y: 0,
       }),
-      unreadChatsCount: ref(0),
-      loginHandler
-    }
+      loginHandler,
+    };
   },
   methods: {
     logoutHandler() {
@@ -452,7 +459,7 @@ export default {
       }, 100);
     },
     chatClick() {
-      this.$store.commit("app/setChatClicks", 1)
+      this.$store.commit("app/setChatClicks", 1);
     },
   },
   computed: {
@@ -493,6 +500,9 @@ export default {
     plugins() {
       return this.$store.getters["plugins/all"];
     },
+    unreadChatsCount() {
+      return this.$store.getters["chats/unreadChatsCount"];
+    },
   },
   created() {
     window.addEventListener("message", ({ data, origin, source }) => {
@@ -505,7 +515,7 @@ export default {
           const { title } = JSON.parse(res[setting]);
 
           setTimeout(() => {
-            source.postMessage({ type: 'button-title', value: title }, "*");
+            source.postMessage({ type: "button-title", value: title }, "*");
           }, 300);
           this.overlay.uuid = data.value.uuid;
         });
@@ -521,7 +531,10 @@ export default {
         return;
       }
       if (data.type === "open-chat") {
-        this.loginHandler({ accountUuid: this.userdata.uuid, chatId: data.value.uuid });
+        this.loginHandler({
+          accountUuid: this.userdata.uuid,
+          chatId: data.value.uuid,
+        });
         return;
       }
       if (data.type === "get-theme") {
@@ -572,11 +585,7 @@ export default {
 
     if (this.isLoggedIn) {
       this.$store.dispatch("auth/fetchUserData");
-      this.$store.dispatch("chats/fetch").then(() => {
-        this.unreadChatsCount = this.$store.getters["chats/all"].filter(
-          (chat) => chat.meta.unread > 0
-        ).length;
-      });
+      this.$store.dispatch("chats/fetch");
     }
   },
   mounted() {
