@@ -311,7 +311,7 @@ func (ctrl *ServicesController) GetServiceInstancesUuids(key string) ([]string, 
 }
 
 var getServiceList = `
-FOR service, e, path IN 0..@depth OUTBOUND @account
+LET list = (FOR service, e, path IN 0..@depth OUTBOUND @account
     GRAPH @permissions_graph
 	OPTIONS {order: "bfs", uniqueVertices: "global"}
     FILTER IS_SAME_COLLECTION(@@services, service)
@@ -344,11 +344,22 @@ FOR service, e, path IN 0..@depth OUTBOUND @account
 					}))
     		RETURN MERGE(group, { uuid: group._key, instances })
         )
-RETURN MERGE(service, {uuid:service._key, instances_groups, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key }})
+    RETURN MERGE(service, {uuid:service._key, instances_groups, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key }})
+	)
+
+RETURN { 
+	result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
+	count: LENGTH(list)
+}
 `
 
+type ServicesResult struct {
+	Result []*spb.Service `json:"result"`
+	Count  int            `json:"count"`
+}
+
 // List Services in DB
-func (ctrl *ServicesController) List(ctx context.Context, requestor string, request *spb.ListRequest) ([]*spb.Service, error) {
+func (ctrl *ServicesController) List(ctx context.Context, requestor string, request *spb.ListRequest) (*ServicesResult, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
 
 	depth := request.GetDepth()
@@ -357,13 +368,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	}
 	showDeleted := request.GetShowDeleted() == "true"
 
-	var query string
-	if showDeleted {
-		query = fmt.Sprintf(getServiceList, "", "")
-	} else {
-		query = fmt.Sprintf(getServiceList, fmt.Sprintf(`FILTER service.status != %d`, stpb.NoCloudStatus_DEL),
-			fmt.Sprintf(`FILTER i.status != %d`, stpb.NoCloudStatus_DEL))
-	}
+	var query, instQuery string
 	bindVars := map[string]interface{}{
 		"depth":             depth,
 		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
@@ -372,6 +377,48 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		"instances":         schema.INSTANCES_COL,
 		"bps":               schema.BILLING_PLANS_COL,
 	}
+
+	if request.Field != nil && request.Sort != nil {
+		subQuery := ` SORT t.%s %s`
+		field, sort := request.GetField(), request.GetSort()
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	if request.Page != nil && request.Limit != nil {
+		if request.GetLimit() != 0 {
+			limit, page := request.GetLimit(), request.GetPage()
+			offset := (page - 1) * limit
+
+			query += ` LIMIT @offset, @count`
+			bindVars["offset"] = offset
+			bindVars["count"] = limit
+		}
+	}
+
+	for key, val := range request.GetFilters() {
+		if key == "title" {
+			query += fmt.Sprintf(` FILTER LOWER(service.title) LIKE LOWER("%s")`, "%"+val.GetStringValue()+"%")
+		} else if key == "access.level" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER service."%s" in @%s`, key, key)
+			bindVars[key] = values
+		}
+	}
+
+	if showDeleted {
+		instQuery = ""
+	} else {
+		query += fmt.Sprintf(`FILTER service.status != %d`, stpb.NoCloudStatus_DEL)
+		instQuery = fmt.Sprintf(`FILTER i.status != %d`, stpb.NoCloudStatus_DEL)
+	}
+
+	query = fmt.Sprintf(getServiceList, query, instQuery)
+
+	ctrl.log.Debug("Query", zap.Any("q", query))
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
 
 	c, err := ctrl.db.Query(ctx, query, bindVars)
@@ -379,21 +426,13 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		return nil, err
 	}
 	defer c.Close()
-	var r []*spb.Service
-	for {
-		var s spb.Service
-		meta, err := c.ReadDocument(ctx, &s)
-		if driver.IsNoMoreDocuments(err) {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		ctrl.log.Debug("Got document", zap.Any("service", &s))
-		s.Uuid = meta.ID.Key()
-		r = append(r, &s)
+	var result ServicesResult
+	_, err = c.ReadDocument(ctx, &request)
+	if err != nil {
+		return nil, err
 	}
 
-	return r, nil
+	return &result, nil
 }
 
 // Join Service into Namespace
