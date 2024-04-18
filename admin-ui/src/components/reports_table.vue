@@ -31,12 +31,12 @@
       no-hide-uuid
     >
       <template v-slot:[`item.totalPreview`]="{ item }">
-        <v-chip>{{ `${item.total} ${item.currency}` }}</v-chip>
+        <v-chip>{{ `${item.total} ${item.currency?.title}` }}</v-chip>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
         <v-chip>{{
           item.totalDefault
-            ? `${item.totalDefault} ${defaultCurrency}`
+            ? `${item.totalDefault} ${defaultCurrency?.title}`
             : item.totalDefault
         }}</v-chip>
       </template>

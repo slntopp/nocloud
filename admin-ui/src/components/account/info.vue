@@ -65,7 +65,7 @@
         <hint-btn hint="Create transaction/invoice">
           <v-chip @click="openTransaction" class="ma-1" color="primary" outlined
             >Balance: {{ account.balance?.toFixed(2) || 0 }}
-            {{ account.currency }}</v-chip
+            {{ account.currency?.title }}</v-chip
           >
         </hint-btn>
       </div>
@@ -87,6 +87,9 @@
           :readonly="isCurrencyReadonly"
           :items="currencies"
           v-model="currency"
+          item-text="title"
+          return-object
+          item-value="id"
           label="currency"
           style="width: 330px"
         />
@@ -425,7 +428,9 @@ export default {
       return this.$store.getters["services/all"];
     },
     currencies() {
-      return this.$store.getters["currencies/all"].filter((c) => c !== "NCU");
+      return this.$store.getters["currencies/all"].filter(
+        (c) => c.title !== "NCU"
+      );
     },
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];
@@ -453,7 +458,7 @@ export default {
       );
     },
     isCurrencyReadonly() {
-      return this.account.currency && this.account.currency !== "NCU";
+      return this.account.currency && this.account.currency.title !== "NCU";
     },
     isLocked() {
       return this.account.status !== "ACTIVE";

@@ -27,7 +27,7 @@
         </router-link>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
-        {{ `${convertTo(item.total,item.currency)} ${defaultCurrency}` }}
+        {{ `${convertTo(item.total,item.currency)} ${defaultCurrency?.title}` }}
       </template>
     </nocloud-table>
   </v-card>
@@ -105,7 +105,7 @@ const onUpdateOptions = async (newOptions) => {
     reports.value = result.map((r) => {
       return {
         uuid: r.uuid,
-        totalPreview: `${r.total.toFixed(2)} ${r.currency}`,
+        totalPreview: `${r.total.toFixed(2)} ${r.currency?.title}`,
         total: r.total,
         currency: r.currency,
       };

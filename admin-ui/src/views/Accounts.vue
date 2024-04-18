@@ -94,6 +94,9 @@
                   dense
                   :items="currencies"
                   v-model="newAccount.currency"
+                  return-object
+                  item-value="id"
+                  item-text="title"
                   label="currency"
                 ></v-select>
               </v-col>
@@ -368,7 +371,7 @@ export default {
       return this.$store.getters["currencies/default"];
     },
     currencies() {
-      return this.$store.getters["currencies/all"].filter((c) => c !== "NCU");
+      return this.$store.getters["currencies/all"].filter((c) => c.title !== "NCU");
     },
     changeStateButtons() {
       return [

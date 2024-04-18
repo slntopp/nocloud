@@ -15,11 +15,13 @@ const useCurrency = () => {
   const convertFrom = (price, currency) => {
     let rate;
 
-    if (currency === defaultCurrency.value) {
+    if (currency?.title === defaultCurrency.value?.title) {
       rate = 1;
     } else {
       rate = rates.value.find(
-        (r) => r.to === defaultCurrency.value && r.from === currency
+        (r) =>
+          r.to.title === defaultCurrency.value?.title &&
+          r.from.title === currency?.title
       )?.rate;
     }
 
@@ -29,11 +31,13 @@ const useCurrency = () => {
   const convertTo = (price, currency) => {
     let rate;
 
-    if (currency === defaultCurrency.value) {
+    if (currency?.title === defaultCurrency.value?.title) {
       rate = 1;
     } else {
       rate = rates.value.find(
-        (r) => r.to === currency && r.from === defaultCurrency.value
+        (r) =>
+          r.to.title === currency?.title &&
+          r.from.title === defaultCurrency.value?.title
       )?.rate;
     }
 

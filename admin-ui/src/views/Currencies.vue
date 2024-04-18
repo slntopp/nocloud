@@ -14,6 +14,9 @@
                 dense
                 label="Currency 1"
                 v-model="currency.from"
+                item-text="title"
+                item-value="id"
+                return-object
                 :items="currenciesFrom"
               />
             </v-col>
@@ -22,6 +25,9 @@
                 dense
                 label="Currency 2"
                 v-model="currency.to"
+                item-text="title"
+                item-value="id"
+                return-object
                 :items="currenciesTo"
               />
             </v-col>
@@ -42,7 +48,10 @@
           </v-row>
         </v-card>
       </v-dialog>
-      <confirm-dialog :disabled="selected.length < 1" @confirm="deleteSelectedCurrencies">
+      <confirm-dialog
+        :disabled="selected.length < 1"
+        @confirm="deleteSelectedCurrencies"
+      >
         <v-btn
           class="mr-2"
           color="background-light"
@@ -58,7 +67,7 @@
         label="Default currency"
         class="d-inline-block"
         style="width: 200px"
-        :value="defaultCurrency"
+        :value="defaultCurrency?.title"
       />
     </div>
 
@@ -72,6 +81,12 @@
       :loading="isLoading"
       :footer-error="fetchError"
     >
+      <template v-slot:[`item.from`]="{ item }">
+        {{ item.from.title }}
+      </template>
+      <template v-slot:[`item.to`]="{ item }">
+        {{ item.to.title }}
+      </template>
       <template v-slot:[`item.rate`]="{ item }">
         <v-text-field
           dense
@@ -124,13 +139,13 @@ export default {
   }),
   methods: {
     addCurrency() {
-      if (this.currency.from === "" || this.currency.to === "") return;
+      if (!this.currency.from || !this.currency.to) return;
       if (typeof this.rules.number[0](this.currency.rate) === "string") return;
 
       const newCurrency = {
         rate: +this.currency.rate.replace(",", "."),
-        from: this.currenciesList.indexOf(this.currency.from),
-        to: this.currenciesList.indexOf(this.currency.to),
+        from: this.currency.from,
+        to: this.currency.to,
       };
 
       this.isCreateLoading = true;
@@ -152,8 +167,8 @@ export default {
       if (typeof this.rules.number[0](currency.rate) === "string") return;
       const newCurrency = {
         rate: +currency.rate.replace(",", "."),
-        from: this.currenciesList.indexOf(currency.from),
-        to: this.currenciesList.indexOf(currency.to),
+        from: currency.from,
+        to: currency.to,
       };
 
       this.$store.commit("currencies/setLoading", true);
@@ -176,7 +191,7 @@ export default {
       const promises = this.selected
         .filter(({ id }) => this.currencies.find((el) => el.id === id))
         .map(({ from, to }) =>
-          api.delete(`/billing/currencies/rates/${from}/${to}`)
+          api.delete(`/billing/currencies/rates/rate?from.id=${from.id}&to.id=${to.id}`)
         );
 
       Promise.all(promises)

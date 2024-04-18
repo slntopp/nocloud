@@ -98,7 +98,7 @@
             <v-text-field
               dense
               type="number"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               :value="item.price"
               :rules="[rules.price]"
               @change="(value) => changeProduct('price', value, item.id)"
@@ -225,7 +225,7 @@
                 type="number"
                 style="width: 150px"
                 :value="item.installationFee"
-                :suffix="defaultCurrency"
+                :suffix="defaultCurrency?.title"
                 @input="changeProduct('installationFee', +$event, item.id)"
               />
             </td>

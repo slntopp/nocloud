@@ -7,7 +7,7 @@
     :small="small"
   >
     {{ title }}{{ abs ? Math.abs(balance) : balance }}
-    {{ (!hideCurrency && (currency || defaultCurrency)) || "" }}
+    {{ (!hideCurrency && (currency?.title || defaultCurrency?.title)) || "" }}
   </v-chip>
 </template>
 
