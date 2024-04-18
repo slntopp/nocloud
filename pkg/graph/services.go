@@ -421,7 +421,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	}
 	defer c.Close()
 	var result ServicesResult
-	_, err = c.ReadDocument(ctx, &request)
+	_, err = c.ReadDocument(ctx, &result)
 	if err != nil {
 		return nil, err
 	}
