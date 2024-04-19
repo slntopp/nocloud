@@ -25,7 +25,6 @@ import (
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type Namespace struct {
@@ -57,8 +56,8 @@ func (ctrl *NamespacesController) Get(ctx context.Context, id string) (Namespace
 	return GetWithAccess[Namespace](ctx, ctrl.col.Database(), driver.NewDocumentID(schema.NAMESPACES_COL, id))
 }
 
-func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, req_depth int32, offset, limit uint64, field, sort string, filters map[string]*structpb.Value) (*ListQueryResult[*Namespace], error) {
-	return ListNamespaces[*Namespace](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.NAMESPACES_COL, req_depth, offset, limit, field, sort, filters)
+func (ctrl *NamespacesController) List(ctx context.Context, requestor Account, req_depth int32) ([]*namespaces.Namespace, error) {
+	return ListWithAccess[*namespaces.Namespace](ctx, ctrl.log, ctrl.col.Database(), requestor.ID, schema.NAMESPACES_COL, req_depth)
 }
 
 func (ctrl *NamespacesController) Create(ctx context.Context, title string) (Namespace, error) {
