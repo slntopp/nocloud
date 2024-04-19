@@ -222,6 +222,26 @@ func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespace
 	return &namespacespb.DeleteResponse{Result: true}, nil
 }
 
+func (s *NamespacesServiceServer) Get(ctx context.Context, request *namespacespb.GetRequest) (*namespacespb.Namespace, error) {
+	log := s.log.Named("Delete")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ctrl.Get(ctx, request.Uuid)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if !graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "NoAccess")
+	}
+
+	return ns.Namespace, nil
+}
+
 func (s *NamespacesServiceServer) Patch(ctx context.Context, request *namespacespb.PatchRequest) (*namespacespb.PatchResponse, error) {
 	log := s.log.Named("Patch")
 	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
