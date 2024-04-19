@@ -401,7 +401,7 @@ type ListQueryResult[T Accessible] struct {
 	Count  int `json:"count"`
 }
 
-func ListWithAccessAndFilters[T Accessible](
+func ListAccounts[T Accessible](
 	ctx context.Context,
 	log *zap.Logger,
 	db driver.Database,
@@ -499,3 +499,59 @@ func ListWithAccessAndFilters[T Accessible](
 	return &result, nil
 }
 
+func ListNamespaces[T Accessible](
+	ctx context.Context,
+	log *zap.Logger,
+	db driver.Database,
+	fromDocument driver.DocumentID,
+	collectionName string,
+	depth int32,
+	offset, limit uint64,
+	field, sort string,
+	filters map[string]*structpb.Value,
+) (*ListQueryResult[T], error) {
+	var result ListQueryResult[T]
+
+	bindVars := map[string]interface{}{
+		"depth":             depth,
+		"from":              fromDocument,
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"@kind":             collectionName,
+		"offset":            offset,
+		"limit":             limit,
+	}
+
+	var insert string
+
+	if field != "" && sort != "" {
+		insert += fmt.Sprintf("SORT node.%s %s\n", field, sort)
+	}
+
+	for key, val := range filters {
+		if key == "search_param" {
+			insert += fmt.Sprintf(` FILTER LOWER(node.title) LIKE LOWER("%s")`, "%"+val.GetStringValue()+"%")
+		} else if key == "access.level" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += ` FILTER perm.level in @levels`
+			bindVars["levels"] = values
+		}
+	}
+
+	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
+	q := fmt.Sprintf(listObjectsWithFiltersOfKind, insert)
+	log.Debug("Query", zap.String("q", q))
+	c, err := db.Query(ctx, q, bindVars)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = c.ReadDocument(ctx, &result)
+	if err != nil {
+		log.Warn("Could not append entity to query results", zap.Error(err))
+	}
+
+	return &result, nil
+}
