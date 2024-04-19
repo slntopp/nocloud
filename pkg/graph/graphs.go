@@ -529,7 +529,7 @@ func ListNamespaces[T Accessible](
 	}
 
 	for key, val := range filters {
-		if key == "title" {
+		if key == "search_param" {
 			insert += fmt.Sprintf(` FILTER LOWER(node.title) LIKE LOWER("%s")`, "%"+val.GetStringValue()+"%")
 		} else if key == "access.level" {
 			values := val.GetListValue().AsSlice()
