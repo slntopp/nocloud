@@ -384,7 +384,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	}
 
 	if request.Field != nil && request.Sort != nil {
-		subQuery := ` SORT t.%s %s`
+		subQuery := ` SORT service.%s %s`
 		field, sort := request.GetField(), request.GetSort()
 
 		query += fmt.Sprintf(subQuery, field, sort)
