@@ -386,8 +386,8 @@ GRAPH @permissions_graph
 OPTIONS {order: "bfs", uniqueVertices: "global"}
 FILTER IS_SAME_COLLECTION(@@kind, node)
 // FILTER edge.level > 0 // TODO: ensure all edges have level
-%s
     LET perm = path.edges[0]
+	%s
 	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
 )
 
@@ -536,7 +536,7 @@ func ListNamespaces[T Accessible](
 			if len(values) == 0 {
 				continue
 			}
-			insert += ` FILTER node.access.level in @levels`
+			insert += ` FILTER perm.level in @levels`
 			bindVars["levels"] = values
 		}
 	}

@@ -315,8 +315,8 @@ LET list = (FOR service, e, path IN 0..@depth OUTBOUND @account
     GRAPH @permissions_graph
 	OPTIONS {order: "bfs", uniqueVertices: "global"}
     FILTER IS_SAME_COLLECTION(@@services, service)
+	LET perm = path.edges[0]
 	%s
-        LET perm = path.edges[0]
         LET instances_groups = (
     	FOR group IN 1 OUTBOUND service
     	GRAPH @permissions_graph
@@ -398,7 +398,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 			if len(values) == 0 {
 				continue
 			}
-			query += ` FILTER node.access.level in @levels`
+			query += ` FILTER perm.level in @levels`
 			bindVars["levels"] = values
 		}
 	}
