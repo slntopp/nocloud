@@ -536,8 +536,8 @@ func ListNamespaces[T Accessible](
 			if len(values) == 0 {
 				continue
 			}
-			insert += fmt.Sprintf(` FILTER node."%s" in @%s`, key, key)
-			bindVars[key] = values
+			insert += ` FILTER node.access.level in @levels`
+			bindVars["levels"] = values
 		}
 	}
 
