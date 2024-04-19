@@ -398,8 +398,8 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER service."%s" in @%s`, key, key)
-			bindVars[key] = values
+			query += ` FILTER node.access.level in @levels`
+			bindVars["levels"] = values
 		}
 	}
 
