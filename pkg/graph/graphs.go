@@ -536,7 +536,7 @@ func ListNamespaces[T Accessible](
 			if len(values) == 0 {
 				continue
 			}
-			insert += ` FILTER perm.level in @level`
+			insert += ` FILTER perm.level in @levels`
 			bindVars["levels"] = values
 		}
 	}
