@@ -366,7 +366,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	if depth < 2 {
 		depth = 5
 	}
-	showDeleted := request.GetShowDeleted() == "true"
+	showDeleted := request.GetShowDeleted()
 
 	limit, page := request.GetLimit(), request.GetPage()
 	offset := (page - 1) * limit
