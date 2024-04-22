@@ -406,8 +406,8 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	if showDeleted {
 		instQuery = ""
 	} else {
-		query += fmt.Sprintf(`FILTER service.status != %d`, stpb.NoCloudStatus_DEL)
-		instQuery = fmt.Sprintf(`FILTER i.status != %d`, stpb.NoCloudStatus_DEL)
+		query += fmt.Sprintf(` FILTER service.status != %d`, stpb.NoCloudStatus_DEL)
+		instQuery = fmt.Sprintf(` FILTER i.status != %d`, stpb.NoCloudStatus_DEL)
 	}
 
 	query = fmt.Sprintf(getServiceList, query, instQuery)
