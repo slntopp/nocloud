@@ -537,6 +537,10 @@ func ListNamespaces[T Accessible](
 			}
 			insert += ` FILTER perm.level in @levels`
 			bindVars["levels"] = values
+		} else if key == "account" {
+			account := val.GetStringValue()
+			insert += ` FILTER path.vertices[-2]._key == @account`
+			bindVars["account"] = account
 		}
 	}
 
