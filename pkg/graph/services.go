@@ -402,12 +402,12 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 			bindVars["levels"] = values
 		} else if key == "account" {
 			value := val.GetStringValue()
-			query += ` FILTER path.vertices[-3]._key == @account`
-			bindVars["account"] = value
+			query += ` FILTER path.vertices[-3]._key == @search_account`
+			bindVars["search_account"] = value
 		} else if key == "namespace" {
 			value := val.GetStringValue()
-			query += ` FILTER path.vertices[-2]._key == @namespace`
-			bindVars["namespace"] = value
+			query += ` FILTER path.vertices[-2]._key == @search_namespace`
+			bindVars["search_namespace"] = value
 		}
 	}
 
