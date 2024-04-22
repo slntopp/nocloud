@@ -391,7 +391,7 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 	}
 
 	for key, val := range request.GetFilters() {
-		if key == "title" {
+		if key == "search_param" {
 			query += fmt.Sprintf(` FILTER LOWER(service.title) LIKE LOWER("%s")`, "%"+val.GetStringValue()+"%")
 		} else if key == "access.level" {
 			values := val.GetListValue().AsSlice()
@@ -400,6 +400,14 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 			}
 			query += ` FILTER perm.level in @levels`
 			bindVars["levels"] = values
+		} else if key == "account" {
+			value := val.GetStringValue()
+			query += ` FILTER path.vertices[-3]._key == @account`
+			bindVars["account"] = value
+		} else if key == "namespace" {
+			value := val.GetStringValue()
+			query += ` FILTER path.vertices[-2]._key == @namespace`
+			bindVars["namespace"] = value
 		}
 	}
 
