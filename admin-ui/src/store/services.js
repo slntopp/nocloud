@@ -93,25 +93,18 @@ export default {
     },
   },
   actions: {
-    fetch({ commit }, params) {
+    async fetch({ commit }, params) {
       commit("setInstances", []);
       commit("setServices", []);
       commit("setLoading", true);
-      return new Promise((resolve, reject) => {
-        api.services
-          .list(params)
-          .then((response) => {
-            commit("setServices", response.pool);
-            commit("setInstances", response.pool);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+      try {
+        const response = await api.post("services", params);
+        commit("setServices", response.pool);
+        commit("setInstances", response.pool);
+        return response;
+      } finally {
+        commit("setLoading", false);
+      }
     },
     fetchById({ commit }, id) {
       commit("setLoading", true);

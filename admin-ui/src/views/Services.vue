@@ -76,11 +76,15 @@
         </v-chip>
       </template>
       <template v-slot:[`item.access`]="{ item }">
-        <v-chip :color="accessColor(item.access?.level)">
+        <v-chip
+          v-if="!isNamespacesLoading"
+          :color="accessColor(item.access?.level)"
+        >
           {{ getName(item.access?.namespace) }} ({{
             item.access?.level ?? "NONE"
           }})
         </v-chip>
+        <v-skeleton-loader type="text" v-else />
       </template>
 
       <template v-slot:expanded-item="{ headers, item }">
@@ -195,6 +199,9 @@ export default {
       NONE: "error",
     },
     stateColorMap,
+
+    namespaces: {},
+    isNamespacesLoading: false,
   }),
   computed: {
     ...mapGetters("appSearch", { searchParam: "param", filter: "filter" }),
@@ -235,9 +242,6 @@ export default {
     servicesProviders() {
       return this.$store.getters["servicesProviders/all"];
     },
-    namespaces() {
-      return this.$store.getters["namespaces/all"];
-    },
     searchFields() {
       return [
         {
@@ -267,7 +271,6 @@ export default {
   },
   created() {
     this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
-    this.$store.dispatch("namespaces/fetch");
     this.fetchServices();
   },
   methods: {
@@ -276,9 +279,7 @@ export default {
       return data?.title || "not found";
     },
     getName(namespace) {
-      return (
-        this.namespaces.find(({ uuid }) => namespace === uuid)?.title ?? ""
-      );
+      return this.namespaces[namespace]?.title ?? "";
     },
     fetchServices() {
       this.$store
@@ -413,8 +414,28 @@ export default {
     this.$store.commit("appSearch/setFields", this.searchFields);
   },
   watch: {
-    services() {
+    services(value) {
       this.fetchError = "";
+
+      value.forEach(async ({ access: { namespace: uuid } }) => {
+        if (!uuid) {
+          return;
+        }
+
+        this.isNamespacesLoading = true;
+        try {
+          if (!this.namespaces[uuid]) {
+            this.namespaces[uuid] = api.get("namespaces/" + uuid);
+            this.namespaces[uuid] = await this.namespaces[uuid];
+          }
+        } catch {
+          this.namespaces[uuid] = undefined;
+        } finally {
+          this.isNamespacesLoading = Object.values(this.namespaces).some(
+            (acc) => acc instanceof Promise
+          );
+        }
+      });
     },
   },
 };

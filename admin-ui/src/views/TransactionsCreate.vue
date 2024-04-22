@@ -259,6 +259,7 @@ export default {
       exec: 0,
       meta: { instances: [], description: "", transactionType: "", items: [] },
     },
+    namespace: {},
     date: {
       title: "Date",
       value: "",
@@ -473,10 +474,7 @@ export default {
     }
 
     try {
-      await Promise.all([
-        this.$store.dispatch("namespaces/fetch"),
-        this.$store.dispatch("services/fetch"),
-      ]);
+      await Promise.all([this.$store.dispatch("services/fetch")]);
       this.fetchError = "";
     } catch (err) {
       let fetchError = "Can't reach the server";
@@ -490,9 +488,6 @@ export default {
     }
   },
   computed: {
-    namespaces() {
-      return this.$store.getters["namespaces/all"];
-    },
     services() {
       return this.$store.getters["services/all"];
     },
@@ -507,11 +502,8 @@ export default {
     },
     servicesByAccount() {
       if (this.transaction.account) {
-        const namespace = this.namespaces.find(
-          (n) => n.access.namespace === this.transaction.account.uuid
-        );
         return this.services.filter(
-          (s) => s.access.namespace === namespace?.uuid
+          (s) => s.access.namespace === this.namespace?.uuid
         );
       }
       return this.services;
@@ -595,6 +587,16 @@ export default {
         this.transaction.meta.items = undefined;
         this.transaction.meta.note = undefined;
         this.initDate();
+      }
+    },
+    async "transaction.account"() {
+      try {
+        const { pool } = await this.$store.dispatch("namespaces/fetch", {
+          filters: { account: this.transaction.account.uuid },
+        });
+        this.namespace = pool[0];
+      } catch (e) {
+        console.log(e);
       }
     },
   },
