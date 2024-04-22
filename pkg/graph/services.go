@@ -408,6 +408,13 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 			value := val.GetStringValue()
 			query += ` FILTER path.vertices[-2]._key == @search_namespace`
 			bindVars["search_namespace"] = value
+		} else {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER service["%s"] in @%s`, key, key)
+			bindVars[key] = values
 		}
 	}
 
