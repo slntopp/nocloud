@@ -338,9 +338,16 @@ export default {
     getPeriod(inst) {
       if (isInstancePayg(inst)) {
         return "PayG";
-      } else if (inst.resources.period && inst.type !== "ovh") {
+      } else if (
+        inst.resources.period &&
+        !["ovh", "opensrs"].includes(inst.type)
+      ) {
         const text = inst.resources.period > 1 ? "months" : "month";
         return `${inst.resources.period} ${text}`;
+      } else if (inst.type === "opensrs") {
+        return getBillingPeriod(
+          Object.values(inst.billingPlan.resources || {})[0]?.period || 0
+        );
       }
       const period = getBillingPeriod(
         Object.values(inst.billingPlan.products || {})[0]?.period || 0
