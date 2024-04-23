@@ -102,7 +102,19 @@
           <v-text-field readonly :value="account.data?.email" label="Email" />
         </v-col>
 
-        <v-col lg="1" md="2" sm="4">
+        <v-col lg="3" md="4" sm="6">
+          <v-text-field
+            readonly
+            :value="account.data?.company"
+            label="Company"
+          />
+        </v-col>
+
+        <v-col lg="3" md="4" sm="6">
+          <v-text-field readonly :value="account.data?.phone" label="Phone" />
+        </v-col>
+
+        <v-col lg="3" md="4" sm="6">
           <v-text-field
             readonly
             :value="formatSecondsToDate(account.data?.date_create || 0)"
@@ -110,7 +122,7 @@
           />
         </v-col>
 
-        <v-col lg="1" md="2" sm="4">
+        <v-col lg="3" md="4" sm="6">
           <v-text-field
             readonly
             :value="account.data?.country"
@@ -118,11 +130,11 @@
           />
         </v-col>
 
-        <v-col lg="1" md="2" sm="4">
+        <v-col lg="3" md="4" sm="6">
           <v-text-field readonly :value="account.data?.city" label="City" />
         </v-col>
 
-        <v-col lg="1" md="2" sm="4">
+        <v-col lg="3" md="4" sm="6">
           <v-text-field
             readonly
             :value="account.data?.address"
