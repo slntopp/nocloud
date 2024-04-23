@@ -8,6 +8,7 @@ export default {
     instances: [],
     loading: false,
     loadingItem: false,
+    total: 0,
   },
   getters: {
     all(state) {
@@ -18,6 +19,9 @@ export default {
     },
     one(state) {
       return state.service;
+    },
+    total(state) {
+      return state.total;
     },
     getInstances(state) {
       return state.instances;
@@ -32,6 +36,9 @@ export default {
   mutations: {
     setServices(state, services) {
       state.services = services;
+    },
+    setTotal(state, value) {
+      state.total = value;
     },
     setLoading(state, data) {
       state.loading = data;
@@ -93,13 +100,14 @@ export default {
     },
   },
   actions: {
-    async fetch({ commit }, params) {
+    async fetch({ commit }, options) {
       commit("setInstances", []);
       commit("setServices", []);
       commit("setLoading", true);
       try {
-        const response = await api.post("services", params);
+        const response = await api.post("services", options);
         commit("setServices", response.pool);
+        commit("setTotal", response.count);
         commit("setInstances", response.pool);
         return response;
       } finally {
