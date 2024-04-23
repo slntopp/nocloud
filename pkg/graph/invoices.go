@@ -63,3 +63,8 @@ func (ctrl *InvoicesController) Update(ctx context.Context, tx *pb.Invoice) (*pb
 	}
 	return tx, nil
 }
+
+func (ctrl *InvoicesController) Patch(ctx context.Context, id string, patch map[string]interface{}) error {
+	_, err := ctrl.col.UpdateDocument(ctx, id, patch)
+	return err
+}

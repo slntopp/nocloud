@@ -56,6 +56,8 @@ type InstancesController struct {
 	db driver.Database
 
 	ig2inst driver.Collection
+
+	inv *InvoicesController
 }
 
 func NewInstancesController(log *zap.Logger, db driver.Database) *InstancesController {
@@ -119,6 +121,32 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 			log.Warn("Failed to cleanup", zap.String("uuid", meta.Key), zap.Error(err))
 		}
 		return err
+	}
+
+	// Create invoice for this instance
+	// Exec = Now + 24hours
+	// TODO: review cost
+	var cost float64
+	for _, p := range i.GetBillingPlan().GetProducts() {
+		cost += p.Price
+	}
+	_, err = ctrl.inv.Create(ctx, &bpb.Invoice{
+		Status: bpb.BillingStatus_UNPAID,
+		Items: []*bpb.Item{
+			{
+				Title:    "Instance: " + i.Title,
+				Amount:   int64(cost),
+				Instance: i.GetUuid(),
+			},
+		},
+		Total:   float64(cost),
+		Type:    bpb.ActionType_INSTANCE_CREATION,
+		Created: time.Now().Unix(),
+		Exec:    time.Now().Add(24 * time.Hour).Unix(),
+	})
+	if err != nil {
+		log.Error("Failed to create Invoice", zap.Error(err))
+		return fmt.Errorf("instance was created. Failed to create invoice for this instaqnce: %v", err)
 	}
 
 	return nil

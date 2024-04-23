@@ -175,6 +175,92 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	return resp, nil
 }
 
+func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
+	log := s.log.Named("UpdateStatus")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	t := req.Msg
+	log.Debug("UpdateStatus request received")
+
+	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
+	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
+	if !ok {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
+	}
+
+	old, err := s.invoices.Get(ctx, t.GetUuid())
+	if err != nil {
+		log.Error("Failed to get invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get invoice")
+	}
+	newStatus := t.GetStatus()
+	oldStatus := old.GetStatus()
+
+	// TODO: More complex validations
+	if oldStatus == pb.BillingStatus_CANCELED || oldStatus == pb.BillingStatus_TERMINATED {
+		return nil, status.Error(codes.InvalidArgument, "Cannot rollback from cancelled and terminated statuses")
+	}
+	if oldStatus == pb.BillingStatus_PAID && newStatus == pb.BillingStatus_UNPAID {
+		return nil, status.Error(codes.InvalidArgument, "Cannot go from paid to unpaid")
+	}
+
+	now := time.Now().Unix()
+	patch := map[string]interface{}{
+		"status":    newStatus,
+		"proc":      now,
+		"processed": true,
+	}
+	err = s.invoices.Patch(ctx, t.GetUuid(), patch)
+	if err != nil {
+		log.Error("Failed to update status", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to update status")
+	}
+	old.Status = newStatus
+	old.Proc = now
+	old.Processed = true
+
+	if newStatus != pb.BillingStatus_PAID && newStatus != pb.BillingStatus_TERMINATED {
+		resp := connect.NewResponse(old)
+		return resp, nil
+	}
+
+	// Perform actions after status update
+
+	acc, err := s.accounts.Get(ctx, old.GetAccount())
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
+	}
+
+	switch old.GetType() {
+	case pb.ActionType_BALANCE:
+		rate, err := s.currencies.GetExchangeRateDirect(ctx, &pb.Currency{Id: old.Currency.GetId()}, &pb.Currency{Id: acc.Currency.GetId()})
+		if err != nil {
+			log.Error("Failed to get exchange rate", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
+		}
+		if err := s.accounts.Update(ctx, graph.Account{DocumentMeta: driver.DocumentMeta{Key: t.GetAccount()}}, map[string]interface{}{
+			"balance": acc.GetBalance() + t.GetTotal()*rate,
+		}); err != nil {
+			log.Error("Failed to update account balance", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to update account balance")
+		}
+		log.Info("Updated account balance after invoice was paid")
+
+	case pb.ActionType_INSTANCE_CREATION:
+		eventsClient.Publish(ctx, &epb.Event{
+			Type: "email",
+			Uuid: t.GetAccount(),
+			Key:  "invoice_created",
+		})
+
+	case pb.ActionType_INSTANCE_RENEWAL:
+	}
+
+	resp := connect.NewResponse(old)
+	return resp, nil
+}
+
 func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.Request[pb.GetInvoicesCountRequest]) (*connect.Response[pb.GetInvoicesCountResponse], error) {
 	log := s.log.Named("GetTransactionsCount")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
