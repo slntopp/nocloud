@@ -537,7 +537,7 @@ LET instances = (
             FOR sp_node IN 1 OUTBOUND ig
 	            GRAPH @permissions_graph
 	            OPTIONS {order: "bfs", uniqueVertices: "global"}
-	            FILTER IS_SAME_COLLECTION(@sp, sp_node)
+	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
 	            RETURN sp_node._key
         )
         LET srv = path.vertices[-3]._key
