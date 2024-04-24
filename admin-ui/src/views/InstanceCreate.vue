@@ -338,9 +338,10 @@ const save = async () => {
       service: service.value,
     };
 
-    const res = await api.services.testConfig(data);
-    if (!res.result) throw res;
-    await api.services._update(data.service);
+    const response = await api.services._update(data.service);
+    if (response.errors) {
+      throw response;
+    }
     store.commit("snackbar/showSnackbarError", {
       message: isEdit.value
         ? "instance updated successfully"
