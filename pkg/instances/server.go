@@ -572,7 +572,7 @@ LET instances = (
 )
 
 return { 
-	result: (@limit > 0) ? SLICE(instances, @offset, @limit) : instances,
+	pool: (@limit > 0) ? SLICE(instances, @offset, @limit) : instances,
 	count: LENGTH(instances)
 }
 `
