@@ -177,8 +177,15 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				if !ok {
 					_, err := s.billing.GetPlan(ctx, instance.BillingPlan)
 					if err != nil {
-						log.Error("Error fetching BillingPlan", zap.Error(err))
-						return nil, err
+						response.Result = false
+						log.Error("instance.BillingPlan", zap.Any("bill plan", instance.BillingPlan))
+						terr := pb.TestConfigError{
+							Error:         "Billing plan not exist, check it",
+							Instance:      instance.Title,
+							InstanceGroup: group.Title,
+						}
+						response.Errors = append(response.Errors, &terr)
+						continue
 					}
 				}
 
