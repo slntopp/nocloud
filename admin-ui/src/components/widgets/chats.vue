@@ -1,7 +1,21 @@
 <template>
   <widget title="Chats" :loading="isLoading" class="pa-0 ma-0">
     <v-card color="background-light" flat>
-      <div class="d-flex justify-end">
+      <div class="d-flex justify-space-between">
+        <v-btn-toggle
+          class="mt-2"
+          dense
+          :value="data.status"
+          @change="
+            emit('update:key', { value: $event || data.status, key: 'status' })
+          "
+          borderless
+        >
+          <v-btn x-small :value="item" :key="item" v-for="item in statuses">
+            {{ item }}
+          </v-btn>
+        </v-btn-toggle>
+
         <v-btn-toggle
           class="mt-2"
           dense
@@ -121,6 +135,7 @@ const emit = defineEmits(["update", "update:key"]);
 const store = useStore();
 
 const periods = ref(["day", "week", "month"]);
+const statuses = ref(["all", "closed"]);
 const accounts = ref({});
 const isAccountsLoading = ref(false);
 
@@ -171,13 +186,17 @@ const countForPeriod = computed(() => {
 
   return chats.value.filter((chat) => {
     const createDate = (Number(chat.created) || 0) / 1000;
-    return dates.from <= createDate && dates.to >= createDate;
+    return (
+      dates.from <= createDate &&
+      dates.to >= createDate &&
+      !(data.value.status === "closed" && chat.status !== 3)
+    );
   }).length;
 });
 
 const setDefaultData = () => {
   if (Object.keys(data.value || {}).length === 0) {
-    emit("update", { period: "week" });
+    emit("update", { period: "week", starus: "all" });
   }
 };
 

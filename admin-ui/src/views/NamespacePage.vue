@@ -20,16 +20,16 @@
       v-model="tabs"
     >
       <v-tab-item>
-        <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
+        <v-progress-linear indeterminate class="pt-2" v-if="isLoading" />
         <namespace-info
-          :loading="isFetchLoading"
+          :loading="isLoading"
           v-if="namespace && namespaceTitle"
           :namespace="namespace"
           @input:title="namespace.title = $event"
         />
       </v-tab-item>
       <v-tab-item>
-        <v-progress-linear indeterminate class="pt-2" v-if="isFetchLoading" />
+        <v-progress-linear indeterminate class="pt-2" v-if="isLoading" />
         <namespace-accounts
           v-if="namespace && namespaceTitle"
           :namespace="namespace"
@@ -48,9 +48,7 @@ export default {
   name: "account-view",
   data: () => ({
     navTitles: config.navTitles ?? {},
-    isFetchLoading: false,
     tabs: 0,
-    namespace: {},
   }),
   components: { NamespaceAccounts, namespaceInfo },
   methods: {
@@ -63,29 +61,32 @@ export default {
     },
   },
   computed: {
-    all() {
-      return this.$store.getters["namespaces/all"];
+    namespace() {
+      return this.$store.getters["namespaces/one"] || {};
+    },
+    isLoading() {
+      return this.$store.getters["namespaces/isLoading"];
     },
     namespaceId() {
       return this.$route.params.namespaceId;
     },
     namespaceTitle() {
-      if (!this.namespace || !this.namespace.title) {
+      if (this.isLoading) {
         return "...";
+      } else if (!this.isLoading && !Object.keys(this.namespace).length) {
+        return "Not found";
       }
 
       return this.namespace.title;
     },
   },
   async mounted() {
-    if (!this.all || this.all.length === 0) {
-      this.isFetchLoading = true;
-      await this.$store.dispatch("namespaces/fetch");
-      this.isFetchLoading = false;
-    }
-
-    this.namespace = this.all.find((n) => n.uuid == this.namespaceId);
-    document.title = `${this.namespace.title} | NoCloud`;
+    await this.$store.dispatch("namespaces/fetchById", this.namespaceId);
+  },
+  watch: {
+    namespaceTitle(value) {
+      document.title = `${value} | NoCloud`;
+    },
   },
 };
 </script>
