@@ -16,6 +16,7 @@
                 label="Type"
                 v-model="typeId"
                 :items="types"
+                :loading="isFetchLoading"
               >
                 <template v-slot:item="{ item }">
                   <span>{{ item.title }} - {{ item.amount.title }}</span>
@@ -35,14 +36,24 @@
               <v-subheader>Account</v-subheader>
             </v-col>
             <v-col cols="9">
-              <accounts-autocomplete
-                fetch-value
-                :rules="generalRule"
-                :disabled="isEdit"
-                label="Account"
-                return-object
-                v-model="transaction.account"
-              />
+              <div class="d-flex align-center">
+                <accounts-autocomplete
+                  fetch-value
+                  :rules="generalRule"
+                  :disabled="isEdit"
+                  :loading="isFetchLoading"
+                  label="Account"
+                  return-object
+                  v-model="transaction.account"
+                />
+                <v-btn
+                  @click="openAccountWindow"
+                  icon
+                  v-if="isEdit && !isFetchLoading"
+                >
+                  <v-icon>mdi-login</v-icon>
+                </v-btn>
+              </div>
             </v-col>
           </v-row>
 
@@ -444,6 +455,9 @@ export default {
         (_, i) => i !== index
       );
     },
+    openAccountWindow() {
+      return window.open("/accounts/" + this.transaction.account.uuid, "_blanc");
+    },
   },
   async created() {
     if (this.$route.params.account) {
@@ -454,6 +468,8 @@ export default {
     this.setTransactionType();
 
     if (this.$route.params.uuid) {
+      this.isFetchLoading = true;
+
       try {
         const { pool } = await api.transactions.get(this.$route.params.uuid);
         this.transaction = pool[0];
@@ -471,6 +487,8 @@ export default {
         this.history = records;
       } catch (err) {
         this.$router.back();
+      } finally {
+        this.isFetchLoading = false;
       }
     }
   },

@@ -175,7 +175,10 @@
             @click="chatClick"
           >
             <v-list-item-icon>
-              <v-icon>mdi-chat</v-icon>
+              <v-icon
+                :color="unreadChatsCount && isMenuMinimize ? 'red' : undefined"
+                >mdi-chat</v-icon
+              >
             </v-list-item-icon>
 
             <v-list-item-content>

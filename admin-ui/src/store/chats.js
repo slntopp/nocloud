@@ -41,7 +41,7 @@ export default {
       return createPromiseClient(StreamService, rootGetters["app/transport"]);
     },
     unreadChatsCount(state) {
-      return state.chats.filter((chat) => chat.meta.unread > 0).length;
+      return state.chats.filter((chat) => chat.meta.unread > 0 && ![2,3].includes(chat.status)).length;
     },
   },
   actions: {
