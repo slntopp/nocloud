@@ -3,19 +3,93 @@ package billing
 import (
 	"connectrpc.com/connect"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	epb "github.com/slntopp/nocloud-proto/events"
+	healthpb "github.com/slntopp/nocloud-proto/health"
+	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
+	"slices"
 	"time"
 )
+
+type pair[T any] struct {
+	f T
+	s T
+}
+
+var forbiddenStatusConversions = []pair[pb.BillingStatus]{
+	{pb.BillingStatus_PAID, pb.BillingStatus_UNPAID},
+	{pb.BillingStatus_PAID, pb.BillingStatus_DRAFT},
+	{pb.BillingStatus_DRAFT, pb.BillingStatus_TERMINATED},
+	{pb.BillingStatus_UNPAID, pb.BillingStatus_TERMINATED},
+}
+
+func (s *BillingServiceServer) Consume(ctx context.Context) {
+	log := s.log.Named("ExpiringInstancesConsumer")
+init:
+	log.Info("Trying to register instances expiring consumer")
+
+	ch, err := s.rbmq.Channel()
+	if err != nil {
+		log.Error("Failed to open a channel", zap.Error(err))
+		time.Sleep(time.Second)
+		goto init
+	}
+
+	queue, _ := ch.QueueDeclare(
+		"instance_expiring",
+		true, false, false, true, nil,
+	)
+
+	records, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	if err != nil {
+		log.Error("Failed to register a consumer", zap.Error(err))
+		time.Sleep(time.Second)
+		goto init
+	}
+
+	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
+	currencyConf := MakeCurrencyConf(ctx, log)
+
+	log.Info("Instances expiring consumer registered. Reading messages")
+	for msg := range records {
+		log.Debug("Received a message")
+		var recs []*pb.Record
+		err = json.Unmarshal(msg.Body, &recs)
+		if err != nil {
+			log.Error("Failed to unmarshal record", zap.Error(err))
+			if err = msg.Ack(false); err != nil {
+				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+			}
+			continue
+		}
+		log.Debug("Message unmarshalled", zap.Any("records", &recs))
+		err := s.processExpiringRecords(ctx, recs, currencyConf)
+		if err != nil {
+			log.Error("Failed to process record", zap.Error(err))
+		}
+		if err = msg.Ack(false); err != nil {
+			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+		}
+		continue
+	}
+}
+
+func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs []*pb.Record, cur CurrencyConf) error {
+
+	return nil
+}
 
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
 	log := s.log.Named("GetTransactions")
@@ -196,12 +270,12 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	newStatus := t.GetStatus()
 	oldStatus := old.GetStatus()
 
-	// TODO: More complex validations
+	// Cannot rollback from cancelled and terminated
 	if oldStatus == pb.BillingStatus_CANCELED || oldStatus == pb.BillingStatus_TERMINATED {
 		return nil, status.Error(codes.InvalidArgument, "Cannot rollback from cancelled and terminated statuses")
 	}
-	if oldStatus == pb.BillingStatus_PAID && newStatus == pb.BillingStatus_UNPAID {
-		return nil, status.Error(codes.InvalidArgument, "Cannot go from paid to unpaid")
+	if slices.Contains(forbiddenStatusConversions, pair[pb.BillingStatus]{oldStatus, newStatus}) {
+		return nil, status.Error(codes.InvalidArgument, "Cannot convert from "+oldStatus.String()+" to "+newStatus.String())
 	}
 
 	now := time.Now().Unix()
@@ -219,22 +293,28 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	old.Proc = now
 	old.Processed = true
 
-	if newStatus != pb.BillingStatus_PAID && newStatus != pb.BillingStatus_TERMINATED {
-		resp := connect.NewResponse(old)
-		return resp, nil
-	}
-
-	// Perform actions after status update
-
 	acc, err := s.accounts.Get(ctx, old.GetAccount())
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
+	var resp *connect.Response[pb.Invoice]
+
+	if newStatus == pb.BillingStatus_PAID {
+		goto payment
+	} else if newStatus == pb.BillingStatus_TERMINATED {
+		goto termination
+	} else {
+		resp = connect.NewResponse(old)
+		return resp, nil
+	}
+
+payment:
+
 	switch old.GetType() {
 	case pb.ActionType_BALANCE:
-		rate, err := s.currencies.GetExchangeRateDirect(ctx, &pb.Currency{Id: old.Currency.GetId()}, &pb.Currency{Id: acc.Currency.GetId()})
+		rate, err := s.currencies.GetExchangeRate(ctx, &pb.Currency{Id: old.Currency.GetId()}, &pb.Currency{Id: acc.Currency.GetId()})
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
@@ -248,16 +328,81 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 		log.Info("Updated account balance after invoice was paid")
 
 	case pb.ActionType_INSTANCE_CREATION:
-		eventsClient.Publish(ctx, &epb.Event{
-			Type: "email",
-			Uuid: t.GetAccount(),
-			Key:  "invoice_created",
-		})
+		for _, item := range old.GetItems() {
+			i := item.GetInstance()
+			instOld, err := s.instances.Get(ctx, i)
+			if err != nil {
+				log.Warn("Failed to get instance to start", zap.Error(err))
+				continue
+			}
+			instNew := graph.Instance{
+				Instance:     proto.Clone(instOld.Instance).(*ipb.Instance),
+				DocumentMeta: instOld.DocumentMeta,
+			}
+			cfg := instNew.Config
+			cfg["auto_start"] = structpb.NewBoolValue(true)
+			instNew.Config = cfg
+			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
+				log.Warn("Failed to update instance auto_start", zap.Error(err))
+				continue
+			}
+			log.Info("Updated auto_start for instances after invoice was paid")
+		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
-	}
+		for _, item := range old.GetItems() {
+			i := item.GetInstance()
+			instOld, err := s.instances.Get(ctx, i)
+			if err != nil {
+				log.Error("Failed to get instance to renew", zap.Error(err))
+				continue
+			}
+			instNew := proto.Clone(instOld.Instance).(*ipb.Instance)
+			plan, err := s.plans.Get(ctx, &pb.Plan{Uuid: instOld.GetBillingPlan().GetUuid()})
+			if err != nil {
+				log.Error("Failed to get plan", zap.Error(err))
+				continue
+			}
 
-	resp := connect.NewResponse(old)
+			var last, next int64
+			for _, resource := range plan.GetResources() {
+				_, ok := instOld.Data[resource.Key+"_last_monitoring"]
+				if ok {
+					last = int64(instOld.Data[resource.Key+"_last_monitoring"].GetNumberValue())
+					instNew.Data[resource.Key+"_last_monitoring"] = structpb.NewNumberValue(float64(last + resource.GetPeriod()))
+				}
+				_, ok = instOld.Data[resource.Key+"_next_payment_date"]
+				if ok {
+					next = int64(instOld.Data[resource.Key+"_next_payment_date"].GetNumberValue())
+					instNew.Data[resource.Key+"_next_payment_date"] = structpb.NewNumberValue(float64(next + resource.GetPeriod()))
+				}
+			}
+			product := plan.GetProducts()[instOld.GetProduct()]
+			_, ok := instOld.Data["last_monitoring"]
+			if ok {
+				last = int64(instOld.Data["last_monitoring"].GetNumberValue())
+				instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last + product.GetPeriod()))
+			}
+			_, ok = instOld.Data["next_payment_date"]
+			if ok {
+				next = int64(instOld.Data["next_payment_date"].GetNumberValue())
+				instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next + product.GetPeriod()))
+			}
+
+			if err := s.instances.Update(ctx, "", instNew, instOld.Instance); err != nil {
+				log.Error("Failed to update instance", zap.Error(err))
+				return nil, err
+			}
+		}
+		log.Info("Renewed instance after invoice was paid")
+	}
+	resp = connect.NewResponse(old)
+	return resp, nil
+
+termination:
+	// TODO: undo action after invoice termination
+
+	resp = connect.NewResponse(old)
 	return resp, nil
 }
 

@@ -145,7 +145,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		accCurrency = acc.Currency
 	}
 
-	rate, err := ctrl.cur.GetExchangeRateDirect(ctx,
+	rate, err := ctrl.cur.GetExchangeRate(ctx,
 		&bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID},
 		accCurrency)
 	if err != nil {
@@ -156,7 +156,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	// Exec = Now + 24hours
 	// TODO: review cost
 	var cost float64
-	for _, p := range i.GetBillingPlan().GetProducts() {
+	for _, p := range i.GetBillingPlan().GetResources() {
 		cost += p.Price * rate
 	}
 	_, err = ctrl.inv.Create(ctx, &bpb.Invoice{
@@ -169,7 +169,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 			},
 		},
 		Total:    cost,
-		Type:     bpb.ActionType_INSTANCE_CREATION,
+		Type:     bpb.ActionType_BALANCE,
 		Created:  time.Now().Unix(),
 		Exec:     time.Now().Add(24 * time.Hour).Unix(),
 		Account:  acc.GetUuid(),

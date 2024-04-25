@@ -129,6 +129,7 @@ func main() {
 	records := billing.NewRecordsServiceServer(log, conn, db)
 	log.Info("Starting Records Consumer")
 	go records.Consume(ctx)
+	go server.Consume(ctx) // Expiring records consumer
 
 	log.Info("Registering CurrencyService Server")
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
