@@ -403,12 +403,6 @@ export default {
           import(`@/components/modules/${type}/instanceCard.vue`);
       }
     });
-
-    this.$store.dispatch("namespaces/fetch").catch((err) => {
-      this.showSnackbarError({
-        message: `Error: ${err?.response?.data?.message ?? "Unknown"}.`,
-      });
-    });
   },
   mounted() {
     const types = require.context(

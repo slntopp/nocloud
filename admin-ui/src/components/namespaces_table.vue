@@ -2,17 +2,22 @@
   <nocloud-table
     table-name="namespaces"
     :loading="isLoading"
-    :items="filtredNamespaces"
+    :items="namespaces"
     :headers="headers"
-    :value="selected"
-    @input="handleSelect"
+    :value="value"
+    @input="emit('input', $event)"
     :single-select="singleSelect"
     :footer-error="fetchError"
+    :server-items-length="total"
+    :server-side-page="options.page"
+    @update:options="setOptions"
   >
     <template v-slot:[`item.access`]="{ item }">
-      <v-chip color="info">
-        {{ getName(item.access.namespace) }} ({{ item.access.level }})
+      <v-chip color="info" v-if="!isAccountsLoading">
+        {{ accounts[item.access.namespace]?.title }}
+        ({{ item.access.level }})
       </v-chip>
+      <v-skeleton-loader type="text" v-else />
     </template>
     <template v-slot:[`item.title`]="{ item }">
       <router-link
@@ -24,117 +29,146 @@
   </nocloud-table>
 </template>
 
+<script setup>
+import nocloudTable from "@/components/table.vue";
+import { useStore } from "@/store/";
+import { debounce } from "@/functions";
+import api from "@/api";
+
+const props = defineProps({
+  value: {
+    type: Array,
+    default: () => [],
+  },
+  singleSelect: {
+    type: Boolean,
+    default: false,
+  },
+  refetch: {
+    type: Boolean,
+    default: false,
+  },
+});
+const { value, singleSelect, refetch } = toRefs(props);
+
+const emit = defineEmits(["input"]);
+
+const store = useStore();
+
+const headers = ref([
+  { text: "Title", value: "title" },
+  { text: "UUID", value: "uuid" },
+  { text: "Access", value: "access" },
+]);
+const fetchError = ref("");
+const total = ref(0);
+const options = ref({});
+const accounts = ref({});
+const isAccountsLoading = ref(false);
+
+onMounted(() => {
+  store.commit("appSearch/setFields", searchFields.value);
+});
+
+const filter = computed(() => store.getters["appSearch/filter"]);
+const searchParam = computed(() => store.getters["appSearch/param"]);
+const isLoading = computed(() => store.getters["namespaces/isLoading"]);
+const namespaces = computed(() => store.getters["namespaces/all"]);
+
+const requestOptions = computed(() => ({
+  filters: {
+    ...filter.value,
+    search_param: searchParam.value || filter.value.title || undefined,
+  },
+  page: options.value.page,
+  limit: options.value.itemsPerPage,
+  field: options.value.sortBy[0],
+  sort: options.value.sortBy[0] && options.value.sortDesc[0] ? "DESC" : "ASC",
+}));
+
+const searchFields = computed(() => [
+  {
+    title: "Title",
+    key: "title",
+    type: "input",
+  },
+  {
+    title: "Access level",
+    key: "access.level",
+    type: "select",
+    item: { value: "id", title: "title" },
+    items: [
+      { id: 0, title: "NONE" },
+      { id: 1, title: "READ" },
+      { id: 2, title: "MGMT" },
+      { id: 3, title: "ADMIN" },
+    ],
+  },
+]);
+
+const setOptions = (newOptions) => {
+  if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
+    options.value = newOptions;
+  }
+};
+
+const fetchNamespaces = async () => {
+  fetchError.value = "";
+  try {
+    const { count } = await store.dispatch(
+      "namespaces/fetch",
+      requestOptions.value
+    );
+    total.value = +count;
+  } catch (err) {
+    fetchError.value = "Can't reach the server";
+    if (err.response && err.response.data.message) {
+      fetchError.value += `: [ERROR]: ${err.response.data.message}`;
+    } else {
+      fetchError.value += `: [ERROR]: ${err.toJSON().message}`;
+    }
+  }
+};
+
+const fetchNamespacesDebounce = debounce(fetchNamespaces);
+
+const fetchAccounts = () => {
+  namespaces.value.forEach(async ({ access: { namespace: uuid } }) => {
+    if (!uuid) {
+      return;
+    }
+
+    isAccountsLoading.value = true;
+    try {
+      if (!accounts.value[uuid]) {
+        accounts.value[uuid] = api.accounts.get(uuid);
+        accounts.value[uuid] = await accounts.value[uuid];
+      }
+    } catch {
+      accounts.value[uuid] = undefined;
+    } finally {
+      isAccountsLoading.value = Object.values(accounts.value).some(
+        (acc) => acc instanceof Promise
+      );
+    }
+  });
+};
+
+watch(filter, fetchNamespacesDebounce, { deep: true });
+watch(searchParam, fetchNamespacesDebounce);
+watch(options, fetchNamespacesDebounce);
+watch(refetch, fetchNamespacesDebounce);
+
+watch(namespaces, fetchAccounts);
+</script>
+
 <script>
-import noCloudTable from "@/components/table.vue";
-import {
-  compareSearchValue,
-  filterArrayByTitleAndUuid,
-  getDeepObjectValue,
-} from "@/functions";
 import search from "@/mixins/search";
-import { mapGetters } from "vuex";
+import { computed, onMounted, ref, toRefs, watch } from "vue";
 
 export default {
   name: "namespaces-table",
-  mixins: [search({name:"namespaces-table"})],
-  components: {
-    "nocloud-table": noCloudTable,
-  },
-  props: {
-    value: {
-      type: Array,
-      default: () => [],
-    },
-    "single-select": {
-      type: Boolean,
-      default: false,
-    },
-  },
-  data() {
-    return {
-      headers: [
-        { text: "Title", value: "title" },
-        { text: "UUID", value: "uuid" },
-        { text: "Access", value: "access" },
-      ],
-      selected: this.value,
-      fetchError: "",
-    };
-  },
-  methods: {
-    handleSelect(item) {
-      this.$emit("input", item);
-    },
-    getName(account) {
-      return this.accounts.find(({ uuid }) => account === uuid)?.title ?? "";
-    },
-  },
-  computed: {
-    ...mapGetters("appSearch", ["filter", "param"]),
-    ...mapGetters("namespaces", { tableData: "all", isLoading: "isLoading" }),
-    filtredNamespaces() {
-      const namespaces = this.tableData.filter((n) =>
-        Object.keys(this.filter).every((key) => {
-          const data = getDeepObjectValue(n, key);
-
-          return compareSearchValue(
-            data,
-            this.filter[key],
-            this.searchFields.find((f) => f.key === key)
-          );
-        })
-      );
-
-      if (this.param) {
-        return filterArrayByTitleAndUuid(namespaces, this.param);
-      }
-      return namespaces;
-    },
-    accessLevels() {
-      return [...new Set(this.tableData.map((n) => n.access.level)), "NONE"];
-    },
-    searchFields() {
-      return [
-        {
-          title: "Title",
-          key: "title",
-          type: "input",
-        },
-        {
-          title: "Access",
-          key: "access.level",
-          type: "select",
-          items: this.accessLevels,
-        },
-      ];
-    },
-    accounts() {
-      return this.$store.getters["accounts/all"];
-    },
-  },
-  created() {
-    this.$store.dispatch("accounts/fetch");
-    this.$store
-      .dispatch("namespaces/fetch")
-      .then(() => {
-        this.fetchError = "";
-      })
-      .catch((err) => {
-        console.log(`err`, err);
-        this.fetchError = "Can't reach the server";
-        if (err.response) {
-          this.fetchError += `: [ERROR]: ${err.response.data.message}`;
-        } else {
-          this.fetchError += `: [ERROR]: ${err.toJSON().message}`;
-        }
-      });
-  },
-  watch: {
-    tableData() {
-      this.fetchError = "";
-      this.$store.commit("appSearch/setFields", this.searchFields);
-    },
-  },
+  mixins: [search({ name: "namespaces-table" })],
 };
 </script>
 
