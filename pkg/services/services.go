@@ -335,7 +335,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	if err != nil {
 		return nil, err
 	} else if !testResult.Result {
-		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Config didn't pass test. Errors: %v", testResult.Errors))
 	}
 
 	doc, err := s.ctrl.Create(ctx, service)
@@ -402,7 +402,7 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 	if err != nil {
 		return nil, err
 	} else if !testResult.Result {
-		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Config didn't pass test. Errors: %v", testResult.Errors))
 	}
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
