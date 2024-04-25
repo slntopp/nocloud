@@ -100,7 +100,13 @@ func main() {
 		})
 	})
 
-	server := billing.NewBillingServiceServer(log, db)
+	conn, err := amqp.Dial(RabbitMQConn)
+	if err != nil {
+		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer conn.Close()
+
+	server := billing.NewBillingServiceServer(log, db, conn)
 	currencies := billing.NewCurrencyServiceServer(log, db)
 	log.Info("Starting Currencies Service")
 
@@ -119,12 +125,6 @@ func main() {
 	log.Info("Registering BillingService Server")
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
 	router.PathPrefix(path).Handler(handler)
-
-	conn, err := amqp.Dial(RabbitMQConn)
-	if err != nil {
-		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
-	}
-	defer conn.Close()
 
 	records := billing.NewRecordsServiceServer(log, conn, db)
 	log.Info("Starting Records Consumer")

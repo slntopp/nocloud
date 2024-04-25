@@ -64,9 +64,10 @@ type BillingServiceServer struct {
 	sus  *healthpb.RoutineStatus
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
+		rbmq:         conn,
 		log:          log,
 		nss:          graph.NewNamespacesController(log, db),
 		plans:        graph.NewBillingPlansController(log.Named("PlansController"), db),
@@ -97,6 +98,10 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 				Service: "Billing Machine",
 				Status:  healthpb.Status_STOPPED,
 			},
+		},
+
+		ConsumerStatus: &healthpb.RoutineStatus{
+			Routine: "Billing Consumer",
 		},
 	}
 
