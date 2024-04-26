@@ -19,6 +19,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"github.com/arangodb/go-driver"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
@@ -43,6 +44,9 @@ type Routine struct {
 type BillingServiceServer struct {
 	log *zap.Logger
 
+	rbmq           *amqp.Connection
+	ConsumerStatus *healthpb.RoutineStatus
+
 	nss          graph.NamespacesController
 	plans        graph.BillingPlansController
 	transactions graph.TransactionsController
@@ -51,6 +55,7 @@ type BillingServiceServer struct {
 	currencies   graph.CurrencyController
 	accounts     graph.AccountsController
 	descriptions *graph.DescriptionsController
+	instances    *graph.InstancesController
 
 	db driver.Database
 
@@ -59,9 +64,10 @@ type BillingServiceServer struct {
 	sus  *healthpb.RoutineStatus
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
+		rbmq:         conn,
 		log:          log,
 		nss:          graph.NewNamespacesController(log, db),
 		plans:        graph.NewBillingPlansController(log.Named("PlansController"), db),
@@ -71,6 +77,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 		accounts:     graph.NewAccountsController(log.Named("AccountsController"), db),
 		invoices:     graph.NewInvoicesController(log.Named("InvoicesController"), db),
 		descriptions: graph.NewDescriptionsController(log, db),
+		instances:    graph.NewInstancesController(log, db),
 		db:           db,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
@@ -87,6 +94,14 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 		},
 		sus: &healthpb.RoutineStatus{
 			Routine: "Suspend Monitoring",
+			Status: &healthpb.ServingStatus{
+				Service: "Billing Machine",
+				Status:  healthpb.Status_STOPPED,
+			},
+		},
+
+		ConsumerStatus: &healthpb.RoutineStatus{
+			Routine: "Billing Consumer",
 			Status: &healthpb.ServingStatus{
 				Service: "Billing Machine",
 				Status:  healthpb.Status_STOPPED,
