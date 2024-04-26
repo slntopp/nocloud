@@ -4,7 +4,6 @@
       v-if="$route.query.url"
       ref="plugin"
       class="h-100 w-100"
-      :redirect="redirect"
       :url="url"
       :params="params"
     />
@@ -24,9 +23,17 @@ const plugin = ref()
 const url = computed(() =>
   route.params.url || route.query.url
 )
-const params = computed(() =>
-  route.params.params
-)
+const params = computed(() => {
+  const result = {
+    ...route.params.params, fullUrl: location.href
+  }
+
+  if (route.query.chat) {
+    result.redirect = `dashboard/${route.query.chat}`
+  }
+
+  return result
+})
 
 watch(() => store.getters["app/chatClicks"], () => {
   plugin.value.$el.contentWindow.postMessage({ type: "start-page" }, "*");
