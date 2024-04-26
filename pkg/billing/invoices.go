@@ -4,6 +4,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -86,9 +87,93 @@ init:
 	}
 }
 
-func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs []*pb.Record, cur CurrencyConf) error {
+const instanceOwner = `
+LET account = LAST( // Find Instance owner Account
+    FOR node, edge, path IN 4
+    INBOUND DOCUMENT(@@instances, @instance)
+    GRAPH @permissions
+    FILTER path.edges[*].role == ["owner","owner"]
+    FILTER IS_SAME_COLLECTION(node, @@accounts)
+        RETURN node
+    )`
 
-	return nil
+func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs []*pb.Record, currency CurrencyConf) error {
+
+	var i *graph.Instance
+	var plan *graph.BillingPlan
+	var sum float64
+	for _, rec := range recs {
+		var err error
+		i, err = s.instances.Get(ctx, rec.GetInstance())
+		if err != nil {
+			return err
+		}
+		plan, err = s.plans.Get(ctx, i.GetBillingPlan())
+		if err != nil {
+			return err
+		}
+		if product, ok := plan.GetProducts()[rec.Product]; ok {
+			sum += product.Price * rec.Total
+		}
+		// Scan each resource to find presented in current record. TODO: optimize
+		for _, res := range plan.GetResources() {
+			if res.Key == rec.Resource {
+				sum += res.Price * rec.Total
+			}
+		}
+	}
+
+	if plan == nil {
+		return errors.New("got nil plan")
+	}
+
+	if i == nil {
+		return errors.New("got nil instance")
+	}
+
+	if sum == 0 {
+		return errors.New("payment sum is zero")
+	}
+
+	// Find owner account
+	cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
+		"instance":    i.GetUuid(),
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"@instances":  schema.INSTANCES_COL,
+		"@accounts":   schema.ACCOUNTS_COL,
+	})
+	if err != nil {
+		return err
+	}
+	var acc graph.Account
+	_, err = cur.ReadDocument(ctx, &acc)
+	if err != nil {
+		return err
+	}
+
+	if acc.Currency == nil {
+		acc.Currency = currency.Currency
+	}
+	rate, err := s.currencies.GetExchangeRate(ctx, acc.Currency, currency.Currency)
+	if err != nil {
+		return err
+	}
+
+	inv := &pb.Invoice{
+		Exec:    time.Now().Add(time.Duration(plan.GetProducts()[i.GetProduct()].GetPeriod()) * time.Second).Unix(),
+		Status:  pb.BillingStatus_UNPAID,
+		Total:   sum * rate,
+		Created: time.Now().Unix(),
+		Type:    pb.ActionType_INSTANCE_RENEWAL,
+		Items: []*pb.Item{
+			{Title: i.Title + " renewal", Amount: int64(sum * rate), Instance: i.GetUuid()},
+		},
+		Account:  acc.GetUuid(),
+		Currency: acc.Currency,
+	}
+
+	_, err = s.CreateInvoice(ctx, connect.NewRequest(inv))
+	return err
 }
 
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
@@ -230,12 +315,33 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
-	t.Created = time.Now().Unix()
+	if t.GetTotal() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Zero total")
+	}
+	if t.Account == "" {
+		return nil, status.Error(codes.InvalidArgument, "Missing account")
+	}
+	if t.GetType() == pb.ActionType_BALANCE && t.GetTotal() >= 0 {
+		return nil, status.Error(codes.InvalidArgument, "Positive total in balance invoice")
+	}
 
-	r, err := s.invoices.Create(ctx, t)
+	newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
+		Priority: pb.Priority_NORMAL,
+		Account:  t.GetAccount(),
+		Total:    t.GetTotal(),
+		Exec:     0,
+	}))
 	if err != nil {
 		log.Error("Failed to create transaction", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to create transaction")
+	}
+
+	t.Transactions = []string{newTr.Msg.Uuid}
+	t.Created = time.Now().Unix()
+	r, err := s.invoices.Create(ctx, t)
+	if err != nil {
+		log.Error("Failed to create invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
 	eventsClient.Publish(ctx, &epb.Event{
@@ -278,6 +384,23 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 		return nil, status.Error(codes.InvalidArgument, "Cannot convert from "+oldStatus.String()+" to "+newStatus.String())
 	}
 
+	// Update invoice's transactions to perform payment
+	if newStatus == pb.BillingStatus_PAID {
+		for _, trId := range old.GetTransactions() {
+			tr, err := s.transactions.Get(ctx, trId)
+			if err != nil {
+				log.Error("Failed to get transaction", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Failed to get transaction")
+			}
+			tr.Priority = pb.Priority_URGENT
+			_, err = s.UpdateTransaction(ctx, connect.NewRequest(tr))
+			if err != nil {
+				log.Error("Failed to update transaction", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Failed to update transaction")
+			}
+		}
+	}
+
 	now := time.Now().Unix()
 	patch := map[string]interface{}{
 		"status":    newStatus,
@@ -293,7 +416,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	old.Proc = now
 	old.Processed = true
 
-	acc, err := s.accounts.Get(ctx, old.GetAccount())
+	_, err = s.accounts.Get(ctx, old.GetAccount())
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get account")
@@ -314,18 +437,7 @@ payment:
 
 	switch old.GetType() {
 	case pb.ActionType_BALANCE:
-		rate, err := s.currencies.GetExchangeRate(ctx, &pb.Currency{Id: old.Currency.GetId()}, &pb.Currency{Id: acc.Currency.GetId()})
-		if err != nil {
-			log.Error("Failed to get exchange rate", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
-		}
-		if err := s.accounts.Update(ctx, graph.Account{DocumentMeta: driver.DocumentMeta{Key: t.GetAccount()}}, map[string]interface{}{
-			"balance": acc.GetBalance() + t.GetTotal()*rate,
-		}); err != nil {
-			log.Error("Failed to update account balance", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to update account balance")
-		}
-		log.Info("Updated account balance after invoice was paid")
+		// Updated transactions raised account's balance
 
 	case pb.ActionType_INSTANCE_CREATION:
 		for _, item := range old.GetItems() {

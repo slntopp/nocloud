@@ -102,6 +102,10 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 
 		ConsumerStatus: &healthpb.RoutineStatus{
 			Routine: "Billing Consumer",
+			Status: &healthpb.ServingStatus{
+				Service: "Billing Machine",
+				Status:  healthpb.Status_STOPPED,
+			},
 		},
 	}
 
