@@ -424,6 +424,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		log.Error("Error getting service", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Error getting service")
 	}
+	log.Debug("Got service", zap.Any("service", srv))
 	for _, group := range srv.GetInstancesGroups() {
 		for _, instance := range group.GetInstances() {
 
@@ -433,13 +434,13 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 				cost += p.Price
 			}
 			product, ok := instance.GetBillingPlan().GetProducts()[instance.GetProduct()]
-			if !ok {
-				log.Error("Failed to get product(instance's product not found in billing plan)",
+			if !ok || product == nil {
+				log.Error("Failed to get product(instance's product not found in billing plan or nil)",
 					zap.String("product", instance.GetProduct()),
 					zap.String("instance", instance.GetUuid()))
-				continue
+			} else {
+				cost += product.Price
 			}
-			cost += product.Price
 
 			cost *= rate // Convert NCU cost to account's currency
 

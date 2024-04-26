@@ -351,6 +351,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
 		Priority: pb.Priority_NORMAL,
 		Account:  t.GetAccount(),
+		Currency: t.GetCurrency(),
 		Total:    transactionTotal,
 		Exec:     0,
 	}))
