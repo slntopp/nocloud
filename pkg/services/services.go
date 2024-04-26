@@ -46,10 +46,12 @@ import (
 
 type ServicesServer struct {
 	pb.UnimplementedServicesServiceServer
-	db      driver.Database
-	ctrl    graph.ServicesController
-	sp_ctrl graph.ServicesProvidersController
-	ns_ctrl graph.NamespacesController
+	db       driver.Database
+	ctrl     graph.ServicesController
+	sp_ctrl  graph.ServicesProvidersController
+	ns_ctrl  graph.NamespacesController
+	acc_ctrl graph.AccountsController
+	cur_ctrl graph.CurrencyController
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -66,10 +68,12 @@ func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub) 
 
 	return &ServicesServer{
 		log: log, db: db, ctrl: graph.NewServicesController(log, db),
-		sp_ctrl: graph.NewServicesProvidersController(log, db),
-		ns_ctrl: graph.NewNamespacesController(log, db),
-		drivers: make(map[string]driverpb.DriverServiceClient),
-		ps:      ps,
+		sp_ctrl:  graph.NewServicesProvidersController(log, db),
+		ns_ctrl:  graph.NewNamespacesController(log, db),
+		acc_ctrl: graph.NewAccountsController(log, db),
+		cur_ctrl: graph.NewCurrencyController(log, db),
+		drivers:  make(map[string]driverpb.DriverServiceClient),
+		ps:       ps,
 	}
 }
 
@@ -395,6 +399,73 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 			continue
 		}
 		log.Debug("Created Group", zap.Any("group", group))
+	}
+
+	// Create invoice for newly created instances
+	acc, err := s.acc_ctrl.Get(ctx, requestor)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
+	}
+	var accCurrency = &bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME}
+	if acc.Currency != nil {
+		accCurrency = acc.Currency
+	}
+	rate, err := s.cur_ctrl.GetExchangeRate(ctx,
+		&bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID},
+		accCurrency)
+	if err != nil {
+		log.Error("Failed to get exchange rate", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get exchange rate")
+	}
+	srv, err := s.ctrl.Get(ctx, requestor, doc.Uuid)
+	if err != nil {
+		log.Error("Error getting service", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting service")
+	}
+	for _, group := range srv.GetInstancesGroups() {
+		for _, instance := range group.GetInstances() {
+
+			// TODO: make sure cost calculated correctly
+			var cost float64
+			for _, p := range instance.GetBillingPlan().GetResources() {
+				cost += p.Price
+			}
+			product, ok := instance.GetBillingPlan().GetProducts()[instance.GetProduct()]
+			if !ok {
+				log.Error("Failed to get product(instance's product not found in billing plan)",
+					zap.String("product", instance.GetProduct()),
+					zap.String("instance", instance.GetUuid()))
+				continue
+			}
+			cost += product.Price
+
+			cost *= rate // Convert NCU cost to account's currency
+
+			inv := &bpb.Invoice{
+				Status: bpb.BillingStatus_UNPAID,
+				Items: []*bpb.Item{
+					{
+						Title:    "Instance: " + instance.Title,
+						Amount:   int64(cost),
+						Instance: instance.GetUuid(),
+					},
+				},
+				Total:    cost,
+				Type:     bpb.ActionType_INSTANCE_CREATION,
+				Created:  time.Now().Unix(),
+				Exec:     time.Now().Add(24 * time.Hour).Unix(), // Until when invoice should be paid
+				Account:  acc.GetUuid(),
+				Currency: accCurrency,
+			}
+			_, err = s.billing.CreateInvoice(ctx, inv)
+			if err != nil {
+				log.Error("Failed to create invoice", zap.Error(err), zap.String("instance", instance.GetUuid()), zap.Any("invoice", inv))
+				return nil, status.Error(codes.Internal, "Failed to create invoice")
+			}
+
+			log.Debug("Successfully created invoice", zap.Any("instance", instance.GetUuid()))
+		}
 	}
 
 	return service, nil

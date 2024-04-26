@@ -135,6 +135,19 @@ func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs 
 		return errors.New("payment sum is zero")
 	}
 
+	// Make sure we're not gonna send invoice twice for the same notification
+	// If it past less time than payment_period / 10 then it's considered as previous renew notification
+	// payment_period / 10 --- same in ione driver
+	lastInvoiceData, ok := i.Data["last_renew_invoice"]
+	if ok {
+		period := plan.GetProducts()[i.GetProduct()].GetPeriod()
+		lastInvoice := int64(lastInvoiceData.GetNumberValue())
+		if time.Now().Unix()-lastInvoice <= period/10 {
+			s.log.Info("INFO: Skipping renew invoice issuing.", zap.Int64("diff from last notify", time.Now().Unix()-lastInvoice))
+			return nil
+		}
+	}
+
 	// Find owner account
 	cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
 		"instance":    i.GetUuid(),
@@ -154,8 +167,15 @@ func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs 
 	if acc.Currency == nil {
 		acc.Currency = currency.Currency
 	}
-	rate, err := s.currencies.GetExchangeRate(ctx, acc.Currency, currency.Currency)
+	rate, err := s.currencies.GetExchangeRate(ctx, currency.Currency, acc.Currency)
 	if err != nil {
+		return err
+	}
+
+	newInst := proto.Clone(i.Instance).(*ipb.Instance)
+	newInst.Data["last_renew_invoice"] = structpb.NewNumberValue(float64(time.Now().Unix()))
+	if err := s.instances.Update(ctx, "", newInst, i.Instance); err != nil {
+		s.log.Error("Failed to update instance last_renew_invoice. Skipping invoice creation", zap.Error(err))
 		return err
 	}
 
@@ -303,11 +323,11 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 }
 
 func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
-	log := s.log.Named("CreateTransaction")
+	log := s.log.Named("CreateInvoice")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	t := req.Msg
-	log.Debug("Request received", zap.Any("transaction", t), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("invoice", t), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
@@ -315,20 +335,23 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
-	if t.GetTotal() == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Zero total")
+	if t.GetTotal() <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "Zero or negative total")
 	}
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
-	if t.GetType() == pb.ActionType_BALANCE && t.GetTotal() >= 0 {
-		return nil, status.Error(codes.InvalidArgument, "Positive total in balance invoice")
+
+	// Transaction gets negative total if it's balance deposit
+	var transactionTotal = t.GetTotal()
+	if t.GetType() == pb.ActionType_BALANCE {
+		transactionTotal *= -1
 	}
 
 	newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
 		Priority: pb.Priority_NORMAL,
 		Account:  t.GetAccount(),
-		Total:    t.GetTotal(),
+		Total:    transactionTotal,
 		Exec:     0,
 	}))
 	if err != nil {
@@ -344,14 +367,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	eventsClient.Publish(ctx, &epb.Event{
+	_, _ = eventsClient.Publish(ctx, &epb.Event{
 		Type: "email",
 		Uuid: t.GetAccount(),
 		Key:  "invoice_created",
 	})
 
 	resp := connect.NewResponse(r)
-
 	return resp, nil
 }
 
@@ -384,23 +406,6 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 		return nil, status.Error(codes.InvalidArgument, "Cannot convert from "+oldStatus.String()+" to "+newStatus.String())
 	}
 
-	// Update invoice's transactions to perform payment
-	if newStatus == pb.BillingStatus_PAID {
-		for _, trId := range old.GetTransactions() {
-			tr, err := s.transactions.Get(ctx, trId)
-			if err != nil {
-				log.Error("Failed to get transaction", zap.Error(err))
-				return nil, status.Error(codes.Internal, "Failed to get transaction")
-			}
-			tr.Priority = pb.Priority_URGENT
-			_, err = s.UpdateTransaction(ctx, connect.NewRequest(tr))
-			if err != nil {
-				log.Error("Failed to update transaction", zap.Error(err))
-				return nil, status.Error(codes.Internal, "Failed to update transaction")
-			}
-		}
-	}
-
 	now := time.Now().Unix()
 	patch := map[string]interface{}{
 		"status":    newStatus,
@@ -416,6 +421,24 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	old.Proc = now
 	old.Processed = true
 
+	// Update invoice's transactions to perform payment
+	if newStatus == pb.BillingStatus_PAID {
+		for _, trId := range old.GetTransactions() {
+			tr, err := s.transactions.Get(ctx, trId)
+			if err != nil {
+				log.Error("Failed to get transaction", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Failed to get transaction")
+			}
+			tr.Exec = now // This should trigger transaction processing
+			_, err = s.UpdateTransaction(ctx, connect.NewRequest(tr))
+			if err != nil {
+				log.Error("Failed to update transaction", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Failed to update transaction")
+			}
+		}
+		log.Debug("All transactions were updated and processed.")
+	}
+
 	_, err = s.accounts.Get(ctx, old.GetAccount())
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
@@ -429,16 +452,14 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	} else if newStatus == pb.BillingStatus_TERMINATED {
 		goto termination
 	} else {
-		resp = connect.NewResponse(old)
-		return resp, nil
+		goto quit
 	}
 
 payment:
 
+	// BALANCE action was processed after transaction was processed
+	// NO_ACTION action don't need any processing
 	switch old.GetType() {
-	case pb.ActionType_BALANCE:
-		// Updated transactions raised account's balance
-
 	case pb.ActionType_INSTANCE_CREATION:
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
@@ -447,15 +468,15 @@ payment:
 				log.Warn("Failed to get instance to start", zap.Error(err))
 				continue
 			}
+			// Set auto_start to true. After next driver monitoring instance will be started
 			instNew := graph.Instance{
-				Instance:     proto.Clone(instOld.Instance).(*ipb.Instance),
-				DocumentMeta: instOld.DocumentMeta,
+				Instance: proto.Clone(instOld.Instance).(*ipb.Instance),
 			}
 			cfg := instNew.Config
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
-				log.Warn("Failed to update instance auto_start", zap.Error(err))
+				log.Warn("Failed to update instance", zap.Error(err))
 				continue
 			}
 			log.Info("Updated auto_start for instances after invoice was paid")
@@ -476,6 +497,8 @@ payment:
 				continue
 			}
 
+			// Update every *_last_monitoring data to put aside instance billing
+			// TODO: make sure this works correctly
 			var last, next int64
 			for _, resource := range plan.GetResources() {
 				_, ok := instOld.Data[resource.Key+"_last_monitoring"]
@@ -508,12 +531,13 @@ payment:
 		}
 		log.Info("Renewed instance after invoice was paid")
 	}
-	resp = connect.NewResponse(old)
-	return resp, nil
+	goto quit
 
 termination:
 	// TODO: undo action after invoice termination
+	goto quit
 
+quit:
 	resp = connect.NewResponse(old)
 	return resp, nil
 }
