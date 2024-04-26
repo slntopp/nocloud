@@ -134,6 +134,11 @@
           @change:meta="(data) => changeMetaConfig(data, 'meta')"
           @change:addons="(data) => changeAddons(data)"
         />
+
+        <template v-else-if="plan.type === 'openai'">
+          <v-subheader class="px-0">Description:</v-subheader>
+          <rich-editor class="html-editor" v-model="plan.meta.description" />
+        </template>
       </v-col>
 
       <v-row>
@@ -239,6 +244,7 @@ import { downloadPlanXlsx, getTimestamp } from "@/functions.js";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
 import PlanWikiIcon from "@/components/ui/planWikiIcon.vue";
 import NocloudTable from "@/components/table.vue";
+import RichEditor from "@/components/ui/richEditor.vue";
 
 export default {
   name: "plansCreate-view",
@@ -250,6 +256,7 @@ export default {
     confirmDialog,
     planOpensrs,
     JsonEditor,
+    RichEditor,
   },
   props: { item: { type: Object }, isEdit: { type: Boolean, default: false } },
   data: () => ({

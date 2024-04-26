@@ -105,7 +105,19 @@
           <v-text-field readonly :value="account.data?.email" label="Email" />
         </v-col>
 
-        <v-col lg="1" md="2" sm="4">
+        <v-col lg="3" md="4" sm="6">
+          <v-text-field
+            readonly
+            :value="account.data?.company"
+            label="Company"
+          />
+        </v-col>
+
+        <v-col lg="3" md="4" sm="6">
+          <v-text-field readonly :value="account.data?.phone" label="Phone" />
+        </v-col>
+
+        <v-col lg="3" md="4" sm="6">
           <v-text-field
             readonly
             :value="formatSecondsToDate(account.data?.date_create || 0)"
@@ -113,7 +125,7 @@
           />
         </v-col>
 
-        <v-col lg="1" md="2" sm="4">
+        <v-col lg="3" md="4" sm="6">
           <v-text-field
             readonly
             :value="account.data?.country"
@@ -121,11 +133,11 @@
           />
         </v-col>
 
-        <v-col lg="1" md="2" sm="4">
+        <v-col lg="3" md="4" sm="6">
           <v-text-field readonly :value="account.data?.city" label="City" />
         </v-col>
 
-        <v-col lg="1" md="2" sm="4">
+        <v-col lg="3" md="4" sm="6">
           <v-text-field
             readonly
             :value="account.data?.address"
@@ -257,6 +269,7 @@ export default {
     ],
     generalRule: [(v) => !!v || "Required field"],
     navTitles: config.navTitles ?? {},
+    accountNamespace: null,
     uuid: "",
     title: "",
     currency: "",
@@ -410,20 +423,27 @@ export default {
         params: { account: this.account.uuid },
       });
     },
+    async fetchNamespace() {
+      try {
+        const { pool } = await this.$store.dispatch("namespaces/fetch", {
+          filters: { account: this.account.uuid },
+        });
+        this.accountNamespace = pool[0];
+      } catch (e) {
+        console.log(e);
+      }
+    },
   },
   mounted() {
     this.title = this.account.title;
     this.currency = this.account.currency;
     this.uuid = this.account.uuid;
     this.keys = this.account.data?.ssh_keys || [];
-    this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("services/fetch", { showDeleted: true });
     this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
+    this.fetchNamespace();
   },
   computed: {
-    namespaces() {
-      return this.$store.getters["namespaces/all"];
-    },
     services() {
       return this.$store.getters["services/all"];
     },
@@ -437,11 +457,6 @@ export default {
     },
     instances() {
       return this.$store.getters["services/getInstances"];
-    },
-    accountNamespace() {
-      return this.namespaces.find(
-        (n) => n.access.namespace === this.account?.uuid
-      );
     },
     accountsByInstance() {
       return this.instances.filter(

@@ -177,8 +177,15 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				if !ok {
 					_, err := s.billing.GetPlan(ctx, instance.BillingPlan)
 					if err != nil {
-						log.Error("Error fetching BillingPlan", zap.Error(err))
-						return nil, err
+						response.Result = false
+						log.Error("instance.BillingPlan", zap.Any("bill plan", instance.BillingPlan))
+						terr := pb.TestConfigError{
+							Error:         "Billing plan not exist, check it",
+							Instance:      instance.Title,
+							InstanceGroup: group.Title,
+						}
+						response.Errors = append(response.Errors, &terr)
+						continue
 					}
 				}
 
@@ -335,7 +342,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	if err != nil {
 		return nil, err
 	} else if !testResult.Result {
-		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Config didn't pass test. Errors: %v", testResult.Errors))
 	}
 
 	doc, err := s.ctrl.Create(ctx, service)
@@ -402,7 +409,7 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 	if err != nil {
 		return nil, err
 	} else if !testResult.Result {
-		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Config didn't pass test. Errors: %v", testResult.Errors))
 	}
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)

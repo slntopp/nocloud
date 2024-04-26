@@ -233,7 +233,7 @@ export default {
   created() {
     this.isPlansLoading = true;
     this.$store
-      .dispatch("servicesProviders/fetch",{anonymously:true})
+      .dispatch("servicesProviders/fetch", { anonymously: true })
       .then(({ pool }) => {
         const sp = pool.find(({ type }) => type === "goget");
 
