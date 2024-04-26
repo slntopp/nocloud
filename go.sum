@@ -125,6 +125,8 @@ github.com/slntopp/nocloud-proto v0.0.0-20240423040740-8a5b41ebd03f h1:9e5gQBI96
 github.com/slntopp/nocloud-proto v0.0.0-20240423040740-8a5b41ebd03f/go.mod h1:xgkHVMSJJty73Lpf4O0KJSdUqjjB894YZ2LwVe8ZV/o=
 github.com/slntopp/nocloud-proto v0.0.0-20240424000909-d7ba7884c591 h1:dtVa3oFU92k0+Xsn2tFgD43u7Jodi6aPX95qb5RkmsM=
 github.com/slntopp/nocloud-proto v0.0.0-20240424000909-d7ba7884c591/go.mod h1:xgkHVMSJJty73Lpf4O0KJSdUqjjB894YZ2LwVe8ZV/o=
+github.com/slntopp/nocloud-proto v0.0.0-20240426063631-bd2fb10424fe h1:2C+xNQRzn7lKIJdeao5JY8l/+RRJSvSe2D/03GXzTc4=
+github.com/slntopp/nocloud-proto v0.0.0-20240426063631-bd2fb10424fe/go.mod h1:xgkHVMSJJty73Lpf4O0KJSdUqjjB894YZ2LwVe8ZV/o=
 github.com/sourcegraph/conc v0.3.0 h1:OQTbbt6P72L20UqAkXXuLOj79LfEanQ+YQFNpLA9ySo=
 github.com/sourcegraph/conc v0.3.0/go.mod h1:Sdozi7LEKbFPqYX2/J+iBAM6HpqSLTASQIKqDmF7Mt0=
 github.com/spf13/afero v1.11.0 h1:WJQKhtpdm3v2IzqG8VMqrr6Rf3UYpEF239Jy9wNepM8=
