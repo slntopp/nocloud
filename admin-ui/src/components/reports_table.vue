@@ -57,12 +57,12 @@
       </template>
       <template v-slot:[`item.service`]="{ value }">
         <router-link :to="{ name: 'Service', params: { serviceId: value } }">
-          {{ getService(value)?.title || value }}
+          {{ getShortName(getService(value)?.title || value) }}
         </router-link>
       </template>
       <template v-slot:[`item.instance`]="{ value }">
         <router-link :to="{ name: 'Instance', params: { instanceId: value } }">
-          {{ getInstance(value)?.title || value }}
+          {{ getShortName(getInstance(value)?.title || value) }}
         </router-link>
       </template>
       <template v-slot:[`item.meta.transactionType`]="{ item }">
@@ -100,7 +100,7 @@
           v-if="!isAccountsLoading"
           :to="{ name: 'Account', params: { accountId: value } }"
         >
-          {{ getAccount(value)?.title || value }}
+          {{ getShortName(getAccount(value)?.title || value) }}
         </router-link>
         <v-skeleton-loader type="text" v-else />
       </template>
@@ -115,7 +115,7 @@ import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import DatePicker from "@/components/ui/datePicker.vue";
 import useCurrency from "@/hooks/useCurrency";
-import { debounce, formatSecondsToDate } from "@/functions";
+import { debounce, formatSecondsToDate, getShortName } from "@/functions";
 import { useRouter } from "vue-router/composables";
 
 const props = defineProps({

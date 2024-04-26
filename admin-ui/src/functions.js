@@ -736,3 +736,9 @@ export function isInstancePayg(inst) {
     inst.type === "openai"
   );
 }
+
+export function getShortName(name = "", maxLength = 30) {
+  return name.length > maxLength + 3
+    ? name.slice(0, maxLength - 3) + "..."
+    : name;
+}

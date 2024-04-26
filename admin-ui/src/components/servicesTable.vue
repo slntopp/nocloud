@@ -23,7 +23,7 @@
 
     <template v-slot:[`item.title`]="{ item }">
       <router-link :to="{ name: 'Service', params: { serviceId: item.uuid } }">
-        {{ item.title }}
+        {{ getShortName(item.title, 45) }}
       </router-link>
     </template>
 
@@ -92,7 +92,7 @@ import nocloudTable from "@/components/table.vue";
 import serviceInstancesItem from "@/components/service_instances_item.vue";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
-import { debounce } from "@/functions";
+import { debounce, getShortName } from "@/functions";
 import api from "@/api";
 
 const props = defineProps(["value", "refetch"]);

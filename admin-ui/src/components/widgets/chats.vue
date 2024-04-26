@@ -66,11 +66,7 @@
                 params: { uuid: chat.uuid },
               }"
             >
-              {{
-                chat.topic.length > 27
-                  ? chat.topic.slice(0, 30) + "..."
-                  : chat.topic
-              }}
+              {{ getShortName(chat.topic) }}
             </router-link>
           </div>
 
@@ -124,7 +120,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import api from "@/api";
-import { formatSecondsToDate } from "@/functions";
+import { formatSecondsToDate, getShortName } from "@/functions";
 import { Status as ChatStatus } from "core-chatting/plugin/src/connect/cc/cc_pb";
 
 const props = defineProps(["data"]);

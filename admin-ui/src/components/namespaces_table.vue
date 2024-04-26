@@ -23,7 +23,7 @@
       <router-link
         :to="{ name: 'NamespacePage', params: { namespaceId: item.uuid } }"
       >
-        {{ item.title }}
+        {{ getShortName(item.title, 50) }}
       </router-link>
     </template>
   </nocloud-table>
@@ -32,7 +32,7 @@
 <script setup>
 import nocloudTable from "@/components/table.vue";
 import { useStore } from "@/store/";
-import { debounce } from "@/functions";
+import { debounce, getShortName } from "@/functions";
 import api from "@/api";
 
 const props = defineProps({
