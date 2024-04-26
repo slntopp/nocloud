@@ -125,7 +125,7 @@
           <v-icon @click="startEdit('description', item)" class="edit-btn">
             mdi-border-color
           </v-icon>
-          {{ item.description }}
+          {{ getShortName(item.description, 45) }}
         </template>
       </template>
 
@@ -148,7 +148,7 @@
           <v-icon @click="startEdit('value', item)" class="edit-btn">
             mdi-border-color
           </v-icon>
-          {{ item.value }}
+          {{ getShortName(item.value, 45) }}
         </template>
       </template>
     </nocloud-table>
@@ -172,7 +172,7 @@ import snackbar from "@/mixins/snackbar.js";
 import noCloudTable from "@/components/table.vue";
 import PluginIframe from "@/components/plugin/iframe.vue";
 import ConfirmDialog from "@/components/confirmDialog.vue";
-import { filterArrayIncludes } from "@/functions";
+import { filterArrayIncludes, getShortName } from "@/functions";
 import RoutinesWidget from "@/components/widgets/routines";
 import HealthWidget from "@/components/widgets/health";
 import ServicesWidget from "@/components/widgets/services";
@@ -259,6 +259,7 @@ export default {
     },
   },
   methods: {
+    getShortName,
     deleteSelectedKeys() {
       if (this.selected.length > 0) {
         const deletePromices = this.selected.map((el) =>

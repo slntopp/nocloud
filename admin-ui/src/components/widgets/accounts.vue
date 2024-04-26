@@ -49,7 +49,7 @@
                   params: { accountId: account?.uuid },
                 }"
               >
-                {{ account.title }}
+                {{ getShortName(account.title) }}
               </router-link>
               <balance-display
                 small
@@ -77,6 +77,7 @@ import {
 } from "date-fns";
 import BalanceDisplay from "@/components/balance.vue";
 import api from "@/api";
+import { getShortName } from "@/functions";
 
 const props = defineProps(["data"]);
 const { data } = toRefs(props);

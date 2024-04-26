@@ -17,7 +17,7 @@
         <router-link
           :to="{ name: 'Account', params: { accountId: item.uuid } }"
         >
-          {{ item.title }}
+          {{ getShortName(item.title) }}
         </router-link>
         <div>
           <whmcs-btn :account="item" />
@@ -28,6 +28,11 @@
         </div>
       </div>
     </template>
+
+    <template v-slot:[`item.data.email`]="{ item }">
+      {{ getShortName(item.data.email) }}
+    </template>
+
     <template v-slot:[`item.balance`]="{ item }">
       <balance
         :hide-currency="true"
@@ -75,7 +80,7 @@
 <script setup>
 import Balance from "./balance.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
-import { debounce, formatSecondsToDate } from "@/functions";
+import { debounce, formatSecondsToDate, getShortName } from "@/functions";
 import api from "@/api";
 import { toRefs, ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
