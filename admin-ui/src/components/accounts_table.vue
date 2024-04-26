@@ -62,17 +62,20 @@
       </v-chip>
     </template>
     <template v-slot:[`item.data.regular_payment`]="{ value, item }">
-      <v-switch
-        :disabled="
-          !!changeRegularPaymentUuid && changeRegularPaymentUuid !== item.uuid
-        "
-        :loading="
-          !!changeRegularPaymentUuid && changeRegularPaymentUuid === item.uuid
-        "
-        @change="changeRegularPayment(item, $event)"
-        :input-value="value"
-      >
-      </v-switch>
+      <div class="d-flex justify-center align-center regular_payment">
+        <v-switch
+          dense
+          hide-details
+          :disabled="
+            !!changeRegularPaymentUuid && changeRegularPaymentUuid !== item.uuid
+          "
+          :loading="
+            !!changeRegularPaymentUuid && changeRegularPaymentUuid === item.uuid
+          "
+          @change="changeRegularPayment(item, $event)"
+          :input-value="value"
+        />
+      </div>
     </template>
   </nocloud-table>
 </template>
@@ -342,4 +345,8 @@ export default {
 };
 </script>
 
-<style></style>
+<style>
+.regular_payment .v-input {
+  margin-top: 0px !important;
+}
+</style>
