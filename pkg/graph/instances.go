@@ -126,60 +126,6 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		return err
 	}
 
-	// =================================
-	// Create invoice for this instance
-	var errInvoiceCreation = "instance was created. Failed to create invoice for this instance: %v"
-	accId, ok := ctx.Value(nocloud.NoCloudAccount).(string)
-	if !ok {
-		log.Error("Failed to get account id")
-		return fmt.Errorf(errInvoiceCreation, "no related account found in context")
-	}
-	acc, err := ctrl.acc.Get(ctx, accId)
-	if err != nil {
-		log.Error("Failed to get account", zap.Error(err))
-		return fmt.Errorf(errInvoiceCreation, err)
-	}
-
-	var accCurrency = &bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME}
-	if acc.Currency != nil {
-		accCurrency = acc.Currency
-	}
-
-	rate, err := ctrl.cur.GetExchangeRate(ctx,
-		&bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID},
-		accCurrency)
-	if err != nil {
-		log.Error("Failed to get exchange rate", zap.Error(err))
-		return fmt.Errorf(errInvoiceCreation, err)
-	}
-
-	// Exec = Now + 24hours
-	// TODO: review cost
-	var cost float64
-	for _, p := range i.GetBillingPlan().GetResources() {
-		cost += p.Price * rate
-	}
-	_, err = ctrl.inv.Create(ctx, &bpb.Invoice{
-		Status: bpb.BillingStatus_UNPAID,
-		Items: []*bpb.Item{
-			{
-				Title:    "Instance: " + i.Title,
-				Amount:   int64(cost),
-				Instance: i.GetUuid(),
-			},
-		},
-		Total:    cost,
-		Type:     bpb.ActionType_BALANCE,
-		Created:  time.Now().Unix(),
-		Exec:     time.Now().Add(24 * time.Hour).Unix(),
-		Account:  acc.GetUuid(),
-		Currency: accCurrency,
-	})
-	if err != nil {
-		log.Error("Failed to create Invoice", zap.Error(err))
-		return fmt.Errorf(errInvoiceCreation, err)
-	}
-
 	return nil
 }
 
