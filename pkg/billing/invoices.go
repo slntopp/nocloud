@@ -192,7 +192,7 @@ func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs 
 		Currency: acc.Currency,
 	}
 
-	_, err = s.CreateInvoice(ctx, connect.NewRequest(inv))
+	_, err = s.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), connect.NewRequest(inv))
 	return err
 }
 

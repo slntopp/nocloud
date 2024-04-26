@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"reflect"
 	"time"
 
@@ -458,7 +459,15 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 				Account:  acc.GetUuid(),
 				Currency: accCurrency,
 			}
-			_, err = s.billing.CreateInvoice(ctx, inv)
+			token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+			if err != nil {
+				log.Error("Failed to create token", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Couldn't create invoice")
+			}
+			ctx2 := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+			ctx2 = metadata.AppendToOutgoingContext(ctx2, string(nocloud.NoCloudAccount), schema.ROOT_ACCOUNT_KEY)
+			ctx2 = metadata.AppendToOutgoingContext(ctx2, "authorization", "Bearer "+token)
+			_, err = s.billing.CreateInvoice(ctx2, inv)
 			if err != nil {
 				log.Error("Failed to create invoice", zap.Error(err), zap.String("instance", instance.GetUuid()), zap.Any("invoice", inv))
 				return nil, status.Error(codes.Internal, "Failed to create invoice")
