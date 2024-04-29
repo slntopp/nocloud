@@ -3,7 +3,6 @@ package billing
 import (
 	"connectrpc.com/connect"
 	"context"
-	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -96,105 +95,105 @@ LET account = LAST( // Find Instance owner Account
     )
 RETURN account`
 
-func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs []*pb.Record, currency CurrencyConf) error {
+//func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs []*pb.Record, currency CurrencyConf) error {
+//
+//	var i *graph.Instance
+//	var plan *graph.BillingPlan
+//	var sum float64
+//	for _, rec := range recs {
+//		var err error
+//		i, err = s.instances.Get(ctx, rec.GetInstance())
+//		if err != nil {
+//			return err
+//		}
+//		plan, err = s.plans.Get(ctx, i.GetBillingPlan())
+//		if err != nil {
+//			return err
+//		}
+//		if product, ok := plan.GetProducts()[rec.Product]; ok {
+//			sum += product.Price * rec.Total
+//		}
+//		// Scan each resource to find presented in current record. TODO: optimize
+//		for _, res := range plan.GetResources() {
+//			if res.Key == rec.Resource {
+//				sum += res.Price * rec.Total
+//			}
+//		}
+//	}
+//
+//	if plan == nil {
+//		return errors.New("got nil plan")
+//	}
 
-	var i *graph.Instance
-	var plan *graph.BillingPlan
-	var sum float64
-	for _, rec := range recs {
-		var err error
-		i, err = s.instances.Get(ctx, rec.GetInstance())
-		if err != nil {
-			return err
-		}
-		plan, err = s.plans.Get(ctx, i.GetBillingPlan())
-		if err != nil {
-			return err
-		}
-		if product, ok := plan.GetProducts()[rec.Product]; ok {
-			sum += product.Price * rec.Total
-		}
-		// Scan each resource to find presented in current record. TODO: optimize
-		for _, res := range plan.GetResources() {
-			if res.Key == rec.Resource {
-				sum += res.Price * rec.Total
-			}
-		}
-	}
+//if i == nil {
+//	return errors.New("got nil instance")
+//}
+//
+//if sum == 0 {
+//	return errors.New("payment sum is zero")
+//}
+//
+//// Make sure we're not gonna send invoice twice for the same notification
+//// If it past less time than payment_period / 10 then it's considered as previous renew notification
+//// payment_period / 10 --- same in ione driver
+//now := time.Now().Unix()
+//lastInvoiceData, ok := i.Data["last_renew_invoice"]
+//if ok {
+//	period := plan.GetProducts()[i.GetProduct()].GetPeriod()
+//	lastInvoice := int64(lastInvoiceData.GetNumberValue())
+//	if now-lastInvoice <= period/10 {
+//		s.log.Info("INFO: Skipping renew invoice issuing.", zap.Int64("diff from last notify", time.Now().Unix()-lastInvoice))
+//		return nil
+//	}
+//}
+//
+//// Find owner account
+//cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
+//	"instance":    i.GetUuid(),
+//	"permissions": schema.PERMISSIONS_GRAPH.Name,
+//	"@instances":  schema.INSTANCES_COL,
+//	"@accounts":   schema.ACCOUNTS_COL,
+//})
+//if err != nil {
+//	return err
+//}
+//var acc graph.Account
+//_, err = cur.ReadDocument(ctx, &acc)
+//if err != nil {
+//	return err
+//}
 
-	if plan == nil {
-		return errors.New("got nil plan")
-	}
-
-	if i == nil {
-		return errors.New("got nil instance")
-	}
-
-	if sum == 0 {
-		return errors.New("payment sum is zero")
-	}
-
-	// Make sure we're not gonna send invoice twice for the same notification
-	// If it past less time than payment_period / 10 then it's considered as previous renew notification
-	// payment_period / 10 --- same in ione driver
-	now := time.Now().Unix()
-	lastInvoiceData, ok := i.Data["last_renew_invoice"]
-	if ok {
-		period := plan.GetProducts()[i.GetProduct()].GetPeriod()
-		lastInvoice := int64(lastInvoiceData.GetNumberValue())
-		if now-lastInvoice <= period/10 {
-			s.log.Info("INFO: Skipping renew invoice issuing.", zap.Int64("diff from last notify", time.Now().Unix()-lastInvoice))
-			return nil
-		}
-	}
-
-	// Find owner account
-	cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
-		"instance":    i.GetUuid(),
-		"permissions": schema.PERMISSIONS_GRAPH.Name,
-		"@instances":  schema.INSTANCES_COL,
-		"@accounts":   schema.ACCOUNTS_COL,
-	})
-	if err != nil {
-		return err
-	}
-	var acc graph.Account
-	_, err = cur.ReadDocument(ctx, &acc)
-	if err != nil {
-		return err
-	}
-
-	if acc.Currency == nil {
-		acc.Currency = currency.Currency
-	}
-	rate, err := s.currencies.GetExchangeRate(ctx, currency.Currency, acc.Currency)
-	if err != nil {
-		return err
-	}
-
-	newInst := proto.Clone(i.Instance).(*ipb.Instance)
-	newInst.Data["last_renew_invoice"] = structpb.NewNumberValue(float64(now))
-	if err := s.instances.Update(ctx, "", newInst, i.Instance); err != nil {
-		s.log.Error("Failed to update instance last_renew_invoice. Skipping invoice creation", zap.Error(err))
-		return err
-	}
-
-	inv := &pb.Invoice{
-		Exec:    time.Now().Add(time.Duration(plan.GetProducts()[i.GetProduct()].GetPeriod()) * time.Second).Unix(),
-		Status:  pb.BillingStatus_UNPAID,
-		Total:   sum * rate,
-		Created: now,
-		Type:    pb.ActionType_INSTANCE_RENEWAL,
-		Items: []*pb.Item{
-			{Title: i.Title + " renewal", Amount: int64(sum * rate), Instance: i.GetUuid()},
-		},
-		Account:  acc.GetUuid(),
-		Currency: acc.Currency,
-	}
-
-	_, err = s.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), connect.NewRequest(inv))
-	return err
-}
+//	if acc.Currency == nil {
+//		acc.Currency = currency.Currency
+//	}
+//	rate, err := s.currencies.GetExchangeRate(ctx, currency.Currency, acc.Currency)
+//	if err != nil {
+//		return err
+//	}
+//
+//	newInst := proto.Clone(i.Instance).(*ipb.Instance)
+//	newInst.Data["last_renew_invoice"] = structpb.NewNumberValue(float64(now))
+//	if err := s.instances.Update(ctx, "", newInst, i.Instance); err != nil {
+//		s.log.Error("Failed to update instance last_renew_invoice. Skipping invoice creation", zap.Error(err))
+//		return err
+//	}
+//
+//	inv := &pb.Invoice{
+//		Exec:    time.Now().Add(time.Duration(plan.GetProducts()[i.GetProduct()].GetPeriod()) * time.Second).Unix(),
+//		Status:  pb.BillingStatus_UNPAID,
+//		Total:   sum * rate,
+//		Created: now,
+//		Type:    pb.ActionType_INSTANCE_RENEWAL,
+//		Items: []*pb.Item{
+//			{Title: i.Title + " renewal", Amount: int64(sum * rate), Instance: i.GetUuid()},
+//		},
+//		Account:  acc.GetUuid(),
+//		Currency: acc.Currency,
+//	}
+//
+//	_, err = s.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), connect.NewRequest(inv))
+//	return err
+//}
 
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
 	log := s.log.Named("GetTransactions")
