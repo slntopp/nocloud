@@ -122,6 +122,9 @@ func main() {
 	log.Info("Starting Account Suspension Routine")
 	go server.SuspendAccountsRoutine(ctx)
 
+	log.Info("Starting Invoices Routine")
+	go server.IssueInvoicesRoutine(ctx)
+
 	log.Info("Registering BillingService Server")
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
 	router.PathPrefix(path).Handler(handler)
