@@ -3,14 +3,12 @@ package billing
 import (
 	"connectrpc.com/connect"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	epb "github.com/slntopp/nocloud-proto/events"
-	healthpb "github.com/slntopp/nocloud-proto/health"
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -37,54 +35,54 @@ var forbiddenStatusConversions = []pair[pb.BillingStatus]{
 }
 
 func (s *BillingServiceServer) Consume(ctx context.Context) {
-	log := s.log.Named("ExpiringInstancesConsumer")
-init:
-	log.Info("Trying to register instances expiring consumer")
-
-	ch, err := s.rbmq.Channel()
-	if err != nil {
-		log.Error("Failed to open a channel", zap.Error(err))
-		time.Sleep(time.Second)
-		goto init
-	}
-
-	queue, _ := ch.QueueDeclare(
-		"instance_expiring",
-		true, false, false, true, nil,
-	)
-
-	records, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
-	if err != nil {
-		log.Error("Failed to register a consumer", zap.Error(err))
-		time.Sleep(time.Second)
-		goto init
-	}
-
-	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
-	currencyConf := MakeCurrencyConf(ctx, log)
-
-	log.Info("Instances expiring consumer registered. Reading messages")
-	for msg := range records {
-		log.Debug("Received a message")
-		var recs []*pb.Record
-		err = json.Unmarshal(msg.Body, &recs)
-		if err != nil {
-			log.Error("Failed to unmarshal record", zap.Error(err))
-			if err = msg.Ack(false); err != nil {
-				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
-			}
-			continue
-		}
-		log.Debug("Message unmarshalled", zap.Any("records", &recs))
-		err := s.processExpiringRecords(ctx, recs, currencyConf)
-		if err != nil {
-			log.Error("Failed to process record", zap.Error(err))
-		}
-		if err = msg.Ack(false); err != nil {
-			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
-		}
-		continue
-	}
+	//	log := s.log.Named("ExpiringInstancesConsumer")
+	//init:
+	//	log.Info("Trying to register instances expiring consumer")
+	//
+	//	ch, err := s.rbmq.Channel()
+	//	if err != nil {
+	//		log.Error("Failed to open a channel", zap.Error(err))
+	//		time.Sleep(time.Second)
+	//		goto init
+	//	}
+	//
+	//	queue, _ := ch.QueueDeclare(
+	//		"instance_expiring",
+	//		true, false, false, true, nil,
+	//	)
+	//
+	//	records, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+	//	if err != nil {
+	//		log.Error("Failed to register a consumer", zap.Error(err))
+	//		time.Sleep(time.Second)
+	//		goto init
+	//	}
+	//
+	//	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
+	//	currencyConf := MakeCurrencyConf(ctx, log)
+	//
+	//	log.Info("Instances expiring consumer registered. Reading messages")
+	//	for msg := range records {
+	//		log.Debug("Received a message")
+	//		var recs []*pb.Record
+	//		err = json.Unmarshal(msg.Body, &recs)
+	//		if err != nil {
+	//			log.Error("Failed to unmarshal record", zap.Error(err))
+	//			if err = msg.Ack(false); err != nil {
+	//				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+	//			}
+	//			continue
+	//		}
+	//		log.Debug("Message unmarshalled", zap.Any("records", &recs))
+	//		err := s.processExpiringRecords(ctx, recs, currencyConf)
+	//		if err != nil {
+	//			log.Error("Failed to process record", zap.Error(err))
+	//		}
+	//		if err = msg.Ack(false); err != nil {
+	//			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+	//		}
+	//		continue
+	//	}
 }
 
 const instanceOwner = `
@@ -92,10 +90,11 @@ LET account = LAST( // Find Instance owner Account
     FOR node, edge, path IN 4
     INBOUND DOCUMENT(@@instances, @instance)
     GRAPH @permissions
-    FILTER path.edges[*].role == ["owner","owner"]
+    FILTER path.edges[*].role == ["owner","owner","owner","owner"]
     FILTER IS_SAME_COLLECTION(node, @@accounts)
         RETURN node
-    )`
+    )
+RETURN account`
 
 func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs []*pb.Record, currency CurrencyConf) error {
 
@@ -138,11 +137,12 @@ func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs 
 	// Make sure we're not gonna send invoice twice for the same notification
 	// If it past less time than payment_period / 10 then it's considered as previous renew notification
 	// payment_period / 10 --- same in ione driver
+	now := time.Now().Unix()
 	lastInvoiceData, ok := i.Data["last_renew_invoice"]
 	if ok {
 		period := plan.GetProducts()[i.GetProduct()].GetPeriod()
 		lastInvoice := int64(lastInvoiceData.GetNumberValue())
-		if time.Now().Unix()-lastInvoice <= period/10 {
+		if now-lastInvoice <= period/10 {
 			s.log.Info("INFO: Skipping renew invoice issuing.", zap.Int64("diff from last notify", time.Now().Unix()-lastInvoice))
 			return nil
 		}
@@ -173,7 +173,7 @@ func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs 
 	}
 
 	newInst := proto.Clone(i.Instance).(*ipb.Instance)
-	newInst.Data["last_renew_invoice"] = structpb.NewNumberValue(float64(time.Now().Unix()))
+	newInst.Data["last_renew_invoice"] = structpb.NewNumberValue(float64(now))
 	if err := s.instances.Update(ctx, "", newInst, i.Instance); err != nil {
 		s.log.Error("Failed to update instance last_renew_invoice. Skipping invoice creation", zap.Error(err))
 		return err
@@ -183,7 +183,7 @@ func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs 
 		Exec:    time.Now().Add(time.Duration(plan.GetProducts()[i.GetProduct()].GetPeriod()) * time.Second).Unix(),
 		Status:  pb.BillingStatus_UNPAID,
 		Total:   sum * rate,
-		Created: time.Now().Unix(),
+		Created: now,
 		Type:    pb.ActionType_INSTANCE_RENEWAL,
 		Items: []*pb.Item{
 			{Title: i.Title + " renewal", Amount: int64(sum * rate), Instance: i.GetUuid()},
@@ -335,6 +335,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
 	}
 
+	if t.GetStatus() != pb.BillingStatus_DRAFT && t.GetStatus() != pb.BillingStatus_UNPAID {
+		return nil, status.Error(codes.InvalidArgument, "Status can be only DRAFT and UNPAID on creation")
+	}
 	if t.GetTotal() <= 0 {
 		return nil, status.Error(codes.InvalidArgument, "Zero or negative total")
 	}
@@ -348,11 +351,19 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		transactionTotal *= -1
 	}
 
+	// Convert invoice's currency to default currency(according to how creating transaction works)
+	defCurr := MakeCurrencyConf(ctx, log).Currency
+	rate, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
+	if err != nil {
+		log.Error("Failed to get exchange rate", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get exchange rate")
+	}
+
 	newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
 		Priority: pb.Priority_NORMAL,
 		Account:  t.GetAccount(),
-		Currency: t.GetCurrency(),
-		Total:    transactionTotal,
+		Currency: defCurr,
+		Total:    transactionTotal * rate,
 		Exec:     0,
 	}))
 	if err != nil {
@@ -430,7 +441,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 				log.Error("Failed to get transaction", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Failed to get transaction")
 			}
-			tr.Exec = now // This should trigger transaction processing
+			tr.Exec = now // Setting transaction process time. Should trigger transaction process
 			_, err = s.UpdateTransaction(ctx, connect.NewRequest(tr))
 			if err != nil {
 				log.Error("Failed to update transaction", zap.Error(err))
@@ -446,6 +457,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 		return nil, status.Error(codes.Internal, "Failed to get account")
 	}
 
+	transactions := old.GetTransactions()
 	var resp *connect.Response[pb.Invoice]
 
 	if newStatus == pb.BillingStatus_PAID {
@@ -457,16 +469,18 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	}
 
 payment:
+	log.Info("Starting invoice payment", zap.String("invoice", old.GetUuid()))
 
 	// BALANCE action was processed after transaction was processed
 	// NO_ACTION action don't need any processing
 	switch old.GetType() {
 	case pb.ActionType_INSTANCE_CREATION:
+		log.Debug("Paid action: instance start")
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
 			instOld, err := s.instances.Get(ctx, i)
 			if err != nil {
-				log.Warn("Failed to get instance to start", zap.Error(err))
+				log.Warn("Failed to get instance to start", zap.Error(err), zap.String("instance", i))
 				continue
 			}
 			// Set auto_start to true. After next driver monitoring instance will be started
@@ -477,13 +491,15 @@ payment:
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
-				log.Warn("Failed to update instance", zap.Error(err))
+				log.Warn("Failed to update instance", zap.Error(err), zap.String("instance", i))
 				continue
 			}
-			log.Info("Updated auto_start for instances after invoice was paid")
+			log.Debug("Successfully updated auto_start for instance", zap.String("instance", i))
 		}
+		log.Info("Updated auto_start for instances after invoice was paid")
 
 	case pb.ActionType_INSTANCE_RENEWAL:
+		log.Debug("Paid action: instance renewal")
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
 			instOld, err := s.instances.Get(ctx, i)
@@ -527,15 +543,106 @@ payment:
 
 			if err := s.instances.Update(ctx, "", instNew, instOld.Instance); err != nil {
 				log.Error("Failed to update instance", zap.Error(err))
-				return nil, err
+				continue
 			}
+			log.Debug("Renewed instance", zap.String("instance", i))
 		}
-		log.Info("Renewed instance after invoice was paid")
+		log.Info("Renewed instances after invoice was paid")
 	}
 	goto quit
 
 termination:
-	// TODO: undo action after invoice termination
+	log.Info("Starting invoice termination", zap.String("invoice", old.GetUuid()))
+	// Create same amount of transactions but rewert their total
+	// Make them urgent and set exec time to apply them to account's balance immediately
+	log.Debug("Creating rewert transactions")
+	for _, trId := range old.GetTransactions() {
+		tr, err := s.transactions.Get(ctx, trId)
+		if err != nil {
+			log.Error("Failed to get transaction", zap.Error(err))
+			continue
+		}
+		tr.Uuid = ""
+		tr.Priority = pb.Priority_URGENT
+		tr.Exec = time.Now().Unix()
+		tr.Records = nil
+		tr.Created = time.Now().Unix()
+		tr.Total = tr.Total * -1
+		t, err := s.CreateTransaction(ctx, connect.NewRequest(tr))
+		if err != nil {
+			log.Error("Failed to create rewert transaction", zap.Error(err))
+			continue
+		}
+		if t.Msg.GetUuid() == "" {
+			log.Error("Created transaction uuid is empty")
+			continue
+		}
+		transactions = append(transactions, t.Msg.GetUuid())
+	}
+	log.Debug("Patching invoice with rewert transactions")
+	if err = s.invoices.Patch(ctx, old.GetUuid(), map[string]interface{}{"transactions": transactions}); err != nil {
+		log.Error("Failed to patch invoice with rewert transactions", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to create terminate invoice")
+	}
+	log.Debug("Ended revert transactions creation")
+	log.Debug("Starting action termination")
+	// BALANCE was reverted on revert transactions
+	// NO_ACTION action don't need any reverting actions
+	switch old.GetType() {
+	case pb.ActionType_INSTANCE_CREATION:
+		// TODO: research how to properly stop or pause already running instance
+
+	case pb.ActionType_INSTANCE_RENEWAL:
+		for _, item := range old.GetItems() {
+			i := item.GetInstance()
+			instOld, err := s.instances.Get(ctx, i)
+			if err != nil {
+				log.Error("Failed to get instance to renew", zap.Error(err))
+				continue
+			}
+			instNew := proto.Clone(instOld.Instance).(*ipb.Instance)
+			plan, err := s.plans.Get(ctx, &pb.Plan{Uuid: instOld.GetBillingPlan().GetUuid()})
+			if err != nil {
+				log.Error("Failed to get plan", zap.Error(err))
+				continue
+			}
+
+			// Update every *_last_monitoring data to cancel renewal
+			// TODO: make sure this works correctly
+			var last, next int64
+			for _, resource := range plan.GetResources() {
+				_, ok := instOld.Data[resource.Key+"_last_monitoring"]
+				if ok {
+					last = int64(instOld.Data[resource.Key+"_last_monitoring"].GetNumberValue())
+					instNew.Data[resource.Key+"_last_monitoring"] = structpb.NewNumberValue(float64(last - resource.GetPeriod()))
+				}
+				_, ok = instOld.Data[resource.Key+"_next_payment_date"]
+				if ok {
+					next = int64(instOld.Data[resource.Key+"_next_payment_date"].GetNumberValue())
+					instNew.Data[resource.Key+"_next_payment_date"] = structpb.NewNumberValue(float64(next - resource.GetPeriod()))
+				}
+			}
+			product := plan.GetProducts()[instOld.GetProduct()]
+			_, ok := instOld.Data["last_monitoring"]
+			if ok {
+				last = int64(instOld.Data["last_monitoring"].GetNumberValue())
+				instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last - product.GetPeriod()))
+			}
+			_, ok = instOld.Data["next_payment_date"]
+			if ok {
+				next = int64(instOld.Data["next_payment_date"].GetNumberValue())
+				instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next - product.GetPeriod()))
+			}
+
+			if err := s.instances.Update(ctx, "", instNew, instOld.Instance); err != nil {
+				log.Error("Failed to update instance", zap.Error(err))
+				continue
+			}
+
+			log.Debug("Reverted instance renewal", zap.String("instance", i))
+		}
+	}
+	log.Debug("Finished invoice termination")
 	goto quit
 
 quit:
