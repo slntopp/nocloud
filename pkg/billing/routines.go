@@ -16,14 +16,23 @@ limitations under the License.
 package billing
 
 import (
+	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud-proto/services"
+	"github.com/slntopp/nocloud/pkg/graph"
+	"github.com/slntopp/nocloud/pkg/nocloud"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/structpb"
+	"strings"
 	"time"
 
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 
 	epb "github.com/slntopp/nocloud-proto/events"
 	hpb "github.com/slntopp/nocloud-proto/health"
+	ipb "github.com/slntopp/nocloud-proto/instances"
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
@@ -71,6 +80,228 @@ func init() {
 func (s *BillingServiceServer) GenTransactionsRoutineState() []*hpb.RoutineStatus {
 	return []*hpb.RoutineStatus{
 		s.gen, s.proc,
+	}
+}
+
+func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log *zap.Logger, tick time.Time,
+	currencyConf CurrencyConf, roundingConf RoundingConf) {
+	log.Info("Issuing invoices for expiring instances", zap.Time("tick", tick))
+
+	list, err := s.services.List(ctx, schema.ROOT_ACCOUNT_KEY, &services.ListRequest{})
+	if err != nil {
+		log.Error("Error getting services", zap.Error(err))
+		return
+	}
+
+	log.Debug("Got list of services", zap.Any("count", len(list.Result)))
+
+	// Before 2.4 hours before daily payment
+	// Before 3 days before monthly payment and so on
+	expiringTime := func(expiringAt, period int64) int64 {
+		return expiringAt - (period / 10)
+	}
+
+	counter := 0
+	// Process every instance
+	for _, srv := range list.Result {
+		for _, ig := range srv.GetInstancesGroups() {
+			for _, i := range ig.GetInstances() {
+				cost := 0.0
+				plan := i.GetBillingPlan()
+				now := time.Now().Unix()
+
+				if i.Data == nil {
+					i.Data = map[string]*structpb.Value{}
+				}
+
+				for _, res := range plan.GetResources() {
+					if res.GetPeriod() == 0 {
+						continue
+					}
+
+					lastMonitoringValue, ok := i.Data[res.GetKey()+"_last_monitoring"]
+					if !ok {
+						log.Debug("Last monitoring not found. Skipping", zap.String("key", res.GetKey()))
+						continue
+					}
+					lm := int64(lastMonitoringValue.GetNumberValue())
+					expiringAt := expiringTime(lm, res.GetPeriod())
+
+					// Checking if invoice was issued for this last_monitoring value
+					issuedInvTsValue, ok := i.Data[res.GetKey()+"_lm_for_last_issued_invoice"]
+					issuedInvTs := int64(issuedInvTsValue.GetNumberValue())
+					if ok && lm == issuedInvTs {
+						log.Info("Invoice for current renew cycle was issued before. Skipping", zap.String("instance", i.GetUuid()), zap.String("resource", res.GetKey()))
+						continue
+					}
+
+					if now < expiringAt {
+						log.Debug("Resource is not expiring yet", zap.Int64("expiringAt", expiringAt), zap.Int64("now", now), zap.String("key", res.GetKey()))
+						continue
+					}
+
+					switch res.GetKey() {
+					case "cpu":
+						value := i.GetResources()["cpu"].GetNumberValue()
+						cost += value * res.GetPrice()
+					case "ram":
+						value := i.GetResources()["ram"].GetNumberValue() / 1024
+						cost += value * res.GetPrice()
+					default:
+						// Calculate drive size billing
+						if strings.Contains(res.GetKey(), "drive") {
+							driveType := i.GetResources()["drive_type"].GetStringValue()
+							if res.GetKey() != "drive_"+strings.ToLower(driveType) {
+								continue
+							}
+							count := i.GetResources()["drive_size"].GetNumberValue() / 1024
+							cost += res.GetPrice() * count
+						}
+					}
+
+					i.Data[res.GetKey()+"_lm_for_last_issued_invoice"] = structpb.NewNumberValue(float64(lm))
+				}
+
+				product, ok := i.GetBillingPlan().GetProducts()[i.GetProduct()]
+				if !ok || product == nil {
+					log.Error("Failed to get product(instance's product not found in billing plan or nil)",
+						zap.String("product", i.GetProduct()),
+						zap.String("instance", i.GetUuid()))
+				} else {
+					if product.GetPeriod() == 0 {
+						log.Info("Product period is 0. Skipping billing for this product, but not skipping for resources.", zap.String("product", product.GetTitle()))
+						goto resume
+					}
+					lastMonitoringValue, ok := i.Data["last_monitoring"]
+					if !ok {
+						log.Debug("Last monitoring for product not found", zap.String("instance", i.GetUuid()), zap.String("product", product.GetTitle()))
+						goto resume
+					}
+					lm := int64(lastMonitoringValue.GetNumberValue())
+
+					// Checking if invoice was issued for this last_monitoring value
+					issuedInvTsValue, ok := i.Data["lm_for_last_issued_invoice"]
+					issuedInvTs := int64(issuedInvTsValue.GetNumberValue())
+					if ok && lm == issuedInvTs {
+						log.Info("Invoice for current renew cycle was issued before", zap.String("instance", i.GetUuid()), zap.String("product", product.GetTitle()))
+						goto resume
+					}
+
+					expiringAt := expiringTime(lm, product.GetPeriod())
+					if now < expiringAt {
+						log.Debug("Product is not expiring yet.", zap.Int64("expiringAt", expiringAt), zap.Int64("now", now), zap.String("product", product.GetTitle()))
+						goto resume
+					}
+					cost += product.GetPrice()
+
+					i.Data["lm_for_last_issued_invoice"] = structpb.NewNumberValue(float64(lm))
+				}
+
+			resume:
+
+				// Find owner account
+				cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
+					"instance":    i.GetUuid(),
+					"permissions": schema.PERMISSIONS_GRAPH.Name,
+					"@instances":  schema.INSTANCES_COL,
+					"@accounts":   schema.ACCOUNTS_COL,
+				})
+				if err != nil {
+					log.Error("Error getting instance owner", zap.Error(err))
+					return
+				}
+				var acc graph.Account
+				_, err = cur.ReadDocument(ctx, &acc)
+				if err != nil {
+					log.Error("Error getting instance owner", zap.Error(err))
+					return
+				}
+				acc.Uuid = acc.Key
+				if acc.GetUuid() == "" {
+					log.Error("Instance owner not found", zap.String("instance", i.GetUuid()))
+					continue
+				}
+				log.Debug("Instance owner found", zap.String("instance", i.GetUuid()), zap.String("account", acc.GetUuid()))
+
+				if acc.Currency == nil {
+					acc.Currency = currencyConf.Currency
+				}
+				rate, err := s.currencies.GetExchangeRate(ctx, currencyConf.Currency, acc.Currency)
+				if err != nil {
+					log.Error("Error getting exchange rate", zap.Error(err))
+					return
+				}
+
+				cost *= rate // Convert from NCU to  account's currency
+
+				log.Debug("Updating instance", zap.String("instance", i.GetUuid()))
+				// Update instance with stamps to track issued invoice
+				err = s.instances.Update(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), "", i, proto.Clone(i).(*ipb.Instance))
+				if err != nil {
+					log.Error("Failed to update instance. Not issuing invoice.", zap.Error(err), zap.String("instance", i.GetUuid()))
+					return
+				}
+
+				inv := &pb.Invoice{
+					Status: pb.BillingStatus_UNPAID,
+					Items: []*pb.Item{
+						{
+							Title:    fmt.Sprintf("Instance '%s' renewal", i.GetTitle()),
+							Amount:   int64(cost),
+							Instance: i.GetUuid(),
+						},
+					},
+					Total:    cost,
+					Type:     pb.ActionType_INSTANCE_RENEWAL,
+					Created:  now,
+					Exec:     time.Unix(now, 0).Add(24 * time.Hour).Unix(), // Until when invoice should be paid
+					Account:  acc.GetUuid(),
+					Currency: acc.Currency,
+				}
+
+				ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+				_, err = s.CreateInvoice(ctx, connect.NewRequest(inv))
+				if err != nil {
+					log.Error("Failed to create invoice", zap.Error(err), zap.String("instance", i.GetUuid()))
+					continue
+				}
+
+				counter++
+			}
+		}
+	}
+
+	log.Info("Routine finished", zap.Int("invoices created", counter))
+}
+
+func (s *BillingServiceServer) IssueInvoicesRoutine(ctx context.Context) {
+	log := s.log.Named("IssueInvoicesRoutine")
+
+start:
+
+	routineConf := MakeRoutineConf(ctx, log)
+	roundingConf := MakeRoundingConf(ctx, log)
+	currencyConf := MakeCurrencyConf(ctx, log)
+
+	upd := make(chan bool, 1)
+	go sc.Subscribe([]string{currencyKey}, upd)
+
+	log.Info("Got Configuration", zap.Any("currency", currencyConf), zap.Any("routine", routineConf), zap.Any("rounding", roundingConf))
+
+	ticker := time.NewTicker(time.Second * time.Duration(routineConf.Frequency))
+	tick := time.Now()
+	for {
+		log.Info("Entering new Iteration", zap.Time("ts", tick))
+		s.InvoiceExpiringInstances(ctx, log, tick, currencyConf, roundingConf)
+
+		s.proc.LastExecution = tick.Format("2006-01-02T15:04:05Z07:00")
+		select {
+		case tick = <-ticker.C:
+			continue
+		case <-upd:
+			log.Info("New Configuration Received, restarting Routine")
+			goto start
+		}
 	}
 }
 

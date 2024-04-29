@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/arangodb/go-driver"
@@ -430,9 +431,28 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 
 			// TODO: make sure cost calculated correctly
 			var cost float64
-			for _, p := range instance.GetBillingPlan().GetResources() {
-				cost += p.Price
+			for _, res := range instance.GetBillingPlan().GetResources() {
+
+				switch res.Key {
+				case "cpu":
+					count := instance.GetResources()["cpu"].GetNumberValue()
+					cost += res.GetPrice() * count
+				case "ram":
+					count := instance.GetResources()["ram"].GetNumberValue() / 1024
+					cost += res.GetPrice() * count
+				default:
+					// Calculate drive size billing
+					if strings.Contains(res.GetKey(), "drive") {
+						driveType := instance.GetResources()["drive_type"].GetStringValue()
+						if res.GetKey() != "drive_"+strings.ToLower(driveType) {
+							continue
+						}
+						count := instance.GetResources()["drive_size"].GetNumberValue() / 1024
+						cost += res.GetPrice() * count
+					}
+				}
 			}
+
 			product, ok := instance.GetBillingPlan().GetProducts()[instance.GetProduct()]
 			if !ok || product == nil {
 				log.Error("Failed to get product(instance's product not found in billing plan or nil)",
@@ -448,7 +468,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 				Status: bpb.BillingStatus_UNPAID,
 				Items: []*bpb.Item{
 					{
-						Title:    "Instance: " + instance.Title,
+						Title:    fmt.Sprintf("Instance '%s' start bill", instance.GetUuid()),
 						Amount:   int64(cost),
 						Instance: instance.GetUuid(),
 					},

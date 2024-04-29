@@ -56,6 +56,7 @@ type BillingServiceServer struct {
 	accounts     graph.AccountsController
 	descriptions *graph.DescriptionsController
 	instances    *graph.InstancesController
+	services     graph.ServicesController
 
 	db driver.Database
 
@@ -76,6 +77,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		currencies:   graph.NewCurrencyController(log.Named("CurrenciesController"), db),
 		accounts:     graph.NewAccountsController(log.Named("AccountsController"), db),
 		invoices:     graph.NewInvoicesController(log.Named("InvoicesController"), db),
+		services:     graph.NewServicesController(log.Named("ServicesController"), db),
 		descriptions: graph.NewDescriptionsController(log, db),
 		instances:    graph.NewInstancesController(log, db),
 		db:           db,
