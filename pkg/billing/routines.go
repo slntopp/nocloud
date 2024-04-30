@@ -114,6 +114,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					i.Data = map[string]*structpb.Value{}
 				}
 
+				expiring := false
 				for _, res := range plan.GetResources() {
 					if res.GetPeriod() == 0 {
 						continue
@@ -130,14 +131,14 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					// Checking if invoice was issued for this last_monitoring value
 					issuedInvTsValue, ok := i.Data[res.GetKey()+"_lm_for_last_issued_invoice"]
 					issuedInvTs := int64(issuedInvTsValue.GetNumberValue())
-					if ok && lm == issuedInvTs {
-						log.Info("Invoice for current renew cycle was issued before. Skipping", zap.String("instance", i.GetUuid()), zap.String("resource", res.GetKey()))
-						continue
+					wasIssued := ok && lm == issuedInvTs
+					if wasIssued {
+						log.Info("Invoice for current renew cycle was issued before.", zap.String("instance", i.GetUuid()), zap.String("resource", res.GetKey()))
 					}
 
-					if now < expiringAt {
-						log.Debug("Resource is not expiring yet", zap.Int64("expiringAt", expiringAt), zap.Int64("now", now), zap.String("key", res.GetKey()))
-						continue
+					if now >= expiringAt && !wasIssued {
+						log.Debug("Resource is expiring", zap.Int64("expiringAt", expiringAt), zap.Int64("now", now), zap.String("key", res.GetKey()))
+						expiring = true
 					}
 
 					switch res.GetKey() {
@@ -174,7 +175,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					}
 					lastMonitoringValue, ok := i.Data["last_monitoring"]
 					if !ok {
-						log.Debug("Last monitoring for product not found", zap.String("instance", i.GetUuid()), zap.String("product", product.GetTitle()))
+						log.Debug("Last monitoring for product not found. Skipping", zap.String("instance", i.GetUuid()), zap.String("product", product.GetTitle()))
 						goto resume
 					}
 					lm := int64(lastMonitoringValue.GetNumberValue())
@@ -182,15 +183,15 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					// Checking if invoice was issued for this last_monitoring value
 					issuedInvTsValue, ok := i.Data["lm_for_last_issued_invoice"]
 					issuedInvTs := int64(issuedInvTsValue.GetNumberValue())
-					if ok && lm == issuedInvTs {
+					wasIssued := ok && lm == issuedInvTs
+					if wasIssued {
 						log.Info("Invoice for current renew cycle was issued before", zap.String("instance", i.GetUuid()), zap.String("product", product.GetTitle()))
-						goto resume
 					}
 
 					expiringAt := expiringTime(lm, product.GetPeriod())
-					if now < expiringAt {
-						log.Debug("Product is not expiring yet.", zap.Int64("expiringAt", expiringAt), zap.Int64("now", now), zap.String("product", product.GetTitle()))
-						goto resume
+					if now >= expiringAt && !wasIssued {
+						log.Debug("Product is expiring.", zap.Int64("expiringAt", expiringAt), zap.Int64("now", now), zap.String("product", product.GetTitle()))
+						expiring = true
 					}
 					cost += product.GetPrice()
 
@@ -198,6 +199,11 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				}
 
 			resume:
+
+				if !expiring {
+					log.Info("No expiring resources or products. Skipping invoice creation", zap.String("instance", i.GetUuid()))
+					continue
+				}
 
 				// Find owner account
 				cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
