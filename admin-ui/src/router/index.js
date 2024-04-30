@@ -111,7 +111,7 @@ const routes = [
     redirect: {
       name: "Plugin",
       params: { title: "Chats", url: "/cc.ui/" },
-      query: { url: "/cc.ui/" },
+      query: { url: "/cc.ui/", fullscrean: false },
     },
   },
   {
