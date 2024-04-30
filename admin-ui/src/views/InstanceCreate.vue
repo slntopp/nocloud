@@ -267,7 +267,7 @@ const save = async () => {
 
   if (instance.value.type === "ovh") {
     instance.value.config.location = fullSp.locations.find(({ id }) =>
-      id.startsWith(
+      id.includes(
         instance.value.config.configuration[
           `${instance.value.config.type}_datacenter`
         ]
@@ -291,6 +291,13 @@ const save = async () => {
           instancesGroups: [],
         },
       });
+    }
+
+    if (type.value === "opensrs") {
+      await api.plans.update(
+        instance.value.billing_plan.uuid,
+        instance.value.billing_plan
+      );
     }
 
     let igIndex = service.value.instancesGroups.findIndex(
@@ -342,7 +349,7 @@ const save = async () => {
     if (response.errors) {
       throw response;
     }
-    store.commit("snackbar/showSnackbarError", {
+    store.commit("snackbar/showSnackbarSuccess", {
       message: isEdit.value
         ? "instance updated successfully"
         : "instance created successfully",
@@ -381,6 +388,9 @@ watch(serviceProviderId, (sp_uuid) => {
 watch(
   () => instance.value.billing_plan,
   (plan) => {
+    if (!plan) {
+      return;
+    }
     serviceProviderId.value =
       plan.sp || plans.value.find((p) => p.uuid === plan)?.sp;
   }
