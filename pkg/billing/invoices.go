@@ -343,34 +343,46 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Account == "" {
 		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
+	if t.Transactions == nil {
+		t.Transactions = []string{}
+	}
+	if len(req.Msg.GetItems()) > 0 {
+		sum := int64(0)
+		for _, item := range req.Msg.GetItems() {
+			sum += item.GetAmount()
+		}
+		if float64(sum) != t.GetTotal() {
+			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
+		}
+	}
 
-	// Transaction gets negative total if it's balance deposit
-	var transactionTotal = t.GetTotal()
+	// Create transaction if it's balance deposit
 	if t.GetType() == pb.ActionType_BALANCE {
+		var transactionTotal = t.GetTotal()
 		transactionTotal *= -1
+
+		// Convert invoice's currency to default currency(according to how creating transaction works)
+		defCurr := MakeCurrencyConf(ctx, log).Currency
+		rate, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
+		if err != nil {
+			log.Error("Failed to get exchange rate", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
+		}
+
+		newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
+			Priority: pb.Priority_NORMAL,
+			Account:  t.GetAccount(),
+			Currency: defCurr,
+			Total:    transactionTotal * rate,
+			Exec:     0,
+		}))
+		if err != nil {
+			log.Error("Failed to create transaction", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to create transaction")
+		}
+		t.Transactions = []string{newTr.Msg.Uuid}
 	}
 
-	// Convert invoice's currency to default currency(according to how creating transaction works)
-	defCurr := MakeCurrencyConf(ctx, log).Currency
-	rate, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
-	if err != nil {
-		log.Error("Failed to get exchange rate", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get exchange rate")
-	}
-
-	newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
-		Priority: pb.Priority_NORMAL,
-		Account:  t.GetAccount(),
-		Currency: defCurr,
-		Total:    transactionTotal * rate,
-		Exec:     0,
-	}))
-	if err != nil {
-		log.Error("Failed to create transaction", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to create transaction")
-	}
-
-	t.Transactions = []string{newTr.Msg.Uuid}
 	t.Created = time.Now().Unix()
 	r, err := s.invoices.Create(ctx, t)
 	if err != nil {
@@ -432,24 +444,6 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	old.Proc = now
 	old.Processed = true
 
-	// Update invoice's transactions to perform payment
-	if newStatus == pb.BillingStatus_PAID {
-		for _, trId := range old.GetTransactions() {
-			tr, err := s.transactions.Get(ctx, trId)
-			if err != nil {
-				log.Error("Failed to get transaction", zap.Error(err))
-				return nil, status.Error(codes.Internal, "Failed to get transaction")
-			}
-			tr.Exec = now // Setting transaction process time. Should trigger transaction process
-			_, err = s.UpdateTransaction(ctx, connect.NewRequest(tr))
-			if err != nil {
-				log.Error("Failed to update transaction", zap.Error(err))
-				return nil, status.Error(codes.Internal, "Failed to update transaction")
-			}
-		}
-		log.Debug("All transactions were updated and processed.")
-	}
-
 	_, err = s.accounts.Get(ctx, old.GetAccount())
 	if err != nil {
 		log.Error("Failed to get account", zap.Error(err))
@@ -469,6 +463,22 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 payment:
 	log.Info("Starting invoice payment", zap.String("invoice", old.GetUuid()))
+
+	log.Debug("Updating transactions to perform payment.")
+	for _, trId := range old.GetTransactions() {
+		tr, err := s.transactions.Get(ctx, trId)
+		if err != nil {
+			log.Error("Failed to get transaction", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get transaction")
+		}
+		tr.Exec = now // Setting transaction process time. Should trigger transaction process
+		_, err = s.UpdateTransaction(ctx, connect.NewRequest(tr))
+		if err != nil {
+			log.Error("Failed to update transaction", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to update transaction")
+		}
+	}
+	log.Debug("Transactions were updated and processed.")
 
 	// BALANCE action was processed after transaction was processed
 	// NO_ACTION action don't need any processing
@@ -514,7 +524,7 @@ payment:
 			}
 
 			// Update every *_last_monitoring data to put aside instance billing
-			// TODO: make sure this works correctly
+			// TODO: should work correctly but need to make 100% sure
 			var last, next int64
 			for _, resource := range plan.GetResources() {
 				_, ok := instOld.Data[resource.Key+"_last_monitoring"]
@@ -590,6 +600,7 @@ termination:
 	switch old.GetType() {
 	case pb.ActionType_INSTANCE_CREATION:
 		// TODO: research how to properly stop or pause already running instance
+		log.Debug("NOT IMPLEMENTED: Termination of started instance")
 
 	case pb.ActionType_INSTANCE_RENEWAL:
 		for _, item := range old.GetItems() {

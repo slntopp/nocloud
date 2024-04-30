@@ -24,6 +24,7 @@ import (
 	pb "github.com/slntopp/nocloud-proto/billing"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
 	healthpb "github.com/slntopp/nocloud-proto/health"
+	ipb "github.com/slntopp/nocloud-proto/instances"
 	statuspb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -63,6 +64,8 @@ type BillingServiceServer struct {
 	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
 	sus  *healthpb.RoutineStatus
+
+	inst_client ipb.InstancesServiceClient // Unregistered
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection) *BillingServiceServer {
