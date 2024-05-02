@@ -464,8 +464,8 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	if newStatus == pb.BillingStatus_PAID {
 		goto payment
-	} else if newStatus == pb.BillingStatus_TERMINATED {
-		goto termination
+	} else if newStatus == pb.BillingStatus_RETURNED {
+		goto returning
 	} else {
 		goto quit
 	}
@@ -574,10 +574,8 @@ payment:
 	old.Processed = int64(patch["processed"].(float64))
 	goto quit
 
-termination:
-	log.Info("Starting invoice termination", zap.String("invoice", old.GetUuid()))
-	patch["terminated"] = nowBeforeActions
-	old.Terminated = nowBeforeActions
+returning:
+	log.Info("Starting invoice returning", zap.String("invoice", old.GetUuid()))
 	// Create same amount of transactions but rewert their total
 	// Make them urgent and set exec time to apply them to account's balance immediately
 	log.Debug("Creating rewert transactions")
@@ -615,7 +613,7 @@ termination:
 	switch old.GetType() {
 	case pb.ActionType_INSTANCE_START:
 		// TODO: research how to properly stop or pause already running instance
-		log.Debug("NOT IMPLEMENTED: Termination of started instance")
+		log.Debug("NOT IMPLEMENTED: Returning of started instance")
 
 	case pb.ActionType_INSTANCE_RENEWAL:
 		for _, item := range old.GetItems() {
@@ -667,7 +665,7 @@ termination:
 			log.Debug("Reverted instance renewal", zap.String("instance", i))
 		}
 	}
-	log.Debug("Finished invoice termination")
+	log.Debug("Finished invoice returning")
 	goto quit
 
 quit:
