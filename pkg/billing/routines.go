@@ -106,6 +106,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 	for _, srv := range list.Result {
 		for _, ig := range srv.GetInstancesGroups() {
 			for _, i := range ig.GetInstances() {
+				log := log.With(zap.String("instance", i.GetUuid()))
+
 				cost := 0.0
 				plan := i.GetBillingPlan()
 				now := time.Now().Unix()
@@ -116,13 +118,16 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 
 				expiring := false
 				for _, res := range plan.GetResources() {
+					log := log.With(zap.String("resource", res.GetKey()))
+
 					if res.GetPeriod() == 0 {
+						log.Debug("Resource period is 0. Skipping")
 						continue
 					}
 
 					lastMonitoringValue, ok := i.Data[res.GetKey()+"_last_monitoring"]
 					if !ok {
-						log.Debug("Last monitoring not found. Skipping", zap.String("key", res.GetKey()))
+						log.Debug("Last monitoring not found. Skipping")
 						continue
 					}
 					lm := int64(lastMonitoringValue.GetNumberValue())
@@ -133,11 +138,11 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					issuedInvTs := int64(issuedInvTsValue.GetNumberValue())
 					wasIssued := ok && lm == issuedInvTs
 					if wasIssued {
-						log.Info("Invoice for current renew cycle was issued before.", zap.String("instance", i.GetUuid()), zap.String("resource", res.GetKey()))
+						log.Info("Invoice for current renew cycle was issued before.")
 					}
 
 					if now >= expiringAt && !wasIssued {
-						log.Debug("Resource is expiring", zap.Int64("expiringAt", expiringAt), zap.Int64("now", now), zap.String("key", res.GetKey()))
+						log.Debug("Resource is expiring.", zap.Int64("expiring_at", expiringAt), zap.Int64("now", now))
 						expiring = true
 					}
 
@@ -166,8 +171,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				product, ok := i.GetBillingPlan().GetProducts()[i.GetProduct()]
 				if !ok || product == nil {
 					log.Error("Failed to get product(instance's product not found in billing plan or nil)",
-						zap.String("product", i.GetProduct()),
-						zap.String("instance", i.GetUuid()))
+						zap.String("product_id", i.GetProduct()))
 				} else {
 					if product.GetPeriod() == 0 {
 						log.Info("Product period is 0. Skipping billing for this product, but not skipping for resources.", zap.String("product", product.GetTitle()))
@@ -175,7 +179,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					}
 					lastMonitoringValue, ok := i.Data["last_monitoring"]
 					if !ok {
-						log.Debug("Last monitoring for product not found. Skipping", zap.String("instance", i.GetUuid()), zap.String("product", product.GetTitle()))
+						log.Debug("Last monitoring for product not found. Skipping", zap.String("product", product.GetTitle()))
 						goto resume
 					}
 					lm := int64(lastMonitoringValue.GetNumberValue())
@@ -185,12 +189,12 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					issuedInvTs := int64(issuedInvTsValue.GetNumberValue())
 					wasIssued := ok && lm == issuedInvTs
 					if wasIssued {
-						log.Info("Invoice for current renew cycle was issued before", zap.String("instance", i.GetUuid()), zap.String("product", product.GetTitle()))
+						log.Info("Invoice for current renew cycle was issued before", zap.String("product", product.GetTitle()))
 					}
 
 					expiringAt := expiringTime(lm, product.GetPeriod())
 					if now >= expiringAt && !wasIssued {
-						log.Debug("Product is expiring.", zap.Int64("expiringAt", expiringAt), zap.Int64("now", now), zap.String("product", product.GetTitle()))
+						log.Debug("Product is expiring.", zap.Int64("expiring_at", expiringAt), zap.Int64("now", now), zap.String("product", product.GetTitle()))
 						expiring = true
 					}
 					cost += product.GetPrice()
@@ -205,6 +209,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					continue
 				}
 
+				log.Debug("Proceeding to invoice creation")
+
 				// Find owner account
 				cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
 					"instance":    i.GetUuid(),
@@ -214,20 +220,20 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				})
 				if err != nil {
 					log.Error("Error getting instance owner", zap.Error(err))
-					return
+					continue
 				}
 				var acc graph.Account
 				_, err = cur.ReadDocument(ctx, &acc)
 				if err != nil {
 					log.Error("Error getting instance owner", zap.Error(err))
-					return
+					continue
 				}
 				acc.Uuid = acc.Key
 				if acc.GetUuid() == "" {
-					log.Error("Instance owner not found", zap.String("instance", i.GetUuid()))
+					log.Error("Instance owner not found")
 					continue
 				}
-				log.Debug("Instance owner found", zap.String("instance", i.GetUuid()), zap.String("account", acc.GetUuid()))
+				log.Debug("Instance owner found", zap.String("account", acc.GetUuid()))
 
 				if acc.Currency == nil {
 					acc.Currency = currencyConf.Currency
@@ -235,18 +241,18 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				rate, err := s.currencies.GetExchangeRate(ctx, currencyConf.Currency, acc.Currency)
 				if err != nil {
 					log.Error("Error getting exchange rate", zap.Error(err))
-					return
+					continue
 				}
 
 				cost *= rate // Convert from NCU to  account's currency
 
-				log.Debug("Updating instance", zap.String("instance", i.GetUuid()))
+				log.Debug("Updating instance")
 				// Update instance with stamps to track issued invoice
 				err = s.instances.Update(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY),
 					"", proto.Clone(i).(*ipb.Instance), proto.Clone(i).(*ipb.Instance))
 				if err != nil {
-					log.Error("Failed to update instance. Not issuing invoice.", zap.Error(err), zap.String("instance", i.GetUuid()))
-					return
+					log.Error("Failed to update instance. Not issuing invoice.", zap.Error(err))
+					continue
 				}
 
 				inv := &pb.Invoice{
@@ -269,16 +275,17 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 				_, err = s.CreateInvoice(ctx, connect.NewRequest(inv))
 				if err != nil {
-					log.Error("Failed to create invoice", zap.Error(err), zap.String("instance", i.GetUuid()))
+					log.Error("Failed to create invoice", zap.Error(err))
 					continue
 				}
 
+				log.Debug("Invoice created", zap.String("invoice", inv.Uuid))
 				counter++
 			}
 		}
 	}
 
-	log.Info("Routine finished", zap.Int("invoices created", counter))
+	log.Info("Routine finished", zap.Int("invoices_created", counter))
 }
 
 func (s *BillingServiceServer) IssueInvoicesRoutine(ctx context.Context) {
