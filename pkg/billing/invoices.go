@@ -199,7 +199,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 				return nil, status.Error(codes.InvalidArgument, "Missing instance in item")
 			}
 		}
-		if float64(sum) != t.GetTotal() {
+		if sum != t.GetTotal() {
 			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
 		}
 	}

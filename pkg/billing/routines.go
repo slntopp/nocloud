@@ -242,7 +242,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 
 				log.Debug("Updating instance", zap.String("instance", i.GetUuid()))
 				// Update instance with stamps to track issued invoice
-				err = s.instances.Update(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), "", i, proto.Clone(i).(*ipb.Instance))
+				err = s.instances.Update(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY),
+					"", proto.Clone(i).(*ipb.Instance), proto.Clone(i).(*ipb.Instance))
 				if err != nil {
 					log.Error("Failed to update instance. Not issuing invoice.", zap.Error(err), zap.String("instance", i.GetUuid()))
 					return
