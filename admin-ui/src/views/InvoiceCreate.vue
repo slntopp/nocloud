@@ -14,12 +14,26 @@
                 item-value="id"
                 item-text="title"
                 label="Type"
-                v-model="newInvoice.meta.type"
+                v-model="newInvoice.type"
                 :items="types"
               >
               </v-select>
             </v-col>
           </v-row>
+
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Deadline</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <date-picker
+                :min="formatSecondsToDateString(Date.now() / 1000)"
+                label="Deadline"
+                v-model="newInvoice.deadline"
+              />
+            </v-col>
+          </v-row>
+
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Account</v-subheader>
@@ -37,7 +51,8 @@
               />
             </v-col>
           </v-row>
-          <v-row align="center">
+
+          <v-row v-if="!isBalanceInvoice" align="center">
             <v-col cols="3">
               <v-subheader>Instances</v-subheader>
             </v-col>
@@ -66,9 +81,8 @@
                 type="number"
                 label="Amount"
                 :suffix="accountCurrency?.title"
-                :value="amount"
-                disabled
-                readonly
+                v-model="newInvoice.total"
+                :disabled="!isBalanceInvoice"
               />
             </v-col>
           </v-row>
@@ -115,7 +129,7 @@
               <v-subheader>Status</v-subheader>
             </v-col>
             <v-col cols="9">
-              <v-chip>{{ BillingStatus[invoice.status] }}</v-chip>
+              <v-chip>{{ invoice.status }}</v-chip>
             </v-col>
           </v-row>
         </v-col>
@@ -126,7 +140,7 @@
         v-model="newInvoice.meta.note"
       ></v-textarea>
 
-      <div class="mt-2">
+      <div class="mt-2" v-if="!isBalanceInvoice">
         <div class="d-flex justify-space-between">
           <v-subheader>Invoice items</v-subheader>
           <v-btn @click="addInvoiceItem">Add</v-btn>
@@ -200,10 +214,15 @@
 
 <script setup>
 import JsonEditor from "@/components/JsonEditor.vue";
-import { defaultFilterObject, formatSecondsToDate } from "@/functions";
+import {
+  defaultFilterObject,
+  formatSecondsToDate,
+  formatSecondsToDateString,
+} from "@/functions";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
+import datePicker from "@/components/ui/datePicker.vue";
 import InvoiceItemsTable from "@/components/invoiceItemsTable.vue";
 import { useRouter } from "vue-router/composables";
 import {
@@ -225,11 +244,13 @@ const selectedInstances = ref([]);
 
 const newInvoice = ref({
   account: null,
+  status: "UNPAID",
+  type: "INSTANCE_RENEWAL",
   total: 0,
   items: [{ amount: null, title: "" }],
+  deadline: formatSecondsToDateString(Date.now() / 1000 + 86400 * 30),
   meta: {
     note: "",
-    type: "payment",
   },
 });
 
@@ -242,18 +263,34 @@ const isStatusChangeLoading = ref(false);
 const newStatus = ref("");
 
 const types = [
+  { id: "INSTANCE_START", title: "Instance start" },
+  { id: "INSTANCE_RENEWAL", title: "Instance renewal" },
   {
-    id: "payment",
-    title: "Payment invoice (no balance change)",
+    id: "balance+",
+    title: "Top up balance",
   },
   {
-    id: "top-up",
-    title: "Top-up invoice (with balance change)",
+    id: "balance-",
+    title: "Debit balance",
   },
 ];
 
 const changeStatusBtns = [
-  { title: "cancel", status: "CANCELED", disabled: ["CANCELED", "TERMINATED"] },
+  {
+    title: "pay",
+    status: "PAID",
+    disabled: ["TERMINATED", "CANCELED", "DRAFT", "RETURNED", "PAID"],
+  },
+  {
+    title: "cancel",
+    status: "CANCELED",
+    disabled: ["CANCELED", "TERMINATED", "RETURNED", "DRAFT"],
+  },
+  {
+    title: "return",
+    status: "RETURNED",
+    disabled: ["CANCELED", "TERMINATED", "UNPAID", "DRAFT", "RETURNED"],
+  },
   { title: "terminate", status: "TERMINATED", disabled: ["TERMINATED"] },
 ];
 
@@ -261,6 +298,13 @@ onMounted(async () => {
   if (isEdit.value) {
     newInvoice.value = {
       ...invoice.value,
+      deadline: formatSecondsToDateString(invoice.value.deadline),
+      type:
+        invoice.value.type === "BALANCE"
+          ? invoice.value.total > 0
+            ? "balance-"
+            : "balance+"
+          : invoice.value.type,
     };
   }
 
@@ -279,6 +323,9 @@ onMounted(async () => {
 const namespaces = computed(() => store.getters["namespaces/all"]);
 
 const isInstancesLoading = computed(() => store.getters["services/isLoading"]);
+const isBalanceInvoice = computed(() =>
+  newInvoice.value.type.startsWith("balance")
+);
 const services = computed(() => store.getters["services/all"]);
 const instances = computed(() => {
   if (!newInvoice.value.account) {
@@ -306,9 +353,6 @@ const accountCurrency = computed(
   () =>
     newInvoice.value.account?.currency || store.getters["currencies/default"]
 );
-const amount = computed(() =>
-  newInvoice.value.items.reduce((acc, i) => acc + Number(i.amount), 0)
-);
 
 const isEmailDisabled = computed(() =>
   ["TERMINATED", "CANCELED"].includes(newInvoice.value.status)
@@ -327,13 +371,15 @@ const saveInvoice = async (withEmail = false) => {
 
   try {
     const data = {
-      total: convertPrice(amount.value),
+      total: convertPrice(newInvoice.value.total),
       account: newInvoice.value.account.uuid,
-      items: newInvoice.value.items.map((item) => ({
-        ...item,
-        amount: convertPrice(item.amount),
-      })),
+      items: newInvoice.value.items,
       meta: newInvoice.value.meta,
+      status: newInvoice.value.status,
+      deadline: new Date(newInvoice.value.deadline).getTime() / 1000,
+      type: newInvoice.value.type.startsWith("balance")
+        ? "BALANCE"
+        : newInvoice.value.type,
     };
     if (!isEdit.value) {
       await store.getters["invoices/invoicesClient"].createInvoice(
@@ -359,7 +405,11 @@ const saveInvoice = async (withEmail = false) => {
 };
 
 const convertPrice = (price) => {
-  return newInvoice.value.meta.type === "payment"
+  if (!isBalanceInvoice.value) {
+    return price;
+  }
+
+  return newInvoice.value.type.endsWith("-")
     ? Math.abs(price)
     : -Math.abs(price);
 };
@@ -424,10 +474,13 @@ const changeInvoiceStatus = async (status) => {
   isStatusChangeLoading.value = true;
   newStatus.value = status;
   try {
-    await store.getters["invoices/invoicesClient"].updateInvoice({
-      ...invoice.value,
-      status,
-    });
+    await store.getters["invoices/invoicesClient"].updateInvoice(
+      Invoice.fromJson({
+        ...invoice.value,
+        status: BillingStatus[status],
+        deadline: new Date(newInvoice.value.deadline).getTime() / 1000,
+      })
+    );
     newInvoice.value.status = status;
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
@@ -447,6 +500,21 @@ watch(instances, (instances) => {
     );
   }
 });
+
+watch(isBalanceInvoice, () => {
+  selectedInstances.value = [];
+  newInvoice.value.items = [];
+});
+
+watch(
+  () => newInvoice.value.items,
+  () => {
+    newInvoice.value.total = newInvoice.value.items.reduce(
+      (acc, i) => acc + Number(i.amount),
+      0
+    );
+  }
+);
 </script>
 
 <style scoped>

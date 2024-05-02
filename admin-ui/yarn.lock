@@ -4962,9 +4962,9 @@ no-case@^3.0.4:
     lower-case "^2.0.2"
     tslib "^2.0.3"
 
-"nocloud-proto@https://github.com/slntopp/nocloud-proto#4b89c790a8246b6237931176cfeeb7b3a34c3909":
+"nocloud-proto@https://github.com/slntopp/nocloud-proto#0b36dceb9449f58edb9855ed546ce902d8f370a9":
   version "1.0.1"
-  resolved "https://github.com/slntopp/nocloud-proto#4b89c790a8246b6237931176cfeeb7b3a34c3909"
+  resolved "https://github.com/slntopp/nocloud-proto#0b36dceb9449f58edb9855ed546ce902d8f370a9"
   dependencies:
     "@bufbuild/protobuf" "^1.7.2"
     "@connectrpc/connect" "^1.3.0"
