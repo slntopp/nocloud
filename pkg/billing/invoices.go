@@ -251,11 +251,11 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 }
 
 func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *connect.Request[pb.UpdateInvoiceStatusRequest]) (*connect.Response[pb.Invoice], error) {
-	log := s.log.Named("UpdateStatus")
+	log := s.log.Named("UpdateInvoiceStatus")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	t := req.Msg
-	log.Debug("UpdateStatus request received")
+	log.Debug("UpdateInvoiceStatus request received")
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
