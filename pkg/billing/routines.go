@@ -253,14 +253,14 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					Items: []*pb.Item{
 						{
 							Title:    fmt.Sprintf("Instance '%s' renewal", i.GetTitle()),
-							Amount:   int64(cost),
+							Amount:   float32(cost),
 							Instance: i.GetUuid(),
 						},
 					},
 					Total:    cost,
 					Type:     pb.ActionType_INSTANCE_RENEWAL,
 					Created:  now,
-					Exec:     time.Unix(now, 0).Add(24 * time.Hour).Unix(), // Until when invoice should be paid
+					Deadline: time.Unix(now, 0).Add(24 * time.Hour).Unix(), // Until when invoice should be paid
 					Account:  acc.GetUuid(),
 					Currency: acc.Currency,
 				}

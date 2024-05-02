@@ -469,14 +469,14 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 				Items: []*bpb.Item{
 					{
 						Title:    fmt.Sprintf("Instance '%s' start bill", instance.GetUuid()),
-						Amount:   int64(cost),
+						Amount:   float32(cost),
 						Instance: instance.GetUuid(),
 					},
 				},
 				Total:    cost,
-				Type:     bpb.ActionType_INSTANCE_CREATION,
+				Type:     bpb.ActionType_INSTANCE_START,
 				Created:  time.Now().Unix(),
-				Exec:     time.Now().Add(24 * time.Hour).Unix(), // Until when invoice should be paid
+				Deadline: time.Now().Add(24 * time.Hour).Unix(), // Until when invoice should be paid
 				Account:  acc.GetUuid(),
 				Currency: accCurrency,
 			}
