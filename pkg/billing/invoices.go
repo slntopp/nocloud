@@ -40,57 +40,6 @@ var forbiddenStatusConversions = []pair[pb.BillingStatus]{
 	// From TERMINATED (All forbidden)
 }
 
-func (s *BillingServiceServer) Consume(ctx context.Context) {
-	//	log := s.log.Named("ExpiringInstancesConsumer")
-	//init:
-	//	log.Info("Trying to register instances expiring consumer")
-	//
-	//	ch, err := s.rbmq.Channel()
-	//	if err != nil {
-	//		log.Error("Failed to open a channel", zap.Error(err))
-	//		time.Sleep(time.Second)
-	//		goto init
-	//	}
-	//
-	//	queue, _ := ch.QueueDeclare(
-	//		"instance_expiring",
-	//		true, false, false, true, nil,
-	//	)
-	//
-	//	records, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
-	//	if err != nil {
-	//		log.Error("Failed to register a consumer", zap.Error(err))
-	//		time.Sleep(time.Second)
-	//		goto init
-	//	}
-	//
-	//	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
-	//	currencyConf := MakeCurrencyConf(ctx, log)
-	//
-	//	log.Info("Instances expiring consumer registered. Reading messages")
-	//	for msg := range records {
-	//		log.Debug("Received a message")
-	//		var recs []*pb.Record
-	//		err = json.Unmarshal(msg.Body, &recs)
-	//		if err != nil {
-	//			log.Error("Failed to unmarshal record", zap.Error(err))
-	//			if err = msg.Ack(false); err != nil {
-	//				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
-	//			}
-	//			continue
-	//		}
-	//		log.Debug("Message unmarshalled", zap.Any("records", &recs))
-	//		err := s.processExpiringRecords(ctx, recs, currencyConf)
-	//		if err != nil {
-	//			log.Error("Failed to process record", zap.Error(err))
-	//		}
-	//		if err = msg.Ack(false); err != nil {
-	//			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
-	//		}
-	//		continue
-	//	}
-}
-
 const instanceOwner = `
 LET account = LAST( // Find Instance owner Account
     FOR node, edge, path IN 4
@@ -102,108 +51,8 @@ LET account = LAST( // Find Instance owner Account
     )
 RETURN account`
 
-//func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs []*pb.Record, currency CurrencyConf) error {
-//
-//	var i *graph.Instance
-//	var plan *graph.BillingPlan
-//	var sum float64
-//	for _, rec := range recs {
-//		var err error
-//		i, err = s.instances.Get(ctx, rec.GetInstance())
-//		if err != nil {
-//			return err
-//		}
-//		plan, err = s.plans.Get(ctx, i.GetBillingPlan())
-//		if err != nil {
-//			return err
-//		}
-//		if product, ok := plan.GetProducts()[rec.Product]; ok {
-//			sum += product.Price * rec.Total
-//		}
-//		// Scan each resource to find presented in current record. TODO: optimize
-//		for _, res := range plan.GetResources() {
-//			if res.Key == rec.Resource {
-//				sum += res.Price * rec.Total
-//			}
-//		}
-//	}
-//
-//	if plan == nil {
-//		return errors.New("got nil plan")
-//	}
-
-//if i == nil {
-//	return errors.New("got nil instance")
-//}
-//
-//if sum == 0 {
-//	return errors.New("payment sum is zero")
-//}
-//
-//// Make sure we're not gonna send invoice twice for the same notification
-//// If it past less time than payment_period / 10 then it's considered as previous renew notification
-//// payment_period / 10 --- same in ione driver
-//now := time.Now().Unix()
-//lastInvoiceData, ok := i.Data["last_renew_invoice"]
-//if ok {
-//	period := plan.GetProducts()[i.GetProduct()].GetPeriod()
-//	lastInvoice := int64(lastInvoiceData.GetNumberValue())
-//	if now-lastInvoice <= period/10 {
-//		s.log.Info("INFO: Skipping renew invoice issuing.", zap.Int64("diff from last notify", time.Now().Unix()-lastInvoice))
-//		return nil
-//	}
-//}
-//
-//// Find owner account
-//cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
-//	"instance":    i.GetUuid(),
-//	"permissions": schema.PERMISSIONS_GRAPH.Name,
-//	"@instances":  schema.INSTANCES_COL,
-//	"@accounts":   schema.ACCOUNTS_COL,
-//})
-//if err != nil {
-//	return err
-//}
-//var acc graph.Account
-//_, err = cur.ReadDocument(ctx, &acc)
-//if err != nil {
-//	return err
-//}
-
-//	if acc.Currency == nil {
-//		acc.Currency = currency.Currency
-//	}
-//	rate, err := s.currencies.GetExchangeRate(ctx, currency.Currency, acc.Currency)
-//	if err != nil {
-//		return err
-//	}
-//
-//	newInst := proto.Clone(i.Instance).(*ipb.Instance)
-//	newInst.Data["last_renew_invoice"] = structpb.NewNumberValue(float64(now))
-//	if err := s.instances.Update(ctx, "", newInst, i.Instance); err != nil {
-//		s.log.Error("Failed to update instance last_renew_invoice. Skipping invoice creation", zap.Error(err))
-//		return err
-//	}
-//
-//	inv := &pb.Invoice{
-//		Exec:    time.Now().Add(time.Duration(plan.GetProducts()[i.GetProduct()].GetPeriod()) * time.Second).Unix(),
-//		Status:  pb.BillingStatus_UNPAID,
-//		Total:   sum * rate,
-//		Created: now,
-//		Type:    pb.ActionType_INSTANCE_RENEWAL,
-//		Items: []*pb.Item{
-//			{Title: i.Title + " renewal", Amount: int64(sum * rate), Instance: i.GetUuid()},
-//		},
-//		Account:  acc.GetUuid(),
-//		Currency: acc.Currency,
-//	}
-//
-//	_, err = s.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), connect.NewRequest(inv))
-//	return err
-//}
-
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
-	log := s.log.Named("GetTransactions")
+	log := s.log.Named("GetInvoice")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	req := r.Msg
@@ -234,23 +83,9 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 		}
 	}
 
-	if req.Service != nil {
-		service := *req.Service
-		node := driver.NewDocumentID(schema.SERVICES_COL, service)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
-			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
-		}
-		if req.Account == nil {
-			query += ` FILTER t.service == @service`
-		} else {
-			query += ` && t.service == @service`
-		}
-		vars["service"] = service
-	}
-
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			if key == "exec" || key == "total" || key == "proc" || key == "created" {
+			if key == "exec" || key == "total" || key == "processed" || key == "created" {
 				values := value.GetStructValue().AsMap()
 				if val, ok := values["from"]; ok {
 					from := val.(float64)
@@ -299,32 +134,32 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	}
 	query += ` RETURN merge(t, {uuid: t._key})`
 
-	log.Debug("Ready to retrieve transactions", zap.String("query", query), zap.Any("vars", vars))
+	log.Debug("Ready to retrieve invoices", zap.String("query", query), zap.Any("vars", vars))
 
 	cursor, err := s.db.Query(ctx, query, vars)
 	if err != nil {
-		log.Error("Failed to retrieve transactions", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to retrieve transactions")
+		log.Error("Failed to retrieve invoices", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to retrieve invoices")
 	}
 	defer cursor.Close()
 
-	var transactions []*pb.Invoice
+	var invoices []*pb.Invoice
 	for {
-		transaction := &pb.Invoice{}
-		meta, err := cursor.ReadDocument(ctx, transaction)
+		invoice := &pb.Invoice{}
+		meta, err := cursor.ReadDocument(ctx, invoice)
 		if err != nil {
 			if driver.IsNoMoreDocuments(err) {
 				break
 			}
-			log.Error("Failed to retrieve transactions", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to retrieve transactions")
+			log.Error("Failed to retrieve invoices", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to retrieve invoices")
 		}
-		transaction.Uuid = meta.Key
-		transactions = append(transactions, transaction)
+		invoice.Uuid = meta.Key
+		invoices = append(invoices, invoice)
 	}
 
-	log.Debug("Transactions retrieved", zap.Any("transactions", transactions))
-	resp := connect.NewResponse(&pb.Invoices{Pool: transactions})
+	log.Debug("Invoices retrieved", zap.Any("invoices", invoices))
+	resp := connect.NewResponse(&pb.Invoices{Pool: invoices})
 	return resp, nil
 }
 
@@ -360,6 +195,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		sum := float32(0)
 		for _, item := range req.Msg.GetItems() {
 			sum += item.GetAmount()
+			if item.Instance == "" {
+				return nil, status.Error(codes.InvalidArgument, "Missing instance in item")
+			}
 		}
 		if float64(sum) != t.GetTotal() {
 			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
@@ -388,7 +226,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		}))
 		if err != nil {
 			log.Error("Failed to create transaction", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to create transaction")
+			return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
 		}
 		t.Transactions = []string{newTr.Msg.Uuid}
 	}
@@ -679,7 +517,7 @@ quit:
 }
 
 func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.Request[pb.GetInvoicesCountRequest]) (*connect.Response[pb.GetInvoicesCountResponse], error) {
-	log := s.log.Named("GetTransactionsCount")
+	log := s.log.Named("GetInvoicesCount")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg
 	log.Debug("Request received", zap.Any("request", req), zap.String("requestor", requestor))
@@ -693,7 +531,7 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			if key == "exec" || key == "total" || key == "proc" || key == "created" {
+			if key == "exec" || key == "total" || key == "processed" || key == "created" {
 				values := value.GetStructValue().AsMap()
 				if val, ok := values["from"]; ok {
 					from := val.(float64)
@@ -729,34 +567,20 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 		}
 	}
 
-	if req.Service != nil {
-		service := *req.Service
-		node := driver.NewDocumentID(schema.SERVICES_COL, service)
-		if !graph.HasAccess(ctx, s.db, requestor, node, access.Level_ADMIN) {
-			return nil, status.Error(codes.PermissionDenied, "Not enough Access Rights")
-		}
-		if req.Account == nil {
-			query += ` FILTER t.service == @service`
-		} else {
-			query += ` && t.service == @service`
-		}
-		vars["service"] = service
-	}
-
 	query += ` RETURN t`
 
-	log.Debug("Ready to retrieve transactions", zap.String("query", query), zap.Any("vars", vars))
+	log.Debug("Ready to retrieve invoices", zap.String("query", query), zap.Any("vars", vars))
 
 	queryContext := driver.WithQueryCount(ctx)
 
 	cursor, err := s.db.Query(queryContext, query, vars)
 	if err != nil {
-		log.Error("Failed to retrieve transactions", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to retrieve transactions")
+		log.Error("Failed to retrieve invoices", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to retrieve invoices")
 	}
 	defer cursor.Close()
 
-	log.Info("transactions count", zap.Int64("count", cursor.Count()))
+	log.Info("invoices count", zap.Int64("count", cursor.Count()))
 
 	resp := connect.NewResponse(&pb.GetInvoicesCountResponse{
 		Total: uint64(cursor.Count()),
@@ -766,10 +590,10 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 }
 
 func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
-	log := s.log.Named("UpdateTransaction")
+	log := s.log.Named("UpdateInvoice")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg
-	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
@@ -779,18 +603,14 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 
 	t, err := s.invoices.Get(ctx, req.GetUuid())
 	if err != nil {
-		return nil, err
-	}
-
-	if err != nil {
-		log.Error("Failed to get transaction", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to get transaction")
+		log.Error("Failed to get invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
 
 	exec := t.GetExec()
 	if exec != 0 {
-		log.Error("Transaction has exec timestamp")
-		return nil, status.Error(codes.Internal, "Transaction has exec timestamp")
+		log.Error("Invoice has exec timestamp")
+		return nil, status.Error(codes.Internal, "Invoice has exec timestamp")
 	}
 	if req.GetExec() != 0 {
 		t.Exec = req.GetExec()
@@ -798,21 +618,74 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
+	t.Processed = req.GetProcessed()
+	t.Account = req.GetAccount()
+	t.Deadline = req.GetDeadline()
+	t.Total = req.GetTotal()
+	t.Currency = req.GetCurrency()
+	t.Type = req.GetType()
+	t.Items = req.GetItems()
+	if req.Transactions != nil {
+		t.Transactions = req.Transactions
+	}
+
+	if t.Type == pb.ActionType_BALANCE {
+		var transactionTotal = t.GetTotal()
+		transactionTotal *= -1
+
+		// Convert invoice's currency to default currency(according to how creating transaction works)
+		defCurr := MakeCurrencyConf(ctx, log).Currency
+		rate, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
+		if err != nil {
+			log.Error("Failed to get exchange rate", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
+		}
+
+		newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
+			Priority: pb.Priority_NORMAL,
+			Account:  t.GetAccount(),
+			Currency: defCurr,
+			Total:    transactionTotal * rate,
+			Exec:     0,
+		}))
+		if err != nil {
+			log.Error("Failed to create transaction", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
+		}
+		t.Transactions = []string{newTr.Msg.Uuid}
+	}
+
+	if len(t.GetItems()) > 0 {
+		sum := float32(0)
+		for _, item := range t.Items {
+			sum += item.GetAmount()
+			if item.Instance == "" {
+				return nil, status.Error(codes.InvalidArgument, "Missing instance in item")
+			}
+		}
+		if float64(sum) != t.Total {
+			return nil, status.Error(codes.InvalidArgument, "Sum of items does not match total")
+		}
+	}
+
+	if t.Account == "" {
+		return nil, status.Error(codes.InvalidArgument, "Missing account")
+	}
 
 	_, err = s.invoices.Update(ctx, t)
 	if err != nil {
-		log.Error("Failed to update transaction", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to update transaction")
+		log.Error("Failed to update invoice", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to update invoice")
 	}
 
 	return connect.NewResponse(t), nil
 }
 
 func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
-	log := s.log.Named("UpdateTransaction")
+	log := s.log.Named("GetInvoice")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	req := r.Msg
-	log.Debug("Request received", zap.Any("transaction", req), zap.String("requestor", requestor))
+	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
@@ -831,7 +704,7 @@ func (s *BillingServiceServer) GetInvoice(ctx context.Context, r *connect.Reques
 func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc, uuid string) (*connect.Response[pb.Invoices], error) {
 	tr, err := s.invoices.Get(ctx, uuid)
 	if err != nil {
-		return nil, status.Error(codes.NotFound, "Transaction doesn't exist")
+		return nil, status.Error(codes.NotFound, "Invoice doesn't exist")
 	}
 
 	ok := graph.HasAccess(ctx, s.db, acc, driver.NewDocumentID(schema.ACCOUNTS_COL, tr.Account), access.Level_ADMIN)
@@ -844,3 +717,154 @@ func (s *BillingServiceServer) _HandleGetSingleInvoice(ctx context.Context, acc,
 
 	return resp, nil
 }
+
+//func (s *BillingServiceServer) Consume(ctx context.Context) {
+//	log := s.log.Named("ExpiringInstancesConsumer")
+//init:
+//	log.Info("Trying to register instances expiring consumer")
+//
+//	ch, err := s.rbmq.Channel()
+//	if err != nil {
+//		log.Error("Failed to open a channel", zap.Error(err))
+//		time.Sleep(time.Second)
+//		goto init
+//	}
+//
+//	queue, _ := ch.QueueDeclare(
+//		"instance_expiring",
+//		true, false, false, true, nil,
+//	)
+//
+//	records, err := ch.Consume(queue.Name, "", false, false, false, false, nil)
+//	if err != nil {
+//		log.Error("Failed to register a consumer", zap.Error(err))
+//		time.Sleep(time.Second)
+//		goto init
+//	}
+//
+//	s.ConsumerStatus.Status.Status = healthpb.Status_RUNNING
+//	currencyConf := MakeCurrencyConf(ctx, log)
+//
+//	log.Info("Instances expiring consumer registered. Reading messages")
+//	for msg := range records {
+//		log.Debug("Received a message")
+//		var recs []*pb.Record
+//		err = json.Unmarshal(msg.Body, &recs)
+//		if err != nil {
+//			log.Error("Failed to unmarshal record", zap.Error(err))
+//			if err = msg.Ack(false); err != nil {
+//				log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+//			}
+//			continue
+//		}
+//		log.Debug("Message unmarshalled", zap.Any("records", &recs))
+//		err := s.processExpiringRecords(ctx, recs, currencyConf)
+//		if err != nil {
+//			log.Error("Failed to process record", zap.Error(err))
+//		}
+//		if err = msg.Ack(false); err != nil {
+//			log.Warn("Failed to Acknowledge the delivery while unmarshal message", zap.Error(err))
+//		}
+//		continue
+//	}
+//}
+
+//func (s *BillingServiceServer) processExpiringRecords(ctx context.Context, recs []*pb.Record, currency CurrencyConf) error {
+//
+//	var i *graph.Instance
+//	var plan *graph.BillingPlan
+//	var sum float64
+//	for _, rec := range recs {
+//		var err error
+//		i, err = s.instances.Get(ctx, rec.GetInstance())
+//		if err != nil {
+//			return err
+//		}
+//		plan, err = s.plans.Get(ctx, i.GetBillingPlan())
+//		if err != nil {
+//			return err
+//		}
+//		if product, ok := plan.GetProducts()[rec.Product]; ok {
+//			sum += product.Price * rec.Total
+//		}
+//		// Scan each resource to find presented in current record. TODO: optimize
+//		for _, res := range plan.GetResources() {
+//			if res.Key == rec.Resource {
+//				sum += res.Price * rec.Total
+//			}
+//		}
+//	}
+//
+//	if plan == nil {
+//		return errors.New("got nil plan")
+//	}
+
+//if i == nil {
+//	return errors.New("got nil instance")
+//}
+//
+//if sum == 0 {
+//	return errors.New("payment sum is zero")
+//}
+//
+//// Make sure we're not gonna send invoice twice for the same notification
+//// If it past less time than payment_period / 10 then it's considered as previous renew notification
+//// payment_period / 10 --- same in ione driver
+//now := time.Now().Unix()
+//lastInvoiceData, ok := i.Data["last_renew_invoice"]
+//if ok {
+//	period := plan.GetProducts()[i.GetProduct()].GetPeriod()
+//	lastInvoice := int64(lastInvoiceData.GetNumberValue())
+//	if now-lastInvoice <= period/10 {
+//		s.log.Info("INFO: Skipping renew invoice issuing.", zap.Int64("diff from last notify", time.Now().Unix()-lastInvoice))
+//		return nil
+//	}
+//}
+//
+//// Find owner account
+//cur, err := s.db.Query(ctx, instanceOwner, map[string]interface{}{
+//	"instance":    i.GetUuid(),
+//	"permissions": schema.PERMISSIONS_GRAPH.Name,
+//	"@instances":  schema.INSTANCES_COL,
+//	"@accounts":   schema.ACCOUNTS_COL,
+//})
+//if err != nil {
+//	return err
+//}
+//var acc graph.Account
+//_, err = cur.ReadDocument(ctx, &acc)
+//if err != nil {
+//	return err
+//}
+
+//	if acc.Currency == nil {
+//		acc.Currency = currency.Currency
+//	}
+//	rate, err := s.currencies.GetExchangeRate(ctx, currency.Currency, acc.Currency)
+//	if err != nil {
+//		return err
+//	}
+//
+//	newInst := proto.Clone(i.Instance).(*ipb.Instance)
+//	newInst.Data["last_renew_invoice"] = structpb.NewNumberValue(float64(now))
+//	if err := s.instances.Update(ctx, "", newInst, i.Instance); err != nil {
+//		s.log.Error("Failed to update instance last_renew_invoice. Skipping invoice creation", zap.Error(err))
+//		return err
+//	}
+//
+//	inv := &pb.Invoice{
+//		Exec:    time.Now().Add(time.Duration(plan.GetProducts()[i.GetProduct()].GetPeriod()) * time.Second).Unix(),
+//		Status:  pb.BillingStatus_UNPAID,
+//		Total:   sum * rate,
+//		Created: now,
+//		Type:    pb.ActionType_INSTANCE_RENEWAL,
+//		Items: []*pb.Item{
+//			{Title: i.Title + " renewal", Amount: int64(sum * rate), Instance: i.GetUuid()},
+//		},
+//		Account:  acc.GetUuid(),
+//		Currency: acc.Currency,
+//	}
+//
+//	_, err = s.CreateInvoice(context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY), connect.NewRequest(inv))
+//	return err
+//}
