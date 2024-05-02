@@ -607,8 +607,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
 
-	oldType := t.Type
-
 	exec := t.GetExec()
 	if exec != 0 {
 		log.Error("Invoice has exec timestamp")
@@ -631,7 +629,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		t.Transactions = req.Transactions
 	}
 
-	if oldType != pb.ActionType_BALANCE && t.Type == pb.ActionType_BALANCE {
+	if t.Type == pb.ActionType_BALANCE {
 		var transactionTotal = t.GetTotal()
 		transactionTotal *= -1
 
