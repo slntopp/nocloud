@@ -253,7 +253,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					Items: []*pb.Item{
 						{
 							Title:    fmt.Sprintf("Instance '%s' renewal", i.GetTitle()),
-							Amount:   int64(cost),
+							Amount:   float32(cost),
 							Instance: i.GetUuid(),
 						},
 					},

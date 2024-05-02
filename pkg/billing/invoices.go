@@ -27,10 +27,17 @@ type pair[T any] struct {
 }
 
 var forbiddenStatusConversions = []pair[pb.BillingStatus]{
-	{pb.BillingStatus_PAID, pb.BillingStatus_UNPAID},
+	// From DRAFT
+	{pb.BillingStatus_DRAFT, pb.BillingStatus_RETURNED},
+	// From UNPAID
+	{pb.BillingStatus_UNPAID, pb.BillingStatus_RETURNED},
+	// From PAID
 	{pb.BillingStatus_PAID, pb.BillingStatus_DRAFT},
-	{pb.BillingStatus_DRAFT, pb.BillingStatus_TERMINATED},
-	{pb.BillingStatus_UNPAID, pb.BillingStatus_TERMINATED},
+	{pb.BillingStatus_PAID, pb.BillingStatus_UNPAID},
+	{pb.BillingStatus_PAID, pb.BillingStatus_CANCELED},
+	// From CANCELLED  (All forbidden)
+	// From RETURNED   (All forbidden)
+	// From TERMINATED (All forbidden)
 }
 
 func (s *BillingServiceServer) Consume(ctx context.Context) {
@@ -346,8 +353,11 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Transactions == nil {
 		t.Transactions = []string{}
 	}
+	if t.Deadline != 0 && t.Deadline < time.Now().Unix() {
+		return nil, status.Error(codes.InvalidArgument, "Deadline in the past")
+	}
 	if len(req.Msg.GetItems()) > 0 {
-		sum := int64(0)
+		sum := float32(0)
 		for _, item := range req.Msg.GetItems() {
 			sum += item.GetAmount()
 		}
@@ -384,6 +394,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	t.Created = time.Now().Unix()
+	t.Exec = 0
+	t.Processed = 0
+	t.Terminated = 0
 	r, err := s.invoices.Create(ctx, t)
 	if err != nil {
 		log.Error("Failed to create invoice", zap.Error(err))
@@ -421,28 +434,24 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	newStatus := t.GetStatus()
 	oldStatus := old.GetStatus()
 
-	// Cannot rollback from cancelled and terminated
-	if oldStatus == pb.BillingStatus_CANCELED || oldStatus == pb.BillingStatus_TERMINATED {
-		return nil, status.Error(codes.InvalidArgument, "Cannot rollback from cancelled and terminated statuses")
+	if oldStatus == newStatus {
+		return nil, status.Error(codes.InvalidArgument, "Same status")
+	}
+	// Cannot rollback from cancelled, terminated or returned statuses
+	if oldStatus == pb.BillingStatus_CANCELED ||
+		oldStatus == pb.BillingStatus_TERMINATED ||
+		oldStatus == pb.BillingStatus_RETURNED {
+		return nil, status.Error(codes.InvalidArgument, "Cannot rollback from cancelled, terminated or returned statuses")
 	}
 	if slices.Contains(forbiddenStatusConversions, pair[pb.BillingStatus]{oldStatus, newStatus}) {
 		return nil, status.Error(codes.InvalidArgument, "Cannot convert from "+oldStatus.String()+" to "+newStatus.String())
 	}
 
-	now := time.Now().Unix()
+	nowBeforeActions := time.Now().Unix()
 	patch := map[string]interface{}{
-		"status":    newStatus,
-		"proc":      now,
-		"processed": true,
-	}
-	err = s.invoices.Patch(ctx, t.GetUuid(), patch)
-	if err != nil {
-		log.Error("Failed to update status", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to update status")
+		"status": newStatus,
 	}
 	old.Status = newStatus
-	old.Proc = now
-	old.Processed = true
 
 	_, err = s.accounts.Get(ctx, old.GetAccount())
 	if err != nil {
@@ -463,19 +472,21 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 payment:
 	log.Info("Starting invoice payment", zap.String("invoice", old.GetUuid()))
+	patch["exec"] = nowBeforeActions
+	old.Exec = nowBeforeActions
 
 	log.Debug("Updating transactions to perform payment.")
 	for _, trId := range old.GetTransactions() {
 		tr, err := s.transactions.Get(ctx, trId)
 		if err != nil {
 			log.Error("Failed to get transaction", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to get transaction")
+			continue
 		}
-		tr.Exec = now // Setting transaction process time. Should trigger transaction process
+		tr.Exec = nowBeforeActions // Setting transaction process time. Should trigger transaction process
 		_, err = s.UpdateTransaction(ctx, connect.NewRequest(tr))
 		if err != nil {
 			log.Error("Failed to update transaction", zap.Error(err))
-			return nil, status.Error(codes.Internal, "Failed to update transaction")
+			continue
 		}
 	}
 	log.Debug("Transactions were updated and processed.")
@@ -483,7 +494,7 @@ payment:
 	// BALANCE action was processed after transaction was processed
 	// NO_ACTION action don't need any processing
 	switch old.GetType() {
-	case pb.ActionType_INSTANCE_CREATION:
+	case pb.ActionType_INSTANCE_START:
 		log.Debug("Paid action: instance start")
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
@@ -558,10 +569,15 @@ payment:
 		}
 		log.Info("Renewed instances after invoice was paid")
 	}
+
+	patch["processed"] = time.Now().Unix()
+	old.Processed = int64(patch["processed"].(float64))
 	goto quit
 
 termination:
 	log.Info("Starting invoice termination", zap.String("invoice", old.GetUuid()))
+	patch["terminated"] = nowBeforeActions
+	old.Terminated = nowBeforeActions
 	// Create same amount of transactions but rewert their total
 	// Make them urgent and set exec time to apply them to account's balance immediately
 	log.Debug("Creating rewert transactions")
@@ -573,9 +589,9 @@ termination:
 		}
 		tr.Uuid = ""
 		tr.Priority = pb.Priority_URGENT
-		tr.Exec = time.Now().Unix()
+		tr.Exec = nowBeforeActions
 		tr.Records = nil
-		tr.Created = time.Now().Unix()
+		tr.Created = nowBeforeActions
 		tr.Total = tr.Total * -1
 		t, err := s.CreateTransaction(ctx, connect.NewRequest(tr))
 		if err != nil {
@@ -591,14 +607,13 @@ termination:
 	log.Debug("Patching invoice with rewert transactions")
 	if err = s.invoices.Patch(ctx, old.GetUuid(), map[string]interface{}{"transactions": transactions}); err != nil {
 		log.Error("Failed to patch invoice with rewert transactions", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to create terminate invoice")
 	}
 	log.Debug("Ended revert transactions creation")
 	log.Debug("Starting action termination")
 	// BALANCE was reverted on revert transactions
 	// NO_ACTION action don't need any reverting actions
 	switch old.GetType() {
-	case pb.ActionType_INSTANCE_CREATION:
+	case pb.ActionType_INSTANCE_START:
 		// TODO: research how to properly stop or pause already running instance
 		log.Debug("NOT IMPLEMENTED: Termination of started instance")
 
@@ -656,6 +671,12 @@ termination:
 	goto quit
 
 quit:
+	err = s.invoices.Patch(ctx, t.GetUuid(), patch)
+	if err != nil {
+		log.Error("Failed to update status", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to patch status. Actions should be applied, but invoice wasn't updated")
+	}
+
 	resp = connect.NewResponse(old)
 	return resp, nil
 }
