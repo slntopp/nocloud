@@ -192,7 +192,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.InvalidArgument, "Deadline in the past")
 	}
 	if len(req.Msg.GetItems()) > 0 {
-		sum := float32(0)
+		sum := 0.0
 		for _, item := range req.Msg.GetItems() {
 			sum += item.GetAmount()
 			if item.Instance == "" {
@@ -250,12 +250,12 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	return resp, nil
 }
 
-func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
-	log := s.log.Named("UpdateStatus")
+func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *connect.Request[pb.UpdateInvoiceStatusRequest]) (*connect.Response[pb.Invoice], error) {
+	log := s.log.Named("UpdateInvoiceStatus")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	t := req.Msg
-	log.Debug("UpdateStatus request received")
+	log.Debug("UpdateInvoiceStatus request received")
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
@@ -656,7 +656,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	}
 
 	if len(t.GetItems()) > 0 {
-		sum := float32(0)
+		sum := 0.0
 		for _, item := range t.Items {
 			sum += item.GetAmount()
 			if item.Instance == "" {

@@ -469,7 +469,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 				Items: []*bpb.Item{
 					{
 						Title:    fmt.Sprintf("Instance '%s' start bill", instance.GetUuid()),
-						Amount:   float32(cost),
+						Amount:   cost,
 						Instance: instance.GetUuid(),
 					},
 				},
