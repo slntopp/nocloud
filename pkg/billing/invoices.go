@@ -396,7 +396,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	t.Created = time.Now().Unix()
 	t.Exec = 0
 	t.Processed = 0
-	t.Terminated = 0
 	r, err := s.invoices.Create(ctx, t)
 	if err != nil {
 		log.Error("Failed to create invoice", zap.Error(err))
