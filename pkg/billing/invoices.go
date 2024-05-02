@@ -195,6 +195,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		sum := float32(0)
 		for _, item := range req.Msg.GetItems() {
 			sum += item.GetAmount()
+			if item.Instance == "" {
+				return nil, status.Error(codes.InvalidArgument, "Missing instance in item")
+			}
 		}
 		if float64(sum) != t.GetTotal() {
 			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
@@ -604,6 +607,8 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
 
+	oldType := t.Type
+
 	exec := t.GetExec()
 	if exec != 0 {
 		log.Error("Invoice has exec timestamp")
@@ -615,6 +620,59 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
+	t.Processed = req.GetProcessed()
+	t.Account = req.GetAccount()
+	t.Deadline = req.GetDeadline()
+	t.Total = req.GetTotal()
+	t.Currency = req.GetCurrency()
+	t.Type = req.GetType()
+	t.Items = req.GetItems()
+	if req.Transactions != nil {
+		t.Transactions = req.Transactions
+	}
+
+	if oldType != pb.ActionType_BALANCE && t.Type == pb.ActionType_BALANCE {
+		var transactionTotal = t.GetTotal()
+		transactionTotal *= -1
+
+		// Convert invoice's currency to default currency(according to how creating transaction works)
+		defCurr := MakeCurrencyConf(ctx, log).Currency
+		rate, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), defCurr)
+		if err != nil {
+			log.Error("Failed to get exchange rate", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
+		}
+
+		newTr, err := s.CreateTransaction(ctx, connect.NewRequest(&pb.Transaction{
+			Priority: pb.Priority_NORMAL,
+			Account:  t.GetAccount(),
+			Currency: defCurr,
+			Total:    transactionTotal * rate,
+			Exec:     0,
+		}))
+		if err != nil {
+			log.Error("Failed to create transaction", zap.Error(err))
+			return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
+		}
+		t.Transactions = []string{newTr.Msg.Uuid}
+	}
+
+	if len(t.GetItems()) > 0 {
+		sum := float32(0)
+		for _, item := range t.Items {
+			sum += item.GetAmount()
+			if item.Instance == "" {
+				return nil, status.Error(codes.InvalidArgument, "Missing instance in item")
+			}
+		}
+		if float64(sum) != t.Total {
+			return nil, status.Error(codes.InvalidArgument, "Sum of items does not match total")
+		}
+	}
+
+	if t.Account == "" {
+		return nil, status.Error(codes.InvalidArgument, "Missing account")
+	}
 
 	_, err = s.invoices.Update(ctx, t)
 	if err != nil {
