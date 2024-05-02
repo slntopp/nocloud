@@ -260,7 +260,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					Total:    cost,
 					Type:     pb.ActionType_INSTANCE_RENEWAL,
 					Created:  now,
-					Exec:     time.Unix(now, 0).Add(24 * time.Hour).Unix(), // Until when invoice should be paid
+					Deadline: time.Unix(now, 0).Add(24 * time.Hour).Unix(), // Until when invoice should be paid
 					Account:  acc.GetUuid(),
 					Currency: acc.Currency,
 				}
