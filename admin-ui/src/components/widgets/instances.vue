@@ -49,11 +49,7 @@
                   params: { instanceId: instance.uuid },
                 }"
               >
-                {{
-                  instance.title.length > 30
-                    ? instance.title.slice(0, 27) + "..."
-                    : instance.title
-                }}
+                {{ getShortName(instance.title) }}
               </router-link>
               <instance-state small :template="instance" />
             </div>
@@ -68,6 +64,7 @@
 import widget from "@/components/widgets/widget.vue";
 import { computed, onMounted, ref, toRefs } from "vue";
 import { useStore } from "@/store";
+import { getShortName } from "@/functions";
 import {
   endOfDay,
   endOfMonth,

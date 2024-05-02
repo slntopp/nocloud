@@ -18,7 +18,7 @@
 
     <template v-slot:[`item.title`]="{ item }">
       <router-link :to="{ name: 'ShowcasePage', params: { uuid: item.uuid } }">
-        {{ item.title }}
+        {{ getShortName(item.title, 45) }}
       </router-link>
     </template>
 
@@ -58,6 +58,7 @@ import IconTitlePreview from "@/components/ui/iconTitlePreview.vue";
 import { ref, toRefs } from "vue";
 import api from "@/api";
 import { useStore } from "@/store";
+import { getShortName } from "@/functions";
 
 const props = defineProps(["items", "loading", "value"]);
 const emits = defineEmits(["input"]);

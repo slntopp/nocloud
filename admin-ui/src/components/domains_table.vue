@@ -18,7 +18,8 @@
       </v-col>
       <v-col cols="2" class="d-flex justify-center align-center">
         <p v-if="!isPriceLoading">
-          Price: {{ domainPrice || "select domain and period" }}
+          Price:
+          {{ domainPrice ? `${domainPrice} USD` : "select domain and period" }}
         </p>
         <v-progress-circular v-else indeterminate color="primary" />
       </v-col>
@@ -62,7 +63,7 @@ import NocloudTable from "@/components/table.vue";
 export default {
   name: "domains-table",
   components: { NocloudTable },
-  emits: ["input:domain", "input:period"],
+  emits: ["input:domain", "input:period", "input:price"],
   props: ["sp-uuid"],
   data: () => ({
     headers: [
@@ -155,6 +156,11 @@ export default {
     },
     domainPrice() {
       return this.prices[this.selectedPeriodIndex];
+    },
+  },
+  watch: {
+    domainPrice(value) {
+      this.$emit("input:price", value);
     },
   },
 };

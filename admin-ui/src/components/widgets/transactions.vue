@@ -47,7 +47,7 @@
                   params: { accountId: report.account },
                 }"
               >
-                {{ getAccount(report.account)?.title }}
+                {{ getShortName(getAccount(report.account)?.title) }}
               </router-link>
               <v-skeleton-loader type="text" v-else />
 
@@ -77,7 +77,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { formatSecondsToDate } from "../../functions";
+import { formatSecondsToDate, getShortName } from "../../functions";
 import BalanceDisplay from "@/components/balance.vue";
 
 const props = defineProps(["data"]);
