@@ -158,7 +158,8 @@
       </v-dialog>
     </div>
 
-    <namespaces-table v-model="selected" single-select> </namespaces-table>
+    <namespaces-table :refetch="refetch" v-model="selected" single-select>
+    </namespaces-table>
   </div>
 </template>
 
@@ -197,6 +198,7 @@ export default {
         },
         search: "",
       },
+      refetch: false,
 
       accessLevels: [
         { id: undefined, title: "DEFAULT" },
@@ -227,7 +229,7 @@ export default {
         .then(() => {
           this.createMenuVisible = false;
           this.newNamespace.title = "";
-          this.$store.dispatch("namespaces/fetch");
+          this.refetch = !this.refetch;
         })
         .finally(() => {
           this.newNamespace.loading = false;
@@ -244,7 +246,7 @@ export default {
               console.log("all ok");
             }
             this.selected = [];
-            this.$store.dispatch("namespaces/fetch");
+            this.refetch = !this.refetch;
 
             this.snackbar.message = `Namespace${
               deletePromices.length == 1 ? "" : "s"
@@ -277,7 +279,7 @@ export default {
             }
 
             this.selected = [];
-            this.$store.dispatch("namespaces/fetch");
+            this.refetch = !this.refetch;
           })
           .catch((err) => {
             console.error(err);
@@ -307,7 +309,7 @@ export default {
           }
 
           this.selected = [];
-          this.$store.dispatch("namespaces/fetch");
+          this.refetch = !this.refetch;
         })
         .catch((err) => {
           // this.snackbar.message = "Something went wrong... Try later."
@@ -323,7 +325,7 @@ export default {
   },
   mounted() {
     this.$store.commit("reloadBtn/setCallback", {
-      type: "namespaces/fetch",
+      event: () => (this.refetch = !this.refetch),
     });
   },
 };

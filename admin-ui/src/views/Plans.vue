@@ -76,7 +76,7 @@
     >
       <template v-slot:[`item.title`]="{ item }">
         <router-link :to="{ name: 'Plan', params: { planId: item.uuid } }">
-          {{ item.title }}
+          {{ getShortName(item.title, 45) }}
         </router-link>
       </template>
       <template v-slot:[`item.meta.auto_start`]="{ item }">
@@ -187,6 +187,7 @@ import {
   getDeepObjectValue,
   readJSONFile,
   readYAMLFile,
+  getShortName,
 } from "@/functions";
 import { mapGetters } from "vuex";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
@@ -249,6 +250,7 @@ export default {
     updatedPlanUuid: "",
   }),
   methods: {
+    getShortName,
     changePlan() {
       this.linked = [];
       this.services.forEach((service) => {

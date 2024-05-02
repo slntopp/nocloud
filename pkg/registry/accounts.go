@@ -18,11 +18,12 @@ package registry
 import (
 	"context"
 	"fmt"
+	"slices"
+	"time"
+
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/notes"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
-	"slices"
-	"time"
 
 	"github.com/arangodb/go-driver"
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -283,7 +284,7 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	offset := (page - 1) * limit
 
-	pool, err := graph.ListWithAccessAndFilters[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
+	pool, err := graph.ListAccounts[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")

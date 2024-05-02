@@ -379,7 +379,7 @@ export function getFullDate(period) {
     return result;
   }
 
-  result.year = Math.floor(result.day / 360);
+  result.year = Math.floor(result.day / 365);
   result.day -= result.year * 365;
 
   result.month = Math.floor(result.day / 30);
@@ -735,4 +735,10 @@ export function isInstancePayg(inst) {
     (inst.type === "ione" && inst.billingPlan.kind === "DYNAMIC") ||
     inst.type === "openai"
   );
+}
+
+export function getShortName(name = "", maxLength = 30) {
+  return name.length > maxLength + 3
+    ? name.slice(0, maxLength - 3) + "..."
+    : name;
 }

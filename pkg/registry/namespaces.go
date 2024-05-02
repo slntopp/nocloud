@@ -85,13 +85,28 @@ func (s *NamespacesServiceServer) List(ctx context.Context, request *namespacesp
 		depth = 10
 	}
 
-	pool, err := s.ctrl.List(ctx, acc, depth)
+	page := request.GetPage()
+	limit := request.GetLimit()
+
+	offset := (page - 1) * limit
+
+	pool, err := s.ctrl.List(ctx, acc, depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
 	if err != nil {
 		s.log.Debug("Error listing namespaces", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing namespaces")
 	}
 
-	return &namespacespb.ListResponse{Pool: pool}, nil
+	result := make([]*namespacespb.Namespace, len(pool.Result))
+	for i, ns := range pool.Result {
+		result[i] = ns.Namespace
+	}
+	log.Debug("Convert result", zap.Any("pool", result))
+
+	return &namespacespb.ListResponse{
+		Pool:  result,
+		Count: int64(pool.Count),
+	}, nil
+
 }
 
 func (s *NamespacesServiceServer) Join(ctx context.Context, request *namespacespb.JoinRequest) (*namespacespb.JoinResponse, error) {
@@ -205,6 +220,26 @@ func (s *NamespacesServiceServer) Delete(ctx context.Context, request *namespace
 	}
 
 	return &namespacespb.DeleteResponse{Result: true}, nil
+}
+
+func (s *NamespacesServiceServer) Get(ctx context.Context, request *namespacespb.GetRequest) (*namespacespb.Namespace, error) {
+	log := s.log.Named("Delete")
+	log.Debug("Request received", zap.Any("request", request), zap.Any("context", ctx))
+
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	ns, err := s.ctrl.Get(ctx, request.Uuid)
+	if err != nil {
+		s.log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
+	if !graph.HasAccess(ctx, s.db, requestor, ns.ID, access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "NoAccess")
+	}
+
+	return ns.Namespace, nil
 }
 
 func (s *NamespacesServiceServer) Patch(ctx context.Context, request *namespacespb.PatchRequest) (*namespacespb.PatchResponse, error) {

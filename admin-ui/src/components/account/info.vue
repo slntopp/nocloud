@@ -266,6 +266,7 @@ export default {
     ],
     generalRule: [(v) => !!v || "Required field"],
     navTitles: config.navTitles ?? {},
+    accountNamespace: null,
     uuid: "",
     title: "",
     currency: "",
@@ -419,20 +420,27 @@ export default {
         params: { account: this.account.uuid },
       });
     },
+    async fetchNamespace() {
+      try {
+        const { pool } = await this.$store.dispatch("namespaces/fetch", {
+          filters: { account: this.account.uuid },
+        });
+        this.accountNamespace = pool[0];
+      } catch (e) {
+        console.log(e);
+      }
+    },
   },
   mounted() {
     this.title = this.account.title;
     this.currency = this.account.currency;
     this.uuid = this.account.uuid;
     this.keys = this.account.data?.ssh_keys || [];
-    this.$store.dispatch("namespaces/fetch");
     this.$store.dispatch("services/fetch", { showDeleted: true });
     this.$store.dispatch("servicesProviders/fetch", { anonymously: true });
+    this.fetchNamespace();
   },
   computed: {
-    namespaces() {
-      return this.$store.getters["namespaces/all"];
-    },
     services() {
       return this.$store.getters["services/all"];
     },
@@ -444,11 +452,6 @@ export default {
     },
     instances() {
       return this.$store.getters["services/getInstances"];
-    },
-    accountNamespace() {
-      return this.namespaces.find(
-        (n) => n.access.namespace === this.account?.uuid
-      );
     },
     accountsByInstance() {
       return this.instances.filter(

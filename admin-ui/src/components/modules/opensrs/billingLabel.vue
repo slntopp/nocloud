@@ -20,10 +20,12 @@ const emit = defineEmits(["update"]);
 
 const { template, account } = toRefs(props);
 
-const tariffPrice = ref(template.value.billingPlan.resources[0]?.price ?? 0);
+const tariffPrice = ref(
+  template.value.billingPlan.products[template.value.product]?.price ?? 0
+);
 
 const dueDate = computed(() =>
-  formatSecondsToDate(template.value.data.expiry.expiredate)
+  formatSecondsToDate(template.value.data.expiry?.expiredate)
 );
 </script>
 

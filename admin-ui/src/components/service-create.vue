@@ -346,7 +346,7 @@ export default {
       this.namespace = data.namespace;
       this.service = data.service;
     },
-    createService() {
+    async createService() {
       const action = this.$route.params.serviceId ? "edit" : "create";
       const data = this.getService();
 
@@ -356,33 +356,30 @@ export default {
       }
 
       this.isLoading = true;
-      api.services
-        .testConfig(data)
-        .then((res) => {
-          if (res.result)
-            return action === "create"
-              ? api.services._create(data)
-              : api.services._update(data.service);
-          else throw res;
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message:
-              action === "create"
-                ? "Service created successfully"
-                : "Service updated successfully",
-          });
-          this.$router.push({ name: "Services" });
-        })
-        .catch((err) => {
-          const opts = {
-            message: err.errors.map((error) => error),
-          };
-          this.showSnackbarError(opts);
-        })
-        .finally(() => {
-          this.isLoading = false;
+      try {
+        const promise =
+          action === "create"
+            ? api.services._create(data)
+            : api.services._update(data.service);
+        const response = await promise;
+        if (response.errors) {
+          throw response;
+        }
+        this.showSnackbarSuccess({
+          message:
+            action === "create"
+              ? "Service created successfully"
+              : "Service updated successfully",
         });
+        this.$router.push({ name: "Services" });
+      } catch (err) {
+        const opts = {
+          message: err.errors.map((error) => error),
+        };
+        this.showSnackbarError(opts);
+      } finally {
+        this.isLoading = false;
+      }
     },
     setProducts() {
       const { plan } = this.currentInstancesGroups;
@@ -496,7 +493,7 @@ export default {
     });
 
     this.$store.dispatch("namespaces/fetch");
-    this.$store.dispatch("servicesProviders/fetch", {anonymously:false});
+    this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
 
     const types = require.context(
       "@/components/modules/",

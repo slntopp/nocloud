@@ -17,7 +17,7 @@
         <router-link
           :to="{ name: 'Account', params: { accountId: item.uuid } }"
         >
-          {{ item.title }}
+          {{ getShortName(item.title) }}
         </router-link>
         <div>
           <whmcs-btn :account="item" />
@@ -28,6 +28,11 @@
         </div>
       </div>
     </template>
+
+    <template v-slot:[`item.data.email`]="{ item }">
+      {{ getShortName(item.data.email) }}
+    </template>
+
     <template v-slot:[`item.balance`]="{ item }">
       <balance
         :hide-currency="true"
@@ -57,17 +62,20 @@
       </v-chip>
     </template>
     <template v-slot:[`item.data.regular_payment`]="{ value, item }">
-      <v-switch
-        :disabled="
-          !!changeRegularPaymentUuid && changeRegularPaymentUuid !== item.uuid
-        "
-        :loading="
-          !!changeRegularPaymentUuid && changeRegularPaymentUuid === item.uuid
-        "
-        @change="changeRegularPayment(item, $event)"
-        :input-value="value"
-      >
-      </v-switch>
+      <div class="d-flex justify-center align-center regular_payment">
+        <v-switch
+          dense
+          hide-details
+          :disabled="
+            !!changeRegularPaymentUuid && changeRegularPaymentUuid !== item.uuid
+          "
+          :loading="
+            !!changeRegularPaymentUuid && changeRegularPaymentUuid === item.uuid
+          "
+          @change="changeRegularPayment(item, $event)"
+          :input-value="value"
+        />
+      </div>
     </template>
   </nocloud-table>
 </template>
@@ -75,7 +83,7 @@
 <script setup>
 import Balance from "./balance.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
-import { debounce, formatSecondsToDate } from "@/functions";
+import { debounce, formatSecondsToDate, getShortName } from "@/functions";
 import api from "@/api";
 import { toRefs, ref, computed, onMounted, watch } from "vue";
 import { useStore } from "@/store";
@@ -337,4 +345,8 @@ export default {
 };
 </script>
 
-<style></style>
+<style>
+.regular_payment .v-input {
+  margin-top: 0px !important;
+}
+</style>

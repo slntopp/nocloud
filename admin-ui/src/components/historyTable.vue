@@ -24,7 +24,7 @@
         v-if="!isAccountsLoading"
         :to="{ name: 'Account', params: { accountId: value } }"
       >
-        {{ getAccount(value)?.title }}
+        {{ getShortName(getAccount(value)?.title) }}
       </router-link>
       <v-skeleton-loader type="text" v-else />
     </template>
@@ -34,10 +34,11 @@
         :to="getEntityByUuid(item).route"
       >
         {{
-          `${
-            getEntityByUuid(item).item?.title || getEntityByUuid(item).item
-          } (${getEntityByUuid(item).type})`
+          getShortName(
+            `${getEntityByUuid(item).item?.title || getEntityByUuid(item).item}`
+          )
         }}
+        {{ `(${getEntityByUuid(item).type})` }}
       </router-link>
     </template>
     <template
@@ -61,7 +62,7 @@ import { toRefs, ref, computed, watch } from "vue";
 import nocloudTable from "@/components/table.vue";
 import api from "@/api";
 import { useStore } from "@/store";
-import { debounce, formatSecondsToDate } from "@/functions";
+import { debounce, formatSecondsToDate, getShortName } from "@/functions";
 
 const props = defineProps({
   tableName: {},
