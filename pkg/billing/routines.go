@@ -36,6 +36,8 @@ import (
 	regpb "github.com/slntopp/nocloud-proto/registry"
 	accpb "github.com/slntopp/nocloud-proto/registry/accounts"
 	settingspb "github.com/slntopp/nocloud-proto/settings"
+	stpb "github.com/slntopp/nocloud-proto/states"
+	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -107,6 +109,13 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 		for _, ig := range srv.GetInstancesGroups() {
 			for _, i := range ig.GetInstances() {
 				log := log.With(zap.String("instance", i.GetUuid()))
+
+				if i.GetStatus() == spb.NoCloudStatus_DEL ||
+					i.GetStatus() == spb.NoCloudStatus_INIT ||
+					i.GetState().GetState() == stpb.NoCloudState_PENDING {
+					log.Info("Instance has been deleted or in INIT or PENDING state. Skipping")
+					continue
+				}
 
 				cost := 0.0
 				plan := i.GetBillingPlan()

@@ -375,6 +375,10 @@ payment:
 			// TODO: should work correctly but need to make 100% sure
 			var last, next int64
 			for _, resource := range plan.GetResources() {
+				if resource.GetPeriod() == 0 {
+					continue
+				}
+
 				_, ok := instOld.Data[resource.Key+"_last_monitoring"]
 				if ok {
 					last = int64(instOld.Data[resource.Key+"_last_monitoring"].GetNumberValue())
@@ -386,16 +390,19 @@ payment:
 					instNew.Data[resource.Key+"_next_payment_date"] = structpb.NewNumberValue(float64(next + resource.GetPeriod()))
 				}
 			}
+
 			product := plan.GetProducts()[instOld.GetProduct()]
-			_, ok := instOld.Data["last_monitoring"]
-			if ok {
-				last = int64(instOld.Data["last_monitoring"].GetNumberValue())
-				instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last + product.GetPeriod()))
-			}
-			_, ok = instOld.Data["next_payment_date"]
-			if ok {
-				next = int64(instOld.Data["next_payment_date"].GetNumberValue())
-				instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next + product.GetPeriod()))
+			if product.GetPeriod() > 0 {
+				_, ok := instOld.Data["last_monitoring"]
+				if ok {
+					last = int64(instOld.Data["last_monitoring"].GetNumberValue())
+					instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last + product.GetPeriod()))
+				}
+				_, ok = instOld.Data["next_payment_date"]
+				if ok {
+					next = int64(instOld.Data["next_payment_date"].GetNumberValue())
+					instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next + product.GetPeriod()))
+				}
 			}
 
 			if err := s.instances.Update(ctx, "", instNew, instOld.Instance); err != nil {
@@ -471,6 +478,9 @@ returning:
 			// TODO: make sure this works correctly
 			var last, next int64
 			for _, resource := range plan.GetResources() {
+				if resource.GetPeriod() == 0 {
+					continue
+				}
 				_, ok := instOld.Data[resource.Key+"_last_monitoring"]
 				if ok {
 					last = int64(instOld.Data[resource.Key+"_last_monitoring"].GetNumberValue())
@@ -482,16 +492,19 @@ returning:
 					instNew.Data[resource.Key+"_next_payment_date"] = structpb.NewNumberValue(float64(next - resource.GetPeriod()))
 				}
 			}
+
 			product := plan.GetProducts()[instOld.GetProduct()]
-			_, ok := instOld.Data["last_monitoring"]
-			if ok {
-				last = int64(instOld.Data["last_monitoring"].GetNumberValue())
-				instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last - product.GetPeriod()))
-			}
-			_, ok = instOld.Data["next_payment_date"]
-			if ok {
-				next = int64(instOld.Data["next_payment_date"].GetNumberValue())
-				instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next - product.GetPeriod()))
+			if product.GetPeriod() > 0 {
+				_, ok := instOld.Data["last_monitoring"]
+				if ok {
+					last = int64(instOld.Data["last_monitoring"].GetNumberValue())
+					instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last - product.GetPeriod()))
+				}
+				_, ok = instOld.Data["next_payment_date"]
+				if ok {
+					next = int64(instOld.Data["next_payment_date"].GetNumberValue())
+					instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next - product.GetPeriod()))
+				}
 			}
 
 			if err := s.instances.Update(ctx, "", instNew, instOld.Instance); err != nil {
