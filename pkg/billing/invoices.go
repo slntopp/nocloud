@@ -7,6 +7,7 @@ import (
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	epb "github.com/slntopp/nocloud-proto/events"
 	ipb "github.com/slntopp/nocloud-proto/instances"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -50,6 +51,17 @@ LET account = LAST( // Find Instance owner Account
         RETURN node
     )
 RETURN account`
+
+const instanceInstanceGroup = `
+LET ig = LAST( // Find Instance instance group
+    FOR node, edge, path IN 1
+    INBOUND DOCUMENT(@@instances, @instance)
+    GRAPH @permissions
+    FILTER path.edges[*].role == ["owner"]
+    FILTER IS_SAME_COLLECTION(node, @@igs)
+        RETURN node
+    )
+RETURN ig`
 
 func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Request[pb.GetInvoicesRequest]) (*connect.Response[pb.Invoices], error) {
 	log := s.log.Named("GetInvoice")
@@ -337,7 +349,7 @@ payment:
 			i := item.GetInstance()
 			instOld, err := s.instances.Get(ctx, i)
 			if err != nil {
-				log.Warn("Failed to get instance to start", zap.Error(err), zap.String("instance", i))
+				log.Error("Failed to get instance to start", zap.Error(err), zap.String("instance", i))
 				continue
 			}
 			// Set auto_start to true. After next driver monitoring instance will be started
@@ -348,7 +360,7 @@ payment:
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
-				log.Warn("Failed to update instance", zap.Error(err), zap.String("instance", i))
+				log.Error("Failed to update instance", zap.Error(err), zap.String("instance", i))
 				continue
 			}
 			log.Debug("Successfully updated auto_start for instance", zap.String("instance", i))
@@ -391,17 +403,19 @@ payment:
 				}
 			}
 
-			product := plan.GetProducts()[instOld.GetProduct()]
-			if product.GetPeriod() > 0 {
-				_, ok := instOld.Data["last_monitoring"]
-				if ok {
-					last = int64(instOld.Data["last_monitoring"].GetNumberValue())
-					instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last + product.GetPeriod()))
-				}
-				_, ok = instOld.Data["next_payment_date"]
-				if ok {
-					next = int64(instOld.Data["next_payment_date"].GetNumberValue())
-					instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next + product.GetPeriod()))
+			product, ok := plan.GetProducts()[instOld.GetProduct()]
+			if ok {
+				if product.GetPeriod() > 0 {
+					_, ok := instOld.Data["last_monitoring"]
+					if ok {
+						last = int64(instOld.Data["last_monitoring"].GetNumberValue())
+						instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last + product.GetPeriod()))
+					}
+					_, ok = instOld.Data["next_payment_date"]
+					if ok {
+						next = int64(instOld.Data["next_payment_date"].GetNumberValue())
+						instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next + product.GetPeriod()))
+					}
 				}
 			}
 
@@ -456,10 +470,62 @@ returning:
 	// NO_ACTION action don't need any reverting actions
 	switch old.GetType() {
 	case pb.ActionType_INSTANCE_START:
-		// TODO: research how to properly stop or pause already running instance
-		log.Debug("NOT IMPLEMENTED: Returning of started instance")
+		// Suspending instance
+		// TODO: maybe start returning should be done without suspending
+		log.Debug("Returning instance from start to suspended")
+		for _, item := range old.GetItems() {
+			id := item.GetInstance()
+			i, err := s.instances.Get(ctx, id)
+			if err != nil {
+				log.Error("Error getting instance", zap.Error(err))
+				continue
+			}
+			i.Uuid = i.Key
+			// Find instance's ig
+			cur, err := s.db.Query(ctx, instanceInstanceGroup, map[string]interface{}{
+				"instance":    i.GetUuid(),
+				"permissions": schema.PERMISSIONS_GRAPH.Name,
+				"@instances":  schema.INSTANCES_COL,
+				"@igs":        schema.INSTANCES_GROUPS_COL,
+			})
+			if err != nil {
+				log.Error("Error getting instance group", zap.Error(err))
+				continue
+			}
+			var ig graph.InstancesGroup
+			_, err = cur.ReadDocument(ctx, &ig)
+			if err != nil {
+				log.Error("Error getting instance group", zap.Error(err))
+				continue
+			}
+			ig.Uuid = ig.Key
+
+			sp, err := s.sp.Get(ctx, ig.GetSp())
+			if err != nil {
+				log.Error("Failed to get SP", zap.Error(err))
+			}
+			sp.Uuid = sp.Key
+
+			client, ok := s.drivers[ig.GetType()]
+			if !ok {
+				log.Error("Failed to get driver", zap.String("type", ig.GetType()))
+				continue
+			}
+
+			_, err = client.Invoke(ctx, &driverpb.InvokeRequest{
+				Instance:         i.Instance,
+				ServicesProvider: sp.ServicesProvider,
+				Method:           "suspend",
+			})
+			if err != nil {
+				log.Error("Failed to suspend instance", zap.Error(err))
+				continue
+			}
+			log.Debug("Suspended instance", zap.String("instance", id))
+		}
 
 	case pb.ActionType_INSTANCE_RENEWAL:
+		log.Debug("Canceling instance renewal back")
 		for _, item := range old.GetItems() {
 			i := item.GetInstance()
 			instOld, err := s.instances.Get(ctx, i)
@@ -493,17 +559,19 @@ returning:
 				}
 			}
 
-			product := plan.GetProducts()[instOld.GetProduct()]
-			if product.GetPeriod() > 0 {
-				_, ok := instOld.Data["last_monitoring"]
-				if ok {
-					last = int64(instOld.Data["last_monitoring"].GetNumberValue())
-					instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last - product.GetPeriod()))
-				}
-				_, ok = instOld.Data["next_payment_date"]
-				if ok {
-					next = int64(instOld.Data["next_payment_date"].GetNumberValue())
-					instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next - product.GetPeriod()))
+			product, ok := plan.GetProducts()[instOld.GetProduct()]
+			if ok {
+				if product.GetPeriod() > 0 {
+					_, ok := instOld.Data["last_monitoring"]
+					if ok {
+						last = int64(instOld.Data["last_monitoring"].GetNumberValue())
+						instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last - product.GetPeriod()))
+					}
+					_, ok = instOld.Data["next_payment_date"]
+					if ok {
+						next = int64(instOld.Data["next_payment_date"].GetNumberValue())
+						instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next - product.GetPeriod()))
+					}
 				}
 			}
 
