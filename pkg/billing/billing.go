@@ -23,6 +23,7 @@ import (
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
+	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	statuspb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -57,12 +58,15 @@ type BillingServiceServer struct {
 	descriptions *graph.DescriptionsController
 	instances    *graph.InstancesController
 	services     graph.ServicesController
+	sp           graph.ServicesProvidersController
 
 	db driver.Database
 
 	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
 	sus  *healthpb.RoutineStatus
+
+	drivers map[string]driverpb.DriverServiceClient
 }
 
 func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection) *BillingServiceServer {
@@ -80,6 +84,7 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		services:     graph.NewServicesController(log.Named("ServicesController"), db),
 		descriptions: graph.NewDescriptionsController(log, db),
 		instances:    graph.NewInstancesController(log, db),
+		sp:           graph.NewServicesProvidersController(log, db),
 		db:           db,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
@@ -114,6 +119,10 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 	s.migrate()
 
 	return s
+}
+
+func (s *BillingServiceServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
+	s.drivers[type_key] = client
 }
 
 func (s *BillingServiceServer) migrate() {
