@@ -337,7 +337,7 @@ payment:
 			i := item.GetInstance()
 			instOld, err := s.instances.Get(ctx, i)
 			if err != nil {
-				log.Warn("Failed to get instance to start", zap.Error(err), zap.String("instance", i))
+				log.Error("Failed to get instance to start", zap.Error(err), zap.String("instance", i))
 				continue
 			}
 			// Set auto_start to true. After next driver monitoring instance will be started
@@ -348,7 +348,7 @@ payment:
 			cfg["auto_start"] = structpb.NewBoolValue(true)
 			instNew.Config = cfg
 			if err := s.instances.Update(ctx, "", instNew.Instance, instOld.Instance); err != nil {
-				log.Warn("Failed to update instance", zap.Error(err), zap.String("instance", i))
+				log.Error("Failed to update instance", zap.Error(err), zap.String("instance", i))
 				continue
 			}
 			log.Debug("Successfully updated auto_start for instance", zap.String("instance", i))
@@ -391,17 +391,19 @@ payment:
 				}
 			}
 
-			product := plan.GetProducts()[instOld.GetProduct()]
-			if product.GetPeriod() > 0 {
-				_, ok := instOld.Data["last_monitoring"]
-				if ok {
-					last = int64(instOld.Data["last_monitoring"].GetNumberValue())
-					instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last + product.GetPeriod()))
-				}
-				_, ok = instOld.Data["next_payment_date"]
-				if ok {
-					next = int64(instOld.Data["next_payment_date"].GetNumberValue())
-					instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next + product.GetPeriod()))
+			product, ok := plan.GetProducts()[instOld.GetProduct()]
+			if ok {
+				if product.GetPeriod() > 0 {
+					_, ok := instOld.Data["last_monitoring"]
+					if ok {
+						last = int64(instOld.Data["last_monitoring"].GetNumberValue())
+						instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last + product.GetPeriod()))
+					}
+					_, ok = instOld.Data["next_payment_date"]
+					if ok {
+						next = int64(instOld.Data["next_payment_date"].GetNumberValue())
+						instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next + product.GetPeriod()))
+					}
 				}
 			}
 
@@ -493,17 +495,19 @@ returning:
 				}
 			}
 
-			product := plan.GetProducts()[instOld.GetProduct()]
-			if product.GetPeriod() > 0 {
-				_, ok := instOld.Data["last_monitoring"]
-				if ok {
-					last = int64(instOld.Data["last_monitoring"].GetNumberValue())
-					instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last - product.GetPeriod()))
-				}
-				_, ok = instOld.Data["next_payment_date"]
-				if ok {
-					next = int64(instOld.Data["next_payment_date"].GetNumberValue())
-					instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next - product.GetPeriod()))
+			product, ok := plan.GetProducts()[instOld.GetProduct()]
+			if ok {
+				if product.GetPeriod() > 0 {
+					_, ok := instOld.Data["last_monitoring"]
+					if ok {
+						last = int64(instOld.Data["last_monitoring"].GetNumberValue())
+						instNew.Data["last_monitoring"] = structpb.NewNumberValue(float64(last - product.GetPeriod()))
+					}
+					_, ok = instOld.Data["next_payment_date"]
+					if ok {
+						next = int64(instOld.Data["next_payment_date"].GetNumberValue())
+						instNew.Data["next_payment_date"] = structpb.NewNumberValue(float64(next - product.GetPeriod()))
+					}
 				}
 			}
 
