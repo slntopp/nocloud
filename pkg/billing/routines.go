@@ -116,7 +116,8 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					i.Data = map[string]*structpb.Value{}
 				}
 
-				expiring := false
+				expiringResources := false
+				expiringProduct := false
 				for _, res := range plan.GetResources() {
 					log := log.With(zap.String("resource", res.GetKey()))
 
@@ -143,7 +144,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 
 					if now >= expiringAt && !wasIssued {
 						log.Debug("Resource is expiring.", zap.Int64("expiring_at", expiringAt), zap.Int64("now", now))
-						expiring = true
+						expiringResources = true
 					}
 
 					switch res.GetKey() {
@@ -168,13 +169,16 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					i.Data[res.GetKey()+"_lm_for_last_issued_invoice"] = structpb.NewNumberValue(float64(lm))
 				}
 
+				productBased := true
 				product, ok := i.GetBillingPlan().GetProducts()[i.GetProduct()]
 				if !ok || product == nil {
 					log.Error("Failed to get product(instance's product not found in billing plan or nil)",
 						zap.String("product_id", i.GetProduct()))
+					productBased = false
 				} else {
 					if product.GetPeriod() == 0 {
 						log.Info("Product period is 0. Skipping billing for this product, but not skipping for resources.", zap.String("product", product.GetTitle()))
+						productBased = false
 						goto resume
 					}
 					lastMonitoringValue, ok := i.Data["last_monitoring"]
@@ -195,7 +199,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					expiringAt := expiringTime(lm, product.GetPeriod())
 					if now >= expiringAt && !wasIssued {
 						log.Debug("Product is expiring.", zap.Int64("expiring_at", expiringAt), zap.Int64("now", now), zap.String("product", product.GetTitle()))
-						expiring = true
+						expiringProduct = true
 					}
 					cost += product.GetPrice()
 
@@ -204,8 +208,16 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 
 			resume:
 
-				if !expiring {
-					log.Info("No expiring resources or products. Skipping invoice creation", zap.String("instance", i.GetUuid()))
+				if productBased && !expiringProduct {
+					log.Info("Product is not expiring. Skipping invoice creation.", zap.String("product", product.GetTitle()))
+					if expiringResources {
+						log.Info("Resources are expiring. But skipping invoice creation, because product is not expiring.")
+					}
+					continue
+				}
+
+				if !productBased && !expiringResources {
+					log.Info("Resources are not expiring in NonProduct instance. Skipping invoice creation.")
 					continue
 				}
 
