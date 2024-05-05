@@ -111,7 +111,6 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				log := log.With(zap.String("instance", i.GetUuid()))
 
 				if i.GetStatus() == spb.NoCloudStatus_DEL ||
-					i.GetStatus() == spb.NoCloudStatus_INIT ||
 					i.GetState().GetState() == stpb.NoCloudState_PENDING {
 					log.Info("Instance has been deleted or in INIT or PENDING state. Skipping")
 					continue
