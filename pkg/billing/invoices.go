@@ -97,7 +97,7 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			if key == "exec" || key == "total" || key == "processed" || key == "created" {
+			if key == "payment" || key == "total" || key == "processed" || key == "created" || key == "returned" {
 				values := value.GetStructValue().AsMap()
 				if val, ok := values["from"]; ok {
 					from := val.(float64)
@@ -182,6 +182,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	t := req.Msg
 	log.Debug("Request received", zap.Any("invoice", t), zap.String("requestor", requestor))
 
+	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
+		t.Status = pb.BillingStatus_DRAFT
+	}
+	if t.GetType() == pb.ActionType_ACTION_TYPE_UNKNOWN {
+		t.Type = pb.ActionType_NO_ACTION
+	}
+
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
 	if !ok {
@@ -244,8 +251,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 
 	t.Created = time.Now().Unix()
-	t.Exec = 0
+	t.Payment = 0
 	t.Processed = 0
+	t.Returned = 0
 	r, err := s.invoices.Create(ctx, t)
 	if err != nil {
 		log.Error("Failed to create invoice", zap.Error(err))
@@ -268,6 +276,10 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 	t := req.Msg
 	log.Debug("UpdateInvoiceStatus request received")
+
+	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
+		t.Status = pb.BillingStatus_DRAFT
+	}
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
@@ -321,8 +333,8 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 payment:
 	log.Info("Starting invoice payment", zap.String("invoice", old.GetUuid()))
-	patch["exec"] = nowBeforeActions
-	old.Exec = nowBeforeActions
+	patch["payment"] = nowBeforeActions
+	old.Payment = nowBeforeActions
 
 	log.Debug("Updating transactions to perform payment.")
 	for _, trId := range old.GetTransactions() {
@@ -434,6 +446,8 @@ payment:
 
 returning:
 	log.Info("Starting invoice returning", zap.String("invoice", old.GetUuid()))
+	patch["returned"] = nowBeforeActions
+	old.Returned = nowBeforeActions
 	// Create same amount of transactions but rewert their total
 	// Make them urgent and set exec time to apply them to account's balance immediately
 	log.Debug("Creating rewert transactions")
@@ -612,7 +626,7 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 
 	if req.GetFilters() != nil {
 		for key, value := range req.GetFilters() {
-			if key == "exec" || key == "total" || key == "processed" || key == "created" {
+			if key == "payment" || key == "total" || key == "processed" || key == "created" || key == "returned" {
 				values := value.GetStructValue().AsMap()
 				if val, ok := values["from"]; ok {
 					from := val.(float64)
@@ -676,6 +690,13 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	req := r.Msg
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
 
+	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
+		req.Status = pb.BillingStatus_DRAFT
+	}
+	if req.GetType() == pb.ActionType_ACTION_TYPE_UNKNOWN {
+		req.Type = pb.ActionType_NO_ACTION
+	}
+
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
 	if !ok {
@@ -688,18 +709,18 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
 
-	exec := t.GetExec()
-	if exec != 0 {
-		log.Error("Invoice has exec timestamp")
-		return nil, status.Error(codes.Internal, "Invoice has exec timestamp")
+	if req.GetPayment() != 0 {
+		t.Payment = req.GetPayment()
 	}
-	if req.GetExec() != 0 {
-		t.Exec = req.GetExec()
+	if req.GetProcessed() != 0 {
+		t.Processed = req.GetProcessed()
+	}
+	if req.GetReturned() != 0 {
+		t.Returned = req.GetReturned()
 	}
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
-	t.Processed = req.GetProcessed()
 	t.Account = req.GetAccount()
 	t.Deadline = req.GetDeadline()
 	t.Total = req.GetTotal()
