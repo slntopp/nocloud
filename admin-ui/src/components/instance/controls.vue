@@ -238,6 +238,9 @@ export default {
           this.isSaveLoading = false;
         });
     },
+    async freezeInstance(date) {
+      this.sendAction(this.freezeBtn, {date})
+    },
     onSaveClick() {
       if (!this.isChanged) {
         return;
@@ -445,6 +448,15 @@ export default {
             },
       ];
     },
+    freezeBtn() {
+      return {
+        action: "freeze",
+        title: "freeze",
+        type: "method",
+        method: this.freezeInstance,
+        component: () => import("@/components/dialogs/freezeInstance.vue"),
+      };
+    },
     vmControlBtns() {
       const types = {
         ione: [
@@ -465,6 +477,7 @@ export default {
             disabled: this.ioneActions?.resume,
             icon: "mdi-play",
           },
+          this.freezeBtn,
           {
             action: "suspend",
             disabled: this.ioneActions?.suspend,
@@ -493,6 +506,7 @@ export default {
           },
           { action: "poweroff", disabled: true, icon: "mdi-stop" },
           { action: "resume", disabled: true, icon: "mdi-play" },
+          this.freezeBtn,
           { action: "suspend", disabled: true, icon: "mdi-power-sleep" },
           { action: "reboot", disabled: true, icon: "mdi-restart" },
           {
@@ -516,6 +530,7 @@ export default {
             icon: "mdi-play",
             disabled: this.ovhActions?.resume,
           },
+          this.freezeBtn,
           {
             action: "suspend_vm",
             title: "suspend",
@@ -560,6 +575,7 @@ export default {
             disabled: this.ovhActions?.resume,
             icon: "mdi-play",
           },
+          this.freezeBtn,
           {
             action: "suspend",
             disabled: this.ovhActions?.suspend,
@@ -601,6 +617,7 @@ export default {
             icon: "mdi-stop",
             disabled: this.emptyActions?.stop,
           },
+          this.freezeBtn,
           {
             action: "change_state",
             data: { state: 6 },
@@ -637,6 +654,7 @@ export default {
             icon: "mdi-restart",
             disabled: !this.keywebActions?.reboot,
           },
+          this.freezeBtn,
           {
             action: "suspend",
             title: "suspend",
