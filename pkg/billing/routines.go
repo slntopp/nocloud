@@ -290,6 +290,10 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					Deadline: time.Unix(now, 0).Add(24 * time.Hour).Unix(), // Until when invoice should be paid
 					Account:  acc.GetUuid(),
 					Currency: acc.Currency,
+					Meta: map[string]*structpb.Value{
+						"auto_created": structpb.NewBoolValue(true),
+						"creator":      structpb.NewStringValue("nocloud.billing.IssueInvoicesRoutine"),
+					},
 				}
 
 				ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
