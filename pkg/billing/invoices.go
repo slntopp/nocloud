@@ -309,6 +309,7 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 	}
 
 	nowBeforeActions := time.Now().Unix()
+	var nowAfterActions int64
 	patch := map[string]interface{}{
 		"status": newStatus,
 	}
@@ -442,8 +443,9 @@ payment:
 		log.Info("Renewed instances after invoice was paid")
 	}
 
-	patch["processed"] = time.Now().Unix()
-	old.Processed = int64(patch["processed"].(float64))
+	nowAfterActions = time.Now().Unix()
+	patch["processed"] = nowAfterActions
+	old.Processed = nowAfterActions
 	goto quit
 
 returning:
@@ -604,6 +606,7 @@ returning:
 	goto quit
 
 quit:
+	log.Debug("Patching invoice with updated data")
 	err = s.invoices.Patch(ctx, t.GetUuid(), patch)
 	if err != nil {
 		log.Error("Failed to update status", zap.Error(err))
