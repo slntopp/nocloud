@@ -4,6 +4,20 @@
     <v-form v-model="isValid" ref="invoiceForm">
       <v-row>
         <v-col cols="6">
+          <v-row v-if="!isEdit" align="center">
+            <v-col cols="3">
+              <v-subheader>Draft</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-switch
+                :input-value="newInvoice.status === 'DRAFT'"
+                @change="onChangeDraft"
+                :items="types"
+              >
+              </v-switch>
+            </v-col>
+          </v-row>
+
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Type</v-subheader>
@@ -40,7 +54,7 @@
             </v-col>
             <v-col cols="9">
               <accounts-autocomplete
-                :loading="isEdit && !newInvoice.account"
+                :loading="isInstancesLoading"
                 @change="onChangeAccount"
                 :disabled="isEdit"
                 label="Account"
@@ -102,11 +116,11 @@
           </v-row>
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Executed date</v-subheader>
+              <v-subheader>Payment date</v-subheader>
             </v-col>
             <v-col cols="9">
               <v-text-field
-                :value="formatSecondsToDate(newInvoice.exec, true) || '-'"
+                :value="formatSecondsToDate(newInvoice.payment, true) || '-'"
                 readonly
                 disabled
               />
@@ -114,16 +128,30 @@
           </v-row>
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Payment date</v-subheader>
+              <v-subheader>Processed date</v-subheader>
             </v-col>
             <v-col cols="9">
               <v-text-field
-                :value="formatSecondsToDate(newInvoice.proc, true) || '-'"
+                :value="formatSecondsToDate(newInvoice.processed, true) || '-'"
                 readonly
                 disabled
               />
             </v-col>
           </v-row>
+
+          <v-row align="center" v-if="newInvoice.returned">
+            <v-col cols="3">
+              <v-subheader>Returned date</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <v-text-field
+                :value="formatSecondsToDate(newInvoice.returned, true) || '-'"
+                readonly
+                disabled
+              />
+            </v-col>
+          </v-row>
+
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Status</v-subheader>
@@ -199,7 +227,8 @@
             :loading="isStatusChangeLoading && btn.status === newStatus"
             :disabled="
               (isStatusChangeLoading && btn.status !== newStatus) ||
-              btn.disabled.includes(newInvoice.status)
+              btn.disabled.includes(newInvoice.status) ||
+              btn.status === newInvoice.status
             "
             color="background-light"
             @click="changeInvoiceStatus(btn.status)"
@@ -228,6 +257,7 @@ import { useRouter } from "vue-router/composables";
 import {
   BillingStatus,
   Invoice,
+  UpdateInvoiceStatusRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 
@@ -244,7 +274,7 @@ const selectedInstances = ref([]);
 
 const newInvoice = ref({
   account: null,
-  status: "UNPAID",
+  status: "DRAFT",
   type: "INSTANCE_RENEWAL",
   total: 0,
   items: [{ amount: null, title: "" }],
@@ -266,12 +296,8 @@ const types = [
   { id: "INSTANCE_START", title: "Instance start" },
   { id: "INSTANCE_RENEWAL", title: "Instance renewal" },
   {
-    id: "balance+",
+    id: "BALANCE",
     title: "Top up balance",
-  },
-  {
-    id: "balance-",
-    title: "Debit balance",
   },
 ];
 
@@ -279,33 +305,29 @@ const changeStatusBtns = [
   {
     title: "pay",
     status: "PAID",
-    disabled: ["TERMINATED", "CANCELED", "DRAFT", "RETURNED", "PAID"],
+    disabled: ["TERMINATED", "CANCELED", "DRAFT", "RETURNED"],
   },
   {
     title: "cancel",
     status: "CANCELED",
-    disabled: ["CANCELED", "TERMINATED", "RETURNED", "DRAFT"],
+    disabled: ["TERMINATED", "RETURNED", "DRAFT", "UNPAID"],
   },
   {
     title: "return",
     status: "RETURNED",
-    disabled: ["CANCELED", "TERMINATED", "UNPAID", "DRAFT", "RETURNED"],
+    disabled: ["CANCELED", "TERMINATED", "UNPAID", "DRAFT"],
   },
   { title: "terminate", status: "TERMINATED", disabled: ["TERMINATED"] },
 ];
 
 onMounted(async () => {
-  if (isEdit.value) {
+  if (invoice.value) {
     newInvoice.value = {
       ...invoice.value,
       deadline: formatSecondsToDateString(invoice.value.deadline),
-      type:
-        invoice.value.type === "BALANCE"
-          ? invoice.value.total > 0
-            ? "balance-"
-            : "balance+"
-          : invoice.value.type,
     };
+
+    selectedInstances.value = invoice.value.items?.map((item) => item.instance);
   }
 
   await Promise.all([
@@ -323,12 +345,13 @@ onMounted(async () => {
 const namespaces = computed(() => store.getters["namespaces/all"]);
 
 const isInstancesLoading = computed(() => store.getters["services/isLoading"]);
-const isBalanceInvoice = computed(() =>
-  newInvoice.value.type.startsWith("balance")
-);
+const isBalanceInvoice = computed(() => newInvoice.value.type === "BALANCE");
 const services = computed(() => store.getters["services/all"]);
 const instances = computed(() => {
-  if (!newInvoice.value.account) {
+  if (
+    newInvoice.value.account === undefined ||
+    newInvoice.value.account === null
+  ) {
     return;
   }
 
@@ -377,11 +400,9 @@ const saveInvoice = async (withEmail = false) => {
       meta: newInvoice.value.meta,
       status: newInvoice.value.status,
       deadline: new Date(newInvoice.value.deadline).getTime() / 1000,
-      type: newInvoice.value.type.startsWith("balance")
-        ? "BALANCE"
-        : newInvoice.value.type,
+      type: newInvoice.value.type,
     };
-    if (!isEdit.value) {
+    if (!isEdit.value && !invoice.value?.uuid) {
       await store.getters["invoices/invoicesClient"].createInvoice(
         Invoice.fromJson(data)
       );
@@ -396,6 +417,10 @@ const saveInvoice = async (withEmail = false) => {
       store.commit("snackbar/showSnackbarSuccess", {
         message: "Invoice successfully saved",
       });
+
+      if (!isEdit.value) {
+        router.push({ name: "Invoices" });
+      }
     }
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
@@ -405,13 +430,7 @@ const saveInvoice = async (withEmail = false) => {
 };
 
 const convertPrice = (price) => {
-  if (!isBalanceInvoice.value) {
-    return price;
-  }
-
-  return newInvoice.value.type.endsWith("-")
-    ? Math.abs(price)
-    : -Math.abs(price);
+  return Math.abs(price);
 };
 
 const addInvoiceItem = () => {
@@ -470,15 +489,19 @@ const sendEmail = async () => {
   }
 };
 
+const onChangeDraft = (isDraft) => {
+  newInvoice.value.status = isDraft ? "DRAFT" : "UNPAID";
+};
+
 const changeInvoiceStatus = async (status) => {
   isStatusChangeLoading.value = true;
   newStatus.value = status;
   try {
-    await store.getters["invoices/invoicesClient"].updateInvoice(
-      Invoice.fromJson({
-        ...invoice.value,
+    console.log("new BillingStatus", BillingStatus[status], status);
+    await store.getters["invoices/invoicesClient"].updateInvoiceStatus(
+      UpdateInvoiceStatusRequest.fromJson({
+        uuid: invoice.value.uuid,
         status: BillingStatus[status],
-        deadline: new Date(newInvoice.value.deadline).getTime() / 1000,
       })
     );
     newInvoice.value.status = status;
@@ -493,7 +516,7 @@ const changeInvoiceStatus = async (status) => {
 watch(instances, (instances) => {
   if (isEdit.value) {
     const instancesUuid = [
-      ...new Set(invoice.value.items.map((item) => item.instance)),
+      ...new Set(invoice.value.items?.map((item) => item.instance)),
     ];
     selectedInstances.value = instances.filter((instance) =>
       instancesUuid.includes(instance.uuid)
@@ -509,7 +532,10 @@ watch(isBalanceInvoice, () => {
 watch(
   () => newInvoice.value.items,
   () => {
-    newInvoice.value.total = newInvoice.value.items.reduce(
+    if (invoice.value?.uuid && invoice.value.type === "BALANCE") {
+      return;
+    }
+    newInvoice.value.total = newInvoice.value.items?.reduce(
       (acc, i) => acc + Number(i.amount),
       0
     );

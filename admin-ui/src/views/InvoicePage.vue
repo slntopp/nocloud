@@ -24,7 +24,7 @@
           v-if="invoice && index === selectedTab"
           :is="tab.component"
           :invoice="invoice"
-          is-edit
+          :is-edit="invoice.status !== 'DRAFT'"
         />
       </v-tab-item>
     </v-tabs-items>
