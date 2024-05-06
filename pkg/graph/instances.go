@@ -438,6 +438,9 @@ func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instanc
 	mask := &pb.Instance{
 		Status: status,
 	}
+	if status == spb.NoCloudStatus_DEL {
+		mask.Deleted = time.Now().Unix()
+	}
 	_, err = ctrl.col.UpdateDocument(ctx, inst.Uuid, mask)
 	return err
 }
