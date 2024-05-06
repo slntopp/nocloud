@@ -115,25 +115,32 @@
         </v-col>
       </v-row>
       <v-row>
-        <v-col cols="4">
+        <v-col cols="3">
           <v-switch
             @change="(newVal) => setValue('resources.auto_renew', newVal)"
             :value="instance.resources.auto_renew"
             label="Auto_renew"
           />
         </v-col>
-        <v-col cols="4">
+        <v-col cols="3">
           <v-switch
             @change="(newVal) => setValue('resources.who_is_privacy', newVal)"
             :value="instance.resources.who_is_privacy"
             label="Who_is_privacy"
           />
         </v-col>
-        <v-col cols="4">
+        <v-col cols="3">
           <v-switch
             @change="(newVal) => setValue('resources.lock_domain', newVal)"
             :value="instance.resources.lock_domain"
             label="Lock_domain"
+          />
+        </v-col>
+        <v-col cols="3">
+          <v-switch
+            @change="(newVal) => setValue('data.existing', newVal)"
+            :value="instance.data.existing"
+            label="Existing"
           />
         </v-col>
       </v-row>
@@ -172,6 +179,8 @@ const getDefaultInstance = () => ({
     who_is_privacy: false,
     lock_domain: true,
   },
+  data: {},
+  config: {},
 });
 export default {
   name: "instance-opensrs-create",
