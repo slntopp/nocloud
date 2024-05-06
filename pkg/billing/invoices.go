@@ -364,6 +364,7 @@ payment:
 				log.Error("Failed to get instance to start", zap.Error(err), zap.String("instance", i))
 				continue
 			}
+			instOld.Uuid = instOld.Key
 			// Set auto_start to true. After next driver monitoring instance will be started
 			instNew := graph.Instance{
 				Instance: proto.Clone(instOld.Instance).(*ipb.Instance),
@@ -388,6 +389,7 @@ payment:
 				log.Error("Failed to get instance to renew", zap.Error(err))
 				continue
 			}
+			instOld.Uuid = instOld.Key
 			instNew := proto.Clone(instOld.Instance).(*ipb.Instance)
 			plan, err := s.plans.Get(ctx, &pb.Plan{Uuid: instOld.GetBillingPlan().GetUuid()})
 			if err != nil {
@@ -547,6 +549,7 @@ returning:
 				log.Error("Failed to get instance to renew", zap.Error(err))
 				continue
 			}
+			instOld.Uuid = instOld.Key
 			instNew := proto.Clone(instOld.Instance).(*ipb.Instance)
 			plan, err := s.plans.Get(ctx, &pb.Plan{Uuid: instOld.GetBillingPlan().GetUuid()})
 			if err != nil {
@@ -607,6 +610,7 @@ quit:
 		return nil, status.Error(codes.Internal, "Failed to patch status. Actions should be applied, but invoice wasn't updated")
 	}
 
+	log.Info("Finished invoice update status")
 	resp = connect.NewResponse(old)
 	return resp, nil
 }
