@@ -344,6 +344,7 @@ payment:
 			log.Error("Failed to get transaction", zap.Error(err))
 			continue
 		}
+		tr.Uuid = trId
 		tr.Exec = nowBeforeActions // Setting transaction process time. Should trigger transaction process
 		_, err = s.UpdateTransaction(ctx, connect.NewRequest(tr))
 		if err != nil {
