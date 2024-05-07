@@ -275,7 +275,7 @@ const selectedInstances = ref([]);
 const newInvoice = ref({
   account: null,
   status: "DRAFT",
-  type: "INSTANCE_RENEWAL",
+  type: "NO_ACTION",
   total: 0,
   items: [{ price: null, title: "", amount: 1, unit: "Pcs" }],
   deadline: formatSecondsToDateString(Date.now() / 1000 + 86400 * 30),
@@ -293,6 +293,7 @@ const isStatusChangeLoading = ref(false);
 const newStatus = ref("");
 
 const types = [
+  { id: "NO_ACTION", title: "No action" },
   { id: "INSTANCE_START", title: "Instance start" },
   { id: "INSTANCE_RENEWAL", title: "Instance renewal" },
   {
