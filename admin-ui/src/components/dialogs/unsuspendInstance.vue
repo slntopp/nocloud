@@ -17,6 +17,7 @@
           label="Unsuspend until"
           :min="formatSecondsToDateString(Date.now() / 1000 + 86400)"
           v-model="unsuspendTo"
+          clearable
         />
         <v-card-actions class="d-flex justify-end">
           <v-btn class="mr-2" @click="isModalOpen = false"> Cancel </v-btn>

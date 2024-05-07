@@ -405,7 +405,7 @@ export default {
       }
     },
     unsuspendInstance(action, date) {
-      this.sendAction({ action }, { date });
+      this.sendAction({ action }, { date: date || undefined });
     },
     async sendInvoice() {
       this.isInvoiceLoading = true;
