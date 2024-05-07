@@ -1,5 +1,5 @@
 <template>
-  <instance-control-btn hint="Freeze">
+  <instance-control-btn hint="unsuspend">
     <v-dialog v-model="isModalOpen" max-width="500">
       <template v-slot:activator="{ on, attrs }">
         <v-btn
@@ -9,18 +9,18 @@
           v-bind="attrs"
           v-on="on"
         >
-          <v-icon>mdi-snowflake</v-icon>
+          <v-icon>mdi-weather-sunny</v-icon>
         </v-btn>
       </template>
       <v-card class="pa-5" color="background-light">
         <date-picker
-          label="Frozen until"
+          label="Unsuspend until"
           :min="formatSecondsToDateString(Date.now() / 1000 + 86400)"
-          v-model="freezeTo"
+          v-model="unsuspendTo"
         />
         <v-card-actions class="d-flex justify-end">
           <v-btn class="mr-2" @click="isModalOpen = false"> Cancel </v-btn>
-          <v-btn class="mr-2" @click="freeze(false)"> Freeze </v-btn>
+          <v-btn class="mr-2" @click="unsuspend(false)"> unsuspend </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -39,12 +39,12 @@ const emit = defineEmits(["click"]);
 const { disabled, loading } = toRefs(props);
 
 const isModalOpen = ref(false);
-const freezeTo = ref();
+const unsuspendTo = ref();
 
-const freeze = async () => {
+const unsuspend = async () => {
   isModalOpen.value = false;
 
-  emit("click", new Date(freezeTo.value).getTime() / 1000);
+  emit("click", new Date(unsuspendTo.value).getTime() / 1000);
 };
 </script>
 

@@ -238,9 +238,6 @@ export default {
           this.isSaveLoading = false;
         });
     },
-    async freezeInstance(date) {
-      this.sendAction(this.freezeBtn, {date})
-    },
     onSaveClick() {
       if (!this.isChanged) {
         return;
@@ -407,6 +404,9 @@ export default {
         this.runningActionName = "";
       }
     },
+    unsuspendInstance(action, date) {
+      this.sendAction({ action }, { date });
+    },
     async sendInvoice() {
       this.isInvoiceLoading = true;
       try {
@@ -448,15 +448,6 @@ export default {
             },
       ];
     },
-    freezeBtn() {
-      return {
-        action: "freeze",
-        title: "freeze",
-        type: "method",
-        method: this.freezeInstance,
-        component: () => import("@/components/dialogs/freezeInstance.vue"),
-      };
-    },
     vmControlBtns() {
       const types = {
         ione: [
@@ -474,10 +465,13 @@ export default {
           },
           {
             action: "resume",
+            title: "Unsuspend",
             disabled: this.ioneActions?.resume,
-            icon: "mdi-play",
+            type: "method",
+            component: () =>
+              import("@/components/dialogs/unsuspendInstance.vue"),
+            method: (date) => this.unsuspendInstance("resume", date),
           },
-          this.freezeBtn,
           {
             action: "suspend",
             disabled: this.ioneActions?.suspend,
@@ -505,8 +499,12 @@ export default {
             disabled: this.ovhActions?.start,
           },
           { action: "poweroff", disabled: true, icon: "mdi-stop" },
-          { action: "resume", disabled: true, icon: "mdi-play" },
-          this.freezeBtn,
+          {
+            action: "resume",
+            title: "Unsuspend",
+            disabled: true,
+            icon: "mdi-weather-sunny",
+          },
           { action: "suspend", disabled: true, icon: "mdi-power-sleep" },
           { action: "reboot", disabled: true, icon: "mdi-restart" },
           {
@@ -526,11 +524,13 @@ export default {
           },
           {
             action: "resume_vm",
-            title: "resume",
-            icon: "mdi-play",
             disabled: this.ovhActions?.resume,
+            title: "Unsuspend",
+            type: "method",
+            component: () =>
+              import("@/components/dialogs/unsuspendInstance.vue"),
+            method: (date) => this.unsuspendInstance("resume_vm", date),
           },
-          this.freezeBtn,
           {
             action: "suspend_vm",
             title: "suspend",
@@ -575,7 +575,6 @@ export default {
             disabled: this.ovhActions?.resume,
             icon: "mdi-play",
           },
-          this.freezeBtn,
           {
             action: "suspend",
             disabled: this.ovhActions?.suspend,
@@ -617,7 +616,6 @@ export default {
             icon: "mdi-stop",
             disabled: this.emptyActions?.stop,
           },
-          this.freezeBtn,
           {
             action: "change_state",
             data: { state: 6 },
@@ -654,7 +652,6 @@ export default {
             icon: "mdi-restart",
             disabled: !this.keywebActions?.reboot,
           },
-          this.freezeBtn,
           {
             action: "suspend",
             title: "suspend",
@@ -665,7 +662,10 @@ export default {
             action: "unsuspend",
             title: "unsuspend",
             disabled: !this.keywebActions?.unsuspend,
-            icon: "mdi-weather-sunny",
+            type: "method",
+            component: () =>
+              import("@/components/dialogs/unsuspendInstance.vue"),
+            method: (date) => this.unsuspendInstance("unsuspend", date),
           },
           {
             action: "vnc",
