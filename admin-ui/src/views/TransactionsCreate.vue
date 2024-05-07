@@ -423,7 +423,7 @@ export default {
       });
     },
     refreshData() {
-      this.transaction.service = this.transaction.service.uuid;
+      this.transaction.service = this.transaction.service?.uuid;
 
       this.transaction.exec = this.exec;
       this.transaction.total *= 1;

@@ -47,7 +47,7 @@
         <v-text-field
           readonly
           label="Due to date/next payment"
-          :value="formatSecondsToDate(template.data.expiry?.expiredate, true)"
+          :value="formatSecondsToDate(template.data.next_payment_date, true)"
         />
       </v-col>
     </v-row>
