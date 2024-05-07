@@ -214,9 +214,6 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		sum := 0.0
 		for _, item := range req.Msg.GetItems() {
 			sum += item.GetPrice()
-			if item.Instance == "" {
-				return nil, status.Error(codes.InvalidArgument, "Missing instance in item")
-			}
 		}
 		if sum != t.GetTotal() {
 			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
@@ -769,11 +766,8 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		sum := 0.0
 		for _, item := range t.Items {
 			sum += item.GetPrice()
-			if item.Instance == "" {
-				return nil, status.Error(codes.InvalidArgument, "Missing instance in item")
-			}
 		}
-		if float64(sum) != t.Total {
+		if sum != t.Total {
 			return nil, status.Error(codes.InvalidArgument, "Sum of items does not match total")
 		}
 	}
