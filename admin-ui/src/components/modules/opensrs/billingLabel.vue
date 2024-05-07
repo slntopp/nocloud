@@ -25,7 +25,7 @@ const tariffPrice = ref(
 );
 
 const dueDate = computed(() =>
-  formatSecondsToDate(template.value.data.expiry?.expiredate)
+  formatSecondsToDate(template.value.data.next_payment_date)
 );
 </script>
 

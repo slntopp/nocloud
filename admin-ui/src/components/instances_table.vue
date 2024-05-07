@@ -363,9 +363,7 @@ export default {
     getExpirationDate(inst) {
       if (isInstancePayg(inst)) return "PayG";
       if (this.getPeriod(inst) === "One time") return "One time";
-      return (
-        inst.data.expiry?.expiredate || inst.data.next_payment_date || "Unknown"
-      );
+      return inst.data.next_payment_date || "Unknown";
     },
     getService({ service }) {
       return (
