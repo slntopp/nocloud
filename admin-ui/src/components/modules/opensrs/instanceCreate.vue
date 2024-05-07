@@ -255,8 +255,6 @@ const getDefaultInstance = () => ({
     who_is_privacy: false,
     lock_domain: true,
   },
-  data: {},
-  config: {},
   billing_plan: {},
 });
 
