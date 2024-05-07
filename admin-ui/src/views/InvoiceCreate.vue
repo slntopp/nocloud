@@ -88,12 +88,12 @@
           </v-row>
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Amount</v-subheader>
+              <v-subheader>Total</v-subheader>
             </v-col>
             <v-col cols="9">
               <v-text-field
                 type="number"
-                label="Amount"
+                label="Total"
                 :suffix="accountCurrency?.title"
                 v-model="newInvoice.total"
                 :disabled="!isBalanceInvoice"
@@ -277,7 +277,7 @@ const newInvoice = ref({
   status: "DRAFT",
   type: "INSTANCE_RENEWAL",
   total: 0,
-  items: [{ amount: null, title: "" }],
+  items: [{ price: null, title: "", amount: 1, unit: "Pcs" }],
   deadline: formatSecondsToDateString(Date.now() / 1000 + 86400 * 30),
   meta: {
     note: "",
@@ -434,7 +434,13 @@ const convertPrice = (price) => {
 };
 
 const addInvoiceItem = () => {
-  newInvoice.value.items.push({ title: "", amount: 0, instance: "" });
+  newInvoice.value.items.push({
+    title: "",
+    price: 0,
+    instance: "",
+    amount: 1,
+    unit: "Pcs",
+  });
 };
 
 const deleteInvoiceItem = (index) => {
@@ -467,9 +473,11 @@ const onChangeInstance = () => {
       newItems.push(existedProduct);
     } else {
       newItems.push({
-        amount: productPrice,
+        price: productPrice,
+        amount: 1,
         title: productTitle,
         instance: instance.uuid,
+        unit: "Pcs",
       });
     }
   });
@@ -536,10 +544,11 @@ watch(
       return;
     }
     newInvoice.value.total = newInvoice.value.items?.reduce(
-      (acc, i) => acc + Number(i.amount),
+      (acc, i) => acc + Number(i.price) * Number(i.amount),
       0
     );
-  }
+  },
+  { deep: true }
 );
 </script>
 

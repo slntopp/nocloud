@@ -6,18 +6,30 @@
     :sort-by="sortBy"
     sort-desc
   >
-    <template v-slot:[`item.amount`]="{ item }">
+    <template v-slot:[`item.price`]="{ item }">
       <v-text-field
         type="number"
         :rules="!readonly ? generalRule : []"
         :readonly="readonly"
         :suffix="accountCurrency?.title"
-        v-model.number="item.amount"
+        v-model.number="item.price"
       />
     </template>
 
     <template v-slot:[`item.title`]="{ item }">
       <v-text-field :rules="generalRule" v-model="item.title" />
+    </template>
+
+    <template v-slot:[`item.amount`]="{ item }">
+      <v-text-field
+        type="number"
+        v-model.number="item.amount"
+        :rules="generalRule"
+      />
+    </template>
+
+    <template v-slot:[`item.unit`]="{ item }">
+      <v-select :rules="generalRule" v-model="item.unit" :items="unitItems" />
     </template>
 
     <template v-slot:[`item.instance`]="{ item }">
@@ -56,13 +68,16 @@ const emit = defineEmits("click:delete");
 const store = useStore();
 
 const generalRule = ref([(v) => !!v || "This field is required!"]);
+const unitItems = ref(["Pcs", "Szt", "Hour`s"]);
 
 const headers = computed(() =>
   [
     showDate.value && { text: "Date", value: "date" },
     { text: "Instance", value: "instance", sortable: false, width: 200 },
     { text: "Title", value: "title", sortable: false },
-    { text: "Amount", value: "amount", sortable: false, width: 200 },
+    { text: "Unit price", value: "price", sortable: false, width: 200 },
+    { text: "Amount", value: "amount", sortable: false },
+    { text: "Unit", value: "unit", sortable: false },
     showDelete.value && {
       text: "Actions",
       value: "actions",
