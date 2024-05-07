@@ -213,7 +213,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if len(req.Msg.GetItems()) > 0 {
 		sum := 0.0
 		for _, item := range req.Msg.GetItems() {
-			sum += item.GetAmount()
+			sum += item.GetPrice()
 			if item.Instance == "" {
 				return nil, status.Error(codes.InvalidArgument, "Missing instance in item")
 			}
@@ -768,7 +768,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if len(t.GetItems()) > 0 {
 		sum := 0.0
 		for _, item := range t.Items {
-			sum += item.GetAmount()
+			sum += item.GetPrice()
 			if item.Instance == "" {
 				return nil, status.Error(codes.InvalidArgument, "Missing instance in item")
 			}
