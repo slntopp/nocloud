@@ -213,11 +213,11 @@ const updatePrice = (item, isAccount) => {
 const getBillingItems = () => {
   const items = [];
 
-  if (template.value.billingPlan.resources[0]) {
-    const { price, kind, period, key } =
-      template.value.billingPlan.resources[0];
+  if (template.value.product) {
+    const { price, kind, period, title } =
+      template.value.billingPlan.products[template.value.product];
     items.push({
-      name: key,
+      name: title,
       price,
       accountPrice: toAccountPrice(price),
       path: `billingPlan.resources.0.price`,

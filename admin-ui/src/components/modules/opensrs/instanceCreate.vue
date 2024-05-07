@@ -14,6 +14,19 @@
             :value="instance.title"
           />
         </v-col>
+
+        <v-col cols="6">
+          <v-autocomplete
+            label="Price model"
+            item-text="title"
+            item-value="uuid"
+            :value="instance.billing_plan"
+            :items="plans"
+            :rules="planRules"
+            return-object
+            @change="changeBilling"
+          />
+        </v-col>
       </v-row>
 
       <v-row>
@@ -148,15 +161,77 @@
         :sp-uuid="spUuid"
         @input:period="setValue('resources.period', $event)"
         @input:domain="setValue('resources.domain', $event)"
+        @input:price="setValue('resources.price', $event)"
       />
     </v-card>
   </div>
 </template>
 
-<script>
+<script setup>
 import DomainsTable from "@/components/domains_table.vue";
+import { onMounted, toRefs, watch } from "vue";
+import useCurrency from "@/hooks/useCurrency";
+import { getMarginedValue } from "@/functions";
+
+const props = defineProps([
+  "plans",
+  "instance",
+  "planRules",
+  "spUuid",
+  "isEdit",
+]);
+const { instance, planRules, plans, spUuid } = toRefs(props);
+
+const emit = defineEmits(["set-instance", "set-value"]);
+
+const { convertFrom } = useCurrency();
+
+onMounted(() => {
+  emit("set-instance", getDefaultInstance());
+});
+
+const setValue = (key, value) => {
+  emit("set-value", { key, value });
+};
+const changeBilling = (val) => {
+  setValue("billing_plan", val);
+};
+
+watch(
+  () => instance.value.resources.price,
+  () => {
+    if (instance.value.billing_plan.uuid) {
+      const planCopy = JSON.parse(
+        JSON.stringify(
+          plans.value.find((p) => p.uuid === instance.value.billing_plan.uuid)
+        )
+      );
+
+      const domain = instance.value.resources.domain;
+      const price = convertFrom(+instance.value.resources.price, "USD");
+
+      planCopy.products[domain] = {
+        period: (instance.value.resources.period || 0) * 86400 * 365,
+        price: getMarginedValue(planCopy.fee, price),
+        kind: "PREPAID",
+        title: `Domain ${domain}`,
+        meta: {
+          basePrice: price,
+        },
+      };
+
+      changeBilling(planCopy);
+      setValue("product", domain);
+    }
+  }
+);
+</script>
+
+<script>
 const getDefaultInstance = () => ({
   title: "instance",
+  config: {},
+  data: {},
   resources: {
     user: {
       first_name: "",
@@ -175,27 +250,18 @@ const getDefaultInstance = () => ({
     reg_password: "",
     domain: "",
     period: 1,
+    price: 0,
     auto_renew: true,
     who_is_privacy: false,
     lock_domain: true,
   },
   data: {},
   config: {},
+  billing_plan: {},
 });
+
 export default {
   name: "instance-opensrs-create",
-  components: { DomainsTable },
-  props: ["plans", "instance", "planRules", "sp-uuid", "is-edit"],
-  mounted() {
-    if (!this.isEdit) {
-      this.$emit("set-instance", getDefaultInstance());
-    }
-  },
-  methods: {
-    setValue(key, value) {
-      this.$emit("set-value", { key, value });
-    },
-  },
 };
 </script>
 
