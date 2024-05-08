@@ -431,6 +431,17 @@ export default {
     },
     baseVmControls() {
       return [
+        this.isFreezed
+          ? {
+              action: "unfreeze",
+              title: "Unfreeze",
+              icon: "mdi-snowflake-off",
+            }
+          : {
+              action: "freeze",
+              title: "Freeze",
+              icon: "mdi-snowflake",
+            },
         this.isDetached
           ? {
               action: "attach",
@@ -886,6 +897,9 @@ export default {
     },
     isDetached() {
       return this.template?.status?.toLowerCase() === "detached";
+    },
+    isFreezed() {
+      return this.template.data.freeze;
     },
     product() {
       switch (this.template.type) {
