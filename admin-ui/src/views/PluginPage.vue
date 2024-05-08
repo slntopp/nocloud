@@ -25,7 +25,7 @@ const store = useStore();
 const plugin = ref();
 
 const url = computed(() => route.params.url || route.query.url);
-const isMaximized = computed(() => route.query.fullscrean);
+const isMaximized = computed(() => route.query.fullscrean === "true");
 const params = computed(() => {
   const result = {
     ...route.params.params,
