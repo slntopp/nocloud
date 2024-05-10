@@ -404,6 +404,9 @@ export default {
         this.runningActionName = "";
       }
     },
+    unsuspendInstance(action, date) {
+      this.sendAction({ action }, { date: date || undefined });
+    },
     async sendInvoice() {
       this.isInvoiceLoading = true;
       try {
@@ -428,6 +431,17 @@ export default {
     },
     baseVmControls() {
       return [
+        this.isFreezed
+          ? {
+              action: "unfreeze",
+              title: "Unfreeze",
+              icon: "mdi-snowflake-off",
+            }
+          : {
+              action: "freeze",
+              title: "Freeze",
+              icon: "mdi-snowflake",
+            },
         this.isDetached
           ? {
               action: "attach",
@@ -462,8 +476,12 @@ export default {
           },
           {
             action: "resume",
+            title: "Unsuspend",
             disabled: this.ioneActions?.resume,
-            icon: "mdi-play",
+            type: "method",
+            component: () =>
+              import("@/components/dialogs/unsuspendInstance.vue"),
+            method: (date) => this.unsuspendInstance("resume", date),
           },
           {
             action: "suspend",
@@ -492,7 +510,12 @@ export default {
             disabled: this.ovhActions?.start,
           },
           { action: "poweroff", disabled: true, icon: "mdi-stop" },
-          { action: "resume", disabled: true, icon: "mdi-play" },
+          {
+            action: "resume",
+            title: "Unsuspend",
+            disabled: true,
+            icon: "mdi-weather-sunny",
+          },
           { action: "suspend", disabled: true, icon: "mdi-power-sleep" },
           { action: "reboot", disabled: true, icon: "mdi-restart" },
           {
@@ -512,9 +535,12 @@ export default {
           },
           {
             action: "resume_vm",
-            title: "resume",
-            icon: "mdi-play",
             disabled: this.ovhActions?.resume,
+            title: "Unsuspend",
+            type: "method",
+            component: () =>
+              import("@/components/dialogs/unsuspendInstance.vue"),
+            method: (date) => this.unsuspendInstance("resume_vm", date),
           },
           {
             action: "suspend_vm",
@@ -647,7 +673,10 @@ export default {
             action: "unsuspend",
             title: "unsuspend",
             disabled: !this.keywebActions?.unsuspend,
-            icon: "mdi-weather-sunny",
+            type: "method",
+            component: () =>
+              import("@/components/dialogs/unsuspendInstance.vue"),
+            method: (date) => this.unsuspendInstance("unsuspend", date),
           },
           {
             action: "vnc",
@@ -868,6 +897,9 @@ export default {
     },
     isDetached() {
       return this.template?.status?.toLowerCase() === "detached";
+    },
+    isFreezed() {
+      return this.template.data.freeze;
     },
     product() {
       switch (this.template.type) {

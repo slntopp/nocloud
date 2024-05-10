@@ -23,7 +23,7 @@
     >
       <template v-slot:[`item.uuid`]="{ value }">
         <router-link :to="{ name: 'Instance', params: { instanceId: value } }">
-          {{ getInstance(value)?.title || value }}
+          {{ getShortName(getInstance(value)?.title || value, 100) }}
         </router-link>
       </template>
       <template v-slot:[`item.totalDefaultPreview`]="{ item }">
@@ -40,6 +40,7 @@ import NocloudTable from "@/components/table.vue";
 import { useStore } from "@/store";
 import DatePicker from "@/components/ui/datePicker.vue";
 import useCurrency from "@/hooks/useCurrency";
+import { getShortName } from "@/functions";
 
 const store = useStore();
 const { convertTo, defaultCurrency } = useCurrency();
@@ -60,7 +61,7 @@ const reportsHeaders = [
 ];
 
 const fetchData = () => {
-  store.dispatch("services/fetch",{showDeleted:true});
+  store.dispatch("services/fetch", { showDeleted: true });
 };
 
 onMounted(() => {

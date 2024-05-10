@@ -573,7 +573,15 @@ export default {
       return document.documentElement.clientWidth;
     },
     productsHide() {
-      const hidden = ["ovh", "goget", "acronis", "cpanel", "keyweb", "openai"];
+      const hidden = [
+        "ovh",
+        "goget",
+        "acronis",
+        "cpanel",
+        "keyweb",
+        "openai",
+        "opensrs",
+      ];
       return hidden.some((h) => this.plan.type?.includes(h));
     },
     filteredProducts() {

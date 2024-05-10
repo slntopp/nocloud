@@ -24,7 +24,7 @@
           :target="openInNewTab ? '_blank' : null"
           :to="{ name: 'Instance', params: { instanceId: item.uuid } }"
         >
-          {{ item.title }}
+          {{ getShortName(item.title, 45) }}
         </router-link>
         <login-in-account-icon
           :uuid="getAccount(item).uuid"
@@ -39,13 +39,13 @@
         v-if="!isAccountsLoading"
         :to="{ name: 'Account', params: { accountId: getAccount(item)?.uuid } }"
       >
-        {{ getValue("access", item) }}
+        {{ getShortName(getValue("access", item)) }}
       </router-link>
       <v-skeleton-loader type="text" v-else />
     </template>
 
     <template v-slot:[`item.email`]="{ item }">
-      {{ getValue("email", item) }}
+      {{ getShortName(getValue("email", item)) }}
     </template>
 
     <template v-slot:[`item.state`]="{ item }">
@@ -62,7 +62,7 @@
           },
         }"
       >
-        {{ getValue("product", item) }}
+        {{ getShortName(getValue("product", item)) }}
       </router-link>
     </template>
 
@@ -92,13 +92,13 @@
 
     <template v-slot:[`item.service`]="{ item, value }">
       <router-link :to="{ name: 'Service', params: { serviceId: value } }">
-        {{ getValue("service", item) }}
+        {{ getShortName(getValue("service", item)) }}
       </router-link>
     </template>
 
     <template v-slot:[`item.sp`]="{ item, value }">
       <router-link :to="{ name: 'ServicesProvider', params: { uuid: value } }">
-        {{ getValue("sp", item) }}
+        {{ getShortName(getValue("sp", item)) }}
       </router-link>
     </template>
 
@@ -110,7 +110,7 @@
       <router-link
         :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
       >
-        {{ value }}
+        {{ getShortName(value) }}
       </router-link>
     </template>
 
@@ -173,6 +173,7 @@ import {
   getState,
   isInstancePayg,
   formatDateToTimestamp,
+  getShortName,
 } from "@/functions";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import searchMixin from "@/mixins/search";
@@ -258,6 +259,7 @@ export default {
   },
   methods: {
     formatSecondsToDate,
+    getShortName,
     sortInstances(items, sortBy, sortDesc) {
       return items.sort((a, b) => {
         for (let i = 0; i < sortBy.length; i++) {
@@ -361,9 +363,7 @@ export default {
     getExpirationDate(inst) {
       if (isInstancePayg(inst)) return "PayG";
       if (this.getPeriod(inst) === "One time") return "One time";
-      return (
-        inst.data.expiry?.expiredate || inst.data.next_payment_date || "Unknown"
-      );
+      return inst.data.next_payment_date || "Unknown";
     },
     getService({ service }) {
       return (

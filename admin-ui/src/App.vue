@@ -1,390 +1,444 @@
 <template>
-  <v-app
-    v-if="!isVNC"
-    :style="{ background: $vuetify.theme.themes[theme].background }"
-  >
-    <v-navigation-drawer
-      app
-      permanent
-      :color="asideColor"
-      :mini-variant="isMenuMinimize"
+  <div>
+    <v-app
+      :style="{
+        background: $vuetify.theme.themes[theme].background,
+        width: isFullscrean ? '0px' : undefined,
+        height: isFullscrean ? '0px' : undefined,
+      }"
     >
-      <router-link to="/">
-        <!-- <div class="d-flex gg-15px align-center justify-center" :class="[miniNav ? 'pa-3' : 'pa-5']"> -->
-        <div class="d-flex gg-15px align-center justify-center pa-5">
-          <template v-if="!config.logoSrc">
-            <v-img
-              alt=""
-              src="@/assets/logo.svg"
-              max-height="42px"
-              max-width="48px"
-              contain
-            ></v-img>
+      <div
+        v-if="isFullscreanAvailable"
+        style="position: fixed; right: 50vw; z-index: 100; margin-top: 5vh"
+      >
+        <v-btn @click="toggleFullScrean" x-large icon>
+          <v-icon x-large>{{
+            isFullscrean ? "mdi-fullscreen-exit" : "mdi-fullscreen"
+          }}</v-icon>
+        </v-btn>
+      </div>
 
-            <v-img
-              v-if="!isMenuMinimize"
-              transition="fade-transition"
-              alt=""
-              src="@/assets/logoTitle.svg"
-              max-height="24px"
-              max-width="122px"
-              contain
-            ></v-img>
-          </template>
-          <template v-else>
-            <v-img
-              v-if="!isMenuMinimize"
-              transition="fade-transition"
-              alt=""
-              :src="config.logoSrc"
-              contain
-            ></v-img>
-          </template>
-        </div>
-      </router-link>
-
-      <v-list style="height: 100%" v-if="isLoggedIn" dense :dark="asideDark">
-        <div
-          :class="{
-            'd-flex': true,
-            'align-center': true,
-            'justify-space-between': !isMenuMinimize,
-            'flex-column-reverse': isMenuMinimize,
-          }"
+      <template v-if="!isFullscrean">
+        <v-navigation-drawer
+          app
+          permanent
+          :color="asideColor"
+          :mini-variant="isMenuMinimize"
         >
-          <v-subheader>MAIN</v-subheader>
-          <v-btn @click="isMenuMinimize = !isMenuMinimize" icon>
-            <v-icon v-if="isMenuMinimize">mdi-arrow-right</v-icon>
-            <v-icon v-else>mdi-arrow-left</v-icon>
-          </v-btn>
-        </div>
+          <router-link to="/">
+            <!-- <div class="d-flex gg-15px align-center justify-center" :class="[miniNav ? 'pa-3' : 'pa-5']"> -->
+            <div class="d-flex gg-15px align-center justify-center pa-5">
+              <template v-if="!config.logoSrc">
+                <v-img
+                  alt=""
+                  src="@/assets/logo.svg"
+                  max-height="42px"
+                  max-width="48px"
+                  contain
+                ></v-img>
 
-        <div style="height: 100%" id="drawer-menu-hover">
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Dashboard' }">
-            <v-list-item-icon>
-              <v-icon>mdi-view-dashboard-variant</v-icon>
-            </v-list-item-icon>
+                <v-img
+                  v-if="!isMenuMinimize"
+                  transition="fade-transition"
+                  alt=""
+                  src="@/assets/logoTitle.svg"
+                  max-height="24px"
+                  max-width="122px"
+                  contain
+                ></v-img>
+              </template>
+              <template v-else>
+                <v-img
+                  v-if="!isMenuMinimize"
+                  transition="fade-transition"
+                  alt=""
+                  :src="config.logoSrc"
+                  contain
+                ></v-img>
+              </template>
+            </div>
+          </router-link>
 
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Dashboard") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Accounts' }">
-            <v-list-item-icon>
-              <v-icon>mdi-account-multiple</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Accounts") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Instances' }">
-            <v-list-item-icon>
-              <v-icon>mdi-server</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Instances") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Showcases' }">
-            <v-list-item-icon>
-              <v-icon>mdi-store-search</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Showcases") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-subheader>BILLING</v-subheader>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Plans' }">
-            <v-list-item-icon>
-              <v-icon>mdi-script-text</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{
-                navTitle("Price Models")
-              }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Addons' }">
-            <v-list-item-icon>
-              <v-icon>mdi-tab-plus</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Addons") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Transactions' }">
-            <v-list-item-icon>
-              <v-icon>mdi-abacus</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{
-                navTitle("Transactions")
-              }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Invoices' }">
-            <v-list-item-icon>
-              <v-icon>mdi-invoice-list</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Invoices") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Currencies' }">
-            <v-list-item-icon>
-              <v-icon>mdi-cash</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{
-                navTitle("Currencies")
-              }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Reports' }">
-            <v-list-item-icon>
-              <v-icon>mdi-chart-gantt</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Reports") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-subheader v-if="plugins?.length > 0">PLUGINS</v-subheader>
-
-          <v-list-item
-            v-bind="listItemBind"
-            v-for="plugin of plugins"
-            :key="plugin.url"
-            :to="{ name: 'Plugin', params: plugin, query: { url: plugin.url } }"
+          <v-list
+            style="height: 100%"
+            v-if="isLoggedIn"
+            dense
+            :dark="asideDark"
           >
-            <v-list-item-icon>
-              <v-icon>mdi-{{ plugin.icon }}</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{
-                navTitle(plugin.title)
-              }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-subheader>SYSTEM</v-subheader>
-
-          <v-list-item
-            v-bind="listItemBind"
-            :to="{ name: 'Chats' }"
-            @click="chatClick"
-          >
-            <v-list-item-icon>
-              <v-icon
-                :color="unreadChatsCount && isMenuMinimize ? 'red' : undefined"
-                >mdi-chat</v-icon
-              >
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title
-                >{{ navTitle("Chats") }}
-                <v-chip
-                  color="red"
-                  class="pa-2"
-                  v-if="unreadChatsCount"
-                  x-small
-                >
-                  {{ unreadChatsCount }}
-                </v-chip>
-              </v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
-            <v-list-item-icon>
-              <v-icon>mdi-history</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Event log") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'DNS manager' }">
-            <v-list-item-icon>
-              <v-icon>mdi-dns</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{
-                navTitle("DNS manager")
-              }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Namespaces' }">
-            <v-list-item-icon>
-              <v-icon>mdi-form-textbox</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{
-                navTitle("Groups (NameSpaces)")
-              }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item
-            v-bind="listItemBind"
-            :to="{ name: 'ServicesProviders' }"
-          >
-            <v-list-item-icon>
-              <v-icon>mdi-database-marker</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{
-                navTitle("Services Providers")
-              }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item
-            v-bind="listItemBind"
-            :to="{ name: 'Services' }"
-            @click.ctrl="() => (easterEgg = true)"
-          >
-            <v-list-item-icon>
-              <v-icon :color="easterEgg ? 'green darker-2' : undefined"
-                >mdi-alien</v-icon
-              >
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Services") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-
-          <v-list-item v-bind="listItemBind" :to="{ name: 'Settings' }">
-            <v-list-item-icon>
-              <v-icon>mdi-cogs</v-icon>
-            </v-list-item-icon>
-
-            <v-list-item-content>
-              <v-list-item-title>{{ navTitle("Settings") }}</v-list-item-title>
-            </v-list-item-content>
-          </v-list-item>
-        </div>
-      </v-list>
-    </v-navigation-drawer>
-
-    <v-app-bar app color="background" elevation="0">
-      <v-row style="width: 100%" justify="center" align="center">
-        <template v-if="isLoggedIn">
-          <v-col>
-            <app-search />
-          </v-col>
-          <v-col class="d-flex justify-start">
-            <v-btn
-              v-if="btnStates.visible"
-              :disabled="btnStates.disabled"
-              color="background-light"
-              fab
-              small
-              :loading="btnLoading"
-              @click="() => this.$store.dispatch('reloadBtn/onclick')"
+            <div
+              :class="{
+                'd-flex': true,
+                'align-center': true,
+                'justify-space-between': !isMenuMinimize,
+                'flex-column-reverse': isMenuMinimize,
+              }"
             >
-              <v-icon>mdi-reload</v-icon>
-            </v-btn>
-          </v-col>
-        </template>
-        <v-col class="d-flex justify-end align-center">
-          <languages v-if="false" />
-          <themes />
-          <v-menu v-if="isLoggedIn" offset-y transition="slide-y-transition">
-            <template v-slot:activator="{ on, attrs }">
-              <v-btn
-                class="mx-2"
-                fab
-                color="background-light"
-                v-bind="attrs"
-                v-on="on"
-              >
-                <v-icon dark> mdi-account </v-icon>
+              <v-subheader>MAIN</v-subheader>
+              <v-btn @click="isMenuMinimize = !isMenuMinimize" icon>
+                <v-icon v-if="isMenuMinimize">mdi-arrow-right</v-icon>
+                <v-icon v-else>mdi-arrow-left</v-icon>
               </v-btn>
-            </template>
-            <v-list dence min-width="250px">
-              <v-list-item>
+            </div>
+
+            <div style="height: 100%" id="drawer-menu-hover">
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Dashboard' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-view-dashboard-variant</v-icon>
+                </v-list-item-icon>
+
                 <v-list-item-content>
-                  <v-list-item-title class="text-h6">
-                    {{ userdata.title }}
-                  </v-list-item-title>
-                  <v-list-item-subtitle
-                    >#{{ userdata.uuid }}</v-list-item-subtitle
-                  >
+                  <v-list-item-title>{{
+                    navTitle("Dashboard")
+                  }}</v-list-item-title>
                 </v-list-item-content>
               </v-list-item>
-              <v-list-item>
-                <balance title="Balance: " loged-in-user />
-              </v-list-item>
-              <v-divider></v-divider>
-              <v-list-item @click="logoutHandler">
-                <v-list-item-title>Logout</v-list-item-title>
-              </v-list-item>
-            </v-list>
-          </v-menu>
-        </v-col>
-      </v-row>
-      <v-spacer></v-spacer>
-    </v-app-bar>
 
-    <instances-table-modal
-      v-if="overlay.uuid"
-      type="menu"
-      :uuid="overlay.uuid"
-      :visible="overlay.isVisible"
-      @close="overlay.isVisible = false"
-      @hover="hoverOverlay"
-    >
-      <template #activator>
-        <v-btn
-          outlined
-          color="success"
-          :style="{
-            position: 'absolute',
-            top: `${overlay.y + 80}px`,
-            right: `30px`,
-            zIndex: 100,
-            visibility: 'hidden',
-          }"
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Accounts' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-account-multiple</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Accounts")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Instances' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-server</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Instances")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Showcases' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-store-search</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Showcases")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-subheader>BILLING</v-subheader>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Plans' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-script-text</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Price Models")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Addons' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-tab-plus</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Addons")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Transactions' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-abacus</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Transactions")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Invoices' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-invoice-list</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Invoices")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Currencies' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-cash</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Currencies")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Reports' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-chart-gantt</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Reports")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-subheader v-if="plugins?.length > 0">PLUGINS</v-subheader>
+
+              <v-list-item
+                v-bind="listItemBind"
+                v-for="plugin of plugins"
+                :key="plugin.url"
+                :to="{
+                  name: 'Plugin',
+                  params: plugin,
+                  query: { url: plugin.url, fullscrean: false },
+                }"
+              >
+                <v-list-item-icon>
+                  <v-icon>mdi-{{ plugin.icon }}</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle(plugin.title)
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-subheader>SYSTEM</v-subheader>
+
+              <v-list-item
+                v-bind="listItemBind"
+                :to="{ name: 'Chats' }"
+                @click="chatClick"
+              >
+                <v-list-item-icon>
+                  <v-icon
+                    :color="
+                      unreadChatsCount && isMenuMinimize ? 'red' : undefined
+                    "
+                    >mdi-chat</v-icon
+                  >
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title
+                    >{{ navTitle("Chats") }}
+                    <v-chip
+                      color="red"
+                      class="pa-2"
+                      v-if="unreadChatsCount"
+                      x-small
+                    >
+                      {{ unreadChatsCount }}
+                    </v-chip>
+                  </v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'History' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-history</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Event log")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'DNS manager' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-dns</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("DNS manager")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Namespaces' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-form-textbox</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Groups (NameSpaces)")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item
+                v-bind="listItemBind"
+                :to="{ name: 'ServicesProviders' }"
+              >
+                <v-list-item-icon>
+                  <v-icon>mdi-database-marker</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Services Providers")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item
+                v-bind="listItemBind"
+                :to="{ name: 'Services' }"
+                @click.ctrl="() => (easterEgg = true)"
+              >
+                <v-list-item-icon>
+                  <v-icon :color="easterEgg ? 'green darker-2' : undefined"
+                    >mdi-alien</v-icon
+                  >
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Services")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-list-item v-bind="listItemBind" :to="{ name: 'Settings' }">
+                <v-list-item-icon>
+                  <v-icon>mdi-cogs</v-icon>
+                </v-list-item-icon>
+
+                <v-list-item-content>
+                  <v-list-item-title>{{
+                    navTitle("Settings")
+                  }}</v-list-item-title>
+                </v-list-item-content>
+              </v-list-item>
+            </div>
+          </v-list>
+        </v-navigation-drawer>
+
+        <v-app-bar app color="background" elevation="0">
+          <v-row style="width: 100%" justify="center" align="center">
+            <template v-if="isLoggedIn">
+              <v-col>
+                <app-search />
+              </v-col>
+              <v-col class="d-flex justify-start">
+                <v-btn
+                  v-if="btnStates.visible"
+                  :disabled="btnStates.disabled"
+                  color="background-light"
+                  fab
+                  small
+                  :loading="btnLoading"
+                  @click="() => this.$store.dispatch('reloadBtn/onclick')"
+                >
+                  <v-icon>mdi-reload</v-icon>
+                </v-btn>
+              </v-col>
+            </template>
+            <v-col class="d-flex justify-end align-center">
+              <languages v-if="false" />
+              <themes />
+              <v-menu
+                v-if="isLoggedIn"
+                offset-y
+                transition="slide-y-transition"
+              >
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn
+                    class="mx-2"
+                    fab
+                    color="background-light"
+                    v-bind="attrs"
+                    v-on="on"
+                  >
+                    <v-icon dark> mdi-account </v-icon>
+                  </v-btn>
+                </template>
+                <v-list dence min-width="250px">
+                  <v-list-item>
+                    <v-list-item-content>
+                      <v-list-item-title class="text-h6">
+                        {{ userdata.title }}
+                      </v-list-item-title>
+                      <v-list-item-subtitle
+                        >#{{ userdata.uuid }}</v-list-item-subtitle
+                      >
+                    </v-list-item-content>
+                  </v-list-item>
+                  <v-list-item>
+                    <balance title="Balance: " loged-in-user />
+                  </v-list-item>
+                  <v-divider></v-divider>
+                  <v-list-item @click="logoutHandler">
+                    <v-list-item-title>Logout</v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </v-col>
+          </v-row>
+          <v-spacer></v-spacer>
+        </v-app-bar>
+
+        <instances-table-modal
+          v-if="overlay.uuid"
+          type="menu"
+          :uuid="overlay.uuid"
+          :visible="overlay.isVisible"
+          @close="overlay.isVisible = false"
+          @hover="hoverOverlay"
         >
-          {{ overlay.buttonTitle }}
-        </v-btn>
-      </template>
-    </instances-table-modal>
+          <template #activator>
+            <v-btn
+              outlined
+              color="success"
+              :style="{
+                position: 'absolute',
+                top: `${overlay.y + 80}px`,
+                right: `30px`,
+                zIndex: 100,
+                visibility: 'hidden',
+              }"
+            >
+              {{ overlay.buttonTitle }}
+            </v-btn>
+          </template>
+        </instances-table-modal>
 
-    <v-main>
-      <router-view />
-    </v-main>
-    <app-snackbar />
-  </v-app>
-  <router-view v-else />
+        <v-main>
+          <router-view />
+        </v-main>
+        <app-snackbar />
+      </template>
+    </v-app>
+
+    <router-view v-if="isFullscrean" />
+  </div>
 </template>
 
 <script>
@@ -484,6 +538,15 @@ export default {
     chatClick() {
       this.$store.commit("app/setChatClicks", 1);
     },
+    toggleFullScrean() {
+      this.$router.push({
+        path: this.$route.path,
+        query: {
+          ...this.$route.query,
+          fullscrean: !this.isFullscrean,
+        },
+      });
+    },
   },
   computed: {
     ...mapGetters("app", ["theme"]),
@@ -517,8 +580,14 @@ export default {
         };
       else return {};
     },
-    isVNC() {
-      return this.$route.path.includes("vnc");
+    isFullscrean() {
+      return (
+        this.$route.path.includes("vnc") ||
+        this.$route.query["fullscrean"] === "true"
+      );
+    },
+    isFullscreanAvailable() {
+      return this.$route.query["fullscrean"] !== undefined;
     },
     plugins() {
       return this.$store.getters["plugins/all"];

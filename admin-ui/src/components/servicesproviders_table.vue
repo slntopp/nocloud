@@ -29,6 +29,7 @@ import {
   compareSearchValue,
   filterArrayByTitleAndUuid,
   getDeepObjectValue,
+  getShortName
 } from "@/functions";
 import search from "@/mixins/search";
 import { mapGetters } from "vuex";
@@ -130,7 +131,7 @@ export default {
     ...mapGetters("appSearch", { filter: "filter", searchParam: "param" }),
     tableData() {
       return this.$store.getters["servicesProviders/all"].map((el) => ({
-        titleLink: el.title,
+        titleLink: getShortName(el.title,45),
         title: el.title,
         type: el.type,
         uuid: el.uuid,
