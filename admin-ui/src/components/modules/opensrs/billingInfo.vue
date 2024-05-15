@@ -220,7 +220,7 @@ const getBillingItems = () => {
       name: title,
       price,
       accountPrice: toAccountPrice(price),
-      path: `billingPlan.resources.0.price`,
+      path: `billingPlan.products.${template.value.product}.price`,
       kind,
       period: getBillingPeriod(period),
     });

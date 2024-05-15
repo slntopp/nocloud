@@ -225,7 +225,15 @@ export default {
       if (keys.length) {
         const lastKey = keys.pop();
         let temp = this.copyInstance;
-        keys.forEach((key) => (temp = temp[key]));
+        console.log(key, value);
+        keys.forEach((key, index, array) => {
+          console.log(key, temp);
+          if (["com", "net", "org"].includes(key)) {
+            temp = temp[array[index - 1] + "." + key];
+          } else if (temp[key]) {
+            temp = temp[key];
+          }
+        });
         temp[lastKey] = value;
       } else {
         this.copyInstance[key] = value;
