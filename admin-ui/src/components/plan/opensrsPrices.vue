@@ -26,7 +26,16 @@
       :show-select="false"
       :items="existedDomens"
       :headers="headers"
-    />
+    >
+      <template v-slot:[`item.price`]="{ item }">
+        <v-text-field
+          class="mr-2"
+          v-model.number="item.price"
+          type="number"
+          append-icon="mdi-pencil"
+        />
+      </template>
+    </nocloud-table>
 
     <v-btn class="mt-4" @click="isDialogVisible = true">Save</v-btn>
 
@@ -97,11 +106,18 @@ const existedDomens = computed(() =>
 );
 
 const tryToSend = async (action) => {
+  const products = {};
+  existedDomens.value.map((product) => {
+    products[product.key] = {
+      ...template.value.products[product.key],
+      price: product.price,
+    };
+  });
+
   const newPlan = {
     ...template.value,
     fee: fee.value,
-    resources: [],
-    products: {},
+    products: products,
   };
   const isEdit = action === "edit";
   if (isEdit) {
