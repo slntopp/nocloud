@@ -381,31 +381,6 @@
           <v-spacer></v-spacer>
         </v-app-bar>
 
-        <instances-table-modal
-          v-if="overlay.uuid"
-          type="menu"
-          :uuid="overlay.uuid"
-          :visible="overlay.isVisible"
-          @close="overlay.isVisible = false"
-          @hover="hoverOverlay"
-        >
-          <template #activator>
-            <v-btn
-              outlined
-              color="success"
-              :style="{
-                position: 'absolute',
-                top: `${overlay.y + 80}px`,
-                right: `30px`,
-                zIndex: 100,
-                visibility: 'hidden',
-              }"
-            >
-              {{ overlay.buttonTitle }}
-            </v-btn>
-          </template>
-        </instances-table-modal>
-
         <v-main>
           <router-view />
         </v-main>
@@ -414,6 +389,30 @@
     </v-app>
 
     <router-view v-if="isFullscrean" />
+    <instances-table-modal
+      v-if="overlay.uuid"
+      type="menu"
+      :uuid="overlay.uuid"
+      :visible="overlay.isVisible"
+      @close="overlay.isVisible = false"
+      @hover="hoverOverlay"
+    >
+      <template #activator>
+        <v-btn
+          outlined
+          color="success"
+          :style="{
+            position: 'absolute',
+            top: `${overlay.y + ((isFullscrean) ? 0 : 80)}px`,
+            right: `30px`,
+            zIndex: 100,
+            visibility: 'hidden',
+          }"
+        >
+          {{ overlay.buttonTitle }}
+        </v-btn>
+      </template>
+    </instances-table-modal>
   </div>
 </template>
 
