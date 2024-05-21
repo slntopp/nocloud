@@ -387,25 +387,49 @@ OPTIONS {order: "bfs", uniqueVertices: "global"}
 FILTER IS_SAME_COLLECTION(@@kind, node)
     LET perm = path.edges[0]
 	%s
-	LET instances = (
-		FOR subnode IN 0..@depth OUTBOUND node._id
-			GRAPH @permissions_graph
-			OPTIONS {order: "bfs", uniqueVertices: "global"}
-			FILTER IS_SAME_COLLECTION(@@subkiund, subnode)
-			RETURN subnode
-		)
 	RETURN MERGE(node, { uuid: node._key, active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
 )
 
 RETURN { 
 	result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
-	count: LENGTH(list)
+	count: LENGTH(list),
 }
+`
+
+const listAccounts = `
+LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
+	GRAPH @permissions_graph
+	OPTIONS {order: "bfs", uniqueVertices: "global"}
+	FILTER IS_SAME_COLLECTION(@@kind, node)
+		LET perm = path.edges[0]
+		%s
+		LET instances = (
+			FOR subnode IN 0..@depth OUTBOUND node._id
+				GRAPH @permissions_graph
+				OPTIONS {order: "bfs", uniqueVertices: "global"}
+				FILTER IS_SAME_COLLECTION(@@subkiund, subnode)
+				RETURN subnode
+			)
+		RETURN MERGE(node, { uuid: node._key, active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+	)
+	
+	LET active = LENGTH(
+		FOR l in list
+			FILTER l.active == true
+			return l
+	)
+	
+	RETURN { 
+		result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
+		count: LENGTH(list),
+		active: active
+	}
 `
 
 type ListQueryResult[T Accessible] struct {
 	Result []T `json:"result"`
 	Count  int `json:"count"`
+	Active int `json:"active"`
 }
 
 func ListAccounts[T Accessible](
@@ -426,6 +450,7 @@ func ListAccounts[T Accessible](
 		"from":              fromDocument,
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"@kind":             collectionName,
+		"@subkiund":         schema.INSTANCES_COL,
 		"offset":            offset,
 		"limit":             limit,
 	}
@@ -491,7 +516,7 @@ func ListAccounts[T Accessible](
 	}
 
 	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
-	q := fmt.Sprintf(listObjectsWithFiltersOfKind, insert)
+	q := fmt.Sprintf(listAccounts, insert)
 	log.Debug("Query", zap.String("q", q))
 	c, err := db.Query(ctx, q, bindVars)
 	if err != nil {
