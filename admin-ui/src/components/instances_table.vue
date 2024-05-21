@@ -516,23 +516,34 @@ export default {
         return this.items;
       }
 
-      const instances = this.items.filter((i) => {
-        return Object.keys(this.filter || {})
-          .filter((key) => !!this.filter[key])
-          .every((key) => {
-            let value;
-            if (this.headersGetters[key]) {
-              value = this.getValue(key, i);
-            } else {
-              value = getDeepObjectValue(i, key);
-            }
-            return compareSearchValue(
-              value,
-              this.filter[key],
-              this.searchFields?.find((f) => f.key === key)
-            );
-          });
-      });
+      const instances = this.items
+        .filter((i) => {
+          return Object.keys(this.filter || {})
+            .filter((key) => !!this.filter[key])
+            .every((key) => {
+              let value;
+              if (this.headersGetters[key]) {
+                value = this.getValue(key, i);
+              } else {
+                value = getDeepObjectValue(i, key);
+              }
+              return compareSearchValue(
+                value,
+                this.filter[key],
+                this.searchFields?.find((f) => f.key === key)
+              );
+            });
+        })
+        .map((i) => ({
+          ...i,
+          config: {
+            ...i.config,
+            regular_payment:
+              i.config.regular_payment === undefined
+                ? true
+                : i.config.regular_payment,
+          },
+        }));
 
       const searchParam = this.searchParam?.toLowerCase();
       if (!searchParam) {
