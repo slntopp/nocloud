@@ -387,12 +387,12 @@ OPTIONS {order: "bfs", uniqueVertices: "global"}
 FILTER IS_SAME_COLLECTION(@@kind, node)
     LET perm = path.edges[0]
 	%s
-	RETURN MERGE(node, { uuid: node._key, active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
 )
 
 RETURN { 
 	result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
-	count: LENGTH(list),
+	count: LENGTH(list)
 }
 `
 
