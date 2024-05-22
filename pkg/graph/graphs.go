@@ -381,7 +381,6 @@ func ListWithAccess[T Accessible](
 }
 
 const listObjectsWithFiltersOfKind = `
-
 LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
 	GRAPH @permissions_graph
 	OPTIONS {order: "bfs", uniqueVertices: "global"}
@@ -394,6 +393,7 @@ LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
 	RETURN { 
 		result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
 		count: LENGTH(list)
+	}
 `
 
 const listAccounts = `
