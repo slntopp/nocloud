@@ -10,6 +10,12 @@
           class="ma-1"
           :loading="runningActionName === btn.action"
           @click="btn.type === 'method' ? btn.method() : sendAction(btn)"
+          :disabled="
+            btn.disabled ||
+            (!!runningActionName && runningActionName !== btn.action) ||
+            isDeleted ||
+            isOperated
+          "
         >
           <v-icon>
             {{ btn.icon }}
@@ -23,7 +29,8 @@
         :disabled="
           btn.disabled ||
           (!!runningActionName && runningActionName !== btn.action) ||
-          isDeleted
+          isDeleted ||
+          isOperated
         "
         :loading="runningActionName === btn.action"
         :template="template"
@@ -911,6 +918,9 @@ export default {
     },
     isPending() {
       return this.template.state.state === "PENDING";
+    },
+    isOperated() {
+      return this.template.state.state === "OPERATION";
     },
     namespace() {
       return this.$store.getters["namespaces/all"].find(
