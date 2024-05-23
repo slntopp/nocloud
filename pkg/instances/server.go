@@ -23,13 +23,13 @@ import (
 
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/notes"
-	"github.com/slntopp/nocloud-proto/states"
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
 	accesspb "github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	pb "github.com/slntopp/nocloud-proto/instances"
+	stpb "github.com/slntopp/nocloud-proto/states"
 	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -117,7 +117,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	if instance.GetState().GetState() == states.NoCloudState_SUSPENDED && instance.GetAccess().GetLevel() < accesspb.Level_ROOT {
+	if instance.GetState().GetState() == stpb.NoCloudState_SUSPENDED && instance.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		log.Error("Machine is suspended. Functionality is limited", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.Unavailable, "Machine is suspended. Functionality is limited")
 	}
@@ -185,9 +185,18 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	err = s.ctrl.SetStatus(ctx, instance.Instance, spb.NoCloudStatus_DEL)
+	err = s.ctrl.SetState(ctx, instance.Instance, stpb.NoCloudState_DELETED)
+
 	if err != nil {
-		return nil, err
+		log.Error("Failed to set state", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.ctrl.SetStatus(ctx, instance.Instance, spb.NoCloudStatus_DEL)
+
+	if err != nil {
+		log.Error("Failed to set status", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var event = &elpb.Event{
