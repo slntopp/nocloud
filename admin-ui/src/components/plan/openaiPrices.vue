@@ -1,6 +1,11 @@
 <template>
   <div class="pa-5">
-    <nocloud-table table-name="openai-prices_table" :headers="headers" :items="resources" :show-select="false">
+    <nocloud-table
+      table-name="openai-prices_table"
+      :headers="headers"
+      :items="resources"
+      :show-select="false"
+    >
       <template v-slot:[`item.price`]="{ item }">
         <v-text-field type="number" dense v-model.number="item.price" />
       </template>
@@ -39,6 +44,38 @@ const resources = ref([
     title: "Output kilotoken",
     public: true,
   },
+  {
+    key: "image_size_1024_1024_quality_standart",
+    kind: "POSTPAID",
+    price: 0,
+    period: 0,
+    title: "Image 1024*1024",
+    public: true,
+  },
+  {
+    key: "image_size_1024_1024_quality_hd",
+    kind: "POSTPAID",
+    price: 0,
+    period: 0,
+    title: "Image 1024*1024 HD",
+    public: true,
+  },
+  {
+    key: "image_size_1024_1792_quality_standart",
+    kind: "POSTPAID",
+    price: 0,
+    period: 0,
+    title: "Image 1024*1792 or 1792*1024",
+    public: true,
+  },
+  {
+    key: "image_size_1024_1792_quality_hd",
+    kind: "POSTPAID",
+    price: 0,
+    period: 0,
+    title: "Image 1024*1792 or 1792*1024 HD",
+    public: true,
+  },
 ]);
 const headers = [
   { text: "Key", value: "key" },
@@ -57,8 +94,9 @@ onMounted(() => {
     const realResource = template.value.resources.find(
       (realResource) => realResource.key === resource.key
     );
+    console.log(realResource?.price);
 
-    return { ...resource, price: realResource.price || 0 };
+    return { ...resource, price: realResource?.price || 0 };
   });
 });
 

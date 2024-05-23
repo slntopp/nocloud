@@ -175,7 +175,14 @@ const changePM = () => {
 const getBillingItems = () => {
   const items = [];
 
-  const acceptedResources = ["input_kilotoken", "output_kilotoken"];
+  const acceptedResources = [
+    "input_kilotoken",
+    "output_kilotoken",
+    "image_size_1024_1024_quality_standart",
+    "image_size_1024_1024_quality_hd",
+    "image_size_1024_1792_quality_standart",
+    "image_size_1024_1792_quality_hd",
+  ];
 
   template.value.billingPlan.resources.forEach((r, index) => {
     if (acceptedResources.includes(r.key)) {

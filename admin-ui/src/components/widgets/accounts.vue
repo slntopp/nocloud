@@ -27,9 +27,9 @@
       </div>
 
       <div class="d-flex justify-space-between align-center mb-2">
-        <v-card-subtitle class="ma-0 my-2 pa-0">Total created</v-card-subtitle>
-        <v-card-subtitle v-if="accountsCount" class="ma-0 pa-0">
-          {{ accountsCount }}
+        <v-card-subtitle class="ma-0 my-2 pa-0">Total active</v-card-subtitle>
+        <v-card-subtitle v-if="activeAccountsCount" class="ma-0 pa-0">
+          {{ activeAccountsCount }}
         </v-card-subtitle>
       </div>
 
@@ -91,14 +91,14 @@ const periods = ref(["day", "week", "month"]);
 onMounted(async () => {
   isLoading.value = true;
   try {
-    const { pool, count } = await api.post("accounts", {
+    const { pool, active } = await api.post("accounts", {
       page: 1,
       limit: 5,
       field: "data.date_create",
       sort: "DESC",
     });
     lastFiveAccounts.value = pool;
-    accountsCount.value = count;
+    activeAccountsCount.value = active;
   } finally {
     isLoading.value = false;
   }
@@ -106,7 +106,7 @@ onMounted(async () => {
 
 const countsForPeriod = ref({});
 const lastFiveAccounts = ref([]);
-const accountsCount = ref();
+const activeAccountsCount = ref();
 
 const getCountForPeriod = async (period) => {
   const dates = { from: null, to: null };

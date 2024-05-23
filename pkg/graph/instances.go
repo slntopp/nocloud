@@ -33,6 +33,7 @@ import (
 	"github.com/slntopp/nocloud-proto/hasher"
 	pb "github.com/slntopp/nocloud-proto/instances"
 	sppb "github.com/slntopp/nocloud-proto/services_providers"
+	stpb "github.com/slntopp/nocloud-proto/states"
 	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/nocloud/roles"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -437,6 +438,19 @@ func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid
 func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instance, status spb.NoCloudStatus) (err error) {
 	mask := &pb.Instance{
 		Status: status,
+	}
+	if status == spb.NoCloudStatus_DEL {
+		mask.Deleted = time.Now().Unix()
+	}
+	_, err = ctrl.col.UpdateDocument(ctx, inst.Uuid, mask)
+	return err
+}
+
+func (ctrl *InstancesController) SetState(ctx context.Context, inst *pb.Instance, state stpb.NoCloudState) (err error) {
+	mask := &pb.Instance{
+		State: &stpb.State{
+			State: state,
+		},
 	}
 	_, err = ctrl.col.UpdateDocument(ctx, inst.Uuid, mask)
 	return err

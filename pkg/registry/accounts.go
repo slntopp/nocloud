@@ -301,8 +301,9 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	log.Debug("Convert result", zap.Any("pool", result))
 
 	return &accountspb.ListResponse{
-		Pool:  result,
-		Count: int64(pool.Count),
+		Pool:   result,
+		Count:  int64(pool.Count),
+		Active: int64(pool.Active),
 	}, nil
 }
 
