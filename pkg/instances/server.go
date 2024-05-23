@@ -549,9 +549,10 @@ LET instances = (
 	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
 	            RETURN sp_node._key
         )
+        LET ig = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-2]._key))
         LET srv = path.vertices[-3]._key
         LET ns = path.vertices[-4]._key
-        LET acc = path.vertices[-5]._key
+        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
 		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
 		
 		%s
@@ -599,6 +600,7 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"instances":         schema.INSTANCES_COL,
+		"accounts":          schema.ACCOUNTS_COL,
 		"bps":               schema.BILLING_PLANS_COL,
 		"service_provider":  schema.SERVICES_PROVIDERS_COL,
 		"offset":            offset,
@@ -618,7 +620,20 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER acc in @%s`, key)
+			query += fmt.Sprintf(` FILTER acc._key in @%s`, key)
+			bindVars[key] = values
+		} else if key == "email" {
+			query += fmt.Sprintf(` FILTER acc.data.email == %s`, val.GetStringValue())
+		} else if key == "title" {
+			query += fmt.Sprintf(` FILTER node.title == %s`, val.GetStringValue())
+		} else if key == "os" {
+			query += fmt.Sprintf(` FILTER node.config.configuration.vps_os == %s`, val.GetStringValue())
+		} else if key == "type" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER ig.type in @%s`, key)
 			bindVars[key] = values
 		} else if key == "namespace" {
 			values := val.GetListValue().AsSlice()
@@ -640,6 +655,95 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 				continue
 			}
 			query += fmt.Sprintf(` FILTER bp._key in @%s`, key)
+			bindVars[key] = values
+		} else if key == "state" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER node.state.state in @%s`, key)
+			bindVars[key] = values
+		} else if key == "price" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := val.(float64)
+				query += fmt.Sprintf(` FILTER node.price >= %f`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := val.(float64)
+				query += fmt.Sprintf(` FILTER node.price <= %f`, to)
+			}
+		} else if key == "service" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER srv in @%s`, key)
+			bindVars[key] = values
+		} else if key == "period" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER node["%s"] in @%s`, key, key)
+			bindVars[key] = values
+		} else if key == "location" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER node["config"]["%s"] in @%s`, key, key)
+			bindVars[key] = values
+		} else if key == "cpu" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := val.(int)
+				query += fmt.Sprintf(` FILTER node.resources.cpu >= %d`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := val.(int)
+				query += fmt.Sprintf(` FILTER node.resources.cpu <= %d`, to)
+			}
+		} else if key == "drive_size" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := val.(int)
+				query += fmt.Sprintf(` FILTER node.resources.drive_size >= %d`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := val.(int)
+				query += fmt.Sprintf(` FILTER node.resources.drive_size <= %d`, to)
+			}
+		} else if key == "ram" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := val.(int)
+				query += fmt.Sprintf(` FILTER node.resources.ram >= %d`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := val.(int)
+				query += fmt.Sprintf(` FILTER node.resources.ram <= %d`, to)
+			}
+		} else if key == "due_date" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := val.(int)
+				query += fmt.Sprintf(` FILTER node.data.next_payment_date >= %d`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := val.(int)
+				query += fmt.Sprintf(` FILTER node.data.next_payment_date <= %d`, to)
+			}
+		} else if key == "ip" {
+			val := val.GetStringValue()
+			query += fmt.Sprintf(` FILTER @%s in node.state.meta.networking.public || @%s in node.state.meta.networking.private`, key, key)
+			bindVars[key] = val
+		} else if key == "product" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER node.product in @%s`, key)
 			bindVars[key] = values
 		}
 	}
