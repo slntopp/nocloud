@@ -32,12 +32,12 @@ func NewCurrencyServiceServer(log *zap.Logger, db driver.Database) *CurrencyServ
 }
 
 func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, req *pb.GetExchangeRateRequest) (*pb.GetExchangeRateResponse, error) {
-	rate, err := s.ctrl.GetExchangeRate(ctx, req.From, req.To)
+	rate, commission, err := s.ctrl.GetExchangeRate(ctx, req.From, req.To)
 	if err != nil {
 		return nil, err
 	}
 
-	return &pb.GetExchangeRateResponse{Rate: rate}, nil
+	return &pb.GetExchangeRateResponse{Rate: rate, Commission: commission}, nil
 }
 
 func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, req *pb.CreateExchangeRateRequest) (*pb.CreateExchangeRateResponse, error) {
@@ -46,18 +46,18 @@ func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, req *pb.
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
-	err := s.ctrl.CreateExchangeRate(ctx, req.From, req.To, req.Rate)
+	err := s.ctrl.CreateExchangeRate(ctx, req.From, req.To, req.Rate, req.Commission)
 	if err != nil {
 		return &pb.CreateExchangeRateResponse{}, err
 	}
 
-	_, err = s.ctrl.GetExchangeRateDirect(ctx, req.To, req.From)
+	_, _, err = s.ctrl.GetExchangeRateDirect(ctx, req.To, req.From)
 	if err == nil {
 		return &pb.CreateExchangeRateResponse{}, nil
 	}
 
 	s.log.Info("Reverse rate is not set yet, setting automatically", zap.String("from", req.To.String()), zap.String("to", req.From.String()))
-	err = s.ctrl.CreateExchangeRate(ctx, req.To, req.From, 1/req.Rate)
+	err = s.ctrl.CreateExchangeRate(ctx, req.To, req.From, 1/req.Rate, req.Commission)
 	if err != nil {
 		s.log.Warn("Couldn't automatically create reverse Exchange rate", zap.Error(err))
 	}
@@ -71,7 +71,7 @@ func (s *CurrencyServiceServer) UpdateExchangeRate(ctx context.Context, req *pb.
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
-	err := s.ctrl.UpdateExchangeRate(ctx, req.From, req.To, req.Rate)
+	err := s.ctrl.UpdateExchangeRate(ctx, req.From, req.To, req.Rate, req.Commission)
 	return &pb.UpdateExchangeRateResponse{}, err
 }
 

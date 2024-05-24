@@ -306,7 +306,7 @@ FOR service IN @@services // Iterate over Services
 			// Cast to NCU if currency is not specified
 			DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency))) TO
 			DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
-				RETURN edge.rate
+				RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
 		)
         LET total = record.total * rate
             UPDATE record._key WITH { 
@@ -343,7 +343,7 @@ LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND SHORTEST_PATH
 	DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency))) TO
 	DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
-	RETURN edge.rate
+	RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
 )
 LET total = t.total * rate
 
