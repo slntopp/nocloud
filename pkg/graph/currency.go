@@ -60,31 +60,31 @@ FOR CURRENCY in @@currencies
 	return CURRENCY
 `
 
-func (c *CurrencyController) GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, error) {
+func (c *CurrencyController) GetExchangeRateDirect(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error) {
 	edge := map[string]interface{}{}
 	_, err := c.edges.ReadDocument(ctx, fmt.Sprintf("%d-%d", from, to), &edge)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	rate := edge["rate"].(float64)
-	return rate, err
+	commission, ok := edge["commission"].(float64)
+	if !ok {
+		commission = 0
+	}
+	return rate, commission, err
 }
 
 const getExchangeRateQuery = `
-LET rates = (
  FOR vertex, edge IN OUTBOUND
  SHORTEST_PATH @from TO @to
  GRAPH @billing
  FILTER edge
-    RETURN edge.rate
-)
+    RETURN {rate: edge.rate, commission: TO_NUMBER(edge.commission)}
+)`
 
-RETURN { len: LENGTH(rates), rate: PRODUCT(rates) }
-`
-
-func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) (float64, error) {
+func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error) {
 	if from == to {
-		return 1, nil
+		return 1, 0, nil
 	}
 
 	cursor, err := c.db.Query(ctx, getExchangeRateQuery, map[string]interface{}{
@@ -93,46 +93,61 @@ func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Curren
 		"billing": schema.BILLING_GRAPH.Name,
 	})
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer cursor.Close()
 
-	var res struct {
-		Len  int     `json:"len"`
-		Rate float64 `json:"rate"`
+	type Rate struct {
+		Rate       float64 `json:"rate"`
+		Commission float64 `json:"commission"`
 	}
 
-	_, err = cursor.ReadDocument(ctx, &res)
-	if err != nil {
-		return 0, err
+	rates := []Rate{}
+	for cursor.HasMore() {
+		obj := &Rate{}
+		_, err := cursor.ReadDocument(ctx, obj)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		rates = append(rates, *obj)
 	}
 
-	if res.Len == 0 {
-		return 0, fmt.Errorf("no path or direct connection between %s and %s", from.String(), to.String())
+	if len(rates) == 0 {
+		return 0, 0, fmt.Errorf("no path or direct connection between %s and %s", from.String(), to.String())
 	}
 
-	return res.Rate, nil
+	totalCommission := 0.0
+	totalRate := 1.0
+	for _, rate := range rates {
+		totalRate *= rate.Rate + rate.Rate*(rate.Commission/100.0)
+		totalCommission += rate.Commission
+	}
+
+	return totalRate, totalCommission, nil
 }
 
-func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate float64) error {
+func (c *CurrencyController) CreateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
 	edge := map[string]interface{}{
-		"_key":  fmt.Sprintf("%d-%d", from, to),
-		"_from": fmt.Sprintf("%s/%d", schema.CUR_COL, from),
-		"_to":   fmt.Sprintf("%s/%d", schema.CUR_COL, to),
-		"from":  from,
-		"to":    to,
-		"rate":  rate,
+		"_key":       fmt.Sprintf("%d-%d", from, to),
+		"_from":      fmt.Sprintf("%s/%d", schema.CUR_COL, from),
+		"_to":        fmt.Sprintf("%s/%d", schema.CUR_COL, to),
+		"from":       from,
+		"to":         to,
+		"rate":       rate,
+		"commission": commission,
 	}
 	_, err := c.edges.CreateDocument(ctx, &edge)
 
 	return err
 }
 
-func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate float64) error {
+func (c *CurrencyController) UpdateExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency, rate, commission float64) error {
 	key := fmt.Sprintf("%d-%d", from, to)
 
 	edge := map[string]interface{}{
-		"rate": rate,
+		"rate":       rate,
+		"commission": commission,
 	}
 	_, err := c.edges.UpdateDocument(ctx, key, &edge)
 
@@ -153,7 +168,7 @@ func (c *CurrencyController) Convert(ctx context.Context, from pb.Currency, to p
 		return amount, nil
 	}
 
-	rate, err := c.GetExchangeRate(ctx, from, to)
+	rate, _, err := c.GetExchangeRate(ctx, from, to)
 	if err != nil {
 		return 0, status.Error(codes.NotFound, err.Error())
 	}
