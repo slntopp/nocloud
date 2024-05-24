@@ -306,6 +306,7 @@ FOR service IN @@services // Iterate over Services
 			// Cast to NCU if currency is not specified
 			DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(record.currency))) TO
 			DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+			FILTER edge
 				RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
 		)
         LET total = record.total * rate
