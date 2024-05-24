@@ -344,6 +344,7 @@ LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND SHORTEST_PATH
 	DOCUMENT(CONCAT(@currencies, "/", TO_NUMBER(t.currency))) TO
 	DOCUMENT(CONCAT(@currencies, "/", currency)) GRAPH @graph
+	FILTER edge
 	RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
 )
 LET total = t.total * rate
