@@ -12,7 +12,7 @@ require (
 	github.com/gorilla/websocket v1.5.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.1
-	github.com/rabbitmq/amqp091-go v1.9.0
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/rs/cors v1.10.1
 	github.com/slntopp/nocloud-proto v0.0.0-20240524155337-4bd4b26152ef
 	github.com/spf13/viper v1.18.2
