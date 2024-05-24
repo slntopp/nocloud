@@ -293,17 +293,23 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, req *pb.ListReques
 			}
 		}
 
-		var rate float64
+		var (
+			rate       float64
+			commission float64 = 0
+		)
 
 		if cur == defaultCur {
 			rate = 1
 		} else {
-			rate, err = s.currencies.GetExchangeRateDirect(ctx, defaultCur, cur)
+			rate, commission, err = s.currencies.GetExchangeRateDirect(ctx, defaultCur, cur)
 			if err != nil {
 				log.Error("Error getting rate", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting rate")
 			}
 		}
+
+		// Apply commission to rate
+		rate = rate + ((commission / 100) * rate)
 
 		for planIndex := range result {
 			plan := result[planIndex]

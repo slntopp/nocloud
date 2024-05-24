@@ -144,8 +144,8 @@ func TestGenerateTransactions(t *testing.T) {
 	currencyController.DeleteExchangeRate(ctx, pb.Currency_EUR, pb.Currency_NCU)
 	currencyController.DeleteExchangeRate(ctx, pb.Currency_EUR, pb.Currency_USD)
 
-	currencyController.CreateExchangeRate(ctx, pb.Currency_USD, pb.Currency_NCU, 2.0)
-	currencyController.CreateExchangeRate(ctx, pb.Currency_EUR, pb.Currency_USD, 2.0)
+	currencyController.CreateExchangeRate(ctx, pb.Currency_USD, pb.Currency_NCU, 2.0, 0)
+	currencyController.CreateExchangeRate(ctx, pb.Currency_EUR, pb.Currency_USD, 2.0, 0)
 
 	acc, err := accountController.Create(ctx, accpb.Account{Title: "test_user"})
 	if err != nil {
@@ -264,7 +264,7 @@ func TestReprocessTransactions(t *testing.T) {
 	}
 
 	currencyController.DeleteExchangeRate(ctx, pb.Currency_NCU, pb.Currency_USD)
-	if err := currencyController.CreateExchangeRate(ctx, pb.Currency_NCU, pb.Currency_USD, rate); err != nil {
+	if err := currencyController.CreateExchangeRate(ctx, pb.Currency_NCU, pb.Currency_USD, rate, 0); err != nil {
 		t.Fatal(err)
 	}
 

@@ -302,7 +302,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, t *pb.Tran
 		var rate float64 = 1
 
 		if cur != pb.Currency(currencyConf.Currency) {
-			rate, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
+			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
 
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
@@ -519,7 +519,7 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, req *pb.Tr
 		var rate float64 = 1
 
 		if cur != pb.Currency(currencyConf.Currency) {
-			rate, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
+			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
 
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
@@ -569,7 +569,7 @@ LET rate = PRODUCT(
 	TO DOCUMENT(CONCAT(@currencies, "/", currency))
 	GRAPH @graph
 	FILTER edge
-		RETURN edge.rate
+		RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
 )
 
 LET total = transaction.total * rate
@@ -594,7 +594,7 @@ LET rate = PRODUCT(
 	TO DOCUMENT(CONCAT(@currencies, "/", currency))
 	GRAPH @graph
 	FILTER edge
-		RETURN edge.rate
+		RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
 )
 
 LET total = transaction.total * rate
@@ -626,7 +626,7 @@ FILTER t.account == account._key
 		TO DOCUMENT(CONCAT(@currencies, "/", currency))
 		GRAPH @graph
 		FILTER edge
-			RETURN edge.rate
+			RETURN edge.rate + (TO_NUMBER(edge.commission) / 100) * edge.rate
 	)
     UPDATE t WITH { processed: true, proc: @now, total: t.total * rate, currency: currency } IN @@transactions RETURN NEW )
 
