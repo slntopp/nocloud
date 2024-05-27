@@ -34,7 +34,7 @@
     </template>
 
     <template v-slot:[`item.actions`]="{ index }">
-      <div class="d-flex justify-end">
+      <div class="d-flex justify-center">
         <v-btn icon @click="emit('click:delete', index)"
           ><v-icon>mdi-delete</v-icon></v-btn
         >
@@ -68,10 +68,10 @@ const generalRule = ref([(v) => !!v || "This field is required!"]);
 const headers = computed(() =>
   [
     showDate.value && { text: "Date", value: "date" },
-    { text: "Title", value: "title", width: 100 },
+    { text: "Title", value: "title", width: 125 },
     { text: "Description", value: "description" },
-    { text: "Amount", value: "amount", width: 50 },
-    showDelete.value && { text: "Actions", value: "actions", width: 50 },
+    { text: "Amount", value: "amount", width: 175 },
+    showDelete.value && { text: "Actions", value: "actions", width:25 },
   ].filter((c) => !!c)
 );
 const accountCurrency = computed(
