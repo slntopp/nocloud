@@ -22,12 +22,14 @@
     </template>
 
     <template v-slot:[`item.description`]="{ item }">
-      <v-text-field
+      <v-textarea
         :readonly="readonly"
         :rules="!readonly ? generalRule : []"
         no-resize
         label="Items description"
         v-model="item.description"
+        rows="1"
+        auto-grow
       />
     </template>
 
@@ -66,10 +68,10 @@ const generalRule = ref([(v) => !!v || "This field is required!"]);
 const headers = computed(() =>
   [
     showDate.value && { text: "Date", value: "date" },
-    { text: "Title", value: "title" },
+    { text: "Title", value: "title", width: 100 },
     { text: "Description", value: "description" },
-    { text: "Amount", value: "amount" },
-    showDelete.value && { text: "Actions", value: "actions" },
+    { text: "Amount", value: "amount", width: 50 },
+    showDelete.value && { text: "Actions", value: "actions", width: 50 },
   ].filter((c) => !!c)
 );
 const accountCurrency = computed(

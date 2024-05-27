@@ -8,13 +8,11 @@
       }"
     >
       <div
-        v-if="isFullscreanAvailable"
-        style="position: fixed; right: 50vw; z-index: 100; margin-top: 5vh"
+        v-if="isFullscreanAvailable && isFullscrean"
+        style="position: fixed; right: 5vw; z-index: 100; margin-top: 1vh"
       >
-        <v-btn @click="toggleFullScrean" x-large icon>
-          <v-icon x-large>{{
-            isFullscrean ? "mdi-fullscreen-exit" : "mdi-fullscreen"
-          }}</v-icon>
+        <v-btn @click="toggleFullScrean" color="background-light" fab small>
+          <v-icon>mdi-fullscreen-exit</v-icon>
         </v-btn>
       </div>
 
@@ -334,6 +332,16 @@
                   @click="() => this.$store.dispatch('reloadBtn/onclick')"
                 >
                   <v-icon>mdi-reload</v-icon>
+                </v-btn>
+                <v-btn
+                  class="ml-2"
+                  color="background-light"
+                  v-if="!isFullscrean"
+                  @click="toggleFullScrean"
+                  fab
+                  small
+                >
+                  <v-icon>mdi-fullscreen</v-icon>
                 </v-btn>
               </v-col>
             </template>
