@@ -79,8 +79,7 @@ const getExchangeRateQuery = `
  SHORTEST_PATH @from TO @to
  GRAPH @billing
  FILTER edge
-    RETURN {rate: edge.rate, commission: TO_NUMBER(edge.commission)}
-)`
+    RETURN {rate: edge.rate, commission: TO_NUMBER(edge.commission)}`
 
 func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Currency, to pb.Currency) (float64, float64, error) {
 	if from == to {
