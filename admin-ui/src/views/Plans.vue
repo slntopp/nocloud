@@ -61,7 +61,7 @@
         </template>
       </confirm-dialog>
 
-      <v-switch label="Hide individual" v-model="isIndividualHide" />
+      <v-switch label="Individual" v-model="isIndividual" />
     </div>
 
     <nocloud-table
@@ -245,7 +245,7 @@ export default {
     isPlansUploadLoading: false,
     uploadedPlans: [],
 
-    isIndividualHide: true,
+    isIndividual: false,
 
     updatedPlanUuid: "",
   }),
@@ -445,9 +445,9 @@ export default {
       );
     },
     filtredPlans() {
-      const plans = this.plans
-        .filter((p) => p?.meta?.isIndividual != this.isIndividualHide)
-        .filter((p) =>
+      const plans = this.plans.filter(
+        (p) =>
+          !!p?.meta?.isIndividual == this.isIndividual &&
           Object.keys(this.filter).every((key) => {
             const data = getDeepObjectValue(p, key);
 
@@ -457,7 +457,7 @@ export default {
               this.searchFields.find((f) => f.key === key)
             );
           })
-        );
+      );
 
       if (this.searchParam) {
         return filterArrayByTitleAndUuid(plans, this.searchParam);
