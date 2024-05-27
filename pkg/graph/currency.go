@@ -93,6 +93,7 @@ func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Curren
 		"billing": schema.BILLING_GRAPH.Name,
 	})
 	if err != nil {
+		c.log.Error("1", zap.Error(err))
 		return 0, 0, err
 	}
 	defer cursor.Close()
@@ -107,6 +108,7 @@ func (c *CurrencyController) GetExchangeRate(ctx context.Context, from pb.Curren
 		obj := &Rate{}
 		_, err := cursor.ReadDocument(ctx, obj)
 		if err != nil {
+			c.log.Error("2", zap.Error(err))
 			return 0, 0, err
 		}
 
