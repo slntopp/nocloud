@@ -19,7 +19,7 @@
 
       <div class="d-flex justify-space-between align-center">
         <v-card-subtitle class="ma-0 my-2 pa-0"
-          >Created in last {{ data.period }}</v-card-subtitle
+          >Created this {{ data.period }}</v-card-subtitle
         >
         <v-card-subtitle v-if="!isCountForPeriodLoading" class="ma-0 pa-0">
           {{ countsForPeriod[data.period] }}
