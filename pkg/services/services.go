@@ -420,6 +420,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		log.Error("Failed to get exchange rate", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get exchange rate")
 	}
+	
 	srv, err := s.ctrl.Get(ctx, requestor, doc.Uuid)
 	if err != nil {
 		log.Error("Error getting service", zap.Error(err))
