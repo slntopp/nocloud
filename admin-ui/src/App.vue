@@ -336,7 +336,7 @@
                 <v-btn
                   class="ml-2"
                   color="background-light"
-                  v-if="!isFullscrean"
+                  v-if="isFullscreanAvailable && !isFullscrean"
                   @click="toggleFullScrean"
                   fab
                   small

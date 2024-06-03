@@ -23,6 +23,7 @@
         style="margin-top: 0 !important"
         :value="[]"
         :headers="headers"
+        no-search
         :items="accountInstances"
         :show-select="false"
       />
