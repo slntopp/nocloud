@@ -97,6 +97,17 @@
           :rules="rules.number"
         />
       </template>
+
+      <template v-slot:[`item.commission`]="{ item }">
+        <v-text-field
+          dense
+          type="number"
+          style="width: 200px"
+          :value="item.commission"
+          @input="item.commission = $event"
+        />
+      </template>
+
       <template v-slot:[`item.actions`]="{ item }">
         <v-icon title="Save edit" @click="editCurrency(item)">
           mdi-content-save-edit-outline
@@ -121,6 +132,7 @@ export default {
       { text: "Currency 1 ", value: "from" },
       { text: "Currency 2 ", value: "to" },
       { text: "Rate ", value: "rate" },
+      { text: "Commission ", value: "commission" },
       { text: "Actions", value: "actions", sortable: false },
     ],
     selected: [],
@@ -167,8 +179,9 @@ export default {
       if (typeof this.rules.number[0](currency.rate) === "string") return;
       const newCurrency = {
         rate: +currency.rate.replace(",", "."),
-        from: currency.from,
-        to: currency.to,
+        from: this.currenciesList.indexOf(currency.from),
+        to: this.currenciesList.indexOf(currency.to),
+        commission: +currency.commission.replace(",", "."),
       };
 
       this.$store.commit("currencies/setLoading", true);
@@ -224,7 +237,11 @@ export default {
       return this.$store.getters["currencies/isLoading"];
     },
     currencies() {
-      return this.$store.getters["currencies/rates"];
+      return this.$store.getters["currencies/rates"].map((c) => ({
+        ...c,
+        rate: c.rate?.toString(),
+        commission: c.commission?.toString(),
+      }));
     },
     currenciesList() {
       return this.$store.getters["currencies/all"];

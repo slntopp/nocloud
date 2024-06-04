@@ -54,8 +54,13 @@ func TestConvert(t *testing.T) {
 	}
 
 	testRate := 2.0
+<<<<<<< HEAD
 	c.CreateExchangeRate(ctx, &pb.Currency{Id: 1}, &pb.Currency{Id: 3}, testRate)
 	c.CreateExchangeRate(ctx, &pb.Currency{Id: 2}, &pb.Currency{Id: 3}, testRate)
+=======
+	c.CreateExchangeRate(ctx, pb.Currency_USD, pb.Currency_BYN, testRate, 0)
+	c.CreateExchangeRate(ctx, pb.Currency_EUR, pb.Currency_BYN, testRate, 0)
+>>>>>>> dev
 	rates, err := c.GetExchangeRates(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -64,7 +69,11 @@ func TestConvert(t *testing.T) {
 		t.Error("Didn't fetch all exchange rates")
 	}
 
+<<<<<<< HEAD
 	rate, err := c.GetExchangeRateDirect(ctx, &pb.Currency{Id: 1}, &pb.Currency{Id: 3})
+=======
+	rate, _, err := c.GetExchangeRateDirect(ctx, pb.Currency_USD, pb.Currency_BYN)
+>>>>>>> dev
 	if err != nil {
 		t.Error(err)
 	}

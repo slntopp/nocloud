@@ -32,12 +32,20 @@
       <v-select :rules="generalRule" v-model="item.unit" :items="unitItems" />
     </template>
 
-    <template v-slot:[`item.instance`]="{ item }">
-      <v-text-field readonly disabled :value="getInstance(item.instance)" />
+    <template v-slot:[`item.description`]="{ item }">
+      <v-textarea
+        :readonly="readonly"
+        :rules="!readonly ? generalRule : []"
+        no-resize
+        label="Items description"
+        v-model="item.description"
+        rows="1"
+        auto-grow
+      />
     </template>
 
     <template v-slot:[`item.actions`]="{ index }">
-      <div class="d-flex justify-end">
+      <div class="d-flex justify-center">
         <v-btn icon @click="emit('click:delete', index)"
           ><v-icon>mdi-delete</v-icon></v-btn
         >
@@ -73,17 +81,10 @@ const unitItems = ref(["Pcs", "Szt", "Hour`s"]);
 const headers = computed(() =>
   [
     showDate.value && { text: "Date", value: "date" },
-    { text: "Instance", value: "instance", sortable: false, width: 200 },
-    { text: "Title", value: "title", sortable: false },
-    { text: "Unit price", value: "price", sortable: false, width: 200 },
-    { text: "Amount", value: "amount", sortable: false },
-    { text: "Unit", value: "unit", sortable: false },
-    showDelete.value && {
-      text: "Actions",
-      value: "actions",
-      sortable: false,
-      width: 50,
-    },
+    { text: "Title", value: "title", width: 125 },
+    { text: "Description", value: "description" },
+    { text: "Amount", value: "amount", width: 175 },
+    showDelete.value && { text: "Actions", value: "actions", width:25 },
   ].filter((c) => !!c)
 );
 const accountCurrency = computed(

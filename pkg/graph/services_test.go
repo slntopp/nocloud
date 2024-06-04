@@ -33,7 +33,7 @@ func init() {
 	db = connectdb.MakeDBConnection(log, arangodbHost, arangodbCred)
 	log.Info("DB connection established")
 
-	ctrl = graph.NewServicesController(log, db)
+	ctrl = graph.NewServicesController(log, db, nil)
 }
 
 func TestCreate(t *testing.T) {

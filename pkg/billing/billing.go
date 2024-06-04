@@ -16,8 +16,10 @@ limitations under the License.
 package billing
 
 import (
-	"connectrpc.com/connect"
 	"context"
+	"strconv"
+
+	"connectrpc.com/connect"
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
@@ -33,7 +35,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
-	"strconv"
 )
 
 type Routine struct {
@@ -81,9 +82,9 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.
 		currencies:   graph.NewCurrencyController(log.Named("CurrenciesController"), db),
 		accounts:     graph.NewAccountsController(log.Named("AccountsController"), db),
 		invoices:     graph.NewInvoicesController(log.Named("InvoicesController"), db),
-		services:     graph.NewServicesController(log.Named("ServicesController"), db),
+		services:     graph.NewServicesController(log.Named("ServicesController"), db, conn),
 		descriptions: graph.NewDescriptionsController(log, db),
-		instances:    graph.NewInstancesController(log, db),
+		instances:    graph.NewInstancesController(log, db, conn),
 		sp:           graph.NewServicesProvidersController(log, db),
 		db:           db,
 		gen: &healthpb.RoutineStatus{
@@ -415,17 +416,23 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 			Title: dbCur.Title,
 		}
 
-		var rate float64
+		var (
+			rate       float64
+			commission float64 = 0
+		)
 
 		if cur.GetId() == defaultCur.GetId() {
 			rate = 1
 		} else {
-			rate, err = s.currencies.GetExchangeRateDirect(ctx, defaultCur, cur)
+			rate, commission, err = s.currencies.GetExchangeRateDirect(ctx, *defaultCur, *cur)
 			if err != nil {
 				log.Error("Error getting rate", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting rate")
 			}
 		}
+
+		// Apply commission to rate
+		rate = rate + ((commission / 100) * rate)
 
 		for planIndex := range result {
 			plan := result[planIndex]
