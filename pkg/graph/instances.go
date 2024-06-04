@@ -147,7 +147,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	c := pb.Context{
 		Instance: i.GetUuid(),
 		Sp:       sp,
-		Event:    "create",
+		Event:    spb.NoCloudStatus_INIT.String(),
 	}
 	body, err := proto.Marshal(&c)
 	if err == nil {
@@ -301,7 +301,7 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 	c := pb.Context{
 		Instance: inst.GetUuid(),
 		Sp:       sp,
-		Event:    "update",
+		Event:    "UPDATE",
 	}
 	body, err := proto.Marshal(&c)
 	if err == nil {
@@ -358,7 +358,7 @@ func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb
 		c := pb.Context{
 			Instance: i.GetUuid(),
 			Sp:       sp,
-			Event:    "create",
+			Event:    spb.NoCloudStatus_DEL.String(),
 		}
 		body, err := proto.Marshal(&c)
 		if err == nil {

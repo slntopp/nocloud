@@ -531,6 +531,13 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 			continue
 		}
 
+		for _, inst := range group.GetInstances() {
+			if inst.GetStatus() == statuspb.NoCloudStatus_DEL {
+				continue
+			}
+			s.ctrl.IGController().Instances().SetStatus(ctx, inst, statuspb.NoCloudStatus_UP)
+		}
+
 		log.Debug("Updated Group", zap.Any("group", group))
 	}
 
