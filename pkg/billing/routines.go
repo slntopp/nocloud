@@ -16,17 +16,18 @@ limitations under the License.
 package billing
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"strings"
+	"time"
+
+	"connectrpc.com/connect"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	"github.com/slntopp/nocloud-proto/services"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
-	"strings"
-	"time"
 
 	sc "github.com/slntopp/nocloud/pkg/settings/client"
 
@@ -258,7 +259,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				if acc.Currency == nil {
 					acc.Currency = currencyConf.Currency
 				}
-				rate, err := s.currencies.GetExchangeRate(ctx, currencyConf.Currency, acc.Currency)
+				rate, _, err := s.currencies.GetExchangeRate(ctx, currencyConf.Currency, acc.Currency)
 				if err != nil {
 					log.Error("Error getting exchange rate", zap.Error(err))
 					continue

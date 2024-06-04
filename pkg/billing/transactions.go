@@ -16,10 +16,11 @@ limitations under the License.
 package billing
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
 	"time"
+
+	"connectrpc.com/connect"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -305,13 +306,8 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 
 		var rate float64 = 1
 
-<<<<<<< HEAD
 		if cur.GetId() != currencyConf.Currency.GetId() {
-			rate, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
-=======
-		if cur != pb.Currency(currencyConf.Currency) {
-			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
->>>>>>> dev
+			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
 
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
@@ -527,13 +523,8 @@ func (s *BillingServiceServer) UpdateTransaction(ctx context.Context, r *connect
 
 		var rate float64 = 1
 
-<<<<<<< HEAD
 		if cur.GetId() != currencyConf.Currency.GetId() {
-			rate, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
-=======
-		if cur != pb.Currency(currencyConf.Currency) {
-			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, pb.Currency(currencyConf.Currency))
->>>>>>> dev
+			rate, _, err = s.currencies.GetExchangeRate(ctx, cur, currencyConf.Currency)
 
 			if err != nil {
 				log.Error("Failed to get exchange rate", zap.String("err", err.Error()))
