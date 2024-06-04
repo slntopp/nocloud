@@ -49,9 +49,8 @@ type Provision struct {
 type ServicesController struct {
 	log *zap.Logger
 
-	col       driver.Collection // Services Collection
-	ig_ctrl   *InstancesGroupsController
-	inst_ctrl *InstancesController
+	col     driver.Collection // Services Collection
+	ig_ctrl *InstancesGroupsController
 
 	db driver.Database
 }
