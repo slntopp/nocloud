@@ -56,7 +56,7 @@ type InstancesServer struct {
 func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection) *InstancesServer {
 	log := logger.Named("instances")
 	log.Debug("New Instances Server Creating")
-	ig_ctrl := graph.NewInstancesGroupsController(logger, db)
+	ig_ctrl := graph.NewInstancesGroupsController(logger, db, rbmq)
 
 	log.Debug("Setting up StatesPubSub")
 	s := s.NewStatesPubSub(log, &db, rbmq)

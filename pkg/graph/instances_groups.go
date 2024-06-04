@@ -20,6 +20,7 @@ import (
 	"reflect"
 
 	"github.com/arangodb/go-driver"
+	"github.com/rabbitmq/amqp091-go"
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/proto"
 
@@ -53,7 +54,7 @@ type InstancesGroupsController struct {
 	ig2sp   driver.Collection
 }
 
-func NewInstancesGroupsController(log *zap.Logger, db driver.Database) *InstancesGroupsController {
+func NewInstancesGroupsController(log *zap.Logger, db driver.Database, conn *amqp091.Connection) *InstancesGroupsController {
 	log.Debug("New InstancesGroups Controller Creating")
 
 	ctx := context.TODO()
@@ -70,7 +71,7 @@ func NewInstancesGroupsController(log *zap.Logger, db driver.Database) *Instance
 	ig2sp := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2SP, schema.INSTANCES_GROUPS_COL, schema.SERVICES_PROVIDERS_COL)
 
 	return &InstancesGroupsController{
-		log: log.Named("InstancesGroupsController"), inst_ctrl: NewInstancesController(log, db),
+		log: log.Named("InstancesGroupsController"), inst_ctrl: NewInstancesController(log, db, conn),
 		col: col, graph: graph, db: db,
 		serv2ig: serv2ig,
 		ig2sp:   ig2sp,
