@@ -45,6 +45,7 @@ func NewRecordsController(logger *zap.Logger, db driver.Database) RecordsControl
 	log.Info("Creating Records controller")
 
 	migrations.UpdateNumericCurrencyToDynamic(log, col)
+	migrations.UpdateTotalAndCostFields(log, col)
 
 	return RecordsController{
 		log: log, col: col, db: db,
