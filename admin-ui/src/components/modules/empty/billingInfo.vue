@@ -48,6 +48,14 @@
 
       <v-col>
         <v-text-field
+          label="Deleted date"
+          readonly
+          :value="formatSecondsToDate(template.deleted, true, '-')"
+        />
+      </v-col>
+
+      <v-col>
+        <v-text-field
           readonly
           label="Start date"
           :value="formatSecondsToDate(template.data.start) || '-'"
