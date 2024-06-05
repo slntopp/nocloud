@@ -47,6 +47,14 @@
         />
       </v-col>
 
+      <v-col>
+        <v-text-field
+          label="Deleted date"
+          readonly
+          :value="formatSecondsToDate(template.deleted, true, '-')"
+        />
+      </v-col>
+
       <v-col
         v-if="
           template.billingPlan.title.toLowerCase() !== 'payg' ||

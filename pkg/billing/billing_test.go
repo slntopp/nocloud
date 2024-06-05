@@ -134,7 +134,7 @@ func TestGenerateTransactions(t *testing.T) {
 	accountController := nograph.NewAccountsController(log, db)
 	recordsController := nograph.NewRecordsController(log, db)
 	nsConroller := nograph.NewNamespacesController(log, db)
-	srvConroller := nograph.NewServicesController(log, db)
+	srvConroller := nograph.NewServicesController(log, db, nil)
 	currencyController := nograph.NewCurrencyController(log, db)
 
 	ctx := context.Background()

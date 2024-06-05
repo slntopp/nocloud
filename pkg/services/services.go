@@ -24,6 +24,7 @@ import (
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
+	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
@@ -60,12 +61,12 @@ type ServicesServer struct {
 	log *zap.Logger
 }
 
-func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub) *ServicesServer {
+func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, conn *amqp091.Connection) *ServicesServer {
 	log := _log.Named("ServicesServer")
 	log.Debug("New Services Server Creating")
 
 	return &ServicesServer{
-		log: log, db: db, ctrl: graph.NewServicesController(log, db),
+		log: log, db: db, ctrl: graph.NewServicesController(log, db, conn),
 		sp_ctrl: graph.NewServicesProvidersController(log, db),
 		ns_ctrl: graph.NewNamespacesController(log, db),
 		drivers: make(map[string]driverpb.DriverServiceClient),
@@ -528,6 +529,13 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 				},
 			})
 			continue
+		}
+
+		for _, inst := range group.GetInstances() {
+			if inst.GetStatus() == statuspb.NoCloudStatus_DEL {
+				continue
+			}
+			s.ctrl.IGController().Instances().SetStatus(ctx, inst, statuspb.NoCloudStatus_UP)
 		}
 
 		log.Debug("Updated Group", zap.Any("group", group))
