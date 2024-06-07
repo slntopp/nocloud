@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
+	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	hasher "github.com/slntopp/nocloud-proto/hasher"
 	spb "github.com/slntopp/nocloud-proto/services"
@@ -54,7 +55,7 @@ type ServicesController struct {
 	db driver.Database
 }
 
-func NewServicesController(log *zap.Logger, db driver.Database) ServicesController {
+func NewServicesController(log *zap.Logger, db driver.Database, conn *amqp091.Connection) ServicesController {
 	log.Debug("New Services Controller creating")
 	ctx := context.TODO()
 
@@ -66,7 +67,7 @@ func NewServicesController(log *zap.Logger, db driver.Database) ServicesControll
 	})
 	GraphGetEdgeEnsure(log, ctx, graph, schema.NS2SERV, schema.NAMESPACES_COL, schema.SERVICES_COL)
 
-	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db), db: db}
+	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db, conn), db: db}
 }
 
 func (ctrl *ServicesController) IGController() *InstancesGroupsController {

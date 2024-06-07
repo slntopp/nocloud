@@ -19,13 +19,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 	"reflect"
 	"strings"
 	"time"
 
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
+
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
+	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
@@ -64,12 +66,12 @@ type ServicesServer struct {
 	log *zap.Logger
 }
 
-func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub) *ServicesServer {
+func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, conn *amqp091.Connection) *ServicesServer {
 	log := _log.Named("ServicesServer")
 	log.Debug("New Services Server Creating")
 
 	return &ServicesServer{
-		log: log, db: db, ctrl: graph.NewServicesController(log, db),
+		log: log, db: db, ctrl: graph.NewServicesController(log, db, conn),
 		sp_ctrl:  graph.NewServicesProvidersController(log, db),
 		ns_ctrl:  graph.NewNamespacesController(log, db),
 		acc_ctrl: graph.NewAccountsController(log, db),
@@ -413,13 +415,14 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	if acc.Currency != nil {
 		accCurrency = acc.Currency
 	}
-	rate, err := s.cur_ctrl.GetExchangeRate(ctx,
+	rate, _, err := s.cur_ctrl.GetExchangeRate(ctx,
 		&bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID},
 		accCurrency)
 	if err != nil {
 		log.Error("Failed to get exchange rate", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to get exchange rate")
 	}
+
 	srv, err := s.ctrl.Get(ctx, requestor, doc.Uuid)
 	if err != nil {
 		log.Error("Error getting service", zap.Error(err))
@@ -631,6 +634,13 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 				},
 			})
 			continue
+		}
+
+		for _, inst := range group.GetInstances() {
+			if inst.GetStatus() == statuspb.NoCloudStatus_DEL {
+				continue
+			}
+			s.ctrl.IGController().Instances().SetStatus(ctx, inst, statuspb.NoCloudStatus_UP)
 		}
 
 		log.Debug("Updated Group", zap.Any("group", group))

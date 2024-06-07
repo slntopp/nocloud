@@ -24,9 +24,11 @@ import (
 	"time"
 
 	"github.com/arangodb/go-driver"
+	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/wI2L/jsondiff"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
 
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
@@ -61,17 +63,36 @@ type InstancesController struct {
 	inv InvoicesController
 	acc AccountsController
 	cur CurrencyController
+	channel *amqp091.Channel
 }
 
-func NewInstancesController(log *zap.Logger, db driver.Database) *InstancesController {
+func NewInstancesController(log *zap.Logger, db driver.Database, conn *amqp091.Connection) *InstancesController {
 	ctx := context.TODO()
 
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	col := GetEnsureCollection(log, ctx, db, schema.INSTANCES_COL)
 	ig2inst := GraphGetEdgeEnsure(log, ctx, graph, schema.IG2INST, schema.INSTANCES_GROUPS_COL, schema.INSTANCES_COL)
 
-	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst,
-		inv: NewInvoicesController(log, db), acc: NewAccountsController(log, db), cur: NewCurrencyController(log, db)}
+	channel, err := conn.Channel()
+	if err != nil {
+		log.Fatal("Failed to init channel", zap.Error(err))
+	}
+
+	err = channel.ExchangeDeclare(
+		"hooks",
+		"topic",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+
+	if err != nil {
+		log.Fatal("Failed to init exchange", zap.Error(err))
+	}
+
+	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel}
 }
 
 func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) error {
@@ -125,6 +146,26 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 			log.Warn("Failed to cleanup", zap.String("uuid", meta.Key), zap.Error(err))
 		}
 		return err
+	}
+
+	c := pb.Context{
+		Instance: i.GetUuid(),
+		Sp:       sp,
+		Event:    spb.NoCloudStatus_INIT.String(),
+	}
+	body, err := proto.Marshal(&c)
+	if err == nil {
+		err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
+			ContentType:  "text/plain",
+			DeliveryMode: amqp091.Persistent,
+			Body:         body,
+		})
+
+		if err != nil {
+			log.Error("Failed to publish", zap.Error(err))
+		}
+	} else {
+		log.Error("Failed to parse", zap.Error(err))
 	}
 
 	return nil
@@ -261,6 +302,26 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	nocloud.Log(log, event)
 
+	c := pb.Context{
+		Instance: inst.GetUuid(),
+		Sp:       sp,
+		Event:    "UPDATE",
+	}
+	body, err := proto.Marshal(&c)
+	if err == nil {
+		err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
+			ContentType:  "text/plain",
+			DeliveryMode: amqp091.Persistent,
+			Body:         body,
+		})
+
+		if err != nil {
+			log.Error("Failed to publish", zap.Error(err))
+		}
+	} else {
+		log.Error("Failed to parse", zap.Error(err))
+	}
+
 	return nil
 }
 
@@ -295,6 +356,31 @@ func (ctrl *InstancesController) Delete(ctx context.Context, group string, i *pb
 		return err
 	}
 
+	sp, err := ctrl.getSp(ctx, i.GetUuid())
+
+	if err == nil {
+		c := pb.Context{
+			Instance: i.GetUuid(),
+			Sp:       sp,
+			Event:    spb.NoCloudStatus_DEL.String(),
+		}
+		body, err := proto.Marshal(&c)
+		if err == nil {
+			err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
+				ContentType:  "text/plain",
+				DeliveryMode: amqp091.Persistent,
+				Body:         body,
+			})
+
+			if err != nil {
+				log.Error("Failed to publish", zap.Error(err))
+			}
+		} else {
+			log.Error("Failed to parse", zap.Error(err))
+		}
+	} else {
+		log.Error("Failed to get sp", zap.Error(err))
+	}
 	return nil
 }
 
@@ -441,6 +527,8 @@ func (ctrl *InstancesController) ValidateBillingPlan(ctx context.Context, spUuid
 }
 
 func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instance, status spb.NoCloudStatus) (err error) {
+	log := ctrl.log.Named("SetStatus")
+
 	mask := &pb.Instance{
 		Status: status,
 	}
@@ -448,7 +536,38 @@ func (ctrl *InstancesController) SetStatus(ctx context.Context, inst *pb.Instanc
 		mask.Deleted = time.Now().Unix()
 	}
 	_, err = ctrl.col.UpdateDocument(ctx, inst.Uuid, mask)
-	return err
+	if err != nil {
+		log.Error("Failed to update", zap.Error(err))
+		return err
+	}
+
+	sp, err := ctrl.getSp(ctx, inst.GetUuid())
+
+	if err == nil {
+		c := pb.Context{
+			Instance: inst.GetUuid(),
+			Sp:       sp,
+			Event:    status.String(),
+		}
+		body, err := proto.Marshal(&c)
+		if err == nil {
+			err = ctrl.channel.PublishWithContext(ctx, "hooks", "ansible_hooks", false, false, amqp091.Publishing{
+				ContentType:  "text/plain",
+				DeliveryMode: amqp091.Persistent,
+				Body:         body,
+			})
+
+			if err != nil {
+				log.Error("Failed to publish", zap.Error(err))
+			}
+		} else {
+			log.Error("Failed to parse", zap.Error(err))
+		}
+	} else {
+		log.Error("Failed to get sp", zap.Error(err))
+	}
+
+	return nil
 }
 
 func (ctrl *InstancesController) SetState(ctx context.Context, inst *pb.Instance, state stpb.NoCloudState) (err error) {
@@ -502,4 +621,48 @@ func (ctrl *InstancesController) GetEdge(ctx context.Context, inboundNode string
 	}
 
 	return edgeId, nil
+}
+
+const getSp = `
+LET inboundNode = DOCUMENT(@node)
+
+LET ig = LAST(
+	FOR ig IN 1 Inbound inboundNode
+	GRAPH @permissions
+	FILTER IS_SAME_COLLECTION(@ig, ig)
+	RETURN ig
+)
+
+LET sp = LAST(
+	FOR sp IN 1 OUTBOUND ig
+	GRAPH @permissions
+	FILTER IS_SAME_COLLECTION(@sp, sp)
+	RETURN sp
+)
+
+return sp._key
+`
+
+func (ctrl *InstancesController) getSp(ctx context.Context, uuid string) (string, error) {
+	log := ctrl.log.Named("GetSp")
+	c, err := ctrl.db.Query(ctx, getSp, map[string]interface{}{
+		"node":        driver.NewDocumentID(schema.INSTANCES_COL, uuid),
+		"permissions": schema.PERMISSIONS_GRAPH.Name,
+		"ig":          schema.INSTANCES_GROUPS_COL,
+		"sp":          schema.SERVICES_PROVIDERS_COL,
+	})
+
+	if err != nil {
+		log.Error("Error while querying", zap.Error(err))
+		return "", err
+	}
+	defer c.Close()
+	var sp string
+	_, err = c.ReadDocument(ctx, &sp)
+	if err != nil {
+		log.Error("Error while reading document", zap.Error(err))
+		return "", err
+	}
+
+	return sp, nil
 }

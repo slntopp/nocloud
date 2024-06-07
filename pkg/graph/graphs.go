@@ -382,6 +382,7 @@ func ListWithAccess[T Accessible](
 
 const listObjectsWithFiltersOfKind = `
 LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
+<<<<<<< HEAD
 	GRAPH @permissions_graph
 	OPTIONS {order: "bfs", uniqueVertices: "global"}
 	FILTER IS_SAME_COLLECTION(@@kind, node)
@@ -394,6 +395,20 @@ LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
 		result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
 		count: LENGTH(list)
 	}
+=======
+GRAPH @permissions_graph
+OPTIONS {order: "bfs", uniqueVertices: "global"}
+FILTER IS_SAME_COLLECTION(@@kind, node)
+    LET perm = path.edges[0]
+	%s
+	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+)
+
+RETURN { 
+	result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
+	count: LENGTH(list)
+}
+>>>>>>> dev
 `
 
 const listAccounts = `
@@ -477,12 +492,12 @@ func ListAccounts[T Accessible](
 				values := val.GetStructValue().AsMap()
 				if val, ok := values["from"]; ok {
 					from := val.(float64)
-					insert += fmt.Sprintf(` FILTER node.data["%s"] >= %f`, key, from)
+					insert += fmt.Sprintf(` FILTER node.data["%s"] >= %f`, split[1], from)
 				}
 
 				if val, ok := values["to"]; ok {
 					to := val.(float64)
-					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %f`, key, to)
+					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %f`, split[1], to)
 				}
 			} else if split[1] == "whmcs_id" {
 				insert += fmt.Sprintf(` FILTER node.data["%s"] == %d`, split[1], int(val.GetNumberValue()))

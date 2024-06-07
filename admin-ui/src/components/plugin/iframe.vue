@@ -8,11 +8,13 @@ export default {
 import { Buffer } from "buffer";
 import { useStore } from "@/store";
 import { computed, toRefs } from "vue";
+import { useRoute } from "vue-router/composables";
 
 const props = defineProps(["url", "params"]);
 const { url, params } = toRefs(props);
 
 const store = useStore();
+const route = useRoute();
 
 const theme = computed(() => store.getters["app/theme"]);
 const src = computed(() => {
@@ -24,6 +26,7 @@ const src = computed(() => {
     api: location.host,
     theme: theme.value,
     params: params.value,
+    fullscrean: route.query["fullscrean"] === "true",
   });
 
   return `${url.value}?a=${Buffer.from(fullParams).toString("base64")}`;

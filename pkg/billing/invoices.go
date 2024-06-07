@@ -1,9 +1,12 @@
 package billing
 
 import (
-	"connectrpc.com/connect"
 	"context"
 	"fmt"
+	"slices"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
@@ -18,8 +21,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/structpb"
-	"slices"
-	"time"
 )
 
 type pair[T any] struct {

@@ -157,6 +157,7 @@ func main() {
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
+	
 	addons := billing.NewAddonsServer(log, db)
 	log.Info("Registering AddonsService Server")
 	path, handler = cc.NewAddonsServiceHandler(addons, interceptors)
