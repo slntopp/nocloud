@@ -260,7 +260,7 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				if acc.Currency == nil {
 					acc.Currency = &currencyConf.Currency
 				}
-				rate, err := s.currencies.GetExchangeRate(ctx, &currencyConf.Currency, acc.Currency)
+				rate, _, err := s.currencies.GetExchangeRate(ctx, &currencyConf.Currency, acc.Currency)
 				if err != nil {
 					log.Error("Error getting exchange rate", zap.Error(err))
 					continue

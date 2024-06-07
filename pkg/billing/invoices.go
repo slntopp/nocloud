@@ -228,7 +228,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 
 		// Convert invoice's currency to default currency(according to how creating transaction works)
 		defCurr := MakeCurrencyConf(ctx, log).Currency
-		rate, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), &defCurr)
+		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), &defCurr)
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
@@ -743,7 +743,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 
 		// Convert invoice's currency to default currency(according to how creating transaction works)
 		defCurr := MakeCurrencyConf(ctx, log).Currency
-		rate, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), &defCurr)
+		rate, _, err := s.currencies.GetExchangeRate(ctx, t.GetCurrency(), &defCurr)
 		if err != nil {
 			log.Error("Failed to get exchange rate", zap.Error(err))
 			return nil, status.Error(codes.Internal, "Failed to get exchange rate")
