@@ -324,6 +324,10 @@ start:
 	routineConf := MakeRoutineConf(ctx, log)
 	roundingConf := MakeRoundingConf(ctx, log)
 	currencyConf := MakeCurrencyConf(ctx, log)
+	currencyConf.Currency = pb.Currency{
+		Id:    0,
+		Title: "NCU",
+	}
 
 	upd := make(chan bool, 1)
 	go sc.Subscribe([]string{currencyKey}, upd)
