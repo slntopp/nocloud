@@ -22,7 +22,7 @@ type RoutineConf struct {
 }
 
 type CurrencyConf struct {
-	Currency *pb.Currency `json:"currency"` // Default currency for platform
+	Currency pb.Currency `json:"currency"` // Default currency for platform
 }
 
 type RoundingConf struct {
@@ -55,7 +55,7 @@ var (
 	}
 	currencySetting = &sc.Setting[CurrencyConf]{
 		Value: CurrencyConf{
-			Currency: &pb.Currency{
+			Currency: pb.Currency{
 				Id:    schema.DEFAULT_CURRENCY_ID,
 				Title: schema.DEFAULT_CURRENCY_NAME,
 			},
