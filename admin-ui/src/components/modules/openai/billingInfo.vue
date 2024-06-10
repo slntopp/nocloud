@@ -118,10 +118,17 @@ import {
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
 
-const props = defineProps(["template", "plans", "service", "sp", "account"]);
+const props = defineProps([
+  "template",
+  "plans",
+  "service",
+  "sp",
+  "account",
+  "addons",
+]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, plans, service, account } = toRefs(props);
+const { template, plans, service, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -193,6 +200,14 @@ const getBillingItems = () => {
         path: `billingPlan.resources.${index}.price`,
       });
     }
+  });
+
+  addons.value.forEach((addon) => {
+    items.push({
+      name: addon.title,
+      price: addon.periods[0],
+      accountPrice: toAccountPrice(addon.price),
+    });
   });
 
   return items;

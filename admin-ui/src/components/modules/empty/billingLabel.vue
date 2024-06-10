@@ -14,10 +14,10 @@ import { computed, toRefs } from "vue";
 import { formatSecondsToDate } from "@/functions";
 import billingLabel from "@/components/ui/billingLabel.vue";
 
-const props = defineProps(["template", "account"]);
+const props = defineProps(["template", "account", "addons"]);
 const emit = defineEmits(["update"]);
 
-const { template } = toRefs(props);
+const { template, addons } = toRefs(props);
 
 const dueDate = computed(() => {
   return formatSecondsToDate(+props.template?.data?.next_payment_date);
@@ -30,14 +30,17 @@ const instancePrice = computed(() => {
 });
 
 const addonsPrice = computed(() => {
-  const addons = {};
+  const prices = {};
 
-  props.template.config?.addons?.forEach((a) => {
-    const r = props.template.billingPlan?.resources?.find((r) => r.key === a);
-    addons[r?.title || a] = r?.price || 0;
-  });
+  addons.value.forEach(
+    (a) =>
+      (prices[a.uuid] =
+        a.periods[
+          template.value.billingPlan.products[template.value.product]?.period
+        ])
+  );
 
-  return addons;
+  return prices;
 });
 </script>
 

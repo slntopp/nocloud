@@ -24,11 +24,16 @@
       v-model="tabsIndex"
     >
       <v-tab-item v-for="tab of tabs" :key="tab.title">
-        <v-progress-linear indeterminate class="pt-2" v-if="isLoading" />
+        <v-progress-linear
+          indeterminate
+          class="pt-2"
+          v-if="isLoading || isAddonsLoading"
+        />
         <component
           v-else
           :is="tab.component"
           :template="instance"
+          :addons="addons"
           :account="account"
         />
       </v-tab-item>
@@ -51,6 +56,8 @@ export default {
     navTitles: config.navTitles ?? {},
     isLoading: false,
     account: null,
+    addons: [],
+    isAddonsLoading: false,
   }),
   mixins: [snackbar],
   methods: {
@@ -93,6 +100,23 @@ export default {
             socket.close(1000, "job is done");
           }
         };
+      }
+    },
+    async fetchAddons() {
+      const addons = [];
+      this.isAddonsLoading = true;
+      try {
+        await Promise.allSettled(
+          this.instance.addons.map(async (uuid) => {
+            const addon = await this.$store.getters["addons/addonsClient"].get({
+              uuid,
+            });
+            addons.push(addon);
+          })
+        );
+      } finally {
+        this.isAddonsLoading = false;
+        this.addons = addons;
       }
     },
   },
@@ -170,9 +194,10 @@ export default {
 
       this.$store.dispatch("servicesProviders/fetch", { anonymously: false });
       this.$store.dispatch("plans/fetch");
-
       this.account = await api.accounts.get(this.namespace.access.namespace);
+      console.log(this.account);
     } catch (err) {
+      console.log(err);
       this.$store.commit("snackbar/showSnackbarError", {
         message: err.message,
       });
@@ -190,6 +215,7 @@ export default {
       if (newVal) {
         this.initSocket();
         this.$store.dispatch("plans/fetchItem", this.instance.billingPlan.uuid);
+        this.fetchAddons();
       }
     },
     instanceTitle(newVal) {

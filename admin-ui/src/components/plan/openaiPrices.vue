@@ -1,15 +1,39 @@
 <template>
   <div class="pa-5">
-    <nocloud-table
-      table-name="openai-prices_table"
-      :headers="headers"
-      :items="items"
-      :show-select="false"
+    <v-tabs
+      class="rounded-t-lg"
+      v-model="tabsIndex"
+      background-color="background-light"
     >
-      <template v-slot:[`item.price`]="{ item }">
-        <v-text-field type="number" dense v-model.number="item.price" />
-      </template>
-    </nocloud-table>
+      <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
+    </v-tabs>
+
+    <v-tabs-items
+      v-model="tabsIndex"
+      style="background: var(--v-background-light-base)"
+      class="rounded-b-lg"
+    >
+      <v-tab-item v-for="tab in tabs" :key="tab">
+        <nocloud-table
+          v-if="tab === 'Prices'"
+          table-name="openai-prices_table"
+          :headers="headers"
+          :items="resources"
+          :show-select="false"
+        >
+          <template v-slot:[`item.price`]="{ item }">
+            <v-text-field type="number" dense v-model.number="item.price" />
+          </template>
+        </nocloud-table>
+
+        <div class="os-tab__card" v-else>
+          <plan-addons-table
+            @change:addons="addons = $event"
+            :addons="template.addons"
+          />
+        </div>
+      </v-tab-item>
+    </v-tabs-items>
     <div class="d-flex justify-end">
       <v-btn :loading="isSaveLoading" @click="save">Save</v-btn>
     </div>
@@ -19,6 +43,7 @@
 <script setup>
 import { computed, onMounted, ref, toRefs } from "vue";
 import NocloudTable from "@/components/table.vue";
+import planAddonsTable from "@/components/planAddonsTable.vue";
 import api from "@/api";
 import { useStore } from "@/store";
 
@@ -26,6 +51,11 @@ const props = defineProps(["template"]);
 const { template } = toRefs(props);
 
 const store = useStore();
+
+const tabs = ref(["Prices", "Addons"]);
+const tabsIndex = ref(0);
+
+const addons = ref([]);
 
 const resources = ref([
   {
@@ -120,6 +150,8 @@ onMounted(() => {
 
     return { ...resource, price: realResource?.price || 0 };
   });
+
+  addons.value = template.value.addons;
 });
 
 const save = async () => {
@@ -146,6 +178,7 @@ const save = async () => {
     await api.plans.update(props.template.uuid, {
       ...props.template,
       products: {},
+      addons: addons.value,
       resources: result,
     });
 

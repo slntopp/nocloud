@@ -178,10 +178,17 @@ import { useStore } from "@/store";
 import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
 
-const props = defineProps(["template", "plans", "service", "sp", "account"]);
+const props = defineProps([
+  "template",
+  "plans",
+  "service",
+  "sp",
+  "account",
+  "addons",
+]);
 const emit = defineEmits(["refresh", "update"]);
 
-const { template, service, sp, plans, account } = toRefs(props);
+const { template, service, sp, plans, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -315,6 +322,21 @@ const getBillingItems = () => {
       period: drive?.period,
     });
   }
+
+  addons.value.forEach((addon) => {
+    const { title, periods } = addon;
+    const { period,kind } =
+      billingPlan.value.products[template.value.product];
+    items.push({
+      name:title,
+      price: periods[period],
+      accountPrice: toAccountPrice(periods[period]),
+      quantity: 1,
+      isAddon: true,
+      kind,
+      period,
+    });
+  });
 
   return items.map((i) => {
     i.period = getBillingPeriod(i.period);
