@@ -68,7 +68,7 @@ const props = defineProps({
   sortBy: {},
   instances: {},
 });
-const { items, account, showDelete, showDate, readonly, sortBy, instances } =
+const { items, account, showDelete, showDate, readonly, sortBy } =
   toRefs(props);
 
 const emit = defineEmits("click:delete");
@@ -90,10 +90,6 @@ const headers = computed(() =>
 const accountCurrency = computed(
   () => account.value?.currency || store.getters["currencies/default"]
 );
-
-const getInstance = (uuid) => {
-  return instances.value?.find((i) => i.uuid === uuid)?.title;
-};
 </script>
 
 <style scoped></style>
