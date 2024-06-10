@@ -54,7 +54,7 @@
       </v-col>
       <v-col class="d-flex justify-end px-1">
         <v-chip color="primary" outlined
-          >Price: {{ price }} {{ accountCurrency }}</v-chip
+          >Price: {{ price }} {{ accountCurrency?.title }}</v-chip
         >
       </v-col>
       <v-col class="px-1 d-flex justify-end">
@@ -88,7 +88,7 @@ const store = useStore();
 const { convertTo } = useCurrency();
 
 const currency = computed(() => ({
-  code: store.getters["currencies/default"],
+  code: store.getters["currencies/default"].title,
 }));
 
 const accountCurrency = computed(() => {

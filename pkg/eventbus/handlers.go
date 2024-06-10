@@ -2,6 +2,7 @@ package eventbus
 
 import (
 	"context"
+
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/events"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -19,6 +20,7 @@ var handlers = map[string]EventHandler{
 	"suspend_expiry_notification": GetInstAccountHandler,
 	"suspend_delete_instance":     GetInstAccountHandler,
 	"instance_renew":              GetInstAccountHandler,
+	"pending_notification":        GetInstAccountHandler,
 }
 
 var getInstanceAccount = `
@@ -44,23 +46,25 @@ LET account = LAST(
 
 LET rate_one = LAST(
 	FOR i IN @@c2c
-    FILTER (i.to == 0 || i.from == 0) && i.rate == 1
+    FILTER (i.to.id == 0 || i.from.id == 0) && i.rate == 1
         RETURN i
 )
 
-LET default_cur = rate_one.to == 0 ? rate_one.from : rate_one.to
+LET default_cur = rate_one.to.id == 0 ? rate_one.from : rate_one.to
 
 LET currency = account.currency != null ? account.currency : default_cur
 LET rate = PRODUCT(
 	FOR vertex, edge IN OUTBOUND
-	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", default_cur))
-	TO DOCUMENT(CONCAT(@currencies, "/", currency))
+	SHORTEST_PATH DOCUMENT(CONCAT(@currencies, "/", default_cur.id))
+	TO DOCUMENT(CONCAT(@currencies, "/", currency.id))
 	GRAPH @graph
 	FILTER edge
 		RETURN edge.rate
 )
 
 LET price = doc.billing_plan.products[doc.product] == null ? 0 : doc.billing_plan.products[doc.product].price
+
+LET total = @inner_price == 0 ? price : @inner_price
 
 RETURN {
 	account: account._key, 
@@ -69,7 +73,7 @@ RETURN {
 	product: doc.product, 
 	next_payment_date: doc.data.next_payment_date,
 	ips: doc.state.meta.networking.public,
-	price: price * rate
+	price: total * rate
 }
 `
 
@@ -88,6 +92,12 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 		event.Data = make(map[string]*structpb.Value)
 	}
 
+	var innerPrice float64
+	price, ok := event.GetData()["price"]
+	if ok {
+		innerPrice = price.GetNumberValue()
+	}
+
 	inst := driver.NewDocumentID(schema.INSTANCES_COL, event.GetUuid())
 
 	cursor, err := db.Query(ctx, getInstanceAccount, map[string]interface{}{
@@ -98,6 +108,7 @@ func GetInstAccountHandler(ctx context.Context, event *pb.Event, db driver.Datab
 		"currencies":  schema.CUR_COL,
 		"graph":       schema.BILLING_GRAPH.Name,
 		"@c2c":        schema.CUR2CUR,
+		"inner_price": innerPrice,
 	})
 	if err != nil {
 		return nil, err

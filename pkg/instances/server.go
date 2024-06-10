@@ -17,17 +17,19 @@ package instances
 
 import (
 	"context"
-	elpb "github.com/slntopp/nocloud-proto/events_logging"
-	"github.com/slntopp/nocloud-proto/notes"
-	"github.com/slntopp/nocloud-proto/states"
+	"fmt"
 	"slices"
 	"time"
+
+	elpb "github.com/slntopp/nocloud-proto/events_logging"
+	"github.com/slntopp/nocloud-proto/notes"
 
 	"github.com/arangodb/go-driver"
 	amqp "github.com/rabbitmq/amqp091-go"
 	accesspb "github.com/slntopp/nocloud-proto/access"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	pb "github.com/slntopp/nocloud-proto/instances"
+	stpb "github.com/slntopp/nocloud-proto/states"
 	spb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -54,7 +56,7 @@ type InstancesServer struct {
 func NewInstancesServiceServer(logger *zap.Logger, db driver.Database, rbmq *amqp.Connection) *InstancesServer {
 	log := logger.Named("instances")
 	log.Debug("New Instances Server Creating")
-	ig_ctrl := graph.NewInstancesGroupsController(logger, db)
+	ig_ctrl := graph.NewInstancesGroupsController(logger, db, rbmq)
 
 	log.Debug("Setting up StatesPubSub")
 	s := s.NewStatesPubSub(log, &db, rbmq)
@@ -115,7 +117,7 @@ func (s *InstancesServer) Invoke(ctx context.Context, req *pb.InvokeRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	if instance.GetState().GetState() == states.NoCloudState_SUSPENDED && instance.GetAccess().GetLevel() < accesspb.Level_ROOT {
+	if instance.GetState().GetState() == stpb.NoCloudState_SUSPENDED && instance.GetAccess().GetLevel() < accesspb.Level_ROOT {
 		log.Error("Machine is suspended. Functionality is limited", zap.String("uuid", instance.GetUuid()))
 		return nil, status.Error(codes.Unavailable, "Machine is suspended. Functionality is limited")
 	}
@@ -183,9 +185,18 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 		return nil, status.Error(codes.PermissionDenied, "Access denied")
 	}
 
-	err = s.ctrl.SetStatus(ctx, instance.Instance, spb.NoCloudStatus_DEL)
+	err = s.ctrl.SetState(ctx, instance.Instance, stpb.NoCloudState_DELETED)
+
 	if err != nil {
-		return nil, err
+		log.Error("Failed to set state", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	err = s.ctrl.SetStatus(ctx, instance.Instance, spb.NoCloudStatus_DEL)
+
+	if err != nil {
+		log.Error("Failed to set status", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
 	}
 
 	var event = &elpb.Event{
@@ -521,4 +532,133 @@ func (s *InstancesServer) RemoveNote(ctx context.Context, req *notes.RemoveNoteR
 	}
 
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
+}
+
+const listInstancesQuery = `
+LET instances = (
+	FOR node, edge, path IN 0..10 OUTBOUND @account
+	    GRAPH @permissions_graph
+	    OPTIONS {order: "bfs", uniqueVertices: "global"}
+	    FILTER IS_SAME_COLLECTION(@instances, node)
+
+        LET ig = DOCUMENT(path.vertices[-2]._id)
+        LET sp = LAST (
+            FOR sp_node IN 1 OUTBOUND ig
+	            GRAPH @permissions_graph
+	            OPTIONS {order: "bfs", uniqueVertices: "global"}
+	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
+	            RETURN sp_node._key
+        )
+        LET srv = path.vertices[-3]._key
+        LET ns = path.vertices[-4]._key
+        LET acc = path.vertices[-5]._key
+		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
+		
+		%s
+		
+		RETURN {
+			instance: MERGE(node, { 
+				uuid: node._key, 
+				billing_plan: {
+					uuid: bp._key,
+					title: bp.title,
+					type: bp.type,
+					kind: bp.kind,
+					resources: bp.resources,
+					products: {
+						[node.product]: bp.products[node.product],
+					},
+					meta: bp.meta,
+					fee: bp.fee,
+					software: bp.software 
+				}
+			}
+			),
+			service: srv,
+			sp: sp,
+			type: bp.type
+		}
+)
+
+return { 
+	pool: (@limit > 0) ? SLICE(instances, @offset, @limit) : instances,
+	count: LENGTH(instances)
+}
+`
+
+func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest) (*pb.ListInstancesResponse, error) {
+	log := s.log.Named("List")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	limit, page := req.GetLimit(), req.GetPage()
+	offset := (page - 1) * limit
+
+	var query string
+	bindVars := map[string]interface{}{
+		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"instances":         schema.INSTANCES_COL,
+		"bps":               schema.BILLING_PLANS_COL,
+		"service_provider":  schema.SERVICES_PROVIDERS_COL,
+		"offset":            offset,
+		"limit":             limit,
+	}
+
+	if req.Field != nil && req.Sort != nil {
+		subQuery := ` SORT node.%s %s`
+		field, sort := req.GetField(), req.GetSort()
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	for key, val := range req.GetFilters() {
+		if key == "account" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER acc in @%s`, key)
+			bindVars[key] = values
+		} else if key == "namespace" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER ns in @%s`, key)
+			bindVars[key] = values
+		} else if key == "sp" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER sp in @%s`, key)
+			bindVars[key] = values
+		} else if key == "billing_plan" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER bp._key in @%s`, key)
+			bindVars[key] = values
+		}
+	}
+
+	query = fmt.Sprintf(listInstancesQuery, query)
+
+	s.log.Debug("Query", zap.Any("q", query))
+	s.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	c, err := s.db.Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+	var result pb.ListInstancesResponse
+	_, err = c.ReadDocument(ctx, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }

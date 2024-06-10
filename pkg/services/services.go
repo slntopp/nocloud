@@ -20,10 +20,14 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
+
+	"github.com/slntopp/nocloud/pkg/nocloud/auth"
 
 	"github.com/arangodb/go-driver"
 	"github.com/cskr/pubsub"
+	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	bpb "github.com/slntopp/nocloud-proto/billing"
 	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
@@ -46,10 +50,12 @@ import (
 
 type ServicesServer struct {
 	pb.UnimplementedServicesServiceServer
-	db      driver.Database
-	ctrl    graph.ServicesController
-	sp_ctrl graph.ServicesProvidersController
-	ns_ctrl graph.NamespacesController
+	db       driver.Database
+	ctrl     graph.ServicesController
+	sp_ctrl  graph.ServicesProvidersController
+	ns_ctrl  graph.NamespacesController
+	acc_ctrl graph.AccountsController
+	cur_ctrl graph.CurrencyController
 
 	drivers map[string]driverpb.DriverServiceClient
 
@@ -60,16 +66,18 @@ type ServicesServer struct {
 	log *zap.Logger
 }
 
-func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub) *ServicesServer {
+func NewServicesServer(_log *zap.Logger, db driver.Database, ps *pubsub.PubSub, conn *amqp091.Connection) *ServicesServer {
 	log := _log.Named("ServicesServer")
 	log.Debug("New Services Server Creating")
 
 	return &ServicesServer{
-		log: log, db: db, ctrl: graph.NewServicesController(log, db),
-		sp_ctrl: graph.NewServicesProvidersController(log, db),
-		ns_ctrl: graph.NewNamespacesController(log, db),
-		drivers: make(map[string]driverpb.DriverServiceClient),
-		ps:      ps,
+		log: log, db: db, ctrl: graph.NewServicesController(log, db, conn),
+		sp_ctrl:  graph.NewServicesProvidersController(log, db),
+		ns_ctrl:  graph.NewNamespacesController(log, db),
+		acc_ctrl: graph.NewAccountsController(log, db),
+		cur_ctrl: graph.NewCurrencyController(log, db),
+		drivers:  make(map[string]driverpb.DriverServiceClient),
+		ps:       ps,
 	}
 }
 
@@ -177,8 +185,15 @@ func (s *ServicesServer) DoTestServiceConfig(ctx context.Context, log *zap.Logge
 				if !ok {
 					_, err := s.billing.GetPlan(ctx, instance.BillingPlan)
 					if err != nil {
-						log.Error("Error fetching BillingPlan", zap.Error(err))
-						return nil, err
+						response.Result = false
+						log.Error("instance.BillingPlan", zap.Any("bill plan", instance.BillingPlan))
+						terr := pb.TestConfigError{
+							Error:         "Billing plan not exist, check it",
+							Instance:      instance.Title,
+							InstanceGroup: group.Title,
+						}
+						response.Errors = append(response.Errors, &terr)
+						continue
 					}
 				}
 
@@ -335,7 +350,7 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 	if err != nil {
 		return nil, err
 	} else if !testResult.Result {
-		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Config didn't pass test. Errors: %v", testResult.Errors))
 	}
 
 	doc, err := s.ctrl.Create(ctx, service)
@@ -390,6 +405,104 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 		log.Debug("Created Group", zap.Any("group", group))
 	}
 
+	// Create invoice for newly created instances
+	acc, err := s.acc_ctrl.Get(ctx, requestor)
+	if err != nil {
+		log.Error("Failed to get account", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get account")
+	}
+	var accCurrency = &bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID, Title: schema.DEFAULT_CURRENCY_NAME}
+	if acc.Currency != nil {
+		accCurrency = acc.Currency
+	}
+	rate, _, err := s.cur_ctrl.GetExchangeRate(ctx,
+		&bpb.Currency{Id: schema.DEFAULT_CURRENCY_ID},
+		accCurrency)
+	if err != nil {
+		log.Error("Failed to get exchange rate", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Failed to get exchange rate")
+	}
+
+	srv, err := s.ctrl.Get(ctx, requestor, doc.Uuid)
+	if err != nil {
+		log.Error("Error getting service", zap.Error(err))
+		return nil, status.Error(codes.Internal, "Error getting service")
+	}
+	log.Debug("Got service", zap.Any("service", srv))
+	for _, group := range srv.GetInstancesGroups() {
+		for _, instance := range group.GetInstances() {
+
+			// TODO: make sure cost calculated correctly
+			var cost float64
+			for _, res := range instance.GetBillingPlan().GetResources() {
+
+				switch res.Key {
+				case "cpu":
+					count := instance.GetResources()["cpu"].GetNumberValue()
+					cost += res.GetPrice() * count
+				case "ram":
+					count := instance.GetResources()["ram"].GetNumberValue() / 1024
+					cost += res.GetPrice() * count
+				default:
+					// Calculate drive size billing
+					if strings.Contains(res.GetKey(), "drive") {
+						driveType := instance.GetResources()["drive_type"].GetStringValue()
+						if res.GetKey() != "drive_"+strings.ToLower(driveType) {
+							continue
+						}
+						count := instance.GetResources()["drive_size"].GetNumberValue() / 1024
+						cost += res.GetPrice() * count
+					}
+				}
+			}
+
+			product, ok := instance.GetBillingPlan().GetProducts()[instance.GetProduct()]
+			if !ok || product == nil {
+				log.Error("Failed to get product(instance's product not found in billing plan or nil)",
+					zap.String("product", instance.GetProduct()),
+					zap.String("instance", instance.GetUuid()))
+			} else {
+				cost += product.Price
+			}
+
+			cost *= rate // Convert NCU cost to account's currency
+
+			inv := &bpb.Invoice{
+				Status: bpb.BillingStatus_UNPAID,
+				Items: []*bpb.Item{
+					{
+						Title:    fmt.Sprintf("Instance '%s' start bill", instance.GetUuid()),
+						Amount:   1,
+						Unit:     "Instance",
+						Price:    cost,
+						Instance: instance.GetUuid(),
+					},
+				},
+				Total:    cost,
+				Type:     bpb.ActionType_INSTANCE_START,
+				Created:  time.Now().Unix(),
+				Deadline: time.Now().Add(24 * time.Hour).Unix(), // Until when invoice should be paid
+				Account:  acc.GetUuid(),
+				Currency: accCurrency,
+			}
+			token, err := auth.MakeToken(schema.ROOT_ACCOUNT_KEY)
+			if err != nil {
+				log.Error("Failed to create token", zap.Error(err))
+				return nil, status.Error(codes.Internal, "Couldn't create invoice")
+			}
+			ctx2 := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
+			ctx2 = metadata.AppendToOutgoingContext(ctx2, string(nocloud.NoCloudAccount), schema.ROOT_ACCOUNT_KEY)
+			ctx2 = metadata.AppendToOutgoingContext(ctx2, "authorization", "Bearer "+token)
+			_, err = s.billing.CreateInvoice(ctx2, inv)
+			if err != nil {
+				log.Error("Failed to create invoice", zap.Error(err), zap.String("instance", instance.GetUuid()), zap.Any("invoice", inv))
+				return nil, status.Error(codes.Internal, "Failed to create invoice")
+			}
+
+			log.Debug("Successfully created invoice", zap.Any("instance", instance.GetUuid()))
+		}
+	}
+
 	return service, nil
 }
 
@@ -402,7 +515,7 @@ func (s *ServicesServer) Update(ctx context.Context, service *pb.Service) (*pb.S
 	if err != nil {
 		return nil, err
 	} else if !testResult.Result {
-		return nil, status.Error(codes.InvalidArgument, "Config didn't pass test")
+		return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("Config didn't pass test. Errors: %v", testResult.Errors))
 	}
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
@@ -521,6 +634,13 @@ func (s *ServicesServer) Up(ctx context.Context, request *pb.UpRequest) (*pb.UpR
 				},
 			})
 			continue
+		}
+
+		for _, inst := range group.GetInstances() {
+			if inst.GetStatus() == statuspb.NoCloudStatus_DEL {
+				continue
+			}
+			s.ctrl.IGController().Instances().SetStatus(ctx, inst, statuspb.NoCloudStatus_UP)
 		}
 
 		log.Debug("Updated Group", zap.Any("group", group))
@@ -798,7 +918,7 @@ func (s *ServicesServer) Get(ctx context.Context, request *pb.GetRequest) (res *
 
 func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (response *pb.Services, err error) {
 	log := s.log.Named("List")
-	log.Debug("Request received", zap.String("namespace", request.GetNamespace()), zap.String("show_deleted", request.GetShowDeleted()))
+	log.Debug("Request received", zap.String("namespace", request.GetNamespace()), zap.Bool("show_deleted", request.GetShowDeleted()))
 
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -809,7 +929,7 @@ func (s *ServicesServer) List(ctx context.Context, request *pb.ListRequest) (res
 		return nil, status.Error(codes.Internal, "Error reading Services from DB")
 	}
 
-	return &pb.Services{Pool: r}, nil
+	return &pb.Services{Pool: r.Result, Count: int64(r.Count)}, nil
 }
 
 func (s *ServicesServer) Delete(ctx context.Context, request *pb.DeleteRequest) (response *pb.DeleteResponse, err error) {

@@ -45,10 +45,10 @@ func TestDeleteAccount(t *testing.T) {
 
 	ac := NewAccountsController(log, db)
 	nsc := NewNamespacesController(log, db)
-	instc := NewInstancesController(log, db)
-	igc := NewInstancesGroupsController(log, db)
+	instc := NewInstancesController(log, db, nil)
+	igc := NewInstancesGroupsController(log, db, nil)
 	spc := NewServicesProvidersController(log, db)
-	srvc := NewServicesController(log, db)
+	srvc := NewServicesController(log, db, nil)
 
 	acc, err := ac.Create(ctx, accounts.Account{Title: "test_user"})
 	if err != nil {
@@ -115,7 +115,7 @@ func TestDeleteAccountCredentials(t *testing.T) {
 	ac := NewAccountsController(log, db)
 	nsc := NewNamespacesController(log, db)
 	spc := NewServicesProvidersController(log, db)
-	srvc := NewServicesController(log, db)
+	srvc := NewServicesController(log, db, nil)
 
 	acc, err := ac.Create(ctx, accounts.Account{Title: "test_user"})
 	if err != nil {

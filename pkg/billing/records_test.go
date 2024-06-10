@@ -14,6 +14,15 @@ import (
 	"time"
 )
 
+func currMigrationMock(t *testing.T, db *driver_mocks.MockDatabase, col *driver_mocks.MockCollection) {
+	col.On("Database").Return(db)
+	col.On("Name").Return("Records")
+	cur := driver_mocks.NewMockCursor(t)
+	db.On("Query", mock.Anything, mock.Anything, mock.Anything).Return(cur, nil).Times(1)
+	cur.On("ReadDocument", mock.Anything, mock.Anything).Return(driver.DocumentMeta{}, nil).Maybe()
+	cur.On("Close").Return(nil).Maybe()
+}
+
 func TestConsumeMock(t *testing.T) {
 	ctx := context.TODO()
 
@@ -21,6 +30,7 @@ func TestConsumeMock(t *testing.T) {
 	col := driver_mocks.NewMockCollection(t)
 	cursor := driver_mocks.NewMockCursor(t)
 
+	currMigrationMock(t, db, col)
 	db.On("CollectionExists", ctx, "Records").Return(true, nil)
 	db.On("Collection", ctx, "Records").Return(col, nil)
 	ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
@@ -35,11 +45,11 @@ func TestConsumeMock(t *testing.T) {
 		Instance: uuid.New().String(),
 		Resource: uuid.New().String(),
 		Total:    1,
-		Currency: pb.Currency_NCU,
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	conf := CurrencyConf{
-		Currency: int32(pb.Currency_NCU),
+		Currency: pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	db.On("Query", ctx, checkOverlap, map[string]interface{}{
@@ -61,6 +71,7 @@ func TestConsumeMock_NotNormal(t *testing.T) {
 	col := driver_mocks.NewMockCollection(t)
 	cursor2 := driver_mocks.NewMockCursor(t)
 
+	currMigrationMock(t, db, col)
 	db.On("CollectionExists", ctx, "Records").Return(true, nil)
 	db.On("Collection", ctx, "Records").Return(col, nil)
 	ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
@@ -75,17 +86,18 @@ func TestConsumeMock_NotNormal(t *testing.T) {
 		Instance: uuid.New().String(),
 		Resource: uuid.New().String(),
 		Total:    1,
-		Currency: pb.Currency_NCU,
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	conf := CurrencyConf{
-		Currency: int32(pb.Currency_NCU),
+		Currency: pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	col.On("CreateDocument", ctx, &record).Return(driver.DocumentMeta{}, nil)
 	db.On("Query", ctx, generateUrgentTransactions, map[string]interface{}{
 		"@transactions": schema.TRANSACTIONS_COL,
 		"@instances":    schema.INSTANCES_COL,
+		"instances":     schema.INSTANCES_COL,
 		"@services":     schema.SERVICES_COL,
 		"@records":      schema.RECORDS_COL,
 		"@accounts":     schema.ACCOUNTS_COL,
@@ -124,6 +136,7 @@ func TestConsumeMock_ZeroTotal(t *testing.T) {
 	db := driver_mocks.NewMockDatabase(t)
 	col := driver_mocks.NewMockCollection(t)
 
+	currMigrationMock(t, db, col)
 	db.On("CollectionExists", ctx, "Records").Return(true, nil)
 	db.On("Collection", ctx, "Records").Return(col, nil)
 	ctrl := NewRecordsServiceServer(zap.NewExample(), nil, db)
@@ -138,11 +151,11 @@ func TestConsumeMock_ZeroTotal(t *testing.T) {
 		Instance: uuid.New().String(),
 		Resource: uuid.New().String(),
 		Total:    0,
-		Currency: pb.Currency_NCU,
+		Currency: &pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	conf := CurrencyConf{
-		Currency: int32(pb.Currency_NCU),
+		Currency: pb.Currency{Id: 0, Title: "NCU"},
 	}
 
 	err := ctrl.ProcessRecord(ctx, &record, conf, now)

@@ -20,8 +20,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/rs/cors"
+	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"net/http"
 
 	cc "github.com/slntopp/nocloud-proto/billing/billingconnect"
@@ -49,6 +52,7 @@ var (
 	arangodbHost string
 	arangodbCred string
 	SIGNING_KEY  []byte
+	drivers      []string
 )
 
 func init() {
@@ -70,6 +74,7 @@ func init() {
 	arangodbCred = viper.GetString("DB_CRED")
 	redisHost = viper.GetString("REDIS_HOST")
 	SIGNING_KEY = []byte(viper.GetString("SIGNING_KEY"))
+	drivers = viper.GetStringSlice("DRIVERS")
 
 	viper.SetDefault("RABBITMQ_CONN", "amqp://nocloud:secret@rabbitmq:5672/")
 	RabbitMQConn = viper.GetString("RABBITMQ_CONN")
@@ -100,7 +105,13 @@ func main() {
 		})
 	})
 
-	server := billing.NewBillingServiceServer(log, db)
+	conn, err := amqp.Dial(RabbitMQConn)
+	if err != nil {
+		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
+	}
+	defer conn.Close()
+
+	server := billing.NewBillingServiceServer(log, db, conn)
 	currencies := billing.NewCurrencyServiceServer(log, db)
 	log.Info("Starting Currencies Service")
 
@@ -116,15 +127,27 @@ func main() {
 	log.Info("Starting Account Suspension Routine")
 	go server.SuspendAccountsRoutine(ctx)
 
+	log.Info("Starting Invoices Routine")
+	go server.IssueInvoicesRoutine(ctx)
+
+	for _, driver := range drivers {
+		log.Info("Registering Driver", zap.String("driver", driver))
+		dconn, err := grpc.Dial(driver, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		if err != nil {
+			log.Fatal("Error registering driver", zap.String("driver", driver), zap.Error(err))
+		}
+		client := driverpb.NewDriverServiceClient(dconn)
+		driver_type, err := client.GetType(context.Background(), &driverpb.GetTypeRequest{})
+		if err != nil {
+			log.Fatal("Error dialing driver and getting its type", zap.String("driver", driver), zap.Error(err))
+		}
+		server.RegisterDriver(driver_type.GetType(), client)
+		log.Info("Registered Driver", zap.String("driver", driver), zap.String("type", driver_type.GetType()))
+	}
+
 	log.Info("Registering BillingService Server")
 	path, handler := cc.NewBillingServiceHandler(server, interceptors)
 	router.PathPrefix(path).Handler(handler)
-
-	conn, err := amqp.Dial(RabbitMQConn)
-	if err != nil {
-		log.Fatal("failed to connect to RabbitMQ", zap.Error(err))
-	}
-	defer conn.Close()
 
 	records := billing.NewRecordsServiceServer(log, conn, db)
 	log.Info("Starting Records Consumer")
@@ -134,6 +157,7 @@ func main() {
 	path, handler = cc.NewCurrencyServiceHandler(currencies, interceptors)
 	router.PathPrefix(path).Handler(handler)
 
+	
 	addons := billing.NewAddonsServer(log, db)
 	log.Info("Registering AddonsService Server")
 	path, handler = cc.NewAddonsServiceHandler(addons, interceptors)

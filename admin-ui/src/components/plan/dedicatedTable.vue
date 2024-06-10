@@ -138,7 +138,7 @@
       </template>
 
       <template v-slot:[`item.basePrice`]="{ value }">
-        {{ value }} {{ defaultCurrency }}
+        {{ value }} {{ defaultCurrency?.title }}
       </template>
 
       <template v-slot:[`item.price`]="{ item }">
@@ -146,7 +146,7 @@
           dense
           style="min-width: 200px"
           v-model="item.price"
-          :suffix="defaultCurrency"
+          :suffix="defaultCurrency?.title"
         />
       </template>
 
@@ -157,7 +157,7 @@
           <td :colspan="headers.length - 6">Installation price</td>
           <td>
             {{ item.installation_fee.price.value }}
-            {{ defaultCurrency }}
+            {{ defaultCurrency?.title }}
           </td>
           <td>
             <v-text-field
@@ -190,7 +190,7 @@
               {{ getPayment(item.duration) || getBillingPeriod(item.period) }}
             </template>
             <template v-slot:[`item.basePrice`]="{ value }">
-              {{ value }} {{ value ? defaultCurrency : "" }}
+              {{ value }} {{ value ? defaultCurrency?.title : "" }}
             </template>
             <template v-slot:[`item.price`]="{ item }">
               <span v-if="item.virtual">{{ item.price }}</span>
@@ -198,7 +198,7 @@
                 v-else
                 dense
                 style="width: 200px"
-                :suffix="defaultCurrency"
+                :suffix="defaultCurrency?.title"
                 v-model="item.price"
               />
             </template>
@@ -731,11 +731,11 @@ export default {
       return this.plans;
     },
     plnRate() {
-      if (this.defaultCurrency === "PLN") {
+      if (this.defaultCurrency.title === "PLN") {
         return 1;
       }
       return this.rates.find(
-        (r) => r.from === "PLN" && r.to === this.defaultCurrency
+        (r) => r.from.title === "PLN" && r.to.title === this.defaultCurrency.title
       )?.rate;
     },
   },

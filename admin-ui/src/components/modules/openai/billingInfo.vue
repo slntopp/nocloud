@@ -48,7 +48,7 @@
       >
         <template v-slot:[`item.price`]="{ item }">
           <v-text-field
-            :suffix="defaultCurrency"
+            :suffix="defaultCurrency?.title"
             v-model="item.price"
             @input="updatePrice(item, false)"
             append-icon="mdi-pencil"
@@ -56,7 +56,7 @@
         </template>
         <template v-slot:[`item.accountPrice`]="{ item }">
           <v-text-field
-            :suffix="accountCurrency"
+            :suffix="accountCurrency?.title"
             style="color: var(--v-primary-base)"
             v-model="item.accountPrice"
             @input="updatePrice(item, true)"
@@ -182,7 +182,14 @@ const changePM = () => {
 const getBillingItems = () => {
   const items = [];
 
-  const acceptedResources = ["input_kilotoken", "output_kilotoken"];
+  const acceptedResources = [
+    "input_kilotoken",
+    "output_kilotoken",
+    "image_size_1024_1024_quality_standart",
+    "image_size_1024_1024_quality_hd",
+    "image_size_1024_1792_quality_standart",
+    "image_size_1024_1792_quality_hd",
+  ];
 
   template.value.billingPlan.resources.forEach((r, index) => {
     if (acceptedResources.includes(r.key)) {

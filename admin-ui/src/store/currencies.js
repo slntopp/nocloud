@@ -1,13 +1,74 @@
-import api from "@/api.js";
+import { createPromiseClient } from "@connectrpc/connect";
+import { CurrencyService } from "nocloud-proto/proto/es/billing/billing_connect";
+import {
+  GetCurrenciesRequest,
+  GetExchangeRatesRequest,
+} from "nocloud-proto/proto/es/billing/billing_pb";
 
 export default {
   namespaced: true,
   state: {
-    currenciesList: ["NCU", "USD", "EUR", "BYN", "PLN"],
+    currenciesList: [{ id: 1, title: "NCU" }],
     currencies: [],
     currency: {},
     defaultCurrency: "",
     loading: false,
+  },
+  mutations: {
+    setCurrencies(state, currencies) {
+      state.currenciesList = currencies;
+    },
+    setCurrency(state, currency) {
+      state.currency = currency;
+    },
+    setRates(state, rates) {
+      state.currencies = rates.map((el) => ({
+        ...el,
+        id: `${el.from.id} ${el.to.id}`,
+      }));
+    },
+    setDefault(state, currencies) {
+      const currency = currencies.find(
+        (el) => el.rate === 1 && [el.from.title, el.to.title].includes("NCU")
+      );
+
+      if (!currency) return;
+      state.defaultCurrency =
+        currency.from.title === "NCU" ? currency.to : currency.from;
+    },
+    setLoading(state, data) {
+      state.loading = data;
+    },
+    updateCurrency(state, newCurrency) {
+      state.currency = state.currency.map((currency) =>
+        newCurrency.id === currency.id ? newCurrency : currency
+      );
+    },
+  },
+  actions: {
+    async fetch({ commit, state, getters }, options) {
+      if (state.loading) return;
+      if (!options?.silent) {
+        commit("setRates", []);
+        commit("setDefault", []);
+        commit("setCurrencies", []);
+        commit("setLoading", true);
+      }
+
+      try {
+        const { currencies } = await getters["currencyClient"].getCurrencies(
+          new GetCurrenciesRequest()
+        );
+        commit("setCurrencies", currencies);
+        const { rates } = await getters["currencyClient"].getExchangeRates(
+          new GetExchangeRatesRequest()
+        );
+        commit("setRates", rates);
+        commit("setDefault", rates);
+      } finally {
+        commit("setLoading", false);
+      }
+    },
   },
   getters: {
     all(state) {
@@ -25,103 +86,8 @@ export default {
     isLoading(state) {
       return state.loading;
     },
-  },
-  mutations: {
-    setCurrencies(state, currencies) {
-      state.currenciesList = currencies;
-    },
-    setCurrency(state, currency) {
-      state.currency = currency;
-    },
-    setRates(state, rates) {
-      state.currencies = rates.map((el) => ({
-        ...el,
-        id: `${el.from} ${el.to}`,
-      }));
-    },
-    setDefault(state, currencies) {
-      const currency = currencies.find(
-        (el) => el.rate === 1 && [el.from, el.to].includes("NCU")
-      );
-
-      if (!currency) return;
-      state.defaultCurrency =
-        currency.from === "NCU" ? currency.to : currency.from;
-    },
-    setLoading(state, data) {
-      state.loading = data;
-    },
-    updateCurrency(state, newCurrency) {
-      state.currency = state.currency.map((currency) =>
-        newCurrency.id === currency.id ? newCurrency : currency
-      );
-    },
-  },
-  actions: {
-    fetch({ commit, state }, options) {
-      if (state.loading) return;
-      if (!options?.silent) {
-        commit("setRates", []);
-        commit("setDefault", []);
-        commit("setCurrencies", []);
-        commit("setLoading", true);
-      }
-
-      return new Promise((resolve, reject) => {
-        api
-          .get("/billing/currencies")
-          .then((response) => {
-            commit("setCurrencies", response.currencies);
-            return api.get("/billing/currencies/rates");
-          })
-          .then((response) => {
-            commit("setRates", response.rates);
-            commit("setDefault", response.rates);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
-    },
-    fetchById({ commit }, { from, to }) {
-      commit("setLoading", true);
-
-      return new Promise((resolve, reject) => {
-        api
-          .get(`/billing/currencies/${from}/${to}`)
-          .then((response) => {
-            commit("updateCurrency", response);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
-    },
-    fetchItem({ commit }, { from, to }) {
-      commit("setLoading", true);
-
-      return new Promise((resolve, reject) => {
-        api
-          .get(`/billing/currencies/${from}/${to}`)
-          .then((response) => {
-            commit("setCurrency", response);
-            resolve(response);
-          })
-          .catch((error) => {
-            reject(error);
-          })
-          .finally(() => {
-            commit("setLoading", false);
-          });
-      });
+    currencyClient(state, getters, rootState, rootGetters) {
+      return createPromiseClient(CurrencyService, rootGetters["app/transport"]);
     },
   },
 };

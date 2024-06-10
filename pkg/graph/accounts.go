@@ -19,6 +19,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud/pkg/nocloud"
@@ -51,6 +52,8 @@ func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsContr
 	ctx := context.TODO()
 	log := logger.Named("AccountsController")
 
+	log.Info("Creating Accounts controller")
+
 	graph := GraphGetEnsure(log, ctx, db, schema.PERMISSIONS_GRAPH.Name)
 	col := GraphGetVertexEnsure(log, ctx, db, graph, schema.ACCOUNTS_COL)
 
@@ -64,6 +67,8 @@ func NewAccountsController(logger *zap.Logger, db driver.Database) AccountsContr
 	GraphGetEdgeEnsure(log, ctx, graph, schema.CREDENTIALS_EDGE_COL, schema.ACCOUNTS_COL, schema.CREDENTIALS_COL)
 
 	nsController := NewNamespacesController(log, col.Database())
+
+	migrations.UpdateNumericCurrencyToDynamic(log, col)
 
 	return AccountsController{log: log, col: col, cred: cred, ns_ctrl: nsController}
 }
@@ -108,6 +113,9 @@ func (ctrl *AccountsController) Exists(ctx context.Context, id string) (bool, er
 
 func (ctrl *AccountsController) Create(ctx context.Context, acc pb.Account) (Account, error) {
 	meta, err := ctrl.col.CreateDocument(ctx, &acc)
+	if err != nil {
+		return Account{}, err
+	}
 	acc.Uuid = meta.ID.Key()
 	return Account{&acc, meta}, err
 }

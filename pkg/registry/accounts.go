@@ -18,11 +18,12 @@ package registry
 import (
 	"context"
 	"fmt"
+	"slices"
+	"time"
+
 	elpb "github.com/slntopp/nocloud-proto/events_logging"
 	"github.com/slntopp/nocloud-proto/notes"
 	"github.com/slntopp/nocloud/pkg/nocloud/sessions"
-	"slices"
-	"time"
 
 	"github.com/arangodb/go-driver"
 	jwt "github.com/golang-jwt/jwt/v4"
@@ -229,15 +230,16 @@ func (s *AccountsServiceServer) Get(ctx context.Context, request *accountspb.Get
 	log.Debug("Retrieving account", zap.String("uuid", requested))
 	acc, err := graph.GetWithAccess[graph.Account](ctx, s.db, driver.NewDocumentID(schema.ACCOUNTS_COL, requested))
 
+	if err != nil || acc.Access == nil {
+		log.Debug("Error getting account", zap.Any("error", err))
+		return nil, status.Error(codes.NotFound, "Account not found")
+	}
+
 	if acc.Account == nil {
 		log.Debug("Error getting account", zap.Any("error", err))
 		return nil, status.Error(codes.NotFound, "Account not found")
 	}
 
-	if err != nil || acc.Access == nil {
-		log.Debug("Error getting account", zap.Any("error", err))
-		return nil, status.Error(codes.NotFound, "Account not found")
-	}
 	log.Debug("Retrieved account", zap.Any("account", acc))
 
 	// Provide public information without access check
@@ -283,7 +285,7 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 
 	offset := (page - 1) * limit
 
-	pool, err := graph.ListWithAccessAndFilters[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
+	pool, err := graph.ListAccounts[graph.Account](ctx, log, s.db, acc.ID, schema.ACCOUNTS_COL, depth, offset, limit, request.GetField(), request.GetSort(), request.GetFilters())
 	if err != nil {
 		log.Debug("Error listing accounts", zap.Any("error", err))
 		return nil, status.Error(codes.Internal, "Error listing accounts")
@@ -300,8 +302,9 @@ func (s *AccountsServiceServer) List(ctx context.Context, request *accountspb.Li
 	log.Debug("Convert result", zap.Any("pool", result))
 
 	return &accountspb.ListResponse{
-		Pool:  result,
-		Count: int64(pool.Count),
+		Pool:   result,
+		Count:  int64(pool.Count),
+		Active: int64(pool.Active),
 	}, nil
 }
 
@@ -431,7 +434,7 @@ func (s *AccountsServiceServer) Create(ctx context.Context, request *accountspb.
 
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
-		Currency: &request.Currency,
+		Currency: request.Currency,
 		Data:     request.GetData(),
 	}
 
@@ -529,7 +532,7 @@ func (s *AccountsServiceServer) SignUp(ctx context.Context, request *accountspb.
 
 	creationAccount := accountspb.Account{
 		Title:    request.Title,
-		Currency: &request.Currency,
+		Currency: request.Currency,
 		Data:     request.GetData(),
 		Status:   accStatus,
 	}
@@ -624,7 +627,7 @@ func (s *AccountsServiceServer) Update(ctx context.Context, request *accountspb.
 	}
 
 	if request.Currency != nil {
-		if acc.GetCurrency() != request.GetCurrency() {
+		if acc.GetCurrency().GetId() != request.GetCurrency().GetId() {
 			log.Debug("Currency patch detected")
 			patch["currency"] = request.GetCurrency()
 		}

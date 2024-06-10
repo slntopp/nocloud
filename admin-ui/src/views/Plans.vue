@@ -61,7 +61,7 @@
         </template>
       </confirm-dialog>
 
-      <v-switch label="Hide individual" v-model="isIndividualHide" />
+      <v-switch label="Individual" v-model="isIndividual" />
     </div>
 
     <nocloud-table
@@ -76,7 +76,7 @@
     >
       <template v-slot:[`item.title`]="{ item }">
         <router-link :to="{ name: 'Plan', params: { planId: item.uuid } }">
-          {{ item.title }}
+          {{ getShortName(item.title, 45) }}
         </router-link>
       </template>
       <template v-slot:[`item.meta.auto_start`]="{ item }">
@@ -187,6 +187,7 @@ import {
   getDeepObjectValue,
   readJSONFile,
   readYAMLFile,
+  getShortName,
 } from "@/functions";
 import { mapGetters } from "vuex";
 import DownloadTemplateButton from "@/components/ui/downloadTemplateButton.vue";
@@ -244,11 +245,12 @@ export default {
     isPlansUploadLoading: false,
     uploadedPlans: [],
 
-    isIndividualHide: true,
+    isIndividual: false,
 
     updatedPlanUuid: "",
   }),
   methods: {
+    getShortName,
     changePlan() {
       this.linked = [];
       this.services.forEach((service) => {
@@ -443,9 +445,9 @@ export default {
       );
     },
     filtredPlans() {
-      const plans = this.plans
-        .filter((p) => p?.meta?.isIndividual != this.isIndividualHide)
-        .filter((p) =>
+      const plans = this.plans.filter(
+        (p) =>
+          !!p?.meta?.isIndividual == this.isIndividual &&
           Object.keys(this.filter).every((key) => {
             const data = getDeepObjectValue(p, key);
 
@@ -455,7 +457,7 @@ export default {
               this.searchFields.find((f) => f.key === key)
             );
           })
-        );
+      );
 
       if (this.searchParam) {
         return filterArrayByTitleAndUuid(plans, this.searchParam);

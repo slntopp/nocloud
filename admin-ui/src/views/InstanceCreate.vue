@@ -68,7 +68,7 @@
         </v-col>
       </v-row>
       <component
-        :is-edit="isEdit || this.$route.params.instanceId"
+        :is-edit="isEdit || route.params.instanceId"
         v-if="isInstanceControlsShowed"
         @set-value="setValue"
         :instance-group="instanceGroup"
@@ -78,7 +78,7 @@
         :instance="instance"
         :plans="plans"
         :account-id="account?.uuid"
-        :plan-rules="planRules"
+        :plan-rules="rules.req"
         :sp-uuid="serviceProviderId"
         :is="templates[type] ?? templates.custom"
       />
@@ -89,330 +89,351 @@
   </v-form>
 </template>
 
+<script setup>
+import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import api from "@/api";
+import { computed, onMounted, watch, ref } from "vue";
+import { defaultFilterObject } from "@/functions";
+import { useStore } from "@/store";
+
+const store = useStore();
+const route = useRoute();
+const router = useRouter();
+
+const isEdit = ref(false);
+const isCreateLoading = ref(false);
+const isLoading = ref(true);
+const formValid = ref(false);
+const typeItems = ref([]);
+const templates = ref([]);
+const type = ref("ione");
+const customTypeName = ref(null);
+const instance = ref({});
+const service = ref({});
+const account = ref(null);
+const namespace = ref(null);
+const instanceGroup = ref({});
+const instanceGroupTitle = ref("");
+const serviceProviderId = ref(null);
+const meta = ref({});
+const form = ref(null);
+const rules = ref({
+  req: [(v) => !!v || "required field"],
+});
+
+const servicesProviders = computed(() =>
+  store.getters["servicesProviders/all"].filter((el) => el.type === type.value)
+);
+const services = computed(() => store.getters["services/all"]);
+const servicesByAccount = computed(() =>
+  services.value.filter((s) => s.access.namespace === namespace.value?.uuid)
+);
+
+const serviceInstanceGroups = computed(() => {
+  if (
+    !service.value ||
+    !service.value?.instancesGroups ||
+    !type.value ||
+    !serviceProviderId.value
+  ) {
+    return [];
+  }
+
+  return service.value?.instancesGroups.filter(
+    (ig) => ig.type === type.value && ig.sp === serviceProviderId.value
+  );
+});
+const serviceInstanceGroupTitles = computed(() => {
+  const igs = serviceInstanceGroups.value.map((i) => i.title);
+
+  return igs;
+});
+const allPlans = computed(() => {
+  return store.getters["plans/all"] || [];
+});
+const plans = computed(() =>
+  allPlans.value
+    .map((plan) => ({
+      ...plan,
+      sp: servicesProviders.value.find((sp) =>
+        sp.meta.plans?.includes(plan.uuid)
+      )?.uuid,
+    }))
+    .filter((plan) => !!plan.sp)
+);
+
+const isInstanceControlsShowed = computed(
+  () =>
+    type.value &&
+    (!(isEdit.value || route.params.instanceId) ||
+      isEdit.value ||
+      route.params.instanceId) &&
+    !isLoading.value
+);
+
+onMounted(async () => {
+  const types = require.context(
+    "@/components/modules/",
+    true,
+    /instanceCreate\.vue$/
+  );
+  types.keys().forEach((key) => {
+    const matched = key.match(/\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i);
+    if (matched && matched.length > 1) {
+      const type = matched[1];
+      typeItems.value.push(type);
+      templates.value[type] = () =>
+        import(`@/components/modules/${type}/instanceCreate.vue`);
+    }
+  });
+
+  try {
+    isLoading.value = true;
+    await Promise.all([
+      store.dispatch("services/fetch"),
+      store.dispatch("servicesProviders/fetch", { anonymously: false }),
+      store.dispatch("plans/fetch"),
+    ]);
+    const instanceId = route.params.instanceId;
+    if (instanceId) {
+      services.value.forEach((s) => {
+        s.instancesGroups.forEach((ig) => {
+          isEdit.value = true;
+          const instance = ig.instances.find((i) => i.uuid === instanceId);
+          if (instance) {
+            type.value = ig.type;
+            service.value = s;
+            serviceProviderId.value = ig.sp;
+            instanceGroupTitle.value = ig.title;
+            instance.value = instance;
+          }
+        });
+      });
+      return;
+    }
+
+    let {
+      type: newType,
+      serviceId,
+      accountId,
+      serviceProviderId,
+    } = route.params;
+
+    if (newType) {
+      service.value = services.value.find((s) => s.uuid === serviceId);
+      if (!typeItems.value.includes(newType)) {
+        customTypeName.value = newType;
+        newType = "custom";
+      }
+      type.value = newType;
+      serviceProviderId.value = serviceProviderId;
+    }
+    if (accountId) {
+      account.value = await api.accounts.get(accountId);
+    }
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+const setValue = ({ key, value }) => {
+  const keys = key.split(".");
+  switch (keys.length) {
+    case 1: {
+      return (instance.value[keys[0]] = value);
+    }
+    case 2: {
+      return (instance.value[keys[0]][keys[1]] = value);
+    }
+    case 3: {
+      return (instance.value[keys[0]][keys[1]][keys[2]] = value);
+    }
+  }
+};
+const save = async () => {
+  if (!form.value.validate()) {
+    return;
+  }
+
+  instance.value.config.auto_start =
+    instance.value.billing_plan.meta.auto_start;
+  if (typeof instance.value.billing_plan === "string") {
+    instance.value.billing_plan = { uuid: instance.value.billing_plan };
+  }
+
+  const fullSp = servicesProviders.value.find(
+    (sp) => sp.uuid === serviceProviderId.value
+  );
+
+  if (instance.value.type === "ovh") {
+    instance.value.config.location = fullSp.locations.find(({ id }) =>
+      id.includes(
+        instance.value.config.configuration[
+          `${instance.value.config.type}_datacenter`
+        ]
+      )
+    )?.title;
+  } else {
+    instance.value.config.location = fullSp.locations[0]?.title;
+  }
+
+  isCreateLoading.value = true;
+  try {
+    const namespaceUuid = namespace.value?.uuid;
+
+    if (!service.value) {
+      service.value = await api.services.create({
+        namespace: namespaceUuid,
+        service: {
+          version: "1",
+          title: account.value.title,
+          context: {},
+          instancesGroups: [],
+        },
+      });
+    }
+
+    if (type.value === "opensrs") {
+      await api.plans.update(
+        instance.value.billing_plan.uuid,
+        instance.value.billing_plan
+      );
+    }
+
+    let igIndex = service.value.instancesGroups.findIndex(
+      (i) => i.title === instanceGroupTitle.value
+    );
+
+    if (igIndex === -1) {
+      service.value.instancesGroups.push({
+        title:
+          instanceGroupTitle.value ||
+          account.value.title + new Date().getTime(),
+        type: customTypeName.value || type.value,
+        instances: [],
+        sp: serviceProviderId.value,
+      });
+      igIndex = service.value.instancesGroups.length - 1;
+    }
+
+    service.value.instancesGroups[igIndex] = {
+      ...service.value.instancesGroups[igIndex],
+      ...instanceGroup.value,
+    };
+
+    if (isEdit.value) {
+      const instanceIndex = service.value.instancesGroups[
+        igIndex
+      ].instances.findIndex((i) => i.uuid === instance.value.uuid);
+      service.value.instancesGroups[igIndex].instances[instanceIndex] =
+        instance.value;
+    } else {
+      service.value.instancesGroups[igIndex].instances.push(instance.value);
+    }
+
+    if (service.value.instancesGroups[igIndex].type === "ione") {
+      service.value.instancesGroups[igIndex].resources = {
+        ...(service.value.instancesGroups[igIndex].resources || {}),
+        ips_public: service.value.instancesGroups[igIndex].instances
+          .filter((i) => i.state?.state !== "DELETED")
+          .reduce((acc, i) => acc + +i?.resources.ips_public, 0),
+      };
+    }
+
+    const data = {
+      namespace: namespaceUuid,
+      service: service.value,
+    };
+
+    const response = await api.services._update(data.service);
+    if (response.errors) {
+      throw response;
+    }
+    store.commit("snackbar/showSnackbarSuccess", {
+      message: isEdit.value
+        ? "instance updated successfully"
+        : "instance created successfully",
+    });
+
+    api.services.up(data.service.uuid);
+    router.push({ name: "Instances" });
+  } catch (err) {
+    const opts = {
+      message: err.errors.map((error) => error),
+    };
+    store.commit("snackbar/showSnackbarError", opts);
+  } finally {
+    isCreateLoading.value = false;
+  }
+};
+
+const fetchNamespace = async () => {
+  try {
+    const { pool } = await store.dispatch("namespaces/fetch", {
+      filters: { account: account.value.uuid },
+    });
+    namespace.value = pool[0];
+  } catch (e) {
+    console.log(e);
+  }
+};
+
+watch(serviceProviderId, (sp_uuid) => {
+  if (!sp_uuid) return;
+  instanceGroupTitle.value = service.value?.instancesGroups.find(
+    (ig) => ig.sp === sp_uuid
+  )?.title;
+});
+
+watch(
+  () => instance.value.billing_plan,
+  (plan) => {
+    if (!plan) {
+      return;
+    }
+    serviceProviderId.value =
+      plan.sp || plans.value.find((p) => p.uuid === plan)?.sp;
+  }
+);
+watch(instanceGroupTitle, (newVal) => {
+  instanceGroup.value = serviceInstanceGroups.value.find(
+    (ig) => ig.title === newVal
+  );
+});
+
+watch(account, () => {
+  service.value = servicesByAccount.value?.[0];
+
+  if (account.value.uuid) {
+    fetchNamespace();
+  }
+});
+
+watch(type, () => {
+  if (isEdit.value) {
+    isEdit.value = false;
+    return;
+  }
+  if (type.value !== "custom") {
+    customTypeName.value = null;
+  }
+  isEdit.value = false;
+});
+
+watch(plans, (newVal) => {
+  if (newVal && instance.value?.billingPlan?.uuid) {
+    instance.value.billing_plan = instance.value?.billingPlan?.uuid;
+    delete instance.value.billingPlan;
+  }
+});
+</script>
+
 <script>
 import snackbar from "@/mixins/snackbar.js";
-import api from "@/api";
-import { defaultFilterObject } from "@/functions";
-import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import { useRoute, useRouter } from "vue-router/composables";
 
 export default {
   name: "instance-create",
-  components: { AccountsAutocomplete },
-  data: () => ({
-    isEdit: false,
-    isCreateLoading: false,
-
-    typeItems: [],
-    templates: [],
-    type: "ione",
-    customTypeName: null,
-    instance: {},
-    service: {},
-    account: null,
-    instanceGroup: {},
-    instanceGroupTitle: "",
-    serviceProviderId: null,
-
-    isLoading: true,
-
-    meta: {},
-
-    formValid: false,
-    rules: {
-      req: [(v) => !!v || "required field"],
-    },
-  }),
   mixins: [snackbar],
-  methods: {
-    defaultFilterObject,
-    setValue({ key, value }) {
-      const keys = key.split(".");
-      switch (keys.length) {
-        case 1: {
-          return (this.instance[keys[0]] = value);
-        }
-        case 2: {
-          return (this.instance[keys[0]][keys[1]] = value);
-        }
-        case 3: {
-          return (this.instance[keys[0]][keys[1]][keys[2]] = value);
-        }
-      }
-    },
-    async save() {
-      if (!this.$refs.form.validate()) {
-        return;
-      }
-
-      this.instance.config.auto_start =
-        this.instance.billing_plan.meta.auto_start;
-      if (typeof this.instance.billing_plan === "string") {
-        this.instance.billing_plan = { uuid: this.instance.billing_plan };
-      }
-
-      const fullSp = this.servicesProviders.find(
-        (sp) => sp.uuid === this.serviceProviderId
-      );
-
-      if (this.instance.type === "ovh") {
-        this.instance.config.location = fullSp.locations.find(({ id }) =>
-          id.startsWith(
-            this.instance.config.configuration[
-              `${this.instance.config.type}_datacenter`
-            ]
-          )
-        )?.title;
-      } else {
-        this.instance.config.location = fullSp.locations[0]?.title;
-      }
-
-      this.isCreateLoading = true;
-      try {
-        const namespaceUuid = this.namespaces.find(
-          (n) => n.access.namespace == this.account?.uuid
-        )?.uuid;
-
-        if (!this.service) {
-          this.service = await api.services.create({
-            namespace: namespaceUuid,
-            service: {
-              version: "1",
-              title: this.account.title,
-              context: {},
-              instancesGroups: [],
-            },
-          });
-        }
-
-        let igIndex = this.service.instancesGroups.findIndex(
-          (i) => i.title === this.instanceGroupTitle
-        );
-
-        if (igIndex === -1) {
-          this.service.instancesGroups.push({
-            title:
-              this.instanceGroupTitle ||
-              this.account.title + new Date().getTime(),
-            type: this.customTypeName || this.type,
-            instances: [],
-            sp: this.serviceProviderId,
-          });
-          igIndex = this.service.instancesGroups.length - 1;
-        }
-
-        this.service.instancesGroups[igIndex] = {
-          ...this.service.instancesGroups[igIndex],
-          ...this.instanceGroup,
-        };
-
-        if (this.isEdit) {
-          const instanceIndex = this.service.instancesGroups[
-            igIndex
-          ].instances.findIndex((i) => i.uuid === this.instance.uuid);
-          this.service.instancesGroups[igIndex].instances[instanceIndex] =
-            this.instance;
-        } else {
-          this.service.instancesGroups[igIndex].instances.push(this.instance);
-        }
-
-        if (this.service.instancesGroups[igIndex].type === "ione") {
-          this.service.instancesGroups[igIndex].resources = {
-            ...(this.service.instancesGroups[igIndex].resources || {}),
-            ips_public: this.service.instancesGroups[igIndex].instances
-              .filter((i) => i.state?.state !== "DELETED")
-              .reduce((acc, i) => acc + +i?.resources.ips_public, 0),
-          };
-        }
-
-        const data = {
-          namespace: namespaceUuid,
-          service: this.service,
-        };
-
-        const res = await api.services.testConfig(data);
-
-        if (!res.result) throw res;
-        await api.services._update(data.service);
-        this.showSnackbarSuccess({
-          message: this.isEdit
-            ? "instance updated successfully"
-            : "instance created successfully",
-        });
-        api.services.up(data.service.uuid);
-        this.$router.push({ name: "Instances" });
-      } catch (err) {
-        const opts = {
-          message: err.errors.map((error) => error),
-        };
-        this.showSnackbarError(opts);
-      } finally {
-        this.isCreateLoading = false;
-      }
-    },
-  },
-  computed: {
-    servicesProviders() {
-      return this.$store.getters["servicesProviders/all"].filter(
-        (el) => el.type === this.type
-      );
-    },
-    services() {
-      return this.$store.getters["services/all"];
-    },
-    servicesByAccount() {
-      return this.services.filter(
-        (s) =>
-          s.access.namespace ===
-          this.namespaces.find((n) => n.access.namespace === this.account?.uuid)
-            ?.uuid
-      );
-    },
-    namespaces() {
-      return this.$store.getters["namespaces/all"];
-    },
-    serviceInstanceGroups() {
-      if (
-        !this.service ||
-        !this.service?.instancesGroups ||
-        !this.type ||
-        !this.serviceProviderId
-      ) {
-        return [];
-      }
-
-      return this.service?.instancesGroups.filter(
-        (ig) => ig.type === this.type && ig.sp === this.serviceProviderId
-      );
-    },
-    serviceInstanceGroupTitles() {
-      const igs = this.serviceInstanceGroups.map((i) => i.title);
-
-      return igs;
-    },
-    allPlans() {
-      return this.$store.getters["plans/all"] || [];
-    },
-    plans() {
-      return this.allPlans
-        .map((plan) => ({
-          ...plan,
-          sp: this.servicesProviders.find((sp) =>
-            sp.meta.plans?.includes(plan.uuid)
-          )?.uuid,
-        }))
-        .filter((plan) => !!plan.sp);
-    },
-    planRules() {
-      return this.rules.req;
-    },
-    isInstanceControlsShowed() {
-      return (
-        this.type &&
-        (!(this.isEdit || this.$route.params.instanceId) ||
-          this.isEdit ||
-          this.$route.params.instanceId) &&
-        !this.isLoading
-      );
-    },
-  },
-  async created() {
-    const types = require.context(
-      "@/components/modules/",
-      true,
-      /instanceCreate\.vue$/
-    );
-    types.keys().forEach((key) => {
-      const matched = key.match(
-        /\.\/([A-Za-z0-9-_,\s]*)\/instanceCreate\.vue/i
-      );
-      if (matched && matched.length > 1) {
-        const type = matched[1];
-        this.typeItems.push(type);
-        this.templates[type] = () =>
-          import(`@/components/modules/${type}/instanceCreate.vue`);
-      }
-    });
-
-    try {
-      this.isLoading = true;
-      await Promise.all([
-        this.$store.dispatch("namespaces/fetch"),
-        this.$store.dispatch("services/fetch"),
-        this.$store.dispatch("servicesProviders/fetch", { anonymously: false }),
-        this.$store.dispatch("plans/fetch"),
-      ]);
-      const instanceId = this.$route.params.instanceId;
-      if (instanceId) {
-        this.services.forEach((s) => {
-          s.instancesGroups.forEach((ig) => {
-            this.isEdit = true;
-            const instance = ig.instances.find((i) => i.uuid === instanceId);
-            if (instance) {
-              this.type = ig.type;
-              this.service = s;
-              this.serviceProviderId = ig.sp;
-              this.instanceGroupTitle = ig.title;
-              this.instance = instance;
-            }
-          });
-        });
-        return;
-      }
-
-      let { type, serviceId, accountId, serviceProviderId } =
-        this.$route.params;
-
-      if (type) {
-        this.service = this.services.find((s) => s.uuid === serviceId);
-        if (!this.typeItems.includes(type)) {
-          this.customTypeName = type;
-          type = "custom";
-        }
-        this.type = type;
-        this.serviceProviderId = serviceProviderId;
-      }
-      if (accountId) {
-        this.account = await api.accounts.get(accountId);
-      }
-    } finally {
-      this.isLoading = false;
-    }
-  },
-  watch: {
-    serviceProviderId(sp_uuid) {
-      if (!sp_uuid) return;
-      this.instanceGroupTitle = this.service?.instancesGroups.find(
-        (ig) => ig.sp === sp_uuid
-      )?.title;
-    },
-    "instance.billing_plan"(plan) {
-      this.serviceProviderId =
-        plan.sp || this.plans.find((p) => p.uuid === plan)?.sp;
-    },
-    instanceGroupTitle(newVal) {
-      this.instanceGroup = this.serviceInstanceGroups.find(
-        (ig) => ig.title === newVal
-      );
-    },
-    account() {
-      this.service = this.servicesByAccount?.[0];
-    },
-    type() {
-      if (this.isEdit) {
-        this.isEdit = false;
-        return;
-      }
-      if (this.type !== "custom") {
-        this.customTypeName = null;
-      }
-      this.isEdit = false;
-    },
-    ["plans"](newVal) {
-      if (newVal && this.instance?.billingPlan?.uuid) {
-        this.instance.billing_plan = this.instance?.billingPlan?.uuid;
-        delete this.instance.billingPlan;
-      }
-    },
-  },
 };
 </script>

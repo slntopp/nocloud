@@ -98,7 +98,7 @@
             <v-text-field
               dense
               type="number"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               :value="item.price"
               :rules="[rules.price]"
               @change="(value) => changeProduct('price', value, item.id)"
@@ -218,16 +218,45 @@
                   @changeValue="changeProduct('amount', $event, item.id)"
                 />
               </template>
-
-              <v-subheader class="px-0 pt-4">Installation price:</v-subheader>
-              <v-text-field
-                dense
-                type="number"
-                style="width: 150px"
-                :value="item.installationFee"
-                :suffix="defaultCurrency"
-                @input="changeProduct('installationFee', +$event, item.id)"
-              />
+              <v-row>
+                <v-col>
+                  <v-subheader class="px-0 pt-4">Installation price:</v-subheader>
+                  <v-text-field
+                    dense
+                    type="number"
+                    style="width: 150px"
+                    :value="item.installationFee"
+                    :suffix="defaultCurrency"
+                    @input="
+                      (value) => changeProduct('installationFee', +value, item.id)
+                    "
+                  />
+                </v-col>
+                <v-col>
+                  <v-subheader class="px-0 pt-4">Min disk size:</v-subheader>
+                  <v-text-field
+                    dense
+                    type="number"
+                    style="width: 150px"
+                    :value="item.meta.minDiskSize"
+                    @input="
+                      (value) => changeProduct('meta', { ...item.meta, minDiskSize: +value }, item.id)
+                    "
+                  />
+                </v-col>
+                <v-col>
+                  <v-subheader class="px-0 pt-4">Max disk size:</v-subheader>
+                  <v-text-field
+                    dense
+                    type="number"
+                    style="width: 150px"
+                    :value="item.meta.maxDiskSize"
+                    @input="
+                      (value) => changeProduct('meta', { ...item.meta, maxDiskSize: +value }, item.id)
+                    "
+                  />
+                </v-col>
+              </v-row>
             </td>
           </template>
         </nocloud-table>

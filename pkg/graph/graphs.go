@@ -19,8 +19,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"google.golang.org/protobuf/types/known/structpb"
 	"strings"
+
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
@@ -381,27 +382,156 @@ func ListWithAccess[T Accessible](
 
 const listObjectsWithFiltersOfKind = `
 LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
-GRAPH @permissions_graph
-OPTIONS {order: "bfs", uniqueVertices: "global"}
-FILTER IS_SAME_COLLECTION(@@kind, node)
-// FILTER edge.level > 0 // TODO: ensure all edges have level
-    LET perm = path.edges[0]
-%s
-	RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
-)
+	GRAPH @permissions_graph
+	OPTIONS {order: "bfs", uniqueVertices: "global"}
+	FILTER IS_SAME_COLLECTION(@@kind, node)
+		LET perm = path.edges[0]
+		%s
+		RETURN MERGE(node, { uuid: node._key, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+	)
+	
+	RETURN { 
+		result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
+		count: LENGTH(list)
+	}
+`
 
-RETURN { 
-	result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
-	count: LENGTH(list)
-}
+const listAccounts = `
+LET list = (FOR node, edge, path IN 0..@depth OUTBOUND @from
+	GRAPH @permissions_graph
+	OPTIONS {order: "bfs", uniqueVertices: "global"}
+	FILTER IS_SAME_COLLECTION(@@kind, node)
+		LET perm = path.edges[0]
+		%s
+		LET instances = (
+			FOR subnode IN 0..@depth OUTBOUND node._id
+				GRAPH @permissions_graph
+				OPTIONS {order: "bfs", uniqueVertices: "global"}
+				FILTER IS_SAME_COLLECTION(@@subkiund, subnode)
+				RETURN subnode
+			)
+		RETURN MERGE(node, { uuid: node._key, active: length(instances) != 0, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key } })
+	)
+	
+	LET active = LENGTH(
+		FOR l in list
+			FILTER l.active == true
+			return l
+	)
+	
+	RETURN { 
+		result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
+		count: LENGTH(list),
+		active: active
+	}
 `
 
 type ListQueryResult[T Accessible] struct {
 	Result []T `json:"result"`
 	Count  int `json:"count"`
+	Active int `json:"active"`
 }
 
-func ListWithAccessAndFilters[T Accessible](
+func ListAccounts[T Accessible](
+	ctx context.Context,
+	log *zap.Logger,
+	db driver.Database,
+	fromDocument driver.DocumentID,
+	collectionName string,
+	depth int32,
+	offset, limit uint64,
+	field, sort string,
+	filters map[string]*structpb.Value,
+) (*ListQueryResult[T], error) {
+	var result ListQueryResult[T]
+
+	bindVars := map[string]interface{}{
+		"depth":             depth,
+		"from":              fromDocument,
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"@kind":             collectionName,
+		"@subkiund":         schema.INSTANCES_COL,
+		"offset":            offset,
+		"limit":             limit,
+	}
+
+	var insert string
+
+	if field != "" && sort != "" {
+		insert += fmt.Sprintf("SORT node.%s %s\n", field, sort)
+	}
+
+	for key, val := range filters {
+		if key == "search_param" && collectionName == schema.ACCOUNTS_COL {
+			insert += fmt.Sprintf(` FILTER LOWER(node.title) LIKE LOWER("%s") || LOWER(node.data.email) LIKE LOWER("%s") || node._key LIKE "%s"`, "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
+		} else if key == "namespace" && collectionName == schema.ACCOUNTS_COL {
+			insert += fmt.Sprintf(` FILTER path.vertices[-2]._key == "%s"`, "%"+val.GetStringValue()+"%")
+		} else if strings.HasPrefix(key, "data") {
+			split := strings.Split(key, ".")
+			if len(split) != 2 {
+				continue
+			}
+			if split[1] == "address" || split[1] == "country" || split[1] == "email" {
+				insert += fmt.Sprintf(` FILTER node.data["%s"] LIKE "%s"`, split[1], "%"+val.GetStringValue()+"%")
+			} else if split[1] == "date_create" {
+				values := val.GetStructValue().AsMap()
+				if val, ok := values["from"]; ok {
+					from := val.(float64)
+					insert += fmt.Sprintf(` FILTER node.data["%s"] >= %f`, split[1], from)
+				}
+
+				if val, ok := values["to"]; ok {
+					to := val.(float64)
+					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %f`, split[1], to)
+				}
+			} else if split[1] == "whmcs_id" {
+				insert += fmt.Sprintf(` FILTER node.data["%s"] == %d`, split[1], int(val.GetNumberValue()))
+			}
+		} else if key == "access.level" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += ` FILTER perm.level in @level`
+			bindVars["level"] = values
+		} else if key == "balance" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := val.(float64)
+				insert += fmt.Sprintf(` FILTER node["%s"] >= %f`, key, from)
+			}
+
+			if val, ok := values["to"]; ok {
+				to := val.(float64)
+				insert += fmt.Sprintf(` FILTER node["%s"] <= %f`, key, to)
+			}
+		} else {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			insert += fmt.Sprintf(` FILTER node["%s"] in @%s`, key, key)
+			bindVars[key] = values
+		}
+	}
+
+	log.Debug("ListWithAccess", zap.Any("vars", bindVars))
+	q := fmt.Sprintf(listAccounts, insert)
+	log.Debug("Query", zap.String("q", q))
+	c, err := db.Query(ctx, q, bindVars)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = c.ReadDocument(ctx, &result)
+	if err != nil {
+		log.Warn("Could not append entity to query results", zap.Error(err))
+	}
+
+	return &result, nil
+}
+
+func ListNamespaces[T Accessible](
 	ctx context.Context,
 	log *zap.Logger,
 	db driver.Database,
@@ -430,54 +560,19 @@ func ListWithAccessAndFilters[T Accessible](
 	}
 
 	for key, val := range filters {
-		if key == "search_param" && collectionName == schema.ACCOUNTS_COL {
-			insert += fmt.Sprintf(` FILTER node.title LIKE "%s" || node.data.email LIKE "%s"`, "%"+val.GetStringValue()+"%", "%"+val.GetStringValue()+"%")
-		} else if key == "namespace" && collectionName == schema.ACCOUNTS_COL {
-			insert += fmt.Sprintf(` FILTER path.vertices[-2]._key == "%s"`, "%"+val.GetStringValue()+"%")
-		} else if strings.HasPrefix(key, "data") {
-			split := strings.Split(key, ".")
-			if len(split) != 2 {
-				continue
-			}
-			if split[1] == "address" || split[1] == "country" || split[1] == "email" {
-				insert += fmt.Sprintf(` FILTER node.data["%s"] LIKE "%s"`, split[1], "%"+val.GetStringValue()+"%")
-			} else if split[1] == "date_create" {
-				values := val.GetStructValue().AsMap()
-				if val, ok := values["from"]; ok {
-					from := val.(float64)
-					insert += fmt.Sprintf(` FILTER node.data["%s"] >= %f`, key, from)
-				}
-
-				if val, ok := values["to"]; ok {
-					to := val.(float64)
-					insert += fmt.Sprintf(` FILTER node.data["%s"] <= %f`, key, to)
-				}
-			}
+		if key == "search_param" {
+			insert += fmt.Sprintf(` FILTER LOWER(node.title) LIKE LOWER("%s")`, "%"+val.GetStringValue()+"%")
 		} else if key == "access.level" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
 				continue
 			}
-			insert += ` FILTER perm.level in @level`
-			bindVars["level"] = values
-		} else if key == "balance" {
-			values := val.GetStructValue().AsMap()
-			if val, ok := values["from"]; ok {
-				from := val.(float64)
-				insert += fmt.Sprintf(` FILTER node["%s"] >= %f`, key, from)
-			}
-
-			if val, ok := values["to"]; ok {
-				to := val.(float64)
-				insert += fmt.Sprintf(` FILTER node["%s"] <= %f`, key, to)
-			}
-		} else {
-			values := val.GetListValue().AsSlice()
-			if len(values) == 0 {
-				continue
-			}
-			insert += fmt.Sprintf(` FILTER node["%s"] in @%s`, key, key)
-			bindVars[key] = values
+			insert += ` FILTER perm.level in @levels`
+			bindVars["levels"] = values
+		} else if key == "account" {
+			account := val.GetStringValue()
+			insert += ` FILTER path.vertices[-2]._key == @account`
+			bindVars["account"] = account
 		}
 	}
 

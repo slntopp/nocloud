@@ -58,7 +58,7 @@ const typesMap = ref(new Map());
 const options = computed(() => ({
   labels: [...Object.keys(typesMap.value)]
     .filter((key) => typesMap.value[key] != 0)
-    .map((key) => `${key} - ${typesMap.value[key]} ${defaultCurrency.value}`),
+    .map((key) => `${key} - ${typesMap.value[key]} ${defaultCurrency.value?.title}`),
   theme: {
     palette: "palette8",
   },
