@@ -29,7 +29,9 @@ const src = computed(() => {
     fullscrean: route.query["fullscrean"] === "true",
   });
 
-  return `${url.value}?a=${Buffer.from(fullParams).toString("base64")}`;
+  return `${url.value}?a=${Buffer.from(
+    unescape(encodeURIComponent(fullParams))
+  ).toString("base64")}`;
 });
 </script>
 
