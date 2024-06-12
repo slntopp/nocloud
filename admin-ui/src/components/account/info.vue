@@ -8,7 +8,7 @@
             :disabled="isLocked"
             :to="{
               name: 'Instance create',
-              params: {
+              query: {
                 accountId: account.uuid,
               },
             }"
