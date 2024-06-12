@@ -623,11 +623,11 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 			query += fmt.Sprintf(` FILTER acc._key in @%s`, key)
 			bindVars[key] = values
 		} else if key == "email" {
-			query += fmt.Sprintf(` FILTER acc.data.email == %s`, val.GetStringValue())
+			query += fmt.Sprintf(` FILTER CONTAINS(acc.data.email, %s)`, val.GetStringValue())
 		} else if key == "title" {
-			query += fmt.Sprintf(` FILTER node.title == %s`, val.GetStringValue())
+			query += fmt.Sprintf(` FILTER CONTAINS(node.title, %s)`, val.GetStringValue())
 		} else if key == "os" {
-			query += fmt.Sprintf(` FILTER node.config.configuration.vps_os == %s`, val.GetStringValue())
+			query += fmt.Sprintf(` FILTER CONTAINS(node.config.configuration.vps_os, %s)`, val.GetStringValue())
 		} else if key == "type" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
