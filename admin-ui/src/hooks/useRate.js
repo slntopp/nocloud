@@ -1,8 +1,7 @@
-import api from "@/api";
 import { computed, onMounted, ref, watch } from "vue";
 import { useStore } from "@/store";
 
-const useRate = (currency = ref("")) => {
+const useRate = (currency = ref()) => {
   const store = useStore();
 
   const rate = ref(0);
@@ -12,34 +11,28 @@ const useRate = (currency = ref("")) => {
   });
 
   onMounted(() => {
-    fetchRate();
+    setRate();
   });
 
-  const fetchRate = async (fetchedCurrency) => {
+  const setRate = async (fetchedCurrency) => {
     if (!fetchedCurrency) {
       fetchedCurrency = currency.value;
     }
 
-    if (!fetchedCurrency || !defaultCurrency.value) {
-      return;
-    }
-    if (fetchedCurrency === defaultCurrency.value) {
-      rate.value = 1;
-      return 1;
-    }
-    const res = await api.get(
-      `/billing/currencies/rates/${fetchedCurrency}/${defaultCurrency.value}`
-    );
-    rate.value = res.rate;
-    return res.rate;
+    rate.value = store.getters["currencies/rates"].find(
+      (rate) =>
+        rate.from.title === fetchedCurrency.title &&
+        rate.to.title === defaultCurrency.value.title
+    ).rate;
+    return rate.value;
   };
 
   watch(currency, () => {
-    fetchRate();
+    setRate();
   });
 
   watch(defaultCurrency, () => {
-    fetchRate();
+    setRate();
   });
 
   const convertFrom = (price, convertedRate) => {
@@ -59,7 +52,7 @@ const useRate = (currency = ref("")) => {
     rate,
     convertTo,
     convertFrom,
-    fetchRate
+    setRate,
   };
 };
 

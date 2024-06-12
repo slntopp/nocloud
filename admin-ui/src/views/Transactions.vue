@@ -136,14 +136,14 @@ export default {
       this.products = products;
     },
     fetchData() {
-      this.$store.dispatch("services/fetch", { showDeleted: true });
-      this.$store.dispatch("namespaces/fetch");
+      console.log(1);
+      //fetch instances
     },
   },
   mounted() {
     this.fetchData();
     this.$store.commit("reloadBtn/setCallback", {
-      event: async () => {
+      event: () => {
         this.fetchData();
       },
     });
@@ -156,12 +156,6 @@ export default {
     },
     user() {
       return this.$store.getters["auth/userdata"];
-    },
-    namespaces() {
-      return this.$store.getters["namespaces/all"];
-    },
-    services() {
-      return this.$store.getters["services/all"];
     },
     filters() {
       const total = {};
@@ -202,35 +196,19 @@ export default {
         product: this.filter.product,
       };
     },
-    servicesByAccount() {
-      const namespaces = this.namespaces
-        .filter((n) => this.filter.account?.includes(n.access.namespace))
-        .map((n) => n.uuid);
-
-      return this.services.filter((s) => {
-        return namespaces.includes(s.access.namespace);
-      });
-    },
     instances() {
       const instances = [];
-      this.servicesByAccount.forEach((s) => {
-        s.instancesGroups.forEach((ig) => {
-          ig.instances.forEach((i) =>
-            instances.push({ title: i.title, uuid: i.uuid })
-          );
-        });
-      });
 
       return instances;
     },
     balance() {
       const dates = [];
-      let labels = [`0 ${this.defaultCurrency}`];
+      let labels = [`0 ${this.defaultCurrency?.title}`];
       let values = [0];
       let balance = 0;
       this.transactions?.forEach((el, i, arr) => {
         values.push((balance -= el.total));
-        labels.push(`${balance.toFixed(2)} ${this.defaultCurrency}`);
+        labels.push(`${balance.toFixed(2)} ${this.defaultCurrency?.title}`);
         dates.push(
           el.proc - arr[i - 1]?.proc || arr[i + 1]?.proc - el.proc || el.proc
         );

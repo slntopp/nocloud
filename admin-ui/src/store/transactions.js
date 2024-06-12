@@ -22,15 +22,15 @@ export default {
       ) {
         return state.transactions.map((t) => {
           if (
-            t.currency === rootGetters["currencies/default"] ||
-            t.currency === "NCU"
+            t.currency?.title === rootGetters["currencies/default"]?.title ||
+            t.currency?.title === "NCU"
           ) {
             return t;
           }
           const rate = rootGetters["currencies/rates"].find(
             (r) =>
-              r.from === t.currency &&
-              r.to === rootGetters["currencies/default"]
+              r.from?.title === t.currency?.title &&
+              r.to?.title === rootGetters["currencies/default"]?.title
           )?.rate;
           t.total = t.total * rate;
           return t;

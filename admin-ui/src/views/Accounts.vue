@@ -94,6 +94,9 @@
                   dense
                   :items="currencies"
                   v-model="newAccount.currency"
+                  return-object
+                  item-value="id"
+                  item-text="title"
                   label="currency"
                 ></v-select>
               </v-col>
@@ -259,38 +262,42 @@ export default {
         const servicesForDown = [];
         const accountServices = [];
 
-        const accounts = this.selected.filter((account) => {
-          if (account.status === newStatus) {
-            return false;
-          }
-
-          switch (newStatus) {
-            case "PERMANENT_LOCK": {
-              const accountNamespace = this.namespaces.find(
-                (n) => n.access.namespace === account?.uuid
-              );
-
-              accountServices.push(
-                ...this.services.filter(
-                  (s) => s.access.namespace === accountNamespace?.uuid
-                )
-              );
-
-              servicesForDown.push(
-                ...accountServices.filter((s) => s.status !== "INIT")
-              );
-              return true;
+        const accountPromises = await Promise.all(
+          this.selected.map(async (account) => {
+            if (account.status === newStatus) {
+              return false;
             }
-            case "LOCK": {
-              return account.status !== "PERMANENT_LOCK";
-            }
-            case "ACTIVE": {
-              return account.status === "LOCK";
-            }
-          }
-        });
 
-        if (servicesForDown.length) {
+            switch (newStatus) {
+              case "PERMANENT_LOCK": {
+                const { pool: services } = await this.$store.dispatch(
+                  "services/fetch",
+                  {
+                    filters: { account: account.uuid },
+                  }
+                );
+                accountServices.push(...services);
+
+                servicesForDown.push(
+                  ...accountServices.filter((s) => s.status !== "INIT")
+                );
+                return account;
+              }
+              case "LOCK": {
+                return account.status !== "PERMANENT_LOCK"
+                  ? account
+                  : undefined;
+              }
+              case "ACTIVE": {
+                return account.status === "LOCK" ? account : undefined;
+              }
+            }
+          })
+        );
+
+        const accounts = accountPromises.filter((m) => !!m);
+
+        if (accountServices.length) {
           await Promise.all(
             servicesForDown.map((s) => api.services.down(s.uuid))
           );
@@ -361,14 +368,11 @@ export default {
       }));
       return namespaces;
     },
-    services() {
-      return this.$store.getters["services/all"];
-    },
     defaultCurrency() {
       return this.$store.getters["currencies/default"];
     },
     currencies() {
-      return this.$store.getters["currencies/all"].filter((c) => c !== "NCU");
+      return this.$store.getters["currencies/all"].filter((c) => c.title !== "NCU");
     },
     changeStateButtons() {
       return [
@@ -383,7 +387,6 @@ export default {
   },
   mounted() {
     this.$store.dispatch("currencies/fetch");
-    this.$store.dispatch("services/fetch", { showDeleted: true });
   },
   watch: {
     defaultCurrency(newVal) {

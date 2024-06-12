@@ -49,7 +49,7 @@
               {{ value }} months
             </template>
             <template v-slot:[`item.price`]="{ value }">
-              {{ value }} {{ defaultCurrency }}
+              {{ value }} {{ defaultCurrency?.title }}
             </template>
             <template v-slot:[`item.value`]="{ item }">
               <v-text-field dense style="width: 150px" v-model="item.value" />
@@ -233,7 +233,7 @@ export default {
   created() {
     this.isPlansLoading = true;
     this.$store
-      .dispatch("servicesProviders/fetch",{anonymously:true})
+      .dispatch("servicesProviders/fetch", { anonymously: true })
       .then(({ pool }) => {
         const sp = pool.find(({ type }) => type === "goget");
 

@@ -31,7 +31,7 @@ export default {
         const response = await getters["invoicesClient"].getInvoices(
           GetInvoicesRequest.fromJson(params)
         );
-        commit("setInvoices", response.pool);
+        commit("setInvoices", response.toJson().pool);
       } finally {
         commit("setLoading", false);
       }

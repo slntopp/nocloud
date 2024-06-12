@@ -18,8 +18,8 @@
                       <template v-slot:default>
                         <v-list-item-content>
                           <v-list-item-title>
-                            Price from: {{ item.from }} {{ defaultCurrency }},
-                            Price to: {{ item.to }} {{ defaultCurrency }},
+                            Price from: {{ item.from }} {{ defaultCurrency?.title }},
+                            Price to: {{ item.to }} {{ defaultCurrency?.title }},
                             Margin: {{ item.factor }}%
                           </v-list-item-title>
                         </v-list-item-content>

@@ -14,6 +14,9 @@
                 dense
                 label="Currency 1"
                 v-model="currency.from"
+                item-text="title"
+                item-value="id"
+                return-object
                 :items="currenciesFrom"
               />
             </v-col>
@@ -22,6 +25,9 @@
                 dense
                 label="Currency 2"
                 v-model="currency.to"
+                item-text="title"
+                item-value="id"
+                return-object
                 :items="currenciesTo"
               />
             </v-col>
@@ -42,7 +48,10 @@
           </v-row>
         </v-card>
       </v-dialog>
-      <confirm-dialog :disabled="selected.length < 1" @confirm="deleteSelectedCurrencies">
+      <confirm-dialog
+        :disabled="selected.length < 1"
+        @confirm="deleteSelectedCurrencies"
+      >
         <v-btn
           class="mr-2"
           color="background-light"
@@ -58,7 +67,7 @@
         label="Default currency"
         class="d-inline-block"
         style="width: 200px"
-        :value="defaultCurrency"
+        :value="defaultCurrency?.title"
       />
     </div>
 
@@ -72,6 +81,12 @@
       :loading="isLoading"
       :footer-error="fetchError"
     >
+      <template v-slot:[`item.from`]="{ item }">
+        {{ item.from.title }}
+      </template>
+      <template v-slot:[`item.to`]="{ item }">
+        {{ item.to.title }}
+      </template>
       <template v-slot:[`item.rate`]="{ item }">
         <v-text-field
           dense
@@ -82,6 +97,17 @@
           :rules="rules.number"
         />
       </template>
+
+      <template v-slot:[`item.commission`]="{ item }">
+        <v-text-field
+          dense
+          type="number"
+          style="width: 200px"
+          :value="item.commission"
+          @input="item.commission = $event"
+        />
+      </template>
+
       <template v-slot:[`item.actions`]="{ item }">
         <v-icon title="Save edit" @click="editCurrency(item)">
           mdi-content-save-edit-outline
@@ -106,6 +132,7 @@ export default {
       { text: "Currency 1 ", value: "from" },
       { text: "Currency 2 ", value: "to" },
       { text: "Rate ", value: "rate" },
+      { text: "Commission ", value: "commission" },
       { text: "Actions", value: "actions", sortable: false },
     ],
     selected: [],
@@ -124,13 +151,13 @@ export default {
   }),
   methods: {
     addCurrency() {
-      if (this.currency.from === "" || this.currency.to === "") return;
+      if (!this.currency.from || !this.currency.to) return;
       if (typeof this.rules.number[0](this.currency.rate) === "string") return;
 
       const newCurrency = {
         rate: +this.currency.rate.replace(",", "."),
-        from: this.currenciesList.indexOf(this.currency.from),
-        to: this.currenciesList.indexOf(this.currency.to),
+        from: this.currency.from,
+        to: this.currency.to,
       };
 
       this.isCreateLoading = true;
@@ -154,6 +181,7 @@ export default {
         rate: +currency.rate.replace(",", "."),
         from: this.currenciesList.indexOf(currency.from),
         to: this.currenciesList.indexOf(currency.to),
+        commission: +currency.commission.replace(",", "."),
       };
 
       this.$store.commit("currencies/setLoading", true);
@@ -176,7 +204,7 @@ export default {
       const promises = this.selected
         .filter(({ id }) => this.currencies.find((el) => el.id === id))
         .map(({ from, to }) =>
-          api.delete(`/billing/currencies/rates/${from}/${to}`)
+          api.delete(`/billing/currencies/rates/rate?from.id=${from.id}&to.id=${to.id}`)
         );
 
       Promise.all(promises)
@@ -209,7 +237,11 @@ export default {
       return this.$store.getters["currencies/isLoading"];
     },
     currencies() {
-      return this.$store.getters["currencies/rates"];
+      return this.$store.getters["currencies/rates"].map((c) => ({
+        ...c,
+        rate: c.rate?.toString(),
+        commission: c.commission?.toString(),
+      }));
     },
     currenciesList() {
       return this.$store.getters["currencies/all"];

@@ -46,6 +46,7 @@
             label="Price model"
             item-text="title"
             item-value="uuid"
+            return-object
             :value="instance.billing_plan"
             @change="setValue('billing_plan', $event)"
             :items="plans"
@@ -148,7 +149,9 @@ const rules = ref({
 });
 
 const billingPlan = computed(() =>
-  plans.value.find((p) => p.uuid === instance.value.billing_plan)
+  instance.value.billing_plan.uuid
+    ? instance.value.billing_plan
+    : plans.value.find((p) => p.uuid === instance.value.billing_plan)
 );
 
 const fullProduct = computed(() => billingPlan.value?.products[product.value]);

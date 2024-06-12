@@ -41,6 +41,10 @@ func (s *AddonsServer) Create(ctx context.Context, r *connect.Request[pb.Addon])
 
 	req := r.Msg
 
+	if req.GetKind() == pb.Kind_UNSPECIFIED {
+		return nil, status.Error(codes.InvalidArgument, "kind is required")
+	}
+
 	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
 	}
@@ -63,6 +67,10 @@ func (s *AddonsServer) Update(ctx context.Context, r *connect.Request[pb.Addon])
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
 	req := r.Msg
+
+	if req.GetKind() == pb.Kind_UNSPECIFIED {
+		return nil, status.Error(codes.InvalidArgument, "kind is required")
+	}
 
 	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")

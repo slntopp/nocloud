@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/arangodb/go-driver"
+	"github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	hasher "github.com/slntopp/nocloud-proto/hasher"
 	spb "github.com/slntopp/nocloud-proto/services"
@@ -54,7 +55,7 @@ type ServicesController struct {
 	db driver.Database
 }
 
-func NewServicesController(log *zap.Logger, db driver.Database) ServicesController {
+func NewServicesController(log *zap.Logger, db driver.Database, conn *amqp091.Connection) ServicesController {
 	log.Debug("New Services Controller creating")
 	ctx := context.TODO()
 
@@ -66,7 +67,7 @@ func NewServicesController(log *zap.Logger, db driver.Database) ServicesControll
 	})
 	GraphGetEdgeEnsure(log, ctx, graph, schema.NS2SERV, schema.NAMESPACES_COL, schema.SERVICES_COL)
 
-	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db), db: db}
+	return ServicesController{log: log, col: col, ig_ctrl: NewInstancesGroupsController(log, db, conn), db: db}
 }
 
 func (ctrl *ServicesController) IGController() *InstancesGroupsController {
@@ -311,13 +312,13 @@ func (ctrl *ServicesController) GetServiceInstancesUuids(key string) ([]string, 
 }
 
 var getServiceList = `
-FOR service, e, path IN 0..@depth OUTBOUND @account
+LET list = (FOR service, e, path IN 0..@depth OUTBOUND @account
     GRAPH @permissions_graph
 	OPTIONS {order: "bfs", uniqueVertices: "global"}
     FILTER IS_SAME_COLLECTION(@@services, service)
-	%s
         LET perm = path.edges[0]
-        LET instances_groups = (
+		%s
+		LET instances_groups = (
     	FOR group IN 1 OUTBOUND service
     	GRAPH @permissions_graph
     		LET instances = (
@@ -344,26 +345,34 @@ FOR service, e, path IN 0..@depth OUTBOUND @account
 					}))
     		RETURN MERGE(group, { uuid: group._key, instances })
         )
-RETURN MERGE(service, {uuid:service._key, instances_groups, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key }})
+    RETURN MERGE(service, {uuid:service._key, instances_groups, access: { level: perm.level, role: perm.role, namespace: path.vertices[-2]._key }})
+	)
+
+RETURN { 
+	result: (@limit > 0) ? SLICE(list, @offset, @limit) : list,
+	count: LENGTH(list)
+}
 `
 
+type ServicesResult struct {
+	Result []*spb.Service `json:"result"`
+	Count  int            `json:"count"`
+}
+
 // List Services in DB
-func (ctrl *ServicesController) List(ctx context.Context, requestor string, request *spb.ListRequest) ([]*spb.Service, error) {
+func (ctrl *ServicesController) List(ctx context.Context, requestor string, request *spb.ListRequest) (*ServicesResult, error) {
 	ctrl.log.Debug("Getting Services", zap.String("requestor", requestor))
 
 	depth := request.GetDepth()
 	if depth < 2 {
 		depth = 5
 	}
-	showDeleted := request.GetShowDeleted() == "true"
+	showDeleted := request.GetShowDeleted()
 
-	var query string
-	if showDeleted {
-		query = fmt.Sprintf(getServiceList, "", "")
-	} else {
-		query = fmt.Sprintf(getServiceList, fmt.Sprintf(`FILTER service.status != %d`, stpb.NoCloudStatus_DEL),
-			fmt.Sprintf(`FILTER i.status != %d`, stpb.NoCloudStatus_DEL))
-	}
+	limit, page := request.GetLimit(), request.GetPage()
+	offset := (page - 1) * limit
+
+	var query, instQuery string
 	bindVars := map[string]interface{}{
 		"depth":             depth,
 		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
@@ -371,7 +380,55 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		"@services":         schema.SERVICES_COL,
 		"instances":         schema.INSTANCES_COL,
 		"bps":               schema.BILLING_PLANS_COL,
+		"offset":            offset,
+		"limit":             limit,
 	}
+
+	if request.Field != nil && request.Sort != nil {
+		subQuery := ` SORT service.%s %s`
+		field, sort := request.GetField(), request.GetSort()
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	for key, val := range request.GetFilters() {
+		if key == "search_param" {
+			query += fmt.Sprintf(` FILTER LOWER(service.title) LIKE LOWER("%s")`, "%"+val.GetStringValue()+"%")
+		} else if key == "access.level" {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += ` FILTER perm.level in @levels`
+			bindVars["levels"] = values
+		} else if key == "account" {
+			value := val.GetStringValue()
+			query += ` FILTER path.vertices[-3]._key == @search_account`
+			bindVars["search_account"] = value
+		} else if key == "namespace" {
+			value := val.GetStringValue()
+			query += ` FILTER path.vertices[-2]._key == @search_namespace`
+			bindVars["search_namespace"] = value
+		} else {
+			values := val.GetListValue().AsSlice()
+			if len(values) == 0 {
+				continue
+			}
+			query += fmt.Sprintf(` FILTER service["%s"] in @%s`, key, key)
+			bindVars[key] = values
+		}
+	}
+
+	if showDeleted {
+		instQuery = ""
+	} else {
+		query += fmt.Sprintf(` FILTER service.status != %d`, stpb.NoCloudStatus_DEL)
+		instQuery = fmt.Sprintf(` FILTER i.status != %d`, stpb.NoCloudStatus_DEL)
+	}
+
+	query = fmt.Sprintf(getServiceList, query, instQuery)
+
+	ctrl.log.Debug("Query", zap.Any("q", query))
 	ctrl.log.Debug("Ready to build query", zap.Any("bindVars", bindVars), zap.Bool("show_deleted", showDeleted))
 
 	c, err := ctrl.db.Query(ctx, query, bindVars)
@@ -379,21 +436,13 @@ func (ctrl *ServicesController) List(ctx context.Context, requestor string, requ
 		return nil, err
 	}
 	defer c.Close()
-	var r []*spb.Service
-	for {
-		var s spb.Service
-		meta, err := c.ReadDocument(ctx, &s)
-		if driver.IsNoMoreDocuments(err) {
-			break
-		} else if err != nil {
-			return nil, err
-		}
-		ctrl.log.Debug("Got document", zap.Any("service", &s))
-		s.Uuid = meta.ID.Key()
-		r = append(r, &s)
+	var result ServicesResult
+	_, err = c.ReadDocument(ctx, &result)
+	if err != nil {
+		return nil, err
 	}
 
-	return r, nil
+	return &result, nil
 }
 
 // Join Service into Namespace

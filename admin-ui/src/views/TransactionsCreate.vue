@@ -16,6 +16,7 @@
                 label="Type"
                 v-model="typeId"
                 :items="types"
+                :loading="isFetchLoading"
               >
                 <template v-slot:item="{ item }">
                   <span>{{ item.title }} - {{ item.amount.title }}</span>
@@ -35,14 +36,24 @@
               <v-subheader>Account</v-subheader>
             </v-col>
             <v-col cols="9">
-              <accounts-autocomplete
-                fetch-value
-                :rules="generalRule"
-                :disabled="isEdit"
-                label="Account"
-                return-object
-                v-model="transaction.account"
-              />
+              <div class="d-flex align-center">
+                <accounts-autocomplete
+                  fetch-value
+                  :rules="generalRule"
+                  :disabled="isEdit"
+                  :loading="isFetchLoading"
+                  label="Account"
+                  return-object
+                  v-model="transaction.account"
+                />
+                <v-btn
+                  @click="openAccountWindow"
+                  icon
+                  v-if="isEdit && !isFetchLoading"
+                >
+                  <v-icon>mdi-login</v-icon>
+                </v-btn>
+              </div>
             </v-col>
           </v-row>
 
@@ -54,11 +65,13 @@
               <v-autocomplete
                 :filter="defaultFilterObject"
                 label="Service"
-                item-value="title"
+                item-value="uuid"
                 item-text="title"
                 clearable
+                return-object
                 v-model="transaction.service"
-                :items="servicesByAccount"
+                :items="services"
+                :loading="isServicesLoading"
               />
             </v-col>
           </v-row>
@@ -88,7 +101,7 @@
               <v-text-field
                 type="number"
                 label="Amount"
-                :suffix="accountCurrency"
+                :suffix="accountCurrency?.title"
                 v-model.number="transaction.total"
                 :rules="isInvoice ? [] : amountRule"
                 :disabled="isInvoice"
@@ -259,6 +272,7 @@ export default {
       exec: 0,
       meta: { instances: [], description: "", transactionType: "", items: [] },
     },
+    namespace: {},
     date: {
       title: "Date",
       value: "",
@@ -308,6 +322,8 @@ export default {
     typeId: 4,
     isEdit: false,
     history: [],
+    services: [],
+    isServicesLoading: false,
   }),
   methods: {
     defaultFilterObject,
@@ -407,10 +423,7 @@ export default {
       });
     },
     refreshData() {
-      this.transaction.service =
-        this.services.find(
-          (service) => service.title === this.transaction.service
-        )?.uuid || undefined;
+      this.transaction.service = this.transaction.service?.uuid;
 
       this.transaction.exec = this.exec;
       this.transaction.total *= 1;
@@ -442,6 +455,9 @@ export default {
         (_, i) => i !== index
       );
     },
+    openAccountWindow() {
+      return window.open("/accounts/" + this.transaction.account.uuid, "_blanc");
+    },
   },
   async created() {
     if (this.$route.params.account) {
@@ -452,6 +468,8 @@ export default {
     this.setTransactionType();
 
     if (this.$route.params.uuid) {
+      this.isFetchLoading = true;
+
       try {
         const { pool } = await api.transactions.get(this.$route.params.uuid);
         this.transaction = pool[0];
@@ -469,33 +487,12 @@ export default {
         this.history = records;
       } catch (err) {
         this.$router.back();
+      } finally {
+        this.isFetchLoading = false;
       }
-    }
-
-    try {
-      await Promise.all([
-        this.$store.dispatch("namespaces/fetch"),
-        this.$store.dispatch("services/fetch"),
-      ]);
-      this.fetchError = "";
-    } catch (err) {
-      let fetchError = "Can't reach the server";
-      if (err.response) {
-        fetchError += `: [ERROR]: ${err.response.data.message}`;
-      } else {
-        fetchError += `: [ERROR]: ${err.toJSON().message}`;
-      }
-
-      this.showSnackbarError({ message: fetchError });
     }
   },
   computed: {
-    namespaces() {
-      return this.$store.getters["namespaces/all"];
-    },
-    services() {
-      return this.$store.getters["services/all"];
-    },
     whmcsApi() {
       return this.$store.getters["settings/whmcsApi"];
     },
@@ -505,29 +502,14 @@ export default {
     accountCurrency() {
       return this.transaction.account?.currency || this.defaultCurrency;
     },
-    servicesByAccount() {
-      if (this.transaction.account) {
-        const namespace = this.namespaces.find(
-          (n) => n.access.namespace === this.transaction.account.uuid
-        );
-        return this.services.filter(
-          (s) => s.access.namespace === namespace?.uuid
-        );
-      }
-      return this.services;
-    },
     instances() {
       if (!this.transaction.service) {
         return;
       }
 
-      const service = this.services.find(
-        (s) => s.title === this.transaction.service
-      );
-
       const instances = [];
 
-      service?.instancesGroups.forEach((ig) => {
+      this.transaction.service?.instancesGroups.forEach((ig) => {
         ig.instances.forEach((i) =>
           instances.push({ uuid: i.uuid, title: i.title })
         );
@@ -595,6 +577,38 @@ export default {
         this.transaction.meta.items = undefined;
         this.transaction.meta.note = undefined;
         this.initDate();
+      }
+    },
+    async "transaction.account"() {
+      if (!this.transaction.account?.uuid) {
+        this.services = [];
+        this.namespace = null;
+        return;
+      }
+
+      try {
+        const { pool: namespaces } = await this.$store.dispatch(
+          "namespaces/fetch",
+          {
+            filters: { account: this.transaction.account.uuid },
+          }
+        );
+        this.namespace = namespaces[0];
+
+        this.isServicesLoading = true;
+        const { pool: services } = await this.$store.dispatch(
+          "services/fetch",
+          {
+            filters: { account: this.transaction.account.uuid },
+          }
+        );
+        this.services = services;
+      } catch (err) {
+        this.showSnackbarError({
+          message: err,
+        });
+      } finally {
+        this.isServicesLoading = false;
       }
     },
   },

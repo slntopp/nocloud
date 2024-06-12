@@ -1,8 +1,9 @@
 package billing
 
 import (
-	"connectrpc.com/connect"
 	"context"
+
+	"connectrpc.com/connect"
 	"github.com/slntopp/nocloud-proto/access"
 	"github.com/slntopp/nocloud/pkg/nocloud"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -31,14 +32,26 @@ func NewCurrencyServiceServer(log *zap.Logger, db driver.Database) *CurrencyServ
 	}
 }
 
-func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, r *connect.Request[pb.GetExchangeRateRequest]) (*connect.Response[pb.GetExchangeRateResponse], error) {
+func (s *CurrencyServiceServer) CreateCurrency(ctx context.Context, r *connect.Request[pb.CreateCurrencyRequest]) (*connect.Response[pb.CreateCurrencyResponse], error) {
 	req := r.Msg
-	rate, err := s.ctrl.GetExchangeRate(ctx, req.From, req.To)
+	if req.Currency == nil {
+		return nil, status.Error(codes.InvalidArgument, "no currency provided")
+	}
+	err := s.ctrl.CreateCurrency(ctx, req.Currency)
 	if err != nil {
 		return nil, err
 	}
 
-	return connect.NewResponse(&pb.GetExchangeRateResponse{Rate: rate}), nil
+	return connect.NewResponse(&pb.CreateCurrencyResponse{}), nil
+}
+
+func (s *CurrencyServiceServer) GetExchangeRate(ctx context.Context, req *connect.Request[pb.GetExchangeRateRequest]) (*connect.Response[pb.GetExchangeRateResponse], error) {
+	rate, commission, err := s.ctrl.GetExchangeRate(ctx, req.Msg.GetFrom(), req.Msg.GetTo())
+	if err != nil {
+		return nil, err
+	}
+
+	return connect.NewResponse(&pb.GetExchangeRateResponse{Rate: rate, Commission: commission}), nil
 }
 
 func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, r *connect.Request[pb.CreateExchangeRateRequest]) (*connect.Response[pb.CreateExchangeRateResponse], error) {
@@ -48,18 +61,18 @@ func (s *CurrencyServiceServer) CreateExchangeRate(ctx context.Context, r *conne
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
-	err := s.ctrl.CreateExchangeRate(ctx, req.From, req.To, req.Rate)
+	err := s.ctrl.CreateExchangeRate(ctx, *req.From, *req.To, req.Rate, req.Commission)
 	if err != nil {
 		return connect.NewResponse(&pb.CreateExchangeRateResponse{}), err
 	}
 
-	_, err = s.ctrl.GetExchangeRateDirect(ctx, req.To, req.From)
+	_, _, err = s.ctrl.GetExchangeRateDirect(ctx, *req.To, *req.From)
 	if err == nil {
 		return connect.NewResponse(&pb.CreateExchangeRateResponse{}), nil
 	}
 
 	s.log.Info("Reverse rate is not set yet, setting automatically", zap.String("from", req.To.String()), zap.String("to", req.From.String()))
-	err = s.ctrl.CreateExchangeRate(ctx, req.To, req.From, 1/req.Rate)
+	err = s.ctrl.CreateExchangeRate(ctx, *req.To, *req.From, 1/req.Rate, req.Commission)
 	if err != nil {
 		s.log.Warn("Couldn't automatically create reverse Exchange rate", zap.Error(err))
 	}
@@ -74,7 +87,7 @@ func (s *CurrencyServiceServer) UpdateExchangeRate(ctx context.Context, r *conne
 		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Currencies")
 	}
 
-	err := s.ctrl.UpdateExchangeRate(ctx, req.From, req.To, req.Rate)
+	err := s.ctrl.UpdateExchangeRate(ctx, *req.From, *req.To, req.Rate, req.Commission)
 	return connect.NewResponse(&pb.UpdateExchangeRateResponse{}), err
 }
 

@@ -38,7 +38,7 @@
         </v-col>
         <v-col v-if="accountRate">
           <v-text-field
-            :suffix="accountCurrency"
+            :suffix="accountCurrency?.title"
             readonly
             :value="isSelectedPlanAvailable ? accountPrice : null"
             label="account price"
@@ -46,7 +46,7 @@
         </v-col>
         <v-col>
           <v-text-field
-            :suffix="defaultCurrency"
+            :suffix="defaultCurrency?.title"
             readonly
             :value="isSelectedPlanAvailable ? fullProduct?.price : null"
             label="price"

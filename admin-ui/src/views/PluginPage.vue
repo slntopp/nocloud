@@ -1,10 +1,12 @@
 <template>
-  <div class="pa-4 h-100 w-100">
+  <div
+    class="pa-4 h-100 w-100"
+    :style="isMaximized ? { width: '100vw', height: '100vh' } : {}"
+  >
     <plugin-iframe
       v-if="$route.query.url"
       ref="plugin"
       class="h-100 w-100"
-      :redirect="redirect"
       :url="url"
       :params="params"
     />
@@ -17,24 +19,36 @@ import { useRoute } from "vue-router/composables";
 import { useStore } from "@/store";
 import PluginIframe from "@/components/plugin/iframe.vue";
 
-const route = useRoute()
-const store = useStore()
+const route = useRoute();
+const store = useStore();
 
-const plugin = ref()
-const url = computed(() =>
-  route.params.url || route.query.url
-)
-const params = computed(() =>
-  route.params.params
-)
+const plugin = ref();
 
-watch(() => store.getters["app/chatClicks"], () => {
-  plugin.value.$el.contentWindow.postMessage({ type: "start-page" }, "*");
-})
+const url = computed(() => route.params.url || route.query.url);
+const isMaximized = computed(() => route.query.fullscrean === "true");
+const params = computed(() => {
+  const result = {
+    ...route.params.params,
+    fullUrl: location.href,
+  };
+
+  if (route.query.chat) {
+    result.redirect = `dashboard/${route.query.chat}`;
+  }
+
+  return result;
+});
+
+watch(
+  () => store.getters["app/chatClicks"],
+  () => {
+    plugin.value.$el.contentWindow.postMessage({ type: "start-page" }, "*");
+  }
+);
 </script>
 
 <script>
-export default { name: "plugin-view" }
+export default { name: "plugin-view" };
 </script>
 
 <style>

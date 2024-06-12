@@ -26,18 +26,31 @@
     <template v-slot:[`item.total`]="{ item }">
       <balance abs :currency="item.currency" :value="-item.total" />
     </template>
-    <template v-slot:[`item.proc`]="{ item }">
-      {{ formatSecondsToDate(item.proc, true) }}
+
+    <template v-slot:[`item.processed`]="{ item }">
+      {{ formatSecondsToDate(item.processed, true) }}
     </template>
-    <template v-slot:[`item.exec`]="{ item }">
-      {{ formatSecondsToDate(item.exec, true) }}
+
+    <template v-slot:[`item.deadline`]="{ item }">
+      {{ formatSecondsToDate(item.deadline, true) }}
     </template>
+
+    <template v-slot:[`item.payment`]="{ item }">
+      {{ formatSecondsToDate(item.payment, true) }}
+    </template>
+
     <template v-slot:[`item.created`]="{ item }">
       {{ formatSecondsToDate(item.created, true) }}
     </template>
-    <template v-slot:[`item.status`]="{ item }">
-      <v-chip>{{ BillingStatus[item.status] }}</v-chip>
+
+    <template v-slot:[`item.returned`]="{ item }">
+      {{ formatSecondsToDate(item.returned, true) }}
     </template>
+
+    <template v-slot:[`item.status`]="{ item }">
+      <v-chip>{{ item.status }}</v-chip>
+    </template>
+
     <template v-slot:[`item.actions`]="{ item }">
       <v-btn icon :to="{ name: 'Invoice page', params: { uuid: item.uuid } }">
         <v-icon>mdi-login</v-icon>
@@ -52,7 +65,6 @@ import balance from "@/components/balance.vue";
 import { debounce, formatSecondsToDate } from "../functions";
 import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
-import { BillingStatus } from "nocloud-proto/proto/es/billing/billing_pb";
 import api from "@/api";
 
 const props = defineProps({
@@ -79,9 +91,12 @@ const headers = ref([
   { text: "UUID ", value: "uuid" },
   { text: "Account ", value: "account" },
   { text: "Amount ", value: "total" },
-  { text: "Payment date ", value: "proc" },
-  { text: "Executed date ", value: "exec" },
+  { text: "Type ", value: "type" },
   { text: "Created date ", value: "created" },
+  { text: "Deadline date", value: "deadline" },
+  { text: "Payment date", value: "payment" },
+  { text: "Processed date", value: "processed" },
+  { text: "Returned date", value: "returned" },
   { text: "Status ", value: "status" },
   { text: "Actions ", value: "actions" },
 ]);

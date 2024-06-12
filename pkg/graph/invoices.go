@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing"
+	"github.com/slntopp/nocloud/pkg/graph/migrations"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
 	"go.uber.org/zap"
 )
@@ -19,6 +20,9 @@ func NewInvoicesController(logger *zap.Logger, db driver.Database) InvoicesContr
 	ctx := context.TODO()
 	log := logger.Named("InvoicesController")
 	col := GetEnsureCollection(log, ctx, db, schema.INVOICES_COL)
+
+	migrations.UpdateNumericCurrencyToDynamic(log, col)
+
 	return InvoicesController{
 		log: log, col: col,
 	}
@@ -58,4 +62,9 @@ func (ctrl *InvoicesController) Update(ctx context.Context, tx *pb.Invoice) (*pb
 		return nil, err
 	}
 	return tx, nil
+}
+
+func (ctrl *InvoicesController) Patch(ctx context.Context, id string, patch map[string]interface{}) error {
+	_, err := ctrl.col.UpdateDocument(ctx, id, patch)
+	return err
 }

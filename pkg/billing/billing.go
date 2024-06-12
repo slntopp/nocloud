@@ -16,12 +16,16 @@ limitations under the License.
 package billing
 
 import (
-	"connectrpc.com/connect"
 	"context"
+	"strconv"
+
+	"connectrpc.com/connect"
 	"github.com/arangodb/go-driver"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing"
 	dpb "github.com/slntopp/nocloud-proto/billing/descriptions"
+	driverpb "github.com/slntopp/nocloud-proto/drivers/instance/vanilla"
 	healthpb "github.com/slntopp/nocloud-proto/health"
 	statuspb "github.com/slntopp/nocloud-proto/statuses"
 	"github.com/slntopp/nocloud/pkg/graph"
@@ -42,6 +46,9 @@ type Routine struct {
 type BillingServiceServer struct {
 	log *zap.Logger
 
+	rbmq           *amqp.Connection
+	ConsumerStatus *healthpb.RoutineStatus
+
 	nss          graph.NamespacesController
 	plans        graph.BillingPlansController
 	transactions graph.TransactionsController
@@ -50,17 +57,23 @@ type BillingServiceServer struct {
 	currencies   graph.CurrencyController
 	accounts     graph.AccountsController
 	descriptions *graph.DescriptionsController
+	instances    *graph.InstancesController
+	services     graph.ServicesController
+	sp           graph.ServicesProvidersController
 
 	db driver.Database
 
 	gen  *healthpb.RoutineStatus
 	proc *healthpb.RoutineStatus
 	sus  *healthpb.RoutineStatus
+
+	drivers map[string]driverpb.DriverServiceClient
 }
 
-func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingServiceServer {
+func NewBillingServiceServer(logger *zap.Logger, db driver.Database, conn *amqp.Connection) *BillingServiceServer {
 	log := logger.Named("BillingService")
 	s := &BillingServiceServer{
+		rbmq:         conn,
 		log:          log,
 		nss:          graph.NewNamespacesController(log, db),
 		plans:        graph.NewBillingPlansController(log.Named("PlansController"), db),
@@ -69,7 +82,10 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 		currencies:   graph.NewCurrencyController(log.Named("CurrenciesController"), db),
 		accounts:     graph.NewAccountsController(log.Named("AccountsController"), db),
 		invoices:     graph.NewInvoicesController(log.Named("InvoicesController"), db),
+		services:     graph.NewServicesController(log.Named("ServicesController"), db, conn),
 		descriptions: graph.NewDescriptionsController(log, db),
+		instances:    graph.NewInstancesController(log, db, conn),
+		sp:           graph.NewServicesProvidersController(log, db),
 		db:           db,
 		gen: &healthpb.RoutineStatus{
 			Routine: "Generate Transactions",
@@ -91,11 +107,23 @@ func NewBillingServiceServer(logger *zap.Logger, db driver.Database) *BillingSer
 				Status:  healthpb.Status_STOPPED,
 			},
 		},
+
+		ConsumerStatus: &healthpb.RoutineStatus{
+			Routine: "Billing Consumer",
+			Status: &healthpb.ServingStatus{
+				Service: "Billing Machine",
+				Status:  healthpb.Status_STOPPED,
+			},
+		},
 	}
 
 	s.migrate()
 
 	return s
+}
+
+func (s *BillingServiceServer) RegisterDriver(type_key string, client driverpb.DriverServiceClient) {
+	s.drivers[type_key] = client
 }
 
 func (s *BillingServiceServer) migrate() {
@@ -307,11 +335,11 @@ func (s *BillingServiceServer) GetPlan(ctx context.Context, req *connect.Request
 var getDefaultCurrencyQuery = `
 LET cur = LAST(
     FOR i IN Currencies2Currencies
-    FILTER (i.to == 0 || i.from == 0) && i.rate == 1
+    FILTER (i.to.id == 0 || i.from.id == 0) && i.rate == 1
         RETURN i
 )
 
-RETURN cur.to == 0 ? cur.from : cur.to
+RETURN cur.to.id == 0 ? cur.from : cur.to
 `
 
 func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request[pb.ListRequest]) (*connect.Response[pb.ListResponse], error) {
@@ -362,32 +390,49 @@ func (s *BillingServiceServer) ListPlans(ctx context.Context, r *connect.Request
 
 		cur := acc.Account.GetCurrency()
 
-		defaultCur := pb.Currency_NCU
-
+		dbCur := struct {
+			Id    string `json:"id"`
+			Title string `json:"title"`
+		}{}
 		queryContext := driver.WithQueryCount(ctx)
 		res, err := s.db.Query(queryContext, getDefaultCurrencyQuery, map[string]interface{}{})
 		if err != nil {
 			return nil, err
 		}
 		if res.Count() != 0 {
-			_, err = res.ReadDocument(ctx, &defaultCur)
+			_, err = res.ReadDocument(ctx, &dbCur)
 			if err != nil {
 				log.Error("Failed to get default cur", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Failed to get default cur")
 			}
 		}
 
-		var rate float64
+		id, err := strconv.ParseInt(dbCur.Id, 10, 32)
+		if err != nil {
+			log.Error("Failed to parse int", zap.Error(err))
+		}
+		defaultCur := &pb.Currency{
+			Id:    int32(id),
+			Title: dbCur.Title,
+		}
 
-		if cur == defaultCur {
+		var (
+			rate       float64
+			commission float64 = 0
+		)
+
+		if cur.GetId() == defaultCur.GetId() {
 			rate = 1
 		} else {
-			rate, err = s.currencies.GetExchangeRateDirect(ctx, defaultCur, cur)
+			rate, commission, err = s.currencies.GetExchangeRateDirect(ctx, *defaultCur, *cur)
 			if err != nil {
 				log.Error("Error getting rate", zap.Error(err))
 				return nil, status.Error(codes.Internal, "Error getting rate")
 			}
 		}
+
+		// Apply commission to rate
+		rate = rate + ((commission / 100) * rate)
 
 		for planIndex := range result {
 			plan := result[planIndex]

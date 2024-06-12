@@ -153,6 +153,7 @@ export default {
               const ending = deletePromises.length === 1 ? "" : "s";
 
               this.$store.dispatch("services/fetch", { showDeleted: true });
+              this.selected = [];
               this.showSnackbarSuccess({
                 message: `Instance${ending} deleted successfully.`,
               });

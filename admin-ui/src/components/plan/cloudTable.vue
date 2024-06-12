@@ -39,13 +39,13 @@
           <template v-slot:[`item.endPrice`]="{ item }">
             <v-text-field
               style="width: 200px"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               v-model.number="item.endPrice"
               type="number"
             />
           </template>
           <template v-slot:[`item.price`]="{ value }">
-            {{ value }} {{ defaultCurrency }}
+            {{ value }} {{ defaultCurrency?.title }}
           </template>
           <template v-slot:[`item.gpu.model`]="{ item }">
             <template v-if="item.gpu.model !== ''">

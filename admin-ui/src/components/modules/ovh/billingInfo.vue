@@ -75,7 +75,7 @@
               class="mr-2"
               v-model="item.price"
               @change="onUpdatePrice(item, false)"
-              :suffix="defaultCurrency"
+              :suffix="defaultCurrency?.title"
               type="number"
               append-icon="mdi-pencil"
             ></v-text-field>
@@ -84,7 +84,7 @@
               style="color: var(--v-primary-base)"
               v-model="item.accountPrice"
               @change="onUpdatePrice(item, true)"
-              :suffix="accountCurrency"
+              :suffix="accountCurrency?.title"
               type="number"
               append-icon="mdi-pencil"
             ></v-text-field>
@@ -115,9 +115,9 @@
             <td>
               <div class="d-flex justify-end">
                 <v-chip outlined color="primary" class="mr-4">
-                  {{ [totalNewPrice?.toFixed(2), defaultCurrency].join(" ") }}
+                  {{ [totalNewPrice?.toFixed(2), defaultCurrency?.title].join(" ") }}
                   /
-                  {{ [accountTotalNewPrice, accountCurrency].join(" ") }}
+                  {{ [accountTotalNewPrice, accountCurrency?.title].join(" ") }}
                 </v-chip>
               </div>
             </td>

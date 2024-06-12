@@ -356,7 +356,7 @@ export default {
           this.extentions.loading = false;
         });
     },
-    tryToSend() {
+    async tryToSend() {
       const action = this.$route.params.uuid ? "edit" : "create";
 
       if (
@@ -396,32 +396,28 @@ export default {
       }
 
       this.isLoading = true;
-      api.servicesProviders
-        .testConfig(this.serviceProviderBody)
-        .then((res) => {
-          if (res.result) {
-            const id = this.$route.params.uuid;
-
-            return action === "create"
-              ? api.servicesProviders.create(this.serviceProviderBody)
-              : api.servicesProviders.update(id, this.serviceProviderBody);
-          } else throw res;
-        })
-        .then(() => {
-          this.showSnackbarSuccess({
-            message:
-              action === "create"
-                ? "Service provider created successfully"
-                : "Service provider updated successfully",
-          });
-          this.$router.push({ name: "ServicesProviders" });
-        })
-        .catch((err) => {
-          this.errorDisplay(err);
-        })
-        .finally(() => {
-          this.isLoading = false;
+      try {
+        const id = this.$route.params.uuid;
+        const promise =
+          action === "create"
+            ? api.servicesProviders.create(this.serviceProviderBody)
+            : api.servicesProviders.update(id, this.serviceProviderBody);
+        const response = await promise;
+        if (response.errors) {
+          throw response;
+        }
+        this.showSnackbarSuccess({
+          message:
+            action === "create"
+              ? "Service provider created successfully"
+              : "Service provider updated successfully",
         });
+        this.$router.push({ name: "ServicesProviders" });
+      } catch (err) {
+        this.errorDisplay(err);
+      } finally {
+        this.isLoading = false;
+      }
     },
     errorDisplay(err) {
       let opts;

@@ -1,21 +1,21 @@
 <template>
   <v-autocomplete
-      placeholder="Start typing..."
-      :items="allAccounts"
-      :filter="accountsFilter"
-      :value="value"
-      @input="emit('input', $event)"
-      item-text="title"
-      item-value="uuid"
-      :rules="rules"
-      :disabled="disabled"
-      :label="label"
-      :return-object="returnObject"
-      @update:search-input="onSearchInput"
-      :loading="isLoading || isInitLoading || loading"
-      :multiple="multiple"
-      :clearable="clearable"
-      :dense="dense"
+    placeholder="Start typing..."
+    :items="allAccounts"
+    :filter="accountsFilter"
+    :value="value"
+    @input="emit('input', $event)"
+    item-text="title"
+    item-value="uuid"
+    :rules="rules"
+    :disabled="disabled"
+    :label="label"
+    :return-object="returnObject"
+    @update:search-input="onSearchInput"
+    :loading="isLoading || isInitLoading || loading"
+    :multiple="multiple"
+    :clearable="clearable"
+    :dense="dense"
   />
 </template>
 
@@ -87,18 +87,26 @@ const onSearchInput = async (e) => {
   isLoading.value = true;
 
   allAccounts.value = allAccounts.value.filter(
-      (account) =>
-          value.value?.includes?.(account) ||
-          value.value?.includes?.(account.uuid) ||
-          value.value === account ||
-          value.value?.uuid === account.uuid
+    (account) =>
+      value.value?.includes?.(account) ||
+      value.value?.includes?.(account.uuid) ||
+      value.value === account ||
+      value.value?.uuid === account.uuid
   );
 
   updateAccountsDebounce(e);
 };
 
 const fetchAccount = async () => {
-  if (fetchValue.value && value.value) {
+  console.log( fetchValue.value &&
+    value.value &&
+    (typeof value.value === "string" || Object.keys(value.value).length),
+  value.value);
+  if (
+    fetchValue.value &&
+    value.value &&
+    (typeof value.value === "string" || Object.keys(value.value).length)
+  ) {
     isInitLoading.value = true;
     try {
       if (Array.isArray(value.value)) {
