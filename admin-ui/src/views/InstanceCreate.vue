@@ -212,16 +212,11 @@ onMounted(async () => {
       return;
     }
 
-    let {
-      type: newType,
-      serviceId,
-      accountId,
-      serviceProviderId,
-    } = route.query;
+    let { type: newType, accountId, serviceProviderId } = route.query;
 
     if (newType) {
       account.value = accountId;
-      service.value = services.value.find((s) => s.uuid === serviceId);
+      setService();
       if (!typeItems.value.includes(newType)) {
         customTypeName.value = newType;
         newType = "custom";
@@ -376,6 +371,25 @@ const fetchNamespace = async () => {
   }
 };
 
+const setService = () => {
+  let newService;
+  const serviceId = route.query.serviceId;
+
+  if (!account.value) {
+    return (service.value = null);
+  }
+
+  if (serviceId) {
+    newService = servicesByAccount.value.find((s) => s.uuid === serviceId);
+  }
+
+  if (!newService) {
+    newService = servicesByAccount.value?.[0];
+  }
+
+  service.value = newService;
+};
+
 watch(serviceProviderId, (sp_uuid) => {
   if (!sp_uuid) return;
   instanceGroupTitle.value = service.value?.instancesGroups.find(
@@ -400,11 +414,15 @@ watch(instanceGroupTitle, (newVal) => {
 });
 
 watch(account, () => {
-  service.value = servicesByAccount.value?.[0];
+  setService();
 
   if (account.value.uuid) {
     fetchNamespace();
   }
+});
+
+watch(servicesByAccount, () => {
+  setService();
 });
 
 watch(type, () => {
