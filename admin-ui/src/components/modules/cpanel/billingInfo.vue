@@ -143,14 +143,21 @@ import useInstancePrices from "@/hooks/useInstancePrices";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import DatePicker from "../../ui/datePicker.vue";
 
-const props = defineProps(["template", "plans", "service", "sp", "addons"]);
+const props = defineProps([
+  "template",
+  "plans",
+  "service",
+  "sp",
+  "account",
+  "addons",
+]);
 const emit = defineEmits(["refresh"]);
 
-const { template, plans, addons } = toRefs(props);
+const { template, plans, addons, account } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
-  useInstancePrices(template.value);
+  useInstancePrices(template.value, account.value);
 
 const billingHeaders = ref([
   { text: "Name", value: "name" },
