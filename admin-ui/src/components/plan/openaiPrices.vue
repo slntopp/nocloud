@@ -41,7 +41,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, toRefs } from "vue";
+import { onMounted, ref, toRefs } from "vue";
 import NocloudTable from "@/components/table.vue";
 import planAddonsTable from "@/components/planAddonsTable.vue";
 import api from "@/api";
@@ -124,11 +124,6 @@ const resources = ref([
   }
 ]);
 
-const items = computed(() =>
-  resources.value.filter(({ key }) =>
-    !['image_size_1792x1024_quality_standard', 'image_size_1792x1024_quality_hd'].includes(key)
-  )
-)
 const headers = [
   { text: "Key", value: "key" },
   { text: "Title", value: "title" },
