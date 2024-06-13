@@ -201,12 +201,13 @@ const getBillingItems = () => {
       });
     }
   });
-
   addons.value.forEach((addon) => {
+    const price = addon.periods[Object.keys(addon.periods)[0]];
+
     items.push({
       name: addon.title,
-      price: addon.periods[0],
-      accountPrice: toAccountPrice(addon.price),
+      price: price,
+      accountPrice: toAccountPrice(price),
     });
   });
 
