@@ -90,6 +90,10 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 				query += fmt.Sprintf(` FILTER a.title LIKE "%s"`, "%"+value.GetStringValue()+"%")
 			} else if key == "system" {
 				query += fmt.Sprintf(` FILTER a.system == %t`, value.GetBoolValue())
+			} else if key == "group" {
+				query += fmt.Sprintf(` FILTER a.group LIKE "%s"`, "%"+value.GetStringValue()+"%")
+			} else if key == "uuid" {
+				query += fmt.Sprintf(` FILTER a._key LIKE "%s"`, "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {
