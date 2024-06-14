@@ -253,21 +253,33 @@ export default {
         .map((k) => k.key.split("_")[1].toUpperCase());
     },
     driveSizeConfig() {
-      let minDisk, maxDisk;
-      if (this.instance.billing_plan?.meta?.minDisk) {
-        minDisk = this.instance.billing_plan.meta.minDisk;
+      const defaultDiskSize = {
+        minDisk: 0,
+        maxDisk: 102400,
+      };
+
+      if (!this.instance.resources.drive_type) {
+        return defaultDiskSize;
       }
-      if (this.instance.billing_plan?.meta?.maxDisk) {
-        maxDisk = this.instance.billing_plan.meta.maxDisk;
+
+      const diskType = this.instance.resources.drive_type;
+      let minDisk, maxDisk;
+
+      if (this.instance.billing_plan?.meta?.minDiskSize?.[diskType]) {
+        minDisk = this.instance.billing_plan.meta.minDiskSize[diskType];
+      }
+      if (this.instance.billing_plan?.meta?.maxDiskSize?.[diskType]) {
+        maxDisk = this.instance.billing_plan.meta.maxDiskSize[diskType];
       }
 
       if (this.selectedTemplate?.min_size) {
-        minDisk = this.selectedTemplate?.min_size;
+        const osMinDiskSize = (this.selectedTemplate?.min_size || 0) / 1024;
+        minDisk = osMinDiskSize > minDisk ? osMinDiskSize : minDisk;
       }
 
       return {
-        minDisk: (minDisk || 0) / 1024,
-        maxDisk: (maxDisk || 1024000000) / 1024,
+        minDisk: minDisk || defaultDiskSize.minDisk,
+        maxDisk: maxDisk || defaultDiskSize.maxDisk,
       };
     },
     selectedTemplate() {
@@ -284,7 +296,7 @@ export default {
     },
   },
   watch: {
-    "plans"() {
+    plans() {
       this.changeBilling(this.instance.billing_plan);
     },
     existing() {
