@@ -1,6 +1,8 @@
 <template>
   <div class="pa-4">
-    <h1 class="page__title">Create invoice</h1>
+    <h1 v-if="!isEdit && invoice?.status !== 'DRAFT'" class="page__title">
+      Create invoice
+    </h1>
     <v-form v-model="isValid" ref="invoiceForm">
       <v-row>
         <v-col cols="6">
@@ -267,6 +269,8 @@ const props = defineProps({
 });
 const { invoice, isEdit } = toRefs(props);
 
+const emit = defineEmits(["refresh"]);
+
 const store = useStore();
 const router = useRouter();
 
@@ -311,7 +315,7 @@ const changeStatusBtns = [
   {
     title: "cancel",
     status: "CANCELED",
-    disabled: ["TERMINATED", "RETURNED", "DRAFT", "UNPAID"],
+    disabled: ["TERMINATED", "RETURNED", "DRAFT", "PAID"],
   },
   {
     title: "return",
@@ -322,19 +326,12 @@ const changeStatusBtns = [
 ];
 
 onMounted(async () => {
-  if (invoice.value) {
-    newInvoice.value = {
-      ...invoice.value,
-      deadline: formatSecondsToDateString(invoice.value.deadline),
-    };
-
-    selectedInstances.value = invoice.value.items?.map((item) => item.instance);
-  }
-
   await Promise.all([
     store.dispatch("services/fetch"),
     store.dispatch("namespaces/fetch"),
   ]);
+
+  setInvoice();
 
   // if (isEdit.value) {
   //   newInvoice.value.account = accounts.value.find(
@@ -385,6 +382,17 @@ const isEmailDisabled = computed(() =>
 const isSaveDisabled = computed(() =>
   ["TERMINATED"].includes(newInvoice.value.status)
 );
+
+const setInvoice = () => {
+  if (invoice.value) {
+    newInvoice.value = {
+      ...invoice.value,
+      deadline: formatSecondsToDateString(invoice.value.deadline),
+    };
+
+    selectedInstances.value = invoice.value.items?.map((item) => item.instance);
+  }
+};
 
 const saveInvoice = async (withEmail = false) => {
   console.log(withEmail, newInvoice.value);
@@ -506,14 +514,14 @@ const changeInvoiceStatus = async (status) => {
   isStatusChangeLoading.value = true;
   newStatus.value = status;
   try {
-    console.log("new BillingStatus", BillingStatus[status], status);
     await store.getters["invoices/invoicesClient"].updateInvoiceStatus(
       UpdateInvoiceStatusRequest.fromJson({
         uuid: invoice.value.uuid,
         status: BillingStatus[status],
       })
     );
-    newInvoice.value.status = status;
+
+    emit("refresh");
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
@@ -551,6 +559,8 @@ watch(
   },
   { deep: true }
 );
+
+watch(invoice, setInvoice);
 </script>
 
 <style scoped>
