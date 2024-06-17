@@ -61,9 +61,9 @@ type InstancesController struct {
 
 	ig2inst driver.Collection
 
-	inv InvoicesController
-	acc AccountsController
-	cur CurrencyController
+	inv     InvoicesController
+	acc     AccountsController
+	cur     CurrencyController
 	channel *amqp091.Channel
 
 	bp_ctrl *BillingPlansController
@@ -318,6 +318,10 @@ func (ctrl *InstancesController) Update(ctx context.Context, sp string, inst, ol
 
 	if inst.GetTitle() != oldInst.GetTitle() {
 		mask.Title = inst.GetTitle()
+	}
+
+	if !reflect.DeepEqual(inst.GetAddons(), oldInst.GetAddons()) {
+		mask.Addons = inst.GetAddons()
 	}
 
 	if inst.GetProduct() != oldInst.GetProduct() {

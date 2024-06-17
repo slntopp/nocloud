@@ -3,6 +3,7 @@ package graph
 import (
 	"context"
 	"fmt"
+
 	"github.com/arangodb/go-driver"
 	pb "github.com/slntopp/nocloud-proto/billing/addons"
 	"github.com/slntopp/nocloud/pkg/nocloud/schema"
@@ -48,6 +49,36 @@ func (c *AddonsController) Update(ctx context.Context, addon *pb.Addon) (*pb.Add
 	return addon, nil
 }
 
+func (c *AddonsController) CreateBulk(ctx context.Context, addons []*pb.Addon) ([]*pb.Addon, error) {
+	log := c.log.Named("Create")
+
+	_, _, err := c.col.CreateDocuments(ctx, addons)
+	if err != nil {
+		log.Error("Failed to create document", zap.Error(err))
+		return nil, err
+	}
+
+	return addons, nil
+}
+
+func (c *AddonsController) UpdateBulk(ctx context.Context, addons []*pb.Addon) ([]*pb.Addon, error) {
+	log := c.log.Named("Update")
+
+	var keys = make([]string, len(addons))
+
+	for i, addon := range addons {
+		keys[i] = addon.GetUuid()
+	}
+
+	_, _, err := c.col.ReplaceDocuments(ctx, keys, addons)
+	if err != nil {
+		log.Error("Failed to update document", zap.Error(err))
+		return nil, err
+	}
+
+	return addons, nil
+}
+
 func (c *AddonsController) Delete(ctx context.Context, uuid string) error {
 	log := c.log.Named("Update")
 
@@ -89,7 +120,10 @@ func (c *AddonsController) List(ctx context.Context, req *pb.ListAddonsRequest) 
 			if key == "title" {
 				query += fmt.Sprintf(` FILTER a.title LIKE "%s"`, "%"+value.GetStringValue()+"%")
 			} else if key == "system" {
-				query += fmt.Sprintf(` FILTER a.system == %t`, value.GetBoolValue())
+				// TODO: make it easier to read
+				query += fmt.Sprintf(` FILTER (%t && a.system == true) || (!%t && (!a.system || a.system == false))`, value.GetBoolValue(), value.GetBoolValue())
+			} else if key == "search_param" {
+				query += fmt.Sprintf(` FILTER LOWER(a.title) LIKE LOWER("%s") || LOWER(a.group) LIKE LOWER("%s") || a._key LIKE "%s"`, "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%", "%"+value.GetStringValue()+"%")
 			} else {
 				values := value.GetListValue().AsSlice()
 				if len(values) == 0 {

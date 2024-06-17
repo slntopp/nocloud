@@ -1,8 +1,10 @@
 package billing
 
 import (
-	"connectrpc.com/connect"
 	"context"
+	"time"
+
+	"connectrpc.com/connect"
 	"github.com/arangodb/go-driver"
 	"github.com/slntopp/nocloud-proto/access"
 	pb "github.com/slntopp/nocloud-proto/billing/addons"
@@ -13,7 +15,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
-	"time"
 )
 
 type AddonsServer struct {
@@ -83,6 +84,62 @@ func (s *AddonsServer) Update(ctx context.Context, r *connect.Request[pb.Addon])
 	}
 
 	resp := connect.NewResponse(addon)
+
+	return resp, nil
+}
+
+func (s *AddonsServer) CreateBulk(ctx context.Context, r *connect.Request[pb.BulkAddons]) (*connect.Response[pb.BulkAddons], error) {
+	log := s.log.Named("Create")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	req := r.Msg
+
+	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
+	}
+
+	for _, addon := range req.GetAddons() {
+		if addon.GetKind() == pb.Kind_UNSPECIFIED {
+			return nil, status.Error(codes.InvalidArgument, "kind is required")
+		}
+
+		addon.Created = time.Now().Unix()
+	}
+
+	addons, err := s.addons.CreateBulk(ctx, req.GetAddons())
+	if err != nil {
+		log.Error("Failed to create document", zap.Error(err))
+		return nil, err
+	}
+
+	resp := connect.NewResponse(&pb.BulkAddons{Addons: addons})
+
+	return resp, nil
+}
+
+func (s *AddonsServer) UpdateBulk(ctx context.Context, r *connect.Request[pb.BulkAddons]) (*connect.Response[pb.BulkAddons], error) {
+	log := s.log.Named("Update")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+
+	req := r.Msg
+
+	if !graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), access.Level_ADMIN) {
+		return nil, status.Error(codes.PermissionDenied, "Not enough Access rights to manage Addons")
+	}
+
+	for _, addon := range req.GetAddons() {
+		if addon.GetKind() == pb.Kind_UNSPECIFIED {
+			return nil, status.Error(codes.InvalidArgument, "kind is required")
+		}
+	}
+
+	addons, err := s.addons.UpdateBulk(ctx, req.GetAddons())
+	if err != nil {
+		log.Error("Failed to update document", zap.Error(err))
+		return nil, err
+	}
+
+	resp := connect.NewResponse(&pb.BulkAddons{Addons: addons})
 
 	return resp, nil
 }
