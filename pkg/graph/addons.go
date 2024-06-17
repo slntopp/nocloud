@@ -52,10 +52,14 @@ func (c *AddonsController) Update(ctx context.Context, addon *pb.Addon) (*pb.Add
 func (c *AddonsController) CreateBulk(ctx context.Context, addons []*pb.Addon) ([]*pb.Addon, error) {
 	log := c.log.Named("Create")
 
-	_, _, err := c.col.CreateDocuments(ctx, addons)
+	meta_slice, _, err := c.col.CreateDocuments(ctx, addons)
 	if err != nil {
 		log.Error("Failed to create document", zap.Error(err))
 		return nil, err
+	}
+
+	for i, item := range meta_slice.Keys() {
+		addons[i].Uuid = item
 	}
 
 	return addons, nil
