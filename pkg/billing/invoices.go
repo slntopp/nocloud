@@ -215,7 +215,7 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if len(req.Msg.GetItems()) > 0 {
 		sum := 0.0
 		for _, item := range req.Msg.GetItems() {
-			sum += item.GetPrice()
+			sum += item.GetPrice() * float64(item.GetAmount())
 		}
 		if sum != t.GetTotal() {
 			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
@@ -767,10 +767,10 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if len(t.GetItems()) > 0 {
 		sum := 0.0
 		for _, item := range t.Items {
-			sum += item.GetPrice()
+			sum += item.GetPrice() * float64(item.GetAmount())
 		}
 		if sum != t.Total {
-			return nil, status.Error(codes.InvalidArgument, "Sum of items does not match total")
+			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
 		}
 	}
 
