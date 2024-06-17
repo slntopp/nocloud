@@ -84,6 +84,7 @@ import { useRouter } from "vue-router/composables";
 import { getFullDate, getTimestamp } from "@/functions";
 import RichEditor from "@/components/ui/richEditor.vue";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
+import { Addon } from "nocloud-proto/proto/es/billing/addons/addons_pb";
 
 const props = defineProps({
   addon: {},
@@ -145,14 +146,16 @@ const saveAddon = async () => {
   isSaveLoading.value = true;
 
   try {
-    const dto = {
-      ...newAddon.value,
-      description: undefined,
+    const dto = Addon.fromJson({
+      public: newAddon.value.public,
+      title: newAddon.value.title,
+      group: newAddon.value.group,
       periods: newAddon.value.periods.reduce((acc, a) => {
         acc[getTimestamp(a.period)] = a.price;
         return acc;
       }, {}),
-    };
+      kind: "PREPAID",
+    });
 
     if (!isEdit.value) {
       const description = await store.dispatch("descriptions/create", {
@@ -169,6 +172,7 @@ const saveAddon = async () => {
       await store.getters["addons/addonsClient"].update(dto);
     }
   } catch (e) {
+    console.log(e);
     store.commit("snackbar/showSnackbarError", { message: e.message });
   } finally {
     isSaveLoading.value = false;
