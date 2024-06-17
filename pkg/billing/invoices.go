@@ -31,6 +31,7 @@ type pair[T any] struct {
 var forbiddenStatusConversions = []pair[pb.BillingStatus]{
 	// From DRAFT
 	{pb.BillingStatus_DRAFT, pb.BillingStatus_RETURNED},
+	{pb.BillingStatus_DRAFT, pb.BillingStatus_PAID},
 	// From UNPAID
 	{pb.BillingStatus_UNPAID, pb.BillingStatus_RETURNED},
 	// From PAID
