@@ -471,11 +471,11 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 				Status: bpb.BillingStatus_UNPAID,
 				Items: []*bpb.Item{
 					{
-						Title:    fmt.Sprintf("Instance '%s' start bill", instance.GetUuid()),
-						Amount:   1,
-						Unit:     "Instance",
-						Price:    cost,
-						Instance: instance.GetUuid(),
+						Description: fmt.Sprintf("Instance '%s' start bill", instance.GetUuid()),
+						Amount:      1,
+						Unit:        "Instance",
+						Price:       cost,
+						Instance:    instance.GetUuid(),
 					},
 				},
 				Total:    cost,
