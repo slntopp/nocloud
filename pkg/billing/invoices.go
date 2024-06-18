@@ -177,11 +177,11 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	return resp, nil
 }
 
-func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
+func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.Request[pb.CreateInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("CreateInvoice")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	t := req.Msg
+	t := req.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", t), zap.String("requestor", requestor))
 
 	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
@@ -215,9 +215,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Deadline != 0 && t.Deadline < time.Now().Unix() {
 		return nil, status.Error(codes.InvalidArgument, "Deadline in the past")
 	}
-	if len(req.Msg.GetItems()) > 0 {
+	if len(t.GetItems()) > 0 {
 		sum := 0.0
-		for _, item := range req.Msg.GetItems() {
+		for _, item := range t.GetItems() {
 			sum += item.GetPrice() * float64(item.GetAmount())
 		}
 		if sum != t.GetTotal() {
