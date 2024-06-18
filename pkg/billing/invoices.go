@@ -730,26 +730,41 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
 
-	if req.GetPayment() != 0 {
+	if req.GetPayment() != 0 && t.GetPayment() != 0 {
 		t.Payment = req.GetPayment()
 	}
-	if req.GetProcessed() != 0 {
+	if req.GetProcessed() != 0 && t.GetProcessed() != 0 {
 		t.Processed = req.GetProcessed()
 	}
-	if req.GetReturned() != 0 {
+	if req.GetReturned() != 0 && t.GetReturned() != 0 {
 		t.Returned = req.GetReturned()
+	}
+	if req.GetDeadline() != 0 && t.GetDeadline() != 0 {
+		t.Deadline = req.GetDeadline()
 	}
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
 	t.Account = req.GetAccount()
-	t.Deadline = req.GetDeadline()
 	t.Total = req.GetTotal()
 	t.Currency = req.GetCurrency()
 	t.Type = req.GetType()
 	t.Items = req.GetItems()
 	if req.Transactions != nil {
 		t.Transactions = req.Transactions
+	}
+
+	if t.Account == "" {
+		return nil, status.Error(codes.InvalidArgument, "Missing account")
+	}
+	if len(t.GetItems()) > 0 {
+		sum := 0.0
+		for _, item := range t.Items {
+			sum += item.GetPrice() * float64(item.GetAmount())
+		}
+		if sum != t.Total {
+			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
+		}
 	}
 
 	if t.Type == pb.ActionType_BALANCE {
@@ -776,20 +791,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 			return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
 		}
 		t.Transactions = []string{newTr.Msg.Uuid}
-	}
-
-	if len(t.GetItems()) > 0 {
-		sum := 0.0
-		for _, item := range t.Items {
-			sum += item.GetPrice() * float64(item.GetAmount())
-		}
-		if sum != t.Total {
-			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
-		}
-	}
-
-	if t.Account == "" {
-		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
 
 	_, err = s.invoices.Update(ctx, t)
