@@ -338,8 +338,13 @@ func (s *BillingServiceServer) UpdateInvoiceStatus(ctx context.Context, req *con
 
 payment:
 	log.Info("Starting invoice payment", zap.String("invoice", old.GetUuid()))
-	patch["payment"] = nowBeforeActions
-	old.Payment = nowBeforeActions
+	if req.Msg.GetParams().GetPaymentDate() != 0 {
+		patch["payment"] = req.Msg.GetParams().GetPaymentDate()
+		old.Payment = req.Msg.GetParams().GetPaymentDate()
+	} else {
+		patch["payment"] = nowBeforeActions
+		old.Payment = nowBeforeActions
+	}
 
 	log.Debug("Updating transactions to perform payment.")
 	for _, trId := range old.GetTransactions() {
@@ -452,7 +457,7 @@ payment:
 	patch["processed"] = nowAfterActions
 	old.Processed = nowAfterActions
 
-	if req.Msg.GetIsSendEmail() {
+	if req.Msg.GetParams().GetIsSendEmail() {
 		_, _ = eventsClient.Publish(ctx, &epb.Event{
 			Type: "email",
 			Uuid: old.GetAccount(),
