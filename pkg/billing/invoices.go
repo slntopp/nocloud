@@ -190,6 +190,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.GetType() == pb.ActionType_ACTION_TYPE_UNKNOWN {
 		t.Type = pb.ActionType_NO_ACTION
 	}
+	if t.GetDeadline() == 0 {
+		t.Deadline = time.Now().Unix()
+	}
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
 	ok := graph.HasAccess(ctx, s.db, requestor, ns, access.Level_ROOT)
