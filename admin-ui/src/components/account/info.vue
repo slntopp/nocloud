@@ -10,6 +10,7 @@
               name: 'Instance create',
               query: {
                 accountId: account.uuid,
+                type:'ione'
               },
             }"
           >
