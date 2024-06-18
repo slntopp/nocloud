@@ -281,11 +281,11 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 					Status: pb.BillingStatus_UNPAID,
 					Items: []*pb.Item{
 						{
-							Title:    fmt.Sprintf("Instance '%s' renewal", i.GetTitle()),
-							Amount:   1,
-							Unit:     "Instance",
-							Price:    cost,
-							Instance: i.GetUuid(),
+							Description: fmt.Sprintf("Instance '%s' renewal", i.GetTitle()),
+							Amount:      1,
+							Unit:        "Instance",
+							Price:       cost,
+							Instance:    i.GetUuid(),
 						},
 					},
 					Total:    cost,
@@ -301,7 +301,10 @@ func (s *BillingServiceServer) InvoiceExpiringInstances(ctx context.Context, log
 				}
 
 				ctx = context.WithValue(ctx, nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
-				_, err = s.CreateInvoice(ctx, connect.NewRequest(inv))
+				_, err = s.CreateInvoice(ctx, connect.NewRequest(&pb.CreateInvoiceRequest{
+					Invoice:     inv,
+					IsSendEmail: true,
+				}))
 				if err != nil {
 					log.Error("Failed to create invoice", zap.Error(err))
 					continue

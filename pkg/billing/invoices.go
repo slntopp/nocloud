@@ -177,11 +177,11 @@ func (s *BillingServiceServer) GetInvoices(ctx context.Context, r *connect.Reque
 	return resp, nil
 }
 
-func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
+func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.Request[pb.CreateInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("CreateInvoice")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 
-	t := req.Msg
+	t := req.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", t), zap.String("requestor", requestor))
 
 	if t.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
@@ -189,6 +189,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	}
 	if t.GetType() == pb.ActionType_ACTION_TYPE_UNKNOWN {
 		t.Type = pb.ActionType_NO_ACTION
+	}
+	if t.GetDeadline() == 0 {
+		t.Deadline = time.Now().Unix()
 	}
 
 	ns := driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY)
@@ -212,9 +215,9 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 	if t.Deadline != 0 && t.Deadline < time.Now().Unix() {
 		return nil, status.Error(codes.InvalidArgument, "Deadline in the past")
 	}
-	if len(req.Msg.GetItems()) > 0 {
+	if len(t.GetItems()) > 0 {
 		sum := 0.0
-		for _, item := range req.Msg.GetItems() {
+		for _, item := range t.GetItems() {
 			sum += item.GetPrice() * float64(item.GetAmount())
 		}
 		if sum != t.GetTotal() {
@@ -259,11 +262,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	_, _ = eventsClient.Publish(ctx, &epb.Event{
-		Type: "email",
-		Uuid: t.GetAccount(),
-		Key:  "invoice_created",
-	})
+	if req.Msg.GetIsSendEmail() {
+		_, _ = eventsClient.Publish(ctx, &epb.Event{
+			Type: "email",
+			Uuid: t.GetAccount(),
+			Key:  "invoice_created",
+		})
+	}
 
 	resp := connect.NewResponse(r)
 	return resp, nil
@@ -446,6 +451,15 @@ payment:
 	nowAfterActions = time.Now().Unix()
 	patch["processed"] = nowAfterActions
 	old.Processed = nowAfterActions
+
+	if req.Msg.GetIsSendEmail() {
+		_, _ = eventsClient.Publish(ctx, &epb.Event{
+			Type: "email",
+			Uuid: old.GetAccount(),
+			Key:  "invoice_paid",
+		})
+	}
+
 	goto quit
 
 returning:
@@ -716,26 +730,41 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
 
-	if req.GetPayment() != 0 {
+	if req.GetPayment() != 0 && t.GetPayment() != 0 {
 		t.Payment = req.GetPayment()
 	}
-	if req.GetProcessed() != 0 {
+	if req.GetProcessed() != 0 && t.GetProcessed() != 0 {
 		t.Processed = req.GetProcessed()
 	}
-	if req.GetReturned() != 0 {
+	if req.GetReturned() != 0 && t.GetReturned() != 0 {
 		t.Returned = req.GetReturned()
+	}
+	if req.GetDeadline() != 0 && t.GetDeadline() != 0 {
+		t.Deadline = req.GetDeadline()
 	}
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
 	t.Account = req.GetAccount()
-	t.Deadline = req.GetDeadline()
 	t.Total = req.GetTotal()
 	t.Currency = req.GetCurrency()
 	t.Type = req.GetType()
 	t.Items = req.GetItems()
 	if req.Transactions != nil {
 		t.Transactions = req.Transactions
+	}
+
+	if t.Account == "" {
+		return nil, status.Error(codes.InvalidArgument, "Missing account")
+	}
+	if len(t.GetItems()) > 0 {
+		sum := 0.0
+		for _, item := range t.Items {
+			sum += item.GetPrice() * float64(item.GetAmount())
+		}
+		if sum != t.Total {
+			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
+		}
 	}
 
 	if t.Type == pb.ActionType_BALANCE {
@@ -762,20 +791,6 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 			return nil, status.Error(codes.Internal, "Failed to create transaction for invoice")
 		}
 		t.Transactions = []string{newTr.Msg.Uuid}
-	}
-
-	if len(t.GetItems()) > 0 {
-		sum := 0.0
-		for _, item := range t.Items {
-			sum += item.GetPrice() * float64(item.GetAmount())
-		}
-		if sum != t.Total {
-			return nil, status.Error(codes.InvalidArgument, "Sum of existing items not equals to total")
-		}
-	}
-
-	if t.Account == "" {
-		return nil, status.Error(codes.InvalidArgument, "Missing account")
 	}
 
 	_, err = s.invoices.Update(ctx, t)

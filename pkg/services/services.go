@@ -471,11 +471,11 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 				Status: bpb.BillingStatus_UNPAID,
 				Items: []*bpb.Item{
 					{
-						Title:    fmt.Sprintf("Instance '%s' start bill", instance.GetUuid()),
-						Amount:   1,
-						Unit:     "Instance",
-						Price:    cost,
-						Instance: instance.GetUuid(),
+						Description: fmt.Sprintf("Instance '%s' start bill", instance.GetUuid()),
+						Amount:      1,
+						Unit:        "Instance",
+						Price:       cost,
+						Instance:    instance.GetUuid(),
 					},
 				},
 				Total:    cost,
@@ -493,7 +493,10 @@ func (s *ServicesServer) Create(ctx context.Context, request *pb.CreateRequest) 
 			ctx2 := context.WithValue(context.Background(), nocloud.NoCloudAccount, schema.ROOT_ACCOUNT_KEY)
 			ctx2 = metadata.AppendToOutgoingContext(ctx2, string(nocloud.NoCloudAccount), schema.ROOT_ACCOUNT_KEY)
 			ctx2 = metadata.AppendToOutgoingContext(ctx2, "authorization", "Bearer "+token)
-			_, err = s.billing.CreateInvoice(ctx2, inv)
+			_, err = s.billing.CreateInvoice(ctx2, &bpb.CreateInvoiceRequest{
+				Invoice:     inv,
+				IsSendEmail: true,
+			})
 			if err != nil {
 				log.Error("Failed to create invoice", zap.Error(err), zap.String("instance", instance.GetUuid()), zap.Any("invoice", inv))
 				return nil, status.Error(codes.Internal, "Failed to create invoice")
