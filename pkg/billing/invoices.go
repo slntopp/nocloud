@@ -262,11 +262,13 @@ func (s *BillingServiceServer) CreateInvoice(ctx context.Context, req *connect.R
 		return nil, status.Error(codes.Internal, "Failed to create invoice")
 	}
 
-	_, _ = eventsClient.Publish(ctx, &epb.Event{
-		Type: "email",
-		Uuid: t.GetAccount(),
-		Key:  "invoice_created",
-	})
+	if req.Msg.GetIsSendEmail() {
+		_, _ = eventsClient.Publish(ctx, &epb.Event{
+			Type: "email",
+			Uuid: t.GetAccount(),
+			Key:  "invoice_created",
+		})
+	}
 
 	resp := connect.NewResponse(r)
 	return resp, nil
@@ -449,6 +451,15 @@ payment:
 	nowAfterActions = time.Now().Unix()
 	patch["processed"] = nowAfterActions
 	old.Processed = nowAfterActions
+
+	if req.Msg.GetIsSendEmail() {
+		_, _ = eventsClient.Publish(ctx, &epb.Event{
+			Type: "email",
+			Uuid: old.GetAccount(),
+			Key:  "invoice_paid",
+		})
+	}
+
 	goto quit
 
 returning:
