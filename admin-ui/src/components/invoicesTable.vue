@@ -39,6 +39,10 @@
       {{ formatSecondsToDate(item.processed, true) }}
     </template>
 
+    <template v-slot:[`item.type`]="{ value }">
+      {{ value.replaceAll("_", " ") }}
+    </template>
+
     <template v-slot:[`item.deadline`]="{ item }">
       {{ formatSecondsToDate(item.deadline, true) }}
     </template>
