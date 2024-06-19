@@ -79,7 +79,7 @@ const addons = computed(() => store.getters["addons/all"]);
 const requestOptions = computed(() => ({
   filters: Object.keys(filter.value).reduce((newFilter, key) => {
     if (!filter.value[key]) {
-      newFilter[key] = undefined;
+      delete newFilter[key]
     } else {
       newFilter[key] = filter.value[key];
     }
@@ -94,7 +94,7 @@ const requestOptions = computed(() => ({
 }));
 
 const countOptions = computed(() => ({
-  filters: filter.value,
+  filters: requestOptions.value.filters,
 }));
 
 const filter = computed(() => ({
