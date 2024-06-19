@@ -258,7 +258,8 @@ import InvoiceItemsTable from "@/components/invoiceItemsTable.vue";
 import { useRouter } from "vue-router/composables";
 import {
   BillingStatus,
-  Invoice,
+  CreateInvoiceRequest,
+  UpdateInvoiceRequest,
   UpdateInvoiceStatusRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
@@ -281,7 +282,7 @@ const newInvoice = ref({
   status: "DRAFT",
   type: "NO_ACTION",
   total: 0,
-  items: [{ price: null, title: "", amount: 1, unit: "Pcs" }],
+  items: [{ price: null, description: "", amount: 1, unit: "Pcs" }],
   deadline: formatSecondsToDateString(Date.now() / 1000 + 86400 * 30),
   meta: {
     note: "",
@@ -308,6 +309,11 @@ const types = [
 
 const changeStatusBtns = [
   {
+    title: "draft",
+    status: "DRAFT",
+    disabled: ["TERMINATED", "CANCELED", "PAID", "RETURNED"],
+  },
+  {
     title: "pay",
     status: "PAID",
     disabled: ["TERMINATED", "CANCELED", "DRAFT", "RETURNED"],
@@ -326,12 +332,12 @@ const changeStatusBtns = [
 ];
 
 onMounted(async () => {
+  setInvoice();
+
   await Promise.all([
     store.dispatch("services/fetch"),
     store.dispatch("namespaces/fetch"),
   ]);
-
-  setInvoice();
 
   // if (isEdit.value) {
   //   newInvoice.value.account = accounts.value.find(
@@ -395,7 +401,6 @@ const setInvoice = () => {
 };
 
 const saveInvoice = async (withEmail = false) => {
-  console.log(withEmail, newInvoice.value);
   if (!(await invoiceForm.value.validate())) {
     return;
   }
@@ -413,14 +418,19 @@ const saveInvoice = async (withEmail = false) => {
     };
     if (!isEdit.value && !invoice.value?.uuid) {
       await store.getters["invoices/invoicesClient"].createInvoice(
-        Invoice.fromJson(data)
+        CreateInvoiceRequest.fromJson({
+          invoice: data,
+          isSendEmail: !!withEmail,
+        })
       );
       router.push({ name: "Invoices" });
     } else {
+      data.uuid = invoice.value.uuid;
+
       await store.getters["invoices/invoicesClient"].updateInvoice(
-        Invoice.fromJson({
-          ...data,
-          uuid: invoice.value.uuid,
+        UpdateInvoiceRequest.fromJson({
+          invoice: data,
+          isSendEmail: !!withEmail,
         })
       );
       store.commit("snackbar/showSnackbarSuccess", {
@@ -444,7 +454,7 @@ const convertPrice = (price) => {
 
 const addInvoiceItem = () => {
   newInvoice.value.items.push({
-    title: "",
+    description: "",
     price: 0,
     instance: "",
     amount: 1,
@@ -484,7 +494,7 @@ const onChangeInstance = () => {
       newItems.push({
         price: productPrice,
         amount: 1,
-        title: productTitle,
+        description: productTitle,
         instance: instance.uuid,
         unit: "Pcs",
       });
@@ -497,7 +507,6 @@ const onChangeInstance = () => {
 const sendEmail = async () => {
   isSendEmailLoading.value = true;
   try {
-    console.log(newInvoice.value.account);
     await new Promise((resolve) => setTimeout(resolve, 5000));
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
