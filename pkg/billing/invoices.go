@@ -710,10 +710,10 @@ func (s *BillingServiceServer) GetInvoicesCount(ctx context.Context, r *connect.
 	return resp, nil
 }
 
-func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Request[pb.Invoice]) (*connect.Response[pb.Invoice], error) {
+func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Request[pb.UpdateInvoiceRequest]) (*connect.Response[pb.Invoice], error) {
 	log := s.log.Named("UpdateInvoice")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	req := r.Msg
+	req := r.Msg.Invoice
 	log.Debug("Request received", zap.Any("invoice", req), zap.String("requestor", requestor))
 
 	if req.GetStatus() == pb.BillingStatus_BILLING_STATUS_UNKNOWN {
@@ -802,6 +802,14 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if err != nil {
 		log.Error("Failed to update invoice", zap.Error(err))
 		return nil, status.Error(codes.Internal, "Failed to update invoice")
+	}
+
+	if r.Msg.GetIsSendEmail() {
+		_, _ = eventsClient.Publish(ctx, &epb.Event{
+			Type: "email",
+			Uuid: t.GetAccount(),
+			Key:  "invoice_updated",
+		})
 	}
 
 	return connect.NewResponse(t), nil
