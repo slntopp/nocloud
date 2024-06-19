@@ -24,7 +24,9 @@
     </template>
 
     <template v-slot:[`item.total`]="{ item }">
-      <balance abs :currency="item.currency" :value="-item.total" />
+      <v-chip :color="getTotalColor(item)" abs>
+        {{ `${-item.total} ${item.currency?.title || defaultCurrency.title}` }}
+      </v-chip>
     </template>
 
     <template v-slot:[`item.processed`]="{ item }">
@@ -63,7 +65,6 @@
 
 <script setup>
 import nocloudTable from "@/components/table.vue";
-import balance from "@/components/balance.vue";
 import { debounce, formatSecondsToDate } from "../functions";
 import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
@@ -116,6 +117,8 @@ onMounted(() => {
 const invoices = computed(() => store.getters["invoices/all"]);
 const isLoading = computed(() => isFetchLoading.value || isCountLoading.value);
 
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
+
 const filter = computed(() => store.getters["appSearch/filter"]);
 
 const listOptions = computed(() => ({
@@ -142,8 +145,6 @@ const setOptions = (newOptions) => {
 };
 
 const getInvoiceStatusColor = (status) => {
-  console.log(status, BillingStatus[status]);
-
   switch (BillingStatus[status]) {
     case BillingStatus.CANCELED: {
       return "warning";
@@ -166,6 +167,17 @@ const getInvoiceStatusColor = (status) => {
       return "red";
     }
   }
+};
+
+const getTotalColor = (item) => {
+  if (
+    BillingStatus[item.status] === BillingStatus.UNPAID &&
+    item.deadline < Date.now() / 1000
+  ) {
+    return "red";
+  }
+
+  return "gray";
 };
 
 const init = async () => {
