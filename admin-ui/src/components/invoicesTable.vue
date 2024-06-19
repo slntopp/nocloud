@@ -23,6 +23,12 @@
       <v-skeleton-loader type="text" v-else />
     </template>
 
+    <template v-slot:[`item.number`]="{ item }">
+      <router-link :to="{ name: 'Invoice page', params: { uuid: item.uuid } }">
+        {{ `№${item.number || item.uuid}` }}
+      </router-link>
+    </template>
+
     <template v-slot:[`item.total`]="{ item }">
       <v-chip :color="getTotalColor(item)" abs>
         {{ `${-item.total} ${item.currency?.title || defaultCurrency.title}` }}
@@ -53,12 +59,6 @@
       <v-chip :color="getInvoiceStatusColor(item.status)">{{
         item.status
       }}</v-chip>
-    </template>
-
-    <template v-slot:[`item.actions`]="{ item }">
-      <v-btn icon :to="{ name: 'Invoice page', params: { uuid: item.uuid } }">
-        <v-icon>mdi-login</v-icon>
-      </v-btn>
     </template>
   </nocloud-table>
 </template>
@@ -92,7 +92,8 @@ const accounts = ref({});
 const store = useStore();
 
 const headers = ref([
-  { text: "UUID ", value: "uuid" },
+  { text: "UUID", value: "uuid" },
+  { text: "Number", value: "number" },
   { text: "Account ", value: "account" },
   { text: "Amount ", value: "total" },
   { text: "Type ", value: "type" },
@@ -102,7 +103,6 @@ const headers = ref([
   { text: "Processed date", value: "processed" },
   { text: "Returned date", value: "returned" },
   { text: "Status ", value: "status" },
-  { text: "Actions ", value: "actions" },
 ]);
 
 onMounted(() => {
