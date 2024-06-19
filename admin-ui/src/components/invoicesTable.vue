@@ -48,7 +48,9 @@
     </template>
 
     <template v-slot:[`item.status`]="{ item }">
-      <v-chip>{{ item.status }}</v-chip>
+      <v-chip :color="getInvoiceStatusColor(item.status)">{{
+        item.status
+      }}</v-chip>
     </template>
 
     <template v-slot:[`item.actions`]="{ item }">
@@ -66,6 +68,7 @@ import { debounce, formatSecondsToDate } from "../functions";
 import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
+import { BillingStatus } from "nocloud-proto/proto/es/billing/billing_pb";
 
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
@@ -135,6 +138,33 @@ const setOptions = (newOptions) => {
   page.value = newOptions.page;
   if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
     options.value = newOptions;
+  }
+};
+
+const getInvoiceStatusColor = (status) => {
+  console.log(status, BillingStatus[status]);
+
+  switch (BillingStatus[status]) {
+    case BillingStatus.CANCELED: {
+      return "warning";
+    }
+    case BillingStatus.RETURNED: {
+      return "blue";
+    }
+    case BillingStatus.DRAFT: {
+      return "brown darked";
+    }
+    case BillingStatus.PAID: {
+      return "green";
+    }
+    case BillingStatus.UNPAID: {
+      return "gray";
+    }
+    case BillingStatus.BILLING_STATUS_UNKNOWN:
+    case BillingStatus.TERMINATED:
+    default: {
+      return "red";
+    }
   }
 };
 
