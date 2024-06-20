@@ -6,20 +6,6 @@
     <v-form v-model="isValid" ref="invoiceForm">
       <v-row>
         <v-col cols="6">
-          <v-row v-if="!isEdit" align="center">
-            <v-col cols="3">
-              <v-subheader>Draft</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-switch
-                :input-value="newInvoice.status === 'DRAFT'"
-                @change="onChangeDraft"
-                :items="types"
-              >
-              </v-switch>
-            </v-col>
-          </v-row>
-
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Type</v-subheader>
@@ -191,28 +177,38 @@
         />
       </nocloud-expansion-panels>
 
-      <v-row justify="start" class="mt-4 mb-4">
-        <v-btn
-          class="mx-3"
-          color="background-light"
-          :loading="isSaveLoading"
-          :disabled="isSaveDisabled"
-          @click="saveInvoice(false)"
-        >
-          Publish
-        </v-btn>
-        <v-btn
-          class="mx-4"
-          color="background-light"
-          :loading="isSaveLoading"
-          @click="saveInvoice(true)"
-          :disabled="isEmailDisabled"
-        >
-          Publish + email
-        </v-btn>
-
-        <template v-if="isEdit">
+      <v-row justify="space-between" class="mt-4 mb-4">
+        <div>
           <v-btn
+            v-if="!isEdit"
+            class="mx-3"
+            color="background-light"
+            :loading="isSaveLoading"
+            :disabled="isSaveDisabled"
+            @click="saveInvoice(false, 'DRAFT')"
+          >
+            Draft
+          </v-btn>
+          <v-btn
+            class="mx-3"
+            color="background-light"
+            :loading="isSaveLoading"
+            :disabled="isSaveDisabled"
+            @click="saveInvoice(false)"
+          >
+            Publish
+          </v-btn>
+          <v-btn
+            class="mx-4"
+            color="background-light"
+            :loading="isSaveLoading"
+            @click="saveInvoice(true)"
+            :disabled="isEmailDisabled"
+          >
+            Publish + email
+          </v-btn>
+          <v-btn
+            v-if="isEdit"
             class="mx-4"
             color="background-light"
             :loading="isSendEmailLoading"
@@ -221,7 +217,9 @@
           >
             email
           </v-btn>
+        </div>
 
+        <div v-if="isEdit">
           <v-btn
             v-for="btn in changeStatusBtns"
             class="mx-4"
@@ -237,7 +235,7 @@
           >
             {{ btn.title }}
           </v-btn>
-        </template>
+        </div>
       </v-row>
     </v-form>
   </div>
@@ -319,7 +317,7 @@ const changeStatusBtns = [
     disabled: ["TERMINATED", "CANCELED", "DRAFT", "RETURNED"],
   },
   {
-    title: "cancel",
+    title: "refund",
     status: "CANCELED",
     disabled: ["TERMINATED", "RETURNED", "DRAFT", "PAID"],
   },
@@ -400,7 +398,7 @@ const setInvoice = () => {
   }
 };
 
-const saveInvoice = async (withEmail = false) => {
+const saveInvoice = async (withEmail = false, status = "UNPAID") => {
   if (!(await invoiceForm.value.validate())) {
     return;
   }
@@ -409,13 +407,14 @@ const saveInvoice = async (withEmail = false) => {
   try {
     const data = {
       total: convertPrice(newInvoice.value.total),
-      account: newInvoice.value.account.uuid,
+      account: newInvoice.value.account.uuid || invoice.value.account,
       items: newInvoice.value.items,
       meta: newInvoice.value.meta,
-      status: newInvoice.value.status,
+      status: status ? status : newInvoice.value.status,
       deadline: new Date(newInvoice.value.deadline).getTime() / 1000,
       type: newInvoice.value.type,
     };
+
     if (!isEdit.value && !invoice.value?.uuid) {
       await store.getters["invoices/invoicesClient"].createInvoice(
         CreateInvoiceRequest.fromJson({
@@ -513,10 +512,6 @@ const sendEmail = async () => {
   } finally {
     isSendEmailLoading.value = false;
   }
-};
-
-const onChangeDraft = (isDraft) => {
-  newInvoice.value.status = isDraft ? "DRAFT" : "UNPAID";
 };
 
 const changeInvoiceStatus = async (status) => {
