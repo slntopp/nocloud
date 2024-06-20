@@ -239,13 +239,58 @@
               btn.status === newInvoice.status
             "
             color="background-light"
-            @click="changeInvoiceStatus(btn.status)"
+            @click="
+              btn.onClick ? btn.onClick() : changeInvoiceStatus(btn.status)
+            "
           >
             {{ btn.title }}
           </v-btn>
         </div>
       </v-row>
     </v-form>
+
+    <v-dialog v-model="isAddPaymentDialogOpen" width="400px" persistent>
+      <v-card class="px-5 py-2">
+        <v-card-title class="text-h5"> Add payment </v-card-title>
+
+        <v-switch
+          v-model="addPaymentOptions.changePaymentDate"
+          label="Change payment date?"
+        />
+
+        <div style="max-width: 300px">
+          <date-picker
+            :min="newInvoice.created"
+            label="Payment date"
+            v-model="addPaymentOptions.paymentDate"
+            :readonly="!addPaymentOptions.changePaymentDate"
+            :disabled="!addPaymentOptions.changePaymentDate"
+          />
+        </div>
+
+        <v-switch v-model="addPaymentOptions.sendEmail" label="Send email?" />
+
+        <v-card-actions class="d-flex justify-end">
+          <v-btn
+            :disabled="isAddPaymentLoading"
+            color="primary"
+            text
+            @click="isAddPaymentDialogOpen = false"
+          >
+            Close</v-btn
+          >
+
+          <v-btn
+            color="primary"
+            :loading="isAddPaymentLoading"
+            text
+            @click="changeStatusToPaid"
+          >
+            Add payment
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -298,6 +343,13 @@ const isSaveLoading = ref(false);
 const isSendEmailLoading = ref(false);
 const isStatusChangeLoading = ref(false);
 const newStatus = ref("");
+const isAddPaymentDialogOpen = ref(false);
+const isAddPaymentLoading = ref(false);
+const addPaymentOptions = ref({
+  sendEmail: false,
+  changePaymentDate: false,
+  paymentDate: formatSecondsToDateString(Date.now() / 1000),
+});
 
 const types = [
   { id: "NO_ACTION", title: "No action" },
@@ -316,8 +368,9 @@ const changeStatusBtns = [
     disabled: ["TERMINATED", "CANCELED", "PAID", "RETURNED"],
   },
   {
-    title: "pay",
+    title: "Add payment",
     status: "PAID",
+    onClick: () => openAddPaymentDialog(),
     disabled: ["TERMINATED", "CANCELED", "DRAFT", "RETURNED"],
   },
   {
@@ -534,7 +587,27 @@ const sendEmail = async () => {
   }
 };
 
-const changeInvoiceStatus = async (status) => {
+const openAddPaymentDialog = () => {
+  isAddPaymentDialogOpen.value = true;
+};
+
+const changeStatusToPaid = async () => {
+  try {
+    isAddPaymentLoading.value = true;
+
+    await changeInvoiceStatus("PAID", {
+      paymentDate: addPaymentOptions.value.changePaymentDate
+        ? new Date(addPaymentOptions.value.paymentDate).getTime() / 1000
+        : null,
+      isSendEmail: addPaymentOptions.value.sendEmail,
+    });
+  } finally {
+    isAddPaymentLoading.value = false;
+    isAddPaymentDialogOpen.value = false;
+  }
+};
+
+const changeInvoiceStatus = async (status, params = null) => {
   isStatusChangeLoading.value = true;
   newStatus.value = status;
   try {
@@ -542,6 +615,7 @@ const changeInvoiceStatus = async (status) => {
       UpdateInvoiceStatusRequest.fromJson({
         uuid: invoice.value.uuid,
         status: BillingStatus[status],
+        params,
       })
     );
 
