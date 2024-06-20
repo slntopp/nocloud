@@ -735,6 +735,13 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 		return nil, status.Error(codes.Internal, "Failed to get invoice")
 	}
 
+	newStatus := req.GetStatus()
+	oldStatus := t.GetStatus()
+	if (oldStatus == pb.BillingStatus_UNPAID && newStatus == pb.BillingStatus_DRAFT) ||
+		(oldStatus == pb.BillingStatus_DRAFT && newStatus == pb.BillingStatus_UNPAID) {
+		return nil, status.Error(codes.InvalidArgument, "Forbidden status conversion")
+	}
+
 	if req.GetPayment() != 0 && t.GetPayment() != 0 {
 		t.Payment = req.GetPayment()
 	}
@@ -747,7 +754,7 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if req.GetDeadline() != 0 && t.GetDeadline() != 0 {
 		t.Deadline = req.GetDeadline()
 	}
-	if req.GetCreated() != 0 && t.GetCreated() != 0 {
+	if req.GetCreated() != 0 {
 		t.Created = req.GetCreated()
 	}
 	t.Uuid = req.GetUuid()
