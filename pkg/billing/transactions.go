@@ -229,7 +229,7 @@ func (s *BillingServiceServer) CreateTransaction(ctx context.Context, req *conne
 		Exec:      time.Now().Unix(),
 		Processed: true,
 		Priority:  t.GetPriority(),
-		Total:     t.GetTotal(),
+		Total:     1,
 		Currency:  t.GetCurrency(),
 		Service:   t.GetService(),
 		Account:   t.GetAccount(),
