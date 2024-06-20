@@ -6,20 +6,6 @@
     <v-form v-model="isValid" ref="invoiceForm">
       <v-row>
         <v-col cols="6">
-          <v-row v-if="!isEdit" align="center">
-            <v-col cols="3">
-              <v-subheader>Draft</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-switch
-                :input-value="newInvoice.status === 'DRAFT'"
-                @change="onChangeDraft"
-                :items="types"
-              >
-              </v-switch>
-            </v-col>
-          </v-row>
-
           <v-row align="center">
             <v-col cols="3">
               <v-subheader>Type</v-subheader>
@@ -34,19 +20,6 @@
                 :items="types"
               >
               </v-select>
-            </v-col>
-          </v-row>
-
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Deadline</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <date-picker
-                :min="formatSecondsToDateString(Date.now() / 1000)"
-                label="Deadline"
-                v-model="newInvoice.deadline"
-              />
             </v-col>
           </v-row>
 
@@ -102,59 +75,8 @@
               />
             </v-col>
           </v-row>
-        </v-col>
-        <v-col v-if="isEdit" cols="6">
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Created date</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                :value="formatSecondsToDate(newInvoice.created, true) || '-'"
-                readonly
-                disabled
-              />
-            </v-col>
-          </v-row>
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Payment date</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                :value="formatSecondsToDate(newInvoice.payment, true) || '-'"
-                readonly
-                disabled
-              />
-            </v-col>
-          </v-row>
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Processed date</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                :value="formatSecondsToDate(newInvoice.processed, true) || '-'"
-                readonly
-                disabled
-              />
-            </v-col>
-          </v-row>
 
-          <v-row align="center" v-if="newInvoice.returned">
-            <v-col cols="3">
-              <v-subheader>Returned date</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                :value="formatSecondsToDate(newInvoice.returned, true) || '-'"
-                readonly
-                disabled
-              />
-            </v-col>
-          </v-row>
-
-          <v-row align="center">
+          <v-row v-if="isEdit" align="center">
             <v-col cols="3">
               <v-subheader>Status</v-subheader>
             </v-col>
@@ -162,6 +84,78 @@
               <v-chip>{{ invoice.status }}</v-chip>
             </v-col>
           </v-row>
+        </v-col>
+        <v-col cols="6">
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Due date</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <date-picker
+                :min="formatSecondsToDateString(Date.now() / 1000)"
+                label="Due date"
+                v-model="newInvoice.deadline"
+              />
+            </v-col>
+          </v-row>
+
+          <template v-if="isEdit">
+            <v-row align="center">
+              <v-col cols="3">
+                <v-subheader>Created date</v-subheader>
+              </v-col>
+              <v-col cols="9">
+                <date-picker
+                  label="Created"
+                  v-model="newInvoice.created"
+                  :readonly="!newInvoice.created"
+                  :disabled="!newInvoice.created"
+                />
+              </v-col>
+            </v-row>
+            <v-row align="center">
+              <v-col cols="3">
+                <v-subheader>Payment date</v-subheader>
+              </v-col>
+              <v-col cols="9">
+                <date-picker
+                  :min="newInvoice.created"
+                  label="Payment"
+                  v-model="newInvoice.payment"
+                  :readonly="!newInvoice.payment"
+                  :disabled="!newInvoice.payment"
+                />
+              </v-col>
+            </v-row>
+            <v-row align="center">
+              <v-col cols="3">
+                <v-subheader>Processed date</v-subheader>
+              </v-col>
+              <v-col cols="9">
+                <date-picker
+                  label="Processed"
+                  v-model="newInvoice.processed"
+                  readonly
+                  disabled
+                />
+              </v-col>
+            </v-row>
+
+            <v-row align="center" v-if="newInvoice.returned">
+              <v-col cols="3">
+                <v-subheader>Refunded date</v-subheader>
+              </v-col>
+              <v-col cols="9">
+                <date-picker
+                  :min="newInvoice.payment"
+                  label="Refunded"
+                  v-model="newInvoice.returned"
+                  :readonly="!newInvoice.returned"
+                  :disabled="!newInvoice.returned"
+                />
+              </v-col>
+            </v-row>
+          </template>
         </v-col>
       </v-row>
       <v-textarea
@@ -191,28 +185,38 @@
         />
       </nocloud-expansion-panels>
 
-      <v-row justify="start" class="mt-4 mb-4">
-        <v-btn
-          class="mx-3"
-          color="background-light"
-          :loading="isSaveLoading"
-          :disabled="isSaveDisabled"
-          @click="saveInvoice(false)"
-        >
-          Publish
-        </v-btn>
-        <v-btn
-          class="mx-4"
-          color="background-light"
-          :loading="isSaveLoading"
-          @click="saveInvoice(true)"
-          :disabled="isEmailDisabled"
-        >
-          Publish + email
-        </v-btn>
-
-        <template v-if="isEdit">
+      <v-row justify="space-between" class="mt-4 mb-4">
+        <div>
           <v-btn
+            v-if="!isEdit"
+            class="mx-3"
+            color="background-light"
+            :loading="isSaveLoading"
+            :disabled="isSaveDisabled"
+            @click="saveInvoice(false, 'DRAFT')"
+          >
+            Draft
+          </v-btn>
+          <v-btn
+            class="mx-3"
+            color="background-light"
+            :loading="isSaveLoading"
+            :disabled="isSaveDisabled"
+            @click="saveInvoice(false)"
+          >
+            Publish
+          </v-btn>
+          <v-btn
+            class="mx-4"
+            color="background-light"
+            :loading="isSaveLoading"
+            @click="saveInvoice(true)"
+            :disabled="isEmailDisabled"
+          >
+            Publish + email
+          </v-btn>
+          <v-btn
+            v-if="isEdit"
             class="mx-4"
             color="background-light"
             :loading="isSendEmailLoading"
@@ -221,7 +225,9 @@
           >
             email
           </v-btn>
+        </div>
 
+        <div v-if="isEdit">
           <v-btn
             v-for="btn in changeStatusBtns"
             class="mx-4"
@@ -233,23 +239,64 @@
               btn.status === newInvoice.status
             "
             color="background-light"
-            @click="changeInvoiceStatus(btn.status)"
+            @click="
+              btn.onClick ? btn.onClick() : changeInvoiceStatus(btn.status)
+            "
           >
             {{ btn.title }}
           </v-btn>
-        </template>
+        </div>
       </v-row>
     </v-form>
+
+    <v-dialog v-model="isAddPaymentDialogOpen" width="400px" persistent>
+      <v-card class="px-5 py-2">
+        <v-card-title class="text-h5"> Add payment </v-card-title>
+
+        <v-switch
+          v-model="addPaymentOptions.changePaymentDate"
+          label="Change payment date?"
+        />
+
+        <div style="max-width: 300px">
+          <date-picker
+            :min="newInvoice.created"
+            label="Payment date"
+            v-model="addPaymentOptions.paymentDate"
+            :readonly="!addPaymentOptions.changePaymentDate"
+            :disabled="!addPaymentOptions.changePaymentDate"
+          />
+        </div>
+
+        <v-switch v-model="addPaymentOptions.sendEmail" label="Send email?" />
+
+        <v-card-actions class="d-flex justify-end">
+          <v-btn
+            :disabled="isAddPaymentLoading"
+            color="primary"
+            text
+            @click="isAddPaymentDialogOpen = false"
+          >
+            Close</v-btn
+          >
+
+          <v-btn
+            color="primary"
+            :loading="isAddPaymentLoading"
+            text
+            @click="changeStatusToPaid"
+          >
+            Add payment
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script setup>
 import JsonEditor from "@/components/JsonEditor.vue";
-import {
-  defaultFilterObject,
-  formatSecondsToDate,
-  formatSecondsToDateString,
-} from "@/functions";
+import { defaultFilterObject, formatSecondsToDateString } from "@/functions";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
@@ -258,7 +305,8 @@ import InvoiceItemsTable from "@/components/invoiceItemsTable.vue";
 import { useRouter } from "vue-router/composables";
 import {
   BillingStatus,
-  Invoice,
+  CreateInvoiceRequest,
+  UpdateInvoiceRequest,
   UpdateInvoiceStatusRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
@@ -281,7 +329,7 @@ const newInvoice = ref({
   status: "DRAFT",
   type: "NO_ACTION",
   total: 0,
-  items: [{ price: null, title: "", amount: 1, unit: "Pcs" }],
+  items: [{ price: null, description: "", amount: 1, unit: "Pcs" }],
   deadline: formatSecondsToDateString(Date.now() / 1000 + 86400 * 30),
   meta: {
     note: "",
@@ -295,6 +343,13 @@ const isSaveLoading = ref(false);
 const isSendEmailLoading = ref(false);
 const isStatusChangeLoading = ref(false);
 const newStatus = ref("");
+const isAddPaymentDialogOpen = ref(false);
+const isAddPaymentLoading = ref(false);
+const addPaymentOptions = ref({
+  sendEmail: false,
+  changePaymentDate: false,
+  paymentDate: formatSecondsToDateString(Date.now() / 1000),
+});
 
 const types = [
   { id: "NO_ACTION", title: "No action" },
@@ -308,8 +363,14 @@ const types = [
 
 const changeStatusBtns = [
   {
-    title: "pay",
+    title: "draft",
+    status: "DRAFT",
+    disabled: ["TERMINATED", "CANCELED", "PAID", "RETURNED"],
+  },
+  {
+    title: "Add payment",
     status: "PAID",
+    onClick: () => openAddPaymentDialog(),
     disabled: ["TERMINATED", "CANCELED", "DRAFT", "RETURNED"],
   },
   {
@@ -318,7 +379,7 @@ const changeStatusBtns = [
     disabled: ["TERMINATED", "RETURNED", "DRAFT", "PAID"],
   },
   {
-    title: "return",
+    title: "Refund",
     status: "RETURNED",
     disabled: ["CANCELED", "TERMINATED", "UNPAID", "DRAFT"],
   },
@@ -326,12 +387,12 @@ const changeStatusBtns = [
 ];
 
 onMounted(async () => {
+  setInvoice();
+
   await Promise.all([
     store.dispatch("services/fetch"),
     store.dispatch("namespaces/fetch"),
   ]);
-
-  setInvoice();
 
   // if (isEdit.value) {
   //   newInvoice.value.account = accounts.value.find(
@@ -388,14 +449,17 @@ const setInvoice = () => {
     newInvoice.value = {
       ...invoice.value,
       deadline: formatSecondsToDateString(invoice.value.deadline),
+      payment: formatSecondsToDateString(invoice.value.payment),
+      returned: formatSecondsToDateString(invoice.value.returned),
+      processed: formatSecondsToDateString(invoice.value.processed),
+      created: formatSecondsToDateString(invoice.value.created),
     };
 
     selectedInstances.value = invoice.value.items?.map((item) => item.instance);
   }
 };
 
-const saveInvoice = async (withEmail = false) => {
-  console.log(withEmail, newInvoice.value);
+const saveInvoice = async (withEmail = false, status = "UNPAID") => {
   if (!(await invoiceForm.value.validate())) {
     return;
   }
@@ -404,23 +468,41 @@ const saveInvoice = async (withEmail = false) => {
   try {
     const data = {
       total: convertPrice(newInvoice.value.total),
-      account: newInvoice.value.account.uuid,
+      account: newInvoice.value.account.uuid || invoice.value.account,
       items: newInvoice.value.items,
       meta: newInvoice.value.meta,
-      status: newInvoice.value.status,
+      status: status ? status : newInvoice.value.status,
       deadline: new Date(newInvoice.value.deadline).getTime() / 1000,
       type: newInvoice.value.type,
     };
+
     if (!isEdit.value && !invoice.value?.uuid) {
       await store.getters["invoices/invoicesClient"].createInvoice(
-        Invoice.fromJson(data)
+        CreateInvoiceRequest.fromJson({
+          invoice: data,
+          isSendEmail: !!withEmail,
+        })
       );
       router.push({ name: "Invoices" });
     } else {
+      data.uuid = invoice.value.uuid;
+
+      if (newInvoice.value.created) {
+        data.created = new Date(newInvoice.value.created).getTime() / 1000;
+      }
+
+      if (newInvoice.value.returned) {
+        data.returned = new Date(newInvoice.value.returned).getTime() / 1000;
+      }
+
+      if (newInvoice.value.payment) {
+        data.payment = new Date(newInvoice.value.payment).getTime() / 1000;
+      }
+
       await store.getters["invoices/invoicesClient"].updateInvoice(
-        Invoice.fromJson({
-          ...data,
-          uuid: invoice.value.uuid,
+        UpdateInvoiceRequest.fromJson({
+          invoice: data,
+          isSendEmail: !!withEmail,
         })
       );
       store.commit("snackbar/showSnackbarSuccess", {
@@ -444,7 +526,7 @@ const convertPrice = (price) => {
 
 const addInvoiceItem = () => {
   newInvoice.value.items.push({
-    title: "",
+    description: "",
     price: 0,
     instance: "",
     amount: 1,
@@ -484,7 +566,7 @@ const onChangeInstance = () => {
       newItems.push({
         price: productPrice,
         amount: 1,
-        title: productTitle,
+        description: productTitle,
         instance: instance.uuid,
         unit: "Pcs",
       });
@@ -497,7 +579,6 @@ const onChangeInstance = () => {
 const sendEmail = async () => {
   isSendEmailLoading.value = true;
   try {
-    console.log(newInvoice.value.account);
     await new Promise((resolve) => setTimeout(resolve, 5000));
   } catch (e) {
     store.commit("snackbar/showSnackbarError", { message: e.message });
@@ -506,11 +587,27 @@ const sendEmail = async () => {
   }
 };
 
-const onChangeDraft = (isDraft) => {
-  newInvoice.value.status = isDraft ? "DRAFT" : "UNPAID";
+const openAddPaymentDialog = () => {
+  isAddPaymentDialogOpen.value = true;
 };
 
-const changeInvoiceStatus = async (status) => {
+const changeStatusToPaid = async () => {
+  try {
+    isAddPaymentLoading.value = true;
+
+    await changeInvoiceStatus("PAID", {
+      paymentDate: addPaymentOptions.value.changePaymentDate
+        ? new Date(addPaymentOptions.value.paymentDate).getTime() / 1000
+        : null,
+      isSendEmail: addPaymentOptions.value.sendEmail,
+    });
+  } finally {
+    isAddPaymentLoading.value = false;
+    isAddPaymentDialogOpen.value = false;
+  }
+};
+
+const changeInvoiceStatus = async (status, params = null) => {
   isStatusChangeLoading.value = true;
   newStatus.value = status;
   try {
@@ -518,6 +615,7 @@ const changeInvoiceStatus = async (status) => {
       UpdateInvoiceStatusRequest.fromJson({
         uuid: invoice.value.uuid,
         status: BillingStatus[status],
+        params,
       })
     );
 

@@ -23,12 +23,24 @@
       <v-skeleton-loader type="text" v-else />
     </template>
 
+    <template v-slot:[`item.number`]="{ item }">
+      <router-link :to="{ name: 'Invoice page', params: { uuid: item.uuid } }">
+        {{ `№${item.number || item.uuid}` }}
+      </router-link>
+    </template>
+
     <template v-slot:[`item.total`]="{ item }">
-      <balance abs :currency="item.currency" :value="-item.total" />
+      <v-chip :color="getTotalColor(item)" abs>
+        {{ `${-item.total} ${item.currency?.title || defaultCurrency.title}` }}
+      </v-chip>
     </template>
 
     <template v-slot:[`item.processed`]="{ item }">
       {{ formatSecondsToDate(item.processed, true) }}
+    </template>
+
+    <template v-slot:[`item.type`]="{ value }">
+      {{ value.replaceAll("_", " ") }}
     </template>
 
     <template v-slot:[`item.deadline`]="{ item }">
@@ -48,30 +60,27 @@
     </template>
 
     <template v-slot:[`item.status`]="{ item }">
-      <v-chip>{{ item.status }}</v-chip>
-    </template>
-
-    <template v-slot:[`item.actions`]="{ item }">
-      <v-btn icon :to="{ name: 'Invoice page', params: { uuid: item.uuid } }">
-        <v-icon>mdi-login</v-icon>
-      </v-btn>
+      <v-chip :color="getInvoiceStatusColor(item.status)">{{
+        item.status
+      }}</v-chip>
     </template>
   </nocloud-table>
 </template>
 
 <script setup>
 import nocloudTable from "@/components/table.vue";
-import balance from "@/components/balance.vue";
 import { debounce, formatSecondsToDate } from "../functions";
 import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
+import { BillingStatus } from "nocloud-proto/proto/es/billing/billing_pb";
 
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
   value: {},
+  refetch: { type: Boolean, default: false },
 });
-const { tableName, value } = toRefs(props);
+const { tableName, value, refetch } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -88,7 +97,8 @@ const accounts = ref({});
 const store = useStore();
 
 const headers = ref([
-  { text: "UUID ", value: "uuid" },
+  { text: "UUID", value: "uuid" },
+  { text: "Number", value: "number" },
   { text: "Account ", value: "account" },
   { text: "Amount ", value: "total" },
   { text: "Type ", value: "type" },
@@ -98,7 +108,6 @@ const headers = ref([
   { text: "Processed date", value: "processed" },
   { text: "Returned date", value: "returned" },
   { text: "Status ", value: "status" },
-  { text: "Actions ", value: "actions" },
 ]);
 
 onMounted(() => {
@@ -112,6 +121,8 @@ onMounted(() => {
 
 const invoices = computed(() => store.getters["invoices/all"]);
 const isLoading = computed(() => isFetchLoading.value || isCountLoading.value);
+
+const defaultCurrency = computed(() => store.getters["currencies/default"]);
 
 const filter = computed(() => store.getters["appSearch/filter"]);
 
@@ -132,10 +143,47 @@ const account = (uuid) => {
 };
 
 const setOptions = (newOptions) => {
+  console.log(newOptions);
   page.value = newOptions.page;
   if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
     options.value = newOptions;
   }
+};
+
+const getInvoiceStatusColor = (status) => {
+  switch (BillingStatus[status]) {
+    case BillingStatus.CANCELED: {
+      return "warning";
+    }
+    case BillingStatus.RETURNED: {
+      return "blue";
+    }
+    case BillingStatus.DRAFT: {
+      return "brown darked";
+    }
+    case BillingStatus.PAID: {
+      return "green";
+    }
+    case BillingStatus.UNPAID: {
+      return "gray";
+    }
+    case BillingStatus.BILLING_STATUS_UNKNOWN:
+    case BillingStatus.TERMINATED:
+    default: {
+      return "red";
+    }
+  }
+};
+
+const getTotalColor = (item) => {
+  if (
+    BillingStatus[item.status] === BillingStatus.UNPAID &&
+    item.deadline < Date.now() / 1000
+  ) {
+    return "red";
+  }
+
+  return "gray";
 };
 
 const init = async () => {
@@ -168,11 +216,7 @@ const fetchInvoicesDebounce = debounce(fetchInvoices, 100);
 
 watch(filter, fetchInvoicesDebounce, { deep: true });
 watch(options, fetchInvoicesDebounce);
-watch(value, (newValue) => {
-  if (newValue?.length === 0) {
-    fetchInvoicesDebounce();
-  }
-});
+watch(refetch, fetchInvoicesDebounce);
 
 watch(invoices, () => {
   invoices.value.forEach(async ({ account: uuid }) => {
