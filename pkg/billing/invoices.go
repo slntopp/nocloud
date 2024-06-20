@@ -747,6 +747,9 @@ func (s *BillingServiceServer) UpdateInvoice(ctx context.Context, r *connect.Req
 	if req.GetDeadline() != 0 && t.GetDeadline() != 0 {
 		t.Deadline = req.GetDeadline()
 	}
+	if req.GetCreated() != 0 && t.GetCreated() != 0 {
+		t.Created = req.GetCreated()
+	}
 	t.Uuid = req.GetUuid()
 	t.Meta = req.GetMeta()
 	t.Status = req.GetStatus()
