@@ -649,13 +649,40 @@ export function downloadPlanXlsx(plans) {
         }
       }
 
+      let configPrice = 0;
+
+      if (plan.type === "ione" && plan.meta.minDiskSize) {
+        const hddMinSize = +plan.meta.minDiskSize.HDD || 20;
+        const ssdMinSize = +plan.meta.minDiskSize.SSD || 20;
+
+        const hddMin =
+          plan.resources.find((r) => r.key === "drive_hdd")?.price *
+            hddMinSize || 0;
+        const ssdMin =
+          plan.resources.find((r) => r.key === "drive_ssd")?.price *
+            ssdMinSize || 0;
+
+        if (!ssdMin && hddMin) {
+          configPrice = hddMin;
+        }
+        if (!hddMin && ssdMin) {
+          configPrice = ssdMin;
+        } else {
+          configPrice = Math.min(ssdMin, hddMin);
+        }
+      }
+
       return {
         name: plan.title,
         headers,
         items: Object.values(plan.products)
           .map((product) => {
             const result = {};
-            product = { ...product, ...product.meta };
+            product = {
+              ...product,
+              ...product.meta,
+              price: product.price + configPrice,
+            };
 
             Object.keys(product).forEach((key) => {
               if (headers.findIndex((a) => a.key === key) !== -1) {
