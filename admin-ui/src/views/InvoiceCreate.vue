@@ -25,19 +25,6 @@
 
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Deadline</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <date-picker
-                :min="formatSecondsToDateString(Date.now() / 1000)"
-                label="Deadline"
-                v-model="newInvoice.deadline"
-              />
-            </v-col>
-          </v-row>
-
-          <v-row align="center">
-            <v-col cols="3">
               <v-subheader>Account</v-subheader>
             </v-col>
             <v-col cols="9">
@@ -88,59 +75,8 @@
               />
             </v-col>
           </v-row>
-        </v-col>
-        <v-col v-if="isEdit" cols="6">
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Created date</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                :value="formatSecondsToDate(newInvoice.created, true) || '-'"
-                readonly
-                disabled
-              />
-            </v-col>
-          </v-row>
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Payment date</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                :value="formatSecondsToDate(newInvoice.payment, true) || '-'"
-                readonly
-                disabled
-              />
-            </v-col>
-          </v-row>
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Processed date</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                :value="formatSecondsToDate(newInvoice.processed, true) || '-'"
-                readonly
-                disabled
-              />
-            </v-col>
-          </v-row>
 
-          <v-row align="center" v-if="newInvoice.returned">
-            <v-col cols="3">
-              <v-subheader>Returned date</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                :value="formatSecondsToDate(newInvoice.returned, true) || '-'"
-                readonly
-                disabled
-              />
-            </v-col>
-          </v-row>
-
-          <v-row align="center">
+          <v-row v-if="isEdit" align="center">
             <v-col cols="3">
               <v-subheader>Status</v-subheader>
             </v-col>
@@ -148,6 +84,78 @@
               <v-chip>{{ invoice.status }}</v-chip>
             </v-col>
           </v-row>
+        </v-col>
+        <v-col cols="6">
+          <v-row align="center">
+            <v-col cols="3">
+              <v-subheader>Deadline</v-subheader>
+            </v-col>
+            <v-col cols="9">
+              <date-picker
+                :min="formatSecondsToDateString(Date.now() / 1000)"
+                label="Deadline"
+                v-model="newInvoice.deadline"
+              />
+            </v-col>
+          </v-row>
+
+          <template v-if="isEdit">
+            <v-row align="center">
+              <v-col cols="3">
+                <v-subheader>Created date</v-subheader>
+              </v-col>
+              <v-col cols="9">
+                <date-picker
+                  label="Created"
+                  v-model="newInvoice.created"
+                  :readonly="!newInvoice.created"
+                  :disabled="!newInvoice.created"
+                />
+              </v-col>
+            </v-row>
+            <v-row align="center">
+              <v-col cols="3">
+                <v-subheader>Payment date</v-subheader>
+              </v-col>
+              <v-col cols="9">
+                <date-picker
+                  :min="newInvoice.created"
+                  label="Payment"
+                  v-model="newInvoice.payment"
+                  :readonly="!newInvoice.payment"
+                  :disabled="!newInvoice.payment"
+                />
+              </v-col>
+            </v-row>
+            <v-row align="center">
+              <v-col cols="3">
+                <v-subheader>Processed date</v-subheader>
+              </v-col>
+              <v-col cols="9">
+                <date-picker
+                  label="Processed"
+                  v-model="newInvoice.processed"
+                  readonly
+                  disabled
+                />
+              </v-col>
+            </v-row>
+
+            <v-row align="center" v-if="newInvoice.returned">
+              <v-col cols="3">
+                <v-subheader>Returned date</v-subheader>
+              </v-col>
+              <v-col cols="9">
+                <date-picker
+                  :min="newInvoice.payment"
+                  label="Returned"
+                  v-model="newInvoice.returned"
+                  :readonly="!newInvoice.returned"
+                  :disabled="!newInvoice.returned"
+                />
+              </v-col>
+            </v-row>
+          </template>
         </v-col>
       </v-row>
       <v-textarea
@@ -243,11 +251,7 @@
 
 <script setup>
 import JsonEditor from "@/components/JsonEditor.vue";
-import {
-  defaultFilterObject,
-  formatSecondsToDate,
-  formatSecondsToDateString,
-} from "@/functions";
+import { defaultFilterObject, formatSecondsToDateString } from "@/functions";
 import { computed, onMounted, ref, toRefs, watch } from "vue";
 import { useStore } from "@/store";
 import NocloudExpansionPanels from "@/components/ui/nocloudExpansionPanels.vue";
@@ -317,12 +321,12 @@ const changeStatusBtns = [
     disabled: ["TERMINATED", "CANCELED", "DRAFT", "RETURNED"],
   },
   {
-    title: "refund",
+    title: "cancel",
     status: "CANCELED",
     disabled: ["TERMINATED", "RETURNED", "DRAFT", "PAID"],
   },
   {
-    title: "return",
+    title: "Refund",
     status: "RETURNED",
     disabled: ["CANCELED", "TERMINATED", "UNPAID", "DRAFT"],
   },
@@ -392,6 +396,10 @@ const setInvoice = () => {
     newInvoice.value = {
       ...invoice.value,
       deadline: formatSecondsToDateString(invoice.value.deadline),
+      payment: formatSecondsToDateString(invoice.value.payment),
+      returned: formatSecondsToDateString(invoice.value.returned),
+      processed: formatSecondsToDateString(invoice.value.processed),
+      created: formatSecondsToDateString(invoice.value.created),
     };
 
     selectedInstances.value = invoice.value.items?.map((item) => item.instance);
@@ -425,6 +433,18 @@ const saveInvoice = async (withEmail = false, status = "UNPAID") => {
       router.push({ name: "Invoices" });
     } else {
       data.uuid = invoice.value.uuid;
+
+      if (newInvoice.value.created) {
+        data.created = new Date(newInvoice.value.created).getTime() / 1000;
+      }
+
+      if (newInvoice.value.returned) {
+        data.returned = new Date(newInvoice.value.returned).getTime() / 1000;
+      }
+
+      if (newInvoice.value.payment) {
+        data.payment = new Date(newInvoice.value.payment).getTime() / 1000;
+      }
 
       await store.getters["invoices/invoicesClient"].updateInvoice(
         UpdateInvoiceRequest.fromJson({
