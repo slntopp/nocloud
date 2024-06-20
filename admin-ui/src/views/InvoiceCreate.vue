@@ -88,12 +88,12 @@
         <v-col cols="6">
           <v-row align="center">
             <v-col cols="3">
-              <v-subheader>Deadline</v-subheader>
+              <v-subheader>Due date</v-subheader>
             </v-col>
             <v-col cols="9">
               <date-picker
                 :min="formatSecondsToDateString(Date.now() / 1000)"
-                label="Deadline"
+                label="Due date"
                 v-model="newInvoice.deadline"
               />
             </v-col>
@@ -143,12 +143,12 @@
 
             <v-row align="center" v-if="newInvoice.returned">
               <v-col cols="3">
-                <v-subheader>Returned date</v-subheader>
+                <v-subheader>Refunded date</v-subheader>
               </v-col>
               <v-col cols="9">
                 <date-picker
                   :min="newInvoice.payment"
-                  label="Returned"
+                  label="Refunded"
                   v-model="newInvoice.returned"
                   :readonly="!newInvoice.returned"
                   :disabled="!newInvoice.returned"
