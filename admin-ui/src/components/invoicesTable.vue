@@ -78,8 +78,9 @@ import { BillingStatus } from "nocloud-proto/proto/es/billing/billing_pb";
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
   value: {},
+  refetch: { type: Boolean, default: false },
 });
-const { tableName, value } = toRefs(props);
+const { tableName, value, refetch } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -142,6 +143,7 @@ const account = (uuid) => {
 };
 
 const setOptions = (newOptions) => {
+  console.log(newOptions);
   page.value = newOptions.page;
   if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
     options.value = newOptions;
@@ -214,11 +216,7 @@ const fetchInvoicesDebounce = debounce(fetchInvoices, 100);
 
 watch(filter, fetchInvoicesDebounce, { deep: true });
 watch(options, fetchInvoicesDebounce);
-watch(value, (newValue) => {
-  if (newValue?.length === 0) {
-    fetchInvoicesDebounce();
-  }
-});
+watch(refetch, fetchInvoicesDebounce);
 
 watch(invoices, () => {
   invoices.value.forEach(async ({ account: uuid }) => {
