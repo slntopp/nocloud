@@ -25,6 +25,7 @@
           :is="tab.component"
           :invoice="invoice"
           :is-edit="invoice.status !== 'DRAFT'"
+          @refresh="refreshInvoice"
         />
       </v-tab-item>
     </v-tabs-items>
@@ -50,19 +51,14 @@ const invoiceTitle = computed(() =>
   isInvoiceLoading.value ? "..." : "#" + invoice.value?.uuid
 );
 
-onMounted(async () => {
+onMounted(() => {
   store.commit("reloadBtn/setCallback", {
     type: "invoices/get",
     params: route.params?.uuid,
   });
   selectedTab.value = route.query.tab || 0;
 
-  try {
-    await store.dispatch("invoices/get", route.params.uuid);
-    document.title = `${invoiceTitle.value} | NoCloud`;
-  } catch (e) {
-    store.commit("snackbar/showSnackbarError", { message: e.message });
-  }
+  refreshInvoice();
 });
 
 const isInvoiceLoading = computed(() => {
@@ -87,6 +83,15 @@ function navTitle(title) {
 
   return title;
 }
+
+const refreshInvoice = async () => {
+  try {
+    await store.dispatch("invoices/get", route.params.uuid);
+    document.title = `${invoiceTitle.value} | NoCloud`;
+  } catch (e) {
+    store.commit("snackbar/showSnackbarError", { message: e.message });
+  }
+};
 </script>
 
 <script>

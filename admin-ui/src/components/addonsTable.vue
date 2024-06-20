@@ -77,7 +77,15 @@ const isLoading = computed(() => store.getters["addons/isLoading"]);
 const addons = computed(() => store.getters["addons/all"]);
 
 const requestOptions = computed(() => ({
-  filters: filter.value,
+  filters: Object.keys(filter.value).reduce((newFilter, key) => {
+    if (!filter.value[key]) {
+      delete newFilter[key]
+    } else {
+      newFilter[key] = filter.value[key];
+    }
+
+    return newFilter;
+  }, {}),
   page: page.value,
   limit: options.value.itemsPerPage,
   field: options.value.sortBy?.[0],
@@ -86,7 +94,7 @@ const requestOptions = computed(() => ({
 }));
 
 const countOptions = computed(() => ({
-  filters: filter.value,
+  filters: requestOptions.value.filters,
 }));
 
 const filter = computed(() => ({

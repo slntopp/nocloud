@@ -110,7 +110,26 @@
               }}
             </td>
             <td></td>
-            <td></td>
+            <td>
+              <v-dialog v-model="isAddonsDialog" max-width="60%">
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn class="ml-2" color="primary" v-bind="attrs" v-on="on"
+                    >addons</v-btn
+                  >
+                </template>
+                <instance-change-addons
+                v-if="isAddonsDialog"
+                  :instance="template"
+                  :instance-addons="addons"
+                  @update="
+                    emit('update', {
+                      key: 'addons',
+                      value: $event,
+                    })
+                  "
+                />
+              </v-dialog>
+            </td>
             <td>
               <v-chip color="primary" outlined>
                 {{ totalPrice }}
@@ -173,6 +192,7 @@ import ChangeIoneMonitorings from "@/components/dialogs/changeMonitorings.vue";
 import ChangeIoneTarrif from "@/components/dialogs/changeIoneTarrif.vue";
 import NocloudTable from "@/components/table.vue";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
+import InstanceChangeAddons from "@/components/InstanceChangeAddons.vue";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import { useStore } from "@/store";
 import InstancesPanels from "../../ui/nocloudExpansionPanels.vue";
@@ -196,6 +216,7 @@ const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
 
 const changeDatesDialog = ref(false);
 const changeTariffDialog = ref(false);
+const isAddonsDialog = ref(false);
 const priceModelDialog = ref(false);
 const billingItems = ref([]);
 const billingHeaders = ref([
@@ -325,10 +346,9 @@ const getBillingItems = () => {
 
   addons.value.forEach((addon) => {
     const { title, periods } = addon;
-    const { period,kind } =
-      billingPlan.value.products[template.value.product];
+    const { period, kind } = billingPlan.value.products[template.value.product];
     items.push({
-      name:title,
+      name: title,
       price: periods[period],
       accountPrice: toAccountPrice(periods[period]),
       quantity: 1,

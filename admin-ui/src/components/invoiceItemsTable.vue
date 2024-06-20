@@ -16,14 +16,18 @@
       />
     </template>
 
-    <template v-slot:[`item.title`]="{ item }">
-      <v-text-field :rules="generalRule" v-model="item.title" />
-    </template>
-
     <template v-slot:[`item.amount`]="{ item }">
       <v-text-field
         type="number"
         v-model.number="item.amount"
+        :rules="generalRule"
+      />
+    </template>
+
+    <template v-slot:[`item.price`]="{ item }">
+      <v-text-field
+        type="number"
+        v-model.number="item.price"
         :rules="generalRule"
       />
     </template>
@@ -81,10 +85,11 @@ const unitItems = ref(["Pcs", "Szt", "Hour`s"]);
 const headers = computed(() =>
   [
     showDate.value && { text: "Date", value: "date" },
-    { text: "Title", value: "title", width: 125 },
-    { text: "Description", value: "description" },
-    { text: "Amount", value: "amount", width: 175 },
-    showDelete.value && { text: "Actions", value: "actions", width:25 },
+    { text: "Description", value: "description", width: "40%" },
+    { text: "Amount", value: "amount", width: 125 },
+    { text: "Price", value: "price", width: 125 },
+    { text: "Unit", value: "unit", width: 125 },
+    showDelete.value && { text: "Actions", value: "actions", width: 25 },
   ].filter((c) => !!c)
 );
 const accountCurrency = computed(
