@@ -100,14 +100,29 @@ func NewInstancesController(log *zap.Logger, db driver.Database, conn *amqp091.C
 	return &InstancesController{log: log.Named("InstancesController"), col: col, graph: graph, db: db, ig2inst: ig2inst, channel: channel, bp_ctrl: &bp_ctrl}
 }
 
-// CalculateInstanceEstimatePeriodicPrice return estimate periodic price for current instance in NCU currency
-func (ctrl *InstancesController) CalculateInstanceEstimatePeriodicPrice(i *pb.Instance) (float64, error) {
+// CalculatePriceOptions - options for CalculateInstancePrice method
+type CalculatePriceOptions struct {
+	IgnoreOnePaymentItems bool // Ignore items with 0 period
+}
+
+// CalculateInstancePrice return estimate periodic price for current instance in NCU currency
+func (ctrl *InstancesController) CalculateInstancePrice(i *pb.Instance, options ...CalculatePriceOptions) (float64, error) {
+	opt := CalculatePriceOptions{}
+	if len(options) > 0 {
+		opt = options[0]
+	}
+
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
 	if err != nil {
 		return 0, err
 	}
 
 	cost := 0.0
+
+	product := i.GetProduct()
+	if _, has := plan.GetProducts()[product]; has {
+		cost = plan.GetProducts()[product].GetPrice()
+	}
 
 	for _, res := range plan.GetResources() {
 
