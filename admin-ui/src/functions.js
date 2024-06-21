@@ -652,6 +652,11 @@ export function downloadPlanXlsx(plans) {
       let configPrice = 0;
 
       if (plan.type === "ione" && plan.meta.minDiskSize) {
+        const ip =
+          plan.resources.find((r) => r.key === "ips_public")?.price || 0;
+
+        configPrice += ip;
+
         const hddMinSize = +plan.meta.minDiskSize.HDD || 20;
         const ssdMinSize = +plan.meta.minDiskSize.SSD || 20;
 
@@ -663,12 +668,12 @@ export function downloadPlanXlsx(plans) {
             ssdMinSize || 0;
 
         if (!ssdMin && hddMin) {
-          configPrice = hddMin;
+          configPrice += hddMin;
         }
         if (!hddMin && ssdMin) {
-          configPrice = ssdMin;
+          configPrice += ssdMin;
         } else {
-          configPrice = Math.min(ssdMin, hddMin);
+          configPrice += Math.min(ssdMin, hddMin);
         }
       }
 
