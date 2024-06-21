@@ -316,10 +316,7 @@ export default {
           resources:
             this.type === "opensrs"
               ? { ...this.copyTemplate.billingPlan.resources }
-              : [
-                  ...ogPlan.resources,
-                  ...this.copyTemplate.billingPlan.resources,
-                ],
+              : [...this.copyTemplate.billingPlan.resources],
           title,
         };
 
