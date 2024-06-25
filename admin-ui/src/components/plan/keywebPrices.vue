@@ -301,7 +301,7 @@ onMounted(async () => {
       });
 
       addonsValues.os.forEach((os) => {
-        os.key = os.baseName + "-" + os.duration;
+        os.key = os.baseName + "$" + os.duration;
 
         if (oss.find((existed) => os.key === existed.key)) {
           return;
