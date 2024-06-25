@@ -28,7 +28,7 @@ const useInstanceAddons = (instance, setValue) => {
           fetchedAddons.value[uuid] = store.getters["addons/addonsClient"].get({
             uuid,
           });
-          fetchedAddons.value[uuid] = await fetchedAddons.value[uuid];
+          fetchedAddons.value[uuid] = (await fetchedAddons.value[uuid]).toJson();
         }
       } catch {
         fetchedAddons.value[uuid] = undefined;

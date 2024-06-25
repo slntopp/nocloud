@@ -137,10 +137,17 @@ import { useStore } from "@/store";
 import InstancesPanels from "@/components/ui/nocloudExpansionPanels.vue";
 import DatePicker from "../../ui/datePicker.vue";
 
-const props = defineProps(["template", "plans", "service", "sp", "account"]);
+const props = defineProps([
+  "template",
+  "plans",
+  "service",
+  "sp",
+  "account",
+  "addons",
+]);
 const emit = defineEmits(["refresh"]);
 
-const { template, plans, service, account } = toRefs(props);
+const { template, plans, service, account, addons } = toRefs(props);
 
 const store = useStore();
 const { accountCurrency, toAccountPrice, accountRate, fromAccountPrice } =
@@ -189,27 +196,6 @@ watch(accountRate, () => {
   });
 });
 
-const addons = computed(() => {
-  return Object.values(props.template.config?.configurations || {})
-    .map((val) => {
-      const resIndex = props.template.billingPlan?.resources?.findIndex(
-        (r) => r.key === [val, template.value.product].join("$")
-      );
-      if (resIndex !== -1) {
-        const res = props.template.billingPlan?.resources[resIndex];
-        return {
-          name: res.title,
-          price: res?.price,
-          path: `billingPlan.resources.${resIndex}.price`,
-          kind: res?.kind,
-          period: res?.period,
-          accountPrice: toAccountPrice(res?.price),
-        };
-      }
-    })
-    .filter((a) => !!a);
-});
-
 const getBillingItems = () => {
   const items = [];
   const product = billingPlan.value.products[template.value.product];
@@ -222,7 +208,17 @@ const getBillingItems = () => {
     accountPrice: toAccountPrice(product?.price),
   });
 
-  items.push(...addons.value.map((a) => ({ ...a, isAddon: true })));
+  items.push(
+    ...addons.value.map((a) => ({
+      name: a.title,
+      price: a?.periods?.[product?.period] || 0,
+      path: ``,
+      kind: a?.kind,
+      period: product?.period,
+      accountPrice: toAccountPrice(a?.periods?.[product?.period] || 0),
+      isAddon: true,
+    }))
+  );
 
   return items.map((i) => {
     i.period = getBillingPeriod(i.period);

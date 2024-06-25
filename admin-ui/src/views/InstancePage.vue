@@ -111,7 +111,7 @@ export default {
             const addon = await this.$store.getters["addons/addonsClient"].get({
               uuid,
             });
-            addons.push(addon);
+            addons.push(addon.toJson());
           })
         );
       } finally {
