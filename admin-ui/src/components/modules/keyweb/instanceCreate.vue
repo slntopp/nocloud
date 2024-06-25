@@ -200,11 +200,6 @@ const setValue = (key, value) => {
   /* eslint-enable */
 };
 
-// :value="instance.config.configurations?.[os[0]?.type]"
-//             @change="
-//
-//             "
-
 const setAddons = () => {
   const addons = [];
 
@@ -213,9 +208,9 @@ const setAddons = () => {
       return;
     }
 
-    if (addon?.meta?.type === osTypeKey) {
+    if (addon?.meta?.type) {
       setValue(
-        "config.configurations." + osTypeKey,
+        "config.configurations." + addon?.meta?.type,
         addon.meta.keys[0]?.split("$")?.[0]
       );
     }
