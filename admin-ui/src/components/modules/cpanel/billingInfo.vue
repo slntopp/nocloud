@@ -133,6 +133,16 @@
       @refresh="emit('refresh')"
       :service="service"
     />
+
+    <change-monitorings
+      :template="template"
+      :service="service"
+      v-model="changeDatesDialog"
+      @refresh="emit('refresh')"
+      v-if="
+        template.billingPlan.title.toLowerCase() !== 'payg' || isMonitoringEmpty
+      "
+    />
   </div>
 </template>
 
@@ -150,6 +160,7 @@ import { useStore } from "@/store";
 import useInstancePrices from "@/hooks/useInstancePrices";
 import EditPriceModel from "@/components/dialogs/editPriceModel.vue";
 import DatePicker from "../../ui/datePicker.vue";
+import changeMonitorings from "@/components/dialogs/changeMonitorings.vue";
 
 const props = defineProps(["template", "plans", "service", "sp"]);
 const emit = defineEmits(["refresh"]);
@@ -168,6 +179,7 @@ const billingHeaders = ref([
 ]);
 const billingItems = ref([]);
 const priceModelDialog = ref(false);
+const changeDatesDialog = ref(false);
 
 const filtredPlans = computed(() =>
   plans.value.filter((p) => p.type === "cpanel")
