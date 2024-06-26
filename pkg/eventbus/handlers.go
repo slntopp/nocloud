@@ -21,6 +21,7 @@ var handlers = map[string]EventHandler{
 	"suspend_delete_instance":     GetInstAccountHandler,
 	"instance_renew":              GetInstAccountHandler,
 	"pending_notification":        GetInstAccountHandler,
+	"instance_credentials":        GetInstAccountHandler,
 }
 
 var getInstanceAccount = `
