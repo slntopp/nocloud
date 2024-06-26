@@ -73,7 +73,7 @@ import { debounce, formatSecondsToDate } from "../functions";
 import { ref, computed, watch, toRefs, onMounted } from "vue";
 import { useStore } from "@/store";
 import api from "@/api";
-import { BillingStatus } from "nocloud-proto/proto/es/billing/billing_pb";
+import useInvoices from "../hooks/useInvoices";
 
 const props = defineProps({
   tableName: { type: String, default: "invoices-table" },
@@ -84,6 +84,9 @@ const { tableName, value, refetch } = toRefs(props);
 
 const emit = defineEmits(["input"]);
 
+const store = useStore();
+const { getInvoiceStatusColor, getTotalColor } = useInvoices();
+
 const count = ref(10);
 const page = ref(1);
 const isFetchLoading = ref(true);
@@ -93,8 +96,6 @@ const fetchError = ref("");
 
 const isAccountsLoading = ref(false);
 const accounts = ref({});
-
-const store = useStore();
 
 const headers = ref([
   { text: "UUID", value: "uuid" },
@@ -148,42 +149,6 @@ const setOptions = (newOptions) => {
   if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
     options.value = newOptions;
   }
-};
-
-const getInvoiceStatusColor = (status) => {
-  switch (BillingStatus[status]) {
-    case BillingStatus.CANCELED: {
-      return "warning";
-    }
-    case BillingStatus.RETURNED: {
-      return "blue";
-    }
-    case BillingStatus.DRAFT: {
-      return "brown darked";
-    }
-    case BillingStatus.PAID: {
-      return "green";
-    }
-    case BillingStatus.UNPAID: {
-      return "gray";
-    }
-    case BillingStatus.BILLING_STATUS_UNKNOWN:
-    case BillingStatus.TERMINATED:
-    default: {
-      return "red";
-    }
-  }
-};
-
-const getTotalColor = (item) => {
-  if (
-    BillingStatus[item.status] === BillingStatus.UNPAID &&
-    item.deadline < Date.now() / 1000
-  ) {
-    return "red";
-  }
-
-  return "gray";
 };
 
 const init = async () => {
