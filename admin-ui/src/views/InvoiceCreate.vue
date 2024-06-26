@@ -3,162 +3,125 @@
     <h1 v-if="!isEdit && invoice?.status !== 'DRAFT'" class="page__title">
       Create invoice
     </h1>
+
+    <div
+      v-if="isEdit"
+      style="z-index: 0; position: relative; top: -15px; right: 20px"
+    >
+      <div class="d-flex justify-end mt-1 align-center flex-wrap">
+        <v-chip :color="getTotalColor(newInvoice)">
+          Total:
+          {{ `${newInvoice.total} ${accountCurrency?.title}` }}
+        </v-chip>
+
+        <v-chip :color="getInvoiceStatusColor(newInvoice.status)">
+          {{ `${newInvoice.status}` }}
+        </v-chip>
+      </div>
+    </div>
+
     <v-form v-model="isValid" ref="invoiceForm">
       <v-row>
-        <v-col cols="6">
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Type</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-select
-                :disabled="isEdit"
-                item-value="id"
-                item-text="title"
-                label="Type"
-                v-model="newInvoice.type"
-                :items="types"
-              >
-              </v-select>
-            </v-col>
-          </v-row>
-
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Account</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <accounts-autocomplete
-                :loading="isInstancesLoading"
-                @change="onChangeAccount"
-                :disabled="isEdit"
-                label="Account"
-                v-model="newInvoice.account"
-                fetch-value
-                return-object
-                :rules="requiredRule"
-              />
-            </v-col>
-          </v-row>
-
-          <v-row v-if="!isBalanceInvoice" align="center">
-            <v-col cols="3">
-              <v-subheader>Instances</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-autocomplete
-                :disabled="isEdit"
-                :filter="defaultFilterObject"
-                label="Instances"
-                v-model="selectedInstances"
-                return-object
-                multiple
-                item-text="title"
-                item-value="uuid"
-                :items="instances"
-                @change="onChangeInstance"
-                :loading="isInstancesLoading"
-              />
-            </v-col>
-          </v-row>
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Total</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-text-field
-                type="number"
-                label="Total"
-                :suffix="accountCurrency?.title"
-                v-model="newInvoice.total"
-                :disabled="!isBalanceInvoice"
-              />
-            </v-col>
-          </v-row>
-
-          <v-row v-if="isEdit" align="center">
-            <v-col cols="3">
-              <v-subheader>Status</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <v-chip>{{ invoice.status }}</v-chip>
-            </v-col>
-          </v-row>
+        <v-col cols="2">
+          <v-select
+            :disabled="isEdit"
+            item-value="id"
+            item-text="title"
+            label="Type"
+            v-model="newInvoice.type"
+            :items="types"
+          >
+          </v-select>
         </v-col>
-        <v-col cols="6">
-          <v-row align="center">
-            <v-col cols="3">
-              <v-subheader>Due date</v-subheader>
-            </v-col>
-            <v-col cols="9">
-              <date-picker
-                :min="formatSecondsToDateString(Date.now() / 1000)"
-                label="Due date"
-                v-model="newInvoice.deadline"
-              />
-            </v-col>
-          </v-row>
 
-          <template v-if="isEdit">
-            <v-row align="center">
-              <v-col cols="3">
-                <v-subheader>Created date</v-subheader>
-              </v-col>
-              <v-col cols="9">
-                <date-picker
-                  label="Created"
-                  v-model="newInvoice.created"
-                  :readonly="!newInvoice.created"
-                  :disabled="!newInvoice.created"
-                />
-              </v-col>
-            </v-row>
-            <v-row align="center">
-              <v-col cols="3">
-                <v-subheader>Payment date</v-subheader>
-              </v-col>
-              <v-col cols="9">
-                <date-picker
-                  :min="newInvoice.created"
-                  label="Payment"
-                  v-model="newInvoice.payment"
-                  :readonly="!newInvoice.payment"
-                  :disabled="!newInvoice.payment"
-                />
-              </v-col>
-            </v-row>
-            <v-row align="center">
-              <v-col cols="3">
-                <v-subheader>Processed date</v-subheader>
-              </v-col>
-              <v-col cols="9">
-                <date-picker
-                  label="Processed"
-                  v-model="newInvoice.processed"
-                  readonly
-                  disabled
-                />
-              </v-col>
-            </v-row>
-
-            <v-row align="center" v-if="newInvoice.returned">
-              <v-col cols="3">
-                <v-subheader>Refunded date</v-subheader>
-              </v-col>
-              <v-col cols="9">
-                <date-picker
-                  :min="newInvoice.payment"
-                  label="Refunded"
-                  v-model="newInvoice.returned"
-                  :readonly="!newInvoice.returned"
-                  :disabled="!newInvoice.returned"
-                />
-              </v-col>
-            </v-row>
-          </template>
+        <v-col cols="3">
+          <accounts-autocomplete
+            :loading="isInstancesLoading"
+            @change="onChangeAccount"
+            :disabled="isEdit"
+            label="Account"
+            v-model="newInvoice.account"
+            fetch-value
+            return-object
+            :rules="requiredRule"
+          />
         </v-col>
+
+        <v-col cols="3">
+          <v-autocomplete
+            :disabled="isEdit"
+            :filter="defaultFilterObject"
+            label="Instances"
+            v-model="selectedInstances"
+            return-object
+            multiple
+            item-text="title"
+            item-value="uuid"
+            :items="instances"
+            @change="onChangeInstance"
+            :loading="isInstancesLoading"
+          />
+        </v-col>
+
+        <v-col cols="2" v-if="isBalanceInvoice">
+          <v-text-field
+            type="number"
+            label="Total"
+            :suffix="accountCurrency?.title"
+            v-model="newInvoice.total"
+          />
+        </v-col>
+
+        <v-col cols="2">
+          <date-picker
+            :min="formatSecondsToDateString(Date.now() / 1000)"
+            label="Due date"
+            v-model="newInvoice.deadline"
+          />
+        </v-col>
+
+        <template v-if="isEdit">
+          <v-col cols="2">
+            <date-picker
+              label="Created"
+              v-model="newInvoice.created"
+              :readonly="!newInvoice.created"
+              :disabled="!newInvoice.created"
+            />
+          </v-col>
+
+          <v-col cols="2">
+            <date-picker
+              :min="newInvoice.created"
+              label="Payment"
+              v-model="newInvoice.payment"
+              :readonly="!newInvoice.payment"
+              :disabled="!newInvoice.payment"
+            />
+          </v-col>
+
+          <v-col cols="2">
+            <date-picker
+              label="Processed"
+              v-model="newInvoice.processed"
+              readonly
+              disabled
+            />
+          </v-col>
+
+          <v-col v-if="newInvoice.returned" cols="2">
+            <date-picker
+              :min="newInvoice.payment"
+              label="Refunded"
+              v-model="newInvoice.returned"
+              :readonly="!newInvoice.returned"
+              :disabled="!newInvoice.returned"
+            />
+          </v-col>
+        </template>
       </v-row>
       <v-textarea
+        outlined
         no-resize
         label="Admin note"
         v-model="newInvoice.meta.note"
@@ -310,6 +273,7 @@ import {
   UpdateInvoiceStatusRequest,
 } from "nocloud-proto/proto/es/billing/billing_pb";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import useInvoices from "../hooks/useInvoices";
 
 const props = defineProps({
   invoice: {},
@@ -321,6 +285,7 @@ const emit = defineEmits(["refresh"]);
 
 const store = useStore();
 const router = useRouter();
+const { getInvoiceStatusColor, getTotalColor } = useInvoices();
 
 const selectedInstances = ref([]);
 
