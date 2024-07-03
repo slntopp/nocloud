@@ -777,3 +777,37 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 
 	return &result, nil
 }
+
+func (s *InstancesServer) Get(ctx context.Context, req *pb.Instance) (*pb.Instance, error) {
+	log := s.log.Named("List")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
+	var instance graph.Instance
+	instance, err := graph.GetInstanceWithAccess(
+		ctx, s.db,
+		instance_id,
+	)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if instance.GetAccess().GetLevel() != accesspb.Level_ROOT {
+		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ROOT)
+
+	if ok {
+		i, err := s.ctrl.Get(ctx, req.GetUuid())
+		if err != nil {
+			return nil, err
+		}
+		return i.Instance, nil
+	}
+
+	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance")
+}
