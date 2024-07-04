@@ -27,10 +27,10 @@ const store = useStore();
 
 const widgets = [
   { component: ChatsWidget, key: "chats" },
-  { component: ChatsResponsibles, key: "chats-responsibles" },
   { component: AccountsWidget, key: "accounts" },
   { component: InstancesWidget, key: "instances" },
   { component: TransactionsWidget, key: "transactions" },
+  { component: ChatsResponsibles, key: "chats-responsibles" },
   { component: InstancesTypesWidget, key: "instances-types" },
   { component: InstancesPricesWidget, key: "instances-prices" },
 ];

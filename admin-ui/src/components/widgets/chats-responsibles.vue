@@ -122,7 +122,7 @@ const chatsResponsibleStatistic = computed(() => {
       }
 
       let count = chatResponsibles.get(responsible) || 0;
-      if (data.value.status === "all") {
+      if (data.value.status === "all" || !data.value.status) {
         count++;
       } else if (data.value.status === "close" && chat.status === 3) {
         count++;
@@ -133,8 +133,7 @@ const chatsResponsibleStatistic = computed(() => {
       chatResponsibles.set(responsible, count);
     });
 
-
-    console.log(chatResponsibles);
+  console.log(chatResponsibles);
   return chatResponsibles;
 });
 
@@ -162,7 +161,7 @@ const series = computed(() =>
 
 const setDefaultData = () => {
   if (Object.keys(data.value || {}).length === 0) {
-    emit("update", { period: "week", starus: "all" });
+    emit("update", { period: "week", status: "all" });
   }
 };
 
