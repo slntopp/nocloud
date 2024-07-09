@@ -223,6 +223,10 @@ import nocloudTable from "@/components/table.vue";
 import { mapGetters } from "vuex";
 import { getBillingPeriod, getMarginedValue } from "@/functions";
 import api from "@/api";
+import {
+  Addon,
+  ListAddonsRequest,
+} from "nocloud-proto/proto/es/billing/addons/addons_pb";
 
 export default {
   name: "dedicated-table",
@@ -473,28 +477,58 @@ export default {
 
       this.$emit("changeFee", this.fee);
 
-      this.plans.forEach((p) => {
-        p.meta.addons?.forEach((a) => {
-          if (a.virtual) {
-            return;
-          }
+      const addonsForCreate = [];
+      const addonsForUpdate = [];
+      let allAddons = [];
 
-          plan.resources.push({
-            key: a.id,
+      this.plans.forEach((p) => {
+        p.meta.addons?.forEach((addon) => {
+          console.log(addon);
+
+          const data = Addon.fromJson({
+            system: true,
+            group: this.template.uuid,
             kind: "PREPAID",
-            title: a.title,
-            price: a.price,
-            public: a.public,
-            period: this.getPeriod(a.duration),
-            except: false,
-            meta: { ...a.meta, basePrice: a.basePrice },
-            on: [],
+            public: addon.public,
+            meta: {
+              planCode: addon.planCode,
+              apiName: addon.apiName,
+              id: addon.id,
+              basePrice: addon.basePrice,
+            },
+            title: addon.title,
+            periods: { [this.getPeriod(p.duration)]: addon.price },
           });
+          if (addon.uuid) {
+            data.uuid = addon.uuid;
+            addonsForUpdate.push(data);
+          } else {
+            addonsForCreate.push(data);
+          }
+        });
+      });
+
+      console.log(addonsForCreate, addonsForUpdate);
+
+      if (addonsForCreate.length) {
+        const createdAddons = await this.addonsClient.createBulk({
+          addons: addonsForCreate,
         });
 
-        const addons = (p.meta.addons || [])
-          .filter((addon) => addon.public)
-          ?.map((el) => el.id);
+        allAddons.push(...createdAddons.toJson().addons);
+      }
+
+      if (addonsForUpdate.length) {
+        const updatedAddons = await this.addonsClient.updateBulk({
+          addons: addonsForUpdate,
+        });
+        allAddons.push(...updatedAddons.toJson().addons);
+      }
+
+      this.plans.forEach((p) => {
+        const addons = (p.meta.addons || [])?.map(
+          (el) => allAddons.find((addon) => addon.meta.id === el.id)?.uuid
+        );
 
         plan.products[p.id] = {
           kind: "PREPAID",
@@ -511,8 +545,9 @@ export default {
             apiName: p.apiName,
             cpu: p.cpu,
             baseInstallationFee: p.installation_fee?.price?.value,
-            addons,
+            addons: undefined,
           },
+          addons,
         };
       });
     },
@@ -665,37 +700,38 @@ export default {
   mounted() {
     this.refreshApiPlans();
   },
-  created() {
+  async created() {
     this.$emit("changeFee", this.template.fee);
+
+    const { addons = [] } = await this.addonsClient.list(
+      ListAddonsRequest.fromJson({ filters: { group: [this.template.uuid] } })
+    );
 
     this.plans = Object.keys(this.template.products || {}).map((key) => {
       const product = this.template.products[key];
 
       const [duration, planCode] = key.split(" ");
 
-      const addons = this.template.resources
+      const tariffAddons = addons
         .filter((a) => {
-          if (a.virtual && product.meta.addons.includes(a.key)) {
-            return true;
-          }
-
-          const [addonDuration, addonPlanCode] = a.key.split(" ");
-
-          if (addonDuration === duration && addonPlanCode === planCode) {
+          if (product.addons.includes(a.uuid)) {
             return true;
           }
           return false;
         })
         .map((a) => {
-          const id = a.key.split(" ")[1];
+          // const id =.split(" ")[1];
 
           return {
-            ...a,
-            id: a.key,
-            meta: { ...a.meta },
-            planCode: id,
-            duration: a.virtual ? null : duration,
             basePrice: a.meta.basePrice,
+            id: a.meta.id,
+            group: "",
+            duration,
+            planCode: a.meta.planCode,
+            apiName: a.meta.apiName,
+            title: a.title,
+            price: a.periods[this.getPeriod(duration)],
+            public: a.public,
           };
         });
 
@@ -715,7 +751,7 @@ export default {
         id: key,
         meta: {
           ...product.meta,
-          addons,
+          addons: tariffAddons,
         },
       };
     });
@@ -735,8 +771,12 @@ export default {
         return 1;
       }
       return this.rates.find(
-        (r) => r.from.title === "PLN" && r.to.title === this.defaultCurrency.title
+        (r) =>
+          r.from.title === "PLN" && r.to.title === this.defaultCurrency.title
       )?.rate;
+    },
+    addonsClient() {
+      return this.$store.getters["addons/addonsClient"];
     },
   },
   watch: {
