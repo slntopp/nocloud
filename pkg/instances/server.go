@@ -549,6 +549,7 @@ LET instances = (
 	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
 	            RETURN sp_node._key
         )
+        LET ig = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-2]._key))
         LET srv = path.vertices[-3]._key
         LET ns = path.vertices[-4]._key
         LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))

@@ -19,6 +19,7 @@ import InstancesWidget from "@/components/widgets/instances";
 import InstancesTypesWidget from "@/components/widgets/instances-types.vue";
 import InstancesPricesWidget from "@/components/widgets/instances-prices.vue";
 import ChatsWidget from "@/components/widgets/chats.vue";
+import ChatsResponsibles from "@/components/widgets/chats-responsibles.vue";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useStore } from "@/store/";
 
@@ -29,6 +30,7 @@ const widgets = [
   { component: AccountsWidget, key: "accounts" },
   { component: InstancesWidget, key: "instances" },
   { component: TransactionsWidget, key: "transactions" },
+  { component: ChatsResponsibles, key: "chats-responsibles" },
   { component: InstancesTypesWidget, key: "instances-types" },
   { component: InstancesPricesWidget, key: "instances-prices" },
 ];
