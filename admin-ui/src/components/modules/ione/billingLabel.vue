@@ -11,7 +11,7 @@
 </template>
 
 <script setup>
-import { computed, ref, toRefs } from "vue";
+import { computed, toRefs } from "vue";
 import { formatSecondsToDate, getInstancePrice } from "@/functions";
 import billingLabel from "@/components/ui/billingLabel.vue";
 
@@ -20,9 +20,6 @@ const emit = defineEmits(["update"]);
 
 const { template, account, addons } = toRefs(props);
 
-const tariffPrice = ref(
-  template.value.billingPlan.products[template.value.product]?.price ?? 0
-);
 const addonsPrices = computed(() => {
   const prices = {};
   console.log(addons);
