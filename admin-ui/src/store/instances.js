@@ -7,6 +7,7 @@ export default {
   namespaced: true,
   state: {
     instances: [],
+    cached: new Map(),
     one: null,
     loading: false,
     total: 0,
@@ -24,6 +25,12 @@ export default {
     setLoading(state, data) {
       state.loading = data;
     },
+    setCached(state, data) {
+      state.cached = data;
+    },
+    setToCached(state, { instance, uuid }) {
+      state.cached.set(uuid, instance);
+    },
   },
   actions: {
     async fetch({ commit }, params) {
@@ -39,6 +46,8 @@ export default {
 
         commit("setInstances", response.pool);
         commit("setTotal", response.count);
+
+        return response.pool
       } finally {
         commit("setLoading", false);
       }
@@ -52,10 +61,26 @@ export default {
         commit("setLoading", false);
       }
     },
+    async fetchToCached({ state, commit }, uuid) {
+      if (state.cached.has(uuid)) {
+        return state.cached.get(uuid);
+      }
+
+      commit("setToCached", { instance: api.get("/instances/" + uuid), uuid });
+
+      const response = await state.cached.get(uuid);
+
+      commit("setToCached", { instance: response, uuid });
+
+      return response;
+    },
   },
   getters: {
     all(state) {
       return state.instances;
+    },
+    cached(state) {
+      return state.cached;
     },
     one(state) {
       return state.one;
