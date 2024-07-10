@@ -62,6 +62,7 @@ func init() {
 
 	viper.SetDefault("PORT", "8000")
 
+	
 	viper.SetDefault("REDIS_HOST", "redis:6379")
 	viper.SetDefault("DB_HOST", "localhost:8529")
 	viper.SetDefault("DB_CRED", "root:openSesame")

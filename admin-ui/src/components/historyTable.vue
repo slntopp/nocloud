@@ -161,6 +161,13 @@ const getEntityByUuid = (item) => {
         type: "Service provider",
       };
     }
+    case "BillingPlans": {
+      return {
+        route: { name: "Plan", params: { planId: item.uuid } },
+        item: getBillingPlan(item.uuid),
+        type: "Plan",
+      };
+    }
     default: {
       return { route: null, item: null };
     }
@@ -228,6 +235,10 @@ const getServiceProvider = (uuid) => {
   return sps.value.find((s) => s.uuid === uuid) || uuid;
 };
 
+const getBillingPlan = (uuid) => {
+  return plans.value.find((s) => s.uuid === uuid) || uuid;
+};
+
 const isLoading = computed(() => {
   return isFetchLoading.value || isCountLoading.value;
 });
@@ -261,6 +272,7 @@ const searchFields = computed(() => {
 
 const services = computed(() => store.getters["services/all"]);
 const sps = computed(() => store.getters["servicesProviders/all"]);
+const plans = computed(() => store.getters["plans/all"]);
 const instances = computed(() => store.getters["services/getInstances"]);
 const filter = computed(() => store.getters["appSearch/filter"]);
 const path = computed(() => filter.value.path || undefined);

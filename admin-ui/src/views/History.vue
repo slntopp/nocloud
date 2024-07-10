@@ -31,12 +31,16 @@ export default {
     await Promise.all([
       this.$store.dispatch("services/fetch", { showDeleted: true }),
       this.$store.dispatch("servicesProviders/fetch", { anonymously: false }),
+      this.$store.dispatch("plans/fetch"),
     ]);
     this.isVariantsLoading = false;
 
     this.$store.commit("appSearch/pushFields", [
       {
-        items: this.services.concat(this.instances).concat(this.sps),
+        items: this.services
+          .concat(this.instances)
+          .concat(this.sps)
+          .concat(this.plans),
         type: "select",
         title: "Entity",
         key: "entity",
@@ -64,6 +68,9 @@ export default {
     },
     services() {
       return this.$store.getters["services/all"];
+    },
+    plans() {
+      return this.$store.getters["plans/all"];
     },
   },
   watch: {

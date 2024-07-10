@@ -66,7 +66,7 @@
           <v-btn
             :to="{
               name: 'Instance create',
-              params: {
+              query: {
                 serviceId,
                 accountId: newInstance.account,
                 type:

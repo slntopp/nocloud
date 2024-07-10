@@ -121,6 +121,10 @@ export default {
           component: () => import("@/components/plan/instances.vue"),
         },
         {
+          title: "Event log",
+          component: () => import("@/components/plan/history.vue"),
+        },
+        {
           title: "Template",
           component: () => import("@/components/plan/template.vue"),
         },

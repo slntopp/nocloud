@@ -82,6 +82,10 @@
       {{ formatSecondsToDate(getValue("date", item)) || "Unknown" }}
     </template>
 
+    <template v-slot:[`item.deleted`]="{ item }">
+      {{ formatSecondsToDate(item.deleted) || "-" }}
+    </template>
+
     <template v-slot:[`item.dueDate`]="{ item }">
       {{
         typeof getExpirationDate(item) === "number"
@@ -610,6 +614,7 @@ export default {
         { text: "Period", value: "period" },
         { text: "Email", value: "email" },
         { text: "Created date", value: "date", editable: { type: "date" } },
+        { text: "Deleted date", value: "deleted" },
         { text: "UUID", value: "uuid" },
         { text: "Price model", value: "billingPlan.title" },
         { text: "IP", value: "state.meta.networking" },
