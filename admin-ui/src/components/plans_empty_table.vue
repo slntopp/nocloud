@@ -36,8 +36,7 @@
     <template v-slot:[`item.value`]="{ item }">
       <v-text-field
         dense
-        type="number"
-        :rules="[rules.price]"
+        :rules="[rules.required]"
         :value="item.value"
         @input="(value) => changeResource('value', value, item.id)"
       />
