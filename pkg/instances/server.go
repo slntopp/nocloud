@@ -39,6 +39,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type InstancesServer struct {
@@ -534,86 +535,13 @@ func (s *InstancesServer) RemoveNote(ctx context.Context, req *notes.RemoveNoteR
 	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance notes")
 }
 
-const listInstancesQuery = `
-LET instances = (
-	FOR node, edge, path IN 0..10 OUTBOUND @account
-	    GRAPH @permissions_graph
-	    OPTIONS {order: "bfs", uniqueVertices: "global"}
-	    FILTER IS_SAME_COLLECTION(@instances, node)
-
-        LET ig = DOCUMENT(path.vertices[-2]._id)
-        LET sp = LAST (
-            FOR sp_node IN 1 OUTBOUND ig
-	            GRAPH @permissions_graph
-	            OPTIONS {order: "bfs", uniqueVertices: "global"}
-	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
-	            RETURN sp_node._key
-        )
-        LET srv = path.vertices[-3]._key
-        LET ns = path.vertices[-4]._key
-        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
-		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
-		
-		%s
-		
-		RETURN {
-			instance: MERGE(node, { 
-				uuid: node._key, 
-				billing_plan: {
-					uuid: bp._key,
-					title: bp.title,
-					type: bp.type,
-					kind: bp.kind,
-					resources: bp.resources,
-					products: {
-						[node.product]: bp.products[node.product],
-					},
-					meta: bp.meta,
-					fee: bp.fee,
-					software: bp.software 
-				}
-			}
-			),
-			service: srv,
-			sp: sp,
-			type: bp.type
-		}
-)
-
-return { 
-	pool: (@limit > 0) ? SLICE(instances, @offset, @limit) : instances,
-	count: LENGTH(instances)
-}
-`
-
-func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest) (*pb.ListInstancesResponse, error) {
-	log := s.log.Named("List")
-	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
-	log.Debug("Requestor", zap.String("id", requestor))
-
-	limit, page := req.GetLimit(), req.GetPage()
-	offset := (page - 1) * limit
-
-	var query string
-	bindVars := map[string]interface{}{
-		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
-		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
-		"instances":         schema.INSTANCES_COL,
-		"accounts":          schema.ACCOUNTS_COL,
-		"bps":               schema.BILLING_PLANS_COL,
-		"service_provider":  schema.SERVICES_PROVIDERS_COL,
-		"offset":            offset,
-		"limit":             limit,
+func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]interface{}) string {
+	if len(filters) == 0 {
+		return ""
 	}
 
-	if req.Field != nil && req.Sort != nil {
-		subQuery := ` SORT node.%s %s`
-		field, sort := req.GetField(), req.GetSort()
-
-		query += fmt.Sprintf(subQuery, field, sort)
-	}
-
-	for key, val := range req.GetFilters() {
+	query := ""
+	for key, val := range filters {
 		if key == "account" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
@@ -747,6 +675,91 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 		}
 	}
 
+	return query
+}
+
+const listInstancesQuery = `
+LET instances = (
+	FOR node, edge, path IN 0..10 OUTBOUND @account
+	    GRAPH @permissions_graph
+	    OPTIONS {order: "bfs", uniqueVertices: "global"}
+	    FILTER IS_SAME_COLLECTION(@instances, node)
+
+        LET ig = DOCUMENT(path.vertices[-2]._id)
+        LET sp = LAST (
+            FOR sp_node IN 1 OUTBOUND ig
+	            GRAPH @permissions_graph
+	            OPTIONS {order: "bfs", uniqueVertices: "global"}
+	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
+	            RETURN sp_node._key
+        )
+        LET srv = path.vertices[-3]._key
+        LET ns = path.vertices[-4]._key
+        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
+		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
+		
+		%s
+		
+		RETURN {
+			instance: MERGE(node, { 
+				uuid: node._key, 
+				billing_plan: {
+					uuid: bp._key,
+					title: bp.title,
+					type: bp.type,
+					kind: bp.kind,
+					resources: bp.resources,
+					products: {
+						[node.product]: bp.products[node.product],
+					},
+					meta: bp.meta,
+					fee: bp.fee,
+					software: bp.software 
+				}
+			}
+			),
+			service: srv,
+			sp: sp,
+			type: bp.type,
+			account: acc._key
+		}
+)
+
+return { 
+	pool: (@limit > 0) ? SLICE(instances, @offset, @limit) : instances,
+	count: LENGTH(instances)
+}
+`
+
+func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest) (*pb.ListInstancesResponse, error) {
+	log := s.log.Named("List")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	limit, page := req.GetLimit(), req.GetPage()
+	offset := (page - 1) * limit
+
+	var query string
+	bindVars := map[string]interface{}{
+		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"instances":         schema.INSTANCES_COL,
+		"accounts":          schema.ACCOUNTS_COL,
+		"bps":               schema.BILLING_PLANS_COL,
+		"service_provider":  schema.SERVICES_PROVIDERS_COL,
+		"offset":            offset,
+		"limit":             limit,
+	}
+
+	if req.Field != nil && req.Sort != nil {
+		subQuery := ` SORT node.%s %s`
+		field, sort := req.GetField(), req.GetSort()
+
+		query += fmt.Sprintf(subQuery, field, sort)
+	}
+
+	query += getFiltersQuery(req.GetFilters(), bindVars)
+
 	query = fmt.Sprintf(listInstancesQuery, query)
 
 	s.log.Debug("Query", zap.Any("q", query))
@@ -777,36 +790,199 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 	return &result, nil
 }
 
-func (s *InstancesServer) Get(ctx context.Context, req *pb.Instance) (*pb.Instance, error) {
-	log := s.log.Named("List")
+const countInstancesQuery = `
+LET instances = (
+	FOR node, edge, path IN 0..10 OUTBOUND @account
+	    GRAPH @permissions_graph
+	    OPTIONS {order: "bfs", uniqueVertices: "global"}
+	    FILTER IS_SAME_COLLECTION(@instances, node)
+
+        LET ig = DOCUMENT(path.vertices[-2]._id)
+        LET sp = LAST (
+            FOR sp_node IN 1 OUTBOUND ig
+	            GRAPH @permissions_graph
+	            OPTIONS {order: "bfs", uniqueVertices: "global"}
+	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
+	            RETURN sp_node._key
+        )
+        LET srv = path.vertices[-3]._key
+        LET ns = path.vertices[-4]._key
+        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
+		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
+		
+		%s
+		
+		RETURN {
+			instance: MERGE(node, { 
+				uuid: node._key, 
+				billing_plan: {
+					uuid: bp._key,
+					title: bp.title,
+					type: bp.type,
+					kind: bp.kind,
+					resources: bp.resources,
+					products: {
+						[node.product]: bp.products[node.product],
+					},
+					meta: bp.meta,
+					fee: bp.fee,
+					software: bp.software 
+				}
+			}
+			),
+			service: srv,
+			sp: sp,
+			type: bp.type
+		}
+)
+
+let locations = (
+ FOR inst IN instances
+ FILTER inst.config.location
+ FILTER inst.config.location != ""
+ RETURN DISTINCT inst.config.location
+)
+
+let products = (
+ FOR inst IN instances
+ FILTER inst.product
+ FILTER inst.product != ""
+ RETURN DISTINCT inst.product
+)
+
+return { 
+	unique: {
+		locations: locations,
+		products: products,
+	},
+	total: LENGTH(instances)
+}
+`
+
+func (s *InstancesServer) GetCount(ctx context.Context, req *pb.GetCountRequest) (*pb.GetCountResponse, error) {
+	log := s.log.Named("GetCount")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
 
-	instance_id := driver.NewDocumentID(schema.INSTANCES_COL, req.Uuid)
-	var instance graph.Instance
-	instance, err := graph.GetInstanceWithAccess(
-		ctx, s.db,
-		instance_id,
-	)
+	var query string
+	bindVars := map[string]interface{}{
+		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"instances":         schema.INSTANCES_COL,
+		"accounts":          schema.ACCOUNTS_COL,
+		"bps":               schema.BILLING_PLANS_COL,
+		"service_provider":  schema.SERVICES_PROVIDERS_COL,
+		"offset":            0,
+		"limit":             0,
+	}
+
+	query += getFiltersQuery(req.GetFilters(), bindVars)
+
+	query = fmt.Sprintf(countInstancesQuery, query)
+
+	s.log.Debug("Query", zap.Any("q", query))
+	s.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	c, err := s.db.Query(ctx, query, bindVars)
 	if err != nil {
-		log.Error("Failed to get instance", zap.Error(err))
-		return nil, status.Error(codes.Internal, err.Error())
+		return nil, err
+	}
+	defer c.Close()
+	var result pb.GetCountResponse
+	_, err = c.ReadDocument(ctx, &result)
+	if err != nil {
+		return nil, err
 	}
 
-	if instance.GetAccess().GetLevel() != accesspb.Level_ROOT {
-		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
-		return nil, status.Error(codes.PermissionDenied, "Access denied")
-	}
+	return &result, nil
+}
 
-	ok := graph.HasAccess(ctx, s.db, requestor, driver.NewDocumentID(schema.NAMESPACES_COL, schema.ROOT_NAMESPACE_KEY), accesspb.Level_ROOT)
+const getInstanceQuery = `
+LET instances = (
+	FOR node, edge, path IN 0..10 OUTBOUND @account
+	    GRAPH @permissions_graph
+	    OPTIONS {order: "bfs", uniqueVertices: "global"}
+	    FILTER IS_SAME_COLLECTION(@instances, node)
 
-	if ok {
-		i, err := s.ctrl.Get(ctx, req.GetUuid())
-		if err != nil {
-			return nil, err
+		FILTER node._key == @uuid
+
+        LET ig = DOCUMENT(path.vertices[-2]._id)
+        LET sp = LAST (
+            FOR sp_node IN 1 OUTBOUND ig
+	            GRAPH @permissions_graph
+	            OPTIONS {order: "bfs", uniqueVertices: "global"}
+	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
+	            RETURN sp_node._key
+        )
+        LET srv = path.vertices[-3]._key
+        LET ns = path.vertices[-4]._key
+        LET acc = DOCUMENT(CONCAT(@accounts, "/", path.vertices[-5]._key))
+		LET bp = DOCUMENT(CONCAT(@bps, "/", node.billing_plan.uuid))
+		
+		%s
+		
+		RETURN {
+			instance: MERGE(node, { 
+				uuid: node._key, 
+				billing_plan: {
+					uuid: bp._key,
+					title: bp.title,
+					type: bp.type,
+					kind: bp.kind,
+					resources: bp.resources,
+					products: {
+						[node.product]: bp.products[node.product],
+					},
+					meta: bp.meta,
+					fee: bp.fee,
+					software: bp.software 
+				}
+			}
+			),
+			service: srv,
+			sp: sp,
+			type: bp.type,
+			account: acc._key
 		}
-		return i.Instance, nil
+)
+
+FILTER LENGTH(instances) > 0
+RETURN instances[0]
+`
+
+func (s *InstancesServer) Get(ctx context.Context, req *pb.Instance) (*pb.ResponseInstance, error) {
+	log := s.log.Named("Get")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	var query string
+	bindVars := map[string]interface{}{
+		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
+		"instances":         schema.INSTANCES_COL,
+		"accounts":          schema.ACCOUNTS_COL,
+		"bps":               schema.BILLING_PLANS_COL,
+		"service_provider":  schema.SERVICES_PROVIDERS_COL,
+		"offset":            0,
+		"limit":             0,
+		"uuid":              req.Uuid,
 	}
 
-	return nil, status.Error(codes.PermissionDenied, "Not enough access rights to Instance")
+	s.log.Debug("Query", zap.Any("q", query))
+	s.log.Debug("Ready to build query", zap.Any("bindVars", bindVars))
+
+	query = fmt.Sprintf(getInstanceQuery, query)
+
+	c, err := s.db.Query(ctx, query, bindVars)
+	if err != nil {
+		return nil, err
+	}
+	defer c.Close()
+	var result pb.ResponseInstance
+	_, err = c.ReadDocument(ctx, &result)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
