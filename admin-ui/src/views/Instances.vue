@@ -112,7 +112,7 @@
 import api from "@/api.js";
 import snackbar from "@/mixins/snackbar.js";
 import confirmDialog from "@/components/confirmDialog.vue";
-import instancesTable from "@/components/instances_table.vue";
+import instancesTable from "@/components/instancesTable.vue";
 import { defaultFilterObject } from "@/functions";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 
