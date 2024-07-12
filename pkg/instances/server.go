@@ -788,6 +788,7 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 		}
 	}
 
+	log.Debug("Result", zap.Any("result", &result))
 	return &result, nil
 }
 
