@@ -963,8 +963,6 @@ func (s *InstancesServer) Get(ctx context.Context, req *pb.Instance) (*pb.Respon
 		"accounts":          schema.ACCOUNTS_COL,
 		"bps":               schema.BILLING_PLANS_COL,
 		"service_provider":  schema.SERVICES_PROVIDERS_COL,
-		"offset":            0,
-		"limit":             0,
 		"uuid":              req.Uuid,
 	}
 
