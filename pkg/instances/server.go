@@ -735,6 +735,7 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 	log := s.log.Named("List")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
+	log.Debug("Request", zap.Any("req", req))
 
 	limit, page := req.GetLimit(), req.GetPage()
 	offset := (page - 1) * limit
