@@ -856,7 +856,7 @@ return {
 			struct_value: {
                 fields: {
                     locations: locations,
-				    products: products,
+				    products: products
                 }
 			}
         }
