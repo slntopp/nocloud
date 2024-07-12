@@ -840,14 +840,14 @@ let locations = (
  FOR inst IN instances
  FILTER inst.config.location
  FILTER inst.config.location != ""
- RETURN DISTINCT inst.config.location
+ RETURN inst.config.location
 )
 
 let products = (
  FOR inst IN instances
  FILTER inst.product
  FILTER inst.product != ""
- RETURN DISTINCT inst.product
+ RETURN inst.product
 )
 
 return { 
