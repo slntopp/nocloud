@@ -872,8 +872,6 @@ func (s *InstancesServer) GetCount(ctx context.Context, req *pb.GetCountRequest)
 		"accounts":          schema.ACCOUNTS_COL,
 		"bps":               schema.BILLING_PLANS_COL,
 		"service_provider":  schema.SERVICES_PROVIDERS_COL,
-		"offset":            0,
-		"limit":             0,
 	}
 
 	query += getFiltersQuery(req.GetFilters(), bindVars)
