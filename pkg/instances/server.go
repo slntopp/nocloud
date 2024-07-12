@@ -852,8 +852,14 @@ let products = (
 
 return { 
 	unique: {
-		locations: locations,
-		products: products,
+        kind: {
+			struct_value: {
+                fields: {
+                    locations: locations,
+				    products: products,
+                }
+			}
+        }
 	},
 	total: LENGTH(instances)
 }
