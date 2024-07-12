@@ -852,14 +852,8 @@ let products = (
 
 return { 
 	unique: {
-        kind: {
-			struct_value: {
-                fields: {
-                    locations: locations,
-				    products: products
-                }
-			}
-        }
+        locations: locations,
+        products: products
 	},
 	total: LENGTH(instances)
 }
@@ -869,6 +863,11 @@ func (s *InstancesServer) GetCount(ctx context.Context, req *pb.GetCountRequest)
 	log := s.log.Named("GetCount")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
+
+	type Response struct {
+		Total  int                    `json:"total"`
+		Unique map[string]interface{} `json:"unique"`
+	}
 
 	var query string
 	bindVars := map[string]interface{}{
@@ -892,11 +891,19 @@ func (s *InstancesServer) GetCount(ctx context.Context, req *pb.GetCountRequest)
 		return nil, err
 	}
 	defer c.Close()
-	var result pb.GetCountResponse
-	_, err = c.ReadDocument(ctx, &result)
+	var resp Response
+	_, err = c.ReadDocument(ctx, &resp)
 	if err != nil {
 		return nil, err
 	}
+
+	var result pb.GetCountResponse
+	obj, err := structpb.NewStruct(resp.Unique)
+	if err != nil {
+		return nil, err
+	}
+	result.Unique = structpb.NewStructValue(obj)
+	result.Total = uint64(resp.Total)
 
 	return &result, nil
 }
