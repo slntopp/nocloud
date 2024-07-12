@@ -680,7 +680,7 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 
 const listInstancesQuery = `
 LET instances = (
-	FOR node, edge, path IN 0..10 OUTBOUND @account
+	FOR node, edge, path IN 0..10 OUTBOUND @account_node
 	    GRAPH @permissions_graph
 	    OPTIONS {order: "bfs", uniqueVertices: "global"}
 	    FILTER IS_SAME_COLLECTION(@instances, node)
@@ -742,7 +742,7 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 
 	var query string
 	bindVars := map[string]interface{}{
-		"account":           driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
+		"account_node":      driver.NewDocumentID(schema.ACCOUNTS_COL, requestor),
 		"permissions_graph": schema.PERMISSIONS_GRAPH.Name,
 		"instances":         schema.INSTANCES_COL,
 		"accounts":          schema.ACCOUNTS_COL,
@@ -846,6 +846,13 @@ let locations = (
 )
 
 let products = (
+ FOR inst IN instances
+ FILTER inst.instance.product
+ FILTER inst.instance.product != ""
+ RETURN DISTINCT inst.instance.product
+)
+
+let periods = (
  FOR inst IN instances
  FILTER inst.instance.product
  FILTER inst.instance.product != ""
