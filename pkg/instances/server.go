@@ -838,16 +838,16 @@ LET instances = (
 
 let locations = (
  FOR inst IN instances
- FILTER inst.config.location
- FILTER inst.config.location != ""
- RETURN inst.config.location
+ FILTER inst.instance.config.location
+ FILTER inst.instance.config.location != ""
+ RETURN DISTINCT inst.instance.config.location
 )
 
 let products = (
  FOR inst IN instances
- FILTER inst.product
- FILTER inst.product != ""
- RETURN inst.product
+ FILTER inst.instance.product
+ FILTER inst.instance.product != ""
+ RETURN DISTINCT inst.instance.product
 )
 
 return { 
