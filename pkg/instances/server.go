@@ -896,6 +896,7 @@ func (s *InstancesServer) GetCount(ctx context.Context, req *pb.GetCountRequest)
 	if err != nil {
 		return nil, err
 	}
+	log.Debug("Response", zap.Any("resp", resp))
 
 	var result pb.GetCountResponse
 	obj, err := structpb.NewStruct(resp.Unique)
