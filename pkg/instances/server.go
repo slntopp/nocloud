@@ -547,7 +547,7 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER acc._key in @%s`, key)
+			query += fmt.Sprintf(` FILTER TO_STRING(acc._key) in @%s`, key)
 			bindVars[key] = values
 		} else if key == "email" {
 			query += fmt.Sprintf(` FILTER CONTAINS(acc.data.email, "%s")`, val.GetStringValue())
