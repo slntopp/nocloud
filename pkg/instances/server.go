@@ -868,7 +868,7 @@ return {
 }
 `
 
-func (s *InstancesServer) GetCount(ctx context.Context, req *pb.GetCountRequest) (*pb.GetCountResponse, error) {
+func (s *InstancesServer) GetUnique(ctx context.Context, req *pb.GetUniqueRequest) (*pb.GetUniqueResponse, error) {
 	log := s.log.Named("GetCount")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
 	log.Debug("Requestor", zap.String("id", requestor))
@@ -907,7 +907,7 @@ func (s *InstancesServer) GetCount(ctx context.Context, req *pb.GetCountRequest)
 	}
 	log.Debug("Response", zap.Any("resp", resp))
 
-	var result pb.GetCountResponse
+	var result pb.GetUniqueResponse
 	obj, err := structpb.NewStruct(resp.Unique)
 	if err != nil {
 		return nil, err
