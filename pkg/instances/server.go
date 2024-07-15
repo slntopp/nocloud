@@ -845,14 +845,13 @@ let locations = (
  RETURN DISTINCT inst.instance.config.location
 )
 
-let products = (
+let periods = (
  FOR inst IN instances
- FILTER inst.instance.product
- FILTER inst.instance.product != ""
- RETURN DISTINCT inst.instance.product
+ FILTER inst.period
+ RETURN DISTINCT inst.period
 )
 
-let periods = (
+let products = (
  FOR inst IN instances
  FILTER inst.instance.product
  FILTER inst.instance.product != ""
@@ -862,7 +861,8 @@ let periods = (
 return { 
 	unique: {
         locations: locations,
-        products: products
+        products: products,
+        periods: periods
 	},
 	total: LENGTH(instances)
 }
