@@ -594,11 +594,11 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
 				from := val.(float64)
-				query += fmt.Sprintf(` FILTER node.price >= %f`, from)
+				query += fmt.Sprintf(` FILTER node.estimate >= %f`, from)
 			}
 			if val, ok := values["to"]; ok {
 				to := val.(float64)
-				query += fmt.Sprintf(` FILTER node.price <= %f`, to)
+				query += fmt.Sprintf(` FILTER node.estimate <= %f`, to)
 			}
 		} else if key == "service" {
 			values := val.GetListValue().AsSlice()
