@@ -667,7 +667,7 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 				to := val.(int)
 				query += fmt.Sprintf(` FILTER node.data.next_payment_date <= %d`, to)
 			}
-		} else if key == "ip" {
+		} else if key == "state.meta.networking" {
 			val := val.GetStringValue()
 			query += fmt.Sprintf(` FILTER @%s in node.state.meta.networking.public || @%s in node.state.meta.networking.private`, key, key)
 			bindVars[key] = val
