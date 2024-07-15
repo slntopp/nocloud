@@ -896,7 +896,7 @@ let billing_plans = (
  FOR inst IN instances
  FILTER inst.instance.billing_plan
  COLLECT uuid = inst.instance.billing_plan.uuid, title = inst.instance.billing_plan.title,
- RETURN DISTINCT { uuid, title }
+ RETURN { uuid, title }
 )
 
 return { 
