@@ -22,7 +22,7 @@
         v-if="!isAccountsLoading"
         :to="{ name: 'Account', params: { accountId: value } }"
       >
-        {{ getAccount(value) }}
+        {{ getAccount(value)?.title }}
       </router-link>
       <v-skeleton-loader type="text" v-else />
     </template>
@@ -38,7 +38,7 @@
       </div>
     </template>
 
-    <template v-slot:[`item.dueDate`]="{ item }">
+    <template v-slot:[`item.data.next_payment_date`]="{ item }">
       {{
         typeof getExpirationDate(item) === "number"
           ? formatSecondsToDate(getExpirationDate(item))
@@ -71,7 +71,7 @@
       {{ getPeriod(item) }}
     </template>
 
-    <template v-slot:[`item.date`]="{ item }">
+    <template v-slot:[`item.created`]="{ item }">
       {{ formatSecondsToDate(+item.created || "Unknown") }}
     </template>
 
@@ -95,21 +95,11 @@
       </div>
     </template>
 
-    <template v-slot:[`item.access`]="{ item }">
-      <router-link
-        v-if="!isAccountsLoading"
-        :to="{
-          name: 'Account',
-          params: { accountId: getAccount(item.account)?.uuid },
-        }"
-      >
-        {{ getShortName(getAccount(item)?.title) }}
-      </router-link>
-      <v-skeleton-loader type="text" v-else />
-    </template>
-
     <template v-slot:[`item.email`]="{ item }">
-      {{ getShortName(getAccount(item.account)?.data?.email ?? "-") }}
+      <span v-if="!isAccountsLoading">
+        {{ getShortName(getAccount(item.account)?.data?.email ?? "-") }}
+      </span>
+      <v-skeleton-loader type="text" v-else />
     </template>
 
     <template v-slot:[`item.resources.cpu`]="{ value }">
@@ -129,7 +119,7 @@
       {{ getOSName(item) }}
     </template>
 
-    <template v-slot:[`item.state`]="{ item }">
+    <template v-slot:[`item.state.state`]="{ item }">
       <instance-state small :template="item" />
     </template>
 
@@ -137,6 +127,19 @@
       <router-link :to="{ name: 'ServicesProvider', params: { uuid: value } }">
         {{ getShortName(getServiceProvider(value)?.title) }}
       </router-link>
+    </template>
+
+    <template v-slot:[`item.estimate`]="{ item }">
+      {{ item.estimate }} {{ defaultCurrency?.title }}
+    </template>
+
+    <template v-slot:[`item.accountPrice`]="{ item }">
+      <span v-if="!isAccountsLoading">
+        {{ convertTo(item.estimate, getAccount(item.account)?.currency) }}
+        {{ getAccount(item.account)?.currency?.title }}
+      </span>
+
+      <v-skeleton-loader type="text" v-else />
     </template>
   </nocloud-table>
 </template>
@@ -157,6 +160,8 @@ import api from "@/api";
 import instanceIpMenu from "./ui/instanceIpMenu.vue";
 import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import InstanceState from "@/components/ui/instanceState.vue";
+import useCurrency from "@/hooks/useCurrency";
+import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
 
 const props = defineProps({
   tableName: { type: String, default: "instances-table" },
@@ -172,10 +177,15 @@ const { tableName, value, refetch, showSelect, openInNewTab } = toRefs(props);
 const emit = defineEmits(["input"]);
 
 const store = useStore();
+const { defaultCurrency, convertTo } = useCurrency();
 
 const page = ref(1);
 const options = ref({});
 const fetchError = ref("");
+
+const isUniqueFetched = ref(false);
+const uniqueProducts = ref([]);
+const uniqueLocations = ref([]);
 
 const instancesTypes = ref([]);
 
@@ -211,18 +221,22 @@ const headers = computed(() => {
   const headers = [
     { text: "ID", value: "id" },
     { text: "Name", value: "title" },
-    { text: "Account", value: "access" },
-    { text: "Due date", value: "dueDate", editable: { type: "date" } },
-    { text: "Status", value: "state" },
+    { text: "Account", value: "account" },
+    {
+      text: "Due date",
+      value: "data.next_payment_date",
+      editable: { type: "date" },
+    },
+    { text: "Status", value: "state.state" },
     { text: "Tariff", value: "product" },
     { text: "Service provider", value: "sp" },
     { text: "Location", value: "config.location" },
     { text: "Type", value: "type" },
-    { text: "NCU price", value: "price" },
+    { text: "NCU price", value: "estimate" },
     { text: "Account price", value: "accountPrice" },
     { text: "Period", value: "period" },
     { text: "Email", value: "email" },
-    { text: "Created date", value: "date", editable: { type: "date" } },
+    { text: "Created date", value: "created", editable: { type: "date" } },
     { text: "UUID", value: "uuid" },
     { text: "Price model", value: "billingPlan.title" },
     { text: "IP", value: "state.meta.networking" },
@@ -256,17 +270,70 @@ const total = computed(() => store.getters["instances/total"]);
 const servicesProviders = computed(
   () => store.getters["servicesProviders/all"]
 );
+const billingPlans = computed(() => store.getters["plans/all"]);
 
 const filter = computed(() => store.getters["appSearch/filter"]);
 
-const listOptions = computed(() => ({
-  filters: filter.value,
-  page: page.value,
-  limit: options.value.itemsPerPage,
-  field: options.value.sortBy?.[0],
-  sort:
-    options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
-}));
+const listOptions = computed(() => {
+  const filters = {};
+  const datekeys = ["created", "data.next_payment_date"];
+
+  for (const key of Object.keys(filter.value)) {
+    const value = filter.value[key];
+
+    if (
+      !value ||
+      (Array.isArray(value) && !value.length) ||
+      (typeof value === "object" && !Object.keys(value).length)
+    ) {
+      continue;
+    }
+
+    if (value?.to || value?.from) {
+      const total = {};
+      if (value?.to) {
+        total.to = +value?.to;
+      }
+      if (value?.from) {
+        total.from = +value?.from;
+      }
+
+      filters[key] = total;
+      continue;
+    }
+
+    if (datekeys.includes(key)) {
+      let dates = [];
+
+      if (value[0]) {
+        dates.push(new Date(value[0]).getTime() / 1000);
+      }
+      if (value[1]) {
+        dates.push(new Date(value[1]).getTime() / 1000);
+      }
+
+      dates = dates.sort();
+
+      const result = { from: dates[0] };
+      if (dates[1]) {
+        result.to = dates[1];
+      }
+      filters[key] = result;
+      continue;
+    }
+
+    filters[key] = filter.value[key];
+  }
+
+  return {
+    filters: filters,
+    page: page.value,
+    limit: options.value.itemsPerPage,
+    field: options.value.sortBy?.[0],
+    sort:
+      options.value.sortBy?.[0] && options.value.sortDesc?.[0] ? "DESC" : "ASC",
+  };
+});
 
 const searchFields = () =>
   computed(() => [
@@ -283,40 +350,44 @@ const searchFields = () =>
     },
     {
       key: "sp",
-      items: [],
+      items: servicesProviders.value.map((sp) => ({
+        text: sp.title,
+        value: sp.uuid,
+      })),
       type: "select",
       title: "Service provider",
     },
     {
       key: "config.location",
-      items: [],
+      items: uniqueLocations.value,
       type: "select",
       title: "Location",
     },
     {
-      key: "access",
-      type: "select",
+      key: "account",
+      custom: true,
+      multiple: true,
       title: "Account",
-      items: [],
+      component: AccountsAutocomplete,
     },
     {
       key: "product",
-      items: [],
+      items: uniqueProducts.value,
       type: "select",
       title: "Product",
     },
     {
-      key: "state",
+      key: "state.state",
       items: [
-        "INIT",
-        "RUNNING",
-        "STOPPED",
-        "PENDING",
-        "OPERATION",
-        "SUSPENDED",
-        "UNKNOWN",
-        "DELETED",
-        "ERROR",
+        { text: "INIT", value: 0 },
+        { text: "RUNNING", value: 3 },
+        { text: "STOPPED", value: 2 },
+        { text: "PENDING", value: 8 },
+        { text: "OPERATION", value: 7 },
+        { text: "SUSPENDED", value: 6 },
+        { text: "DELETED", value: 5 },
+        { text: "ERROR", value: 4 },
+        { text: "UNKNOWN", value: 1 },
       ],
       type: "select",
       title: "State",
@@ -328,15 +399,18 @@ const searchFields = () =>
       items: instancesTypes.value,
     },
     {
-      key: "billingPlan.title",
+      key: "billing_plan",
       type: "select",
       title: "Billing plan",
-      items: [],
+      items: billingPlans.value.map((plan) => ({
+        text: plan.title,
+        value: plan.uuid,
+      })),
     },
-    { title: "Due date", key: "dueDate", type: "date" },
-    { title: "NCU price", key: "price", type: "number-range" },
+    { title: "Due date", key: "data.next_payment_date", type: "date" },
+    { title: "NCU price", key: "estimate", type: "number-range" },
     { title: "Email", key: "email", type: "input" },
-    { title: "Date", key: "date", type: "date" },
+    { title: "Date", key: "created", type: "date" },
     { title: "IP", key: "state.meta.networking", type: "input" },
     {
       key: "resources.cpu",
@@ -356,11 +430,10 @@ const searchFields = () =>
   ]);
 
 const getAccount = (uuid) => {
-  return accounts.value[uuid]?.title;
+  return accounts.value[uuid];
 };
 
 const setOptions = (newOptions) => {
-  console.log(newOptions);
   page.value = newOptions.page;
   if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
     options.value = newOptions;
@@ -370,10 +443,26 @@ const setOptions = (newOptions) => {
 const fetchInstances = async () => {
   fetchError.value = "";
   try {
+    if (!isUniqueFetched.value) {
+      fetchUnique();
+    }
+
     console.log(listOptions.value);
     await store.dispatch("instances/fetch", listOptions.value);
   } catch (e) {
     fetchError.value = e.message;
+  }
+};
+
+const fetchUnique = async () => {
+  try {
+    const { unique } = await api.get("/instances/unique");
+    uniqueLocations.value = unique.locations;
+    uniqueProducts.value = unique.products;
+
+    isUniqueFetched.value = true;
+  } catch {
+    isUniqueFetched.value = false;
   }
 };
 
@@ -518,23 +607,14 @@ watch(
 import searchMixin from "@/mixins/search";
 
 export default {
-  name: "AddonsView",
+  name: "instances-table",
   mixins: [
     searchMixin({
       name: "instances-table",
       defaultLayout: {
         title: "Default",
         filter: {
-          state: [
-            "INIT",
-            "RUNNING",
-            "STOPPED",
-            "PENDING",
-            "OPERATION",
-            "SUSPENDED",
-            "UNKNOWN",
-            "ERROR",
-          ],
+          state: [0, 1, 2, 3, 4, 6, 7, 8],
         },
       },
     }),

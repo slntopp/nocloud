@@ -37,7 +37,7 @@
         <v-col cols="3">
           <accounts-autocomplete
             :loading="isInstancesLoading"
-            @change="onChangeAccount"
+            @input="onChangeAccount"
             :disabled="isEdit"
             label="Account"
             v-model="newInvoice.account"
@@ -316,6 +316,9 @@ const addPaymentOptions = ref({
   paymentDate: formatSecondsToDateString(Date.now() / 1000),
 });
 
+const isInstancesLoading = ref(false);
+const instancesAccountMap = ref(new Map());
+
 const types = [
   { id: "NO_ACTION", title: "No action" },
   { id: "INSTANCE_START", title: "Instance start" },
@@ -354,11 +357,6 @@ const changeStatusBtns = [
 onMounted(async () => {
   setInvoice();
 
-  await Promise.all([
-    store.dispatch("services/fetch"),
-    store.dispatch("namespaces/fetch"),
-  ]);
-
   // if (isEdit.value) {
   //   newInvoice.value.account = accounts.value.find(
   //     (a) => a.uuid === invoice.value.account
@@ -366,34 +364,14 @@ onMounted(async () => {
   // }
 });
 
-const namespaces = computed(() => store.getters["namespaces/all"]);
-
-const isInstancesLoading = computed(() => store.getters["services/isLoading"]);
 const isBalanceInvoice = computed(() => newInvoice.value.type === "BALANCE");
-const services = computed(() => store.getters["services/all"]);
 const instances = computed(() => {
-  if (
-    newInvoice.value.account === undefined ||
-    newInvoice.value.account === null
-  ) {
-    return;
+  const account = newInvoice.value.account?.uuid;
+  if (!account || isInstancesLoading.value) {
+    return [];
   }
 
-  const namespace = namespaces.value.find(
-    (n) => n.access.namespace === newInvoice.value.account?.uuid
-  );
-  const servicesByAccount = services.value.filter(
-    (s) => s.access.namespace === namespace?.uuid
-  );
-  const instances = [];
-
-  servicesByAccount.forEach((s) => {
-    s?.instancesGroups.forEach((ig) => {
-      ig.instances.forEach((i) => instances.push({ ...i, type: ig.type }));
-    });
-  });
-
-  return instances;
+  return instancesAccountMap.value.get(account);
 });
 
 const accountCurrency = computed(
@@ -506,8 +484,30 @@ const deleteInvoiceItem = (index) => {
   newInvoice.value.items = newInvoice.value.items.filter((_, i) => i !== index);
 };
 
-const onChangeAccount = () => {
+const onChangeAccount = async () => {
+  console.log(111);
   selectedInstances.value = null;
+
+  const account = newInvoice.value.account?.uuid;
+console.log(account);
+  if (instancesAccountMap.value.has(account)) {
+    return;
+  }
+
+  isInstancesLoading.value = true;
+  try {
+    instancesAccountMap.value.set(
+      account,
+      store.dispatch("instances/fetch", {
+        filters: { account: [account] },
+      })
+    );
+
+    const data=await instancesAccountMap.value.get(account);
+    console.log(data);
+  } finally {
+    isInstancesLoading.value = false;
+  }
 };
 
 const onChangeInstance = () => {
