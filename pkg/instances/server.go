@@ -695,7 +695,7 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 	return query
 }
 
-func getSortQuery(field, order string) string {
+func getSortQuery(field, order string, customOrder []interface{}, bindVars map[string]interface{}) string {
 	if field == "" || order == "" {
 		return ""
 	}
@@ -711,6 +711,11 @@ func getSortQuery(field, order string) string {
 		query += fmt.Sprintf(" SORT bp.title %s", order)
 	} else if field == "sp" {
 		query += fmt.Sprintf(" SORT sp.title %s", order)
+
+	} else if field == "state.state" && len(customOrder) > 0 {
+		bindKey := "customOrder"
+		query += fmt.Sprintf(" SORT POSITION(@%s, node.state.state, true) %s", bindKey, order)
+		bindVars[bindKey] = customOrder
 	} else {
 		query += fmt.Sprintf(" SORT node.%s %s", field, order)
 	}
@@ -792,7 +797,8 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 		"limit":             limit,
 	}
 
-	query += getSortQuery(req.GetField(), req.GetSort())
+	customOrder := req.GetCustomOrder().GetListValue().AsSlice()
+	query += getSortQuery(req.GetField(), req.GetSort(), customOrder, bindVars)
 
 	query += getFiltersQuery(req.GetFilters(), bindVars)
 
