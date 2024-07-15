@@ -714,7 +714,7 @@ func getSortQuery(field, order string, customOrder []interface{}, bindVars map[s
 
 	} else if field == "state.state" && len(customOrder) > 0 {
 		bindKey := "customOrder"
-		query += fmt.Sprintf(" SORT POSITION(@%s, node.state.state, true) %s", bindKey, order)
+		query += fmt.Sprintf(" SORT POSITION(@%s, node.state.state, true) DESC", bindKey)
 		bindVars[bindKey] = customOrder
 	} else {
 		query += fmt.Sprintf(" SORT node.%s %s", field, order)
@@ -798,6 +798,7 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 	}
 
 	customOrder := req.GetCustomOrder().GetListValue().AsSlice()
+	slices.Reverse(customOrder)
 	query += getSortQuery(req.GetField(), req.GetSort(), customOrder, bindVars)
 
 	query += getFiltersQuery(req.GetFilters(), bindVars)
