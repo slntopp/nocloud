@@ -672,6 +672,16 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			}
 			query += fmt.Sprintf(` FILTER node.product in @%s`, key)
 			bindVars[key] = values
+		} else if key == "created_date" {
+			values := val.GetStructValue().AsMap()
+			if val, ok := values["from"]; ok {
+				from := val.(int)
+				query += fmt.Sprintf(` FILTER node.created >= %d`, from)
+			}
+			if val, ok := values["to"]; ok {
+				to := val.(int)
+				query += fmt.Sprintf(` FILTER node.created <= %d`, to)
+			}
 		}
 	}
 
