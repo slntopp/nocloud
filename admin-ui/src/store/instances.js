@@ -47,7 +47,7 @@ export default {
         commit("setInstances", response.pool);
         commit("setTotal", response.count);
 
-        return response.pool
+        return response.pool;
       } finally {
         commit("setLoading", false);
       }
