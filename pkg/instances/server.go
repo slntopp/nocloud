@@ -858,11 +858,19 @@ let products = (
  RETURN DISTINCT inst.instance.product
 )
 
+let billing_plans = (
+ FOR inst IN instances
+ FILTER inst.instance.billing_plan
+ COLLECT uuid = inst.instance.billing_plan.uuid, title = inst.instance.billing_plan.title,
+ RETURN DISTINCT { uuid, title }
+)
+
 return { 
 	unique: {
         locations: locations,
         products: products,
-        periods: periods
+        periods: periods,
+		billing_plans: billing_plans
 	},
 	total: LENGTH(instances)
 }
