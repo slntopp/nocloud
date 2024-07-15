@@ -553,13 +553,13 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			query += fmt.Sprintf(` FILTER CONTAINS(acc.data.email, "%s")`, val.GetStringValue())
 		} else if key == "title" {
 			query += fmt.Sprintf(` FILTER CONTAINS(node.title, "%s")`, val.GetStringValue())
-		} else if key == "dcv" {
+		} else if key == "resources.dcv" {
 			query += fmt.Sprintf(` FILTER CONTAINS(node.resources.dcv, "%s")`, val.GetStringValue())
-		} else if key == "approver_email" {
+		} else if key == "resources.approver_email" {
 			query += fmt.Sprintf(` FILTER CONTAINS(node.resources.approver_email, "%s")`, val.GetStringValue())
-		} else if key == "domain" {
+		} else if key == "config.domain" {
 			query += fmt.Sprintf(` FILTER CONTAINS(node.config.domain, "%s")`, val.GetStringValue())
-		} else if key == "os" {
+		} else if key == "config.configuration.vps_os" {
 			query += fmt.Sprintf(` FILTER CONTAINS(node.config.configuration.vps_os, "%s")`, val.GetStringValue())
 		} else if key == "type" {
 			values := val.GetListValue().AsSlice()
@@ -589,14 +589,14 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			}
 			query += fmt.Sprintf(` FILTER bp._key in @%s`, key)
 			bindVars[key] = values
-		} else if key == "state" {
+		} else if key == "state.state" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
 				continue
 			}
 			query += fmt.Sprintf(` FILTER node.state.state in @%s`, key)
 			bindVars[key] = values
-		} else if key == "price" {
+		} else if key == "estimate" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
 				from := val.(float64)
@@ -618,16 +618,16 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER node["%s"] in @%s`, key, key)
+			query += fmt.Sprintf(` FILTER node.period in @%s`, key)
 			bindVars[key] = values
-		} else if key == "location" {
+		} else if key == "config.location" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER node["config"]["%s"] in @%s`, key, key)
+			query += fmt.Sprintf(` FILTER node.config.location in @%s`, key)
 			bindVars[key] = values
-		} else if key == "cpu" {
+		} else if key == "resources.cpu" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
 				from := val.(int)
@@ -637,7 +637,7 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 				to := val.(int)
 				query += fmt.Sprintf(` FILTER node.resources.cpu <= %d`, to)
 			}
-		} else if key == "drive_size" {
+		} else if key == "resources.drive_size" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
 				from := val.(int)
@@ -647,7 +647,7 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 				to := val.(int)
 				query += fmt.Sprintf(` FILTER node.resources.drive_size <= %d`, to)
 			}
-		} else if key == "ram" {
+		} else if key == "resources.ram" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
 				from := val.(int)
@@ -657,7 +657,7 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 				to := val.(int)
 				query += fmt.Sprintf(` FILTER node.resources.ram <= %d`, to)
 			}
-		} else if key == "due_date" {
+		} else if key == "data.next_payment_date" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
 				from := val.(int)
@@ -678,7 +678,7 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			}
 			query += fmt.Sprintf(` FILTER node.product in @%s`, key)
 			bindVars[key] = values
-		} else if key == "created_date" {
+		} else if key == "created" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
 				from := val.(int)
