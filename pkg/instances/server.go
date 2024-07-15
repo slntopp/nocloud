@@ -694,6 +694,29 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 	return query
 }
 
+func getSortQuery(field, order string) string {
+	if field == "" || order == "" {
+		return ""
+	}
+	query := ""
+
+	if field == "account" {
+		query += fmt.Sprintf(" SORT acc.title %s", order)
+	} else if field == "email" {
+		query += fmt.Sprintf(" SORT acc.data.email %s", order)
+	} else if field == "type" {
+		query += fmt.Sprintf(" SORT bp.type %s", order)
+	} else if field == "billing_plan" {
+		query += fmt.Sprintf(" SORT bp.title %s", order)
+	} else if field == "sp" {
+		query += fmt.Sprintf(" SORT sp.title %s", order)
+	} else {
+		query += fmt.Sprintf(" SORT node.%s %s", field, order)
+	}
+
+	return query
+}
+
 const listInstancesQuery = `
 LET instances = (
 	FOR node, edge, path IN 0..10 OUTBOUND @account_node
@@ -707,7 +730,7 @@ LET instances = (
 	            GRAPH @permissions_graph
 	            OPTIONS {order: "bfs", uniqueVertices: "global"}
 	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
-	            RETURN sp_node._key
+	            RETURN sp_node
         )
         LET srv = path.vertices[-3]._key
         LET ns = path.vertices[-4]._key
@@ -735,7 +758,7 @@ LET instances = (
 			}
 			),
 			service: srv,
-			sp: sp,
+			sp: sp._key,
 			type: bp.type,
 			account: acc._key
 		}
@@ -768,12 +791,7 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 		"limit":             limit,
 	}
 
-	if req.Field != nil && req.Sort != nil {
-		subQuery := ` SORT node.%s %s`
-		field, sort := req.GetField(), req.GetSort()
-
-		query += fmt.Sprintf(subQuery, field, sort)
-	}
+	query += getSortQuery(req.GetField(), req.GetSort())
 
 	query += getFiltersQuery(req.GetFilters(), bindVars)
 
@@ -821,7 +839,7 @@ LET instances = (
 	            GRAPH @permissions_graph
 	            OPTIONS {order: "bfs", uniqueVertices: "global"}
 	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
-	            RETURN sp_node._key
+	            RETURN sp_node
         )
         LET srv = path.vertices[-3]._key
         LET ns = path.vertices[-4]._key
@@ -849,7 +867,7 @@ LET instances = (
 			}
 			),
 			service: srv,
-			sp: sp,
+			sp: sp._key,
 			type: bp.type
 		}
 )
@@ -957,7 +975,7 @@ LET instances = (
 	            GRAPH @permissions_graph
 	            OPTIONS {order: "bfs", uniqueVertices: "global"}
 	            FILTER IS_SAME_COLLECTION(@service_provider, sp_node)
-	            RETURN sp_node._key
+	            RETURN sp_node
         )
         LET srv = path.vertices[-3]._key
         LET ns = path.vertices[-4]._key
@@ -985,7 +1003,7 @@ LET instances = (
 			}
 			),
 			service: srv,
-			sp: sp,
+			sp: sp._key,
 			type: bp.type,
 			account: acc._key
 		}
