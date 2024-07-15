@@ -671,7 +671,7 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			}
 		} else if key == "state.meta.networking" {
 			val := val.GetStringValue()
-			query += fmt.Sprintf(` FILTER CONTAINS(TO_STRING(node.state.meta.networking.public), %s) || CONTAINS(TO_STRING(node.state.meta.networking.private), %s)`, val, val)
+			query += fmt.Sprintf(` FILTER CONTAINS(TO_STRING(node.state.meta.networking.public), "%s") || CONTAINS(TO_STRING(node.state.meta.networking.private), "%s")`, val, val)
 		} else if key == "product" {
 			values := val.GetListValue().AsSlice()
 			if len(values) == 0 {
