@@ -594,8 +594,9 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER node.state.state in @state`, key)
-			bindVars["state"] = values
+			bindKey := "state"
+			query += fmt.Sprintf(` FILTER node.state.state in @%s`, bindKey)
+			bindVars[bindKey] = values
 		} else if key == "estimate" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
@@ -625,8 +626,9 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			if len(values) == 0 {
 				continue
 			}
-			query += fmt.Sprintf(` FILTER node.config.location in @%s`, key)
-			bindVars[key] = values
+			bindKey := "location"
+			query += fmt.Sprintf(` FILTER node.config.location in @%s`, bindKey)
+			bindVars[bindKey] = values
 		} else if key == "resources.cpu" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
