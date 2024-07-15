@@ -630,41 +630,41 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 		} else if key == "resources.cpu" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
-				from := val.(int)
+				from := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.resources.cpu >= %d`, from)
 			}
 			if val, ok := values["to"]; ok {
-				to := val.(int)
+				to := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.resources.cpu <= %d`, to)
 			}
 		} else if key == "resources.drive_size" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
-				from := val.(int)
+				from := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.resources.drive_size >= %d`, from)
 			}
 			if val, ok := values["to"]; ok {
-				to := val.(int)
+				to := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.resources.drive_size <= %d`, to)
 			}
 		} else if key == "resources.ram" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
-				from := val.(int)
+				from := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.resources.ram >= %d`, from)
 			}
 			if val, ok := values["to"]; ok {
-				to := val.(int)
+				to := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.resources.ram <= %d`, to)
 			}
 		} else if key == "data.next_payment_date" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
-				from := val.(int)
+				from := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.data.next_payment_date >= %d`, from)
 			}
 			if val, ok := values["to"]; ok {
-				to := val.(int)
+				to := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.data.next_payment_date <= %d`, to)
 			}
 		} else if key == "state.meta.networking" {
@@ -681,11 +681,11 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 		} else if key == "created" {
 			values := val.GetStructValue().AsMap()
 			if val, ok := values["from"]; ok {
-				from := val.(int)
+				from := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.created >= %d`, from)
 			}
 			if val, ok := values["to"]; ok {
-				to := val.(int)
+				to := int(val.(float64))
 				query += fmt.Sprintf(` FILTER node.created <= %d`, to)
 			}
 		}
