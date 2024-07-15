@@ -553,6 +553,8 @@ func getFiltersQuery(filters map[string]*structpb.Value, bindVars map[string]int
 			query += fmt.Sprintf(` FILTER CONTAINS(acc.data.email, "%s")`, val.GetStringValue())
 		} else if key == "title" {
 			query += fmt.Sprintf(` FILTER CONTAINS(node.title, "%s")`, val.GetStringValue())
+		} else if key == "domain" {
+			query += fmt.Sprintf(` FILTER CONTAINS(node.config.domain, "%s")`, val.GetStringValue())
 		} else if key == "os" {
 			query += fmt.Sprintf(` FILTER CONTAINS(node.config.configuration.vps_os, "%s")`, val.GetStringValue())
 		} else if key == "type" {
