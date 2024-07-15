@@ -881,8 +881,8 @@ let locations = (
 
 let periods = (
  FOR inst IN instances
- FILTER inst.period
- RETURN DISTINCT inst.period
+ FILTER inst.instance.period
+ RETURN DISTINCT inst.instance.period
 )
 
 let products = (
@@ -895,6 +895,7 @@ let products = (
 let billing_plans = (
  FOR inst IN instances
  FILTER inst.instance.billing_plan
+ FILTER inst.instance.billing_plan.uuid
  COLLECT uuid = inst.instance.billing_plan.uuid, title = inst.instance.billing_plan.title
  RETURN { uuid, title }
 )
