@@ -712,10 +712,11 @@ func getSortQuery(field, order string, customOrder []interface{}, bindVars map[s
 	} else if field == "sp" {
 		query += fmt.Sprintf(" SORT sp.title %s", order)
 
-	} else if field == "state.state" && len(customOrder) > 0 {
+	} else if field == "state.state" {
 		bindKey := "customOrder"
 		query += fmt.Sprintf(" SORT POSITION(@%s, node.state.state, true) DESC", bindKey)
-		bindVars[bindKey] = customOrder
+		bindVars[bindKey] = []interface{}{stpb.NoCloudState_RUNNING, stpb.NoCloudState_SUSPENDED, stpb.NoCloudState_INIT, stpb.NoCloudState_PENDING,
+			stpb.NoCloudState_FAILURE, stpb.NoCloudState_OPERATION, stpb.NoCloudState_STOPPED, stpb.NoCloudState_UNKNOWN, stpb.NoCloudState_DELETED}
 	} else {
 		query += fmt.Sprintf(" SORT node.%s %s", field, order)
 	}
