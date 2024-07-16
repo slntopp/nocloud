@@ -121,6 +121,7 @@ func main() {
 		log.Fatal("Failed to connect to RabbitMQ", zap.Error(err))
 	}
 	defer rbmq.Close()
+	log.Info("RabbitMQ connection established")
 
 	log.Info("Setting up Pub/Sub")
 	ps, err := states.SetupStatesStreaming()
