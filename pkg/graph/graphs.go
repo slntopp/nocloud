@@ -471,7 +471,7 @@ func ListAccounts[T Accessible](
 			if len(split) != 2 {
 				continue
 			}
-			if split[1] == "address" || split[1] == "country" || split[1] == "email" {
+			if split[1] == "address" || split[1] == "country" || split[1] == "email" || split[1] == "city" || split[1] == "company" || split[1] == "phone" {
 				insert += fmt.Sprintf(` FILTER node.data["%s"] LIKE "%s"`, split[1], "%"+val.GetStringValue()+"%")
 			} else if split[1] == "date_create" {
 				values := val.GetStructValue().AsMap()
