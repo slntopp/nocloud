@@ -414,8 +414,8 @@ function isOneTime(item) {
 }
 
 const setProductsArray = () => {
-  productsArray.value = Object.keys(products.value).map((key) =>
-    JSON.parse(JSON.stringify({ ...products.value[key], key }))
+  productsArray.value = Object.keys(products.value).map(
+    (key) => ({ ...products.value[key], key })
   );
 };
 
@@ -468,15 +468,17 @@ const setGroup = (group, id) => {
 const copyProducts = () => {
   setProductsArray();
   const copiedProducts = [
-    ...selected.value.map((p) => ({
+    ...selected.value.map((p) => JSON.parse(JSON.stringify({
       ...p,
       id: Math.random().toString(16).slice(2),
-    })),
+    }))),
   ];
 
   const newProducts = {};
   for (const product of productsArray.value) {
-    const key = product.key;
+    const value = JSON.parse(JSON.stringify(product));
+    const { key } = value;
+
     delete product.key;
     newProducts[key] = product;
   }
