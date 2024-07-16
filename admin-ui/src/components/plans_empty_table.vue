@@ -50,49 +50,59 @@
         @change="(value) => changeResource('title', value, item.id)"
       />
     </template>
+
+    <template v-slot:[`item.group`]="{ item }">
+      <v-text-field
+        dense
+        :value="item.group"
+        @change="(value) => changeResource('group', value, item.id)"
+      />
+    </template>
   </nocloud-table>
 </template>
 
 <script setup>
-import { ref, toRefs } from "vue";
-import nocloudTable from "@/components/table.vue";
-import confirmDialog from "@/components/confirmDialog.vue";
+import { ref, toRefs } from "vue"
+import nocloudTable from "@/components/table.vue"
+import confirmDialog from "@/components/confirmDialog.vue"
 
 const props = defineProps({
   resources: { type: Array, required: true },
   rules: { type: Object },
-});
-const emits = defineEmits(["update:resource"]);
-const { resources,rules } = toRefs(props);
+})
+const emits = defineEmits(["update:resource"])
+const { resources,rules } = toRefs(props)
 
-const selected = ref([]);
+const selected = ref([])
 
 const headers = [
   { text: "Key", value: "key" },
   { text: "Value", value: "value" },
   { text: "Title", value: "title" },
-];
+  { text: "Group", value: "group" }
+]
 
 function changeResource(key, value, id) {
-  emits("update:resource", { key, value, id });
+  emits("update:resource", { key, value, id })
 }
 
 function addConfig() {
-  const value = JSON.parse(JSON.stringify(resources.value));
+  const value = JSON.parse(JSON.stringify(resources.value))
 
   value.push({
     key: "",
     title: "",
+    group: "default",
     value: 0,
     id: Math.random().toString(16).slice(2)
-  });
-  changeResource("resources", value);
+  })
+  changeResource("resources", value)
 }
 
 function removeConfig() {
   const value = resources.value.filter(
     ({ id }) => !selected.value.find((el) => el.id === id)
-  );
-  changeResource("resources", value);
+  )
+  changeResource("resources", value)
 }
 </script>

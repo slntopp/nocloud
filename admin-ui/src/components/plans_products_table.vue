@@ -414,10 +414,9 @@ function isOneTime(item) {
 }
 
 const setProductsArray = () => {
-  productsArray.value = Object.keys(products.value).map((key) => ({
-    ...products.value[key],
-    key,
-  }));
+  productsArray.value = Object.keys(products.value).map((key) =>
+    JSON.parse(JSON.stringify({ ...products.value[key], key }))
+  );
 };
 
 const setDefaultGroups = () => {
