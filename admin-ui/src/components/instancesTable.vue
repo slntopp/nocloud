@@ -95,6 +95,27 @@
       </div>
     </template>
 
+    <template v-slot:[`item.billingPlan.title`]="{ item, value }">
+      <router-link
+        :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
+      >
+        {{ getShortName(value) }}
+      </router-link>
+    </template>
+
+    <template v-slot:[`item.product`]="{ item }">
+      <router-link
+        :to="{
+          name: 'Plan',
+          params: {
+            planId: item.billingPlan?.uuid,
+          },
+        }"
+      >
+        {{ getShortName(item.billingPlan.products[item.product]?.title) }}
+      </router-link>
+    </template>
+
     <template v-slot:[`item.email`]="{ item }">
       <span v-if="!isAccountsLoading">
         {{ getShortName(getAccount(item.account)?.data?.email ?? "-") }}
@@ -171,8 +192,10 @@ const props = defineProps({
   showSelect: { type: Boolean, default: true },
   openInNewTab: { type: Boolean, default: false },
   noSearch: { type: Boolean, default: false },
+  customFilter: { type: Object, default: () => {} },
 });
-const { tableName, value, refetch, showSelect, openInNewTab } = toRefs(props);
+const { tableName, value, refetch, showSelect, openInNewTab, customFilter } =
+  toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -186,6 +209,8 @@ const fetchError = ref("");
 const isUniqueFetched = ref(false);
 const uniqueProducts = ref([]);
 const uniqueLocations = ref([]);
+const uniquePlans = ref([]);
+const uniquePeriods = ref([]);
 
 const instancesTypes = ref([]);
 
@@ -270,8 +295,6 @@ const total = computed(() => store.getters["instances/total"]);
 const servicesProviders = computed(
   () => store.getters["servicesProviders/all"]
 );
-const billingPlans = computed(() => store.getters["plans/all"]);
-
 const filter = computed(() => store.getters["appSearch/filter"]);
 
 const listOptions = computed(() => {
@@ -325,6 +348,11 @@ const listOptions = computed(() => {
     filters[key] = filter.value[key];
   }
 
+  //more priority
+  for (const key in customFilter.value) {
+    filters[key] = customFilter.value[key];
+  }
+
   return {
     filters: filters,
     page: page.value,
@@ -344,7 +372,10 @@ const searchFields = () =>
     },
     {
       key: "period",
-      items: [],
+      items: uniquePeriods.value.map((period) => ({
+        text: getBillingPeriod(period),
+        value: period,
+      })),
       title: "Period",
       type: "select",
     },
@@ -402,7 +433,7 @@ const searchFields = () =>
       key: "billing_plan",
       type: "select",
       title: "Billing plan",
-      items: billingPlans.value.map((plan) => ({
+      items: uniquePlans.value.map((plan) => ({
         text: plan.title,
         value: plan.uuid,
       })),
@@ -434,6 +465,14 @@ const getAccount = (uuid) => {
 };
 
 const setOptions = (newOptions) => {
+  const replaceSortKeys = { accountPrice: "estimate" };
+
+  for (const key in replaceSortKeys) {
+    if (newOptions.sortBy.includes(key)) {
+      newOptions.sortBy = [replaceSortKeys[key]];
+    }
+  }
+
   page.value = newOptions.page;
   if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
     options.value = newOptions;
@@ -459,6 +498,8 @@ const fetchUnique = async () => {
     const { unique } = await api.get("/instances/unique");
     uniqueLocations.value = unique.locations;
     uniqueProducts.value = unique.products;
+    uniquePlans.value = unique.billing_plans;
+    uniquePeriods.value = unique.periods;
 
     isUniqueFetched.value = true;
   } catch {
@@ -471,20 +512,9 @@ const fetchInstancesDebounce = debounce(fetchInstances, 100);
 const getPeriod = (instance) => {
   if (isInstancePayg(instance)) {
     return "PayG";
-  } else if (
-    instance.resources.period &&
-    !["ovh", "opensrs"].includes(instance.type)
-  ) {
-    const text = instance.resources.period > 1 ? "months" : "month";
-    return `${instance.resources.period} ${text}`;
-  } else if (instance.type === "opensrs") {
-    return getBillingPeriod(
-      Object.values(instance.billingPlan.resources || {})[0]?.period || 0
-    );
   }
-  const period = getBillingPeriod(
-    Object.values(instance.billingPlan.products || {})[0]?.period || 0
-  );
+
+  const period = getBillingPeriod(instance.period);
 
   return period || "Unknown";
 };
@@ -530,6 +560,7 @@ const changeRegularPayment = async (instance, value) => {
   }
 };
 
+//remake
 const updateEditValues = async (values) => {
   try {
     const promises = value?.value.map((instance) => {
@@ -574,9 +605,8 @@ const updateEditValues = async (values) => {
   }
 };
 
-watch(filter, fetchInstancesDebounce, { deep: true });
-watch(options, fetchInstancesDebounce);
-watch(refetch, fetchInstancesDebounce);
+watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
+watch([options, refetch], fetchInstancesDebounce);
 
 watch(instances, () => {
   instances.value.forEach(async ({ account: uuid }) => {
@@ -604,20 +634,23 @@ watch(
 </script>
 
 <script>
-import searchMixin from "@/mixins/search";
-
 export default {
   name: "instances-table",
-  mixins: [
-    searchMixin({
-      name: "instances-table",
-      defaultLayout: {
+  beforeDestroy() {
+    this.$store.commit("appSearch/setSearchName", "");
+    this.$store.commit("appSearch/setFields", []);
+    this.$store.commit("appSearch/setDefaultLayout", null);
+  },
+  mounted() {
+    if (!this.noSearch) {
+      this.$store.commit("appSearch/setSearchName", this.tableName);
+      this.$store.commit("appSearch/setDefaultLayout", {
         title: "Default",
         filter: {
-          state: [0, 1, 2, 3, 4, 6, 7, 8],
+          "state.state": [0, 1, 2, 3, 4, 6, 7, 8],
         },
-      },
-    }),
-  ],
+      });
+    }
+  },
 };
 </script>
