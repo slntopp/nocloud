@@ -95,6 +95,27 @@
       </div>
     </template>
 
+    <template v-slot:[`item.billingPlan.title`]="{ item, value }">
+      <router-link
+        :to="{ name: 'Plan', params: { planId: item.billingPlan.uuid } }"
+      >
+        {{ getShortName(value) }}
+      </router-link>
+    </template>
+
+    <template v-slot:[`item.product`]="{ item }">
+      <router-link
+        :to="{
+          name: 'Plan',
+          params: {
+            planId: item.billingPlan?.uuid,
+          },
+        }"
+      >
+        {{ getShortName(item.billingPlan.products[item.product]?.title) }}
+      </router-link>
+    </template>
+
     <template v-slot:[`item.email`]="{ item }">
       <span v-if="!isAccountsLoading">
         {{ getShortName(getAccount(item.account)?.data?.email ?? "-") }}
@@ -491,20 +512,9 @@ const fetchInstancesDebounce = debounce(fetchInstances, 100);
 const getPeriod = (instance) => {
   if (isInstancePayg(instance)) {
     return "PayG";
-  } else if (
-    instance.resources.period &&
-    !["ovh", "opensrs"].includes(instance.type)
-  ) {
-    const text = instance.resources.period > 1 ? "months" : "month";
-    return `${instance.resources.period} ${text}`;
-  } else if (instance.type === "opensrs") {
-    return getBillingPeriod(
-      Object.values(instance.billingPlan.resources || {})[0]?.period || 0
-    );
   }
-  const period = getBillingPeriod(
-    Object.values(instance.billingPlan.products || {})[0]?.period || 0
-  );
+
+  const period = getBillingPeriod(instance.period);
 
   return period || "Unknown";
 };
