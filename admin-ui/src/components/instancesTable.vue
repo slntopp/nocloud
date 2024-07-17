@@ -188,6 +188,8 @@ const fetchError = ref("");
 const isUniqueFetched = ref(false);
 const uniqueProducts = ref([]);
 const uniqueLocations = ref([]);
+const uniquePlans = ref([]);
+const uniquePeriods = ref([]);
 
 const instancesTypes = ref([]);
 
@@ -272,8 +274,6 @@ const total = computed(() => store.getters["instances/total"]);
 const servicesProviders = computed(
   () => store.getters["servicesProviders/all"]
 );
-const billingPlans = computed(() => store.getters["plans/all"]);
-
 const filter = computed(() => store.getters["appSearch/filter"]);
 
 const listOptions = computed(() => {
@@ -351,7 +351,10 @@ const searchFields = () =>
     },
     {
       key: "period",
-      items: [],
+      items: uniquePeriods.value.map((period) => ({
+        text: getBillingPeriod(period),
+        value: period,
+      })),
       title: "Period",
       type: "select",
     },
@@ -409,7 +412,7 @@ const searchFields = () =>
       key: "billing_plan",
       type: "select",
       title: "Billing plan",
-      items: billingPlans.value.map((plan) => ({
+      items: uniquePlans.value.map((plan) => ({
         text: plan.title,
         value: plan.uuid,
       })),
@@ -441,6 +444,14 @@ const getAccount = (uuid) => {
 };
 
 const setOptions = (newOptions) => {
+  const replaceSortKeys = { accountPrice: "estimate" };
+
+  for (const key in replaceSortKeys) {
+    if (newOptions.sortBy.includes(key)) {
+      newOptions.sortBy = [replaceSortKeys[key]];
+    }
+  }
+
   page.value = newOptions.page;
   if (JSON.stringify(newOptions) !== JSON.stringify(options.value)) {
     options.value = newOptions;
@@ -466,6 +477,8 @@ const fetchUnique = async () => {
     const { unique } = await api.get("/instances/unique");
     uniqueLocations.value = unique.locations;
     uniqueProducts.value = unique.products;
+    uniquePlans.value = unique.billing_plans;
+    uniquePeriods.value = unique.periods;
 
     isUniqueFetched.value = true;
   } catch {
@@ -582,10 +595,8 @@ const updateEditValues = async (values) => {
   }
 };
 
-watch(filter, fetchInstancesDebounce, { deep: true });
-watch(customFilter, fetchInstancesDebounce, { deep: true });
-watch(options, fetchInstancesDebounce);
-watch(refetch, fetchInstancesDebounce);
+watch([filter, customFilter], fetchInstancesDebounce, { deep: true });
+watch([options, refetch], fetchInstancesDebounce);
 
 watch(instances, () => {
   instances.value.forEach(async ({ account: uuid }) => {
