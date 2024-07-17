@@ -171,8 +171,10 @@ const props = defineProps({
   showSelect: { type: Boolean, default: true },
   openInNewTab: { type: Boolean, default: false },
   noSearch: { type: Boolean, default: false },
+  customFilter: { type: Object, default: () => {} },
 });
-const { tableName, value, refetch, showSelect, openInNewTab } = toRefs(props);
+const { tableName, value, refetch, showSelect, openInNewTab, customFilter } =
+  toRefs(props);
 
 const emit = defineEmits(["input"]);
 
@@ -323,6 +325,11 @@ const listOptions = computed(() => {
     }
 
     filters[key] = filter.value[key];
+  }
+
+  //more priority
+  for (const key in customFilter.value) {
+    filters[key] = customFilter.value[key];
   }
 
   return {
@@ -530,6 +537,7 @@ const changeRegularPayment = async (instance, value) => {
   }
 };
 
+//remake
 const updateEditValues = async (values) => {
   try {
     const promises = value?.value.map((instance) => {
@@ -575,6 +583,7 @@ const updateEditValues = async (values) => {
 };
 
 watch(filter, fetchInstancesDebounce, { deep: true });
+watch(customFilter, fetchInstancesDebounce, { deep: true });
 watch(options, fetchInstancesDebounce);
 watch(refetch, fetchInstancesDebounce);
 
@@ -604,20 +613,23 @@ watch(
 </script>
 
 <script>
-import searchMixin from "@/mixins/search";
-
 export default {
   name: "instances-table",
-  mixins: [
-    searchMixin({
-      name: "instances-table",
-      defaultLayout: {
+  beforeDestroy() {
+    this.$store.commit("appSearch/setSearchName", "");
+    this.$store.commit("appSearch/setFields", []);
+    this.$store.commit("appSearch/setDefaultLayout", null);
+  },
+  mounted() {
+    if (!this.noSearch) {
+      this.$store.commit("appSearch/setSearchName", this.tableName);
+      this.$store.commit("appSearch/setDefaultLayout", {
         title: "Default",
         filter: {
-          state: [0, 1, 2, 3, 4, 6, 7, 8],
+          "state.state": [0, 1, 2, 3, 4, 6, 7, 8],
         },
-      },
-    }),
-  ],
+      });
+    }
+  },
 };
 </script>
