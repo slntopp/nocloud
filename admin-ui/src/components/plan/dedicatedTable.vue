@@ -1,220 +1,274 @@
 <template>
   <div>
-    <v-row class="my-3" v-if="!isPlansLoading">
-      <v-btn :loading="isRefreshLoading" class="ml-3" @click="refreshApiPlans"
-        >Fetch plans</v-btn
-      >
-      <v-btn :disabled="!this.newPlans" class="ml-3" @click="setRefreshedPlans"
-        >Set api plans</v-btn
-      >
-      <v-btn class="ml-3" @click="setEnabledToPlans(true)"
-        >Enable all plans</v-btn
-      >
-      <v-btn class="ml-3" @click="setEnabledToPlans(false)"
-        >Disable all plans</v-btn
-      >
-      <v-btn class="ml-3" @click="setEnabledToAddons(true)"
-        >Enable all addons</v-btn
-      >
-      <v-btn class="ml-3" @click="setEnabledToAddons(false)"
-        >Disable all addons</v-btn
-      >
-    </v-row>
-
-    <nocloud-table
-      sort-by="isBeenSell"
-      sort-desc
-      item-key="id"
-      :show-expand="true"
-      :show-select="false"
-      :items="filteredPlans"
-      :headers="headers"
-      :loading="isPlansLoading"
+    <v-tabs
+      class="rounded-t-lg"
+      v-model="tabsIndex"
+      background-color="background-light"
     >
-      <template v-slot:[`item.title`]="{ item }">
-        <v-text-field dense style="width: 200px" v-model="item.title" />
-      </template>
+      <v-tab v-for="tab in tabs" :key="tab">{{ tab }}</v-tab>
+    </v-tabs>
 
-      <template v-slot:[`item.group`]="{ item }">
-        <template
-          v-if="newplanGroup.mode === 'edit' && newplanGroup.planId === item.id"
-        >
-          <v-text-field
-            dense
-            class="d-inline-block mr-1"
-            style="width: 200px"
-            v-model="newplanGroup.name"
-          />
-          <v-icon @click="editPlanGroup(item.group)">mdi-content-save</v-icon>
-          <v-icon @click="newplanGroup.mode = 'none'">mdi-close</v-icon>
-        </template>
+    <v-tabs-items
+      v-model="tabsIndex"
+      style="background: var(--v-background-light-base)"
+      class="rounded-b-lg"
+    >
+      <v-tab-item v-for="tab in tabs" :key="tab">
+        <v-progress-linear v-if="isPlansLoading" indeterminate class="pt-1" />
 
-        <template
-          v-if="
-            newplanGroup.mode === 'create' && newplanGroup.planId === item.id
-          "
-        >
-          <v-text-field
-            dense
-            class="d-inline-block mr-1"
-            style="width: 200px"
-            v-model="newplanGroup.name"
-          />
-          <v-icon @click="createPlanGroup(item)">mdi-content-save</v-icon>
-          <v-icon @click="newplanGroup.mode = 'none'">mdi-close</v-icon>
-        </template>
-
-        <template v-if="newplanGroup.mode === 'none'">
-          <v-autocomplete
-            dense
-            class="d-inline-block"
-            style="width: 200px"
-            v-model="item.group"
-            :items="planGroups"
-          />
-          <v-icon @click="changePlanMode('create', item)">mdi-plus</v-icon>
-          <v-icon @click="changePlanMode('edit', item)">mdi-pencil</v-icon>
-          <v-icon
-            v-if="planGroups.length > 1"
-            @click="deletePlanGroup(item.group)"
-            >mdi-delete</v-icon
-          >
-        </template>
-
-        <template v-else-if="newplanGroup.planId !== item.id">{{
-          item.group
-        }}</template>
-      </template>
-
-      <template v-slot:[`item.cpu`]="{ item }">
-        <template
-          v-if="newcpuGroup.mode === 'edit' && newcpuGroup.planId === item.id"
-        >
-          <v-text-field
-            dense
-            class="d-inline-block mr-1"
-            style="width: 200px"
-            v-model="newcpuGroup.name"
-          />
-          <v-icon @click="editCpuGroup(item.cpu)">mdi-content-save</v-icon>
-          <v-icon @click="newcpuGroup.mode = 'none'">mdi-close</v-icon>
-        </template>
-
-        <template
-          v-if="newcpuGroup.mode === 'create' && newcpuGroup.planId === item.id"
-        >
-          <v-text-field
-            dense
-            class="d-inline-block mr-1"
-            style="width: 200px"
-            v-model="newcpuGroup.name"
-          />
-          <v-icon @click="createCpuGroup(item)">mdi-content-save</v-icon>
-          <v-icon @click="newcpuGroup.mode = 'none'">mdi-close</v-icon>
-        </template>
-
-        <template v-if="newcpuGroup.mode === 'none'">
-          <v-autocomplete
-            dense
-            class="d-inline-block"
-            style="width: 200px"
-            v-model="item.cpu"
-            :items="cpuGroups"
-          />
-          <v-icon @click="changeCpuMode('create', item)">mdi-plus</v-icon>
-          <v-icon @click="changeCpuMode('edit', item)">mdi-pencil</v-icon>
-          <v-icon v-if="planGroups.length > 1" @click="deleteCpuGroup(item.cpu)"
-            >mdi-delete</v-icon
-          >
-        </template>
-
-        <template v-else-if="newcpuGroup.planId !== item.id">{{
-          item.cpu
-        }}</template>
-      </template>
-
-      <template v-slot:[`item.duration`]="{ value }">
-        {{ getPayment(value) }}
-      </template>
-
-      <template v-slot:[`item.basePrice`]="{ value }">
-        {{ value }} {{ defaultCurrency?.title }}
-      </template>
-
-      <template v-slot:[`item.price`]="{ item }">
-        <v-text-field
-          dense
-          style="min-width: 200px"
-          v-model="item.price"
-          :suffix="defaultCurrency?.title"
-        />
-      </template>
-
-      <template v-slot:expanded-item="{ headers, item }">
-        <template v-if="item.installation_fee">
-          <td></td>
-          <td></td>
-          <td :colspan="headers.length - 6">Installation price</td>
-          <td>
-            {{ item.installation_fee.price.value }}
-            {{ defaultCurrency?.title }}
-          </td>
-          <td>
-            <v-text-field
-              dense
-              style="width: 150px"
-              v-model="item.installation_fee.value"
-            />
-          </td>
-          <td></td>
-          <td></td>
-        </template>
-      </template>
-
-      <template v-slot:[`item.addons`]="{ item }">
-        <v-dialog width="90vw">
-          <template v-slot:activator="{ on, attrs }">
-            <v-btn icon v-bind="attrs" v-on="on">
-              <v-icon> mdi-menu-open </v-icon>
-            </v-btn>
-          </template>
-
+        <div v-else-if="tab === 'Tariffs'">
+          <v-row class="my-3" v-if="!isPlansLoading">
+            <v-btn
+              :loading="isRefreshLoading"
+              class="ml-3"
+              @click="refreshApiPlans"
+              >Fetch plans</v-btn
+            >
+            <v-btn
+              :disabled="!newPlans"
+              class="ml-3"
+              @click="setRefreshedPlans"
+              >Set api plans</v-btn
+            >
+            <v-btn class="ml-3" @click="setEnabledToPlans(true)"
+              >Enable all plans</v-btn
+            >
+            <v-btn class="ml-3" @click="setEnabledToPlans(false)"
+              >Disable all plans</v-btn
+            >
+            <v-btn class="ml-3" @click="setEnabledToAddons(true)"
+              >Enable all addons</v-btn
+            >
+            <v-btn class="ml-3" @click="setEnabledToAddons(false)"
+              >Disable all addons</v-btn
+            >
+          </v-row>
           <nocloud-table
-            class="pa-4"
+            sort-by="isBeenSell"
+            sort-desc
             item-key="id"
+            table-name="dedicated-prices"
+            :show-expand="true"
             :show-select="false"
-            :items="getPlanAddons(item)"
-            :headers="addonsHeaders"
+            :items="filteredPlans"
+            :headers="headers"
+            :loading="isPlansLoading"
           >
-            <template v-slot:[`item.duration`]="{ item }">
-              {{ getPayment(item.duration) || getBillingPeriod(item.period) }}
+            <template v-slot:[`item.title`]="{ item }">
+              <v-text-field dense style="width: 200px" v-model="item.title" />
             </template>
+
+            <template v-slot:[`item.group`]="{ item }">
+              <template
+                v-if="
+                  newplanGroup.mode === 'edit' &&
+                  newplanGroup.planId === item.id
+                "
+              >
+                <v-text-field
+                  dense
+                  class="d-inline-block mr-1"
+                  style="width: 200px"
+                  v-model="newplanGroup.name"
+                />
+                <v-icon @click="editPlanGroup(item.group)"
+                  >mdi-content-save</v-icon
+                >
+                <v-icon @click="newplanGroup.mode = 'none'">mdi-close</v-icon>
+              </template>
+
+              <template
+                v-if="
+                  newplanGroup.mode === 'create' &&
+                  newplanGroup.planId === item.id
+                "
+              >
+                <v-text-field
+                  dense
+                  class="d-inline-block mr-1"
+                  style="width: 200px"
+                  v-model="newplanGroup.name"
+                />
+                <v-icon @click="createPlanGroup(item)">mdi-content-save</v-icon>
+                <v-icon @click="newplanGroup.mode = 'none'">mdi-close</v-icon>
+              </template>
+
+              <template v-if="newplanGroup.mode === 'none'">
+                <v-autocomplete
+                  dense
+                  class="d-inline-block"
+                  style="width: 200px"
+                  v-model="item.group"
+                  :items="planGroups"
+                />
+                <v-icon @click="changePlanMode('create', item)"
+                  >mdi-plus</v-icon
+                >
+                <v-icon @click="changePlanMode('edit', item)"
+                  >mdi-pencil</v-icon
+                >
+                <v-icon
+                  v-if="planGroups.length > 1"
+                  @click="deletePlanGroup(item.group)"
+                  >mdi-delete</v-icon
+                >
+              </template>
+
+              <template v-else-if="newplanGroup.planId !== item.id">{{
+                item.group
+              }}</template>
+            </template>
+
+            <template v-slot:[`item.cpu`]="{ item }">
+              <template
+                v-if="
+                  newcpuGroup.mode === 'edit' && newcpuGroup.planId === item.id
+                "
+              >
+                <v-text-field
+                  dense
+                  class="d-inline-block mr-1"
+                  style="width: 200px"
+                  v-model="newcpuGroup.name"
+                />
+                <v-icon @click="editCpuGroup(item.cpu)"
+                  >mdi-content-save</v-icon
+                >
+                <v-icon @click="newcpuGroup.mode = 'none'">mdi-close</v-icon>
+              </template>
+
+              <template
+                v-if="
+                  newcpuGroup.mode === 'create' &&
+                  newcpuGroup.planId === item.id
+                "
+              >
+                <v-text-field
+                  dense
+                  class="d-inline-block mr-1"
+                  style="width: 200px"
+                  v-model="newcpuGroup.name"
+                />
+                <v-icon @click="createCpuGroup(item)">mdi-content-save</v-icon>
+                <v-icon @click="newcpuGroup.mode = 'none'">mdi-close</v-icon>
+              </template>
+
+              <template v-if="newcpuGroup.mode === 'none'">
+                <v-autocomplete
+                  dense
+                  class="d-inline-block"
+                  style="width: 200px"
+                  v-model="item.cpu"
+                  :items="cpuGroups"
+                />
+                <v-icon @click="changeCpuMode('create', item)">mdi-plus</v-icon>
+                <v-icon @click="changeCpuMode('edit', item)">mdi-pencil</v-icon>
+                <v-icon
+                  v-if="planGroups.length > 1"
+                  @click="deleteCpuGroup(item.cpu)"
+                  >mdi-delete</v-icon
+                >
+              </template>
+
+              <template v-else-if="newcpuGroup.planId !== item.id">{{
+                item.cpu
+              }}</template>
+            </template>
+
+            <template v-slot:[`item.duration`]="{ value }">
+              {{ getPayment(value) }}
+            </template>
+
             <template v-slot:[`item.basePrice`]="{ value }">
-              {{ value }} {{ value ? defaultCurrency?.title : "" }}
+              {{ value }} {{ defaultCurrency?.title }}
             </template>
+
             <template v-slot:[`item.price`]="{ item }">
-              <span v-if="item.virtual">{{ item.price }}</span>
               <v-text-field
-                v-else
                 dense
-                style="width: 200px"
-                :suffix="defaultCurrency?.title"
+                style="min-width: 200px"
                 v-model="item.price"
+                :suffix="defaultCurrency?.title"
               />
             </template>
-            <template v-slot:[`item.public`]="{ item: addon }">
-              <v-switch
-                :input-value="addon.public"
-                @change="changeAddonPublic(item, addon, $event)"
-              />
+
+            <template v-slot:expanded-item="{ headers, item }">
+              <template v-if="item.installation_fee">
+                <td></td>
+                <td></td>
+                <td :colspan="headers.length - 6">Installation price</td>
+                <td>
+                  {{ item.installation_fee.price.value }}
+                  {{ defaultCurrency?.title }}
+                </td>
+                <td>
+                  <v-text-field
+                    dense
+                    style="width: 150px"
+                    v-model="item.installation_fee.value"
+                  />
+                </td>
+                <td></td>
+                <td></td>
+              </template>
+            </template>
+
+            <template v-slot:[`item.addons`]="{ item }">
+              <v-dialog width="90vw">
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn icon v-bind="attrs" v-on="on">
+                    <v-icon> mdi-menu-open </v-icon>
+                  </v-btn>
+                </template>
+
+                <nocloud-table
+                  class="pa-4"
+                  item-key="id"
+                  :show-select="false"
+                  :items="getPlanAddons(item)"
+                  :headers="addonsHeaders"
+                >
+                  <template v-slot:[`item.duration`]="{ item }">
+                    {{
+                      getPayment(item.duration) || getBillingPeriod(item.period)
+                    }}
+                  </template>
+                  <template v-slot:[`item.basePrice`]="{ value }">
+                    {{ value }} {{ value ? defaultCurrency?.title : "" }}
+                  </template>
+                  <template v-slot:[`item.price`]="{ item }">
+                    <span v-if="item.virtual">{{ item.price }}</span>
+                    <v-text-field
+                      v-else
+                      dense
+                      style="width: 200px"
+                      :suffix="defaultCurrency?.title"
+                      v-model="item.price"
+                    />
+                  </template>
+                  <template v-slot:[`item.public`]="{ item: addon }">
+                    <v-switch
+                      :input-value="addon.public"
+                      @change="changeAddonPublic(item, addon, $event)"
+                    />
+                  </template>
+                </nocloud-table>
+              </v-dialog>
+            </template>
+            <template v-slot:[`item.public`]="{ item }">
+              <v-switch v-model="item.public" />
             </template>
           </nocloud-table>
-        </v-dialog>
-      </template>
-      <template v-slot:[`item.public`]="{ item }">
-        <v-switch v-model="item.public" />
-      </template>
-    </nocloud-table>
+        </div>
+
+        <div v-else>
+          <plan-addons-table
+            @change:addons="planAddons = $event"
+            :addons="template.addons"
+          />
+        </div>
+      </v-tab-item>
+    </v-tabs-items>
   </div>
 </template>
 
@@ -223,10 +277,15 @@ import nocloudTable from "@/components/table.vue";
 import { mapGetters } from "vuex";
 import { getBillingPeriod, getMarginedValue } from "@/functions";
 import api from "@/api";
+import {
+  Addon,
+  ListAddonsRequest,
+} from "nocloud-proto/proto/es/billing/addons/addons_pb";
+import planAddonsTable from "@/components/planAddonsTable.vue";
 
 export default {
   name: "dedicated-table",
-  components: { nocloudTable },
+  components: { nocloudTable, planAddonsTable },
   props: {
     fee: { type: Object, required: true },
     template: { type: Object, required: true },
@@ -275,6 +334,10 @@ export default {
 
     cpuGroups: [],
     newcpuGroup: { mode: "none", name: "", planId: "" },
+
+    tabsIndex: 0,
+    tabs: ["Tariffs", "Custom addons"],
+    planAddons: [],
   }),
   methods: {
     getBillingPeriod,
@@ -473,28 +536,54 @@ export default {
 
       this.$emit("changeFee", this.fee);
 
-      this.plans.forEach((p) => {
-        p.meta.addons?.forEach((a) => {
-          if (a.virtual) {
-            return;
-          }
+      const addonsForCreate = [];
+      const addonsForUpdate = [];
+      let allAddons = [];
 
-          plan.resources.push({
-            key: a.id,
+      this.plans.forEach((p) => {
+        p.meta.addons?.forEach((addon) => {
+          const data = Addon.fromJson({
+            system: true,
+            group: this.template.uuid,
             kind: "PREPAID",
-            title: a.title,
-            price: a.price,
-            public: a.public,
-            period: this.getPeriod(a.duration),
-            except: false,
-            meta: { ...a.meta, basePrice: a.basePrice },
-            on: [],
+            public: !!addon.public,
+            meta: {
+              planCode: addon.planCode,
+              apiName: addon.apiName,
+              id: addon.id,
+              basePrice: addon.basePrice,
+            },
+            title: addon.title,
+            periods: { [this.getPeriod(p.duration)]: addon.price },
           });
+          if (addon.uuid) {
+            data.uuid = addon.uuid;
+            addonsForUpdate.push(data);
+          } else {
+            addonsForCreate.push(data);
+          }
+        });
+      });
+
+      if (addonsForCreate.length) {
+        const createdAddons = await this.addonsClient.createBulk({
+          addons: addonsForCreate,
         });
 
-        const addons = (p.meta.addons || [])
-          .filter((addon) => addon.public)
-          ?.map((el) => el.id);
+        allAddons.push(...createdAddons.toJson().addons);
+      }
+
+      if (addonsForUpdate.length) {
+        const updatedAddons = await this.addonsClient.updateBulk({
+          addons: addonsForUpdate,
+        });
+        allAddons.push(...updatedAddons.toJson().addons);
+      }
+
+      this.plans.forEach((p) => {
+        const addons = (p.meta.addons || [])?.map(
+          (el) => allAddons.find((addon) => addon.meta.id === el.id)?.uuid
+        );
 
         plan.products[p.id] = {
           kind: "PREPAID",
@@ -511,10 +600,13 @@ export default {
             apiName: p.apiName,
             cpu: p.cpu,
             baseInstallationFee: p.installation_fee?.price?.value,
-            addons,
+            addons: undefined,
           },
+          addons,
         };
       });
+
+      plan.addons = this.planAddons;
     },
     getPayment(duration) {
       switch (duration) {
@@ -665,37 +757,39 @@ export default {
   mounted() {
     this.refreshApiPlans();
   },
-  created() {
+  async created() {
     this.$emit("changeFee", this.template.fee);
+
+    const { addons } = await this.addonsClient.list(
+      ListAddonsRequest.fromJson({ filters: { group: [this.template.uuid] } })
+    );
 
     this.plans = Object.keys(this.template.products || {}).map((key) => {
       const product = this.template.products[key];
 
       const [duration, planCode] = key.split(" ");
 
-      const addons = this.template.resources
+      const tariffAddons = addons
         .filter((a) => {
-          if (a.virtual && product.meta.addons.includes(a.key)) {
-            return true;
-          }
-
-          const [addonDuration, addonPlanCode] = a.key.split(" ");
-
-          if (addonDuration === duration && addonPlanCode === planCode) {
+          if (product.addons.includes(a.uuid)) {
             return true;
           }
           return false;
         })
-        .map((a) => {
-          const id = a.key.split(" ")[1];
+        .map((data) => {
+          const addon = data.toJson();
 
           return {
-            ...a,
-            id: a.key,
-            meta: { ...a.meta },
-            planCode: id,
-            duration: a.virtual ? null : duration,
-            basePrice: a.meta.basePrice,
+            basePrice: addon.meta.basePrice,
+            id: addon.meta.id,
+            group: "",
+            duration,
+            planCode: addon.meta.planCode,
+            apiName: addon.meta.apiName,
+            title: addon.title,
+            price: addon.periods[this.getPeriod(duration)],
+            public: addon.public,
+            uuid: addon.uuid,
           };
         });
 
@@ -715,7 +809,7 @@ export default {
         id: key,
         meta: {
           ...product.meta,
-          addons,
+          addons: tariffAddons,
         },
       };
     });
@@ -735,8 +829,12 @@ export default {
         return 1;
       }
       return this.rates.find(
-        (r) => r.from.title === "PLN" && r.to.title === this.defaultCurrency.title
+        (r) =>
+          r.from.title === "PLN" && r.to.title === this.defaultCurrency.title
       )?.rate;
+    },
+    addonsClient() {
+      return this.$store.getters["addons/addonsClient"];
     },
   },
   watch: {
