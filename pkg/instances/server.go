@@ -220,6 +220,73 @@ func (s *InstancesServer) Delete(ctx context.Context, req *pb.DeleteRequest) (*p
 	}, nil
 }
 
+func (s *InstancesServer) Create(ctx context.Context, req *pb.CreateRequest) (*pb.CreateResponse, error) {
+	log := s.log.Named("Create")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	igId := driver.NewDocumentID(schema.INSTANCES_GROUPS_COL, req.GetIg())
+	var ig graph.InstancesGroup
+	ig, err := graph.GetWithAccess[graph.InstancesGroup](
+		ctx, s.db,
+		igId,
+	)
+	if err != nil {
+		log.Error("Failed to get instance group", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if ig.GetAccess().GetLevel() < accesspb.Level_MGMT {
+		log.Error("Access denied", zap.String("uuid", ig.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	// TODO: set sp here to log service prodiver
+	newId, err := s.ctrl.Create(ctx, igId, "", req.GetInstance())
+	if err != nil {
+		log.Error("Failed to create instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.CreateResponse{
+		Id:     newId,
+		Result: true,
+	}, nil
+}
+
+func (s *InstancesServer) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
+	log := s.log.Named("Update")
+	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
+	log.Debug("Requestor", zap.String("id", requestor))
+
+	igId := driver.NewDocumentID(schema.INSTANCES_COL, req.GetInstance().GetUuid())
+	var instance graph.Instance
+	instance, err := graph.GetWithAccess[graph.Instance](
+		ctx, s.db,
+		igId,
+	)
+	if err != nil {
+		log.Error("Failed to get instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if instance.GetAccess().GetLevel() < accesspb.Level_MGMT {
+		log.Error("Access denied", zap.String("uuid", instance.GetUuid()))
+		return nil, status.Error(codes.PermissionDenied, "Access denied")
+	}
+
+	// TODO: set sp here to log service prodiver
+	err = s.ctrl.Update(ctx, "", req.GetInstance(), instance.Instance)
+	if err != nil {
+		log.Error("Failed to update instance", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.UpdateResponse{
+		Result: true,
+	}, nil
+}
+
 func (s *InstancesServer) Detach(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
 	log := s.log.Named("Detach")
 	requestor := ctx.Value(nocloud.NoCloudAccount).(string)
