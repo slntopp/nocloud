@@ -168,7 +168,7 @@ func (ctrl *InstancesController) GetInstancePeriod(i *pb.Instance) (int64, error
 	return 0, nil
 }
 
-func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) error {
+func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error) {
 	log := ctrl.log.Named("Create")
 	log.Debug("Creating Instance", zap.Any("instance", i))
 
@@ -181,20 +181,20 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	estimate, err := ctrl.CalculateInstanceEstimatePeriodicPrice(i)
 	if err != nil {
 		log.Error("Failed to calculate estimate instance periodic price", zap.Error(err))
-		return err
+		return "", err
 	}
 	i.Estimate = estimate
 	period, err := ctrl.GetInstancePeriod(i)
 	if err != nil {
 		log.Error("Failed to get instance period", zap.Error(err))
-		return err
+		return "", err
 	}
 	i.Period = period
 
 	err = hasher.SetHash(i.ProtoReflect())
 	if err != nil {
 		log.Error("Failed to calculate hash", zap.Error(err))
-		return err
+		return "", err
 	}
 
 	ctrl.log.Debug("instance for hash calculating while Creating", zap.Any("inst", i))
@@ -203,7 +203,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 	meta, err := ctrl.col.CreateDocument(ctx, i)
 	if err != nil {
 		log.Error("Failed to create Instance", zap.Error(err))
-		return err
+		return "", err
 	}
 	i.Uuid = meta.Key
 
@@ -232,7 +232,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		if _, err = ctrl.col.RemoveDocument(ctx, meta.Key); err != nil {
 			log.Warn("Failed to cleanup", zap.String("uuid", meta.Key), zap.Error(err))
 		}
-		return err
+		return "", err
 	}
 
 	c := pb.Context{
@@ -255,7 +255,7 @@ func (ctrl *InstancesController) Create(ctx context.Context, group driver.Docume
 		log.Error("Failed to parse", zap.Error(err))
 	}
 
-	return nil
+	return meta.Key, nil
 }
 
 const removeDataQuery = `
