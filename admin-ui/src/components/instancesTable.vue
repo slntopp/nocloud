@@ -183,6 +183,7 @@ import LoginInAccountIcon from "@/components/ui/loginInAccountIcon.vue";
 import InstanceState from "@/components/ui/instanceState.vue";
 import useCurrency from "@/hooks/useCurrency";
 import AccountsAutocomplete from "@/components/ui/accountsAutocomplete.vue";
+import useSearch from "@/hooks/useSearch";
 
 const props = defineProps({
   tableName: { type: String, default: "instances-table" },
@@ -194,13 +195,23 @@ const props = defineProps({
   noSearch: { type: Boolean, default: false },
   customFilter: { type: Object, default: () => {} },
 });
-const { tableName, value, refetch, showSelect, openInNewTab, customFilter } =
+const { value, refetch, showSelect, openInNewTab, customFilter } =
   toRefs(props);
 
 const emit = defineEmits(["input"]);
 
 const store = useStore();
 const { defaultCurrency, convertTo } = useCurrency();
+useSearch({
+  name: props.tableName,
+  noSearch: props.noSearch,
+  defaultLayout: {
+    title: "Default",
+    filter: {
+      "state.state": [0, 1, 2, 3, 4, 6, 7, 8],
+    },
+  },
+});
 
 const page = ref(1);
 const options = ref({});
@@ -363,102 +374,101 @@ const listOptions = computed(() => {
   };
 });
 
-const searchFields = () =>
-  computed(() => [
-    {
-      key: "title",
-      title: "Title",
-      type: "input",
-    },
-    {
-      key: "period",
-      items: uniquePeriods.value.map((period) => ({
-        text: getBillingPeriod(period),
-        value: period,
-      })),
-      title: "Period",
-      type: "select",
-    },
-    {
-      key: "sp",
-      items: servicesProviders.value.map((sp) => ({
-        text: sp.title,
-        value: sp.uuid,
-      })),
-      type: "select",
-      title: "Service provider",
-    },
-    {
-      key: "config.location",
-      items: uniqueLocations.value,
-      type: "select",
-      title: "Location",
-    },
-    {
-      key: "account",
-      custom: true,
-      multiple: true,
-      title: "Account",
-      component: AccountsAutocomplete,
-    },
-    {
-      key: "product",
-      items: uniqueProducts.value,
-      type: "select",
-      title: "Product",
-    },
-    {
-      key: "state.state",
-      items: [
-        { text: "INIT", value: 0 },
-        { text: "RUNNING", value: 3 },
-        { text: "STOPPED", value: 2 },
-        { text: "PENDING", value: 8 },
-        { text: "OPERATION", value: 7 },
-        { text: "SUSPENDED", value: 6 },
-        { text: "DELETED", value: 5 },
-        { text: "ERROR", value: 4 },
-        { text: "UNKNOWN", value: 1 },
-      ],
-      type: "select",
-      title: "State",
-    },
-    {
-      key: "type",
-      title: "Type",
-      type: "select",
-      items: instancesTypes.value,
-    },
-    {
-      key: "billing_plan",
-      type: "select",
-      title: "Billing plan",
-      items: uniquePlans.value.map((plan) => ({
-        text: plan.title,
-        value: plan.uuid,
-      })),
-    },
-    { title: "Due date", key: "data.next_payment_date", type: "date" },
-    { title: "NCU price", key: "estimate", type: "number-range" },
-    { title: "Email", key: "email", type: "input" },
-    { title: "Date", key: "created", type: "date" },
-    { title: "IP", key: "state.meta.networking", type: "input" },
-    {
-      key: "resources.cpu",
-      type: "number-range",
-      title: "CPU",
-    },
-    { title: "RAM", key: "resources.ram", type: "number-range" },
-    { title: "Disk", key: "resources.drive_size", type: "number-range" },
-    { title: "OS", key: "config.template_id", type: "input" },
-    { title: "Domain", key: "resources.domain", type: "input" },
-    { title: "DCV", key: "resources.dcv", type: "input" },
-    {
-      title: "Approver email",
-      key: "resources.approver_email",
-      type: "input",
-    },
-  ]);
+const searchFields = computed(() => [
+  {
+    key: "title",
+    title: "Title",
+    type: "input",
+  },
+  {
+    key: "period",
+    items: uniquePeriods.value.map((period) => ({
+      text: getBillingPeriod(period),
+      value: period,
+    })),
+    title: "Period",
+    type: "select",
+  },
+  {
+    key: "sp",
+    items: servicesProviders.value.map((sp) => ({
+      text: sp.title,
+      value: sp.uuid,
+    })),
+    type: "select",
+    title: "Service provider",
+  },
+  {
+    key: "config.location",
+    items: uniqueLocations.value,
+    type: "select",
+    title: "Location",
+  },
+  {
+    key: "account",
+    custom: true,
+    multiple: true,
+    title: "Account",
+    component: AccountsAutocomplete,
+  },
+  {
+    key: "product",
+    items: uniqueProducts.value,
+    type: "select",
+    title: "Product",
+  },
+  {
+    key: "state.state",
+    items: [
+      { text: "INIT", value: 0 },
+      { text: "RUNNING", value: 3 },
+      { text: "STOPPED", value: 2 },
+      { text: "PENDING", value: 8 },
+      { text: "OPERATION", value: 7 },
+      { text: "SUSPENDED", value: 6 },
+      { text: "DELETED", value: 5 },
+      { text: "ERROR", value: 4 },
+      { text: "UNKNOWN", value: 1 },
+    ],
+    type: "select",
+    title: "State",
+  },
+  {
+    key: "type",
+    title: "Type",
+    type: "select",
+    items: instancesTypes.value,
+  },
+  {
+    key: "billing_plan",
+    type: "select",
+    title: "Billing plan",
+    items: uniquePlans.value.map((plan) => ({
+      text: plan.title,
+      value: plan.uuid,
+    })),
+  },
+  { title: "Due date", key: "data.next_payment_date", type: "date" },
+  { title: "NCU price", key: "estimate", type: "number-range" },
+  { title: "Email", key: "email", type: "input" },
+  { title: "Date", key: "created", type: "date" },
+  { title: "IP", key: "state.meta.networking", type: "input" },
+  {
+    key: "resources.cpu",
+    type: "number-range",
+    title: "CPU",
+  },
+  { title: "RAM", key: "resources.ram", type: "number-range" },
+  { title: "Disk", key: "resources.drive_size", type: "number-range" },
+  { title: "OS", key: "config.template_id", type: "input" },
+  { title: "Domain", key: "resources.domain", type: "input" },
+  { title: "DCV", key: "resources.dcv", type: "input" },
+  {
+    title: "Approver email",
+    key: "resources.approver_email",
+    type: "input",
+  },
+]);
 
 const getAccount = (uuid) => {
   return accounts.value[uuid];
@@ -636,21 +646,5 @@ watch(
 <script>
 export default {
   name: "instances-table",
-  beforeDestroy() {
-    this.$store.commit("appSearch/setSearchName", "");
-    this.$store.commit("appSearch/setFields", []);
-    this.$store.commit("appSearch/setDefaultLayout", null);
-  },
-  mounted() {
-    if (!this.noSearch) {
-      this.$store.commit("appSearch/setSearchName", this.tableName);
-      this.$store.commit("appSearch/setDefaultLayout", {
-        title: "Default",
-        filter: {
-          "state.state": [0, 1, 2, 3, 4, 6, 7, 8],
-        },
-      });
-    }
-  },
 };
 </script>
