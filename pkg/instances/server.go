@@ -943,7 +943,7 @@ LET instances = (
 			}
 			),
 			service: srv,
-			sp: sp._key,
+			sp: sp,
 			type: bp.type
 		}
 )
@@ -976,12 +976,20 @@ let billing_plans = (
  RETURN { uuid, title }
 )
 
+let service_providers = (
+ FOR inst IN instances
+ FILTER inst.sp
+ COLLECT uuid = inst.sp.uuid, title = inst.sp.title
+ RETURN { uuid, title }
+)
+
 return { 
 	unique: {
         locations: locations,
         products: products,
         periods: periods,
-		billing_plans: billing_plans
+		billing_plans: billing_plans,
+        service_providers: service_providers
 	},
 	total: LENGTH(instances)
 }
