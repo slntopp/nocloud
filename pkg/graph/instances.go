@@ -146,26 +146,31 @@ func (ctrl *InstancesController) CalculateInstanceEstimatePeriodicPrice(i *pb.In
 // GetInstancePeriod returns billing period for the whole instance
 //
 // Now it simply returns product's period or period of some random resource if product is not defined or it's period is 0
-func (ctrl *InstancesController) GetInstancePeriod(i *pb.Instance) (int64, error) {
+func (ctrl *InstancesController) GetInstancePeriod(i *pb.Instance) (*int64, error) {
+	zero := int64(0)
+
 	plan, err := ctrl.bp_ctrl.Get(context.Background(), i.GetBillingPlan())
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	product, ok := plan.GetProducts()[i.GetProduct()]
 	if ok {
 		if product.GetPeriod() > 0 {
-			return product.GetPeriod(), nil
+			period := product.GetPeriod()
+			return &period, nil
+		} else {
+			return &zero, nil
 		}
 	}
 
-	for _, res := range plan.GetResources() {
-		if _, ok := i.GetResources()[res.GetKey()]; ok && res.GetPeriod() > 0 {
-			return res.GetPeriod(), nil
-		}
-	}
+	//for _, res := range plan.GetResources() {
+	//	if _, ok := i.GetResources()[res.GetKey()]; ok && res.GetPeriod() > 0 {
+	//		return res.GetPeriod(), nil
+	//	}
+	//}
 
-	return 0, nil
+	return nil, nil
 }
 
 func (ctrl *InstancesController) Create(ctx context.Context, group driver.DocumentID, sp string, i *pb.Instance) (string, error) {

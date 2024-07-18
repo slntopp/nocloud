@@ -887,16 +887,16 @@ func (s *InstancesServer) List(ctx context.Context, req *pb.ListInstancesRequest
 		return nil, err
 	}
 
-	// Calculate estimate and period values if not presented
-	for _, value := range result.Pool {
-		inst := value.Instance
-		if inst.GetEstimate() == 0 {
-			inst.Estimate, _ = s.ctrl.CalculateInstanceEstimatePeriodicPrice(inst)
-		}
-		if inst.GetPeriod() == 0 {
-			inst.Period, _ = s.ctrl.GetInstancePeriod(inst)
-		}
-	}
+	//// Calculate estimate and period values if not presented
+	//for _, value := range result.Pool {
+	//	inst := value.Instance
+	//	if inst.GetEstimate() == 0 {
+	//		inst.Estimate, _ = s.ctrl.CalculateInstanceEstimatePeriodicPrice(inst)
+	//	}
+	//	if inst.GetPeriod() == 0 {
+	//		inst.Period, _ = s.ctrl.GetInstancePeriod(inst)
+	//	}
+	//}
 
 	log.Debug("Result", zap.Any("result", &result))
 	return &result, nil
